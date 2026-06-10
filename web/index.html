@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agentic-canvas-os — Video Remix</title>
+    <meta
+      name="description"
+      content="Submit a reference video URL, brief, and budget; the knowgrph agent runs research → storyboard → render → checkout, and the live knowgrph canvas is embedded here."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <h1 class="app__title">agentic-canvas-os</h1>
+        <p class="app__subtitle">
+          Paste a reference video URL, a creative brief, and a budget cap. The
+          knowgrph agent does the work over MCP — the live canvas embeds below.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2 class="card__title">Start a run</h2>
+        <form id="run-form" class="form" novalidate>
+          <label class="field">
+            <span class="field__label">Reference video URL</span>
+            <input id="referenceUrl" name="referenceUrl" type="url" placeholder="https://youtu.be/…" />
+          </label>
+          <label class="field">
+            <span class="field__label">Creative brief</span>
+            <textarea id="brief" name="brief" rows="3" placeholder="Turn this into a 30s vertical promo."></textarea>
+          </label>
+          <label class="field">
+            <span class="field__label">Budget cap (USD)</span>
+            <input id="budgetUsd" name="budgetUsd" type="number" step="0.01" min="0.01" placeholder="25.00" />
+          </label>
+          <button id="submit-btn" class="btn" type="submit">Submit run</button>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="run-output" class="run-output" hidden aria-live="polite">
+        <div id="run-summary" class="card"></div>
+        <div id="canvas-embed" class="card"></div>
+      </section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

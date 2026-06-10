@@ -1,0 +1,15 @@
+{
+  "name": "agentic-canvas-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Product tier (Vercel UI + AWS Agent-API) that calls the knowgrph control plane over MCP and embeds the live knowgrph canvas. Holds no model provider keys.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test __tests__/*.test.mjs",
+    "web:build": "node web/build.mjs",
+    "agent-api:invoke:dry": "node agent-api/src/handler.js"
+  }
+}

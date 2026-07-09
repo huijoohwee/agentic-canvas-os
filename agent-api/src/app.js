@@ -1,17 +1,16 @@
 // Platform-neutral Agent-API app wiring for agentic-canvas-os.
 //
-// Builds the two request handlers (`authSession`, `run`) from environment, wired
-// to a keyless knowgrph MCP client. This core is HOST-AGNOSTIC: the Vercel
-// serverless functions (PRIMARY) and the AWS Lambda adapter (FALLBACK) both
-// import it, so the auth + forward logic lives in exactly one place regardless
-// of where it is deployed.
+// Builds the request handlers (`authSession`, `run`, readiness metadata) from
+// Cloudflare environment bindings, wired to a keyless knowgrph MCP client.
 //
 // Env (server-side only; never shipped to the client):
 //   AGENT_API_JWT_SECRET   — HS256 signing secret (required to mint/verify)
 //   KNOWGRPH_MCP_ENDPOINT  — knowgrph control-plane MCP Streamable HTTP endpoint
+//   AGENT_MODEL_*          — optional Hermes-like model route overrides
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
 import { createAuthSessionHandler, createRunHandler } from "./handler.js";
+import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
 /**
@@ -30,6 +29,8 @@ export function createAgentApiApp({ env, fetchImpl } = {}) {
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
   const endpoint = typeof e.KNOWGRPH_MCP_ENDPOINT === "string" ? e.KNOWGRPH_MCP_ENDPOINT.trim() : "";
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
+  const agentModelConfig = resolveAgentModelConfig(e);
+  const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
 
   let mcpClient = null;
   if (endpoint) {
@@ -38,6 +39,21 @@ export function createAgentApiApp({ env, fetchImpl } = {}) {
 
   return {
     configured: Boolean(secret && endpoint),
+    agentModelConfig,
+    readiness: () => ({
+      configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
+      auth: { configured: Boolean(secret) },
+      controlPlane: { configured: Boolean(endpoint), endpoint },
+      model: {
+        configured: agentModelConfigReady(agentModelConfig),
+        provider: agentModelConfig.provider,
+        protocol: agentModelConfig.protocol,
+        endpoint: agentModelConfig.endpoint,
+        model: agentModelConfig.model,
+        apiKeyEnv: agentModelConfig.apiKeyEnv,
+        apiKeyPresent: modelKeyPresent,
+      },
+    }),
     authSession: createAuthSessionHandler({
       secret,
       ...(Number.isFinite(expiry) ? { defaultExpirySeconds: expiry } : {}),

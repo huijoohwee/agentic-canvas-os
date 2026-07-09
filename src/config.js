@@ -2,7 +2,7 @@
 //
 // PUBLIC deployment values only — never a model provider key, never an auth
 // signing secret (those stay server-side in the Agent-API / Secrets Manager).
-// Each value is resolved from a public env var with a documented fallback so the
+// Each value is resolved from a public env var with a documented default so the
 // build/runtime is environment-driven (no hardcoded routes baked into logic).
 
 /** First non-empty env value among `names`, trimmed; `fallback` when none set. */
@@ -27,19 +27,9 @@ export const CANVAS_BASE_URL = readEnv(
   "https://airvio.co/knowgrph",
 );
 
-/** Agent-API base the Vercel frontend calls; empty = same origin as the site. */
+/** Agent-API base the Cloudflare-hosted frontend calls; empty = same Worker origin. */
 export const AGENT_API_BASE_URL = readEnv(
-  ["AGENT_API_URL", "NEXT_PUBLIC_AGENT_API_URL", "PUBLIC_AGENT_API_URL"],
-  "",
-);
-
-/**
- * Fallback Agent-API base (AWS). The Vercel deployment hosting the functions is
- * the PRIMARY/default Agent-API (same origin); this AWS base is used only when
- * the primary is unreachable or returns a 5xx. Empty = no fallback configured.
- */
-export const AGENT_API_FALLBACK_URL = readEnv(
-  ["AGENT_API_FALLBACK_URL", "NEXT_PUBLIC_AGENT_API_FALLBACK_URL", "PUBLIC_AGENT_API_FALLBACK_URL"],
+  ["AGENT_API_URL", "PUBLIC_AGENT_API_URL", "CLOUDFLARE_AGENT_API_URL"],
   "",
 );
 

@@ -1,4 +1,4 @@
-// agentic-canvas-os Vercel frontend glue (browser ESM, zero-dependency).
+// agentic-canvas-os Cloudflare frontend glue (browser ESM, zero-dependency).
 //
 // The ONLY network seam is the browser→Agent-API REST call (runtime only, never
 // at build). The Agent-API forwards to knowgrph MCP; this page never holds a
@@ -6,17 +6,11 @@
 // embedded via the run-scoped doc-view URL (canvas consumed over MCP, not
 // rebuilt).
 
-import { AGENT_API_BASE_URL, AGENT_API_FALLBACK_URL, CANVAS_BASE_URL } from "./config.js";
+import { AGENT_API_BASE_URL, CANVAS_BASE_URL } from "./config.js";
 import { buildCanvasEmbed } from "./canvas-embed.js";
-import { resolveAgentApiBases, postJsonWithFallback } from "./agent-api-endpoints.js";
+import { resolveAgentApiBase, postJson } from "./agent-api-endpoints.js";
 
-// Vercel functions are the PRIMARY/default Agent-API (same origin when
-// AGENT_API_BASE_URL is empty); AWS (AGENT_API_FALLBACK_URL) is the fallback the
-// client fails over to on a transport error or 5xx.
-const AGENT_API_BASES = resolveAgentApiBases({
-  primaryBase: AGENT_API_BASE_URL,
-  fallbackBase: AGENT_API_FALLBACK_URL,
-});
+const AGENT_API_BASE = resolveAgentApiBase({ base: AGENT_API_BASE_URL });
 
 function setStatus(text, tone) {
   const node = document.getElementById("status");
@@ -26,9 +20,9 @@ function setStatus(text, tone) {
 }
 
 async function ensureSession() {
-  const { status, body } = await postJsonWithFallback({
+  const { status, body } = await postJson({
     doFetch: (url, init) => fetch(url, init),
-    bases: AGENT_API_BASES,
+    base: AGENT_API_BASE,
     path: "/api/auth/session",
     init: {
       method: "POST",
@@ -43,9 +37,9 @@ async function ensureSession() {
 }
 
 async function postRun(token, submission, approvals) {
-  const { status, body } = await postJsonWithFallback({
+  const { status, body } = await postJson({
     doFetch: (url, init) => fetch(url, init),
-    bases: AGENT_API_BASES,
+    base: AGENT_API_BASE,
     path: "/api/run",
     init: {
       method: "POST",

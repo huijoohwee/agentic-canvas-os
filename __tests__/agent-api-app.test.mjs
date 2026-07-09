@@ -1,6 +1,5 @@
-// Tests for the platform-neutral Agent-API app core (agentic-canvas-os) shared
-// by the Vercel (primary) and AWS (fallback) hosts. ZERO network — the MCP
-// transport is injected.
+// Tests for the platform-neutral Agent-API app core used by the Cloudflare
+// Worker runtime. ZERO network — the MCP transport is injected.
 
 import test from "node:test";
 import assert from "node:assert/strict";

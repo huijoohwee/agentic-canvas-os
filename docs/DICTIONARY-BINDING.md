@@ -1,0 +1,305 @@
+---
+title: "Agentic OS Binding Dictionary"
+graphId: "md:agentic-os-dictionary-binding"
+doc_type: "Invocation Dictionary"
+date: "2026-07-07"
+lang: "en-US"
+schema: "agentic-os-dictionary-binding/v1"
+frontmatter_contract: "required"
+status: "runtime-ready"
+prefix: "@"
+prefix_role: "source, actor, or runtime binding"
+source_docs:
+  - "FACTS.md"
+  - "MEMORY.md"
+  - "AGENTS.md"
+  - "PRD-TAD.md"
+  - "MCP-GATEWAY.md"
+  - "VALIDATION-RUNBOOK.md"
+publish_policy: "Dev-only until explicit operator approval"
+runtime_scope: "Agentic Canvas OS docs control surface"
+runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
+runtime_proof: "RUNTIME-PROOF.md"
+dictionary_entries:
+  - "@agent"
+  - "@soul-profile"
+  - "@identity-slot"
+  - "@personality-overlay"
+  - "@moa-preset"
+  - "@reference-agents"
+  - "@aggregator-agent"
+  - "@operator"
+  - "@source.frontmatter"
+  - "@source.body"
+  - "@local-harness"
+  - "@runtime-proof"
+  - "@dev-only"
+  - "@cost-log"
+  - "@mcp-gateway"
+  - "@canvas"
+  - "@approval-gate"
+  - "@prod-mirror"
+  - "@cloudflare"
+  - "@experience"
+  - "@memory-store"
+  - "@memory-entry"
+  - "@memory-snapshot"
+  - "@memory-policy"
+  - "@user-profile"
+  - "@session-index"
+  - "@skill-index"
+  - "@skill-source"
+  - "@skill-reference"
+  - "@skill-bundle"
+  - "@skill-policy"
+  - "@context-file"
+  - "@working-directory"
+  - "@context-policy"
+  - "@file:"
+  - "@folder:"
+  - "@diff"
+  - "@staged"
+  - "@git:"
+  - "@url:"
+  - "@reference-policy"
+  - "@attached-context"
+  - "@kanban-board"
+  - "@task-row"
+  - "@handoff-row"
+  - "@agent-profile"
+  - "@worker-process"
+  - "@tool-gateway"
+  - "@tool-provider"
+  - "@tool-function"
+  - "@toolset"
+  - "@platform-surface"
+  - "@deferred-tool-catalog"
+  - "@bridge-tool"
+  - "@web-search-tool"
+  - "@image-tool"
+  - "@tts-tool"
+  - "@browser-tool"
+  - "@tool-policy"
+  - "@skill-catalog"
+  - "@identity-model"
+  - "@orchestration-graph"
+  - "@state-store"
+  - "@checkpoint-store"
+  - "@human-review"
+  - "@sandbox-workspace"
+  - "@message-gateway"
+---
+
+# Binding Dictionary
+
+This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings attach commands and semantic filters to an actor, source, runtime surface, proof artifact, or boundary. They are references only; they do not store secrets or authorize deployment.
+
+## Contract
+
+| Rule | Requirement |
+|---|---|
+| Route owner | Existing shared `@` utilities own binding detection and insertion. |
+| Dictionary role | This file names binding meaning, authority, and fail-closed behavior. |
+| Runtime status | Spec-complete until a shared runtime owner resolves the binding. |
+| Secret policy | Bindings never contain raw credentials, provider keys, browser sessions, or media tokens. |
+| Deploy policy | `@prod-mirror` and `@cloudflare` are gated boundaries, not default edit targets. |
+
+## Bindings
+
+| Binding | Meaning | Authority | Boundary |
+|---|---|---|---|
+| `@agent` | Executing agent bound by `FACTS.md`, `AGENTS.md`, and explicit operator instructions. | Current runtime agent. | Must consult facts before memory, keep role behavior separate from truth, and fail closed on spend, mutation, or deploy gaps. |
+| `@soul-profile` | Durable source-backed agent identity and voice. | `SOUL.md` plus approved prompt-assembly owner. | Identity only; no project commands, architecture notes, file paths, ports, credentials, memory facts, or deploy approvals. |
+| `@identity-slot` | Prompt slot 1 identity position. | Approved prompt-assembly owner. | Must be filled from scanned `@soul-profile` or a typed fallback result; silent hardcoded default identity is forbidden. |
+| `@personality-overlay` | Temporary session-level style overlay. | Operator-approved session state. | Overlay cannot mutate `SOUL.md`, override facts, bypass safety, or authorize deploy. |
+| `@moa-preset` | Local neutral MoA preset binding for reference roles, aggregator role, caps, and failover policy. | `FACTS.md`, `SKILLS.md`, and the approved local model router or harness owner. | Must not contain copied provider examples, hardcoded external model ids, recursive MoA aggregators, or global model-switch side effects. |
+| `@reference-agents` | Bounded advisory agents in a Mixture of Agents run. | Approved local harness or provider router. | No tools, no source mutation, capped output, typed failure, cost logging, and private advisory context only. |
+| `@aggregator-agent` | Single acting agent in a Mixture of Agents run. | Approved local harness or provider router. | Owns final answer, tool calls, approvals, transcript persistence, and follow-up iteration through normal gates. |
+| `@operator` | Human approval authority and final release gate. | The user. | Required before paid, mutating, payment, browser-auth, Prod, or Cloudflare actions. |
+| `@source.frontmatter` | Parsed YAML frontmatter. | Authored document source. | SSOT for identity, routing, renderer flags, and runtime gates. |
+| `@source.body` | Authored Markdown body. | Authored document source. | SSOT for operator workflow, guardrails, and checklist language. |
+| `@local-harness` | Dev-local typed harness or dry-run path. | Shared local runtime owner. | Default proof path before paid calls or deploy. |
+| `@runtime-proof` | Surfaced validation evidence. | Command output, typed result, parsed field, or focused test. | Must be observable; narrative alone is not proof. |
+| `@dev-only` | Local development boundary. | Current Dev worktree. | Confirms work stops before Prod mirror and Cloudflare. |
+| `@cost-log` | Token, cache, and estimated cost ledger. | Harness observer or runtime result. | Must report exact zero for model-free views. |
+| `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
+| `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
+| `@approval-gate` | Explicit gate state for spend, mutation, payment, browser auth, or deploy. | Shared gate catalog or harness result. | Missing approval blocks before action. |
+| `@prod-mirror` | Prod mirror path for release staging. | Operator-approved release flow only. | Not a default edit target; forbidden without explicit instruction. |
+| `@cloudflare` | Cloudflare route or Worker/Pages control plane. | Operator-approved deploy flow only. | Not a completion criterion for docs-only work. |
+| `@experience` | Typed record of a run, failure, proof packet, or operator correction. | Authored source plus surfaced runtime proof. | May seed proposals only after provenance, applicability, expiry risk, and no-copy boundary are recorded. |
+| `@memory-store` | Bounded agent-note store for environment facts, conventions, lessons, and project context. | `MEMORY.md` plus approved local memory owner. | Read is scoped; writes require scan, capacity check, duplicate handling, and must exclude secrets, unsupported inference, and deploy artifacts. |
+| `@memory-entry` | One compact memory or profile entry. | Approved memory write request. | Entry must name target, evidence, write action, scan result, capacity result, and source. |
+| `@memory-snapshot` | Frozen memory/profile context captured at session start. | Approved prompt assembly owner. | Active prompt snapshot is immutable; mid-session writes affect future sessions or live tool responses only. |
+| `@memory-policy` | Capacity, write approval, scan, duplicate, and compaction policy. | `FACTS.md`, `MEMORY.md`, `USER.md`, and approved runtime owner. | Unsafe, overflowing, duplicate, or unsupported writes fail closed with typed result. |
+| `@user-profile` | Bounded user profile for explicit preferences, communication style, and expectations. | `USER.md` plus operator-approved profile owner. | No unsupported personal inference, secrets, sensitive profiling, project operations, or stale session details. |
+| `@session-index` | Searchable past-session record index. | Approved local session-search owner. | Read-only search by default; results require explicit capture before persistence. |
+| `@skill-index` | Lightweight skill metadata index. | `SKILLS.md` plus approved shared skill registry owner. | Index entries include metadata only; full instruction bodies and secrets stay out until selected. |
+| `@skill-source` | One selected skill source document. | `SKILL.md`-compatible source under an approved skill root. | Must parse, remain bounded, avoid copied external artifacts, and load only after selection. |
+| `@skill-reference` | Optional skill resource such as references, scripts, templates, or assets. | Approved skill root and resource path. | Load on demand, keep references shallow, validate before execution, and reject unsafe paths. |
+| `@skill-bundle` | Bundle manifest that groups existing skill ids. | Approved bundle source. | Resolves installed skills, reports missing entries, and cannot override approval or deploy gates. |
+| `@skill-policy` | Skill trust, scan, compatibility, write approval, and validation policy. | `FACTS.md`, `SKILLS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | Unsafe external sources, incompatible requirements, copied artifacts, or unreviewed writes fail closed. |
+| `@context-file` | One discovered project-local context file. | Working directory, ancestor, or touched subdirectory under the approved project scope. | Read-only unless operator requests edits; must scan, bound, and never override `FACTS.md`, `SOUL.md`, system, developer, or operator instructions. |
+| `@working-directory` | Current startup or tool-call working directory used for context discovery. | Runtime session state or explicit operator path. | Must be explicit, normalized, and scoped; no home-wide or global scan unless approved. |
+| `@context-policy` | Precedence, scan, truncation, and progressive-discovery rules for context files. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | First-match project context, per-directory visited set, prompt-injection block, capacity bound, and deploy gate are required. |
+| `@file:` | Context reference to one workspace file or 1-indexed line range. | Explicit message text plus normalized workspace path. | Text only, workspace-scoped, sensitive path blocked, path traversal blocked, binary rejected, and bounded before expansion. |
+| `@folder:` | Context reference to a directory listing or bounded folder summary. | Explicit message text plus normalized workspace directory. | Maximum entry cap, no recursive content dump by default, sensitive children skipped with warnings. |
+| `@diff` | Context reference to the current unstaged diff. | Current VCS worktree. | Read-only, secret-scanned, bounded, and never treated as approval to write or revert. |
+| `@staged` | Context reference to the current staged diff. | Current VCS index. | Read-only, secret-scanned, bounded, and never treated as commit approval. |
+| `@git:` | Context reference to recent commit metadata or patch range. | Current VCS repository. | Count is clamped to a small maximum, missing revisions warn, and sensitive content remains blocked. |
+| `@url:` | Context reference to fetched external content. | Approved URL fetch/extract owner. | Requires egress policy, cache/citation metadata, size bounds, and no credentials in URL or headers. |
+| `@reference-policy` | Workspace, scan, size, platform, URL egress, warning, and refusal rules for context references. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved composer or CLI owner. | Missing policy preserves raw text; unsupported surfaces pass raw `@` references through with typed warning. |
+| `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
+| `@kanban-board` | Durable `kanban.md` task board. | Authored Markdown table source plus existing multi-dimensional table/Kanban utilities. | Board rows are the SSOT for task and handoff state; no browser-only, process-only, or copied board store. |
+| `@task-row` | One validated task row in `kanban.md`. | Shared table row parser and operator-approved task schema. | Requires stable id, title, owner profile, status, priority, acceptance, evidence, and next action. |
+| `@handoff-row` | One validated handoff row in `kanban.md`. | Shared table row parser and named profiles. | Requires from profile, to profile, task id, context refs, blockers, resume state, and acceptance criteria. |
+| `@agent-profile` | Named profile that can own or receive board work. | `SOUL.md`, `USER.md`, profile config, or explicit operator-defined profile source. | Profile identity is explicit and non-secret; it cannot imply deploy, spend, or hidden memory ownership. |
+| `@worker-process` | Full OS process worker for a named profile. | Approved local process launcher or operator-run terminal. | Process has cwd, identity, command, proof, cleanup, and resource bounds; no fragile in-process subagent swarm. |
+| `@tool-gateway` | Existing `knowgrph` tool routing surface. | Local MCP, Pages HTTP MCP, Browser WebMCP, or approved Cloudflare control-plane owner. | No new proxy, no copied gateway, and no deploy claim without explicit approval. |
+| `@tool-provider` | Provider state for a specific tool category. | Approved provider router or settings owner. | Gateway, direct, local, or unavailable state only; raw credentials stay server-managed. |
+| `@tool-function` | One callable function that extends agent capability. | Existing MCP, local harness, browser, source, or control-plane owner. | Must declare schema, owner, risk class, cost posture, and typed fallback without secrets. |
+| `@toolset` | Logical bundle of existing tool functions. | `SKILLS.md`, `MCP-GATEWAY.md`, and approved tool catalog owner. | Resolves existing functions only; cannot install, invent, or globally enable tools. |
+| `@platform-surface` | CLI, FloatingPanel Chat, browser, MCP, or control-plane surface. | Approved runtime surface owner. | Toolset state is scoped to this surface and cannot grant cross-platform access implicitly. |
+| `@deferred-tool-catalog` | Session-scoped catalog of eligible deferred tools. | Approved tool catalog owner assembled from current MCP and plugin toolsets. | Rebuilt from currently granted tools; cannot expose core direct tools, disabled tools, or global registry entries. |
+| `@bridge-tool` | Model-visible bridge surface for deferred tool search, describe, or call. | Approved tool-search harness owner. | Cannot bypass real tool schema validation, approval, hooks, audit, cost logging, or fallback. |
+| `@web-search-tool` | Search and extraction capability. | Approved search/extract harness. | Requires source scope, citations, egress policy, cache policy, and cost log. |
+| `@image-tool` | Image generation capability. | Approved image harness. | Requires approval, prompt bounds, artifact manifest, and cost log. |
+| `@tts-tool` | Text-to-speech capability. | Approved audio harness. | Requires voice/provider, text bounds, output manifest, and cost log. |
+| `@browser-tool` | Cloud browser automation capability. | Approved browser automation harness. | Requires isolated session, action schema, redaction, screenshots or vision bounds, and approval. |
+| `@tool-policy` | Tool approval, egress, secret, cost, and fallback policy. | `FACTS.md`, `MCP-GATEWAY.md`, `HARNESS-CONTRACTS.md`, and approved runtime owner. | Paid, mutating, browser-auth, generated-media, and deploy actions fail closed without approval. |
+| `@skill-catalog` | Reusable skill contract catalog. | `SKILLS.md` plus existing shared skill registry owner when present. | Skill changes are proposals until reviewed; direct auto-commit and external copying are forbidden. |
+| `@identity-model` | Stable model of operator preferences, project boundaries, and agent operating rules. | `FACTS.md`, `MEMORY.md`, and operator-approved memory. | Stores non-secret, source-backed facts only; no sensitive profiling or unsupported personal inference. |
+| `@orchestration-graph` | Source-backed state, node, edge, and stop-condition topology. | `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing Canvas/KGC graph owners. | No external graph runtime import, hidden node registry, or direct graph-store mutation. |
+| `@state-store` | Scoped current-state snapshot for a stateful run. | Existing approved local state owner. | Typed, bounded, secret-free state only; writes require mutation approval. |
+| `@checkpoint-store` | Durable checkpoint and resume surface. | Existing approved local persistence owner. | Checkpoints require scope, recovery proof, idempotency, and cleanup path. |
+| `@human-review` | Operator review interrupt and resume binding. | The operator or approved review gate. | Continuation is blocked until approve, reject, or edit result is typed. |
+| `@sandbox-workspace` | Scoped workspace for long-horizon agent file reads, writes, execution, uploads, and outputs. | Approved sandbox, local workspace, or per-run output owner. | Must declare root, allowed operations, diff summary, artifact manifest, secret scan, timeout, cleanup, and approval gates. |
+| `@message-gateway` | Typed message bus for user, agent, worker, tool, review, and artifact events. | Approved local harness, MCP gateway, or control-plane owner where deployed. | Messages require schema, sender, recipient, run id, state transition, replay rule, and visibility boundary. |
+
+## Binding Shape
+
+```yaml
+binding:
+  token: "@local-harness"
+  role: "runtime binding"
+  authority: "shared local runtime owner"
+  allowed_with:
+    - "/runtime-ready.check"
+    - "#harness"
+    - "#vcc"
+  forbidden_without:
+    - "@operator for paid calls"
+    - "@approval-gate for mutation"
+```
+
+## Fail-Closed Rules
+
+| Missing or unsafe binding | Result |
+|---|---|
+| Missing `@operator` for paid, mutating, payment, browser-auth, Prod, or Cloudflare action | Return approval-required or blocked with zero spend. |
+| Missing `@source.frontmatter` for parser or routing claims | Keep status spec-complete and request source. |
+| Missing `@runtime-proof` for runtime-ready promotion | Do not promote; report proof gap. |
+| Missing `@working-directory` for `/context.discover` or `/context.audit` | Return missing-working-directory; do not scan arbitrary paths. |
+| Missing `@context-policy` for `/context.load` | Block before inclusion; context files cannot self-authorize loading. |
+| Missing `@reference-policy` for `/reference.expand` | Preserve raw message text and return reference-policy-required. |
+| `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before injecting content into `@attached-context`. |
+| Missing `@kanban-board` for `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` | Return missing-board; do not create a second board store. |
+| Missing `@agent-profile` or `@worker-process` for a handoff | Return missing-profile; do not spawn an anonymous worker. |
+| Missing `@tool-policy` for paid, egress, generated-media, or browser automation | Return blocked before executing the tool. |
+| Missing `@platform-surface` for `/toolset.enable` or `/toolset.disable` | Return scoped-platform-required before changing toolset state. |
+| Missing `@deferred-tool-catalog` for `/tool.search` or `/tool.describe` | Return no-deferred-catalog before schema disclosure or execution. |
+| Missing `@bridge-tool` or `@tool-policy` for `/tool.call` | Block before execution and require the real underlying tool policy. |
+| `@prod-mirror` or `@cloudflare` appears in docs-only work | Treat as gated boundary, not an action. |
+| Binding points to credentials, media tokens, generated URLs, or browser secrets | Reject and neutralize source content. |
+
+## Composition Rules
+
+| Pattern | Meaning |
+|---|---|
+| `/memory.seed #frontmatter @source.frontmatter @source.body` | Build memory from authored source. |
+| `/runtime-ready.check #harness @local-harness @runtime-proof` | Prove runtime status locally. |
+| `/soul.load #primary-identity @soul-profile @identity-slot` | Load durable identity into prompt slot 1 through a scanned source-backed contract. |
+| `/personality.overlay #personality-overlay @personality-overlay` | Apply a temporary session style overlay without mutating durable identity. |
+| `/cost.audit #token-economics @cost-log @operator` | Inspect and gate spend. |
+| `/deploy.guard #dev-only @operator @cloudflare` | Confirm release remains gated until operator explicitly authorizes deploy. |
+| `/moa #mixture-of-agents @moa-preset @reference-agents @aggregator-agent` | Run one-shot advisory fan-out and aggregator-owned response under cost and approval gates. |
+| `/experience.capture #learning-loop @experience` | Store a bounded lesson from proof before proposing reuse. |
+| `/memory.write #persistent-memory @memory-entry @memory-policy` | Persist a bounded agent-note or profile entry after scan and capacity checks. |
+| `/memory.compact #memory-capacity @memory-store @memory-policy` | Consolidate memory deliberately without silent drops. |
+| `/user.profile #user-profile @user-profile` | Persist explicit user preferences, communication style, and expectations. |
+| `/session.search #session-search @session-index` | Retrieve prior conversation details without automatic memory writes. |
+| `/skill.discover #skill-system @skill-index` | Inspect lightweight skill metadata without full body loading. |
+| `/skill.load #progressive-disclosure @skill-source @skill-reference` | Load selected skill instructions and optional resources only when needed. |
+| `/skill.bundle #skill-bundle @skill-bundle` | Resolve grouped existing skills under one invocation. |
+| `/skill.manage #skill-security @skill-policy` | Gate skill writes and external skill sources through scan, validation, and approval. |
+| `/context.discover #cwd-discovery @working-directory` | Discover project-local context files from startup and touched paths. |
+| `/context.load #context-file @context-file @context-policy` | Load one scanned and bounded context file. |
+| `/context.audit #project-context @context-policy @runtime-proof` | Inspect effective context precedence, blocked files, and stale risks. |
+| `/reference.expand #context-reference @reference-policy @working-directory` | Expand only approved reference forms while preserving raw unsupported `@` bindings. |
+| `/reference.expand #inline-context @attached-context` | Append bounded context packets with source, warning, and size metadata. |
+| `/reference.audit #attached-context @runtime-proof` | Report reference expansion safety, truncation, and refusal states. |
+| `/kanban.task #task-row @kanban-board @task-row` | Create or update one durable task row. |
+| `/kanban.handoff #profile-handoff @handoff-row @agent-profile` | Record a readable handoff between named profiles. |
+| `/kanban.sync #multi-agent-collaboration @worker-process` | Reconcile durable board rows across OS processes. |
+| `/tool.catalog #tool-gateway @tool-gateway @tool-provider` | Read per-tool gateway/direct/local/unavailable states without tool execution. |
+| `/tool.catalog #tool-function @tool-function` | Read callable function schemas, owners, risk classes, and cost posture. |
+| `/toolset.enable #toolset @toolset @platform-surface` | Enable existing tool functions for one platform under `@tool-policy`. |
+| `/toolset.disable #toolset @toolset @platform-surface` | Disable a toolset for one platform without deleting underlying functions. |
+| `/tool.route #tool-routing @tool-provider @tool-policy` | Route one approved tool call through existing `knowgrph` infrastructure. |
+| `/tool.search #tool-search @deferred-tool-catalog` | Search session-scoped deferred tool metadata. |
+| `/tool.describe #deferred-tool-schema @deferred-tool-catalog` | Load one deferred schema from the current session catalog. |
+| `/tool.call #bridge-tool @bridge-tool @tool-policy` | Dispatch through the bridge while enforcing the real tool policy. |
+| `/tool.route #web-search @web-search-tool` | Execute search or extraction with citations and egress policy. |
+| `/tool.route #image-generation @image-tool` | Execute image generation with approval and artifact manifest. |
+| `/tool.route #text-to-speech @tts-tool` | Execute TTS with voice and output bounds. |
+| `/tool.route #cloud-browser @browser-tool` | Execute cloud browser automation with isolated session and redaction. |
+| `/skill.propose #skill-evolution @skill-catalog` | Draft a reusable skill contract for review. |
+| `/memory.search #memory-search @memory-store` | Retrieve prior context from scoped local memory. |
+| `/identity.reflect #identity-model @identity-model` | Persist stable non-secret preferences with operator authority. |
+| `/orchestration.graph #orchestration-graph @orchestration-graph` | Validate graph topology through source-backed owners. |
+| `/state.checkpoint #durable-execution @checkpoint-store` | Persist resumable checkpoints with recovery proof. |
+| `/human.review #human-in-loop @human-review` | Pause and resume a run through operator review. |
+| `/superagent.run #long-horizon-harness @sandbox-workspace @message-gateway` | Run bounded long-horizon work with typed workspace, handoff, checkpoint, and artifact proof. |
+
+## Direct Facts Link
+
+| Token | Facts source |
+|---|---|
+| `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
+| `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
+| `@memory-entry` | `FACTS.md` direct-resolution entry for bounded memory entries. |
+| `@skill-index` | `FACTS.md` direct-resolution entry for progressive skill discovery. |
+| `@skill-source` | `FACTS.md` direct-resolution entry for selected skill source loading. |
+| `@context-file` | `FACTS.md` direct-resolution entry for one discovered context file. |
+| `@working-directory` | `FACTS.md` direct-resolution entry for context discovery root. |
+| `@context-policy` | `FACTS.md` direct-resolution entry for context precedence, scan, and bounds. |
+| `@file:` | `FACTS.md` direct-resolution entry for file and line-range context references. |
+| `@folder:` | `FACTS.md` direct-resolution entry for folder context references. |
+| `@diff` | `FACTS.md` direct-resolution entry for unstaged diff references. |
+| `@staged` | `FACTS.md` direct-resolution entry for staged diff references. |
+| `@git:` | `FACTS.md` direct-resolution entry for bounded git history references. |
+| `@url:` | `FACTS.md` direct-resolution entry for URL context references. |
+| `@reference-policy` | `FACTS.md` direct-resolution entry for reference expansion policy. |
+| `@attached-context` | `FACTS.md` direct-resolution entry for appended expansion packets. |
+| `@kanban-board` | `FACTS.md` direct-resolution entry for durable Kanban board binding. |
+| `@task-row` | `FACTS.md` direct-resolution entry for task row binding. |
+| `@handoff-row` | `FACTS.md` direct-resolution entry for handoff row binding. |
+| `@agent-profile` | `FACTS.md` direct-resolution entry for named profile binding. |
+| `@worker-process` | `FACTS.md` direct-resolution entry for full OS process worker binding. |
+| `@tool-gateway` | `FACTS.md` direct-resolution entry for existing-infrastructure tool routing. |
+| `@tool-provider` | `FACTS.md` direct-resolution entry for per-tool provider state. |
+| `@tool-function` | `FACTS.md` direct-resolution entry for callable tool functions. |
+| `@toolset` | `FACTS.md` direct-resolution entry for logical tool bundles. |
+| `@platform-surface` | `FACTS.md` direct-resolution entry for platform-scoped toolset state. |
+| `@deferred-tool-catalog` | `FACTS.md` direct-resolution entry for session-scoped deferred tool catalog. |
+| `@bridge-tool` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool calls. |
+| `@moa-preset` | `FACTS.md` direct-resolution entry for local MoA preset obligations. |
+
+## VCCs
+
+| VCC | Check |
+|---|---|
+| Dictionary parses | Frontmatter parses as YAML and `dictionary_entries` lists at-prefixed tokens. |
+| Bindings are non-secret | Body contains no raw credentials, provider keys, media tokens, or generated asset URLs. |
+| Authority is explicit | Every binding row names an authority and boundary. |
+| Deploy remains gated | `@prod-mirror` and `@cloudflare` are described as gated boundaries, not default actions. |

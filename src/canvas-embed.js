@@ -14,10 +14,9 @@ export const CANVAS_DOC_VIEW_PATH = "/doc-view";
 export const CANVAS_RUN_PARAM = "run";
 export const CANVAS_DOC_PARAM = "doc";
 
-// Cross-origin embed attributes (Vercel frames airvio.co/knowgrph). The doc-view
-// route must allow `frame-ancestors` of the Vercel origin AND scope the run to
-// the entitled caller (same check as knowgrph GET /runs/{id}); the embed never
-// authorizes spend.
+// Cross-origin embed attributes. The doc-view route must allow `frame-ancestors`
+// of the Cloudflare Worker origin AND scope the run to the entitled caller
+// (same check as knowgrph GET /runs/{id}); the embed never authorizes spend.
 export const CANVAS_EMBED_SANDBOX = "allow-scripts allow-same-origin";
 export const CANVAS_EMBED_REFERRER_POLICY = "no-referrer";
 

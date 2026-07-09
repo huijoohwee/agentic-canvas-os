@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "agentic-canvas-os",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-07-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/ready", "/auth/session", "/run"]
+  },
+  "vars": {
+    "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/mcp",
+    "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+    "AGENT_MODEL_PROVIDER": "sealion",
+    "AGENT_MODEL_BASE_URL": "https://api.sea-lion.ai/v1",
+    "AGENT_MODEL_ID": "aisingapore/Gemma-SEA-LION-v4-27B-IT",
+    "AGENT_MODEL_API_KEY_ENV": "SEA_LION_API_KEY"
+  },
+  "secrets": {
+    "required": ["AGENT_API_JWT_SECRET", "SEA_LION_API_KEY"]
+  }
+}
+

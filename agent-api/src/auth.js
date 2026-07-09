@@ -2,7 +2,7 @@
 //
 // A minimal HS256 JWT (header.payload.signature) minted and verified with
 // `node:crypto` HMAC-SHA256 — zero external dependencies, offline-testable. The
-// signing secret is SERVER-SIDE ONLY (Secrets Manager / Lambda env); it is never
+// signing secret is SERVER-SIDE ONLY (Cloudflare secret binding); it is never
 // logged, returned, or shipped to the client. This token gates *access* to the
 // run/state endpoints; it is DISTINCT from a knowgrph Approval_Token and NEVER
 // authorizes spend (auth ≠ approval — mirrors knowgrph R15.9).

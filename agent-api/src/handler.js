@@ -10,8 +10,8 @@
 //      Approval_Gates.
 //
 // Pure/deterministic + injectable (MCP client, secret, clock) so it is fully
-// testable offline. A real Lambda wraps these handlers with API Gateway event
-// parsing; here they take/return plain objects.
+// testable offline. The Cloudflare Worker adapter wraps these handlers with
+// Request/Response parsing; here they take/return plain objects.
 
 import { mintSessionToken, verifySessionToken } from "./auth.js";
 

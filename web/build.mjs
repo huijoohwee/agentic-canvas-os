@@ -1,13 +1,13 @@
-// Offline, zero-dependency static build for the agentic-canvas-os Vercel
+// Offline, zero-dependency static build for the agentic-canvas-os Cloudflare
 // frontend. Assembles `web/dist` from Node built-ins only — nothing to
 // transpile or bundle, so `npm install` and `npm run web:build` both work
-// OFFLINE with zero network/AWS/Cloudflare calls.
+// OFFLINE with zero network or Cloudflare calls.
 //
 // It (1) copies the static shell, (2) copies the browser-safe `src/canvas-embed.js`
 // into the bundle, and (3) GENERATES `dist/config.js` from PUBLIC build-time env
-// vars (Agent-API base + knowgrph canvas base) so no route is hardcoded into the
-// shipped bundle. SECRET SAFETY: only public URLs are emitted — never a model
-// key or auth signing secret.
+// vars (Cloudflare Agent-API base + knowgrph canvas base) so no route is
+// hardcoded into the shipped bundle. SECRET SAFETY: only public URLs are emitted
+// — never a model key or auth signing secret.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -21,12 +21,7 @@ const DIST = path.join(WEB, "dist");
 
 const SHELL_FILES = ["index.html", "main.js", "styles.css"];
 
-const AGENT_API_ENV = ["AGENT_API_URL", "NEXT_PUBLIC_AGENT_API_URL", "PUBLIC_AGENT_API_URL"];
-const AGENT_API_FALLBACK_ENV = [
-  "AGENT_API_FALLBACK_URL",
-  "NEXT_PUBLIC_AGENT_API_FALLBACK_URL",
-  "PUBLIC_AGENT_API_FALLBACK_URL",
-];
+const AGENT_API_ENV = ["AGENT_API_URL", "PUBLIC_AGENT_API_URL", "CLOUDFLARE_AGENT_API_URL"];
 const CANVAS_BASE_ENV = ["CANVAS_BASE_URL", "NEXT_PUBLIC_CANVAS_BASE_URL", "PUBLIC_CANVAS_BASE_URL"];
 
 function readEnv(names) {
@@ -58,7 +53,6 @@ function copyFile(from, to) {
 
 function main() {
   const agentApiUrl = assertPublicUrl(readEnv(AGENT_API_ENV), "Agent-API base URL");
-  const agentApiFallbackUrl = assertPublicUrl(readEnv(AGENT_API_FALLBACK_ENV), "Agent-API fallback URL");
   const canvasBaseUrl = assertPublicUrl(readEnv(CANVAS_BASE_ENV), "Canvas base URL") || "https://airvio.co/knowgrph";
 
   fs.rmSync(DIST, { recursive: true, force: true });
@@ -72,14 +66,12 @@ function main() {
     `// GENERATED at build time by web/build.mjs — do not edit.\n` +
     `// PUBLIC deployment values only: never a model key or auth secret.\n` +
     `export const AGENT_API_BASE_URL = ${JSON.stringify(agentApiUrl)};\n` +
-    `export const AGENT_API_FALLBACK_URL = ${JSON.stringify(agentApiFallbackUrl)};\n` +
     `export const CANVAS_BASE_URL = ${JSON.stringify(canvasBaseUrl)};\n`;
   fs.writeFileSync(path.join(DIST, "config.js"), config, "utf8");
 
   process.stdout.write(
     `agentic-canvas-os web build → ${path.relative(REPO, DIST)}\n` +
-      `  Agent-API base URL (Vercel, primary): ${agentApiUrl || "(same origin — none set)"}\n` +
-      `  Agent-API fallback URL (AWS):         ${agentApiFallbackUrl || "(none set)"}\n` +
+      `  Agent-API base URL (Cloudflare):      ${agentApiUrl || "(same Worker origin — none set)"}\n` +
       `  Canvas base URL:                      ${canvasBaseUrl}\n` +
       `  artifacts: ${[...SHELL_FILES, "canvas-embed.js", "agent-api-endpoints.js", "config.js"].join(", ")}\n`,
   );

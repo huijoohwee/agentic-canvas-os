@@ -85,6 +85,8 @@ dictionary_entries:
   - "/human.review"
   - "/stream.trace"
   - "/superagent.run"
+  - "/sandbox.policy.validate"
+  - "/sandbox.policy.authorize"
   - "/prd-tad.create"
   - "/runtime-ready.check"
   - "/deploy.guard"
@@ -184,6 +186,8 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/human.review` | Interrupt a run for operator inspection, edit, approval, rejection, and resume. | `@human-review`, `@operator`, `@approval-gate` | `#human-in-loop`, `#approval-gate`, `#vcc` | Run remains paused until review result is present; resume payload and audit event are typed. |
 | `/stream.trace` | Surface execution progress, state transitions, cost, and stop events as a typed trace. | `@runtime-proof`, `@cost-log`, `@orchestration-graph` | `#durable-execution`, `#token-economics`, `#vcc` | Trace events are ordered, bounded, secret-free, and do not mutate source state. |
 | `/superagent.run` | Run a long-horizon research, coding, or creation workflow through source-backed orchestration. | `@orchestration-graph`, `@sandbox-workspace`, `@message-gateway`, `@runtime-proof` | `#long-horizon-harness`, `#sandboxed-workspace`, `#message-gateway`, `#token-economics` | Goal, tools, skills, memory reads, sandbox scope, message handoffs, checkpoints, stop conditions, artifacts, verification, and cost ledger are typed before promotion. |
+| `/sandbox.policy.validate` | Compile and audit one source-backed native sandbox policy without executing an operation. | `@sandbox-policy`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#no-hardcode` | Schema, policy digest, fail-closed defaults, domain mutability, and host-enforcement gap are returned. |
+| `/sandbox.policy.authorize` | Return one fail-closed preflight decision for a filesystem, process, network, or credential operation. | `@sandbox-policy`, `@sandbox-workspace`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#vcc` | Decision, reason code, matched rule where applicable, redacted audit metadata, and enforcement status are returned without execution. |
 | `/prd-tad.create` | Produce or refresh a combined PRD/TAD from validated problem and architecture context. | `@operator`, `@source.body` | `#tco`, `#ttv`, `#vcc`, `#foss` | PRD/TAD includes personas, MoSCoW, topology, harness, ADR, and VCC sections. |
 | `/runtime-ready.check` | Verify whether a spec-complete artifact is runnable. | `@local-harness`, `@runtime-proof` | `#harness`, `#vcc`, `#runtime-ready` | Focused checks exit 0 and cost/deploy boundaries are surfaced. |
 | `/deploy.guard` | Stop accidental Prod mirror or Cloudflare mutation. | `@operator`, `@dev-only` | `#no-deploy`, `#approval-gate` | Output states Dev-only status and no Prod/Cloudflare mutation occurred. |

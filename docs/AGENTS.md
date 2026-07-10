@@ -18,6 +18,7 @@ source_docs:
   - "MEMORY.md"
   - "USER.md"
   - "SKILLS.md"
+  - "SANDBOX-RUNTIME.md"
   - "DICTIONARY-COMMAND.md"
   - "DICTIONARY-SEMANTIC.md"
   - "DICTIONARY-BINDING.md"

@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Proof"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-proof"
 doc_type: "Runtime Proof Ledger"
-date: "2026-07-08"
+date: "2026-07-10"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-proof/v1"
 frontmatter_contract: "required"
@@ -127,6 +127,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Learning-loop contracts | `/memory.search`, `/experience.capture`, `/skill.propose`, `/skill.evolve`, `/identity.reflect`, matching `#` tags, and matching `@` bindings resolve from source docs. | External copied implementation artifacts, unreviewed self-modification, or live optimizer execution. |
 | Stateful orchestration contracts | `/orchestration.graph`, `/state.checkpoint`, `/human.review`, `/stream.trace`, matching `#` tags, and matching `@` bindings resolve from source docs. | Copied graph runtime artifacts, hidden graph stores, unbounded cycles, or live external runtime execution. |
 | Long-horizon SuperAgent contracts | `/superagent.run`, `#long-horizon-harness`, `#sandboxed-workspace`, `#message-gateway`, `@sandbox-workspace`, `@message-gateway`, and `superagent.run` resolve from source docs. | Copied DeerFlow runtime layouts, prompts, provider configs, examples, tests, fixtures, unbounded loops, or live external runtime execution. |
+| Agentic video workflow | Dev runtime proves native model-backed script, character, storyboard, pending-shot render, checkpoint resume, landscape guard, context compaction, bounded retry, and an inspectable nine-stage multi-agent pipeline with typed handoffs, semantic assets, resource accounting, and dependency-propagated state. | Prod mirror writes, Cloudflare deploy, copied ViMax implementation artifacts, or uncontrolled paid calls. |
 | KGC computing-flow | Docs declare `kgc-computing-flow/v1`, explicit handles, bounded execution, and KGC validation ownership. | Separate chat-local flow engine or direct graph mutation. |
 | Cost and gates | Documentation validation is zero model spend and keeps paid/mutating/deploy gates explicit. | Approved paid calls, payment, browser-auth, Prod mirror, or Cloudflare deploy. |
 | Deployment boundary | Dev docs are changed locally only. | Prod mirror and Cloudflare runtime proof. |
@@ -159,6 +160,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Slash dictionary has external proof | `npm -C /Users/huijoohwee/Documents/GitHub/knowgrph/canvas run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` reports `SUMMARY total=1 ok=1 failed=0`. | Passed |
 | FloatingPanel Chat action recommendation has external proof | Focused tests for `ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.contextRail.quickActions`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, `ui.floatingPanelChat.composer.slashVariableMenus`, and structured prompt contracts report `SUMMARY ... failed=0`. | Passed |
 | KGC computing-flow has external proof | `npm -C /Users/huijoohwee/Documents/GitHub/knowgrph/canvas run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` reports `SUMMARY total=1 ok=1 failed=0`. | Passed |
+| Agentic video workflow has Dev proof | Combined multi-agent-pipeline, parallel-shot-generation, image-consistency, automated-image-generation, reference-selection, multi-camera, expressive-storyboard, long-script, narrative/continuity, workflow, live-client, runtime, cost, property, local MCP, and remote MCP suites report 136/136 passing. This includes the forward-only nine-stage DAG, specialist assignments, typed handoffs, semantic checkpoint reuse, selected-frame/clip/output indexing, provider economics, honest unverified completion, dependency-propagated blocking, same-camera concurrency, stable output ordering, VLM selection, temporal state, and accounting proof. Changed-file hygiene remains blocked by unrelated oversized shared-worktree files, and the Canvas TypeScript gate is separately blocked by an unrelated `flowCanvasOverlayNativeScenePartitionRegression` GraphData fixture missing its required `type`. | Passed with unrelated shared-worktree gates reported |
 | Deploy guard holds | Scoped git status shows no `content/knowgrph` mutation and no deploy command was run. | Passed |
 
 ## Promotion Boundary
@@ -178,6 +180,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Mixture-of-agents docs contracts | Runtime-ready for docs | Contracts are route-complete, bounded, one-shot, no-copy, and cost-gated; live runtime remains separately gated. |
 | Learning-loop docs contracts | Runtime-ready for docs | Contracts are route-complete, no-copy, bounded, and review-gated; live runtime remains separately gated. |
 | Stateful orchestration docs contracts | Runtime-ready for docs | Contracts are route-complete, no-copy, checkpointed, bounded, and review-gated; live runtime remains separately gated. |
+| Agentic video workflow Dev runtime | Runtime-ready in Dev | Native workflow schema, exact-span long-script corpus, expressive storyboard, scene rigs, temporal first-frame reference catalog/selection, optional strict entity/environment coverage, KGC/VLM/provider reference parity, action-beat blocking, background continuity, explicit rhythm, plot/dialogue retention, hierarchical planning, specialist negotiation, persistent checkpoint, completed-shot reuse, bounded retry, cost/ledger reuse, and MCP schema parity have focused proof; Prod mirror and Cloudflare remain gated. |
 | Long-horizon SuperAgent docs contracts | Runtime-ready for docs | Contracts are route-complete, sandbox-scoped, message-gated, artifact-backed, no-copy, bounded, and cost-gated; live runtime remains separately gated. |
 | `knowgrph` local runtime capabilities | Gated by focused proof | Must be proven by the relevant `knowgrph` tests or local MCP calls. |
 | Prod mirror | Gated by operator approval | Forbidden until explicit instruction. |

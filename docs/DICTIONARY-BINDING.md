@@ -129,6 +129,7 @@ dictionary_entries:
   - "@checkpoint-store"
   - "@human-review"
   - "@sandbox-workspace"
+  - "@sandbox-policy"
   - "@message-gateway"
 ---
 
@@ -242,6 +243,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@checkpoint-store` | Durable checkpoint and resume surface. | Existing approved local persistence owner. | Checkpoints require scope, recovery proof, idempotency, and cleanup path. |
 | `@human-review` | Operator review interrupt and resume binding. | The operator or approved review gate. | Continuation is blocked until approve, reject, or edit result is typed. |
 | `@sandbox-workspace` | Scoped workspace for long-horizon agent file reads, writes, execution, uploads, and outputs. | Approved sandbox, local workspace, or per-run output owner. | Must declare root, allowed operations, diff summary, artifact manifest, secret scan, timeout, cleanup, and approval gates. |
+| `@sandbox-policy` | Source-backed declarative policy for one agent runtime boundary. | Runtime policy source selected by the operator or owning harness. | Carries policy identity and path only; never credential values, implicit approval, compatibility aliases, or an isolation claim. |
 | `@message-gateway` | Typed message bus for user, agent, worker, tool, review, and artifact events. | Approved local harness, MCP gateway, or control-plane owner where deployed. | Messages require schema, sender, recipient, run id, state transition, replay rule, and visibility boundary. |
 
 ## Binding Shape

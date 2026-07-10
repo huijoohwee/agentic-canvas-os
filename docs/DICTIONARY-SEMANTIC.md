@@ -126,6 +126,7 @@ dictionary_entries:
   - "#human-in-loop"
   - "#long-horizon-harness"
   - "#sandboxed-workspace"
+  - "#agent-sandbox-policy"
   - "#message-gateway"
 ---
 
@@ -236,6 +237,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#human-in-loop` | Operator inspection or approval inside a run. | A workflow pauses for human review, editing, approval, or rejection. | Interrupt payload, resume payload, audit event, and approval gate are typed. |
 | `#long-horizon-harness` | Minutes-to-hours agent workflow for research, coding, or creation. | A task spans multiple tools, skills, memory reads, artifacts, and verification steps. | Goal, graph, checkpoints, sandbox scope, message gateway, stop conditions, artifacts, proof, and cost ledger are typed. |
 | `#sandboxed-workspace` | Isolated or scoped filesystem/execution workspace for agent-created artifacts. | A run reads, writes, edits, executes, or summarizes generated files. | Workspace root, allowed operations, artifact manifest, diff summary, secret scan, cleanup, and approval gates are explicit. |
+| `#agent-sandbox-policy` | Native declarative deny-first policy for agent filesystem, process, network, credential, and audit decisions. | An autonomous or tool-bearing run needs preflight authorization. | Policy source, digest, typed decision, redacted audit result, and OS/kernel enforcement gap are explicit. |
 | `#message-gateway` | Typed handoff channel between user, agent, worker, tool, and review stages. | A workflow fans out, pauses, resumes, or sends tool/status messages across actors. | Message schema, sender, recipient, state transition, replay/idempotency rule, and visibility boundary are present. |
 
 ## Semantic Shape

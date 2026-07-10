@@ -43,6 +43,7 @@ external_pattern_sources:
   - "https://docs.langchain.com/oss/python/langgraph/overview"
   - "https://docs.langchain.com/oss/python/langgraph/graph-api"
   - "https://github.com/bytedance/deer-flow"
+  - "https://github.com/NVIDIA/openshell"
 direct_resolution:
   "/soul.load": "DICTIONARY-COMMAND.md#/soul.load"
   "/personality.overlay": "DICTIONARY-COMMAND.md#/personality.overlay"
@@ -83,6 +84,8 @@ direct_resolution:
   "/human.review": "DICTIONARY-COMMAND.md#/human.review"
   "/stream.trace": "DICTIONARY-COMMAND.md#/stream.trace"
   "/superagent.run": "DICTIONARY-COMMAND.md#/superagent.run"
+  "/sandbox.policy.validate": "DICTIONARY-COMMAND.md#/sandbox.policy.validate"
+  "/sandbox.policy.authorize": "DICTIONARY-COMMAND.md#/sandbox.policy.authorize"
   "#truth": "DICTIONARY-SEMANTIC.md##truth"
   "#soul": "DICTIONARY-SEMANTIC.md##soul"
   "#primary-identity": "DICTIONARY-SEMANTIC.md##primary-identity"
@@ -133,6 +136,7 @@ direct_resolution:
   "#human-in-loop": "DICTIONARY-SEMANTIC.md##human-in-loop"
   "#long-horizon-harness": "DICTIONARY-SEMANTIC.md##long-horizon-harness"
   "#sandboxed-workspace": "DICTIONARY-SEMANTIC.md##sandboxed-workspace"
+  "#agent-sandbox-policy": "DICTIONARY-SEMANTIC.md##agent-sandbox-policy"
   "#message-gateway": "DICTIONARY-SEMANTIC.md##message-gateway"
   "@agent": "DICTIONARY-BINDING.md#@agent"
   "@soul-profile": "DICTIONARY-BINDING.md#@soul-profile"
@@ -188,11 +192,12 @@ direct_resolution:
   "@checkpoint-store": "DICTIONARY-BINDING.md#@checkpoint-store"
   "@human-review": "DICTIONARY-BINDING.md#@human-review"
   "@sandbox-workspace": "DICTIONARY-BINDING.md#@sandbox-workspace"
+  "@sandbox-policy": "DICTIONARY-BINDING.md#@sandbox-policy"
   "@message-gateway": "DICTIONARY-BINDING.md#@message-gateway"
 truth_tokens:
-  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/prd-tad.create", "/runtime-ready.check", "/deploy.guard"]
-  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#message-gateway"]
-  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@message-gateway"]
+  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/deploy.guard"]
+  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
+  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
 ---
 
 # Agentic OS Facts

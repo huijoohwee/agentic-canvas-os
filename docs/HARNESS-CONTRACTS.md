@@ -141,6 +141,7 @@ harness:
 | Identity Reflection | Persist stable operator preferences and project boundaries | `{ sourceRef, proposedFact, sensitivity }` | Identity note or rejected inference | Operator authority required; secrets forbidden |
 | Showrunner | Run bounded creative multi-agent turns | Creative brief + role turn | Creative state, script, choice graph | Stage approval and paid calls |
 | SuperAgent | Execute bounded long-horizon research, code, and creation tasks | Goal, graph, sandbox, message policy, constraints | Run plan, checkpoints, messages, artifacts, verification, cost log | File writes, terminal, browser auth, paid calls, deploy |
+| Agent Sandbox Policy | Compile and authorize native deny-first agent boundaries | Policy path and one typed operation | Policy digest, allow or deny, reason code, redacted audit packet, enforcement gap | No execution; OS/kernel containment remains mandatory for adversarial code |
 
 ## Soul Identity Harness Contract
 

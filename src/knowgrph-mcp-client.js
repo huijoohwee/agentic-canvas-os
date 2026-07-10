@@ -1,6 +1,6 @@
 // Keyless MCP Streamable HTTP client for the agentic-canvas-os product tier.
 //
-// Calls the knowgrph control plane at `airvio.co/knowgrph/mcp` over MCP
+// Calls the knowgrph control plane at `airvio.co/knowgrph/control-plane/mcp` over MCP
 // Streamable HTTP (JSON-RPC 2.0 `tools/call`). This tier holds NO model provider
 // keys — it forwards the hero tool `knowgrph.video_remix.run` (and stage tools)
 // and returns the structured result (Run_Manifest + Demo_Pack). knowgrph owns
@@ -114,11 +114,60 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
   if (!doFetch) throw new KnowgrphMcpError("no fetch transport available", { code: "mcp_no_transport" });
 
   let nextId = 1;
+  let mcpSessionId = null;
 
-  async function callTool(toolName, args = {}, { bearer } = {}) {
+  async function ensureSession({ bearer } = {}) {
+    if (mcpSessionId) return mcpSessionId;
+
     const headers = {
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
+    };
+    const token = bearer || authToken;
+    if (token) headers.authorization = `Bearer ${token}`;
+
+    const rpcRequest = {
+      jsonrpc: "2.0",
+      id: nextId++,
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "agentic-canvas-os", version: "0.1.0" },
+      },
+    };
+
+    const res = await doFetch({ url, method: "POST", headers, body: rpcRequest });
+    const status = typeof res.status === "number" ? res.status : 0;
+
+    if (status < 200 || status >= 300) {
+      throw new KnowgrphMcpError(`knowgrph MCP init responded ${status}`, { code: "mcp_http_error", status });
+    }
+
+    const getHeader = (name) => {
+      const lower = name.toLowerCase();
+      if (res.headers && typeof res.headers.get === "function") {
+        return res.headers.get(lower) || res.headers.get(name);
+      }
+      return (res.headers && (res.headers[lower] || res.headers[name])) || "";
+    };
+
+    mcpSessionId = getHeader("mcp-session-id");
+    if (!mcpSessionId) {
+      throw new KnowgrphMcpError("knowgrph MCP init missing mcp-session-id", { code: "mcp_protocol_error" });
+    }
+
+    if (typeof res.text === "function") await res.text();
+    return mcpSessionId;
+  }
+
+  async function callTool(toolName, args = {}, { bearer } = {}) {
+    const sessionId = await ensureSession({ bearer });
+
+    const headers = {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+      "mcp-session-id": sessionId,
     };
     const token = bearer || authToken;
     if (token) headers.authorization = `Bearer ${token}`;
@@ -154,6 +203,10 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     /** Run the hero video-remix tool; returns the knowgrph Run_Manifest. */
     runVideoRemix(input, opts) {
       return callTool("knowgrph.video_remix.run", input, opts);
+    },
+    /** Invoke the Agentic Canvas OS command grammar (/, @, #). */
+    invokeDocsGrammar(input, opts) {
+      return callTool("knowgrph.agentic_canvas_os.docs.invoke", input, opts);
     },
   };
 }

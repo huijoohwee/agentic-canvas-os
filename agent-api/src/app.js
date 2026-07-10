@@ -9,7 +9,7 @@
 //   AGENT_MODEL_*          — optional Hermes-like model route overrides
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
-import { createAuthSessionHandler, createRunHandler } from "./handler.js";
+import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
 import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
@@ -59,5 +59,6 @@ export function createAgentApiApp({ env, fetchImpl } = {}) {
       ...(Number.isFinite(expiry) ? { defaultExpirySeconds: expiry } : {}),
     }),
     run: createRunHandler({ secret, mcpClient }),
+    invoke: createInvokeHandler({ secret, mcpClient }),
   };
 }

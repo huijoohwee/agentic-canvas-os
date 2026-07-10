@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-07"
+date: "2026-07-09"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -20,6 +20,30 @@ publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared slash invocation utilities; no separate command runtime"
 runtime_proof: "RUNTIME-PROOF.md"
+metadata_consumers:
+  - id: "chat_composer"
+    surface: "FloatingPanel Chat composer"
+    owner: "knowgrph/canvas/src/features/chat/floatingPanelChat/FloatingPanelChatComposer.tsx"
+    metadata_fields: ["token", "label", "summary", "group", "sourcePath", "keywords", "prefix_role"]
+    behavior: "inline command-menu insertion; preserve query text after the invocation token"
+  - id: "skills_commands_catalog"
+    surface: "FloatingPanel Skills & Commands catalog"
+    owner: "knowgrph/canvas/src/features/panels/views/SkillsCommandsView.tsx"
+    metadata_fields: ["token", "label", "summary", "group", "sourcePath", "keywords", "prefix_role"]
+    behavior: "searchable catalog row and active-card token insertion"
+  - id: "mcp"
+    surface: "MCP capability metadata"
+    owner: "knowgrph/mcp/local-tool-contract.js"
+    metadata_fields: ["token", "prefix", "intent", "required_bindings", "semantic_filters", "completion_signal", "publish_policy", "source_docs"]
+    behavior: "reference and handoff metadata only; no standalone MCP tool execution"
+entry_metadata_contract:
+  token: "dictionary_entries item and first Commands table column"
+  label: "runtime mirror derives a concise display label from the token"
+  summary: "Commands table Intent column"
+  group: "Agentic OS command dictionary"
+  sourcePath: "this dictionary document"
+  keywords: "token parts plus Intent, Required bindings, Semantic filters, and Completion signal text"
+  mcp: "MCP consumers may expose command intent and required context, but must fail closed before spend, mutation, or deploy"
 dictionary_entries:
   - "/soul.load"
   - "/personality.overlay"
@@ -69,6 +93,21 @@ dictionary_entries:
   - "/cost.audit"
   - "/canvas.project"
   - "/canvas.render"
+  - "/canvas.node.add"
+  - "/canvas.node.link"
+  - "/canvas.selection.open"
+  - "/canvas.selection.chat"
+  - "/canvas.selection.delete"
+  - "/canvas.media.attach"
+  - "/canvas.layout.tune"
+  - "/canvas.viewport.inspect"
+  - "/canvas.viewport.transform"
+  - "/canvas.interaction.tune"
+  - "/canvas.physics.tune"
+  - "/canvas.center"
+  - "/canvas.distribute"
+  - "/canvas.performance.audit"
+  - "/canvas.edge.rewire"
   - "/validation.run"
   - "/workspace.review"
   - "/pipeline.trace"
@@ -92,6 +131,14 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | Runtime status | Spec-complete until a shared runtime owner proves execution. |
 | Spend policy | Malformed input, missing approval, or missing binding fails before paid calls. |
 | Deploy policy | Prod mirror and Cloudflare commands remain gated until explicit operator approval. |
+
+## Consumer Metadata
+
+| Consumer | Metadata read | Source fields | Runtime boundary |
+|---|---|---|---|
+| Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Commands table Intent plus Required bindings, Semantic filters, and Completion signal. | Inserts the `/` token and preserves the editable query; unknown tokens stay raw text. |
+| Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local command list. |
+| MCP | Token, prefix, intent, required bindings, semantic filters, completion signal, publish policy, source docs. | Commands table plus frontmatter policy fields. | Metadata is reference and handoff context only; a dictionary row does not become an executable MCP tool without a separate shared runtime owner. |
 
 ## Commands
 
@@ -145,6 +192,21 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/cost.audit` | Inspect token, cache, and TCO impact before running a model-bearing path. | `@cost-log`, `@operator` | `#token-economics`, `#tco`, `#foss` | Cost log fields are present and budget breach blocks before spend. |
 | `/canvas.project` | Project source-backed runtime state into existing Canvas owners. | `@source.frontmatter`, `@source.body`, `@canvas` | `#canvas`, `#frontmatter`, `#runtime-ready` | Source-backed graph, table, or Storyboard surface renders without dashboard-only storage. |
 | `/canvas.render` | Inspect or trigger projection through existing Canvas render owners without mutating source graph data. | `@canvas`, `@source.frontmatter`, `@runtime-proof` | `#canvas`, `#runtime-ready`, `#vcc` | Canvas projection reports rendered graph, table, KGC, or Storyboard state without direct store mutation. |
+| `/canvas.node.add` | Create a graph node through existing Canvas owners at the resolved insertion point. | `@canvas`, `@canvas-center`, `@source.frontmatter` | `#canvas-node`, `#canvas-selection`, `#vcc` | Node creation uses shared graph mutation utilities, selects the committed node, and reports the resolved graph-space point. |
+| `/canvas.node.link` | Start or commit a node-to-node connection through the shared Canvas edge request flow. | `@canvas`, `@selected-node`, `@edge-endpoint` | `#canvas-node`, `#canvas-edge`, `#vcc` | Edge request names source, target, label, and selection state; missing endpoint returns a typed pending-edge state. |
+| `/canvas.selection.open` | Open the selected node or edge in the shared side panel, tab, editor, or Markdown provenance surface. | `@selected-node` or `@selected-edge`, `@markdown-provenance` when source opening is requested | `#canvas-selection`, `#canvas-node`, `#canvas-edge` | Open action resolves an implemented surface or returns a typed missing-selection/provenance result without adding a local panel alias. |
+| `/canvas.selection.chat` | Append selected node or edge context to FloatingPanel Chat through the existing chat append route. | `@selected-node` or `@selected-edge`, `@canvas` | `#canvas-selection`, `#inline-context`, `#vcc` | Chat receives typed selection context with id, label, type, properties, and source provenance when present. |
+| `/canvas.selection.delete` | Request deletion of the selected Canvas record through the shared graph mutation owner. | `@selected-node` or `@selected-edge`, `@approval-gate` when required | `#canvas-selection`, `#canvas-node`, `#canvas-edge` | Deletion fails closed without a valid selection, preserves graph consistency, and returns mutation proof from the shared owner. |
+| `/canvas.media.attach` | Add or update selected-node media metadata through the shared media property owner. | `@selected-node`, `@media-url`, `@canvas` | `#canvas-media`, `#canvas-node`, `#no-hardcode` | Media metadata validates kind, URL/reference, opacity, and interactivity before updating the node or creating a media node through shared utilities. |
+| `/canvas.layout.tune` | Tune or reset schema-owned Canvas layout mode and forces through the graph schema owner. | `@layout-forces`, `@physics-2d`, `@canvas`, `@runtime-proof` | `#canvas-layout`, `#canvas-physics`, `#canvas`, `#vcc` | Layout mode and force values are stored in schema layout state, with reset/preset behavior reported from the schema owner. |
+| `/canvas.viewport.inspect` | Read the current viewport size, zoom, center, and transform through shared zoom/projection owners. | `@viewport-readout`, `@viewport-transform`, `@canvas` | `#canvas-viewport`, `#canvas-transform`, `#vcc` | Readout reports viewport dimensions, zoom percent, center, scale, and translation from shared viewport utilities without panel-local recalculation. |
+| `/canvas.viewport.transform` | Apply or audit viewport transform, zoom modes, wheel behavior, and speed tuning through shared camera owners. | `@viewport-transform`, `@zoom-mode`, `@wheel-input`, `@interaction-speed`, `@canvas` | `#canvas-viewport`, `#canvas-transform`, `#canvas-zoom`, `#canvas-wheel` | Transform or audit result names the active shared camera owner, clamp bounds, gesture policy, and applied or blocked state. |
+| `/canvas.interaction.tune` | Tune pointer mode, run mode, drag alpha target, and flow interaction behavior through existing canvas owners. | `@flow-run-mode`, `@drag-alpha-target`, `@interaction-speed`, `@canvas` | `#canvas-interaction`, `#canvas-flow`, `#canvas-wheel`, `#vcc` | Interaction update resolves existing toolbar, store, and Flow owners; missing support returns typed unsupported state without a floating-panel alias. |
+| `/canvas.physics.tune` | Tune or reset schema-owned 2D physics forces without keeping panel-local slider state. | `@physics-2d`, `@layout-forces`, `@canvas`, `@runtime-proof` | `#canvas-physics`, `#canvas-layout`, `#vcc` | Charge, collision, speed, overlap, label, and drag-force values clamp through the schema owner and report applied, reset, or blocked state. |
+| `/canvas.center` | Center the viewport on the active selection or all items through shared arrange and centroid utilities. | `@centroid-target`, `@selected-node` when scoped to selection, `@canvas` | `#canvas-centroid`, `#canvas-selection`, `#vcc` | Centering resolves selection or all-items scope, dispatches through shared arrange utilities, and reports a typed missing-selection result when needed. |
+| `/canvas.distribute` | Distribute selected canvas items along an axis through shared arrange utilities. | `@spread-axis`, `@selected-node`, `@canvas` | `#canvas-even-spread`, `#canvas-selection`, `#vcc` | Distribution validates at least three selected items, axis, and graph state before mutation; invalid scope fails closed. |
+| `/canvas.performance.audit` | Inspect render updates, state updates, layout timing, and performance overlay state through diagnostic owners. | `@performance-overlay`, `@runtime-proof`, `@canvas` | `#canvas-performance`, `#canvas-viewport`, `#vcc` | Diagnostic output reports overlay state, render/update counters, and layout timing from shared diagnostic owners without creating a panel-local monitor. |
+| `/canvas.edge.rewire` | Update selected-edge source or target through the existing Canvas edge request flow. | `@selected-edge`, `@edge-endpoint`, `@canvas` | `#canvas-edge`, `#canvas-selection`, `#vcc` | Rewire validates endpoint existence, updates the selected edge through the shared flow, and avoids duplicate edge ownership. |
 | `/validation.run` | Run focused checks for the touched docs or runtime owner. | `@runtime-proof`, `@dev-only` | `#vcc`, `#no-hardcode`, `#runtime-ready` | Final response includes command, result, skipped checks, and deploy-boundary statement. |
 | `/workspace.review` | Review current workspace context, sources, memory, bindings, and blockers before execution. | `@operator`, `@source.body`, `@runtime-proof` | `#frontmatter`, `#vcc`, `#dev-only` | Typed context packet names ready inputs, missing bindings, stale risks, and the smallest high-ROI next action. |
 | `/pipeline.trace` | Trace source ingestion, parsing, render projection, harness state, and cost boundaries. | `@runtime-proof`, `@cost-log`, `@local-harness` | `#harness`, `#cost`, `#vcc` | Stage ledger names status, cache reuse, fallback, cost state, and stop condition for each pipeline stage. |

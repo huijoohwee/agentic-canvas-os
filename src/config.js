@@ -18,7 +18,7 @@ export function readEnv(names, fallback = "") {
 /** knowgrph MCP Streamable HTTP endpoint (the control plane this tier forwards to). */
 export const KNOWGRPH_MCP_ENDPOINT = readEnv(
   ["KNOWGRPH_MCP_ENDPOINT", "MCP_ENDPOINT", "NEXT_PUBLIC_KNOWGRPH_MCP_ENDPOINT"],
-  "https://airvio.co/knowgrph/mcp",
+  "https://airvio.co/knowgrph/control-plane/mcp",
 );
 
 /** knowgrph control-plane canvas base; the product embeds its run-scoped doc-view. */

@@ -8,15 +8,20 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
-  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/mcp",
+  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
 });
 
 function mcpStub(structuredContent) {
-  return async (req) => ({
-    status: 200,
-    headers: { get: (n) => (n.toLowerCase() === "content-type" ? "application/json" : "") },
-    text: async () => JSON.stringify({ jsonrpc: "2.0", id: req.body.id, result: { structuredContent } }),
-  });
+  return async (req) => {
+    if (req.body && req.body.method === "initialize") {
+      return { status: 200, headers: { get: (n) => n.toLowerCase() === "mcp-session-id" ? "test-session-id" : "" }, text: async () => "" };
+    }
+    return {
+      status: 200,
+      headers: { get: (n) => (n.toLowerCase() === "content-type" ? "application/json" : "") },
+      text: async () => JSON.stringify({ jsonrpc: "2.0", id: req.body.id, result: { structuredContent } }),
+    };
+  };
 }
 
 test("createAgentApiApp wires auth + a forwarding run handler", async () => {
@@ -39,6 +44,28 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.ok(run.body.approvalGates.length >= 5);
 });
 
+test("createAgentApiApp wires an invoke handler for grammar queries", async () => {
+  const app = createAgentApiApp({
+    env: ENV,
+    fetchImpl: mcpStub({
+      ok: true,
+      catalog: [{ token: "/soul.load", kind: "command", summary: "Resolved from knowgrph MCP." }],
+    }),
+  });
+  assert.equal(app.configured, true);
+
+  const session = await app.authSession({ body: { subject: "s1" } });
+  const token = session.body.token;
+
+  const invoke = await app.invoke({
+    headers: { authorization: `Bearer ${token}` },
+    body: { query: "/soul.load" },
+  });
+  assert.equal(invoke.statusCode, 200);
+  assert.equal(invoke.body.ok, true);
+  assert.equal(invoke.body.catalog[0].token, "/soul.load");
+});
+
 test("run fails closed (501) when no MCP endpoint is configured", async () => {
   const app = createAgentApiApp({ env: { AGENT_API_JWT_SECRET: "s" } });
   assert.equal(app.configured, false);
@@ -49,6 +76,17 @@ test("run fails closed (501) when no MCP endpoint is configured", async () => {
     body: { referenceUrl: "https://x", brief: "b", budgetUsd: 1 },
   });
   assert.equal(run.statusCode, 501);
+});
+
+test("invoke fails closed (501) when no MCP endpoint is configured", async () => {
+  const app = createAgentApiApp({ env: { AGENT_API_JWT_SECRET: "s" } });
+  const session = await app.authSession({ body: {} });
+  const token = session.body.token;
+  const invoke = await app.invoke({
+    headers: { authorization: `Bearer ${token}` },
+    body: { query: "/soul.load" },
+  });
+  assert.equal(invoke.statusCode, 501);
 });
 
 test("auth/session honors an env default expiry", async () => {

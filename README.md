@@ -1,9 +1,8 @@
 # agentic-canvas-os
 
-Cloudflare Worker product tier for the knowgrph video-remix agent. One Worker
-serves the static UI, authenticates callers, forwards `knowgrph.video_remix.run`
-to the knowgrph MCP control plane, exposes runtime readiness, and embeds the
-live knowgrph canvas.
+Cloudflare Worker product tier demonstrating `knowgrph` MCP Readiness & Command Grammar Integration. 
+One Worker serves the static UI, authenticates callers, forwards `/api/invoke` and `/api/run` 
+to the knowgrph MCP control plane, exposes runtime readiness, and embeds the live knowgrph canvas.
 
 This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
@@ -14,11 +13,12 @@ secrets are Cloudflare secret bindings; the browser only sees public URLs.
 agentic-canvas-os Cloudflare Worker
   /                  -> Workers Static Assets from web/dist
   /api/auth/session  -> stateless Auth_Token
-  /api/run           -> MCP forward to airvio.co/knowgrph/mcp
+  /api/invoke        -> MCP forward to knowgrph.agentic_canvas_os.docs.invoke
+  /api/run           -> MCP forward to knowgrph.video_remix.run
   /api/ready         -> sanitized runtime readiness
 
 knowgrph control plane
-  airvio.co/knowgrph/mcp
+  airvio.co/knowgrph/control-plane/mcp
   airvio.co/knowgrph/doc-view?run=<runId>
 
 SEA-LION hosted API

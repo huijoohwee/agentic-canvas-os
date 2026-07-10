@@ -39,7 +39,7 @@ test("Agent-API app exposes the resolved server-side model route metadata", () =
   const app = createAgentApiApp({
     env: {
       AGENT_API_JWT_SECRET: "server-side-secret",
-      KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/mcp",
+      KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
       SEA_LION_MODEL: "aisingapore/Gemma-SEA-LION-v4-27B-IT",
     },
     fetchImpl: async () => {
@@ -56,7 +56,7 @@ test("readiness reports SEA-LION key presence without exposing the key", () => {
   const app = createAgentApiApp({
     env: {
       AGENT_API_JWT_SECRET: "server-side-secret",
-      KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/mcp",
+      KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
       SEA_LION_API_KEY: "secret-value",
     },
     fetchImpl: async () => {
@@ -77,7 +77,7 @@ test("readiness fails closed when the SEA-LION key env var is absent", () => {
   const app = createAgentApiApp({
     env: {
       AGENT_API_JWT_SECRET: "server-side-secret",
-      KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/mcp",
+      KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
     },
   });
 

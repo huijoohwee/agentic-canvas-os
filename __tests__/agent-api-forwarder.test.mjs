@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { mintSessionToken, verifySessionToken } from "../agent-api/src/auth.js";
 import {
   createAuthSessionHandler,
+  createInvokeHandler,
   createRunHandler,
   validateRunRequest,
 } from "../agent-api/src/handler.js";
@@ -78,6 +79,13 @@ function stubMcpClient(onCall) {
       if (onCall) onCall(input, opts);
       return { state: "blocked", approvalGates: [1, 2, 3, 4, 5], stages: [] };
     },
+    invokeDocsGrammar: async (input, opts) => {
+      if (onCall) onCall(input, opts);
+      return {
+        ok: true,
+        catalog: [{ token: input.query, kind: "command", summary: "Resolved from knowgrph MCP." }],
+      };
+    },
   };
 }
 
@@ -131,4 +139,48 @@ test("auth never substitutes for approval: the forward carries empty approvals t
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.state, "blocked");
   assert.ok(res.body.approvalGates.length >= 5);
+});
+
+// --- invoke handler (forward grammar queries to knowgrph MCP) ---------------
+
+test("a valid authed invoke request forwards the query to knowgrph MCP", async () => {
+  let forwarded;
+  let forwardedOpts;
+  const handler = createInvokeHandler({
+    secret: SECRET,
+    mcpClient: stubMcpClient((input, opts) => {
+      forwarded = input;
+      forwardedOpts = opts;
+    }),
+  });
+  const token = await tokenFor();
+  const res = await handler({
+    headers: { authorization: `Bearer ${token}` },
+    body: { query: "/soul.load" },
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.catalog[0].token, "/soul.load");
+  assert.deepEqual(forwarded, { query: "/soul.load" });
+  assert.equal(forwardedOpts.bearer, token);
+});
+
+test("an invalid invoke body is 400 and no forward occurs", async () => {
+  let called = false;
+  const handler = createInvokeHandler({
+    secret: SECRET,
+    mcpClient: stubMcpClient(() => {
+      called = true;
+    }),
+  });
+  const token = await tokenFor();
+  const res = await handler({
+    headers: { authorization: `Bearer ${token}` },
+    body: {},
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.error, "invalid request");
+  assert.equal(called, false);
 });

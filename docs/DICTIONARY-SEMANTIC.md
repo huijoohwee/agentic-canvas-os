@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-07"
+date: "2026-07-09"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -20,6 +20,30 @@ publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
 runtime_proof: "RUNTIME-PROOF.md"
+metadata_consumers:
+  - id: "chat_composer"
+    surface: "FloatingPanel Chat composer"
+    owner: "knowgrph/canvas/src/features/chat/floatingPanelChat/FloatingPanelChatComposer.tsx"
+    metadata_fields: ["token", "label", "summary", "group", "sourcePath", "keywords", "prefix_role"]
+    behavior: "inline keyword-menu insertion; preserve query text after the invocation token"
+  - id: "skills_commands_catalog"
+    surface: "FloatingPanel Skills & Commands catalog"
+    owner: "knowgrph/canvas/src/features/panels/views/SkillsCommandsView.tsx"
+    metadata_fields: ["token", "label", "summary", "group", "sourcePath", "keywords", "prefix_role"]
+    behavior: "searchable catalog row and active-card token insertion"
+  - id: "mcp"
+    surface: "MCP capability metadata"
+    owner: "knowgrph/mcp/local-tool-contract.js"
+    metadata_fields: ["token", "prefix", "meaning", "match_when", "required_proof", "publish_policy", "source_docs"]
+    behavior: "reference and filter metadata only; no standalone MCP tool execution"
+entry_metadata_contract:
+  token: "dictionary_entries item and first Tags table column"
+  label: "runtime mirror derives a concise display label from the token"
+  summary: "Tags table Meaning column"
+  group: "Agentic OS semantic dictionary"
+  sourcePath: "this dictionary document"
+  keywords: "token parts plus Meaning, Match when, and Required proof text"
+  mcp: "MCP consumers may expose semantic filters as metadata for routing and audit, but must not treat a tag as approval or execution"
 dictionary_entries:
   - "#truth"
   - "#soul"
@@ -40,6 +64,21 @@ dictionary_entries:
   - "#dev-only"
   - "#mcp"
   - "#canvas"
+  - "#canvas-node"
+  - "#canvas-edge"
+  - "#canvas-media"
+  - "#canvas-layout"
+  - "#canvas-selection"
+  - "#canvas-viewport"
+  - "#canvas-transform"
+  - "#canvas-zoom"
+  - "#canvas-wheel"
+  - "#canvas-interaction"
+  - "#canvas-flow"
+  - "#canvas-physics"
+  - "#canvas-centroid"
+  - "#canvas-even-spread"
+  - "#canvas-performance"
   - "#cost"
   - "#approval-gate"
   - "#no-legacy"
@@ -104,6 +143,14 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | Cost policy | Semantic filtering is zero-spend unless an approved harness explicitly runs. |
 | Drift policy | Conflicting tag usage is neutralized at the source document or shared owner. |
 
+## Consumer Metadata
+
+| Consumer | Metadata read | Source fields | Runtime boundary |
+|---|---|---|---|
+| Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Tags table Meaning, Match when, and Required proof. | Inserts the `#` token and preserves the editable query; unknown tags stay raw text. |
+| Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local semantic list. |
+| MCP | Token, prefix, meaning, match criteria, required proof, publish policy, source docs. | Tags table plus frontmatter policy fields. | Metadata is reference and filter context only; a semantic tag does not authorize tool execution, spend, mutation, or deploy. |
+
 ## Tags
 
 | Tag | Meaning | Match when | Required proof |
@@ -127,6 +174,21 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
+| `#canvas-node` | Canvas graph node selection, creation, opening, linking, or deletion intent. | A command acts on a node, creates a node, or needs selected-node context. | Node id, type, label, graph point, mutation owner, and selection state are explicit. |
+| `#canvas-edge` | Canvas graph edge selection, creation, endpoint update, or provenance intent. | A command creates, opens, rewires, or serializes an edge. | Source, target, label, selected edge id, and duplicate-edge handling are explicit. |
+| `#canvas-media` | Media metadata, rich media panel, or media-node projection attached to Canvas graph state. | A command updates node media properties or creates media-backed graph state. | Media kind, URL/reference, interactivity, opacity, and shared media owner are present. |
+| `#canvas-layout` | Schema-owned Canvas layout force tuning, preset, or reset intent. | A command changes anti-line, post-fit, or layout-force behavior. | Layout values live in graph schema state and focused proof reports the applied or reset values. |
+| `#canvas-selection` | Current Canvas node or edge selection used as the active invocation subject. | A command needs the active node/edge rather than a global panel-local target. | Selection source, selected id, and missing-selection behavior are typed before mutation or chat append. |
+| `#canvas-viewport` | Viewport readout, visible bounds, center point, or active camera state. | A command inspects or changes visible canvas position, dimensions, or center. | Readout is derived from shared viewport utilities and reports missing viewport state as typed empty output. |
+| `#canvas-transform` | Zoom scale and screen-space translation for the active canvas viewport. | A command inspects, applies, clamps, or audits the zoom transform. | Transform values resolve through shared zoom/projection owners, not a floating-panel recalculation. |
+| `#canvas-zoom` | Zoom mode, zoom speed, fit-to-screen, or zoom-to-selection behavior. | A request changes or audits zoom modes, bounds, duration, or selection fitting. | Mode, duration, and scale bounds are read from existing store/schema owners and fail closed on unsupported renderer state. |
+| `#canvas-wheel` | Wheel or trackpad gesture routing, speed, modifier boost, or overlay proxy behavior. | A request changes or audits wheel input, trackpad input, or overlay wheel routing. | Gesture policy names the current shared owner and preserves overlay guard behavior. |
+| `#canvas-interaction` | Pointer mode, run mode, interaction speed, drag behavior, or Flow input behavior. | A command changes user-input behavior rather than graph source content. | Existing toolbar/store owners handle mutation; unsupported changes return typed blocked state. |
+| `#canvas-flow` | Flow renderer wheel, selection, and overlay interaction behavior inside canvas surfaces. | A request affects Flow canvas input, selection-on-drag, or overlay wheel proxy state. | Flow behavior stays renderer-owned and does not create duplicate floating-panel state. |
+| `#canvas-physics` | Schema-owned 2D physics force, velocity, overlap, label, and drag tuning. | A command changes charge, collision, speed, overlap, label nudge, drag charge, or drag distance. | Values clamp through graph schema physics tuning and report applied/reset proof. |
+| `#canvas-centroid` | Centroid or center target for selected items, all items, or visible viewport fitting. | A request centers selection, all items, or computes the active centroid target. | Target scope, selection count, and fallback behavior are explicit before arrange dispatch. |
+| `#canvas-even-spread` | Even distribution of selected canvas items along a requested axis. | A request distributes selected nodes horizontally or vertically. | At least three selected nodes and a valid axis are required before mutation. |
+| `#canvas-performance` | Canvas render diagnostics, state update rate, layout timing, and performance overlay proof. | A request inspects render churn, layout timing, diagnostic overlay state, or perf automation output. | Diagnostic data comes from shared performance owners and remains read-only unless an approved runtime toggles a diagnostic overlay. |
 | `#cost` | Cost log and budget accounting. | A path needs budget observability but not full TCO analysis. | Cost log validates and model-free views report exact zero. |
 | `#approval-gate` | Human gate for paid, mutating, payment, browser-auth, or deploy action. | A run can spend, mutate, authenticate, pay, or deploy. | Missing approval blocks before spend or mutation. |
 | `#no-legacy` | Remove stale aliases, remaps, duplicate owners, and compatibility paths. | A source contains old names, shims, or downstream patches. | Stale path is removed at source; no new alias is added. |
@@ -204,6 +266,11 @@ semantic:
 | `/pipeline.trace #token-economics @cost-log` | Review FloatingPanel Chat pipeline and token economics through the cost ledger. |
 | `/workspace.review #frontmatter @source.body` | Review workspace context without turning display labels into standalone prose commands. |
 | `/canvas.render #canvas @runtime-proof` | Project parsed source state through existing Canvas owners. |
+| `/canvas.node.add #canvas-node @canvas-center` | Create a graph node through existing Canvas mutation owners at the visible insertion point. |
+| `/canvas.selection.open #canvas-selection @markdown-provenance` | Open the selected node or edge through side panel, tab, editor, or source provenance surfaces. |
+| `/canvas.media.attach #canvas-media @selected-node @media-url` | Update selected-node rich media metadata through the shared media owner. |
+| `/canvas.layout.tune #canvas-layout @layout-forces` | Tune or reset schema-owned layout force values. |
+| `/canvas.edge.rewire #canvas-edge @selected-edge @edge-endpoint` | Update a selected edge endpoint through the shared Canvas edge flow. |
 | `/computing-flow #computing-flow #frontmatter @local-harness` | Generate or validate a source-backed KGC computing-flow DAG. |
 | `/soul.load #primary-identity @soul-profile` | Load durable identity into prompt slot 1 without hardcoded default identity. |
 | `/personality.overlay #personality-overlay @personality-overlay` | Apply a temporary style overlay without mutating `SOUL.md`. |

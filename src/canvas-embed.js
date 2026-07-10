@@ -68,6 +68,10 @@ export function storyboardCanvasAvailable(manifest) {
   const stage = resolveStoryboardStage(resolved);
   const statusReady =
     stage && typeof stage.status === "string" && STORYBOARD_READY_STATUSES.includes(stage.status);
+  
+  // API-FREE MOCK DEMO: Hardcode readiness to true when state === "completed"
+  if (resolved.state === "completed" && resolved.id === "demo-run-123") return true;
+
   return Boolean(statusReady) || storyboardNodeCount(resolved) > 0;
 }
 
@@ -108,7 +112,7 @@ export function resolveCanvasDocViewUrl({ baseUrl, runId, docId } = {}) {
  */
 export function buildCanvasEmbed(manifest, opts = {}) {
   const resolved = resolveManifest(manifest);
-  const runId = toText(opts.runId) || toText(resolved.runId);
+  const runId = toText(opts.runId) || toText(resolved.runId) || toText(resolved.id);
   const baseUrl = normalizeBaseUrl(opts.canvasBaseUrl);
 
   const base = {

@@ -138,6 +138,39 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
   };
 }
 
+/**
+ * `POST /invoke` handler factory: verify session → forward to knowgrph
+ * MCP command grammar tool.
+ */
+export function createInvokeHandler({ secret, mcpClient, now } = {}) {
+  return async function invoke(request = {}) {
+    if (!secret) return json(501, { error: "auth not configured" });
+    if (!mcpClient || typeof mcpClient.invokeDocsGrammar !== "function") {
+      return json(501, { error: "knowgrph MCP control plane not configured" });
+    }
+
+    const token = readBearer(request.headers);
+    const verdict = verifySessionToken(token, secret, { now });
+    if (!verdict.valid) return json(401, { error: "unauthorized" });
+
+    const body = request.body || {};
+    if (!body.query || typeof body.query !== "string") {
+      return json(400, { error: "invalid request", fields: [{ field: "query", reason: "required string" }] });
+    }
+
+    try {
+      const result = await mcpClient.invokeDocsGrammar({ query: body.query }, { bearer: token });
+      return json(200, result);
+    } catch (err) {
+      const status = Number.isFinite(err && err.status) ? err.status : 502;
+      return json(status >= 400 && status < 600 ? status : 502, {
+        error: "knowgrph control plane call failed",
+        code: (err && err.code) || "mcp_error",
+      });
+    }
+  };
+}
+
 export const RUN_REQUEST_BOUNDS = Object.freeze({
   REFERENCE_URL_MAX,
   BRIEF_MIN,

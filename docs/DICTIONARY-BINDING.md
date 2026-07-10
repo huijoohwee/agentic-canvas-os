@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-07-07"
+date: "2026-07-09"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -20,6 +20,30 @@ publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
 runtime_proof: "RUNTIME-PROOF.md"
+metadata_consumers:
+  - id: "chat_composer"
+    surface: "FloatingPanel Chat composer"
+    owner: "knowgrph/canvas/src/features/chat/floatingPanelChat/FloatingPanelChatComposer.tsx"
+    metadata_fields: ["token", "label", "summary", "group", "sourcePath", "keywords", "prefix_role"]
+    behavior: "inline variable-menu insertion; preserve query text after the invocation token"
+  - id: "skills_commands_catalog"
+    surface: "FloatingPanel Skills & Commands catalog"
+    owner: "knowgrph/canvas/src/features/panels/views/SkillsCommandsView.tsx"
+    metadata_fields: ["token", "label", "summary", "group", "sourcePath", "keywords", "prefix_role"]
+    behavior: "searchable catalog row and active-card token insertion"
+  - id: "mcp"
+    surface: "MCP capability metadata"
+    owner: "knowgrph/mcp/local-tool-contract.js"
+    metadata_fields: ["token", "prefix", "meaning", "authority", "boundary", "secret_policy", "publish_policy", "source_docs"]
+    behavior: "reference and binding metadata only; no standalone MCP tool execution or secret storage"
+entry_metadata_contract:
+  token: "dictionary_entries item and first Bindings table column"
+  label: "runtime mirror derives a concise display label from the token"
+  summary: "Bindings table Meaning column"
+  group: "Agentic OS binding dictionary"
+  sourcePath: "this dictionary document"
+  keywords: "token parts plus Meaning, Authority, and Boundary text"
+  mcp: "MCP consumers may expose binding authority and boundaries, but must never store credentials or treat bindings as approval"
 dictionary_entries:
   - "@agent"
   - "@soul-profile"
@@ -37,6 +61,24 @@ dictionary_entries:
   - "@cost-log"
   - "@mcp-gateway"
   - "@canvas"
+  - "@selected-node"
+  - "@selected-edge"
+  - "@canvas-center"
+  - "@viewport-readout"
+  - "@viewport-transform"
+  - "@zoom-mode"
+  - "@wheel-input"
+  - "@interaction-speed"
+  - "@flow-run-mode"
+  - "@drag-alpha-target"
+  - "@media-url"
+  - "@markdown-provenance"
+  - "@layout-forces"
+  - "@physics-2d"
+  - "@centroid-target"
+  - "@spread-axis"
+  - "@performance-overlay"
+  - "@edge-endpoint"
   - "@approval-gate"
   - "@prod-mirror"
   - "@cloudflare"
@@ -104,6 +146,14 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | Secret policy | Bindings never contain raw credentials, provider keys, browser sessions, or media tokens. |
 | Deploy policy | `@prod-mirror` and `@cloudflare` are gated boundaries, not default edit targets. |
 
+## Consumer Metadata
+
+| Consumer | Metadata read | Source fields | Runtime boundary |
+|---|---|---|---|
+| Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Bindings table Meaning, Authority, and Boundary. | Inserts the `@` token and preserves the editable query; unknown bindings stay raw text. |
+| Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local binding list. |
+| MCP | Token, prefix, meaning, authority, boundary, secret policy, publish policy, source docs. | Bindings table plus frontmatter policy fields. | Metadata is reference and binding context only; bindings do not store secrets, approve tool calls, or become executable MCP tools. |
+
 ## Bindings
 
 | Binding | Meaning | Authority | Boundary |
@@ -124,6 +174,24 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@cost-log` | Token, cache, and estimated cost ledger. | Harness observer or runtime result. | Must report exact zero for model-free views. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
 | `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
+| `@selected-node` | Current Canvas node selection resolved through shared graph selection state. | Existing Canvas selection owner. | Missing selection returns a typed no-selection result; commands must not keep a panel-local selected-node cache. |
+| `@selected-edge` | Current Canvas edge selection resolved through shared graph selection state. | Existing Canvas selection owner. | Missing selection returns a typed no-selection result; endpoint updates must validate against current graph data. |
+| `@canvas-center` | Resolved graph-space insertion point from the current visible Canvas viewport. | Existing zoom/pan viewport and canvas projection utilities. | Point must be derived from current viewport transform, not a hardcoded panel or screen coordinate. |
+| `@viewport-readout` | Current viewport size, zoom percent, and world-space center from shared viewport utilities. | Existing viewport measurement and zoom projection owners. | Read-only telemetry; missing dimensions return typed empty state instead of synthetic defaults. |
+| `@viewport-transform` | Active zoom transform with scale and screen-space translation. | Existing D3/zoom state and projection utilities. | Transform values must be read from active renderer state and clamped by shared zoom bounds. |
+| `@zoom-mode` | Fit, selection, pinning, duration, and scale extent state for canvas zoom behavior. | Existing auto-zoom, runtime zoom dispatch, and schema owners. | Does not authorize auto-fit or pinning changes without an explicit command route and supported renderer state. |
+| `@wheel-input` | Wheel or trackpad behavior, modifier boost, and gesture preset context. | Existing camera-options and wheel-target guard owners. | Gesture routing preserves overlay guards and never bypasses scroll/input ownership. |
+| `@interaction-speed` | Pan, zoom, and global interaction speed multipliers. | Existing schema, canvas runtime, and store settings owners. | Values clamp through shared owners and must not be stored as panel-local copies. |
+| `@flow-run-mode` | Canvas run mode plus Flow wheel and overlay interaction state. | Existing toolbar run-mode owner, Flow renderer owners, and shared store. | Run-mode changes stay in the toolbar/store path; Flow overlay changes stay renderer-owned. |
+| `@drag-alpha-target` | D3 drag alpha target used by the 2D simulation during canvas dragging. | Existing graph store and D3 simulation tuning owner. | Value is simulation tuning only; missing simulation state returns typed unsupported result. |
+| `@media-url` | Approved media URL or inline media reference for node media metadata. | Shared media inventory, inline media command candidates, or explicit operator input. | Must validate kind and reference; no generated URLs, credentials, or stale fixtures are stored. |
+| `@markdown-provenance` | Document path and line range provenance for opening selected Canvas records in source. | Parsed node/edge properties and workspace document owners. | Missing provenance keeps open actions on implemented graph surfaces and does not invent a source path. |
+| `@layout-forces` | Schema-owned Canvas layout force values for anti-line and post-fit tuning. | Graph schema owner. | Values clamp through schema rules and reset/preset writes stay in schema state rather than toolbar-local state. |
+| `@physics-2d` | Schema-owned charge, collision, speed, overlap, label, and drag-force tuning for 2D layout. | Graph schema physics tuning owner. | Values are clamped, reset, and proven through schema state; no floating-panel slider state is authoritative. |
+| `@centroid-target` | Selection, all-items, or viewport target used by center and centroid arrange commands. | Shared arrange, selection, and centroid utilities. | Target scope must be explicit and selection-dependent commands fail closed when selection is absent. |
+| `@spread-axis` | Requested horizontal or vertical axis for even-spread arrange operations. | Shared arrange utilities. | Axis and selected-node count are validated before mutation. |
+| `@performance-overlay` | Canvas performance overlay state and diagnostic readout source. | Shared performance overlay and pipeline performance owners. | Diagnostics are read-only by default and do not imply continuous polling or panel-local monitoring. |
+| `@edge-endpoint` | Candidate source or target endpoint for a Canvas edge request. | Shared graph lookup and edge request owner. | Endpoint id must exist in the current graph; duplicate or stale endpoints fail before mutation. |
 | `@approval-gate` | Explicit gate state for spend, mutation, payment, browser auth, or deploy. | Shared gate catalog or harness result. | Missing approval blocks before action. |
 | `@prod-mirror` | Prod mirror path for release staging. | Operator-approved release flow only. | Not a default edit target; forbidden without explicit instruction. |
 | `@cloudflare` | Cloudflare route or Worker/Pages control plane. | Operator-approved deploy flow only. | Not a completion criterion for docs-only work. |
@@ -209,6 +277,9 @@ binding:
 | Missing `@platform-surface` for `/toolset.enable` or `/toolset.disable` | Return scoped-platform-required before changing toolset state. |
 | Missing `@deferred-tool-catalog` for `/tool.search` or `/tool.describe` | Return no-deferred-catalog before schema disclosure or execution. |
 | Missing `@bridge-tool` or `@tool-policy` for `/tool.call` | Block before execution and require the real underlying tool policy. |
+| Missing `@selected-node`, `@selected-edge`, or `@edge-endpoint` for Canvas selection commands | Return missing-selection or missing-endpoint before graph mutation, chat append, or source opening. |
+| Missing `@layout-forces` for `/canvas.layout.tune` | Return missing-layout-forces and keep schema layout state unchanged. |
+| Missing `@media-url` for `/canvas.media.attach` | Return missing-media-reference and do not create a placeholder media node. |
 | `@prod-mirror` or `@cloudflare` appears in docs-only work | Treat as gated boundary, not an action. |
 | Binding points to credentials, media tokens, generated URLs, or browser secrets | Reject and neutralize source content. |
 
@@ -218,6 +289,11 @@ binding:
 |---|---|
 | `/memory.seed #frontmatter @source.frontmatter @source.body` | Build memory from authored source. |
 | `/runtime-ready.check #harness @local-harness @runtime-proof` | Prove runtime status locally. |
+| `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
+| `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
+| `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |
+| `/canvas.layout.tune #canvas-layout @layout-forces` | Tune schema-owned Canvas layout values. |
+| `/canvas.edge.rewire #canvas-edge @selected-edge @edge-endpoint` | Rewire the selected edge through validated graph endpoints. |
 | `/soul.load #primary-identity @soul-profile @identity-slot` | Load durable identity into prompt slot 1 through a scanned source-backed contract. |
 | `/personality.overlay #personality-overlay @personality-overlay` | Apply a temporary session style overlay without mutating durable identity. |
 | `/cost.audit #token-economics @cost-log @operator` | Inspect and gate spend. |

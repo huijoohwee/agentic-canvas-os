@@ -8,10 +8,10 @@
     "directory": "./web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/ready", "/auth/session", "/run"]
+    "run_worker_first": ["/api/*", "/ready", "/auth/session", "/run", "/invoke"]
   },
   "vars": {
-    "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/mcp",
+    "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
     "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
     "AGENT_MODEL_PROVIDER": "sealion",
     "AGENT_MODEL_BASE_URL": "https://api.sea-lion.ai/v1",
@@ -22,4 +22,3 @@
     "required": ["AGENT_API_JWT_SECRET", "SEA_LION_API_KEY"]
   }
 }
-

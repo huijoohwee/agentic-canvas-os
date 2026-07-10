@@ -63,6 +63,12 @@ export async function handleCloudflareRequest(request, env = {}) {
     return toResponse(await app.run({ headers: headerBag(request), body }));
   }
 
+  if (url.pathname === "/api/invoke" || url.pathname === "/invoke") {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    return toResponse(await app.invoke({ headers: headerBag(request), body }));
+  }
+
   if (env && env.ASSETS && typeof env.ASSETS.fetch === "function") {
     return env.ASSETS.fetch(request);
   }

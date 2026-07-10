@@ -13,7 +13,7 @@ import {
   KnowgrphMcpError,
 } from "../src/knowgrph-mcp-client.js";
 
-const ENDPOINT = "https://airvio.co/knowgrph/mcp";
+const ENDPOINT = "https://airvio.co/knowgrph/control-plane/mcp";
 
 function jsonResponse(status, obj, contentType = "application/json") {
   return {
@@ -35,6 +35,23 @@ test("forwards tools/call and returns the structured Run_Manifest", async () => 
   const seen = {};
   const fetchImpl = async (req) => {
     seen.req = req;
+    
+    // Handle initialization
+    if (req.body && req.body.method === "initialize") {
+      return {
+        status: 200,
+        headers: {
+          get: (n) => {
+            const lower = n.toLowerCase();
+            if (lower === "content-type") return "text/event-stream";
+            if (lower === "mcp-session-id") return "test-session-id";
+            return "";
+          }
+        },
+        text: async () => "",
+      };
+    }
+
     return jsonResponse(200, rpcOk(req.body.id, { state: "blocked", approvalGates: [1, 2, 3, 4, 5] }));
   };
   const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl });
@@ -52,6 +69,9 @@ test("forwards the caller bearer (Auth_Token) but never a model key", async () =
   let authHeader;
   const fetchImpl = async (req) => {
     authHeader = req.headers.authorization;
+    if (req.body && req.body.method === "initialize") {
+      return { status: 200, headers: { get: (n) => n.toLowerCase() === "mcp-session-id" ? "test-session-id" : "" }, text: async () => "" };
+    }
     return jsonResponse(200, rpcOk(req.body.id, { state: "complete" }));
   };
   const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl, authToken: "tok-123" });
@@ -71,7 +91,10 @@ test("extractToolResult reads a JSON text content block", () => {
 });
 
 test("fail-closed on a non-2xx response", async () => {
-  const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl: async () => jsonResponse(503, "busy", "text/plain") });
+  const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl: async (req) => {
+    if (req.body && req.body.method === "initialize") return { status: 200, headers: { get: (n) => n.toLowerCase() === "mcp-session-id" ? "test-session-id" : "" }, text: async () => "" };
+    return jsonResponse(503, "busy", "text/plain");
+  } });
   await assert.rejects(() => client.runVideoRemix({ referenceUrl: "https://x", brief: "b", budgetUsd: 1 }), (e) => {
     assert.equal(e.code, "mcp_http_error");
     assert.equal(e.status, 503);
@@ -82,7 +105,10 @@ test("fail-closed on a non-2xx response", async () => {
 test("fail-closed on a JSON-RPC error frame", async () => {
   const client = createKnowgrphMcpClient({
     endpoint: ENDPOINT,
-    fetchImpl: async (req) => jsonResponse(200, { jsonrpc: "2.0", id: req.body.id, error: { code: -32000, message: "nope" } }),
+    fetchImpl: async (req) => {
+      if (req.body && req.body.method === "initialize") return { status: 200, headers: { get: (n) => n.toLowerCase() === "mcp-session-id" ? "test-session-id" : "" }, text: async () => "" };
+      return jsonResponse(200, { jsonrpc: "2.0", id: req.body.id, error: { code: -32000, message: "nope" } });
+    }
   });
   await assert.rejects(() => client.runVideoRemix({ referenceUrl: "https://x", brief: "b", budgetUsd: 1 }), (e) => {
     assert.equal(e.code, "mcp_rpc_error");

@@ -8,7 +8,7 @@ import { handleCloudflareRequest } from "../worker/index.js";
 
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
-  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/mcp",
+  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
   SEA_LION_API_KEY: "server-side-sealion-key",
 });
 
@@ -22,6 +22,16 @@ function request(path, { method = "GET", headers = {}, body } = {}) {
 
 async function json(res) {
   return JSON.parse(await res.text());
+}
+
+async function withMockedFetch(mockFetch, run) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = mockFetch;
+  try {
+    return await run();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 }
 
 test("GET /api/ready reports SEA-LION runtime readiness without leaking the key", async () => {
@@ -49,6 +59,65 @@ test("POST /api/run without auth is 401 before any control-plane forward", async
   assert.equal(res.status, 401);
 });
 
+test("POST /api/invoke forwards an authed grammar query through the worker", async () => {
+  await withMockedFetch(async (_url, init) => {
+    const rpc = JSON.parse(String(init.body || "{}"));
+    if (rpc.method === "initialize") {
+      return new Response("", {
+        status: 200,
+        headers: {
+          "content-type": "text/event-stream",
+          "mcp-session-id": "test-session-id",
+        },
+      });
+    }
+    return new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: rpc.id,
+        result: {
+          structuredContent: {
+            ok: true,
+            catalog: [{ token: rpc.params.arguments.query, kind: "command" }],
+          },
+        },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }, async () => {
+    const session = await handleCloudflareRequest(request("/api/auth/session", { method: "POST", body: {} }), ENV);
+    const token = (await json(session)).token;
+    const res = await handleCloudflareRequest(
+      request("/api/invoke", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: { query: "/soul.load" },
+      }),
+      ENV,
+    );
+
+    assert.equal(res.status, 200);
+    const body = await json(res);
+    assert.equal(body.ok, true);
+    assert.equal(body.catalog[0].token, "/soul.load");
+  });
+});
+
+test("POST /api/invoke without auth is 401 before any control-plane forward", async () => {
+  let called = false;
+  await withMockedFetch(async () => {
+    called = true;
+    throw new Error("should not forward without auth");
+  }, async () => {
+    const res = await handleCloudflareRequest(
+      request("/api/invoke", { method: "POST", body: { query: "/soul.load" } }),
+      ENV,
+    );
+    assert.equal(res.status, 401);
+    assert.equal(called, false);
+  });
+});
+
 test("non-API requests delegate to the Cloudflare assets binding", async () => {
   const env = {
     ...ENV,
@@ -67,4 +136,3 @@ test("API methods fail closed", async () => {
   const run = await handleCloudflareRequest(request("/api/run", { method: "GET" }), ENV);
   assert.equal(run.status, 405);
 });
-

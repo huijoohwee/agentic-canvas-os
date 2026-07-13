@@ -17,6 +17,7 @@ source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "MEMORY-LOG.md"
+  - "TODO.md"
   - "USER.md"
   - "SKILLS.md"
   - "SANDBOX-RUNTIME.md"
@@ -31,7 +32,7 @@ source_docs:
 
 ## Scope
 
-These instructions apply to files under `docs/`. Treat `SOUL.md` as the durable identity and voice layer, `FACTS.md` as the shared truth layer, `MEMORY.md` as the bounded agent-note layer, `USER.md` as the bounded explicit user-profile layer, and this file as the agent role and editing-rule layer.
+These instructions apply to files under `docs/`. Treat `SOUL.md` as the durable identity and voice layer, `FACTS.md` as the shared truth layer, `MEMORY.md` as the bounded agent-note layer, `TODO.md` as the cross-repository planning index and shard contract, `USER.md` as the bounded explicit user-profile layer, and this file as the agent role and editing-rule layer.
 
 Before editing or generating files here:
 
@@ -49,6 +50,7 @@ Before editing or generating files here:
 - `SOUL.md` owns durable agent identity, voice, style, and prompt slot 1 identity contract.
 - `FACTS.md` owns shared truth, precedence, and direct `/query`, `#truth`, and `@agent` definitions.
 - `MEMORY.md` persists bounded agent notes: environment facts, project conventions, lessons learned, and routing context.
+- `TODO.md` owns cross-repository planning schema, monthly shard routing, lifecycle, retrieval, and compliance; `../todo/YYYY-MM.md` owns the rows.
 - `USER.md` persists bounded explicit operator preferences, communication style, and expectations.
 - `SKILLS.md` owns on-demand procedural knowledge, Tool Gateway contracts, progressive disclosure, bundles, and skill write gates.
 - `AGENTS.md` owns agent roles, editing rules, and validation behavior.
@@ -110,6 +112,9 @@ Malformed inputs must fail before token spend. Raw, unstructured prompt calls ar
 - If concurrent appends conflict, preserve both complete records and append any later superseding decision instead of rewriting history.
 - Use exact shard or ripgrep retrieval first, local BM25 only when ranking adds value, and embeddings only after a measured precision gap and approved TCO review.
 - Run the `VALIDATION-RUNBOOK.md` memory-log structural gate at session start and its base-ref append-only gate before release; either failure blocks the next workflow stage.
+- Load `TODO.md` plus the active `../todo/YYYY-MM.md` shard at startup; retrieve older months by exact Context or month before broader search.
+- Append new cross-repository planning rows only to the active shard at EOF. Keep closed months immutable and preserve every committed shard byte from the recorded Agentic Canvas OS base ref.
+- Apply the strict 11-cell, non-empty, 50-word Directive, section-date, and unique-Context rules to rows authored on or after the `TODO.md` adoption boundary; never rewrite imported historical rows to make them conform retroactively.
 - Treat `$WORKTREE/todo-log.md` as the canonical Knowgrph planning ledger. Record its fetched base ref at startup, declare one `todo_context`, require one changed 11-cell row with no empty cells, a directive of at most 50 words, a matching dated section, and a valid updated date before release, and preserve every non-target baseline row byte-for-byte.
 - Keep `USER.md` for explicit operator preferences, communication style, expectations, workflow habits, and stated technical comfort.
 - Do not infer user profile facts from behavior. Save profile entries only from explicit operator statements or approved proposed entries.
@@ -185,6 +190,7 @@ For documentation-only changes in this folder, run focused checks only:
 - Parse frontmatter when a file has YAML frontmatter.
 - Check line count and keep files under local hygiene budgets.
 - Scan for copied local runtime artifacts such as local hostnames, media-token markers, inline data-image payloads, provider keys, upload IDs, or generated media URLs.
+- Run the TODO shard structural and base-prefix checks when `TODO.md` or `../todo/**` changes.
 - Confirm no Prod mirror or Cloudflare deploy action was performed.
 
 If a runtime implementation is touched outside this folder, use the touched repo's focused tests and type checks. Do not run indefinite full-codebase validation.

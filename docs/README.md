@@ -12,6 +12,7 @@ source_of_truth:
   - "FACTS.md"
   - "MEMORY.md"
   - "MEMORY-LOG.md"
+  - "TODO.md"
   - "USER.md"
   - "AGENTS.md"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
@@ -32,6 +33,7 @@ This folder is the local documentation control surface for making `knowgrph` a r
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |
 | `MEMORY.md` | Agent memory seed | Bounded agent notes, persistence, routing memory, MoA memory, stateful orchestration memory, reusable runtime-readiness context, and local operating lenses. |
 | `MEMORY-LOG.md` | Append-only memory contract | GitHub-as-SSOT sync boundaries, `memory-log/v1` monthly shards, sigil entries, merge rules, bounded retrieval, and the BM25-to-embedding escalation path. |
+| `TODO.md` | Bounded planning index | Cross-repository `todo-log/v1` monthly shards, append-only lifecycle, exact-first retrieval, size caps, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Agent instructions | Agent roles, editing rules, MoA rules, stateful orchestration rules, forbidden patterns, and validation behavior for this folder. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
@@ -59,6 +61,7 @@ This folder is the local documentation control surface for making `knowgrph` a r
 - A caller can discover and load project-local context files from scoped working directories without letting them override facts, identity, safety, approval, or deploy gates.
 - A caller can expand explicit `@` context references into bounded attached context while preserving raw text on unsupported surfaces.
 - A caller can coordinate named profiles through durable `kanban.md` task and handoff rows instead of hidden in-process subagent swarms.
+- A caller can load one bounded TODO index and the relevant `todo/YYYY-MM.md` shard without sending the full planning history to every model call.
 - A task can preserve Knowgrph planning history through a base-ref-anchored `todo-log.md` update whose declared Context row passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.
 - A caller can route web search, image generation, TTS, and cloud browser tools through existing `knowgrph` infrastructure with per-tool provider state, approval gates, and cost logs.

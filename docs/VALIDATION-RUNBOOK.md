@@ -99,7 +99,8 @@ DOCS_ROOT="$AGENTIC_CANVAS_OS_ROOT/docs"
 KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
 PROD_MIRROR_ROOT="$GITHUB_ROOT/huijoohwee/content/knowgrph"
 MEMORY_ROOT="$AGENTIC_CANVAS_OS_ROOT/memory"
-export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT KNOWGRPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT
+PLANNING_ROOT="$AGENTIC_CANVAS_OS_ROOT/todo"
+export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT KNOWGRPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
 find "$DOCS_ROOT" -maxdepth 1 -type f -name '*.md' -print0 | xargs -0 ruby -rdate -ryaml -e 'ARGV.each { |path| text=File.read(path); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{path}: missing frontmatter"); YAML.safe_load(match[1], permitted_classes: [Date], aliases: true); puts "#{path}: frontmatter ok" }'
 wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
@@ -139,6 +140,149 @@ Expected:
 - Local-time, offset, minute-only, hyphenated, impossible-date, wrong-month, pure-YAML, Markdown-table, bolded, duplicate, and timestamp-reordered entries fail.
 - Existing shards preserve every byte from the recorded base and add content only at EOF; deleted shards fail.
 - A new monthly shard is allowed only when its filename, `period`, identity, policy, source contract, and first entry validate.
+
+## Planning Shard Compliance Checks
+
+Run the structural gate at session start and again before release:
+
+```bash
+ruby -rdate -ryaml <<'RUBY'
+root = ENV.fetch("PLANNING_ROOT")
+index_path = File.expand_path("../docs/TODO.md", root)
+index_text = File.read(index_path)
+index_match = index_text.match(/\A---\n(.*?)\n---\n/m) or abort("TODO.md: missing frontmatter")
+index = YAML.safe_load(index_match[1], permitted_classes: [Date], aliases: true)
+abort("TODO.md: invalid schema") unless index["schema"] == "todo-index/v1"
+abort("TODO.md: invalid append policy") unless index["append_policy"] == "append-only"
+
+active_path = File.expand_path(index.fetch("active_shard"), File.dirname(index_path))
+files = Dir.glob(File.join(root, "[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).sort
+abort("todo: no monthly shards") if files.empty?
+abort("todo: active shard missing") unless files.include?(active_path)
+
+strict_contexts = []
+files.each do |file|
+  text = File.read(file)
+  match = text.match(/\A---\n(.*?)\n---\n/m) or abort("#{file}: missing frontmatter")
+  data = YAML.safe_load(match[1], permitted_classes: [Date], aliases: true)
+  period = File.basename(file, ".md")
+  required = {
+    "schema" => "todo-log/v1",
+    "period" => period,
+    "scope" => "cross-repository",
+    "status" => "append-only",
+    "append_policy" => "append-only",
+    "date_heading_format" => "YYYY-MM-DD",
+    "source_contract" => "../docs/TODO.md",
+    "adoption_date" => index.fetch("adoption_date")
+  }
+  required.each { |key, value| abort("#{file}: invalid #{key}") unless data[key] == value }
+  abort("#{file}: byte cap exceeded") unless File.size(file) < index.fetch("size_limit_bytes")
+  abort("#{file}: line cap exceeded") unless text.lines.length <= index.fetch("line_limit")
+
+  body = text[match.end(0)..]
+  headings = body.scan(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/).flatten
+  abort("#{file}: no dated sections") if headings.empty?
+  abort("#{file}: duplicate or unordered dates") unless headings.uniq == headings && headings.sort == headings
+  headings.each do |heading|
+    Date.iso8601(heading)
+    abort("#{file}: heading month mismatch #{heading}") unless heading.start_with?(period + "-")
+  end
+  header = "| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |"
+  separator = "|--------|--------|-----------|--------|-----------------|-------|--------|----------------|--------------------------|--------------------------|--------------|"
+  sections = body.scan(/^## [0-9]{4}-[0-9]{2}-[0-9]{2}\n.*?(?=^## [0-9]{4}-[0-9]{2}-[0-9]{2}\n|\z)/m)
+  abort("#{file}: dated table missing") unless sections.length == headings.length && sections.all? { |section_text| section_text.lines.any? { |line| line.chomp == header } && section_text.lines.any? { |line| line.chomp == separator } }
+
+  section = nil
+  body.each_line do |line|
+    if line =~ /^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/
+      section = Regexp.last_match(1)
+      next
+    end
+    next unless section && section >= index.fetch("adoption_date")
+    next unless line.start_with?("| ")
+    cells = line.strip.split("|", -1)[1...-1].map(&:strip)
+    next if cells.first == "Context"
+    abort("#{file}: strict row must have 11 cells") unless cells.length == 11
+    abort("#{file}: strict row has empty or placeholder cells") if cells.any? { |cell| cell.empty? || cell == "-" }
+    directive_words = cells[2].split(/\s+/).length
+    abort("#{file}: strict Directive exceeds 50 words") if directive_words > 50
+    abort("#{file}: strict Updated Date mismatch") unless cells[10] == section
+    strict_contexts << cells.first
+  end
+  puts "#{file}: planning shard structure ok"
+end
+abort("todo: no strict planning rows") if strict_contexts.empty?
+abort("todo: duplicate strict Context") unless strict_contexts.uniq.length == strict_contexts.length
+RUBY
+```
+
+Before release, compare committed shard prefixes and validate the declared task row:
+
+```bash
+export PLANNING_BASE_REF="<recorded-agentic-canvas-os-base-sha>"
+export PLANNING_SHARD="todo/<utc-year-month>.md"
+export PLANNING_CONTEXT="<exact-cross-repository-task-context>"
+ruby -rdate -ropen3 -ryaml <<'RUBY'
+root = ENV.fetch("AGENTIC_CANVAS_OS_ROOT")
+base = ENV.fetch("PLANNING_BASE_REF")
+relative = ENV.fetch("PLANNING_SHARD")
+context = ENV.fetch("PLANNING_CONTEXT")
+abort("todo: unsafe planning shard") unless relative.match?(%r{\Atodo/[0-9]{4}-[0-9]{2}\.md\z})
+abort("todo: empty or unsafe Context") if context.empty? || context.include?("|")
+index_text = File.read(File.join(root, "docs", "TODO.md"))
+index_match = index_text.match(/\A---\n(.*?)\n---\n/m) or abort("TODO.md: missing frontmatter")
+index = YAML.safe_load(index_match[1], permitted_classes: [Date], aliases: true)
+active_relative = File.expand_path(index.fetch("active_shard"), File.join(root, "docs")).delete_prefix(root + "/")
+abort("todo: declared shard is not active") unless relative == active_relative
+
+listed, status = Open3.capture2("git", "-C", root, "ls-tree", "-r", "--name-only", base, "--", "todo")
+abort("todo: cannot read planning base ref") unless status.success?
+base_files = listed.lines.map(&:strip).grep(%r{\Atodo/[0-9]{4}-[0-9]{2}\.md\z})
+current_files = Dir.glob(File.join(root, "todo", "[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).map { |file| file.delete_prefix(root + "/") }
+missing = base_files - current_files
+abort("todo: deleted planning shards: #{missing.join(", ")}") unless missing.empty?
+base_files.each do |base_file|
+  prior, read_status = Open3.capture2("git", "-C", root, "show", "#{base}:#{base_file}")
+  abort("todo: cannot read #{base_file} at base") unless read_status.success?
+  now = File.binread(File.join(root, base_file))
+  abort("#{base_file}: historical bytes changed or content inserted before EOF") unless now.start_with?(prior.b)
+end
+
+path = File.join(root, relative)
+section = nil
+matches = []
+File.foreach(path) do |line|
+  section = Regexp.last_match(1) if line =~ /^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/
+  next unless line.start_with?("| ")
+  cells = line.strip.split("|", -1)[1...-1].map(&:strip)
+  next if cells.first == "Context"
+  matches << [line, section, cells] if cells.first == context
+end
+abort("todo: planning Context must occur exactly once") unless matches.length == 1
+line, section, cells = matches.first
+abort("todo: planning row must have 11 cells") unless cells.length == 11
+abort("todo: planning row has empty or placeholder cells") if cells.any? { |cell| cell.empty? || cell == "-" }
+words = cells[2].split(/\s+/).length
+abort("todo: planning Directive exceeds 50 words") if words > 50
+Date.iso8601(cells[10])
+abort("todo: planning Updated Date mismatch") unless cells[10] == section
+abort("todo: planning row predates adoption boundary") unless section >= index.fetch("adoption_date")
+if base_files.include?(relative)
+  prior = Open3.capture2("git", "-C", root, "show", "#{base}:#{relative}").first
+  abort("todo: declared planning row was not appended") if prior.lines.include?(line)
+end
+puts "planning row ok: context=#{context} directive_words=#{words}"
+RUBY
+```
+
+Expected:
+
+- `TODO.md` stays the bounded index; rows live only in monthly shards.
+- Each shard matches its filename, scope, lifecycle, UTC month, chronological ordering, and size caps.
+- Pre-adoption rows remain byte-preserved history; strict validation applies to rows at or after `2026-07-14`.
+- Every shard present at the recorded base remains an exact byte prefix; deleted, edited, reordered, or prepended history fails.
+- Release finds one new declared planning Context with 11 filled cells, a Directive of at most 50 words, and a matching Updated Date.
 
 ## Todo Log Compliance Checks
 

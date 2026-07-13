@@ -24,6 +24,7 @@ layer_contract:
   soul: "durable agent identity and voice"
   facts: "shared truth and precedence"
   memory: "persistence, routing memory, and reusable local context"
+  planning: "bounded index plus append-only cross-repository monthly shards"
   user: "bounded user preferences, communication style, and expectations"
   skills: "on-demand procedural knowledge and progressive disclosure contracts"
   agents: "agent roles, editing rules, and operational behavior"
@@ -452,6 +453,8 @@ This file does not replace system, developer, or operator instructions. It defin
 | Kanban board | `kanban.md` is the durable shared task board for named profiles and worker processes. | `/kanban.task`, `#kanban-board`, `@kanban-board`. |
 | Handoff rows | Every handoff is a row with source profile, target profile, task id, context refs, blockers, resume state, and acceptance. | `/kanban.handoff`, `#profile-handoff`, `@handoff-row`. |
 | Worker isolation | A worker is a full OS process with its own identity and proof path, not a hidden in-process subagent. | `#worker-process`, `@worker-process`, `@agent-profile`. |
+| Cross-repository planning index | `TODO.md` owns the planning schema and routing contract; `todo/YYYY-MM.md` owns append-only rows for one scope and UTC month. | `TODO.md`, `todo-log/v1`, `VALIDATION-RUNBOOK.md`. |
+| Planning shard lifecycle | Only the current monthly shard is active; closed shards are immutable, exact month or Context retrieval precedes broader search, and each shard stays below 500,000 bytes and 600 lines. | `TODO.md` lifecycle, retrieval, and size contracts. |
 | Planning ledger | `$WORKTREE/todo-log.md` is the Knowgrph authored planning-history SSOT; workflow ledgers must record its fetched base ref and the task row's unique Context value. | `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`, `VALIDATION-RUNBOOK.md`. |
 | Planning update compliance | A release requires one changed task row with the canonical 11 columns, all cells filled, one directive of at most 50 words, and `Updated Date` equal to its enclosing dated section; every non-target baseline row remains byte-for-byte unchanged. | `todo-log.md` Planning Ledger Contract and focused changed-row validation. |
 | Experience capture | Useful run traces may be summarized into typed experience records. | `/experience.capture`, `@experience`, `#learning-loop`. |
@@ -468,6 +471,7 @@ This file does not replace system, developer, or operator instructions. It defin
 |---|---|---|
 | Agent notes | `MEMORY.md` stores bounded agent notes: environment facts, project conventions, tool quirks, completed-work lessons, and reusable techniques. | `/memory.write`, `#persistent-memory`, `@memory-store`. |
 | Durable history | `memory/YYYY-MM.md` stores append-only `memory-log/v1` records; `MEMORY-LOG.md` owns the Git sync, merge, retrieval, and escalation contract. | `MEMORY-LOG.md`, `@memory-store`, `@session-index`. |
+| Planning history | `todo/YYYY-MM.md` stores append-only `todo-log/v1` rows; `TODO.md` stays bounded as the schema, routing, lifecycle, and validation owner. | `TODO.md`, `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`. |
 | User profile | `USER.md` stores bounded explicit operator preferences, communication style, and expectations. | `/user.profile`, `#user-profile`, `@user-profile`. |
 | Target separation | Agent notes and user profile are separate targets; do not mix project environment facts into `USER.md` or personal preferences into `MEMORY.md`. | `MEMORY.md`, `USER.md`. |
 | Frozen snapshot | Approved runtimes may inject memory/profile as a frozen session-start snapshot; mid-session writes persist for future sessions and tool responses, not active prompt mutation. | `#frozen-snapshot`, `@memory-snapshot`. |

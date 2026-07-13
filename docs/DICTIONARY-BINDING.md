@@ -59,6 +59,13 @@ dictionary_entries:
   - "@runtime-proof"
   - "@dev-only"
   - "@cost-log"
+  - "@video-generation-demo-script"
+  - "@provider.byteplus"
+  - "@provider.openai"
+  - "@text"
+  - "@image"
+  - "@audio"
+  - "@video"
   - "@mcp-gateway"
   - "@canvas"
   - "@selected-node"
@@ -173,6 +180,13 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@runtime-proof` | Surfaced validation evidence. | Command output, typed result, parsed field, or focused test. | Must be observable; narrative alone is not proof. |
 | `@dev-only` | Local development boundary. | Current Dev worktree. | Confirms work stops before Prod mirror and Cloudflare. |
 | `@cost-log` | Token, cache, and estimated cost ledger. | Harness observer or runtime result. | Must report exact zero for model-free views. |
+| `@video-generation-demo-script` | Authored source-script binding for the default video-agent preset. | The preset frontmatter plus its canonical workspace Markdown reference. | Source context only; it cannot contain generated artifact identities, credentials, provider job ids, or fabricated media URLs. |
+| `@provider.byteplus` | Select the existing BytePlus ModelArk generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
+| `@provider.openai` | Select the existing OpenAI generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
+| `@text` | Request a structured text artifact. | Shared text-generation and workspace-artifact owners. | The video preset requires Character, Scene, Dialogue, Visual asset, Audio, Timing, Metadata, and Prompt sheets; empty or malformed output fails terminally. |
+| `@image` | Request source-consistent image artifacts. | Shared image-generation, persistence, Media, and Canvas projection owners. | Only provider-returned and read-back-verified image identities may project; no fabricated or localhost-only URL is accepted as durable output. |
+| `@audio` | Request narration, dialogue, sound, music, subtitle-sync, and master-audio artifacts. | Shared audio/video generation, media-probe, persistence, and Timeline owners. | Languages, synchronization, media kind, persistence, and read-back identity must be typed before projection. |
+| `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
 | `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
 | `@selected-node` | Current Canvas node selection resolved through shared graph selection state. | Existing Canvas selection owner. | Missing selection returns a typed no-selection result; commands must not keep a panel-local selected-node cache. |

@@ -24,6 +24,7 @@ dictionary_links:
   command: "DICTIONARY-COMMAND.md"
   semantic: "DICTIONARY-SEMANTIC.md"
   binding: "DICTIONARY-BINDING.md"
+prompt_preset_catalog: "PROMPT-PRESETS.md"
 external_pattern_sources:
   - "https://github.com/NousResearch/hermes-agent"
   - "https://hermes-agent.nousresearch.com/docs/"
@@ -50,6 +51,7 @@ direct_resolution:
   "/soul.load": "DICTIONARY-COMMAND.md#/soul.load"
   "/personality.overlay": "DICTIONARY-COMMAND.md#/personality.overlay"
   "/moa": "DICTIONARY-COMMAND.md#/moa"
+  "/video-agent": "DICTIONARY-COMMAND.md#/video-agent"
   "/query": "DICTIONARY-COMMAND.md#/query"
   "/memory.write": "DICTIONARY-COMMAND.md#/memory.write"
   "/memory.compact": "DICTIONARY-COMMAND.md#/memory.compact"
@@ -95,6 +97,15 @@ direct_resolution:
   "#mixture-of-agents": "DICTIONARY-SEMANTIC.md##mixture-of-agents"
   "#reference-agents": "DICTIONARY-SEMANTIC.md##reference-agents"
   "#aggregator-agent": "DICTIONARY-SEMANTIC.md##aggregator-agent"
+  "#spec.low": "DICTIONARY-SEMANTIC.md##spec.low"
+  "#spec.medium": "DICTIONARY-SEMANTIC.md##spec.medium"
+  "#spec.high": "DICTIONARY-SEMANTIC.md##spec.high"
+  "#thinking.type.enabled": "DICTIONARY-SEMANTIC.md##thinking.type.enabled"
+  "#thinking.type.disabled": "DICTIONARY-SEMANTIC.md##thinking.type.disabled"
+  "#thinking.type.auto": "DICTIONARY-SEMANTIC.md##thinking.type.auto"
+  "#token-cap.low": "DICTIONARY-SEMANTIC.md##token-cap.low"
+  "#token-cap.medium": "DICTIONARY-SEMANTIC.md##token-cap.medium"
+  "#token-cap.high": "DICTIONARY-SEMANTIC.md##token-cap.high"
   "#learning-loop": "DICTIONARY-SEMANTIC.md##learning-loop"
   "#persistent-memory": "DICTIONARY-SEMANTIC.md##persistent-memory"
   "#user-profile": "DICTIONARY-SEMANTIC.md##user-profile"
@@ -148,6 +159,13 @@ direct_resolution:
   "@moa-preset": "DICTIONARY-BINDING.md#@moa-preset"
   "@reference-agents": "DICTIONARY-BINDING.md#@reference-agents"
   "@aggregator-agent": "DICTIONARY-BINDING.md#@aggregator-agent"
+  "@video-generation-demo-script": "DICTIONARY-BINDING.md#@video-generation-demo-script"
+  "@provider.byteplus": "DICTIONARY-BINDING.md#@provider.byteplus"
+  "@provider.openai": "DICTIONARY-BINDING.md#@provider.openai"
+  "@text": "DICTIONARY-BINDING.md#@text"
+  "@image": "DICTIONARY-BINDING.md#@image"
+  "@audio": "DICTIONARY-BINDING.md#@audio"
+  "@video": "DICTIONARY-BINDING.md#@video"
   "@experience": "DICTIONARY-BINDING.md#@experience"
   "@memory-store": "DICTIONARY-BINDING.md#@memory-store"
   "@memory-entry": "DICTIONARY-BINDING.md#@memory-entry"
@@ -201,9 +219,9 @@ direct_resolution:
   "@source.frontmatter": "DICTIONARY-BINDING.md#@source.frontmatter"
   "@runtime-proof": "DICTIONARY-BINDING.md#@runtime-proof"
 truth_tokens:
-  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
-  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
-  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
+  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
+  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#spec.low", "#spec.medium", "#spec.high", "#thinking.type.enabled", "#thinking.type.disabled", "#thinking.type.auto", "#token-cap.low", "#token-cap.medium", "#token-cap.high", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
+  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
 ---
 
 # Agentic OS Facts

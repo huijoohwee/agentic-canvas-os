@@ -11,6 +11,7 @@ source_docs:
   - "SOUL.md"
   - "USER.md"
   - "FACTS.md"
+  - "TODO.md"
   - "$GITHUB_ROOT/huijoohwee/docs/knowgrph-strybldr-starter-template.md"
   - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-guidelines.md"
 implementation_contract: "FACTS.md owns shared truth; MEMORY.md persists bounded agent notes; USER.md persists bounded explicit operator profile; frontmatter and authored Markdown body are SSOT"
@@ -97,6 +98,13 @@ agentic_os_memory:
     semantics: ["#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search"]
     bindings: ["@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index"]
     guards: ["bounded stores", "frozen session snapshot", "scan before write", "capacity error before overflow", "explicit user profile only", "no silent auto-compact", "no deploy"]
+  planning_history:
+    index: "TODO.md"
+    shard_pattern: "../todo/YYYY-MM.md"
+    active_shard: "../todo/2026-07.md"
+    schema: "todo-log/v1"
+    scope: "cross-repository"
+    guards: ["append-only", "closed-month immutability", "exact-first retrieval", "500000-byte cap", "599-line cap", "no deploy"]
   skill_system:
     source_policy: "external-pattern-reference-only; forbid copied skills, code, examples, tests, prompt text, layouts, and prose"
     commands: ["/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/skill.propose", "/skill.evolve"]
@@ -170,7 +178,7 @@ flow:
       lane: {key: lane, type: string, value: "Source"}
       position: {key: position, type: object, value: {"x":0,"y":0}}
       handles: {key: handles, type: object, value: {"source":["frontmatter_contract"]}}
-      sources: {key: sources, type: array, value: ["FACTS.md","SOUL.md","MEMORY.md","USER.md","SKILLS.md","DICTIONARY-COMMAND.md","DICTIONARY-SEMANTIC.md","DICTIONARY-BINDING.md"]}
+      sources: {key: sources, type: array, value: ["FACTS.md","SOUL.md","MEMORY.md","TODO.md","USER.md","SKILLS.md","DICTIONARY-COMMAND.md","DICTIONARY-SEMANTIC.md","DICTIONARY-BINDING.md"]}
       "flow:portTypes": {key: "flow:portTypes", type: object, value: {"out":{"frontmatter_contract":"agentic_os_source_signal"}}}
       "frontmatter:primitive": {key: "frontmatter:primitive", type: string, value: "node"}
       "kgc:readingSummary": {key: "kgc:readingSummary", type: string, value: "Source docs own Agentic OS frontmatter, layer contracts, and deploy boundaries."}
@@ -293,6 +301,7 @@ The file is spec-complete when its frontmatter can be parsed as the source of tr
 | `SOUL.md` | Durable agent identity and voice | Identity, style, and communication defaults stay separate from project operations and memory persistence. |
 | `USER.md` | Explicit operator preferences, communication style, and expectations | Save only explicit, non-secret, bounded profile entries; reject unsupported personal inference. |
 | `FACTS.md` | Shared truth and precedence | Facts override stale local memory; update the fact source instead of layering aliases. |
+| `TODO.md` | Cross-repository planning index and shard contract | Keep the index bounded; load or append only the exact `todo/YYYY-MM.md` shard in scope. |
 | Strybldr starter frontmatter | Runtime routing, renderer defaults, local-first publish gate | Frontmatter and authored source payloads own data; renderers project view state only. |
 | Strybldr starter body | Operator workflow and acceptance checklist | Live provider fields, generated media URLs, transcripts, provider IDs, and deploy claims stay empty until returned by an approved live run. |
 | PRD/TAD guidelines | Universal document and architecture contract | Requirements must stay neutral, modular, traceable, VCC-backed, TCO-aware, token-aware, and FOSS-first. |
@@ -380,6 +389,10 @@ Context references are per-message attachments, not durable memory or project co
 ## Persistent Memory Stores
 
 Persistent memory is bounded and curated. It is not a raw transcript dump, auto-compactor, secret store, or personal inference engine.
+
+Durable cross-device history lives in append-only `../memory/YYYY-MM.md` shards under the `MEMORY-LOG.md` contract. This document remains the bounded routing and runtime-readiness seed; selected shard entries are retrieved before context assembly instead of expanding this always-loaded source.
+
+Cross-repository planning history follows the same bounded-loading principle through `TODO.md` and append-only `../todo/YYYY-MM.md` shards. Planning rows stay outside this memory seed and are retrieved by exact scope, month, or Context.
 
 | Target | Source | Stores | Limit | Rejects |
 |---|---|---|---:|---|

@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Skills"
 graphId: "md:knowgrph-agentic-canvas-os-skills"
 doc_type: "Skill Contract Catalog"
-date: "2026-07-08"
+date: "2026-07-13"
 lang: "en-US"
 schema: "agentic-canvas-os-skills/v1"
 frontmatter_contract: "required"
@@ -81,7 +81,7 @@ skill_contracts:
   - "human.review"
   - "stream.trace"
   - "superagent.run"
-skill_variants: ["agent.moa", "agent.research", "agent.video", "agent.care", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
+skill_variants: ["agent.moa", "agent.investment-research", "agent.sme-care", "agent.video", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
 kgCanvasSurfaceMode: "2d"
 kgCanvasRenderMode: "2d"
 kgCanvas2dRenderer: "storyboard"
@@ -463,15 +463,17 @@ FloatingPanel Chat may expose `/` suggestions for source-backed skill variants. 
 | Variant | Invocation | Intent | Required bindings | Harness requirements | Status |
 |---|---|---|---|---|---|
 | `agent.moa` | `/moa-agent` | Run bounded multi-agent deliberation where references advise and one aggregator acts. | `@operator`, `@moa-preset`, `@reference-agents`, `@aggregator-agent`, `@cost-log`, `@runtime-proof` | Local preset resolution, no-tool reference calls, private advisory context, aggregator-owned tool gates, no recursive MoA, cost log, usage fallback. | Spec-complete |
-| `agent.research` | `/research-agent` | Source-backed research, synthesis, citation triage, and evidence packet generation. | `@operator`, `@source.body`, `@runtime-proof` | Typed query, source allowlist, evidence ledger, cost log, max iteration, unsupported-source fallback. | Spec-complete |
-| `agent.video` | `/video-agent` | Storyboard, media planning, render handoff, and approval-gated video workflow. | `@operator`, `@local-harness`, `@cost-log`, `@runtime-proof` | Typed brief, asset manifest, render approval gate, zero-spend dry-run path, generated-artifact boundary. | Spec-complete |
-| `agent.care` | `/care-agent` | Care workflow support with provenance, safety boundaries, escalation, and non-diagnostic output. | `@operator`, `@source.frontmatter`, `@source.body`, `@runtime-proof` | Typed intake, safety classifier, escalation result, no-medical-diagnosis boundary, audit trail, cost log. | Spec-complete |
+| `agent.investment-research` | `/investment-research-agent` | Source-backed investment research, synthesis, claim and contradiction ledgers, citation triage, and review-first graph candidates. | `@operator`, `@source.body`, `@runtime-proof` | `agent.investment-research` definition, typed query, source allowlist, evidence ledger, graph-review gate, cost log, max iteration, unsupported-source fallback. | Runtime-ready |
+| `agent.sme-care` | `/sme-care-agent` | SME protection-gap support across cyber, supply-chain, asset, and growth-stage change with explicit unknowns and adviser handoff. | `@operator`, `@source.frontmatter`, `@source.body`, `@runtime-proof` | `agent.sme-care` definition, typed intake, coverage graph, urgency-confidence separation, review-before-bind boundary, audit trail, cost log. | Runtime-ready |
+| `agent.video` | `/video-agent` | Storyboard, media planning, render handoff, and approval-gated video workflow. | `@operator`, `@local-harness`, `@cost-log`, `@runtime-proof` | `agent.video` definition, typed brief, asset manifest, render approval gate, zero-spend dry-run path, generated-artifact boundary. | Runtime-ready |
 | `agent.docs` | `/docs-agent` | Normalize source docs, PRD/TAD sections, API references, and schema maps after approved source changes. | `@operator`, `@source.frontmatter`, `@source.body`, `@dev-only` | Frontmatter parser, doc diff plan, stale-content detector, focused validation list, no generated-runtime backfill. | Spec-complete |
 | `agent.code` | `/code-agent` | Execute bounded implementation tasks against shared owners with focused tests and no downstream patch masking. | `@operator`, `@local-harness`, `@runtime-proof`, `@dev-only` | Typed task spec, touched-owner plan, command ledger, failure fallback, line-count and hygiene guards. | Spec-complete |
 | `agent.cost` | `/cost-agent` | Analyze TCO, token economics, cache posture, latency, and FOSS alternatives before spend or dependency adoption. | `@operator`, `@cost-log`, `@source.body` | Cost schema, budget decision, dependency alternatives, zero-cost read mode, budget-breach blocker. | Spec-complete |
 | `agent.learning` | `/learning-agent` | Capture experience, search scoped memory, propose skill changes, and reflect stable identity facts. | `@operator`, `@experience`, `@memory-store`, `@skill-catalog`, `@identity-model` | Typed learning-loop stage, source citations, no-copy guard, proposal-only mutation, cost log, max iteration. | Spec-complete |
 | `agent.orchestrator` | `/orchestrator-agent` | Define and validate long-running stateful agent graphs, checkpoints, human review, and traces. | `@operator`, `@orchestration-graph`, `@state-store`, `@checkpoint-store`, `@human-review`, `@runtime-proof` | Typed graph state, node and edge contract, compile checks, checkpoint/resume, review gate, stream trace, no-copy guard. | Spec-complete |
 | `flow.computing` | `/computing-flow` | Produce or validate a KGC computing-flow document for source-backed DAG execution and Canvas projection. | `@operator`, `@source.frontmatter`, `@local-harness`, `@runtime-proof` | `kgc-computing-flow/v1` schema, typed KTV inputs, explicit handles, bounded DAG feedback, KGC validation. | Spec-complete |
+
+The `/<agent-domain>-agent` form is a naming convention, not an executable wildcard. Each token must resolve to exactly one registered `agent.<agent-domain>` definition; `/research-agent`, `/care-agent`, and unknown `/*-agent` forms fail as unsupported variants rather than acting as compatibility aliases. Knowgrph owns the reusable execution registry and kernel; this catalog owns only invocation authority and routing semantics.
 
 ## FloatingPanel Chat Action Recommendation
 

@@ -12,6 +12,14 @@ runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "source-backed facts and invocation definitions only; no separate parser, command runner, memory store, provider panel, or deploy claim"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_proof: "RUNTIME-PROOF.md"
+source_revision_contract:
+  canonical_repository: "$GITHUB_ROOT/agentic-canvas-os"
+  canonical_docs_root: "$GITHUB_ROOT/agentic-canvas-os/docs"
+  canonical_ref: "origin/main"
+  consumer_repository: "$GITHUB_ROOT/knowgrph"
+  runtime_guard: "$GITHUB_ROOT/knowgrph/scripts/dev-source-consistency.mjs"
+  canonical_rule: "every normal local Dev port requires a clean canonical repository whose HEAD equals fetched origin/main"
+  task_rule: "Knowgrph task mode never relaxes the Agentic Canvas OS docs revision"
 layer_contract:
   soul: "durable agent identity and voice"
   facts: "shared truth and precedence"
@@ -253,6 +261,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | User profile | `USER.md` persists explicit operator preferences, communication style, and expectations separately from agent notes. | `USER.md` frontmatter and body. |
 | Roles | `AGENTS.md` governs how agents edit and validate this folder. | `AGENTS.md` scope and validation sections. |
 | Invocation grammar | `/`, `#`, and `@` tokens resolve through dictionary files, not prose-only UI labels. | `DICTIONARY-COMMAND.md`, `DICTIONARY-SEMANTIC.md`, `DICTIONARY-BINDING.md`. |
+| Canonical docs revision | Every normal Knowgrph Dev port consumes `$GITHUB_ROOT/agentic-canvas-os/docs` from one clean local checkout whose `HEAD` equals fetched `origin/main`. Port numbers and Knowgrph task mode cannot select or relax that revision. | `source_revision_contract` above and the Knowgrph runtime guard named there. |
 | Primary identity inspiration | External SOUL systems are pattern references only. This repo may adopt a neutral durable identity contract that occupies prompt slot 1 when an approved runtime assembles prompts. | Official Hermes Agent SOUL docs listed in frontmatter. |
 | Runtime status | `runtime-ready` requires surfaced proof; prose alone cannot promote external runtime claims. | `RUNTIME-READINESS.md` and `VALIDATION-RUNBOOK.md`. |
 | Deployment boundary | Dev, Prod mirror, and Cloudflare are separate. Prod and Cloudflare stay forbidden until explicit operator instruction. | `MEMORY.md`, `AGENTS.md`, `RUNTIME-READINESS.md`. |

@@ -19,6 +19,7 @@ invocation:
 workspace:
   root: "$GITHUB_ROOT"
   invocation_ssot: "$GITHUB_ROOT/agentic-canvas-os/docs"
+  invocation_ssot_ref: "origin/main"
   dev: "$GITHUB_ROOT/knowgrph"
   prod_mirror: "$GITHUB_ROOT/huijoohwee/content/knowgrph"
   dev_commands: ["npm run dev:apex", "npm run dev"]
@@ -36,6 +37,7 @@ coordination:
 stage_order: ["discover", "fetch", "inspect", "claim", "isolate", "verify", "start"]
 completion_requires:
   - "fetched remote refs"
+  - "clean canonical Agentic Canvas OS checkout at fetched origin/main"
   - "clean source checkout"
   - "unique semantic-scope ownership"
   - "fresh isolated worktree from origin/main"
@@ -59,7 +61,7 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Context | Runtime-ready rule |
 |---|---|
 | Operating model | Operator-led, AI-native startup using typed harnesses and bounded orchestration. Optimize minimum-viable maximum-value, time-to-value, ROI, TCO, and token/cache economics. Prefer FOSS, local, zero-egress, and zero-spend paths when capability is equivalent. |
-| Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` is the global, centralized, frontmatter-first SSOT. `/`, `#`, and `@` resolve only through its three dictionaries and their shared runtime projection. Do not copy invocation catalogs downstream. |
+| Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` is the global, centralized, frontmatter-first SSOT. Its canonical checkout must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts; Knowgrph task mode does not relax this dependency. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. Do not copy invocation catalogs downstream. |
 | Dev | Author and run Knowgrph only in the isolated `$WORKTREE`, derived from `$GITHUB_ROOT/knowgrph`. Use `npm run dev:apex` and `npm run dev` through repository-owned scripts. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Mutation is forbidden until the operator explicitly requests promotion or release. |
 | Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Deployment is forbidden until the operator explicitly requests it. |
@@ -127,7 +129,9 @@ Resolve `$GITHUB_ROOT` from the canonical checkout rather than a user-specific p
 
 ```sh
 export GITHUB_ROOT="$(cd "$(git -C agentic-canvas-os rev-parse --show-toplevel)/.." && pwd)"
+export AGENTIC_CANVAS_OS_ROOT="$GITHUB_ROOT/agentic-canvas-os"
 export KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
+git -C "$AGENTIC_CANVAS_OS_ROOT" worktree list --porcelain
 git -C "$KNOWGRPH_ROOT" worktree list --porcelain
 ```
 
@@ -136,6 +140,7 @@ git -C "$KNOWGRPH_ROOT" worktree list --porcelain
 Refresh remote refs before starting Codex or editing files.
 
 ```sh
+git -C "$AGENTIC_CANVAS_OS_ROOT" fetch --prune origin
 git -C "$KNOWGRPH_ROOT" fetch --prune origin
 ```
 
@@ -146,13 +151,16 @@ Fetch failure blocks startup. Do not build from assumed-current refs or compensa
 Inspect the source checkout, branch tracking, divergence, worktrees, and open semantic-scope ownership.
 
 ```sh
+git -C "$AGENTIC_CANVAS_OS_ROOT" status --short --branch
+git -C "$AGENTIC_CANVAS_OS_ROOT" rev-parse HEAD
+git -C "$AGENTIC_CANVAS_OS_ROOT" rev-parse origin/main
 git -C "$KNOWGRPH_ROOT" status --short --branch
 git -C "$KNOWGRPH_ROOT" branch --verbose --verbose
 git -C "$KNOWGRPH_ROOT" worktree list
 git -C "$KNOWGRPH_ROOT" rev-parse origin/main
 ```
 
-Stop when source dirt is unexplained, `origin/main` is unavailable, or another active branch or pull request owns the same semantic scope.
+Stop when either canonical source has unexplained dirt, either `origin/main` is unavailable, Agentic Canvas OS `HEAD` differs from its fetched `origin/main`, or another active branch or pull request owns the same semantic scope.
 
 ### 4. Claim
 
@@ -217,6 +225,6 @@ Stop before build mutation when fetch fails, source dirt is unexplained, branch 
 
 ## Completion VCC
 
-Given a declared device and semantic scope, when `/session.start` completes, then remote refs are fetched, ownership is unique, a clean isolated worktree exists on `agent/<device>/<semantic-scope>` from the fetched `origin/main`, and Codex starts only inside that lane.
+Given a declared device and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, the canonical Agentic Canvas OS checkout is clean and exactly equal to fetched `origin/main`, ownership is unique, a clean Knowgrph worktree exists on `agent/<device>/<semantic-scope>` from its fetched `origin/main`, and Codex starts only inside that lane.
 
-VCC: verify the fetch exits zero, the source checkout remains unchanged, the new worktree is clean, its `HEAD` equals the recorded `origin/main` base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.
+VCC: verify both fetches exit zero, Agentic Canvas OS is clean with `HEAD` equal to its fetched `origin/main`, the Knowgrph source checkout remains unchanged, the new worktree is clean with `HEAD` equal to its recorded `origin/main` base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.

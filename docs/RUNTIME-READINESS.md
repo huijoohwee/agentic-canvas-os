@@ -108,7 +108,7 @@ Runtime-ready means the claim can be proven from surfaced output. This file mark
 
 ## External Runtime Gates
 
-These capabilities remain outside the docs-only runtime-ready claim. Promote them only after current focused proof from `/Users/huijoohwee/Documents/GitHub/knowgrph` or an explicitly approved deploy lane.
+These capabilities remain outside the docs-only runtime-ready claim. Promote them only after current focused proof from `$KNOWGRPH_ROOT` or an explicitly approved deploy lane.
 
 | Capability | Required proof | Status |
 |---|---|---|

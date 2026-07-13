@@ -8,12 +8,12 @@ schema: "agent-sandbox-runtime-contract/v1"
 frontmatter_contract: "required"
 status: "runtime-ready-preflight"
 authority: "source contract for native agent sandbox policy validation and authorization"
-runtime_policy_source: "/Users/huijoohwee/Documents/GitHub/knowgrph/config/agent-sandbox-policy.yaml"
-runtime_owner: "/Users/huijoohwee/Documents/GitHub/knowgrph/mcp/agent-sandbox-policy-runtime.js"
+runtime_policy_source: "$KNOWGRPH_ROOT/config/agent-sandbox-policy.yaml"
+runtime_owner: "$KNOWGRPH_ROOT/mcp/agent-sandbox-policy-runtime.js"
 external_pattern_source: "https://github.com/NVIDIA/openshell"
 external_source_policy: "architecture reference only; forbid copied code, schemas, skills, fixtures, prose, runtime dependency, or compatibility aliases"
 publish_policy: "Dev-only until explicit operator approval"
-runtime_proof: "/Users/huijoohwee/Documents/GitHub/knowgrph/mcp/__tests__/agent-sandbox-policy-runtime.test.mjs"
+runtime_proof: "$KNOWGRPH_ROOT/mcp/__tests__/agent-sandbox-policy-runtime.test.mjs"
 invocations:
   commands: ["/sandbox.policy.validate", "/sandbox.policy.authorize"]
   semantics: ["#agent-sandbox-policy", "#sandboxed-workspace"]

@@ -291,6 +291,7 @@ binding:
 |---|---|
 | `/memory.seed #frontmatter @source.frontmatter @source.body` | Build memory from authored source. |
 | `/runtime-ready.check #harness @local-harness @runtime-proof` | Prove runtime status locally. |
+| `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |

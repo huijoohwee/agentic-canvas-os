@@ -22,6 +22,7 @@ source_docs:
   - "DICTIONARY-COMMAND.md"
   - "DICTIONARY-SEMANTIC.md"
   - "DICTIONARY-BINDING.md"
+  - "RELEASE-WORKFLOW.md"
 ---
 
 # Agent Instructions
@@ -66,8 +67,9 @@ Use existing shared utilities for invocation content:
 
 ## Operating Defaults
 
-- Work Dev-first. The Dev repo is `/Users/huijoohwee/Documents/GitHub/knowgrph`.
-- Treat `/Users/huijoohwee/Documents/GitHub/huijoohwee/content/knowgrph` as a Prod mirror, not a default edit target.
+- Resolve `GITHUB_ROOT` as the parent directory of the `agentic-canvas-os` checkout; never encode a user-specific absolute path in this control surface.
+- Work Dev-first in `$GITHUB_ROOT/knowgrph`.
+- Treat `$GITHUB_ROOT/huijoohwee/content/knowgrph` as a Prod mirror, not a default edit target.
 - Treat `airvio.co` and `airvio.co/knowgrph` as Cloudflare deployment targets, not completion criteria.
 - Forbid Prod or Cloudflare deploy until the operator explicitly authorizes it.
 - Prefer FOSS, zero-egress, local, and dry-run paths until ROI, TCO, token budget, and approval gates justify live spend.

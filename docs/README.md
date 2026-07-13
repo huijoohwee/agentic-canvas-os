@@ -43,6 +43,7 @@ This folder is the local documentation control surface for making `knowgrph` a r
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |
 | `MCP-GATEWAY.md` | MCP federation contract | Discovery-first gateway rules across local, Pages, browser, and control-plane surfaces. |
 | `VALIDATION-RUNBOOK.md` | Focused proof lane | Commands and checks for documentation, local runtime, and deploy guards. |
+| `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, unique ownership, fresh isolated worktree creation, conditional pull, and exact-SHA startup proof. |
 | `RELEASE-WORKFLOW.md` | Runtime-ready release contract | Conflict-safe Dev integration, Prod promotion, Cloudflare deployment, production verification, and evidence reporting. |
 
 ## Runtime Position

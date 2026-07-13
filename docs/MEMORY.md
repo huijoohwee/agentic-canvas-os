@@ -11,8 +11,8 @@ source_docs:
   - "SOUL.md"
   - "USER.md"
   - "FACTS.md"
-  - "/Users/huijoohwee/Documents/GitHub/huijoohwee/docs/knowgrph-strybldr-starter-template.md"
-  - "/Users/huijoohwee/Documents/GitHub/huijoohwee.github.io/guidelines/prd-tad-guidelines.md"
+  - "$GITHUB_ROOT/huijoohwee/docs/knowgrph-strybldr-starter-template.md"
+  - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-guidelines.md"
 implementation_contract: "FACTS.md owns shared truth; MEMORY.md persists bounded agent notes; USER.md persists bounded explicit operator profile; frontmatter and authored Markdown body are SSOT"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
 runtime_scope: "Agentic Canvas OS docs control surface"
@@ -35,8 +35,8 @@ agentic_os_memory:
   owner: "operator"
   default_scope: "local-dev"
   deployment_boundaries:
-    dev: "/Users/huijoohwee/Documents/GitHub/knowgrph"
-    prod_mirror: "/Users/huijoohwee/Documents/GitHub/huijoohwee/content/knowgrph"
+    dev: "$KNOWGRPH_ROOT"
+    prod_mirror: "$PROD_MIRROR_ROOT"
     cloudflare_routes: ["airvio.co", "airvio.co/knowgrph"]
     deploy_gate: "forbid Prod and Cloudflare deploy until explicit operator instruction"
   invocation_prefixes:
@@ -299,8 +299,8 @@ The file is spec-complete when its frontmatter can be parsed as the source of tr
 
 ## Operating Defaults
 
-- Work Dev-first in `/Users/huijoohwee/Documents/GitHub/knowgrph`.
-- Treat `/Users/huijoohwee/Documents/GitHub/huijoohwee/content/knowgrph` as a Prod mirror, not a working default.
+- Work Dev-first in `$KNOWGRPH_ROOT`.
+- Treat `$PROD_MIRROR_ROOT` as a Prod mirror, not a working default.
 - Treat `airvio.co` and `airvio.co/knowgrph` as Cloudflare deployment targets, not completion criteria.
 - Forbid Prod or Cloudflare deploy unless the operator explicitly opens that gate.
 - Prefer FOSS, zero-egress, local, and dry-run paths until ROI, TCO, token budget, and approval gates justify live spend.

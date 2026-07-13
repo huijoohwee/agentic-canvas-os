@@ -16,6 +16,7 @@ source_docs:
   - "HARNESS-CONTRACTS.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
+  - "RELEASE-WORKFLOW.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared slash invocation utilities; no separate command runtime"
@@ -89,6 +90,7 @@ dictionary_entries:
   - "/sandbox.policy.authorize"
   - "/prd-tad.create"
   - "/runtime-ready.check"
+  - "/release.complete"
   - "/deploy.guard"
   - "/harness.define"
   - "/mcp.capabilities"
@@ -190,6 +192,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/sandbox.policy.authorize` | Return one fail-closed preflight decision for a filesystem, process, network, or credential operation. | `@sandbox-policy`, `@sandbox-workspace`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#vcc` | Decision, reason code, matched rule where applicable, redacted audit metadata, and enforcement status are returned without execution. |
 | `/prd-tad.create` | Produce or refresh a combined PRD/TAD from validated problem and architecture context. | `@operator`, `@source.body` | `#tco`, `#ttv`, `#vcc`, `#foss` | PRD/TAD includes personas, MoSCoW, topology, harness, ADR, and VCC sections. |
 | `/runtime-ready.check` | Verify whether a spec-complete artifact is runnable. | `@local-harness`, `@runtime-proof` | `#harness`, `#vcc`, `#runtime-ready` | Focused checks exit 0 and cost/deploy boundaries are surfaced. |
+| `/release.complete` | Execute the bounded Knowgrph Dev-to-Prod-to-Cloudflare release workflow. | `@operator`, `@source.frontmatter`, `@runtime-proof` | `#runtime-ready`, `#multi-agent-collaboration`, `#vcc` | Unique ownership, protected integration, mirror parity, deployment evidence, and both production-route probes pass for one promoted SHA. |
 | `/deploy.guard` | Stop accidental Prod mirror or Cloudflare mutation. | `@operator`, `@dev-only` | `#no-deploy`, `#approval-gate` | Output states Dev-only status and no Prod/Cloudflare mutation occurred. |
 | `/harness.define` | Define typed input, output, fallback, cost, and bounds for an AI-capable component. | `@local-harness`, `@cost-log` | `#harness`, `#token-economics`, `#vcc` | Harness contract includes schemas, cost fields, fallback paths, and max iteration. |
 | `/mcp.capabilities` | Discover tool capabilities through the existing MCP gateway contract. | `@mcp-gateway`, `@local-harness` | `#mcp`, `#runtime-ready`, `#cost` | Capability list is deduplicated and discovery reports zero model spend. |

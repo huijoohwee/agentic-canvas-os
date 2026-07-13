@@ -117,6 +117,7 @@ direct_resolution:
   "#profile-handoff": "DICTIONARY-SEMANTIC.md##profile-handoff"
   "#worker-process": "DICTIONARY-SEMANTIC.md##worker-process"
   "#multi-agent-collaboration": "DICTIONARY-SEMANTIC.md##multi-agent-collaboration"
+  "#runtime-ready": "DICTIONARY-SEMANTIC.md##runtime-ready"
   "#tool-gateway": "DICTIONARY-SEMANTIC.md##tool-gateway"
   "#tool-routing": "DICTIONARY-SEMANTIC.md##tool-routing"
   "#web-search": "DICTIONARY-SEMANTIC.md##web-search"
@@ -196,6 +197,9 @@ direct_resolution:
   "@sandbox-workspace": "DICTIONARY-BINDING.md#@sandbox-workspace"
   "@sandbox-policy": "DICTIONARY-BINDING.md#@sandbox-policy"
   "@message-gateway": "DICTIONARY-BINDING.md#@message-gateway"
+  "@operator": "DICTIONARY-BINDING.md#@operator"
+  "@source.frontmatter": "DICTIONARY-BINDING.md#@source.frontmatter"
+  "@runtime-proof": "DICTIONARY-BINDING.md#@runtime-proof"
 truth_tokens:
   commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
   semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]

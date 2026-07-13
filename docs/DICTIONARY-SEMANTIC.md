@@ -55,6 +55,15 @@ dictionary_entries:
   - "#frontmatter"
   - "#harness"
   - "#token-economics"
+  - "#spec.low"
+  - "#spec.medium"
+  - "#spec.high"
+  - "#thinking.type.enabled"
+  - "#thinking.type.disabled"
+  - "#thinking.type.auto"
+  - "#token-cap.low"
+  - "#token-cap.medium"
+  - "#token-cap.high"
   - "#tco"
   - "#vcc"
   - "#no-hardcode"
@@ -166,6 +175,15 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#frontmatter` | YAML frontmatter identity, routing, render flags, and gates. | A document or source needs parse-first SSOT behavior. | Frontmatter parse succeeds without repair-only fallback. |
 | `#harness` | Typed AI or tool execution contract. | A capability invokes a model, tool, workflow, or bounded agent. | Input schema, output schema, fallback, cost log, and bounds are present. |
 | `#token-economics` | Prompt, completion, cache, latency, and spend performance. | A workflow can spend tokens or repeat calls. | Cost fields include model, token counts, cache hits, and estimated cost. |
+| `#spec.low` | Cost-bounded generation specification. | A video-agent request prefers the minimum viable generation quality and breadth. | The invocation resolves exactly one specification, reports `low`, and keeps provider spend and artifact scope bounded. |
+| `#spec.medium` | Balanced generation specification. | A video-agent request needs more fidelity or coverage than the low profile. | The invocation resolves exactly one specification, reports `medium`, and applies the provider-neutral balanced profile. |
+| `#spec.high` | Highest configured generation specification. | An approved video-agent request prioritizes maximum configured fidelity. | The invocation resolves exactly one specification, reports `high`, and blocks before spend when capability or budget cannot satisfy it. |
+| `#thinking.type.enabled` | Always enable supported model reasoning for this invocation. | A model-bearing stage requires deliberate reasoning before its visible result. | The provider request carries `thinking.type: enabled`; unsupported models or endpoints fail closed instead of silently disabling it. |
+| `#thinking.type.disabled` | Disable model reasoning for this invocation. | A direct-answer stage explicitly prefers latency and visible-output budget over reasoning. | The provider request carries `thinking.type: disabled` and does not send incompatible non-minimal reasoning effort. |
+| `#thinking.type.auto` | Let a supported model decide whether reasoning is needed. | The operator prefers adaptive depth rather than always-on or always-off reasoning. | The provider request carries `thinking.type: auto`; unsupported models or endpoints return a typed capability gap. |
+| `#token-cap.low` | Low video-agent reasoning and total completion budget profile. | An invocation prioritizes cost and latency. | Runtime maps the profile to `reasoning_effort: low` and `max_completion_tokens: 4096`, or blocks when the selected model supports less. |
+| `#token-cap.medium` | Balanced video-agent reasoning and total completion budget profile; default for the source-backed demo preset. | An invocation needs the complete structured package at a bounded default budget. | Runtime maps the profile to `reasoning_effort: medium` and `max_completion_tokens: 16384`, or blocks when the selected model supports less. |
+| `#token-cap.high` | High video-agent reasoning and total completion budget profile. | An explicitly approved invocation needs maximum configured planning depth or output breadth. | Runtime maps the profile to `reasoning_effort: high` and `max_completion_tokens: 32768`, or blocks when entitlement, model capability, or budget is insufficient. |
 | `#tco` | Total cost of ownership and deployment-model comparison. | A dependency, provider, cloud service, or new runtime path is proposed. | FOSS or existing-owner alternative and 12-month cost assumption are named. |
 | `#vcc` | Verifiable completion conditions. | A claim needs measurable done criteria. | Given-When-Then and VCC text name observable output and a bounded check. |
 | `#no-hardcode` | Hardcoded URLs, credentials, provider IDs, generated assets, or fixtures. | A source risks stale or operator-specific data. | Embedded artifact is removed or replaced with neutral source-owned reference. |

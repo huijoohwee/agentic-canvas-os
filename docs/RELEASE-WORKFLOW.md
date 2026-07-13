@@ -22,7 +22,7 @@ workspace:
   dev: "$GITHUB_ROOT/knowgrph"
   prod_mirror: "$GITHUB_ROOT/huijoohwee/content/knowgrph"
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
-stage_order: ["preflight", "reconcile", "ssot", "validate", "integrate", "promote", "deploy", "verify", "report"]
+stage_order: ["preflight", "reconcile", "ssot", "memory", "todo", "validate", "integrate", "promote", "deploy", "verify", "report"]
 coordination:
   branch_pattern: "agent/<device>/<semantic-scope>"
   one_active_writer: true
@@ -36,6 +36,8 @@ completion_requires:
   - "unique semantic-scope ownership"
   - "all required gates pass"
   - "one invocation grammar SSOT"
+  - "append-only memory-log compliance"
+  - "changed todo-log task-row compliance"
   - "protected integration"
   - "Prod mirrors the promoted Dev SHA"
   - "both production routes return verified evidence"
@@ -53,7 +55,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 | Contract | Required fields |
 |---|---|
-| Input | Operator approval, device identity, semantic scope, task branch, base branch, base SHA, Dev repository, Prod mirror, production routes. |
+| Input | Operator approval, device identity, semantic scope, task branch, base branch, base SHA, memory base ref, todo base ref, todo context, Dev repository, Prod mirror, production routes. |
 | Output | Reconciliation ledger, validation ledger, Dev commits and merge SHA, promoted SHA, mirror parity proof, deployment identifiers, production verification, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
@@ -68,12 +70,14 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 - Hand off only after the sender stops and pushes an exact commit SHA.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
+- Treat `memory/YYYY-MM.md` as append-only evidence: validate its hybrid format and compare historical bytes with the recorded Agentic Canvas OS memory base ref before integration.
+- Require one changed `$WORKTREE/todo-log.md` row matching the declared `todo_context`; validate that row against its source-owned planning-ledger contract before integration.
 
 ## Stage Contract
 
 ### 1. Preflight
 
-Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, current base SHA, current Dev SHA, current Prod SHA, and ownership conflicts.
+Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, todo base ref, todo context, current base SHA, current Dev SHA, current Prod SHA, and ownership conflicts.
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another device is writing the same branch.
 
@@ -89,35 +93,49 @@ Confirm `agentic-canvas-os` is the expected Git checkout and its required facts 
 
 Remove duplicate owners; do not edit generated Prod assets directly.
 
-### 4. Validate Dev
+### 4. Verify Memory Log Compliance
+
+Run both commands under `Memory Log Compliance Checks` in `VALIDATION-RUNBOOK.md`. The structural command must validate every current shard. Set `MEMORY_BASE_REF` to the exact Agentic Canvas OS base SHA recorded at session start; the append-only comparison must prove that every shard present at that base remains byte-for-byte unchanged as a prefix of the current file.
+
+New monthly shards are permitted only when their complete frontmatter and first `## @mem-YYYYMMDDTHHmmssZ` UTC sigil entry validate. Existing shard deletion, rename, frontmatter edits, entry edits, reordering, compaction, insertion before EOF, local-time or minute-only sigils, table conversion, pure-YAML conversion, bolded sigils, or incomplete appended entries block release before Dev integration.
+
+When a prior fact is wrong or obsolete, restore the prior bytes and append a new record that cites or supersedes the earlier decision. Never repair compliance by rewriting history.
+
+### 5. Verify Todo Log Update Compliance
+
+Set `TODO_LOG_PATH`, `TODO_BASE_REF`, and `TODO_CONTEXT` from the startup declaration, then run the release command under `Todo Log Compliance Checks` in `VALIDATION-RUNBOOK.md`.
+
+The gate revalidates the planning-ledger frontmatter and table contract, requires the declared Context exactly once, and proves its row is new or changed from the fetched baseline. The row must contain the canonical 11 non-empty cells, a Directive of at most 50 words, a valid `Updated Date` matching its dated section, and a Module cell naming `todo-log.md`. Every non-target baseline row must remain byte-for-byte unchanged. Rewriting or deleting historical rows, omitting the task row, reusing an unchanged baseline row, adding duplicate Context rows, or leaving an empty cell blocks release before validation and integration.
+
+### 6. Validate Dev
 
 Run repository-declared collaboration, protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, and integration gates. Runtime proof must show the pinned docs dependency, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
 
 Stop on any required failure. Never promote by skipping tests, editing fixtures to hide defects, or adding downstream aliases.
 
-### 5. Integrate Dev
+### 7. Integrate Dev
 
 Separate unrelated scopes. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, and handoff evidence. Merge only after the protected Integration Gate succeeds. Record the merged Dev SHA as the sole promotion input.
 
-### 6. Promote Prod
+### 8. Promote Prod
 
 Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Synchronize the merged Dev SHA, remove stale hashed artifacts through the canonical process, and run production build, publish-contract, schema, asset-manifest, and mirror-parity checks.
 
 Require zero unexplained Dev/Prod drift. Never manually patch or backfill the mirror.
 
-### 7. Deploy Cloudflare
+### 9. Deploy Cloudflare
 
 Deploy only the verified promoted SHA with repository-owned Cloudflare configuration. Never expose secrets or hardcode account ids, credentials, routes, local paths, or invocation catalogs. Prevent concurrent deployments to the same environment and capture immutable version evidence.
 
 On partial success, stop further mutation and report the exact state. Do not loop or stack patches.
 
-### 8. Verify Production
+### 10. Verify Production
 
 Verify `https://airvio.co` and `https://airvio.co/knowgrph` for HTTP status, route ownership, primary HTML and assets, stale asset references, MCP availability, invocation catalog resolution, runtime health, promoted-SHA evidence, local-path leakage, legacy aliases, and required responsive smoke paths.
 
-### 9. Report
+### 11. Report
 
-Report invocation intent, ownership, worktrees, base SHA, handoffs, reconciled paths, SSOT commit, Dev commits and pull request, Integration Gate, merge SHA, validation and cost evidence, Prod parity, Cloudflare deployment identifiers, verified routes, and remaining risks.
+Report invocation intent, ownership, worktrees, base SHA, memory base ref, memory structural result, append-only comparison result, todo base ref, todo context, todo row result, handoffs, reconciled paths, SSOT commit, Dev commits and pull request, Integration Gate, merge SHA, validation and cost evidence, Prod parity, Cloudflare deployment identifiers, verified routes, and remaining risks.
 
 ## Stop Conditions
 
@@ -126,6 +144,8 @@ Stop without downstream mutation when any of these is true:
 - semantic-scope or branch ownership conflicts;
 - dirty work cannot be attributed safely;
 - required dictionary or runtime proof is missing;
+- any memory shard is malformed or historical bytes differ from the recorded memory base ref;
+- `todo-log.md` lacks one changed compliant row for the declared task context or deletes a historical context;
 - a required gate fails;
 - Dev, Prod, and promoted SHA cannot be reconciled;
 - credentials or deployment authority are absent;
@@ -133,6 +153,6 @@ Stop without downstream mutation when any of these is true:
 
 ## Completion VCC
 
-Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then Dev is merged through protected integration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
+Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then memory history is proven append-only, the declared todo row is proven changed and compliant from its recorded base, Dev is merged through protected integration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
 
-VCC: verify all required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod release evidence names one promoted SHA, both production URLs pass their canonical probes, and execution stops after the first blocking stage rather than retrying without a new state change.
+VCC: verify the memory structural and base-ref commands exit zero, the todo release command reports the declared context and a directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.

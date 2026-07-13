@@ -381,6 +381,8 @@ Context references are per-message attachments, not durable memory or project co
 
 Persistent memory is bounded and curated. It is not a raw transcript dump, auto-compactor, secret store, or personal inference engine.
 
+Durable cross-device history lives in append-only `../memory/YYYY-MM.md` shards under the `MEMORY-LOG.md` contract. This document remains the bounded routing and runtime-readiness seed; selected shard entries are retrieved before context assembly instead of expanding this always-loaded source.
+
 | Target | Source | Stores | Limit | Rejects |
 |---|---|---|---:|---|
 | `memory` | `MEMORY.md` | Environment facts, project conventions, tool quirks, completed-work lessons, and reusable techniques. | 2200 chars | User preferences, secrets, raw logs, one-off paths, copied source content. |

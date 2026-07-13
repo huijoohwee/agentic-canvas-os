@@ -452,6 +452,8 @@ This file does not replace system, developer, or operator instructions. It defin
 | Kanban board | `kanban.md` is the durable shared task board for named profiles and worker processes. | `/kanban.task`, `#kanban-board`, `@kanban-board`. |
 | Handoff rows | Every handoff is a row with source profile, target profile, task id, context refs, blockers, resume state, and acceptance. | `/kanban.handoff`, `#profile-handoff`, `@handoff-row`. |
 | Worker isolation | A worker is a full OS process with its own identity and proof path, not a hidden in-process subagent. | `#worker-process`, `@worker-process`, `@agent-profile`. |
+| Planning ledger | `$WORKTREE/todo-log.md` is the Knowgrph authored planning-history SSOT; workflow ledgers must record its fetched base ref and the task row's unique Context value. | `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`, `VALIDATION-RUNBOOK.md`. |
+| Planning update compliance | A release requires one changed task row with the canonical 11 columns, all cells filled, one directive of at most 50 words, and `Updated Date` equal to its enclosing dated section; every non-target baseline row remains byte-for-byte unchanged. | `todo-log.md` Planning Ledger Contract and focused changed-row validation. |
 | Experience capture | Useful run traces may be summarized into typed experience records. | `/experience.capture`, `@experience`, `#learning-loop`. |
 | Past conversation search | Agents may search local conversation or memory indexes when scoped by operator-approved storage. | `/memory.search`, `@memory-store`, `#memory-search`. |
 | Skill creation | New skills start as proposals with source evidence, input/output schemas, bounds, cost fields, and VCCs. | `/skill.propose`, `@skill-catalog`, `#skill-evolution`. |
@@ -465,6 +467,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Fact | Rule | Proof or source |
 |---|---|---|
 | Agent notes | `MEMORY.md` stores bounded agent notes: environment facts, project conventions, tool quirks, completed-work lessons, and reusable techniques. | `/memory.write`, `#persistent-memory`, `@memory-store`. |
+| Durable history | `memory/YYYY-MM.md` stores append-only `memory-log/v1` records; `MEMORY-LOG.md` owns the Git sync, merge, retrieval, and escalation contract. | `MEMORY-LOG.md`, `@memory-store`, `@session-index`. |
 | User profile | `USER.md` stores bounded explicit operator preferences, communication style, and expectations. | `/user.profile`, `#user-profile`, `@user-profile`. |
 | Target separation | Agent notes and user profile are separate targets; do not mix project environment facts into `USER.md` or personal preferences into `MEMORY.md`. | `MEMORY.md`, `USER.md`. |
 | Frozen snapshot | Approved runtimes may inject memory/profile as a frozen session-start snapshot; mid-session writes persist for future sessions and tool responses, not active prompt mutation. | `#frozen-snapshot`, `@memory-snapshot`. |

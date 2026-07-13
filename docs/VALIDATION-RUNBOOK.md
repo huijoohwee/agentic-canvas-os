@@ -98,11 +98,12 @@ GITHUB_ROOT="$(dirname "$AGENTIC_CANVAS_OS_ROOT")"
 DOCS_ROOT="$AGENTIC_CANVAS_OS_ROOT/docs"
 KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
 PROD_MIRROR_ROOT="$GITHUB_ROOT/huijoohwee/content/knowgrph"
-export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT KNOWGRPH_ROOT PROD_MIRROR_ROOT
+MEMORY_ROOT="$AGENTIC_CANVAS_OS_ROOT/memory"
+export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT KNOWGRPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT
 find "$DOCS_ROOT" -maxdepth 1 -type f -name '*.md' -print0 | xargs -0 ruby -rdate -ryaml -e 'ARGV.each { |path| text=File.read(path); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{path}: missing frontmatter"); YAML.safe_load(match[1], permitted_classes: [Date], aliases: true); puts "#{path}: frontmatter ok" }'
 wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
-ARTIFACT_PATTERN='local'"host"'|kg_media_'"token"'|data:'"image"'|VIDEO'"DB_API_KEY"'|SENSE'"NOVA_API_KEY"'|generation_'"job_id"'|index_'"job_id"'|upload-'"[0-9a-f]"'|airvio/'"runs"
+ARTIFACT_PATTERN='https?://local'"host"'[:/]|kg_media_'"token"'|data:'"image"'|VIDEO'"DB_API_KEY"'|SENSE'"NOVA_API_KEY"'|generation_'"job_id"'|index_'"job_id"'|upload-'"[0-9a-f]"'|airvio/'"runs"
 ! rg -n "$ARTIFACT_PATTERN" "$DOCS_ROOT"
 	EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
 ! (rg -n "$EXTERNAL_COPY_PATTERN" "$DOCS_ROOT" | rg -v 'VALIDATION-RUNBOOK\.md:[0-9]+:EXTERNAL_COPY_PATTERN=')
@@ -115,6 +116,54 @@ Expected:
 - ASCII scan returns no matches unless a source file intentionally requires non-ASCII.
 - Runtime artifact scan returns no copied local provider/media artifacts.
 - External-copy scan returns no imported code, prompt, preset example, provider config, schema, test, fixture, or prose paths from referenced self-improving agent repositories.
+
+## Memory Log Compliance Checks
+
+Run the structural gate at session start and again before release:
+
+```bash
+ruby -rdate -ryaml -e 'root=ENV.fetch("MEMORY_ROOT"); files=Dir.glob(File.join(root,"[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).sort; abort("memory log has no monthly shard") if files.empty?; files.each do |file|; text=File.read(file); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{file}: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); period=File.basename(file,".md"); required={"schema"=>"memory-log/v1","period"=>period,"timestamp_format"=>"YYYYMMDDTHHmmssZ","append_policy"=>"append-only","source_contract"=>"../docs/MEMORY-LOG.md"}; required.each{|key,value| abort("#{file}: invalid #{key}") unless data[key]==value}; %w[agent device].each{|key| abort("#{file}: missing #{key}") unless data[key].is_a?(String) && !data[key].empty?}; body=text[match.end(0)..]; headings=body.scan(/^## (@mem-[0-9]{8}T[0-9]{6}Z)$/).flatten; abort("#{file}: no memory entries") if headings.empty?; headings.each{|heading| begin instant=DateTime.strptime(heading.delete_prefix("@mem-"),"%Y%m%dT%H%M%SZ"); rescue Date::Error; abort("#{file}: invalid UTC memory timestamp #{heading}"); end; abort("#{file}: timestamp month mismatch #{heading}") unless instant.strftime("%Y-%m")==period}; abort("#{file}: duplicate or unordered memory headings") unless headings.uniq==headings && headings.sort==headings; abort("#{file}: non-sigil memory source format") if body.match?(/^## .*@mem-/) && body.scan(/^## .*@mem-/).length!=headings.length || body.match?(/^\|.*@mem-/); entries=body.split(/^## @mem-[^\n]+\n/).drop(1); entries.each{|entry| %w[type scope summary refs].each{|field| abort("#{file}: missing #{field}") unless entry.scan(/^#{field}:/).length==1}; abort("#{file}: refs must be a Markdown array") unless entry.match?(/^refs:\s*\[[^\]]+\]\s*$/)}; puts "#{file}: memory-log structure ok"; end'
+```
+
+Before release, compare every existing shard with the exact memory base ref recorded by `START-WORKFLOW.md`:
+
+```bash
+export MEMORY_BASE_REF="<recorded-agentic-canvas-os-base-sha>"
+ruby -ropen3 -e 'root=ENV.fetch("AGENTIC_CANVAS_OS_ROOT"); base=ENV.fetch("MEMORY_BASE_REF"); listed,status=Open3.capture2("git","-C",root,"ls-tree","-r","--name-only",base,"--","memory"); abort("cannot read memory base ref") unless status.success?; base_files=listed.lines.map(&:strip).grep(%r{\Amemory/[0-9]{4}-[0-9]{2}\.md\z}); current=Dir.glob(File.join(root,"memory","[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).map{|file| file.delete_prefix(root+"/")}; missing=base_files-current; abort("deleted memory shards: #{missing.join(", ")}") unless missing.empty?; base_files.each do |relative|; prior,status=Open3.capture2("git","-C",root,"show","#{base}:#{relative}"); abort("cannot read #{relative} at base") unless status.success?; now=File.binread(File.join(root,relative)); abort("#{relative}: historical bytes changed or content inserted before EOF") unless now.start_with?(prior); end; puts "memory-log append-only diff ok"'
+```
+
+Expected:
+
+- Every shard uses `memory-log/v1` frontmatter, `timestamp_format: YYYYMMDDTHHmmssZ`, and exact `## @mem-YYYYMMDDTHHmmssZ` UTC blocks.
+- Every entry has exactly one `type`, `scope`, `summary`, and Markdown-array `refs` field.
+- Local-time, offset, minute-only, hyphenated, impossible-date, wrong-month, pure-YAML, Markdown-table, bolded, duplicate, and timestamp-reordered entries fail.
+- Existing shards preserve every byte from the recorded base and add content only at EOF; deleted shards fail.
+- A new monthly shard is allowed only when its filename, `period`, identity, policy, source contract, and first entry validate.
+
+## Todo Log Compliance Checks
+
+At session start, verify the isolated worktree ledger and freeze its exact fetched baseline:
+
+```bash
+export TODO_LOG_PATH="$WORKTREE/todo-log.md"
+export TODO_BASE_REF="<recorded-knowgrph-origin-main-sha>"
+ruby -rdate -ryaml -ropen3 -e 'path=ENV.fetch("TODO_LOG_PATH"); base=ENV.fetch("TODO_BASE_REF"); root=File.dirname(path); source=File.read(path); match=source.match(/\A---\n(.*?)\n---\n/m) or abort("todo-log: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); required={"title"=>"todo-log","doc_type"=>"Planning Ledger","status"=>"active","frontmatter_contract"=>"required"}; required.each{|key,value| abort("todo-log: invalid #{key}") unless data[key]==value}; abort("todo-log: missing one-row directive contract") unless source.include?("one-row-one-directive (Max 50 words)"); header="| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |"; separator="|--------|--------|-----------|--------|-----------------|-------|--------|----------------|--------------------------|--------------------------|--------------|"; abort("todo-log: table header mismatch") unless source.lines.count{|line| line.chomp==header}>0 && source.lines.count{|line| line.chomp==header}==source.lines.count{|line| line.chomp==separator}; source.scan(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/).flatten.each{|date| Date.iso8601(date)}; prior,status=Open3.capture2("git","-C",root,"show","#{base}:todo-log.md"); abort("todo-log: cannot read base ref") unless status.success?; abort("todo-log: startup baseline differs from fetched base") unless source==prior; puts "todo-log startup baseline ok"'
+```
+
+Before release, require the task's declared Context row to be new or changed relative to that baseline:
+
+```bash
+export TODO_CONTEXT="<exact-task-row-context>"
+ruby -rdate -ryaml -ropen3 -e 'path=ENV.fetch("TODO_LOG_PATH"); base=ENV.fetch("TODO_BASE_REF"); context=ENV.fetch("TODO_CONTEXT"); abort("todo-log: empty or unsafe context") if context.empty? || context.include?("|"); root=File.dirname(path); current=File.read(path); prior,status=Open3.capture2("git","-C",root,"show","#{base}:todo-log.md"); abort("todo-log: cannot read base ref") unless status.success?; validate_contract=->(source){match=source.match(/\A---\n(.*?)\n---\n/m) or abort("todo-log: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); {"title"=>"todo-log","doc_type"=>"Planning Ledger","status"=>"active","frontmatter_contract"=>"required"}.each{|key,value| abort("todo-log: invalid #{key}") unless data[key]==value}; abort("todo-log: missing one-row directive contract") unless source.include?("one-row-one-directive (Max 50 words)"); header="| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |"; separator="|--------|--------|-----------|--------|-----------------|-------|--------|----------------|--------------------------|--------------------------|--------------|"; abort("todo-log: table header mismatch") unless source.lines.count{|line| line.chomp==header}>0 && source.lines.count{|line| line.chomp==header}==source.lines.count{|line| line.chomp==separator}; source.scan(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/).flatten.each{|date| Date.iso8601(date)}}; validate_contract.call(current); parse=->(text){section=nil; rows=[]; text.each_line do |line|; if match=line.match(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/); section=match[1]; next; end; next unless line.start_with?("| "); cells=line.strip.split("|",-1)[1...-1].map(&:strip); next if cells.first=="Context"; rows << {line:line,cells:cells,section:section}; end; rows}; current_rows=parse.call(current); base_rows=parse.call(prior); matches=current_rows.select{|row| row[:cells].first==context}; abort("todo-log: task context must occur exactly once") unless matches.length==1; row=matches.first; abort("todo-log: task row must have 11 cells") unless row[:cells].length==11; abort("todo-log: task row has empty cells") if row[:cells].any?(&:empty?); directive_words=row[:cells][2].split(/\s+/).length; abort("todo-log: directive exceeds 50 words") if directive_words>50; updated=row[:cells][10]; Date.iso8601(updated); abort("todo-log: Updated Date must match dated section") unless row[:section]==updated; abort("todo-log: Module must name todo-log.md") unless row[:cells][3].include?("todo-log.md"); prior_row=base_rows.find{|candidate| candidate[:cells].first==context}; abort("todo-log: declared task row was not updated") if prior_row && prior_row[:line]==row[:line]; changed_history=base_rows.reject{|candidate| candidate[:cells].first==context}.reject{|candidate| current_rows.any?{|current_row| current_row[:line]==candidate[:line]}}; abort("todo-log: historical rows changed or deleted: #{changed_history.map{|candidate| candidate[:cells].first}.join(", ")}") unless changed_history.empty?; puts "todo-log task row ok: context=#{context} directive_words=#{directive_words}"'
+```
+
+Expected:
+
+- Startup proves `todo-log.md` is the exact fetched planning-ledger baseline before task mutation.
+- The task declaration records one stable `todo_context`; release finds it exactly once.
+- The task row has the canonical 11 columns, no empty cells, a directive of at most 50 words, a valid `Updated Date` matching its dated section, and a Module cell naming `todo-log.md`.
+- A row unchanged from the base fails; changing or deleting any non-target historical row fails.
+- Historical baseline rows remain byte-for-byte unchanged. Strict row validation applies to the task's new or changed row.
 
 ## Route Consistency Checks
 

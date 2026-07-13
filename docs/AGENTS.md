@@ -16,6 +16,7 @@ source_docs:
   - "SOUL.md"
   - "FACTS.md"
   - "MEMORY.md"
+  - "MEMORY-LOG.md"
   - "USER.md"
   - "SKILLS.md"
   - "SANDBOX-RUNTIME.md"
@@ -104,6 +105,12 @@ Malformed inputs must fail before token spend. Raw, unstructured prompt calls ar
 ## Persistent Memory Rules
 
 - Keep `MEMORY.md` for agent notes about environment facts, project conventions, tool quirks, completed-work lessons, and reusable techniques.
+- Treat `MEMORY-LOG.md` as the contract for durable Git-synchronized history and `../memory/YYYY-MM.md` as its append-only monthly shards.
+- Create shard frontmatter once, then add only complete `## @mem-YYYYMMDDTHHmmssZ` UTC records at end-of-file; never edit, reorder, compact, or delete prior records.
+- If concurrent appends conflict, preserve both complete records and append any later superseding decision instead of rewriting history.
+- Use exact shard or ripgrep retrieval first, local BM25 only when ranking adds value, and embeddings only after a measured precision gap and approved TCO review.
+- Run the `VALIDATION-RUNBOOK.md` memory-log structural gate at session start and its base-ref append-only gate before release; either failure blocks the next workflow stage.
+- Treat `$WORKTREE/todo-log.md` as the canonical Knowgrph planning ledger. Record its fetched base ref at startup, declare one `todo_context`, require one changed 11-cell row with no empty cells, a directive of at most 50 words, a matching dated section, and a valid updated date before release, and preserve every non-target baseline row byte-for-byte.
 - Keep `USER.md` for explicit operator preferences, communication style, expectations, workflow habits, and stated technical comfort.
 - Do not infer user profile facts from behavior. Save profile entries only from explicit operator statements or approved proposed entries.
 - `/memory.write` must name target, action, evidence, scan result, capacity result, and source before persistence.

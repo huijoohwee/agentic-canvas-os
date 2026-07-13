@@ -60,6 +60,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 ## Operating Model
 
+- Complete `START-WORKFLOW.md` before build work: fetch first, inspect ownership, and create a fresh isolated worktree from `origin/main`; pull only on a clean, exclusively owned branch when updating it intentionally.
 - Use one task, semantic scope, worktree, branch, and active writer.
 - Create `agent/<device>/<semantic-scope>` from the latest `origin/main`.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
@@ -72,7 +73,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 ### 1. Preflight
 
-Read repository instructions and release contracts. Fetch remotes, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, base SHA, current Dev SHA, current Prod SHA, and ownership conflicts.
+Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, current base SHA, current Dev SHA, current Prod SHA, and ownership conflicts.
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another device is writing the same branch.
 

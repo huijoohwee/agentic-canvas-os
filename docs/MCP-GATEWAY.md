@@ -109,6 +109,12 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 - MainPanel MCP renders Knowgrph-owned server templates, provider-neutral external-server templates, session-scoped allowlist rules, and deferred-tool bridge routes; it does not execute tools or store credentials.
 - New remote proxies require an ADR with TCO, token, latency, and schema-drift comparison.
 
+## Invocation Grammar Projection
+
+| Consumer surface | Route owner | Source and boundary |
+|---|---|---|
+| Knowgrph Skills & Commands and shared composer menus | `knowgrph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/knowgrph/control-plane/mcp` owner | Reads the three dictionary files from this canonical docs revision, returns metadata only, and never copies a downstream `/`, `#`, or `@` registry. Local Vite dev/preview may expose the same read-only route without granting mutation, spend, Prod, or Cloudflare authority. |
+
 ## Tool Gateway Capabilities
 
 Tool capabilities expose callable functions and platform-scoped toolsets through existing `knowgrph` infrastructure. Gateway routing is one provider path for selected tools; it is not a fifth proxy, copied external registry, or Cloudflare deployment requirement for docs proof.

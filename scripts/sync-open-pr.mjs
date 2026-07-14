@@ -2,9 +2,16 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { assertNoCompetingPullRequests } from "./repository-guards.mjs";
 
 const repo = requiredEnv("GITHUB_REPOSITORY");
 const pulls = ghJson(["api", "--method", "GET", `repos/${repo}/pulls`, "-f", "state=open", "-f", "base=main", "-f", "sort=created", "-f", "direction=asc", "-f", "per_page=100"]);
+if (pulls.length > 0) {
+  assertNoCompetingPullRequests(
+    pulls.map((candidate) => ({ number: candidate.number, headRefName: candidate.head?.ref })),
+    pulls[0].head?.ref,
+  );
+}
 const pull = pulls.find((candidate) =>
   !candidate.draft &&
   candidate.head?.repo?.full_name === repo &&

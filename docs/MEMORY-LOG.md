@@ -8,7 +8,7 @@ schema: "agentic-os-memory/v1"
 frontmatter_contract: "required"
 status: "spec-complete"
 authority: "GitHub-synchronized agent memory and session continuity"
-runtime_scope: "local and worktree-scoped agent harnesses"
+runtime_scope: "local canonical-checkout-scoped agent harnesses"
 runtime_claim: "flat Markdown persistence and retrieval-escalation contract; no database, embedding, provider, or deploy claim"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
 memory_log:
@@ -132,8 +132,8 @@ The baseline executor is deterministic and model-free: `model` is `none`, token 
 
 ```mermaid
 flowchart LR
-  deviceA["Device A worktree"] --> appendA["Append timestamped entry"]
-  deviceB["Device B worktree"] --> appendB["Append timestamped entry"]
+  deviceA["Device A canonical checkout"] --> appendA["Append timestamped entry"]
+  deviceB["Device B canonical checkout"] --> appendB["Append timestamped entry"]
   appendA --> git["Git branch and review"]
   appendB --> git
   git --> shard["Monthly append-only shard"]

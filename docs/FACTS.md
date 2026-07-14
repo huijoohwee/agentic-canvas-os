@@ -18,7 +18,7 @@ source_revision_contract:
   canonical_ref: "origin/main"
   consumer_repository: "$GITHUB_ROOT/knowgrph"
   runtime_guard: "$GITHUB_ROOT/knowgrph/scripts/dev-source-consistency.mjs"
-  canonical_rule: "every normal local Dev port requires a clean canonical repository whose HEAD equals fetched origin/main"
+  canonical_rule: "every normal local Dev port requires exactly one registered worktree per repository and a clean canonical Agentic Canvas OS checkout whose HEAD equals fetched origin/main"
   task_rule: "Knowgrph task mode never relaxes the Agentic Canvas OS docs revision"
 layer_contract:
   soul: "durable agent identity and voice"

@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import path from "node:path";
+import { assertCanonicalReadPath, assertSingleCanonicalWorktree } from "./repository-guards.mjs";
 
 const watch = process.argv.includes("--watch");
 const intervalArg = process.argv.find((arg) => arg.startsWith("--interval="));
 const intervalSeconds = Math.max(5, Math.min(300, Number(intervalArg?.split("=")[1] || 20)));
 const root = gitText(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
-const livePath = path.resolve(process.env.AGENTIC_LIVE_WORKTREE || `${root}-live`);
+assertCanonicalReadPath({ root, cwd: process.cwd() });
 
 await syncOnce();
 if (watch) {
@@ -20,23 +19,20 @@ if (watch) {
 }
 
 async function syncOnce() {
-  run(root, "git", ["fetch", "--quiet", "origin", "main"]);
-  if (!existsSync(livePath)) {
-    run(root, "git", ["worktree", "add", "--detach", livePath, "origin/main"]);
-    console.log(`Created clean live worktree at ${livePath}.`);
-    return;
-  }
+  assertSingleCanonicalWorktree({ root, porcelain: gitText(root, ["worktree", "list", "--porcelain"]) });
 
-  const status = gitText(livePath, ["status", "--porcelain"]).trim();
+  run(root, "git", ["fetch", "--quiet", "origin", "main"]);
+  const branch = gitText(root, ["branch", "--show-current"]).trim();
+  if (branch !== "main") throw new Error(`Live sync updates canonical main only; current branch is ${branch || "detached"}`);
+  const status = gitText(root, ["status", "--porcelain"]).trim();
   if (status) {
-    console.error(`Live worktree is dirty; leaving it untouched: ${livePath}`);
-    return;
+    throw new Error(`Canonical checkout is dirty; commit or restore the owned changes before live sync: ${root}`);
   }
-  const before = gitText(livePath, ["rev-parse", "HEAD"]).trim();
+  const before = gitText(root, ["rev-parse", "HEAD"]).trim();
   const after = gitText(root, ["rev-parse", "origin/main"]).trim();
   if (before === after) return;
-  run(livePath, "git", ["switch", "--detach", "origin/main"]);
-  console.log(`Live worktree updated ${before.slice(0, 12)} -> ${after.slice(0, 12)}.`);
+  run(root, "git", ["merge", "--ff-only", "origin/main"]);
+  console.log(`Canonical checkout updated ${before.slice(0, 12)} -> ${after.slice(0, 12)}.`);
 }
 
 function gitText(cwd, args) {

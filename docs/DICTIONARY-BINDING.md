@@ -178,7 +178,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@source.body` | Authored Markdown body. | Authored document source. | SSOT for operator workflow, guardrails, and checklist language. |
 | `@local-harness` | Dev-local typed harness or dry-run path. | Shared local runtime owner. | Default proof path before paid calls or deploy. |
 | `@runtime-proof` | Surfaced validation evidence. | Command output, typed result, parsed field, or focused test. | Must be observable; narrative alone is not proof. |
-| `@dev-only` | Local development boundary. | Current Dev worktree. | Confirms work stops before Prod mirror and Cloudflare. |
+| `@dev-only` | Local development boundary. | Current canonical Dev checkout. | Confirms work stops before Prod mirror and Cloudflare. |
 | `@cost-log` | Token, cache, and estimated cost ledger. | Harness observer or runtime result. | Must report exact zero for model-free views. |
 | `@video-generation-demo-script` | Authored source-script binding for the default video-agent preset. | The preset frontmatter plus its canonical workspace Markdown reference. | Source context only; it cannot contain generated artifact identities, credentials, provider job ids, or fabricated media URLs. |
 | `@provider.byteplus` | Select the existing BytePlus ModelArk generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
@@ -227,7 +227,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@context-policy` | Precedence, scan, truncation, and progressive-discovery rules for context files. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | First-match project context, per-directory visited set, prompt-injection block, capacity bound, and deploy gate are required. |
 | `@file:` | Context reference to one workspace file or 1-indexed line range. | Explicit message text plus normalized workspace path. | Text only, workspace-scoped, sensitive path blocked, path traversal blocked, binary rejected, and bounded before expansion. |
 | `@folder:` | Context reference to a directory listing or bounded folder summary. | Explicit message text plus normalized workspace directory. | Maximum entry cap, no recursive content dump by default, sensitive children skipped with warnings. |
-| `@diff` | Context reference to the current unstaged diff. | Current VCS worktree. | Read-only, secret-scanned, bounded, and never treated as approval to write or revert. |
+| `@diff` | Context reference to the current unstaged diff. | Current canonical VCS checkout. | Read-only, secret-scanned, bounded, and never treated as approval to write or revert. |
 | `@staged` | Context reference to the current staged diff. | Current VCS index. | Read-only, secret-scanned, bounded, and never treated as commit approval. |
 | `@git:` | Context reference to recent commit metadata or patch range. | Current VCS repository. | Count is clamped to a small maximum, missing revisions warn, and sensitive content remains blocked. |
 | `@url:` | Context reference to fetched external content. | Approved URL fetch/extract owner. | Requires egress policy, cache/citation metadata, size bounds, and no credentials in URL or headers. |

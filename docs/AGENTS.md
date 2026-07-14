@@ -73,7 +73,8 @@ Use existing shared utilities for invocation content:
 
 - Resolve `GITHUB_ROOT` as the parent directory of the `agentic-canvas-os` checkout; never encode a user-specific absolute path in this control surface.
 - Work Dev-first in `$GITHUB_ROOT/knowgrph`.
-- Before every Codex build session, follow `START-WORKFLOW.md`: fetch first, inspect ownership, then create a fresh isolated worktree from `origin/main`.
+- Before every Codex build session, follow `START-WORKFLOW.md`: fetch first, require exactly one registered worktree per repository, inspect ownership, then activate the task branch in the canonical checkout.
+- Treat any instruction to create, retain, or use a secondary worktree as invalid. `git worktree add` is forbidden; stop and correct the contradictory source rule.
 - Do not use pull as a default startup action. Pull only when intentionally updating a clean, exclusively owned branch with explicit integration behavior.
 - Treat `$GITHUB_ROOT/huijoohwee/content/knowgrph` as a Prod mirror, not a default edit target.
 - Treat `airvio.co` and `airvio.co/knowgrph` as Cloudflare deployment targets, not completion criteria.

@@ -6,9 +6,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  appendEventLog,
   applyOp,
+  catchupSince,
   createEmptyRoomState,
   isValidRoomId,
+  roomIsExpired,
+  rosterFromAttachments,
   serializeGraph,
   serializeSnapshot,
   validateOp,
@@ -90,6 +94,173 @@ test("replaceGraph rebuilds state and drops links pointing at unknown nodes", ()
   assert.equal(state.links.l1 !== undefined, true);
   assert.equal(state.links.l2, undefined);
   assert.equal(event.type, "graphReplaced");
+});
+
+test("appendEventLog appends immutably and stays bounded by cap", () => {
+  let log = [];
+  const original = log;
+  log = appendEventLog(log, { type: "nodeUpserted", rev: 1 }, 3);
+  assert.equal(original.length, 0, "input array is not mutated");
+  log = appendEventLog(log, { type: "nodeUpserted", rev: 2 }, 3);
+  log = appendEventLog(log, { type: "nodeUpserted", rev: 3 }, 3);
+  log = appendEventLog(log, { type: "nodeUpserted", rev: 4 }, 3);
+  assert.deepEqual(log.map((e) => e.rev), [2, 3, 4], "oldest event is trimmed at cap");
+});
+
+test("appendEventLog ignores events without a numeric rev", () => {
+  const log = appendEventLog([], { type: "noop" });
+  assert.equal(log.length, 0);
+});
+
+test("catchupSince replays only the delta when the log covers it", () => {
+  const log = [
+    { type: "nodeUpserted", rev: 5 },
+    { type: "nodeUpserted", rev: 6 },
+    { type: "nodeDeleted", rev: 7 },
+  ];
+  const result = catchupSince(log, 4, 7);
+  assert.equal(result.type, "catchup");
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.events.map((e) => e.rev), [5, 6, 7]);
+  assert.equal(result.rev, 7);
+});
+
+test("catchupSince returns an empty complete delta when already current", () => {
+  const result = catchupSince([{ rev: 7 }], 7, 7);
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.events, []);
+});
+
+test("catchupSince is incomplete (forces snapshot) when the log was trimmed past sinceRev", () => {
+  const log = [{ rev: 10 }, { rev: 11 }, { rev: 12 }]; // earliest is rev 10
+  const result = catchupSince(log, 4, 12); // needs rev 5.. but log starts at 10 -> gap
+  assert.equal(result.complete, false);
+  assert.equal(result.rev, 12);
+});
+
+test("catchupSince treats a client ahead of the room as un-resumable", () => {
+  assert.equal(catchupSince([], 9, 7).complete, false);
+  assert.equal(catchupSince([], -1, 7).complete, false);
+  assert.equal(catchupSince([], 1.5, 7).complete, false);
+});
+
+test("appendEventLog + catchupSince integrate with real applyOp events", () => {
+  let state = createEmptyRoomState();
+  let log = [];
+  for (const id of ["a", "b", "c"]) {
+    const { state: next, event } = applyOp(state, { type: "upsertNode", node: { id, x: 0, y: 0 } });
+    state = next;
+    log = appendEventLog(log, event);
+  }
+  // A client that last saw rev 1 catches up on the two newer node upserts.
+  const result = catchupSince(log, 1, state.rev);
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.events.map((e) => e.node.id), ["b", "c"]);
+});
+
+test("rosterFromAttachments dedups subjects and counts multi-device connections", () => {
+  const roster = rosterFromAttachments([
+    { subject: "katrina" },
+    { subject: "katrina" }, // second device, same operator
+    { subject: "guest" },
+    {}, // missing subject -> anonymous
+  ]);
+  assert.equal(roster.type, "presence");
+  assert.equal(roster.connections, 4);
+  assert.deepEqual(roster.members, [
+    { subject: "anonymous", connections: 1 },
+    { subject: "guest", connections: 1 },
+    { subject: "katrina", connections: 2 },
+  ]);
+});
+
+test("rosterFromAttachments is empty and safe with no connections", () => {
+  const roster = rosterFromAttachments([]);
+  assert.deepEqual(roster.members, []);
+  assert.equal(roster.connections, 0);
+});
+
+test("roomIsExpired fails safe and expires only at or after the TTL", () => {
+  assert.equal(roomIsExpired({ lastActivityAt: 100, now: 1099, ttlMs: 1000 }), false);
+  assert.equal(roomIsExpired({ lastActivityAt: 100, now: 1100, ttlMs: 1000 }), true);
+  assert.equal(roomIsExpired({ lastActivityAt: NaN, now: 1100, ttlMs: 1000 }), false);
+  assert.equal(roomIsExpired({ lastActivityAt: 100, now: 1100, ttlMs: Infinity }), false);
+});
++
+test("baseVersion opt-in rejects a stale upsertNode as a typed conflict without mutating state", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } })); // v=1
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 1, y: 1 } })); // v=2
+  const before = state;
+  const { state: after, event, error, conflict } = applyOp(state, {
+    type: "upsertNode",
+    node: { id: "a", x: 9, y: 9 },
+    baseVersion: 1, // stale: current is 2
+  });
+  assert.equal(after, before, "state must not change on conflict");
+  assert.equal(event, null);
+  assert.ok(error.includes("version conflict"));
+  assert.deepEqual(conflict, { kind: "node", id: "a", currentVersion: 2, baseVersion: 1, rev: state.rev });
+});
+
+test("baseVersion matching the current version applies normally", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } })); // v=1
+  const { state: after, event, error, conflict } = applyOp(state, {
+    type: "upsertNode",
+    node: { id: "a", x: 7, y: 7 },
+    baseVersion: 1, // fresh
+  });
+  assert.equal(error, null);
+  assert.equal(conflict, undefined);
+  assert.equal(event.type, "nodeUpserted");
+  assert.equal(after.nodes.a.v, 2);
+  assert.equal(after.nodes.a.x, 7);
+});
+
+test("baseVersion 0 lets a create-if-absent upsert succeed for a new node", () => {
+  const state0 = createEmptyRoomState();
+  const { event, error } = applyOp(state0, { type: "upsertNode", node: { id: "new", x: 0, y: 0 }, baseVersion: 0 });
+  assert.equal(error, null);
+  assert.equal(event.type, "nodeUpserted");
+});
+
+test("baseVersion guards deleteNode and upsertLink against stale edits", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "b", x: 1, y: 1 } }));
+  ({ state } = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b" } })); // v=1
+  ({ state } = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b", label: "x" } })); // v=2
+
+  const staleLink = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b" }, baseVersion: 1 });
+  assert.ok(staleLink.error.includes("version conflict"));
+  assert.equal(staleLink.conflict.kind, "link");
+  assert.equal(staleLink.conflict.currentVersion, 2);
+
+  const staleDelete = applyOp(state, { type: "deleteNode", id: "a", baseVersion: 99 });
+  assert.ok(staleDelete.error.includes("version conflict"));
+  assert.equal(staleDelete.state, state);
+});
+
+test("omitting baseVersion preserves last-write-wins (backward compatible)", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 1, y: 1 } }));
+  const { event, error } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 2, y: 2 } });
+  assert.equal(error, null);
+  assert.equal(event.type, "nodeUpserted");
+});
+
+test("serializeSnapshot reports room capacity limits and current counts", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "b", x: 1, y: 1 } }));
+  ({ state } = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b" } }));
+  const snapshot = serializeSnapshot(state);
+  assert.equal(snapshot.counts.nodes, 2);
+  assert.equal(snapshot.counts.links, 1);
+  assert.equal(snapshot.limits.maxNodes, 500);
+  assert.equal(snapshot.limits.maxLinks, 1000);
 });
 
 test("validateOp rejects unknown op types without throwing", () => {

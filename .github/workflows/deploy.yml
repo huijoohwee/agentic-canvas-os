@@ -41,17 +41,13 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-      - name: Smoke test production readiness
+      - name: Smoke test production readiness, collaboration, and MCP routes
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: node scripts/smoke.mjs
+      - name: Rollback guidance on smoke failure
+        if: failure()
         run: |
-          set -euo pipefail
-          url="${PRODUCTION_URL%/}/api/ready"
-          for attempt in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --max-time 10 "$url" > /tmp/readiness.json; then
-              node -e 'const fs=require("node:fs"); const value=JSON.parse(fs.readFileSync("/tmp/readiness.json", "utf8")); if (typeof value !== "object" || value === null) process.exit(1)'
-              exit 0
-            fi
-            if [ "$attempt" -lt 5 ]; then sleep 3; fi
-          done
-          exit 1
+          echo "::error::Post-deploy smoke checks failed for ${{ github.sha }}." >&2
+          echo "Roll back to the previous good version with the 'Rollback production' workflow" >&2
+          echo "(Actions -> Rollback production -> Run workflow), or run: npm run rollback." >&2

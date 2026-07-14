@@ -78,6 +78,12 @@ class FakeDurableObjectCtx {
       put: async (key, value) => {
         this.store.set(key, value);
       },
+      delete: async (key) => {
+        this.store.delete(key);
+      },
+      setAlarm: async (value) => {
+        this.alarmAt = value;
+      },
     };
   }
   blockConcurrencyWhile(fn) {
@@ -321,4 +327,22 @@ test("structured room logs summarize joins, applied ops, duplicates, conflicts, 
     },
     { connections: 0, joins: 1, opsApplied: 2, duplicates: 1, conflicts: 1, errors: 0 },
   );
+});
+
+test("room alarms preserve live rooms and delete expired disconnected state", async () => {
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "observer" });
+  assert.equal(ctx.store.has("room-state-v1"), true);
+  assert.equal(Number.isFinite(ctx.alarmAt), true);
+
+  room.lastActivityAt = 0;
+  await room.alarm();
+  assert.equal(ctx.store.has("room-state-v1"), true, "a live connection prevents collection");
+
+  ctx.sockets = ctx.sockets.filter((socket) => socket !== ws);
+  room.lastActivityAt = 0;
+  await room.alarm();
+  assert.equal(ctx.store.has("room-state-v1"), false);
+  assert.deepEqual(room.state, { nodes: {}, links: {}, rev: 0 });
+  assert.equal(parsedLogs().some((entry) => entry.event === "room_expired"), true);
 });

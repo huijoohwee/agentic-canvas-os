@@ -18,6 +18,7 @@ import {
   catchupSince,
   createEmptyRoomState,
   isValidRoomId,
+  roomIsExpired,
   rosterFromAttachments,
   serializeSnapshot,
 } from "../src/collab-room.js";
@@ -26,6 +27,8 @@ import { createRoomMetrics, metricsSummary, recordRoomEvent, roomLogRecord } fro
 const STORAGE_KEY = "room-state-v1";
 const MAX_MESSAGE_BYTES = 65536; // generous bound; well under the 32 MiB DO WS limit
 const MAX_RECENT_OP_IDS = 512;
+// Garbage-collect a room after this much idle time with no live connections.
+const ROOM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const OP_ID_PATTERN = /^[A-Za-z0-9_-]{16,100}$/;
 
 function safeJsonParse(text) {
@@ -47,6 +50,7 @@ export class CanvasRoom {
     this.eventLog = [];
     // Per-instance cumulative counters for observability (reset on eviction).
     this.metrics = createRoomMetrics();
+    this.lastActivityAt = Date.now();
     /** @type {{nodes: object, links: object, rev: number} | null} */
     this.state = null;
     this.loaded = this.ctx.blockConcurrencyWhile(async () => {
@@ -54,10 +58,13 @@ export class CanvasRoom {
       if (stored && typeof stored === "object" && stored.graph) {
         this.state = stored.graph;
         this.recentOpIds = Array.isArray(stored.recentOpIds) ? stored.recentOpIds.slice(-MAX_RECENT_OP_IDS) : [];
+        this.lastActivityAt = Number.isFinite(stored.lastActivityAt) ? stored.lastActivityAt : Date.now();
+        this.roomId = typeof stored.roomId === "string" ? stored.roomId : "";
       } else {
         // Backward-compatible read of the original graph-only value.
         this.state = stored && typeof stored === "object" ? stored : createEmptyRoomState();
       }
+      await this.scheduleExpiry();
     });
   }
 
@@ -66,9 +73,20 @@ export class CanvasRoom {
     if (!this.state) this.state = createEmptyRoomState();
   }
 
-  async persist() {
+  async persist({ touch = true } = {}) {
+    if (touch) this.lastActivityAt = Date.now();
     // One bounded value keeps graph state and the idempotency window together.
-    await this.ctx.storage.put(STORAGE_KEY, { graph: this.state, recentOpIds: this.recentOpIds });
+    await this.ctx.storage.put(STORAGE_KEY, {
+      graph: this.state,
+      recentOpIds: this.recentOpIds,
+      lastActivityAt: this.lastActivityAt,
+      roomId: this.roomId,
+    });
+    await this.scheduleExpiry();
+  }
+
+  async scheduleExpiry(at = this.lastActivityAt + ROOM_TTL_MS) {
+    if (typeof this.ctx.storage.setAlarm === "function") await this.ctx.storage.setAlarm(at);
   }
 
   send(ws, payload) {
@@ -201,6 +219,7 @@ export class CanvasRoom {
 
     this.metrics = recordRoomEvent(this.metrics, "join");
     this.log("join", { subject: verdict.claims.sub || "anonymous", init: sentInitial ? "catchup" : "snapshot", rev: this.state.rev });
+    await this.persist();
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -274,11 +293,27 @@ export class CanvasRoom {
     // per-instance activity (joins, applied, conflicts, errors) without a
     // separate metrics store.
     this.log("metrics", { ...metricsSummary(this.metrics, { room: this.roomId }), connections: remaining });
+    await this.persist();
   }
 
   async webSocketError(ws, error) {
     // Swallow: the Hibernation API will close/reap the socket; no shared
     // state to roll back since each op is applied and persisted atomically
     // above before broadcast.
+  }
+
+  async alarm() {
+    await this.ensureLoaded();
+    const now = Date.now();
+    if (this.liveConnections() > 0 || !roomIsExpired({ lastActivityAt: this.lastActivityAt, now, ttlMs: ROOM_TTL_MS })) {
+      await this.scheduleExpiry(Math.max(now + ROOM_TTL_MS, this.lastActivityAt + ROOM_TTL_MS));
+      return;
+    }
+
+    if (typeof this.ctx.storage.delete === "function") await this.ctx.storage.delete(STORAGE_KEY);
+    this.state = createEmptyRoomState();
+    this.recentOpIds = [];
+    this.eventLog = [];
+    this.log("room_expired", { idleMs: now - this.lastActivityAt });
   }
 }

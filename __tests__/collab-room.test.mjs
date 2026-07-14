@@ -11,6 +11,7 @@ import {
   catchupSince,
   createEmptyRoomState,
   isValidRoomId,
+  roomIsExpired,
   rosterFromAttachments,
   serializeGraph,
   serializeSnapshot,
@@ -177,6 +178,13 @@ test("rosterFromAttachments is empty and safe with no connections", () => {
   const roster = rosterFromAttachments([]);
   assert.deepEqual(roster.members, []);
   assert.equal(roster.connections, 0);
+});
+
+test("roomIsExpired fails safe and expires only at or after the TTL", () => {
+  assert.equal(roomIsExpired({ lastActivityAt: 100, now: 1099, ttlMs: 1000 }), false);
+  assert.equal(roomIsExpired({ lastActivityAt: 100, now: 1100, ttlMs: 1000 }), true);
+  assert.equal(roomIsExpired({ lastActivityAt: NaN, now: 1100, ttlMs: 1000 }), false);
+  assert.equal(roomIsExpired({ lastActivityAt: 100, now: 1100, ttlMs: Infinity }), false);
 });
 +
 test("baseVersion opt-in rejects a stale upsertNode as a typed conflict without mutating state", () => {

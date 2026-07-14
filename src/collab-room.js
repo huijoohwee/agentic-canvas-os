@@ -298,6 +298,24 @@ export function rosterFromAttachments(attachments) {
   return { type: "presence", members, connections: list.length };
 }
 
+// --- Room lifecycle ----------------------------------------------------------
+//
+// Rooms persist their state indefinitely, so an idle room would keep storage
+// forever. The transport (Durable Object alarm) garbage-collects a room after
+// it has been idle past a TTL AND has no live connections. This pure predicate
+// owns only the time comparison so it can be unit-tested without an alarm.
+
+/**
+ * True when a room has been idle for at least `ttlMs`. Non-finite inputs return
+ * false (fail safe: never GC on missing or invalid activity data).
+ *
+ * @param {{ lastActivityAt:number, now:number, ttlMs:number }} args
+ */
+export function roomIsExpired({ lastActivityAt, now, ttlMs } = {}) {
+  if (![lastActivityAt, now, ttlMs].every((v) => typeof v === "number" && Number.isFinite(v))) return false;
+  return now - lastActivityAt >= ttlMs;
+}
+
 export const COLLAB_ROOM_LIMITS = Object.freeze({
   MAX_NODES,
   MAX_LINKS,

@@ -21,6 +21,15 @@ npm run check
 npm run dev
 ```
 
+Safe branch exit:
+
+```bash
+npm run device:park
+```
+
+This stashes local task-branch work if needed, switches back to clean `main`,
+and fast-forwards it to `origin/main` without a manual git sequence.
+
 First success check:
 
 ```bash

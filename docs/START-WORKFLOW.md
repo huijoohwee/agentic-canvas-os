@@ -12,6 +12,7 @@ publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
 runtime_scope: "remote synchronization, ownership inspection, and task-branch activation in one canonical Dev checkout"
 runtime_claim: "bounded session-start contract; reading or resolving this document performs no Git mutation"
 runtime_proof: "RUNTIME-PROOF.md"
+contradiction_policy: "any instruction to create, retain, or use a secondary worktree is invalid and blocks startup"
 invocation:
   action: "/session.start"
   semantics: ["#multi-agent-collaboration", "#runtime-ready"]
@@ -57,6 +58,8 @@ completion_requires:
 ## Authoritative Rule
 
 Fetch before starting every Codex session; require exactly one registered worktree in each repository; activate the task branch only in the canonical checkout; pull only when intentionally updating a clean, exclusively owned branch.
+
+The single canonical checkout rule has precedence over every older workflow, template, script description, task note, or historical example. Any instruction to create, retain, or use a secondary worktree is contradictory and invalid. Stop and correct the source contract instead of executing that instruction.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 

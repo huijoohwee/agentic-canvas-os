@@ -33,7 +33,7 @@ the smallest set of docs needed for the task.
 
 Recommended reading order:
 
-1. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and worktree rules.
+1. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the single canonical checkout rule.
 2. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
 3. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
 4. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.

@@ -308,4 +308,4 @@ flowchart TB
 | Stateful orchestration compiles | Graph contract rejects orphaned nodes, missing stop conditions, missing checkpoints for long runs, and hidden mutation. |
 | SuperAgent run is bounded | `/superagent.run` reports sandbox workspace, message gateway, checkpoint policy, artifact manifest, verification state, cost log, stop condition, and no-copy boundary. |
 | Canvas dashboard is source-backed | Dashboard opens from Markdown/frontmatter/KGC owners; no dashboard-only graph store exists. |
-| Deploy boundary is clean | Worktree shows no Prod mirror mutation and no Cloudflare deploy command was run. |
+| Deploy boundary is clean | Canonical checkout shows no Prod mirror mutation and no Cloudflare deploy command was run. |

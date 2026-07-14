@@ -12,10 +12,10 @@ npm run github:configure -- --apply
 
 The command replaces the stale Vercel branch checks with these strict checks:
 
-- `CI / test`
-- `CI / build`
-- `CI / docs-contract`
-- `CI / collaboration-integration`
+- `test`
+- `build`
+- `docs-contract`
+- `collaboration-integration`
 
 It retains CODEOWNERS routing for authentication, collaboration state, Worker, Wrangler, and workflow changes. A solo owner cannot approve their own pull request, so merge permission depends on the strict required checks, resolved conversations, conflict-free index, and single-active-PR guard instead of an impossible self-review. Production remains disabled through `PROD_DEPLOY_ENABLED=false`.
 

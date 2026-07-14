@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 
 const apply = process.argv.includes("--apply");
 const repo = ghText(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim();
-const checks = ["CI / test", "CI / build", "CI / docs-contract", "CI / collaboration-integration"];
+const checks = ["test", "build", "docs-contract", "collaboration-integration"];
 
 if (!apply) {
   console.log(`Dry run for ${repo}`);

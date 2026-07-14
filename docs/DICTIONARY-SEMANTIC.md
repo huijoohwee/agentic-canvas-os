@@ -55,6 +55,7 @@ dictionary_entries:
   - "#frontmatter"
   - "#harness"
   - "#token-economics"
+  - "#pmf-agent"
   - "#spec.low"
   - "#spec.medium"
   - "#spec.high"
@@ -175,6 +176,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#frontmatter` | YAML frontmatter identity, routing, render flags, and gates. | A document or source needs parse-first SSOT behavior. | Frontmatter parse succeeds without repair-only fallback. |
 | `#harness` | Typed AI or tool execution contract. | A capability invokes a model, tool, workflow, or bounded agent. | Input schema, output schema, fallback, cost log, and bounds are present. |
 | `#token-economics` | Prompt, completion, cache, latency, and spend performance. | A workflow can spend tokens or repeat calls. | Cost fields include model, token counts, cache hits, and estimated cost. |
+| `#pmf-agent` | Evidence-led product-market-fit hypothesis evaluation and problem-to-solution gap mapping. | A product, segment, problem, or solution needs PMF evidence, ranked unknowns, and bounded experiment design. | Result separates evidence from assumptions, keeps confidence and freshness visible, and returns falsifiable experiments plus continue, iterate, pivot, or insufficient-evidence without declaring PMF from hackathon attention alone. |
 | `#spec.low` | Cost-bounded generation specification. | A video-agent request prefers the minimum viable generation quality and breadth. | The invocation resolves exactly one specification, reports `low`, and keeps provider spend and artifact scope bounded. |
 | `#spec.medium` | Balanced generation specification. | A video-agent request needs more fidelity or coverage than the low profile. | The invocation resolves exactly one specification, reports `medium`, and applies the provider-neutral balanced profile. |
 | `#spec.high` | Highest configured generation specification. | An approved video-agent request prioritizes maximum configured fidelity. | The invocation resolves exactly one specification, reports `high`, and blocks before spend when capability or budget cannot satisfy it. |

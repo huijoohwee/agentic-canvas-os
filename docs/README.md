@@ -39,7 +39,8 @@ This folder is the local documentation control surface for making `knowgrph` a r
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
 | `DICTIONARY-SEMANTIC.md` | Hash dictionary | `#` semantic filters for routing, proof, cost, and cleanup. |
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
-| `SKILLS.md` | Skill contract catalog | On-demand skill system, context files, context references, tools, platform-scoped toolsets, Tool Gateway routing, Tool Search schema deferral, progressive disclosure, bundles, managed writes, source normalization, harnessing, orchestration, computing-flow, learning, runtime proof, cost, deploy guard, and docs sync. |
+| `PROMPT-PRESETS.md` | Prompt preset catalog | Single owner for preset labels, slash routes, descriptions, activation modes, and prompt text, including PMF Agent. |
+| `SKILLS.md` | Skill contract catalog | On-demand skill system, PMF Agent invocation authority, context files, context references, tools, platform-scoped toolsets, Tool Gateway routing, Tool Search schema deferral, progressive disclosure, bundles, managed writes, source normalization, harnessing, orchestration, computing-flow, learning, runtime proof, cost, deploy guard, and docs sync. |
 | `kanban.md` | Durable task board | Shared task and handoff rows for named profiles and full OS worker processes using existing table/Kanban utilities. |
 | `PRD-TAD.md` | Combined product and architecture contract | What `knowgrph` must provide and how the runtime is shaped. |
 | `RUNTIME-READINESS.md` | Readiness matrix | Tracks spec-complete to runtime-ready gates by capability. |
@@ -62,12 +63,13 @@ This folder is the local documentation control surface for making `knowgrph` a r
 - A caller can expand explicit `@` context references into bounded attached context while preserving raw text on unsupported surfaces.
 - A caller can coordinate named profiles through durable `kanban.md` task and handoff rows instead of hidden in-process subagent swarms.
 - A caller can load one bounded TODO index and the relevant `todo/YYYY-MM.md` shard without sending the full planning history to every model call.
-- A task can preserve Knowgrph planning history through a base-ref-anchored `todo-log.md` update whose declared Context row passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
+- A task can preserve planning history through one base-ref-anchored row in the active `todo/YYYY-MM.md` shard whose declared Context passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.
 - A caller can route web search, image generation, TTS, and cloud browser tools through existing `knowgrph` infrastructure with per-tool provider state, approval gates, and cost logs.
 - A caller can opt into Tool Search so eligible MCP and non-core plugin tool schemas stay behind session-scoped bridge search, describe, and call routes.
 - A caller can inspect process, cost, gate, and circuit-breaker state through typed read views.
 - A caller can run approval-gated agent workflows through shared local or control-plane MCP owners.
+- A caller can load the centralized PMF Agent preset and resolve `/pmf-agent`, `#pmf-agent`, and `@pmf-agent` without a compatibility alias or panel-local registry.
 - A caller can invoke `/moa` for bounded reference-agent deliberation where one aggregator owns the final answer and normal tool gates.
 - A caller can declare stateful orchestration graphs with typed state, nodes, edges, checkpoints, human review, streaming trace, and bounded stop conditions.
 - A caller can invoke `/superagent.run` for long-horizon research, coding, or creation only when sandbox workspace, message gateway, checkpoints, artifacts, verification, cost, and stop conditions are typed.

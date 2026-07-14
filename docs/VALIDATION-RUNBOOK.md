@@ -284,31 +284,6 @@ Expected:
 - Every shard present at the recorded base remains an exact byte prefix; deleted, edited, reordered, or prepended history fails.
 - Release finds one new declared planning Context with 11 filled cells, a Directive of at most 50 words, and a matching Updated Date.
 
-## Todo Log Compliance Checks
-
-At session start, verify the isolated worktree ledger and freeze its exact fetched baseline:
-
-```bash
-export TODO_LOG_PATH="$WORKTREE/todo-log.md"
-export TODO_BASE_REF="<recorded-knowgrph-origin-main-sha>"
-ruby -rdate -ryaml -ropen3 -e 'path=ENV.fetch("TODO_LOG_PATH"); base=ENV.fetch("TODO_BASE_REF"); root=File.dirname(path); source=File.read(path); match=source.match(/\A---\n(.*?)\n---\n/m) or abort("todo-log: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); required={"title"=>"todo-log","doc_type"=>"Planning Ledger","status"=>"active","frontmatter_contract"=>"required"}; required.each{|key,value| abort("todo-log: invalid #{key}") unless data[key]==value}; abort("todo-log: missing one-row directive contract") unless source.include?("one-row-one-directive (Max 50 words)"); header="| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |"; separator="|--------|--------|-----------|--------|-----------------|-------|--------|----------------|--------------------------|--------------------------|--------------|"; abort("todo-log: table header mismatch") unless source.lines.count{|line| line.chomp==header}>0 && source.lines.count{|line| line.chomp==header}==source.lines.count{|line| line.chomp==separator}; source.scan(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/).flatten.each{|date| Date.iso8601(date)}; prior,status=Open3.capture2("git","-C",root,"show","#{base}:todo-log.md"); abort("todo-log: cannot read base ref") unless status.success?; abort("todo-log: startup baseline differs from fetched base") unless source==prior; puts "todo-log startup baseline ok"'
-```
-
-Before release, require the task's declared Context row to be new or changed relative to that baseline:
-
-```bash
-export TODO_CONTEXT="<exact-task-row-context>"
-ruby -rdate -ryaml -ropen3 -e 'path=ENV.fetch("TODO_LOG_PATH"); base=ENV.fetch("TODO_BASE_REF"); context=ENV.fetch("TODO_CONTEXT"); abort("todo-log: empty or unsafe context") if context.empty? || context.include?("|"); root=File.dirname(path); current=File.read(path); prior,status=Open3.capture2("git","-C",root,"show","#{base}:todo-log.md"); abort("todo-log: cannot read base ref") unless status.success?; validate_contract=->(source){match=source.match(/\A---\n(.*?)\n---\n/m) or abort("todo-log: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); {"title"=>"todo-log","doc_type"=>"Planning Ledger","status"=>"active","frontmatter_contract"=>"required"}.each{|key,value| abort("todo-log: invalid #{key}") unless data[key]==value}; abort("todo-log: missing one-row directive contract") unless source.include?("one-row-one-directive (Max 50 words)"); header="| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |"; separator="|--------|--------|-----------|--------|-----------------|-------|--------|----------------|--------------------------|--------------------------|--------------|"; abort("todo-log: table header mismatch") unless source.lines.count{|line| line.chomp==header}>0 && source.lines.count{|line| line.chomp==header}==source.lines.count{|line| line.chomp==separator}; source.scan(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/).flatten.each{|date| Date.iso8601(date)}}; validate_contract.call(current); parse=->(text){section=nil; rows=[]; text.each_line do |line|; if match=line.match(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/); section=match[1]; next; end; next unless line.start_with?("| "); cells=line.strip.split("|",-1)[1...-1].map(&:strip); next if cells.first=="Context"; rows << {line:line,cells:cells,section:section}; end; rows}; current_rows=parse.call(current); base_rows=parse.call(prior); matches=current_rows.select{|row| row[:cells].first==context}; abort("todo-log: task context must occur exactly once") unless matches.length==1; row=matches.first; abort("todo-log: task row must have 11 cells") unless row[:cells].length==11; abort("todo-log: task row has empty cells") if row[:cells].any?(&:empty?); directive_words=row[:cells][2].split(/\s+/).length; abort("todo-log: directive exceeds 50 words") if directive_words>50; updated=row[:cells][10]; Date.iso8601(updated); abort("todo-log: Updated Date must match dated section") unless row[:section]==updated; abort("todo-log: Module must name todo-log.md") unless row[:cells][3].include?("todo-log.md"); prior_row=base_rows.find{|candidate| candidate[:cells].first==context}; abort("todo-log: declared task row was not updated") if prior_row && prior_row[:line]==row[:line]; changed_history=base_rows.reject{|candidate| candidate[:cells].first==context}.reject{|candidate| current_rows.any?{|current_row| current_row[:line]==candidate[:line]}}; abort("todo-log: historical rows changed or deleted: #{changed_history.map{|candidate| candidate[:cells].first}.join(", ")}") unless changed_history.empty?; puts "todo-log task row ok: context=#{context} directive_words=#{directive_words}"'
-```
-
-Expected:
-
-- Startup proves `todo-log.md` is the exact fetched planning-ledger baseline before task mutation.
-- The task declaration records one stable `todo_context`; release finds it exactly once.
-- The task row has the canonical 11 columns, no empty cells, a directive of at most 50 words, a valid `Updated Date` matching its dated section, and a Module cell naming `todo-log.md`.
-- A row unchanged from the base fails; changing or deleting any non-target historical row fails.
-- Historical baseline rows remain byte-for-byte unchanged. Strict row validation applies to the task's new or changed row.
-
 ## Route Consistency Checks
 
 Run from `$GITHUB_ROOT`:

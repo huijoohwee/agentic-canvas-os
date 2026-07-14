@@ -44,13 +44,22 @@ prompt_presets:
       /investment-research-agent @source.frontmatter @source.body @cost-log @runtime-proof #frontmatter #token-economics #runtime-ready #approval-gate
 
       Analyze the investment question using the active workspace sources. Separate claims, evidence, assumptions, contradictions, open questions, freshness, and verification steps; mark unsupported material claims as unknown. Produce a concise research brief, evidence ledger, contradiction ledger, risk/catalyst view, and review-first graph candidates. This is research support, not financial advice. Stop before paid-provider, graph mutation, persistence, transaction, Prod, or Cloudflare actions unless each required approval and capability is available.
+  - id: "pmf-agent"
+    label: "PMF Agent"
+    slash_command: "/pmf-agent"
+    description: "Evidence-led product-market-fit hypotheses, gap mapping, and falsifiable experiment planning."
+    activation: "chat-agent"
+    prompt: |-
+      /pmf-agent @pmf-agent @source.frontmatter @source.body @cost-log @runtime-proof #pmf-agent #token-economics #approval-gate
+
+      Evaluate product-market fit from the active workspace and cited evidence. Separate target segment, job to be done, pain frequency and severity, current alternatives, product promise, acquisition, activation, retention, engagement, referral, willingness-to-pay signals, problem-to-solution gaps, evidence confidence, freshness, and unknowns. Produce an ideal-customer profile, ranked problem and solution hypotheses, an evidence ledger, a gap map, falsifiable experiments with decision thresholds and stop conditions, and one continue, iterate, pivot, or insufficient-evidence recommendation. Do not invent customer demand or treat hackathon interest, awards, demos, social attention, or unverified claims as product-market fit. Stop before outreach, paid research, product mutation, persistence, spend, Prod, or Cloudflare unless the required approvals and runtime capabilities are present.
 ---
 
 # Prompt Presets
 
 This document is the single prompt-text owner for the Knowgrph FloatingPanel **Load preset** selector. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
 
-Selection and loading are zero-spend. **Send** remains the execution boundary. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; SME Care and Investment Research use the shared slash-agent response contract.
+Selection and loading are zero-spend. **Send** remains the execution boundary. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; SME Care, Investment Research, and PMF Agent use the shared slash-agent response contract. PMF Agent absorbs HackaMap's useful problem-to-solution gap-mapping concept; `HackaMap` is provenance, not an invocation alias or a second prompt owner.
 
 ## Catalog contract
 
@@ -59,5 +68,6 @@ Selection and loading are zero-spend. **Send** remains the execution boundary. T
 | Video Agent | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
 | SME Care Agent | `/sme-care-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract and deterministic SME kernel when that runtime is invoked. |
 | Investment Research Agent | `/investment-research-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract with source, evidence, review, and cost boundaries. |
+| PMF Agent | `/pmf-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract with evidence, gap-map, experiment, review, and cost boundaries. |
 
-Missing catalog fields, duplicate ids, unknown routes, absent source bindings, or an unavailable centralized document fail closed with a visible composer error. No downstream prompt copy is authoritative.
+Missing catalog fields, an empty catalog, duplicate ids or routes, mismatched ids and routes, unknown routes, absent source bindings, or an unavailable centralized document fail closed with a visible composer error. No downstream prompt copy is authoritative.

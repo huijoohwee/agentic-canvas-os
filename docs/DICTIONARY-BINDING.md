@@ -46,6 +46,7 @@ entry_metadata_contract:
   mcp: "MCP consumers may expose binding authority and boundaries, but must never store credentials or treat bindings as approval"
 dictionary_entries:
   - "@agent"
+  - "@pmf-agent"
   - "@soul-profile"
   - "@identity-slot"
   - "@personality-overlay"
@@ -167,6 +168,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | Binding | Meaning | Authority | Boundary |
 |---|---|---|---|
 | `@agent` | Executing agent bound by `FACTS.md`, `AGENTS.md`, and explicit operator instructions. | Current runtime agent. | Must consult facts before memory, keep role behavior separate from truth, and fail closed on spend, mutation, or deploy gaps. |
+| `@pmf-agent` | Product-market-fit analysis role bound to cited workspace evidence and the centralized PMF preset. | Agent definition registry plus `PROMPT-PRESETS.md`. | May assess hypotheses and propose experiments; cannot invent customer evidence, contact users, spend, mutate product state, persist results, or declare product-market fit without the required evidence and approvals. |
 | `@soul-profile` | Durable source-backed agent identity and voice. | `SOUL.md` plus approved prompt-assembly owner. | Identity only; no project commands, architecture notes, file paths, ports, credentials, memory facts, or deploy approvals. |
 | `@identity-slot` | Prompt slot 1 identity position. | Approved prompt-assembly owner. | Must be filled from scanned `@soul-profile` or a typed fallback result; silent hardcoded default identity is forbidden. |
 | `@personality-overlay` | Temporary session-level style overlay. | Operator-approved session state. | Overlay cannot mutate `SOUL.md`, override facts, bypass safety, or authorize deploy. |

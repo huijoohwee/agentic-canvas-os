@@ -25,7 +25,6 @@ workspace:
   planning_contract: "$GITHUB_ROOT/agentic-canvas-os/docs/TODO.md"
   planning_root: "$GITHUB_ROOT/agentic-canvas-os/todo"
   dev: "$GITHUB_ROOT/knowgrph"
-  todo_log: "$WORKTREE/todo-log.md"
   prod_mirror: "$GITHUB_ROOT/huijoohwee/content/knowgrph"
   dev_commands: ["npm run dev:apex", "npm run dev"]
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
@@ -39,7 +38,7 @@ coordination:
   one_active_writer: true
   direct_main_push: false
   handoff_identity: "pushed commit SHA"
-stage_order: ["discover", "fetch", "inspect", "claim", "isolate", "verify", "memory", "planning", "todo", "start"]
+stage_order: ["discover", "fetch", "inspect", "claim", "isolate", "verify", "memory", "planning", "start"]
 completion_requires:
   - "fetched remote refs"
   - "clean canonical Agentic Canvas OS checkout at fetched origin/main"
@@ -49,7 +48,6 @@ completion_requires:
   - "recorded branch and base SHA"
   - "memory-log structural compliance"
   - "monthly planning-shard structural compliance"
-  - "todo-log fetched baseline compliance"
 ---
 
 # Knowgrph Conflict-Safe Session Start Workflow
@@ -73,7 +71,7 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
 | Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
 | Dev | Author and run Knowgrph only in the isolated `$WORKTREE`, derived from `$GITHUB_ROOT/knowgrph`. Use `npm run dev:apex` and `npm run dev` through repository-owned scripts. |
-| Planning ledger | `$WORKTREE/todo-log.md` is the canonical authored planning-history ledger. Startup freezes the fetched baseline; release requires the declared task Context row to be new or changed and strictly compliant. |
+| Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local ledgers are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Mutation is forbidden until the operator explicitly requests promotion or release. |
 | Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Deployment is forbidden until the operator explicitly requests it. |
 
@@ -111,9 +109,6 @@ planning_base_ref: <fetched-agentic-canvas-os-origin-main-sha>
 planning_shard: todo/<utc-year-month>.md
 planning_context: <exact-unique-cross-repository-task-context>
 planning_compliance: structure-passed
-todo_base_ref: <fetched-knowgrph-origin-main-sha>
-todo_context: <exact-unique-task-row-context>
-todo_compliance: baseline-passed
 worktree: <resolved-sibling-worktree>
 active_writer: <single-owner>
 acceptance: <observable-vcc>
@@ -230,13 +225,7 @@ The gate validates `TODO.md`, every `todo-log/v1` shard, filename-period identit
 
 Imported pre-adoption rows remain historical evidence. Do not normalize them in place. New rows append at EOF and follow the strict row contract in `TODO.md`.
 
-### 9. Verify Knowgrph Todo Log Baseline
-
-Set `TODO_LOG_PATH` to `$WORKTREE/todo-log.md` and `TODO_BASE_REF` to the fetched Knowgrph `origin/main` SHA, then run the startup command under `Todo Log Compliance Checks` in `VALIDATION-RUNBOOK.md`.
-
-The gate requires the planning-ledger frontmatter and table contract, then proves the worktree file is byte-for-byte equal to `TODO_BASE_REF:todo-log.md`. Record one stable `todo_context` for the row this task will add or change. Historical baseline rows are preserved as fetched; the release gate applies the current strict row rules to the declared task row.
-
-### 10. Start
+### 9. Start
 
 Start Codex with `$WORKTREE` as its working directory. Declare the task invocation, semantic scope, bindings, branch, base SHA, ownership, acceptance criteria, and deploy boundary before editing.
 
@@ -263,10 +252,10 @@ Otherwise fetch, inspect, and create a new reconciliation or task worktree. Neve
 
 ## Stop Conditions
 
-Stop before build mutation when fetch fails, source dirt is unexplained, branch ownership is ambiguous, the semantic scope is already active, the base ref is missing, the worktree path or branch already exists unexpectedly, the startup SHA cannot be proven, any memory or planning shard fails structural compliance, a planning shard exceeds its cap, or `todo-log.md` differs from its fetched baseline before task work begins.
+Stop before build mutation when fetch fails, source dirt is unexplained, branch ownership is ambiguous, the semantic scope is already active, the base ref is missing, the worktree path or branch already exists unexpectedly, the startup SHA cannot be proven, any memory or planning shard fails structural compliance, a planning shard exceeds its cap, or a repository-local planning ledger is presented as live authority.
 
 ## Completion VCC
 
-Given a declared device and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, the canonical Agentic Canvas OS checkout is clean and exactly equal to fetched `origin/main`, every memory and planning shard is structurally compliant, the active planning shard and Context are declared, the Knowgrph todo ledger equals its fetched baseline with one declared `todo_context`, ownership is unique, a clean worktree exists on `agent/<device>/<semantic-scope>`, and Codex starts only inside that lane.
+Given a declared device and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, the canonical Agentic Canvas OS checkout is clean and exactly equal to fetched `origin/main`, every memory and planning shard is structurally compliant, the active planning shard and Context are declared, no repository-local planning ledger claims authority, ownership is unique, a clean worktree exists on `agent/<device>/<semantic-scope>`, and Codex starts only inside that lane.
 
-VCC: verify both fetches exit zero, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, the memory and planning structural commands exit zero, the todo startup command reports `todo-log startup baseline ok`, the memory, planning, and Knowgrph todo base refs plus both declared Contexts are recorded, the source checkout remains unchanged, the worktree is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.
+VCC: verify both fetches exit zero, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, the memory and planning structural commands exit zero, the memory and planning base refs plus the declared planning Context are recorded, repository-local planning ledgers are absent, the source checkout remains unchanged, the worktree is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.

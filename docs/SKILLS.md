@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Skills"
 graphId: "md:knowgrph-agentic-canvas-os-skills"
 doc_type: "Skill Contract Catalog"
-date: "2026-07-13"
+date: "2026-07-14"
 lang: "en-US"
 schema: "agentic-canvas-os-skills/v1"
 frontmatter_contract: "required"
@@ -27,6 +27,7 @@ external_pattern_sources:
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search"
   - "https://agentskills.io/specification"
   - "https://github.com/bytedance/deer-flow"
+  - "https://github.com/vinhhien112/Three.js-Object-Sculptor-Codex-Plugin"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "skill contracts for shared discovery, routing, and harness owners; no separate skill runtime"
@@ -48,6 +49,7 @@ skill_contracts:
   - "deploy.guard"
   - "docs.sync"
   - "flow.computing"
+  - "image.to-threejs"
   - "experience.capture"
   - "memory.write"
   - "memory.compact"
@@ -133,6 +135,7 @@ Every skill row must resolve to a stable id, owner binding, command route, seman
 | `deploy.guard` | Preserve Dev, Prod mirror, and Cloudflare boundaries. | `/deploy.guard`, `#no-deploy`, `#approval-gate`, `@dev-only`, `@operator` | Dev-only confirmation or gated deploy request. | Spec-complete |
 | `docs.sync` | Keep local docs, API contracts, and schema maps aligned after source changes. | `/validation.run`, `#frontmatter`, `#vcc`, `@source.body` | Focused doc update list and validation result. | Spec-complete |
 | `flow.computing` | Generate, validate, or run a source-backed KGC computing-flow DAG with typed inputs, explicit handles, bounded execution, and Canvas projection. | `/computing-flow`, `#computing-flow`, `#frontmatter`, `#harness`, `@source.frontmatter`, `@local-harness`, `@runtime-proof` | `kgc-computing-flow/v1` document, typed validation result, or typed blocked reason. | Spec-complete |
+| [`image.to-threejs`](IMAGE-TO-THREEJS-SKILL.md) | Convert `.png`, `.jpg`, `.jpeg`, or `.svg` image sources into native Three.js render data for shared Card, Widget, and Rich Media Panel surfaces. | `/skill.load image.to-threejs`, `#skill-system`, `@image`, `@local-harness`, `@runtime-proof` | `knowgrph-image-to-threejs/v1` manifest, Three.js render projection, or typed source error. | Spec-complete |
 | `experience.capture` | Turn run traces, failures, proof packets, or operator corrections into typed reusable experience records. | `/experience.capture`, `#learning-loop`, `#vcc`, `@experience`, `@runtime-proof` | Experience record with source, lesson, applicability, expiry risk, cost, and approval state. | Spec-complete |
 | `memory.write` | Add, replace, or remove bounded memory or user-profile entries. | `/memory.write`, `#persistent-memory`, `#memory-capacity`, `@memory-entry`, `@memory-policy`, `@memory-store` | Typed write result, capacity error, scan rejection, or duplicate result. | Spec-complete |
 | `memory.compact` | Consolidate bounded memory/profile targets without silent data loss. | `/memory.compact`, `#memory-capacity`, `@memory-store`, `@memory-policy`, `@runtime-proof` | Before/after entries, capacity delta, and preserved-fact statement. | Spec-complete |
@@ -172,15 +175,12 @@ Every skill row must resolve to a stable id, owner binding, command route, seman
 ## Skills System Contract
 
 The skills system contract is inspired by public on-demand skill systems and the Agent Skills open specification, but this repository owns only neutral source-backed docs contracts. Discovery loads metadata first, selected source loads second, referenced resources load only when required, bundles alias existing skills, and managed writes are scanned, validated, bounded, and review-gated when policy requires it. Do not copy external skills, code, examples, tests, prompt text, repository layouts, or prose.
-
 ## Context Files Contract
 
 Context files are project-local behavioral instructions discovered from scoped working directories and touched paths. Startup discovery uses one first-match project context per scope; progressive subdirectory discovery loads hints only when a path makes them relevant. Every context file must scan cleanly, fit the configured bound, and remain subordinate to system/developer/operator instructions, `FACTS.md`, `SOUL.md`, safety, and deploy gates. Do not copy external context-file discovery code, scanner code, example files, prompt assembly text, tests, fixtures, or prose.
-
 ## Context References Contract
 
 Context references are inline message expansion routes for approved `@file:`, `@folder:`, `@diff`, `@staged`, `@git:`, and `@url:` forms. Supported surfaces append bounded `@attached-context` before model or tool execution; unsupported surfaces keep raw text with typed warning. Every expansion is workspace-scoped where applicable, scanned for sensitive paths, binary content, egress risk, and size limits, and recorded with source, warning, refusal, truncation, and cost metadata. Do not copy external context-reference parser code, prompt section text, examples, tests, fixtures, or prose.
-
 ## Kanban Collaboration Contract
 `kanban.collaborate` uses `kanban.md` as the durable shared board for named profiles and full OS worker processes. Every task and handoff is a validated row through existing multi-dimensional table/Kanban utilities; no hidden subagent swarm, copied board runtime, second datastore, browser-only state, or deploy grant is implied.
 

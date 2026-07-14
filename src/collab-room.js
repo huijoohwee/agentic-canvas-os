@@ -252,4 +252,57 @@ export function serializeSnapshot(state) {
   };
 }
 
-export const COLLAB_ROOM_LIMITS = Object.freeze({ MAX_NODES, MAX_LINKS, LABEL_MAX, NODE_ID_MAX, ROOM_ID_MAX });
+// --- Reconnect catch-up ------------------------------------------------------
+
+// The transport keeps a bounded, ordered log of applied events. A reconnecting
+// client can replay the gap after its last seen revision when the log still
+// covers every missed event; otherwise it safely falls back to a full snapshot.
+const MAX_EVENT_LOG = 256;
+
+export function appendEventLog(log, event, cap = MAX_EVENT_LOG) {
+  if (!event || typeof event.rev !== "number") return log;
+  const base = Array.isArray(log) ? log : [];
+  const next = base.length >= cap ? base.slice(base.length - cap + 1) : base.slice();
+  next.push(event);
+  return next;
+}
+
+export function catchupSince(log, sinceRev, currentRev) {
+  if (typeof sinceRev !== "number" || !Number.isInteger(sinceRev) || sinceRev < 0 || sinceRev > currentRev) {
+    return { type: "catchup", complete: false, events: [], rev: currentRev };
+  }
+  if (sinceRev === currentRev) {
+    return { type: "catchup", complete: true, events: [], rev: currentRev };
+  }
+  const events = (Array.isArray(log) ? log : []).filter((event) =>
+    event && typeof event.rev === "number" && event.rev > sinceRev,
+  );
+  const complete =
+    events.length > 0 && events[0].rev === sinceRev + 1 && events[events.length - 1].rev === currentRev;
+  return { type: "catchup", complete, events, rev: currentRev };
+}
+
+// Presence is derived from live connection attachments so no separate roster
+// state can leak when a socket disappears.
+export function rosterFromAttachments(attachments) {
+  const list = Array.isArray(attachments) ? attachments : [];
+  const counts = new Map();
+  for (const attachment of list) {
+    const subject =
+      attachment && typeof attachment.subject === "string" && attachment.subject ? attachment.subject : "anonymous";
+    counts.set(subject, (counts.get(subject) ?? 0) + 1);
+  }
+  const members = [...counts.entries()]
+    .map(([subject, connections]) => ({ subject, connections }))
+    .sort((a, b) => (a.subject < b.subject ? -1 : a.subject > b.subject ? 1 : 0));
+  return { type: "presence", members, connections: list.length };
+}
+
+export const COLLAB_ROOM_LIMITS = Object.freeze({
+  MAX_NODES,
+  MAX_LINKS,
+  LABEL_MAX,
+  NODE_ID_MAX,
+  ROOM_ID_MAX,
+  MAX_EVENT_LOG,
+});

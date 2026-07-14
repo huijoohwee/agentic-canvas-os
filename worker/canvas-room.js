@@ -12,7 +12,15 @@
 // Oracle Cloud Always Free A1 (Ampere) Node WebSocket server without change.
 
 import { sessionCanJoinRoom, verifySessionToken } from "../agent-api/src/auth.js";
-import { applyOp, createEmptyRoomState, isValidRoomId, serializeSnapshot } from "../src/collab-room.js";
+import {
+  appendEventLog,
+  applyOp,
+  catchupSince,
+  createEmptyRoomState,
+  isValidRoomId,
+  rosterFromAttachments,
+  serializeSnapshot,
+} from "../src/collab-room.js";
 
 const STORAGE_KEY = "room-state-v1";
 const MAX_MESSAGE_BYTES = 65536; // generous bound; well under the 32 MiB DO WS limit
@@ -33,6 +41,9 @@ export class CanvasRoom {
     this.env = env;
     this.roomId = "";
     this.recentOpIds = [];
+    // In-memory only. After hibernation eviction a reconnect safely falls back
+    // to a full snapshot because this bounded replay window starts empty.
+    this.eventLog = [];
     /** @type {{nodes: object, links: object, rev: number} | null} */
     this.state = null;
     this.loaded = this.ctx.blockConcurrencyWhile(async () => {
@@ -73,6 +84,30 @@ export class CanvasRoom {
         ws.send(text);
       } catch {
         // Best-effort; a broken socket will be reaped by the runtime.
+      }
+    }
+  }
+
+  broadcastPresence(exclude) {
+    const sockets = this.ctx.getWebSockets();
+    const attachments = [];
+    for (const ws of sockets) {
+      if (ws === exclude) continue;
+      let attachment = null;
+      try {
+        attachment = ws.deserializeAttachment();
+      } catch {
+        attachment = null;
+      }
+      attachments.push(attachment || {});
+    }
+    const payload = JSON.stringify(rosterFromAttachments(attachments));
+    for (const ws of sockets) {
+      if (ws === exclude) continue;
+      try {
+        ws.send(payload);
+      } catch {
+        // Best-effort; a broken socket is reaped by the runtime.
       }
     }
   }
@@ -125,7 +160,18 @@ export class CanvasRoom {
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({ subject: verdict.claims.sub || "" });
 
-    this.send(server, serializeSnapshot(this.state));
+    const sinceParam = url.searchParams.get("since");
+    const since = sinceParam === null ? NaN : Number(sinceParam);
+    let sentInitial = false;
+    if (Number.isInteger(since)) {
+      const catchup = catchupSince(this.eventLog, since, this.state.rev);
+      if (catchup.complete) {
+        this.send(server, catchup);
+        sentInitial = true;
+      }
+    }
+    if (!sentInitial) this.send(server, serializeSnapshot(this.state));
+    this.broadcastPresence();
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -177,16 +223,16 @@ export class CanvasRoom {
 
     this.state = nextState;
     this.recentOpIds = [...this.recentOpIds, op.opId].slice(-MAX_RECENT_OP_IDS);
+    this.eventLog = appendEventLog(this.eventLog, event);
     await this.persist();
     this.broadcast({ ...event, opId: op.opId }, ws);
     this.send(ws, { type: "ack", opType: op.type, opId: op.opId, rev: event.rev });
   }
 
   async webSocketClose(ws, code, reason, wasClean) {
-    // No per-connection cleanup needed: room state lives in this.state /
-    // storage, not on the socket. Presence (who's connected) is derivable
-    // from `this.ctx.getWebSockets()` on demand if a future revision needs
-    // a roster; no separate bookkeeping to leak here.
+    // The runtime may still list a mid-close socket, so explicitly exclude it
+    // while deriving the new live roster.
+    this.broadcastPresence(ws);
   }
 
   async webSocketError(ws, error) {

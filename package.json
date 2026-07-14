@@ -17,6 +17,8 @@
     "docs:check": "node ./scripts/docs-contract.mjs",
     "doctor": "node ./scripts/doctor.mjs",
     "github:configure": "node ./scripts/configure-github.mjs",
+    "rollback": "wrangler rollback",
+    "smoke": "node ./scripts/smoke.mjs",
     "sync:live": "node ./scripts/live-sync.mjs",
     "test": "node --test __tests__/*.test.mjs",
     "web:build": "node web/build.mjs",

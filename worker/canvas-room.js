@@ -21,6 +21,7 @@ import {
   rosterFromAttachments,
   serializeSnapshot,
 } from "../src/collab-room.js";
+import { createRoomMetrics, metricsSummary, recordRoomEvent, roomLogRecord } from "../src/collab-metrics.js";
 
 const STORAGE_KEY = "room-state-v1";
 const MAX_MESSAGE_BYTES = 65536; // generous bound; well under the 32 MiB DO WS limit
@@ -44,6 +45,8 @@ export class CanvasRoom {
     // In-memory only. After hibernation eviction a reconnect safely falls back
     // to a full snapshot because this bounded replay window starts empty.
     this.eventLog = [];
+    // Per-instance cumulative counters for observability (reset on eviction).
+    this.metrics = createRoomMetrics();
     /** @type {{nodes: object, links: object, rev: number} | null} */
     this.state = null;
     this.loaded = this.ctx.blockConcurrencyWhile(async () => {
@@ -112,6 +115,29 @@ export class CanvasRoom {
     }
   }
 
+  liveConnections() {
+    try {
+      return this.ctx.getWebSockets().length;
+    } catch {
+      return 0;
+    }
+  }
+
+  // Emit one structured JSON log line. Cloudflare Tail / Logpush collect
+  // `console` output; keeping it single-line JSON makes it query-friendly.
+  log(event, fields = {}, level = "info") {
+    const record = roomLogRecord({
+      room: this.roomId,
+      event,
+      level,
+      fields: { connections: this.liveConnections(), ...fields },
+    });
+    const line = JSON.stringify(record);
+    if (level === "error") console.error(line);
+    else if (level === "warn") console.warn(line);
+    else console.log(line);
+  }
+
   async fetch(request) {
     await this.ensureLoaded();
     const url = new URL(request.url);
@@ -173,6 +199,9 @@ export class CanvasRoom {
     if (!sentInitial) this.send(server, serializeSnapshot(this.state));
     this.broadcastPresence();
 
+    this.metrics = recordRoomEvent(this.metrics, "join");
+    this.log("join", { subject: verdict.claims.sub || "anonymous", init: sentInitial ? "catchup" : "snapshot", rev: this.state.rev });
+
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -192,11 +221,14 @@ export class CanvasRoom {
       return;
     }
     if (this.recentOpIds.includes(op.opId)) {
+      this.metrics = recordRoomEvent(this.metrics, "duplicate");
       this.send(ws, { type: "ack", opType: op.type, opId: op.opId, rev: this.state.rev, duplicate: true });
       return;
     }
     const { state: nextState, event, error, conflict } = applyOp(this.state, op);
     if (conflict) {
+      this.metrics = recordRoomEvent(this.metrics, "conflict");
+      this.log("op_conflict", { opType: op.type, kind: conflict.kind, id: conflict.id, currentVersion: conflict.currentVersion }, "warn");
       // Optimistic-concurrency rejection: return the current entity so the
       // sender can rebase its edit onto the winning version instead of
       // silently clobbering a concurrent change. State is unchanged.
@@ -216,12 +248,15 @@ export class CanvasRoom {
       return;
     }
     if (error) {
+      this.metrics = recordRoomEvent(this.metrics, "error");
+      this.log("op_error", { opType: op && op.type, error }, "warn");
       this.send(ws, { type: "error", error });
       return;
     }
     if (!event) return; // no-op (e.g. deleting an id that's already gone)
 
     this.state = nextState;
+    this.metrics = recordRoomEvent(this.metrics, "applied");
     this.recentOpIds = [...this.recentOpIds, op.opId].slice(-MAX_RECENT_OP_IDS);
     this.eventLog = appendEventLog(this.eventLog, event);
     await this.persist();
@@ -233,6 +268,12 @@ export class CanvasRoom {
     // The runtime may still list a mid-close socket, so explicitly exclude it
     // while deriving the new live roster.
     this.broadcastPresence(ws);
+    const remaining = Math.max(0, this.liveConnections() - 1);
+    this.log("leave", { code, wasClean: Boolean(wasClean), connections: remaining });
+    // Emit a metrics summary as the room drains so a Tail query can chart
+    // per-instance activity (joins, applied, conflicts, errors) without a
+    // separate metrics store.
+    this.log("metrics", { ...metricsSummary(this.metrics, { room: this.roomId }), connections: remaining });
   }
 
   async webSocketError(ws, error) {

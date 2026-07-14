@@ -49,6 +49,24 @@ globalThis.Response = class ResponseStub {
   }
 };
 
+// Capture (and silence) the DO's structured `console` logs so we can assert on
+// them and keep the test output clean. Isolated to this test process.
+const logLines = [];
+for (const method of ["log", "warn", "error"]) {
+  console[method] = (...args) => logLines.push(args.map(String).join(" "));
+}
+function parsedLogs() {
+  return logLines
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
 // --- Fake Durable Object context --------------------------------------------
 
 class FakeDurableObjectCtx {
@@ -200,6 +218,52 @@ test("presence updates when a socket closes", async () => {
   assert.deepEqual(presence.members, [{ subject: "op-a", connections: 1 }]);
 });
 
+test("a join emits a structured join log with subject, init mode, and live connections", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  await connect(room, ctx, { subject: "op-log" });
+  const join = parsedLogs().find((r) => r.event === "join");
+  assert.ok(join, "a join log record was emitted");
+  assert.equal(join.level, "info");
+  assert.equal(join.subject, "op-log");
+  assert.equal(join.init, "snapshot");
+  assert.equal(join.connections, 1);
+  assert.match(join.ts, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test("a conflict emits a warn-level op_conflict log", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "op" });
+  await room.webSocketMessage(ws, upsert("n1"));
+  await room.webSocketMessage(
+    ws,
+    JSON.stringify({ type: "upsertNode", opId: "op-n1-stale000000000", node: { id: "n1", x: 9, y: 9 }, baseVersion: 0 }),
+  );
+  const conflict = parsedLogs().find((r) => r.event === "op_conflict");
+  assert.ok(conflict, "a conflict log record was emitted");
+  assert.equal(conflict.level, "warn");
+  assert.equal(conflict.kind, "node");
+  assert.equal(conflict.id, "n1");
+});
+
+test("closing a socket emits leave and a metrics summary log", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "op" });
+  await room.webSocketMessage(ws, upsert("n1")); // opsApplied 1
+  ctx.sockets = ctx.sockets.filter((s) => s !== ws);
+  await room.webSocketClose(ws, 1000, "", true);
+
+  const logs = parsedLogs();
+  assert.ok(logs.find((r) => r.event === "leave"), "a leave log was emitted");
+  const metrics = logs.find((r) => r.event === "metrics");
+  assert.ok(metrics, "a metrics summary was emitted");
+  assert.equal(metrics.joins, 1);
+  assert.equal(metrics.opsApplied, 1);
+  assert.equal(metrics.connections, 0);
+});
+
 test("a stale baseVersion edit is rejected with a typed conflict carrying the current entity", async () => {
   const { room, ctx } = makeRoom();
   const ws = await connect(room, ctx, { subject: "op" });
@@ -218,4 +282,43 @@ test("a stale baseVersion edit is rejected with a typed conflict carrying the cu
   assert.equal(conflict.baseVersion, 1);
   assert.equal(conflict.current.v, 2, "current entity is returned so the client can rebase");
   assert.equal(room.state.rev, 2, "conflicting op did not mutate state");
+});
+
+test("structured room logs summarize joins, applied ops, duplicates, conflicts, and live connections", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "observer" });
+  await room.webSocketMessage(ws, upsert("n1"));
+  await room.webSocketMessage(ws, upsert("n1"));
+  await room.webSocketMessage(ws, upsert("n1", { opId: "op-n1-second00000000" }));
+  await room.webSocketMessage(
+    ws,
+    JSON.stringify({ type: "upsertNode", opId: "op-n1-stale000000000", node: { id: "n1", x: 9, y: 9 }, baseVersion: 1 }),
+  );
+
+  ctx.sockets = [];
+  await room.webSocketClose(ws, 1000, "", true);
+
+  const logs = parsedLogs();
+  const join = logs.find((entry) => entry.event === "join");
+  assert.equal(join.subject, "observer");
+  assert.equal(join.connections, 1);
+
+  const conflict = logs.find((entry) => entry.event === "op_conflict");
+  assert.equal(conflict.level, "warn");
+  assert.equal(conflict.id, "n1");
+  assert.equal(conflict.currentVersion, 2);
+
+  const summary = logs.find((entry) => entry.event === "metrics");
+  assert.deepEqual(
+    {
+      connections: summary.connections,
+      joins: summary.joins,
+      opsApplied: summary.opsApplied,
+      duplicates: summary.duplicates,
+      conflicts: summary.conflicts,
+      errors: summary.errors,
+    },
+    { connections: 0, joins: 1, opsApplied: 2, duplicates: 1, conflicts: 1, errors: 0 },
+  );
 });

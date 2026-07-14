@@ -115,6 +115,44 @@ export function park({
   return { branch, headSha, stashRef };
 }
 
+export function endSession({
+  invocationPath,
+  repo,
+  gitText,
+  run,
+  log = console.log,
+  now = () => new Date(),
+  json = false,
+}) {
+  const result = park({
+    invocationPath,
+    repo,
+    gitText,
+    run,
+    log: () => {},
+    now,
+  });
+  const summary = {
+    parkedBranch: result.branch,
+    stashRef: result.stashRef,
+    mainSha: result.headSha,
+    status: "ok",
+  };
+
+  if (json) {
+    log(JSON.stringify(summary));
+    return summary;
+  }
+
+  const message = summary.stashRef
+    ? `Session ended: parked ${summary.parkedBranch} in ${summary.stashRef}; clean main is ${summary.mainSha.slice(0, 12)}.`
+    : summary.parkedBranch === "main"
+      ? `Session ended: main is already clean at ${summary.mainSha.slice(0, 12)}.`
+      : `Session ended: returned from ${summary.parkedBranch} to clean main at ${summary.mainSha.slice(0, 12)}.`;
+  log(message);
+  return summary;
+}
+
 export function createParkMessage(branch, date = new Date()) {
   return `park: ${branch} ${formatParkTimestamp(date)}`;
 }

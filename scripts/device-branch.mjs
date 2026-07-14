@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { park, publish, start } from "./device-branch-lib.mjs";
+import { endSession, park, publish, start } from "./device-branch-lib.mjs";
 
-const [command, rawScope] = process.argv.slice(2);
-if (!command || !["start", "publish", "park"].includes(command)) usage();
+const [command, ...args] = process.argv.slice(2);
+if (!command || !["start", "publish", "park", "end"].includes(command)) usage();
+
+const json = args.includes("--json");
+const rawScope = args.find((value) => !value.startsWith("--"));
 
 const invocationPath = process.cwd();
 const repo = gitText(["rev-parse", "--show-toplevel"]).trim();
@@ -27,6 +30,7 @@ const context = {
 if (command === "start") start(context);
 if (command === "publish") publish(context);
 if (command === "park") park(context);
+if (command === "end") endSession({ ...context, json });
 
 function configureHooks() {
   run("git", ["config", "core.hooksPath", ".githooks"]);
@@ -56,6 +60,6 @@ function run(command, args) {
 }
 
 function usage() {
-  console.error("Usage: node scripts/device-branch.mjs start <scope> | publish | park");
+  console.error("Usage: node scripts/device-branch.mjs start <scope> | publish | park | end [--json]");
   process.exit(2);
 }

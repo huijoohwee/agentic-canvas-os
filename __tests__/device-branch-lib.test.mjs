@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createParkMessage, formatParkTimestamp, park } from "../scripts/device-branch-lib.mjs";
+import { createParkMessage, endSession, formatParkTimestamp, park } from "../scripts/device-branch-lib.mjs";
 
 const repo = process.cwd();
 
@@ -79,5 +79,72 @@ test("park fails closed when local main does not equal origin/main after refresh
       run: () => {},
     }),
     /main must match origin\/main after park/,
+  );
+});
+
+test("endSession reports a human summary after parking work", () => {
+  const logs = [];
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope\n",
+    "status --porcelain": [" M docs/task.md\n", ""],
+    "stash list --format=%gd -n 1": "stash@{0}\n",
+    "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  const summary = endSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    run: () => {},
+    log: message => logs.push(message),
+    now: () => new Date("2026-07-14T22:30:45.123Z"),
+  });
+
+  assert.deepEqual(summary, {
+    parkedBranch: "agent/device/scope",
+    stashRef: "stash@{0}",
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    status: "ok",
+  });
+  assert.equal(
+    logs[0],
+    "Session ended: parked agent/device/scope in stash@{0}; clean main is 1234567890ab.",
+  );
+});
+
+test("endSession emits machine-readable JSON when requested", () => {
+  const logs = [];
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "main\n",
+    "status --porcelain": "",
+    "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  const summary = endSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    run: () => {},
+    log: message => logs.push(message),
+    json: true,
+  });
+
+  assert.deepEqual(summary, {
+    parkedBranch: "main",
+    stashRef: null,
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    status: "ok",
+  });
+  assert.equal(
+    logs[0],
+    JSON.stringify(summary),
   );
 });

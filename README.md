@@ -30,6 +30,16 @@ npm run device:park
 This stashes local task-branch work if needed, switches back to clean `main`,
 and fast-forwards it to `origin/main` without a manual git sequence.
 
+Safe session end:
+
+```bash
+npm run device:end
+```
+
+This parks any local task-branch work, returns to clean `main`, and prints a
+single end-of-session summary. Use `npm run device:end -- --json` for machine
+readable output.
+
 First success check:
 
 ```bash

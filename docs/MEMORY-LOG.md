@@ -132,8 +132,8 @@ The baseline executor is deterministic and model-free: `model` is `none`, token 
 
 ```mermaid
 flowchart LR
-  deviceA["Device A worktree"] --> appendA["Append timestamped entry"]
-  deviceB["Device B worktree"] --> appendB["Append timestamped entry"]
+  deviceA["Device A canonical checkout"] --> appendA["Append timestamped entry"]
+  deviceB["Device B canonical checkout"] --> appendB["Append timestamped entry"]
   appendA --> git["Git branch and review"]
   appendB --> git
   git --> shard["Monthly append-only shard"]

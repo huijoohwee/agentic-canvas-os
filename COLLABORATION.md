@@ -1,6 +1,6 @@
 # Multi-device delivery
 
-This repository uses protected pull requests as the synchronization boundary. Devices never push directly to `main`; each publishes a scoped branch, CI validates it, GitHub auto-merges it, Cloudflare deploys the resulting `main` SHA serially, and other devices update a separate clean live worktree.
+This repository uses protected pull requests as the synchronization boundary. Devices never push directly to `main`; each publishes a scoped branch from its one canonical checkout, CI validates it, GitHub auto-merges it, Cloudflare deploys the resulting `main` SHA serially, and idle devices fast-forward their clean canonical `main` checkout.
 
 ## One-time activation
 
@@ -51,7 +51,7 @@ Publishing runs local checks, pushes the branch, creates or updates a PR with th
 - Source, schema, auth, Durable Object, storage, secret, deployment, or workflow conflicts receive `automerge/conflict` and stop for owner review.
 - Generated web output is rebuilt; it is not a merge authority.
 
-## Follow merged code without touching active work
+## Update an idle canonical checkout
 
 Run a single update:
 
@@ -65,4 +65,4 @@ Or watch every 20 seconds:
 npm run sync:live -- --watch --interval=20
 ```
 
-The watcher creates a detached sibling worktree named `agentic-canvas-os-live`. It never rebases or resets the active task worktree and refuses to update the live worktree if that worktree is dirty.
+The command requires exactly one registered worktree, the `main` branch, and a clean canonical checkout. It fetches `origin/main` and uses a fast-forward-only merge. It fails closed on an active task branch, local changes, non-fast-forward history, or any secondary worktree.

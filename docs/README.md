@@ -33,11 +33,12 @@ the smallest set of docs needed for the task.
 
 Recommended reading order:
 
-1. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the single canonical checkout rule.
-2. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
-3. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
-4. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.
-5. The three dictionary files only when changing invocation grammar or routing meaning.
+1. [`PROJECT-RULES.md`](./PROJECT-RULES.md) for project-wide engineering and session-closeout rules.
+2. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the single canonical checkout rule.
+3. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
+4. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
+5. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.
+6. The three dictionary files only when changing invocation grammar or routing meaning.
 
 Human-friendly rule: speak in task intent, then translate into the strict
 contracts only when the work touches planning, workflow, or invocation grammar.
@@ -46,6 +47,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 
 | File | Role | Use |
 |---|---|---|
+| `PROJECT-RULES.md` | Repository-wide engineering rules | Neutral code hygiene, validation, and session-end behavior shared across devices and tools. |
 | `SOUL.md` | Durable identity layer | Agent identity, voice, prompt slot 1 contract, personality overlay boundary, and hardcoded-default replacement rules. |
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |
 | `MEMORY.md` | Agent memory seed | Bounded agent notes, persistence, routing memory, MoA memory, stateful orchestration memory, reusable runtime-readiness context, and local operating lenses. |

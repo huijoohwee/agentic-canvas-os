@@ -12,6 +12,12 @@ secrets are Cloudflare secret bindings; the browser only sees public URLs.
 If you are working in this repo as a human contributor, use this file as the
 entrypoint and treat [`docs/`](./docs) as the agent control surface.
 
+Before executing any task, humans and AI tools should read:
+
+1. [`docs/PROJECT-RULES.md`](./docs/PROJECT-RULES.md) for project-wide engineering and session-end rules.
+2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md) for session start, ownership, and canonical checkout rules.
+3. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md) for focused checks and release gates.
+
 Quick local path:
 
 ```bash
@@ -48,9 +54,10 @@ curl http://127.0.0.1:8787/api/ready
 
 Before changing workflow or control-surface docs, read:
 
-1. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md)
-2. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md)
-3. [`docs/RUNTIME-READINESS.md`](./docs/RUNTIME-READINESS.md)
+1. [`docs/PROJECT-RULES.md`](./docs/PROJECT-RULES.md)
+2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md)
+3. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md)
+4. [`docs/RUNTIME-READINESS.md`](./docs/RUNTIME-READINESS.md)
 
 ## Topology
 

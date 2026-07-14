@@ -1,0 +1,15 @@
+# agentic-canvas-os
+
+Vendor-neutral routing hints for AI agents and coding tools.
+
+Start here:
+- README.md
+- docs/PROJECT-RULES.md
+- docs/START-WORKFLOW.md
+- docs/VALIDATION-RUNBOOK.md
+- docs/RUNTIME-READINESS.md
+
+Rules:
+- Use docs/PROJECT-RULES.md as the repository-owned engineering and session-closeout source of truth.
+- End sessions in this repo with `npm run device:end -- --json`.
+- Keep deployment, Prod mirror, and Cloudflare mutation operator-gated.

@@ -259,6 +259,31 @@ Use pull only when all conditions are true:
 - its upstream is verified;
 - the chosen merge or rebase behavior is explicit.
 
+## End of Session Protocol
+
+When a task is complete or intentionally paused, AI agents, AI IDEs, and AI
+coding tools must end the session through the repository-owned wrapper instead
+of leaving a dirty task branch behind.
+
+Run the canonical command:
+
+```sh
+npm run device:end -- --json
+```
+
+The command must safely park local task-branch work, return the canonical
+checkout to clean `main`, and emit machine-readable confirmation for the final
+handoff. Do not require a human to switch branches, stash changes, or reconcile
+local Git state manually after the agent finishes.
+
+Given a completed or paused task, when the session-end protocol runs, then the
+agent's local changes are preserved in a stash when needed, `main` is active,
+and the checkout matches fetched `origin/main`.
+
+VCC: Verify `npm run device:end -- --json` exits zero, the JSON output reports
+`"status":"ok"`, `parkedBranch`, and `mainSha`, and `git status --short
+--branch` shows clean `main` at the fetched `origin/main` revision.
+
 Otherwise fetch, inspect, and activate a new reconciliation or task branch in the canonical checkout. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
 
 ## Handoff and Conflict Rules

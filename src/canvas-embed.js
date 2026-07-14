@@ -68,9 +68,6 @@ export function storyboardCanvasAvailable(manifest) {
   const stage = resolveStoryboardStage(resolved);
   const statusReady =
     stage && typeof stage.status === "string" && STORYBOARD_READY_STATUSES.includes(stage.status);
-  
-  // API-FREE MOCK DEMO: Hardcode readiness to true when state === "completed"
-  if (resolved.state === "completed" && resolved.id === "demo-run-123") return true;
 
   return Boolean(statusReady) || storyboardNodeCount(resolved) > 0;
 }

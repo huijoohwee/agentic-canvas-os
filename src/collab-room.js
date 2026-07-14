@@ -7,13 +7,16 @@
 //   - a future self-hosted Node WebSocket server on Oracle Cloud's Always Free
 //     A1 (Ampere) tier — same reducer, same wire protocol, different transport.
 //
-// Concurrency model: last-write-wins per entity, with a monotonic version
-// counter (`v`) recorded on every node/link so a future strict mode (reject
-// on stale `baseVersion`) can be added without changing the wire shape. This
-// keeps the MVP simple and race-free: a Durable Object (or a single Node
-// process per room) processes one message at a time, so there is no
-// concurrent-write hazard to resolve here — only "which write happened last"
-// bookkeeping.
+// Concurrency model: last-write-wins per entity by default, with a monotonic
+// version counter (`v`) recorded on every node/link. An op MAY additionally
+// carry an optional numeric `baseVersion` to opt into optimistic concurrency:
+// when present, the op is rejected as a typed `conflict` (never applied) if the
+// current entity version does not equal `baseVersion`, so the client can rebase
+// onto the returned current version instead of silently clobbering a concurrent
+// edit. Omitting `baseVersion` preserves the original last-write-wins behavior,
+// so the wire shape stays backward compatible. A Durable Object (or a single
+// Node process per room) still processes one message at a time, so the only
+// hazard resolved here is "this writer edited a stale version".
 
 const ROOM_ID_MAX = 128;
 const LABEL_MAX = 256;
@@ -46,6 +49,25 @@ function cleanLabel(value, fallback = "") {
 
 function cleanNumber(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * Optimistic-concurrency guard. When `op.baseVersion` is a finite number, the
+ * caller is asserting it edited version `baseVersion`; if the current entity
+ * version differs, return a typed conflict descriptor so `applyOp` can reject
+ * the op without mutating state. Returns `null` when there is no conflict
+ * (either `baseVersion` was omitted or it matches the current version).
+ *
+ * @param {"node"|"link"} kind
+ * @param {string} id
+ * @param {number} currentVersion current entity `v` (0 when the entity is absent)
+ * @param {object} op the incoming op, possibly carrying `baseVersion`
+ * @param {number} rev current room revision, echoed back for client rebase
+ */
+function versionConflict(kind, id, currentVersion, op, rev) {
+  if (typeof op.baseVersion !== "number" || !Number.isFinite(op.baseVersion)) return null;
+  if (currentVersion === op.baseVersion) return null;
+  return { conflict: { kind, id, currentVersion, baseVersion: op.baseVersion, rev } };
 }
 
 /** Validate an incoming op. Returns `{ valid, errors }`; never throws. */
@@ -99,10 +121,14 @@ export function applyOp(state, op, opts = {}) {
 
   if (op.type === "upsertNode") {
     const id = cleanId(op.node.id);
+    const prev = state.nodes[id];
+    const conflict = versionConflict("node", id, prev?.v ?? 0, op, state.rev);
+    if (conflict) {
+      return { state, event: null, error: `version conflict on node ${id}`, ...conflict };
+    }
     if (Object.prototype.hasOwnProperty.call(state.nodes, id) === false && Object.keys(state.nodes).length >= MAX_NODES) {
       return { state, event: null, error: `room node limit (${MAX_NODES}) reached` };
     }
-    const prev = state.nodes[id];
     const node = {
       id,
       label: cleanLabel(op.node.label, id),
@@ -121,6 +147,10 @@ export function applyOp(state, op, opts = {}) {
   if (op.type === "deleteNode") {
     const id = cleanId(op.id);
     if (!Object.prototype.hasOwnProperty.call(state.nodes, id)) return { state, event: null, error: null };
+    const conflict = versionConflict("node", id, state.nodes[id]?.v ?? 0, op, state.rev);
+    if (conflict) {
+      return { state, event: null, error: `version conflict on node ${id}`, ...conflict };
+    }
     const nodes = { ...state.nodes };
     delete nodes[id];
     // Cascade: drop links touching the deleted node (mirrors web/app.js deleteSelection).
@@ -133,10 +163,14 @@ export function applyOp(state, op, opts = {}) {
 
   if (op.type === "upsertLink") {
     const id = cleanId(op.link.id);
+    const prev = state.links[id];
+    const conflict = versionConflict("link", id, prev?.v ?? 0, op, state.rev);
+    if (conflict) {
+      return { state, event: null, error: `version conflict on link ${id}`, ...conflict };
+    }
     if (Object.prototype.hasOwnProperty.call(state.links, id) === false && Object.keys(state.links).length >= MAX_LINKS) {
       return { state, event: null, error: `room link limit (${MAX_LINKS}) reached` };
     }
-    const prev = state.links[id];
     const link = {
       id,
       source: cleanId(op.link.source),
@@ -152,6 +186,10 @@ export function applyOp(state, op, opts = {}) {
   if (op.type === "deleteLink") {
     const id = cleanId(op.id);
     if (!Object.prototype.hasOwnProperty.call(state.links, id)) return { state, event: null, error: null };
+    const conflict = versionConflict("link", id, state.links[id]?.v ?? 0, op, state.rev);
+    if (conflict) {
+      return { state, event: null, error: `version conflict on link ${id}`, ...conflict };
+    }
     const links = { ...state.links };
     delete links[id];
     return { state: { ...state, links, rev }, event: { type: "linkDeleted", id, rev }, error: null };
@@ -199,9 +237,72 @@ export function serializeGraph(state) {
   return { nodes, links };
 }
 
-/** Full snapshot payload sent to a client on join. */
+/**
+ * Full snapshot payload sent to a client on join. Includes room capacity so a
+ * client can warn the operator as usage approaches the hard caps rather than
+ * discovering the limit only when an op is rejected.
+ */
 export function serializeSnapshot(state) {
-  return { type: "snapshot", ...serializeGraph(state), rev: state.rev };
+  return {
+    type: "snapshot",
+    ...serializeGraph(state),
+    rev: state.rev,
+    limits: { maxNodes: MAX_NODES, maxLinks: MAX_LINKS },
+    counts: { nodes: Object.keys(state.nodes).length, links: Object.keys(state.links).length },
+  };
 }
 
-export const COLLAB_ROOM_LIMITS = Object.freeze({ MAX_NODES, MAX_LINKS, LABEL_MAX, NODE_ID_MAX, ROOM_ID_MAX });
+// --- Reconnect catch-up ------------------------------------------------------
+
+// The transport keeps a bounded, ordered log of applied events. A reconnecting
+// client can replay the gap after its last seen revision when the log still
+// covers every missed event; otherwise it safely falls back to a full snapshot.
+const MAX_EVENT_LOG = 256;
+
+export function appendEventLog(log, event, cap = MAX_EVENT_LOG) {
+  if (!event || typeof event.rev !== "number") return log;
+  const base = Array.isArray(log) ? log : [];
+  const next = base.length >= cap ? base.slice(base.length - cap + 1) : base.slice();
+  next.push(event);
+  return next;
+}
+
+export function catchupSince(log, sinceRev, currentRev) {
+  if (typeof sinceRev !== "number" || !Number.isInteger(sinceRev) || sinceRev < 0 || sinceRev > currentRev) {
+    return { type: "catchup", complete: false, events: [], rev: currentRev };
+  }
+  if (sinceRev === currentRev) {
+    return { type: "catchup", complete: true, events: [], rev: currentRev };
+  }
+  const events = (Array.isArray(log) ? log : []).filter((event) =>
+    event && typeof event.rev === "number" && event.rev > sinceRev,
+  );
+  const complete =
+    events.length > 0 && events[0].rev === sinceRev + 1 && events[events.length - 1].rev === currentRev;
+  return { type: "catchup", complete, events, rev: currentRev };
+}
+
+// Presence is derived from live connection attachments so no separate roster
+// state can leak when a socket disappears.
+export function rosterFromAttachments(attachments) {
+  const list = Array.isArray(attachments) ? attachments : [];
+  const counts = new Map();
+  for (const attachment of list) {
+    const subject =
+      attachment && typeof attachment.subject === "string" && attachment.subject ? attachment.subject : "anonymous";
+    counts.set(subject, (counts.get(subject) ?? 0) + 1);
+  }
+  const members = [...counts.entries()]
+    .map(([subject, connections]) => ({ subject, connections }))
+    .sort((a, b) => (a.subject < b.subject ? -1 : a.subject > b.subject ? 1 : 0));
+  return { type: "presence", members, connections: list.length };
+}
+
+export const COLLAB_ROOM_LIMITS = Object.freeze({
+  MAX_NODES,
+  MAX_LINKS,
+  LABEL_MAX,
+  NODE_ID_MAX,
+  ROOM_ID_MAX,
+  MAX_EVENT_LOG,
+});

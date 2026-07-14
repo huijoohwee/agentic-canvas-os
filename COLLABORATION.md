@@ -41,10 +41,15 @@ Commit intentionally, then publish the clean branch:
 npm run device:publish
 ```
 
-Publishing runs local checks, pushes the branch, creates or updates a PR with the `automerge` label, and enables squash auto-merge. CI updates only the oldest eligible PR after each `main` change, which provides merge-queue behavior for this personal repository.
+`device:start` configures the repository-owned pre-commit hook. Run `npm run git:configure` once in an existing checkout that has not used `device:start` yet. The hook rejects unresolved index entries and commits from any secondary checkout.
+
+Publishing requires one canonical read path, one registered worktree, no unresolved conflict, and no open PR owned by another branch. It runs local checks, pushes the branch, creates or updates the sole PR with the `automerge` label, and enables squash auto-merge. CI refuses to reconcile multiple open PRs; consolidate or close the superseded PR before continuing.
 
 ## Conflict policy
 
+- Resolve every merge conflict before committing changes. Unmerged index stages fail both the pre-commit hook and device publication.
+- Use only the canonical checkout path returned by `git rev-parse --show-toplevel`; alternate checkout, linked-worktree, copied-source, and subdirectory read paths are not delivery authorities.
+- Keep exactly one open pull request targeting `main`. Import and validate unique commits before closing a superseded PR; never discard unexplained work.
 - GitHub updates and merges disjoint changes automatically.
 - Concurrent append-only `memory/YYYY-MM.md` and `todo/YYYY-MM.md` changes preserve the current `main` bytes and append the device suffix.
 - A `package-lock.json`-only collision is regenerated from the merged package manifest.

@@ -16,6 +16,7 @@
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "doctor": "node ./scripts/doctor.mjs",
+    "git:configure": "git config core.hooksPath .githooks",
     "github:configure": "node ./scripts/configure-github.mjs",
     "rollback": "wrangler rollback",
     "smoke": "node ./scripts/smoke.mjs",

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import path from "node:path";
+import { assertCanonicalReadPath, assertSingleCanonicalWorktree } from "./repository-guards.mjs";
 
 const watch = process.argv.includes("--watch");
 const intervalArg = process.argv.find((arg) => arg.startsWith("--interval="));
 const intervalSeconds = Math.max(5, Math.min(300, Number(intervalArg?.split("=")[1] || 20)));
 const root = gitText(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
+assertCanonicalReadPath({ root, cwd: process.cwd() });
 
 await syncOnce();
 if (watch) {
@@ -18,13 +19,7 @@ if (watch) {
 }
 
 async function syncOnce() {
-  const worktrees = gitText(root, ["worktree", "list", "--porcelain"])
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith("worktree "))
-    .map((line) => path.resolve(line.slice("worktree ".length).trim()));
-  if (worktrees.length !== 1 || worktrees[0] !== path.resolve(root)) {
-    throw new Error(`Live sync requires the one canonical checkout at ${root}; found ${worktrees.join(", ") || "none"}`);
-  }
+  assertSingleCanonicalWorktree({ root, porcelain: gitText(root, ["worktree", "list", "--porcelain"]) });
 
   run(root, "git", ["fetch", "--quiet", "origin", "main"]);
   const branch = gitText(root, ["branch", "--show-current"]).trim();

@@ -62,7 +62,7 @@ This folder is the local documentation control surface for making `knowgrph` a r
 - A caller can expand explicit `@` context references into bounded attached context while preserving raw text on unsupported surfaces.
 - A caller can coordinate named profiles through durable `kanban.md` task and handoff rows instead of hidden in-process subagent swarms.
 - A caller can load one bounded TODO index and the relevant `todo/YYYY-MM.md` shard without sending the full planning history to every model call.
-- A task can preserve Knowgrph planning history through a base-ref-anchored `todo-log.md` update whose declared Context row passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
+- A task can preserve planning history through one base-ref-anchored row in the active `todo/YYYY-MM.md` shard whose declared Context passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.
 - A caller can route web search, image generation, TTS, and cloud browser tools through existing `knowgrph` infrastructure with per-tool provider state, approval gates, and cost logs.
 - A caller can opt into Tool Search so eligible MCP and non-core plugin tool schemas stay behind session-scoped bridge search, describe, and call routes.

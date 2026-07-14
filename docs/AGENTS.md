@@ -115,7 +115,7 @@ Malformed inputs must fail before token spend. Raw, unstructured prompt calls ar
 - Load `TODO.md` plus the active `../todo/YYYY-MM.md` shard at startup; retrieve older months by exact Context or month before broader search.
 - Append new cross-repository planning rows only to the active shard at EOF. Keep closed months immutable and preserve every committed shard byte from the recorded Agentic Canvas OS base ref.
 - Apply the strict 11-cell, non-empty, 50-word Directive, section-date, and unique-Context rules to rows authored on or after the `TODO.md` adoption boundary; never rewrite imported historical rows to make them conform retroactively.
-- Treat `$WORKTREE/todo-log.md` as the canonical Knowgrph planning ledger. Record its fetched base ref at startup, declare one `todo_context`, require one changed 11-cell row with no empty cells, a directive of at most 50 words, a matching dated section, and a valid updated date before release, and preserve every non-target baseline row byte-for-byte.
+- Treat `TODO.md` plus the active `../todo/YYYY-MM.md` shard as the sole planning authority for Knowgrph and every participating repository. Remove repository-local todo files and append one strict task row to the active shard.
 - Keep `USER.md` for explicit operator preferences, communication style, expectations, workflow habits, and stated technical comfort.
 - Do not infer user profile facts from behavior. Save profile entries only from explicit operator statements or approved proposed entries.
 - `/memory.write` must name target, action, evidence, scan result, capacity result, and source before persistence.

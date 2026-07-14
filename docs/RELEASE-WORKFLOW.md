@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-13"
+date: "2026-07-14"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v1"
 frontmatter_contract: "required"
@@ -125,11 +125,15 @@ Separate unrelated scopes. Commit intentionally, push without force, and open or
 
 Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Synchronize the merged Dev SHA, remove stale hashed artifacts through the canonical process, and run production build, publish-contract, schema, asset-manifest, and mirror-parity checks.
 
+When mirror-parity fails because the schema mirror is missing a `knowgrph/docs/documents/*` node, regenerate `huijoohwee.github.io/schema/AgenticRAG/knowgrph-documents-map.graph.jsonld` through `python3 $GITHUB_ROOT/huijoohwee.github.io/schema/AgenticRAG/sync_map.py --mode write`, commit that mirror change in `huijoohwee.github.io`, and rerun release verification. Never hand-edit the generated graph file.
+
 Require zero unexplained Dev/Prod drift. Never manually patch or backfill the mirror.
 
 ### 9. Deploy Cloudflare
 
 Deploy only the verified promoted SHA with repository-owned Cloudflare configuration. Never expose secrets or hardcode account ids, credentials, routes, local paths, or invocation catalogs. Prevent concurrent deployments to the same environment and capture immutable version evidence.
+
+The GitHub `production` environment must provide non-empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets before the deploy job starts. Treat an empty-secret failure as missing deployment authority, not as a reason to weaken the workflow or bypass the environment gate.
 
 On partial success, stop further mutation and report the exact state. Do not loop or stack patches.
 
@@ -153,6 +157,7 @@ Stop without downstream mutation when any of these is true:
 - the active planning shard lacks one appended compliant row for the declared planning Context, or any committed shard prefix changes;
 - a required gate fails;
 - Dev, Prod, and promoted SHA cannot be reconciled;
+- schema mirror parity is stale or missing generated document nodes for the promoted Dev SHA;
 - credentials or deployment authority are absent;
 - deployment is partial or production verification disagrees with release evidence.
 

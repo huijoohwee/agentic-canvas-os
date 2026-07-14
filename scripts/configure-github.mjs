@@ -8,7 +8,7 @@ const checks = ["CI / test", "CI / build", "CI / docs-contract", "CI / collabora
 
 if (!apply) {
   console.log(`Dry run for ${repo}`);
-  console.log("Would enable auto-merge, branch updates, squash-only merges, branch deletion, CODEOWNERS review, conversation resolution, strict CI checks, and the production environment.");
+  console.log("Would enable auto-merge, branch updates, squash-only merges, branch deletion, CODEOWNERS routing, conversation resolution, strict CI checks, and the production environment.");
   console.log("Run `npm run github:configure -- --apply` after these workflow files are present on origin/main.");
   process.exit(0);
 }
@@ -39,7 +39,10 @@ ghJson("PUT", `repos/${repo}/branches/main/protection`, {
   enforce_admins: true,
   required_pull_request_reviews: {
     dismiss_stale_reviews: false,
-    require_code_owner_reviews: true,
+    // A solo owner cannot approve their own PR. CODEOWNERS still routes file
+    // ownership, while strict required checks and the single-PR guard provide
+    // the enforceable integration gate.
+    require_code_owner_reviews: false,
     require_last_push_approval: false,
     required_approving_review_count: 0,
   },

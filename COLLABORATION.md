@@ -17,7 +17,7 @@ The command replaces the stale Vercel branch checks with these strict checks:
 - `CI / docs-contract`
 - `CI / collaboration-integration`
 
-It also enables CODEOWNERS review for authentication, collaboration state, Worker, Wrangler, and workflow changes. Production remains disabled through `PROD_DEPLOY_ENABLED=false`.
+It retains CODEOWNERS routing for authentication, collaboration state, Worker, Wrangler, and workflow changes. A solo owner cannot approve their own pull request, so merge permission depends on the strict required checks, resolved conversations, conflict-free index, and single-active-PR guard instead of an impossible self-review. Production remains disabled through `PROD_DEPLOY_ENABLED=false`.
 
 Before enabling deployment, configure `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as production environment secrets, set the repository variable `PRODUCTION_URL`, fix and verify the public session-token minting vulnerability, then explicitly set `PROD_DEPLOY_ENABLED=true`.
 

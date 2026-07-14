@@ -1,0 +1,88 @@
+---
+title: "Image To Three.js Skill Contract"
+graphId: "md:image-to-threejs-skill"
+doc_type: "Skill Contract"
+date: "2026-07-14"
+lang: "en-US"
+schema: "agentic-canvas-os-skill/v1"
+frontmatter_contract: "required"
+status: "spec-complete"
+skill_id: "image.to-threejs"
+owner: "$GITHUB_ROOT/knowgrph/canvas/src/features/image-to-threejs"
+runtime_scope: "Knowgrph Card, Widget, and Rich Media Panel projections"
+runtime_claim: "native Dev implementation contract; browser proof is required before runtime-ready promotion"
+publish_policy: "Dev-only until explicit operator approval"
+runtime_proof: "RUNTIME-PROOF.md"
+source_docs:
+  - "SKILLS.md"
+  - "FACTS.md"
+  - "AGENTS.md"
+external_pattern_sources:
+  - "https://github.com/vinhhien112/Three.js-Object-Sculptor-Codex-Plugin"
+copy_policy: "behavioral reference only; forbid copied code, prompts, schemas, fixtures, prose, packages, plugin installation, or runtime dependency"
+---
+
+# Image To Three.js Skill
+
+`image.to-threejs` is a model-free Knowgrph skill that converts supported image sources into a typed Three.js render contract and projects the result through existing Card, Widget, and Rich Media Panel owners. It is not an agent, provider, photogrammetry pipeline, external plugin, or compatibility alias.
+
+## Shared Invocation
+
+| Route | Value | Rule |
+|---|---|---|
+| Command | `/skill.load image.to-threejs` | Reuse shared skill discovery and loading; do not add a skill-specific parser. |
+| Semantic | `#skill-system` | Resolve the capability as procedural skill content, not an agent variant. |
+| Binding | `@image` | Bind exactly one `.png`, `.jpg`, `.jpeg`, or `.svg` source. |
+| Proof | `@runtime-proof` | Surface typed conversion, focused checks, cost state, and deploy boundary. |
+
+## Typed Contract
+
+```yaml
+input:
+  source_url: "string ending in .png, .jpg, .jpeg, or .svg, or an equivalent image data URL"
+output:
+  schema: "knowgrph-image-to-threejs/v1"
+  source_kind: "raster | svg"
+  render_engine: "three"
+  primitive: "textured-plane | shape-geometry"
+  render_mode: "threejs"
+fallback:
+  errors: ["missing-source", "unsupported-format"]
+  projection: "original image surface after a typed Three.js load error"
+bounds:
+  max_iterations: 1
+  circuit_breaker: "stop on invalid source, loader error, unmount, or aborted SVG request"
+cost:
+  model: "local-threejs"
+  prompt_tokens: 0
+  completion_tokens: 0
+  cache_hits: 0
+  estimated_cost_usd: 0
+```
+
+## Render Rules
+
+- `.png`, `.jpg`, and `.jpeg` use native Three.js texture loading, `SRGBColorSpace`, a textured plane, and explicit texture disposal.
+- `.svg` uses native `SVGLoader`, `ShapeGeometry`, stroke geometry, bounded fitting, and explicit geometry/material disposal.
+- The conversion manifest stays on the source-backed skill node and is published through the existing Rich Media workflow output owner.
+- Card, Widget, Storyboard, 2D overlay, Three overlay, and Rich Media Panel projections preserve the same `mediaRenderMode: threejs` value.
+- Load failures return to the original image projection without provider spend, generated-media backfill, or hidden retry.
+
+## External Boundary
+
+The named Object Sculptor repository informs only the staged, code-first modeling capability class. Knowgrph imports none of its code, prompts, schema, tests, fixtures, prose, package metadata, plugin layout, or runtime dependencies. The local skill uses dependencies already owned by the Canvas runtime.
+
+## VCCs
+
+| VCC | Check |
+|---|---|
+| Formats are bounded | PNG, JPG, JPEG, and SVG resolve; unsupported formats fail closed before render work. |
+| Surfaces agree | Card, Widget, and Rich Media Panel projections receive one canonical `threejs` render mode. |
+| Native lifecycle is bounded | Raster textures and SVG geometry/material resources dispose on replacement or unmount. |
+| Spend is exact | The manifest reports zero model tokens and zero estimated cost. |
+| External dependency is absent | Dependency manifests and runtime imports contain no Object Sculptor plugin package or copied source. |
+| Deployment stays closed | Focused Dev proof performs no Prod mirror or Cloudflare mutation. |
+
+## Promotion Gate
+
+Promote this skill from spec-complete to runtime-ready only after focused unit tests, TypeScript, hygiene, and browser proof show a supported raster and SVG rendering in the shared Rich Media Panel owner with the fallback and disposal paths intact.

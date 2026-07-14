@@ -121,6 +121,8 @@ Stop on any required failure. Never promote by skipping tests, editing fixtures 
 
 Separate unrelated scopes. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, and handoff evidence. Merge only after the protected Integration Gate succeeds. Record the merged Dev SHA as the sole promotion input.
 
+When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
+
 ### 8. Promote Prod
 
 Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Synchronize the merged Dev SHA, remove stale hashed artifacts through the canonical process, and run production build, publish-contract, schema, asset-manifest, and mirror-parity checks.

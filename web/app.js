@@ -59,6 +59,263 @@
     links: initialGraph.links.map((l) => ({ ...l })),
   };
 
+  // ── Multi-user/multi-device collaboration (opt-in via ?room=<id>) ─────────
+  //
+  // Connects to the room's Cloudflare Durable Object (worker/canvas-room.js)
+  // over WebSocket. Without a `room` query param the canvas remains local.
+  // `?room=new` creates a capability-strength shareable room URL.
+  const collab = {
+    ws: null,
+    roomId: "",
+    applyingRemote: false,
+    reconnectTimer: null,
+    reconnectAttempts: 0,
+    snapshotReady: false,
+    rev: 0,
+    pending: [],
+  };
+
+  function createRoomCapability() {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  }
+
+  function resolveRoomId() {
+    try {
+      const url = new URL(window.location.href);
+      const requested = url.searchParams.get("room") || "";
+      if (requested !== "new") return requested;
+      const generated = createRoomCapability();
+      url.searchParams.set("room", generated);
+      window.history.replaceState(null, "", url);
+      return generated;
+    } catch {
+      return "";
+    }
+  }
+
+  function collabWsUrl(roomId, token) {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const params = new URLSearchParams({ room: roomId, token });
+    return `${proto}//${window.location.host}/api/canvas/room?${params.toString()}`;
+  }
+
+  function createOpId() {
+    if (typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+    return `${Date.now().toString(36)}_${createRoomCapability()}`;
+  }
+
+  function flushPendingOps() {
+    if (!collab.snapshotReady || !collab.ws || collab.ws.readyState !== WebSocket.OPEN) return;
+    for (const entry of collab.pending) {
+      if (entry.sent) continue;
+      try {
+        collab.ws.send(JSON.stringify(entry.op));
+        entry.sent = true;
+      } catch {
+        entry.sent = false;
+        return;
+      }
+    }
+  }
+
+  function sendOp(input) {
+    if (collab.applyingRemote) return; // never echo a remote-originated change back
+    if (collab.pending.length >= 1000) {
+      toast("Collaboration paused: offline operation queue is full", "error");
+      return;
+    }
+    const op = { ...input, opId: createOpId(), baseRev: collab.rev };
+    collab.pending.push({ op, sent: false });
+    flushPendingOps();
+  }
+
+  function upsertNodeFromRemote(node) {
+    if (!node || !node.id) return;
+    const existing = findNode(node.id);
+    if (existing) Object.assign(existing, node);
+    else graph.nodes.push({ ...node });
+    normalizeLinks();
+    sim.nodes(graph.nodes);
+    sim.alpha(0.3).restart();
+    render();
+    updateDataBox();
+  }
+
+  function deleteNodeFromRemote(id) {
+    if (!id) return;
+    graph.nodes = graph.nodes.filter((n) => n.id !== id);
+    graph.links = graph.links.filter((l) => {
+      const s = typeof l.source === "string" ? l.source : l.source.id;
+      const t = typeof l.target === "string" ? l.target : l.target.id;
+      return s !== id && t !== id;
+    });
+    if (state.selected && state.selected.kind === "node" && state.selected.id === id) state.selected = null;
+    sim.nodes(graph.nodes);
+    sim.force("link").links(graph.links);
+    sim.alpha(0.4).restart();
+    render();
+    updateDataBox();
+  }
+
+  function upsertLinkFromRemote(link) {
+    if (!link || !link.id) return;
+    const idx = graph.links.findIndex((l) => l.id === link.id);
+    const next = { id: link.id, source: link.source, target: link.target, label: link.label || "" };
+    if (idx >= 0) graph.links[idx] = next;
+    else graph.links.push(next);
+    normalizeLinks();
+    sim.force("link").links(graph.links);
+    sim.alpha(0.35).restart();
+    render();
+    updateDataBox();
+  }
+
+  function deleteLinkFromRemote(id) {
+    if (!id) return;
+    const before = graph.links.length;
+    graph.links = graph.links.filter((l) => l.id !== id);
+    if (graph.links.length === before) return;
+    if (state.selected && state.selected.kind === "link" && state.selected.id === id) state.selected = null;
+    sim.force("link").links(graph.links);
+    sim.alpha(0.3).restart();
+    render();
+    updateDataBox();
+  }
+
+  function replaceGraphFromRemote(payload) {
+    if (!payload || !Array.isArray(payload.nodes) || !Array.isArray(payload.links)) return;
+    graph.nodes = payload.nodes.map((n) => ({ ...n, r: typeof n.r === "number" ? n.r : 18 }));
+    graph.links = payload.links.map((l) => ({ ...l }));
+    normalizeLinks();
+    sim.nodes(graph.nodes);
+    sim.force("link").links(graph.links);
+    sim.alpha(0.7).restart();
+    clearSelection();
+    render();
+    updateDataBox();
+    fitToContents(0);
+  }
+
+  function applyRemote(fn) {
+    collab.applyingRemote = true;
+    try {
+      fn();
+    } finally {
+      collab.applyingRemote = false;
+    }
+  }
+
+  function replayPendingOps() {
+    applyRemote(() => {
+      for (const { op } of collab.pending) {
+        if (op.type === "upsertNode") upsertNodeFromRemote(op.node);
+        else if (op.type === "deleteNode") deleteNodeFromRemote(op.id);
+        else if (op.type === "upsertLink") upsertLinkFromRemote(op.link);
+        else if (op.type === "deleteLink") deleteLinkFromRemote(op.id);
+        else if (op.type === "replaceGraph") replaceGraphFromRemote(op.graph);
+      }
+    });
+  }
+
+  function handleCollabMessage(payload) {
+    if (!payload || typeof payload !== "object") return;
+    if (typeof payload.rev === "number") collab.rev = Math.max(collab.rev, payload.rev);
+    if (payload.type === "snapshot") {
+      applyRemote(() => replaceGraphFromRemote(payload));
+      replayPendingOps();
+      collab.snapshotReady = true;
+      collab.reconnectAttempts = 0;
+      flushPendingOps();
+      return;
+    }
+    if (payload.type === "graphReplaced") {
+      applyRemote(() => replaceGraphFromRemote(payload.graph));
+      return;
+    }
+    if (payload.type === "nodeUpserted") {
+      applyRemote(() => upsertNodeFromRemote(payload.node));
+      return;
+    }
+    if (payload.type === "nodeDeleted") {
+      applyRemote(() => deleteNodeFromRemote(payload.id));
+      return;
+    }
+    if (payload.type === "linkUpserted") {
+      applyRemote(() => upsertLinkFromRemote(payload.link));
+      return;
+    }
+    if (payload.type === "linkDeleted") {
+      applyRemote(() => deleteLinkFromRemote(payload.id));
+      return;
+    }
+    if (payload.type === "ack" && typeof payload.opId === "string") {
+      collab.pending = collab.pending.filter((entry) => entry.op.opId !== payload.opId);
+      return;
+    }
+    if (payload.type === "error") {
+      toast(`Collaboration: ${payload.error || "error"}`, "error");
+    }
+  }
+
+  async function fetchCollabToken(roomId) {
+    const res = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ roomIds: [roomId] }),
+    });
+    if (!res.ok) throw new Error(`session request failed (${res.status})`);
+    const data = await res.json();
+    if (!data || typeof data.token !== "string") throw new Error("no token in response");
+    return data.token;
+  }
+
+  function scheduleReconnect(roomId) {
+    clearTimeout(collab.reconnectTimer);
+    if (collab.reconnectAttempts >= 8) {
+      toast("Collaboration stopped after 8 reconnect attempts", "error");
+      return;
+    }
+    const delay = Math.min(30000, 1000 * (2 ** collab.reconnectAttempts));
+    collab.reconnectAttempts += 1;
+    collab.reconnectTimer = setTimeout(() => connectCollab(roomId), delay);
+  }
+
+  function connectCollab(roomId) {
+    collab.roomId = roomId;
+    collab.snapshotReady = false;
+    fetchCollabToken(roomId)
+      .then((token) => {
+        const ws = new WebSocket(collabWsUrl(roomId, token));
+        collab.ws = ws;
+        ws.addEventListener("open", () => toast("Collaboration connected", "success"));
+        ws.addEventListener("message", (event) => {
+          let payload = null;
+          try {
+            payload = typeof event.data === "string" ? JSON.parse(event.data) : null;
+          } catch {
+            return;
+          }
+          handleCollabMessage(payload);
+        });
+        ws.addEventListener("close", () => {
+          if (collab.ws !== ws) return; // superseded by a newer connection
+          collab.ws = null;
+          collab.snapshotReady = false;
+          for (const entry of collab.pending) entry.sent = false;
+          scheduleReconnect(roomId);
+        });
+        ws.addEventListener("error", () => {
+          // onclose follows; reconnect handled there.
+        });
+      })
+      .catch((err) => {
+        toast(`Collaboration unavailable: ${err.message || err}`, "error");
+        scheduleReconnect(roomId);
+      });
+  }
+
   const gRoot = svg.append("g").attr("class", "gRoot");
   const gGeo = gRoot.append("g").attr("class", "gGeo");
   const gLinks = gRoot.append("g").attr("class", "gLinks");
@@ -301,6 +558,7 @@
           d.fy = d.y;
         }
         updateDataBox();
+        sendOp({ type: "upsertNode", node: { id: d.id, label: d.label, x: d.x, y: d.y, lon: d.lon, lat: d.lat, r: d.r } });
       });
     return nodeDrag;
   }
@@ -343,6 +601,7 @@
     render();
     select({ kind: "node", id: node.id });
     updateDataBox();
+    sendOp({ type: "upsertNode", node: { id: node.id, label: node.label, x: node.x, y: node.y, lon: node.lon, lat: node.lat, r: node.r } });
   }
 
   function addLink(sourceId, targetId) {
@@ -363,6 +622,7 @@
     render();
     select({ kind: "link", id: link.id });
     updateDataBox();
+    sendOp({ type: "upsertLink", link: { id: link.id, source: sourceId, target: targetId, label: "" } });
   }
 
   function deleteSelection() {
@@ -383,6 +643,7 @@
       sim.alpha(0.65).restart();
       render();
       updateDataBox();
+      sendOp({ type: "deleteNode", id: nodeId });
       return;
     }
     if (state.selected.kind === "link") {
@@ -395,6 +656,7 @@
       sim.alpha(0.55).restart();
       render();
       updateDataBox();
+      sendOp({ type: "deleteLink", id: linkId });
     }
   }
 
@@ -459,6 +721,7 @@
       labelEditor = null;
       render();
       updateDataBox();
+      sendOp({ type: "upsertNode", node: { id: node.id, label: node.label, x: node.x, y: node.y, lon: node.lon, lat: node.lat, r: node.r } });
     };
 
     input.addEventListener("keydown", (e) => {
@@ -564,6 +827,18 @@
     render();
     updateDataBox();
     fitToContents(0);
+    sendOp({
+      type: "replaceGraph",
+      graph: {
+        nodes: graph.nodes.map((n) => ({ id: n.id, label: n.label, x: n.x, y: n.y, lon: n.lon, lat: n.lat, r: n.r })),
+        links: graph.links.map((l) => ({
+          id: l.id,
+          source: typeof l.source === "string" ? l.source : l.source.id,
+          target: typeof l.target === "string" ? l.target : l.target.id,
+          label: l.label || "",
+        })),
+      },
+    });
   }
 
   async function exportStandaloneHtml() {
@@ -836,4 +1111,7 @@
   render();
   updateDataBox();
   fitToContents(0);
+
+  const roomId = resolveRoomId();
+  if (roomId) connectCollab(roomId);
 })();

@@ -1,0 +1,41 @@
+{
+  "VCC Block": {
+    "prefix": "!vcc",
+    "body": [
+      "Given ${1:context} When ${2:action} Then ${3:observable outcome}",
+      "VCC: Verify ${4:outcome} by ${5:stated check} with ${6:constraint}; stop after ${7:N} iterations."
+    ],
+    "description": "Insert a verifiable completion condition block"
+  },
+  "Planning Row": {
+    "prefix": "!taskrow",
+    "body": [
+      "| ${1:Context} | ${2:Intent} | ${3:Directive} | ${4:Module} | ${5:Class/Object} | ${6:Function/Method} | ${7:Input} | ${8:Output} | ${9:Decision Logic} | ${10:Next Step Recommendation} | ${11:Updated Date} |"
+    ],
+    "description": "Insert a strict 11-column planning row"
+  },
+  "Session Declaration": {
+    "prefix": "!sessionstart",
+    "body": [
+      "action: /session.start",
+      "semantics: [\"#multi-agent-collaboration\", \"#runtime-ready\", \"#no-hardcode\"]",
+      "bindings: [\"@operator\", \"@working-directory\", \"@runtime-proof\"]",
+      "device: ${1:device}",
+      "semantic_scope: ${2:semantic-scope}",
+      "branch: agent/${1:device}/${2:semantic-scope}",
+      "base_ref: origin/main",
+      "base_sha: ${3:fetched-origin-main-sha}",
+      "memory_base_ref: ${4:fetched-agentic-canvas-os-origin-main-sha}",
+      "memory_compliance: ${5:passed}",
+      "planning_base_ref: ${6:fetched-agentic-canvas-os-origin-main-sha}",
+      "planning_shard: ${7:todo/YYYY-MM.md}",
+      "planning_context: ${8:exact-unique-cross-repository-task-context}",
+      "planning_compliance: ${9:structure-passed}",
+      "worktree: ${10:resolved-sibling-worktree}",
+      "active_writer: ${11:single-owner}",
+      "acceptance: ${12:observable-vcc}",
+      "deploy_boundary: dev-only"
+    ],
+    "description": "Insert the compact session start declaration"
+  }
+}

@@ -7,6 +7,32 @@ to the knowgrph MCP control plane, exposes runtime readiness, and embeds the liv
 This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
 
+## Start Here
+
+If you are working in this repo as a human contributor, use this file as the
+entrypoint and treat [`docs/`](./docs) as the agent control surface.
+
+Quick local path:
+
+```bash
+npm install
+npm run doctor
+npm run check
+npm run dev
+```
+
+First success check:
+
+```bash
+curl http://127.0.0.1:8787/api/ready
+```
+
+Before changing workflow or control-surface docs, read:
+
+1. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md)
+2. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md)
+3. [`docs/RUNTIME-READINESS.md`](./docs/RUNTIME-READINESS.md)
+
 ## Topology
 
 ```text
@@ -73,9 +99,8 @@ AGENT_MODEL_API_KEY_ENV=SEA_LION_API_KEY
 ## Develop
 
 ```bash
-npm test
-npm run web:build
-npm run cloudflare:dev
+npm run check
+npm run dev
 ```
 
 Deployment is operator-gated:
@@ -85,5 +110,9 @@ wrangler secret put AGENT_API_JWT_SECRET
 wrangler secret put SEA_LION_API_KEY
 npm run cloudflare:deploy
 ```
+
+For collaboration, open `?room=new` once and share the resulting URL. The
+generated 128-bit room id is a bearer capability; anyone with that URL can join
+the room, while generic session tokens and guessable room labels cannot.
 
 Do not deploy this repo as part of local validation unless explicitly instructed.

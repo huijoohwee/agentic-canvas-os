@@ -10,8 +10,16 @@
     "directory": "./web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/ready", "/auth/session", "/run", "/invoke"]
+    "run_worker_first": ["/api/*", "/ready", "/auth/session", "/run", "/invoke", "/canvas/room"]
   },
+  // Canvas collaboration room: one SQLite-backed Durable Object per room id
+  // (env.CANVAS_ROOM.idFromName(roomId)).
+  "durable_objects": {
+    "bindings": [{ "name": "CANVAS_ROOM", "class_name": "CanvasRoom" }]
+  },
+  "migrations": [
+    { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] }
+  ],
   "vars": {
     "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
     "CANVAS_BASE_URL": "https://airvio.co/knowgrph",

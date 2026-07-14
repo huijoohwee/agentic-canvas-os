@@ -1,0 +1,8 @@
+# Security, state persistence, and deployment changes require explicit owner review.
+/agent-api/src/auth.js @huijoohwee
+/agent-api/src/handler.js @huijoohwee
+/src/collab-room.js @huijoohwee
+/worker/canvas-room.js @huijoohwee
+/worker/index.js @huijoohwee
+/wrangler.jsonc @huijoohwee
+/.github/workflows/ @huijoohwee

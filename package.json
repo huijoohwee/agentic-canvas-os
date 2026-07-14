@@ -8,12 +8,22 @@
     "node": ">=20"
   },
   "scripts": {
+    "build": "npm run web:build",
+    "check": "npm test && npm run web:build && npm run docs:check",
+    "collab:test": "node --test __tests__/collab-room.test.mjs",
+    "device:start": "node ./scripts/device-branch.mjs start",
+    "device:publish": "node ./scripts/device-branch.mjs publish",
+    "dev": "npm run cloudflare:dev",
+    "docs:check": "node ./scripts/docs-contract.mjs",
+    "doctor": "node ./scripts/doctor.mjs",
+    "github:configure": "node ./scripts/configure-github.mjs",
+    "sync:live": "node ./scripts/live-sync.mjs",
     "test": "node --test __tests__/*.test.mjs",
     "web:build": "node web/build.mjs",
     "cloudflare:dev": "npm run web:build && wrangler dev",
     "cloudflare:deploy": "npm run web:build && wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "4.107.0"
+    "wrangler": "4.110.0"
   }
 }

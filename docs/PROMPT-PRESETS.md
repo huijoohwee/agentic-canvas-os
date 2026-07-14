@@ -23,7 +23,7 @@ prompt_presets:
     description: "Source-backed multilingual video package, media generation, persistence, read-back, and shared Canvas projection."
     activation: "source-backed-canvas"
     prompt: |-
-      /video-agent @video-generation-demo-script @provider.byteplus @text @image @audio @video #spec.low #thinking.type.enabled #token-cap.medium [AI视频-港岛实景写实风-异城算计与女主绝境求生-终极统一执行总表.md](workspace:/docs/AI视频-港岛实景写实风-异城算计与女主绝境求生-终极统一执行总表.md)
+      /video-agent @video-generation-demo-script @provider.byteplus @text @image @audio @video #spec.low #thinking.type.enabled #token-cap.medium
 
       Build a 45-second, 16:9 Hong Kong live-action drama sequence from the referenced eight-shot script. Generate a structured text package containing a Character sheet, Scene sheet, Dialogue sheet, Visual asset sheet, Audio sheet, Timing sheet, Metadata sheet, and Prompt sheet, plus source-consistent image keyframes, Chinese/Cantonese/English narration, synchronized Chinese/English subtitles, and a playable master video. Persist returned artifacts, read them back, and project the same typed identities into Canvas Cards, Widgets, Rich Media Panels, and BottomPanel Timeline video/FBF/audio lanes. Stop when approval, credentials, entitlement, budget, persistence, read-back, or a required capability is unavailable.
   - id: "sme-care-agent"

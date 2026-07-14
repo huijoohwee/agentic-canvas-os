@@ -27,7 +27,7 @@ workspace:
   planning_root: "$GITHUB_ROOT/agentic-canvas-os/todo"
   dev: "$GITHUB_ROOT/knowgrph"
   prod_mirror: "$GITHUB_ROOT/huijoohwee/content/knowgrph"
-  dev_commands: ["npm run dev:apex", "npm run dev"]
+  dev_commands: ["npm run dev:apex", "npm run dev", "npm run dev:latest"]
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
 deploy_gate:
   prod_mirror: "forbidden until explicit operator instruction"
@@ -75,7 +75,7 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` is the global, centralized, frontmatter-first SSOT. Exactly one registered worktree is allowed, and its canonical checkout must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts; Knowgrph task mode does not relax this dependency. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. Do not copy invocation catalogs downstream. |
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
 | Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
-| Dev | Author and run Knowgrph only in the canonical `$GITHUB_ROOT/knowgrph` checkout. Use `npm run dev:apex` and `npm run dev` through repository-owned scripts. |
+| Dev | Author and run Knowgrph only in the canonical `$GITHUB_ROOT/knowgrph` checkout. Use `npm run dev:apex`, `npm run dev`, and the explicit clean-main refresh command `npm run dev:latest` through repository-owned scripts. |
 | Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Mutation is forbidden until the operator explicitly requests promotion or release. |
 | Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Deployment is forbidden until the operator explicitly requests it. |
@@ -128,9 +128,23 @@ The declaration is coordination metadata, not a second invocation registry. Valu
 |---|---|---|
 | `git fetch --prune origin` | Refresh remote-tracking refs without changing the current branch or worktree. | Required before ownership and divergence inspection. |
 | `git pull` | Fetch and integrate into the checked-out branch. | Forbidden as a default startup action; allowed only for a clean branch with one confirmed writer and an intentional integration choice. |
+| `npm run dev:latest` | Explicitly refresh clean canonical Dev sources and start Knowgrph. | Allowed only when every registered source is on its canonical branch, clean, single-worktree, and fast-forwardable; it applies `git merge --ff-only` only after all sources pass preflight. |
 | Canonical checkout branch activation | Keep the running Dev port and edited source on the same filesystem path. | The only build lane; `git worktree add` is forbidden. |
 
 A pull can merge or rebase into the current branch before its ownership and dirt are understood. Fetch preserves inspection as a read-only-first step.
+
+### Explicit Canonical Dev Refresh
+
+Use the repository-owned command when a normal canonical Dev restart reports that clean local `main` is behind a fetched `origin/main`:
+
+```sh
+git -C "$KNOWGRPH_ROOT" status --short --branch
+npm --prefix "$KNOWGRPH_ROOT" run dev:latest
+```
+
+The command reads the canonical source registry, fetches every source, and completes a two-phase safety check before changing any checkout. Every source must have exactly one registered worktree, no local changes, its canonical branch active, and `HEAD` as an ancestor of the fetched canonical ref. Only after the full set passes does it apply `git merge --ff-only` and delegate to the ordinary fail-closed Dev startup.
+
+Do not use `dev:latest` for an owned task branch. Start that branch explicitly with `KG_DEV_SOURCE_MODE=task npm run dev`; reconcile its upstream history through the task workflow rather than changing it during Dev startup.
 
 ## Inputs and Outputs
 

@@ -92,6 +92,82 @@ test("replaceGraph rebuilds state and drops links pointing at unknown nodes", ()
   assert.equal(event.type, "graphReplaced");
 });
 
+test("baseVersion opt-in rejects a stale upsertNode as a typed conflict without mutating state", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } })); // v=1
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 1, y: 1 } })); // v=2
+  const before = state;
+  const { state: after, event, error, conflict } = applyOp(state, {
+    type: "upsertNode",
+    node: { id: "a", x: 9, y: 9 },
+    baseVersion: 1, // stale: current is 2
+  });
+  assert.equal(after, before, "state must not change on conflict");
+  assert.equal(event, null);
+  assert.ok(error.includes("version conflict"));
+  assert.deepEqual(conflict, { kind: "node", id: "a", currentVersion: 2, baseVersion: 1, rev: state.rev });
+});
+
+test("baseVersion matching the current version applies normally", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } })); // v=1
+  const { state: after, event, error, conflict } = applyOp(state, {
+    type: "upsertNode",
+    node: { id: "a", x: 7, y: 7 },
+    baseVersion: 1, // fresh
+  });
+  assert.equal(error, null);
+  assert.equal(conflict, undefined);
+  assert.equal(event.type, "nodeUpserted");
+  assert.equal(after.nodes.a.v, 2);
+  assert.equal(after.nodes.a.x, 7);
+});
+
+test("baseVersion 0 lets a create-if-absent upsert succeed for a new node", () => {
+  const state0 = createEmptyRoomState();
+  const { event, error } = applyOp(state0, { type: "upsertNode", node: { id: "new", x: 0, y: 0 }, baseVersion: 0 });
+  assert.equal(error, null);
+  assert.equal(event.type, "nodeUpserted");
+});
+
+test("baseVersion guards deleteNode and upsertLink against stale edits", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "b", x: 1, y: 1 } }));
+  ({ state } = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b" } })); // v=1
+  ({ state } = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b", label: "x" } })); // v=2
+
+  const staleLink = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b" }, baseVersion: 1 });
+  assert.ok(staleLink.error.includes("version conflict"));
+  assert.equal(staleLink.conflict.kind, "link");
+  assert.equal(staleLink.conflict.currentVersion, 2);
+
+  const staleDelete = applyOp(state, { type: "deleteNode", id: "a", baseVersion: 99 });
+  assert.ok(staleDelete.error.includes("version conflict"));
+  assert.equal(staleDelete.state, state);
+});
+
+test("omitting baseVersion preserves last-write-wins (backward compatible)", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 1, y: 1 } }));
+  const { event, error } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 2, y: 2 } });
+  assert.equal(error, null);
+  assert.equal(event.type, "nodeUpserted");
+});
+
+test("serializeSnapshot reports room capacity limits and current counts", () => {
+  let state = createEmptyRoomState();
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
+  ({ state } = applyOp(state, { type: "upsertNode", node: { id: "b", x: 1, y: 1 } }));
+  ({ state } = applyOp(state, { type: "upsertLink", link: { id: "l1", source: "a", target: "b" } }));
+  const snapshot = serializeSnapshot(state);
+  assert.equal(snapshot.counts.nodes, 2);
+  assert.equal(snapshot.counts.links, 1);
+  assert.equal(snapshot.limits.maxNodes, 500);
+  assert.equal(snapshot.limits.maxLinks, 1000);
+});
+
 test("validateOp rejects unknown op types without throwing", () => {
   const { valid, errors } = validateOp({ type: "notAThing" });
   assert.equal(valid, false);

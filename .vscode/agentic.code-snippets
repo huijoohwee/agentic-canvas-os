@@ -37,5 +37,12 @@
       "deploy_boundary: dev-only"
     ],
     "description": "Insert the compact session start declaration"
+  },
+  "End Session": {
+    "prefix": "!sessionend",
+    "body": [
+      "Before the final response, run `npm run device:end -- --json` so the task branch is safely parked and the checkout returns to clean `main` without human manual Git cleanup."
+    ],
+    "description": "Insert the canonical AI session-end instruction"
   }
 }

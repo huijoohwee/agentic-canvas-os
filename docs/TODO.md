@@ -30,7 +30,7 @@ runtime_proof: "RUNTIME-PROOF.md"
 
 The shard key is one declared cross-repository scope plus one UTC calendar month. The flat monthly path is the minimum-viable layout while one cross-repository scope is active. If multiple independent scopes later exceed the size cap, add scope directories through a versioned contract change rather than inventing filenames ad hoc.
 
-`$WORKTREE/todo-log.md` remains the repository-local Knowgrph implementation ledger. Agentic Canvas OS shards own cross-repository planning and workflow history. A task updates each ledger only when that ledger is in scope; neither file is a generated mirror of the other.
+Agentic Canvas OS is the sole live planning owner for participating repositories. Repository-local todo files are forbidden because they duplicate authority and drift from the monthly shards. Committed shard rows may retain retired paths as immutable historical provenance, never as current routing instructions.
 
 ## Source Layout
 
@@ -38,7 +38,6 @@ The shard key is one declared cross-repository scope plus one UTC calendar month
 |---|---|---|
 | `TODO.md` | Schema, shard routing, lifecycle, retrieval, validation, and escalation. | Load at workflow start. |
 | `../todo/YYYY-MM.md` | Append-only planning rows for one declared scope and UTC month. | Load the active month or an exact requested month. |
-| `$WORKTREE/todo-log.md` | Knowgrph-local authored implementation history. | Load only for a Knowgrph task. |
 
 ## Shard Frontmatter
 
@@ -115,4 +114,4 @@ Any malformed shard, historical rewrite, missing declared Context, duplicate tas
 
 Given the Todo index and monthly shard root, when planning compliance runs, then every shard resolves to one scope/month, historical bytes remain append-only, and the declared current task row is complete and bounded.
 
-VCC: verify frontmatter parsing, filename-period equality, chronological headings, byte and line caps, base-prefix preservation, and one strict `TODO_CONTEXT` row; stop on the first violation without Prod or Cloudflare mutation.
+VCC: verify frontmatter parsing, filename-period equality, chronological headings, byte and line caps, base-prefix preservation, and one strict `PLANNING_CONTEXT` row; stop on the first violation without Prod or Cloudflare mutation.

@@ -1,0 +1,52 @@
+name: Rollback production
+
+# Manually roll production back to a previously deployed Cloudflare Worker
+# version when a deploy's post-smoke checks fail (or a regression is found
+# later). Runs in the same `production` concurrency group as deploy.yml so a
+# rollback and a deploy never race.
+#
+# With no version id, wrangler prompts for the previous version; in CI we pass
+# --version-id explicitly. Find version ids with: wrangler versions list.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: "Cloudflare Worker version id to roll back to (blank = previous version)"
+        required: false
+        type: string
+      message:
+        description: "Reason recorded with the rollback"
+        required: false
+        type: string
+        default: "manual rollback via workflow_dispatch"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: vars.PROD_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Roll back the Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: rollback ${{ inputs.version_id }} --message "${{ inputs.message }}"
+      - name: Smoke test after rollback
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: node scripts/smoke.mjs

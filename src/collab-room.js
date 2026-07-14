@@ -1,0 +1,207 @@
+// Platform-neutral canvas collaboration room state + op reducer.
+//
+// PURE, no I/O, no framework globals (no WebSocket/DurableObject/fetch here) so
+// this module runs unmodified in:
+//   - the Cloudflare Durable Object (worker/canvas-room.js), using WebSocket
+//     Hibernation to avoid active duration while idle, and
+//   - a future self-hosted Node WebSocket server on Oracle Cloud's Always Free
+//     A1 (Ampere) tier — same reducer, same wire protocol, different transport.
+//
+// Concurrency model: last-write-wins per entity, with a monotonic version
+// counter (`v`) recorded on every node/link so a future strict mode (reject
+// on stale `baseVersion`) can be added without changing the wire shape. This
+// keeps the MVP simple and race-free: a Durable Object (or a single Node
+// process per room) processes one message at a time, so there is no
+// concurrent-write hazard to resolve here — only "which write happened last"
+// bookkeeping.
+
+const ROOM_ID_MAX = 128;
+const LABEL_MAX = 256;
+const NODE_ID_MAX = 200;
+// The room is persisted as one bounded value. These limits keep worst-case
+// serialized state below the Durable Object per-value limit with headroom.
+const MAX_NODES = 500;
+const MAX_LINKS = 1000;
+
+/** Valid collaboration room id: conservative slug, safe as a DO name / file key. */
+export const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+export function isValidRoomId(roomId) {
+  return typeof roomId === "string" && roomId.length > 0 && roomId.length <= ROOM_ID_MAX && ROOM_ID_PATTERN.test(roomId);
+}
+
+/** Fresh, empty room state. `rev` is a monotonic room-wide revision counter. */
+export function createEmptyRoomState() {
+  return { nodes: {}, links: {}, rev: 0 };
+}
+
+function cleanId(value) {
+  return typeof value === "string" ? value.trim().slice(0, NODE_ID_MAX) : "";
+}
+
+function cleanLabel(value, fallback = "") {
+  if (typeof value !== "string") return fallback;
+  return value.slice(0, LABEL_MAX);
+}
+
+function cleanNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/** Validate an incoming op. Returns `{ valid, errors }`; never throws. */
+export function validateOp(op) {
+  const errors = [];
+  if (!op || typeof op !== "object" || Array.isArray(op)) {
+    return { valid: false, errors: ["op must be an object"] };
+  }
+  const type = op.type;
+  if (type === "upsertNode") {
+    const id = cleanId(op.node && op.node.id);
+    if (!id) errors.push("node.id is required");
+  } else if (type === "deleteNode") {
+    if (!cleanId(op.id)) errors.push("id is required");
+  } else if (type === "upsertLink") {
+    const link = op.link || {};
+    if (!cleanId(link.id)) errors.push("link.id is required");
+    if (!cleanId(link.source)) errors.push("link.source is required");
+    if (!cleanId(link.target)) errors.push("link.target is required");
+  } else if (type === "deleteLink") {
+    if (!cleanId(op.id)) errors.push("id is required");
+  } else if (type === "replaceGraph") {
+    const graph = op.graph || {};
+    if (!Array.isArray(graph.nodes)) errors.push("graph.nodes must be an array");
+    if (!Array.isArray(graph.links)) errors.push("graph.links must be an array");
+    if (Array.isArray(graph.nodes) && graph.nodes.length > MAX_NODES) errors.push(`graph.nodes exceeds ${MAX_NODES}`);
+    if (Array.isArray(graph.links) && graph.links.length > MAX_LINKS) errors.push(`graph.links exceeds ${MAX_LINKS}`);
+  } else {
+    errors.push(`unknown op type: ${String(type)}`);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Apply a validated op to `state`, returning a NEW state (never mutates the
+ * input) plus the broadcast-worthy `event` (or `null` if nothing changed) and
+ * an `error` string (or `null`). Callers MUST call `validateOp` first, or pass
+ * already-trusted ops; this function still fails closed on malformed input
+ * rather than throwing.
+ *
+ * @param {{nodes: object, links: object, rev: number}} state
+ * @param {object} op
+ * @param {{ now?: number }} [opts] injectable clock (ms epoch) for deterministic tests
+ */
+export function applyOp(state, op, opts = {}) {
+  const { valid, errors } = validateOp(op);
+  if (!valid) return { state, event: null, error: errors.join("; ") };
+
+  const now = Number.isFinite(opts.now) ? opts.now : Date.now();
+  const rev = state.rev + 1;
+
+  if (op.type === "upsertNode") {
+    const id = cleanId(op.node.id);
+    if (Object.prototype.hasOwnProperty.call(state.nodes, id) === false && Object.keys(state.nodes).length >= MAX_NODES) {
+      return { state, event: null, error: `room node limit (${MAX_NODES}) reached` };
+    }
+    const prev = state.nodes[id];
+    const node = {
+      id,
+      label: cleanLabel(op.node.label, id),
+      x: cleanNumber(op.node.x) ?? prev?.x ?? 0,
+      y: cleanNumber(op.node.y) ?? prev?.y ?? 0,
+      lon: cleanNumber(op.node.lon) ?? prev?.lon,
+      lat: cleanNumber(op.node.lat) ?? prev?.lat,
+      r: cleanNumber(op.node.r) ?? prev?.r ?? 18,
+      v: (prev?.v ?? 0) + 1,
+      updatedAt: now,
+    };
+    const nodes = { ...state.nodes, [id]: node };
+    return { state: { ...state, nodes, rev }, event: { type: "nodeUpserted", node, rev }, error: null };
+  }
+
+  if (op.type === "deleteNode") {
+    const id = cleanId(op.id);
+    if (!Object.prototype.hasOwnProperty.call(state.nodes, id)) return { state, event: null, error: null };
+    const nodes = { ...state.nodes };
+    delete nodes[id];
+    // Cascade: drop links touching the deleted node (mirrors web/app.js deleteSelection).
+    const links = {};
+    for (const [linkId, link] of Object.entries(state.links)) {
+      if (link.source !== id && link.target !== id) links[linkId] = link;
+    }
+    return { state: { ...state, nodes, links, rev }, event: { type: "nodeDeleted", id, rev }, error: null };
+  }
+
+  if (op.type === "upsertLink") {
+    const id = cleanId(op.link.id);
+    if (Object.prototype.hasOwnProperty.call(state.links, id) === false && Object.keys(state.links).length >= MAX_LINKS) {
+      return { state, event: null, error: `room link limit (${MAX_LINKS}) reached` };
+    }
+    const prev = state.links[id];
+    const link = {
+      id,
+      source: cleanId(op.link.source),
+      target: cleanId(op.link.target),
+      label: cleanLabel(op.link.label, ""),
+      v: (prev?.v ?? 0) + 1,
+      updatedAt: now,
+    };
+    const links = { ...state.links, [id]: link };
+    return { state: { ...state, links, rev }, event: { type: "linkUpserted", link, rev }, error: null };
+  }
+
+  if (op.type === "deleteLink") {
+    const id = cleanId(op.id);
+    if (!Object.prototype.hasOwnProperty.call(state.links, id)) return { state, event: null, error: null };
+    const links = { ...state.links };
+    delete links[id];
+    return { state: { ...state, links, rev }, event: { type: "linkDeleted", id, rev }, error: null };
+  }
+
+  if (op.type === "replaceGraph") {
+    const nodes = {};
+    for (const n of op.graph.nodes) {
+      const id = cleanId(n && n.id);
+      if (!id || Object.prototype.hasOwnProperty.call(nodes, id)) continue;
+      nodes[id] = {
+        id,
+        label: cleanLabel(n.label, id),
+        x: cleanNumber(n.x) ?? 0,
+        y: cleanNumber(n.y) ?? 0,
+        lon: cleanNumber(n.lon),
+        lat: cleanNumber(n.lat),
+        r: cleanNumber(n.r) ?? 18,
+        v: 1,
+        updatedAt: now,
+      };
+    }
+    const links = {};
+    for (const l of op.graph.links) {
+      const id = cleanId(l && l.id);
+      const source = cleanId(l && l.source);
+      const target = cleanId(l && l.target);
+      if (!id || !source || !target) continue;
+      if (!Object.prototype.hasOwnProperty.call(nodes, source) || !Object.prototype.hasOwnProperty.call(nodes, target)) continue;
+      if (Object.prototype.hasOwnProperty.call(links, id)) continue;
+      links[id] = { id, source, target, label: cleanLabel(l.label, ""), v: 1, updatedAt: now };
+    }
+    const nextState = { nodes, links, rev };
+    return { state: nextState, event: { type: "graphReplaced", graph: serializeGraph(nextState), rev }, error: null };
+  }
+
+  // Unreachable given validateOp, but fail closed rather than throw.
+  return { state, event: null, error: "unhandled op type" };
+}
+
+/** Plain `{ nodes: [], links: [] }` view, sorted by id for deterministic output. */
+export function serializeGraph(state) {
+  const nodes = Object.values(state.nodes).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const links = Object.values(state.links).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return { nodes, links };
+}
+
+/** Full snapshot payload sent to a client on join. */
+export function serializeSnapshot(state) {
+  return { type: "snapshot", ...serializeGraph(state), rev: state.rev };
+}
+
+export const COLLAB_ROOM_LIMITS = Object.freeze({ MAX_NODES, MAX_LINKS, LABEL_MAX, NODE_ID_MAX, ROOM_ID_MAX });

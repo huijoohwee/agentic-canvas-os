@@ -4,6 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { verifySessionToken } from "../agent-api/src/auth.js";
 import { handleCloudflareRequest } from "../worker/index.js";
 
 const ENV = Object.freeze({
@@ -49,6 +50,25 @@ test("POST /api/auth/session mints a session token", async () => {
   const res = await handleCloudflareRequest(request("/api/auth/session", { method: "POST", body: {} }), ENV);
   assert.equal(res.status, 200);
   assert.equal(typeof (await json(res)).token, "string");
+});
+
+test("POST /api/auth/session rejects caller identity and guessable room scope", async () => {
+  const rejected = await handleCloudflareRequest(request("/api/auth/session", {
+    method: "POST",
+    body: { subject: "spoofed-admin", roomIds: ["victim-room"] },
+  }), ENV);
+  assert.equal(rejected.status, 400);
+
+  const roomId = "a".repeat(32);
+  const accepted = await handleCloudflareRequest(request("/api/auth/session", {
+    method: "POST",
+    body: { subject: "spoofed-admin", roomIds: [roomId] },
+  }), ENV);
+  assert.equal(accepted.status, 200);
+  const verdict = verifySessionToken((await json(accepted)).token, ENV.AGENT_API_JWT_SECRET);
+  assert.equal(verdict.valid, true);
+  assert.notEqual(verdict.claims.sub, "spoofed-admin");
+  assert.deepEqual(verdict.claims.roomIds, [roomId]);
 });
 
 test("POST /api/run without auth is 401 before any control-plane forward", async () => {

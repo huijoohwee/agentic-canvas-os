@@ -25,6 +25,23 @@ runtime_proof: "RUNTIME-PROOF.md"
 
 This folder is the local documentation control surface for making `knowgrph` a runtime-ready Agentic Canvas OS. It is not a deploy artifact and does not authorize Prod or Cloudflare mutation.
 
+## Start Here
+
+This folder is optimized for agent reliability, not casual browsing. Humans
+should usually enter through [`README.md`](../README.md) first, then read only
+the smallest set of docs needed for the task.
+
+Recommended reading order:
+
+1. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and worktree rules.
+2. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
+3. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
+4. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.
+5. The three dictionary files only when changing invocation grammar or routing meaning.
+
+Human-friendly rule: speak in task intent, then translate into the strict
+contracts only when the work touches planning, workflow, or invocation grammar.
+
 ## Document Map
 
 | File | Role | Use |

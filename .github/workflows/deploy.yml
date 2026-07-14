@@ -1,0 +1,57 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.PROD_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Verify deployment configuration
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: |
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "Set the PRODUCTION_URL repository variable before enabling production deploys." >&2
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run check
+      - name: Deploy the merged SHA to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+      - name: Smoke test production readiness
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: |
+          set -euo pipefail
+          url="${PRODUCTION_URL%/}/api/ready"
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 10 "$url" > /tmp/readiness.json; then
+              node -e 'const fs=require("node:fs"); const value=JSON.parse(fs.readFileSync("/tmp/readiness.json", "utf8")); if (typeof value !== "object" || value === null) process.exit(1)'
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then sleep 3; fi
+          done
+          exit 1

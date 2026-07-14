@@ -132,7 +132,7 @@ async function getSessionToken() {
     const res = await fetch("/api/auth/session", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subject: "canvas-guest" })
+      body: JSON.stringify({})
     });
     if (res.ok) {
       const data = await res.json();

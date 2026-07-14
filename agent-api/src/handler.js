@@ -13,7 +13,7 @@
 // testable offline. The Cloudflare Worker adapter wraps these handlers with
 // Request/Response parsing; here they take/return plain objects.
 
-import { mintSessionToken, verifySessionToken } from "./auth.js";
+import { isSecureRoomCapability, mintSessionToken, verifySessionToken } from "./auth.js";
 
 // Request schema bounds (mirror knowgrph POST /run, R12.1).
 const REFERENCE_URL_MAX = 2048;
@@ -87,9 +87,20 @@ export function createAuthSessionHandler({ secret, now, defaultExpirySeconds } =
     const body = request.body && typeof request.body === "object" ? request.body : {};
     const expiryWindowSeconds =
       body.expiryWindowSeconds !== undefined ? body.expiryWindowSeconds : defaultExpirySeconds;
+    // Collaboration room ids are bearer capabilities. A caller may request
+    // one capability-strength room scope, but may never select its subject or
+    // receive a token that joins arbitrary rooms.
+    const requestedRoomIds = body.roomIds === undefined ? [] : body.roomIds;
+    if (!Array.isArray(requestedRoomIds) || requestedRoomIds.length > 1) {
+      return json(400, { error: "invalid request", fields: [fieldError("roomIds", "must contain at most one room capability")] });
+    }
+    const roomIds = requestedRoomIds.map((roomId) => typeof roomId === "string" ? roomId.trim() : "");
+    if (roomIds.some((roomId) => !isSecureRoomCapability(roomId))) {
+      return json(400, { error: "invalid request", fields: [fieldError("roomIds", "must contain a 32-128 character hexadecimal room capability")] });
+    }
     const token = mintSessionToken({
       secret,
-      subject: typeof body.subject === "string" ? body.subject : undefined,
+      roomIds,
       expiryWindowSeconds,
       now,
     });

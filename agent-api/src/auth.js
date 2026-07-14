@@ -10,7 +10,7 @@
 // Interface is intentionally swappable: a future deploy can replace this with
 // `jsonwebtoken`, OIDC, or Cloudflare Access without changing callers.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 const DEFAULT_EXPIRY_SECONDS = 3600; // 60 min (knowgrph R15.8 default)
 const MIN_EXPIRY_SECONDS = 300; // 5 min
@@ -40,19 +40,23 @@ function sign(signingInput, secret) {
  * @param {string} args.secret server-side signing secret (required, non-empty)
  * @param {string} [args.subject] caller/session id (Caller_Identity)
  * @param {string[]} [args.entitledRunIds] runs this session may read
+ * @param {string[]} [args.roomIds] canvas collaboration rooms this session may join.
+ *   Empty/omitted means "no room scoping" (any room) — same posture as
+ *   `entitledRunIds` — so existing callers are unaffected (additive, non-breaking).
  * @param {number} [args.expiryWindowSeconds] [300, 86400], default 3600
  * @param {number} [args.now] injectable clock (ms epoch) for deterministic tests
  * @returns {string} `header.payload.signature`
  */
-export function mintSessionToken({ secret, subject, entitledRunIds = [], expiryWindowSeconds, now } = {}) {
+export function mintSessionToken({ secret, subject, entitledRunIds = [], roomIds = [], expiryWindowSeconds, now } = {}) {
   if (typeof secret !== "string" || !secret) throw new Error("signing secret is required");
   const iatMs = Number.isFinite(now) ? now : Date.now();
   const iat = Math.floor(iatMs / 1000);
   const exp = iat + clampExpiry(expiryWindowSeconds);
   const header = { alg: "HS256", typ: "JWT" };
   const payload = {
-    sub: typeof subject === "string" && subject ? subject : `sess_${iat}_${Math.random().toString(36).slice(2, 10)}`,
+    sub: typeof subject === "string" && subject ? subject : `sess_${randomUUID()}`,
     entitledRunIds: Array.isArray(entitledRunIds) ? entitledRunIds.slice(0, 100) : [],
+    roomIds: Array.isArray(roomIds) ? roomIds.filter((r) => typeof r === "string" && r).slice(0, 50) : [],
     iat,
     exp,
   };
@@ -97,3 +101,27 @@ export const AUTH_EXPIRY = Object.freeze({
   MIN_EXPIRY_SECONDS,
   MAX_EXPIRY_SECONDS,
 });
+
+/**
+ * True iff `claims` (from `verifySessionToken`) may join collaboration room
+ * `roomId`. Empty/absent room scope is fail-closed: a generic anonymous
+ * session may use non-room API routes but cannot join any collaboration room.
+ *
+ * @param {{ roomIds?: unknown }} claims
+ * @param {string} roomId
+ */
+export function sessionCanJoinRoom(claims, roomId) {
+  const room = typeof roomId === "string" ? roomId.trim() : "";
+  if (!room) return false;
+  const scoped = claims && Array.isArray(claims.roomIds) ? claims.roomIds : [];
+  return scoped.length > 0 && scoped.includes(room);
+}
+
+/**
+ * Room ids are bearer capabilities shared in the room URL. Require at least
+ * 128 bits encoded as hexadecimal so a caller cannot mint a token for a
+ * guessable human label such as "victim-room".
+ */
+export function isSecureRoomCapability(roomId) {
+  return typeof roomId === "string" && /^[a-f0-9]{32,128}$/i.test(roomId);
+}

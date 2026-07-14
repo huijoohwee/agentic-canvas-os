@@ -5,6 +5,9 @@
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import { CanvasRoom } from "./canvas-room.js";
+
+export { CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 
@@ -69,6 +72,20 @@ export async function handleCloudflareRequest(request, env = {}) {
     return toResponse(await app.invoke({ headers: headerBag(request), body }));
   }
 
+  if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
+    // WebSocket upgrade to the room's Durable Object. The room uses the
+    // WebSocket Hibernation API; account quota and billing remain deployment
+    // concerns rather than source-code guarantees.
+    if (!env || !env.CANVAS_ROOM || typeof env.CANVAS_ROOM.idFromName !== "function") {
+      return json(501, { error: "canvas collaboration not configured" });
+    }
+    const roomId = url.searchParams.get("room") || "";
+    if (!roomId) return json(400, { error: "missing room" });
+    const id = env.CANVAS_ROOM.idFromName(roomId);
+    const stub = env.CANVAS_ROOM.get(id);
+    return stub.fetch(request);
+  }
+
   if (env && env.ASSETS && typeof env.ASSETS.fetch === "function") {
     return env.ASSETS.fetch(request);
   }
@@ -81,4 +98,3 @@ export default {
     return handleCloudflareRequest(request, env);
   },
 };
-

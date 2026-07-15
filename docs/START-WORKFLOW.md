@@ -49,6 +49,9 @@ completion_requires:
   - "exactly one registered worktree per repository"
   - "task branch active in the canonical Knowgrph checkout"
   - "recorded branch and base SHA"
+  - "visible runtime identity with exact Knowgrph, Agentic Canvas OS, and catalog revisions"
+  - "exact cross-device SHA equality when parity is claimed"
+  - "fresh revision-keyed catalog hydration within at most two explicit refresh attempts"
   - "memory-log structural compliance"
   - "monthly planning-shard structural compliance"
 ---
@@ -108,6 +111,11 @@ semantic_scope: <semantic-scope>
 branch: agent/<device>/<semantic-scope>
 base_ref: origin/main
 base_sha: <fetched-origin-main-sha>
+knowgrph_runtime_sha: <visible-running-knowgrph-sha>
+agentic_canvas_os_runtime_sha: <visible-running-docs-sha>
+catalog_revision: <visible-running-docs-sha>
+catalog_hydration: <fresh|blocked|stale>
+catalog_refresh_attempts: <integer-0-to-2>
 memory_base_ref: <fetched-agentic-canvas-os-origin-main-sha>
 memory_compliance: passed
 planning_base_ref: <fetched-agentic-canvas-os-origin-main-sha>
@@ -228,6 +236,14 @@ git -C "$KNOWGRPH_ROOT" rev-parse HEAD
 
 The repository must report exactly one registered worktree at `$KNOWGRPH_ROOT`; the checkout must be clean, the branch must match the claimed scope, and `HEAD` must equal the recorded startup base SHA.
 
+#### Cross-Device Runtime Identity Gate
+
+Before claiming parity or handing a running surface to another device, open the visible runtime identity on every participating device and compare the exact 40-character `knowgrphRevision` and `agenticCanvasOsRevision`. Matching branch names, ports, routes, or device labels do not satisfy this gate.
+
+The identity must also report `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and separate `/`, `#`, and `@` counts. Require `catalogRevision == agenticCanvasOsRevision`. Hydration and cache keys must include the docs revision so a revision change invalidates the prior catalog instead of reusing a page-lifetime snapshot.
+
+When the catalog revision is absent or mismatched, expose an explicit refresh action. Permit at most two refresh attempts for that revision. A successful attempt reports `fresh`; exhaustion reports `blocked` or `stale`, keeps the mismatched revision visible, and blocks parity and runtime-ready claims. A page reload may be one explicit attempt, but silent or unbounded background retries are forbidden.
+
 ### 7. Verify Memory Log
 
 Set `MEMORY_ROOT` to `$AGENTIC_CANVAS_OS_ROOT/memory` and run the structural memory-log command under `Memory Log Compliance Checks` in `VALIDATION-RUNBOOK.md`.
@@ -289,6 +305,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in th
 ## Handoff and Conflict Rules
 
 - A handoff names the exact pushed commit SHA; the sender stops writing before the receiver starts.
+- A runtime handoff includes both visible runtime SHAs and catalog revision evidence; a branch name alone never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.
 - Use force-with-lease only when repository policy allows it and one writer is reconfirmed; otherwise use a new reconciliation branch.
@@ -296,10 +313,10 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in th
 
 ## Stop Conditions
 
-Stop before build mutation when either repository has other than one registered worktree, fetch fails, source dirt is unexplained, branch ownership is ambiguous, the semantic scope is already active, the base ref is missing, the branch exists unexpectedly, the startup SHA cannot be proven, any memory or planning shard fails structural compliance, a planning shard exceeds its cap, or a repository-local todo file is presented as live authority.
+Stop before build mutation when either repository has other than one registered worktree, fetch fails, source dirt is unexplained, branch ownership is ambiguous, the semantic scope is already active, the base ref is missing, the branch exists unexpectedly, the startup SHA cannot be proven, participating runtime identities do not expose identical exact SHAs, catalog revision differs from the docs revision, bounded catalog refresh is exhausted, any memory or planning shard fails structural compliance, a planning shard exceeds its cap, or a repository-local todo file is presented as live authority.
 
 ## Completion VCC
 
-Given a declared device and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, each repository reports exactly one registered worktree, the canonical Agentic Canvas OS checkout is clean and exactly equal to fetched `origin/main`, every memory and planning shard is structurally compliant, the active planning shard and Context are declared, no repository-local todo file claims authority, ownership is unique, the canonical Knowgrph checkout is clean on `agent/<device>/<semantic-scope>`, and Codex starts only from that path.
+Given a declared device and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, each repository reports exactly one registered worktree, the canonical Agentic Canvas OS checkout is clean and exactly equal to fetched `origin/main`, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog revision equals the docs revision with fresh bounded hydration, every memory and planning shard is structurally compliant, the active planning shard and Context are declared, no repository-local todo file claims authority, ownership is unique, the canonical Knowgrph checkout is clean on `agent/<device>/<semantic-scope>`, and Codex starts only from that path.
 
-VCC: verify both fetches exit zero, each `git worktree list --porcelain` contains exactly one `worktree` record, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, the memory and planning structural commands exit zero, the memory and planning base refs plus the declared planning Context are recorded, repository-local todo files are absent, the canonical Knowgrph checkout is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.
+VCC: verify both fetches exit zero, each `git worktree list --porcelain` contains exactly one `worktree` record, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, the cross-device runtime identity command reports exact SHA and `/`, `#`, `@` count parity with fresh catalog hydration in at most two attempts, the memory and planning structural commands exit zero, the memory and planning base refs plus the declared planning Context are recorded, repository-local todo files are absent, the canonical Knowgrph checkout is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.

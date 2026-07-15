@@ -118,6 +118,23 @@ Expected:
 - Runtime artifact scan returns no copied local provider/media artifacts.
 - External-copy scan returns no imported code, prompt, preset example, provider config, schema, test, fixture, or prose paths from referenced self-improving agent repositories.
 
+## Cross-Device Runtime Identity Compliance Check
+
+Export a colon-delimited list of two or more runtime identity JSON files captured from the visible identity surface on participating devices, then run the gate:
+
+```bash
+export RUNTIME_IDENTITY_FILES="<device-a-runtime-identity.json>:<device-b-runtime-identity.json>"
+ruby -rjson -e 'files=ENV.fetch("RUNTIME_IDENTITY_FILES").split(":").reject(&:empty?); abort("need at least two runtime identities") if files.length<2; ids=files.map{|file| JSON.parse(File.read(file))}; sha=/\A[0-9a-f]{40}\z/; required=%w[schema device knowgrphRevision agenticCanvasOsRevision catalogRevision catalogHydration catalogCounts]; ids.each{|id| missing=required.reject{|key| id.key?(key)}; abort("runtime identity missing: #{missing.join(", ")}") unless missing.empty?; abort("invalid runtime identity schema") unless id.fetch("schema")=="knowgrph-runtime-identity/v1"; %w[knowgrphRevision agenticCanvasOsRevision catalogRevision].each{|key| abort("invalid #{key}") unless sha.match?(id.fetch(key))}; hydration=id.fetch("catalogHydration"); abort("invalid catalog hydration") unless hydration.is_a?(Hash) && hydration.fetch("status")=="fresh" && hydration.fetch("attempts").is_a?(Integer) && hydration.fetch("attempts").between?(0,2); counts=id.fetch("catalogCounts"); abort("invalid catalog counts") unless counts.is_a?(Hash) && %w[slash hash at].all?{|key| counts.fetch(key,-1).is_a?(Integer) && counts.fetch(key)>=0}; abort("catalog revision mismatch") unless id.fetch("catalogRevision")==id.fetch("agenticCanvasOsRevision")}; abort("duplicate device identity") unless ids.map{|id| id.fetch("device")}.uniq.length==ids.length; %w[knowgrphRevision agenticCanvasOsRevision catalogRevision catalogCounts].each{|key| abort("cross-device #{key} mismatch") unless ids.map{|id| id.fetch(key)}.uniq.length==1}; puts "cross-device runtime identity ok devices=#{ids.length} knowgrph=#{ids.first.fetch("knowgrphRevision")} agentic-canvas-os=#{ids.first.fetch("agenticCanvasOsRevision")}"'
+```
+
+Required JSON shape:
+
+```json
+{"schema":"knowgrph-runtime-identity/v1","device":"<device>","branch":"<informational-only>","knowgrphRevision":"<40-hex-sha>","agenticCanvasOsRevision":"<40-hex-sha>","catalogRevision":"<40-hex-sha>","catalogHydration":{"status":"fresh","attempts":0},"catalogCounts":{"slash":0,"hash":0,"at":0}}
+```
+
+The check deliberately ignores `branch` for parity. A missing identity, invalid schema or SHA, cross-device revision or count mismatch, stale or blocked hydration, more than two attempts, catalog/docs revision mismatch, or invalid count fails closed. If the live runtime cannot export this visible identity yet, record runtime implementation as gated rather than marking the compliance check passed.
+
 ## Memory Log Compliance Checks
 
 Run the structural gate at session start and again before release:
@@ -344,6 +361,7 @@ Choose the subset matching touched owners. Do not run broader suites unless the 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
+| Cross-device runtime identity | The compliance command reports identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs for at least two devices; catalog hydration is `fresh` within two attempts. Branch names are ignored. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |

@@ -557,7 +557,6 @@ FloatingPanel Chat action labels are context-ranked recommendations from diction
 | `@` | Binding route | Bind actor, source, proof, or runtime context, such as `@operator`, `@source.frontmatter`, `@local-harness`, `@runtime-proof`, or `@dev-only`. |
 
 Commands, filters, and bindings are descriptive source content for shared invocation utilities. Unknown or conflicting routes must be rejected with a typed unsupported-route result, not remapped through legacy aliases.
-
 ## Semantic HTML And UI Projection
 
 When a skill projects into UI, prefer semantic elements (`main`, `nav`, `article`, `section`, `aside`, `table`, `menu`, `button`, `progress`, `meter`) before generic containers, and reuse existing shared components.
@@ -597,5 +596,4 @@ When a skill projects into UI, prefer semantic elements (`main`, `nav`, `article
 ## Validation
 
 For documentation-only changes to this file, run the focused documentation checks from `VALIDATION-RUNBOOK.md`, including frontmatter parse, line count, ASCII scan, artifact scan, external-copy scan, route consistency, and deploy guard.
-
 Promote any skill to runtime-ready only after the executing shared owner surfaces current proof, not from this catalog alone.

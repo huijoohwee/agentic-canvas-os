@@ -50,6 +50,7 @@ skill_contracts:
   - "docs.sync"
   - "flow.computing"
   - "image.to-threejs"
+  - "image.to-glb"
   - "experience.capture"
   - "memory.write"
   - "memory.compact"
@@ -135,7 +136,8 @@ Every skill row must resolve to a stable id, owner binding, command route, seman
 | `deploy.guard` | Preserve Dev, Prod mirror, and Cloudflare boundaries. | `/deploy.guard`, `#no-deploy`, `#approval-gate`, `@dev-only`, `@operator` | Dev-only confirmation or gated deploy request. | Spec-complete |
 | `docs.sync` | Keep local docs, API contracts, and schema maps aligned after source changes. | `/validation.run`, `#frontmatter`, `#vcc`, `@source.body` | Focused doc update list and validation result. | Spec-complete |
 | `flow.computing` | Generate, validate, or run a source-backed KGC computing-flow DAG with typed inputs, explicit handles, bounded execution, and Canvas projection. | `/computing-flow`, `#computing-flow`, `#frontmatter`, `#harness`, `@source.frontmatter`, `@local-harness`, `@runtime-proof` | `kgc-computing-flow/v1` document, typed validation result, or typed blocked reason. | Spec-complete |
-| [`image.to-threejs`](IMAGE-TO-THREEJS-SKILL.md) | Convert `.png`, `.jpg`, `.jpeg`, or `.svg` image sources into native Three.js render data for shared Card, Widget, and Rich Media Panel surfaces. | `/skill.load image.to-threejs`, `#skill-system`, `@image`, `@local-harness`, `@runtime-proof` | `knowgrph-image-to-threejs/v1` manifest, Three.js render projection, or typed source error. | Runtime-ready Dev |
+| [`image.to-threejs`](IMAGE-TO-THREEJS-SKILL.md) | Convert `.png`, `.jpg`, `.jpeg`, or `.svg` image sources into native Three.js render data for shared Card, Widget, and Rich Media Panel surfaces. | `/image.to-threejs`, `#image-to-threejs`, `@image-to-threejs`, `@local-harness`, `@runtime-proof` | `knowgrph-image-to-threejs/v1` manifest, Three.js render projection, or typed source error. | Runtime-ready Dev |
+| [`image.to-glb`](IMAGE-TO-GLB-SKILL.md) | Construct a procedural Three.js scene from `.png`, `.jpg`, `.jpeg`, or `.svg`, then export a GLB asset without baked geometry. | `/image.to-glb`, `#image-to-glb`, `@image-to-glb`, `@local-harness`, `@runtime-proof` | Procedural JS/TS review ledger, GLB asset result, external-buffer glTF scene-edit interchange, or typed failure. | Spec-complete |
 | `experience.capture` | Turn run traces, failures, proof packets, or operator corrections into typed reusable experience records. | `/experience.capture`, `#learning-loop`, `#vcc`, `@experience`, `@runtime-proof` | Experience record with source, lesson, applicability, expiry risk, cost, and approval state. | Spec-complete |
 | `memory.write` | Add, replace, or remove bounded memory or user-profile entries. | `/memory.write`, `#persistent-memory`, `#memory-capacity`, `@memory-entry`, `@memory-policy`, `@memory-store` | Typed write result, capacity error, scan rejection, or duplicate result. | Spec-complete |
 | `memory.compact` | Consolidate bounded memory/profile targets without silent data loss. | `/memory.compact`, `#memory-capacity`, `@memory-store`, `@memory-policy`, `@runtime-proof` | Before/after entries, capacity delta, and preserved-fact statement. | Spec-complete |
@@ -555,7 +557,6 @@ FloatingPanel Chat action labels are context-ranked recommendations from diction
 | `@` | Binding route | Bind actor, source, proof, or runtime context, such as `@operator`, `@source.frontmatter`, `@local-harness`, `@runtime-proof`, or `@dev-only`. |
 
 Commands, filters, and bindings are descriptive source content for shared invocation utilities. Unknown or conflicting routes must be rejected with a typed unsupported-route result, not remapped through legacy aliases.
-
 ## Semantic HTML And UI Projection
 
 When a skill projects into UI, prefer semantic elements (`main`, `nav`, `article`, `section`, `aside`, `table`, `menu`, `button`, `progress`, `meter`) before generic containers, and reuse existing shared components.
@@ -595,5 +596,4 @@ When a skill projects into UI, prefer semantic elements (`main`, `nav`, `article
 ## Validation
 
 For documentation-only changes to this file, run the focused documentation checks from `VALIDATION-RUNBOOK.md`, including frontmatter parse, line count, ASCII scan, artifact scan, external-copy scan, route consistency, and deploy guard.
-
 Promote any skill to runtime-ready only after the executing shared owner surfaces current proof, not from this catalog alone.

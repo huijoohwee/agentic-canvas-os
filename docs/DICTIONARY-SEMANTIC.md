@@ -99,6 +99,8 @@ dictionary_entries:
   - "#memory-capacity"
   - "#session-search"
   - "#skill-system"
+  - "#image-to-threejs"
+  - "#image-to-glb"
   - "#progressive-disclosure"
   - "#skill-bundle"
   - "#agentskills-compatible"
@@ -219,6 +221,8 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#memory-capacity` | Character/token bound for memory and profile targets. | A write could overflow or a target approaches its limit. | Overflow returns typed error; compaction, replacement, or removal is required before retry. |
 | `#session-search` | On-demand search over prior conversations or session records. | A task needs specifics from past conversations that are not in active memory. | Results cite sessions and remain read-only unless explicitly captured. |
 | `#skill-system` | On-demand procedural knowledge loaded only when useful. | A task should use a reusable skill, skill variant, or skill source. | Metadata discovery, selected source load, shallow resource loading, and no-copy policy are present. |
+| `#image-to-threejs` | Native image-source conversion into a typed Three.js render projection. | A selected Card or Widget binds one PNG, JPG, JPEG, or SVG source to `image.to-threejs`. | The shared `imageToThreeJs` contract validates the source, reports zero model cost, and projects one canonical `threejs` render mode or a typed fallback. |
+| `#image-to-glb` | Native image-source conversion into a procedural GLB asset contract. | A selected Card or Widget binds one PNG, JPG, JPEG, or SVG source to `image.to-glb`. | The contract accepts procedural JS/TS construction only, logs bounded vision-review passes, exports GLB through the asset pipeline, and rejects baked/serialized geometry or embedded glTF buffers. |
 | `#progressive-disclosure` | Token-minimizing staged loading. | A large skill or resource tree could waste prompt context. | Metadata loads first; full skill source and resources load only after explicit selection. |
 | `#skill-bundle` | Grouped skill invocation. | A recurring task needs several existing skills together. | Bundle resolves existing skills, reports missing skills, and does not install or duplicate registry entries. |
 | `#agentskills-compatible` | Open-standard skill file compatibility. | A skill source is authored, inspected, imported, or validated. | Standard frontmatter, concise activation description, Markdown body, optional resources, and validation are present. |

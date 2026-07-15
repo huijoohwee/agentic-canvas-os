@@ -29,6 +29,24 @@ prompt_presets:
       /video-agent @video-generation-demo-script @provider.byteplus @text @image @audio @video #spec.low #thinking.type.enabled #token-cap.medium
 
       Build a 45-second, 16:9 Hong Kong live-action drama sequence from the referenced eight-shot script. Generate a structured text package containing a Character sheet, Scene sheet, Dialogue sheet, Visual asset sheet, Audio sheet, Timing sheet, Metadata sheet, and Prompt sheet, plus source-consistent image keyframes, Chinese/Cantonese/English narration, synchronized Chinese/English subtitles, and a playable master video. Persist returned artifacts, read them back, and project the same typed identities into Canvas Cards, Widgets, Rich Media Panels, and BottomPanel Timeline video/FBF/audio lanes. Stop when approval, credentials, entitlement, budget, persistence, read-back, or a required capability is unavailable.
+  - id: "image-to-threejs"
+    label: "Image to Three.js"
+    slash_command: "/image.to-threejs"
+    description: "Native Widget Card prompt preset for a selected PNG, JPG, JPEG, or SVG source."
+    activation: "card-inline"
+    prompt: |-
+      /image.to-threejs @image-to-threejs #image-to-threejs
+
+      Convert the selected or attached PNG, JPG, JPEG, or SVG source into a native Three.js render. Keep the source Widget Card and input media unchanged; publish the generated result as a separate Three.js Rich Media Panel. Return a typed source error for an unsupported source. Do not use a provider, external plugin, or copied implementation.
+  - id: "image-to-glb"
+    label: "Image to GLB"
+    slash_command: "/image.to-glb"
+    description: "Native Widget Card preset for a procedural GLB asset from one selected image source."
+    activation: "card-inline"
+    prompt: |-
+      /image.to-glb @image-to-glb #image-to-glb
+
+      Build a native GLB asset from the selected or attached PNG, JPG, JPEG, or SVG source. Reuse the shared image-to-threejs source-resolution and preview utilities without mutating the source Widget Card or input media. Generate and review only procedural JS/TS scene construction such as `new THREE.BoxGeometry(...)`, `new THREE.BufferGeometry().setFromPoints(...)`, CSG, or parametric-surface operations; reject baked geometry and every serialized geometry payload. Route the runtime asset pipeline to GLB. An approved LLM loop may propose or revise procedural JS/TS and run bounded vision-review passes against the reference image, but it must not emit a serialized mesh format. When editing an existing scene structure, emit glTF with external buffers only; reject embedded buffers and data URIs. Do not use an external plugin or copy external code, dependencies, prompts, schemas, fixtures, prose, or UI.
   - id: "sme-care-agent"
     label: "SME Care Agent"
     slash_command: "/sme-care-prompt-preset"
@@ -65,7 +83,7 @@ prompt_presets:
 
 This document is the single prompt-text owner for the Knowgrph FloatingPanel **Prompt Presets** catalog. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
 
-Selection and loading are zero-spend. **Send** remains the execution boundary. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; SME Care and Investment Research use the shared slash-agent response contract; Crawler Agent uses the native Import URL workflow.
+Selection and loading are zero-spend. **Send** remains the execution boundary. The image-to-threejs and image-to-glb presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; SME Care and Investment Research use the shared slash-agent response contract; Crawler Agent uses the native Import URL workflow.
 
 Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-preset`. Every `runtime_command` remains the executable route owned by `SKILLS.md` and the command dictionary. Selecting a preset resolves its `runtime_command` and loads the source-backed prompt without submitting, persisting a chat turn, or rewriting the alias into another catalog entry.
 
@@ -74,6 +92,8 @@ Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-pre
 | Preset | Preset invocation | Runtime route | Load behavior | Send behavior |
 | --- | --- | --- | --- | --- |
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
+| Image to Three.js | `/image.to-threejs` | `/image.to-threejs @image-to-threejs #image-to-threejs` | Load the native prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Resolve only an attached or selected supported image through the native zero-cost conversion owner. |
+| Image to GLB | `/image.to-glb` | `/image.to-glb @image-to-glb #image-to-glb` | Load the native procedural prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Require procedural JS/TS construction, a bounded review ledger, and a GLB asset pipeline; source media stays unchanged. |
 | SME Care Agent | `/sme-care-prompt-preset` | `/sme-care-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract and deterministic SME kernel when that runtime is invoked. |
 | Investment Research Agent | `/investment-research-prompt-preset` | `/investment-research-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract with source, evidence, review, and cost boundaries. |
 | Crawler Agent | `/crawler-prompt-preset` | `/crawler-agent` | Load the centralized prompt into Chat with an editable URL. | Use the native headless Import URL workflow and persist separate report and pipe-table Canvas outputs. |

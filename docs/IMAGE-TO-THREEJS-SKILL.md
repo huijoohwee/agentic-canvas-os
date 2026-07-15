@@ -30,9 +30,9 @@ copy_policy: "behavioral reference only; forbid copied code, prompts, schemas, f
 
 | Route | Value | Rule |
 |---|---|---|
-| Command | `/skill.load image.to-threejs` | Reuse shared skill discovery and loading; do not add a skill-specific parser. |
-| Semantic | `#skill-system` | Resolve the capability as procedural skill content, not an agent variant. |
-| Binding | `@image` | Bind exactly one `.png`, `.jpg`, `.jpeg`, or `.svg` source. |
+| Command | `/image.to-threejs` | Resolve through the shared native contract from a skill node or inline Card/Widget prompt before generic text/provider execution; do not add a card-local parser. |
+| Semantic | `#image-to-threejs` | Identify the typed native Three.js conversion capability. |
+| Binding | `@image-to-threejs` | Bind exactly one `.png`, `.jpg`, `.jpeg`, or `.svg` source. |
 | Proof | `@runtime-proof` | Surface typed conversion, focused checks, cost state, and deploy boundary. |
 
 ## Typed Contract
@@ -65,9 +65,14 @@ cost:
 - `.png`, `.jpg`, and `.jpeg` use native Three.js texture loading, `SRGBColorSpace`, a textured plane, and explicit texture disposal.
 - `.svg` uses native `SVGLoader`, `ShapeGeometry`, stroke geometry, bounded fitting, and explicit geometry/material disposal.
 - Source replacement is keyed to the canonical URL so a late loader completion cannot overwrite the current Card, Widget, Storyboard, or Rich Media Panel projection.
-- The conversion manifest stays on the source-backed skill node and is published through the existing Rich Media workflow output owner.
+- A manual inline `/image.to-threejs` Card Run stays scoped to its invoking Widget Card even when a Rich Media Panel is connected as input. Attached album media, inline Markdown image media, and connected inputs share one source resolver.
+- An inline Card conversion creates or reuses a marker-scoped `Three.js Rich Media Panel` owned by that Card. Its generated manifest and `mediaRenderMode: threejs` patch are published only to this output panel; fresh runs do not mutate the input Widget Card or input Rich Media Panel. An explicit rerun may remove only a prior legacy derived-output signature while preserving the prompt and raw media, and never touches marker-owned or authored Three.js panels.
 - Card, Widget, Storyboard, 2D overlay, Three overlay, and Rich Media Panel projections preserve the same `mediaRenderMode: threejs` value.
 - Load failures return to the original image projection without provider spend, generated-media backfill, or hidden retry.
+
+## Widget Card Presentation
+
+The default public card presents as `Widget Card`. It suppresses the legacy visible `Text Generation` metadata rail while retaining query-visible `/`, `#`, and `@` invocation chips. This is a presentation cleanup only; it does not add a compatibility parser or an external skill dependency.
 
 ## External Boundary
 
@@ -88,7 +93,7 @@ The named Object Sculptor repository informs only the staged, code-first modelin
 
 | Gate | Evidence |
 |---|---|
-| Typed conversion and lifecycle | `npm --prefix canvas run test:ci:unit -- imageToThreeJs` reports 8/8 focused selectors passing, including source replacement, fallback, and disposal events. |
+| Typed conversion and lifecycle | `npm --prefix canvas run test:ci:unit -- imageToThreeJs` reports 17/17 focused selectors passing, including inline Card/Widget invocation, a Card-owned `Three.js Rich Media Panel` with no input mutation, legacy derived-output recovery, source replacement, fallback, and disposal events. |
 | Browser contract | `npm --prefix canvas run test:ci:unit -- richMedia.browserSmokeContract` reports 1/1 passing. |
 | Shared-surface browser proof | `npm --prefix canvas run test:smoke:rich-media:browser` on a contract-valid Knowgrph task branch renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and the typed fallback on the visual Canvas. |
 | Static gates | Canvas TypeScript and repository hygiene checks pass for the validated source diff. |

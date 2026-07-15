@@ -90,7 +90,7 @@ The named Object Sculptor repository informs only the staged, code-first modelin
 |---|---|
 | Typed conversion and lifecycle | `npm --prefix canvas run test:ci:unit -- imageToThreeJs` reports 8/8 focused selectors passing, including source replacement, fallback, and disposal events. |
 | Browser contract | `npm --prefix canvas run test:ci:unit -- richMedia.browserSmokeContract` reports 1/1 passing. |
-| Shared-surface browser proof | `KG_DEV_SOURCE_MODE=task npm --prefix canvas run test:smoke:rich-media:browser` renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and the typed fallback on the visual Canvas. |
+| Shared-surface browser proof | `npm --prefix canvas run test:smoke:rich-media:browser` on a contract-valid Knowgrph task branch renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and the typed fallback on the visual Canvas. |
 | Static gates | Canvas TypeScript and repository hygiene checks pass for the validated source diff. |
 | Dependency boundary | Package manifests are unchanged; the runtime continues to use the repository-owned, deduplicated `three` dependency and imports no Object Sculptor package or source. |
 | Deployment boundary | Proof is local to the validated Knowgrph Dev task branch. Protected integration, Prod mirror synchronization, and Cloudflare remain separate operator-gated steps. |

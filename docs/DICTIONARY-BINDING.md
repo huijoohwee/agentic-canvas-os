@@ -64,6 +64,8 @@ dictionary_entries:
   - "@provider.openai"
   - "@text"
   - "@image"
+  - "@image-to-threejs"
+  - "@image-to-glb"
   - "@audio"
   - "@video"
   - "@mcp-gateway"
@@ -185,6 +187,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@provider.openai` | Select the existing OpenAI generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
 | `@text` | Request a structured text artifact. | Shared text-generation and workspace-artifact owners. | The video preset requires Character, Scene, Dialogue, Visual asset, Audio, Timing, Metadata, and Prompt sheets; empty or malformed output fails terminally. |
 | `@image` | Request source-consistent image artifacts. | Shared image-generation, persistence, Media, and Canvas projection owners. | Only provider-returned and read-back-verified image identities may project; no fabricated or localhost-only URL is accepted as durable output. |
+| `@image-to-threejs` | Bind one existing PNG, JPG, JPEG, or SVG source to the native `image.to-threejs` conversion. | Shared Card, Widget, image-to-threejs, and Rich Media Panel owners. | Uses the selected source URL only; no credential, provider generation, external plugin, or deploy authority is introduced. |
+| `@image-to-glb` | Bind one existing PNG, JPG, JPEG, or SVG source to the native procedural `image.to-glb` asset contract. | Shared Card, Widget, image-to-threejs source utilities, and GLB asset-pipeline owners. | Uses only the selected source URL; source media remains unchanged, external plugin/copy paths are forbidden, and any LLM execution requires its separately approved runtime. |
 | `@audio` | Request narration, dialogue, sound, music, subtitle-sync, and master-audio artifacts. | Shared audio/video generation, media-probe, persistence, and Timeline owners. | Languages, synchronization, media kind, persistence, and read-back identity must be typed before projection. |
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |

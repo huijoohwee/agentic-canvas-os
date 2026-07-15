@@ -144,7 +144,7 @@ npm --prefix "$KNOWGRPH_ROOT" run dev:latest
 
 The command reads the canonical source registry, fetches every source, and completes a two-phase safety check before changing any checkout. Every source must have exactly one registered worktree, no local changes, its canonical branch active, and `HEAD` as an ancestor of the fetched canonical ref. Only after the full set passes does it apply `git merge --ff-only` and delegate to the ordinary fail-closed Dev startup.
 
-Do not use `dev:latest` for an owned task branch. Start that branch explicitly with `KG_DEV_SOURCE_MODE=task npm run dev`; reconcile its upstream history through the task workflow rather than changing it during Dev startup.
+Do not use `dev:latest` for an owned task branch. On a contract-valid `agent/<device>/<semantic-scope>` branch, start with `npm run dev` or `npm run dev:apex`; the Knowgrph guard selects task mode automatically. `KG_DEV_SOURCE_MODE` remains an expert override. Reconcile task-branch upstream history through the task workflow rather than changing it during Dev startup.
 
 ## Inputs and Outputs
 

@@ -2,7 +2,7 @@
 title: "Agentic OS Agent Instructions"
 graphId: "md:agentic-os-agents"
 doc_type: "Agent Instructions"
-date: "2026-07-08"
+date: "2026-07-16"
 lang: "en-US"
 schema: "agentic-os-agents/v1"
 frontmatter_contract: "required"
@@ -76,6 +76,7 @@ Use existing shared utilities for invocation content:
 - Before every Codex build session, follow `START-WORKFLOW.md`: fetch first, require exactly one registered worktree per repository, inspect ownership, then activate the task branch in the canonical checkout.
 - Establish cross-device parity only from identical exact Knowgrph and Agentic Canvas OS commit SHAs reported by the running surfaces. Branch names, ports, and device labels are informational, not proof.
 - Require visible runtime identity and revision-keyed catalog hydration. A docs revision change invalidates the prior catalog; allow at most two explicit refresh attempts before returning a visible blocked or stale result.
+- Require one application-root canonical identity owner for all of Knowgrph. MainPanel Settings renders `Cross-device Identity Gate` inside the Settings body as a shared KTV section; Settings, Skills & Commands, Chat, and `/`, `#`, `@` catalog hydration may project or publish facets but must not own identity.
 - Treat any instruction to create, retain, or use a secondary worktree as invalid. `git worktree add` is forbidden; stop and correct the contradictory source rule.
 - Do not use pull as a default startup action. Pull only when intentionally updating a clean, exclusively owned branch with explicit integration behavior.
 - Treat `$GITHUB_ROOT/huijoohwee/content/knowgrph` as a Prod mirror, not a default edit target.

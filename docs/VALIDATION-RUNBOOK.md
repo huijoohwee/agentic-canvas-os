@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Validation Runbook"
 graphId: "md:knowgrph-agentic-canvas-os-validation-runbook"
 doc_type: "Validation Runbook"
-date: "2026-07-07"
+date: "2026-07-16"
 lang: "en-US"
 schema: "agentic-canvas-os-validation-runbook/v1"
 frontmatter_contract: "required"
@@ -106,7 +106,7 @@ wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
 ARTIFACT_PATTERN='https?://local'"host"'[:/]|kg_media_'"token"'|data:'"image"'|VIDEO'"DB_API_KEY"'|SENSE'"NOVA_API_KEY"'|generation_'"job_id"'|index_'"job_id"'|upload-'"[0-9a-f]"'|airvio/'"runs"
 ! rg -n "$ARTIFACT_PATTERN" "$DOCS_ROOT"
-	EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
+EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
 ! (rg -n "$EXTERNAL_COPY_PATTERN" "$DOCS_ROOT" | rg -v 'VALIDATION-RUNBOOK\.md:[0-9]+:EXTERNAL_COPY_PATTERN=')
 ```
 
@@ -119,6 +119,35 @@ Expected:
 - External-copy scan returns no imported code, prompt, preset example, provider config, schema, test, fixture, or prose paths from referenced self-improving agent repositories.
 
 ## Cross-Device Runtime Identity Compliance Check
+
+First prove canonical component ownership in the Knowgrph source checkout:
+
+```bash
+export KNOWGRPH_ROOT="${KNOWGRPH_ROOT:-$GITHUB_ROOT/knowgrph}"
+APP="$KNOWGRPH_ROOT/canvas/src/App.tsx"
+STORE="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/knowgrphRuntimeIdentity.ts"
+BRIDGE="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/KnowgrphRuntimeIdentityRuntime.tsx"
+SETTINGS="$KNOWGRPH_ROOT/canvas/src/features/panels/views/SettingsView.tsx"
+ROWS="$KNOWGRPH_ROOT/canvas/src/features/panels/views/CrossDeviceIdentitySettingsRows.tsx"
+
+test -f "$APP" && test -f "$STORE" && test -f "$BRIDGE" && test -f "$SETTINGS" && test -f "$ROWS"
+test "$(rg -o '<KnowgrphRuntimeIdentityRuntime />' "$APP" | wc -l | tr -d ' ')" = "1"
+rg -q 'buildBaseKnowgrphRuntimeIdentity' "$STORE"
+rg -q 'useSyncExternalStore' "$STORE"
+rg -q 'publishKnowgrphCatalogIdentity' "$STORE" "$BRIDGE"
+rg -q 'useAgenticOsRemoteGrammarCatalog' "$BRIDGE"
+rg -q 'area: CROSS_DEVICE_IDENTITY_SETTINGS_AREA' "$SETTINGS"
+rg -q 'return <CrossDeviceIdentitySettingsRows />' "$SETTINGS"
+rg -q 'useKnowgrphRuntimeIdentity()' "$ROWS"
+KTV_ROW_COUNT="$(rg -o '<KeyTypeValueStaticRow' "$ROWS" | wc -l | tr -d ' ')"
+test "$KTV_ROW_COUNT" -gt 0
+! rg -q '<(dl|dt|dd)([[:space:]>])' "$ROWS"
+! rg -q 'useAgenticOsRemoteGrammarCatalog' "$ROWS"
+! rg -q 'KnowgrphRuntimeIdentityGate|agenticOsRuntimeIdentity' "$KNOWGRPH_ROOT/canvas/src/features"
+echo "runtime identity ownership ok owner=application-root projection=main-panel-settings-ktv rows=$KTV_ROW_COUNT"
+```
+
+This source gate is separate from value parity. It proves that app/build identity exists independently of catalog hydration, the application root mounts exactly one canonical runtime owner, the catalog bridge only publishes its facet, and MainPanel Settings consumes the global snapshot through shared KTV rows without a private definition-list layout. Missing owners, duplicate mounts, a Settings-local catalog hook, the former `KnowgrphRuntimeIdentityGate`, a Skills & Commands owner, or a private non-KTV projection fails closed even if two exported JSON records match.
 
 Export a colon-delimited list of two or more runtime identity JSON files captured from the visible identity surface on participating devices, then run the gate:
 
@@ -361,7 +390,7 @@ Choose the subset matching touched owners. Do not run broader suites unless the 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
-| Cross-device runtime identity | The compliance command reports identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs for at least two devices; catalog hydration is `fresh` within two attempts. Branch names are ignored. |
+| Cross-device runtime identity | The ownership command reports one application-root owner, one MainPanel Settings KTV projection, and no surface/catalog owner; the parity command then reports identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs for at least two devices with `fresh` hydration within two attempts. Branch names are ignored. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |

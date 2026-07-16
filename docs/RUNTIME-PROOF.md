@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Proof"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-proof"
 doc_type: "Runtime Proof Ledger"
-date: "2026-07-13"
+date: "2026-07-16"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-proof/v1"
 frontmatter_contract: "required"
@@ -114,7 +114,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Docs parse | Every Markdown file in this folder has YAML frontmatter and parses. | Instruction-only skipped files. |
 | Route consistency | `/`, `#`, `@`, skill contracts, skill variants, and computing-flow entries resolve from source docs. | FloatingPanel-only duplicate registries or aliases. |
 | Facts consistency | Every `FACTS.md` `direct_resolution` token resolves into the corresponding `/`, `#`, or `@` dictionary. | Memory-only or role-only truth precedence. |
-| Runtime revision identity contract | Facts, startup, validation, and release contracts require visible exact Knowgrph, Agentic Canvas OS, and catalog revisions; branch names are not parity proof; catalog hydration is revision-keyed and limited to two explicit refresh attempts. | A claim that the current Knowgrph runtime already projects or exports the identity before focused implementation proof exists. |
+| Runtime revision identity contract | Facts, startup, validation, and release contracts require one application-root canonical identity owner, a MainPanel Settings KTV projection, visible exact Knowgrph, Agentic Canvas OS, and catalog revisions, and revision-keyed catalog hydration limited to two explicit refresh attempts. | A claim of cross-device parity before two distinct visible runtime identity exports pass the compliance command. |
 | Soul identity contracts | `/soul.load`, `/personality.overlay`, matching `#` tags, matching `@` bindings, `soul.load`, and `personality.overlay` resolve from source docs. | Copied identity text, personality presets, prompt assembly code, hardcoded default identity strings, or live prompt runtime execution. |
 | Persistent memory contracts | `/memory.write`, `/memory.compact`, `/memory.search`, `/session.search`, `/user.profile`, matching `#` tags, matching `@` bindings, and matching skill contracts resolve from source docs. | Copied memory code, database schemas, sample entries, prompt renderers, unsupported profile inference, or live memory runtime execution. |
 | Append-only memory log | `MEMORY-LOG.md`, `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`, and `VALIDATION-RUNBOOK.md` require exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil blocks, complete fields, structural startup proof, and byte-prefix release proof. | Local-time or minute-only sigils, pure YAML entries, table SSOT, bolded sigils, deletion, rewrite, reorder, compaction, or insertion before EOF. |
@@ -146,7 +146,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Artifact scan holds | Split artifact pattern from `VALIDATION-RUNBOOK.md` returns no copied runtime artifacts. | Passed |
 | Route consistency holds | Route consistency command reports `route consistency ok`. | Passed |
 | Facts direct resolution holds | All `FACTS.md` direct-resolution command, semantic, and binding tokens are present in the matching dictionary frontmatter. | Passed |
-| Runtime revision identity contract holds | Source contracts define the visible identity schema, exact cross-device SHA equality, catalog/docs revision equality, and bounded refresh gate. Knowgrph runtime projection and two-device evidence remain required before implementation status can pass. | Spec-complete; runtime implementation gated |
+| Runtime revision identity architecture holds | Knowgrph `fa4f226b9795ba5ec3cb781994fa601f3e555a5e` mounts one application-root identity runtime, publishes catalog hydration as a subordinate facet, renders eight shared KTV rows inside MainPanel Settings, removes the surface-local gate, and passed focused test, type, lint, hygiene, build, browser, pre-push, and Integration Gate proof. Two-device identity exports remain required for parity. | Runtime architecture passed; cross-device parity gated |
 | Soul routes hold | Route consistency checks include `/soul.load`, `/personality.overlay`, `#soul`, `#primary-identity`, `#personality-overlay`, `@soul-profile`, `@identity-slot`, `@personality-overlay`, `soul.load`, and `personality.overlay`. | Passed |
 | Persistent memory routes hold | Route consistency checks include memory write, compact, search, session search, user profile, target tags, bindings, and skill contracts. | Passed |
 | Memory-log compliance holds | The structural command validates `memory-log/v1`, UTC-valid `YYYYMMDDTHHmmssZ`, shard-month identity, unique ordered sigils, and required fields; the base-ref command proves historical bytes remain an unchanged prefix. | Passed |

@@ -2,7 +2,7 @@
 title: "Agentic OS Facts"
 graphId: "md:agentic-os-facts"
 doc_type: "Agentic OS Facts"
-date: "2026-07-08"
+date: "2026-07-16"
 lang: "en-US"
 schema: "agentic-os-facts/v1"
 frontmatter_contract: "required"
@@ -22,6 +22,8 @@ source_revision_contract:
   task_rule: "Knowgrph automatically selects task mode on contract-valid agent branches; explicit KG_DEV_SOURCE_MODE values remain expert overrides and task mode never relaxes the Agentic Canvas OS docs revision"
   parity_rule: "cross-device parity requires identical 40-character Knowgrph and Agentic Canvas OS commit SHAs; matching branch names, ports, or labels are informational and never sufficient"
   runtime_identity_rule: "every served runtime must visibly expose its Knowgrph revision, Agentic Canvas OS docs revision, catalog revision, catalog hydration state, and catalog entry counts"
+  runtime_identity_owner_rule: "one application-root runtime owns the canonical Knowgrph identity snapshot globally; route catalogs, panels, and settings views may publish or project facets but must not instantiate competing identity owners"
+  runtime_identity_projection_rule: "MainPanel Settings exposes Cross-device Identity Gate as a normal section inside the Settings body using the shared Key-Type-Value row layout; it must not render above or replace the KTV header"
   catalog_freshness_rule: "catalog hydration is keyed by the Agentic Canvas OS docs revision; a revision change invalidates the prior catalog and permits at most two explicit refresh attempts before returning a visible blocked or stale result"
 layer_contract:
   soul: "durable agent identity and voice"
@@ -280,6 +282,8 @@ This file does not replace system, developer, or operator instructions. It defin
 | Canonical docs revision | Every normal Knowgrph Dev port consumes `$GITHUB_ROOT/agentic-canvas-os/docs` from one clean local checkout whose `HEAD` equals fetched `origin/main`. Port numbers and Knowgrph task mode cannot select or relax that revision. | `source_revision_contract` above and the Knowgrph runtime guard named there. |
 | Cross-device parity | Devices are in parity only when their visible runtime identities report identical exact Knowgrph and Agentic Canvas OS commit SHAs. A shared branch name, port, route, or device label is not revision proof. | `source_revision_contract` above, `START-WORKFLOW.md`, and `VALIDATION-RUNBOOK.md`. |
 | Visible runtime identity | The running surface must expose exact `knowgrphRevision`, `agenticCanvasOsRevision`, `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and `/`, `#`, `@` counts. Hidden build metadata or terminal-only branch output is insufficient. | `VALIDATION-RUNBOOK.md` runtime identity schema and `RUNTIME-PROOF.md`. |
+| Canonical identity ownership | Exactly one application-root runtime owns the global identity snapshot. MainPanel Settings, FloatingPanel, Chat, Skills & Commands, and `/`, `#`, `@` catalog consumers are projections or facet publishers only; none may create a second identity store, owner, or catalog-coupled identity component. | `source_revision_contract` above and `VALIDATION-RUNBOOK.md` identity-ownership check. |
+| Settings identity projection | `Cross-device Identity Gate` is a normal collapsible MainPanel Settings body section that uses the shared KTV row contract. A standalone gate above the KTV header, a Skills & Commands-owned gate, or a custom non-KTV identity table fails compliance. | `VALIDATION-RUNBOOK.md` identity-ownership check and `START-WORKFLOW.md`. |
 | Catalog freshness | `catalogRevision` must equal `agenticCanvasOsRevision`. Hydration caches use that revision as part of their key, invalidate on revision change, and stop after no more than two explicit refresh attempts with a visible `fresh`, `blocked`, or `stale` result. | `VALIDATION-RUNBOOK.md` and `RELEASE-WORKFLOW.md`. |
 | Primary identity inspiration | External SOUL systems are pattern references only. This repo may adopt a neutral durable identity contract that occupies prompt slot 1 when an approved runtime assembles prompts. | Official Hermes Agent SOUL docs listed in frontmatter. |
 | Runtime status | `runtime-ready` requires surfaced proof; prose alone cannot promote external runtime claims. | `RUNTIME-READINESS.md` and `VALIDATION-RUNBOOK.md`. |
@@ -554,5 +558,6 @@ This file does not replace system, developer, or operator instructions. It defin
 | Roles are not facts | `AGENTS.md` points to `FACTS.md` for truth and keeps role/edit behavior separate. |
 | Memory is not truth precedence | `MEMORY.md` describes persistence and routing memory without overriding `FACTS.md`. |
 | Exact revisions establish parity | Two runtime identity records pass only when their Knowgrph and Agentic Canvas OS SHAs are valid, exact, and equal across devices; branch names are ignored. |
+| Identity ownership stays global | The source-architecture check finds one application-root identity runtime, one canonical store, a Settings KTV projection, and no Settings or invocation-catalog identity owner. |
 | Catalog revision is current | Every runtime identity reports `catalogRevision == agenticCanvasOsRevision`, a bounded hydration attempt count, and a non-stale successful state before parity or release is claimed. |
 | Deploy boundary preserved | No Prod mirror or Cloudflare mutation is performed by documentation-only updates. |

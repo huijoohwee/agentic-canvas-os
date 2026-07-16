@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-14"
+date: "2026-07-16"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v1"
 frontmatter_contract: "required"
@@ -38,6 +38,7 @@ completion_requires:
   - "unique semantic-scope ownership"
   - "all required gates pass"
   - "visible runtime identity with exact cross-device SHA parity"
+  - "one application-root canonical identity owner with a MainPanel Settings KTV projection"
   - "catalog revision equals the Agentic Canvas OS docs revision after no more than two refresh attempts"
   - "one invocation grammar SSOT"
   - "append-only memory-log compliance"
@@ -74,6 +75,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
 - Hand off only after the sender stops and pushes an exact commit SHA.
 - Treat branch names as informational. Cross-device and promoted-runtime parity require visible, identical exact Knowgrph and Agentic Canvas OS SHAs.
+- Require the canonical identity runtime at the application root and the visible gate as a MainPanel Settings body section using shared KTV rows. Settings, Skills & Commands, Chat, FloatingPanel, and invocation catalogs must remain projections or facet publishers, never identity owners.
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
@@ -117,7 +119,7 @@ The structural gate validates `TODO.md` and every shard. The release gate preser
 
 ### 6. Validate Dev
 
-Run repository-declared collaboration, protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, integration, and cross-device runtime identity gates. Runtime proof must show exact visible app/docs SHA parity, catalog revision equal to the docs revision after no more than two explicit refresh attempts, the pinned docs dependency, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
+Run repository-declared collaboration, protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, integration, identity-ownership, and cross-device runtime identity gates. Runtime proof must show one application-root identity owner, a MainPanel Settings KTV projection, no catalog- or surface-owned competing identity component, exact visible app/docs SHA parity, catalog revision equal to the docs revision after no more than two explicit refresh attempts, the pinned docs dependency, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
 
 Stop on any required failure. Never promote by skipping tests, editing fixtures to hide defects, or adding downstream aliases.
 
@@ -159,6 +161,7 @@ Stop without downstream mutation when any of these is true:
 - dirty work cannot be attributed safely;
 - required dictionary or runtime proof is missing;
 - visible runtime identity is missing, exact app/docs SHAs differ across participating devices, or only branch names are available as parity evidence;
+- identity ownership is not application-global, the gate is outside the MainPanel Settings body or does not use shared KTV rows, or any surface/catalog creates a competing identity owner;
 - catalog revision differs from the Agentic Canvas OS docs revision, hydration is stale or blocked, or more than two explicit refresh attempts are required;
 - any memory shard is malformed or historical bytes differ from the recorded memory base ref;
 - any planning shard is malformed, over cap, historically rewritten, or missing the declared strict task row;
@@ -171,6 +174,6 @@ Stop without downstream mutation when any of these is true:
 
 ## Completion VCC
 
-Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, Dev is merged through protected integration, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
+Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, Dev is merged through protected integration, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
 
-VCC: verify the cross-device runtime identity command reports exact app/docs SHA and `/`, `#`, `@` count parity with fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.
+VCC: verify the identity-ownership command reports one application-root owner and a MainPanel Settings KTV projection with no surface/catalog owner, the cross-device runtime identity command reports exact app/docs SHA and `/`, `#`, `@` count parity with fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.

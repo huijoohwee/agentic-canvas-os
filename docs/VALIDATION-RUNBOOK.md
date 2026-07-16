@@ -150,6 +150,8 @@ rg -q 'runtime.identity.challenge.request' "$REPORTER" "$ROOM"
 rg -q 'runtime.identity.attested' "$REPORTER" "$ROOM"
 rg -q 'authenticatedPeerId' "$ROOM" "$ATTESTATION"
 rg -q 'authenticatedSessionId' "$ROOM" "$ATTESTATION"
+rg -q 'authenticatedDevicePrincipalId' "$ROOM" "$ATTESTATION"
+rg -q 'duplicate authenticated device principal' "$ATTESTATION"
 rg -q 'duplicate authenticated session' "$ATTESTATION"
 rg -q 'runtime identity cannot change within an authenticated room session' "$ROOM"
 rg -q 'identity room accepts attestation messages only' "$ROOM"
@@ -179,12 +181,30 @@ This source gate is separate from value parity. It proves that app/build identit
 ### Automatic Challenge-Bound Compliance
 
 1. Configure the existing authenticated storage-room client on every participating runtime. No separate identity datastore, Durable Object class, clipboard file, or committed evidence file is permitted.
-2. Start each device. The application-root reporter automatically joins `runtime-identity:knowgrph:main`; the authenticated room issues a 60-second challenge and relays peer/session-bound attestations without persistence.
+2. Start each device. The application-root reporter automatically joins `runtime-identity:knowgrph:main`; the authenticated storage boundary derives one session-bound device principal, and the room issues a 60-second challenge and relays principal/peer/session-bound attestations without persistence.
 3. Open MainPanel Settings only to observe the projection. Require local identity `fresh` within attempt `0`, `1`, or `2`, peer gate `pass`, transport `connected`, at least `2/2` distinct devices, and a non-empty `Proof` SHA-256 digest.
 4. On every participating device, call the read-only browser tool `knowgrph.read_local_runtime_identity` or inspect the KTV projection. Require the same non-empty gate verification digest and identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs. Branch values are informational and deliberately ignored.
 5. Preserve the gate status, common verification digest, exact compared SHAs, device count, and bounded hydration result in the handoff or release ledger. Do not preserve raw attestations after their TTL and do not substitute screenshots or clipboard exports for the machine result.
 
-The verifier rejects malformed schemas, invalid SHA-256 digests, challenge/session replay, expired or future evidence, duplicate authenticated sessions, duplicate device or runtime instances, fewer than two devices, stale hydration, app/docs/catalog SHA mismatch, catalog/docs mismatch, and `/`, `#`, or `@` count mismatch. A room socket cannot change its bound device/runtime identity, and the dedicated identity room rejects document and asset traffic. The verifier reports only `collecting`, `pass`, `mismatch`, `stale`, or `blocked`; there is no majority winner and no automatic Git or catalog mutation. Transport reconnection is bounded to two attempts. `Copy diagnostic JSON` copies the current identity and gate snapshots as a read-only troubleshooting convenience and cannot affect compliance state.
+The verifier rejects malformed schemas, invalid SHA-256 digests, challenge/session replay, expired or future evidence, duplicate authenticated device principals or sessions, duplicate visible device labels or runtime instances, fewer than two devices, stale hydration, app/docs/catalog SHA mismatch, catalog/docs mismatch, and `/`, `#`, or `@` count mismatch. A room socket cannot change its bound device/runtime identity, and the dedicated identity room rejects document and asset traffic. The verifier reports only `collecting`, `pass`, `mismatch`, `stale`, or `blocked`; there is no majority winner and no automatic Git or catalog mutation. Transport reconnection is bounded to two attempts per outage and the budget resets only after a stable connected window. `Copy diagnostic JSON` copies the current identity and gate snapshots as a read-only troubleshooting convenience and cannot affect compliance state.
+
+### Immutable Pair Manifest Compliance
+
+Create the artifact from one exact source object, then validate the downloaded bytes against the same source and pinned docs revisions:
+
+```bash
+export KNOWGRPH_SOURCE_REVISION="<exact-knowgrph-sha>"
+export KNOWGRPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
+npm --prefix "$KNOWGRPH_ROOT" run release:manifest:create -- \
+  --source-sha "$KNOWGRPH_SOURCE_REVISION" \
+  --target-ref "$KNOWGRPH_TARGET_REF" \
+  --output immutable-release-manifest.json
+npm --prefix "$KNOWGRPH_ROOT" run release:manifest:check -- \
+  immutable-release-manifest.json \
+  --source-sha "$KNOWGRPH_SOURCE_REVISION"
+```
+
+CI must upload the generated file, download it into a separate directory, and rerun the checker with the expected app SHA, resolved Agentic Canvas OS SHA, and first-pass manifest digest. A current-worktree report, individually green docs PR, branch name, manually assembled JSON, or unvalidated upload is insufficient.
 
 ## Memory Log Compliance Checks
 

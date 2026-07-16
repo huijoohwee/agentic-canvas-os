@@ -63,7 +63,7 @@ completion_requires:
 
 Fetch before starting every Codex session; require exactly one registered worktree in each repository; activate the task branch only in the canonical checkout; pull only when intentionally updating a clean, exclusively owned branch.
 
-The single canonical checkout rule has precedence over every older workflow, template, script description, task note, or historical example. Any instruction to create, retain, or use a secondary worktree is contradictory and invalid. Stop and correct the source contract instead of executing that instruction.
+The single canonical Dev checkout rule has precedence over every older workflow, template, script description, task note, or historical example. Any instruction to create, retain, or use a secondary Dev worktree is contradictory and invalid. A repository-owned immutable publication command may inspect and push an existing commit object without switching, staging, restoring, or running that object; this object lane is not a second Dev checkout and must emit exact paired-SHA evidence.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
@@ -80,6 +80,7 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
 | Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
 | Dev | Author and run Knowgrph only in the canonical `$GITHUB_ROOT/knowgrph` checkout. Use `npm run dev:apex`, `npm run dev`, and the explicit clean-main refresh command `npm run dev:latest` through repository-owned scripts. |
+| Immutable publication | When another task owns the canonical checkout, use only Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane after the source commit already exists. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
 | Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Mutation is forbidden until the operator explicitly requests promotion or release. |
 | Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Deployment is forbidden until the operator explicitly requests it. |
@@ -154,6 +155,19 @@ npm --prefix "$KNOWGRPH_ROOT" run dev:latest
 The command reads the canonical source registry, fetches every source, and completes a two-phase safety check before changing any checkout. Every source must have exactly one registered worktree, no local changes, its canonical branch active, and `HEAD` as an ancestor of the fetched canonical ref. Only after the full set passes does it apply `git merge --ff-only` and delegate to the ordinary fail-closed Dev startup.
 
 Do not use `dev:latest` for an owned task branch. On a contract-valid `agent/<device>/<semantic-scope>` branch, start with `npm run dev` or `npm run dev:apex`; the Knowgrph guard selects task mode automatically. `KG_DEV_SOURCE_MODE` remains an expert override. Reconcile task-branch upstream history through the task workflow rather than changing it during Dev startup.
+
+### Checkout-Free Immutable Publication
+
+The object lane is allowed only for an already-created commit whose writer has stopped. It does not authorize authoring outside the canonical checkout. The command must verify the source commit and tree, require an expected remote head, prove fast-forward ancestry, read the pinned docs SHA from that source object, generate a schema-valid app/docs/catalog manifest under Git metadata, push the exact SHA to one unprotected task ref, and verify the resulting remote ref. It must never switch, stage, reset, stash, restore, merge, create a worktree, touch authored files, or deploy.
+
+```sh
+npm --prefix "$KNOWGRPH_ROOT" run release:publish:immutable -- \
+  --source-sha "<exact-source-sha>" \
+  --target-ref "refs/heads/agent/<device>/<semantic-scope>" \
+  --expected-remote-sha "<exact-current-remote-sha>"
+```
+
+The repository-owned command may bypass the checkout-oriented hook only after its own object gate succeeds, and the manifest records that bounded hook mode. Manual `git push --no-verify`, raw refspec publication, force, or a missing manifest fails compliance. The remote Integration Gate remains authoritative and must download and validate the same manifest against its exact pull-request head and pinned Agentic Canvas OS checkout.
 
 ## Inputs and Outputs
 
@@ -245,7 +259,7 @@ Open the gate through MainPanel Settings. `Cross-device Identity Gate` must be o
 
 Before trusting the visible values, run the identity-ownership source check in `VALIDATION-RUNBOOK.md`. Knowgrph must mount exactly one canonical identity runtime at the application root. Settings consumes that global snapshot; `/`, `#`, and `@` catalog hydration may publish the docs revision, counts, and hydration state as one facet but must not define, scope, or own the identity component. Any second store, surface-local owner, or catalog-coupled Settings identity hook blocks parity even when the displayed SHAs happen to match.
 
-With authenticated storage-room configuration present, every running device automatically joins the dedicated global identity room. The room issues a short-lived challenge, the application-root reporter reads the canonical identity snapshot, and every client verifies the authenticated peer/session binding, distinct device and runtime instances, challenge, TTL, digest, exact revisions, hydration, and counts. Continue only when MainPanel Settings reports `pass`, at least `2/2` devices, and a non-empty common verification digest. `collecting`, `mismatch`, `stale`, `blocked`, transport failure, duplicate/replayed evidence, or different digests blocks startup parity. `Copy diagnostic JSON` is optional troubleshooting only and is never required evidence.
+With authenticated storage-room configuration present, every running device automatically joins the dedicated global identity room. The storage boundary derives a session-bound device principal before the room relay; the application-root reporter cannot supply or override that principal. The room issues a short-lived challenge, the reporter reads the canonical identity snapshot, and every client verifies distinct authenticated device principals, sessions, visible device labels, and runtime instances plus challenge, TTL, digest, exact revisions, hydration, and counts. Continue only when MainPanel Settings reports `pass`, at least `2/2` devices, and a non-empty common verification digest. `collecting`, `mismatch`, `stale`, `blocked`, transport failure, duplicate/replayed evidence, or different digests blocks startup parity. Reconnect attempts remain bounded per outage and reset only after a stable connected window. `Copy diagnostic JSON` is optional troubleshooting only and is never required evidence.
 
 The identity must also report `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and separate `/`, `#`, and `@` counts. Require `catalogRevision == agenticCanvasOsRevision`. Hydration and cache keys must include the docs revision so a revision change invalidates the prior catalog instead of reusing a page-lifetime snapshot.
 
@@ -311,7 +325,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in th
 
 ## Handoff and Conflict Rules
 
-- A handoff names the exact pushed commit SHA; the sender stops writing before the receiver starts.
+- A handoff names the exact pushed commit SHA and paired app/docs/catalog manifest digest; the sender stops writing before the receiver starts.
 - A runtime handoff includes identity-ownership compliance plus an automatic gate result with at least two distinct live devices, exact visible revisions, and the common non-empty verification digest; a branch name, screenshot, clipboard export, or one-device result never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.

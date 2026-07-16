@@ -563,4 +563,6 @@ This file does not replace system, developer, or operator instructions. It defin
 | Exact revisions establish parity | Two runtime identity records pass only when their Knowgrph and Agentic Canvas OS SHAs are valid, exact, and equal across devices; branch names are ignored. |
 | Identity ownership stays global | The source-architecture check finds one application-root identity runtime, one canonical store, a Settings KTV projection, and no Settings or invocation-catalog identity owner. |
 | Catalog revision is current | Every runtime identity reports `catalogRevision == agenticCanvasOsRevision`, a bounded hydration attempt count, and a non-stale successful state before parity or release is claimed. |
+| Distinct devices are authenticated | Automatic parity requires unique session-bound device principal ids from the authenticated storage boundary in addition to unique sessions, runtime instances, and visible device labels. |
+| Immutable publication is paired | Checkout-free publication validates one exact commit object and expected remote head, emits a schema-valid app/docs/catalog manifest, pushes without switching the Dev checkout, and requires the remote Integration Gate to round-trip that exact manifest. |
 | Deploy boundary preserved | No Prod mirror or Cloudflare mutation is performed by documentation-only updates. |

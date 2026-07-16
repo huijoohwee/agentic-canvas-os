@@ -77,6 +77,7 @@ Use existing shared utilities for invocation content:
 - Establish cross-device parity only from identical exact Knowgrph and Agentic Canvas OS commit SHAs reported by the running surfaces. Branch names, ports, and device labels are informational, not proof.
 - Require visible runtime identity and revision-keyed catalog hydration. A docs revision change invalidates the prior catalog; allow at most two explicit refresh attempts before returning a visible blocked or stale result.
 - Require one application-root canonical identity owner for all of Knowgrph. MainPanel Settings renders `Cross-device Identity Gate` inside the Settings body as a shared KTV section; Settings, Skills & Commands, Chat, and `/`, `#`, `@` catalog hydration may project or publish facets but must not own identity.
+- Treat `Copy identity JSON` as a read-only export of that canonical snapshot. Require each device to capture its own unedited temporary JSON file and run the multi-file compliance command; copied-from-another-device, manually reconstructed, committed, or copy-only evidence never establishes parity.
 - Treat any instruction to create, retain, or use a secondary worktree as invalid. `git worktree add` is forbidden; stop and correct the contradictory source rule.
 - Do not use pull as a default startup action. Pull only when intentionally updating a clean, exclusively owned branch with explicit integration behavior.
 - Treat `$GITHUB_ROOT/huijoohwee/content/knowgrph` as a Prod mirror, not a default edit target.

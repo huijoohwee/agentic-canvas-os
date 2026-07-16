@@ -139,6 +139,9 @@ rg -q 'useAgenticOsRemoteGrammarCatalog' "$BRIDGE"
 rg -q 'area: CROSS_DEVICE_IDENTITY_SETTINGS_AREA' "$SETTINGS"
 rg -q 'return <CrossDeviceIdentitySettingsRows />' "$SETTINGS"
 rg -q 'useKnowgrphRuntimeIdentity()' "$ROWS"
+rg -q 'serializeKnowgrphRuntimeIdentity(identity)' "$ROWS"
+rg -q 'clipboard.writeText(serializedIdentity)' "$ROWS"
+! rg -q 'buildKnowgrphRuntimeIdentity' "$ROWS"
 KTV_ROW_COUNT="$(rg -o '<KeyTypeValueStaticRow' "$ROWS" | wc -l | tr -d ' ')"
 test "$KTV_ROW_COUNT" -gt 0
 ! rg -q '<(dl|dt|dd)([[:space:]>])' "$ROWS"
@@ -147,7 +150,18 @@ test "$KTV_ROW_COUNT" -gt 0
 echo "runtime identity ownership ok owner=application-root projection=main-panel-settings-ktv rows=$KTV_ROW_COUNT"
 ```
 
-This source gate is separate from value parity. It proves that app/build identity exists independently of catalog hydration, the application root mounts exactly one canonical runtime owner, the catalog bridge only publishes its facet, and MainPanel Settings consumes the global snapshot through shared KTV rows without a private definition-list layout. Missing owners, duplicate mounts, a Settings-local catalog hook, the former `KnowgrphRuntimeIdentityGate`, a Skills & Commands owner, or a private non-KTV projection fails closed even if two exported JSON records match.
+This source gate is separate from value parity. It proves that app/build identity exists independently of catalog hydration, the application root mounts exactly one canonical runtime owner, the catalog bridge only publishes its facet, MainPanel Settings consumes the global snapshot through shared KTV rows without a private definition-list layout, and the copy action serializes that consumed snapshot instead of rebuilding identity. Missing owners, duplicate mounts, a Settings-local catalog hook, the former `KnowgrphRuntimeIdentityGate`, a Skills & Commands owner, a private non-KTV projection, or a copy-time identity builder fails closed even if two exported JSON records match.
+
+### Capture With `Copy identity JSON`
+
+1. On device A, open MainPanel Settings, expand `Cross-device Identity Gate`, and wait for `fresh` with an attempt count from `0` through `2`. If the docs and catalog SHAs differ, use `Refresh identity catalog` within the two-attempt bound before copying.
+2. Click `Copy identity JSON`. Continue only when the row reports `Copied`; `Copy unavailable`, missing acknowledgement, stale/blocked state, or attempt exhaustion blocks capture.
+3. On device A, paste the clipboard once into a new UTF-8 file such as `<temporary-evidence-directory>/<device-a>-runtime-identity.json`. Do not edit, normalize, reconstruct, or substitute fields. Keep the file outside the repository and do not commit it.
+4. Repeat steps 1 through 3 independently on every other participating device. Never send device A's export to device B and relabel it; the compliance command rejects duplicate `device` values, but provenance still depends on same-device capture.
+5. Transfer the distinct files to one verifier through an approved local or secure channel without changing their JSON content. Set `RUNTIME_IDENTITY_FILES` to their colon-delimited paths and run the command below.
+6. Preserve only the command result and exact compared SHAs in the handoff or release ledger. Delete temporary device evidence when its retention is no longer required by the active audit.
+
+The button is read-only clipboard export. It does not fetch, refresh, synchronize, persist, upload, compare, approve, or release anything. A screenshot can help human review but cannot replace the JSON files because the compliance command validates schema, complete SHAs, counts, hydration, distinct devices, and exact equality.
 
 Export a colon-delimited list of two or more runtime identity JSON files captured from the visible identity surface on participating devices, then run the gate:
 

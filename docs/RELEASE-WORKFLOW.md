@@ -76,6 +76,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 - Hand off only after the sender stops and pushes an exact commit SHA.
 - Treat branch names as informational. Cross-device and promoted-runtime parity require visible, identical exact Knowgrph and Agentic Canvas OS SHAs.
 - Require the canonical identity runtime at the application root and the visible gate as a MainPanel Settings body section using shared KTV rows. Settings, Skills & Commands, Chat, FloatingPanel, and invocation catalogs must remain projections or facet publishers, never identity owners.
+- On each participating device, use `Copy identity JSON` only after fresh bounded hydration, require the `Copied` acknowledgement, save the unedited clipboard payload as temporary local evidence outside Git, and run the multi-file parity command. The button is read-only export, not synchronization or parity proof.
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
@@ -119,7 +120,7 @@ The structural gate validates `TODO.md` and every shard. The release gate preser
 
 ### 6. Validate Dev
 
-Run repository-declared collaboration, protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, integration, identity-ownership, and cross-device runtime identity gates. Runtime proof must show one application-root identity owner, a MainPanel Settings KTV projection, no catalog- or surface-owned competing identity component, exact visible app/docs SHA parity, catalog revision equal to the docs revision after no more than two explicit refresh attempts, the pinned docs dependency, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
+Run repository-declared collaboration, protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, integration, identity-ownership, and cross-device runtime identity gates. Runtime proof must show one application-root identity owner, a MainPanel Settings KTV projection, the copy action serializing that consumed canonical snapshot without rebuilding identity, one unedited temporary export captured independently on each device, no catalog- or surface-owned competing identity component, exact visible app/docs SHA parity, catalog revision equal to the docs revision after no more than two explicit refresh attempts, the pinned docs dependency, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
 
 Stop on any required failure. Never promote by skipping tests, editing fixtures to hide defects, or adding downstream aliases.
 
@@ -162,6 +163,7 @@ Stop without downstream mutation when any of these is true:
 - required dictionary or runtime proof is missing;
 - visible runtime identity is missing, exact app/docs SHAs differ across participating devices, or only branch names are available as parity evidence;
 - identity ownership is not application-global, the gate is outside the MainPanel Settings body or does not use shared KTV rows, or any surface/catalog creates a competing identity owner;
+- `Copy identity JSON` is unavailable, serializes a rebuilt or surface-local identity, lacks a `Copied` acknowledgement, or any device evidence is edited, reconstructed, duplicated, reused, or committed as source;
 - catalog revision differs from the Agentic Canvas OS docs revision, hydration is stale or blocked, or more than two explicit refresh attempts are required;
 - any memory shard is malformed or historical bytes differ from the recorded memory base ref;
 - any planning shard is malformed, over cap, historically rewritten, or missing the declared strict task row;

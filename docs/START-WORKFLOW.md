@@ -245,6 +245,8 @@ Open the gate through MainPanel Settings. `Cross-device Identity Gate` must be o
 
 Before trusting the visible values, run the identity-ownership source check in `VALIDATION-RUNBOOK.md`. Knowgrph must mount exactly one canonical identity runtime at the application root. Settings consumes that global snapshot; `/`, `#`, and `@` catalog hydration may publish the docs revision, counts, and hydration state as one facet but must not define, scope, or own the identity component. Any second store, surface-local owner, or catalog-coupled Settings identity hook blocks parity even when the displayed SHAs happen to match.
 
+Use `Copy identity JSON` only after the gate reports `fresh` within attempt `0`, `1`, or `2`. Require the visible `Copied` acknowledgement, then paste the clipboard into one new UTF-8 `.json` evidence file on that same device without editing, reformatting, or replacing any field. Store the capture in a temporary local evidence directory outside Git; never commit device labels, task branches, or runtime exports to source docs. Repeat independently on every participating device, transfer the distinct files to one verifier without changing their contents, and run the multi-file command in `VALIDATION-RUNBOOK.md`. The button does not synchronize devices and its acknowledgement proves only that the clipboard write succeeded.
+
 The identity must also report `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and separate `/`, `#`, and `@` counts. Require `catalogRevision == agenticCanvasOsRevision`. Hydration and cache keys must include the docs revision so a revision change invalidates the prior catalog instead of reusing a page-lifetime snapshot.
 
 When the catalog revision is absent or mismatched, expose an explicit refresh action. Permit at most two refresh attempts for that revision. A successful attempt reports `fresh`; exhaustion reports `blocked` or `stale`, keeps the mismatched revision visible, and blocks parity and runtime-ready claims. A page reload may be one explicit attempt, but silent or unbounded background retries are forbidden.
@@ -310,7 +312,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in th
 ## Handoff and Conflict Rules
 
 - A handoff names the exact pushed commit SHA; the sender stops writing before the receiver starts.
-- A runtime handoff includes identity-ownership compliance, both visible runtime SHAs, and catalog revision evidence; a branch name alone never establishes parity.
+- A runtime handoff includes identity-ownership compliance plus one independently captured, unedited identity JSON file from each participating device; a branch name, screenshot, copied duplicate, or button acknowledgement alone never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.
 - Use force-with-lease only when repository policy allows it and one writer is reconfirmed; otherwise use a new reconciliation branch.

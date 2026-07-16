@@ -101,6 +101,7 @@ dictionary_entries:
   - "#skill-system"
   - "#image-to-threejs"
   - "#image-to-glb"
+  - "#knowgrph.probe-tree"
   - "#progressive-disclosure"
   - "#skill-bundle"
   - "#agentskills-compatible"
@@ -223,6 +224,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#skill-system` | On-demand procedural knowledge loaded only when useful. | A task should use a reusable skill, skill variant, or skill source. | Metadata discovery, selected source load, shallow resource loading, and no-copy policy are present. |
 | `#image-to-threejs` | Native image-source conversion into a typed Three.js render projection. | A selected Card or Widget binds one PNG, JPG, JPEG, or SVG source to `image.to-threejs`. | The shared `imageToThreeJs` contract validates the source, reports zero model cost, and projects one canonical `threejs` render mode or a typed fallback. |
 | `#image-to-glb` | Native image-source conversion into a procedural GLB asset contract. | A selected Card or Widget binds one PNG, JPG, JPEG, or SVG source to `image.to-glb`. | The contract accepts procedural JS/TS construction only, logs bounded vision-review passes, exports GLB through the asset pipeline, and rejects baked/serialized geometry or embedded glTF buffers. |
+| `#knowgrph.probe-tree` | Bounded Probe-Tree clarification generation and continuation from a Widget Card. | A selected or answered card invokes `/knowgrph.probe-tree` with its authored graph context. | Branches cascade forward without backtracking, pinned coordinates remain authoritative, generation does not reload the page, and depth or approval limits stop visibly before spend. |
 | `#progressive-disclosure` | Token-minimizing staged loading. | A large skill or resource tree could waste prompt context. | Metadata loads first; full skill source and resources load only after explicit selection. |
 | `#skill-bundle` | Grouped skill invocation. | A recurring task needs several existing skills together. | Bundle resolves existing skills, reports missing skills, and does not install or duplicate registry entries. |
 | `#agentskills-compatible` | Open-standard skill file compatibility. | A skill source is authored, inspected, imported, or validated. | Standard frontmatter, concise activation description, Markdown body, optional resources, and validation are present. |
@@ -347,6 +349,7 @@ semantic:
 |---|---|
 | `#truth` | `FACTS.md` direct-resolution entry for shared source-backed facts. |
 | `#soul` | `FACTS.md` direct-resolution entry for durable agent identity. |
+| `#knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for bounded Probe-Tree semantics. |
 | `#persistent-memory` | `FACTS.md` direct-resolution entry for bounded persistent memory. |
 | `#skill-system` | `FACTS.md` direct-resolution entry for on-demand skill loading and progressive disclosure. |
 | `#context-file` | `FACTS.md` direct-resolution entry for project-local context files. |

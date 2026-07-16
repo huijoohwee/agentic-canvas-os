@@ -47,6 +47,16 @@ prompt_presets:
       /image.to-glb @image-to-glb #image-to-glb
 
       Build a native GLB asset from the selected or attached PNG, JPG, JPEG, or SVG source. Reuse the shared image-to-threejs source-resolution and preview utilities without mutating the source Widget Card or input media. Generate and review only procedural JS/TS scene construction such as `new THREE.BoxGeometry(...)`, `new THREE.BufferGeometry().setFromPoints(...)`, CSG, or parametric-surface operations; reject baked geometry and every serialized geometry payload. Route the runtime asset pipeline to GLB. An approved LLM loop may propose or revise procedural JS/TS and run bounded vision-review passes against the reference image, but it must not emit a serialized mesh format. When editing an existing scene structure, emit glTF with external buffers only; reject embedded buffers and data URIs. Do not use an external plugin or copy external code, dependencies, prompts, schemas, fixtures, prose, or UI.
+  - id: "knowgrph-probe-tree"
+    label: "Knowgrph Probe-Tree"
+    slash_command: "/knowgrph-probe-tree-prompt-preset"
+    runtime_command: "/knowgrph.probe-tree"
+    description: "Native Widget Card preset for bounded, editable next-question branches and a separate Rich Media branch ledger."
+    activation: "card-inline"
+    prompt: |-
+      /knowgrph.probe-tree @knowgrph.probe-tree #knowgrph.probe-tree
+
+      Generate 2-4 bounded, editable next-question cards from this Widget Card. Keep the source card unchanged, connect each candidate branch, and publish the branch summary to a separate Rich Media Panel. Stop visibly at depth 8. Run the zero-cost local fallback before generic provider generation; do not make a provider call unless separately approved.
   - id: "sme-care-agent"
     label: "SME Care Agent"
     slash_command: "/sme-care-prompt-preset"
@@ -83,7 +93,7 @@ prompt_presets:
 
 This document is the single prompt-text owner for the Knowgrph FloatingPanel **Prompt Presets** catalog. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
 
-Selection and loading are zero-spend. **Send** remains the execution boundary. The image-to-threejs and image-to-glb presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; SME Care and Investment Research use the shared slash-agent response contract; Crawler Agent uses the native Import URL workflow.
+Selection and loading are zero-spend. **Send** remains the Chat execution boundary. The image-to-threejs, image-to-glb, and Probe-Tree presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The Widget Card **Run** action is the execution boundary for those card-inline presets. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; SME Care and Investment Research use the shared slash-agent response contract; Crawler Agent uses the native Import URL workflow.
 
 Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-preset`. Every `runtime_command` remains the executable route owned by `SKILLS.md` and the command dictionary. Selecting a preset resolves its `runtime_command` and loads the source-backed prompt without submitting, persisting a chat turn, or rewriting the alias into another catalog entry.
 
@@ -94,6 +104,7 @@ Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-pre
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
 | Image to Three.js | `/image.to-threejs` | `/image.to-threejs @image-to-threejs #image-to-threejs` | Load the native prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Resolve only an attached or selected supported image through the native zero-cost conversion owner. |
 | Image to GLB | `/image.to-glb` | `/image.to-glb @image-to-glb #image-to-glb` | Load the native procedural prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Require procedural JS/TS construction, a bounded review ledger, and a GLB asset pipeline; source media stays unchanged. |
+| Knowgrph Probe-Tree | `/knowgrph-probe-tree-prompt-preset` | `/knowgrph.probe-tree @knowgrph.probe-tree #knowgrph.probe-tree` | Load the source-backed prompt in Chat or insert its invocation trio into the selected Widget Card. | Materialize 2-4 editable child cards and a separate Rich Media branch ledger through the native zero-cost fallback; stop at depth 8. |
 | SME Care Agent | `/sme-care-prompt-preset` | `/sme-care-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract and deterministic SME kernel when that runtime is invoked. |
 | Investment Research Agent | `/investment-research-prompt-preset` | `/investment-research-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract with source, evidence, review, and cost boundaries. |
 | Crawler Agent | `/crawler-prompt-preset` | `/crawler-agent` | Load the centralized prompt into Chat with an editable URL. | Use the native headless Import URL workflow and persist separate report and pipe-table Canvas outputs. |

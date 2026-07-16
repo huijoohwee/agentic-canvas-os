@@ -51,7 +51,7 @@ completion_requires:
   - "recorded branch and base SHA"
   - "visible runtime identity with exact Knowgrph, Agentic Canvas OS, and catalog revisions"
   - "one application-root canonical identity owner with a MainPanel Settings KTV projection"
-  - "exact cross-device SHA equality when parity is claimed"
+  - "automatic authenticated-room pass with at least two devices and one common verification digest when parity is claimed"
   - "fresh revision-keyed catalog hydration within at most two explicit refresh attempts"
   - "memory-log structural compliance"
   - "monthly planning-shard structural compliance"
@@ -239,13 +239,13 @@ The repository must report exactly one registered worktree at `$KNOWGRPH_ROOT`; 
 
 #### Cross-Device Runtime Identity Gate
 
-Before claiming parity or handing a running surface to another device, open the visible runtime identity on every participating device and compare the exact 40-character `knowgrphRevision` and `agenticCanvasOsRevision`. Matching branch names, ports, routes, or device labels do not satisfy this gate.
+Before claiming parity or handing a running surface to another device, require the automatic authenticated-room gate to compare the exact 40-character `knowgrphRevision` and `agenticCanvasOsRevision` from every participating runtime. Manual copy, visual comparison, matching branch names, ports, routes, or device labels do not satisfy this gate.
 
 Open the gate through MainPanel Settings. `Cross-device Identity Gate` must be one collapsible section inside the Settings body, below the shared KTV header, and every identity field/action must use the shared Key-Type-Value row contract. A gate above the KTV header, in Skills & Commands, or rendered through a private table/list layout fails startup compliance.
 
 Before trusting the visible values, run the identity-ownership source check in `VALIDATION-RUNBOOK.md`. Knowgrph must mount exactly one canonical identity runtime at the application root. Settings consumes that global snapshot; `/`, `#`, and `@` catalog hydration may publish the docs revision, counts, and hydration state as one facet but must not define, scope, or own the identity component. Any second store, surface-local owner, or catalog-coupled Settings identity hook blocks parity even when the displayed SHAs happen to match.
 
-Use `Copy identity JSON` only after the gate reports `fresh` within attempt `0`, `1`, or `2`. Require the visible `Copied` acknowledgement, then paste the clipboard into one new UTF-8 `.json` evidence file on that same device without editing, reformatting, or replacing any field. Store the capture in a temporary local evidence directory outside Git; never commit device labels, task branches, or runtime exports to source docs. Repeat independently on every participating device, transfer the distinct files to one verifier without changing their contents, and run the multi-file command in `VALIDATION-RUNBOOK.md`. The button does not synchronize devices and its acknowledgement proves only that the clipboard write succeeded.
+With authenticated storage-room configuration present, every running device automatically joins the dedicated global identity room. The room issues a short-lived challenge, the application-root reporter reads the canonical identity snapshot, and every client verifies the authenticated peer/session binding, distinct device and runtime instances, challenge, TTL, digest, exact revisions, hydration, and counts. Continue only when MainPanel Settings reports `pass`, at least `2/2` devices, and a non-empty common verification digest. `collecting`, `mismatch`, `stale`, `blocked`, transport failure, duplicate/replayed evidence, or different digests blocks startup parity. `Copy diagnostic JSON` is optional troubleshooting only and is never required evidence.
 
 The identity must also report `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and separate `/`, `#`, and `@` counts. Require `catalogRevision == agenticCanvasOsRevision`. Hydration and cache keys must include the docs revision so a revision change invalidates the prior catalog instead of reusing a page-lifetime snapshot.
 
@@ -312,7 +312,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in th
 ## Handoff and Conflict Rules
 
 - A handoff names the exact pushed commit SHA; the sender stops writing before the receiver starts.
-- A runtime handoff includes identity-ownership compliance plus one independently captured, unedited identity JSON file from each participating device; a branch name, screenshot, copied duplicate, or button acknowledgement alone never establishes parity.
+- A runtime handoff includes identity-ownership compliance plus an automatic gate result with at least two distinct live devices, exact visible revisions, and the common non-empty verification digest; a branch name, screenshot, clipboard export, or one-device result never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.
 - Use force-with-lease only when repository policy allows it and one writer is reconfirmed; otherwise use a new reconciliation branch.
@@ -326,4 +326,4 @@ Stop before build mutation when either repository has other than one registered 
 
 Given a declared device and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, each repository reports exactly one registered worktree, the canonical Agentic Canvas OS checkout is clean and exactly equal to fetched `origin/main`, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog revision equals the docs revision with fresh bounded hydration, every memory and planning shard is structurally compliant, the active planning shard and Context are declared, no repository-local todo file claims authority, ownership is unique, the canonical Knowgrph checkout is clean on `agent/<device>/<semantic-scope>`, and Codex starts only from that path.
 
-VCC: verify both fetches exit zero, each `git worktree list --porcelain` contains exactly one `worktree` record, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, the identity-ownership check reports one global owner and a Settings KTV projection, the cross-device runtime identity command reports exact SHA and `/`, `#`, `@` count parity with fresh catalog hydration in at most two attempts, the memory and planning structural commands exit zero, the memory and planning base refs plus the declared planning Context are recorded, repository-local todo files are absent, the canonical Knowgrph checkout is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.
+VCC: verify both fetches exit zero, each `git worktree list --porcelain` contains exactly one `worktree` record, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, the identity-ownership check reports one global owner and a Settings KTV projection, the automatic cross-device gate reports `pass`, at least two distinct live devices, one common verification digest, exact SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural commands exit zero, the memory and planning base refs plus the declared planning Context are recorded, repository-local todo files are absent, the canonical Knowgrph checkout is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.

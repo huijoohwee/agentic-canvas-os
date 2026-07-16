@@ -127,56 +127,64 @@ export KNOWGRPH_ROOT="${KNOWGRPH_ROOT:-$GITHUB_ROOT/knowgrph}"
 APP="$KNOWGRPH_ROOT/canvas/src/App.tsx"
 STORE="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/knowgrphRuntimeIdentity.ts"
 BRIDGE="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/KnowgrphRuntimeIdentityRuntime.tsx"
+ATTESTATION="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/runtimeIdentityAttestation.ts"
+REPORTER="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/useKnowgrphRuntimeIdentityAttestationRuntime.ts"
+GATE_STORE="$KNOWGRPH_ROOT/canvas/src/features/runtime-identity/runtimeIdentityAttestationStore.ts"
+ROOM_CONTRACT="$KNOWGRPH_ROOT/canvas/src/lib/storage/knowgrphRuntimeIdentityRoomContract.ts"
+ROOM="$KNOWGRPH_ROOT/cloudflare/workers/knowgrph-storage/canvasSyncRoom.ts"
+WEB_TOOL="$KNOWGRPH_ROOT/canvas/src/features/agent-ready/localRuntimeIdentityWebMcpTool.ts"
 SETTINGS="$KNOWGRPH_ROOT/canvas/src/features/panels/views/SettingsView.tsx"
 ROWS="$KNOWGRPH_ROOT/canvas/src/features/panels/views/CrossDeviceIdentitySettingsRows.tsx"
 
-test -f "$APP" && test -f "$STORE" && test -f "$BRIDGE" && test -f "$SETTINGS" && test -f "$ROWS"
+test -f "$APP" && test -f "$STORE" && test -f "$BRIDGE" && test -f "$ATTESTATION" && test -f "$REPORTER" && test -f "$GATE_STORE" && test -f "$ROOM_CONTRACT" && test -f "$ROOM" && test -f "$WEB_TOOL" && test -f "$SETTINGS" && test -f "$ROWS"
 test "$(rg -o '<KnowgrphRuntimeIdentityRuntime />' "$APP" | wc -l | tr -d ' ')" = "1"
 rg -q 'buildBaseKnowgrphRuntimeIdentity' "$STORE"
 rg -q 'useSyncExternalStore' "$STORE"
 rg -q 'publishKnowgrphCatalogIdentity' "$STORE" "$BRIDGE"
 rg -q 'useAgenticOsRemoteGrammarCatalog' "$BRIDGE"
+rg -q 'useKnowgrphRuntimeIdentityAttestationRuntime(identity)' "$BRIDGE"
+rg -q 'createKnowgrphRuntimeIdentityAttestation' "$REPORTER" "$ATTESTATION"
+rg -q 'verifyKnowgrphRuntimeIdentityAttestations' "$REPORTER" "$ATTESTATION"
+! rg -q 'buildKnowgrphRuntimeIdentity' "$REPORTER" "$GATE_STORE"
+rg -q 'runtime.identity.challenge.request' "$REPORTER" "$ROOM"
+rg -q 'runtime.identity.attested' "$REPORTER" "$ROOM"
+rg -q 'authenticatedPeerId' "$ROOM" "$ATTESTATION"
+rg -q 'authenticatedSessionId' "$ROOM" "$ATTESTATION"
+rg -q 'duplicate authenticated session' "$ATTESTATION"
+rg -q 'runtime identity cannot change within an authenticated room session' "$ROOM"
+rg -q 'identity room accepts attestation messages only' "$ROOM"
+rg -q 'identity room cannot persist assets' "$ROOM"
+rg -q 'getKnowgrphRuntimeIdentity' "$WEB_TOOL"
+rg -q 'getKnowgrphRuntimeIdentityGateSnapshot' "$WEB_TOOL"
 rg -q 'area: CROSS_DEVICE_IDENTITY_SETTINGS_AREA' "$SETTINGS"
 rg -q 'return <CrossDeviceIdentitySettingsRows />' "$SETTINGS"
 rg -q 'useKnowgrphRuntimeIdentity()' "$ROWS"
-rg -q 'serializeKnowgrphRuntimeIdentity(identity)' "$ROWS"
-rg -q 'clipboard.writeText(serializedIdentity)' "$ROWS"
+rg -q 'useKnowgrphRuntimeIdentityGate()' "$ROWS"
+rg -F -q 'JSON.stringify({ identity, gate }' "$ROWS"
+rg -q 'clipboard.writeText(serializedDiagnostic)' "$ROWS"
+rg -q 'Copy diagnostic JSON' "$ROWS"
+! rg -q 'Copy identity JSON' "$ROWS"
 ! rg -q 'buildKnowgrphRuntimeIdentity' "$ROWS"
 KTV_ROW_COUNT="$(rg -o '<KeyTypeValueStaticRow' "$ROWS" | wc -l | tr -d ' ')"
-test "$KTV_ROW_COUNT" -gt 0
+test "$KTV_ROW_COUNT" -ge 12
 ! rg -q '<(dl|dt|dd)([[:space:]>])' "$ROWS"
 ! rg -q 'useAgenticOsRemoteGrammarCatalog' "$ROWS"
-! rg -q 'KnowgrphRuntimeIdentityGate|agenticOsRuntimeIdentity' "$KNOWGRPH_ROOT/canvas/src/features"
-echo "runtime identity ownership ok owner=application-root projection=main-panel-settings-ktv rows=$KTV_ROW_COUNT"
+! rg -q 'readKnowgrphStorageCanvasRoomConfig|createKnowgrphRuntimeIdentityAttestation' "$ROWS"
+! rg -q '(function|const|class)[[:space:]]+KnowgrphRuntimeIdentityGate|agenticOsRuntimeIdentity' "$KNOWGRPH_ROOT/canvas/src/features"
+echo "runtime identity ownership ok owner=application-root attestation=authenticated-room projection=main-panel-settings-ktv rows=$KTV_ROW_COUNT"
 ```
 
-This source gate is separate from value parity. It proves that app/build identity exists independently of catalog hydration, the application root mounts exactly one canonical runtime owner, the catalog bridge only publishes its facet, MainPanel Settings consumes the global snapshot through shared KTV rows without a private definition-list layout, and the copy action serializes that consumed snapshot instead of rebuilding identity. Missing owners, duplicate mounts, a Settings-local catalog hook, the former `KnowgrphRuntimeIdentityGate`, a Skills & Commands owner, a private non-KTV projection, or a copy-time identity builder fails closed even if two exported JSON records match.
+This source gate is separate from value parity. It proves that app/build identity exists independently of catalog hydration, the application root mounts exactly one canonical runtime owner, the catalog bridge only publishes its facet, the reporter consumes rather than rebuilds the canonical snapshot, the authenticated room only relays challenge-bound evidence, the WebMCP tool only reads the identity and gate stores, and MainPanel Settings consumes both snapshots through shared KTV rows. Missing owners, duplicate mounts, a Settings-local catalog or transport hook, a room/verifier identity builder, persistence or majority-selection logic, a Skills & Commands owner, or a private non-KTV projection fails closed even if displayed values match.
 
-### Capture With `Copy identity JSON`
+### Automatic Challenge-Bound Compliance
 
-1. On device A, open MainPanel Settings, expand `Cross-device Identity Gate`, and wait for `fresh` with an attempt count from `0` through `2`. If the docs and catalog SHAs differ, use `Refresh identity catalog` within the two-attempt bound before copying.
-2. Click `Copy identity JSON`. Continue only when the row reports `Copied`; `Copy unavailable`, missing acknowledgement, stale/blocked state, or attempt exhaustion blocks capture.
-3. On device A, paste the clipboard once into a new UTF-8 file such as `<temporary-evidence-directory>/<device-a>-runtime-identity.json`. Do not edit, normalize, reconstruct, or substitute fields. Keep the file outside the repository and do not commit it.
-4. Repeat steps 1 through 3 independently on every other participating device. Never send device A's export to device B and relabel it; the compliance command rejects duplicate `device` values, but provenance still depends on same-device capture.
-5. Transfer the distinct files to one verifier through an approved local or secure channel without changing their JSON content. Set `RUNTIME_IDENTITY_FILES` to their colon-delimited paths and run the command below.
-6. Preserve only the command result and exact compared SHAs in the handoff or release ledger. Delete temporary device evidence when its retention is no longer required by the active audit.
+1. Configure the existing authenticated storage-room client on every participating runtime. No separate identity datastore, Durable Object class, clipboard file, or committed evidence file is permitted.
+2. Start each device. The application-root reporter automatically joins `runtime-identity:knowgrph:main`; the authenticated room issues a 60-second challenge and relays peer/session-bound attestations without persistence.
+3. Open MainPanel Settings only to observe the projection. Require local identity `fresh` within attempt `0`, `1`, or `2`, peer gate `pass`, transport `connected`, at least `2/2` distinct devices, and a non-empty `Proof` SHA-256 digest.
+4. On every participating device, call the read-only browser tool `knowgrph.read_local_runtime_identity` or inspect the KTV projection. Require the same non-empty gate verification digest and identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs. Branch values are informational and deliberately ignored.
+5. Preserve the gate status, common verification digest, exact compared SHAs, device count, and bounded hydration result in the handoff or release ledger. Do not preserve raw attestations after their TTL and do not substitute screenshots or clipboard exports for the machine result.
 
-The button is read-only clipboard export. It does not fetch, refresh, synchronize, persist, upload, compare, approve, or release anything. A screenshot can help human review but cannot replace the JSON files because the compliance command validates schema, complete SHAs, counts, hydration, distinct devices, and exact equality.
-
-Export a colon-delimited list of two or more runtime identity JSON files captured from the visible identity surface on participating devices, then run the gate:
-
-```bash
-export RUNTIME_IDENTITY_FILES="<device-a-runtime-identity.json>:<device-b-runtime-identity.json>"
-ruby -rjson -e 'files=ENV.fetch("RUNTIME_IDENTITY_FILES").split(":").reject(&:empty?); abort("need at least two runtime identities") if files.length<2; ids=files.map{|file| JSON.parse(File.read(file))}; sha=/\A[0-9a-f]{40}\z/; required=%w[schema device knowgrphRevision agenticCanvasOsRevision catalogRevision catalogHydration catalogCounts]; ids.each{|id| missing=required.reject{|key| id.key?(key)}; abort("runtime identity missing: #{missing.join(", ")}") unless missing.empty?; abort("invalid runtime identity schema") unless id.fetch("schema")=="knowgrph-runtime-identity/v1"; %w[knowgrphRevision agenticCanvasOsRevision catalogRevision].each{|key| abort("invalid #{key}") unless sha.match?(id.fetch(key))}; hydration=id.fetch("catalogHydration"); abort("invalid catalog hydration") unless hydration.is_a?(Hash) && hydration.fetch("status")=="fresh" && hydration.fetch("attempts").is_a?(Integer) && hydration.fetch("attempts").between?(0,2); counts=id.fetch("catalogCounts"); abort("invalid catalog counts") unless counts.is_a?(Hash) && %w[slash hash at].all?{|key| counts.fetch(key,-1).is_a?(Integer) && counts.fetch(key)>=0}; abort("catalog revision mismatch") unless id.fetch("catalogRevision")==id.fetch("agenticCanvasOsRevision")}; abort("duplicate device identity") unless ids.map{|id| id.fetch("device")}.uniq.length==ids.length; %w[knowgrphRevision agenticCanvasOsRevision catalogRevision catalogCounts].each{|key| abort("cross-device #{key} mismatch") unless ids.map{|id| id.fetch(key)}.uniq.length==1}; puts "cross-device runtime identity ok devices=#{ids.length} knowgrph=#{ids.first.fetch("knowgrphRevision")} agentic-canvas-os=#{ids.first.fetch("agenticCanvasOsRevision")}"'
-```
-
-Required JSON shape:
-
-```json
-{"schema":"knowgrph-runtime-identity/v1","device":"<device>","branch":"<informational-only>","knowgrphRevision":"<40-hex-sha>","agenticCanvasOsRevision":"<40-hex-sha>","catalogRevision":"<40-hex-sha>","catalogHydration":{"status":"fresh","attempts":0},"catalogCounts":{"slash":0,"hash":0,"at":0}}
-```
-
-The check deliberately ignores `branch` for parity. A missing identity, invalid schema or SHA, cross-device revision or count mismatch, stale or blocked hydration, more than two attempts, catalog/docs revision mismatch, or invalid count fails closed. If the live runtime cannot export this visible identity yet, record runtime implementation as gated rather than marking the compliance check passed.
+The verifier rejects malformed schemas, invalid SHA-256 digests, challenge/session replay, expired or future evidence, duplicate authenticated sessions, duplicate device or runtime instances, fewer than two devices, stale hydration, app/docs/catalog SHA mismatch, catalog/docs mismatch, and `/`, `#`, or `@` count mismatch. A room socket cannot change its bound device/runtime identity, and the dedicated identity room rejects document and asset traffic. The verifier reports only `collecting`, `pass`, `mismatch`, `stale`, or `blocked`; there is no majority winner and no automatic Git or catalog mutation. Transport reconnection is bounded to two attempts. `Copy diagnostic JSON` copies the current identity and gate snapshots as a read-only troubleshooting convenience and cannot affect compliance state.
 
 ## Memory Log Compliance Checks
 
@@ -404,7 +412,7 @@ Choose the subset matching touched owners. Do not run broader suites unless the 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
-| Cross-device runtime identity | The ownership command reports one application-root owner, one MainPanel Settings KTV projection, and no surface/catalog owner; the parity command then reports identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs for at least two devices with `fresh` hydration within two attempts. Branch names are ignored. |
+| Cross-device runtime identity | The ownership command reports one application-root owner, one MainPanel Settings KTV projection, and no surface/catalog owner; the automatic authenticated-room gate then reports `pass`, one common digest, and identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs for at least two devices with `fresh` hydration within two attempts. Branch names and clipboard exports are ignored. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |

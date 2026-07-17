@@ -7,6 +7,7 @@ import {
   assertNoCompetingPullRequests,
   assertNoUnmergedPaths,
   assertSingleCanonicalWorktree,
+  assertUniquePullRequestScopes,
   parseWorktreePaths,
 } from "../scripts/repository-guards.mjs";
 
@@ -43,11 +44,18 @@ test("unmerged index entries block commits and publication", () => {
   );
 });
 
-test("only the active branch may own an open delivery PR", () => {
+test("parallel pull requests require unique semantic scopes", () => {
   const own = { number: 18, headRefName: "agent/device/scope" };
   assert.equal(assertNoCompetingPullRequests([own], own.headRefName), own);
+  assert.doesNotThrow(() => assertUniquePullRequestScopes([
+    own,
+    { number: 14, headRefName: "agent/other/other-scope" },
+  ]));
   assert.throws(
-    () => assertNoCompetingPullRequests([own, { number: 14, headRefName: "agent/other/scope" }], own.headRefName),
-    /Exactly one active delivery PR/,
+    () => assertNoCompetingPullRequests(
+      [own, { number: 14, headRefName: "agent/other/scope" }],
+      own.headRefName,
+    ),
+    /multiple active pull requests/,
   );
 });

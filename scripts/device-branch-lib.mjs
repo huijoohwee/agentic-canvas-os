@@ -6,6 +6,11 @@ import {
   assertNoUnmergedPaths,
   assertSingleCanonicalWorktree,
 } from "./repository-guards.mjs";
+import {
+  parseDeviceBranch,
+  parseWriterLeasePullRequestBody,
+  renderWriterLeasePullRequestBody,
+} from "./writer-lease-lib.mjs";
 
 export function start({
   scope,
@@ -14,19 +19,170 @@ export function start({
   gitText,
   gitOptional,
   ghText,
+  leaseStore,
+  sessionId,
+  leaseTtlMs,
   run,
   log = console.log,
 }) {
   if (!scope) throw new Error("A semantic scope is required.");
+  requireSession(sessionId);
   requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
   const device = sanitize(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
   const branch = `agent/${device}/${sanitize(scope)}`;
-  requireNoCompetingPullRequest({ branch, ghText });
   run("git", ["fetch", "origin", "main"]);
+  requireNoCompetingPullRequest({ branch, ghText });
+  const baseSha = gitText(["rev-parse", "origin/main"]).trim();
+  const claimed = leaseStore.claim({
+    sessionId,
+    device,
+    scope: sanitize(scope),
+    branch,
+    baseSha,
+    ttlMs: leaseTtlMs,
+  });
   run("git", ["switch", "--create", branch, "origin/main"]);
-  log(`Created ${branch}. Commit intentionally, then run npm run device:publish.`);
+  run("git", ["commit", "--allow-empty", "-m", `chore(coordination): claim ${sanitize(scope)} lease ${claimed.epoch}`]);
+  const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
+  let lease = leaseStore.annotate({ sessionId, values: { fenceSha } });
+  run("git", ["push", "--set-upstream", "origin", branch]);
+  const url = ghText([
+    "pr",
+    "create",
+    "--draft",
+    "--base",
+    "main",
+    "--head",
+    branch,
+    "--title",
+    `WIP: ${sanitize(scope)}`,
+    "--body",
+    renderWriterLeasePullRequestBody(lease),
+  ]).trim();
+  lease = leaseStore.annotate({ sessionId, values: { pullRequestUrl: url } });
+  log(
+    `Claimed ${branch} in ${url} with fence ${fenceSha.slice(0, 12)}; export AGENTIC_SESSION_ID=${sessionId} before commits and heartbeat before ${lease.expiresAt}.`,
+  );
   return branch;
+}
+
+export function heartbeat({
+  invocationPath,
+  repo,
+  gitText,
+  gitOptional,
+  leaseStore,
+  sessionId,
+  leaseTtlMs,
+  run,
+  log = console.log,
+}) {
+  requireSession(sessionId);
+  requireRepositorySafety({ invocationPath, repo, gitText });
+  const branch = gitText(["branch", "--show-current"]).trim();
+  const current = leaseStore.verify({ sessionId, branch });
+  const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
+  const remoteSha = remoteLine.split(/\s+/)[0] || "";
+  if (!current.fenceSha || remoteSha !== current.fenceSha) {
+    throw new Error(
+      `Remote fence for ${branch} is ${remoteSha || "missing"}, not ${current.fenceSha || "unclaimed"}; this session is stale.`,
+    );
+  }
+  const lease = leaseStore.heartbeat({ sessionId, branch, ttlMs: leaseTtlMs });
+  if (!lease.pullRequestUrl || !lease.fenceSha) {
+    throw new Error("Writer lease is missing its draft pull request or fencing SHA.");
+  }
+  run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", renderWriterLeasePullRequestBody(lease)]);
+  log(`Renewed ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}.`);
+  return lease;
+}
+
+export function resume({
+  branchName,
+  invocationPath,
+  repo,
+  gitText,
+  gitOptional,
+  ghText,
+  leaseStore,
+  sessionId,
+  leaseTtlMs,
+  run,
+  log = console.log,
+  now = () => new Date(),
+}) {
+  requireSession(sessionId);
+  const identity = parseDeviceBranch(branchName);
+  if (!identity) throw new Error("Resume requires the exact agent/<device>/<semantic-scope> handoff branch.");
+  requireRepositorySafety({ invocationPath, repo, gitText });
+  requireClean({ gitText });
+  run("git", ["fetch", "origin", "main", branchName]);
+
+  const pulls = JSON.parse(ghText([
+    "pr",
+    "list",
+    "--state",
+    "open",
+    "--base",
+    "main",
+    "--limit",
+    "100",
+    "--json",
+    "number,headRefName,url,body",
+  ]));
+  const owner = assertNoCompetingPullRequests(pulls, branchName);
+  if (!owner?.url) throw new Error(`No draft ownership pull request exists for ${branchName}.`);
+  const remoteLease = parseWriterLeasePullRequestBody(owner.body);
+  if (!remoteLease || remoteLease.branch !== branchName) {
+    throw new Error(`Pull request ${owner.url} has no matching writer-lease metadata.`);
+  }
+  const expired = Date.parse(remoteLease.expiresAt) <= now().getTime();
+  if (remoteLease.status !== "parked" && !(remoteLease.status === "active" && expired)) {
+    throw new Error(
+      `Semantic scope ${identity.scope} remains ${remoteLease.status} under session ${remoteLease.sessionId} until ${remoteLease.expiresAt}.`,
+    );
+  }
+
+  const remoteRef = `origin/${branchName}`;
+  const remoteSha = gitText(["rev-parse", remoteRef]).trim();
+  if (remoteLease.fenceSha) run("git", ["merge-base", "--is-ancestor", remoteLease.fenceSha, remoteRef]);
+  const localExists = Boolean(gitOptional(["show-ref", "--verify", `refs/heads/${branchName}`]));
+  if (localExists) {
+    run("git", ["switch", branchName]);
+    run("git", ["merge", "--ff-only", remoteRef]);
+    const localSha = gitText(["rev-parse", "HEAD"]).trim();
+    if (localSha !== remoteSha) {
+      throw new Error(
+        `Local ${branchName} is ${localSha.slice(0, 12)}, not the handed-off remote ${remoteSha.slice(0, 12)}; preserve or publish local commits before resume.`,
+      );
+    }
+  } else {
+    run("git", ["switch", "--create", branchName, "--track", remoteRef]);
+  }
+
+  const device = sanitize(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
+  const claimed = leaseStore.claim({
+    sessionId,
+    device,
+    scope: identity.scope,
+    branch: branchName,
+    baseSha: remoteSha,
+    previousEpoch: remoteLease.epoch,
+    ttlMs: leaseTtlMs,
+  });
+  run("git", ["commit", "--allow-empty", "-m", `chore(coordination): claim ${identity.scope} lease ${claimed.epoch}`]);
+  const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
+  const lease = leaseStore.annotate({
+    sessionId,
+    values: { fenceSha, pullRequestUrl: owner.url },
+  });
+  run("git", ["push", "origin", branchName]);
+  run("gh", ["pr", "edit", owner.url, "--body", renderWriterLeasePullRequestBody(lease)]);
+  log(
+    `Resumed ${branchName} at epoch ${lease.epoch} with fence ${fenceSha.slice(0, 12)}; prior writers are fenced by the fast-forward remote head.`,
+  );
+  return lease;
 }
 
 export function publish({
@@ -35,39 +191,36 @@ export function publish({
   gitText,
   ghText,
   ghOptional,
+  leaseStore,
+  sessionId,
   run,
   log = console.log,
 }) {
+  requireSession(sessionId);
   requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
   const branch = gitText(["branch", "--show-current"]).trim();
   if (!branch || branch === "main") throw new Error("Publish from an agent/<device>/<scope> branch, never main.");
   if (!branch.startsWith("agent/")) throw new Error(`Refusing unexpected device branch: ${branch}`);
+  const lease = leaseStore.verify({ sessionId, branch });
+  if (!lease.pullRequestUrl || !lease.fenceSha) {
+    throw new Error("Publish requires the draft ownership pull request and fencing SHA created by device:start.");
+  }
+  run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
   requireNoCompetingPullRequest({ branch, ghText });
   run("npm", ["run", "check"]);
   run("git", ["push", "--set-upstream", "origin", branch]);
 
-  let url = ghOptional(["pr", "view", "--json", "url", "--jq", ".url"]);
-  if (!url) {
-    const title = gitText(["log", "-1", "--pretty=%s"]).trim();
-    url = ghText([
-      "pr",
-      "create",
-      "--base",
-      "main",
-      "--head",
-      branch,
-      "--title",
-      title,
-      "--body",
-      "Device branch published for protected CI and serialized auto-merge.",
-      "--label",
-      "automerge",
-    ]);
-  } else {
-    run("gh", ["pr", "edit", "--add-label", "automerge"]);
+  const url = ghOptional(["pr", "view", "--json", "url", "--jq", ".url"]);
+  if (!url || url.trim() !== lease.pullRequestUrl) {
+    throw new Error(`Active pull request does not match the writer lease ${lease.pullRequestUrl}.`);
   }
-  run("gh", ["pr", "merge", "--auto", "--squash", url.trim()]);
+  const title = gitText(["log", "-1", "--pretty=%s"]).trim();
+  run("gh", ["pr", "edit", url, "--title", title, "--add-label", "automerge"]);
+  run("gh", ["pr", "ready", url]);
+  run("gh", ["pr", "merge", "--auto", "--squash", url]);
+  const deliveredLease = leaseStore.release({ sessionId, status: "delivery" });
+  run("gh", ["pr", "edit", url, "--body", renderWriterLeasePullRequestBody(deliveredLease)]);
   const trimmedUrl = url.trim();
   log(`Published ${trimmedUrl} with protected auto-merge enabled.`);
   return trimmedUrl;
@@ -77,6 +230,8 @@ export function park({
   invocationPath,
   repo,
   gitText,
+  leaseStore,
+  sessionId,
   run,
   log = console.log,
   now = () => new Date(),
@@ -84,6 +239,11 @@ export function park({
   requireRepositorySafety({ invocationPath, repo, gitText });
   const branch = gitText(["branch", "--show-current"]).trim();
   if (!branch) throw new Error("Park from a branch checkout, not a detached HEAD.");
+  const leasedTaskBranch = branch.startsWith("agent/");
+  if (leasedTaskBranch) {
+    requireSession(sessionId);
+    leaseStore.verify({ sessionId, branch, allowExpired: true });
+  }
 
   let stashRef = null;
   if (gitText(["status", "--porcelain"]).trim()) {
@@ -104,6 +264,12 @@ export function park({
   }
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("main remains dirty after park; resolve local changes before continuing.");
+  }
+  if (leasedTaskBranch) {
+    const parkedLease = leaseStore.release({ sessionId, status: "parked" });
+    if (parkedLease.pullRequestUrl) {
+      run("gh", ["pr", "edit", parkedLease.pullRequestUrl, "--body", renderWriterLeasePullRequestBody(parkedLease)]);
+    }
   }
 
   const summary = stashRef
@@ -223,6 +389,12 @@ function requireNoCompetingPullRequest({ branch, ghText }) {
 function requireClean({ gitText }) {
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Working tree is not clean. Commit intentionally before switching or publishing.");
+  }
+}
+
+function requireSession(sessionId) {
+  if (!String(sessionId || "").trim()) {
+    throw new Error("A stable session id is required through --session=<id> or AGENTIC_SESSION_ID.");
   }
 }
 

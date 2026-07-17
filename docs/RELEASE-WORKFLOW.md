@@ -69,6 +69,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 ## Operating Model
 
 - Complete `START-WORKFLOW.md` before build work: fetch first, require exactly one registered worktree per repository, inspect ownership, and activate the task branch in the canonical checkout; pull only on a clean, exclusively owned branch when updating it intentionally.
+- Require the current session-bound writer lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope pull requests may coexist, but duplicate active scope ownership blocks release.
 - Use one task, semantic scope, canonical checkout, branch, and active writer; additional worktrees are forbidden.
 - Create `agent/<device>/<semantic-scope>` from the latest `origin/main`.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.

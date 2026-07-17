@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Docs"
 graphId: "md:knowgrph-agentic-canvas-os-doc-readme"
 doc_type: "Agentic OS Docs Index"
-date: "2026-07-07"
+date: "2026-07-17"
 lang: "en-US"
 schema: "agentic-canvas-os-doc-index/v1"
 frontmatter_contract: "required"
@@ -66,7 +66,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |
 | `MCP-GATEWAY.md` | MCP federation contract | Discovery-first gateway rules across local, Pages, browser, and control-plane surfaces. |
 | `VALIDATION-RUNBOOK.md` | Focused proof lane | Commands and checks for documentation, local runtime, and deploy guards. |
-| `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one-worktree enforcement, unique ownership, canonical-checkout branch activation, conditional pull, and exact-SHA startup proof. |
+| `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one-worktree enforcement, session-bound writer leases, scope-aware draft PRs, fencing SHAs, canonical-checkout activation, and exact-SHA proof. |
 | `RELEASE-WORKFLOW.md` | Runtime-ready release contract | Conflict-safe Dev integration, Prod promotion, Cloudflare deployment, production verification, and evidence reporting. |
 
 ## Runtime Position

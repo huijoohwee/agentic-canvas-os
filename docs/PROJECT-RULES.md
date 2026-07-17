@@ -54,6 +54,7 @@ document can express the same contract.
 
 - Test focused diffs only; do not run indefinite full-codebase sweeps.
 - Resolve issues and verify no regressions before handoff.
+- Serialize same-device checkout mutation through the session-bound writer lease; allow cross-device parallel implementation only for different semantic scopes, and reject stale fencing epochs.
 
 ## Post-Task
 

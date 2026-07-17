@@ -13,10 +13,12 @@ import path from "node:path";
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v1";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
+export const DEVICE_BRANCH_PATTERN =
+  /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
 const LOCK_STALE_MS = 30 * 1000;
 
 export function parseDeviceBranch(branch) {
-  const match = String(branch || "").match(/^agent\/([^/]+)\/([^/]+)$/);
+  const match = String(branch || "").match(DEVICE_BRANCH_PATTERN);
   return match ? { branch, device: match[1], scope: match[2] } : null;
 }
 
@@ -238,5 +240,10 @@ function normalizeTtl(ttlMs) {
 function requireIdentity(values) {
   for (const [key, value] of Object.entries(values)) {
     if (!String(value || "").trim()) throw new Error(`Writer lease requires ${key}.`);
+  }
+  const identity = parseDeviceBranch(values.branch);
+  if (!identity) throw new Error(`Writer lease branch does not satisfy the device branch contract: ${values.branch}`);
+  if (identity.device !== values.device || identity.scope !== values.scope) {
+    throw new Error("Writer lease device and scope must match its branch identity.");
   }
 }

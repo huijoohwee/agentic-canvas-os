@@ -35,7 +35,9 @@ deploy_gate:
 operating_priorities: ["minimum-viable-maximum-value", "time-to-value", "high-ROI", "TCO", "token-economics", "FOSS-first"]
 coordination:
   base_ref: "origin/main"
-  branch_pattern: "agent/<device>/<semantic-scope>"
+  branch_pattern: "^agent/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+  device_segment_contract: "lowercase alphanumeric boundaries with interior dot, underscore, or hyphen"
+  semantic_scope_segment_contract: "lowercase alphanumeric boundaries with interior hyphen only"
   one_active_writer: true
   one_worktree_per_repository: true
   direct_main_push: false
@@ -234,6 +236,8 @@ Stop when either repository reports other than one registered worktree, either c
 ### 4. Claim
 
 Choose one device identity, one stable chat/task session id, and one semantic scope. Derive `agent/<device>/<semantic-scope>` without a compatibility alias. Record the intended action, branch, base ref, base SHA, active writer, lease epoch, expiry, and fencing SHA in the task and draft pull-request metadata.
+
+The device segment preserves valid lowercase hostname identity, including interior dots such as `.local`, underscores, and hyphens, while requiring alphanumeric boundaries. The semantic-scope segment permits only lowercase alphanumerics and interior hyphens. Normalize and validate both segments before fetch, branch switch, lease claim, commit, push, or pull-request mutation so rejected identity input cannot change checkout state.
 
 One branch and one semantic scope have one writer. A second chat on the same device remains read-only or queued. A second device uses a different semantic scope or waits for an exact pushed-SHA handoff. Draft pull requests for different scopes may coexist; duplicate active scope ownership fails closed.
 

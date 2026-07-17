@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Validation Runbook"
 graphId: "md:knowgrph-agentic-canvas-os-validation-runbook"
 doc_type: "Validation Runbook"
-date: "2026-07-16"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-canvas-os-validation-runbook/v1"
 frontmatter_contract: "required"
@@ -344,6 +344,24 @@ Expected:
 - Every shard present at the recorded base remains an exact byte prefix; deleted, edited, reordered, or prepended history fails.
 - Release finds one new declared planning Context with 11 filled cells, a Directive of at most 50 words, and a matching Updated Date.
 
+## Instruction Audit Checks
+
+Run the model-free audit after changing `AGENTS.md`, `SKILLS.md`, their owner routing, or instruction policy:
+
+```bash
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run instruction-audit:check
+node "$AGENTIC_CANVAS_OS_ROOT/scripts/instruction-audit.mjs" \
+  --baseline-ref="<recorded-agentic-canvas-os-base-sha>" --json
+```
+
+Expected:
+
+- Required durable intent remains present in both surfaces.
+- Body words, directive units, invocation mentions, and embedded-procedure counts remain within policy.
+- Duplicate normalized directives and canonical-owner leakage fail closed.
+- An exact baseline comparison reports character and percentage reduction.
+- Cost is exactly zero and neither Prod mirror nor Cloudflare is attempted.
+
 ## Route Consistency Checks
 
 Run from `$GITHUB_ROOT`:
@@ -425,6 +443,7 @@ The proof must show one atomic local writer, increasing epochs after expiry, bou
 | Mixture of Agents | Focused docs route check reports `moa route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes preset resolution, reference fan-out, aggregator action, separated cost logs, and no-recursion rejection. |
 | Persistent memory | Focused docs route check reports `persistent-memory route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes bounded memory/profile targets, frozen snapshot reads, typed capacity errors, scan, and session search. |
 | Skills system | Focused docs route check reports `skill-system route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes metadata discovery, selected source load, resource load, bundle resolution, scan, validation, and write approval policy. |
+| Instruction Audit | `npm run instruction-audit:check` exits zero; required intent remains, budgets hold, duplicate and owner-leakage fixtures fail, cost is zero, and optional baseline metrics are exact. |
 | Context files | Focused docs route check reports `context-files route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes working-directory discovery, scanned load, truncation, progressive hints, and context audit proof. |
 | Context references | Focused docs route check reports `context-references route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed expansion packets, warnings, refusals, source metadata, and unsupported-surface behavior. |
 | Kanban collaboration | Focused docs route check reports `kanban route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes row validation, table/Kanban projection, profile binding, worker-process proof, and sync conflicts. |

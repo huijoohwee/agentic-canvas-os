@@ -111,6 +111,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
+| `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
 | `web/` | Static frontend source and offline build script. |
 | `__tests__/` | Network-free deterministic tests. |
 
@@ -144,6 +145,12 @@ injected. Generated JavaScript is never executed locally; programmatic calls
 are limited to validated read-only idempotent tools, while writes, approvals,
 semantic judgment, citations, and native-artifact validation stay direct.
 
+Instruction readiness is enforced separately from provider readiness.
+`npm run instruction-audit:check` verifies that `docs/AGENTS.md` remains a
+small always-on layer and `docs/SKILLS.md` remains a metadata-first catalog.
+The check is model-free, reports exact zero token cost, and can compare context
+size with an exact Git revision without rewriting either source.
+
 Default SEA-LION route:
 
 ```bash
@@ -160,6 +167,7 @@ npm run check
 npm run cache-context:check
 npm run reasoning-continuity:check
 npm run programmatic-tool-calling:check
+npm run instruction-audit:check
 npm run dev
 ```
 

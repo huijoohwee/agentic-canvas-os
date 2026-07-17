@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Docs"
 graphId: "md:knowgrph-agentic-canvas-os-doc-readme"
 doc_type: "Agentic OS Docs Index"
-date: "2026-07-17"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-canvas-os-doc-index/v1"
 frontmatter_contract: "required"
@@ -15,6 +15,8 @@ source_of_truth:
   - "TODO.md"
   - "USER.md"
   - "AGENTS.md"
+  - "SKILLS.md"
+  - "INSTRUCTION-AUDIT.md"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "documentation control surface for making knowgrph a runtime-ready Agentic Canvas OS"
@@ -54,14 +56,15 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `MEMORY-LOG.md` | Append-only memory contract | GitHub-as-SSOT sync boundaries, `memory-log/v1` monthly shards, sigil entries, merge rules, bounded retrieval, and the BM25-to-embedding escalation path. |
 | `TODO.md` | Bounded planning index | Cross-repository `todo-log/v1` monthly shards, append-only lifecycle, exact-first retrieval, size caps, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
-| `AGENTS.md` | Agent instructions | Agent roles, editing rules, MoA rules, stateful orchestration rules, forbidden patterns, and validation behavior for this folder. |
+| `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
+| `INSTRUCTION-AUDIT.md` | Instruction audit runtime | Model-free context budgets, intent preservation, duplication checks, owner-boundary checks, baseline reduction, and zero-cost proof. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
 | `DICTIONARY-SEMANTIC.md` | Hash dictionary | `#` semantic filters for routing, proof, cost, and cleanup. |
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
-| `SKILLS.md` | Skill contract catalog | On-demand skill system, context files, context references, tools, platform-scoped toolsets, Tool Gateway routing, Tool Search schema deferral, progressive disclosure, bundles, managed writes, source normalization, harnessing, orchestration, computing-flow, learning, runtime proof, cost, deploy guard, and docs sync. |
+| `SKILLS.md` | Metadata-first skill catalog | Lightweight ids, families, selection rules, and links to progressively disclosed workflow owners. |
 | `kanban.md` | Durable task board | Shared task and handoff rows for named profiles and full OS worker processes using existing table/Kanban utilities. |
 | `PRD-TAD.md` | Combined product and architecture contract | What `knowgrph` must provide and how the runtime is shaped. |
 | `RUNTIME-READINESS.md` | Readiness matrix | Tracks spec-complete to runtime-ready gates by capability. |
@@ -81,6 +84,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 - A caller can compile stable prompt prefixes once, reuse an opaque revision-bound handle for dynamic request tails, and keep local reuse distinct from provider cache-hit proof.
 - A caller can preserve compatible reasoning across stable turns, reset rendered reasoning on invariant drift, and keep request intent distinct from provider-effective confirmation.
 - A caller can reduce predictable read-only tool stages through a provider-attested hosted program while keeping local JavaScript execution forbidden and all writes, approvals, citations, and semantic judgment on the direct path.
+- A caller can audit durable guidance and the skill catalog for intent preservation, context budgets, duplicate instructions, and owner leakage with zero model calls.
 - A caller can use bounded `MEMORY.md` and `USER.md` targets with write, compact, search, frozen snapshot, and session-search contracts.
 - A caller can discover skill metadata, load selected skills and resources on demand, resolve bundles, and gate managed skill writes without a duplicate registry.
 - A caller can discover and load project-local context files from scoped working directories without letting them override facts, identity, safety, approval, or deploy gates.

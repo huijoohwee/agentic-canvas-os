@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Harness Contracts"
 graphId: "md:knowgrph-agentic-canvas-os-harness-contracts"
 doc_type: "Harness Contract Catalog"
-date: "2026-07-07"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-canvas-os-harness-contracts/v1"
 frontmatter_contract: "required"
@@ -138,11 +138,22 @@ harness:
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Defer eligible tool schemas behind bridge search, describe, and call routes | `{ query, toolName, arguments, sessionToolsets }` | Matches, selected schema, tool result, approval-required, or blocked reason | Bridge never bypasses real tool policy, approval, hooks, audit, or cost |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
+| Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Skill Evolution | Propose new or improved skills from evaluated experience | `{ skillId, experienceRefs[], evaluationPlan }` | Proposal diff, validation packet, or blocked reason | Human review required; direct auto-commit forbidden |
 | Identity Reflection | Persist stable operator preferences and project boundaries | `{ sourceRef, proposedFact, sensitivity }` | Identity note or rejected inference | Operator authority required; secrets forbidden |
 | Showrunner | Run bounded creative multi-agent turns | Creative brief + role turn | Creative state, script, choice graph | Stage approval and paid calls |
 | SuperAgent | Execute bounded long-horizon research, code, and creation tasks | Goal, graph, sandbox, message policy, constraints | Run plan, checkpoints, messages, artifacts, verification, cost log | File writes, terminal, browser auth, paid calls, deploy |
 | Agent Sandbox Policy | Compile and authorize native deny-first agent boundaries | Policy path and one typed operation | Policy digest, allow or deny, reason code, redacted audit packet, enforcement gap | No execution; OS/kernel containment remains mandatory for adversarial code |
+
+## Instruction Audit Harness Contract
+
+| Stage | Input | Output | Guard |
+|---|---|---|---|
+| Read | `AGENTS.md`, `SKILLS.md`, optional exact Git baseline | In-memory source map | Declared repository files only; no broad workspace scan. |
+| Measure | Body prose plus complete-file size | Words, directive units, route mentions, code fences, estimated tokens | Frontmatter is excluded from prose budgets but included in total context size. |
+| Preserve | Required intent markers | Missing-intent list | Slimming cannot remove workflow, proof, source, external-boundary, or deploy intent. |
+| Detect | Normalized directive units and delegated-detail patterns | Duplicate and canonical-owner findings | Exact structural checks only; no model-based style score. |
+| Report | Findings and optional baseline | Typed audit result | Zero model usage, no source rewrite, and no Prod or Cloudflare action. |
 
 ## Soul Identity Harness Contract
 

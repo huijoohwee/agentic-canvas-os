@@ -138,6 +138,28 @@ The automated contexts model two independent collaboration peers; the gate does 
 
 `KNOWGRPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 
+## Mandatory Completion Gate
+
+After focused validation and protected Dev integration, run from the merged task
+branch:
+
+```bash
+npm run device:complete -- --json
+```
+
+The command must fail for dirty or stashed work, branch-only commits, an open or
+auto-merge-pending pull request, a non-`main` pull-request base, a merge commit
+absent from fetched `origin/main`, local-main drift, or a dirty final checkout.
+Success must emit `completedBranch`, `pullRequestUrl`, `mergeCommitSha`,
+`mainSha`, and `"status":"ok"`, with clean local `main` exactly equal to
+`origin/main`.
+
+Restart or reload the local application from `mainSha` and rerun the original
+browser failure path. Git evidence without matching runtime identity and browser
+acceptance is integration evidence, not task completion. Use `device:park` only
+for an explicitly paused or blocked task. Do not mutate Prod or Cloudflare
+without separate operator authorization.
+
 ### Immutable Pair Manifest Compliance
 
 Create the artifact from one exact source object, then validate the downloaded bytes against the same source and pinned docs revisions:

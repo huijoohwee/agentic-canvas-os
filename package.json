@@ -12,6 +12,7 @@
     "check": "npm test && npm run web:build && npm run docs:check",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",
+    "device:complete": "node ./scripts/device-branch.mjs complete",
     "device:end": "node ./scripts/device-branch.mjs end",
     "device:park": "node ./scripts/device-branch.mjs park",
     "device:start": "node ./scripts/device-branch.mjs start",

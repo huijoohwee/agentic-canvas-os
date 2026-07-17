@@ -115,27 +115,69 @@ export function park({
   return { branch, headSha, stashRef };
 }
 
-export function endSession({
+export function completeSession({
   invocationPath,
   repo,
   gitText,
+  ghText,
   run,
   log = console.log,
-  now = () => new Date(),
   json = false,
 }) {
-  const result = park({
-    invocationPath,
-    repo,
-    gitText,
-    run,
-    log: () => {},
-    now,
-  });
+  requireRepositorySafety({ invocationPath, repo, gitText });
+  requireClean({ gitText });
+
+  const branch = gitText(["branch", "--show-current"]).trim();
+  if (!branch || branch === "main") {
+    throw new Error("Completion must begin on the merged agent/<device>/<scope> task branch.");
+  }
+  if (!branch.startsWith("agent/")) throw new Error(`Refusing unexpected device branch: ${branch}`);
+  const parkedStashes = gitText(["stash", "list", "--format=%s"])
+    .split("\n")
+    .filter(subject => subject.includes(`park: ${branch} `));
+  if (parkedStashes.length) {
+    throw new Error(`Task remains parked in a named stash for ${branch}; restore and integrate it before completion.`);
+  }
+
+  const pullRequest = readPullRequest({ branch, ghText });
+  if (pullRequest.baseRefName !== "main") {
+    throw new Error(`Pull request ${pullRequest.url} targets ${pullRequest.baseRefName}, not main.`);
+  }
+  if (pullRequest.state !== "MERGED") {
+    throw new Error(
+      `Task remains pending: pull request ${pullRequest.url} is ${pullRequest.state.toLowerCase()}, not merged. Use device:park only when pausing or blocked.`,
+    );
+  }
+  const mergeCommitSha = pullRequest.mergeCommit?.oid;
+  if (!mergeCommitSha) throw new Error(`Merged pull request ${pullRequest.url} has no merge commit SHA.`);
+  const taskHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (!pullRequest.headRefOid || taskHeadSha !== pullRequest.headRefOid) {
+    throw new Error(
+      `Task branch HEAD ${taskHeadSha.slice(0, 12)} is not the merged pull-request head ${pullRequest.headRefOid?.slice(0, 12) || "unknown"}.`,
+    );
+  }
+
+  run("git", ["fetch", "origin", "main"]);
+  run("git", ["merge-base", "--is-ancestor", mergeCommitSha, "origin/main"]);
+  run("git", ["switch", "main"]);
+  run("git", ["merge", "--ff-only", "origin/main"]);
+
+  const mainSha = gitText(["rev-parse", "HEAD"]).trim();
+  const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
+  if (mainSha !== canonicalSha) {
+    throw new Error(
+      `main must match origin/main after completion; local main is ${mainSha.slice(0, 12)} but origin/main is ${canonicalSha.slice(0, 12)}`,
+    );
+  }
+  if (gitText(["status", "--porcelain"]).trim()) {
+    throw new Error("main remains dirty after completion; resolve local changes before reporting completion.");
+  }
+
   const summary = {
-    parkedBranch: result.branch,
-    stashRef: result.stashRef,
-    mainSha: result.headSha,
+    completedBranch: branch,
+    pullRequestUrl: pullRequest.url,
+    mergeCommitSha,
+    mainSha,
     status: "ok",
   };
 
@@ -144,12 +186,9 @@ export function endSession({
     return summary;
   }
 
-  const message = summary.stashRef
-    ? `Session ended: parked ${summary.parkedBranch} in ${summary.stashRef}; clean main is ${summary.mainSha.slice(0, 12)}.`
-    : summary.parkedBranch === "main"
-      ? `Session ended: main is already clean at ${summary.mainSha.slice(0, 12)}.`
-      : `Session ended: returned from ${summary.parkedBranch} to clean main at ${summary.mainSha.slice(0, 12)}.`;
-  log(message);
+  log(
+    `Task integrated through ${summary.pullRequestUrl}; clean main is ${summary.mainSha.slice(0, 12)}. Restart the local runtime from this SHA and rerun the original browser acceptance before claiming completion.`,
+  );
   return summary;
 }
 
@@ -185,4 +224,19 @@ function requireClean({ gitText }) {
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Working tree is not clean. Commit intentionally before switching or publishing.");
   }
+}
+
+function readPullRequest({ branch, ghText }) {
+  let pullRequest;
+  try {
+    pullRequest = JSON.parse(
+      ghText(["pr", "view", branch, "--json", "state,baseRefName,url,mergeCommit,headRefOid"]),
+    );
+  } catch (error) {
+    throw new Error(`Cannot prove a pull request for ${branch}: ${error.message}`);
+  }
+  if (!pullRequest?.url || !pullRequest?.state || !pullRequest?.baseRefName) {
+    throw new Error(`Cannot prove a complete pull request record for ${branch}.`);
+  }
+  return pullRequest;
 }

@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Validation Runbook"
 graphId: "md:knowgrph-agentic-canvas-os-validation-runbook"
 doc_type: "Validation Runbook"
-date: "2026-07-07"
+date: "2026-07-16"
 lang: "en-US"
 schema: "agentic-canvas-os-validation-runbook/v1"
 frontmatter_contract: "required"
@@ -106,7 +106,7 @@ wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
 ARTIFACT_PATTERN='https?://local'"host"'[:/]|kg_media_'"token"'|data:'"image"'|VIDEO'"DB_API_KEY"'|SENSE'"NOVA_API_KEY"'|generation_'"job_id"'|index_'"job_id"'|upload-'"[0-9a-f]"'|airvio/'"runs"
 ! rg -n "$ARTIFACT_PATTERN" "$DOCS_ROOT"
-	EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
+EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
 ! (rg -n "$EXTERNAL_COPY_PATTERN" "$DOCS_ROOT" | rg -v 'VALIDATION-RUNBOOK\.md:[0-9]+:EXTERNAL_COPY_PATTERN=')
 ```
 
@@ -118,22 +118,43 @@ Expected:
 - Runtime artifact scan returns no copied local provider/media artifacts.
 - External-copy scan returns no imported code, prompt, preset example, provider config, schema, test, fixture, or prose paths from referenced self-improving agent repositories.
 
-## Cross-Device Runtime Identity Compliance Check
+## Repository-Owned Collaboration Gate
 
-Export a colon-delimited list of two or more runtime identity JSON files captured from the visible identity surface on participating devices, then run the gate:
+Run the complete collaboration and runtime-identity gate from the Agentic Canvas OS repository:
 
 ```bash
-export RUNTIME_IDENTITY_FILES="<device-a-runtime-identity.json>:<device-b-runtime-identity.json>"
-ruby -rjson -e 'files=ENV.fetch("RUNTIME_IDENTITY_FILES").split(":").reject(&:empty?); abort("need at least two runtime identities") if files.length<2; ids=files.map{|file| JSON.parse(File.read(file))}; sha=/\A[0-9a-f]{40}\z/; required=%w[schema device knowgrphRevision agenticCanvasOsRevision catalogRevision catalogHydration catalogCounts]; ids.each{|id| missing=required.reject{|key| id.key?(key)}; abort("runtime identity missing: #{missing.join(", ")}") unless missing.empty?; abort("invalid runtime identity schema") unless id.fetch("schema")=="knowgrph-runtime-identity/v1"; %w[knowgrphRevision agenticCanvasOsRevision catalogRevision].each{|key| abort("invalid #{key}") unless sha.match?(id.fetch(key))}; hydration=id.fetch("catalogHydration"); abort("invalid catalog hydration") unless hydration.is_a?(Hash) && hydration.fetch("status")=="fresh" && hydration.fetch("attempts").is_a?(Integer) && hydration.fetch("attempts").between?(0,2); counts=id.fetch("catalogCounts"); abort("invalid catalog counts") unless counts.is_a?(Hash) && %w[slash hash at].all?{|key| counts.fetch(key,-1).is_a?(Integer) && counts.fetch(key)>=0}; abort("catalog revision mismatch") unless id.fetch("catalogRevision")==id.fetch("agenticCanvasOsRevision")}; abort("duplicate device identity") unless ids.map{|id| id.fetch("device")}.uniq.length==ids.length; %w[knowgrphRevision agenticCanvasOsRevision catalogRevision catalogCounts].each{|key| abort("cross-device #{key} mismatch") unless ids.map{|id| id.fetch(key)}.uniq.length==1}; puts "cross-device runtime identity ok devices=#{ids.length} knowgrph=#{ids.first.fetch("knowgrphRevision")} agentic-canvas-os=#{ids.first.fetch("agenticCanvasOsRevision")}"'
+npm run collaboration:gate
 ```
 
-Required JSON shape:
+This is the only required operator command. It resolves the sibling Knowgrph checkout from the repository root, verifies that Knowgrph still owns `collaboration:readiness:check`, and delegates to that canonical runtime owner. The gate automatically:
 
-```json
-{"schema":"knowgrph-runtime-identity/v1","device":"<device>","branch":"<informational-only>","knowgrphRevision":"<40-hex-sha>","agenticCanvasOsRevision":"<40-hex-sha>","catalogRevision":"<40-hex-sha>","catalogHydration":{"status":"fresh","attempts":0},"catalogCounts":{"slash":0,"hash":0,"at":0}}
+1. Runs focused collaboration documentation, protocol, runtime, and MainPanel checks.
+2. Reuses healthy local services or boots owner `5173`, guest `5174`, and storage worker `8787` processes.
+3. Opens isolated owner and guest browser contexts, authenticates both sessions, and joins the same full document room key.
+4. Requires connected two-peer rosters, a worker room status of at least two active peers, remote document propagation, two distinct runtime identities, exact app/docs/catalog revision parity, fresh bounded catalog hydration, and one common verification digest.
+5. Emits a machine-readable proof summary, captures owner and guest screenshots on failure, and cleans up services it started.
+
+The automated contexts model two independent collaboration peers; the gate does not require two physical devices. It does not export runtime-identity JSON, require clipboard actions, or accept manually assembled evidence. `Copy diagnostic JSON` remains optional troubleshooting only. A nonzero exit, fewer than two peers, a room-key mismatch, duplicate runtime identity, revision mismatch, stale hydration, different digest, propagation failure, or leaked local process blocks parity and release.
+
+`KNOWGRPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
+
+### Immutable Pair Manifest Compliance
+
+Create the artifact from one exact source object, then validate the downloaded bytes against the same source and pinned docs revisions:
+
+```bash
+export KNOWGRPH_SOURCE_REVISION="<exact-knowgrph-sha>"
+export KNOWGRPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
+npm --prefix "$KNOWGRPH_ROOT" run release:manifest:create -- \
+  --source-sha "$KNOWGRPH_SOURCE_REVISION" \
+  --target-ref "$KNOWGRPH_TARGET_REF" \
+  --output immutable-release-manifest.json
+npm --prefix "$KNOWGRPH_ROOT" run release:manifest:check -- \
+  immutable-release-manifest.json \
+  --source-sha "$KNOWGRPH_SOURCE_REVISION"
 ```
 
-The check deliberately ignores `branch` for parity. A missing identity, invalid schema or SHA, cross-device revision or count mismatch, stale or blocked hydration, more than two attempts, catalog/docs revision mismatch, or invalid count fails closed. If the live runtime cannot export this visible identity yet, record runtime implementation as gated rather than marking the compliance check passed.
+CI must upload the generated file, download it into a separate directory, and rerun the checker with the expected app SHA, resolved Agentic Canvas OS SHA, and first-pass manifest digest. A current-worktree report, individually green docs PR, branch name, manually assembled JSON, or unvalidated upload is insufficient.
 
 ## Memory Log Compliance Checks
 
@@ -361,7 +382,7 @@ Choose the subset matching touched owners. Do not run broader suites unless the 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
-| Cross-device runtime identity | The compliance command reports identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs for at least two devices; catalog hydration is `fresh` within two attempts. Branch names are ignored. |
+| Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |

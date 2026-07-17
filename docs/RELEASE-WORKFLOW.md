@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-14"
+date: "2026-07-16"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v1"
 frontmatter_contract: "required"
@@ -38,6 +38,7 @@ completion_requires:
   - "unique semantic-scope ownership"
   - "all required gates pass"
   - "visible runtime identity with exact cross-device SHA parity"
+  - "one application-root canonical identity owner with a MainPanel Settings KTV projection"
   - "catalog revision equals the Agentic Canvas OS docs revision after no more than two refresh attempts"
   - "one invocation grammar SSOT"
   - "append-only memory-log compliance"
@@ -60,8 +61,8 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 | Contract | Required fields |
 |---|---|
-| Input | Operator approval, device identity, semantic scope, task branch, base branch, base SHA, memory base ref, planning base ref, planning shard, planning context, Dev repository, Prod mirror, production routes. |
-| Output | Reconciliation ledger, memory and planning compliance, validation ledger, Dev commits and merge SHA, promoted SHA, mirror parity proof, deployment identifiers, production verification, remaining risks. |
+| Input | Operator approval, device identity, semantic scope, task branch, base branch, base SHA, memory base ref, planning base ref, planning shard, planning context, exact app/docs/catalog manifest, Dev repository, Prod mirror, production routes. |
+| Output | Reconciliation ledger, memory and planning compliance, validation ledger, immutable manifest digest, Dev commits and merge SHA, promoted SHA, mirror parity proof, deployment identifiers, production verification, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
 
@@ -73,7 +74,11 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
 - Hand off only after the sender stops and pushes an exact commit SHA.
+- When another task owns the canonical checkout, publish only an already-created commit through `release:publish:immutable`; require the expected remote SHA and retain the generated manifest digest. Manual hook bypass, raw refspec push, branch switching, or a missing manifest is not a release lane.
 - Treat branch names as informational. Cross-device and promoted-runtime parity require visible, identical exact Knowgrph and Agentic Canvas OS SHAs.
+- Require the canonical identity runtime at the application root and the visible gate as a MainPanel Settings body section using shared KTV rows. Settings, Skills & Commands, Chat, FloatingPanel, and invocation catalogs must remain projections or facet publishers, never identity owners.
+- Require `npm run collaboration:gate` to exit zero with two isolated authenticated runtime peers, at least two active room peers, exact document propagation, and one common non-empty verification digest. The gate owns local orchestration and cleanup; it does not require physical devices or exported JSON. `Copy diagnostic JSON` is optional troubleshooting only.
+- Require CI to build, upload, download, and revalidate one immutable manifest that binds its exact pull-request head to the exact Agentic Canvas OS checkout and catalog revision. Individually green repositories without this paired artifact do not satisfy integration.
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
@@ -85,7 +90,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 ### 1. Preflight
 
-Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning shard, planning context, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, and ownership conflicts.
+Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning shard, planning context, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, immutable manifest digest, and ownership conflicts.
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another device is writing the same branch.
 
@@ -117,13 +122,13 @@ The structural gate validates `TODO.md` and every shard. The release gate preser
 
 ### 6. Validate Dev
 
-Run repository-declared collaboration, protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, integration, and cross-device runtime identity gates. Runtime proof must show exact visible app/docs SHA parity, catalog revision equal to the docs revision after no more than two explicit refresh attempts, the pinned docs dependency, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
+Run `npm run collaboration:gate`, then the repository-declared protected-ref, hygiene, source-conflict, affected-test, type, build, runtime-ready, integration, and immutable-manifest gates. Runtime proof must show two isolated authenticated peers, at least two active room peers, exact document propagation, exact visible app/docs SHA parity, catalog revision equal to the docs revision after no more than two explicit refresh attempts, one common verification digest, the pinned docs dependency, a round-tripped exact app/docs/catalog manifest, deterministic replay, bounded execution, zero test failures, zero unauthorized paid calls, zero unexplained cost, no proof-harness repository writes, and no deployment side effects.
 
 Stop on any required failure. Never promote by skipping tests, editing fixtures to hide defects, or adding downstream aliases.
 
 ### 7. Integrate Dev
 
-Separate unrelated scopes. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, and handoff evidence. Merge only after the protected Integration Gate succeeds. Record the merged Dev SHA as the sole promotion input.
+Separate unrelated scopes. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, immutable manifest digest, and handoff evidence. When the commit is not the canonical checkout's active `HEAD`, use only the repository-owned checkout-free publication command with its expected-remote compare-and-set. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
@@ -158,7 +163,10 @@ Stop without downstream mutation when any of these is true:
 - semantic-scope or branch ownership conflicts;
 - dirty work cannot be attributed safely;
 - required dictionary or runtime proof is missing;
+- the immutable publication manifest is missing, malformed, not round-tripped, or does not bind the exact CI head to the checked-out Agentic Canvas OS and catalog revisions;
 - visible runtime identity is missing, exact app/docs SHAs differ across participating devices, or only branch names are available as parity evidence;
+- identity ownership is not application-global, the gate is outside the MainPanel Settings body or does not use shared KTV rows, or any surface/catalog creates a competing identity owner;
+- the automatic attestation transport is unavailable or unauthenticated, fewer than two distinct session-bound device principals and live devices respond, the gate is not `pass`, verification digests are missing or differ, evidence is expired, replayed, malformed, duplicated, or mismatched, reconnect recovery is unbounded or exhausts after a stable connection, or the room/verifier builds, persists, selects, synchronizes, or mutates identity;
 - catalog revision differs from the Agentic Canvas OS docs revision, hydration is stale or blocked, or more than two explicit refresh attempts are required;
 - any memory shard is malformed or historical bytes differ from the recorded memory base ref;
 - any planning shard is malformed, over cap, historically rewritten, or missing the declared strict task row;
@@ -171,6 +179,6 @@ Stop without downstream mutation when any of these is true:
 
 ## Completion VCC
 
-Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, Dev is merged through protected integration, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
+Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, Dev is merged through protected integration, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
 
-VCC: verify the cross-device runtime identity command reports exact app/docs SHA and `/`, `#`, `@` count parity with fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.
+VCC: verify `npm run collaboration:gate` exits zero with two distinct automated peers, at least two active room peers, one common verification digest, remote document propagation, exact app/docs SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.

@@ -62,7 +62,7 @@ export function start({
   ]).trim();
   lease = leaseStore.annotate({ sessionId, values: { pullRequestUrl: url } });
   log(
-    `Claimed ${branch} in ${url} with fence ${fenceSha.slice(0, 12)}; export AGENTIC_SESSION_ID=${sessionId} before commits and heartbeat before ${lease.expiresAt}.`,
+    `Claimed ${branch} in ${url} with fence ${fenceSha.slice(0, 12)}; keep the claiming task's AGENTIC_SESSION_ID set before commits and heartbeat before ${lease.expiresAt}.`,
   );
   return branch;
 }
@@ -138,9 +138,10 @@ export function resume({
     throw new Error(`Pull request ${owner.url} has no matching writer-lease metadata.`);
   }
   const expired = Date.parse(remoteLease.expiresAt) <= now().getTime();
-  if (remoteLease.status !== "parked" && !(remoteLease.status === "active" && expired)) {
+  const sameSessionDelivery = remoteLease.status === "delivery" && remoteLease.sessionId === sessionId;
+  if (remoteLease.status !== "parked" && !(remoteLease.status === "active" && expired) && !sameSessionDelivery) {
     throw new Error(
-      `Semantic scope ${identity.scope} remains ${remoteLease.status} under session ${remoteLease.sessionId} until ${remoteLease.expiresAt}.`,
+      `Semantic scope ${identity.scope} remains ${remoteLease.status} under another session until ${remoteLease.expiresAt}.`,
     );
   }
 

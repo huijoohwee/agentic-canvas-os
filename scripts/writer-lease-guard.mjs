@@ -15,7 +15,7 @@ const gitCommonDir = path.resolve(repo, git(["rev-parse", "--git-common-dir"]));
 const store = createWriterLeaseStore({ gitCommonDir });
 try {
   const lease = store.verify({ sessionId, branch });
-  process.stdout.write(`[writer-lease] ${lease.scope} epoch ${lease.epoch} owned by ${sessionId}\n`);
+  process.stdout.write(`[writer-lease] ${lease.scope} epoch ${lease.epoch} owner verified\n`);
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }

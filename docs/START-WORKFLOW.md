@@ -257,7 +257,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
 
 If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, and upstream before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. Never run `git worktree add`, create a detached live checkout, reuse a dirty checkout, or activate a branch owned by another session.
 
-Resume only a parked or expired handoff branch. The command fetches its exact remote SHA, requires matching draft-PR lease metadata, claims `remote epoch + 1`, creates a descendant fencing commit, and performs a normal fast-forward push; concurrent receivers cannot both win:
+Resume only a parked or expired handoff branch, or a delivered branch that the same session must revise after a failed protected check. The command fetches its exact remote SHA, requires matching pull-request lease metadata, claims `remote epoch + 1`, creates a descendant fencing commit, and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \

@@ -36,7 +36,7 @@ test("writer lease serializes chats, increments fencing epochs, and supports hea
   try {
     const first = store.claim(input);
     assert.equal(first.epoch, 1);
-    assert.throws(() => store.claim({ ...input, sessionId: "chat-b" }), /leased to session chat-a/);
+    assert.throws(() => store.claim({ ...input, sessionId: "chat-b" }), /leased to another session/);
 
     instant = new Date("2026-07-17T10:00:30.000Z");
     const renewed = store.heartbeat({ sessionId: "chat-a", branch: input.branch, ttlMs: 120_000 });
@@ -45,7 +45,7 @@ test("writer lease serializes chats, increments fencing epochs, and supports hea
     instant = new Date("2026-07-17T10:03:00.000Z");
     const takeover = store.claim({ ...input, sessionId: "chat-b" });
     assert.equal(takeover.epoch, 2);
-    assert.throws(() => store.verify({ sessionId: "chat-a", branch: input.branch }), /belongs to session chat-b/);
+    assert.throws(() => store.verify({ sessionId: "chat-a", branch: input.branch }), /belongs to another session/);
   } finally {
     rmSync(gitCommonDir, { recursive: true, force: true });
   }

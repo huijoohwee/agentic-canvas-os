@@ -76,7 +76,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       const instant = now();
       if (isActive(current, instant) && current.sessionId !== sessionId) {
         throw new Error(
-          `Canonical checkout is leased to session ${current.sessionId} for ${current.scope} until ${current.expiresAt}.`,
+          `Canonical checkout is leased to another session for ${current.scope} until ${current.expiresAt}.`,
         );
       }
       if (isActive(current, instant) && current.sessionId === sessionId) return current;
@@ -105,7 +105,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     const lease = read();
     if (!lease || lease.status !== "active") throw new Error("No active writer lease owns the canonical checkout.");
     if (sessionId && lease.sessionId !== sessionId) {
-      throw new Error(`Writer lease belongs to session ${lease.sessionId}, not ${sessionId}.`);
+      throw new Error("Writer lease belongs to another session.");
     }
     if (branch && lease.branch !== branch) {
       throw new Error(`Writer lease owns ${lease.branch}, not ${branch}.`);

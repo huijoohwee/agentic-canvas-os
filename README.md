@@ -106,6 +106,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/app.js` | Platform-neutral Agent-API core: auth, MCP forward, readiness. |
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |
+| `agent-api/src/reasoning-continuity.js` | Bounded cross-turn invariant registry, compatible request planning, active-turn serialization, and provider-effective context confirmation. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
@@ -129,6 +130,12 @@ It also reports the bounded cache-context policy and local registry counters.
 returns cache-read or cache-write usage; a local stable-prefix reuse is not a
 provider cache hit.
 
+Readiness also exposes the reasoning-continuity policy and bounded counters.
+Stable goals, assumptions, and priorities can produce an `all_turns` request
+patch chained to the last completed response; drift resets requested reasoning
+to `current_turn`. Provider-effective continuity remains `unverified` until the
+downstream model response explicitly confirms the effective context.
+
 Default SEA-LION route:
 
 ```bash
@@ -143,6 +150,7 @@ AGENT_MODEL_API_KEY_ENV=SEA_LION_API_KEY
 ```bash
 npm run check
 npm run cache-context:check
+npm run reasoning-continuity:check
 npm run dev
 ```
 

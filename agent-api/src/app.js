@@ -12,6 +12,7 @@
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
 import { createCacheContextRegistry } from "./cache-context.js";
 import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
+import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
 /**
@@ -24,15 +25,22 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {object} [opts.env] environment bag (default process.env)
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
+ * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
-export function createAgentApiApp({ env, fetchImpl, cacheContext: providedCacheContext } = {}) {
+export function createAgentApiApp({
+  env,
+  fetchImpl,
+  cacheContext: providedCacheContext,
+  reasoningContinuity: providedReasoningContinuity,
+} = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
   const endpoint = typeof e.KNOWGRPH_MCP_ENDPOINT === "string" ? e.KNOWGRPH_MCP_ENDPOINT.trim() : "";
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
   const agentModelConfig = resolveAgentModelConfig(e);
   const cacheContext = providedCacheContext || createCacheContextRegistry();
+  const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
 
   let mcpClient = null;
@@ -44,6 +52,7 @@ export function createAgentApiApp({ env, fetchImpl, cacheContext: providedCacheC
     configured: Boolean(secret && endpoint),
     agentModelConfig,
     cacheContext,
+    reasoningContinuity,
     readiness: () => ({
       configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
       auth: { configured: Boolean(secret) },
@@ -63,6 +72,14 @@ export function createAgentApiApp({ env, fetchImpl, cacheContext: providedCacheC
         invalidation: "revision-or-bounded-eviction",
         providerCacheStatus: "unverified",
         ...cacheContext.stats(),
+      },
+      reasoningContinuity: {
+        configured: true,
+        invariantPolicy: "goals-assumptions-priorities",
+        stableMode: "all_turns-with-previous-response",
+        driftMode: "current_turn",
+        providerEffectiveContext: "unverified",
+        ...reasoningContinuity.stats(),
       },
     }),
     authSession: createAuthSessionHandler({

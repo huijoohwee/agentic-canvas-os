@@ -45,6 +45,9 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.model.apiKeyPresent, true);
   assert.equal(body.cacheContext.stablePrefixOrder, "static-first-dynamic-last");
   assert.equal(body.cacheContext.providerCacheStatus, "unverified");
+  assert.equal(body.reasoningContinuity.invariantPolicy, "goals-assumptions-priorities");
+  assert.equal(body.reasoningContinuity.driftMode, "current_turn");
+  assert.equal(body.reasoningContinuity.providerEffectiveContext, "unverified");
   assert.equal(JSON.stringify(body).includes("server-side-sealion-key"), false);
 });
 

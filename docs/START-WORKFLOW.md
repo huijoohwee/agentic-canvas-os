@@ -302,30 +302,43 @@ Use pull only when all conditions are true:
 - its upstream is verified;
 - the chosen merge or rebase behavior is explicit.
 
-## End of Session Protocol
+## Mandatory Completion Protocol
 
-When a task is complete or intentionally paused, AI agents, AI IDEs, and AI
-coding tools must end the session through the repository-owned wrapper instead
-of leaving a dirty task branch behind.
+Completion and parking are mutually exclusive states. Dirty, stashed,
+branch-only, pushed, open-pull-request, or auto-merge-pending work is not
+complete.
 
-Run the canonical command:
+For a completed task:
 
-```sh
-npm run device:end -- --json
-```
+1. Commit intentionally and pass focused validation on the task branch.
+2. Publish through the protected Dev pull-request path and wait for `MERGED`.
+3. Run `npm run device:complete -- --json` from that task branch.
+4. Restart or reload the local runtime from the emitted exact `mainSha` and
+   rerun the original browser acceptance path.
 
-The command must safely park local task-branch work, return the canonical
-checkout to clean `main`, and emit machine-readable confirmation for the final
-handoff. Do not require a human to switch branches, stash changes, or reconcile
-local Git state manually after the agent finishes.
+The completion wrapper fails closed unless the working tree is clean, the task
+branch has a merged pull request targeting `main`, its merge commit is contained
+by fetched `origin/main`, the canonical checkout is on `main`, local `main`
+equals `origin/main`, and the checkout remains clean. Its JSON must name
+`completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and
+`"status":"ok"`. `device:end` enforces the same gate for existing callers; it
+must never park unmerged work and label the result complete.
 
-Given a completed or paused task, when the session-end protocol runs, then the
-agent's local changes are preserved in a stash when needed, `main` is active,
-and the checkout matches fetched `origin/main`.
+For work intentionally paused or blocked, run `npm run device:park` and report
+the state explicitly. Parking may preserve a dirty task branch in a named stash
+and return the checkout to `main`, but it never satisfies completion.
 
-VCC: Verify `npm run device:end -- --json` exits zero, the JSON output reports
-`"status":"ok"`, `parkedBranch`, and `mainSha`, and `git status --short
---branch` shows clean `main` at the fetched `origin/main` revision.
+Given a completion claim, when the protocol runs, then the protected Dev pull
+request is merged, the canonical checkout is clean at the exact fetched
+`origin/main` revision containing that merge, and the original failure is
+retested on a local runtime started from that same SHA. Dev integration alone
+does not authorize Prod mirror or Cloudflare action.
+
+VCC: Verify `npm run device:complete -- --json` exits zero and emits the required
+branch, pull-request, merge, and main evidence; `git status --short --branch`
+shows clean `main` aligned with `origin/main`; the local runtime identifies that
+exact `mainSha`; and the original browser acceptance passes. Any missing item
+leaves the task pending, paused, or blocked rather than complete.
 
 Otherwise fetch, inspect, and activate a new reconciliation or task branch in the canonical checkout. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
 

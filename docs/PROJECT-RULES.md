@@ -58,9 +58,15 @@ document can express the same contract.
 ## Post-Task
 
 - Update cross-repo and API docs when the change affects them.
-- When this repository is the active repo, always end AI-agent, AI-IDE, and
-  AI-coding-tool sessions with `npm run device:end -- --json` so work is safely
-  parked and the checkout returns to clean `main` without human manual Git
-  cleanup.
+- Never report a task complete while its fix is dirty, stashed, branch-only, in
+  an open pull request, absent from `origin/main`, or unverified on the local
+  runtime started from that exact Dev `main` SHA.
+- For completed work, run `npm run device:complete -- --json` only after the
+  protected Dev pull request merges. Require the emitted pull request, merge,
+  and main SHAs; then restart the local runtime from that clean `main` and rerun
+  the original acceptance path.
+- Use `npm run device:park` only for work explicitly reported as paused or
+  blocked. Parking preserves work but never satisfies completion.
+- A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
 - Suggest next steps in `/GitHub/knowgrph/{todo-log.md, docs/}` and
   `/GitHub/huijoohwee.github.io/schema/AgenticRAG` when relevant.

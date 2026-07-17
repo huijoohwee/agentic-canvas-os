@@ -35,24 +35,27 @@ npm run collaboration:gate
 
 The command delegates to the canonical Knowgrph runtime owner, starts isolated owner and guest browser contexts plus the local storage worker, verifies the shared room and runtime-identity digest, and cleans up automatically. It does not require physical devices or manual JSON exports.
 
-Safe branch exit:
+Safe pause or blocked exit:
 
 ```bash
 npm run device:park
 ```
 
-This stashes local task-branch work if needed, switches back to clean `main`,
-and fast-forwards it to `origin/main` without a manual git sequence.
+This preserves local task-branch work, switches back to clean `main`, and marks
+the task as paused or blocked. A parked branch is never completed work.
 
-Safe session end:
+Mandatory completion gate:
 
 ```bash
-npm run device:end
+npm run device:complete -- --json
 ```
 
-This parks any local task-branch work, returns to clean `main`, and prints a
-single end-of-session summary. Use `npm run device:end -- --json` for machine
-readable output.
+This fails while work is dirty, stashed, branch-only, or attached to an open
+pull request. After the protected Dev pull request is merged, it verifies the
+merge commit is contained by `origin/main`, switches the canonical checkout to
+clean `main`, fast-forwards it exactly, and emits the pull request, merge, and
+main SHAs. `device:end` uses the same fail-closed completion gate for existing
+cross-repository callers; use `device:park` for paused or blocked work.
 
 First success check:
 

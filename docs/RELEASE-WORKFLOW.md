@@ -132,6 +132,20 @@ Separate unrelated scopes. Commit intentionally, push without force, and open or
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
+After the protected pull request reports `MERGED`, run the completion wrapper
+from the task branch:
+
+```bash
+npm run device:complete -- --json
+```
+
+Require its pull-request, merge, and exact `main` SHA evidence, then restart the
+local Dev runtime from that `mainSha` and rerun the original acceptance path.
+Branch-only, stashed, pushed, open-pull-request, or auto-merge-pending work
+remains incomplete. `device:park` is only a paused or blocked exit. This Dev
+completion gate does not itself open the Prod or Cloudflare stages; those still
+require the explicit operator invocation governing this release workflow.
+
 ### 8. Promote Prod
 
 Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Synchronize the merged Dev SHA, remove stale hashed artifacts through the canonical process, and run production build, publish-contract, schema, asset-manifest, and mirror-parity checks.

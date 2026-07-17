@@ -380,6 +380,17 @@ Stateful orchestration harnesses model long-running agent work as neutral graph 
 | Human gate | Review interrupts block until approve, reject, or edit result is typed. |
 | No external copy | Do not import LangGraph code, API schemas, examples, tests, fixtures, or prose. |
 
+### Reasoning Continuity Harness
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Begin turn | `{ threadId, goals[], assumptions[], priorities[], capabilities }` | Turn token, status, request patch, and unverified effective context. | Request prior-turn reasoning only for exact stable invariants and declared capabilities. |
+| Complete turn | `{ threadId, turnToken, responseId, effectiveContext }` | Stored response-id signal, completed-turn count, and confirmed-context signal. | Confirm `all_turns` only from matching returned response metadata. |
+| Drift | Changed goal, assumption, or ordered priority. | `reset` with `current_turn` when supported. | Conversation chaining may continue; stale reasoning rendering must not. |
+| Abort or invalidate | Exact thread and active-turn identity. | Cleared pending or removed completed state. | A concurrent or stale completion cannot revive invalidated state. |
+
+The registry retains no raw reasoning content. Thread and turn bounds are circuit breakers, and the downstream model owner remains responsible for capability validation, provider calls, tokens, cost, and approval.
+
 ## SuperAgent Harness Contract
 
 SuperAgent harnesses compose orchestration, memory, skills, tools, sandboxed workspace, message gateway, artifacts, and verification for minutes-to-hours work. DeerFlow can inform the capability class, but local harnesses must not import its code, prompts, provider configs, runtime layout, examples, tests, fixtures, or prose.

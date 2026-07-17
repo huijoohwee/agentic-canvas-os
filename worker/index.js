@@ -6,12 +6,14 @@
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
 import { CanvasRoom } from "./canvas-room.js";
 
 export { CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
+const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
   return new Response(JSON.stringify(body ?? {}), {
@@ -42,16 +44,23 @@ function toResponse(result) {
 
 function createWorkerApp(env) {
   let cacheContext;
+  let reasoningContinuity;
   if (env && typeof env === "object") {
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
       CACHE_CONTEXT_BY_ENV.set(env, cacheContext);
     }
+    reasoningContinuity = REASONING_CONTINUITY_BY_ENV.get(env);
+    if (!reasoningContinuity) {
+      reasoningContinuity = createReasoningContinuityRegistry();
+      REASONING_CONTINUITY_BY_ENV.set(env, reasoningContinuity);
+    }
   }
   return createAgentApiApp({
     env,
     cacheContext,
+    reasoningContinuity,
     fetchImpl: (req) => fetch(req.url, { method: req.method, headers: req.headers, body: JSON.stringify(req.body) }),
   });
 }

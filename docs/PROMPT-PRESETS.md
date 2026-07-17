@@ -56,7 +56,7 @@ prompt_presets:
     prompt: |-
       /knowgrph.probe-tree
 
-      Generate 2-4 bounded, editable next-question cards from this Widget Card. Derive every question and every 2-4 answer choice from the selected user input, give every card a different user-named focus, and attach 2-6 short context anchors copied verbatim from that input. Never reuse one card's complete choice set or a subset/superset of it in another card. Never substitute stock evidence, policy, reviewer, approval, system-of-record, recalled-exemplar, or fixture content unless the user actually named it. Keep the source card unchanged, connect each candidate branch, and publish the branch summary to a separate Rich Media Panel. Stop visibly at depth 8. Run the zero-cost input-derived path before generic provider generation; do not make a provider call unless separately approved.
+      Generate 2-4 bounded, editable next-question cards from this Widget Card. Derive every question and every 2-4 answer choice from the selected user input, give every card a different user-named focus, and attach 2-6 short context anchors copied verbatim from that input. Never reuse a choice label, one card's complete choice set, or a subset/superset of it in another card. Never substitute stock evidence, policy, reviewer, approval, system-of-record, recalled-exemplar, or fixture content unless the user actually named it. Keep the source card unchanged, connect each candidate branch, and publish the branch summary to a separate Rich Media Panel. Stop visibly at depth 8. Run the zero-cost input-derived path before generic provider generation; do not make a provider call unless separately approved.
   - id: "sme-care-agent"
     label: "SME Care Agent"
     slash_command: "/sme-care-prompt-preset"

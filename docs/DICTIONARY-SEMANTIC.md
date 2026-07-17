@@ -79,6 +79,9 @@ dictionary_entries:
   - "#canvas-layout"
   - "#canvas-selection"
   - "#canvas-viewport"
+  - "#camera"
+  - "#camera-shot"
+  - "#camera-motion"
   - "#canvas-transform"
   - "#canvas-zoom"
   - "#canvas-wheel"
@@ -202,6 +205,9 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#canvas-layout` | Schema-owned Canvas layout force tuning, preset, or reset intent. | A command changes anti-line, post-fit, or layout-force behavior. | Layout values live in graph schema state and focused proof reports the applied or reset values. |
 | `#canvas-selection` | Current Canvas node or edge selection used as the active invocation subject. | A command needs the active node/edge rather than a global panel-local target. | Selection source, selected id, and missing-selection behavior are typed before mutation or chat append. |
 | `#canvas-viewport` | Viewport readout, visible bounds, center point, or active camera state. | A command inspects or changes visible canvas position, dimensions, or center. | Readout is derived from shared viewport utilities and reports missing viewport state as typed empty output. |
+| `#camera` | Shared Camera framing and motion runtime across 2D, 3D, and XR surface modes. | A command inspects, frames, animates, plays, or scrubs the Camera. | One application runtime owns Camera state; FloatingPanel projects controls and BottomPanel Timeline owns motion transport. |
+| `#camera-shot` | Camera angle, level, shot size, and focal-length framing parameters. | `/camera.frame` changes composition around the selected subject. | Parameters validate against shared Camera framing options and return the exact applied pose. |
+| `#camera-motion` | Camera rig, numbered camera marks, playhead, duration, and playback state. | `/camera.animate`, `/camera.play`, or `/camera.scrub` controls choreography. | Rig and time values update one canonical XR camera track and BottomPanel Timeline transport with bounded runtime proof. |
 | `#canvas-transform` | Zoom scale and screen-space translation for the active canvas viewport. | A command inspects, applies, clamps, or audits the zoom transform. | Transform values resolve through shared zoom/projection owners, not a floating-panel recalculation. |
 | `#canvas-zoom` | Zoom mode, zoom speed, fit-to-screen, or zoom-to-selection behavior. | A request changes or audits zoom modes, bounds, duration, or selection fitting. | Mode, duration, and scale bounds are read from existing store/schema owners and fail closed on unsupported renderer state. |
 | `#canvas-wheel` | Wheel or trackpad gesture routing, speed, modifier boost, or overlay proxy behavior. | A request changes or audits wheel input, trackpad input, or overlay wheel routing. | Gesture policy names the current shared owner and preserves overlay guard behavior. |

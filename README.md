@@ -27,6 +27,14 @@ npm run check
 npm run dev
 ```
 
+Run the complete collaboration and runtime-identity proof from this repository with one command:
+
+```bash
+npm run collaboration:gate
+```
+
+The command delegates to the canonical Knowgrph runtime owner, starts isolated owner and guest browser contexts plus the local storage worker, verifies the shared room and runtime-identity digest, and cleans up automatically. It does not require physical devices or manual JSON exports.
+
 Safe branch exit:
 
 ```bash

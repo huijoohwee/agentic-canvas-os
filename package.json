@@ -10,6 +10,7 @@
   "scripts": {
     "build": "npm run web:build",
     "check": "npm test && npm run web:build && npm run docs:check",
+    "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",
     "device:end": "node ./scripts/device-branch.mjs end",
     "device:park": "node ./scripts/device-branch.mjs park",

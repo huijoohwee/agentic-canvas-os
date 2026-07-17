@@ -112,6 +112,10 @@ dictionary_entries:
   - "/canvas.layout.tune"
   - "/canvas.viewport.inspect"
   - "/canvas.viewport.transform"
+  - "/camera.frame"
+  - "/camera.animate"
+  - "/camera.play"
+  - "/camera.scrub"
   - "/canvas.interaction.tune"
   - "/canvas.physics.tune"
   - "/canvas.center"
@@ -219,6 +223,10 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/canvas.layout.tune` | Tune or reset schema-owned Canvas layout mode and forces through the graph schema owner. | `@layout-forces`, `@physics-2d`, `@canvas`, `@runtime-proof` | `#canvas-layout`, `#canvas-physics`, `#canvas`, `#vcc` | Layout mode and force values are stored in schema layout state, with reset/preset behavior reported from the schema owner. |
 | `/canvas.viewport.inspect` | Read the current viewport size, zoom, center, and transform through shared zoom/projection owners. | `@viewport-readout`, `@viewport-transform`, `@canvas` | `#canvas-viewport`, `#canvas-transform`, `#vcc` | Readout reports viewport dimensions, zoom percent, center, scale, and translation from shared viewport utilities without panel-local recalculation. |
 | `/canvas.viewport.transform` | Apply or audit viewport transform, zoom modes, wheel behavior, and speed tuning through shared camera owners. | `@viewport-transform`, `@zoom-mode`, `@wheel-input`, `@interaction-speed`, `@canvas` | `#canvas-viewport`, `#canvas-transform`, `#canvas-zoom`, `#canvas-wheel` | Transform or audit result names the active shared camera owner, clamp bounds, gesture policy, and applied or blocked state. |
+| `/camera.frame` | Frame the shared Camera around the active camera or selected actor. | `@camera`, optionally `@selected-actor` | `#camera`, `#camera-shot` | Angle, level, shot size, and focal length resolve through the shared Camera framing owner and report the applied pose. |
+| `/camera.animate` | Add or update a camera motion mark on the canonical BottomPanel Timeline. | `@camera`, optionally `@selected-actor` | `#camera`, `#camera-motion` | Rig and time parameters validate before one shared XR camera track is updated; no FloatingPanel timeline copy is created. |
+| `/camera.play` | Play or pause the shared camera motion track. | `@camera` | `#camera`, `#camera-motion` | Playback state routes through the canonical Timeline transport and shared XR runtime. |
+| `/camera.scrub` | Move the shared camera motion playhead to a bounded time. | `@camera` | `#camera`, `#camera-motion` | The requested time clamps to scene duration and updates the canonical Timeline transport without duplicating transport state. |
 | `/canvas.interaction.tune` | Tune pointer mode, run mode, drag alpha target, and flow interaction behavior through existing canvas owners. | `@flow-run-mode`, `@drag-alpha-target`, `@interaction-speed`, `@canvas` | `#canvas-interaction`, `#canvas-flow`, `#canvas-wheel`, `#vcc` | Interaction update resolves existing toolbar, store, and Flow owners; missing support returns typed unsupported state without a floating-panel alias. |
 | `/canvas.physics.tune` | Tune or reset schema-owned 2D physics forces without keeping panel-local slider state. | `@physics-2d`, `@layout-forces`, `@canvas`, `@runtime-proof` | `#canvas-physics`, `#canvas-layout`, `#vcc` | Charge, collision, speed, overlap, label, and drag-force values clamp through the schema owner and report applied, reset, or blocked state. |
 | `/canvas.center` | Center the viewport on the active selection or all items through shared arrange and centroid utilities. | `@centroid-target`, `@selected-node` when scoped to selection, `@canvas` | `#canvas-centroid`, `#canvas-selection`, `#vcc` | Centering resolves selection or all-items scope, dispatches through shared arrange utilities, and reports a typed missing-selection result when needed. |

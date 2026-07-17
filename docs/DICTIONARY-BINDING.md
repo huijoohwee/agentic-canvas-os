@@ -71,6 +71,8 @@ dictionary_entries:
   - "@video"
   - "@mcp-gateway"
   - "@canvas"
+  - "@camera"
+  - "@selected-actor"
   - "@selected-node"
   - "@selected-edge"
   - "@canvas-center"
@@ -195,6 +197,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
 | `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
+| `@camera` | Always-visible shared Camera framing and XR motion runtime. | Application-root Camera runtime, shared framing utilities, and canonical BottomPanel Timeline transport. | Does not create a panel-local Camera store, timeline, selection owner, credential, or deployment grant. |
+| `@selected-actor` | Actor selected for framing, cast marks, or camera choreography. | Shared Canvas graph selection and XR cast runtime. | Missing actor selection fails closed; the binding never keeps a FloatingPanel-only selection copy. |
 | `@selected-node` | Current Canvas node selection resolved through shared graph selection state. | Existing Canvas selection owner. | Missing selection returns a typed no-selection result; commands must not keep a panel-local selected-node cache. |
 | `@selected-edge` | Current Canvas edge selection resolved through shared graph selection state. | Existing Canvas selection owner. | Missing selection returns a typed no-selection result; endpoint updates must validate against current graph data. |
 | `@canvas-center` | Resolved graph-space insertion point from the current visible Canvas viewport. | Existing zoom/pan viewport and canvas projection utilities. | Point must be derived from current viewport transform, not a hardcoded panel or screen coordinate. |

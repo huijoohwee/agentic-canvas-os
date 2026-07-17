@@ -36,6 +36,7 @@ test("formatParkTimestamp emits git-friendly UTC stamps", () => {
 test("start claims a lease and publishes a draft ownership PR before authoring", () => {
   const calls = [];
   const annotations = [];
+  const logs = [];
   const gitText = createGitText({
     "worktree list --porcelain": `worktree ${repo}\n`,
     "diff --name-only --diff-filter=U": "",
@@ -85,7 +86,7 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
     sessionId: "chat-a",
     leaseTtlMs: 1_800_000,
     run: (command, args) => calls.push([command, ...args]),
-    log: () => {},
+    log: message => logs.push(message),
   });
 
   assert.equal(branch, "agent/device/runtime-leases");
@@ -99,6 +100,8 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
     { fenceSha: "b".repeat(40) },
     { pullRequestUrl: "https://github.test/pull/1" },
   ]);
+  assert.equal(logs.length, 1);
+  assert.doesNotMatch(logs[0], /chat-a/);
 });
 
 test("park stashes a dirty task branch and returns to clean canonical main", () => {
@@ -219,16 +222,86 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
   assert.equal(releaseStatus, "delivery");
 });
 
-test("resume takes over only a parked remote lease with a newer fencing epoch", () => {
-  const calls = [];
-  const branch = "agent/old-device/runtime-leases";
-  const pullRequestUrl = "https://github.test/pull/1";
+test("resume fences parked handoffs and same-session delivery revisions with a newer epoch", () => {
+  for (const handoff of [
+    { status: "parked", priorSessionId: "chat-old", sessionId: "chat-new" },
+    { status: "delivery", priorSessionId: "chat-new", sessionId: "chat-new" },
+  ]) {
+    const calls = [];
+    const branch = "agent/old-device/runtime-leases";
+    const pullRequestUrl = "https://github.test/pull/1";
+    const priorLease = {
+      schema: "agentic-writer-lease/v1",
+      status: handoff.status,
+      epoch: 4,
+      sessionId: handoff.priorSessionId,
+      device: "old-device",
+      scope: "runtime-leases",
+      branch,
+      baseSha: "a".repeat(40),
+      fenceSha: "b".repeat(40),
+      heartbeatAt: "2026-07-17T10:00:00.000Z",
+      expiresAt: "2026-07-17T10:00:00.000Z",
+    };
+    const gitText = createGitText({
+      "worktree list --porcelain": `worktree ${repo}\n`,
+      "diff --name-only --diff-filter=U": "",
+      "ls-files -u": "",
+      "status --porcelain": "",
+      [`rev-parse origin/${branch}`]: "c".repeat(40),
+      "rev-parse HEAD": "d".repeat(40),
+    });
+    let claimInput = null;
+    const resumedLease = {
+      ...priorLease,
+      status: "active",
+      epoch: 5,
+      sessionId: handoff.sessionId,
+      device: "new-device",
+      baseSha: "c".repeat(40),
+      fenceSha: "d".repeat(40),
+      pullRequestUrl,
+      expiresAt: "2026-07-17T10:30:00.000Z",
+    };
+
+    const result = resume({
+      branchName: branch,
+      invocationPath: repo,
+      repo,
+      gitText,
+      gitOptional: args => args[0] === "config" ? "new-device" : "",
+      ghText: () => JSON.stringify([{
+        number: 1,
+        headRefName: branch,
+        url: pullRequestUrl,
+        body: renderWriterLeasePullRequestBody(priorLease),
+      }]),
+      leaseStore: {
+        claim: input => { claimInput = input; return { ...resumedLease, fenceSha: null }; },
+        annotate: () => resumedLease,
+      },
+      sessionId: handoff.sessionId,
+      leaseTtlMs: 1_800_000,
+      run: (command, args) => calls.push([command, ...args]),
+      log: () => {},
+      now: () => new Date("2026-07-17T10:05:00.000Z"),
+    });
+
+    assert.equal(claimInput.previousEpoch, 4);
+    assert.equal(result.epoch, 5);
+    assert.ok(calls.some(call => call.join(" ") === `git push origin ${branch}`));
+    assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "edit"));
+  }
+});
+
+test("resume rejects a delivery revision claimed by another session", () => {
+  const branch = "agent/device/runtime-leases";
   const priorLease = {
     schema: "agentic-writer-lease/v1",
-    status: "parked",
+    status: "delivery",
     epoch: 4,
     sessionId: "chat-old",
-    device: "old-device",
+    device: "device",
     scope: "runtime-leases",
     branch,
     baseSha: "a".repeat(40),
@@ -241,49 +314,26 @@ test("resume takes over only a parked remote lease with a newer fencing epoch", 
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
-    [`rev-parse origin/${branch}`]: "c".repeat(40),
-    "rev-parse HEAD": "d".repeat(40),
   });
-  let claimInput = null;
-  const resumedLease = {
-    ...priorLease,
-    status: "active",
-    epoch: 5,
-    sessionId: "chat-new",
-    device: "new-device",
-    baseSha: "c".repeat(40),
-    fenceSha: "d".repeat(40),
-    pullRequestUrl,
-    expiresAt: "2026-07-17T10:30:00.000Z",
-  };
 
-  const result = resume({
+  assert.throws(() => resume({
     branchName: branch,
     invocationPath: repo,
     repo,
     gitText,
-    gitOptional: args => args[0] === "config" ? "new-device" : "",
+    gitOptional: () => "",
     ghText: () => JSON.stringify([{
       number: 1,
       headRefName: branch,
-      url: pullRequestUrl,
+      url: "https://github.test/pull/1",
       body: renderWriterLeasePullRequestBody(priorLease),
     }]),
-    leaseStore: {
-      claim: input => { claimInput = input; return { ...resumedLease, fenceSha: null }; },
-      annotate: () => resumedLease,
-    },
+    leaseStore: {},
     sessionId: "chat-new",
     leaseTtlMs: 1_800_000,
-    run: (command, args) => calls.push([command, ...args]),
-    log: () => {},
+    run: () => {},
     now: () => new Date("2026-07-17T10:05:00.000Z"),
-  });
-
-  assert.equal(claimInput.previousEpoch, 4);
-  assert.equal(result.epoch, 5);
-  assert.ok(calls.some(call => call.join(" ") === `git push origin ${branch}`));
-  assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "edit"));
+  }), /remains delivery under another session/);
 });
 
 test("park fails closed when local main does not equal origin/main after refresh", () => {

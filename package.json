@@ -25,6 +25,8 @@
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",
+    "instruction-quality:check": "node --test __tests__/instruction-task-quality.test.mjs && node ./scripts/instruction-task-quality.mjs --validate-suite",
+    "instruction-quality:evaluate": "node ./scripts/instruction-task-quality.mjs",
     "doctor": "node ./scripts/doctor.mjs",
     "git:configure": "git config core.hooksPath .githooks",
     "github:configure": "node ./scripts/configure-github.mjs",

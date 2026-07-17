@@ -362,6 +362,24 @@ Expected:
 - An exact baseline comparison reports character and percentage reduction.
 - Cost is exactly zero and neither Prod mirror nor Cloudflare is attempted.
 
+## Instruction Task-Quality Checks
+
+Run the model-agnostic suite gate after changing instruction intent, routing, or quality criteria:
+
+```bash
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run instruction-quality:check
+node "$AGENTIC_CANVAS_OS_ROOT/scripts/instruction-task-quality.mjs" \
+  --candidate="<recorded-or-live-candidate.json>" --json
+```
+
+Expected:
+
+- Four unique cases validate with bounded prompts, required concepts, forbidden claims, and final-answer word limits.
+- Missing concepts, unsafe deployment advice, excess length, missing cases, and unknown cases fail closed.
+- Candidate provenance names its exact instruction revision and recorded or live mode.
+- The evaluator invokes no model, reads no private reasoning, and attempts no Prod mirror or Cloudflare action.
+- A passing lexical report remains subject to human review and does not prove general model quality.
+
 ## Route Consistency Checks
 
 Run from `$GITHUB_ROOT`:
@@ -444,6 +462,7 @@ The proof must show one atomic local writer, increasing epochs after expiry, bou
 | Persistent memory | Focused docs route check reports `persistent-memory route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes bounded memory/profile targets, frozen snapshot reads, typed capacity errors, scan, and session search. |
 | Skills system | Focused docs route check reports `skill-system route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes metadata discovery, selected source load, resource load, bundle resolution, scan, validation, and write approval policy. |
 | Instruction Audit | `npm run instruction-audit:check` exits zero; required intent remains, budgets hold, duplicate and owner-leakage fixtures fail, cost is zero, and optional baseline metrics are exact. |
+| Instruction Task Quality | `npm run instruction-quality:check` exits zero; four cases and seven discrimination tests pass, candidate drift fails closed, and evaluator model/deploy claims remain false. |
 | Context files | Focused docs route check reports `context-files route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes working-directory discovery, scanned load, truncation, progressive hints, and context audit proof. |
 | Context references | Focused docs route check reports `context-references route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed expansion packets, warnings, refusals, source metadata, and unsupported-surface behavior. |
 | Kanban collaboration | Focused docs route check reports `kanban route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes row validation, table/Kanban projection, profile binding, worker-process proof, and sync conflicts. |

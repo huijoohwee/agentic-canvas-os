@@ -90,4 +90,4 @@ The library accepts in-memory documents for focused tests. The CLI reads only th
 
 ## Promotion Boundary
 
-The instruction-audit harness is runtime-ready locally. It proves the repository policy and current surfaces; it does not prove that every downstream host loaded the new instructions, that a provider cached them, or that shorter context alone improved task quality. Behavioral quality remains an evaluation concern, while this runtime owns structural context discipline.
+The instruction-audit harness is runtime-ready locally. It proves the repository policy and current surfaces; it does not prove that every downstream host loaded the new instructions, that a provider cached them, or that shorter context alone improved task quality. `INSTRUCTION-QUALITY-EVALUATION.md` owns the separate final-answer evaluation contract; named candidates still require their own evidence and human review.

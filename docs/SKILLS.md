@@ -40,6 +40,7 @@ skill_contracts:
   - "harness.define"
   - "runtime.check"
   - "instruction.audit"
+  - "instruction.quality.evaluate"
   - "cost.audit"
   - "deploy.guard"
   - "docs.sync"
@@ -125,7 +126,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 
 | Family | Skill ids | Detail owner |
 |---|---|---|
-| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `cost.audit`, `deploy.guard`, `docs.sync` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md` |
+| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md` |
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
@@ -137,6 +138,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Capability | Selected detail |
 |---|---|
 | Instruction audit | `INSTRUCTION-AUDIT.md` |
+| Instruction task quality | `INSTRUCTION-QUALITY-EVALUATION.md` |
 | Image to Three.js | `IMAGE-TO-THREEJS-SKILL.md` |
 | Image to GLB | `IMAGE-TO-GLB-SKILL.md` |
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
@@ -158,6 +160,8 @@ A catalog entry is spec-complete when its identity, owner, schemas, bounds, cost
 
 `instruction.audit` is model-free. It audits `AGENTS.md` and this catalog for required intent, bounded instruction density, duplicate instructions, route-detail load, and canonical-owner leakage. Its typed report contains zero model tokens and no mutation or deployment authority.
 
+`instruction.quality.evaluate` scores provenance-bound final answers against the selected repository suite. The evaluator invokes no model, reads no private reasoning, and requires a complete candidate packet plus human review before any quality promotion.
+
 ## External Boundary
 
 External documentation and projects inform capability shape only. This repository does not copy their code, prose, prompts, schemas, examples, tests, fixtures, layouts, packages, or runtime dependencies. Local owners, dictionaries, validation, and proof remain authoritative.
@@ -171,4 +175,5 @@ External documentation and projects inform capability shape only. This repositor
 | Routes stay canonical | Invocation entries resolve through the three dictionaries. |
 | Promotion is honest | Runtime-ready claims link current executable proof and cost state. |
 | Default context stays lean | `npm run instruction-audit:check` passes its budgets and duplicate checks. |
+| Task quality stays observable | `npm run instruction-quality:check` validates the suite and scorer; a named candidate passes only through explicit final-answer evaluation. |
 | Deployment stays closed | Audit and catalog validation make no Prod mirror or Cloudflare mutation. |

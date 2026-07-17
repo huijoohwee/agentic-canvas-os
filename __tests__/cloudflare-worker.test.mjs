@@ -43,6 +43,8 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.model.provider, "sealion");
   assert.equal(body.model.endpoint, "https://api.sea-lion.ai/v1/chat/completions");
   assert.equal(body.model.apiKeyPresent, true);
+  assert.equal(body.cacheContext.stablePrefixOrder, "static-first-dynamic-last");
+  assert.equal(body.cacheContext.providerCacheStatus, "unverified");
   assert.equal(JSON.stringify(body).includes("server-side-sealion-key"), false);
 });
 

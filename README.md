@@ -105,6 +105,7 @@ run-scoped canvas embed URL.
 | `src/canvas-embed.js` | Run-scoped knowgrph canvas doc-view URL + embed descriptor. |
 | `agent-api/src/app.js` | Platform-neutral Agent-API core: auth, MCP forward, readiness. |
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
+| `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
@@ -123,6 +124,10 @@ requires:
   defaulting to `SEA_LION_API_KEY`
 
 The response reports `apiKeyPresent`; it never includes the secret value.
+It also reports the bounded cache-context policy and local registry counters.
+`providerCacheStatus` remains `unverified` until the downstream model owner
+returns cache-read or cache-write usage; a local stable-prefix reuse is not a
+provider cache hit.
 
 Default SEA-LION route:
 
@@ -137,6 +142,7 @@ AGENT_MODEL_API_KEY_ENV=SEA_LION_API_KEY
 
 ```bash
 npm run check
+npm run cache-context:check
 npm run dev
 ```
 

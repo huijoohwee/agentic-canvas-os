@@ -30,6 +30,8 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
     fetchImpl: mcpStub({ state: "blocked", approvalGates: [1, 2, 3, 4, 5] }),
   });
   assert.equal(app.configured, true);
+  assert.equal(app.readiness().cacheContext.configured, true);
+  assert.equal(app.readiness().cacheContext.providerCacheStatus, "unverified");
 
   const session = await app.authSession({ body: { subject: "s1" } });
   assert.equal(session.statusCode, 200);

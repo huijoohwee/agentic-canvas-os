@@ -66,6 +66,7 @@ dictionary_entries:
   - "@image"
   - "@image-to-threejs"
   - "@image-to-glb"
+  - "@knowgrph.probe-tree"
   - "@audio"
   - "@video"
   - "@mcp-gateway"
@@ -189,6 +190,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@image` | Request source-consistent image artifacts. | Shared image-generation, persistence, Media, and Canvas projection owners. | Only provider-returned and read-back-verified image identities may project; no fabricated or localhost-only URL is accepted as durable output. |
 | `@image-to-threejs` | Bind one existing PNG, JPG, JPEG, or SVG source to the native `image.to-threejs` conversion. | Shared Card, Widget, image-to-threejs, and Rich Media Panel owners. | Uses the selected source URL only; no credential, provider generation, external plugin, or deploy authority is introduced. |
 | `@image-to-glb` | Bind one existing PNG, JPG, JPEG, or SVG source to the native procedural `image.to-glb` asset contract. | Shared Card, Widget, image-to-threejs source utilities, and GLB asset-pipeline owners. | Uses only the selected source URL; source media remains unchanged, external plugin/copy paths are forbidden, and any LLM execution requires its separately approved runtime. |
+| `@knowgrph.probe-tree` | Bind one Widget Card or answered branch to the shared Probe-Tree generation context. | Authored graph identity, selected card output, local MCP Probe-Tree tools, and shared Storyboard publication owners. | Carries no credentials or implicit provider approval; generation is bounded, forward-only, page-stable, zero-spend by default, and graph mutation remains atomic through the owning publication transaction. |
 | `@audio` | Request narration, dialogue, sound, music, subtitle-sync, and master-audio artifacts. | Shared audio/video generation, media-probe, persistence, and Timeline owners. | Languages, synchronization, media kind, persistence, and read-back identity must be typed before projection. |
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
@@ -364,6 +366,7 @@ binding:
 |---|---|
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
 | `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
+| `@knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
 | `@memory-entry` | `FACTS.md` direct-resolution entry for bounded memory entries. |
 | `@skill-index` | `FACTS.md` direct-resolution entry for progressive skill discovery. |
 | `@skill-source` | `FACTS.md` direct-resolution entry for selected skill source loading. |

@@ -402,6 +402,9 @@ Every model-bearing harness emits:
 | `prompt_tokens` | Non-negative integer; zero for model-free views. |
 | `completion_tokens` | Non-negative integer; zero for model-free views. |
 | `cache_hits` | Non-negative integer or boolean-derived count. |
+| `cached_tokens` | Exact provider-reported cache-read tokens; local prefix reuse does not populate this field. |
+| `cache_write_tokens` | Exact provider-reported cache-write tokens. |
+| `provider_cache_status` | `hit`, `write`, `miss`, or `unreported`; never inferred from local reuse or latency. |
 | `estimated_cost_usd` | Decimal estimate; exact zero for read-only model-free views. |
 
 Do not clamp unexpected non-zero cost to zero. Treat it as a defect.

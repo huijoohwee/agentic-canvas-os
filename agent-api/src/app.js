@@ -10,6 +10,7 @@
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
+import { createCacheContextRegistry } from "./cache-context.js";
 import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
@@ -22,14 +23,16 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {object} [opts]
  * @param {object} [opts.env] environment bag (default process.env)
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
+ * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
-export function createAgentApiApp({ env, fetchImpl } = {}) {
+export function createAgentApiApp({ env, fetchImpl, cacheContext: providedCacheContext } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
   const endpoint = typeof e.KNOWGRPH_MCP_ENDPOINT === "string" ? e.KNOWGRPH_MCP_ENDPOINT.trim() : "";
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
   const agentModelConfig = resolveAgentModelConfig(e);
+  const cacheContext = providedCacheContext || createCacheContextRegistry();
   const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
 
   let mcpClient = null;
@@ -40,6 +43,7 @@ export function createAgentApiApp({ env, fetchImpl } = {}) {
   return {
     configured: Boolean(secret && endpoint),
     agentModelConfig,
+    cacheContext,
     readiness: () => ({
       configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
       auth: { configured: Boolean(secret) },
@@ -52,6 +56,13 @@ export function createAgentApiApp({ env, fetchImpl } = {}) {
         model: agentModelConfig.model,
         apiKeyEnv: agentModelConfig.apiKeyEnv,
         apiKeyPresent: modelKeyPresent,
+      },
+      cacheContext: {
+        configured: true,
+        stablePrefixOrder: "static-first-dynamic-last",
+        invalidation: "revision-or-bounded-eviction",
+        providerCacheStatus: "unverified",
+        ...cacheContext.stats(),
       },
     }),
     authSession: createAuthSessionHandler({

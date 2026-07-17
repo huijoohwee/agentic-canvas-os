@@ -5,11 +5,13 @@
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import { CanvasRoom } from "./canvas-room.js";
 
 export { CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
+const CACHE_CONTEXT_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
   return new Response(JSON.stringify(body ?? {}), {
@@ -39,8 +41,17 @@ function toResponse(result) {
 }
 
 function createWorkerApp(env) {
+  let cacheContext;
+  if (env && typeof env === "object") {
+    cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
+    if (!cacheContext) {
+      cacheContext = createCacheContextRegistry();
+      CACHE_CONTEXT_BY_ENV.set(env, cacheContext);
+    }
+  }
   return createAgentApiApp({
     env,
+    cacheContext,
     fetchImpl: (req) => fetch(req.url, { method: req.method, headers: req.headers, body: JSON.stringify(req.body) }),
   });
 }

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "npm run web:build",
+    "cache-context:check": "node --test __tests__/cache-context.test.mjs",
     "check": "npm test && npm run web:build && npm run docs:check",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",

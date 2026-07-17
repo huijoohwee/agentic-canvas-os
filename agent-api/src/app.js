@@ -12,6 +12,7 @@
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
 import { createCacheContextRegistry } from "./cache-context.js";
 import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
+import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
@@ -26,6 +27,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
+ * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
 export function createAgentApiApp({
@@ -33,6 +35,7 @@ export function createAgentApiApp({
   fetchImpl,
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
+  programmaticToolCalling: providedProgrammaticToolCalling,
 } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
@@ -41,6 +44,7 @@ export function createAgentApiApp({
   const agentModelConfig = resolveAgentModelConfig(e);
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
+  const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
   const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
 
   let mcpClient = null;
@@ -53,35 +57,49 @@ export function createAgentApiApp({
     agentModelConfig,
     cacheContext,
     reasoningContinuity,
-    readiness: () => ({
-      configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
-      auth: { configured: Boolean(secret) },
-      controlPlane: { configured: Boolean(endpoint), endpoint },
-      model: {
-        configured: agentModelConfigReady(agentModelConfig),
-        provider: agentModelConfig.provider,
-        protocol: agentModelConfig.protocol,
-        endpoint: agentModelConfig.endpoint,
-        model: agentModelConfig.model,
-        apiKeyEnv: agentModelConfig.apiKeyEnv,
-        apiKeyPresent: modelKeyPresent,
-      },
-      cacheContext: {
-        configured: true,
-        stablePrefixOrder: "static-first-dynamic-last",
-        invalidation: "revision-or-bounded-eviction",
-        providerCacheStatus: "unverified",
-        ...cacheContext.stats(),
-      },
-      reasoningContinuity: {
-        configured: true,
-        invariantPolicy: "goals-assumptions-priorities",
-        stableMode: "all_turns-with-previous-response",
-        driftMode: "current_turn",
-        providerEffectiveContext: "unverified",
-        ...reasoningContinuity.stats(),
-      },
-    }),
+    programmaticToolCalling,
+    readiness: () => {
+      const programmaticStats = programmaticToolCalling.stats();
+      return {
+        configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
+        auth: { configured: Boolean(secret) },
+        controlPlane: { configured: Boolean(endpoint), endpoint },
+        model: {
+          configured: agentModelConfigReady(agentModelConfig),
+          provider: agentModelConfig.provider,
+          protocol: agentModelConfig.protocol,
+          endpoint: agentModelConfig.endpoint,
+          model: agentModelConfig.model,
+          apiKeyEnv: agentModelConfig.apiKeyEnv,
+          apiKeyPresent: modelKeyPresent,
+        },
+        cacheContext: {
+          configured: true,
+          stablePrefixOrder: "static-first-dynamic-last",
+          invalidation: "revision-or-bounded-eviction",
+          providerCacheStatus: "unverified",
+          ...cacheContext.stats(),
+        },
+        reasoningContinuity: {
+          configured: true,
+          invariantPolicy: "goals-assumptions-priorities",
+          stableMode: "all_turns-with-previous-response",
+          driftMode: "current_turn",
+          providerEffectiveContext: "unverified",
+          ...reasoningContinuity.stats(),
+        },
+        programmaticToolCalling: {
+          configured: programmaticStats.adapterConfigured && programmaticStats.toolGatewayConfigured,
+          contractReady: true,
+          executionOwner: "downstream-hosted-sandbox",
+          programRouting: "bounded-read-only-stages",
+          directRouting: "writes-approvals-semantic-judgment",
+          localJavaScriptExecution: "forbidden",
+          providerContextIsolation: "unverified",
+          ...programmaticStats,
+        },
+      };
+    },
     authSession: createAuthSessionHandler({
       secret,
       ...(Number.isFinite(expiry) ? { defaultExpirySeconds: expiry } : {}),

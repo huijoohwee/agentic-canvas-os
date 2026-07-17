@@ -137,6 +137,7 @@ harness:
 | Tool Gateway | Route web, image, TTS, and browser tool calls through existing infrastructure | `{ category, provider, input, approvals[] }` | Tool result, unavailable provider, approval-required, cost log, or typed fallback | Paid, egress, generated-media, and browser-auth actions require approval |
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Defer eligible tool schemas behind bridge search, describe, and call routes | `{ query, toolName, arguments, sessionToolsets }` | Matches, selected schema, tool result, approval-required, or blocked reason | Bridge never bypasses real tool policy, approval, hooks, audit, or cost |
+| Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Skill Evolution | Propose new or improved skills from evaluated experience | `{ skillId, experienceRefs[], evaluationPlan }` | Proposal diff, validation packet, or blocked reason | Human review required; direct auto-commit forbidden |
 | Identity Reflection | Persist stable operator preferences and project boundaries | `{ sourceRef, proposedFact, sensitivity }` | Identity note or rejected inference | Operator authority required; secrets forbidden |
 | Showrunner | Run bounded creative multi-agent turns | Creative brief + role turn | Creative state, script, choice graph | Stage approval and paid calls |
@@ -272,6 +273,20 @@ Tool Search harnesses minimize model-visible schema load for eligible MCP and no
 | Describe | `{ toolName }` | Selected tool schema or unavailable result. | Schema must come from the current session catalog. |
 | Call | `{ toolName, arguments, approvals[] }` | Real tool result, approval-required, schema error, cost log, or typed fallback. | Enforce the underlying tool identity, policy, approval, hooks, and audit. |
 | Audit | `{ scope }` | Deferred catalog, bridge use, cost, and blocked-reason ledger. | Read-only and deploy-free. |
+
+## Programmatic Tool Calling Harness Contract
+
+Programmatic tool calling uses provider-hosted JavaScript only for predictable read-only stages. The local controller never evaluates generated source. The cited provider guide informs the capability class; local code, prompts, schemas, examples, tests, fixtures, and prose remain independently authored.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Validate | Run id, JSON input, capability flags, tool declarations, and validators | Immutable request or typed preflight block | Hosted sandbox, response continuation, caller lineage, adapter, and gateway are mandatory. |
+| Advance | Initial input or previous response identity plus caller-preserving tool results | Provider-normalized hosted turn and actual cost log | Missing attestation, cost, completed status, or typed items blocks. |
+| Authorize | Program lineage, tool identity, arguments, risk, and idempotency | Eligible call or direct-route requirement | Only validated read-only idempotent tools may run programmatically. |
+| Execute | Eligible calls within parallel and timeout bounds | Schema-valid bounded results | Real tool policy, validator, approval, audit, hook, and cost owners remain authoritative. |
+| Finalize | Provider final message | Final output, compact evidence, and aggregate cost | Generated code and intermediate tool payloads are neither persisted nor returned. |
+
+The controller bounds model turns, calls, batch width, program size, result size, and stage duration. Duplicate run and tool-call identities fail closed. Offline proof confirms the controller contract only; provider-hosted execution and context isolation remain unverified until a live adapter returns matching attestation.
 
 ### Tool Category Guardrails
 

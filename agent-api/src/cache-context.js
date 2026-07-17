@@ -1,3 +1,5 @@
+import { normalizeJson } from "./json-contract.js";
+
 const DEFAULT_MAX_ENTRIES = 32;
 const DEFAULT_MAX_STABLE_PREFIX_CHARS = 200_000;
 const DEFAULT_MIN_CACHEABLE_TOKENS = 1_024;
@@ -16,42 +18,11 @@ function assertPositiveInteger(value, field) {
   return value;
 }
 
-function canonicalize(value, path = "value", seen = new Set()) {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new TypeError(`${path} must contain only finite numbers.`);
-    return value;
-  }
-  if (typeof value !== "object") throw new TypeError(`${path} must be JSON-compatible.`);
-  if (seen.has(value)) throw new TypeError(`${path} must not contain cycles.`);
-
-  seen.add(value);
-  let result;
-  if (Array.isArray(value)) {
-    result = value.map((item, index) => canonicalize(item, `${path}[${index}]`, seen));
-  } else {
-    result = {};
-    for (const key of Object.keys(value).sort()) {
-      const item = value[key];
-      if (item === undefined) throw new TypeError(`${path}.${key} must not be undefined.`);
-      result[key] = canonicalize(item, `${path}.${key}`, seen);
-    }
-  }
-  seen.delete(value);
-  return result;
-}
-
-function freezeDeep(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
-  for (const child of Object.values(value)) freezeDeep(child);
-  return Object.freeze(value);
-}
-
 function canonicalSegments(segments, field) {
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new TypeError(`${field} must be a non-empty array.`);
   }
-  return freezeDeep(canonicalize(segments, field));
+  return normalizeJson(segments, field);
 }
 
 async function sha256Hex(value) {

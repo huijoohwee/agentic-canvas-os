@@ -107,6 +107,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |
 | `agent-api/src/reasoning-continuity.js` | Bounded cross-turn invariant registry, compatible request planning, active-turn serialization, and provider-effective context confirmation. |
+| `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
@@ -136,6 +137,13 @@ patch chained to the last completed response; drift resets requested reasoning
 to `current_turn`. Provider-effective continuity remains `unverified` until the
 downstream model response explicitly confirms the effective context.
 
+Programmatic tool-calling readiness is also sanitized. The local controller is
+contract-ready, but `configured` and `providerContextIsolation` remain false or
+`unverified` until a downstream hosted-sandbox adapter and real tool gateway are
+injected. Generated JavaScript is never executed locally; programmatic calls
+are limited to validated read-only idempotent tools, while writes, approvals,
+semantic judgment, citations, and native-artifact validation stay direct.
+
 Default SEA-LION route:
 
 ```bash
@@ -151,6 +159,7 @@ AGENT_MODEL_API_KEY_ENV=SEA_LION_API_KEY
 npm run check
 npm run cache-context:check
 npm run reasoning-continuity:check
+npm run programmatic-tool-calling:check
 npm run dev
 ```
 

@@ -57,6 +57,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `AGENTS.md` | Agent instructions | Agent roles, editing rules, MoA rules, stateful orchestration rules, forbidden patterns, and validation behavior for this folder. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
+| `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
 | `DICTIONARY-SEMANTIC.md` | Hash dictionary | `#` semantic filters for routing, proof, cost, and cleanup. |
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
@@ -79,6 +80,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 - A caller can load durable agent identity from `SOUL.md` into prompt slot 1 without silent hardcoded defaults.
 - A caller can compile stable prompt prefixes once, reuse an opaque revision-bound handle for dynamic request tails, and keep local reuse distinct from provider cache-hit proof.
 - A caller can preserve compatible reasoning across stable turns, reset rendered reasoning on invariant drift, and keep request intent distinct from provider-effective confirmation.
+- A caller can reduce predictable read-only tool stages through a provider-attested hosted program while keeping local JavaScript execution forbidden and all writes, approvals, citations, and semantic judgment on the direct path.
 - A caller can use bounded `MEMORY.md` and `USER.md` targets with write, compact, search, frozen snapshot, and session-search contracts.
 - A caller can discover skill metadata, load selected skills and resources on demand, resolve bundles, and gate managed skill writes without a duplicate registry.
 - A caller can discover and load project-local context files from scoped working directories without letting them override facts, identity, safety, approval, or deploy gates.

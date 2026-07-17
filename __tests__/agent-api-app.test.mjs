@@ -35,6 +35,10 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().reasoningContinuity.configured, true);
   assert.equal(app.readiness().reasoningContinuity.stableMode, "all_turns-with-previous-response");
   assert.equal(app.readiness().reasoningContinuity.providerEffectiveContext, "unverified");
+  assert.equal(app.readiness().programmaticToolCalling.contractReady, true);
+  assert.equal(app.readiness().programmaticToolCalling.configured, false);
+  assert.equal(app.readiness().programmaticToolCalling.localJavaScriptExecution, "forbidden");
+  assert.equal(app.readiness().programmaticToolCalling.providerContextIsolation, "unverified");
 
   const session = await app.authSession({ body: { subject: "s1" } });
   assert.equal(session.statusCode, 200);

@@ -96,6 +96,7 @@ dictionary_entries:
   - "/prd-tad.create"
   - "/runtime-ready.check"
   - "/instruction.audit"
+  - "/instruction.quality-evaluate"
   - "/session.start"
   - "/release.complete"
   - "/deploy.guard"
@@ -209,6 +210,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/prd-tad.create` | Produce or refresh a combined PRD/TAD from validated problem and architecture context. | `@operator`, `@source.body` | `#tco`, `#ttv`, `#vcc`, `#foss` | PRD/TAD includes personas, MoSCoW, topology, harness, ADR, and VCC sections. |
 | `/runtime-ready.check` | Verify whether a spec-complete artifact is runnable. | `@local-harness`, `@runtime-proof` | `#harness`, `#vcc`, `#runtime-ready` | Focused checks exit 0 and cost/deploy boundaries are surfaced. |
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
+| `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
 | `/session.start` | Start one conflict-safe Codex build lane from current remote state. | `@operator`, `@working-directory`, `@runtime-proof` | `#multi-agent-collaboration`, `#runtime-ready`, `#vcc` | Remote refs are fetched, each repository has exactly one registered worktree, ownership is unique, and the canonical checkout activates a clean contract-valid `agent/<device>/<semantic-scope>` branch; `.local` remains valid only in the device segment, invalid identity fails before checkout mutation, and Prod or Cloudflare remains unchanged. |
 | `/release.complete` | Execute the bounded Knowgrph Dev-to-Prod-to-Cloudflare release workflow. | `@operator`, `@source.frontmatter`, `@runtime-proof` | `#runtime-ready`, `#multi-agent-collaboration`, `#vcc` | Unique ownership, protected integration, mirror parity, deployment evidence, and both production-route probes pass for one promoted SHA. |
 | `/deploy.guard` | Stop accidental Prod mirror or Cloudflare mutation. | `@operator`, `@dev-only` | `#no-deploy`, `#approval-gate` | Output states Dev-only status and no Prod/Cloudflare mutation occurred. |

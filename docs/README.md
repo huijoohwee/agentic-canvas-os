@@ -17,6 +17,7 @@ source_of_truth:
   - "AGENTS.md"
   - "SKILLS.md"
   - "INSTRUCTION-AUDIT.md"
+  - "INSTRUCTION-QUALITY-EVALUATION.md"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "documentation control surface for making knowgrph a runtime-ready Agentic Canvas OS"
@@ -58,6 +59,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
 | `INSTRUCTION-AUDIT.md` | Instruction audit runtime | Model-free context budgets, intent preservation, duplication checks, owner-boundary checks, baseline reduction, and zero-cost proof. |
+| `INSTRUCTION-QUALITY-EVALUATION.md` | Instruction task-quality evaluation | Provenance-bound final-answer scenarios, deterministic rubric findings, model-agnostic execution, and human-review promotion boundaries. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |

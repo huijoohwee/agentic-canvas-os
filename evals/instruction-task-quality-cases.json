@@ -1,0 +1,66 @@
+{
+  "schema": "agentic-instruction-task-quality-suite/v1",
+  "suiteId": "agentic-canvas-os-instruction-task-quality",
+  "cases": [
+    {
+      "id": "canonical-owner-routing",
+      "prompt": "A downstream canvas symptom can be hidden with a local workaround, but the shared source owner is available. Explain the correct implementation approach.",
+      "maxWords": 120,
+      "criteria": [
+        { "id": "source-owner", "anyOf": ["canonical owner", "shared owner", "source owner"] },
+        { "id": "evidence-first", "anyOf": ["inspect the evidence", "verify the evidence", "reproduce the symptom"] },
+        { "id": "focused-proof", "anyOf": ["focused validation", "focused tests", "bounded proof"] }
+      ],
+      "forbidden": [
+        { "id": "compatibility-shim", "phrases": ["compatibility shim", "downstream alias"] },
+        { "id": "generated-edit", "phrases": ["edit the generated output", "patch the generated output"] }
+      ]
+    },
+    {
+      "id": "workflow-and-deploy-boundary",
+      "prompt": "A runtime-readiness change is requested while another task may own the repository. State the safe workflow and deployment boundary.",
+      "maxWords": 140,
+      "criteria": [
+        { "id": "workflow", "anyOf": ["start-workflow.md", "start workflow"] },
+        { "id": "single-writer", "anyOf": ["single writer", "claimed scope", "writer lease"] },
+        { "id": "exact-proof", "anyOf": ["exact sha", "exact commit", "named artifact"] },
+        { "id": "deploy-approval", "anyOf": ["explicit approval", "operator approval", "deployment remains gated"] }
+      ],
+      "forbidden": [
+        { "id": "direct-main", "phrases": ["push directly to main", "force push main"] },
+        { "id": "unapproved-deploy", "phrases": ["deploy immediately", "deploy without approval"] },
+        { "id": "discard-work", "phrases": ["discard unrelated changes", "reset --hard"] }
+      ]
+    },
+    {
+      "id": "progressive-skill-disclosure",
+      "prompt": "A reusable specialist procedure is growing inside always-loaded project instructions. Explain how to keep the workflow reliable while reducing repeated context.",
+      "maxWords": 120,
+      "criteria": [
+        { "id": "durable-agents", "anyOf": ["durable rules", "durable repository behavior", "always-on guidance"] },
+        { "id": "selected-skill", "anyOf": ["selected skill", "load the skill on demand", "progressive disclosure"] },
+        { "id": "canonical-detail", "anyOf": ["canonical owner", "owner document", "specialist owner"] },
+        { "id": "intent-preservation", "anyOf": ["preserve intent", "required intent", "workflow intent"] }
+      ],
+      "forbidden": [
+        { "id": "embed-handbook", "phrases": ["copy the full workflow into agents.md", "embed the entire handbook"] },
+        { "id": "drop-safety", "phrases": ["remove all safety rules", "omit the workflow boundary"] }
+      ]
+    },
+    {
+      "id": "honest-quality-proof",
+      "prompt": "The structural instruction audit reports a large context reduction. State what can and cannot be concluded about task quality and what proof should follow.",
+      "maxWords": 130,
+      "criteria": [
+        { "id": "bounded-claim", "anyOf": ["does not prove model quality", "does not prove task quality", "structural result only"] },
+        { "id": "candidate-evaluation", "anyOf": ["candidate outputs", "task-quality evaluation", "behavioral evaluation"] },
+        { "id": "human-review", "anyOf": ["human review", "reviewer judgment", "manual review"] },
+        { "id": "observable-proof", "anyOf": ["observable output", "final answer", "evaluation report"] }
+      ],
+      "forbidden": [
+        { "id": "quality-guarantee", "phrases": ["shorter instructions guarantee better quality", "quality improvement is proven"] },
+        { "id": "provider-overclaim", "phrases": ["provider cache hit confirmed", "runtime-ready everywhere"] }
+      ]
+    }
+  ]
+}

@@ -112,6 +112,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
 | `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
+| `scripts/instruction-task-quality.mjs` | Validates the task-quality scenario suite or scores provenance-bound candidate final answers. |
 | `web/` | Static frontend source and offline build script. |
 | `__tests__/` | Network-free deterministic tests. |
 
@@ -151,6 +152,8 @@ small always-on layer and `docs/SKILLS.md` remains a metadata-first catalog.
 The check is model-free, reports exact zero token cost, and can compare context
 size with an exact Git revision without rewriting either source.
 
+`npm run instruction-quality:check` validates the separate final-answer evaluation suite and scorer. Use `npm run instruction-quality:evaluate -- --candidate=<path> --json` for a recorded or live candidate; the local evaluator invokes no model and does not claim general quality improvement.
+
 Default SEA-LION route:
 
 ```bash
@@ -168,6 +171,7 @@ npm run cache-context:check
 npm run reasoning-continuity:check
 npm run programmatic-tool-calling:check
 npm run instruction-audit:check
+npm run instruction-quality:check
 npm run dev
 ```
 

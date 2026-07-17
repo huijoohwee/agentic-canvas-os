@@ -58,6 +58,7 @@ dictionary_entries:
   - "@local-harness"
   - "@runtime-proof"
   - "@instruction-source"
+  - "@instruction-eval-suite"
   - "@dev-only"
   - "@cost-log"
   - "@video-generation-demo-script"
@@ -185,6 +186,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@local-harness` | Dev-local typed harness or dry-run path. | Shared local runtime owner. | Default proof path before paid calls or deploy. |
 | `@runtime-proof` | Surfaced validation evidence. | Command output, typed result, parsed field, or focused test. | Must be observable; narrative alone is not proof. |
 | `@instruction-source` | One audited durable-guidance or skill-catalog source. | `docs/AGENTS.md` or `docs/SKILLS.md`. | Read-only audit input; it grants no rewrite, runtime, release, or deployment authority. |
+| `@instruction-eval-suite` | Repository-owned final-answer scenarios and scoring rules for instruction quality. | `evals/instruction-task-quality-cases.json` and `INSTRUCTION-QUALITY-EVALUATION.md`. | Read-only evaluation input; candidate execution, human approval, release, and deployment remain separate authorities. |
 | `@dev-only` | Local development boundary. | Current canonical Dev checkout. | Confirms work stops before Prod mirror and Cloudflare. |
 | `@cost-log` | Token, cache, and estimated cost ledger. | Harness observer or runtime result. | Must report exact zero for model-free views. |
 | `@video-generation-demo-script` | Authored source-script binding for the default video-agent preset. | The preset frontmatter plus its canonical workspace Markdown reference. | Source context only; it cannot contain generated artifact identities, credentials, provider job ids, or fabricated media URLs. |

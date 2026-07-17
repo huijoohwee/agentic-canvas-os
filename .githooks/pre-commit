@@ -18,3 +18,8 @@ if [ "$worktree_count" != "1" ] || [ "$worktrees" != "$root" ]; then
   echo "Commit only from the one canonical checkout at $root; found: ${worktrees:-none}" >&2
   exit 1
 fi
+
+branch="$(git branch --show-current)"
+case "$branch" in
+  agent/*) node "$root/scripts/writer-lease-guard.mjs" ;;
+esac

@@ -1,7 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { completeSession, createParkMessage, formatParkTimestamp, park } from "../scripts/device-branch-lib.mjs";
+import {
+  completeSession,
+  createParkMessage,
+  formatParkTimestamp,
+  heartbeat,
+  park,
+  publish,
+  resume,
+  start,
+} from "../scripts/device-branch-lib.mjs";
+import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const repo = process.cwd();
 
@@ -23,6 +33,74 @@ test("formatParkTimestamp emits git-friendly UTC stamps", () => {
   );
 });
 
+test("start claims a lease and publishes a draft ownership PR before authoring", () => {
+  const calls = [];
+  const annotations = [];
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "rev-parse origin/main": "a".repeat(40),
+    "rev-parse HEAD": "b".repeat(40),
+  });
+  const leaseStore = {
+    claim: values => ({
+      schema: "agentic-writer-lease/v1",
+      status: "active",
+      epoch: 1,
+      ...values,
+      fenceSha: null,
+      pullRequestUrl: null,
+      heartbeatAt: "2026-07-17T10:00:00.000Z",
+      expiresAt: "2026-07-17T10:30:00.000Z",
+    }),
+    annotate: ({ values }) => {
+      annotations.push(values);
+      return {
+        schema: "agentic-writer-lease/v1",
+        status: "active",
+        epoch: 1,
+        sessionId: "chat-a",
+        device: "device",
+        scope: "runtime-leases",
+        branch: "agent/device/runtime-leases",
+        baseSha: "a".repeat(40),
+        fenceSha: values.fenceSha || "b".repeat(40),
+        pullRequestUrl: values.pullRequestUrl || null,
+        heartbeatAt: "2026-07-17T10:00:00.000Z",
+        expiresAt: "2026-07-17T10:30:00.000Z",
+      };
+    },
+  };
+
+  const branch = start({
+    scope: "runtime-leases",
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "device",
+    ghText: args => args[0] === "pr" && args[1] === "list" ? "[]" : "https://github.test/pull/1\n",
+    leaseStore,
+    sessionId: "chat-a",
+    leaseTtlMs: 1_800_000,
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  });
+
+  assert.equal(branch, "agent/device/runtime-leases");
+  assert.deepEqual(calls.map(call => call.slice(0, 3)), [
+    ["git", "fetch", "origin"],
+    ["git", "switch", "--create"],
+    ["git", "commit", "--allow-empty"],
+    ["git", "push", "--set-upstream"],
+  ]);
+  assert.deepEqual(annotations, [
+    { fenceSha: "b".repeat(40) },
+    { pullRequestUrl: "https://github.test/pull/1" },
+  ]);
+});
+
 test("park stashes a dirty task branch and returns to clean canonical main", () => {
   const calls = [];
   const logs = [];
@@ -41,6 +119,11 @@ test("park stashes a dirty task branch and returns to clean canonical main", () 
     invocationPath: repo,
     repo,
     gitText,
+    leaseStore: {
+      verify: () => ({ status: "active" }),
+      release: () => ({ status: "parked" }),
+    },
+    sessionId: "chat-a",
     run: (command, args) => calls.push([command, ...args]),
     log: message => logs.push(message),
     now: () => new Date("2026-07-14T22:30:45.123Z"),
@@ -58,6 +141,149 @@ test("park stashes a dirty task branch and returns to clean canonical main", () 
     stashRef: "stash@{0}",
   });
   assert.equal(logs[0], "Parked agent/device/scope in stash@{0}; main is now 1234567890ab.");
+});
+
+test("heartbeat rejects a session after the remote fencing commit advances", () => {
+  const branch = "agent/device/runtime-leases";
+  let renewed = false;
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": `${branch}\n`,
+  });
+
+  assert.throws(() => heartbeat({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => `${"c".repeat(40)}\trefs/heads/${branch}`,
+    leaseStore: {
+      verify: () => ({ fenceSha: "b".repeat(40) }),
+      heartbeat: () => { renewed = true; },
+    },
+    sessionId: "chat-a",
+    leaseTtlMs: 1_800_000,
+    run: () => {},
+  }), /session is stale/);
+  assert.equal(renewed, false);
+});
+
+test("publish verifies the session lease and fencing ancestor before delivery", () => {
+  const calls = [];
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "log -1 --pretty=%s": "fix: coordination runtime\n",
+  });
+  let releaseStatus = null;
+
+  const result = publish({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }]),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl }),
+      release: ({ status }) => {
+        releaseStatus = status;
+        return {
+          schema: "agentic-writer-lease/v1",
+          status,
+          epoch: 1,
+          sessionId: "chat-a",
+          device: "device",
+          scope: "runtime-leases",
+          branch,
+          baseSha: "a".repeat(40),
+          fenceSha: "b".repeat(40),
+          heartbeatAt: "2026-07-17T10:00:00.000Z",
+          expiresAt: "2026-07-17T10:00:00.000Z",
+        };
+      },
+    },
+    sessionId: "chat-a",
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.deepEqual(calls[0], ["git", "merge-base", "--is-ancestor", "b".repeat(40), "HEAD"]);
+  assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"));
+  assert.equal(releaseStatus, "delivery");
+});
+
+test("resume takes over only a parked remote lease with a newer fencing epoch", () => {
+  const calls = [];
+  const branch = "agent/old-device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const priorLease = {
+    schema: "agentic-writer-lease/v1",
+    status: "parked",
+    epoch: 4,
+    sessionId: "chat-old",
+    device: "old-device",
+    scope: "runtime-leases",
+    branch,
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    heartbeatAt: "2026-07-17T10:00:00.000Z",
+    expiresAt: "2026-07-17T10:00:00.000Z",
+  };
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    [`rev-parse origin/${branch}`]: "c".repeat(40),
+    "rev-parse HEAD": "d".repeat(40),
+  });
+  let claimInput = null;
+  const resumedLease = {
+    ...priorLease,
+    status: "active",
+    epoch: 5,
+    sessionId: "chat-new",
+    device: "new-device",
+    baseSha: "c".repeat(40),
+    fenceSha: "d".repeat(40),
+    pullRequestUrl,
+    expiresAt: "2026-07-17T10:30:00.000Z",
+  };
+
+  const result = resume({
+    branchName: branch,
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: args => args[0] === "config" ? "new-device" : "",
+    ghText: () => JSON.stringify([{
+      number: 1,
+      headRefName: branch,
+      url: pullRequestUrl,
+      body: renderWriterLeasePullRequestBody(priorLease),
+    }]),
+    leaseStore: {
+      claim: input => { claimInput = input; return { ...resumedLease, fenceSha: null }; },
+      annotate: () => resumedLease,
+    },
+    sessionId: "chat-new",
+    leaseTtlMs: 1_800_000,
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+    now: () => new Date("2026-07-17T10:05:00.000Z"),
+  });
+
+  assert.equal(claimInput.previousEpoch, 4);
+  assert.equal(result.epoch, 5);
+  assert.ok(calls.some(call => call.join(" ") === `git push origin ${branch}`));
+  assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "edit"));
 });
 
 test("park fails closed when local main does not equal origin/main after refresh", () => {

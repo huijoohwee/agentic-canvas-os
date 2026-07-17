@@ -2,7 +2,7 @@
 title: "Agentic OS Agent Instructions"
 graphId: "md:agentic-os-agents"
 doc_type: "Agent Instructions"
-date: "2026-07-16"
+date: "2026-07-17"
 lang: "en-US"
 schema: "agentic-os-agents/v1"
 frontmatter_contract: "required"
@@ -74,6 +74,8 @@ Use existing shared utilities for invocation content:
 - Resolve `GITHUB_ROOT` as the parent directory of the `agentic-canvas-os` checkout; never encode a user-specific absolute path in this control surface.
 - Work Dev-first in `$GITHUB_ROOT/knowgrph`.
 - Before every Codex build session, follow `START-WORKFLOW.md`: fetch first, require exactly one registered worktree per repository, inspect ownership, then activate the task branch in the canonical checkout.
+- Parallel chats may inspect and plan, but only the session holding the target repository's unexpired `agentic-writer-lease/v1` record may mutate its canonical checkout. Pass the canonical `--repository` to `device:start`, `device:resume`, and `device:heartbeat`; never borrow another chat's session id.
+- Permit simultaneous cross-device implementation only for different semantic scopes with distinct draft ownership pull requests. Same-scope work waits for a parked, exact-SHA handoff and a newer fencing epoch.
 - Establish cross-device parity only from identical exact Knowgrph and Agentic Canvas OS commit SHAs reported by the running surfaces. Branch names, ports, and device labels are informational, not proof.
 - Require visible runtime identity and revision-keyed catalog hydration. A docs revision change invalidates the prior catalog; allow at most two explicit refresh attempts before returning a visible blocked or stale result.
 - Require one application-root canonical identity owner for all of Knowgrph. MainPanel Settings renders `Cross-device Identity Gate` inside the Settings body as a shared KTV section; Settings, Skills & Commands, Chat, and `/`, `#`, `@` catalog hydration may project or publish facets but must not own identity.

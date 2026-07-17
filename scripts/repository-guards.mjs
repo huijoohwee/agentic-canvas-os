@@ -1,5 +1,9 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
+import {
+  assertNoCompetingScopePullRequests,
+  assertUniquePullRequestScopes,
+} from "./writer-lease-lib.mjs";
 
 export function parseWorktreePaths(porcelain) {
   return String(porcelain || "")
@@ -35,12 +39,7 @@ export function assertNoUnmergedPaths({ conflictPaths, indexEntries }) {
 }
 
 export function assertNoCompetingPullRequests(pulls, activeBranch) {
-  const normalized = Array.isArray(pulls) ? pulls : [];
-  const owned = normalized.filter((pull) => pull.headRefName === activeBranch);
-  const competing = normalized.filter((pull) => pull.headRefName !== activeBranch);
-  if (owned.length > 1 || competing.length > 0) {
-    const details = normalized.map((pull) => `#${pull.number}:${pull.headRefName}`).join(", ");
-    throw new Error(`Exactly one active delivery PR is allowed; close or consolidate competing PRs first (${details})`);
-  }
-  return owned[0] || null;
+  return assertNoCompetingScopePullRequests(pulls, activeBranch);
 }
+
+export { assertUniquePullRequestScopes };

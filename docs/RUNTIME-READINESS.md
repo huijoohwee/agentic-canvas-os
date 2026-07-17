@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Readiness"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-readiness"
 doc_type: "Runtime Readiness Matrix"
-date: "2026-07-08"
+date: "2026-07-17"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-readiness/v1"
 frontmatter_contract: "required"
@@ -84,6 +84,7 @@ Runtime-ready means the claim can be proven from surfaced output. This file mark
 | Capability | Current target | Runtime-ready proof | Status |
 |---|---|---|---|
 | Documentation control surface | Local docs parse, route, validate, and preserve deploy boundaries. | `RUNTIME-PROOF.md` records frontmatter, line-count, ASCII, artifact, route, diff, and deploy-guard checks. | Runtime-ready |
+| Multi-chat writer coordination | Same-device chats serialize canonical-checkout mutation while different devices may implement different semantic scopes concurrently. | `writer-lease-lib.mjs`, `device-branch-lib.mjs`, the pre-commit guard, draft ownership PR metadata, monotonic epochs, TTL heartbeat, and fencing ancestry have focused unit proof. | Runtime-ready in Dev |
 | Soul identity layer | Durable identity, prompt slot 1, and personality overlay contracts are source-backed. | `SOUL.md`, `FACTS.md`, dictionaries, `MEMORY.md`, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and `PRD-TAD.md` expose matching routes, tags, bindings, guards, and VCCs. | Runtime-ready for docs |
 | Persistent memory contracts | Bounded agent notes, explicit user profile, append-only monthly history, frozen snapshots, writes, compaction, and session search are documented as no-copy contracts. | `MEMORY.md`, `MEMORY-LOG.md`, `memory/YYYY-MM.md`, `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`, and `VALIDATION-RUNBOOK.md` enforce hybrid structure at startup and byte-prefix preservation before release. | Runtime-ready for docs |
 | Skills system contracts | Skill discovery, on-demand load, progressive disclosure, bundles, managed writes, and open-standard compatibility are documented as no-copy contracts. | `FACTS.md`, dictionaries, `SKILLS.md`, `MEMORY.md`, `AGENTS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and `PRD-TAD.md` expose matching routes, tags, bindings, guards, and VCCs. | Runtime-ready for docs |

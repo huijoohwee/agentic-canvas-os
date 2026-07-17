@@ -29,21 +29,23 @@ export function start({
   requireSession(sessionId);
   requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
-  const device = sanitize(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
-  const branch = `agent/${device}/${sanitize(scope)}`;
+  const device = sanitizeDevice(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
+  const normalizedScope = sanitizeScope(scope);
+  const branch = `agent/${device}/${normalizedScope}`;
+  if (!parseDeviceBranch(branch)) throw new Error(`Generated branch does not satisfy the device branch contract: ${branch}`);
   run("git", ["fetch", "origin", "main"]);
   requireNoCompetingPullRequest({ branch, ghText });
   const baseSha = gitText(["rev-parse", "origin/main"]).trim();
   const claimed = leaseStore.claim({
     sessionId,
     device,
-    scope: sanitize(scope),
+    scope: normalizedScope,
     branch,
     baseSha,
     ttlMs: leaseTtlMs,
   });
   run("git", ["switch", "--create", branch, "origin/main"]);
-  run("git", ["commit", "--allow-empty", "-m", `chore(coordination): claim ${sanitize(scope)} lease ${claimed.epoch}`]);
+  run("git", ["commit", "--allow-empty", "-m", `chore(coordination): claim ${normalizedScope} lease ${claimed.epoch}`]);
   const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
   let lease = leaseStore.annotate({ sessionId, values: { fenceSha } });
   run("git", ["push", "--set-upstream", "origin", branch]);
@@ -56,7 +58,7 @@ export function start({
     "--head",
     branch,
     "--title",
-    `WIP: ${sanitize(scope)}`,
+    `WIP: ${normalizedScope}`,
     "--body",
     renderWriterLeasePullRequestBody(lease),
   ]).trim();
@@ -162,7 +164,7 @@ export function resume({
     run("git", ["switch", "--create", branchName, "--track", remoteRef]);
   }
 
-  const device = sanitize(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
+  const device = sanitizeDevice(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
   const claimed = leaseStore.claim({
     sessionId,
     device,
@@ -369,6 +371,26 @@ export function formatParkTimestamp(date = new Date()) {
 
 export function sanitize(value) {
   const normalized = String(value).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!normalized) throw new Error("Device/scope must contain an ASCII letter or number.");
+  return normalized.slice(0, 48);
+}
+
+export function sanitizeDevice(value) {
+  const normalized = String(value).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").slice(0, 48);
+  if (!/^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/.test(normalized)) {
+    throw new Error("Device must have ASCII alphanumeric boundaries.");
+  }
+  return normalized;
+}
+
+export function sanitizeScope(value) {
+  const normalized = normalizeBranchSegment(value, /[^a-z0-9-]+/g, /^-+|-+$/g);
+  if (!normalized) throw new Error("Semantic scope must contain an ASCII letter or number.");
+  return normalized;
+}
+
+function normalizeBranchSegment(value, invalidPattern, edgePattern) {
+  const normalized = String(value).toLowerCase().replace(invalidPattern, "-").replace(edgePattern, "");
   if (!normalized) throw new Error("Device/scope must contain an ASCII letter or number.");
   return normalized.slice(0, 48);
 }

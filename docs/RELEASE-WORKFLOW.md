@@ -26,7 +26,9 @@ workspace:
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
 stage_order: ["preflight", "reconcile", "ssot", "memory", "planning", "validate", "integrate", "promote", "deploy", "verify", "report"]
 coordination:
-  branch_pattern: "agent/<device>/<semantic-scope>"
+  branch_pattern: "^agent/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+  device_segment_contract: "lowercase alphanumeric boundaries with interior dot, underscore, or hyphen"
+  semantic_scope_segment_contract: "lowercase alphanumeric boundaries with interior hyphen only"
   one_active_writer: true
   direct_main_push: false
   handoff_identity: "pushed commit SHA"
@@ -71,7 +73,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 - Complete `START-WORKFLOW.md` before build work: fetch first, require exactly one registered worktree per repository, inspect ownership, and activate the task branch in the canonical checkout; pull only on a clean, exclusively owned branch when updating it intentionally.
 - Require the current session-bound writer lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope pull requests may coexist, but duplicate active scope ownership blocks release.
 - Use one task, semantic scope, canonical checkout, branch, and active writer; additional worktrees are forbidden.
-- Create `agent/<device>/<semantic-scope>` from the latest `origin/main`.
+- Create a contract-valid `agent/<device>/<semantic-scope>` from the latest `origin/main`; preserve interior `.`, `_`, and `-` in the device segment, but normalize semantic scope to lowercase alphanumerics and hyphens before any checkout mutation.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
 - Hand off only after the sender stops and pushes an exact commit SHA.

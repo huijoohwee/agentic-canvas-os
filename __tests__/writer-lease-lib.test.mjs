@@ -17,7 +17,20 @@ test("device branch identity separates device from semantic scope", () => {
     device: "mac-a",
     scope: "rich-media",
   });
+  assert.deepEqual(parseDeviceBranch("agent/katrinas-macbook-pro.local/rich-media"), {
+    branch: "agent/katrinas-macbook-pro.local/rich-media",
+    device: "katrinas-macbook-pro.local",
+    scope: "rich-media",
+  });
+  assert.deepEqual(parseDeviceBranch("agent/build_host/rich-media"), {
+    branch: "agent/build_host/rich-media",
+    device: "build_host",
+    scope: "rich-media",
+  });
   assert.equal(parseDeviceBranch("main"), null);
+  assert.equal(parseDeviceBranch("agent/.local/rich-media"), null);
+  assert.equal(parseDeviceBranch("agent/mac-a/rich_media"), null);
+  assert.equal(parseDeviceBranch("agent/mac-a/rich.media"), null);
 });
 
 test("writer lease serializes chats, increments fencing epochs, and supports heartbeat", () => {
@@ -46,6 +59,22 @@ test("writer lease serializes chats, increments fencing epochs, and supports hea
     const takeover = store.claim({ ...input, sessionId: "chat-b" });
     assert.equal(takeover.epoch, 2);
     assert.throws(() => store.verify({ sessionId: "chat-a", branch: input.branch }), /belongs to another session/);
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
+test("writer lease rejects branch metadata that disagrees with its parsed identity", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  const store = createWriterLeaseStore({ gitCommonDir });
+  try {
+    assert.throws(() => store.claim({
+      sessionId: "chat-a",
+      device: "mac-a",
+      scope: "runtime-leases",
+      branch: "agent/mac-b/runtime-leases",
+      baseSha: "a".repeat(40),
+    }), /must match its branch identity/);
   } finally {
     rmSync(gitCommonDir, { recursive: true, force: true });
   }

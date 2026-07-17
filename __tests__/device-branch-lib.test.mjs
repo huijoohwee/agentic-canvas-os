@@ -9,6 +9,9 @@ import {
   park,
   publish,
   resume,
+  sanitize,
+  sanitizeDevice,
+  sanitizeScope,
   start,
 } from "../scripts/device-branch-lib.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
@@ -31,6 +34,37 @@ test("formatParkTimestamp emits git-friendly UTC stamps", () => {
     createParkMessage("agent/device/scope", new Date("2026-07-14T22:30:45.123Z")),
     "park: agent/device/scope 20260714T223045Z",
   );
+});
+
+test("device and scope sanitizers preserve hostname identity without widening scope grammar", () => {
+  assert.equal(sanitize("Legacy.Scope_Value"), "legacy.scope_value");
+  assert.equal(sanitizeDevice("Katrinas-MacBook-Pro.local"), "katrinas-macbook-pro.local");
+  assert.equal(sanitizeDevice("build_host"), "build_host");
+  assert.equal(sanitizeScope("Local_Branch.Runtime Contract"), "local-branch-runtime-contract");
+  assert.throws(() => sanitizeDevice(".local"), /Device must have ASCII alphanumeric boundaries/);
+});
+
+test("start rejects an invalid device before checkout mutation", () => {
+  const calls = [];
+  const gitText = createGitText({
+    "worktree list --porcelain": `worktree ${repo}\n`,
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+  });
+
+  assert.throws(() => start({
+    scope: "runtime-leases",
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => ".local",
+    ghText: () => "[]",
+    leaseStore: {},
+    sessionId: "chat-a",
+    run: (command, args) => calls.push([command, ...args]),
+  }), /Device must have ASCII alphanumeric boundaries/);
+  assert.deepEqual(calls, []);
 });
 
 test("start claims a lease and publishes a draft ownership PR before authoring", () => {

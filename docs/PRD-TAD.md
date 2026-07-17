@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Agentic Canvas OS PRD/TAD"
 graphId: "md:knowgrph-agentic-canvas-os-prd-tad-local"
 doc_type: "Combined PRD/TAD"
-date: "2026-07-07"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -124,6 +124,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Load durable identity | Given a prompt assembly path, when `/soul.load` runs, then prompt slot 1 uses scanned `SOUL.md` content or returns typed fallback without silent hardcoded identity. | Must |
 | Persist bounded memory | Given a durable fact or explicit preference, when `/memory.write` or `/user.profile` runs, then the entry is target-scoped, scanned, capacity-checked, and persisted or rejected with a typed reason. | Must |
 | Load procedural skills on demand | Given a task that matches a skill, when `/skill.discover` and `/skill.load` run, then metadata loads before selected instructions and referenced resources load only when required. | Must |
+| Audit durable instructions | Given `AGENTS.md` and `SKILLS.md`, when `/instruction.audit` runs, then required intent, context budgets, duplicate guidance, owner leakage, zero model cost, and deploy state are returned without rewriting either source. | Must |
 | Load project context safely | Given a working directory or touched path, when `/context.discover` and `/context.load` run, then one effective project context is discovered, scanned, bounded, and kept subordinate to facts and identity. | Must |
 | Inject inline context by reference | Given a message with approved `@` references, when `/reference.expand` runs on a supported surface, then bounded `@attached-context` is appended with warnings or refusals and raw text is preserved on unsupported surfaces. | Must |
 | Coordinate named profiles by Kanban | Given several profiles or worker processes, when `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` runs, then all coordination state is stored as validated `kanban.md` rows. | Must |
@@ -225,6 +226,7 @@ flowchart TB
 | Agentic OS memory | Bounded agent notes, frozen snapshot, memory writes, compaction, and session search | `docs/MEMORY.md`, dictionaries, and memory harness owners |
 | User profile | Explicit operator preferences, communication style, and expectations | `docs/USER.md`, dictionaries, and memory harness owners |
 | Skills system | On-demand procedural knowledge, progressive disclosure, bundles, managed writes, and open-standard-compatible skill sources | `docs/SKILLS.md`, dictionaries, and skill harness owners |
+| Instruction audit | Model-free context budgets, intent preservation, duplicate detection, baseline reduction, and canonical-owner checks | `docs/INSTRUCTION-AUDIT.md`, `scripts/instruction-audit-lib.mjs`, and focused tests |
 | Context files | Working-directory and subdirectory project context discovery, scan, truncation, and audit | `FACTS.md`, `AGENTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and context harness owners |
 | Context references | Explicit `@` message references expanded into bounded attached context | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and approved composer or local harness owners |
 | Kanban collaboration | Durable task and handoff rows for named profiles and full OS worker processes | `kanban.md`, `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and shared table/Kanban owners |

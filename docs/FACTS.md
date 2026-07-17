@@ -2,7 +2,7 @@
 title: "Agentic OS Facts"
 graphId: "md:agentic-os-facts"
 doc_type: "Agentic OS Facts"
-date: "2026-07-17"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-os-facts/v1"
 frontmatter_contract: "required"
@@ -58,6 +58,7 @@ external_pattern_sources:
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tools"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search"
   - "https://agentskills.io/specification"
+  - "https://learn.chatgpt.com/docs/customization/overview"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents"
   - "https://github.com/NousResearch/hermes-agent-self-evolution"
   - "https://github.com/langchain-ai/langgraph"
@@ -90,6 +91,7 @@ direct_resolution:
   "/skill.load": "DICTIONARY-COMMAND.md#/skill.load"
   "/skill.bundle": "DICTIONARY-COMMAND.md#/skill.bundle"
   "/skill.manage": "DICTIONARY-COMMAND.md#/skill.manage"
+  "/instruction.audit": "DICTIONARY-COMMAND.md#/instruction.audit"
   "/context.discover": "DICTIONARY-COMMAND.md#/context.discover"
   "/context.load": "DICTIONARY-COMMAND.md#/context.load"
   "/context.audit": "DICTIONARY-COMMAND.md#/context.audit"
@@ -141,6 +143,7 @@ direct_resolution:
   "#memory-capacity": "DICTIONARY-SEMANTIC.md##memory-capacity"
   "#session-search": "DICTIONARY-SEMANTIC.md##session-search"
   "#skill-system": "DICTIONARY-SEMANTIC.md##skill-system"
+  "#instruction-audit": "DICTIONARY-SEMANTIC.md##instruction-audit"
   "#image-to-threejs": "DICTIONARY-SEMANTIC.md##image-to-threejs"
   "#image-to-glb": "DICTIONARY-SEMANTIC.md##image-to-glb"
   "#knowgrph.probe-tree": "DICTIONARY-SEMANTIC.md##knowgrph.probe-tree"
@@ -259,10 +262,11 @@ direct_resolution:
   "@operator": "DICTIONARY-BINDING.md#@operator"
   "@source.frontmatter": "DICTIONARY-BINDING.md#@source.frontmatter"
   "@runtime-proof": "DICTIONARY-BINDING.md#@runtime-proof"
+  "@instruction-source": "DICTIONARY-BINDING.md#@instruction-source"
 truth_tokens:
-  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/image.to-threejs", "/image.to-glb", "/knowgrph.probe-tree", "/animation.control", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
-  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#spec.low", "#spec.medium", "#spec.high", "#thinking.type.enabled", "#thinking.type.disabled", "#thinking.type.auto", "#token-cap.low", "#token-cap.medium", "#token-cap.high", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#image-to-threejs", "#image-to-glb", "#knowgrph.probe-tree", "#character-motion", "#action-path", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
-  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@image-to-threejs", "@image-to-glb", "@knowgrph.probe-tree", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
+  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/image.to-threejs", "/image.to-glb", "/knowgrph.probe-tree", "/animation.control", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/instruction.audit", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
+  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#spec.low", "#spec.medium", "#spec.high", "#thinking.type.enabled", "#thinking.type.disabled", "#thinking.type.auto", "#token-cap.low", "#token-cap.medium", "#token-cap.high", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#instruction-audit", "#image-to-threejs", "#image-to-glb", "#knowgrph.probe-tree", "#character-motion", "#action-path", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
+  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@instruction-source", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@image-to-threejs", "@image-to-glb", "@knowgrph.probe-tree", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
 ---
 
 # Agentic OS Facts
@@ -351,6 +355,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | `/skill.load` | `DICTIONARY-COMMAND.md` | Route for loading one on-demand skill and optional referenced resource. | Load full source only after selection; load referenced files only when required; reject deep reference chains. |
 | `/skill.bundle` | `DICTIONARY-COMMAND.md` | Route for grouping several installed skills behind one command. | Resolve all listed skills, report skipped missing skills, and keep bundle instructions bounded. |
 | `/skill.manage` | `DICTIONARY-COMMAND.md` | Route for create, patch, edit, delete, or supporting-file changes. | Require source evidence, scan, validation, operator review when gated, and no direct auto-commit. |
+| `/instruction.audit` | `DICTIONARY-COMMAND.md` | Route for model-free durable-guidance and skill-catalog auditing. | Preserve required intent, enforce context budgets, reject duplicate guidance and owner leakage, and report zero model cost. |
 | `/context.discover` | `DICTIONARY-COMMAND.md` | Route for discovering project-local context files from a working directory. | Use scoped startup and touched-path discovery, first-match project context, zero model spend, and no mutation. |
 | `/context.load` | `DICTIONARY-COMMAND.md` | Route for loading one scanned and bounded context file. | Scan for injection and secrets, truncate within policy, and return loaded or blocked state. |
 | `/context.audit` | `DICTIONARY-COMMAND.md` | Route for inspecting effective project context and safety state. | Report precedence, loaded files, skipped files, truncation, stale risks, and proof without rewriting files. |
@@ -379,6 +384,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | `@user-profile` | `DICTIONARY-BINDING.md` | Binding for bounded user profile store. | Explicit preferences only; no unsupported personal inference. |
 | `@session-index` | `DICTIONARY-BINDING.md` | Binding for searchable past-session records. | Read-only search unless an explicit memory capture is approved. |
 | `#skill-system` | `DICTIONARY-SEMANTIC.md` | Semantic route for on-demand procedural knowledge. | Keep skill metadata small, load detailed instructions only when selected, and validate open-standard shape. |
+| `#instruction-audit` | `DICTIONARY-SEMANTIC.md` | Semantic route for structural instruction-context discipline. | Measure required intent, context budgets, duplication, progressive disclosure, and canonical ownership without model grading. |
 | `#progressive-disclosure` | `DICTIONARY-SEMANTIC.md` | Semantic route for token-minimizing staged loading. | Index metadata loads first; full `SKILL.md` and resources load only when needed. |
 | `#skill-bundle` | `DICTIONARY-SEMANTIC.md` | Semantic route for grouped skills under one invocation. | Bundles are aliases over existing skills, not installs or hardcoded registries. |
 | `#agentskills-compatible` | `DICTIONARY-SEMANTIC.md` | Semantic route for open-standard skill file shape. | Require standard frontmatter, concise description, body instructions, optional resources, and validation. |
@@ -399,6 +405,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | `@skill-reference` | `DICTIONARY-BINDING.md` | Binding for optional scripts, references, templates, or assets. | Load on demand, keep references shallow, and validate before use. |
 | `@skill-bundle` | `DICTIONARY-BINDING.md` | Binding for a bundle manifest. | Must resolve to existing skills and report missing entries. |
 | `@skill-policy` | `DICTIONARY-BINDING.md` | Binding for trust, scan, write approval, and compatibility policy. | Blocks unsafe installs, writes, and incompatible skill loads before execution. |
+| `@instruction-source` | `DICTIONARY-BINDING.md` | Binding for one audited durable-guidance or skill-catalog source. | Read-only input with no rewrite, runtime, release, or deploy grant. |
 | `@context-file` | `DICTIONARY-BINDING.md` | Binding for one discovered context file. | Read-only by default, scanned, bounded, and subordinate to stronger truth, identity, role, and operator layers. |
 | `@working-directory` | `DICTIONARY-BINDING.md` | Binding for the context discovery root. | Must be explicit and scoped to the current project or touched path. |
 | `@context-policy` | `DICTIONARY-BINDING.md` | Binding for precedence, security scan, truncation, and discovery rules. | First-match project context, per-directory visited set, and fail-closed blocking are required. |

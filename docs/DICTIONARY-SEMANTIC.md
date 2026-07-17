@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-09"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -104,6 +104,7 @@ dictionary_entries:
   - "#memory-capacity"
   - "#session-search"
   - "#skill-system"
+  - "#instruction-audit"
   - "#image-to-threejs"
   - "#image-to-glb"
   - "#knowgrph.probe-tree"
@@ -232,6 +233,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#memory-capacity` | Character/token bound for memory and profile targets. | A write could overflow or a target approaches its limit. | Overflow returns typed error; compaction, replacement, or removal is required before retry. |
 | `#session-search` | On-demand search over prior conversations or session records. | A task needs specifics from past conversations that are not in active memory. | Results cite sessions and remain read-only unless explicitly captured. |
 | `#skill-system` | On-demand procedural knowledge loaded only when useful. | A task should use a reusable skill, skill variant, or skill source. | Metadata discovery, selected source load, shallow resource loading, and no-copy policy are present. |
+| `#instruction-audit` | Structural context discipline for durable guidance and skill catalogs. | Instruction surfaces are added, expanded, consolidated, or promoted. | Required intent, budgets, duplication, progressive disclosure, owner boundaries, zero model cost, and deploy state are reported. |
 | `#image-to-threejs` | Native image-source conversion into a typed Three.js render projection. | A selected Card or Widget binds one PNG, JPG, JPEG, or SVG source to `image.to-threejs`. | The shared `imageToThreeJs` contract validates the source, reports zero model cost, and projects one canonical `threejs` render mode or a typed fallback. |
 | `#image-to-glb` | Native image-source conversion into a procedural GLB asset contract. | A selected Card or Widget binds one PNG, JPG, JPEG, or SVG source to `image.to-glb`. | The contract accepts procedural JS/TS construction only, logs bounded vision-review passes, exports GLB through the asset pipeline, and rejects baked/serialized geometry or embedded glTF buffers. |
 | `#knowgrph.probe-tree` | Bounded Probe-Tree Type 2 generation and continuation from a Widget Card. | A selected or answered child invokes `/knowgrph.probe-tree` with its authored graph identity, canonical numbered multi-select or Other Output, and bounded ancestor lineage. | Each generated card exposes 2-4 context-relevant clarification suggestions plus Other and 2-6 verbatim child-or-lineage anchors; bare focus fragments, stock response content, recalled-exemplar wording, and root-alias ownership fail validation, branches cascade forward without backtracking, pinned coordinates remain authoritative, generation does not reload the page, and depth or approval limits stop visibly before spend. |

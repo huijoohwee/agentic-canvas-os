@@ -24,6 +24,7 @@
     "device:resume": "node ./scripts/device-branch.mjs resume",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
+    "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",
     "doctor": "node ./scripts/doctor.mjs",
     "git:configure": "git config core.hooksPath .githooks",
     "github:configure": "node ./scripts/configure-github.mjs",

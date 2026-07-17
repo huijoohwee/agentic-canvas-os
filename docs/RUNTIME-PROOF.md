@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Proof"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-proof"
 doc_type: "Runtime Proof Ledger"
-date: "2026-07-17"
+date: "2026-07-18"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-proof/v1"
 frontmatter_contract: "required"
@@ -18,6 +18,7 @@ source_docs:
   - "DICTIONARY-SEMANTIC.md"
   - "DICTIONARY-BINDING.md"
   - "HARNESS-CONTRACTS.md"
+  - "INSTRUCTION-AUDIT.md"
   - "MCP-GATEWAY.md"
   - "MEMORY.md"
   - "PRD-TAD.md"
@@ -121,6 +122,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Append-only memory log | `MEMORY-LOG.md`, `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`, and `VALIDATION-RUNBOOK.md` require exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil blocks, complete fields, structural startup proof, and byte-prefix release proof. | Local-time or minute-only sigils, pure YAML entries, table SSOT, bolded sigils, deletion, rewrite, reorder, compaction, or insertion before EOF. |
 | Monthly planning shards | `TODO.md` owns bounded routing and `todo/YYYY-MM.md` owns append-only `todo-log/v1` rows with exact scope/month, lifecycle, chronology, size caps, adoption boundary, and base-prefix proof. | Monolithic planning tables, closed-month mutation, wrong-month headings, retroactive normalization, prepend writes, silent overflow shards, or embedding-first retrieval. |
 | Skills system contracts | `/skill.discover`, `/skill.load`, `/skill.bundle`, `/skill.manage`, matching `#` tags, matching `@` bindings, and matching skill contracts resolve from source docs. | Copied skills, examples, layouts, prompt text, tests, fixtures, external repositories, or live skill runtime execution. |
+| Instruction audit runtime | `/instruction.audit`, `#instruction-audit`, `@instruction-source`, context budgets, required intent, exact duplicate detection, and canonical-owner checks are executable locally. | Model-based style grading, automatic instruction rewrites, copied external guidance, or deploy authority. |
 | Context files contracts | `/context.discover`, `/context.load`, `/context.audit`, `#context-file`, `#project-context`, `#cwd-discovery`, `@context-file`, `@working-directory`, `@context-policy`, and matching skill contracts resolve from source docs. | Copied context discovery code, scanner code, example files, prompt assembly text, tests, fixtures, prose, or live context runtime execution. |
 | Context references contracts | `/reference.expand`, `/reference.audit`, `#context-reference`, `#inline-context`, `#attached-context`, `@file:`, `@folder:`, `@diff`, `@staged`, `@git:`, `@url:`, `@reference-policy`, `@attached-context`, and matching skill contracts resolve from source docs. | Copied context-reference parser code, prompt section text, examples, tests, fixtures, prose, or live reference runtime execution. |
 | Kanban collaboration contracts | `/kanban.task`, `/kanban.handoff`, `/kanban.sync`, `#kanban-board`, `#task-row`, `#profile-handoff`, `#worker-process`, `#multi-agent-collaboration`, `@kanban-board`, `@task-row`, `@handoff-row`, `@agent-profile`, `@worker-process`, and `kanban.collaborate` resolve from source docs. | Copied board runtimes, schema examples, hidden in-process subagent swarms, or live worker process execution. |
@@ -153,6 +155,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Cache context is executable | `npm run cache-context:check` reports 6/6 passing for exact stable-prefix reuse, idempotent registration, revision invalidation, least-recent bounded eviction, provider-eligibility honesty, and cache read/write telemetry. `GET /api/ready` exposes only sanitized registry policy and keeps provider cache status `unverified`. | Runtime-ready in Dev; live provider hit remains gated |
 | Reasoning continuity is executable | `npm run reasoning-continuity:check` reports 8/8 passing for first-turn behavior, exact invariant reuse, drift reset, capability gating, returned-context confirmation, mismatch rejection, active-turn serialization, and bounded retention. `GET /api/ready` exposes only policy and counters while provider-effective context remains `unverified`. | Runtime-ready in Dev; live provider confirmation remains gated |
 | Programmatic tool calling is executable | `npm run programmatic-tool-calling:check` reports 10/10 passing for hosted orchestration, no local dynamic-code fallback, capability and configuration gates, attestation, lineage, direct-call enforcement, schemas, bounds, serialization, timeout, costs, and no generated-code return. App and Worker readiness tests expose only sanitized policy while provider context isolation remains `unverified`. | Runtime-ready in Dev; hosted adapter proof remains gated |
+| Instruction audit is executable | `npm run instruction-audit:check -- --baseline-ref=9916527fb7ac78dbd80772eaa7412c21259314de` reports 7/7 focused tests, two passing current surfaces, 1,027 body words, 3,951 estimated tokens, zero violations, and 58,748 fewer characters (78.8%) than the inspected base. Fixtures prove missing intent, duplicate directives, excessive directive context, embedded procedures, canonical-owner leakage, and route drift fail closed. | Runtime-ready in Dev; behavioral quality evaluation remains separate |
 | Soul routes hold | Route consistency checks include `/soul.load`, `/personality.overlay`, `#soul`, `#primary-identity`, `#personality-overlay`, `@soul-profile`, `@identity-slot`, `@personality-overlay`, `soul.load`, and `personality.overlay`. | Passed |
 | Persistent memory routes hold | Route consistency checks include memory write, compact, search, session search, user profile, target tags, bindings, and skill contracts. | Passed |
 | Memory-log compliance holds | The structural command validates `memory-log/v1`, UTC-valid `YYYYMMDDTHHmmssZ`, shard-month identity, unique ordered sigils, and required fields; the base-ref command proves historical bytes remain an unchanged prefix. | Passed |
@@ -188,6 +191,7 @@ This ledger proves the local Agentic Canvas OS docs control surface. It does not
 | Soul identity docs contracts | Runtime-ready for docs | Contracts are route-complete, source-backed, scan-bounded, no-copy, and no-hardcoded-default; live prompt runtime remains separately gated. |
 | Persistent memory docs contracts | Runtime-ready for docs | Contracts are route-complete, bounded, target-separated, scan-gated, capacity-aware, and no-copy; live memory runtime remains separately gated. |
 | Skills system docs contracts | Runtime-ready for docs | Contracts are route-complete, metadata-first, progressive, resource-bounded, scan-gated, open-standard-compatible, and no-copy; live skill runtime remains separately gated. |
+| Instruction audit Dev runtime | Runtime-ready in Dev | The local audit is deterministic, intent-preserving, budgeted, duplicate-aware, canonical-owner-aware, baseline-comparable, zero-cost, and non-mutating; it does not claim model-quality improvement from structural reduction alone. |
 | Context files docs contracts | Runtime-ready for docs | Contracts are route-complete, working-directory-scoped, precedence-aware, scan-bounded, subordinate to facts and identity, and no-copy; live context runtime remains separately gated. |
 | Context references docs contracts | Runtime-ready for docs | Contracts are route-complete, workspace-scoped where applicable, egress-aware, warning/refusal typed, bounded, and no-copy; live reference runtime remains separately gated. |
 | Kanban collaboration docs contracts | Runtime-ready for docs | Contracts are route-complete, row-based, profile-named, worker-process-aware, conflict-aware, shared-utility-owned, and no-copy; live worker runtime remains separately gated. |

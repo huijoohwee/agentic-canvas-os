@@ -40,7 +40,8 @@ test("one command delegates to the complete Knowgrph collaboration readiness gat
   const calls = [];
   runCollaborationGate({
     agenticCanvasOsRoot: "/repos/agentic-canvas-os",
-    env: { KNOWGRPH_ROOT: path.resolve("../knowgrph") },
+    env: {},
+    validateOwner: ({ knowgrphRoot }) => knowgrphRoot,
     spawn: (command, args, options) => {
       calls.push({ command, args, options });
       return { status: 0 };
@@ -48,6 +49,7 @@ test("one command delegates to the complete Knowgrph collaboration readiness gat
   });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].args, ["run", "collaboration:readiness:check"]);
+  assert.equal(calls[0].options.cwd, path.resolve("/repos/knowgrph"));
   assert.equal(calls[0].options.stdio, "inherit");
 });
 

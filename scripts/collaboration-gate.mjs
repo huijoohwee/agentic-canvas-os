@@ -40,8 +40,9 @@ export function runCollaborationGate({
   agenticCanvasOsRoot = defaultAgenticCanvasOsRoot,
   env = process.env,
   spawn = spawnSync,
+  validateOwner = assertKnowgrphCollaborationGate,
 } = {}) {
-  const knowgrphRoot = assertKnowgrphCollaborationGate({
+  const knowgrphRoot = validateOwner({
     knowgrphRoot: resolveKnowgrphRoot({ agenticCanvasOsRoot, env }),
   });
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";

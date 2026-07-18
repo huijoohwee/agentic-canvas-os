@@ -110,16 +110,17 @@ run-scoped canvas embed URL.
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |
 | `agent-api/src/reasoning-continuity.js` | Bounded cross-turn invariant registry, compatible request planning, active-turn serialization, and provider-effective context confirmation. |
 | `agent-api/src/function-calling.js` | Strict direct function-call controller, exact call-id continuation, application-gateway dispatch, and bounded final evidence. |
+| `agent-api/src/function-calling-manager.js` | Durable reviewed-call checkpoint, opaque resume token, atomic cross-isolate claim, and terminal settlement owner. |
 | `agent-api/src/openai-responses-function-adapter.js` | Responses translation, strict function selection, same-response continuation, and usage-derived cost evidence. |
 | `agent-api/src/knowgrph-function-gateway.js` | Explicit allowlist, tool guardrails, signed-review pause, and policy-preserving Knowgrph MCP mapping. |
-| `agent-api/src/function-calling-handler.js` | Authenticated bounded HTTP request boundary for direct function calls. |
+| `agent-api/src/function-calling-handler.js` | Authenticated bounded start and review-resume HTTP boundaries for direct function calls. |
 | `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
 | `agent-api/src/tool-search.js` | Session-scoped deferred-definition controller, metadata-only initial exposure, exact search loading, and call authorization. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
 | `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
 | `agent-api/src/guardrails-human-review.js` | Ordered validation plus exact-scoped, authenticated, single-consume human review. |
-| `agent-api/src/durable-object-state-store.js` | Durable Object adapters for atomic review consumption and paused-turn claims. |
+| `agent-api/src/durable-object-state-store.js` | Durable Object adapters for atomic review consumption, paused-turn claims, and Function Calling continuation claims. |
 | `worker/agent-state.js` | Per-identity transactional Durable Object state owner. |
 | `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
 | `agent-api/src/progressive-agents.js` | Incremental facade for one exact agent run, tool-bearing definitions, and explicit specialist workflows. |
@@ -164,9 +165,12 @@ schemas, explicit selection modes, exact call-id outputs, reasoning-item replay,
 and bounded parallel calls are contract-ready. A server-configured OpenAI
 Responses adapter and explicit Knowgrph function allowlist wire
 `POST /api/function-call` to the existing MCP owner; callers cannot submit
-schemas, routing, credentials, or policy. Readiness reports only sanitized
-adapter/gateway state, and `providerExecutionStatus` remains `unverified` until
-a bounded live run returns actual usage and continuation evidence.
+schemas, routing, credentials, or policy. A review pause returns an opaque token;
+`POST /api/function-call/resume` atomically claims the private `AGENT_STATE`
+checkpoint and accepts only a decision plus exact signed reviewer evidence.
+Readiness reports only sanitized adapter, gateway, and manager state, and
+`providerExecutionStatus` remains `unverified` until a bounded live run returns
+actual usage and continuation evidence.
 
 Programmatic tool-calling readiness is also sanitized. The local controller is
 contract-ready, but `configured` and `providerContextIsolation` remain false or

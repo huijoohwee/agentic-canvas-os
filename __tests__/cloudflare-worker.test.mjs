@@ -150,6 +150,8 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.functionCalling.providerExecutionStatus, "unverified");
   assert.equal(body.functionCalling.adapter.configured, false);
   assert.equal(body.functionCalling.gateway.configured, false);
+  assert.equal(body.functionCalling.reviewContinuation, "manager-owned-durable-same-run");
+  assert.equal(body.functionCalling.reviewStateExposure, "resume-token-only");
   assert.equal(body.programmaticToolCalling.contractReady, true);
   assert.equal(body.programmaticToolCalling.configured, false);
   assert.equal(body.programmaticToolCalling.executionOwner, "downstream-hosted-sandbox");
@@ -215,6 +217,9 @@ test("GET /api/ready exposes durable review and paused-turn recovery bindings", 
   assert.equal(body.runningAgents.persistence, "durable-object");
   assert.equal(body.runningAgents.atomicClaims, true);
   assert.equal(body.runningAgents.recovery, "cross-isolate");
+  assert.equal(body.functionCalling.manager.persistence, "durable-object");
+  assert.equal(body.functionCalling.manager.atomicClaims, true);
+  assert.equal(body.functionCalling.manager.recovery, "cross-isolate");
 });
 
 test("POST /api/auth/session mints a session token", async () => {
@@ -314,6 +319,14 @@ test("POST /api/function-call requires auth before adapter or gateway configurat
     request("/api/function-call", { method: "POST", body: { runId: "x", prompt: "x" } }),
     ENV,
   );
+  assert.equal(res.status, 401);
+});
+
+test("POST /api/function-call/resume requires session authentication", async () => {
+  const res = await handleCloudflareRequest(request("/api/function-call/resume", {
+    method: "POST",
+    body: { runId: "run-1", resumeToken: "resume-1", decision: "approve", reviewerToken: "review-1" },
+  }), ENV);
   assert.equal(res.status, 401);
 });
 

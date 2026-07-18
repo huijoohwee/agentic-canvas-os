@@ -8,6 +8,7 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import {
+  createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
   createDurableObjectPausedTurnStore,
 } from "../agent-api/src/durable-object-state-store.js";
@@ -81,6 +82,9 @@ function createWorkerApp(env) {
   const pausedTurnStore = durableStateConfigured
     ? createDurableObjectPausedTurnStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const functionContinuationStore = durableStateConfigured
+    ? createDurableObjectFunctionContinuationStore({ namespace: env.AGENT_STATE })
+    : undefined;
   if (env && typeof env === "object") {
     agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
     if (!agentDefinitions) {
@@ -135,6 +139,7 @@ function createWorkerApp(env) {
     runningAgents,
     reviewStore,
     pausedTurnStore,
+    functionContinuationStore,
     sandboxAgents,
     toolSearch,
     fetchImpl: (req) => fetch(req.url, {
@@ -179,6 +184,12 @@ export async function handleCloudflareRequest(request, env = {}) {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
     const body = await readJsonBody(request);
     return toResponse(await app.functionCall({ headers: headerBag(request), body }));
+  }
+
+  if (url.pathname === "/api/function-call/resume" || url.pathname === "/function-call/resume") {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    return toResponse(await app.functionCallResume({ headers: headerBag(request), body }));
   }
 
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {

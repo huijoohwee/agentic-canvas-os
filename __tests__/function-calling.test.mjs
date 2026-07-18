@@ -33,6 +33,7 @@ function tool(name, overrides = {}) {
   return {
     type: "function",
     name,
+    revision: `${name}/v1`,
     description: `Access ${name} data.`,
     parameters: OBJECT_SCHEMA,
     strict: true,
@@ -141,7 +142,9 @@ test("exposes only provider function fields and forwards policy without caller-s
   assert.equal(result.status, "completed");
   assert.deepEqual(Object.keys(adapterCalls[0].tools[0]).sort(), ["description", "name", "parameters", "strict", "type"]);
   assert.equal(adapterCalls[0].approvals, undefined);
-  assert.deepEqual(gatewayCalls[0].policy, { riskClass: "mutation", idempotent: false, approvalRequired: true });
+  assert.deepEqual(gatewayCalls[0].policy, {
+    revision: "write_record/v1", riskClass: "mutation", idempotent: false, approvalRequired: true,
+  });
   assert.equal(gatewayCalls[0].approvals, undefined);
 });
 

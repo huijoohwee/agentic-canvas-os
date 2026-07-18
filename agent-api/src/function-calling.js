@@ -1,4 +1,24 @@
 import { normalizeJson, serializedJsonLength } from "./json-contract.js";
+import {
+  createFunctionContinuationState,
+  functionToolFingerprint,
+  restoreFunctionContinuationState,
+} from "./function-calling-continuation.js";
+import {
+  normalizeCapabilities,
+  normalizeToolChoice,
+  normalizeTools,
+  publicToolDeclarations,
+} from "./function-calling-contract.js";
+import {
+  aggregateCostLogs,
+  assertIdentifier,
+  blockedResult,
+  callWithTimeout,
+  emptyCostLog,
+  FunctionCallingBlock,
+  normalizeCostLog,
+} from "./function-calling-runtime-support.js";
 
 const DEFAULT_MAX_MODEL_TURNS = 8;
 const DEFAULT_MAX_TOOL_CALLS = 32;
@@ -8,228 +28,9 @@ const DEFAULT_MAX_SCHEMA_CHARS = 100_000;
 const DEFAULT_MAX_TOOL_RESULT_CHARS = 200_000;
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-const CACHE_STATUSES = new Set(["hit", "write", "miss", "unreported"]);
-const TOOL_CHOICE_MODES = new Set(["auto", "required", "none", "forced", "allowed"]);
-const ALLOWED_REQUIREMENTS = new Set(["auto", "required"]);
-
-class FunctionCallingBlock extends Error {
-  constructor(reasonCode, message) {
-    super(message);
-    this.name = "FunctionCallingBlock";
-    this.reasonCode = reasonCode;
-  }
-}
-
 function assertPositiveInteger(value, field) {
   if (!Number.isInteger(value) || value < 1) throw new TypeError(`${field} must be a positive integer.`);
   return value;
-}
-
-function assertIdentifier(value, field) {
-  if (typeof value !== "string" || !value.trim()) throw new TypeError(`${field} must be a non-empty string.`);
-  const normalized = value.trim();
-  if (normalized.length > 512) throw new RangeError(`${field} exceeds 512 characters.`);
-  return normalized;
-}
-
-function normalizeCapabilities(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new TypeError("capabilities must be an object.");
-  }
-  const fields = ["functionCalling", "strictSchemas", "parallelFunctionCalls",
-    "previousResponseContinuation", "reasoningItemReplay"];
-  for (const field of fields) {
-    if (typeof value[field] !== "boolean") throw new TypeError(`capabilities.${field} must be boolean.`);
-  }
-  return Object.freeze(Object.fromEntries(fields.map((field) => [field, value[field]])));
-}
-
-function schemaIncludesType(schema, type) {
-  return schema.type === type || (Array.isArray(schema.type) && schema.type.includes(type));
-}
-
-function assertStrictSchemaNode(schema, field) {
-  if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
-    throw new TypeError(`${field} must be a schema object.`);
-  }
-  if (schemaIncludesType(schema, "object") || schema.properties !== undefined) {
-    if (schema.additionalProperties !== false) {
-      throw new TypeError(`${field}.additionalProperties must be false in strict mode.`);
-    }
-    const properties = schema.properties || {};
-    if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
-      throw new TypeError(`${field}.properties must be an object.`);
-    }
-    if (!Array.isArray(schema.required)) throw new TypeError(`${field}.required must list every property.`);
-    const propertyNames = Object.keys(properties).sort();
-    const requiredNames = [...new Set(schema.required)].sort();
-    if (requiredNames.length !== schema.required.length || propertyNames.join("\0") !== requiredNames.join("\0")) {
-      throw new TypeError(`${field}.required must contain every property exactly once.`);
-    }
-    for (const [name, child] of Object.entries(properties)) {
-      assertStrictSchemaNode(child, `${field}.properties.${name}`);
-    }
-  }
-  if (schemaIncludesType(schema, "array") && schema.items !== undefined) {
-    assertStrictSchemaNode(schema.items, `${field}.items`);
-  }
-  for (const keyword of ["allOf", "anyOf", "oneOf"]) {
-    if (schema[keyword] === undefined) continue;
-    if (!Array.isArray(schema[keyword])) throw new TypeError(`${field}.${keyword} must be an array.`);
-    schema[keyword].forEach((child, index) => assertStrictSchemaNode(child, `${field}.${keyword}[${index}]`));
-  }
-  for (const keyword of ["$defs", "definitions"]) {
-    if (schema[keyword] === undefined) continue;
-    if (!schema[keyword] || typeof schema[keyword] !== "object" || Array.isArray(schema[keyword])) {
-      throw new TypeError(`${field}.${keyword} must be an object.`);
-    }
-    for (const [name, child] of Object.entries(schema[keyword])) {
-      assertStrictSchemaNode(child, `${field}.${keyword}.${name}`);
-    }
-  }
-}
-
-function normalizeStrictObjectSchema(value, field) {
-  const schema = normalizeJson(value, field);
-  if (!schemaIncludesType(schema, "object")) throw new TypeError(`${field} must be an object schema.`);
-  assertStrictSchemaNode(schema, field);
-  return schema;
-}
-
-function normalizeAllowedCallers(value, field) {
-  if (!Array.isArray(value) || value.length === 0) throw new TypeError(`${field} must be a non-empty array.`);
-  const callers = [...new Set(value)];
-  if (callers.some((caller) => caller !== "direct" && caller !== "programmatic")) {
-    throw new TypeError(`${field} contains an unsupported caller.`);
-  }
-  return Object.freeze(callers);
-}
-
-function normalizeTools(value, { maxTools, maxSchemaChars }) {
-  if (!Array.isArray(value) || value.length === 0) throw new TypeError("tools must be a non-empty array.");
-  if (value.length > maxTools) throw new RangeError(`tools must contain at most ${maxTools} entries.`);
-  const names = new Set();
-  let schemaChars = 0;
-  const tools = value.map((tool, index) => {
-    if (!tool || typeof tool !== "object" || Array.isArray(tool)) {
-      throw new TypeError(`tools[${index}] must be an object.`);
-    }
-    if (tool.type !== "function") throw new TypeError(`tools[${index}].type must be function.`);
-    const name = assertIdentifier(tool.name, `tools[${index}].name`);
-    if (names.has(name)) throw new TypeError(`Duplicate tool name: ${name}.`);
-    names.add(name);
-    if (tool.strict !== true) throw new TypeError(`tools[${index}].strict must be true.`);
-    const parameters = normalizeStrictObjectSchema(tool.parameters, `tools[${index}].parameters`);
-    const outputSchema = normalizeStrictObjectSchema(tool.outputSchema, `tools[${index}].outputSchema`);
-    schemaChars += serializedJsonLength(parameters) + serializedJsonLength(outputSchema);
-    if (schemaChars > maxSchemaChars) throw new RangeError(`Tool schemas exceed ${maxSchemaChars} characters.`);
-    if (typeof tool.idempotent !== "boolean") throw new TypeError(`tools[${index}].idempotent must be boolean.`);
-    if (typeof tool.approvalRequired !== "boolean") {
-      throw new TypeError(`tools[${index}].approvalRequired must be boolean.`);
-    }
-    if (typeof tool.validateArguments !== "function" || typeof tool.validateOutput !== "function") {
-      throw new TypeError(`tools[${index}] must provide argument and output validators.`);
-    }
-    return Object.freeze({
-      type: "function",
-      name,
-      description: assertIdentifier(tool.description, `tools[${index}].description`),
-      parameters,
-      strict: true,
-      outputSchema,
-      allowedCallers: normalizeAllowedCallers(tool.allowedCallers, `tools[${index}].allowedCallers`),
-      riskClass: assertIdentifier(tool.riskClass, `tools[${index}].riskClass`),
-      idempotent: tool.idempotent,
-      approvalRequired: tool.approvalRequired,
-      validateArguments: tool.validateArguments,
-      validateOutput: tool.validateOutput,
-    });
-  });
-  return Object.freeze(tools);
-}
-
-function publicToolDeclarations(tools) {
-  return Object.freeze(tools.map(({ type, name, description, parameters, strict }) => Object.freeze({
-    type, name, description, parameters, strict,
-  })));
-}
-
-function normalizeToolChoice(value, toolNames) {
-  const choice = value === undefined ? { mode: "auto" } : value;
-  if (!choice || typeof choice !== "object" || Array.isArray(choice) || !TOOL_CHOICE_MODES.has(choice.mode)) {
-    throw new TypeError("toolChoice.mode must be auto, required, none, forced, or allowed.");
-  }
-  if (choice.mode === "forced") {
-    const name = assertIdentifier(choice.name, "toolChoice.name");
-    if (!toolNames.has(name)) throw new TypeError(`toolChoice names an unknown tool: ${name}.`);
-    return Object.freeze({ mode: "forced", name });
-  }
-  if (choice.mode === "allowed") {
-    if (!Array.isArray(choice.names) || choice.names.length === 0) {
-      throw new TypeError("toolChoice.names must be a non-empty array.");
-    }
-    const names = choice.names.map((name, index) => assertIdentifier(name, `toolChoice.names[${index}]`));
-    if (new Set(names).size !== names.length) throw new TypeError("toolChoice.names must be unique.");
-    for (const name of names) if (!toolNames.has(name)) throw new TypeError(`toolChoice names an unknown tool: ${name}.`);
-    const requirement = choice.requirement === undefined ? "auto" : choice.requirement;
-    if (!ALLOWED_REQUIREMENTS.has(requirement)) {
-      throw new TypeError("toolChoice.requirement must be auto or required.");
-    }
-    return Object.freeze({ mode: "allowed", names: Object.freeze(names), requirement });
-  }
-  return Object.freeze({ mode: choice.mode });
-}
-
-function normalizeCostLog(value, owner) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new FunctionCallingBlock(`${owner}_cost_log_missing`, `${owner} execution must return a cost log.`);
-  }
-  const result = { model: assertIdentifier(value.model, `${owner}CostLog.model`) };
-  for (const field of ["prompt_tokens", "completion_tokens", "cache_hits", "cached_tokens", "cache_write_tokens"]) {
-    if (!Number.isInteger(value[field]) || value[field] < 0) {
-      throw new FunctionCallingBlock(`${owner}_cost_log_invalid`, `${owner}CostLog.${field} must be non-negative.`);
-    }
-    result[field] = value[field];
-  }
-  if (!CACHE_STATUSES.has(value.provider_cache_status)) {
-    throw new FunctionCallingBlock(`${owner}_cost_log_invalid`, `${owner}CostLog.provider_cache_status is invalid.`);
-  }
-  if (!Number.isFinite(value.estimated_cost_usd) || value.estimated_cost_usd < 0) {
-    throw new FunctionCallingBlock(`${owner}_cost_log_invalid`, `${owner}CostLog.estimated_cost_usd must be non-negative.`);
-  }
-  result.provider_cache_status = value.provider_cache_status;
-  result.estimated_cost_usd = value.estimated_cost_usd;
-  return Object.freeze(result);
-}
-
-function aggregateCostLogs(logs) {
-  const models = [...new Set(logs.map((log) => log.model))];
-  const statuses = [...new Set(logs.map((log) => log.provider_cache_status))];
-  return Object.freeze({
-    model: models.length === 1 ? models[0] : "multiple",
-    prompt_tokens: logs.reduce((sum, log) => sum + log.prompt_tokens, 0),
-    completion_tokens: logs.reduce((sum, log) => sum + log.completion_tokens, 0),
-    cache_hits: logs.reduce((sum, log) => sum + log.cache_hits, 0),
-    cached_tokens: logs.reduce((sum, log) => sum + log.cached_tokens, 0),
-    cache_write_tokens: logs.reduce((sum, log) => sum + log.cache_write_tokens, 0),
-    provider_cache_status: statuses.length === 1 ? statuses[0] : "unreported",
-    estimated_cost_usd: logs.reduce((sum, log) => sum + log.estimated_cost_usd, 0),
-    status: "reported",
-  });
-}
-
-function emptyCostLog(status) {
-  return Object.freeze({
-    model: status === "not-run" ? "not-run" : "unreported",
-    prompt_tokens: status === "not-run" ? 0 : null,
-    completion_tokens: status === "not-run" ? 0 : null,
-    cache_hits: status === "not-run" ? 0 : null,
-    cached_tokens: status === "not-run" ? 0 : null,
-    cache_write_tokens: status === "not-run" ? 0 : null,
-    provider_cache_status: "unreported",
-    estimated_cost_usd: status === "not-run" ? 0 : null,
-    status,
-  });
 }
 
 function normalizeResponse(value) {
@@ -320,35 +121,6 @@ function validateCallsAgainstChoice(calls, choice) {
   }
 }
 
-function blockedResult(runId, stage, reasonCode, message, costLog, gatewayCostLog) {
-  return Object.freeze({ runId, status: "blocked", stage, reasonCode, message, costLog, gatewayCostLog });
-}
-
-function callWithTimeout(callback, input, timeoutMs, externalSignal, runController, label) {
-  return new Promise((resolve, reject) => {
-    if (externalSignal?.aborted) {
-      runController.abort();
-      reject(new FunctionCallingBlock("aborted", "Function-calling run was aborted."));
-      return;
-    }
-    const timer = setTimeout(() => {
-      runController.abort();
-      reject(new FunctionCallingBlock("timeout", `${label} exceeded ${timeoutMs} milliseconds.`));
-    }, timeoutMs);
-    const onAbort = () => {
-      runController.abort();
-      reject(new FunctionCallingBlock("aborted", "Function-calling run was aborted."));
-    };
-    externalSignal?.addEventListener("abort", onAbort, { once: true });
-    Promise.resolve().then(() => callback(Object.freeze({ ...input, signal: runController.signal })))
-      .then(resolve, reject)
-      .finally(() => {
-        clearTimeout(timer);
-        externalSignal?.removeEventListener("abort", onAbort);
-      });
-  });
-}
-
 export function createFunctionCallingRuntime({ advanceModel, callTool,
   maxModelTurns = DEFAULT_MAX_MODEL_TURNS, maxToolCalls = DEFAULT_MAX_TOOL_CALLS,
   maxParallelCalls = DEFAULT_MAX_PARALLEL_CALLS, maxTools = DEFAULT_MAX_TOOLS,
@@ -363,13 +135,13 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
   const activeRuns = new Set();
   let completedRuns = 0;
   let blockedRuns = 0;
+  let pausedRuns = 0;
+  let resumedRuns = 0;
   let modelTurns = 0;
   let toolCalls = 0;
 
-  async function run({ runId, input, tools, capabilities, toolChoice,
-    parallelToolCalls = true, signal } = {}) {
+  function prepare({ runId, tools, capabilities, toolChoice, parallelToolCalls = true }) {
     const safeRunId = assertIdentifier(runId, "runId");
-    const safeInput = normalizeJson(input, "input");
     const safeTools = normalizeTools(tools, { maxTools, maxSchemaChars });
     const toolsByName = new Map(safeTools.map((tool) => [tool.name, tool]));
     const publicTools = publicToolDeclarations(safeTools);
@@ -377,112 +149,180 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
     const supported = normalizeCapabilities(capabilities);
     if (typeof parallelToolCalls !== "boolean") throw new TypeError("parallelToolCalls must be boolean.");
 
+    return { safeRunId, safeTools, toolsByName, publicTools, safeChoice, supported, parallelToolCalls };
+  }
+
+  function preflight(context) {
     const notRun = emptyCostLog("not-run");
-    if (activeRuns.has(safeRunId)) {
-      return blockedResult(safeRunId, "preflight", "run_active", "A run with this id is already active.", notRun, notRun);
+    if (activeRuns.has(context.safeRunId)) {
+      return blockedResult(context.safeRunId, "preflight", "run_active", "A run with this id is already active.", notRun, notRun);
     }
     if (!adapterConfigured || !toolGatewayConfigured) {
-      return blockedResult(safeRunId, "preflight", "runtime_unconfigured", "Function calling requires model and tool-gateway adapters.", notRun, notRun);
+      return blockedResult(context.safeRunId, "preflight", "runtime_unconfigured", "Function calling requires model and tool-gateway adapters.", notRun, notRun);
     }
-    if (!supported.functionCalling || !supported.strictSchemas || !supported.previousResponseContinuation || !supported.reasoningItemReplay) {
-      return blockedResult(safeRunId, "preflight", "capability_unsupported", "Declared capabilities do not support strict continued function calling.", notRun, notRun);
+    const capabilities = context.supported;
+    if (!capabilities.functionCalling || !capabilities.strictSchemas
+      || !capabilities.previousResponseContinuation || !capabilities.reasoningItemReplay) {
+      return blockedResult(context.safeRunId, "preflight", "capability_unsupported", "Declared capabilities do not support strict continued function calling.", notRun, notRun);
     }
-    if (parallelToolCalls && !supported.parallelFunctionCalls) {
-      return blockedResult(safeRunId, "preflight", "capability_unsupported", "Parallel function calls were requested but are unsupported.", notRun, notRun);
+    if (context.parallelToolCalls && !capabilities.parallelFunctionCalls) {
+      return blockedResult(context.safeRunId, "preflight", "capability_unsupported", "Parallel function calls were requested but are unsupported.", notRun, notRun);
     }
+    return null;
+  }
 
-    activeRuns.add(safeRunId);
-    const controller = new AbortController();
-    const modelCosts = [];
-    const gatewayCosts = [];
-    const usedCallIds = new Set();
-    const usedResponseIds = new Set();
-    const usedToolNames = new Set();
-    let providerAttempts = 0;
-    let gatewayAttempts = 0;
-    let runToolCalls = 0;
-    let priorResponseId;
-    let nextInput = Object.freeze([{ type: "request", value: safeInput }]);
-    let executedRequiredCall = false;
+  function continuation(context, state, responseId, reasoningItems, pendingCall, reviewState, nextTurn) {
+    return createFunctionContinuationState({
+      runId: context.safeRunId,
+      toolFingerprint: functionToolFingerprint(context.safeTools),
+      capabilities: context.supported,
+      toolChoice: context.safeChoice,
+      parallelToolCalls: context.parallelToolCalls,
+      previousResponseId: responseId,
+      reasoningItems,
+      pendingCall: { ...pendingCall, reviewState },
+      usedCallIds: [...state.usedCallIds],
+      usedResponseIds: [...state.usedResponseIds],
+      usedToolNames: [...state.usedToolNames],
+      modelCosts: state.modelCosts,
+      gatewayCosts: state.gatewayCosts,
+      providerAttempts: state.providerAttempts,
+      gatewayAttempts: state.gatewayAttempts,
+      runToolCalls: state.runToolCalls,
+      executedRequiredCall: state.executedRequiredCall,
+      nextTurn,
+    });
+  }
 
-    try {
-      for (let turn = 1; turn <= maxModelTurns; turn += 1) {
-        providerAttempts += 1;
-        const providerToolChoice = providerChoiceForTurn(safeChoice, executedRequiredCall);
+  function executionCosts(state) {
+    const model = state.providerAttempts === 0
+      ? emptyCostLog("not-run")
+      : state.modelCosts.length === state.providerAttempts
+        ? aggregateCostLogs(state.modelCosts)
+        : emptyCostLog("unreported");
+    const gateway = state.gatewayAttempts === 0
+      ? emptyCostLog("not-run")
+      : state.gatewayCosts.length === state.gatewayAttempts
+        ? aggregateCostLogs(state.gatewayCosts)
+        : emptyCostLog("unreported");
+    return { model, gateway };
+  }
+
+  async function invokeGateway(context, state, call, signal, controller, review) {
+    const tool = context.toolsByName.get(call.name);
+    state.gatewayAttempts += 1;
+    toolCalls += 1;
+    const result = await callWithTimeout(callTool, {
+      runId: context.safeRunId,
+      conversationId: context.safeRunId,
+      callId: call.callId,
+      name: call.name,
+      arguments: call.arguments,
+      caller: Object.freeze({ type: "direct" }),
+      policy: Object.freeze({
+        revision: tool.revision,
+        riskClass: tool.riskClass,
+        idempotent: tool.idempotent,
+        approvalRequired: tool.approvalRequired,
+      }),
+      ...(review ? { review } : {}),
+    }, timeoutMs, signal, controller, `Tool ${call.name}`);
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      throw new FunctionCallingBlock("tool_gateway_invalid", `Tool ${call.name} returned an invalid gateway result.`);
+    }
+    state.gatewayCosts.push(normalizeCostLog(result.costLog, "gateway"));
+    return result;
+  }
+
+  function validateCall(context, call) {
+    const tool = context.toolsByName.get(call.name);
+    if (!tool || !tool.allowedCallers.includes("direct")) {
+      throw new FunctionCallingBlock("tool_not_allowed", `Tool ${call.name} is not available for direct calls.`);
+    }
+    if (!tool.validateArguments(call.arguments)) {
+      throw new FunctionCallingBlock("tool_arguments_invalid", `Tool ${call.name} rejected its arguments.`);
+    }
+    return tool;
+  }
+
+  function validateGatewayOutput(tool, call, gatewayResult) {
+    const output = normalizeJson(gatewayResult.output, `tool.${call.name}.output`);
+    if (!output || typeof output !== "object" || Array.isArray(output) || !tool.validateOutput(output)) {
+      throw new FunctionCallingBlock("tool_output_invalid", `Tool ${call.name} returned invalid output.`);
+    }
+    if (serializedJsonLength(output) > maxToolResultChars) {
+      throw new FunctionCallingBlock("tool_result_limit", `Tool ${call.name} output exceeds ${maxToolResultChars} characters.`);
+    }
+    return Object.freeze({ type: "function_call_output", callId: call.callId, output });
+  }
+
+  async function execute(context, state, signal, controller) {
+    let priorResponseId = state.priorResponseId;
+    let nextInput = state.nextInput;
+    for (let turn = state.nextTurn; turn <= maxModelTurns; turn += 1) {
+      state.providerAttempts += 1;
+      const providerToolChoice = providerChoiceForTurn(context.safeChoice, state.executedRequiredCall);
         const response = normalizeResponse(await callWithTimeout(advanceModel, {
-          runId: safeRunId,
+          runId: context.safeRunId,
           input: nextInput,
-          tools: publicTools,
+          tools: context.publicTools,
           toolChoice: providerToolChoice,
-          parallelToolCalls,
+          parallelToolCalls: context.parallelToolCalls,
           ...(priorResponseId ? { previousResponseId: priorResponseId } : {}),
         }, timeoutMs, signal, controller, "Model function-calling turn"));
-        if (usedResponseIds.has(response.responseId)) {
+        if (state.usedResponseIds.has(response.responseId)) {
           throw new FunctionCallingBlock("provider_response_replayed", `Model response ${response.responseId} was repeated.`);
         }
-        usedResponseIds.add(response.responseId);
-        modelCosts.push(response.costLog);
+        state.usedResponseIds.add(response.responseId);
+        state.modelCosts.push(response.costLog);
         modelTurns += 1;
-        const inspected = inspectItems(response.items, usedCallIds);
-        validateCallsAgainstChoice(inspected.functionCalls, safeChoice);
-        if (!parallelToolCalls && inspected.functionCalls.length > 1) {
+        const inspected = inspectItems(response.items, state.usedCallIds);
+        validateCallsAgainstChoice(inspected.functionCalls, context.safeChoice);
+        if (!context.parallelToolCalls && inspected.functionCalls.length > 1) {
           throw new FunctionCallingBlock("parallel_calls_forbidden", "The model returned parallel calls while parallel execution is disabled.");
         }
-        runToolCalls += inspected.functionCalls.length;
-        if (safeChoice.mode === "forced" && runToolCalls > 1) {
+        state.runToolCalls += inspected.functionCalls.length;
+        if (context.safeChoice.mode === "forced" && state.runToolCalls > 1) {
           throw new FunctionCallingBlock("tool_choice_violation", "Forced tool choice permits exactly one call in the run.");
         }
-        if (runToolCalls > maxToolCalls) {
+        if (state.runToolCalls > maxToolCalls) {
           throw new FunctionCallingBlock("tool_call_limit", `Function-calling run exceeds ${maxToolCalls} calls.`);
         }
         if (inspected.functionCalls.length > 0) {
-          if (choiceRequiresCall(safeChoice)) executedRequiredCall = true;
+          const selectedTools = inspected.functionCalls.map((call) => validateCall(context, call));
+          if (selectedTools.some((tool) => tool.approvalRequired) && inspected.functionCalls.length !== 1) {
+            throw new FunctionCallingBlock("review_parallel_forbidden", "A review-required function must be the only call in its model turn.");
+          }
+          if (choiceRequiresCall(context.safeChoice)) state.executedRequiredCall = true;
           const outputs = [];
           for (let offset = 0; offset < inspected.functionCalls.length; offset += maxParallelCalls) {
             const batch = inspected.functionCalls.slice(offset, offset + maxParallelCalls);
             const batchOutputs = await Promise.all(batch.map(async (call) => {
-              const tool = toolsByName.get(call.name);
-              if (!tool || !tool.allowedCallers.includes("direct")) {
-                throw new FunctionCallingBlock("tool_not_allowed", `Tool ${call.name} is not available for direct calls.`);
+              const tool = context.toolsByName.get(call.name);
+              const gatewayResult = await invokeGateway(context, state, call, signal, controller);
+              if (gatewayResult.status === "paused") {
+                if (!tool.approvalRequired || !tool.idempotent) {
+                  throw new FunctionCallingBlock("review_continuation_unsafe", `Tool ${call.name} cannot be resumed safely.`);
+                }
+                const interruptions = normalizeJson(gatewayResult.interruptions, "gateway.interruptions");
+                if (!Array.isArray(interruptions) || interruptions.length !== 1) {
+                  throw new FunctionCallingBlock("tool_gateway_invalid", "A reviewed function must return one interruption.");
+                }
+                const reviewState = normalizeJson(gatewayResult.resumeState, "gateway.resumeState");
+                const continuationState = continuation(
+                  context, state, response.responseId, inspected.reasoningItems, call, reviewState, turn + 1,
+                );
+                throw new FunctionCallingBlock("review_required", `Tool ${call.name} requires human review.`, {
+                  continuationState: Object.freeze({ continuationState, interruptions }),
+                });
               }
-              if (!tool.validateArguments(call.arguments)) {
-                throw new FunctionCallingBlock("tool_arguments_invalid", `Tool ${call.name} rejected its arguments.`);
-              }
-              gatewayAttempts += 1;
-              toolCalls += 1;
-              const gatewayResult = await callWithTimeout(callTool, {
-                runId: safeRunId,
-                callId: call.callId,
-                name: call.name,
-                arguments: call.arguments,
-                caller: Object.freeze({ type: "direct" }),
-                policy: Object.freeze({
-                  riskClass: tool.riskClass,
-                  idempotent: tool.idempotent,
-                  approvalRequired: tool.approvalRequired,
-                }),
-              }, timeoutMs, signal, controller, `Tool ${call.name}`);
-              if (!gatewayResult || typeof gatewayResult !== "object" || Array.isArray(gatewayResult)) {
-                throw new FunctionCallingBlock("tool_gateway_invalid", `Tool ${call.name} returned an invalid gateway result.`);
-              }
-              gatewayCosts.push(normalizeCostLog(gatewayResult.costLog, "gateway"));
               if (gatewayResult.status !== "completed") {
                 const reasonCode = typeof gatewayResult.reasonCode === "string" ? gatewayResult.reasonCode : "tool_gateway_blocked";
                 const message = typeof gatewayResult.message === "string" ? gatewayResult.message : `Tool ${call.name} was blocked.`;
                 throw new FunctionCallingBlock(reasonCode, message);
               }
-              const output = normalizeJson(gatewayResult.output, `tool.${call.name}.output`);
-              if (!output || typeof output !== "object" || Array.isArray(output)) {
-                throw new FunctionCallingBlock("tool_output_invalid", `Tool ${call.name} output must be an object.`);
-              }
-              if (!tool.validateOutput(output)) {
-                throw new FunctionCallingBlock("tool_output_invalid", `Tool ${call.name} returned invalid output.`);
-              }
-              if (serializedJsonLength(output) > maxToolResultChars) {
-                throw new FunctionCallingBlock("tool_result_limit", `Tool ${call.name} output exceeds ${maxToolResultChars} characters.`);
-              }
-              usedToolNames.add(call.name);
-              return Object.freeze({ type: "function_call_output", callId: call.callId, output });
+              state.usedToolNames.add(call.name);
+              return validateGatewayOutput(tool, call, gatewayResult);
             }));
             outputs.push(...batchOutputs);
           }
@@ -492,60 +332,140 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
         }
 
         if (inspected.message !== undefined) {
-          if (choiceRequiresCall(safeChoice) && !executedRequiredCall) {
+          if (choiceRequiresCall(context.safeChoice) && !state.executedRequiredCall) {
             throw new FunctionCallingBlock("tool_choice_violation", "A required function call was not made before final output.");
           }
           completedRuns += 1;
           return Object.freeze({
-            runId: safeRunId,
+            runId: context.safeRunId,
             status: "completed",
             stage: "final",
             output: inspected.message,
             evidence: Object.freeze({
               modelTurns: turn,
-              toolCalls: runToolCalls,
-              toolNames: Object.freeze([...usedToolNames].sort()),
-              toolChoice: safeChoice,
-              parallelToolCalls,
+              toolCalls: state.runToolCalls,
+              toolNames: Object.freeze([...state.usedToolNames].sort()),
+              toolChoice: context.safeChoice,
+              parallelToolCalls: context.parallelToolCalls,
               callIdentity: "preserved",
               reasoningItemsReturned: false,
               providerExecutionStatus: "adapter-reported",
             }),
-            costLog: aggregateCostLogs(modelCosts),
-            gatewayCostLog: gatewayCosts.length > 0 ? aggregateCostLogs(gatewayCosts) : emptyCostLog("not-run"),
+            costLog: aggregateCostLogs(state.modelCosts),
+            gatewayCostLog: state.gatewayCosts.length > 0 ? aggregateCostLogs(state.gatewayCosts) : emptyCostLog("not-run"),
           });
         }
         priorResponseId = response.responseId;
         nextInput = inspected.reasoningItems;
       }
       throw new FunctionCallingBlock("model_turn_limit", `Function-calling run exceeds ${maxModelTurns} model turns.`);
+  }
+
+  async function resumePending(context, state, resolution, signal, controller) {
+    const call = state.pendingCall;
+    const tool = validateCall(context, call);
+    const gatewayResult = await invokeGateway(context, state, call, signal, controller, {
+      state: call.reviewState,
+      resolution,
+    });
+    if (gatewayResult.status !== "completed") {
+      const reasonCode = typeof gatewayResult.reasonCode === "string" ? gatewayResult.reasonCode : "tool_gateway_blocked";
+      const message = typeof gatewayResult.message === "string" ? gatewayResult.message : `Tool ${call.name} was blocked.`;
+      const retryable = gatewayResult.reviewStateConsumed === false;
+      const continuationState = retryable
+        ? continuation(context, state, state.priorResponseId, state.nextInput, call, call.reviewState, state.nextTurn)
+        : undefined;
+      throw new FunctionCallingBlock(reasonCode, message, { retryable, continuationState });
+    }
+    state.usedToolNames.add(call.name);
+    const output = validateGatewayOutput(tool, call, gatewayResult);
+    return execute(context, { ...state, nextInput: Object.freeze([...state.nextInput, output]) }, signal, controller);
+  }
+
+  async function runExecution(context, state, signal, resumeResolution) {
+    const blocked = preflight(context);
+    if (blocked) return blocked;
+    activeRuns.add(context.safeRunId);
+    const controller = new AbortController();
+    try {
+      return resumeResolution
+        ? await resumePending(context, state, resumeResolution, signal, controller)
+        : await execute(context, state, signal, controller);
     } catch (error) {
-      blockedRuns += 1;
-      const modelCost = providerAttempts === 0
-        ? emptyCostLog("not-run")
-        : modelCosts.length === providerAttempts
-          ? aggregateCostLogs(modelCosts)
-          : emptyCostLog("unreported");
-      const gatewayCost = gatewayAttempts === 0
-        ? emptyCostLog("not-run")
-        : gatewayCosts.length === gatewayAttempts
-          ? aggregateCostLogs(gatewayCosts)
-          : emptyCostLog("unreported");
+      const costs = executionCosts(state);
       if (error instanceof FunctionCallingBlock) {
-        return blockedResult(safeRunId, "execute", error.reasonCode, error.message, modelCost, gatewayCost);
+        if (error.reasonCode === "review_required" && error.continuationState) {
+          pausedRuns += 1;
+          return Object.freeze({
+            runId: context.safeRunId,
+            status: "paused",
+            stage: "review",
+            interruptions: error.continuationState.interruptions,
+            continuationState: error.continuationState.continuationState,
+            costLog: costs.model,
+            gatewayCostLog: costs.gateway,
+          });
+        }
+        blockedRuns += 1;
+        return blockedResult(context.safeRunId, "execute", error.reasonCode, error.message, costs.model, costs.gateway, {
+          retryable: error.retryable,
+          continuationState: error.continuationState,
+        });
       }
+      blockedRuns += 1;
       return blockedResult(
-        safeRunId,
+        context.safeRunId,
         "execute",
         "runtime_failed",
         error instanceof Error ? error.message : String(error),
-        modelCost,
-        gatewayCost,
+        costs.model,
+        costs.gateway,
       );
     } finally {
       controller.abort();
-      activeRuns.delete(safeRunId);
+      activeRuns.delete(context.safeRunId);
     }
+  }
+
+  async function run({ runId, input, tools, capabilities, toolChoice,
+    parallelToolCalls = true, signal } = {}) {
+    const safeInput = normalizeJson(input, "input");
+    const context = prepare({ runId, tools, capabilities, toolChoice, parallelToolCalls });
+    const state = {
+      priorResponseId: undefined,
+      nextInput: Object.freeze([{ type: "request", value: safeInput }]),
+      nextTurn: 1,
+      modelCosts: [], gatewayCosts: [], usedCallIds: new Set(), usedResponseIds: new Set(), usedToolNames: new Set(),
+      providerAttempts: 0, gatewayAttempts: 0, runToolCalls: 0, executedRequiredCall: false,
+    };
+    return runExecution(context, state, signal);
+  }
+
+  async function resume({ continuationState, resolution, tools, signal } = {}) {
+    const provisionalTools = normalizeTools(tools, { maxTools, maxSchemaChars });
+    const restored = restoreFunctionContinuationState(continuationState, {
+      tools: provisionalTools, maxModelTurns, maxToolCalls,
+    });
+    const context = prepare({
+      runId: restored.runId,
+      tools,
+      capabilities: restored.capabilities,
+      toolChoice: restored.toolChoice,
+      parallelToolCalls: restored.parallelToolCalls,
+    });
+    resumedRuns += 1;
+    const state = {
+      priorResponseId: restored.previousResponseId,
+      nextInput: restored.reasoningItems,
+      nextTurn: restored.nextTurn,
+      pendingCall: restored.pendingCall,
+      modelCosts: [...restored.modelCosts], gatewayCosts: [...restored.gatewayCosts],
+      usedCallIds: new Set(restored.usedCallIds), usedResponseIds: new Set(restored.usedResponseIds),
+      usedToolNames: new Set(restored.usedToolNames), providerAttempts: restored.providerAttempts,
+      gatewayAttempts: restored.gatewayAttempts, runToolCalls: restored.runToolCalls,
+      executedRequiredCall: restored.executedRequiredCall,
+    };
+    return runExecution(context, state, signal, normalizeJson(resolution, "resolution"));
   }
 
   function stats() {
@@ -555,6 +475,8 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
       activeRuns: activeRuns.size,
       completedRuns,
       blockedRuns,
+      pausedRuns,
+      resumedRuns,
       modelTurns,
       toolCalls,
       maxModelTurns,
@@ -567,7 +489,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
     });
   }
 
-  return Object.freeze({ run, stats });
+  return Object.freeze({ run, resume, stats });
 }
 
 export const FUNCTION_CALLING_DEFAULTS = Object.freeze({

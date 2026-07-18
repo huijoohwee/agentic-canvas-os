@@ -258,6 +258,16 @@ test("rejects unauthenticated reviewer evidence without consuming the pending re
     createReviewId: () => "review-auth",
   });
   const paused = await runtime.requestReview(review());
+  const malformed = await runtime.resolveReview({
+    state: paused.resumeState,
+    resolution: {
+      reviewId: "review-auth",
+      decision: "edit",
+      reviewerEvidence: REVIEWER_EVIDENCE,
+    },
+  });
+  assert.equal(malformed.reasonCode, "review_resolution_invalid");
+  assert.equal(malformed.stateConsumed, false);
   const rejected = await runtime.resolveReview({
     state: paused.resumeState,
     resolution: {

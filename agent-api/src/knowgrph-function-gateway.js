@@ -61,6 +61,7 @@ const TOOL_RECORDS = Object.freeze({
   [STATUS_TOOL_NAME]: Object.freeze({
     type: "function",
     name: STATUS_TOOL_NAME,
+    revision: "knowgrph-status-function/v1",
     description: "Read one existing Knowgrph Agentic OS status view without mutating state or invoking a model-bearing tool.",
     parameters: STATUS_PARAMETERS,
     strict: true,
@@ -125,8 +126,16 @@ function statusOutput(payload, expectedView) {
   };
 }
 
-function blocked(reasonCode, message) {
-  return { status: "blocked", reasonCode, message, costLog: zeroGatewayCost() };
+function blocked(reasonCode, message, details = {}) {
+  return {
+    status: "blocked",
+    reasonCode,
+    message,
+    costLog: zeroGatewayCost(),
+    ...(typeof details.reviewStateConsumed === "boolean"
+      ? { reviewStateConsumed: details.reviewStateConsumed }
+      : {}),
+  };
 }
 
 export function createKnowgrphGuardrailEvaluator() {
@@ -232,16 +241,24 @@ export function createKnowgrphFunctionGateway({
     const expectedConversationId = call.conversationId || call.runId;
     if (resolution.audit
       && (resolution.audit.runId !== call.runId || resolution.audit.conversationId !== expectedConversationId)) {
-      return blocked("tool_review_run_mismatch", `Function ${call.name} review belongs to another run or conversation.`);
+      return blocked("tool_review_run_mismatch", `Function ${call.name} review belongs to another run or conversation.`, {
+        reviewStateConsumed: resolution.stateConsumed,
+      });
     }
     if (resolution.status === "rejected") {
-      return blocked("tool_review_rejected", `Function ${call.name} was rejected by the reviewer.`);
+      return blocked("tool_review_rejected", `Function ${call.name} was rejected by the reviewer.`, {
+        reviewStateConsumed: resolution.stateConsumed,
+      });
     }
     if (resolution.status !== "approved") {
-      return blocked(resolution.reasonCode || "tool_review_blocked", `Function ${call.name} review did not authorize execution.`);
+      return blocked(resolution.reasonCode || "tool_review_blocked", `Function ${call.name} review did not authorize execution.`, {
+        reviewStateConsumed: resolution.stateConsumed,
+      });
     }
     if (resolution.action.actionId !== call.callId || resolution.action.name !== call.name) {
-      return blocked("tool_review_action_mismatch", `Function ${call.name} review action does not match the call.`);
+      return blocked("tool_review_action_mismatch", `Function ${call.name} review action does not match the call.`, {
+        reviewStateConsumed: resolution.stateConsumed,
+      });
     }
     if (!resolution.requiresValidation) return { status: "approved", arguments: resolution.action.payload };
     const edited = await validateStage(call, record, "tool-input", resolution.action.payload);
@@ -259,6 +276,7 @@ export function createKnowgrphFunctionGateway({
       return blocked("tool_not_allowlisted", `Function ${call.name} is not enabled by the Knowgrph gateway.`);
     }
     if (call.caller?.type !== "direct"
+      || call.policy?.revision !== record.revision
       || call.policy?.riskClass !== record.riskClass
       || call.policy?.idempotent !== record.idempotent
       || call.policy?.approvalRequired !== record.approvalRequired) {

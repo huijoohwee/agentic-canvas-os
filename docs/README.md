@@ -71,6 +71,8 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `SANDBOX-AGENTS.md` | Container workspace control plane | Provider-neutral orchestration plus the Node-only Docker adapter, deny-first authorizer, atomic file state, independent local verifier, snapshots, resume, loopback previews, cleanup, and proof boundaries. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
 | `TOOL-SEARCH.md` | Deferred-definition loading contract | Session catalogs, metadata-only initial exposure, bounded client and hosted resolution, exact definition validation, authorization, and provider-proof boundaries. |
+| `PROMPT-PRESETS.md` | Shared prompt preset catalog | Source-backed selection aliases, runtime commands, Chat response modes, and read-only MCP invocation metadata. |
+| `PROBE-TREE.md` | Probe-Tree semantic clarification contract | Case-insensitive semantic topic families, 2-4 card bounds, selected-child continuation ownership, active Chat routing, and fail-closed fallback policy. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
 | `DICTIONARY-SEMANTIC.md` | Hash dictionary | `#` semantic filters for routing, proof, cost, and cleanup. |
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |

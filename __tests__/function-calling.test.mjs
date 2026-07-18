@@ -96,6 +96,32 @@ test("continues by response id, replays reasoning, and preserves function call i
   assert.equal(result.gatewayCostLog.status, "reported");
 });
 
+test("relaxes a satisfied required selection before requesting final output", async () => {
+  const adapterCalls = [];
+  const runtime = createFunctionCallingRuntime({
+    advanceModel: async (call) => {
+      adapterCalls.push(call);
+      return adapterCalls.length === 1
+        ? response("response-1", [
+          { type: "function_call", callId: "call-1", name: "read_record", arguments: { value: "a" } },
+        ])
+        : response("response-2", [{ type: "message", output: "done" }]);
+    },
+    callTool: async () => completedGateway(),
+  });
+
+  const result = await runtime.run(request({
+    toolChoice: { mode: "forced", name: "read_record" },
+    parallelToolCalls: false,
+  }));
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(adapterCalls[0].toolChoice, { mode: "forced", name: "read_record" });
+  assert.deepEqual(adapterCalls[1].toolChoice, { mode: "auto" });
+  assert.deepEqual(result.evidence.toolChoice, { mode: "forced", name: "read_record" });
+  assert.equal(result.evidence.toolCalls, 1);
+});
+
 test("exposes only provider function fields and forwards application policy to the gateway", async () => {
   const adapterCalls = [];
   const gatewayCalls = [];

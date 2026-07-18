@@ -26,6 +26,7 @@
     "check": "npm test && npm run web:build && npm run docs:check",
     "function-calling:check": "node --test __tests__/function-calling.test.mjs",
     "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/function-calling-continuation.test.mjs __tests__/function-execution-receipts.test.mjs __tests__/openai-function-gateway.test.mjs __tests__/knowgrph-mcp-client.test.mjs",
+    "function-gateway:cross-repo-proof": "node ./scripts/function-gateway-run-note-proof.mjs",
     "guardrails-human-review:check": "node --test __tests__/guardrails-human-review.test.mjs __tests__/durable-agent-state.test.mjs",
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",

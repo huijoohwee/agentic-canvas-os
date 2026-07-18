@@ -113,6 +113,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/function-calling-manager.js` | Durable reviewed-call checkpoint, opaque resume token, atomic cross-isolate claim, and terminal settlement owner. |
 | `agent-api/src/openai-responses-function-adapter.js` | Responses translation, strict function selection, same-response continuation, and usage-derived cost evidence. |
 | `agent-api/src/knowgrph-function-gateway.js` | Explicit allowlist, tool guardrails, signed-review pause, and policy-preserving Knowgrph MCP mapping. |
+| `agent-api/src/knowgrph-function-tools.js` | Strict status and immutable review-required run-note function records, validators, guardrails, and native output projections. |
 | `agent-api/src/function-calling-handler.js` | Authenticated bounded start and review-resume HTTP boundaries for direct function calls. |
 | `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
 | `agent-api/src/tool-search.js` | Session-scoped deferred-definition controller, metadata-only initial exposure, exact search loading, and call authorization. |
@@ -197,9 +198,9 @@ bounded approval interruption and single-consume resume state; approve, reject,
 and edit decisions require a purpose-scoped reviewer token before they resume
 the same Running Agents turn, and edits must be validated again. The Worker
 uses one Durable Object identity per review and per paused conversation. The
-concrete Knowgrph status gateway proves tool-input and tool-output checks plus
-an optional reviewed execution path offline; live provider behavior remains
-unverified. See
+concrete Knowgrph gateway proves guarded status reads plus an intrinsically
+reviewed run-note mutation with native receipt echo and one-revision recovery
+offline; live provider and deployed Worker behavior remain unverified. See
 [`docs/GUARDRAILS-HUMAN-REVIEW.md`](./docs/GUARDRAILS-HUMAN-REVIEW.md).
 
 Agent Runtime Composition joins the previously separate contracts without

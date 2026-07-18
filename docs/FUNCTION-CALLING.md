@@ -8,10 +8,10 @@ schema: "function-calling-runtime-contract/v1"
 frontmatter_contract: "required"
 status: "runtime-ready-dev"
 authority: "bounded direct function-call orchestration policy for Agentic Canvas OS"
-runtime_scope: "provider-neutral model adapter and application tool-gateway loop"
-runtime_claim: "local direct-call controller is runtime-ready; live provider execution and gateway integration remain unverified"
-runtime_owner: "../agent-api/src/function-calling.js"
-runtime_proof: "../__tests__/function-calling.test.mjs"
+runtime_scope: "provider-neutral controller, OpenAI Responses adapter, and policy-enforcing Knowgrph MCP tool gateway"
+runtime_claim: "direct-call controller and concrete adapter/gateway wiring are runtime-ready in Dev; live provider execution remains unverified"
+runtime_owner: "../agent-api/src/function-calling.js; ../agent-api/src/openai-responses-function-adapter.js; ../agent-api/src/knowgrph-function-gateway.js"
+runtime_proof: "../__tests__/function-calling.test.mjs; ../__tests__/openai-function-gateway.test.mjs"
 external_pattern_source: "https://developers.openai.com/api/docs/guides/function-calling"
 external_source_policy: "concept reference only; forbid copied code, examples, prompts, schemas, fixtures, tests, or prose"
 publish_policy: "Dev-only until explicit operator approval"
@@ -22,6 +22,28 @@ publish_policy: "Dev-only until explicit operator approval"
 The direct-call runtime gives a model a bounded catalog of application-owned functions and returns each requested result to the same active response chain. The repository owns validation, selection policy, call correlation, continuation, limits, cost evidence, and sanitized readiness. Injected adapters own provider translation and the real tool gateway owns authorization and execution.
 
 The cited OpenAI guide informs the capability class only. The controller, canonical vocabulary, schemas, tests, and documentation are independently authored. Exact provider or model support is declared by an adapter; the runtime never guesses support from a model name.
+
+## Concrete Dev Wiring
+
+`POST /api/function-call` is the authenticated application entry point. The caller supplies a bounded run id, prompt, selection mode, parallel preference, and approval references; it cannot submit function schemas, validators, provider credentials, endpoints, or policy metadata. The application registry currently exposes one independently authored function, `read_agentic_os_status`, only when that exact name appears in `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST`.
+
+The OpenAI adapter sends strict application declarations through the Responses protocol, preserves opaque reasoning items, continues by `previous_response_id`, correlates `function_call_output` with the original call id, and translates returned usage into the repository cost log. Its static instructions and stable function declarations precede changing prompt and tool-result content. Configuration fails closed unless the server supplies `OPENAI_FUNCTION_CALLING_MODEL`, the named API-key binding, and uncached-input, cached-input, cache-write, and output rates; source does not embed a provider pricing table, multiplier, or credential.
+
+The Knowgrph gateway maps the application name to the existing `knowgrph.os.status` MCP tool. It checks the allowlist, direct caller, immutable risk and idempotency metadata, exact arguments, approval policy, strict reduced output, and upstream zero-cost evidence before completion. Model-visible names never become arbitrary MCP dispatch authority. This first tool is read-only and zero-model; later mutating mappings must add an exact run-and-tool approval grant and retain Knowgrph's native gate.
+
+Readiness reports adapter key presence, pricing readiness, model, protocol, bounds, gateway allowlist, and counters without returning secrets. Configuration is not live proof: `providerExecutionStatus` remains `unverified` until a bounded provider run returns actual response identity, usage, function call, gateway result, continuation, and final output.
+
+| Server binding | Purpose |
+|---|---|
+| `OPENAI_FUNCTION_CALLING_MODEL` | Explicit model selected by the operator; no model-name capability inference. |
+| `OPENAI_FUNCTION_CALLING_API_KEY_ENV` | Name of the server-side key binding; defaults to `OPENAI_API_KEY`. |
+| `OPENAI_FUNCTION_CALLING_INPUT_USD_PER_MILLION` | Current uncached-input rate used only for returned usage estimation. |
+| `OPENAI_FUNCTION_CALLING_CACHED_INPUT_USD_PER_MILLION` | Current cached-input rate used only for returned usage estimation. |
+| `OPENAI_FUNCTION_CALLING_CACHE_WRITE_USD_PER_MILLION` | Current cache-write rate used only for returned usage estimation. |
+| `OPENAI_FUNCTION_CALLING_OUTPUT_USD_PER_MILLION` | Current output rate used only for returned usage estimation. |
+| `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST` | Exact comma-separated application function names enabled for this runtime. |
+| `KNOWGRPH_MCP_ENDPOINT` | Existing Knowgrph MCP owner; no new proxy is introduced. |
+| `KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN` | Optional server-managed service credential for an authenticated MCP owner. |
 
 ## Ownership Boundary
 
@@ -80,15 +102,16 @@ The gateway envelope may complete or return a typed policy block. A block keeps 
 
 Defaults allow eight model turns, 32 total calls, eight calls per parallel batch, 128 visible functions, 100,000 serialized schema characters, 200,000 serialized characters per tool result, and 60 seconds per model or gateway stage. Duplicate active run ids serialize and duplicate call ids fail instead of replaying an action.
 
-Every attempted model turn and gateway execution must return the repository cost-log fields, including provider cache status and cache token counts. Preflight blocks report explicit `not-run` zero state. An attempted operation without usable cost evidence reports nullable `unreported` state instead of claiming zero spend. Model and gateway costs remain separate so an unknown tool charge cannot hide behind known model usage.
+Every attempted model turn and gateway execution must return the repository cost-log fields, including provider cache status and both cached and cache-write token counts. The adapter subtracts both reported categories from ordinary uncached input before applying the separately configured rates, so cache writes are neither omitted nor double-counted. Preflight blocks report explicit `not-run` zero state. An attempted operation without usable cost evidence reports nullable `unreported` state instead of claiming zero spend. Model and gateway costs remain separate so an unknown tool charge cannot hide behind known model usage.
 
-`providerExecutionStatus` stays `unverified` in `/api/ready`. Offline adapter tests prove the controller's enforcement only; they do not prove a live model, provider cache result, external data source, or deployed gateway.
+`providerExecutionStatus` stays `unverified` in `/api/ready`. Offline adapter and gateway tests prove request translation, usage accounting, policy enforcement, and the complete injected loop without spending. They do not prove a live model, provider cache result, external data source, or deployed gateway.
 
 ## VCCs
 
 - Given a strict direct function, when the adapter returns reasoning plus one call, then the gateway receives the exact call identity, the next turn receives that reasoning plus a same-id output and previous response id, and the completed result excludes reasoning and intermediate payloads.
 - Given automatic, required, none, forced, or allowed selection, when a response violates the selected policy, then the controller blocks before an unauthorized gateway action.
 - Given parallel output, missing capabilities, lax schemas, unknown or repeated calls, invalid arguments or outputs, approval denial, excess bounds, abort, or timeout, when the controller evaluates the run, then it returns typed evidence with honest model and gateway cost states.
-- Given an unconfigured Worker, when readiness is read, then the contract and bounds are visible while adapter, gateway, and live provider execution remain unverified.
+- Given an unconfigured Worker, when readiness is read, then contract, adapter, gateway, and bounds remain visible without a secret value or live-provider claim.
+- Given configured offline transports, when OpenAI returns reasoning plus a strict function call, then the application calls only `knowgrph.os.status`, replays the opaque reasoning and same-id output with the prior response id, and returns final text plus actual model usage and zero-cost gateway evidence.
 
-VCC: run `npm run function-calling:check` and the affected app and Worker tests; require zero failures, exact call-id continuation, no reasoning-item return, no paid live call, no Prod mirror mutation, and no Cloudflare action.
+VCC: run `npm run function-gateway:check` and the affected app and Worker tests; require zero failures, exact call-id continuation, application-owned tool exposure, no reasoning or secret return, no unapproved live call, no Prod mirror mutation, and no Cloudflare action.

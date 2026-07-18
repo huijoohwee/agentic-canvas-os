@@ -42,6 +42,9 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.deepEqual(app.readiness().functionCalling.selectionModes, ["auto", "required", "none", "forced", "allowed"]);
   assert.equal(app.readiness().functionCalling.callIdentity, "function-call-output-preserves-call-id");
   assert.equal(app.readiness().functionCalling.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().functionCalling.adapter.configured, false);
+  assert.equal(app.readiness().functionCalling.adapter.apiKeyPresent, false);
+  assert.equal(app.readiness().functionCalling.gateway.configured, false);
   assert.equal(app.readiness().programmaticToolCalling.contractReady, true);
   assert.equal(app.readiness().programmaticToolCalling.configured, false);
   assert.equal(app.readiness().programmaticToolCalling.localJavaScriptExecution, "forbidden");

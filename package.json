@@ -15,6 +15,7 @@
     "tool-search:check": "node --test __tests__/tool-search.test.mjs",
     "check": "npm test && npm run web:build && npm run docs:check",
     "function-calling:check": "node --test __tests__/function-calling.test.mjs",
+    "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/openai-function-gateway.test.mjs",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",
     "device:complete": "node ./scripts/device-branch.mjs complete",

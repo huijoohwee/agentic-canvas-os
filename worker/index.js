@@ -8,6 +8,7 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import {
+  createDurableObjectFunctionExecutionReceiptStore,
   createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
   createDurableObjectPausedTurnStore,
@@ -85,6 +86,9 @@ function createWorkerApp(env) {
   const functionContinuationStore = durableStateConfigured
     ? createDurableObjectFunctionContinuationStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const functionExecutionReceiptStore = durableStateConfigured
+    ? createDurableObjectFunctionExecutionReceiptStore({ namespace: env.AGENT_STATE })
+    : undefined;
   if (env && typeof env === "object") {
     agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
     if (!agentDefinitions) {
@@ -140,6 +144,7 @@ function createWorkerApp(env) {
     reviewStore,
     pausedTurnStore,
     functionContinuationStore,
+    functionExecutionReceiptStore,
     sandboxAgents,
     toolSearch,
     fetchImpl: (req) => fetch(req.url, {

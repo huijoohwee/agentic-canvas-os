@@ -183,7 +183,7 @@ MoA capabilities are discoverable without model spend. Runtime execution can fan
 
 ## Stateful Orchestration Capabilities
 
-Stateful orchestration tools are discoverable without model spend. Runtime execution, checkpoint writes, human review continuation, and deployment remain approval-gated.
+Stateful orchestration tools are discoverable without model spend. Runtime execution, checkpoint writes, human review continuation, and deployment remain approval-gated. Reviewed mutations additionally require a durable gateway receipt before execution, one stable idempotency key on the MCP request, and a matching native tool receipt before local completion.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|

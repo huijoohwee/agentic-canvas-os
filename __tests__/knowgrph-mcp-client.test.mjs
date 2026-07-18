@@ -79,6 +79,36 @@ test("forwards the caller bearer (Auth_Token) but never a model key", async () =
   assert.equal(authHeader, "Bearer tok-123");
 });
 
+test("forwards gateway-owned execution identity in the idempotency header and MCP metadata", async () => {
+  let toolRequest;
+  const client = createKnowgrphMcpClient({
+    endpoint: ENDPOINT,
+    fetchImpl: async (req) => {
+      if (req.body?.method === "initialize") {
+        return {
+          status: 200,
+          headers: { get: (name) => name.toLowerCase() === "mcp-session-id" ? "receipt-session" : "" },
+          text: async () => "",
+        };
+      }
+      toolRequest = req;
+      return jsonResponse(200, rpcOk(req.body.id, { ok: true }));
+    },
+  });
+  const execution = {
+    schema: "function-execution-receipt/v1",
+    receiptId: "receipt-1",
+    idempotencyKey: "stable-key-1",
+    requestDigest: "request-digest-1",
+  };
+  await client.callTool("knowgrph.record.update", { value: "updated" }, { execution });
+  assert.equal(toolRequest.headers["idempotency-key"], execution.idempotencyKey);
+  assert.deepEqual(
+    toolRequest.body.params._meta["io.agentic-canvas-os/execution"],
+    execution,
+  );
+});
+
 test("parses an SSE reply and extracts the last JSON-RPC frame", () => {
   const sse = `event: message\ndata: ${JSON.stringify(rpcOk(1, { state: "complete" }))}\n\n`;
   const parsed = parseMcpReply(sse, "text/event-stream");

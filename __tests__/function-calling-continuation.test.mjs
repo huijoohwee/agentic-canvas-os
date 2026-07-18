@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { mintReviewerToken, mintSessionToken, verifyReviewerToken } from "../agent-api/src/auth.js";
-import { createDurableObjectFunctionContinuationStore } from "../agent-api/src/durable-object-state-store.js";
+import {
+  createDurableObjectFunctionContinuationStore,
+  createDurableObjectFunctionExecutionReceiptStore,
+} from "../agent-api/src/durable-object-state-store.js";
 import {
   createFunctionCallingHandler,
   createFunctionCallingResumeHandler,
@@ -111,11 +114,12 @@ function reviewRuntime(reviewSecret, captured) {
   });
 }
 
-function reviewedGateway(guardrailsHumanReview, onMcpCall) {
+function reviewedGateway(guardrailsHumanReview, onMcpCall, executionReceiptStore) {
   return createKnowgrphFunctionGateway({
     allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
     reviewRequiredToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
     guardrailsHumanReview,
+    executionReceiptStore,
     mcpClient: { callTool: async () => { onMcpCall(); return statusPayload(); } },
   });
 }
@@ -124,9 +128,14 @@ test("resumes an exact provider chain through a fresh durable manager after sign
   const namespace = agentStateNamespace();
   const reviewSecret = "durable-review-secret";
   const captured = {};
+  const executionReceiptStore = createDurableObjectFunctionExecutionReceiptStore({ namespace });
   let mcpCalls = 0;
   let initialModelCalls = 0;
-  const firstGateway = reviewedGateway(reviewRuntime(reviewSecret, captured), () => { mcpCalls += 1; });
+  const firstGateway = reviewedGateway(
+    reviewRuntime(reviewSecret, captured),
+    () => { mcpCalls += 1; },
+    executionReceiptStore,
+  );
   const firstManager = createFunctionCallingManager({
     continuationStore: createDurableObjectFunctionContinuationStore({ namespace }),
     functionCalling: createFunctionCallingRuntime({
@@ -161,7 +170,11 @@ test("resumes an exact provider chain through a fresh durable manager after sign
   assert.equal(JSON.stringify(paused).includes("response-before-review"), false);
 
   const resumedModelCalls = [];
-  const secondGateway = reviewedGateway(reviewRuntime(reviewSecret, captured), () => { mcpCalls += 1; });
+  const secondGateway = reviewedGateway(
+    reviewRuntime(reviewSecret, captured),
+    () => { mcpCalls += 1; },
+    executionReceiptStore,
+  );
   const secondStore = createDurableObjectFunctionContinuationStore({ namespace });
   const secondManager = createFunctionCallingManager({
     continuationStore: secondStore,

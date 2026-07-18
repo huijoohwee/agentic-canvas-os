@@ -25,6 +25,18 @@ function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function normalizeExecutionMetadata(value) {
+  if (value === undefined) return undefined;
+  const keys = ["schema", "receiptId", "idempotencyKey", "requestDigest"];
+  if (!isPlainObject(value)
+    || Object.keys(value).sort().join("\0") !== [...keys].sort().join("\0")
+    || value.schema !== "function-execution-receipt/v1"
+    || keys.slice(1).some((key) => typeof value[key] !== "string" || !value[key].trim())) {
+    throw new KnowgrphMcpError("invalid function execution metadata", { code: "mcp_execution_metadata_invalid" });
+  }
+  return Object.freeze(Object.fromEntries(keys.map((key) => [key, value[key].trim()])));
+}
+
 /**
  * Parse an MCP Streamable HTTP reply body. The endpoint may answer with a single
  * JSON document (`application/json`) or an SSE stream (`text/event-stream`) whose
@@ -161,8 +173,9 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     return mcpSessionId;
   }
 
-  async function callTool(toolName, args = {}, { bearer } = {}) {
+  async function callTool(toolName, args = {}, { bearer, execution } = {}) {
     const sessionId = await ensureSession({ bearer });
+    const executionMetadata = normalizeExecutionMetadata(execution);
 
     const headers = {
       "content-type": "application/json",
@@ -171,12 +184,19 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     };
     const token = bearer || authToken;
     if (token) headers.authorization = `Bearer ${token}`;
+    if (executionMetadata) headers["idempotency-key"] = executionMetadata.idempotencyKey;
 
     const rpcRequest = {
       jsonrpc: "2.0",
       id: nextId++,
       method: "tools/call",
-      params: { name: toolName, arguments: args },
+      params: {
+        name: toolName,
+        arguments: args,
+        ...(executionMetadata
+          ? { _meta: { "io.agentic-canvas-os/execution": executionMetadata } }
+          : {}),
+      },
     };
 
     const res = await doFetch({ url, method: "POST", headers, body: rpcRequest });

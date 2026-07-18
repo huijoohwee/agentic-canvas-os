@@ -59,6 +59,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
  * @param {ReturnType<createFunctionCallingManager>} [opts.functionCallingManager] durable function-call lifecycle owner
  * @param {object} [opts.functionContinuationStore] optional durable Function Calling continuation store
+ * @param {object} [opts.functionExecutionReceiptStore] optional durable reviewed-tool execution receipt store
  * @param {ReturnType<createGuardrailsHumanReviewRuntime>} [opts.guardrailsHumanReview] automatic validation and review controller
  * @param {object} [opts.reviewStore] optional atomic review-state store
  * @param {object} [opts.pausedTurnStore] optional durable paused-turn store
@@ -81,6 +82,7 @@ export function createAgentApiApp({
   functionCalling: providedFunctionCalling,
   functionCallingManager: providedFunctionCallingManager,
   functionContinuationStore,
+  functionExecutionReceiptStore,
   guardrailsHumanReview: providedGuardrailsHumanReview,
   reviewStore,
   pausedTurnStore,
@@ -164,6 +166,7 @@ export function createAgentApiApp({
     allowedToolNames: parseKnowgrphFunctionToolAllowlist(e.KNOWGRPH_FUNCTION_TOOL_ALLOWLIST),
     reviewRequiredToolNames: parseKnowgrphFunctionToolAllowlist(e.KNOWGRPH_FUNCTION_REVIEW_REQUIRED),
     guardrailsHumanReview,
+    ...(functionExecutionReceiptStore ? { executionReceiptStore: functionExecutionReceiptStore } : {}),
   });
   const openAiFunctionAdapter = openAiFunctionConfig.ready
     ? createOpenAiResponsesFunctionAdapter({ ...openAiFunctionConfig, fetchImpl })
@@ -337,6 +340,8 @@ export function createAgentApiApp({
           continuation: "previous-response-with-reasoning-items",
           reviewContinuation: "manager-owned-durable-same-run",
           reviewStateExposure: "resume-token-only",
+          reviewedExecutionPolicy: "durable-receipt-before-side-effect",
+          idempotencyPolicy: "stable-key-with-upstream-echo-for-mutations",
           callIdentity: "function-call-output-preserves-call-id",
           providerExecutionStatus: "unverified",
           adapter: {

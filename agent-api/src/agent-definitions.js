@@ -9,7 +9,7 @@ const DEFAULT_MAX_OUTPUT_CHARS = 200_000;
 const DEFAULT_MAX_VALIDATION_ISSUE_CHARS = 20_000;
 
 const TOOL_LOADING_MODES = new Set(["direct", "deferred"]);
-const GUARDRAIL_STAGES = new Set(["input", "output"]);
+const GUARDRAIL_STAGES = new Set(["input", "output", "tool-input", "tool-output"]);
 const OUTPUT_MODES = new Set(["text", "structured"]);
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
+import { createGuardrailsHumanReviewRuntime } from "../agent-api/src/guardrails-human-review.js";
 import { createAgentOrchestrationRuntime } from "../agent-api/src/agent-orchestration.js";
 import { createAgentRuntimeComposition } from "../agent-api/src/agent-runtime-composition.js";
 import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
@@ -74,7 +75,13 @@ function orchestrationRequest(overrides = {}) {
   };
 }
 
-function createHarness({ executeAgentStep, sourceState = { valid: true }, structured = false } = {}) {
+function createHarness({
+  executeAgentStep,
+  guardrailsHumanReview,
+  managerOverrides = {},
+  sourceState = { valid: true },
+  structured = false,
+} = {}) {
   const executions = [];
   const definitions = createAgentDefinitionRegistry({
     verifyDefinitionSource: async ({ source: reference }) => ({
@@ -89,9 +96,10 @@ function createHarness({ executeAgentStep, sourceState = { valid: true }, struct
       issues: output?.approved === true ? [] : ["approved must be true"],
     }),
   });
-  definitions.register(definition("manager", structured
-    ? { output: { mode: "structured", schemaId: "manager-result-v1" } }
-    : {}));
+  definitions.register(definition("manager", {
+    ...(structured ? { output: { mode: "structured", schemaId: "manager-result-v1" } } : {}),
+    ...managerOverrides,
+  }));
   definitions.register(definition("researcher", {
     tools: [{ name: "source_lookup", loading: "deferred" }],
   }));
@@ -109,6 +117,7 @@ function createHarness({ executeAgentStep, sourceState = { valid: true }, struct
 
   const composition = createAgentRuntimeComposition({
     agentDefinitions: definitions,
+    guardrailsHumanReview,
     modelProviders: providers,
     executeAgentStep: async (call) => {
       executions.push(call);
@@ -249,6 +258,62 @@ test("preserves exact previous-response continuation across agent turns", async 
     strategy: "previous-response",
     previousResponseId: "offline-response-1",
   });
+});
+
+test("applies registered input and output guardrails around the composed agent", async () => {
+  const guardrailCalls = [];
+  const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
+    evaluateGuardrail: async (request) => {
+      guardrailCalls.push(request);
+      if (request.stage === "input") return { passed: true, value: { request: "validated" } };
+      return { passed: true, value: "public answer" };
+    },
+  });
+  const { composition, executions } = createHarness({
+    guardrailsHumanReview,
+    managerOverrides: {
+      guardrails: [
+        { name: "request-policy", stage: "input" },
+        { name: "response-policy", stage: "output" },
+      ],
+    },
+    executeAgentStep: async () => ({
+      status: "completed",
+      output: "private answer",
+      responseId: "guarded-response",
+      costLog: COST,
+    }),
+  });
+  const result = await composition.runAgent({
+    runId: "guarded-run",
+    conversationId: "guarded-conversation",
+    agent: { agentId: "manager", revision: "manager-v1" },
+    role: "user-facing-owner",
+    input: { request: "raw" },
+  });
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.output, "public answer");
+  assert.deepEqual(executions[0].input, { request: "validated" });
+  assert.deepEqual(guardrailCalls.map(({ stage }) => stage), ["input", "output"]);
+  assert.equal(composition.stats().automaticGuardrailChecks, 2);
+  assert.deepEqual(composition.stats().guardrailStageChecks, { input: 1, output: 1 });
+});
+
+test("blocks referenced guardrails before execution when their runtime owner is missing", async () => {
+  const { composition, executions } = createHarness({
+    managerOverrides: { guardrails: [{ name: "request-policy", stage: "input" }] },
+  });
+  const result = await composition.runAgent({
+    runId: "unguarded-run",
+    conversationId: "unguarded-conversation",
+    agent: { agentId: "manager", revision: "manager-v1" },
+    role: "user-facing-owner",
+    input: { request: "must not execute" },
+  });
+  assert.equal(result.status, "blocked");
+  assert.equal(executions.length, 0);
+  assert.equal(composition.stats().blockedGuardrailRuns, 1);
 });
 
 test("blocks stale source evidence and missing model features before execution", async () => {

@@ -71,6 +71,19 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
   assert.equal(app.readiness().agentDefinitions.executionOwner, "running-agents-adapter");
   assert.equal(app.readiness().agentDefinitions.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().guardrailsHumanReview.contractReady, true);
+  assert.equal(app.readiness().guardrailsHumanReview.configured, false);
+  assert.equal(app.readiness().guardrailsHumanReview.reviewStoreConfigured, true);
+  assert.deepEqual(app.readiness().guardrailsHumanReview.automaticStages, [
+    "input",
+    "output",
+    "tool-input",
+    "tool-output",
+  ]);
+  assert.deepEqual(app.readiness().guardrailsHumanReview.reviewDecisions, ["approve", "reject", "edit"]);
+  assert.equal(app.readiness().guardrailsHumanReview.interruptionOwner, "running-agents-same-turn-state");
+  assert.equal(app.readiness().guardrailsHumanReview.reviewStatePolicy, "single-consume-bounded-expiry");
+  assert.equal(app.readiness().guardrailsHumanReview.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().agentOrchestration.contractReady, true);
   assert.equal(app.readiness().agentOrchestration.configured, false);
   assert.equal(app.readiness().agentOrchestration.topologyOwner, "application-orchestration-registry");
@@ -89,6 +102,7 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentRuntimeComposition.lifecycleOwner, "running-agents");
   assert.deepEqual(app.readiness().agentRuntimeComposition.orchestrationInterfaces, ["resolve-agent", "run-agent"]);
   assert.equal(app.readiness().agentRuntimeComposition.outputValidationOwner, "agent-definitions");
+  assert.equal(app.readiness().agentRuntimeComposition.guardrailRuntimeConfigured, true);
   assert.equal(app.readiness().agentRuntimeComposition.executionAdapterConfigured, false);
   assert.equal(app.readiness().agentRuntimeComposition.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().progressiveAgents.contractReady, true);

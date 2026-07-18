@@ -7,8 +7,8 @@ lang: "en-US"
 schema: "agent-runtime-composition-contract/v1"
 frontmatter_contract: "required"
 status: "runtime-ready-dev"
-authority: "provider-neutral composition of source-backed definitions, model selection, Running Agents, and orchestration"
-runtime_scope: "definition preparation, provider selection, agent-step lifecycle, output validation, and orchestration adapters"
+authority: "provider-neutral composition of source-backed definitions, automatic guardrails, model selection, Running Agents, and orchestration"
+runtime_scope: "definition preparation, input and output guardrails, provider selection, agent-step lifecycle, output validation, and orchestration adapters"
 runtime_claim: "composition is runtime-ready in Dev with one bounded live delegate and handoff proof; the default Worker still has no definitions, verifier, execution adapter, or authorizer"
 runtime_owner: "../agent-api/src/agent-runtime-composition.js"
 runtime_proof: "../__tests__/agent-runtime-composition.test.mjs"
@@ -19,7 +19,7 @@ publish_policy: "Dev-only until explicit operator approval"
 
 # Agent Runtime Composition
 
-Agent Runtime Composition connects existing owners without replacing them. It prepares one exact source-backed Agent Definition, resolves its registered model and transport, drives the injected step adapter through Running Agents, revalidates final output against the same definition revision, and exposes the exact resolver and runner shape consumed by Agent Orchestration.
+Agent Runtime Composition connects existing owners without replacing them. It prepares one exact source-backed Agent Definition, runs referenced input guardrails, resolves its registered model and transport, drives the injected step adapter through Running Agents, runs referenced output guardrails, revalidates final output against the same definition revision, and exposes the exact resolver and runner shape consumed by Agent Orchestration.
 
 The cited multi-agent guidance informs only the distinction between manager-owned delegation and target-owned handoff. Local module boundaries, packets, continuation state, failure behavior, tests, and prose are independently authored. No external SDK implementation or artifact is imported.
 
@@ -28,6 +28,7 @@ The cited multi-agent guidance informs only the distinction between manager-owne
 | Owner | Responsibility | Composition rule |
 |---|---|---|
 | Agent Definitions | Definition identity, source URI and digest, ordered instructions, capability references, and final-output contract | Source verification and exact revision preparation run before every resolution or execution. |
+| Guardrails and Human Review | Automatic input and output validation plus sensitive-action interruption state | Referenced input checks run before adapter execution; output checks run before final validation; tool checks stay with the gateway. |
 | Models and Providers | Provider revision, model, feature eligibility, and transport selection | Composition passes the prepared agent model plus derived feature requirements; it never calls a provider directly. |
 | Running Agents | Turn serialization, continuation, step bounds, settlement, events, pause state, and cost aggregation | Composition owns one internal Running Agents controller and never duplicates its loop. |
 | Execution adapter | Provider translation and actual model, tool, or handoff work | The application injects this adapter; default construction remains unconfigured. |
@@ -39,8 +40,8 @@ The cited multi-agent guidance informs only the distinction between manager-owne
 |---|---|---|
 | Prepare | Exact agent id and revision plus application-confirmed source URI and SHA-256 digest | Missing verifier, changed source, stale revision, denied capability, or missing handoff target blocks. |
 | Select | Registered provider revision, exact model, compatible features, and transport | Missing route, feature, delivery, or connection blocks before execution. |
-| Run | Prepared packet, model-selection packet, orchestration role, branch, input, and one continuation strategy | Missing adapter, concurrent conversation, malformed step result, timeout, or lifecycle block stops the stage. |
-| Validate | Final output checked against the same agent id, revision, and output contract | Invalid text or structured output is rejected and its continuation is discarded. |
+| Run | Prepared packet, passed input guardrails, model-selection packet, orchestration role, branch, input, and one continuation strategy | Missing guardrail evaluator, rejected input, missing adapter, concurrent conversation, malformed step result, timeout, or lifecycle block stops the stage. |
+| Validate | Final output passes referenced output guardrails and the same agent id, revision, and output contract | Rejected guardrails or invalid text or structured output discard completion and continuation. |
 | Return | Final output and only fully reported aggregate cost | Partial or absent usage stays unreported; intermediate specialist output remains with orchestration. |
 
 Source evidence is revalidated on each prepare instead of cached as permanent truth. This avoids executing a definition whose bound file changed after registration. Only the URI, digest, and bounded verification id enter preparation evidence; source contents never enter readiness counters.

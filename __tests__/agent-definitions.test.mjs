@@ -99,6 +99,8 @@ test("packages authorized tools, guardrails, MCP servers, handoffs, and structur
     guardrails: [
       { name: "input-scope", stage: "input" },
       { name: "citation-check", stage: "output" },
+      { name: "tool-arguments", stage: "tool-input" },
+      { name: "tool-result", stage: "tool-output" },
     ],
     mcpServers: [{ name: "workspace-readonly" }],
     handoffs: [{ targetAgentId: "review-agent", summary: "Delegate final evidence review." }],
@@ -107,10 +109,12 @@ test("packages authorized tools, guardrails, MCP servers, handoffs, and structur
 
   const prepared = await registry.prepare({ agentId: "briefing-agent" });
   assert.equal(prepared.status, "ready");
-  assert.equal(prepared.evidence.authorizedCapabilities, 6);
+  assert.equal(prepared.evidence.authorizedCapabilities, 8);
   assert.deepEqual(authorizations.map(({ kind, name }) => `${kind}:${name}`).sort(), [
     "guardrail:citation-check",
     "guardrail:input-scope",
+    "guardrail:tool-arguments",
+    "guardrail:tool-result",
     "mcp-server:workspace-readonly",
     "output-schema:briefing-result-v1",
     "tool:archive_lookup",

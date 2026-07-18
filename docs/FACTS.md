@@ -60,6 +60,7 @@ external_pattern_sources:
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tools"
   - "https://developers.openai.com/api/docs/guides/tools-tool-search"
+  - "https://developers.openai.com/api/docs/guides/agents/guardrails-approvals"
   - "https://agentskills.io/specification"
   - "https://learn.chatgpt.com/docs/customization/overview"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents"
@@ -582,7 +583,6 @@ This file does not replace system, developer, or operator instructions. It defin
 | A dictionary token is missing | Add the token to the correct `DICTIONARY-*` file and cross-link it from this file. |
 | A UI label looks like an invocation | Resolve through dictionaries before treating it as executable. |
 | A claim needs runtime-ready status | Require `@runtime-proof`, focused validation, cost/deploy boundary reporting, and a bounded VCC. |
-
 ## Truth Tests
 
 | VCC | Check |

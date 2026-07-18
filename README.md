@@ -118,6 +118,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
 | `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
+| `agent-api/src/guardrails-human-review.js` | Ordered automatic validation plus bounded, single-consume human-review interruption state. |
 | `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
 | `agent-api/src/progressive-agents.js` | Incremental facade for one exact agent run, tool-bearing definitions, and explicit specialist workflows. |
 | `agent-api/src/agent-orchestration.js` | Revision-fenced manager and specialist topology with explicit delegation, handoff, conversation, and final-answer ownership. |
@@ -179,6 +180,17 @@ same turn, and streams canonical events through the same loop used by ordinary
 runs. The default Worker has no agent-step adapter, so `configured` is false and
 `providerExecutionStatus` remains `unverified`; the controller does not replace
 Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
+
+Guardrails and Human Review adds one application control owner around that
+lifecycle. Agent Runtime Composition runs source-referenced input checks before
+adapter execution and output checks before public completion. Tool-input and
+tool-output checks stay beside the real gateway. Sensitive actions produce a
+bounded approval interruption and single-consume resume state; approve, reject,
+and edit decisions resume the same Running Agents turn, and edits must be
+validated again. The default Worker's review store is isolate-memory and its
+application evaluator is absent, so restart-safe review and live behavior remain
+unverified. See
+[`docs/GUARDRAILS-HUMAN-REVIEW.md`](./docs/GUARDRAILS-HUMAN-REVIEW.md).
 
 Agent Runtime Composition joins the previously separate contracts without
 absorbing them. Each execution re-verifies the Agent Definition source, resolves
@@ -282,6 +294,7 @@ npm run check
 npm run cache-context:check
 npm run reasoning-continuity:check
 npm run function-gateway:check
+npm run guardrails-human-review:check
 npm run programmatic-tool-calling:check
 npm run tool-search:check
 npm run model-providers:check

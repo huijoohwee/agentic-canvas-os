@@ -86,6 +86,7 @@ function blockedOutcome() {
 
 export function createAgentRuntimeComposition({
   agentDefinitions,
+  guardrailsHumanReview,
   modelProviders,
   executeAgentStep,
   runDefault,
@@ -95,6 +96,7 @@ export function createAgentRuntimeComposition({
   ...runningAgentOptions
 } = {}) {
   assertOwner(agentDefinitions, ["prepare", "validateOutput", "stats"], "agentDefinitions");
+  assertOwner(guardrailsHumanReview, ["validate", "stats"], "guardrailsHumanReview");
   assertOwner(modelProviders, ["resolve", "stats"], "modelProviders");
   if (executeAgentStep !== undefined && typeof executeAgentStep !== "function") {
     throw new TypeError("executeAgentStep must be a function when provided.");
@@ -113,6 +115,9 @@ export function createAgentRuntimeComposition({
   let completedRunCount = 0;
   let blockedRunCount = 0;
   let outputValidationCount = 0;
+  let automaticGuardrailChecks = 0;
+  let blockedGuardrailRuns = 0;
+  const guardrailStageChecks = { input: 0, output: 0 };
 
   function conversationKey(conversationId, agentId) {
     return JSON.stringify([conversationId, agentId]);
@@ -139,6 +144,34 @@ export function createAgentRuntimeComposition({
     });
     if (selection.status !== "ready") return Object.freeze({ status: "blocked" });
     return Object.freeze({ status: "ready", prepared, selection });
+  }
+
+  async function applyAutomaticGuardrails({
+    runId,
+    conversationId,
+    agent,
+    preparedAgent,
+    stage,
+    value,
+  }) {
+    const guardrails = preparedAgent.behavior.guardrails.filter((reference) => reference.stage === stage);
+    if (guardrails.length === 0) return Object.freeze({ status: "passed", value });
+    automaticGuardrailChecks += guardrails.length;
+    guardrailStageChecks[stage] += guardrails.length;
+    if (!guardrailsHumanReview) {
+      blockedGuardrailRuns += 1;
+      return Object.freeze({ status: "blocked" });
+    }
+    const result = await guardrailsHumanReview.validate({
+      runId,
+      conversationId,
+      agent,
+      stage,
+      guardrails,
+      value,
+    });
+    if (result.status !== "passed") blockedGuardrailRuns += 1;
+    return result;
   }
 
   const runningAgents = createRunningAgentRuntime({
@@ -217,6 +250,15 @@ export function createAgentRuntimeComposition({
       if (record.active) throw new TypeError("Agent runtime composition conversation is active.");
       record.active = true;
       const internalRunId = `agent-runtime-run-${++identitySequence}`;
+      const guardedInput = await applyAutomaticGuardrails({
+        runId: externalRunId,
+        conversationId: externalConversationId,
+        agent: request.agent,
+        preparedAgent: resolved.prepared.agent,
+        stage: "input",
+        value: request.input,
+      });
+      if (guardedInput.status !== "passed") throw new TypeError("Agent input guardrails blocked execution.");
       executionContexts.set(record.internalConversationId, Object.freeze({
         externalRunId,
         externalConversationId,
@@ -230,7 +272,7 @@ export function createAgentRuntimeComposition({
         runId: internalRunId,
         conversationId: record.internalConversationId,
         agent: agentId,
-        input: request.input,
+        input: guardedInput.value,
         continuation: record.continuation,
         signal: request.signal,
       });
@@ -241,11 +283,24 @@ export function createAgentRuntimeComposition({
         throw new TypeError("Running Agents did not complete the composed stage.");
       }
       record.continuation = result.continuation;
+      const guardedOutput = await applyAutomaticGuardrails({
+        runId: externalRunId,
+        conversationId: externalConversationId,
+        agent: request.agent,
+        preparedAgent: resolved.prepared.agent,
+        stage: "output",
+        value: result.output,
+      });
+      if (guardedOutput.status !== "passed") {
+        runningAgents.clearConversation(record.internalConversationId);
+        conversations.delete(key);
+        throw new TypeError("Agent output guardrails blocked completion.");
+      }
       outputValidationCount += 1;
       const validated = await agentDefinitions.validateOutput({
         agentId,
         revision: request.agent.revision,
-        output: result.output,
+        output: guardedOutput.value,
       });
       if (validated.status !== "valid") {
         runningAgents.clearConversation(record.internalConversationId);
@@ -289,6 +344,7 @@ export function createAgentRuntimeComposition({
       configured,
       sourceRegistryConfigured: Boolean(agentDefinitions),
       modelProviderRegistryConfigured: Boolean(modelProviders),
+      guardrailRuntimeConfigured: Boolean(guardrailsHumanReview),
       executionAdapterConfigured: typeof executeAgentStep === "function",
       continuationStrategy,
       conversations: conversations.size,
@@ -298,6 +354,9 @@ export function createAgentRuntimeComposition({
       completedRunCount,
       blockedRunCount,
       outputValidationCount,
+      automaticGuardrailChecks,
+      blockedGuardrailRuns,
+      guardrailStageChecks: Object.freeze({ ...guardrailStageChecks }),
       maxConversations,
       runningAgents: runningAgents.stats(),
     }),

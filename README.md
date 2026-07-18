@@ -255,6 +255,12 @@ See [`docs/SANDBOX-AGENTS.md`](./docs/SANDBOX-AGENTS.md) for container-provider
 ownership, workspace and operation bounds, snapshot and resume semantics, and
 the distinction between provider attestation and independent containment proof.
 
+An independently approved Node-only proof can connect the composed agent owners
+to OpenAI Responses without changing the default Worker. It hard-limits the run
+to three requests, keeps delegation and handoff ownership explicit, reuses only
+the specialist's stored prior response, and emits redacted usage-derived cost
+evidence. See [`docs/LIVE-AGENT-PROVIDER-PROOF.md`](./docs/LIVE-AGENT-PROVIDER-PROOF.md).
+
 ```bash
 AGENTIC_SANDBOX_IMAGE='node@sha256:<immutable-multiarch-digest>' npm run sandbox-docker:check
 ```
@@ -270,6 +276,7 @@ npm run programmatic-tool-calling:check
 npm run tool-search:check
 npm run model-providers:check
 npm run agent-runtime-composition:check
+npm run agent-live-provider:check
 npm run instruction-audit:check
 npm run instruction-quality:check
 npm run dev

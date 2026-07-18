@@ -327,7 +327,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Tool search inspiration | External Tool Search systems are pattern references only. This repo may adopt neutral contracts for session-scoped definition deferral, metadata search, exact subset loading, top-level program preloading, and real-tool policy enforcement. | Official OpenAI Tool Search guide listed in frontmatter. |
 | Mixture-of-agents inspiration | External MoA systems are pattern references only. This repo may adopt a neutral one-shot `/moa` contract for bounded reference-agent deliberation, aggregator-owned action, cost accounting, and prompt-cache-preserving context. | Official Hermes Agent MoA docs listed in frontmatter. |
 | Stateful orchestration inspiration | External graph orchestration frameworks are pattern references only. This repo may adopt neutral contracts for graph state, nodes, edges, checkpoints, streaming traces, and human review. | Official LangGraph repository and docs listed in frontmatter. |
-| Long-horizon SuperAgent inspiration | External SuperAgent harnesses are pattern references only. This repo may adopt neutral contracts for minutes-to-hours research, coding, creation, sandbox workspaces, memory, skills, tools, subagents, and message gateways. | DeerFlow repository listed in frontmatter. |
+| Sandbox Agents and long-horizon SuperAgent inspiration | External sandbox and SuperAgent harnesses are pattern references only. This repo may adopt a neutral split between application control and injected container compute for bounded files, commands, packages, ports, snapshots, resume, memory, skills, tools, subagents, and message gateways. | `SANDBOX-AGENTS.md` plus the DeerFlow repository listed in frontmatter. |
 | Copy boundary | External code, APIs, prompts, schemas, examples, files, tests, fixtures, and prose must not be copied into this docs folder. | `AGENTS.md`, `SKILLS.md`, `VALIDATION-RUNBOOK.md`. |
 
 ## Direct Invocation Definitions
@@ -571,7 +571,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Human review | Human-in-loop stages are explicit interrupts with inspect, edit, approve, reject, and resume outcomes. | `/human.review`, `#human-in-loop`, `@human-review`. |
 | Streaming trace | Agent runs may surface streaming events for progress and state transitions, but not as source mutation. | `/stream.trace`, `@runtime-proof`, `@cost-log`. |
 | SuperAgent run | Long-horizon research, code, and creation tasks compose orchestration, skills, memory, tools, sandboxed workspace, message gateway, artifacts, and verification under one bounded harness. | `/superagent.run`, `#long-horizon-harness`, `@sandbox-workspace`, `@message-gateway`. |
-| External pattern boundary | LangGraph and DeerFlow may inform graph and SuperAgent semantics; local docs must not copy external code, APIs, schemas, tests, examples, prompts, provider configs, runtime layouts, or prose. | `VALIDATION-RUNBOOK.md`, `SKILLS.md`, `HARNESS-CONTRACTS.md`. |
+| External pattern boundary | OpenAI Sandbox Agents, LangGraph, and DeerFlow may inform sandbox, graph, and SuperAgent semantics; local docs must not copy external code, APIs, schemas, tests, examples, prompts, provider configs, runtime layouts, or prose. | `SANDBOX-AGENTS.md`, `VALIDATION-RUNBOOK.md`, `SKILLS.md`, `HARNESS-CONTRACTS.md`. |
 
 ## Resolution Rules
 

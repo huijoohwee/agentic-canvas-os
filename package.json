@@ -13,6 +13,7 @@
     "cache-context:check": "node --test __tests__/cache-context.test.mjs",
     "programmatic-tool-calling:check": "node --test __tests__/programmatic-tool-calling.test.mjs",
     "running-agents:check": "node --test __tests__/running-agents.test.mjs",
+    "sandbox-agents:check": "node --test __tests__/sandbox-agents.test.mjs",
     "reasoning-continuity:check": "node --test __tests__/reasoning-continuity.test.mjs",
     "tool-search:check": "node --test __tests__/tool-search.test.mjs",
     "check": "npm test && npm run web:build && npm run docs:check",

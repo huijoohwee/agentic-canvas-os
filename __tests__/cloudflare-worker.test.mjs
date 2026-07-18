@@ -112,6 +112,25 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
     "previous-response",
   ]);
   assert.equal(body.runningAgents.providerExecutionStatus, "unverified");
+  assert.equal(body.sandboxAgents.contractReady, true);
+  assert.equal(body.sandboxAgents.configured, false);
+  assert.equal(body.sandboxAgents.controlPlaneOwner, "agentic-canvas-os");
+  assert.equal(body.sandboxAgents.executionOwner, "injected-container-provider");
+  assert.deepEqual(body.sandboxAgents.stateSurfaces, [
+    "active-session",
+    "resume-checkpoint",
+    "workspace-snapshot",
+  ]);
+  assert.deepEqual(body.sandboxAgents.supportedCapabilities, [
+    "files",
+    "commands",
+    "packages",
+    "ports",
+    "snapshots",
+    "resume",
+  ]);
+  assert.equal(body.sandboxAgents.containerExecutionStatus, "unverified");
+  assert.equal(body.sandboxAgents.independentContainmentProof, "unverified");
   assert.equal(body.toolSearch.contractReady, true);
   assert.equal(body.toolSearch.configured, false);
   assert.equal(body.toolSearch.catalogScope, "active-session-grants");

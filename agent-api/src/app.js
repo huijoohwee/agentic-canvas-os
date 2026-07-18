@@ -30,6 +30,7 @@ import {
 import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
 import { createRunningAgentRuntime } from "./running-agents.js";
+import { createSandboxAgentRuntime } from "./sandbox-agents.js";
 import { createToolSearchRuntime } from "./tool-search.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
@@ -48,6 +49,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
  * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
+ * @param {ReturnType<createSandboxAgentRuntime>} [opts.sandboxAgents] container-workspace control plane
  * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
  * @param {ReturnType<createModelProviderRuntime>} [opts.modelProviders] model and transport selection controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
@@ -61,6 +63,7 @@ export function createAgentApiApp({
   functionCalling: providedFunctionCalling,
   programmaticToolCalling: providedProgrammaticToolCalling,
   runningAgents: providedRunningAgents,
+  sandboxAgents: providedSandboxAgents,
   toolSearch: providedToolSearch,
   modelProviders: providedModelProviders,
 } = {}) {
@@ -75,6 +78,7 @@ export function createAgentApiApp({
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
   const runningAgents = providedRunningAgents || createRunningAgentRuntime();
+  const sandboxAgents = providedSandboxAgents || createSandboxAgentRuntime();
   const toolSearch = providedToolSearch || createToolSearchRuntime();
   const modelProviders = providedModelProviders || createModelProviderRuntime();
   if (modelProviderEnvironment.ready) {
@@ -116,6 +120,7 @@ export function createAgentApiApp({
     openAiFunctionAdapter,
     programmaticToolCalling,
     runningAgents,
+    sandboxAgents,
     toolSearch,
     readiness: () => {
       const agentDefinitionStats = agentDefinitions.stats();
@@ -124,6 +129,7 @@ export function createAgentApiApp({
       const functionGatewayStats = functionGateway.stats();
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
       const runningAgentStats = runningAgents.stats();
+      const sandboxAgentStats = sandboxAgents.stats();
       const toolSearchStats = toolSearch.stats();
       const modelProviderStats = modelProviders.stats();
       return {
@@ -239,6 +245,18 @@ export function createAgentApiApp({
           continuationPolicy: "one-strategy-per-conversation",
           providerExecutionStatus: "unverified",
           ...runningAgentStats,
+        },
+        sandboxAgents: {
+          configured: sandboxAgentStats.configured,
+          contractReady: true,
+          controlPlaneOwner: "agentic-canvas-os",
+          executionOwner: "injected-container-provider",
+          operationPolicy: "application-authorized-and-capability-bounded",
+          stateSurfaces: ["active-session", "resume-checkpoint", "workspace-snapshot"],
+          secretPolicy: "host-bindings-only",
+          containerExecutionStatus: sandboxAgentStats.containerExecutionStatus,
+          independentContainmentProof: sandboxAgentStats.independentContainmentProof,
+          ...sandboxAgentStats,
         },
         toolSearch: {
           configured: toolSearchStats.clientSearchConfigured,

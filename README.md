@@ -177,6 +177,15 @@ runs. The default Worker has no agent-step adapter, so `configured` is false and
 `providerExecutionStatus` remains `unverified`; the controller does not replace
 Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
 
+Sandbox Agents readiness exposes a separate container-workspace control plane.
+It validates one fresh workspace or saved snapshot, routes application-approved
+file, command, package, and private-preview-port work to an injected provider,
+serializes operations, and keeps provider session and resume state opaque. The
+default Worker has no container adapter, authorizer, or external state store, so
+`configured` is false and both real containment and provider execution remain
+unverified. Offline adapter tests prove the controller contract, not a live
+container boundary.
+
 Agent Definitions readiness exposes the separate registry that packages each
 specialist's model route, ordered instructions, and optional reference-only
 tools, guardrails, MCP servers, handoffs, and output contract. Preparation
@@ -218,6 +227,10 @@ AGENT_MODEL_FEATURES=tool-calling,structured-output
 
 See [`docs/MODELS-AND-PROVIDERS.md`](./docs/MODELS-AND-PROVIDERS.md) for
 selection precedence, transport strategy, ownership, and acceptance proof.
+
+See [`docs/SANDBOX-AGENTS.md`](./docs/SANDBOX-AGENTS.md) for container-provider
+ownership, workspace and operation bounds, snapshot and resume semantics, and
+the distinction between provider attestation and independent containment proof.
 
 ## Develop
 

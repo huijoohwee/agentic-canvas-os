@@ -45,7 +45,7 @@ Every registration requires `id`, `revision`, `name`, an application source URI 
 | Model | `providerId`, `modelId` | The route is descriptive selection only. Transport, credentials, endpoints, arbitrary settings, and provider objects stay with the Models and Providers owner and are rejected here as unknown fields. |
 | Instructions | Ordered `{ name, content }[]` | Names are unique, content is bounded, order is preserved, and no hidden dynamic function enters the registry. |
 | Tools | `{ name, loading }[]` | `loading` is `direct` or `deferred`; the actual Function Calling or Tool Search owner still resolves and authorizes it. |
-| Guardrails | `{ name, stage }[]` | Input and output references identify application-owned checks; they never replace tool approval or gateway policy. |
+| Guardrails | `{ name, stage }[]` | Input and output references run through composition; tool-input and tool-output references stay adjacent to the gateway; none replaces approval or gateway policy. |
 | MCP servers | `{ name }[]` | Only logical names are accepted. Transport endpoints, credentials, and client objects stay in the MCP owner. |
 | Handoffs | `{ targetAgentId, summary }[]` | Self-handoffs and duplicate targets fail at registration; missing targets fail at preparation; the target's active revision is recorded. |
 | Output | Text mode or `{ mode: structured, schemaId }` | Structured results remain invalid until the injected application validator accepts the bounded JSON value. |

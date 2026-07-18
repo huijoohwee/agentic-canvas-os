@@ -79,6 +79,19 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
   assert.equal(body.agentDefinitions.executionOwner, "running-agents-adapter");
   assert.equal(body.agentDefinitions.providerExecutionStatus, "unverified");
+  assert.equal(body.guardrailsHumanReview.contractReady, true);
+  assert.equal(body.guardrailsHumanReview.configured, false);
+  assert.equal(body.guardrailsHumanReview.reviewStoreConfigured, true);
+  assert.deepEqual(body.guardrailsHumanReview.automaticStages, [
+    "input",
+    "output",
+    "tool-input",
+    "tool-output",
+  ]);
+  assert.deepEqual(body.guardrailsHumanReview.reviewDecisions, ["approve", "reject", "edit"]);
+  assert.equal(body.guardrailsHumanReview.interruptionOwner, "running-agents-same-turn-state");
+  assert.equal(body.guardrailsHumanReview.reviewStatePolicy, "single-consume-bounded-expiry");
+  assert.equal(body.guardrailsHumanReview.providerExecutionStatus, "unverified");
   assert.equal(body.agentOrchestration.contractReady, true);
   assert.equal(body.agentOrchestration.configured, false);
   assert.equal(body.agentOrchestration.topologyOwner, "application-orchestration-registry");
@@ -97,6 +110,7 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentRuntimeComposition.lifecycleOwner, "running-agents");
   assert.deepEqual(body.agentRuntimeComposition.orchestrationInterfaces, ["resolve-agent", "run-agent"]);
   assert.equal(body.agentRuntimeComposition.outputValidationOwner, "agent-definitions");
+  assert.equal(body.agentRuntimeComposition.guardrailRuntimeConfigured, true);
   assert.equal(body.agentRuntimeComposition.executionAdapterConfigured, false);
   assert.equal(body.agentRuntimeComposition.providerExecutionStatus, "unverified");
   assert.equal(body.progressiveAgents.contractReady, true);

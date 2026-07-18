@@ -37,6 +37,7 @@ external Agents SDK.
 |---|---|---|
 | Definition | Agent Definitions | Forward registration without weakening source, revision, capability, handoff, or output validation. |
 | Single run | Agent Runtime Composition | Normalize one bounded public request and require the exact agent revision to own the final answer. |
+| Guardrails and review | Guardrails and Human Review plus Running Agents | Apply referenced input and output checks automatically; keep tool checks and approval interrupts in their existing adapter and gateway owners. |
 | Tool use | Function Calling through the application step adapter | Preserve prepared tool references and model feature selection; never execute or authorize a tool inside the facade. |
 | Specialists | Agent Orchestration | Forward exact workflow registration and branch execution; preserve explicit manager or specialist answer ownership. |
 | Provider | Models and Providers plus the injected adapter | Keep credentials, transport, protocol translation, usage, and cost outside the facade. |
@@ -46,7 +47,7 @@ external Agents SDK.
 | Stage | Input | Output | Stop condition |
 |---|---|---|---|
 | Register one agent | Complete source-backed Agent Definition | Exact id, revision, and registration status | Missing registry, invalid source digest, unknown field, conflict, or capacity fails. |
-| Run one agent | Run id, conversation id, exact agent revision, bounded JSON input | Validated output with the same agent as final-answer owner | Missing composition, source or model drift, adapter failure, or invalid output returns a bounded block. |
+| Run one agent | Run id, conversation id, exact agent revision, bounded JSON input | Guarded, validated output with the same agent as final-answer owner | Missing composition or guardrail owner, source or model drift, rejected check, adapter failure, or invalid output returns a bounded block. |
 | Add tools | New exact definition revision with authorized tool references | Prepared references delivered to the application adapter | Missing authorization, unsupported model feature, schema, gateway, approval, or cost evidence blocks in its existing owner. |
 | Add specialists | Exact workflow revision and explicit branch ownership | Manager-owned delegation or specialist-owned handoff result | Missing authorizer, unresolved agent, stale revision, branch mismatch, or conversation-owner mismatch blocks. |
 

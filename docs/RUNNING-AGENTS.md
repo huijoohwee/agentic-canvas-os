@@ -31,7 +31,7 @@ The cited OpenAI guides inform only the capability class. The controller, vocabu
 | Agent-step adapter | Advance the selected provider or agent runtime by one normalized stage and return actual continuation and cost evidence. | Configuration alone does not prove a provider call, tool use, handoff, session, or stream. |
 | Function Calling controller | Validate and run direct application functions through the real gateway. | The outer loop never duplicates tool schemas, selection policy, approvals, or gateway execution. |
 | Programmatic Tool Calling controller | Run eligible hosted-program reductions behind its own capability and isolation gates. | The outer loop never evaluates generated code or weakens direct-call policy. |
-| Tool gateway | Authorize identity, arguments, risk, approval, execution, output, audit, and tool cost. | An agent transition or continuation token grants no tool authority. |
+| Guardrails and tool gateway | Validate bounded input, output, tool arguments, and results; authorize identity, risk, approval, execution, audit, and tool cost. | An agent transition, guardrail pass, or continuation token grants no tool authority. |
 | Durable state owner | Store application history, provider session identity, provider conversation identity, or previous response identity when required. | The in-memory Dev registry is not durable storage or cross-isolate continuity proof. |
 
 ## Turn Contract

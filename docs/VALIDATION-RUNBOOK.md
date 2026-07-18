@@ -106,7 +106,7 @@ wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
 ARTIFACT_PATTERN='https?://local'"host"'[:/]|kg_media_'"token"'|data:'"image"'|VIDEO'"DB_API_KEY"'|SENSE'"NOVA_API_KEY"'|generation_'"job_id"'|index_'"job_id"'|upload-'"[0-9a-f]"'|airvio/'"runs"
 ! rg -n "$ARTIFACT_PATTERN" "$DOCS_ROOT"
-EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
+EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py|InputGuardrailTripwireTriggered|GuardrailFunctionOutput|needsApproval|needs_approval|function_tool'
 ! (rg -n "$EXTERNAL_COPY_PATTERN" "$DOCS_ROOT" | rg -v 'VALIDATION-RUNBOOK\.md:[0-9]+:EXTERNAL_COPY_PATTERN=')
 ```
 Expected:
@@ -369,7 +369,7 @@ Expected:
 Run the application-turn controller and affected readiness checks after changing agent-loop transitions, continuation state, streaming, pause and resume, settlement, bounds, or cost evidence:
 
 ```bash
-npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run running-agents:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run agent-runtime-composition:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run agent-orchestration:check
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run running-agents:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run guardrails-human-review:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run agent-runtime-composition:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run agent-orchestration:check
 node --test \
   "$AGENTIC_CANVAS_OS_ROOT/__tests__/agent-api-app.test.mjs" \
   "$AGENTIC_CANVAS_OS_ROOT/__tests__/cloudflare-worker.test.mjs"
@@ -380,10 +380,10 @@ Expected:
 - One application turn advances model, tool, and handoff transitions within explicit step, event, state, output, conversation, and timeout bounds.
 - Application history, downstream session, downstream conversation, and previous-response continuation are mutually exclusive and locked to one conversation.
 - Streaming uses the same loop as ordinary runs, yields incremental bounded events, and closes only after completed, paused, or blocked settlement.
-- Pause state stays opaque; exact resume identity continues at the next step of the same turn while competing turns fail closed.
+- Pause state stays opaque; exact approve, reject, or edit review continues the same turn once, edits require validation, and replay, expiry, or competing turns fail closed.
 - Active conversations and recent run ids serialize; stale continuation, malformed adapter output, event overflow, timeout, and missing configuration return typed bounded evidence.
 - Readiness exposes sanitized policy, limits, and counters while adapter configuration is false and provider execution remains `unverified` without live proof.
-- Composition re-verifies source identity, resolves the exact model and transport, uses the Running Agents lifecycle, validates final output, and then lets orchestration enforce manager-owned delegation or target-owned handoff.
+- Composition re-verifies source identity, runs referenced input and output guardrails, resolves the exact model and transport, uses the Running Agents lifecycle, validates final output, and then lets orchestration enforce manager-owned delegation or target-owned handoff.
 - No external provider code, agent implementation, schemas, prompts, examples, event fixtures, tests, or prose are copied; no paid call, Prod mirror write, or Cloudflare action occurs.
 
 ## Agent Definitions And Model Providers Runtime Checks
@@ -555,7 +555,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 | Agent Definitions | `npm run agent-definitions:check` exits zero; affected composition, app, and Worker tests confirm exact source verification, immutable packets, revision fencing, reference-only authorization, verified handoffs, bounded output validation, sanitized empty-registry readiness, and no provider overclaim. |
 | Models and Providers | `npm run model-providers:check` exits zero; Agent Definition, app, and Worker tests confirm exact default precedence, revision fencing, feature and transport matching, strict neutral environment fields, secret redaction, sanitized readiness, and unverified live execution. |
 | Running Agents | `npm run running-agents:check` exits zero; affected app and Worker tests confirm one bounded lifecycle, exclusive continuation state, same-loop incremental streaming, same-turn pause resume, serialization, replay fencing, honest costs, sanitized unconfigured readiness, and no provider overclaim. |
-| Progressive Agents, Runtime Composition, and Orchestration | `npm run progressive-agents:check`, `npm run agent-runtime-composition:check`, and `npm run agent-orchestration:check` exit zero; affected Function Calling, app, and Worker tests confirm source and provider fencing, one exact direct agent, tool-owner reuse, explicit specialist ownership, honest costs, sanitized readiness, and no provider overclaim. |
+| Guardrails, Progressive Agents, Runtime Composition, and Orchestration | `npm run guardrails-human-review:check`, `npm run progressive-agents:check`, `npm run agent-runtime-composition:check`, and `npm run agent-orchestration:check` exit zero; affected definition, Function Calling, app, and Worker tests confirm automatic checks, same-turn review, source and provider fencing, owner reuse, honest costs, and sanitized readiness. |
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check` must report a fresh verified proof, 20 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |

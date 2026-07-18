@@ -18,6 +18,7 @@ import { createAgentRuntimeComposition } from "./agent-runtime-composition.js";
 import { createCacheContextRegistry } from "./cache-context.js";
 import { createFunctionCallingHandler } from "./function-calling-handler.js";
 import { createFunctionCallingRuntime } from "./function-calling.js";
+import { createGuardrailsHumanReviewRuntime } from "./guardrails-human-review.js";
 import {
   createKnowgrphFunctionGateway,
   parseKnowgrphFunctionToolAllowlist,
@@ -52,6 +53,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
+ * @param {ReturnType<createGuardrailsHumanReviewRuntime>} [opts.guardrailsHumanReview] automatic validation and review controller
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
  * @param {ReturnType<createProgressiveAgentsRuntime>} [opts.progressiveAgents] progressive single-agent and specialist facade
  * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
@@ -69,6 +71,7 @@ export function createAgentApiApp({
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
+  guardrailsHumanReview: providedGuardrailsHumanReview,
   programmaticToolCalling: providedProgrammaticToolCalling,
   progressiveAgents: providedProgressiveAgents,
   runningAgents: providedRunningAgents,
@@ -85,6 +88,7 @@ export function createAgentApiApp({
   const agentDefinitions = providedAgentDefinitions || createAgentDefinitionRegistry();
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
+  const guardrailsHumanReview = providedGuardrailsHumanReview || createGuardrailsHumanReviewRuntime();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
   const runningAgents = providedRunningAgents || createRunningAgentRuntime();
   const sandboxAgents = providedSandboxAgents || createSandboxAgentRuntime();
@@ -96,6 +100,7 @@ export function createAgentApiApp({
   }
   const agentRuntimeComposition = providedAgentRuntimeComposition || createAgentRuntimeComposition({
     agentDefinitions,
+    guardrailsHumanReview,
     modelProviders,
   });
   const agentOrchestration = providedAgentOrchestration || createAgentOrchestrationRuntime({
@@ -141,6 +146,7 @@ export function createAgentApiApp({
     reasoningContinuity,
     functionCalling,
     functionGateway,
+    guardrailsHumanReview,
     openAiFunctionAdapter,
     programmaticToolCalling,
     progressiveAgents,
@@ -155,6 +161,7 @@ export function createAgentApiApp({
       const progressiveAgentStats = progressiveAgents.stats();
       const functionCallingStats = functionCalling.stats();
       const functionGatewayStats = functionGateway.stats();
+      const guardrailsHumanReviewStats = guardrailsHumanReview.stats();
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
       const runningAgentStats = runningAgents.stats();
       const sandboxAgentStats = sandboxAgents.stats();
@@ -210,6 +217,17 @@ export function createAgentApiApp({
           executionOwner: "running-agents-adapter",
           providerExecutionStatus: "unverified",
           ...agentDefinitionStats,
+        },
+        guardrailsHumanReview: {
+          configured: guardrailsHumanReviewStats.guardrailEvaluatorConfigured,
+          contractReady: true,
+          automaticValidationOwner: "application-guardrail-evaluator",
+          toolBoundaryOwner: "function-tool-gateway",
+          humanReviewOwner: "application-review-gate",
+          interruptionOwner: "running-agents-same-turn-state",
+          reviewStatePolicy: "single-consume-bounded-expiry",
+          providerExecutionStatus: "unverified",
+          ...guardrailsHumanReviewStats,
         },
         agentOrchestration: {
           configured: agentOrchestrationStats.configured,

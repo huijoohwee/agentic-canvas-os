@@ -493,7 +493,7 @@ Stateful orchestration harnesses model long-running agent work as neutral graph 
 | Node execution | `{ nodeId, state, input, context }` | State update, command, trace event, or typed error. | Validate input/output schemas before model or tool spend. |
 | Edge routing | `{ state, nodeResult, edgeGuards[] }` | Next node ids, halt, or blocked result. | Conditional routes must be deterministic, bounded, and auditable. |
 | Checkpoint | `{ runId, state, step, resumeToken }` | Durable checkpoint or rejected persistence. | Require scope, idempotency, recovery proof, and cleanup path. |
-| Human review | `{ interruptPayload, state, proposedAction }` | Approve, reject, edit, or blocked continuation. | Continuation requires `@operator` approval. |
+| Human review | `{ runId, conversationId, agent, proposedAction }` | Bounded interruption, single-consume resume state, approve, reject, edit, audit, or typed block. | Exact identity and unexpired review are required; edits revalidate and a decision never executes the action itself. |
 | Stream trace | `{ runId, eventCursor }` | Ordered stage, state, cost, and stop events. | Events are secret-free and tied to `@runtime-proof`. |
 
 ### Orchestration Guardrails

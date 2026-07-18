@@ -298,6 +298,11 @@ function choiceRequiresCall(choice) {
     || (choice.mode === "allowed" && choice.requirement === "required");
 }
 
+function providerChoiceForTurn(choice, requiredCallCompleted) {
+  if (!requiredCallCompleted || !choiceRequiresCall(choice)) return choice;
+  return Object.freeze({ mode: "auto" });
+}
+
 function validateCallsAgainstChoice(calls, choice) {
   if (choice.mode === "none" && calls.length > 0) {
     throw new FunctionCallingBlock("tool_choice_violation", "Tool choice none forbids function calls.");
@@ -405,11 +410,12 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
     try {
       for (let turn = 1; turn <= maxModelTurns; turn += 1) {
         providerAttempts += 1;
+        const providerToolChoice = providerChoiceForTurn(safeChoice, executedRequiredCall);
         const response = normalizeResponse(await callWithTimeout(advanceModel, {
           runId: safeRunId,
           input: nextInput,
           tools: publicTools,
-          toolChoice: safeChoice,
+          toolChoice: providerToolChoice,
           parallelToolCalls,
           approvals: safeApprovals,
           ...(priorResponseId ? { previousResponseId: priorResponseId } : {}),

@@ -301,6 +301,8 @@ Direct function calling exposes strict application-owned declarations to a model
 
 The controller bounds tools, schema size, model turns, total calls, parallel width, result size, and stage duration. Tool Search supplies only direct or already-loaded definitions; Programmatic Tool Calling remains a separate route for predictable read-only reductions. Offline proof does not establish live provider or gateway execution.
 
+The concrete Dev adapter uses the OpenAI Responses protocol only after explicit server-side model, key, and pricing configuration. The HTTP caller supplies no schemas or routes. The first application-owned function, `read_agentic_os_status`, maps through an explicit allowlist to Knowgrph's existing `knowgrph.os.status` MCP owner, where caller type, immutable policy, arguments, result shape, and zero-cost evidence are revalidated. Returned provider reasoning stays opaque and transient; only final output, usage-derived model cost, gateway cost, and compact evidence cross the completion boundary.
+
 ## Programmatic Tool Calling Harness Contract
 
 Programmatic tool calling uses provider-hosted JavaScript only for predictable read-only stages. The local controller never evaluates generated source. The cited provider guide informs the capability class; local code, prompts, schemas, examples, tests, fixtures, and prose remain independently authored.

@@ -6,7 +6,6 @@
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
-import { createFunctionCallingRuntime } from "../agent-api/src/function-calling.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
 import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
@@ -15,8 +14,8 @@ import { CanvasRoom } from "./canvas-room.js";
 export { CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
+const APP_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
-const FUNCTION_CALLING_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
 const TOOL_SEARCH_BY_ENV = new WeakMap();
@@ -49,8 +48,8 @@ function toResponse(result) {
 }
 
 function createWorkerApp(env) {
+  if (env && typeof env === "object" && APP_BY_ENV.has(env)) return APP_BY_ENV.get(env);
   let cacheContext;
-  let functionCalling;
   let reasoningContinuity;
   let programmaticToolCalling;
   let toolSearch;
@@ -59,11 +58,6 @@ function createWorkerApp(env) {
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
       CACHE_CONTEXT_BY_ENV.set(env, cacheContext);
-    }
-    functionCalling = FUNCTION_CALLING_BY_ENV.get(env);
-    if (!functionCalling) {
-      functionCalling = createFunctionCallingRuntime();
-      FUNCTION_CALLING_BY_ENV.set(env, functionCalling);
     }
     reasoningContinuity = REASONING_CONTINUITY_BY_ENV.get(env);
     if (!reasoningContinuity) {
@@ -81,15 +75,21 @@ function createWorkerApp(env) {
       TOOL_SEARCH_BY_ENV.set(env, toolSearch);
     }
   }
-  return createAgentApiApp({
+  const app = createAgentApiApp({
     env,
     cacheContext,
-    functionCalling,
     reasoningContinuity,
     programmaticToolCalling,
     toolSearch,
-    fetchImpl: (req) => fetch(req.url, { method: req.method, headers: req.headers, body: JSON.stringify(req.body) }),
+    fetchImpl: (req) => fetch(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body: JSON.stringify(req.body),
+      signal: req.signal,
+    }),
   });
+  if (env && typeof env === "object") APP_BY_ENV.set(env, app);
+  return app;
 }
 
 export async function handleCloudflareRequest(request, env = {}) {
@@ -117,6 +117,12 @@ export async function handleCloudflareRequest(request, env = {}) {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
     const body = await readJsonBody(request);
     return toResponse(await app.invoke({ headers: headerBag(request), body }));
+  }
+
+  if (url.pathname === "/api/function-call" || url.pathname === "/function-call") {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    return toResponse(await app.functionCall({ headers: headerBag(request), body }));
   }
 
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {

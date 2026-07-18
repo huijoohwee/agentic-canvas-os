@@ -55,6 +55,8 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.deepEqual(body.functionCalling.selectionModes, ["auto", "required", "none", "forced", "allowed"]);
   assert.equal(body.functionCalling.parallelPolicy, "capability-and-request-bounded");
   assert.equal(body.functionCalling.providerExecutionStatus, "unverified");
+  assert.equal(body.functionCalling.adapter.configured, false);
+  assert.equal(body.functionCalling.gateway.configured, false);
   assert.equal(body.programmaticToolCalling.contractReady, true);
   assert.equal(body.programmaticToolCalling.configured, false);
   assert.equal(body.programmaticToolCalling.executionOwner, "downstream-hosted-sandbox");
@@ -162,6 +164,14 @@ test("POST /api/invoke without auth is 401 before any control-plane forward", as
     assert.equal(res.status, 401);
     assert.equal(called, false);
   });
+});
+
+test("POST /api/function-call requires auth before adapter or gateway configuration", async () => {
+  const res = await handleCloudflareRequest(
+    request("/api/function-call", { method: "POST", body: { runId: "x", prompt: "x" } }),
+    ENV,
+  );
+  assert.equal(res.status, 401);
 });
 
 test("non-API requests delegate to the Cloudflare assets binding", async () => {

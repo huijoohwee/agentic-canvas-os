@@ -3,6 +3,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { validateProbeTreeContractDocuments } from "./probe-tree-contract.mjs";
+
 const DOCS_ROOT = path.resolve("docs");
 const REQUIRED_KEYS = [
   "title",
@@ -33,9 +35,11 @@ const files = (await readdir(DOCS_ROOT))
 if (files.length === 0) fail("docs contract found no Markdown files");
 
 const failures = [];
+const documents = new Map();
 for (const name of files) {
   const file = path.join(DOCS_ROOT, name);
   const text = await readFile(file, "utf8");
+  documents.set(name, text);
   const frontmatter = readFrontmatter(text, name);
   if (frontmatter) {
     for (const key of REQUIRED_KEYS) {
@@ -55,6 +59,8 @@ for (const name of files) {
     }
   }
 }
+
+failures.push(...validateProbeTreeContractDocuments(documents));
 
 if (failures.length > 0) fail(failures.join("\n"));
 console.log(`docs contract ok (${files.length} files)`);

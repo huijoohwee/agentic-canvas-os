@@ -487,7 +487,7 @@ ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.
 
 Expected:
 
-- Command, semantic, binding, skill, and variant entries are discoverable from the source docs.
+- Command, semantic, binding, skill, variant, and structured Probe-Tree clarification contracts are discoverable and fail closed through `npm run docs:check`.
 - Every `FACTS.md` `direct_resolution` token is present in the matching `/`, `#`, or `@` dictionary.
 - `/soul.load`, `/personality.overlay`, Soul tags, Soul bindings, `soul.load`, and `personality.overlay` route through dictionaries, `SOUL.md`, and `SKILLS.md`.
 - `/memory.write`, `/memory.compact`, `/memory.search`, `/session.search`, `/user.profile`, persistent-memory tags, memory bindings, and matching skills route through dictionaries, `MEMORY.md`, `USER.md`, and `SKILLS.md`.

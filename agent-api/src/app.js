@@ -14,6 +14,7 @@
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
 import { createAgentDefinitionRegistry } from "./agent-definitions.js";
 import { createAgentOrchestrationRuntime } from "./agent-orchestration.js";
+import { createAgentRuntimeComposition } from "./agent-runtime-composition.js";
 import { createCacheContextRegistry } from "./cache-context.js";
 import { createFunctionCallingHandler } from "./function-calling-handler.js";
 import { createFunctionCallingRuntime } from "./function-calling.js";
@@ -46,6 +47,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
  * @param {ReturnType<createAgentDefinitionRegistry>} [opts.agentDefinitions] isolate-scoped agent definition registry
  * @param {ReturnType<createAgentOrchestrationRuntime>} [opts.agentOrchestration] multi-agent ownership controller
+ * @param {ReturnType<createAgentRuntimeComposition>} [opts.agentRuntimeComposition] definition-to-execution adapter
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
@@ -61,6 +63,7 @@ export function createAgentApiApp({
   fetchImpl,
   agentDefinitions: providedAgentDefinitions,
   agentOrchestration: providedAgentOrchestration,
+  agentRuntimeComposition: providedAgentRuntimeComposition,
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
@@ -77,7 +80,6 @@ export function createAgentApiApp({
   const modelProviderEnvironment = resolveModelProviderEnvironment(e);
   const openAiFunctionConfig = resolveOpenAiResponsesFunctionConfig(e);
   const agentDefinitions = providedAgentDefinitions || createAgentDefinitionRegistry();
-  const agentOrchestration = providedAgentOrchestration || createAgentOrchestrationRuntime();
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
@@ -89,6 +91,14 @@ export function createAgentApiApp({
     modelProviders.registerProvider(modelProviderEnvironment.providerDefinition);
     modelProviders.configureProcessDefault(modelProviderEnvironment.processDefault);
   }
+  const agentRuntimeComposition = providedAgentRuntimeComposition || createAgentRuntimeComposition({
+    agentDefinitions,
+    modelProviders,
+  });
+  const agentOrchestration = providedAgentOrchestration || createAgentOrchestrationRuntime({
+    resolveAgent: agentRuntimeComposition.resolveAgent,
+    runAgent: agentRuntimeComposition.runAgent,
+  });
 
   let mcpClient = null;
   if (endpoint) {
@@ -118,6 +128,7 @@ export function createAgentApiApp({
     modelProviders,
     agentDefinitions,
     agentOrchestration,
+    agentRuntimeComposition,
     cacheContext,
     reasoningContinuity,
     functionCalling,
@@ -130,6 +141,7 @@ export function createAgentApiApp({
     readiness: () => {
       const agentDefinitionStats = agentDefinitions.stats();
       const agentOrchestrationStats = agentOrchestration.stats();
+      const agentRuntimeCompositionStats = agentRuntimeComposition.stats();
       const programmaticStats = programmaticToolCalling.stats();
       const functionCallingStats = functionCalling.stats();
       const functionGatewayStats = functionGateway.stats();
@@ -181,7 +193,8 @@ export function createAgentApiApp({
           configured: agentDefinitionStats.agents > 0,
           contractReady: true,
           definitionOwner: "application-agent-registry",
-          requiredCore: ["model", "instructions"],
+          requiredCore: ["source", "model", "instructions"],
+          sourcePolicy: "application-verified-uri-and-sha256",
           optionalBehavior: ["tools", "guardrails", "mcp-servers", "handoffs", "structured-output"],
           capabilityPolicy: "reference-only-with-application-authorization",
           executionOwner: "running-agents-adapter",
@@ -198,6 +211,17 @@ export function createAgentApiApp({
           finalAnswerOwnership: "branch-explicit",
           providerExecutionStatus: "unverified",
           ...agentOrchestrationStats,
+        },
+        agentRuntimeComposition: {
+          configured: agentRuntimeCompositionStats.configured,
+          contractReady: true,
+          sourceOwner: "agent-definitions",
+          selectionOwner: "models-and-providers",
+          lifecycleOwner: "running-agents",
+          orchestrationInterfaces: ["resolve-agent", "run-agent"],
+          outputValidationOwner: "agent-definitions",
+          providerExecutionStatus: "unverified",
+          ...agentRuntimeCompositionStats,
         },
         cacheContext: {
           configured: true,

@@ -138,10 +138,11 @@ harness:
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
 | Function Calling | Continue direct model-requested functions through the application gateway | `{ runId, input, tools[], capabilities, toolChoice, approvals[] }` | Final output, same-id outputs, separate model and gateway costs, or typed block | Strict schemas and explicit capabilities required; the real gateway retains authorization, mutation, approval, audit, and cost |
-| Agent Definitions | Package one specialist's intrinsic runtime configuration without granting execution authority | `{ definition, revision, applicationAuthorizer }` | Immutable prepared packet, validated output, or typed block | Capabilities stay reference-only; Running Agents, gateways, MCP owners, and output validators retain execution and policy |
+| Agent Definitions | Package one source-backed specialist's intrinsic runtime configuration without granting execution authority | `{ definition, revision, sourceVerifier, applicationAuthorizer }` | Immutable prepared packet, validated output, or typed block | Exact source evidence precedes reference-only capability checks; Running Agents, gateways, MCP owners, and output validators retain execution and policy |
 | Models And Providers | Resolve an application-registered provider revision, model, and transport without executing it | `{ agentModel, runDefault, processDefault, requirements }` | Immutable selection packet or typed block | Exact registration, feature, delivery, and connection matching precede adapter execution; credentials and provider calls stay external |
 | Running Agents | Drive one bounded application turn across model, tool, handoff, pause, and final stages | `{ runId, conversationId, agent, input, continuation }` | Completed, paused, or blocked settlement plus continuation, evidence, and honest cost | One strategy per conversation; streaming shares the same loop; adapters and gateways retain execution policy |
 | Agent Orchestration | Route one exact manager or specialist branch with explicit public ownership | `{ runId, conversationId, workflowId, workflowRevision, branchId, input }` | Source-owned delegated answer, target-owned handoff answer, or typed block | Every branch fixes conversation and final-answer ownership; authorization, exact agent resolution, and Running Agents execution remain separate |
+| Agent Runtime Composition | Join exact definition, model selection, lifecycle, output validation, and orchestration interfaces | `{ agent, role, workflow, branch, input }` | Validated final output and fully reported cost, or bounded block | Existing owners remain authoritative; missing or changed evidence fails before public output |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Instruction Task Quality | Screen final-answer behavior after structural instruction changes | `{ suite, candidate }` | `agentic-instruction-task-quality/v1` per-case findings and aggregate score | Model-agnostic lexical rubric; exact provenance and human review required; no private reasoning access or deployment authority |
@@ -335,6 +336,20 @@ Agent Orchestration owns explicit manager and specialist topology without absorb
 | Finalize | Completed agent outcomes and cost logs | Public output, owner identities, approval, cost, and compact evidence | Failed work does not change ownership; raw errors and adapter details remain private. |
 
 Bounds cover workflow revisions, participants, branches, input, output, conversations, replay identities, and stage time. Offline proof establishes orchestration behavior only; provider execution and durable cross-isolate conversation ownership remain unverified.
+
+## Agent Runtime Composition Harness Contract
+
+Composition owns only the adapter seams between source-backed Agent Definitions, Models and Providers, Running Agents, and Agent Orchestration. It does not own provider translation, workflow authorization, capability grants, or public-answer policy.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Prepare | Exact agent id and revision | Source-verified prepared packet | Missing verifier, source mismatch, stale revision, denied reference, or missing handoff blocks. |
+| Select | Prepared model route and derived features | Exact provider, model, and transport packet | Missing route or feature and transport mismatch block before adapter work. |
+| Execute | Prepared packet, selection packet, role, branch, input, and continuation | Running Agents settlement | One bounded internal conversation exists per external conversation and agent. |
+| Validate | Completed output and exact agent revision | Text or structured final output | Invalid output clears the internal continuation before retry. |
+| Orchestrate | Resolver and runner interfaces | Manager-owned delegation or target-owned handoff | Registered topology and authorizer remain the sole public-ownership owners. |
+
+Only a fully reported aggregate cost becomes a downstream cost log. Missing or partial usage remains unreported. Offline proof establishes integrated owner behavior without establishing provider reachability, quality, usage, price, or spend.
 
 ## Function Calling Harness Contract
 

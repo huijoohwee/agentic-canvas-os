@@ -1,0 +1,24 @@
+{
+  "id": "source-specialist",
+  "revision": "source-specialist-v1",
+  "name": "Source Specialist",
+  "model": {
+    "providerId": "offline-provider",
+    "modelId": "offline-model"
+  },
+  "instructions": [
+    {
+      "name": "purpose",
+      "content": "Return one bounded answer grounded in the supplied task input."
+    }
+  ],
+  "tools": [
+    {
+      "name": "source_lookup",
+      "loading": "deferred"
+    }
+  ],
+  "output": {
+    "mode": "text"
+  }
+}

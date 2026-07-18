@@ -28,7 +28,7 @@ The cited OpenAI guide informs only the capability category. Local field names, 
 | Owner | Responsibility | Forbidden claim |
 |---|---|---|
 | Agent Definition Registry | Validate, freeze, revision-fence, register, prepare, and remove bounded agent definitions. | Registration is not model execution, provider configuration, or permission. |
-| Application capability authorizer | Revalidate every tool, guardrail, MCP server, and structured-output schema reference for the prepared agent revision. | A definition reference cannot mint a grant, credential, endpoint, or approval. |
+| Application source verifier and capability authorizer | Revalidate the source URI and digest first, then every tool, guardrail, MCP server, and structured-output schema reference for the prepared agent revision. | A source or capability reference cannot mint a grant, credential, endpoint, or approval. |
 | Running Agents adapter | Consume a prepared packet and drive the bounded application turn. | The definition registry does not duplicate loop, streaming, pause, continuation, or cost ownership. |
 | Tool, guardrail, and MCP owners | Resolve definitions and enforce policy, approvals, execution, audit, and cost. | Agent metadata cannot weaken the existing real owner. |
 | Structured-output validator | Check a bounded JSON result against the application-owned schema identity. | A declared schema id does not prove validation or provider conformance. |
@@ -36,11 +36,12 @@ The cited OpenAI guide informs only the capability category. Local field names, 
 
 ## Definition Contract
 
-Every registration requires `id`, `revision`, `name`, a model route, and at least one ordered instruction block. Optional behavior remains reference-only.
+Every registration requires `id`, `revision`, `name`, an application source URI and lowercase SHA-256 digest, a model route, and at least one ordered instruction block. Optional behavior remains reference-only.
 
 | Field | Local shape | Runtime rule |
 |---|---|---|
 | Identity | `id`, `revision`, `name` | Identity is bounded and immutable. Reusing a revision with different content fails; a new revision replaces the prior active revision. |
+| Source | `uri`, `digest` | The URI uses an explicit scheme and the digest binds the registered content. An injected verifier must return the exact pair before each preparation. |
 | Model | `providerId`, `modelId` | The route is descriptive selection only. Transport, credentials, endpoints, arbitrary settings, and provider objects stay with the Models and Providers owner and are rejected here as unknown fields. |
 | Instructions | Ordered `{ name, content }[]` | Names are unique, content is bounded, order is preserved, and no hidden dynamic function enters the registry. |
 | Tools | `{ name, loading }[]` | `loading` is `direct` or `deferred`; the actual Function Calling or Tool Search owner still resolves and authorizes it. |
@@ -55,7 +56,7 @@ Unknown fields fail closed at each definition layer. This keeps secrets, executa
 
 | Stage | Input | Output | Stop condition |
 |---|---|---|---|
-| Resolve | Agent id and optional exact revision | Active immutable definition | Unknown agent or stale revision blocks. |
+| Resolve source | Agent id and optional exact revision | Active immutable definition plus exact source verification | Unknown agent, stale revision, missing verifier, verifier failure, or URI/digest mismatch blocks. |
 | Authorize | Tool, guardrail, MCP server, and output-schema references | One explicit application decision per reference | Missing authorizer, authorizer failure, or any denial blocks the whole packet. |
 | Verify handoffs | Declared target ids | Target id, active revision, name, and summary | Missing target blocks; target configuration is never embedded recursively. |
 | Prepare | Validated definition plus decisions | Immutable runtime packet and compact evidence | No adapter or provider call occurs. |
@@ -65,7 +66,7 @@ Capability decisions may run concurrently, but preparation settles once and retu
 
 ## Revision And Capacity Rules
 
-The registry keeps one active revision per agent id. Registering identical content at the same revision is idempotent. Registering different content under the same revision returns a conflict. A changed revision atomically replaces the active definition, and callers requesting the old revision receive a stale-revision block.
+The registry keeps one active revision per agent id. Registering identical content at the same revision is idempotent. Registering different content, including changed source identity, under the same revision returns a conflict. A changed revision atomically replaces the active definition, and callers requesting the old revision receive a stale-revision block.
 
 Definitions are isolate-scoped and capacity-bounded. The registry does not silently evict an agent because eviction could invalidate a handoff between validation and execution. Applications must remove a definition explicitly or create a larger registry after reviewing memory and ownership impact.
 
@@ -91,10 +92,10 @@ All bounds are explicit positive integers at registry construction. Readiness ex
 
 ## Acceptance Contract
 
-- Given a minimal definition, when it is registered and prepared, then the result preserves exact model and instruction order in a frozen packet with empty optional behavior.
+- Given a minimal definition, when its exact source is verified and it is prepared, then the result preserves source, model, and instruction order in a frozen packet with empty optional behavior.
 - Given optional references, when the application authorizes every reference and all handoff targets exist, then preparation returns one complete packet without resolving credentials or executing a capability.
 - Given a missing authorizer, denial, unknown handoff, stale revision, duplicate identity, unknown field, or capacity breach, when preparation or registration runs, then it fails closed with a typed reason.
 - Given text or structured output, when validation runs, then only a bounded string or application-validator-approved JSON result becomes valid.
 - Given default Worker construction, when readiness is read, then the contract and bounds are visible while definition configuration is false and provider execution remains `unverified`.
 
-VCC: run `npm run agent-definitions:check` plus the affected app and Worker tests; require zero failures, immutable packets, explicit revision fencing, reference-only capabilities, target verification, structured-output validation, bounded counters, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.
+VCC: run `npm run agent-definitions:check` plus the composition, app, and Worker tests; require zero failures, exact source verification, immutable packets, explicit revision fencing, reference-only capabilities, target verification, structured-output validation, bounded counters, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.

@@ -6,11 +6,29 @@ import {
   createAgentDefinitionRegistry,
 } from "../agent-api/src/agent-definitions.js";
 
+const SOURCE = Object.freeze({
+  uri: "workspace:/agents/briefing-agent.json",
+  digest: "a".repeat(64),
+});
+
+function createRegistry(options = {}) {
+  return createAgentDefinitionRegistry({
+    verifyDefinitionSource: async ({ source }) => ({
+      verified: true,
+      uri: source.uri,
+      digest: source.digest,
+      verificationId: "source-proof-1",
+    }),
+    ...options,
+  });
+}
+
 function minimalDefinition(overrides = {}) {
   return {
     id: "briefing-agent",
     revision: "briefing-v1",
     name: "Briefing Agent",
+    source: SOURCE,
     model: {
       providerId: "configured-provider",
       modelId: "configured-model",
@@ -23,8 +41,8 @@ function minimalDefinition(overrides = {}) {
   };
 }
 
-test("registers and prepares a minimal immutable agent packet", async () => {
-  const registry = createAgentDefinitionRegistry();
+test("registers and prepares a minimal immutable source-backed agent packet", async () => {
+  const registry = createRegistry();
   assert.deepEqual(registry.register(minimalDefinition()), {
     id: "briefing-agent",
     revision: "briefing-v1",
@@ -34,6 +52,7 @@ test("registers and prepares a minimal immutable agent packet", async () => {
 
   const prepared = await registry.prepare({ agentId: "briefing-agent", revision: "briefing-v1" });
   assert.equal(prepared.status, "ready");
+  assert.deepEqual(prepared.agent.source, SOURCE);
   assert.equal(prepared.agent.model.modelId, "configured-model");
   assert.deepEqual(prepared.agent.instructions.map((instruction) => instruction.name), ["purpose", "boundary"]);
   assert.deepEqual(prepared.agent.behavior, {
@@ -44,6 +63,8 @@ test("registers and prepares a minimal immutable agent packet", async () => {
     output: { mode: "text" },
   });
   assert.deepEqual(prepared.evidence, {
+    sourceVerified: true,
+    sourceVerificationId: "source-proof-1",
     authorizedCapabilities: 0,
     verifiedHandoffTargets: 0,
     executionOwner: "running-agents-adapter",
@@ -55,7 +76,7 @@ test("registers and prepares a minimal immutable agent packet", async () => {
 
 test("packages authorized tools, guardrails, MCP servers, handoffs, and structured output", async () => {
   const authorizations = [];
-  const registry = createAgentDefinitionRegistry({
+  const registry = createRegistry({
     authorizeCapability: async (request) => {
       authorizations.push(request);
       return true;
@@ -116,13 +137,13 @@ test("packages authorized tools, guardrails, MCP servers, handoffs, and structur
 });
 
 test("capabilities remain references and fail closed without application authorization", async () => {
-  const unconfigured = createAgentDefinitionRegistry();
+  const unconfigured = createRegistry({ authorizeCapability: undefined });
   unconfigured.register(minimalDefinition({ tools: [{ name: "source_lookup", loading: "direct" }] }));
   const missing = await unconfigured.prepare({ agentId: "briefing-agent" });
   assert.equal(missing.status, "blocked");
   assert.equal(missing.reasonCode, "capability_authorizer_unconfigured");
 
-  const denied = createAgentDefinitionRegistry({ authorizeCapability: ({ name }) => name !== "archive_lookup" });
+  const denied = createRegistry({ authorizeCapability: ({ name }) => name !== "archive_lookup" });
   denied.register(minimalDefinition({
     tools: [
       { name: "source_lookup", loading: "direct" },
@@ -136,7 +157,7 @@ test("capabilities remain references and fail closed without application authori
 });
 
 test("handoffs require a distinct registered target at preparation time", async () => {
-  const registry = createAgentDefinitionRegistry();
+  const registry = createRegistry();
   assert.throws(
     () => registry.register(minimalDefinition({
       handoffs: [{ targetAgentId: "briefing-agent", summary: "Cycle back." }],
@@ -152,7 +173,7 @@ test("handoffs require a distinct registered target at preparation time", async 
 });
 
 test("revision conflicts, stale prepares, unknown fields, and capacity fail closed", async () => {
-  const registry = createAgentDefinitionRegistry({ maxAgents: 1 });
+  const registry = createRegistry({ maxAgents: 1 });
   registry.register(minimalDefinition());
   assert.throws(
     () => registry.register(minimalDefinition({ name: "Changed without revision" })),
@@ -203,13 +224,13 @@ test("revision conflicts, stale prepares, unknown fields, and capacity fail clos
 });
 
 test("instruction, reference, definition, and output bounds are enforced", async () => {
-  const instructionBound = createAgentDefinitionRegistry({ maxInstructionChars: 8 });
+  const instructionBound = createRegistry({ maxInstructionChars: 8 });
   assert.throws(
     () => instructionBound.register(minimalDefinition({ instructions: [{ name: "task", content: "123456789" }] })),
     /instructions exceed 8 characters/,
   );
 
-  const referenceBound = createAgentDefinitionRegistry({ maxReferences: 1 });
+  const referenceBound = createRegistry({ maxReferences: 1 });
   assert.throws(
     () => referenceBound.register(minimalDefinition({
       tools: [
@@ -220,7 +241,7 @@ test("instruction, reference, definition, and output bounds are enforced", async
     /at most 1 entries/,
   );
 
-  const outputBound = createAgentDefinitionRegistry({ maxOutputChars: 5 });
+  const outputBound = createRegistry({ maxOutputChars: 5 });
   outputBound.register(minimalDefinition());
   const output = await outputBound.validateOutput({ agentId: "briefing-agent", output: "123456" });
   assert.equal(output.status, "blocked");
@@ -228,7 +249,7 @@ test("instruction, reference, definition, and output bounds are enforced", async
 });
 
 test("text and structured output validation report configuration honestly", async () => {
-  const textRegistry = createAgentDefinitionRegistry();
+  const textRegistry = createRegistry();
   textRegistry.register(minimalDefinition());
   assert.equal((await textRegistry.validateOutput({ agentId: "briefing-agent", output: "done" })).status, "valid");
   assert.equal(
@@ -236,7 +257,7 @@ test("text and structured output validation report configuration honestly", asyn
     "text_output_invalid",
   );
 
-  const structuredRegistry = createAgentDefinitionRegistry({ authorizeCapability: () => true });
+  const structuredRegistry = createRegistry({ authorizeCapability: () => true });
   structuredRegistry.register(minimalDefinition({ output: { mode: "structured", schemaId: "result-v1" } }));
   const result = await structuredRegistry.validateOutput({ agentId: "briefing-agent", output: { ok: true } });
   assert.equal(result.status, "blocked");
@@ -249,6 +270,7 @@ test("text and structured output validation report configuration honestly", asyn
     blockedPreparationCount: 0,
     outputValidationCount: 0,
     blockedOutputCount: 1,
+    sourceVerifierConfigured: true,
     capabilityAuthorizerConfigured: true,
     outputValidatorConfigured: false,
     maxAgents: 64,
@@ -259,4 +281,28 @@ test("text and structured output validation report configuration honestly", asyn
     maxOutputChars: 200000,
     maxValidationIssueChars: 20000,
   });
+});
+
+test("source verification is required and exact before capability authorization", async () => {
+  let authorizations = 0;
+  const missingVerifier = createAgentDefinitionRegistry({ authorizeCapability: () => { authorizations += 1; return true; } });
+  missingVerifier.register(minimalDefinition({ tools: [{ name: "source_lookup", loading: "direct" }] }));
+  const missing = await missingVerifier.prepare({ agentId: "briefing-agent" });
+  assert.equal(missing.reasonCode, "source_verifier_unconfigured");
+  assert.equal(authorizations, 0);
+
+  const mismatch = createAgentDefinitionRegistry({
+    verifyDefinitionSource: async ({ source }) => ({
+      verified: true,
+      uri: source.uri,
+      digest: "b".repeat(64),
+      verificationId: "wrong-source",
+    }),
+  });
+  mismatch.register(minimalDefinition());
+  assert.equal((await mismatch.prepare({ agentId: "briefing-agent" })).reasonCode, "source_mismatch");
+  assert.throws(() => mismatch.register(minimalDefinition({
+    revision: "briefing-v2",
+    source: { uri: "workspace:/agents/briefing-agent.json", digest: "not-a-digest" },
+  })), /lowercase SHA-256 digest/);
 });

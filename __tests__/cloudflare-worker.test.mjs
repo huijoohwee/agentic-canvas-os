@@ -67,7 +67,8 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentDefinitions.contractReady, true);
   assert.equal(body.agentDefinitions.configured, false);
   assert.equal(body.agentDefinitions.definitionOwner, "application-agent-registry");
-  assert.deepEqual(body.agentDefinitions.requiredCore, ["model", "instructions"]);
+  assert.deepEqual(body.agentDefinitions.requiredCore, ["source", "model", "instructions"]);
+  assert.equal(body.agentDefinitions.sourcePolicy, "application-verified-uri-and-sha256");
   assert.deepEqual(body.agentDefinitions.optionalBehavior, [
     "tools",
     "guardrails",
@@ -87,6 +88,17 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentOrchestration.finalAnswerOwnership, "branch-explicit");
   assert.deepEqual(body.agentOrchestration.modes, ["delegate", "handoff"]);
   assert.equal(body.agentOrchestration.providerExecutionStatus, "unverified");
+  assert.equal(body.agentOrchestration.agentResolverConfigured, true);
+  assert.equal(body.agentOrchestration.agentRunnerConfigured, true);
+  assert.equal(body.agentRuntimeComposition.contractReady, true);
+  assert.equal(body.agentRuntimeComposition.configured, false);
+  assert.equal(body.agentRuntimeComposition.sourceOwner, "agent-definitions");
+  assert.equal(body.agentRuntimeComposition.selectionOwner, "models-and-providers");
+  assert.equal(body.agentRuntimeComposition.lifecycleOwner, "running-agents");
+  assert.deepEqual(body.agentRuntimeComposition.orchestrationInterfaces, ["resolve-agent", "run-agent"]);
+  assert.equal(body.agentRuntimeComposition.outputValidationOwner, "agent-definitions");
+  assert.equal(body.agentRuntimeComposition.executionAdapterConfigured, false);
+  assert.equal(body.agentRuntimeComposition.providerExecutionStatus, "unverified");
   assert.equal(body.cacheContext.stablePrefixOrder, "static-first-dynamic-last");
   assert.equal(body.cacheContext.providerCacheStatus, "unverified");
   assert.equal(body.reasoningContinuity.invariantPolicy, "goals-assumptions-priorities");

@@ -59,7 +59,8 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentDefinitions.contractReady, true);
   assert.equal(app.readiness().agentDefinitions.configured, false);
   assert.equal(app.readiness().agentDefinitions.definitionOwner, "application-agent-registry");
-  assert.deepEqual(app.readiness().agentDefinitions.requiredCore, ["model", "instructions"]);
+  assert.deepEqual(app.readiness().agentDefinitions.requiredCore, ["source", "model", "instructions"]);
+  assert.equal(app.readiness().agentDefinitions.sourcePolicy, "application-verified-uri-and-sha256");
   assert.deepEqual(app.readiness().agentDefinitions.optionalBehavior, [
     "tools",
     "guardrails",
@@ -79,6 +80,17 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentOrchestration.finalAnswerOwnership, "branch-explicit");
   assert.deepEqual(app.readiness().agentOrchestration.modes, ["delegate", "handoff"]);
   assert.equal(app.readiness().agentOrchestration.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().agentOrchestration.agentResolverConfigured, true);
+  assert.equal(app.readiness().agentOrchestration.agentRunnerConfigured, true);
+  assert.equal(app.readiness().agentRuntimeComposition.contractReady, true);
+  assert.equal(app.readiness().agentRuntimeComposition.configured, false);
+  assert.equal(app.readiness().agentRuntimeComposition.sourceOwner, "agent-definitions");
+  assert.equal(app.readiness().agentRuntimeComposition.selectionOwner, "models-and-providers");
+  assert.equal(app.readiness().agentRuntimeComposition.lifecycleOwner, "running-agents");
+  assert.deepEqual(app.readiness().agentRuntimeComposition.orchestrationInterfaces, ["resolve-agent", "run-agent"]);
+  assert.equal(app.readiness().agentRuntimeComposition.outputValidationOwner, "agent-definitions");
+  assert.equal(app.readiness().agentRuntimeComposition.executionAdapterConfigured, false);
+  assert.equal(app.readiness().agentRuntimeComposition.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().cacheContext.configured, true);
   assert.equal(app.readiness().cacheContext.providerCacheStatus, "unverified");
   assert.equal(app.readiness().reasoningContinuity.configured, true);

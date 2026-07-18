@@ -571,7 +571,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Human review | Human-in-loop stages are explicit interrupts with inspect, edit, approve, reject, and resume outcomes. | `/human.review`, `#human-in-loop`, `@human-review`. |
 | Streaming trace | Agent runs may surface streaming events for progress and state transitions, but not as source mutation. | `/stream.trace`, `@runtime-proof`, `@cost-log`. |
 | SuperAgent run | Long-horizon research, code, and creation tasks compose orchestration, skills, memory, tools, sandboxed workspace, message gateway, artifacts, and verification under one bounded harness. | `/superagent.run`, `#long-horizon-harness`, `@sandbox-workspace`, `@message-gateway`. |
-| External pattern boundary | OpenAI orchestration, handoff, and Sandbox Agents guides, Docker documentation, LangGraph, and DeerFlow may inform semantics or platform usage; local docs and runtime must not copy external code, APIs, schemas, tests, examples, prompts, provider configs, runtime layouts, or prose. | `AGENT-ORCHESTRATION.md`, `SANDBOX-AGENTS.md`, `VALIDATION-RUNBOOK.md`, `HARNESS-CONTRACTS.md`. |
+| External pattern boundary | OpenAI orchestration, handoff, and Sandbox Agents guides, Docker documentation, LangGraph, and DeerFlow may inform semantics or platform usage; local docs and runtime must not copy external code, APIs, schemas, tests, examples, prompts, provider configs, runtime layouts, or prose. | `AGENT-RUNTIME-COMPOSITION.md`, `AGENT-ORCHESTRATION.md`, `SANDBOX-AGENTS.md`, `VALIDATION-RUNBOOK.md`, `HARNESS-CONTRACTS.md`. |
 
 ## Resolution Rules
 

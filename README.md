@@ -118,6 +118,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
 | `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
+| `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
 | `agent-api/src/agent-orchestration.js` | Revision-fenced manager and specialist topology with explicit delegation, handoff, conversation, and final-answer ownership. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
 | `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
@@ -178,12 +179,21 @@ runs. The default Worker has no agent-step adapter, so `configured` is false and
 `providerExecutionStatus` remains `unverified`; the controller does not replace
 Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
 
+Agent Runtime Composition joins the previously separate contracts without
+absorbing them. Each execution re-verifies the Agent Definition source, resolves
+the exact provider, model, and transport, uses Running Agents for continuation
+and settlement, and validates final output before Agent Orchestration may return
+it. The default Worker wires the resolver and runner but has no definitions,
+source verifier, execution adapter, or authorizer, so configuration is false and
+live provider behavior stays `unverified`. See
+[`docs/AGENT-RUNTIME-COMPOSITION.md`](./docs/AGENT-RUNTIME-COMPOSITION.md).
+
 Agent Orchestration readiness exposes a separate revision-fenced manager and
 specialist topology. Each branch declares `delegate` or `handoff` plus its
 conversation and final-answer owner. Delegation keeps the specialist behind the
 source manager and returns only manager synthesis; handoff transfers both owners
-to the target. The default Worker injects no resolver, runner, or authorizer, so
-configuration is false and provider execution remains `unverified`. See
+to the target. The default Worker receives resolver and runner interfaces from
+Agent Runtime Composition but no authorizer, so configuration is false and provider execution remains `unverified`. See
 [`docs/AGENT-ORCHESTRATION.md`](./docs/AGENT-ORCHESTRATION.md).
 
 Sandbox Agents readiness exposes a separate container-workspace control plane.
@@ -199,9 +209,10 @@ The default Worker injects none of these owners, so its `configured` and
 `unverified`.
 
 Agent Definitions readiness exposes the separate registry that packages each
-specialist's model route, ordered instructions, and optional reference-only
-tools, guardrails, MCP servers, handoffs, and output contract. Preparation
-requires application authorization for every capability reference, verifies
+specialist's source URI and digest, model route, ordered instructions, and
+optional reference-only tools, guardrails, MCP servers, handoffs, and output
+contract. Preparation requires exact application source verification and
+authorization for every capability reference, verifies
 handoff targets, and preserves exact revisions. The default Worker registers no
 agents, so `configured` is false; model execution remains owned by the Running
 Agents adapter and provider execution remains `unverified`.
@@ -258,6 +269,7 @@ npm run function-gateway:check
 npm run programmatic-tool-calling:check
 npm run tool-search:check
 npm run model-providers:check
+npm run agent-runtime-composition:check
 npm run instruction-audit:check
 npm run instruction-quality:check
 npm run dev

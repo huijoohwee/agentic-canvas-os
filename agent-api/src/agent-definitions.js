@@ -11,6 +11,7 @@ const DEFAULT_MAX_VALIDATION_ISSUE_CHARS = 20_000;
 const TOOL_LOADING_MODES = new Set(["direct", "deferred"]);
 const GUARDRAIL_STAGES = new Set(["input", "output"]);
 const OUTPUT_MODES = new Set(["text", "structured"]);
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
 export class AgentDefinitionBlock extends Error {
   constructor(reasonCode, message, details = {}) {
@@ -47,6 +48,15 @@ function normalizeModel(value) {
     providerId: assertIdentifier(value.providerId, "model.providerId"),
     modelId: assertIdentifier(value.modelId, "model.modelId"),
   });
+}
+
+function normalizeSource(value) {
+  assertExactKeys(value, ["uri", "digest"], "source");
+  const uri = assertIdentifier(value.uri, "source.uri");
+  if (!uri.includes(":")) throw new TypeError("source.uri must use an explicit source scheme.");
+  const digest = assertIdentifier(value.digest, "source.digest");
+  if (!SHA256_PATTERN.test(digest)) throw new TypeError("source.digest must be a lowercase SHA-256 digest.");
+  return Object.freeze({ uri, digest });
 }
 
 function normalizeInstructions(value, { maxInstructions, maxInstructionChars }) {
@@ -126,7 +136,7 @@ function normalizeOutput(value) {
 function normalizeDefinition(value, limits) {
   assertExactKeys(
     value,
-    ["id", "revision", "name", "model", "instructions", "tools", "guardrails", "mcpServers", "handoffs", "output"],
+    ["id", "revision", "name", "source", "model", "instructions", "tools", "guardrails", "mcpServers", "handoffs", "output"],
     "definition",
   );
   const id = assertIdentifier(value.id, "definition.id");
@@ -134,6 +144,7 @@ function normalizeDefinition(value, limits) {
     id,
     revision: assertIdentifier(value.revision, "definition.revision"),
     name: assertIdentifier(value.name, "definition.name"),
+    source: normalizeSource(value.source),
     model: normalizeModel(value.model),
     instructions: normalizeInstructions(value.instructions, limits),
     tools: normalizeReferences(value.tools, "tools", limits.maxReferences, normalizeTool),
@@ -194,6 +205,7 @@ function assertUniqueReferenceNames(references, field) {
 }
 
 export function createAgentDefinitionRegistry({
+  verifyDefinitionSource,
   authorizeCapability,
   validateStructuredOutput,
   maxAgents = DEFAULT_MAX_AGENTS,
@@ -214,6 +226,9 @@ export function createAgentDefinitionRegistry({
     maxValidationIssueChars,
   };
   for (const [field, value] of Object.entries(limits)) assertPositiveInteger(value, field);
+  if (verifyDefinitionSource !== undefined && typeof verifyDefinitionSource !== "function") {
+    throw new TypeError("verifyDefinitionSource must be a function when provided.");
+  }
   if (authorizeCapability !== undefined && typeof authorizeCapability !== "function") {
     throw new TypeError("authorizeCapability must be a function when provided.");
   }
@@ -254,6 +269,28 @@ export function createAgentDefinitionRegistry({
     let record;
     try {
       record = requireRecord(definitions, agentId, revision);
+      if (typeof verifyDefinitionSource !== "function") {
+        throw new AgentDefinitionBlock("source_verifier_unconfigured", "Agent definitions require an application source verifier.");
+      }
+      let sourceVerification;
+      try {
+        sourceVerification = await verifyDefinitionSource(Object.freeze({
+          agentId: record.id,
+          revision: record.revision,
+          source: record.source,
+        }));
+      } catch {
+        throw new AgentDefinitionBlock("source_verifier_failed", "Agent definition source verification failed.");
+      }
+      assertExactKeys(sourceVerification, ["verified", "uri", "digest", "verificationId"], "source verification");
+      if (
+        sourceVerification.verified !== true
+        || sourceVerification.uri !== record.source.uri
+        || sourceVerification.digest !== record.source.digest
+      ) {
+        throw new AgentDefinitionBlock("source_mismatch", "Agent definition source evidence does not match the registered source.");
+      }
+      const verificationId = assertIdentifier(sourceVerification.verificationId, "source verification.verificationId");
       const references = capabilityReferences(record);
       if (references.length && typeof authorizeCapability !== "function") {
         throw new AgentDefinitionBlock("capability_authorizer_unconfigured", "Agent capabilities require an application authorizer.");
@@ -296,6 +333,7 @@ export function createAgentDefinitionRegistry({
           id: record.id,
           revision: record.revision,
           name: record.name,
+          source: record.source,
           model: record.model,
           instructions: record.instructions,
           behavior: Object.freeze({
@@ -307,6 +345,8 @@ export function createAgentDefinitionRegistry({
           }),
         }),
         evidence: Object.freeze({
+          sourceVerified: true,
+          sourceVerificationId: verificationId,
           authorizedCapabilities: decisions.length,
           verifiedHandoffTargets: handoffs.length,
           executionOwner: "running-agents-adapter",
@@ -395,6 +435,7 @@ export function createAgentDefinitionRegistry({
       blockedPreparationCount,
       outputValidationCount,
       blockedOutputCount,
+      sourceVerifierConfigured: typeof verifyDefinitionSource === "function",
       capabilityAuthorizerConfigured: typeof authorizeCapability === "function",
       outputValidatorConfigured: typeof validateStructuredOutput === "function",
       ...limits,

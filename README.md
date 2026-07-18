@@ -110,6 +110,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |
 | `agent-api/src/reasoning-continuity.js` | Bounded cross-turn invariant registry, compatible request planning, active-turn serialization, and provider-effective context confirmation. |
 | `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
+| `agent-api/src/tool-search.js` | Session-scoped deferred-definition controller, metadata-only initial exposure, exact search loading, and call authorization. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
@@ -148,6 +149,13 @@ injected. Generated JavaScript is never executed locally; programmatic calls
 are limited to validated read-only idempotent tools, while writes, approvals,
 semantic judgment, citations, and native-artifact validation stay direct.
 
+Tool Search readiness exposes a separate session-scoped controller. Direct
+tools keep complete definitions, while deferred namespaces and functions expose
+metadata until a bounded client or hosted search loads an exact catalog subset.
+The initial context is immutable, programmatic search must happen before hosted
+execution, and provider context reduction remains `unverified` without live
+adapter evidence.
+
 Instruction readiness is enforced separately from provider readiness.
 `npm run instruction-audit:check` verifies that `docs/AGENTS.md` remains a
 small always-on layer and `docs/SKILLS.md` remains a metadata-first catalog.
@@ -172,6 +180,7 @@ npm run check
 npm run cache-context:check
 npm run reasoning-continuity:check
 npm run programmatic-tool-calling:check
+npm run tool-search:check
 npm run instruction-audit:check
 npm run instruction-quality:check
 npm run dev

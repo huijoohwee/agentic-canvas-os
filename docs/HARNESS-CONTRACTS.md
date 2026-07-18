@@ -136,7 +136,7 @@ harness:
 | Kanban Collaboration | Manage durable task and handoff rows across named profiles | `{ boardRef, row, profile, workerProcess }` | Validated row, handoff row, sync ledger, conflict, or missing-board result | Board writes stay in `kanban.md`; no hidden subagent swarm or duplicate store |
 | Tool Gateway | Route web, image, TTS, and browser tool calls through existing infrastructure | `{ category, provider, input, approvals[] }` | Tool result, unavailable provider, approval-required, cost log, or typed fallback | Paid, egress, generated-media, and browser-auth actions require approval |
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
-| Tool Search | Defer eligible tool schemas behind bridge search, describe, and call routes | `{ query, toolName, arguments, sessionToolsets }` | Matches, selected schema, tool result, approval-required, or blocked reason | Bridge never bypasses real tool policy, approval, hooks, audit, or cost |
+| Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Instruction Task Quality | Screen final-answer behavior after structural instruction changes | `{ suite, candidate }` | `agentic-instruction-task-quality/v1` per-case findings and aggregate score | Model-agnostic lexical rubric; exact provenance and human review required; no private reasoning access or deployment authority |
@@ -276,15 +276,15 @@ Tool gateway harnesses route concrete tool calls through existing `knowgrph` inf
 
 ## Tool Search Harness Contract
 
-Tool Search harnesses minimize model-visible schema load for eligible MCP and non-core plugin tools. External tool-search systems may inform the stage shape, but local harnesses must not import external code, retrieval implementation, bridge prompt text, examples, tests, fixtures, or prose.
+Tool Search harnesses minimize model-visible schema load for eligible MCP and non-core plugin tools. External tool-search systems may inform the capability class, but local harnesses must not import external code, search implementation, prompts, examples, tests, fixtures, schemas, or prose.
 
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
-| Activate | `{ mode, threshold, sessionToolsets }` | Direct exposure, bridge exposure, or disabled state. | Opt-in or budget-threshold only; core required tools stay direct. |
-| Search | `{ query, limit }` | Ranked deferred metadata or empty result. | Search only `@deferred-tool-catalog`; no global registry scan. |
-| Describe | `{ toolName }` | Selected tool schema or unavailable result. | Schema must come from the current session catalog. |
-| Call | `{ toolName, arguments, approvals[] }` | Real tool result, approval-required, schema error, cost log, or typed fallback. | Enforce the underlying tool identity, policy, approval, hooks, and audit. |
-| Audit | `{ scope }` | Deferred catalog, bridge use, cost, and blocked-reason ledger. | Read-only and deploy-free. |
+| Register | `{ sessionId, catalogRevision, mode, capabilities, namespaces, tools }` | Immutable direct definitions, deferred metadata surfaces, and typed evidence. | Current grants only; duplicate, oversized, stale, or unsupported catalogs fail before registration. |
+| Search | `{ eventId, query, limit, caller }` | Exact loaded names or typed block. | Top-level caller only; search still-unloaded session metadata without global registry access. |
+| Load | Client names or provider-normalized hosted definitions | Append-only canonical definitions. | Unknown, altered, duplicate, direct, over-limit, replayed, or cost-unreported output fails closed. |
+| Authorize | `{ sessionId, toolName, caller }` | Canonical definition or typed refusal. | Direct tools remain available; deferred tools require prior load; the real gateway still owns execution policy. |
+| Audit | Readiness and session counters | Bounds, search mode, loaded count, and blocked count. | No provider reduction, cache hit, spend, or live execution is inferred. |
 
 ## Programmatic Tool Calling Harness Contract
 
@@ -312,7 +312,7 @@ The controller bounds model turns, calls, batch width, program size, result size
 | Image generation | Approval gate, prompt bounds, artifact manifest, and cost log. |
 | Text-to-speech | Voice/provider, text bounds, output manifest, duration guard, and cost log. |
 | Cloud browser | Isolated session, action schema, screenshot/vision bounds, redaction, trace, and approval. |
-| Tool Search | Session-scoped deferred catalog, on-demand schema, bridge dispatch, and no copied retrieval implementation. |
+| Tool Search | Session-scoped metadata exposure, exact on-demand definition loading, gateway authorization, and no copied search implementation. |
 
 ## Learning Harness Contract
 

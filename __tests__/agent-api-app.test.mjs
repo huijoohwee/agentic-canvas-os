@@ -30,6 +30,20 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
     fetchImpl: mcpStub({ state: "blocked", approvalGates: [1, 2, 3, 4, 5] }),
   });
   assert.equal(app.configured, true);
+  assert.equal(app.readiness().agentDefinitions.contractReady, true);
+  assert.equal(app.readiness().agentDefinitions.configured, false);
+  assert.equal(app.readiness().agentDefinitions.definitionOwner, "application-agent-registry");
+  assert.deepEqual(app.readiness().agentDefinitions.requiredCore, ["model", "instructions"]);
+  assert.deepEqual(app.readiness().agentDefinitions.optionalBehavior, [
+    "tools",
+    "guardrails",
+    "mcp-servers",
+    "handoffs",
+    "structured-output",
+  ]);
+  assert.equal(app.readiness().agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
+  assert.equal(app.readiness().agentDefinitions.executionOwner, "running-agents-adapter");
+  assert.equal(app.readiness().agentDefinitions.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().cacheContext.configured, true);
   assert.equal(app.readiness().cacheContext.providerCacheStatus, "unverified");
   assert.equal(app.readiness().reasoningContinuity.configured, true);

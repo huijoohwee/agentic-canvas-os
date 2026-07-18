@@ -170,6 +170,14 @@ runs. The default Worker has no agent-step adapter, so `configured` is false and
 `providerExecutionStatus` remains `unverified`; the controller does not replace
 Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
 
+Agent Definitions readiness exposes the separate registry that packages each
+specialist's model route, ordered instructions, and optional reference-only
+tools, guardrails, MCP servers, handoffs, and output contract. Preparation
+requires application authorization for every capability reference, verifies
+handoff targets, and preserves exact revisions. The default Worker registers no
+agents, so `configured` is false; model execution remains owned by the Running
+Agents adapter and provider execution remains `unverified`.
+
 Tool Search readiness exposes a separate session-scoped controller. Direct
 tools keep complete definitions, while deferred namespaces and functions expose
 metadata until a bounded client or hosted search loads an exact catalog subset.

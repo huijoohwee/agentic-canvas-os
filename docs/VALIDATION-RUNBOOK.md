@@ -386,6 +386,27 @@ Expected:
 - Readiness exposes sanitized policy, limits, and counters while adapter configuration is false and provider execution remains `unverified` without live proof.
 - No external provider code, agent implementation, schemas, prompts, examples, event fixtures, tests, or prose are copied; no paid call, Prod mirror write, or Cloudflare action occurs.
 
+## Agent Definitions Runtime Checks
+
+Run the definition registry and affected readiness checks after changing agent identity, model routes, instructions, optional behavior references, handoffs, revisions, preparation, or output validation:
+
+```bash
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run agent-definitions:check
+node --test \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/agent-api-app.test.mjs" \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/cloudflare-worker.test.mjs"
+```
+
+Expected:
+
+- Minimal definitions preserve exact model identity and ordered instructions in immutable prepared packets.
+- Tools, guardrails, MCP servers, and output schemas remain reference-only and require an application authorizer before preparation.
+- Handoff targets must be distinct, registered, and revision-visible without recursively embedding another definition.
+- Same-revision conflicts, stale prepares, unknown fields, missing authorization, denials, and capacity or character limits fail closed.
+- Text output is bounded; structured output requires the exact application-owned schema id and an injected validator.
+- Readiness exposes sanitized policy, limits, flags, and counters while the default registry is empty and provider execution remains `unverified`.
+- No external SDK code, agent examples, prompts, schemas, fixtures, tests, or prose are copied; no paid call, Prod mirror write, or Cloudflare action occurs.
+
 ## Tool Search Runtime Checks
 
 Run the focused controller and affected readiness checks after changing deferred catalog shape, search resolution, programmatic availability, or provider-proof boundaries:
@@ -530,6 +551,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 | Tools and toolsets | Focused docs route check reports `tools-and-toolsets route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool function catalog, toolset state, platform scope, policy, approval, cost, and fallback proof. |
 | Tool Gateway | Focused docs route check reports `tool-gateway route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool catalog, provider select, web/image/TTS/browser route, schema, approval, egress, cost, and fallback proof. |
 | Function Calling | `npm run function-gateway:check` exits zero; controller, OpenAI Responses adapter, Knowgrph allowlist gateway, app, and Worker tests confirm strict schemas, exact call-id and prior-response continuation, opaque reasoning replay, usage accounting, policy enforcement, secret redaction, and sanitized configured or unconfigured state. Live provider execution remains gated. |
+| Agent Definitions | `npm run agent-definitions:check` exits zero; affected app and Worker tests confirm immutable packets, exact revision fencing, reference-only authorization, verified handoffs, bounded text or structured output validation, sanitized empty-registry readiness, and no provider overclaim. |
 | Running Agents | `npm run running-agents:check` exits zero; affected app and Worker tests confirm one bounded lifecycle, exclusive continuation state, same-loop incremental streaming, same-turn pause resume, serialization, replay fencing, honest costs, sanitized unconfigured readiness, and no provider overclaim. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |

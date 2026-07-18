@@ -5,6 +5,7 @@
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
@@ -16,6 +17,7 @@ export { CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const APP_BY_ENV = new WeakMap();
+const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
@@ -51,12 +53,18 @@ function toResponse(result) {
 
 function createWorkerApp(env) {
   if (env && typeof env === "object" && APP_BY_ENV.has(env)) return APP_BY_ENV.get(env);
+  let agentDefinitions;
   let cacheContext;
   let reasoningContinuity;
   let programmaticToolCalling;
   let runningAgents;
   let toolSearch;
   if (env && typeof env === "object") {
+    agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
+    if (!agentDefinitions) {
+      agentDefinitions = createAgentDefinitionRegistry();
+      AGENT_DEFINITIONS_BY_ENV.set(env, agentDefinitions);
+    }
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
@@ -85,6 +93,7 @@ function createWorkerApp(env) {
   }
   const app = createAgentApiApp({
     env,
+    agentDefinitions,
     cacheContext,
     reasoningContinuity,
     programmaticToolCalling,

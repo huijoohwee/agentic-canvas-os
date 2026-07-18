@@ -43,6 +43,20 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.model.provider, "sealion");
   assert.equal(body.model.endpoint, "https://api.sea-lion.ai/v1/chat/completions");
   assert.equal(body.model.apiKeyPresent, true);
+  assert.equal(body.agentDefinitions.contractReady, true);
+  assert.equal(body.agentDefinitions.configured, false);
+  assert.equal(body.agentDefinitions.definitionOwner, "application-agent-registry");
+  assert.deepEqual(body.agentDefinitions.requiredCore, ["model", "instructions"]);
+  assert.deepEqual(body.agentDefinitions.optionalBehavior, [
+    "tools",
+    "guardrails",
+    "mcp-servers",
+    "handoffs",
+    "structured-output",
+  ]);
+  assert.equal(body.agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
+  assert.equal(body.agentDefinitions.executionOwner, "running-agents-adapter");
+  assert.equal(body.agentDefinitions.providerExecutionStatus, "unverified");
   assert.equal(body.cacheContext.stablePrefixOrder, "static-first-dynamic-last");
   assert.equal(body.cacheContext.providerCacheStatus, "unverified");
   assert.equal(body.reasoningContinuity.invariantPolicy, "goals-assumptions-priorities");

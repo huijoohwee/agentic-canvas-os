@@ -12,6 +12,7 @@
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
+import { createAgentDefinitionRegistry } from "./agent-definitions.js";
 import { createCacheContextRegistry } from "./cache-context.js";
 import { createFunctionCallingHandler } from "./function-calling-handler.js";
 import { createFunctionCallingRuntime } from "./function-calling.js";
@@ -40,6 +41,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {object} [opts]
  * @param {object} [opts.env] environment bag (default process.env)
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
+ * @param {ReturnType<createAgentDefinitionRegistry>} [opts.agentDefinitions] isolate-scoped agent definition registry
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
@@ -51,6 +53,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 export function createAgentApiApp({
   env,
   fetchImpl,
+  agentDefinitions: providedAgentDefinitions,
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
@@ -64,6 +67,7 @@ export function createAgentApiApp({
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
   const agentModelConfig = resolveAgentModelConfig(e);
   const openAiFunctionConfig = resolveOpenAiResponsesFunctionConfig(e);
+  const agentDefinitions = providedAgentDefinitions || createAgentDefinitionRegistry();
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
@@ -96,6 +100,7 @@ export function createAgentApiApp({
   return {
     configured: Boolean(secret && endpoint),
     agentModelConfig,
+    agentDefinitions,
     cacheContext,
     reasoningContinuity,
     functionCalling,
@@ -105,6 +110,7 @@ export function createAgentApiApp({
     runningAgents,
     toolSearch,
     readiness: () => {
+      const agentDefinitionStats = agentDefinitions.stats();
       const programmaticStats = programmaticToolCalling.stats();
       const functionCallingStats = functionCalling.stats();
       const functionGatewayStats = functionGateway.stats();
@@ -123,6 +129,17 @@ export function createAgentApiApp({
           model: agentModelConfig.model,
           apiKeyEnv: agentModelConfig.apiKeyEnv,
           apiKeyPresent: modelKeyPresent,
+        },
+        agentDefinitions: {
+          configured: agentDefinitionStats.agents > 0,
+          contractReady: true,
+          definitionOwner: "application-agent-registry",
+          requiredCore: ["model", "instructions"],
+          optionalBehavior: ["tools", "guardrails", "mcp-servers", "handoffs", "structured-output"],
+          capabilityPolicy: "reference-only-with-application-authorization",
+          executionOwner: "running-agents-adapter",
+          providerExecutionStatus: "unverified",
+          ...agentDefinitionStats,
         },
         cacheContext: {
           configured: true,

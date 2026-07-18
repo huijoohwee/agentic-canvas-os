@@ -63,6 +63,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
+| `TOOL-SEARCH.md` | Deferred-definition loading contract | Session catalogs, metadata-only initial exposure, bounded client and hosted resolution, exact definition validation, authorization, and provider-proof boundaries. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
 | `DICTIONARY-SEMANTIC.md` | Hash dictionary | `#` semantic filters for routing, proof, cost, and cleanup. |
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
@@ -86,6 +87,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 - A caller can compile stable prompt prefixes once, reuse an opaque revision-bound handle for dynamic request tails, and keep local reuse distinct from provider cache-hit proof.
 - A caller can preserve compatible reasoning across stable turns, reset rendered reasoning on invariant drift, and keep request intent distinct from provider-effective confirmation.
 - A caller can reduce predictable read-only tool stages through a provider-attested hosted program while keeping local JavaScript execution forbidden and all writes, approvals, citations, and semantic judgment on the direct path.
+- A caller can keep optional schemas deferred, search only the active session catalog, append exact selected definitions, and require top-level loading before a hosted program uses them.
 - A caller can audit durable guidance and the skill catalog for intent preservation, context budgets, duplicate instructions, and owner leakage with zero model calls.
 - A caller can use bounded `MEMORY.md` and `USER.md` targets with write, compact, search, frozen snapshot, and session-search contracts.
 - A caller can discover skill metadata, load selected skills and resources on demand, resolve bundles, and gate managed skill writes without a duplicate registry.
@@ -96,7 +98,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 - A task can preserve planning history through one base-ref-anchored row in the active `todo/YYYY-MM.md` shard whose declared Context passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.
 - A caller can route web search, image generation, TTS, and cloud browser tools through existing `knowgrph` infrastructure with per-tool provider state, approval gates, and cost logs.
-- A caller can opt into Tool Search so eligible MCP and non-core plugin tool schemas stay behind session-scoped bridge search, describe, and call routes.
+- A caller can opt into Tool Search so eligible MCP and non-core plugin schemas stay behind session-scoped metadata search and exact definition loading while the real tool gateway retains execution policy.
 - A caller can inspect process, cost, gate, and circuit-breaker state through typed read views.
 - A caller can run approval-gated agent workflows through shared local or control-plane MCP owners.
 - A caller can invoke `/moa` for bounded reference-agent deliberation where one aggregator owns the final answer and normal tool gates.

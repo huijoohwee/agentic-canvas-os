@@ -14,6 +14,7 @@ import { createCacheContextRegistry } from "./cache-context.js";
 import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
 import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
+import { createToolSearchRuntime } from "./tool-search.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
 /**
@@ -28,6 +29,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
+ * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
 export function createAgentApiApp({
@@ -36,6 +38,7 @@ export function createAgentApiApp({
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   programmaticToolCalling: providedProgrammaticToolCalling,
+  toolSearch: providedToolSearch,
 } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
@@ -45,6 +48,7 @@ export function createAgentApiApp({
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
+  const toolSearch = providedToolSearch || createToolSearchRuntime();
   const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
 
   let mcpClient = null;
@@ -58,8 +62,10 @@ export function createAgentApiApp({
     cacheContext,
     reasoningContinuity,
     programmaticToolCalling,
+    toolSearch,
     readiness: () => {
       const programmaticStats = programmaticToolCalling.stats();
+      const toolSearchStats = toolSearch.stats();
       return {
         configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
         auth: { configured: Boolean(secret) },
@@ -99,6 +105,16 @@ export function createAgentApiApp({
           localJavaScriptExecution: "forbidden",
           providerContextIsolation: "unverified",
           ...programmaticStats,
+        },
+        toolSearch: {
+          configured: toolSearchStats.clientSearchConfigured,
+          contractReady: true,
+          catalogScope: "active-session-grants",
+          initialExposure: "direct-definitions-and-deferred-metadata",
+          loadedDefinitionPlacement: "append-only-search-output",
+          programSearchPolicy: "top-level-before-hosted-program",
+          providerContextReduction: "unverified",
+          ...toolSearchStats,
         },
       };
     },

@@ -56,7 +56,7 @@ external_pattern_sources:
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/context-references"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tools"
-  - "https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search"
+  - "https://developers.openai.com/api/docs/guides/tools-tool-search"
   - "https://agentskills.io/specification"
   - "https://learn.chatgpt.com/docs/customization/overview"
   - "https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents"
@@ -324,7 +324,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Kanban collaboration inspiration | Context-reference patterns may inform how agents attach board rows or context refs, but the durable multi-agent board is local `kanban.md` plus shared table/Kanban utilities. | This file, dictionaries, `kanban.md`, and `HARNESS-CONTRACTS.md`. |
 | Tool gateway inspiration | External tool gateways are pattern references only. This repo may adopt neutral contracts for per-tool routing, gateway/direct-provider selection, web search, image generation, text-to-speech, cloud browser automation, status, and usage. | Official Hermes Agent Tool Gateway docs listed in frontmatter. |
 | Tools and toolsets inspiration | External tool registries are pattern references only. This repo may adopt neutral contracts for callable tool functions, logical toolsets, and per-platform enable or disable state. | Official Hermes Agent Tools and Toolsets docs listed in frontmatter. |
-| Tool search inspiration | External tool-search layers are pattern references only. This repo may adopt neutral contracts for opt-in schema deferral, bridge search/describe/call routes, session-scoped deferred catalogs, and real-tool policy enforcement. | Official Hermes Agent Tool Search docs listed in frontmatter. |
+| Tool search inspiration | External Tool Search systems are pattern references only. This repo may adopt neutral contracts for session-scoped definition deferral, metadata search, exact subset loading, top-level program preloading, and real-tool policy enforcement. | Official OpenAI Tool Search guide listed in frontmatter. |
 | Mixture-of-agents inspiration | External MoA systems are pattern references only. This repo may adopt a neutral one-shot `/moa` contract for bounded reference-agent deliberation, aggregator-owned action, cost accounting, and prompt-cache-preserving context. | Official Hermes Agent MoA docs listed in frontmatter. |
 | Stateful orchestration inspiration | External graph orchestration frameworks are pattern references only. This repo may adopt neutral contracts for graph state, nodes, edges, checkpoints, streaming traces, and human review. | Official LangGraph repository and docs listed in frontmatter. |
 | Long-horizon SuperAgent inspiration | External SuperAgent harnesses are pattern references only. This repo may adopt neutral contracts for minutes-to-hours research, coding, creation, sandbox workspaces, memory, skills, tools, subagents, and message gateways. | DeerFlow repository listed in frontmatter. |
@@ -482,16 +482,16 @@ This file does not replace system, developer, or operator instructions. It defin
 | Toolsets | Toolsets are logical groups of existing tool functions that can be enabled or disabled by platform. | `#toolset`, `@toolset`, `/toolset.enable`, `/toolset.disable`. |
 | Platform scoping | A toolset enabled for one surface does not imply access from another surface. | `#platform-toolset`, `@platform-surface`, `@tool-policy`. |
 | Tool Search eligibility | Tool Search defers only eligible MCP and non-core plugin tool schemas; core required tools stay direct. | `/tool.search`, `#tool-search`, `@deferred-tool-catalog`. |
-| Tool Search catalog | The deferred catalog is session-scoped and rebuilt from current granted tool definitions; no stale global map is authoritative. | `@deferred-tool-catalog`, `#deferred-tool-schema`. |
+| Tool Search catalog | The deferred catalog is session-scoped and rebuilt from current grants; initial context exposes metadata, and search appends exact selected definitions without rewriting the initial prefix. | `TOOL-SEARCH.md`, `@deferred-tool-catalog`, `#deferred-tool-schema`. |
 | Tool Search bridge | Bridge calls unwrap to the underlying tool identity for policy, approval, hooks, audit, cost, and fallback. | `/tool.call`, `#bridge-tool`, `@bridge-tool`, `@tool-policy`. |
-| Tool Search activation | Activation is opt-in or budget-threshold based and should disable below budget because bridge schemas and extra round trips have cost. | `#token-economics`, `#progressive-disclosure`. |
+| Tool Search activation | Activation requires explicit adapter capabilities and an active revision-bound session; a hosted program must use direct or previously loaded definitions. | `TOOL-SEARCH.md`, `#token-economics`, `#progressive-disclosure`. |
 | Per-tool provider selection | Web search, image generation, TTS, and cloud browser automation choose gateway, direct, local, or unavailable provider state independently. | `/tool.provider.select`, `#tool-routing`, `@tool-provider`. |
 | Tool catalog | Gateway status is discoverable without executing a tool or spending model tokens. | `/tool.catalog`, `@tool-provider`, `#tool-gateway`. |
 | Web search | Search and extraction tools must return citations, source scope, egress state, and cost logs. | `#web-search`, `@web-search-tool`, `@tool-policy`. |
 | Image generation | Image generation requires approval, provider/model choice, prompt bounds, artifact manifest, and cost log. | `#image-generation`, `@image-tool`, `@approval-gate`. |
 | Text-to-speech | TTS requires voice/provider choice, text bounds, output manifest, and cost log. | `#text-to-speech`, `@tts-tool`, `@cost-log`. |
 | Cloud browser | Cloud browser automation requires isolated session, action schema, screenshot or vision bounds, redaction, and approval gates. | `#cloud-browser`, `@browser-tool`, `@tool-policy`. |
-| External pattern boundary | Hermes Tool Gateway and Tool Search may inform tool-category and deferred-schema semantics; local docs must not copy Hermes gateway code, tool-search code, retrieval implementation, bridge prompt text, provider tables, model lists, config examples, tests, fixtures, or prose. | `VALIDATION-RUNBOOK.md`, `MCP-GATEWAY.md`, `HARNESS-CONTRACTS.md`. |
+| External pattern boundary | External Tool Gateway and Tool Search guides may inform capability semantics; local docs and runtime must not copy provider code, search implementation, prompts, schemas, examples, tests, fixtures, tables, model lists, or prose. | `TOOL-SEARCH.md`, `VALIDATION-RUNBOOK.md`, `MCP-GATEWAY.md`, `HARNESS-CONTRACTS.md`. |
 | Skill discovery | Installed or authored skills are exposed first as lightweight metadata, not full prompt content. | `/skill.discover`, `#skill-system`, `@skill-index`. |
 | On-demand load | Full `SKILL.md` content loads only when a selected skill is needed for the task. | `/skill.load`, `#progressive-disclosure`, `@skill-source`. |
 | Resource disclosure | Supporting references, scripts, templates, and assets load only when the active skill explicitly requires them. | `/skill.load`, `@skill-reference`, `#agentskills-compatible`. |

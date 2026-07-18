@@ -123,6 +123,8 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   ]);
   assert.equal(app.readiness().sandboxAgents.containerExecutionStatus, "unverified");
   assert.equal(app.readiness().sandboxAgents.independentContainmentProof, "unverified");
+  assert.equal(app.readiness().sandboxAgents.containmentVerifierConfigured, false);
+  assert.equal(app.readiness().sandboxAgents.liveContainerReady, false);
   assert.equal(app.readiness().toolSearch.contractReady, true);
   assert.equal(app.readiness().toolSearch.configured, false);
   assert.equal(app.readiness().toolSearch.initialExposure, "direct-definitions-and-deferred-metadata");

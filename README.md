@@ -180,11 +180,14 @@ Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
 Sandbox Agents readiness exposes a separate container-workspace control plane.
 It validates one fresh workspace or saved snapshot, routes application-approved
 file, command, package, and private-preview-port work to an injected provider,
-serializes operations, and keeps provider session and resume state opaque. The
-default Worker has no container adapter, authorizer, or external state store, so
-`configured` is false and both real containment and provider execution remain
-unverified. Offline adapter tests prove the controller contract, not a live
-container boundary.
+serializes operations, and keeps provider session and resume state opaque. A
+Node host can inject the repository-owned Docker CLI adapter, deny-first policy,
+atomic file checkpoint store, and independent verifier. The live check uses an
+immutable image, hardened internal networking, loopback-only preview proxies,
+workspace snapshots, cross-controller resume, and complete resource cleanup.
+The default Worker injects none of these owners, so its `configured` and
+`liveContainerReady` fields remain false and its containment status stays
+`unverified`.
 
 Agent Definitions readiness exposes the separate registry that packages each
 specialist's model route, ordered instructions, and optional reference-only
@@ -231,6 +234,10 @@ selection precedence, transport strategy, ownership, and acceptance proof.
 See [`docs/SANDBOX-AGENTS.md`](./docs/SANDBOX-AGENTS.md) for container-provider
 ownership, workspace and operation bounds, snapshot and resume semantics, and
 the distinction between provider attestation and independent containment proof.
+
+```bash
+AGENTIC_SANDBOX_IMAGE='node@sha256:<immutable-multiarch-digest>' npm run sandbox-docker:check
+```
 
 ## Develop
 

@@ -8,6 +8,7 @@ import {
   createKnowgrphFunctionGateway,
   createKnowgrphGuardrailEvaluator,
   KNOWGRPH_FUNCTION_TOOL_NAMES,
+  parseKnowgrphFunctionToolAllowlist,
 } from "../agent-api/src/knowgrph-function-gateway.js";
 import {
   createOpenAiResponsesFunctionAdapter,
@@ -300,6 +301,99 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
   assert.deepEqual(gateway.stats().reviewRequiredToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.status]);
   assert.equal(gateway.stats().reviewPauses, 1);
   assert.equal(gateway.stats().reviewResolutions, 1);
+});
+
+test("built-in run-note mutation cannot bypass review and requires native receipt evidence", async () => {
+  assert.deepEqual(
+    parseKnowgrphFunctionToolAllowlist(`unknown,${KNOWGRPH_FUNCTION_TOOL_NAMES.runNote}`),
+    [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote],
+  );
+  const reviewSecret = "run-note-review-secret";
+  let mcpCall;
+  const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
+    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    createReviewId: () => "run-note-review-1",
+    authenticateReviewer: async ({ state, evidence }) => {
+      const verdict = verifyReviewerToken(evidence?.token, reviewSecret, state);
+      return verdict.valid
+        ? { authenticated: true, subjectId: verdict.claims.sub, evidenceId: verdict.claims.jti, assurance: "signed-review-token" }
+        : { authenticated: false };
+    },
+  });
+  const gateway = createKnowgrphFunctionGateway({
+    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote],
+    guardrailsHumanReview,
+    mcpClient: {
+      callTool: async (name, argumentsValue, options) => {
+        mcpCall = { name, argumentsValue, options };
+        return {
+          ok: true,
+          run_id: argumentsValue.run_id,
+          note: argumentsValue.note,
+          revision: 1,
+          execution_receipt: {
+            schema: "knowgrph-tool-execution-receipt/v1",
+            idempotencyKey: options.execution.idempotencyKey,
+            requestDigest: options.execution.requestDigest,
+            status: "applied",
+          },
+        };
+      },
+    },
+  });
+  const call = {
+    runId: "reviewed-run-note",
+    conversationId: "reviewed-run-note-conversation",
+    callId: "reviewed-run-note-call",
+    name: KNOWGRPH_FUNCTION_TOOL_NAMES.runNote,
+    arguments: { run_id: "target-run", note: "Operator reviewed this run." },
+    caller: { type: "direct" },
+    policy: {
+      revision: "knowgrph-run-note-function/v1",
+      riskClass: "mutation",
+      idempotent: true,
+      approvalRequired: true,
+    },
+  };
+
+  assert.equal(gateway.tools[0].approvalRequired, true);
+  assert.deepEqual(gateway.stats().reviewRequiredToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote]);
+  const bypass = await gateway.callTool({
+    ...call,
+    policy: { ...call.policy, approvalRequired: false },
+  });
+  assert.equal(bypass.reasonCode, "tool_policy_mismatch");
+  assert.equal(mcpCall, undefined);
+
+  const paused = await gateway.callTool(call);
+  assert.equal(paused.status, "paused");
+  assert.equal(paused.executionReceipt.phase, "reserved");
+  const reviewerToken = mintReviewerToken({
+    secret: reviewSecret,
+    subject: "operator-1",
+    ...paused.resumeState,
+  });
+  const completed = await gateway.callTool({
+    ...call,
+    review: {
+      state: paused.resumeState,
+      resolution: {
+        reviewId: paused.resumeState.reviewId,
+        decision: "approve",
+        reviewerEvidence: { token: reviewerToken },
+      },
+    },
+  });
+
+  assert.equal(completed.status, "completed");
+  assert.deepEqual(completed.output, {
+    ok: true,
+    run_id: "target-run",
+    note: "Operator reviewed this run.",
+    revision: 1,
+  });
+  assert.equal(mcpCall.name, "knowgrph.run_manifest.note.update");
+  assert.equal(mcpCall.options.execution.schema, "function-execution-receipt/v1");
 });
 
 test("Agent API completes one authenticated OpenAI and Knowgrph function loop without exposing keys", async () => {

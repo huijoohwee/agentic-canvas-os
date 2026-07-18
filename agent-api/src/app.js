@@ -30,6 +30,7 @@ import {
   resolveOpenAiResponsesFunctionConfig,
 } from "./openai-responses-function-adapter.js";
 import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
+import { createProgressiveAgentsRuntime } from "./progressive-agents.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
 import { createRunningAgentRuntime } from "./running-agents.js";
 import { createSandboxAgentRuntime } from "./sandbox-agents.js";
@@ -52,6 +53,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
+ * @param {ReturnType<createProgressiveAgentsRuntime>} [opts.progressiveAgents] progressive single-agent and specialist facade
  * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
  * @param {ReturnType<createSandboxAgentRuntime>} [opts.sandboxAgents] container-workspace control plane
  * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
@@ -68,6 +70,7 @@ export function createAgentApiApp({
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
   programmaticToolCalling: providedProgrammaticToolCalling,
+  progressiveAgents: providedProgressiveAgents,
   runningAgents: providedRunningAgents,
   sandboxAgents: providedSandboxAgents,
   toolSearch: providedToolSearch,
@@ -98,6 +101,11 @@ export function createAgentApiApp({
   const agentOrchestration = providedAgentOrchestration || createAgentOrchestrationRuntime({
     resolveAgent: agentRuntimeComposition.resolveAgent,
     runAgent: agentRuntimeComposition.runAgent,
+  });
+  const progressiveAgents = providedProgressiveAgents || createProgressiveAgentsRuntime({
+    agentDefinitions,
+    agentRuntimeComposition,
+    agentOrchestration,
   });
 
   let mcpClient = null;
@@ -135,6 +143,7 @@ export function createAgentApiApp({
     functionGateway,
     openAiFunctionAdapter,
     programmaticToolCalling,
+    progressiveAgents,
     runningAgents,
     sandboxAgents,
     toolSearch,
@@ -143,6 +152,7 @@ export function createAgentApiApp({
       const agentOrchestrationStats = agentOrchestration.stats();
       const agentRuntimeCompositionStats = agentRuntimeComposition.stats();
       const programmaticStats = programmaticToolCalling.stats();
+      const progressiveAgentStats = progressiveAgents.stats();
       const functionCallingStats = functionCalling.stats();
       const functionGatewayStats = functionGateway.stats();
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
@@ -222,6 +232,18 @@ export function createAgentApiApp({
           outputValidationOwner: "agent-definitions",
           providerExecutionStatus: "unverified",
           ...agentRuntimeCompositionStats,
+        },
+        progressiveAgents: {
+          configured: progressiveAgentStats.configured,
+          contractReady: true,
+          progressionPolicy: "single-agent-then-tools-then-specialists",
+          definitionOwner: "agent-definitions",
+          toolExecutionOwner: "function-calling-through-application-adapter",
+          specialistOwner: "agent-orchestration",
+          lifecycleOwner: "agent-runtime-composition",
+          externalSdkDependency: false,
+          providerExecutionStatus: "unverified",
+          ...progressiveAgentStats,
         },
         cacheContext: {
           configured: true,

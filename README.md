@@ -119,6 +119,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
 | `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
 | `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
+| `agent-api/src/progressive-agents.js` | Incremental facade for one exact agent run, tool-bearing definitions, and explicit specialist workflows. |
 | `agent-api/src/agent-orchestration.js` | Revision-fenced manager and specialist topology with explicit delegation, handoff, conversation, and final-answer ownership. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
 | `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
@@ -187,6 +188,15 @@ it. The default Worker wires the resolver and runner but has no definitions,
 source verifier, execution adapter, or authorizer, so configuration is false and
 live provider behavior stays `unverified`. See
 [`docs/AGENT-RUNTIME-COMPOSITION.md`](./docs/AGENT-RUNTIME-COMPOSITION.md).
+
+Progressive Agents provides the application-facing growth path over those
+owners: register one source-backed agent and run one bounded turn, add authorized
+tool references through the existing Function Calling adapter boundary, then
+register an explicit specialist workflow only when needed. The facade adds no
+external SDK dependency and does not absorb definition, provider, tool, loop, or
+answer-ownership policy. The default Worker remains unconfigured and provider
+execution stays `unverified`. See
+[`docs/PROGRESSIVE-AGENTS.md`](./docs/PROGRESSIVE-AGENTS.md).
 
 Agent Orchestration readiness exposes a separate revision-fenced manager and
 specialist topology. Each branch declares `delegate` or `handoff` plus its

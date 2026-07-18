@@ -99,6 +99,19 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentRuntimeComposition.outputValidationOwner, "agent-definitions");
   assert.equal(body.agentRuntimeComposition.executionAdapterConfigured, false);
   assert.equal(body.agentRuntimeComposition.providerExecutionStatus, "unverified");
+  assert.equal(body.progressiveAgents.contractReady, true);
+  assert.equal(body.progressiveAgents.configured, false);
+  assert.equal(body.progressiveAgents.progressionPolicy, "single-agent-then-tools-then-specialists");
+  assert.deepEqual(body.progressiveAgents.growthStages, [
+    "single-agent",
+    "tool-enabled-agent",
+    "specialist-workflow",
+  ]);
+  assert.equal(body.progressiveAgents.definitionOwner, "agent-definitions");
+  assert.equal(body.progressiveAgents.toolExecutionOwner, "function-calling-through-application-adapter");
+  assert.equal(body.progressiveAgents.specialistOwner, "agent-orchestration");
+  assert.equal(body.progressiveAgents.externalSdkDependency, false);
+  assert.equal(body.progressiveAgents.providerExecutionStatus, "unverified");
   assert.equal(body.cacheContext.stablePrefixOrder, "static-first-dynamic-last");
   assert.equal(body.cacheContext.providerCacheStatus, "unverified");
   assert.equal(body.reasoningContinuity.invariantPolicy, "goals-assumptions-priorities");

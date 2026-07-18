@@ -6,6 +6,7 @@
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
+import { createAgentOrchestrationRuntime } from "../agent-api/src/agent-orchestration.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
@@ -20,6 +21,7 @@ export { CanvasRoom };
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const APP_BY_ENV = new WeakMap();
 const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
+const AGENT_ORCHESTRATION_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
 const MODEL_PROVIDERS_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
@@ -58,6 +60,7 @@ function toResponse(result) {
 function createWorkerApp(env) {
   if (env && typeof env === "object" && APP_BY_ENV.has(env)) return APP_BY_ENV.get(env);
   let agentDefinitions;
+  let agentOrchestration;
   let cacheContext;
   let modelProviders;
   let reasoningContinuity;
@@ -70,6 +73,11 @@ function createWorkerApp(env) {
     if (!agentDefinitions) {
       agentDefinitions = createAgentDefinitionRegistry();
       AGENT_DEFINITIONS_BY_ENV.set(env, agentDefinitions);
+    }
+    agentOrchestration = AGENT_ORCHESTRATION_BY_ENV.get(env);
+    if (!agentOrchestration) {
+      agentOrchestration = createAgentOrchestrationRuntime();
+      AGENT_ORCHESTRATION_BY_ENV.set(env, agentOrchestration);
     }
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
     if (!cacheContext) {
@@ -110,6 +118,7 @@ function createWorkerApp(env) {
   const app = createAgentApiApp({
     env,
     agentDefinitions,
+    agentOrchestration,
     cacheContext,
     modelProviders,
     reasoningContinuity,

@@ -78,6 +78,15 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
   assert.equal(body.agentDefinitions.executionOwner, "running-agents-adapter");
   assert.equal(body.agentDefinitions.providerExecutionStatus, "unverified");
+  assert.equal(body.agentOrchestration.contractReady, true);
+  assert.equal(body.agentOrchestration.configured, false);
+  assert.equal(body.agentOrchestration.topologyOwner, "application-orchestration-registry");
+  assert.equal(body.agentOrchestration.definitionOwner, "agent-definitions");
+  assert.equal(body.agentOrchestration.executionOwner, "running-agents-adapter");
+  assert.equal(body.agentOrchestration.conversationOwnership, "branch-explicit");
+  assert.equal(body.agentOrchestration.finalAnswerOwnership, "branch-explicit");
+  assert.deepEqual(body.agentOrchestration.modes, ["delegate", "handoff"]);
+  assert.equal(body.agentOrchestration.providerExecutionStatus, "unverified");
   assert.equal(body.cacheContext.stablePrefixOrder, "static-first-dynamic-last");
   assert.equal(body.cacheContext.providerCacheStatus, "unverified");
   assert.equal(body.reasoningContinuity.invariantPolicy, "goals-assumptions-priorities");

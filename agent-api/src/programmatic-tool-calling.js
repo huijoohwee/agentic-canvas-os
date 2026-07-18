@@ -7,7 +7,9 @@ const DEFAULT_MAX_PROGRAM_CHARS = 100_000;
 const DEFAULT_MAX_TOOL_RESULT_CHARS = 200_000;
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-const CALLER_MODES = new Set(["direct", "programmatic"]);
+const ALLOWED_CALLERS = new Set(["direct", "programmatic"]);
+const CONTINUATION_MODES = new Set(["stored", "stateless"]);
+const CLIENT_TOOL_TYPE = "function";
 const READ_ONLY_RISK = "read-only";
 
 class RuntimeBlock extends Error {
@@ -34,20 +36,35 @@ function normalizeCapabilities(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError("capabilities must be an object.");
   }
-  const required = ["hostedSandbox", "previousResponseContinuation", "callerLineage"];
+  const required = ["hostedSandbox", "previousResponseContinuation", "statelessReplay", "callerLineage"];
   for (const field of required) {
     if (typeof value[field] !== "boolean") throw new TypeError(`capabilities.${field} must be boolean.`);
   }
   return Object.freeze(Object.fromEntries(required.map((field) => [field, value[field]])));
 }
 
-function normalizeCallerModes(value, field) {
+function normalizeAllowedCallers(value, field) {
   if (!Array.isArray(value) || value.length === 0) throw new TypeError(`${field} must be a non-empty array.`);
   const modes = [...new Set(value)];
   for (const mode of modes) {
-    if (!CALLER_MODES.has(mode)) throw new TypeError(`${field} contains unsupported mode ${String(mode)}.`);
+    if (!ALLOWED_CALLERS.has(mode)) throw new TypeError(`${field} contains unsupported caller ${String(mode)}.`);
   }
   return Object.freeze(modes);
+}
+
+function normalizeContinuationMode(value) {
+  if (!CONTINUATION_MODES.has(value)) {
+    throw new TypeError("continuationMode must be stored or stateless.");
+  }
+  return value;
+}
+
+function normalizeObjectSchema(value, field) {
+  const schema = normalizeJson(value, field);
+  if (!schema || typeof schema !== "object" || Array.isArray(schema) || schema.type !== "object") {
+    throw new TypeError(`${field} must be an object schema.`);
+  }
+  return schema;
 }
 
 function normalizeToolDefinitions(value) {
@@ -60,19 +77,29 @@ function normalizeToolDefinitions(value) {
     const name = assertIdentifier(tool.name, `tools[${index}].name`);
     if (names.has(name)) throw new TypeError(`Duplicate tool name: ${name}.`);
     names.add(name);
-    const callerModes = normalizeCallerModes(tool.callerModes, `tools[${index}].callerModes`);
+    if (tool.type !== CLIENT_TOOL_TYPE) {
+      throw new TypeError(`tools[${index}].type must be ${CLIENT_TOOL_TYPE}.`);
+    }
+    const description = assertIdentifier(tool.description, `tools[${index}].description`);
+    const allowedCallers = normalizeAllowedCallers(tool.allowedCallers, `tools[${index}].allowedCallers`);
     const riskClass = assertIdentifier(tool.riskClass, `tools[${index}].riskClass`);
     if (typeof tool.idempotent !== "boolean") throw new TypeError(`tools[${index}].idempotent must be boolean.`);
+    if (typeof tool.approvalRequired !== "boolean") {
+      throw new TypeError(`tools[${index}].approvalRequired must be boolean.`);
+    }
     if (typeof tool.validateArguments !== "function" || typeof tool.validateOutput !== "function") {
       throw new TypeError(`tools[${index}] must provide argument and output validators.`);
     }
     return Object.freeze({
       name,
-      callerModes,
+      type: CLIENT_TOOL_TYPE,
+      description,
+      allowedCallers,
       riskClass,
       idempotent: tool.idempotent,
-      inputSchema: normalizeJson(tool.inputSchema || {}, `tools[${index}].inputSchema`),
-      outputSchema: normalizeJson(tool.outputSchema || {}, `tools[${index}].outputSchema`),
+      approvalRequired: tool.approvalRequired,
+      inputSchema: normalizeObjectSchema(tool.inputSchema, `tools[${index}].inputSchema`),
+      outputSchema: normalizeObjectSchema(tool.outputSchema, `tools[${index}].outputSchema`),
       validateArguments: tool.validateArguments,
       validateOutput: tool.validateOutput,
     });
@@ -83,9 +110,12 @@ function normalizeToolDefinitions(value) {
 function publicToolDeclarations(tools) {
   return Object.freeze(tools.map((tool) => Object.freeze({
     name: tool.name,
-    callerModes: tool.callerModes,
+    type: tool.type,
+    description: tool.description,
+    allowedCallers: tool.allowedCallers,
     riskClass: tool.riskClass,
     idempotent: tool.idempotent,
+    approvalRequired: tool.approvalRequired,
     inputSchema: tool.inputSchema,
     outputSchema: tool.outputSchema,
   })));
@@ -156,8 +186,20 @@ function normalizeResponse(response) {
   });
 }
 
+function normalizeProgramCaller(value, field, programCallIds) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new RuntimeBlock("caller_lineage_invalid", "Programmatic function call is missing program lineage.");
+  }
+  const caller = normalizeJson(value, field);
+  if (caller.type !== "program" || typeof caller.callerId !== "string" || !programCallIds.has(caller.callerId)) {
+    throw new RuntimeBlock("caller_lineage_invalid", "Programmatic function call has unknown program lineage.");
+  }
+  return caller;
+}
+
 function inspectItems(items, programCallIds, maxProgramChars) {
-  const toolCalls = [];
+  const functionCalls = [];
+  const replayItems = [];
   let message;
   let programCount = 0;
   let programChars = 0;
@@ -165,10 +207,15 @@ function inspectItems(items, programCallIds, maxProgramChars) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
       throw new RuntimeBlock("provider_item_invalid", `response.items[${index}] must be an object.`);
     }
+    const replayItem = normalizeJson(item, `response.items[${index}]`);
+    replayItems.push(replayItem);
     if (item.type === "program") {
       const callId = assertIdentifier(item.callId, `response.items[${index}].callId`);
       if (typeof item.code !== "string" || !item.code.trim()) {
         throw new RuntimeBlock("program_invalid", "Hosted program code must be non-empty text.");
+      }
+      if (typeof item.fingerprint !== "string" || !item.fingerprint.trim()) {
+        throw new RuntimeBlock("program_invalid", "Hosted program fingerprint must be non-empty text.");
       }
       programChars += item.code.length;
       if (programChars > maxProgramChars) {
@@ -178,16 +225,14 @@ function inspectItems(items, programCallIds, maxProgramChars) {
       programCount += 1;
       continue;
     }
-    if (item.type === "tool_call") {
-      const caller = item.caller;
-      if (!caller || caller.type !== "program" || !programCallIds.has(caller.callId)) {
-        throw new RuntimeBlock("caller_lineage_invalid", "Programmatic tool call has missing or unknown program lineage.");
-      }
-      toolCalls.push(Object.freeze({
+    if (item.type === "reasoning") continue;
+    if (item.type === "function_call") {
+      const caller = normalizeProgramCaller(item.caller, `response.items[${index}].caller`, programCallIds);
+      functionCalls.push(Object.freeze({
         callId: assertIdentifier(item.callId, `response.items[${index}].callId`),
         name: assertIdentifier(item.name, `response.items[${index}].name`),
         arguments: normalizeJson(item.arguments, `response.items[${index}].arguments`),
-        caller: Object.freeze({ type: "program", callId: caller.callId }),
+        caller,
       }));
       continue;
     }
@@ -208,7 +253,13 @@ function inspectItems(items, programCallIds, maxProgramChars) {
     }
     throw new RuntimeBlock("provider_item_invalid", `Unsupported hosted response item: ${String(item.type)}.`);
   }
-  return Object.freeze({ toolCalls: Object.freeze(toolCalls), message, programCount, programChars });
+  return Object.freeze({
+    functionCalls: Object.freeze(functionCalls),
+    replayItems: Object.freeze(replayItems),
+    message,
+    programCount,
+    programChars,
+  });
 }
 
 function zeroCostLog() {
@@ -288,16 +339,16 @@ export function createProgrammaticToolCallingRuntime({
   let toolCalls = 0;
   let hostedPrograms = 0;
 
-  async function executeToolCalls({ calls, toolsByName, runId, signal, controller }) {
+  async function executeFunctionCalls({ calls, toolsByName, runId, signal, controller }) {
     const outputs = [];
     for (let offset = 0; offset < calls.length; offset += maxParallelCalls) {
       const batch = calls.slice(offset, offset + maxParallelCalls);
       const resolved = await Promise.all(batch.map(async (call) => {
         const tool = toolsByName.get(call.name);
-        if (!tool || !tool.callerModes.includes("programmatic")) {
+        if (!tool || !tool.allowedCallers.includes("programmatic")) {
           throw new RuntimeBlock("tool_not_allowed", `Tool ${call.name} is not enabled for programmatic calls.`);
         }
-        if (tool.riskClass !== READ_ONLY_RISK || !tool.idempotent) {
+        if (tool.riskClass !== READ_ONLY_RISK || !tool.idempotent || tool.approvalRequired) {
           throw new RuntimeBlock("direct_call_required", `Tool ${call.name} requires the direct-call path.`);
         }
         if (tool.validateArguments(call.arguments) !== true) {
@@ -306,7 +357,14 @@ export function createProgrammaticToolCallingRuntime({
         let output;
         try {
           output = await runWithDeadline(
-            () => callTool({ runId, callId: call.callId, name: call.name, arguments: call.arguments, signal: controller.signal }),
+            () => callTool({
+              runId,
+              callId: call.callId,
+              name: call.name,
+              arguments: call.arguments,
+              caller: call.caller,
+              signal: controller.signal,
+            }),
             signal,
             timeoutMs,
             controller,
@@ -323,7 +381,7 @@ export function createProgrammaticToolCallingRuntime({
           throw new RuntimeBlock("tool_result_limit", `Tool ${call.name} output exceeds ${maxToolResultChars} characters.`);
         }
         return Object.freeze({
-          type: "tool_result",
+          type: "function_call_output",
           callId: call.callId,
           caller: call.caller,
           output: normalized,
@@ -334,18 +392,27 @@ export function createProgrammaticToolCallingRuntime({
     return Object.freeze(outputs);
   }
 
-  async function run({ runId, input, tools, capabilities, signal } = {}) {
+  async function run({ runId, input, tools, capabilities, continuationMode = "stored", signal } = {}) {
     const safeRunId = assertIdentifier(runId, "runId");
     const safeInput = normalizeJson(input, "input");
     const safeTools = normalizeToolDefinitions(tools);
     const safeCapabilities = normalizeCapabilities(capabilities);
+    const safeContinuationMode = normalizeContinuationMode(continuationMode);
     if (!adapterConfigured || !toolGatewayConfigured) {
       blockedRuns += 1;
       return blockedResult(safeRunId, "configure", "runtime_unconfigured", "Hosted program and tool gateway adapters are required.");
     }
-    if (!safeCapabilities.hostedSandbox || !safeCapabilities.previousResponseContinuation || !safeCapabilities.callerLineage) {
+    const continuationSupported = safeContinuationMode === "stored"
+      ? safeCapabilities.previousResponseContinuation
+      : safeCapabilities.statelessReplay;
+    if (!safeCapabilities.hostedSandbox || !safeCapabilities.callerLineage || !continuationSupported) {
       blockedRuns += 1;
-      return blockedResult(safeRunId, "capability", "capability_unsupported", "Hosted sandbox, response continuation, and caller lineage are required.");
+      return blockedResult(
+        safeRunId,
+        "capability",
+        "capability_unsupported",
+        `Hosted sandbox, caller lineage, and ${safeContinuationMode} continuation are required.`,
+      );
     }
     if (activeRuns.has(safeRunId)) {
       blockedRuns += 1;
@@ -359,8 +426,10 @@ export function createProgrammaticToolCallingRuntime({
     const programCallIds = new Set();
     const usedToolNames = new Set();
     const costLogs = [];
+    const requestItem = Object.freeze({ type: "request", payload: safeInput });
+    const transcript = [requestItem];
     let previousResponseId;
-    let nextInput = Object.freeze([Object.freeze({ type: "request", payload: safeInput })]);
+    let nextInput = Object.freeze([...transcript]);
     let runToolCalls = 0;
     let runPrograms = 0;
     let runProgramChars = 0;
@@ -372,14 +441,18 @@ export function createProgrammaticToolCallingRuntime({
         let rawResponse;
         try {
           providerAttempted = true;
+          const adapterRequest = {
+            runId: safeRunId,
+            input: nextInput,
+            continuationMode: safeContinuationMode,
+            tools: declarations,
+            signal: controller.signal,
+          };
+          if (safeContinuationMode === "stored" && previousResponseId) {
+            adapterRequest.previousResponseId = previousResponseId;
+          }
           rawResponse = await runWithDeadline(
-            () => advanceHostedProgram({
-              runId: safeRunId,
-              input: nextInput,
-              previousResponseId,
-              tools: declarations,
-              signal: controller.signal,
-            }),
+            () => advanceHostedProgram(adapterRequest),
             signal,
             timeoutMs,
             controller,
@@ -395,28 +468,35 @@ export function createProgrammaticToolCallingRuntime({
         runPrograms += inspected.programCount;
         runProgramChars += inspected.programChars;
         hostedPrograms += inspected.programCount;
-        previousResponseId = response.responseId;
+        if (safeContinuationMode === "stored") previousResponseId = response.responseId;
+        else transcript.push(...inspected.replayItems);
 
-        if (inspected.toolCalls.length > 0) {
-          runToolCalls += inspected.toolCalls.length;
+        if (inspected.functionCalls.length > 0) {
+          runToolCalls += inspected.functionCalls.length;
           if (runToolCalls > maxToolCalls) {
             throw new RuntimeBlock("tool_call_limit", `Programmatic run exceeds ${maxToolCalls} tool calls.`);
           }
-          for (const call of inspected.toolCalls) {
+          for (const call of inspected.functionCalls) {
             if (completedCallIds.has(call.callId)) {
               throw new RuntimeBlock("duplicate_tool_call", `Tool call ${call.callId} was already completed.`);
             }
             completedCallIds.add(call.callId);
             usedToolNames.add(call.name);
           }
-          nextInput = await executeToolCalls({
-            calls: inspected.toolCalls,
+          const outputs = await executeFunctionCalls({
+            calls: inspected.functionCalls,
             toolsByName,
             runId: safeRunId,
             signal,
             controller,
           });
-          toolCalls += inspected.toolCalls.length;
+          toolCalls += inspected.functionCalls.length;
+          if (safeContinuationMode === "stateless") {
+            transcript.push(...outputs);
+            nextInput = Object.freeze([...transcript]);
+          } else {
+            nextInput = outputs;
+          }
           continue;
         }
 
@@ -432,6 +512,7 @@ export function createProgrammaticToolCallingRuntime({
               toolCalls: runToolCalls,
               toolNames: Object.freeze([...usedToolNames].sort()),
               hostedPrograms: runPrograms,
+              continuationMode: safeContinuationMode,
               hostedSandbox: "provider-attested",
               localJavaScriptExecution: "forbidden",
               intermediateResultsReturned: false,
@@ -440,7 +521,9 @@ export function createProgrammaticToolCallingRuntime({
             costLog: aggregateCostLogs(costLogs),
           });
         }
-        nextInput = Object.freeze([]);
+        nextInput = safeContinuationMode === "stateless"
+          ? Object.freeze([...transcript])
+          : Object.freeze([]);
       }
       throw new RuntimeBlock("model_turn_limit", `Programmatic run exceeds ${maxModelTurns} model turns.`);
     } catch (error) {

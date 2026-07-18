@@ -39,6 +39,8 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().programmaticToolCalling.configured, false);
   assert.equal(app.readiness().programmaticToolCalling.localJavaScriptExecution, "forbidden");
   assert.equal(app.readiness().programmaticToolCalling.providerContextIsolation, "unverified");
+  assert.deepEqual(app.readiness().programmaticToolCalling.continuationModes, ["stored", "stateless-replay"]);
+  assert.equal(app.readiness().programmaticToolCalling.callerContract, "function-call-output-preserves-caller");
 
   const session = await app.authSession({ body: { subject: "s1" } });
   assert.equal(session.statusCode, 200);

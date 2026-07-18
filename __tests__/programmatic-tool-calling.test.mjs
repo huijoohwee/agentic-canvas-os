@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
+import { selectProgrammaticToolRoute } from "../agent-api/src/programmatic-tool-routing.js";
 
 const CAPABILITIES = Object.freeze({
   hostedSandbox: true,
   previousResponseContinuation: true,
+  statelessReplay: true,
   callerLineage: true,
 });
 
@@ -27,10 +29,13 @@ const COST = Object.freeze({
 
 function tool(name, overrides = {}) {
   return {
+    type: "function",
     name,
-    callerModes: ["programmatic"],
+    description: `Read ${name} data.`,
+    allowedCallers: ["programmatic"],
     riskClass: "read-only",
     idempotent: true,
+    approvalRequired: false,
     inputSchema: { type: "object" },
     outputSchema: { type: "object" },
     validateArguments: () => true,
@@ -65,9 +70,9 @@ test("orchestrates hosted programs and returns only final output plus compact ev
   const toolCalls = [];
   const responses = [
     response("response-1", [
-      { type: "program", callId: "program-1", code: "opaque generated source" },
-      { type: "tool_call", callId: "call-a", name: "read_alpha", arguments: { key: "a" }, caller: { type: "program", callId: "program-1" } },
-      { type: "tool_call", callId: "call-b", name: "read_beta", arguments: { key: "b" }, caller: { type: "program", callId: "program-1" } },
+      { type: "program", callId: "program-1", code: "opaque generated source", fingerprint: "opaque-fingerprint-1" },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: { key: "a" }, caller: { type: "program", callerId: "program-1", resumeToken: "opaque-caller-state" } },
+      { type: "function_call", callId: "call-b", name: "read_beta", arguments: { key: "b" }, caller: { type: "program", callerId: "program-1" } },
     ]),
     response("response-2", [
       { type: "program_output", callId: "program-1", status: "completed", result: { total: 3 } },
@@ -93,10 +98,71 @@ test("orchestrates hosted programs and returns only final output plus compact ev
   assert.equal(result.evidence.hostedPrograms, 1);
   assert.equal(result.evidence.intermediateResultsReturned, false);
   assert.equal(result.evidence.localJavaScriptExecution, "forbidden");
+  assert.equal(result.evidence.continuationMode, "stored");
   assert.equal(adapterCalls[1].previousResponseId, "response-1");
+  assert.equal(adapterCalls[0].tools[0].allowedCallers[0], "programmatic");
+  assert.equal(adapterCalls[1].input[0].type, "function_call_output");
+  assert.deepEqual(adapterCalls[1].input[0].caller, { type: "program", callerId: "program-1", resumeToken: "opaque-caller-state" });
   assert.deepEqual(adapterCalls[1].input.map((item) => item.callId), ["call-a", "call-b"]);
+  assert.deepEqual(toolCalls[0].caller, { type: "program", callerId: "program-1", resumeToken: "opaque-caller-state" });
   assert.equal(toolCalls.every((call) => !("code" in call)), true);
   assert.equal(JSON.stringify(result).includes("opaque generated source"), false);
+});
+
+test("replays every opaque response item and caller-linked output for stateless continuation", async () => {
+  const adapterCalls = [];
+  const responses = [
+    response("response-1", [
+      { type: "program", callId: "program-1", code: "transient source", fingerprint: "opaque-fingerprint-1" },
+      { type: "reasoning", encryptedContent: "opaque-reasoning" },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: { key: "a" }, caller: { type: "program", callerId: "program-1" } },
+    ]),
+    response("response-2", [
+      { type: "program_output", callId: "program-1", status: "completed", result: { value: 1 } },
+      { type: "message", output: { value: 1 } },
+    ]),
+  ];
+  const runtime = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async (call) => {
+      adapterCalls.push(call);
+      return responses.shift();
+    },
+    callTool: async () => ({ value: 1 }),
+  });
+
+  const result = await runtime.run(request({ continuationMode: "stateless" }));
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.evidence.continuationMode, "stateless");
+  assert.equal("previousResponseId" in adapterCalls[1], false);
+  assert.deepEqual(
+    adapterCalls[1].input.map((item) => item.type),
+    ["request", "program", "reasoning", "function_call", "function_call_output"],
+  );
+  assert.equal(adapterCalls[1].input[1].fingerprint, "opaque-fingerprint-1");
+  assert.equal(adapterCalls[1].input[2].encryptedContent, "opaque-reasoning");
+  assert.deepEqual(adapterCalls[1].input[4].caller, { type: "program", callerId: "program-1" });
+  assert.equal(JSON.stringify(result).includes("transient source"), false);
+  assert.equal(JSON.stringify(result).includes("opaque-reasoning"), false);
+});
+
+test("selects programmatic execution only for predictable structured reductions", () => {
+  const bounded = {
+    toolCallCount: 3,
+    predictableControlFlow: true,
+    compactStructuredReduction: true,
+    requiresSemanticJudgment: false,
+    requiresApproval: false,
+    performsMutation: false,
+    requiresCitationPreservation: false,
+    requiresNativeArtifactValidation: false,
+  };
+
+  assert.equal(selectProgrammaticToolRoute(bounded).route, "programmatic");
+  assert.equal(selectProgrammaticToolRoute({ ...bounded, toolCallCount: 1 }).reasonCode, "single_call_sufficient");
+  assert.equal(selectProgrammaticToolRoute({ ...bounded, requiresSemanticJudgment: true }).reasonCode, "semantic_judgment_required");
+  assert.equal(selectProgrammaticToolRoute({ ...bounded, requiresApproval: true }).reasonCode, "authorization_boundary");
+  assert.equal(selectProgrammaticToolRoute({ ...bounded, requiresCitationPreservation: true }).reasonCode, "native_evidence_required");
 });
 
 test("contains no local dynamic-code execution fallback", async () => {
@@ -119,6 +185,14 @@ test("blocks before provider execution when required capabilities are absent", a
   assert.equal(result.reasonCode, "capability_unsupported");
   assert.equal(result.costLog.model, "not-run");
   assert.equal(adapterCalls, 0);
+
+  const stateless = await runtime.run(request({
+    runId: "run-stateless",
+    continuationMode: "stateless",
+    capabilities: { ...CAPABILITIES, statelessReplay: false },
+  }));
+  assert.equal(stateless.reasonCode, "capability_unsupported");
+  assert.equal(adapterCalls, 0);
 });
 
 test("keeps an unconfigured app boundary fail-closed", async () => {
@@ -130,12 +204,12 @@ test("keeps an unconfigured app boundary fail-closed", async () => {
   assert.equal(runtime.stats().toolGatewayConfigured, false);
 });
 
-test("requires direct routing for mutating or non-idempotent tools", async () => {
+test("requires direct routing for mutation, non-idempotency, or approval", async () => {
   let gatewayCalls = 0;
   const runtime = createProgrammaticToolCallingRuntime({
     advanceHostedProgram: async () => response("response-1", [
-      { type: "program", callId: "program-1", code: "opaque" },
-      { type: "tool_call", callId: "call-a", name: "write_record", arguments: {}, caller: { type: "program", callId: "program-1" } },
+      { type: "program", callId: "program-1", code: "opaque", fingerprint: "opaque-fingerprint-1" },
+      { type: "function_call", callId: "call-a", name: "write_record", arguments: {}, caller: { type: "program", callerId: "program-1" } },
     ]),
     callTool: async () => { gatewayCalls += 1; return {}; },
   });
@@ -144,6 +218,20 @@ test("requires direct routing for mutating or non-idempotent tools", async () =>
   }));
 
   assert.equal(result.reasonCode, "direct_call_required");
+  assert.equal(gatewayCalls, 0);
+
+  const approvalRuntime = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async () => response("response-approval", [
+      { type: "program", callId: "program-approval", code: "opaque", fingerprint: "opaque-fingerprint-approval" },
+      { type: "function_call", callId: "call-approval", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-approval" } },
+    ]),
+    callTool: async () => { gatewayCalls += 1; return {}; },
+  });
+  const approvalResult = await approvalRuntime.run(request({
+    runId: "run-approval",
+    tools: [tool("read_alpha", { approvalRequired: true })],
+  }));
+  assert.equal(approvalResult.reasonCode, "direct_call_required");
   assert.equal(gatewayCalls, 0);
 });
 
@@ -156,18 +244,26 @@ test("rejects missing hosted-sandbox attestation and invalid caller lineage", as
 
   const unlinked = createProgrammaticToolCallingRuntime({
     advanceHostedProgram: async () => response("response-1", [
-      { type: "tool_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callId: "unknown" } },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "unknown" } },
     ]),
     callTool: async () => ({}),
   });
   assert.equal((await unlinked.run(request())).reasonCode, "caller_lineage_invalid");
+
+  const missingFingerprint = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async () => response("response-fingerprint", [
+      { type: "program", callId: "program-fingerprint", code: "opaque" },
+    ]),
+    callTool: async () => ({}),
+  });
+  assert.equal((await missingFingerprint.run(request({ runId: "run-fingerprint" }))).reasonCode, "program_invalid");
 });
 
 test("enforces program, tool-call, and result bounds", async () => {
   const oversizedProgram = createProgrammaticToolCallingRuntime({
     maxProgramChars: 4,
     advanceHostedProgram: async () => response("response-1", [
-      { type: "program", callId: "program-1", code: "12345" },
+      { type: "program", callId: "program-1", code: "12345", fingerprint: "opaque-fingerprint-1" },
     ]),
     callTool: async () => ({}),
   });
@@ -176,9 +272,9 @@ test("enforces program, tool-call, and result bounds", async () => {
   const tooManyCalls = createProgrammaticToolCallingRuntime({
     maxToolCalls: 1,
     advanceHostedProgram: async () => response("response-1", [
-      { type: "program", callId: "program-1", code: "opaque" },
-      { type: "tool_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callId: "program-1" } },
-      { type: "tool_call", callId: "call-b", name: "read_beta", arguments: {}, caller: { type: "program", callId: "program-1" } },
+      { type: "program", callId: "program-1", code: "opaque", fingerprint: "opaque-fingerprint-1" },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-1" } },
+      { type: "function_call", callId: "call-b", name: "read_beta", arguments: {}, caller: { type: "program", callerId: "program-1" } },
     ]),
     callTool: async () => ({}),
   });
@@ -187,8 +283,8 @@ test("enforces program, tool-call, and result bounds", async () => {
   const oversizedResult = createProgrammaticToolCallingRuntime({
     maxToolResultChars: 5,
     advanceHostedProgram: async () => response("response-1", [
-      { type: "program", callId: "program-1", code: "opaque" },
-      { type: "tool_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callId: "program-1" } },
+      { type: "program", callId: "program-1", code: "opaque", fingerprint: "opaque-fingerprint-1" },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-1" } },
     ]),
     callTool: async () => ({ value: "too-large" }),
   });
@@ -198,8 +294,8 @@ test("enforces program, tool-call, and result bounds", async () => {
 test("validates tool arguments and outputs at the application gateway", async () => {
   const runtime = createProgrammaticToolCallingRuntime({
     advanceHostedProgram: async () => response("response-1", [
-      { type: "program", callId: "program-1", code: "opaque" },
-      { type: "tool_call", callId: "call-a", name: "read_alpha", arguments: { invalid: true }, caller: { type: "program", callId: "program-1" } },
+      { type: "program", callId: "program-1", code: "opaque", fingerprint: "opaque-fingerprint-1" },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: { invalid: true }, caller: { type: "program", callerId: "program-1" } },
     ]),
     callTool: async () => ({}),
   });
@@ -208,6 +304,27 @@ test("validates tool arguments and outputs at the application gateway", async ()
   }));
 
   assert.equal(result.reasonCode, "tool_arguments_invalid");
+
+  const invalidOutput = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async () => response("response-output", [
+      { type: "program", callId: "program-output", code: "opaque", fingerprint: "opaque-fingerprint-output" },
+      { type: "function_call", callId: "call-output", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-output" } },
+    ]),
+    callTool: async () => ({ unexpected: true }),
+  });
+  const outputResult = await invalidOutput.run(request({
+    runId: "run-output",
+    tools: [tool("read_alpha", { validateOutput: () => false })],
+  }));
+  assert.equal(outputResult.reasonCode, "tool_output_invalid");
+
+  await assert.rejects(
+    () => runtime.run(request({
+      runId: "run-schema",
+      tools: [tool("read_alpha", { outputSchema: undefined })],
+    })),
+    /outputSchema/,
+  );
 });
 
 test("serializes duplicate run ids while allowing a later completion", async () => {

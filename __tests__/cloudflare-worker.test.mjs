@@ -53,6 +53,8 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.programmaticToolCalling.executionOwner, "downstream-hosted-sandbox");
   assert.equal(body.programmaticToolCalling.localJavaScriptExecution, "forbidden");
   assert.equal(body.programmaticToolCalling.providerContextIsolation, "unverified");
+  assert.deepEqual(body.programmaticToolCalling.continuationModes, ["stored", "stateless-replay"]);
+  assert.equal(body.programmaticToolCalling.callerContract, "function-call-output-preserves-caller");
   assert.equal(JSON.stringify(body).includes("server-side-sealion-key"), false);
 });
 

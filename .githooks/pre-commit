@@ -12,10 +12,9 @@ fi
 
 root="$(git rev-parse --show-toplevel)"
 worktrees="$(git worktree list --porcelain | sed -n 's/^worktree //p')"
-worktree_count="$(printf '%s\n' "$worktrees" | sed '/^$/d' | wc -l | tr -d ' ')"
 
-if [ "$worktree_count" != "1" ] || [ "$worktrees" != "$root" ]; then
-  echo "Commit only from the one canonical checkout at $root; found: ${worktrees:-none}" >&2
+if ! printf '%s\n' "$worktrees" | grep -F -x -- "$root" >/dev/null; then
+  echo "Commit only from a live registered worktree; current: $root; registered: ${worktrees:-none}" >&2
   exit 1
 fi
 

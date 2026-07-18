@@ -1,6 +1,6 @@
 # Multi-device delivery
 
-This repository uses protected pull requests as the synchronization boundary. Devices never push directly to `main`; each publishes a scoped branch from its one canonical checkout, CI validates it, GitHub auto-merges it, Cloudflare deploys the resulting `main` SHA serially, and idle devices fast-forward their clean canonical `main` checkout.
+This repository uses protected pull requests as the synchronization boundary. Devices never push directly to `main`; one registered `main` worktree remains the runtime and synchronization owner while registered task worktrees publish distinct scoped branches concurrently. CI validates each branch, GitHub merges protected changes, and the clean main worktree fast-forwards after integration.
 
 ## One-time activation
 
@@ -17,7 +17,7 @@ The command replaces the stale Vercel branch checks with these strict checks:
 - `docs-contract`
 - `collaboration-integration`
 
-It retains CODEOWNERS routing for authentication, collaboration state, Worker, Wrangler, and workflow changes. A solo owner cannot approve their own pull request, so merge permission depends on the strict required checks, resolved conversations, conflict-free index, and single-active-PR guard instead of an impossible self-review. Production remains disabled through `PROD_DEPLOY_ENABLED=false`.
+It retains CODEOWNERS routing for authentication, collaboration state, Worker, Wrangler, and workflow changes. A solo owner cannot approve their own pull request, so merge permission depends on the strict required checks, resolved conversations, conflict-free index, and unique-semantic-scope guard instead of an impossible self-review. Production remains disabled through `PROD_DEPLOY_ENABLED=false`.
 
 Before enabling deployment, configure `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as production environment secrets, set the repository variable `PRODUCTION_URL`, fix and verify the public session-token minting vulnerability, then explicitly set `PROD_DEPLOY_ENABLED=true`.
 
@@ -29,10 +29,15 @@ Set a stable device id once if the hostname is not suitable:
 git config agentic.device katrina-macbook
 ```
 
-Start from current remote `main`:
+Create a detached registered task worktree from current remote `main`, then claim it:
 
 ```bash
-npm run device:start -- canvas-presence
+export TASK_WORKTREE_ROOT="../.worktrees/agentic-canvas-os"
+export TASK_WORKTREE="$TASK_WORKTREE_ROOT/canvas-presence"
+git fetch --prune origin
+git worktree add --detach "$TASK_WORKTREE" origin/main
+npm run device:start -- canvas-presence \
+  --session="<stable-task-id>" --repository="$TASK_WORKTREE"
 ```
 
 Commit intentionally, then publish the clean branch:
@@ -41,15 +46,16 @@ Commit intentionally, then publish the clean branch:
 npm run device:publish
 ```
 
-`device:start` configures the repository-owned pre-commit hook. Run `npm run git:configure` once in an existing checkout that has not used `device:start` yet. The hook rejects unresolved index entries and commits from any secondary checkout.
+`device:start` configures the repository-owned pre-commit hook. Run `npm run git:configure` once in an existing checkout that has not used `device:start` yet. The hook rejects unresolved index entries, unregistered worktrees, branch/lease mismatches, and expired sessions.
 
-Publishing requires one canonical read path, one registered worktree, no unresolved conflict, and no open PR owned by another branch. It runs local checks, pushes the branch, creates or updates the sole PR with the `automerge` label, and enables squash auto-merge. CI refuses to reconcile multiple open PRs; consolidate or close the superseded PR before continuing.
+Publishing requires a registered task worktree, its branch-bound lease, no unresolved conflict, and no open PR owned by another branch for the same semantic scope. It runs local checks, pushes the branch, updates its scope-owned PR with the `automerge` label, and enables squash auto-merge. Different semantic scopes may keep independent worktrees and pull requests active concurrently.
 
 ## Conflict policy
 
 - Resolve every merge conflict before committing changes. Unmerged index stages fail both the pre-commit hook and device publication.
-- Use only the canonical checkout path returned by `git rev-parse --show-toplevel`; alternate checkout, linked-worktree, copied-source, and subdirectory read paths are not delivery authorities.
-- Keep exactly one open pull request targeting `main`. Import and validate unique commits before closing a superseded PR; never discard unexplained work.
+- Use only a path returned by `git worktree list --porcelain -z`; copied-source and unregistered paths are not delivery authorities.
+- Keep one open pull request per semantic scope. Distinct scopes may coexist; duplicate scope owners must serialize through exact-SHA handoff.
+- Never use `git checkout --ignore-other-worktrees` or activate one branch in multiple worktrees.
 - GitHub updates and merges disjoint changes automatically.
 - Concurrent append-only `memory/YYYY-MM.md` and `todo/YYYY-MM.md` changes preserve the current `main` bytes and append the device suffix.
 - A `package-lock.json`-only collision is regenerated from the merged package manifest.
@@ -70,7 +76,7 @@ Or watch every 20 seconds:
 npm run sync:live -- --watch --interval=20
 ```
 
-The command requires exactly one registered worktree, the `main` branch, and a clean canonical checkout. It fetches `origin/main` and uses a fast-forward-only merge. It fails closed on an active task branch, local changes, non-fast-forward history, or any secondary worktree.
+The command requires invocation from the registered `main` worktree with a clean `main` branch. It fetches `origin/main` and uses a fast-forward-only merge without switching, merging, or inspecting task worktree content. It fails closed on a task worktree, local main changes, or non-fast-forward history; additional registered task worktrees are allowed.
 
 ## Preview, smoke, and rollback
 

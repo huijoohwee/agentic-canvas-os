@@ -1,10 +1,10 @@
 import os from "node:os";
+import path from "node:path";
 
 import {
-  assertCanonicalReadPath,
   assertNoCompetingPullRequests,
   assertNoUnmergedPaths,
-  assertSingleCanonicalWorktree,
+  assertRegisteredWorktree,
 } from "./repository-guards.mjs";
 import {
   parseDeviceBranch,
@@ -27,27 +27,35 @@ export function start({
 }) {
   if (!scope) throw new Error("A semantic scope is required.");
   requireSession(sessionId);
-  requireRepositorySafety({ invocationPath, repo, gitText });
+  const worktree = requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
+  if (!worktree.detached || gitText(["branch", "--show-current"]).trim()) {
+    throw new Error("device:start requires a detached registered task worktree; keep main checked out in its canonical worktree.");
+  }
   const device = sanitizeDevice(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
   const normalizedScope = sanitizeScope(scope);
   const branch = `agent/${device}/${normalizedScope}`;
   if (!parseDeviceBranch(branch)) throw new Error(`Generated branch does not satisfy the device branch contract: ${branch}`);
   run("git", ["fetch", "origin", "main"]);
-  requireNoCompetingPullRequest({ branch, ghText });
+  const detachedSha = gitText(["rev-parse", "HEAD"]).trim();
   const baseSha = gitText(["rev-parse", "origin/main"]).trim();
+  if (detachedSha !== baseSha) {
+    throw new Error(`Task worktree must start at fetched origin/main ${baseSha}; received ${detachedSha}.`);
+  }
+  requireNoCompetingPullRequest({ branch, ghText });
   const claimed = leaseStore.claim({
     sessionId,
     device,
     scope: normalizedScope,
     branch,
+    worktreePath: repo,
     baseSha,
     ttlMs: leaseTtlMs,
   });
   run("git", ["switch", "--create", branch, "origin/main"]);
   run("git", ["commit", "--allow-empty", "-m", `chore(coordination): claim ${normalizedScope} lease ${claimed.epoch}`]);
   const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
-  let lease = leaseStore.annotate({ sessionId, values: { fenceSha } });
+  let lease = leaseStore.annotate({ sessionId, branch, values: { fenceSha } });
   run("git", ["push", "--set-upstream", "origin", branch]);
   const url = ghText([
     "pr",
@@ -62,7 +70,7 @@ export function start({
     "--body",
     renderWriterLeasePullRequestBody(lease),
   ]).trim();
-  lease = leaseStore.annotate({ sessionId, values: { pullRequestUrl: url } });
+  lease = leaseStore.annotate({ sessionId, branch, values: { pullRequestUrl: url } });
   log(
     `Claimed ${branch} in ${url} with fence ${fenceSha.slice(0, 12)}; keep the claiming task's AGENTIC_SESSION_ID set before commits and heartbeat before ${lease.expiresAt}.`,
   );
@@ -84,6 +92,7 @@ export function heartbeat({
   requireRepositorySafety({ invocationPath, repo, gitText });
   const branch = gitText(["branch", "--show-current"]).trim();
   const current = leaseStore.verify({ sessionId, branch });
+  assertLeaseWorktree(current, repo);
   const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
   const remoteSha = remoteLine.split(/\s+/)[0] || "";
   if (!current.fenceSha || remoteSha !== current.fenceSha) {
@@ -119,6 +128,9 @@ export function resume({
   if (!identity) throw new Error("Resume requires the exact agent/<device>/<semantic-scope> handoff branch.");
   requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
+  if (gitText(["branch", "--show-current"]).trim()) {
+    throw new Error("device:resume requires a detached registered task worktree.");
+  }
   run("git", ["fetch", "origin", "main", branchName]);
 
   const pulls = JSON.parse(ghText([
@@ -170,6 +182,7 @@ export function resume({
     device,
     scope: identity.scope,
     branch: branchName,
+    worktreePath: repo,
     baseSha: remoteSha,
     previousEpoch: remoteLease.epoch,
     ttlMs: leaseTtlMs,
@@ -178,6 +191,7 @@ export function resume({
   const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
   const lease = leaseStore.annotate({
     sessionId,
+    branch: branchName,
     values: { fenceSha, pullRequestUrl: owner.url },
   });
   run("git", ["push", "origin", branchName]);
@@ -206,6 +220,7 @@ export function publish({
   if (!branch || branch === "main") throw new Error("Publish from an agent/<device>/<scope> branch, never main.");
   if (!branch.startsWith("agent/")) throw new Error(`Refusing unexpected device branch: ${branch}`);
   const lease = leaseStore.verify({ sessionId, branch });
+  assertLeaseWorktree(lease, repo);
   if (!lease.pullRequestUrl || !lease.fenceSha) {
     throw new Error("Publish requires the draft ownership pull request and fencing SHA created by device:start.");
   }
@@ -222,7 +237,7 @@ export function publish({
   run("gh", ["pr", "edit", url, "--title", title, "--add-label", "automerge"]);
   run("gh", ["pr", "ready", url]);
   run("gh", ["pr", "merge", "--auto", "--squash", url]);
-  const deliveredLease = leaseStore.release({ sessionId, status: "delivery" });
+  const deliveredLease = leaseStore.release({ sessionId, branch, status: "delivery" });
   run("gh", ["pr", "edit", url, "--body", renderWriterLeasePullRequestBody(deliveredLease)]);
   const trimmedUrl = url.trim();
   log(`Published ${trimmedUrl} with protected auto-merge enabled.`);
@@ -245,7 +260,8 @@ export function park({
   const leasedTaskBranch = branch.startsWith("agent/");
   if (leasedTaskBranch) {
     requireSession(sessionId);
-    leaseStore.verify({ sessionId, branch, allowExpired: true });
+    const lease = leaseStore.verify({ sessionId, branch, allowExpired: true });
+    assertLeaseWorktree(lease, repo);
   }
 
   let stashRef = null;
@@ -254,9 +270,9 @@ export function park({
     stashRef = gitText(["stash", "list", "--format=%gd", "-n", "1"]).trim();
   }
 
-  if (branch !== "main") run("git", ["switch", "main"]);
   run("git", ["fetch", "origin", "main"]);
-  run("git", ["merge", "--ff-only", "origin/main"]);
+  if (branch === "main") run("git", ["merge", "--ff-only", "origin/main"]);
+  else run("git", ["switch", "--detach", "origin/main"]);
 
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
   const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
@@ -269,17 +285,17 @@ export function park({
     throw new Error("main remains dirty after park; resolve local changes before continuing.");
   }
   if (leasedTaskBranch) {
-    const parkedLease = leaseStore.release({ sessionId, status: "parked" });
+    const parkedLease = leaseStore.release({ sessionId, branch, status: "parked" });
     if (parkedLease.pullRequestUrl) {
       run("gh", ["pr", "edit", parkedLease.pullRequestUrl, "--body", renderWriterLeasePullRequestBody(parkedLease)]);
     }
   }
 
   const summary = stashRef
-    ? `Parked ${branch} in ${stashRef}; main is now ${headSha.slice(0, 12)}.`
+    ? `Parked ${branch} in ${stashRef}; task worktree is detached at ${headSha.slice(0, 12)}.`
     : branch === "main"
       ? `main is already clean at ${headSha.slice(0, 12)}.`
-      : `Switched from ${branch} to clean main at ${headSha.slice(0, 12)}.`;
+      : `Detached the task worktree from ${branch} at ${headSha.slice(0, 12)}.`;
   log(summary);
   return { branch, headSha, stashRef };
 }
@@ -328,8 +344,7 @@ export function completeSession({
 
   run("git", ["fetch", "origin", "main"]);
   run("git", ["merge-base", "--is-ancestor", mergeCommitSha, "origin/main"]);
-  run("git", ["switch", "main"]);
-  run("git", ["merge", "--ff-only", "origin/main"]);
+  run("git", ["switch", "--detach", "origin/main"]);
 
   const mainSha = gitText(["rev-parse", "HEAD"]).trim();
   const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
@@ -396,12 +411,24 @@ function normalizeBranchSegment(value, invalidPattern, edgePattern) {
 }
 
 function requireRepositorySafety({ invocationPath, repo, gitText }) {
-  assertCanonicalReadPath({ root: repo, cwd: invocationPath });
-  assertSingleCanonicalWorktree({ root: repo, porcelain: gitText(["worktree", "list", "--porcelain"]) });
+  if (path.resolve(invocationPath) !== path.resolve(repo)) {
+    throw new Error(`Repository commands must start at the registered worktree root ${repo}; received ${invocationPath}`);
+  }
+  const worktree = assertRegisteredWorktree({
+    cwd: repo,
+    porcelain: gitText(["worktree", "list", "--porcelain", "-z"]),
+  });
   assertNoUnmergedPaths({
     conflictPaths: gitText(["diff", "--name-only", "--diff-filter=U"]),
     indexEntries: gitText(["ls-files", "-u"]),
   });
+  return worktree;
+}
+
+function assertLeaseWorktree(lease, repo) {
+  if (path.resolve(lease.worktreePath) !== path.resolve(repo)) {
+    throw new Error(`Writer lease owns worktree ${lease.worktreePath}, not ${repo}.`);
+  }
 }
 
 function requireNoCompetingPullRequest({ branch, ghText }) {

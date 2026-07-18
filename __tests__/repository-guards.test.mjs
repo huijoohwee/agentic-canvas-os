@@ -3,36 +3,59 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 import {
-  assertCanonicalReadPath,
+  assertMainWorktree,
   assertNoCompetingPullRequests,
   assertNoUnmergedPaths,
-  assertSingleCanonicalWorktree,
+  assertRegisteredWorktree,
   assertUniquePullRequestScopes,
+  assertWorktreeRegistry,
   parseWorktreePaths,
+  parseWorktreeRecords,
 } from "../scripts/repository-guards.mjs";
 
 const resolvePath = (value) => path.resolve("/", value);
 
 test("parseWorktreePaths reads only registered worktree records", () => {
-  assert.deepEqual(parseWorktreePaths("worktree /repo\nHEAD abc\nbranch refs/heads/main\n"), ["/repo"]);
+  const porcelain = "worktree /repo\0HEAD abc\0branch refs/heads/main\0\0worktree /tasks/camera\0HEAD def\0detached\0";
+  assert.deepEqual(parseWorktreePaths(porcelain), ["/repo", "/tasks/camera"]);
+  assert.deepEqual(parseWorktreeRecords(porcelain), [
+    { path: "/repo", head: "abc", branch: "refs/heads/main" },
+    { path: "/tasks/camera", head: "def", detached: true },
+  ]);
 });
 
-test("canonical read paths reject another checkout or subdirectory", () => {
-  assert.equal(assertCanonicalReadPath({ root: "/repo", cwd: "/repo", resolvePath }), "/repo");
+test("registered worktree guard accepts parallel task worktrees and rejects unregistered paths", () => {
+  const porcelain = "worktree /repo\nHEAD abc\nbranch refs/heads/main\n\nworktree /tasks/camera\nHEAD def\ndetached\n";
+  assert.equal(assertRegisteredWorktree({ cwd: "/tasks/camera", porcelain, resolvePath }).path, "/tasks/camera");
   assert.throws(
-    () => assertCanonicalReadPath({ root: "/repo", cwd: "/repo-copy", resolvePath }),
-    /must read from the canonical checkout/,
+    () => assertRegisteredWorktree({ cwd: "/repo-copy", porcelain, resolvePath }),
+    /live registered worktree/,
   );
 });
 
-test("single-worktree guard rejects secondary or mismatched worktrees", () => {
+test("main synchronization remains bound to the registered main worktree", () => {
+  const porcelain = "worktree /repo\nHEAD abc\nbranch refs/heads/main\n\nworktree /tasks/camera\nHEAD def\nbranch refs/heads/agent/mac/camera\n";
   assert.equal(
-    assertSingleCanonicalWorktree({ root: "/repo", porcelain: "worktree /repo\n", resolvePath }),
+    assertMainWorktree({ cwd: "/repo", porcelain, resolvePath }).path,
     "/repo",
   );
   assert.throws(
-    () => assertSingleCanonicalWorktree({ root: "/repo", porcelain: "worktree /repo\n\nworktree /repo-copy\n", resolvePath }),
-    /Exactly one canonical worktree/,
+    () => assertMainWorktree({ cwd: "/tasks/camera", porcelain, resolvePath }),
+    /registered main worktree/,
+  );
+});
+
+test("worktree registry rejects prunable paths and duplicate checked-out branches", () => {
+  assert.throws(
+    () => assertWorktreeRegistry({ porcelain: "worktree /tasks/stale\nprunable missing\n", resolvePath }),
+    /unavailable or prunable/,
+  );
+  assert.throws(
+    () => assertWorktreeRegistry({
+      porcelain: "worktree /repo\nbranch refs/heads/agent/device/scope\n\nworktree /tasks/scope\nbranch refs/heads/agent/device/scope\n",
+      resolvePath,
+    }),
+    /active in multiple worktrees/,
   );
 });
 

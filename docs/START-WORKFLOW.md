@@ -2,17 +2,17 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-07-17"
+date: "2026-07-18"
 lang: "en-US"
-schema: "knowgrph-start-workflow/v1"
+schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "Knowgrph Codex session-start and single-checkout operating model"
+authority: "Knowgrph Codex session-start and same-device multi-worktree operating model"
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
-runtime_scope: "remote synchronization, ownership inspection, and task-branch activation in one canonical Dev checkout"
+runtime_scope: "remote synchronization, ownership inspection, and isolated task-branch activation in registered worktrees"
 runtime_claim: "bounded session-start contract; reading or resolving this document performs no Git mutation"
 runtime_proof: "RUNTIME-PROOF.md"
-contradiction_policy: "any instruction to create, retain, or use a secondary worktree is invalid and blocks startup"
+contradiction_policy: "unregistered, shared-branch, unleased, or runtime-serving task worktrees are invalid and block startup"
 invocation:
   action: "/session.start"
   semantics: ["#multi-agent-collaboration", "#runtime-ready"]
@@ -38,13 +38,15 @@ coordination:
   branch_pattern: "^agent/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
   device_segment_contract: "lowercase alphanumeric boundaries with interior dot, underscore, or hyphen"
   semantic_scope_segment_contract: "lowercase alphanumeric boundaries with interior hyphen only"
-  one_active_writer: true
-  one_worktree_per_repository: true
+  one_active_writer_per_worktree: true
+  parallel_worktrees_per_repository: true
+  canonical_main_worktree: true
   direct_main_push: false
   handoff_identity: "pushed commit SHA"
-  writer_lease_schema: "agentic-writer-lease/v1"
+  writer_lease_schema: "agentic-writer-lease/v2"
+  writer_lease_registry_schema: "agentic-writer-lease-registry/v2"
   writer_lease_ttl_seconds: 1800
-  writer_lease_registry: "atomic local Git metadata plus one draft ownership pull request per semantic scope"
+  writer_lease_registry: "one atomic Git-common-directory registry keyed by branch plus one draft ownership pull request per semantic scope"
   fencing_identity: "monotonic lease epoch plus claim commit SHA"
 stage_order: ["discover", "fetch", "inspect", "claim", "activate", "verify", "memory", "planning", "start"]
 completion_requires:
@@ -53,8 +55,8 @@ completion_requires:
   - "clean source checkout"
   - "unique semantic-scope ownership"
   - "unexpired session-bound writer lease with matching draft pull request and fencing SHA"
-  - "exactly one registered worktree per repository"
-  - "task branch active in the canonical Knowgrph checkout"
+  - "one clean registered main worktree plus zero or more isolated registered task worktrees"
+  - "task branch active only in its leased task worktree"
   - "recorded branch and base SHA"
   - "visible runtime identity with exact Knowgrph, Agentic Canvas OS, and catalog revisions"
   - "one application-root canonical identity owner with a MainPanel Settings KTV projection"
@@ -68,11 +70,11 @@ completion_requires:
 
 ## Authoritative Rule
 
-Fetch before starting every Codex session; require exactly one registered worktree in each repository; activate the task branch only in the canonical checkout; pull only when intentionally updating a clean, exclusively owned branch.
+Fetch before starting every Codex session; keep one clean registered `main` worktree as the runtime and synchronization owner; activate each task branch only in its own registered task worktree; pull only when intentionally updating a clean, exclusively owned branch.
 
-The single canonical Dev checkout rule has precedence over every older workflow, template, script description, task note, or historical example. Any instruction to create, retain, or use a secondary Dev worktree is contradictory and invalid. A repository-owned immutable publication command may inspect and push an existing commit object without switching, staging, restoring, or running that object; this object lane is not a second Dev checkout and must emit exact paired-SHA evidence.
+The canonical `main` worktree remains the only normal Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from normal Dev ports. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task worktrees serving as canonical runtime sources are forbidden.
 
-Parallel chats may discover, inspect, plan, and prepare read-only evidence. Mutation requires the one unexpired session-bound lease for the canonical checkout. Different devices may implement different semantic scopes concurrently through separate clones and draft ownership pull requests; the same semantic scope always serializes behind the current fencing SHA.
+Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
@@ -85,11 +87,11 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Context | Runtime-ready rule |
 |---|---|
 | Operating model | Operator-led, AI-native startup using typed harnesses and bounded orchestration. Optimize minimum-viable maximum-value, time-to-value, ROI, TCO, and token/cache economics. Prefer FOSS, local, zero-egress, and zero-spend paths when capability is equivalent. |
-| Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` is the global, centralized, frontmatter-first SSOT. Exactly one registered worktree is allowed, and its canonical checkout must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts; Knowgrph task mode does not relax this dependency. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. Do not copy invocation catalogs downstream. |
+| Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` in the registered `main` worktree is the global, centralized, frontmatter-first SSOT. It must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts. Additional registered task worktrees may author isolated branches but never become runtime docs sources. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. |
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
 | Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
-| Dev | Author and run Knowgrph only in the canonical `$GITHUB_ROOT/knowgrph` checkout. Use `npm run dev:apex`, `npm run dev`, and the explicit clean-main refresh command `npm run dev:latest` through repository-owned scripts. |
-| Immutable publication | When another task owns the canonical checkout, use only Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane after the source commit already exists. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
+| Dev | Author in leased task worktrees; run normal Knowgrph Dev only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`. Use `npm run dev:apex`, `npm run dev`, and `npm run dev:latest` only through repository-owned scripts after integration. |
+| Immutable publication | Use Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane only for an already-created commit whose writer stopped or when recovering a checkout-independent delivery. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
 | Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Mutation is forbidden until the operator explicitly requests promotion or release. |
 | Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Deployment is forbidden until the operator explicitly requests it. |
@@ -133,10 +135,11 @@ planning_base_ref: <fetched-agentic-canvas-os-origin-main-sha>
 planning_shard: todo/<utc-year-month>.md
 planning_context: <exact-unique-cross-repository-task-context>
 planning_compliance: structure-passed
-checkout: $GITHUB_ROOT/knowgrph
+main_worktree: $GITHUB_ROOT/knowgrph
+task_worktree: <registered-task-worktree-path>
 active_writer: <single-owner>
 writer_session: <stable-chat-or-task-id>
-writer_repository: <canonical-repository-path>
+writer_repository: <registered-task-worktree-path>
 writer_lease_epoch: <positive-integer>
 writer_lease_expires_at: <utc-instant>
 writer_fence_sha: <40-hex-claim-commit>
@@ -152,8 +155,8 @@ The declaration is coordination metadata, not a second invocation registry. Valu
 |---|---|---|
 | `git fetch --prune origin` | Refresh remote-tracking refs without changing the current branch or worktree. | Required before ownership and divergence inspection. |
 | `git pull` | Fetch and integrate into the checked-out branch. | Forbidden as a default startup action; allowed only for a clean branch with one confirmed writer and an intentional integration choice. |
-| `npm run dev:latest` | Explicitly refresh clean canonical Dev sources and start Knowgrph. | Allowed only when every registered source is on its canonical branch, clean, single-worktree, and fast-forwardable; it applies `git merge --ff-only` only after all sources pass preflight. |
-| Canonical checkout branch activation | Keep the running Dev port and edited source on the same filesystem path. | The only build lane; `git worktree add` is forbidden. |
+| `npm run dev:latest` | Explicitly refresh clean canonical `main` sources and start Knowgrph. | Allowed only from each registered main worktree when it is clean and fast-forwardable; task worktrees do not participate in runtime refresh. |
+| Registered task worktree activation | Isolate a semantic scope without disturbing `main` or another task. | Create detached at fetched `origin/main`, then claim exactly one branch and per-worktree lease; never use `--ignore-other-worktrees`. |
 
 A pull can merge or rebase into the current branch before its ownership and dirt are understood. Fetch preserves inspection as a read-only-first step.
 
@@ -166,13 +169,13 @@ git -C "$KNOWGRPH_ROOT" status --short --branch
 npm --prefix "$KNOWGRPH_ROOT" run dev:latest
 ```
 
-The command reads the canonical source registry, fetches every source, and completes a two-phase safety check before changing any checkout. Every source must have exactly one registered worktree, no local changes, its canonical branch active, and `HEAD` as an ancestor of the fetched canonical ref. Only after the full set passes does it apply `git merge --ff-only` and delegate to the ordinary fail-closed Dev startup.
+The command reads the canonical source registry, fetches every source, and completes a two-phase safety check before changing a main worktree. Every main source must have no local changes, its canonical branch active, and `HEAD` as an ancestor of the fetched canonical ref. Registered task worktrees are inspected for conflicts but are never switched, merged, or used as runtime source. Only after the full set passes does the command apply `git merge --ff-only` to the main worktrees and delegate to ordinary fail-closed Dev startup.
 
 Do not use `dev:latest` for an owned task branch. On a contract-valid `agent/<device>/<semantic-scope>` branch, start with `npm run dev` or `npm run dev:apex`; the Knowgrph guard selects task mode automatically. `KG_DEV_SOURCE_MODE` remains an expert override. Reconcile task-branch upstream history through the task workflow rather than changing it during Dev startup.
 
 ### Checkout-Free Immutable Publication
 
-The object lane is allowed only for an already-created commit whose writer has stopped. It does not authorize authoring outside the canonical checkout. The command must verify the source commit and tree, require an expected remote head, prove fast-forward ancestry, read the pinned docs SHA from that source object, generate a schema-valid app/docs/catalog manifest under Git metadata, push the exact SHA to one unprotected task ref, and verify the resulting remote ref. It must never switch, stage, reset, stash, restore, merge, create a worktree, touch authored files, or deploy.
+The object lane remains available only for an already-created commit whose writer has stopped. Normal authoring now belongs in a leased registered task worktree, so immutable publication is a recovery/integration path rather than the concurrency mechanism. The command must verify the source commit and tree, require an expected remote head, prove fast-forward ancestry, read the pinned docs SHA from that source object, generate a schema-valid app/docs/catalog manifest under Git metadata, push the exact SHA to one unprotected task ref, and verify the resulting remote ref. It must never switch, stage, reset, stash, restore, merge, create a worktree, touch authored files, or deploy.
 
 ```sh
 npm --prefix "$KNOWGRPH_ROOT" run release:publish:immutable -- \
@@ -188,7 +191,7 @@ The repository-owned command may bypass the checkout-oriented hook only after it
 | Contract | Required fields |
 |---|---|
 | Input | Repository root, device identity, semantic scope, intended action, remote, and base ref. |
-| Output | Fetch result, ownership result, single-worktree proof, canonical checkout path, task branch, and exact base SHA. |
+| Output | Fetch result, worktree registration, ownership result, main and task worktree paths, task branch, lease identity, and exact base SHA. |
 | Failure | Typed blocking stage and unchanged source, Prod mirror, and Cloudflare state. |
 | Cost | Zero model calls and zero paid calls are required for the Git preflight itself. |
 
@@ -196,14 +199,14 @@ The repository-owned command may bypass the checkout-oriented hook only after it
 
 ### 1. Discover
 
-Resolve `$GITHUB_ROOT` from the canonical checkout rather than a user-specific path. Read repository instructions and prove that each repository has exactly one registered worktree before changing Git state.
+Resolve `$GITHUB_ROOT` from the registered main worktree rather than a user-specific path. Read repository instructions and enumerate every registered worktree before changing Git state.
 
 ```sh
 export GITHUB_ROOT="$(cd "$(git -C agentic-canvas-os rev-parse --show-toplevel)/.." && pwd)"
 export AGENTIC_CANVAS_OS_ROOT="$GITHUB_ROOT/agentic-canvas-os"
 export KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
-git -C "$AGENTIC_CANVAS_OS_ROOT" worktree list --porcelain
-git -C "$KNOWGRPH_ROOT" worktree list --porcelain
+git -C "$AGENTIC_CANVAS_OS_ROOT" worktree list --porcelain -z
+git -C "$KNOWGRPH_ROOT" worktree list --porcelain -z
 ```
 
 ### 2. Fetch
@@ -231,7 +234,7 @@ git -C "$KNOWGRPH_ROOT" worktree list
 git -C "$KNOWGRPH_ROOT" rev-parse origin/main
 ```
 
-Stop when either repository reports other than one registered worktree, either canonical source has unexplained dirt, either `origin/main` is unavailable, Agentic Canvas OS `HEAD` differs from its fetched `origin/main`, or another active branch or pull request owns the same semantic scope.
+Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. Dirt in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane.
 
 ### 4. Claim
 
@@ -239,48 +242,50 @@ Choose one device identity, one stable chat/task session id, and one semantic sc
 
 The device segment preserves valid lowercase hostname identity, including interior dots such as `.local`, underscores, and hyphens, while requiring alphanumeric boundaries. The semantic-scope segment permits only lowercase alphanumerics and interior hyphens. Normalize and validate both segments before fetch, branch switch, lease claim, commit, push, or pull-request mutation so rejected identity input cannot change checkout state.
 
-One branch and one semantic scope have one writer. A second chat on the same device remains read-only or queued. A second device uses a different semantic scope or waits for an exact pushed-SHA handoff. Draft pull requests for different scopes may coexist; duplicate active scope ownership fails closed.
+One task worktree, branch, and semantic scope have one writer. A second chat on the same device may claim another detached registered task worktree for a different scope. A same-scope chat waits for an exact pushed-SHA handoff. Draft pull requests for different scopes may coexist; duplicate active scope ownership fails closed.
 
 ### 5. Activate
 
-Create the owned task branch and its remote draft ownership record through the repository command. The command atomically claims `.git/agentic-canvas-os/writer-lease.json`, increments its epoch, creates a no-content claim commit, pushes the task branch, and opens the draft pull request before normal authoring:
+Create a detached linked task worktree at fetched `origin/main`, then create the owned task branch and remote draft ownership record through the repository command. The command atomically claims the branch entry in `.git/agentic-canvas-os/writer-leases.json`, increments the shared registry epoch, creates a no-content claim commit, pushes the task branch, and opens the draft pull request before normal authoring:
 
 ```sh
 export AGENTIC_SESSION_ID="<stable-chat-or-task-id>"
+export TASK_WORKTREE="$GITHUB_ROOT/.worktrees/knowgrph/<semantic-scope>"
+git -C "$KNOWGRPH_ROOT" worktree add --detach "$TASK_WORKTREE" origin/main
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
   "<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
-  --repository="$KNOWGRPH_ROOT"
+  --repository="$TASK_WORKTREE"
 ```
 
 Heartbeat before the 30-minute default TTL expires:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
-  --session="$AGENTIC_SESSION_ID" --repository="$KNOWGRPH_ROOT"
+  --session="$AGENTIC_SESSION_ID" --repository="$TASK_WORKTREE"
 ```
 
-If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, and upstream before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. Never run `git worktree add`, create a detached live checkout, reuse a dirty checkout, or activate a branch owned by another session.
+If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. Never reuse a dirty worktree, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session.
 
 Resume only a parked or expired handoff branch, or a delivered branch that the same session must revise after a failed protected check. The command fetches its exact remote SHA, requires matching pull-request lease metadata, claims `remote epoch + 1`, creates a descendant fencing commit, and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
   "agent/<origin-device>/<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
-  --repository="$KNOWGRPH_ROOT"
+  --repository="$TASK_WORKTREE"
 ```
 
 ### 6. Verify
 
-Verify the canonical checkout before starting the build session.
+Verify the registered task worktree before starting the build session.
 
 ```sh
-git -C "$KNOWGRPH_ROOT" worktree list --porcelain
-git -C "$KNOWGRPH_ROOT" status --short --branch
-git -C "$KNOWGRPH_ROOT" merge-base --is-ancestor origin/main HEAD
-git -C "$KNOWGRPH_ROOT" rev-parse HEAD
+git -C "$TASK_WORKTREE" worktree list --porcelain -z
+git -C "$TASK_WORKTREE" status --short --branch
+git -C "$TASK_WORKTREE" merge-base --is-ancestor origin/main HEAD
+git -C "$TASK_WORKTREE" rev-parse HEAD
 ```
 
-The repository must report exactly one registered worktree at `$KNOWGRPH_ROOT`; the checkout must be clean, the branch must match the claimed scope, the lease session/epoch must be current, its draft pull request must own that scope, and the claim commit must be an ancestor of `HEAD`.
+The task path must appear exactly once in the worktree registry; its branch must appear in no other worktree; the checkout must be clean; the branch must match the claimed scope; the lease session, worktree path, and epoch must be current; its draft pull request must own that scope; and the claim commit must be an ancestor of `HEAD`.
 
 #### Automated Collaboration And Runtime Identity Gate
 
@@ -320,14 +325,14 @@ Imported pre-adoption rows remain historical evidence. Do not normalize them in 
 
 ### 9. Start
 
-Start Codex with `$KNOWGRPH_ROOT` as its working directory. Declare the task invocation, semantic scope, bindings, branch, base SHA, ownership, acceptance criteria, and deploy boundary before editing. Knowgrph `predev` independently rechecks the single-worktree invariant before Vite can bind a port.
+Start Codex with `$TASK_WORKTREE` as its working directory. Declare the task invocation, semantic scope, bindings, branch, base SHA, worktree path, ownership, acceptance criteria, and deploy boundary before editing. Normal Vite runtime remains bound to the clean registered main worktree; task worktrees use focused source and test commands unless a separate runtime-port policy explicitly authorizes them.
 
 ## Updating an Existing Owned Branch
 
 Use pull only when all conditions are true:
 
 - the branch is intentionally being updated rather than used as a fresh task lane;
-- the canonical checkout is clean;
+- the owned task worktree is clean;
 - the current branch is not `main`;
 - exactly one active writer owns the branch;
 - its upstream is verified;
@@ -343,41 +348,43 @@ For a completed task:
 
 1. Commit intentionally and pass focused validation on the task branch.
 2. Publish through the protected Dev pull-request path and wait for `MERGED`.
-3. Run `npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:complete -- --json --repository="$KNOWGRPH_ROOT"` from that task branch.
-4. Restart or reload the local runtime from the emitted exact `mainSha` and
+3. Run `npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:complete -- --json --repository="$TASK_WORKTREE"` from that task branch.
+4. Fast-forward the clean registered main worktree with `npm run sync:live`, then restart or reload the local runtime from the emitted exact `mainSha` and
    rerun the original browser acceptance path.
 
 The completion wrapper fails closed unless the working tree is clean, the task
 branch has a merged pull request targeting `main`, its merge commit is contained
-by fetched `origin/main`, the canonical checkout is on `main`, local `main`
-equals `origin/main`, and the checkout remains clean. Its JSON must name
+by fetched `origin/main`, the task worktree detaches at that exact `origin/main`,
+and the checkout remains clean. Its JSON must name
 `completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and
 `"status":"ok"`. `device:end` enforces the same gate for existing callers; it
 must never park unmerged work and label the result complete.
 
 For work intentionally paused or blocked, run `npm run device:park` and report
 the state explicitly. Parking may preserve a dirty task branch in a named stash
-and return the checkout to `main`, but it never satisfies completion.
+and detach that task worktree at `origin/main`, but it never satisfies completion.
 
 Given a completion claim, when the protocol runs, then the protected Dev pull
-request is merged, the canonical checkout is clean at the exact fetched
-`origin/main` revision containing that merge, and the original failure is
+request is merged, the task worktree is detached and clean at the exact fetched
+`origin/main` revision containing that merge, the registered main worktree is
+fast-forwarded separately, and the original failure is
 retested on a local runtime started from that same SHA. Dev integration alone
 does not authorize Prod mirror or Cloudflare action.
 
 VCC: Verify `npm run device:complete -- --json` exits zero and emits the required
-branch, pull-request, merge, and main evidence; `git status --short --branch`
-shows clean `main` aligned with `origin/main`; the local runtime identifies that
+branch, pull-request, merge, and main evidence; the task worktree is clean and
+detached; `npm run sync:live` leaves the registered main worktree aligned with
+`origin/main`; the local runtime identifies that
 exact `mainSha`; and the original browser acceptance passes. Any missing item
 leaves the task pending, paused, or blocked rather than complete.
 
-Otherwise fetch, inspect, and activate a new reconciliation or task branch in the canonical checkout. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
+Otherwise fetch, inspect, and activate a new reconciliation or task branch in a detached registered task worktree. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
 
 ## Handoff and Conflict Rules
 
 - A handoff names the exact pushed commit SHA and paired app/docs/catalog manifest digest; the sender stops writing before the receiver starts.
 - A writer handoff also marks the prior lease parked, names its final epoch and fence SHA, and requires the receiver to claim a strictly newer epoch before mutation.
-- Same-device chats serialize checkout mutation through the atomic local lease. Different-device chats may mutate different scopes concurrently; duplicate scope pull requests, expired sessions, and stale fencing ancestry fail closed.
+- Same-device and different-device chats may mutate different scopes concurrently through distinct registered worktrees or clones. The Git-common-directory registry serializes each local worktree and branch; duplicate scope pull requests, expired sessions, and stale fencing ancestry fail closed.
 - A runtime handoff includes the successful `npm run collaboration:gate` summary with two distinct automated peers, exact visible revisions, and the common non-empty verification digest; a branch name, screenshot, clipboard export, or manually assembled JSON never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.
@@ -386,10 +393,10 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in th
 
 ## Stop Conditions
 
-Stop before build mutation when either repository has other than one registered worktree, fetch fails, source dirt is unexplained, the local writer lease is missing, expired, or owned by another session, its fencing SHA is not ancestral, branch ownership is ambiguous, the semantic scope already has another active pull request, the base ref is missing, the branch exists unexpectedly, the startup SHA cannot be proven, identity ownership is not application-global, the gate is not a Settings-body KTV section, a surface or catalog owns a competing identity component, participating runtime identities do not expose identical exact SHAs, catalog revision differs from the docs revision, bounded catalog refresh is exhausted, any memory or planning shard fails structural compliance, a planning shard exceeds its cap, or a repository-local todo file is presented as live authority.
+Stop before build mutation when a target worktree is unregistered, dirty, prunable, shared by another active session, or not detached at fetched `origin/main` before claim; when a branch is active in another worktree; when fetch fails; when source dirt is unexplained; when the local writer lease is missing, expired, or owned by another session or worktree; when its fencing SHA is not ancestral; when branch ownership is ambiguous; when the semantic scope already has another active pull request; when the base ref is missing; when the branch exists unexpectedly; when the startup SHA cannot be proven; or when any runtime identity, catalog, memory, or planning gate fails.
 
 ## Completion VCC
 
-Given a declared device, session, and semantic scope, when `/session.start` completes, then both repositories' remote refs are fetched, each repository reports exactly one registered worktree, the canonical Agentic Canvas OS checkout is clean at its fetched base before claim, one unexpired local lease and one draft pull request own the semantic scope, the lease epoch and fencing SHA match the task branch, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog hydration is fresh, memory and planning shards are compliant, and Codex starts only from the canonical checkout.
+Given a declared device, session, semantic scope, and task worktree, when `/session.start` completes, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog hydration is fresh, memory and planning shards are compliant, and Codex mutates only its leased task worktree.
 
-VCC: verify both fetches exit zero, each `git worktree list --porcelain` contains exactly one `worktree` record, Agentic Canvas OS is clean with `HEAD` equal to fetched `origin/main`, `npm run collaboration:gate` exits zero with two distinct automated peers, one common verification digest, exact SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural commands exit zero, the memory and planning base refs plus the declared planning Context are recorded, repository-local todo files are absent, the canonical Knowgrph checkout is clean at its recorded base SHA, one writer owns the branch, and no Prod mirror or Cloudflare action occurred.
+VCC: verify both fetches exit zero; `git worktree list --porcelain -z` identifies one registered `main` owner plus the declared task worktree; every checked-out branch is unique; the Agentic Canvas OS main worktree is clean with `HEAD` equal to fetched `origin/main`; the task lease registry entry matches its session, branch, and path; `npm run collaboration:gate` exits zero with two distinct automated peers and one common verification digest; memory and planning checks pass; the Knowgrph main worktree remains clean; and no Prod mirror or Cloudflare action occurred.

@@ -11,7 +11,8 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v1";
+export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
+export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEVICE_BRANCH_PATTERN =
   /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
@@ -53,14 +54,24 @@ export function assertNoCompetingScopePullRequests(pulls, activeBranch) {
 
 export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() }) {
   const root = path.resolve(gitCommonDir, "agentic-canvas-os");
-  const statePath = path.join(root, "writer-lease.json");
-  const lockPath = path.join(root, "writer-lease.lock");
+  const statePath = path.join(root, "writer-leases.json");
+  const lockPath = path.join(root, "writer-leases.lock");
 
-  function read() {
-    if (!existsSync(statePath)) return null;
+  function readRegistry() {
+    if (!existsSync(statePath)) {
+      return { schema: WRITER_LEASE_REGISTRY_SCHEMA, revision: 0, leases: {} };
+    }
     const value = JSON.parse(readFileSync(statePath, "utf8"));
-    if (value.schema !== WRITER_LEASE_SCHEMA) throw new Error(`Unsupported writer lease schema at ${statePath}`);
+    if (value.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases || typeof value.leases !== "object") {
+      throw new Error(`Unsupported writer lease registry schema at ${statePath}`);
+    }
     return value;
+  }
+
+  function read(branch) {
+    const registry = readRegistry();
+    if (!branch) return registry;
+    return registry.leases[branch] || null;
   }
 
   function claim({
@@ -68,29 +79,48 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     device,
     scope,
     branch,
+    worktreePath,
     baseSha,
     previousEpoch = 0,
     ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
   }) {
-    requireIdentity({ sessionId, device, scope, branch, baseSha });
+    requireIdentity({ sessionId, device, scope, branch, worktreePath, baseSha });
     return withLock(() => {
-      const current = read();
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
       const instant = now();
+      const normalizedWorktreePath = path.resolve(worktreePath);
+      for (const candidate of Object.values(registry.leases)) {
+        if (!isActive(candidate, instant) || candidate.branch === branch) continue;
+        if (path.resolve(candidate.worktreePath) === normalizedWorktreePath) {
+          throw new Error(
+            `Worktree ${normalizedWorktreePath} is leased to another session for ${candidate.scope} until ${candidate.expiresAt}.`,
+          );
+        }
+      }
       if (isActive(current, instant) && current.sessionId !== sessionId) {
         throw new Error(
-          `Canonical checkout is leased to another session for ${current.scope} until ${current.expiresAt}.`,
+          `Branch ${branch} is leased to another session in ${current.worktreePath} until ${current.expiresAt}.`,
         );
       }
-      if (isActive(current, instant) && current.sessionId === sessionId) return current;
+      if (isActive(current, instant) && current.sessionId === sessionId) {
+        if (path.resolve(current.worktreePath) !== normalizedWorktreePath) {
+          throw new Error(`Session ${sessionId} already owns ${branch} in ${current.worktreePath}.`);
+        }
+        return current;
+      }
       const timestamp = instant.toISOString();
+      const maximumEpoch = Object.values(registry.leases)
+        .reduce((highest, lease) => Math.max(highest, Number(lease?.epoch || 0)), 0);
       const lease = {
         schema: WRITER_LEASE_SCHEMA,
         status: "active",
-        epoch: Math.max(Number(current?.epoch || 0), Number(previousEpoch || 0)) + 1,
+        epoch: Math.max(maximumEpoch, Number(previousEpoch || 0)) + 1,
         sessionId,
         device,
         scope,
         branch,
+        worktreePath: normalizedWorktreePath,
         baseSha,
         fenceSha: null,
         pullRequestUrl: null,
@@ -98,14 +128,19 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         heartbeatAt: timestamp,
         expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),
       };
-      write(lease);
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
       return lease;
     });
   }
 
   function verify({ sessionId, branch, allowExpired = false }) {
-    const lease = read();
-    if (!lease || lease.status !== "active") throw new Error("No active writer lease owns the canonical checkout.");
+    if (!branch) throw new Error("Writer lease verification requires a branch.");
+    const lease = read(branch);
+    if (!lease || lease.status !== "active") throw new Error(`No active writer lease owns ${branch}.`);
     if (sessionId && lease.sessionId !== sessionId) {
       throw new Error("Writer lease belongs to another session.");
     }
@@ -120,6 +155,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
 
   function heartbeat({ sessionId, branch, ttlMs = DEFAULT_WRITER_LEASE_TTL_MS }) {
     return withLock(() => {
+      const registry = readRegistry();
       const current = verify({ sessionId, branch, allowExpired: true });
       const instant = now();
       const lease = {
@@ -127,31 +163,45 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         heartbeatAt: instant.toISOString(),
         expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),
       };
-      write(lease);
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
       return lease;
     });
   }
 
-  function annotate({ sessionId, values }) {
+  function annotate({ sessionId, branch, values }) {
     return withLock(() => {
-      const current = verify({ sessionId });
+      const registry = readRegistry();
+      const current = verify({ sessionId, branch });
       const lease = { ...current, ...values, schema: WRITER_LEASE_SCHEMA };
-      write(lease);
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
       return lease;
     });
   }
 
-  function release({ sessionId, status = "released" }) {
+  function release({ sessionId, branch, status = "released" }) {
     return withLock(() => {
-      const current = verify({ sessionId, allowExpired: true });
+      const registry = readRegistry();
+      const current = verify({ sessionId, branch, allowExpired: true });
       const timestamp = now().toISOString();
       const lease = { ...current, status, heartbeatAt: timestamp, expiresAt: timestamp };
-      write(lease);
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
       return lease;
     });
   }
 
-  function write(value) {
+  function writeRegistry(value) {
     mkdirSync(root, { recursive: true });
     const temporaryPath = `${statePath}.${process.pid}.tmp`;
     writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
@@ -169,7 +219,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     }
   }
 
-  return { annotate, claim, heartbeat, read, release, statePath, verify };
+  return { annotate, claim, heartbeat, read, readRegistry, release, statePath, verify };
 }
 
 export function renderWriterLeasePullRequestBody(lease) {

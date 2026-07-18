@@ -15,7 +15,7 @@ entrypoint and treat [`docs/`](./docs) as the agent control surface.
 Before executing any task, humans and AI tools should read:
 
 1. [`docs/PROJECT-RULES.md`](./docs/PROJECT-RULES.md) for project-wide engineering and session-end rules.
-2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md) for session start, ownership, and canonical checkout rules.
+2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md) for session start, registered task worktrees, and ownership rules.
 3. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md) for focused checks and release gates.
 
 Quick local path:
@@ -41,8 +41,9 @@ Safe pause or blocked exit:
 npm run device:park
 ```
 
-This preserves local task-branch work, switches back to clean `main`, and marks
-the task as paused or blocked. A parked branch is never completed work.
+This preserves local task-branch work, detaches that task worktree at fetched
+`origin/main`, and marks the task as paused or blocked. A parked branch is never
+completed work.
 
 Mandatory completion gate:
 
@@ -52,10 +53,11 @@ npm run device:complete -- --json
 
 This fails while work is dirty, stashed, branch-only, or attached to an open
 pull request. After the protected Dev pull request is merged, it verifies the
-merge commit is contained by `origin/main`, switches the canonical checkout to
-clean `main`, fast-forwards it exactly, and emits the pull request, merge, and
-main SHAs. `device:end` uses the same fail-closed completion gate for existing
-cross-repository callers; use `device:park` for paused or blocked work.
+merge commit is contained by `origin/main`, detaches the clean task worktree at
+that exact revision, and emits the pull request, merge, and main SHAs. Fast-forward
+the registered main worktree separately with `npm run sync:live` before runtime
+acceptance. `device:end` uses the same fail-closed completion gate; use
+`device:park` for paused or blocked work.
 
 First success check:
 

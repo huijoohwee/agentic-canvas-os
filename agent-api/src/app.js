@@ -18,7 +18,8 @@ import { createAgentDefinitionRegistry } from "./agent-definitions.js";
 import { createAgentOrchestrationRuntime } from "./agent-orchestration.js";
 import { createAgentRuntimeComposition } from "./agent-runtime-composition.js";
 import { createCacheContextRegistry } from "./cache-context.js";
-import { createFunctionCallingHandler } from "./function-calling-handler.js";
+import { createFunctionCallingHandler, createFunctionCallingResumeHandler } from "./function-calling-handler.js";
+import { createFunctionCallingManager } from "./function-calling-manager.js";
 import { createFunctionCallingRuntime } from "./function-calling.js";
 import { createGuardrailsHumanReviewRuntime } from "./guardrails-human-review.js";
 import {
@@ -56,6 +57,8 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
+ * @param {ReturnType<createFunctionCallingManager>} [opts.functionCallingManager] durable function-call lifecycle owner
+ * @param {object} [opts.functionContinuationStore] optional durable Function Calling continuation store
  * @param {ReturnType<createGuardrailsHumanReviewRuntime>} [opts.guardrailsHumanReview] automatic validation and review controller
  * @param {object} [opts.reviewStore] optional atomic review-state store
  * @param {object} [opts.pausedTurnStore] optional durable paused-turn store
@@ -76,6 +79,8 @@ export function createAgentApiApp({
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
+  functionCallingManager: providedFunctionCallingManager,
+  functionContinuationStore,
   guardrailsHumanReview: providedGuardrailsHumanReview,
   reviewStore,
   pausedTurnStore,
@@ -167,6 +172,12 @@ export function createAgentApiApp({
     advanceModel: openAiFunctionAdapter?.advanceModel,
     callTool: functionGateway.configured ? functionGateway.callTool : undefined,
   });
+  const functionCallingManager = providedFunctionCallingManager || createFunctionCallingManager({
+    functionCalling,
+    tools: functionGateway.tools,
+    capabilities: openAiFunctionAdapter?.capabilities || OPENAI_FUNCTION_CALLING_CAPABILITIES,
+    ...(functionContinuationStore ? { continuationStore: functionContinuationStore } : {}),
+  });
 
   return {
     configured: Boolean(secret && endpoint && modelProviderEnvironment.ready && modelProviderEnvironment.apiKeyPresent),
@@ -178,6 +189,7 @@ export function createAgentApiApp({
     cacheContext,
     reasoningContinuity,
     functionCalling,
+    functionCallingManager,
     functionGateway,
     guardrailsHumanReview,
     openAiFunctionAdapter,
@@ -193,6 +205,7 @@ export function createAgentApiApp({
       const programmaticStats = programmaticToolCalling.stats();
       const progressiveAgentStats = progressiveAgents.stats();
       const functionCallingStats = functionCalling.stats();
+      const functionCallingManagerStats = functionCallingManager.stats();
       const functionGatewayStats = functionGateway.stats();
       const guardrailsHumanReviewStats = guardrailsHumanReview.stats();
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
@@ -315,13 +328,15 @@ export function createAgentApiApp({
         },
         functionCalling: {
           configured: functionCallingStats.adapterConfigured && functionCallingStats.toolGatewayConfigured
-            && functionGatewayStats.configured,
+            && functionGatewayStats.configured && functionCallingManagerStats.configured,
           contractReady: true,
           executionOwner: "application-tool-gateway",
           schemaMode: "explicit-strict",
           selectionModes: ["auto", "required", "none", "forced", "allowed"],
           parallelPolicy: "capability-and-request-bounded",
           continuation: "previous-response-with-reasoning-items",
+          reviewContinuation: "manager-owned-durable-same-run",
+          reviewStateExposure: "resume-token-only",
           callIdentity: "function-call-output-preserves-call-id",
           providerExecutionStatus: "unverified",
           adapter: {
@@ -338,6 +353,7 @@ export function createAgentApiApp({
             ...(openAiFunctionStats || {}),
           },
           gateway: functionGatewayStats,
+          manager: functionCallingManagerStats,
           ...functionCallingStats,
         },
         programmaticToolCalling: {
@@ -395,9 +411,12 @@ export function createAgentApiApp({
     invoke: createInvokeHandler({ secret, mcpClient }),
     functionCall: createFunctionCallingHandler({
       secret,
-      functionCalling,
+      functionCallingManager,
       tools: functionGateway.tools,
-      capabilities: openAiFunctionAdapter?.capabilities || OPENAI_FUNCTION_CALLING_CAPABILITIES,
+    }),
+    functionCallResume: createFunctionCallingResumeHandler({
+      secret,
+      functionCallingManager,
     }),
   };
 }

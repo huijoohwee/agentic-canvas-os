@@ -181,7 +181,9 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
     name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
     arguments: { view: "capabilities" },
     caller: { type: "direct" },
-    policy: { riskClass: "read-only", idempotent: true, approvalRequired: false },
+    policy: {
+      revision: "knowgrph-status-function/v1", riskClass: "read-only", idempotent: true, approvalRequired: false,
+    },
   };
   const mismatch = await gateway.callTool({ ...base, policy: { ...base.policy, riskClass: "mutation" } });
   assert.equal(mismatch.status, "blocked");
@@ -268,7 +270,9 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
     name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
     arguments: { view: "capabilities" },
     caller: { type: "direct" },
-    policy: { riskClass: "read-only", idempotent: true, approvalRequired: true },
+    policy: {
+      revision: "knowgrph-status-function/v1", riskClass: "read-only", idempotent: true, approvalRequired: true,
+    },
   };
 
   const paused = await gateway.callTool(call);

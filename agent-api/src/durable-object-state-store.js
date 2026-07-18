@@ -110,4 +110,55 @@ export function createDurableObjectPausedTurnStore({ namespace, maxRecordChars =
   });
 }
 
+export function createDurableObjectFunctionContinuationStore({
+  namespace,
+  maxRecordChars = MAX_RECORD_CHARS,
+} = {}) {
+  const owner = requireNamespace(namespace);
+  const scope = (runId) => `function-continuation:${identifier(runId, "runId")}`;
+  return Object.freeze({
+    async put(value) {
+      const record = boundedRecord(value, "functionContinuation", maxRecordChars);
+      const result = await operate(owner, scope(record.runId), "put", { record });
+      return result.stored === true;
+    },
+    async get(runId) {
+      const result = await operate(owner, scope(runId), "get", {});
+      return result.record ?? null;
+    },
+    async claim(runId, claimId, claimExpiresAt) {
+      const result = await operate(owner, scope(runId), "claim", {
+        claimId: identifier(claimId, "claimId"),
+        claimExpiresAt,
+      });
+      return result.record ?? null;
+    },
+    async commit(runId, claimId) {
+      const result = await operate(owner, scope(runId), "commit", { claimId: identifier(claimId, "claimId") });
+      return result.committed === true;
+    },
+    async release(runId, claimId) {
+      const result = await operate(owner, scope(runId), "release", { claimId: identifier(claimId, "claimId") });
+      return result.released === true;
+    },
+    async replace(runId, claimId, value) {
+      const record = boundedRecord(value, "functionContinuation", maxRecordChars);
+      const result = await operate(owner, scope(runId), "replace", {
+        claimId: identifier(claimId, "claimId"), record,
+      });
+      return result.replaced === true;
+    },
+    async delete(runId) {
+      const result = await operate(owner, scope(runId), "delete", {});
+      return result.deleted === true;
+    },
+    stats: () => Object.freeze({
+      persistence: "durable-object",
+      atomicClaims: true,
+      recovery: "cross-isolate",
+      owner: "function-calling-manager",
+    }),
+  });
+}
+
 export const DURABLE_OBJECT_STATE_DEFAULTS = Object.freeze({ maxRecordChars: MAX_RECORD_CHARS });

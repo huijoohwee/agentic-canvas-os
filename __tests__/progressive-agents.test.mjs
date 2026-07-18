@@ -56,6 +56,7 @@ function functionTool() {
   return {
     type: "function",
     name: "lookup_record",
+    revision: "lookup-record/v1",
     description: "Read one approved record.",
     parameters: OBJECT_SCHEMA,
     strict: true,

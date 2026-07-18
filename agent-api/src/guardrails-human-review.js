@@ -375,15 +375,22 @@ export function createGuardrailsHumanReviewRuntime({
   }
 
   async function resolveReview({ state, resolution } = {}) {
-    const safeState = normalizeResumeState(state);
-    const safeResolution = normalizeResolution(resolution, maxValueChars);
+    let safeState;
+    let safeResolution;
+    try {
+      safeState = normalizeResumeState(state);
+      safeResolution = normalizeResolution(resolution, maxValueChars);
+    } catch {
+      blockedReviews += 1;
+      return Object.freeze({ status: "blocked", reasonCode: "review_resolution_invalid", stateConsumed: false });
+    }
     if (safeState.reviewId !== safeResolution.reviewId) {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "review_identity_mismatch" });
+      return Object.freeze({ status: "blocked", reasonCode: "review_identity_mismatch", stateConsumed: false });
     }
     if (typeof authenticateReviewer !== "function") {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "reviewer_authenticator_unconfigured" });
+      return Object.freeze({ status: "blocked", reasonCode: "reviewer_authenticator_unconfigured", stateConsumed: false });
     }
     let reviewer;
     try {
@@ -394,24 +401,24 @@ export function createGuardrailsHumanReviewRuntime({
       })));
     } catch {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "reviewer_authentication_failed" });
+      return Object.freeze({ status: "blocked", reasonCode: "reviewer_authentication_failed", stateConsumed: false });
     }
     if (!reviewer.authenticated) {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "reviewer_unauthenticated" });
+      return Object.freeze({ status: "blocked", reasonCode: "reviewer_unauthenticated", stateConsumed: false });
     }
     authenticatedReviews += 1;
     const storedRecord = await reviewStore.take(safeState.reviewId);
     if (!storedRecord) {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "review_missing_or_consumed" });
+      return Object.freeze({ status: "blocked", reasonCode: "review_missing_or_consumed", stateConsumed: true });
     }
     let record;
     try {
       record = normalizeStoredReview(storedRecord, maxValueChars);
     } catch {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "review_state_invalid" });
+      return Object.freeze({ status: "blocked", reasonCode: "review_state_invalid", stateConsumed: true });
     }
     if (
       record.runId !== safeState.runId
@@ -419,12 +426,12 @@ export function createGuardrailsHumanReviewRuntime({
       || record.actionDigest !== safeState.actionDigest
     ) {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "review_state_mismatch" });
+      return Object.freeze({ status: "blocked", reasonCode: "review_state_mismatch", stateConsumed: true });
     }
     const decidedAt = now();
     if (!Number.isFinite(decidedAt) || decidedAt > record.expiresAt) {
       blockedReviews += 1;
-      return Object.freeze({ status: "blocked", reasonCode: "review_expired" });
+      return Object.freeze({ status: "blocked", reasonCode: "review_expired", stateConsumed: true });
     }
     const audit = Object.freeze({
       schema: "agentic-human-review-audit/v1",
@@ -441,7 +448,7 @@ export function createGuardrailsHumanReviewRuntime({
     });
     if (safeResolution.decision === "reject") {
       rejectedReviews += 1;
-      return Object.freeze({ status: "rejected", audit });
+      return Object.freeze({ status: "rejected", audit, stateConsumed: true });
     }
     const edited = safeResolution.decision === "edit";
     if (edited) editedReviews += 1;
@@ -449,7 +456,7 @@ export function createGuardrailsHumanReviewRuntime({
     const action = edited
       ? Object.freeze({ ...record.action, payload: safeResolution.editedPayload })
       : record.action;
-    return Object.freeze({ status: "approved", action, edited, requiresValidation: edited, audit });
+    return Object.freeze({ status: "approved", action, edited, requiresValidation: edited, audit, stateConsumed: true });
   }
 
   function stats() {

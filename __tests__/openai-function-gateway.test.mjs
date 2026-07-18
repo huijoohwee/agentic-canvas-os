@@ -229,7 +229,8 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
   const app = createAgentApiApp({
     env,
     fetchImpl: async (request) => {
-      if (request.url.includes("api.openai.com")) {
+      const requestUrl = new URL(request.url);
+      if (requestUrl.origin === "https://api.openai.com" && requestUrl.pathname === "/v1/responses") {
         openAiBodies.push(request.body);
         openAiTurnIndex += 1;
         return reply(openAiTurnIndex === 1

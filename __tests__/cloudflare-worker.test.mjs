@@ -131,6 +131,8 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   ]);
   assert.equal(body.sandboxAgents.containerExecutionStatus, "unverified");
   assert.equal(body.sandboxAgents.independentContainmentProof, "unverified");
+  assert.equal(body.sandboxAgents.containmentVerifierConfigured, false);
+  assert.equal(body.sandboxAgents.liveContainerReady, false);
   assert.equal(body.toolSearch.contractReady, true);
   assert.equal(body.toolSearch.configured, false);
   assert.equal(body.toolSearch.catalogScope, "active-session-grants");

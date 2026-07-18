@@ -76,7 +76,7 @@ function normalizeWorkspaceFile(value, index, limits) {
 }
 
 export function normalizeWorkspace(value, limits) {
-  assertExactKeys(value, ["revision", "directories", "files", "environmentBindings"], "workspace");
+  assertExactKeys(value, ["revision", "directories", "files", "environmentBindings", "previewPorts"], "workspace");
   const directories = value.directories === undefined
     ? []
     : value.directories.map((path, index) => normalizeRelativePath(path, `workspace.directories[${index}]`));
@@ -88,11 +88,17 @@ export function normalizeWorkspace(value, limits) {
     if (!ENVIRONMENT_NAME.test(binding)) throw new TypeError(`workspace.environmentBindings[${index}] is invalid.`);
     return binding;
   });
-  for (const [field, items] of Object.entries({ directories, files, environmentBindings })) {
+  const previewPorts = value.previewPorts === undefined ? [] : value.previewPorts.map((port, index) => {
+    if (!Number.isInteger(port) || port < 1_024 || port > 65_535) {
+      throw new TypeError(`workspace.previewPorts[${index}] must be an integer from 1024 to 65535.`);
+    }
+    return port;
+  });
+  for (const [field, items] of Object.entries({ directories, files, environmentBindings, previewPorts })) {
     if (items.length > limits.maxWorkspaceEntries) {
       throw new RangeError(`workspace.${field} exceeds ${limits.maxWorkspaceEntries} entries.`);
     }
-    const identities = items.map((item) => typeof item === "string" ? item : item.path);
+    const identities = items.map((item) => typeof item === "object" ? item.path : item);
     if (new Set(identities).size !== identities.length) throw new TypeError(`workspace.${field} contains a duplicate.`);
   }
   const workspace = normalizeJson({
@@ -100,6 +106,7 @@ export function normalizeWorkspace(value, limits) {
     directories,
     files,
     environmentBindings,
+    previewPorts,
   }, "workspace");
   if (serializedJsonLength(workspace) > limits.maxWorkspaceChars) {
     throw new RangeError(`workspace exceeds ${limits.maxWorkspaceChars} characters.`);
@@ -157,11 +164,15 @@ export function normalizeOperation(value, limits) {
     return Object.freeze({ kind, path: normalizeRelativePath(value.path, "operation.path"), content: value.content });
   }
   if (kind === "command.run") {
-    assertExactKeys(value, ["kind", "argv", "cwd"], "operation");
+    assertExactKeys(value, ["kind", "argv", "cwd", "background"], "operation");
+    if (value.background !== undefined && typeof value.background !== "boolean") {
+      throw new TypeError("operation.background must be boolean when provided.");
+    }
     return Object.freeze({
       kind,
       argv: normalizeArgv(value.argv, limits),
       ...(value.cwd === undefined ? {} : { cwd: normalizeRelativePath(value.cwd, "operation.cwd") }),
+      background: value.background === true,
     });
   }
   if (kind === "package.install") {
@@ -283,6 +294,52 @@ export function normalizeSandboxAdapter(adapter) {
     requireSandboxMethod(adapter, method);
   }
   return Object.freeze({ adapter, descriptor });
+}
+
+export function normalizeContainmentVerifier(verifier) {
+  if (verifier === undefined) return null;
+  if (!verifier || typeof verifier !== "object" || Array.isArray(verifier)) {
+    throw new TypeError("containmentVerifier must be an object when provided.");
+  }
+  assertExactKeys(verifier, ["descriptor", "verify"], "containmentVerifier");
+  assertExactKeys(verifier.descriptor, ["id", "revision"], "containmentVerifier.descriptor");
+  requireSandboxMethod(verifier, "verify");
+  return Object.freeze({
+    verifier,
+    descriptor: Object.freeze({
+      id: assertIdentifier(verifier.descriptor.id, "containmentVerifier.descriptor.id"),
+      revision: assertIdentifier(verifier.descriptor.revision, "containmentVerifier.descriptor.revision"),
+    }),
+  });
+}
+
+export function normalizeContainmentProof(value, descriptor) {
+  assertExactKeys(value, ["status", "fresh", "checks"], "containment proof");
+  if (value.status !== "verified" || value.fresh !== true) {
+    throw new SandboxAgentBlock("containment_proof_failed", "Fresh independent containment proof is required.");
+  }
+  if (!Array.isArray(value.checks) || value.checks.length === 0 || value.checks.length > 32) {
+    throw new SandboxAgentBlock("containment_proof_failed", "Containment proof must include 1 to 32 checks.");
+  }
+  const checks = value.checks.map((check, index) => {
+    assertExactKeys(check, ["id", "status"], `containment proof.checks[${index}]`);
+    if (check.status !== "pass") {
+      throw new SandboxAgentBlock("containment_proof_failed", "Every containment check must pass.");
+    }
+    return Object.freeze({
+      id: assertIdentifier(check.id, `containment proof.checks[${index}].id`),
+      status: "pass",
+    });
+  });
+  const identities = checks.map((check) => check.id);
+  if (new Set(identities).size !== identities.length) {
+    throw new SandboxAgentBlock("containment_proof_failed", "Containment proof contains a duplicate check.");
+  }
+  return Object.freeze({
+    status: "verified",
+    verifier: descriptor,
+    checks: Object.freeze(checks),
+  });
 }
 
 export function normalizeAuthorization(value, action) {

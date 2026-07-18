@@ -6,10 +6,24 @@ import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
 
 function createStateStore() {
   const values = new Map();
+  const claims = new Map();
   return {
     put: async (key, value) => values.set(key, value),
     get: async (key) => values.get(key),
     delete: async (key) => values.delete(key),
+    claim: async (key, claimId) => {
+      if (!values.has(key)) return null;
+      const value = values.get(key);
+      values.delete(key);
+      claims.set(`${key}:${claimId}`, value);
+      return value;
+    },
+    commit: async (key, claimId) => claims.delete(`${key}:${claimId}`),
+    release: async (key, claimId) => {
+      const claimKey = `${key}:${claimId}`;
+      values.set(key, claims.get(claimKey));
+      claims.delete(claimKey);
+    },
     has: (key) => values.has(key),
   };
 }
@@ -132,7 +146,7 @@ test("runs bounded file, command, package, and port work through one attested co
   assert.equal(started.status, "ready");
   assert.equal(started.provider.executionBoundary, "container");
   assert.equal(started.evidence.containerExecutionStatus, "provider-attested");
-  assert.equal(started.evidence.independentContainmentProof, "unverified");
+  assert.deepEqual(started.evidence.independentContainmentProof, { status: "unverified" });
 
   const operations = [
     { kind: "file.read", path: "src/input.txt" },
@@ -290,9 +304,41 @@ test("pauses and resumes the same sandbox across controller instances through an
   assert.equal(resumed.status, "ready");
   assert.equal(resumed.stage, "resumed");
   assert.equal(resumed.sandboxId, started.sandboxId);
-  assert.deepEqual(resumed.cost, { status: "partial", amountUsd: 0.04 });
+  assert.deepEqual(resumed.cost, { status: "reported", amountUsd: 0.05 });
   assert.equal(requests.resume[0].serializedState.providerCursor, 1);
   assert.equal(stateStore.has(`resume:${paused.resumeToken}`), false);
+});
+
+test("promotes independent containment only after a separate fresh verifier passes", async () => {
+  const { adapter, requests } = createAdapter();
+  const containmentVerifier = {
+    descriptor: { id: "independent-verifier", revision: "verifier-v1" },
+    verify: async () => ({
+      status: "verified",
+      fresh: true,
+      checks: [{ id: "container-boundary", status: "pass" }],
+    }),
+  };
+  const runtime = createSandboxAgentRuntime(runtimeOptions(adapter, createStateStore(), { containmentVerifier }));
+  const started = await open(runtime);
+  assert.equal(started.status, "ready");
+  assert.deepEqual(started.evidence.independentContainmentProof, {
+    status: "verified",
+    verifier: containmentVerifier.descriptor,
+    checkCount: 1,
+  });
+  assert.equal(runtime.stats().independentContainmentProof, "verified");
+  assert.equal(runtime.stats().liveContainerReady, true);
+
+  const failingVerifier = {
+    ...containmentVerifier,
+    verify: async () => ({ status: "verified", fresh: true, checks: [{ id: "root-write", status: "fail" }] }),
+  };
+  const blocked = await open(createSandboxAgentRuntime(runtimeOptions(adapter, createStateStore(), {
+    containmentVerifier: failingVerifier,
+  })), { runId: "run-proof-fails" });
+  assert.equal(blocked.reasonCode, "containment_proof_failed");
+  assert.equal(requests.close.length, 1);
 });
 
 test("rejects sensitive provider output and redacts unexpected provider failures", async () => {

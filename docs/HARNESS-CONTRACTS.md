@@ -351,6 +351,8 @@ Composition owns only the adapter seams between source-backed Agent Definitions,
 
 Only a fully reported aggregate cost becomes a downstream cost log. Missing or partial usage remains unreported. Offline proof establishes integrated owner behavior without establishing provider reachability, quality, usage, price, or spend.
 
+The separately approved Node-only live proof injects an OpenAI Responses adapter without changing Worker defaults. It permits exactly one specialist-manager-specialist sequence and at most three provider attempts, uses stored previous-response continuation only for the returning specialist, requires provider-confirmed effective reasoning context and complete usage, and emits no raw response id, output, reasoning, or credential.
+
 ## Function Calling Harness Contract
 
 Direct function calling exposes strict application-owned declarations to a model and returns gateway-owned results under exact call identities. The cited provider guide informs the capability class; local implementation, schemas, examples, tests, fixtures, and prose remain independently authored.

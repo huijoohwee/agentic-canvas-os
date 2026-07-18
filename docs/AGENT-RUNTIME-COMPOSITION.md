@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "runtime-ready-dev"
 authority: "provider-neutral composition of source-backed definitions, model selection, Running Agents, and orchestration"
 runtime_scope: "definition preparation, provider selection, agent-step lifecycle, output validation, and orchestration adapters"
-runtime_claim: "offline composition is runtime-ready in Dev; the default Worker has no definitions, source verifier, execution adapter, or authorizer, and live provider behavior remains unverified"
+runtime_claim: "composition is runtime-ready in Dev with one bounded live delegate and handoff proof; the default Worker still has no definitions, verifier, execution adapter, or authorizer"
 runtime_owner: "../agent-api/src/agent-runtime-composition.js"
 runtime_proof: "../__tests__/agent-runtime-composition.test.mjs"
 external_pattern_source: "https://openai.github.io/openai-agents-js/guides/multi-agent/"
@@ -61,7 +61,7 @@ Composition does not infer either mode from agent metadata. The registered branc
 
 Readiness reports owner names, adapter presence, continuation strategy, bounded counters, and nested Running Agents statistics. It never reports instructions, source content, provider credentials, adapter error bodies, or output payloads.
 
-`contractReady: true` means the local composition shape and offline behavior are executable. `configured: true` additionally requires Agent Definitions, Models and Providers, and an injected execution adapter. Provider execution remains `unverified` until a separately approved bounded live run returns actual provider evidence.
+`contractReady: true` means the local composition shape and offline behavior are executable. `configured: true` additionally requires Agent Definitions, Models and Providers, and an injected execution adapter. Provider execution remains `unverified` in default construction. The separately approved Node-only proof in `LIVE-AGENT-PROVIDER-PROOF.md` injects a concrete adapter without changing Worker defaults and accepts only returned, redacted provider evidence.
 
 ## Acceptance Contract
 
@@ -71,5 +71,6 @@ Readiness reports owner names, adapter presence, continuation strategy, bounded 
 - Changed source evidence, stale definition revision, missing model feature, malformed output, duplicate execution, or missing adapter blocks before a public answer.
 - Fully reported usage may flow to orchestration; absent or partial usage never becomes fabricated reported cost.
 - Default app and Worker readiness expose the connected resolver and runner while configuration and provider execution remain false or `unverified`.
+- The bounded live proof permits at most three provider attempts, confirms specialist-manager-specialist order and answer ownership, and links only hashed prior-response evidence.
 
 VCC: run `npm run agent-runtime-composition:check`, the definition, provider, Running Agents, orchestration, app, and Worker tests, plus `npm run docs:check`; require zero failures, exact source and revision evidence, deterministic owner transitions, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.

@@ -93,10 +93,13 @@ and contract validation alone do not execute a model, approve spend, or grant
 mutation authority.
 
 User-authored edges to explicitly targeted Widget Cards or Rich Media Panels
-remain authoritative. A runtime-recognized selected-child terminal continuation
-atomically creates or reuses one owned `Generated Result` Rich Media Panel and
+remain authoritative. Clarification publication atomically creates or reuses
+one owned `Probe-Tree Branches` Rich Media Panel and one typed output edge from
+the source Widget Card; graph authority repairs that edge when reopening an
+older disconnected ledger. A runtime-recognized selected-child terminal continuation
+similarly creates or reuses one owned `Generated Result` Rich Media Panel and
 one typed output edge from that selected child. The runtime must not merge
-targets, attach an unrelated panel, or infer edges for non-terminal output.
+targets, attach an unrelated panel, or infer any other output edge.
 
 ## Validation Contract
 

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { assertCanonicalReadPath, assertSingleCanonicalWorktree } from "./repository-guards.mjs";
+import { assertMainWorktree } from "./repository-guards.mjs";
 
 const watch = process.argv.includes("--watch");
 const intervalArg = process.argv.find((arg) => arg.startsWith("--interval="));
 const intervalSeconds = Math.max(5, Math.min(300, Number(intervalArg?.split("=")[1] || 20)));
 const root = gitText(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
-assertCanonicalReadPath({ root, cwd: process.cwd() });
 
 await syncOnce();
 if (watch) {
@@ -19,7 +18,10 @@ if (watch) {
 }
 
 async function syncOnce() {
-  assertSingleCanonicalWorktree({ root, porcelain: gitText(root, ["worktree", "list", "--porcelain"]) });
+  assertMainWorktree({
+    cwd: root,
+    porcelain: gitText(root, ["worktree", "list", "--porcelain", "-z"]),
+  });
 
   run(root, "git", ["fetch", "--quiet", "origin", "main"]);
   const branch = gitText(root, ["branch", "--show-current"]).trim();

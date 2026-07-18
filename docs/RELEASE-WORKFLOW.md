@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-16"
+date: "2026-07-18"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v1"
 frontmatter_contract: "required"
@@ -29,7 +29,8 @@ coordination:
   branch_pattern: "^agent/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
   device_segment_contract: "lowercase alphanumeric boundaries with interior dot, underscore, or hyphen"
   semantic_scope_segment_contract: "lowercase alphanumeric boundaries with interior hyphen only"
-  one_active_writer: true
+  one_active_writer_per_worktree: true
+  canonical_main_worktree: true
   direct_main_push: false
   handoff_identity: "pushed commit SHA"
 cost_policy:
@@ -70,14 +71,14 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 ## Operating Model
 
-- Complete `START-WORKFLOW.md` before build work: fetch first, require exactly one registered worktree per repository, inspect ownership, and activate the task branch in the canonical checkout; pull only on a clean, exclusively owned branch when updating it intentionally.
-- Require the current session-bound writer lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope pull requests may coexist, but duplicate active scope ownership blocks release.
-- Use one task, semantic scope, canonical checkout, branch, and active writer; additional worktrees are forbidden.
+- Complete `START-WORKFLOW.md` before build work: fetch first, preserve one clean registered `main` worktree, inspect every registered worktree, and activate the task branch only in its leased task worktree; pull only on a clean, exclusively owned branch when updating it intentionally.
+- Require the current worktree-bound session lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope worktrees and pull requests may coexist, but duplicate active scope ownership blocks release.
+- Use one task, semantic scope, registered task worktree, branch, and active writer. Keep normal runtime and synchronization on the registered `main` worktree.
 - Create a contract-valid `agent/<device>/<semantic-scope>` from the latest `origin/main`; preserve interior `.`, `_`, and `-` in the device segment, but normalize semantic scope to lowercase alphanumerics and hyphens before any checkout mutation.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
 - Hand off only after the sender stops and pushes an exact commit SHA.
-- When another task owns the canonical checkout, publish only an already-created commit through `release:publish:immutable`; require the expected remote SHA and retain the generated manifest digest. Manual hook bypass, raw refspec push, branch switching, or a missing manifest is not a release lane.
+- Use `release:publish:immutable` only for an already-created commit whose writer stopped or for checkout-independent recovery; require the expected remote SHA and retain the generated manifest digest. Manual hook bypass, raw refspec push, branch switching, or a missing manifest is not a release lane.
 - Treat branch names as informational. Cross-device and promoted-runtime parity require visible, identical exact Knowgrph and Agentic Canvas OS SHAs.
 - Require the canonical identity runtime at the application root and the visible gate as a MainPanel Settings body section using shared KTV rows. Settings, Skills & Commands, Chat, FloatingPanel, and invocation catalogs must remain projections or facet publishers, never identity owners.
 - Require `npm run collaboration:gate` to exit zero with two isolated authenticated runtime peers, at least two active room peers, exact document propagation, and one common non-empty verification digest. The gate owns local orchestration and cleanup; it does not require physical devices or exported JSON. `Copy diagnostic JSON` is optional troubleshooting only.
@@ -95,7 +96,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning shard, planning context, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, immutable manifest digest, and ownership conflicts.
 
-Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another device is writing the same branch.
+Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another worktree or device is writing the same branch or semantic scope.
 
 ### 2. Reconcile
 
@@ -131,7 +132,7 @@ Stop on any required failure. Never promote by skipping tests, editing fixtures 
 
 ### 7. Integrate Dev
 
-Separate unrelated scopes. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, immutable manifest digest, and handoff evidence. When the commit is not the canonical checkout's active `HEAD`, use only the repository-owned checkout-free publication command with its expected-remote compare-and-set. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
+Separate unrelated scopes into branch-exclusive leased task worktrees. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, immutable manifest digest, and handoff evidence. Use the repository-owned checkout-free publication command only for a stopped writer's existing commit or recovery path. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 

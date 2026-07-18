@@ -17,6 +17,8 @@ import {
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const repo = process.cwd();
+const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
+const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
 
 function createGitText(responses) {
   return args => {
@@ -47,10 +49,11 @@ test("device and scope sanitizers preserve hostname identity without widening sc
 test("start rejects an invalid device before checkout mutation", () => {
   const calls = [];
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": detachedWorktree,
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
+    "branch --show-current": "",
   });
 
   assert.throws(() => start({
@@ -72,16 +75,17 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
   const annotations = [];
   const logs = [];
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": detachedWorktree,
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
+    "branch --show-current": "",
     "rev-parse origin/main": "a".repeat(40),
-    "rev-parse HEAD": "b".repeat(40),
+    "rev-parse HEAD": ["a".repeat(40), "b".repeat(40)],
   });
   const leaseStore = {
     claim: values => ({
-      schema: "agentic-writer-lease/v1",
+      schema: "agentic-writer-lease/v2",
       status: "active",
       epoch: 1,
       ...values,
@@ -93,13 +97,14 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
     annotate: ({ values }) => {
       annotations.push(values);
       return {
-        schema: "agentic-writer-lease/v1",
+        schema: "agentic-writer-lease/v2",
         status: "active",
         epoch: 1,
         sessionId: "chat-a",
         device: "device",
         scope: "runtime-leases",
         branch: "agent/device/runtime-leases",
+        worktreePath: repo,
         baseSha: "a".repeat(40),
         fenceSha: values.fenceSha || "b".repeat(40),
         pullRequestUrl: values.pullRequestUrl || null,
@@ -138,11 +143,11 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
   assert.doesNotMatch(logs[0], /chat-a/);
 });
 
-test("park stashes a dirty task branch and returns to clean canonical main", () => {
+test("park stashes a dirty task branch and detaches its worktree at origin main", () => {
   const calls = [];
   const logs = [];
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
@@ -157,7 +162,7 @@ test("park stashes a dirty task branch and returns to clean canonical main", () 
     repo,
     gitText,
     leaseStore: {
-      verify: () => ({ status: "active" }),
+      verify: () => ({ status: "active", worktreePath: repo }),
       release: () => ({ status: "parked" }),
     },
     sessionId: "chat-a",
@@ -168,23 +173,22 @@ test("park stashes a dirty task branch and returns to clean canonical main", () 
 
   assert.deepEqual(calls, [
     ["git", "stash", "push", "-u", "-m", "park: agent/device/scope 20260714T223045Z"],
-    ["git", "switch", "main"],
     ["git", "fetch", "origin", "main"],
-    ["git", "merge", "--ff-only", "origin/main"],
+    ["git", "switch", "--detach", "origin/main"],
   ]);
   assert.deepEqual(result, {
     branch: "agent/device/scope",
     headSha: "1234567890abcdef1234567890abcdef12345678",
     stashRef: "stash@{0}",
   });
-  assert.equal(logs[0], "Parked agent/device/scope in stash@{0}; main is now 1234567890ab.");
+  assert.equal(logs[0], "Parked agent/device/scope in stash@{0}; task worktree is detached at 1234567890ab.");
 });
 
 test("heartbeat rejects a session after the remote fencing commit advances", () => {
   const branch = "agent/device/runtime-leases";
   let renewed = false;
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree(branch),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": `${branch}\n`,
@@ -196,7 +200,7 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
     gitText,
     gitOptional: () => `${"c".repeat(40)}\trefs/heads/${branch}`,
     leaseStore: {
-      verify: () => ({ fenceSha: "b".repeat(40) }),
+      verify: () => ({ fenceSha: "b".repeat(40), worktreePath: repo }),
       heartbeat: () => { renewed = true; },
     },
     sessionId: "chat-a",
@@ -211,7 +215,7 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
   const branch = "agent/device/runtime-leases";
   const pullRequestUrl = "https://github.test/pull/1";
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree(branch),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
@@ -227,11 +231,11 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     ghText: () => JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }]),
     ghOptional: () => pullRequestUrl,
     leaseStore: {
-      verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl }),
+      verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
       release: ({ status }) => {
         releaseStatus = status;
         return {
-          schema: "agentic-writer-lease/v1",
+          schema: "agentic-writer-lease/v2",
           status,
           epoch: 1,
           sessionId: "chat-a",
@@ -265,7 +269,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
     const branch = "agent/old-device/runtime-leases";
     const pullRequestUrl = "https://github.test/pull/1";
     const priorLease = {
-      schema: "agentic-writer-lease/v1",
+      schema: "agentic-writer-lease/v2",
       status: handoff.status,
       epoch: 4,
       sessionId: handoff.priorSessionId,
@@ -278,10 +282,11 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       expiresAt: "2026-07-17T10:00:00.000Z",
     };
     const gitText = createGitText({
-      "worktree list --porcelain": `worktree ${repo}\n`,
+      "worktree list --porcelain -z": detachedWorktree,
       "diff --name-only --diff-filter=U": "",
       "ls-files -u": "",
       "status --porcelain": "",
+      "branch --show-current": "",
       [`rev-parse origin/${branch}`]: "c".repeat(40),
       "rev-parse HEAD": "d".repeat(40),
     });
@@ -292,6 +297,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       epoch: 5,
       sessionId: handoff.sessionId,
       device: "new-device",
+      worktreePath: repo,
       baseSha: "c".repeat(40),
       fenceSha: "d".repeat(40),
       pullRequestUrl,
@@ -331,7 +337,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
 test("resume rejects a delivery revision claimed by another session", () => {
   const branch = "agent/device/runtime-leases";
   const priorLease = {
-    schema: "agentic-writer-lease/v1",
+    schema: "agentic-writer-lease/v2",
     status: "delivery",
     epoch: 4,
     sessionId: "chat-old",
@@ -344,10 +350,11 @@ test("resume rejects a delivery revision claimed by another session", () => {
     expiresAt: "2026-07-17T10:00:00.000Z",
   };
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": detachedWorktree,
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
+    "branch --show-current": "",
   });
 
   assert.throws(() => resume({
@@ -372,7 +379,7 @@ test("resume rejects a delivery revision claimed by another session", () => {
 
 test("park fails closed when local main does not equal origin/main after refresh", () => {
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree("main"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "main\n",
@@ -392,11 +399,11 @@ test("park fails closed when local main does not equal origin/main after refresh
   );
 });
 
-test("completeSession switches to main only after the task pull request is merged", () => {
+test("completeSession detaches the task worktree only after the task pull request is merged", () => {
   const calls = [];
   const logs = [];
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
@@ -427,8 +434,7 @@ test("completeSession switches to main only after the task pull request is merge
   assert.deepEqual(calls, [
     ["git", "fetch", "origin", "main"],
     ["git", "merge-base", "--is-ancestor", "abcdefabcdefabcdefabcdefabcdefabcdefabcd", "origin/main"],
-    ["git", "switch", "main"],
-    ["git", "merge", "--ff-only", "origin/main"],
+    ["git", "switch", "--detach", "origin/main"],
   ]);
   assert.deepEqual(summary, {
     completedBranch: "agent/device/scope",
@@ -442,7 +448,7 @@ test("completeSession switches to main only after the task pull request is merge
 
 test("completeSession fails closed while the pull request is open", () => {
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
@@ -470,7 +476,7 @@ test("completeSession fails closed while the pull request is open", () => {
 
 test("completeSession fails closed while task work remains parked", () => {
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
@@ -493,7 +499,7 @@ test("completeSession fails closed while task work remains parked", () => {
 test("completeSession emits machine-readable merge and main evidence", () => {
   const logs = [];
   const gitText = createGitText({
-    "worktree list --porcelain": `worktree ${repo}\n`,
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",

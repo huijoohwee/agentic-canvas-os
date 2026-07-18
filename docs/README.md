@@ -37,7 +37,7 @@ the smallest set of docs needed for the task.
 Recommended reading order:
 
 1. [`PROJECT-RULES.md`](./PROJECT-RULES.md) for project-wide engineering and session-closeout rules.
-2. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the single canonical checkout rule.
+2. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the registered multi-worktree rule.
 3. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
 4. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
 5. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.
@@ -74,7 +74,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |
 | `MCP-GATEWAY.md` | MCP federation contract | Discovery-first gateway rules across local, Pages, browser, and control-plane surfaces. |
 | `VALIDATION-RUNBOOK.md` | Focused proof lane | Commands and checks for documentation, local runtime, and deploy guards. |
-| `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one-worktree enforcement, session-bound writer leases, scope-aware draft PRs, fencing SHAs, canonical-checkout activation, and exact-SHA proof. |
+| `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one canonical `main` runtime owner, registered task worktrees, branch-bound session leases, scope-aware draft PRs, fencing SHAs, and exact-SHA proof. |
 | `RELEASE-WORKFLOW.md` | Runtime-ready release contract | Conflict-safe Dev integration, Prod promotion, Cloudflare deployment, production verification, and evidence reporting. |
 
 ## Runtime Position

@@ -33,7 +33,7 @@ test("device branch identity separates device from semantic scope", () => {
   assert.equal(parseDeviceBranch("agent/mac-a/rich.media"), null);
 });
 
-test("writer lease serializes chats, increments fencing epochs, and supports heartbeat", () => {
+test("writer lease registry isolates worktrees, increments fencing epochs, and supports heartbeat", () => {
   const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
   let instant = new Date("2026-07-17T10:00:00.000Z");
   const store = createWriterLeaseStore({ gitCommonDir, now: () => instant });
@@ -42,6 +42,7 @@ test("writer lease serializes chats, increments fencing epochs, and supports hea
     device: "mac-a",
     scope: "runtime-leases",
     branch: "agent/mac-a/runtime-leases",
+    worktreePath: "/worktrees/runtime-leases",
     baseSha: "a".repeat(40),
     ttlMs: 60_000,
   };
@@ -50,6 +51,21 @@ test("writer lease serializes chats, increments fencing epochs, and supports hea
     const first = store.claim(input);
     assert.equal(first.epoch, 1);
     assert.throws(() => store.claim({ ...input, sessionId: "chat-b" }), /leased to another session/);
+    const parallel = store.claim({
+      ...input,
+      sessionId: "chat-b",
+      scope: "camera-controls",
+      branch: "agent/mac-a/camera-controls",
+      worktreePath: "/worktrees/camera-controls",
+    });
+    assert.equal(parallel.epoch, 2);
+    assert.equal(store.readRegistry().leases[parallel.branch].worktreePath, "/worktrees/camera-controls");
+    assert.throws(() => store.claim({
+      ...input,
+      sessionId: "chat-c",
+      scope: "other-scope",
+      branch: "agent/mac-a/other-scope",
+    }), /Worktree .* is leased to another session/);
 
     instant = new Date("2026-07-17T10:00:30.000Z");
     const renewed = store.heartbeat({ sessionId: "chat-a", branch: input.branch, ttlMs: 120_000 });
@@ -57,7 +73,7 @@ test("writer lease serializes chats, increments fencing epochs, and supports hea
 
     instant = new Date("2026-07-17T10:03:00.000Z");
     const takeover = store.claim({ ...input, sessionId: "chat-b" });
-    assert.equal(takeover.epoch, 2);
+    assert.equal(takeover.epoch, 3);
     assert.throws(() => store.verify({ sessionId: "chat-a", branch: input.branch }), /belongs to another session/);
   } finally {
     rmSync(gitCommonDir, { recursive: true, force: true });
@@ -73,6 +89,7 @@ test("writer lease rejects branch metadata that disagrees with its parsed identi
       device: "mac-a",
       scope: "runtime-leases",
       branch: "agent/mac-b/runtime-leases",
+      worktreePath: "/worktrees/runtime-leases",
       baseSha: "a".repeat(40),
     }), /must match its branch identity/);
   } finally {
@@ -82,17 +99,32 @@ test("writer lease rejects branch metadata that disagrees with its parsed identi
 
 test("pull request metadata round-trips the current fencing identity", () => {
   const lease = {
-    schema: "agentic-writer-lease/v1",
+    schema: "agentic-writer-lease/v2",
     status: "active",
     epoch: 4,
     sessionId: "chat-a",
     device: "mac-a",
     scope: "runtime-leases",
     branch: "agent/mac-a/runtime-leases",
+    worktreePath: "/worktrees/runtime-leases",
     baseSha: "a".repeat(40),
     fenceSha: "b".repeat(40),
     heartbeatAt: "2026-07-17T10:00:00.000Z",
     expiresAt: "2026-07-17T10:30:00.000Z",
   };
-  assert.deepEqual(parseWriterLeasePullRequestBody(renderWriterLeasePullRequestBody(lease)), lease);
+  const parsed = parseWriterLeasePullRequestBody(renderWriterLeasePullRequestBody(lease));
+  assert.deepEqual(parsed, {
+    schema: lease.schema,
+    status: lease.status,
+    epoch: lease.epoch,
+    sessionId: lease.sessionId,
+    device: lease.device,
+    scope: lease.scope,
+    branch: lease.branch,
+    baseSha: lease.baseSha,
+    fenceSha: lease.fenceSha,
+    heartbeatAt: lease.heartbeatAt,
+    expiresAt: lease.expiresAt,
+  });
+  assert.doesNotMatch(renderWriterLeasePullRequestBody(lease), /worktrees\/runtime-leases/);
 });

@@ -54,7 +54,7 @@ document can express the same contract.
 
 - Test focused diffs only; do not run indefinite full-codebase sweeps.
 - Resolve issues and verify no regressions before handoff.
-- Serialize same-device checkout mutation through the session-bound writer lease; allow cross-device parallel implementation only for different semantic scopes, and reject stale fencing epochs.
+- Allow same-device and cross-device parallel mutation only for different semantic scopes in distinct registered task worktrees or clones. Bind each task worktree to one session lease and branch; reject shared-worktree sessions, duplicate scopes, and stale fencing epochs.
 
 ## Post-Task
 
@@ -64,8 +64,9 @@ document can express the same contract.
   runtime started from that exact Dev `main` SHA.
 - For completed work, run `npm run device:complete -- --json` only after the
   protected Dev pull request merges. Require the emitted pull request, merge,
-  and main SHAs; then restart the local runtime from that clean `main` and rerun
-  the original acceptance path.
+  and main SHAs; fast-forward the registered main worktree with `npm run sync:live`,
+  then restart the local runtime from that clean `main` and rerun the original
+  acceptance path.
 - Use `npm run device:park` only for work explicitly reported as paused or
   blocked. Parking preserves work but never satisfies completion.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.

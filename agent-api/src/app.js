@@ -27,6 +27,7 @@ import {
 } from "./openai-responses-function-adapter.js";
 import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
+import { createRunningAgentRuntime } from "./running-agents.js";
 import { createToolSearchRuntime } from "./tool-search.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
@@ -43,6 +44,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
+ * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
  * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
@@ -53,6 +55,7 @@ export function createAgentApiApp({
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
   programmaticToolCalling: providedProgrammaticToolCalling,
+  runningAgents: providedRunningAgents,
   toolSearch: providedToolSearch,
 } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
@@ -64,6 +67,7 @@ export function createAgentApiApp({
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
+  const runningAgents = providedRunningAgents || createRunningAgentRuntime();
   const toolSearch = providedToolSearch || createToolSearchRuntime();
   const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
 
@@ -98,12 +102,14 @@ export function createAgentApiApp({
     functionGateway,
     openAiFunctionAdapter,
     programmaticToolCalling,
+    runningAgents,
     toolSearch,
     readiness: () => {
       const programmaticStats = programmaticToolCalling.stats();
       const functionCallingStats = functionCalling.stats();
       const functionGatewayStats = functionGateway.stats();
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
+      const runningAgentStats = runningAgents.stats();
       const toolSearchStats = toolSearch.stats();
       return {
         configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
@@ -171,6 +177,16 @@ export function createAgentApiApp({
           localJavaScriptExecution: "forbidden",
           providerContextIsolation: "unverified",
           ...programmaticStats,
+        },
+        runningAgents: {
+          configured: runningAgentStats.adapterConfigured,
+          contractReady: true,
+          loopOwner: "application-turn-controller",
+          streamingOwner: "same-loop-event-channel",
+          pauseSemantics: "resume-same-turn",
+          continuationPolicy: "one-strategy-per-conversation",
+          providerExecutionStatus: "unverified",
+          ...runningAgentStats,
         },
         toolSearch: {
           configured: toolSearchStats.clientSearchConfigured,

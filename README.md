@@ -162,6 +162,14 @@ injected. Generated JavaScript is never executed locally; programmatic calls
 are limited to validated read-only idempotent tools, while writes, approvals,
 semantic judgment, citations, and native-artifact validation stay direct.
 
+Running Agents readiness exposes a provider-neutral application-turn
+controller. It sequences bounded model, tool, and handoff transitions, locks a
+conversation to one of four continuation strategies, resumes pauses within the
+same turn, and streams canonical events through the same loop used by ordinary
+runs. The default Worker has no agent-step adapter, so `configured` is false and
+`providerExecutionStatus` remains `unverified`; the controller does not replace
+Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
+
 Tool Search readiness exposes a separate session-scoped controller. Direct
 tools keep complete definitions, while deferred namespaces and functions expose
 metadata until a bounded client or hosted search loads an exact catalog subset.

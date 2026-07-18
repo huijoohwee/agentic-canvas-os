@@ -138,6 +138,7 @@ harness:
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
 | Function Calling | Continue direct model-requested functions through the application gateway | `{ runId, input, tools[], capabilities, toolChoice, approvals[] }` | Final output, same-id outputs, separate model and gateway costs, or typed block | Strict schemas and explicit capabilities required; the real gateway retains authorization, mutation, approval, audit, and cost |
+| Running Agents | Drive one bounded application turn across model, tool, handoff, pause, and final stages | `{ runId, conversationId, agent, input, continuation }` | Completed, paused, or blocked settlement plus continuation, evidence, and honest cost | One strategy per conversation; streaming shares the same loop; adapters and gateways retain execution policy |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Instruction Task Quality | Screen final-answer behavior after structural instruction changes | `{ suite, candidate }` | `agentic-instruction-task-quality/v1` per-case findings and aggregate score | Model-agnostic lexical rubric; exact provenance and human review required; no private reasoning access or deployment authority |
@@ -286,6 +287,21 @@ Tool Search harnesses minimize model-visible schema load for eligible MCP and no
 | Load | Client names or provider-normalized hosted definitions | Append-only canonical definitions. | Unknown, altered, duplicate, direct, over-limit, replayed, or cost-unreported output fails closed. |
 | Authorize | `{ sessionId, toolName, caller }` | Canonical definition or typed refusal. | Direct tools remain available; deferred tools require prior load; the real gateway still owns execution policy. |
 | Audit | Readiness and session counters | Bounds, search mode, loaded count, and blocked count. | No provider reduction, cache hit, spend, or live execution is inferred. |
+
+## Running Agents Harness Contract
+
+Running Agents owns application-turn lifecycle without absorbing provider, Function Calling, Programmatic Tool Calling, Tool Search, gateway, or durable-state responsibilities. The cited provider guides inform the capability class; local transitions, strategy state, events, schemas, tests, fixtures, and prose remain independently authored.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Validate | Run, conversation, agent, JSON input, one continuation strategy | Immutable request or typed preflight block | Mixed strategy state, stale continuation, replayed run, active, paused, blocked, or unconfigured conversation fails closed. |
+| Advance | Current agent, input, continuation, optional resume resolution | Completed, paused, or model/tool/handoff continuation | The injected adapter owns provider translation and delegates execution to existing controllers. |
+| Continue | Normalized transition and next input | Next bounded step plus compact evidence | Handoffs change agent; no transition grants tool authority. |
+| Stream | The same active loop and bounded adapter events | Async events plus a terminal result promise | The iterable closes only after completed, paused, or blocked settlement. |
+| Resume | Exact run, conversation, token, resolution, and opaque internal state | Next step of the same turn | New turns cannot bypass a pause; raw state never enters the public result. |
+| Finalize | Final adapter output and continuation update | Output, continuation, transition evidence, and honest aggregate cost | Intermediate inputs, raw adapter objects, resume state, and provider wire events remain internal. |
+
+The controller supports application history, downstream session identity, downstream conversation identity, or previous-response identity, never a mixture. Bounds cover steps, history, input, state, output, event size and count, conversation capacity, recent run replay, and stage time. Offline proof establishes lifecycle only; live model, tool, handoff, session, and provider streaming remain unverified.
 
 ## Function Calling Harness Contract
 

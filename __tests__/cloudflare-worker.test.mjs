@@ -64,6 +64,19 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.programmaticToolCalling.providerContextIsolation, "unverified");
   assert.deepEqual(body.programmaticToolCalling.continuationModes, ["stored", "stateless-replay"]);
   assert.equal(body.programmaticToolCalling.callerContract, "function-call-output-preserves-caller");
+  assert.equal(body.runningAgents.contractReady, true);
+  assert.equal(body.runningAgents.configured, false);
+  assert.equal(body.runningAgents.loopOwner, "application-turn-controller");
+  assert.equal(body.runningAgents.streamingOwner, "same-loop-event-channel");
+  assert.equal(body.runningAgents.pauseSemantics, "resume-same-turn");
+  assert.equal(body.runningAgents.continuationPolicy, "one-strategy-per-conversation");
+  assert.deepEqual(body.runningAgents.continuationStrategies, [
+    "application-history",
+    "session",
+    "conversation",
+    "previous-response",
+  ]);
+  assert.equal(body.runningAgents.providerExecutionStatus, "unverified");
   assert.equal(body.toolSearch.contractReady, true);
   assert.equal(body.toolSearch.configured, false);
   assert.equal(body.toolSearch.catalogScope, "active-session-grants");

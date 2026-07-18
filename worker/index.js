@@ -8,6 +8,7 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
+import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
 import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
 import { CanvasRoom } from "./canvas-room.js";
 
@@ -18,6 +19,7 @@ const APP_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
+const RUNNING_AGENTS_BY_ENV = new WeakMap();
 const TOOL_SEARCH_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
@@ -52,6 +54,7 @@ function createWorkerApp(env) {
   let cacheContext;
   let reasoningContinuity;
   let programmaticToolCalling;
+  let runningAgents;
   let toolSearch;
   if (env && typeof env === "object") {
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
@@ -69,6 +72,11 @@ function createWorkerApp(env) {
       programmaticToolCalling = createProgrammaticToolCallingRuntime();
       PROGRAMMATIC_TOOL_CALLING_BY_ENV.set(env, programmaticToolCalling);
     }
+    runningAgents = RUNNING_AGENTS_BY_ENV.get(env);
+    if (!runningAgents) {
+      runningAgents = createRunningAgentRuntime();
+      RUNNING_AGENTS_BY_ENV.set(env, runningAgents);
+    }
     toolSearch = TOOL_SEARCH_BY_ENV.get(env);
     if (!toolSearch) {
       toolSearch = createToolSearchRuntime();
@@ -80,6 +88,7 @@ function createWorkerApp(env) {
     cacheContext,
     reasoningContinuity,
     programmaticToolCalling,
+    runningAgents,
     toolSearch,
     fetchImpl: (req) => fetch(req.url, {
       method: req.method,

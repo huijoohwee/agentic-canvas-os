@@ -63,6 +63,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
 | `FUNCTION-CALLING.md` | Direct function-call runtime | Strict schemas, explicit selection, exact call-id continuation, application-gateway policy, bounds, costs, and live-provider proof gates. |
+| `RUNNING-AGENTS.md` | Application-turn lifecycle contract | Bounded agent loops, exclusive continuation strategies, same-loop streaming, pause and resume, settlement, cost evidence, and provider-proof boundaries. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
 | `TOOL-SEARCH.md` | Deferred-definition loading contract | Session catalogs, metadata-only initial exposure, bounded client and hosted resolution, exact definition validation, authorization, and provider-proof boundaries. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |

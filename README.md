@@ -109,6 +109,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |
 | `agent-api/src/reasoning-continuity.js` | Bounded cross-turn invariant registry, compatible request planning, active-turn serialization, and provider-effective context confirmation. |
+| `agent-api/src/function-calling.js` | Strict direct function-call controller, exact call-id continuation, application-gateway dispatch, and bounded final evidence. |
 | `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
 | `agent-api/src/tool-search.js` | Session-scoped deferred-definition controller, metadata-only initial exposure, exact search loading, and call authorization. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
@@ -141,6 +142,13 @@ Stable goals, assumptions, and priorities can produce an `all_turns` request
 patch chained to the last completed response; drift resets requested reasoning
 to `current_turn`. Provider-effective continuity remains `unverified` until the
 downstream model response explicitly confirms the effective context.
+
+Function-calling readiness exposes the separate direct-call controller. Strict
+schemas, explicit selection modes, exact call-id outputs, reasoning-item replay,
+and bounded parallel calls are contract-ready, while `configured` and
+`providerExecutionStatus` remain false or `unverified` until a model adapter and
+real application tool gateway are injected. Approval and mutation policy stays
+with that gateway.
 
 Programmatic tool-calling readiness is also sanitized. The local controller is
 contract-ready, but `configured` and `providerContextIsolation` remain false or
@@ -179,6 +187,7 @@ AGENT_MODEL_API_KEY_ENV=SEA_LION_API_KEY
 npm run check
 npm run cache-context:check
 npm run reasoning-continuity:check
+npm run function-calling:check
 npm run programmatic-tool-calling:check
 npm run tool-search:check
 npm run instruction-audit:check

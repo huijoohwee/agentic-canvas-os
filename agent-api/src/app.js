@@ -11,6 +11,7 @@
 
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
 import { createCacheContextRegistry } from "./cache-context.js";
+import { createFunctionCallingRuntime } from "./function-calling.js";
 import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
 import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
@@ -28,6 +29,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
+ * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
  * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
@@ -37,6 +39,7 @@ export function createAgentApiApp({
   fetchImpl,
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
+  functionCalling: providedFunctionCalling,
   programmaticToolCalling: providedProgrammaticToolCalling,
   toolSearch: providedToolSearch,
 } = {}) {
@@ -47,6 +50,7 @@ export function createAgentApiApp({
   const agentModelConfig = resolveAgentModelConfig(e);
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
+  const functionCalling = providedFunctionCalling || createFunctionCallingRuntime();
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
   const toolSearch = providedToolSearch || createToolSearchRuntime();
   const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
@@ -61,10 +65,12 @@ export function createAgentApiApp({
     agentModelConfig,
     cacheContext,
     reasoningContinuity,
+    functionCalling,
     programmaticToolCalling,
     toolSearch,
     readiness: () => {
       const programmaticStats = programmaticToolCalling.stats();
+      const functionCallingStats = functionCalling.stats();
       const toolSearchStats = toolSearch.stats();
       return {
         configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
@@ -93,6 +99,18 @@ export function createAgentApiApp({
           driftMode: "current_turn",
           providerEffectiveContext: "unverified",
           ...reasoningContinuity.stats(),
+        },
+        functionCalling: {
+          configured: functionCallingStats.adapterConfigured && functionCallingStats.toolGatewayConfigured,
+          contractReady: true,
+          executionOwner: "application-tool-gateway",
+          schemaMode: "explicit-strict",
+          selectionModes: ["auto", "required", "none", "forced", "allowed"],
+          parallelPolicy: "capability-and-request-bounded",
+          continuation: "previous-response-with-reasoning-items",
+          callIdentity: "function-call-output-preserves-call-id",
+          providerExecutionStatus: "unverified",
+          ...functionCallingStats,
         },
         programmaticToolCalling: {
           configured: programmaticStats.adapterConfigured && programmaticStats.toolGatewayConfigured,

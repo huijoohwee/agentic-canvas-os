@@ -344,6 +344,25 @@ Expected:
 - Every shard present at the recorded base remains an exact byte prefix; deleted, edited, reordered, or prepended history fails.
 - Release finds one new declared planning Context with 11 filled cells, a Directive of at most 50 words, and a matching Updated Date.
 
+## Function Calling Runtime Checks
+
+Run the direct-call controller and affected readiness checks after changing strict schemas, selection, call correlation, continuation, gateway policy, or cost boundaries:
+
+```bash
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run function-calling:check
+node --test \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/agent-api-app.test.mjs" \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/cloudflare-worker.test.mjs"
+```
+
+Expected:
+
+- Strict object schemas reject unknown properties and require every declared field before model execution.
+- Auto, required, none, forced, and allowed selection constrain direct calls without changing gateway permissions.
+- Reasoning items and exact call ids continue only inside the active previous-response loop and never enter final output.
+- Capability, adapter, gateway, call, parallel, result, duplicate, timeout, and cost failures stay typed and bounded.
+- Readiness keeps provider execution `unverified`; no paid call, Prod mirror write, or Cloudflare action occurs.
+
 ## Tool Search Runtime Checks
 
 Run the focused controller and affected readiness checks after changing deferred catalog shape, search resolution, programmatic availability, or provider-proof boundaries:
@@ -487,6 +506,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 | Kanban collaboration | Focused docs route check reports `kanban route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes row validation, table/Kanban projection, profile binding, worker-process proof, and sync conflicts. |
 | Tools and toolsets | Focused docs route check reports `tools-and-toolsets route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool function catalog, toolset state, platform scope, policy, approval, cost, and fallback proof. |
 | Tool Gateway | Focused docs route check reports `tool-gateway route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool catalog, provider select, web/image/TTS/browser route, schema, approval, egress, cost, and fallback proof. |
+| Function Calling | `npm run function-calling:check` exits zero; app and Worker readiness tests confirm strict schemas, explicit selection modes, exact call-id continuation, active reasoning replay, sanitized unconfigured state, and unverified provider execution. Real model and gateway execution remain gated. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |
 | Computing-flow | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |

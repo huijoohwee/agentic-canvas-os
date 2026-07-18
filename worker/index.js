@@ -6,6 +6,7 @@
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import { createFunctionCallingRuntime } from "../agent-api/src/function-calling.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
 import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
@@ -15,6 +16,7 @@ export { CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
+const FUNCTION_CALLING_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
 const TOOL_SEARCH_BY_ENV = new WeakMap();
@@ -48,6 +50,7 @@ function toResponse(result) {
 
 function createWorkerApp(env) {
   let cacheContext;
+  let functionCalling;
   let reasoningContinuity;
   let programmaticToolCalling;
   let toolSearch;
@@ -56,6 +59,11 @@ function createWorkerApp(env) {
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
       CACHE_CONTEXT_BY_ENV.set(env, cacheContext);
+    }
+    functionCalling = FUNCTION_CALLING_BY_ENV.get(env);
+    if (!functionCalling) {
+      functionCalling = createFunctionCallingRuntime();
+      FUNCTION_CALLING_BY_ENV.set(env, functionCalling);
     }
     reasoningContinuity = REASONING_CONTINUITY_BY_ENV.get(env);
     if (!reasoningContinuity) {
@@ -76,6 +84,7 @@ function createWorkerApp(env) {
   return createAgentApiApp({
     env,
     cacheContext,
+    functionCalling,
     reasoningContinuity,
     programmaticToolCalling,
     toolSearch,

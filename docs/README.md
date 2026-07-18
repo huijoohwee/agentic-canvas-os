@@ -62,6 +62,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `INSTRUCTION-QUALITY-EVALUATION.md` | Instruction task-quality evaluation | Provenance-bound final-answer scenarios, deterministic rubric findings, model-agnostic execution, and human-review promotion boundaries. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
+| `FUNCTION-CALLING.md` | Direct function-call runtime | Strict schemas, explicit selection, exact call-id continuation, application-gateway policy, bounds, costs, and live-provider proof gates. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
 | `TOOL-SEARCH.md` | Deferred-definition loading contract | Session catalogs, metadata-only initial exposure, bounded client and hosted resolution, exact definition validation, authorization, and provider-proof boundaries. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
@@ -86,6 +87,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 - A caller can load durable agent identity from `SOUL.md` into prompt slot 1 without silent hardcoded defaults.
 - A caller can compile stable prompt prefixes once, reuse an opaque revision-bound handle for dynamic request tails, and keep local reuse distinct from provider cache-hit proof.
 - A caller can preserve compatible reasoning across stable turns, reset rendered reasoning on invariant drift, and keep request intent distinct from provider-effective confirmation.
+- A caller can expose strict application functions, enforce explicit selection and parallel policy, continue with same-id outputs and active reasoning items, and keep execution under the real tool gateway.
 - A caller can reduce predictable read-only tool stages through a provider-attested hosted program while keeping local JavaScript execution forbidden and all writes, approvals, citations, and semantic judgment on the direct path.
 - A caller can keep optional schemas deferred, search only the active session catalog, append exact selected definitions, and require top-level loading before a hosted program uses them.
 - A caller can audit durable guidance and the skill catalog for intent preservation, context budgets, duplicate instructions, and owner leakage with zero model calls.

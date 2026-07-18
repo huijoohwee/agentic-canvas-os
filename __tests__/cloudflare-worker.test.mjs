@@ -48,6 +48,13 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.reasoningContinuity.invariantPolicy, "goals-assumptions-priorities");
   assert.equal(body.reasoningContinuity.driftMode, "current_turn");
   assert.equal(body.reasoningContinuity.providerEffectiveContext, "unverified");
+  assert.equal(body.functionCalling.contractReady, true);
+  assert.equal(body.functionCalling.configured, false);
+  assert.equal(body.functionCalling.executionOwner, "application-tool-gateway");
+  assert.equal(body.functionCalling.schemaMode, "explicit-strict");
+  assert.deepEqual(body.functionCalling.selectionModes, ["auto", "required", "none", "forced", "allowed"]);
+  assert.equal(body.functionCalling.parallelPolicy, "capability-and-request-bounded");
+  assert.equal(body.functionCalling.providerExecutionStatus, "unverified");
   assert.equal(body.programmaticToolCalling.contractReady, true);
   assert.equal(body.programmaticToolCalling.configured, false);
   assert.equal(body.programmaticToolCalling.executionOwner, "downstream-hosted-sandbox");

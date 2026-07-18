@@ -1,3 +1,5 @@
+import { createFunctionExecutionReceiptRuntime } from "./function-execution-receipts.js";
+
 const STATUS_TOOL_NAME = "read_agentic_os_status";
 const STATUS_MCP_TOOL_NAME = "knowgrph.os.status";
 const STATUS_INPUT_GUARDRAIL = "knowgrph-status-tool-input";
@@ -72,6 +74,7 @@ const TOOL_RECORDS = Object.freeze({
     approvalRequired: false,
     validateArguments: validStatusArguments,
     validateOutput: validStatusOutput,
+    mapOutput: (payload, argumentsValue) => statusOutput(payload, argumentsValue.view),
     inputGuardrails: Object.freeze([{ name: STATUS_INPUT_GUARDRAIL, stage: "tool-input" }]),
     outputGuardrails: Object.freeze([{ name: STATUS_OUTPUT_GUARDRAIL, stage: "tool-output" }]),
     mcpToolName: STATUS_MCP_TOOL_NAME,
@@ -135,6 +138,8 @@ function blocked(reasonCode, message, details = {}) {
     ...(typeof details.reviewStateConsumed === "boolean"
       ? { reviewStateConsumed: details.reviewStateConsumed }
       : {}),
+    ...(details.retryable === true ? { retryable: true } : {}),
+    ...(details.executionReceipt ? { executionReceipt: details.executionReceipt } : {}),
   };
 }
 
@@ -173,18 +178,26 @@ export function createKnowgrphFunctionGateway({
   allowedToolNames = [],
   reviewRequiredToolNames = [],
   guardrailsHumanReview,
+  executionReceiptStore,
+  toolRecords = TOOL_RECORDS,
 } = {}) {
-  const allowed = new Set(allowedToolNames.filter((name) => Object.hasOwn(TOOL_RECORDS, name)));
+  const sourceRecords = toolRecords && typeof toolRecords === "object" && !Array.isArray(toolRecords)
+    ? toolRecords
+    : TOOL_RECORDS;
+  const allowed = new Set(allowedToolNames.filter((name) => Object.hasOwn(sourceRecords, name)));
   const reviewRequired = new Set(
-    reviewRequiredToolNames.filter((name) => allowed.has(name) && Object.hasOwn(TOOL_RECORDS, name)),
+    reviewRequiredToolNames.filter((name) => allowed.has(name) && Object.hasOwn(sourceRecords, name)),
   );
   const records = Object.freeze(Object.fromEntries([...allowed].map((name) => [
     name,
     reviewRequired.has(name)
-      ? Object.freeze({ ...TOOL_RECORDS[name], approvalRequired: true })
-      : TOOL_RECORDS[name],
+      ? Object.freeze({ ...sourceRecords[name], approvalRequired: true })
+      : sourceRecords[name],
   ])));
   const tools = Object.freeze([...allowed].sort().map((name) => records[name]));
+  const executionReceipts = createFunctionExecutionReceiptRuntime({
+    ...(executionReceiptStore ? { executionReceiptStore } : {}),
+  });
   const configured = Boolean(
     mcpClient
     && typeof mcpClient.callTool === "function"
@@ -198,6 +211,7 @@ export function createKnowgrphFunctionGateway({
   let outputGuardrailChecks = 0;
   let reviewPauses = 0;
   let reviewResolutions = 0;
+  let receiptReplays = 0;
 
   async function validateStage(call, record, stage, value) {
     const guardrails = stage === "tool-input" ? record.inputGuardrails : record.outputGuardrails;
@@ -217,8 +231,11 @@ export function createKnowgrphFunctionGateway({
     });
   }
 
-  async function approvedArguments(call, record, argumentsValue) {
+  async function approvedArguments(call, record, argumentsValue, preparedReceipt) {
     if (!record.approvalRequired) return { status: "approved", arguments: argumentsValue };
+    if (preparedReceipt?.status === "authorized") {
+      return { status: "approved", arguments: preparedReceipt.arguments, receiptAuthorized: true };
+    }
     if (!call.review) {
       reviewPauses += 1;
       const paused = await guardrailsHumanReview.requestReview({
@@ -248,6 +265,7 @@ export function createKnowgrphFunctionGateway({
     if (resolution.status === "rejected") {
       return blocked("tool_review_rejected", `Function ${call.name} was rejected by the reviewer.`, {
         reviewStateConsumed: resolution.stateConsumed,
+        reviewAudit: resolution.audit,
       });
     }
     if (resolution.status !== "approved") {
@@ -260,12 +278,42 @@ export function createKnowgrphFunctionGateway({
         reviewStateConsumed: resolution.stateConsumed,
       });
     }
-    if (!resolution.requiresValidation) return { status: "approved", arguments: resolution.action.payload };
+    if (!resolution.requiresValidation) {
+      return { status: "approved", arguments: resolution.action.payload, reviewAudit: resolution.audit };
+    }
     const edited = await validateStage(call, record, "tool-input", resolution.action.payload);
     if (edited.status !== "passed") {
       return blocked(edited.reasonCode || "tool_arguments_invalid", edited.message || "Edited arguments failed validation.");
     }
-    return { status: "approved", arguments: edited.value };
+    return { status: "approved", arguments: edited.value, reviewAudit: resolution.audit };
+  }
+
+  async function completedOutput(call, record, output, executionReceipt) {
+    const guardedOutput = await validateStage(call, record, "tool-output", output);
+    if (guardedOutput.status !== "passed") {
+      blockedCalls += 1;
+      return blocked(
+        guardedOutput.reasonCode || "tool_output_invalid",
+        guardedOutput.message || `Function ${call.name} output was blocked.`,
+        { executionReceipt },
+      );
+    }
+    completedCalls += 1;
+    return {
+      status: "completed",
+      output: guardedOutput.value,
+      costLog: zeroGatewayCost(),
+      ...(executionReceipt ? { executionReceipt } : {}),
+    };
+  }
+
+  async function releaseExecution(executionClaim) {
+    if (!executionClaim) return false;
+    try {
+      return await executionReceipts.release(executionClaim.fence);
+    } catch {
+      return false;
+    }
   }
 
   async function callTool(call) {
@@ -288,39 +336,160 @@ export function createKnowgrphFunctionGateway({
       blockedCalls += 1;
       return blocked(guardedInput.reasonCode || "tool_arguments_invalid", guardedInput.message || `Function ${call.name} input was blocked.`);
     }
+    let preparedReceipt;
+    if (record.approvalRequired) {
+      try {
+        preparedReceipt = await executionReceipts.prepare({
+          runId: call.runId,
+          callId: call.callId,
+          toolName: call.name,
+          toolRevision: record.revision,
+          riskClass: record.riskClass,
+          arguments: guardedInput.value,
+          requiresUpstreamReceipt: record.riskClass !== "read-only",
+        });
+      } catch {
+        blockedCalls += 1;
+        return blocked("execution_receipt_failed", `Function ${call.name} execution receipt could not be prepared.`);
+      }
+      if (preparedReceipt.status === "blocked") {
+        blockedCalls += 1;
+        return blocked(preparedReceipt.reasonCode, preparedReceipt.message, {
+          retryable: preparedReceipt.retryable,
+        });
+      }
+      if (preparedReceipt.status === "completed") {
+        receiptReplays += 1;
+        return completedOutput(call, record, preparedReceipt.output, preparedReceipt.evidence);
+      }
+    }
     let approval;
     try {
-      approval = await approvedArguments(call, record, guardedInput.value);
+      approval = await approvedArguments(call, record, guardedInput.value, preparedReceipt);
     } catch {
       blockedCalls += 1;
       return blocked("tool_review_failed", `Function ${call.name} review state failed at the gateway boundary.`);
     }
-    if (approval.status === "paused") return approval;
+    if (approval.status === "paused") return {
+      ...approval,
+      ...(preparedReceipt ? { executionReceipt: preparedReceipt.evidence } : {}),
+    };
     if (approval.status !== "approved") {
+      if (approval.reasonCode === "tool_review_rejected" && preparedReceipt) {
+        try {
+          await executionReceipts.abandon(preparedReceipt);
+        } catch {
+          blockedCalls += 1;
+          return blocked("execution_receipt_cleanup_failed", `Function ${call.name} rejected receipt could not be removed.`);
+        }
+      }
       blockedCalls += 1;
       return approval;
     }
-    try {
-      const payload = await mcpClient.callTool(record.mcpToolName, approval.arguments);
-      if (!payload || typeof payload !== "object" || Array.isArray(payload) || payload.ok !== true) {
+    if (preparedReceipt?.status === "reserved") {
+      try {
+        preparedReceipt = await executionReceipts.authorize(preparedReceipt, {
+          arguments: approval.arguments,
+          reviewAudit: approval.reviewAudit,
+        });
+      } catch {
         blockedCalls += 1;
-        return blocked("tool_upstream_blocked", `Knowgrph blocked function ${call.name}.`);
+        return blocked("execution_receipt_authorization_failed", `Function ${call.name} authorization was not persisted.`);
       }
-      const output = statusOutput(payload, approval.arguments.view);
-      if (!output) {
+      if (preparedReceipt.status === "blocked") {
         blockedCalls += 1;
-        return blocked("tool_output_invalid", `Function ${call.name} produced an invalid strict output.`);
+        return blocked(preparedReceipt.reasonCode, preparedReceipt.message, {
+          retryable: preparedReceipt.retryable,
+        });
+      }
+    }
+    let executionClaim;
+    if (preparedReceipt) {
+      try {
+        executionClaim = await executionReceipts.claim(preparedReceipt);
+      } catch {
+        blockedCalls += 1;
+        return blocked("execution_receipt_claim_failed", `Function ${call.name} execution receipt could not be claimed.`, {
+          retryable: true,
+          executionReceipt: preparedReceipt.evidence,
+        });
+      }
+      if (executionClaim.status === "completed") {
+        receiptReplays += 1;
+        return completedOutput(call, record, executionClaim.output, executionClaim.evidence);
+      }
+      if (executionClaim.status === "blocked") {
+        blockedCalls += 1;
+        return blocked(executionClaim.reasonCode, executionClaim.message, {
+          retryable: executionClaim.retryable,
+          executionReceipt: preparedReceipt.evidence,
+        });
+      }
+    }
+    const executionArguments = executionClaim?.arguments || approval.arguments;
+    try {
+      const payload = await mcpClient.callTool(
+        record.mcpToolName,
+        executionArguments,
+        executionClaim ? { execution: executionClaim.execution } : undefined,
+      );
+      if (!payload || typeof payload !== "object" || Array.isArray(payload) || payload.ok !== true) {
+        await releaseExecution(executionClaim);
+        blockedCalls += 1;
+        return blocked("tool_upstream_blocked", `Knowgrph blocked function ${call.name}.`, {
+          retryable: Boolean(executionClaim),
+          executionReceipt: preparedReceipt?.evidence,
+        });
+      }
+      const output = typeof record.mapOutput === "function"
+        ? record.mapOutput(payload, executionArguments)
+        : null;
+      if (!output) {
+        await releaseExecution(executionClaim);
+        blockedCalls += 1;
+        return blocked("tool_output_invalid", `Function ${call.name} produced an invalid strict output.`, {
+          retryable: Boolean(executionClaim),
+          executionReceipt: preparedReceipt?.evidence,
+        });
       }
       const guardedOutput = await validateStage(call, record, "tool-output", output);
       if (guardedOutput.status !== "passed") {
+        await releaseExecution(executionClaim);
         blockedCalls += 1;
-        return blocked(guardedOutput.reasonCode || "tool_output_invalid", guardedOutput.message || `Function ${call.name} output was blocked.`);
+        return blocked(
+          guardedOutput.reasonCode || "tool_output_invalid",
+          guardedOutput.message || `Function ${call.name} output was blocked.`,
+          { retryable: Boolean(executionClaim), executionReceipt: preparedReceipt?.evidence },
+        );
+      }
+      let executionReceipt;
+      if (executionClaim) {
+        const settled = await executionReceipts.complete(executionClaim.fence, {
+          output: guardedOutput.value,
+          upstreamReceipt: payload.execution_receipt,
+        });
+        if (settled.status === "blocked") {
+          await releaseExecution(executionClaim);
+          blockedCalls += 1;
+          return blocked(settled.reasonCode, settled.message, {
+            retryable: settled.retryable,
+            executionReceipt: preparedReceipt.evidence,
+          });
+        }
+        executionReceipt = settled.evidence;
       }
       completedCalls += 1;
-      return { status: "completed", output: guardedOutput.value, costLog: zeroGatewayCost() };
+      return {
+        status: "completed", output: guardedOutput.value, costLog: zeroGatewayCost(),
+        ...(executionReceipt ? { executionReceipt } : {}),
+      };
     } catch {
+      await releaseExecution(executionClaim);
       blockedCalls += 1;
-      return blocked("tool_gateway_failed", `Knowgrph function ${call.name} failed at the gateway boundary.`);
+      return blocked("tool_gateway_failed", `Knowgrph function ${call.name} failed at the gateway boundary.`, {
+        retryable: Boolean(executionClaim),
+        executionReceipt: preparedReceipt?.evidence,
+      });
     }
   }
 
@@ -339,6 +508,8 @@ export function createKnowgrphFunctionGateway({
       outputGuardrailChecks,
       reviewPauses,
       reviewResolutions,
+      receiptReplays,
+      executionReceipts: executionReceipts.stats(),
     }),
   });
 }

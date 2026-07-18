@@ -161,4 +161,52 @@ export function createDurableObjectFunctionContinuationStore({
   });
 }
 
+export function createDurableObjectFunctionExecutionReceiptStore({
+  namespace,
+  maxRecordChars = MAX_RECORD_CHARS,
+} = {}) {
+  const owner = requireNamespace(namespace);
+  const scope = (receiptKey) => `function-execution:${identifier(receiptKey, "receiptKey")}`;
+  return Object.freeze({
+    async put(value) {
+      const record = boundedRecord(value, "functionExecutionReceipt", maxRecordChars);
+      const result = await operate(owner, scope(record.receiptKey), "put", { record });
+      return result.stored === true;
+    },
+    async get(receiptKey) {
+      const result = await operate(owner, scope(receiptKey), "get", {});
+      return result.record ?? null;
+    },
+    async claim(receiptKey, claimId, claimExpiresAt) {
+      const result = await operate(owner, scope(receiptKey), "claim", {
+        claimId: identifier(claimId, "claimId"), claimExpiresAt,
+      });
+      return result.record ?? null;
+    },
+    async replace(receiptKey, claimId, value) {
+      const record = boundedRecord(value, "functionExecutionReceipt", maxRecordChars);
+      const result = await operate(owner, scope(receiptKey), "replace", {
+        claimId: identifier(claimId, "claimId"), record,
+      });
+      return result.replaced === true;
+    },
+    async release(receiptKey, claimId) {
+      const result = await operate(owner, scope(receiptKey), "release", {
+        claimId: identifier(claimId, "claimId"),
+      });
+      return result.released === true;
+    },
+    async delete(receiptKey) {
+      const result = await operate(owner, scope(receiptKey), "delete", {});
+      return result.deleted === true;
+    },
+    stats: () => Object.freeze({
+      persistence: "durable-object",
+      atomicClaims: true,
+      recovery: "cross-isolate",
+      owner: "function-tool-gateway",
+    }),
+  });
+}
+
 export const DURABLE_OBJECT_STATE_DEFAULTS = Object.freeze({ maxRecordChars: MAX_RECORD_CHARS });

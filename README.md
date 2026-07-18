@@ -120,7 +120,8 @@ run-scoped canvas embed URL.
 | `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
 | `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
 | `agent-api/src/guardrails-human-review.js` | Ordered validation plus exact-scoped, authenticated, single-consume human review. |
-| `agent-api/src/durable-object-state-store.js` | Durable Object adapters for atomic review consumption, paused-turn claims, and Function Calling continuation claims. |
+| `agent-api/src/durable-object-state-store.js` | Durable Object adapters for atomic review consumption, paused-turn claims, Function Calling continuation claims, and reviewed execution receipts. |
+| `agent-api/src/function-execution-receipts.js` | Pre-side-effect receipt owner for stable idempotency keys, atomic execution claims, native mutation evidence, and terminal replay. |
 | `worker/agent-state.js` | Per-identity transactional Durable Object state owner. |
 | `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
 | `agent-api/src/progressive-agents.js` | Incremental facade for one exact agent run, tool-bearing definitions, and explicit specialist workflows. |

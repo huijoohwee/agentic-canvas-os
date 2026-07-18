@@ -371,7 +371,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
     if (gatewayResult.status !== "completed") {
       const reasonCode = typeof gatewayResult.reasonCode === "string" ? gatewayResult.reasonCode : "tool_gateway_blocked";
       const message = typeof gatewayResult.message === "string" ? gatewayResult.message : `Tool ${call.name} was blocked.`;
-      const retryable = gatewayResult.reviewStateConsumed === false;
+      const retryable = gatewayResult.retryable === true || gatewayResult.reviewStateConsumed === false;
       const continuationState = retryable
         ? continuation(context, state, state.priorResponseId, state.nextInput, call, call.reviewState, state.nextTurn)
         : undefined;

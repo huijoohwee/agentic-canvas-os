@@ -66,8 +66,8 @@ test("mechanical clarification cards fail the contract", () => {
 test("stale card-local routing fails the contract", () => {
   const documents = withReplacement(
     "PROMPT-PRESETS.md",
-    '"active Chat provider, endpoint, and model"',
-    '"card-local provider and model"',
+    'model_route: "active Chat provider, endpoint, and model"',
+    'model_route: "card-local provider and model"',
   );
   const failures = validateProbeTreeContractDocuments(documents);
   assert.equal(failures.some((failure) => failure.includes("model_route")), true);

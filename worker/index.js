@@ -7,6 +7,10 @@
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import {
+  createDurableObjectHumanReviewStore,
+  createDurableObjectPausedTurnStore,
+} from "../agent-api/src/durable-object-state-store.js";
 import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
@@ -14,8 +18,9 @@ import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
 import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
 import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
 import { CanvasRoom } from "./canvas-room.js";
+import { AgentState } from "./agent-state.js";
 
-export { CanvasRoom };
+export { AgentState, CanvasRoom };
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const APP_BY_ENV = new WeakMap();
@@ -65,6 +70,17 @@ function createWorkerApp(env) {
   let runningAgents;
   let sandboxAgents;
   let toolSearch;
+  const durableStateConfigured = Boolean(
+    env?.AGENT_STATE
+    && typeof env.AGENT_STATE.idFromName === "function"
+    && typeof env.AGENT_STATE.get === "function",
+  );
+  const reviewStore = durableStateConfigured
+    ? createDurableObjectHumanReviewStore({ namespace: env.AGENT_STATE })
+    : undefined;
+  const pausedTurnStore = durableStateConfigured
+    ? createDurableObjectPausedTurnStore({ namespace: env.AGENT_STATE })
+    : undefined;
   if (env && typeof env === "object") {
     agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
     if (!agentDefinitions) {
@@ -93,7 +109,9 @@ function createWorkerApp(env) {
     }
     runningAgents = RUNNING_AGENTS_BY_ENV.get(env);
     if (!runningAgents) {
-      runningAgents = createRunningAgentRuntime();
+      runningAgents = createRunningAgentRuntime({
+        ...(pausedTurnStore ? { pausedTurnStore } : {}),
+      });
       RUNNING_AGENTS_BY_ENV.set(env, runningAgents);
     }
     sandboxAgents = SANDBOX_AGENTS_BY_ENV.get(env);
@@ -115,6 +133,8 @@ function createWorkerApp(env) {
     reasoningContinuity,
     programmaticToolCalling,
     runningAgents,
+    reviewStore,
+    pausedTurnStore,
     sandboxAgents,
     toolSearch,
     fetchImpl: (req) => fetch(req.url, {

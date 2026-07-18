@@ -6,7 +6,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { mintSessionToken, verifySessionToken } from "../agent-api/src/auth.js";
+import {
+  mintReviewerToken,
+  mintSessionToken,
+  verifyReviewerToken,
+  verifySessionToken,
+} from "../agent-api/src/auth.js";
 import {
   createAuthSessionHandler,
   createInvokeHandler,
@@ -42,6 +47,30 @@ test("an expired token is rejected (injected clock)", () => {
   const v = verifySessionToken(token, SECRET, { now: 301 * 1000 });
   assert.equal(v.valid, false);
   assert.equal(v.reason, "expired");
+});
+
+test("review tokens are purpose-separated and exact-scoped to one paused action", () => {
+  const expected = {
+    reviewId: "review-1",
+    runId: "run-1",
+    conversationId: "conversation-1",
+    actionDigest: "digest-1",
+  };
+  const token = mintReviewerToken({
+    secret: SECRET,
+    subject: "operator-1",
+    ...expected,
+    now: 1_000,
+  });
+  const review = verifyReviewerToken(token, SECRET, expected, { now: 2_000 });
+  assert.equal(review.valid, true);
+  assert.equal(review.claims.sub, "operator-1");
+  assert.equal(typeof review.claims.jti, "string");
+  assert.equal(verifySessionToken(token, SECRET, { now: 2_000 }).reason, "wrong_purpose");
+  assert.equal(verifyReviewerToken(token, SECRET, { ...expected, runId: "run-2" }, { now: 2_000 }).reason, "scope_mismatch");
+
+  const session = mintSessionToken({ secret: SECRET, now: 1_000 });
+  assert.equal(verifyReviewerToken(session, SECRET, expected, { now: 2_000 }).reason, "wrong_purpose");
 });
 
 // --- request validation -----------------------------------------------------

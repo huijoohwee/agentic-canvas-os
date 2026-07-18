@@ -7,10 +7,12 @@
 //   AGENT_API_JWT_SECRET   — HS256 signing secret (required to mint/verify)
 //   KNOWGRPH_MCP_ENDPOINT  — knowgrph control-plane MCP Streamable HTTP endpoint
 //   KNOWGRPH_FUNCTION_TOOL_ALLOWLIST — explicit application function names
+//   KNOWGRPH_FUNCTION_REVIEW_REQUIRED — enabled functions that require signed human review
 //   OPENAI_FUNCTION_CALLING_* — Responses adapter model, pricing, and key route
 //   AGENT_MODEL_*          — explicit provider, model, transport, and secret route
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
+import { verifyReviewerToken } from "./auth.js";
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
 import { createAgentDefinitionRegistry } from "./agent-definitions.js";
 import { createAgentOrchestrationRuntime } from "./agent-orchestration.js";
@@ -21,6 +23,7 @@ import { createFunctionCallingRuntime } from "./function-calling.js";
 import { createGuardrailsHumanReviewRuntime } from "./guardrails-human-review.js";
 import {
   createKnowgrphFunctionGateway,
+  createKnowgrphGuardrailEvaluator,
   parseKnowgrphFunctionToolAllowlist,
 } from "./knowgrph-function-gateway.js";
 import { resolveModelProviderEnvironment } from "./model-config.js";
@@ -54,6 +57,8 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
  * @param {ReturnType<createGuardrailsHumanReviewRuntime>} [opts.guardrailsHumanReview] automatic validation and review controller
+ * @param {object} [opts.reviewStore] optional atomic review-state store
+ * @param {object} [opts.pausedTurnStore] optional durable paused-turn store
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
  * @param {ReturnType<createProgressiveAgentsRuntime>} [opts.progressiveAgents] progressive single-agent and specialist facade
  * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
@@ -72,6 +77,8 @@ export function createAgentApiApp({
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
   guardrailsHumanReview: providedGuardrailsHumanReview,
+  reviewStore,
+  pausedTurnStore,
   programmaticToolCalling: providedProgrammaticToolCalling,
   progressiveAgents: providedProgressiveAgents,
   runningAgents: providedRunningAgents,
@@ -85,12 +92,36 @@ export function createAgentApiApp({
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
   const modelProviderEnvironment = resolveModelProviderEnvironment(e);
   const openAiFunctionConfig = resolveOpenAiResponsesFunctionConfig(e);
+  const configuredReviewSecret = typeof e.AGENT_REVIEW_JWT_SECRET === "string" ? e.AGENT_REVIEW_JWT_SECRET : "";
+  const reviewSecret = configuredReviewSecret && configuredReviewSecret !== secret ? configuredReviewSecret : "";
   const agentDefinitions = providedAgentDefinitions || createAgentDefinitionRegistry();
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
-  const guardrailsHumanReview = providedGuardrailsHumanReview || createGuardrailsHumanReviewRuntime();
+  const authenticateReviewer = reviewSecret
+    ? async ({ state, evidence }) => {
+      const token = evidence && typeof evidence === "object" && !Array.isArray(evidence)
+        && Object.keys(evidence).length === 1 && typeof evidence.token === "string"
+        ? evidence.token
+        : "";
+      const verdict = verifyReviewerToken(token, reviewSecret, state);
+      if (!verdict.valid) return { authenticated: false };
+      return {
+        authenticated: true,
+        subjectId: verdict.claims.sub,
+        evidenceId: verdict.claims.jti,
+        assurance: "signed-review-token",
+      };
+    }
+    : undefined;
+  const guardrailsHumanReview = providedGuardrailsHumanReview || createGuardrailsHumanReviewRuntime({
+    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    authenticateReviewer,
+    ...(reviewStore ? { reviewStore } : {}),
+  });
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
-  const runningAgents = providedRunningAgents || createRunningAgentRuntime();
+  const runningAgents = providedRunningAgents || createRunningAgentRuntime({
+    ...(pausedTurnStore ? { pausedTurnStore } : {}),
+  });
   const sandboxAgents = providedSandboxAgents || createSandboxAgentRuntime();
   const toolSearch = providedToolSearch || createToolSearchRuntime();
   const modelProviders = providedModelProviders || createModelProviderRuntime();
@@ -126,6 +157,8 @@ export function createAgentApiApp({
   const functionGateway = createKnowgrphFunctionGateway({
     mcpClient,
     allowedToolNames: parseKnowgrphFunctionToolAllowlist(e.KNOWGRPH_FUNCTION_TOOL_ALLOWLIST),
+    reviewRequiredToolNames: parseKnowgrphFunctionToolAllowlist(e.KNOWGRPH_FUNCTION_REVIEW_REQUIRED),
+    guardrailsHumanReview,
   });
   const openAiFunctionAdapter = openAiFunctionConfig.ready
     ? createOpenAiResponsesFunctionAdapter({ ...openAiFunctionConfig, fetchImpl })
@@ -219,13 +252,15 @@ export function createAgentApiApp({
           ...agentDefinitionStats,
         },
         guardrailsHumanReview: {
-          configured: guardrailsHumanReviewStats.guardrailEvaluatorConfigured,
+          configured: guardrailsHumanReviewStats.guardrailEvaluatorConfigured
+            && guardrailsHumanReviewStats.reviewerAuthenticatorConfigured,
           contractReady: true,
           automaticValidationOwner: "application-guardrail-evaluator",
           toolBoundaryOwner: "function-tool-gateway",
           humanReviewOwner: "application-review-gate",
           interruptionOwner: "running-agents-same-turn-state",
-          reviewStatePolicy: "single-consume-bounded-expiry",
+          reviewStatePolicy: "atomic-single-consume-bounded-expiry",
+          reviewerEvidencePolicy: "purpose-scoped-signed-token",
           providerExecutionStatus: "unverified",
           ...guardrailsHumanReviewStats,
         },
@@ -323,6 +358,7 @@ export function createAgentApiApp({
           loopOwner: "application-turn-controller",
           streamingOwner: "same-loop-event-channel",
           pauseSemantics: "resume-same-turn",
+          recoveryPolicy: "atomic-claim-resume-commit",
           continuationPolicy: "one-strategy-per-conversation",
           providerExecutionStatus: "unverified",
           ...runningAgentStats,

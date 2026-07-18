@@ -2,7 +2,7 @@ import { verifySessionToken } from "./auth.js";
 
 const PROMPT_MAX = 8_000;
 const RUN_ID_MAX = 128;
-const APPROVALS_MAX = 32;
+const REQUEST_FIELDS = Object.freeze(["runId", "prompt", "parallelToolCalls", "toolChoice"]);
 
 function json(statusCode, body) {
   return { statusCode, headers: { "content-type": "application/json" }, body };
@@ -32,22 +32,21 @@ function validateBody(body, tools) {
   const input = body && typeof body === "object" && !Array.isArray(body) ? body : {};
   const runId = typeof input.runId === "string" ? input.runId.trim() : "";
   const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
-  const approvals = input.approvals === undefined ? [] : input.approvals;
   const parallelToolCalls = input.parallelToolCalls === undefined ? false : input.parallelToolCalls;
   const names = new Set(tools.map((tool) => tool.name));
   const choice = toolChoice(input.toolChoice, names);
   const fields = [];
+  for (const field of Object.keys(input).filter((field) => !REQUEST_FIELDS.includes(field))) {
+    fields.push({ field, reason: "unsupported field" });
+  }
   if (!runId || runId.length > RUN_ID_MAX) fields.push({ field: "runId", reason: `required, at most ${RUN_ID_MAX} characters` });
   if (!prompt || prompt.length > PROMPT_MAX) fields.push({ field: "prompt", reason: `required, at most ${PROMPT_MAX} characters` });
-  if (!Array.isArray(approvals) || approvals.length > APPROVALS_MAX) {
-    fields.push({ field: "approvals", reason: `must contain at most ${APPROVALS_MAX} entries` });
-  }
   if (typeof parallelToolCalls !== "boolean") fields.push({ field: "parallelToolCalls", reason: "must be boolean" });
   if (!choice) fields.push({ field: "toolChoice", reason: "must reference only enabled application functions" });
   return {
     valid: fields.length === 0,
     fields,
-    value: { runId, prompt, approvals, parallelToolCalls, toolChoice: choice },
+    value: { runId, prompt, parallelToolCalls, toolChoice: choice },
   };
 }
 
@@ -69,10 +68,9 @@ export function createFunctionCallingHandler({ secret, functionCalling, tools = 
       capabilities,
       toolChoice: validated.value.toolChoice,
       parallelToolCalls: validated.value.parallelToolCalls,
-      approvals: validated.value.approvals,
     });
     return json(result.status === "completed" ? 200 : 409, result);
   };
 }
 
-export const FUNCTION_CALLING_REQUEST_BOUNDS = Object.freeze({ PROMPT_MAX, RUN_ID_MAX, APPROVALS_MAX });
+export const FUNCTION_CALLING_REQUEST_BOUNDS = Object.freeze({ PROMPT_MAX, RUN_ID_MAX });

@@ -15,6 +15,9 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 const DEFAULT_EXPIRY_SECONDS = 3600; // 60 min (knowgrph R15.8 default)
 const MIN_EXPIRY_SECONDS = 300; // 5 min
 const MAX_EXPIRY_SECONDS = 86400; // 24 h
+const DEFAULT_REVIEW_EXPIRY_SECONDS = 900;
+const MIN_REVIEW_EXPIRY_SECONDS = 60;
+const MAX_REVIEW_EXPIRY_SECONDS = 3600;
 
 function base64url(input) {
   return Buffer.from(input).toString("base64url");
@@ -30,8 +33,20 @@ function clampExpiry(seconds) {
   return Math.max(MIN_EXPIRY_SECONDS, Math.min(MAX_EXPIRY_SECONDS, n));
 }
 
+function clampReviewExpiry(seconds) {
+  const value = Math.floor(Number(seconds));
+  if (!Number.isFinite(value)) return DEFAULT_REVIEW_EXPIRY_SECONDS;
+  return Math.max(MIN_REVIEW_EXPIRY_SECONDS, Math.min(MAX_REVIEW_EXPIRY_SECONDS, value));
+}
+
 function sign(signingInput, secret) {
   return createHmac("sha256", secret).update(signingInput).digest("base64url");
+}
+
+function mintSignedToken(secret, payload) {
+  const header = { alg: "HS256", typ: "JWT" };
+  const signingInput = `${base64urlJson(header)}.${base64urlJson(payload)}`;
+  return `${signingInput}.${sign(signingInput, secret)}`;
 }
 
 /**
@@ -52,16 +67,15 @@ export function mintSessionToken({ secret, subject, entitledRunIds = [], roomIds
   const iatMs = Number.isFinite(now) ? now : Date.now();
   const iat = Math.floor(iatMs / 1000);
   const exp = iat + clampExpiry(expiryWindowSeconds);
-  const header = { alg: "HS256", typ: "JWT" };
   const payload = {
+    purpose: "session",
     sub: typeof subject === "string" && subject ? subject : `sess_${randomUUID()}`,
     entitledRunIds: Array.isArray(entitledRunIds) ? entitledRunIds.slice(0, 100) : [],
     roomIds: Array.isArray(roomIds) ? roomIds.filter((r) => typeof r === "string" && r).slice(0, 50) : [],
     iat,
     exp,
   };
-  const signingInput = `${base64urlJson(header)}.${base64urlJson(payload)}`;
-  return `${signingInput}.${sign(signingInput, secret)}`;
+  return mintSignedToken(secret, payload);
 }
 
 /**
@@ -73,7 +87,7 @@ export function mintSessionToken({ secret, subject, entitledRunIds = [], roomIds
  * @param {string} secret server-side signing secret
  * @param {{ now?: number }} [opts] injectable clock (ms epoch)
  */
-export function verifySessionToken(token, secret, opts = {}) {
+function verifySignedToken(token, secret, opts = {}) {
   if (typeof secret !== "string" || !secret) return { valid: false, reason: "no_secret" };
   if (typeof token !== "string" || token.split(".").length !== 3) {
     return { valid: false, reason: "malformed" };
@@ -84,22 +98,89 @@ export function verifySessionToken(token, secret, opts = {}) {
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return { valid: false, reason: "bad_signature" };
 
+  let header;
   let claims;
   try {
+    header = JSON.parse(Buffer.from(h, "base64url").toString("utf8"));
     claims = JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
   } catch {
     return { valid: false, reason: "malformed" };
   }
+  if (header?.alg !== "HS256" || header?.typ !== "JWT") return { valid: false, reason: "unsupported" };
   const nowSec = Math.floor((Number.isFinite(opts.now) ? opts.now : Date.now()) / 1000);
-  if (typeof claims.exp === "number" && nowSec >= claims.exp) return { valid: false, reason: "expired" };
+  if (!Number.isInteger(claims.iat) || !Number.isInteger(claims.exp) || claims.exp <= claims.iat) {
+    return { valid: false, reason: "malformed" };
+  }
+  if (nowSec >= claims.exp) return { valid: false, reason: "expired" };
 
   return { valid: true, claims };
+}
+
+export function verifySessionToken(token, secret, opts = {}) {
+  const verdict = verifySignedToken(token, secret, opts);
+  if (!verdict.valid) return verdict;
+  if (verdict.claims.purpose !== "session" || typeof verdict.claims.sub !== "string" || !verdict.claims.sub) {
+    return { valid: false, reason: "wrong_purpose" };
+  }
+  return verdict;
+}
+
+export function mintReviewerToken({
+  secret,
+  subject,
+  reviewId,
+  runId,
+  conversationId,
+  actionDigest,
+  expiryWindowSeconds,
+  now,
+} = {}) {
+  if (typeof secret !== "string" || !secret) throw new Error("review signing secret is required");
+  const required = { subject, reviewId, runId, conversationId, actionDigest };
+  for (const [field, value] of Object.entries(required)) {
+    if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`);
+  }
+  const iatMs = Number.isFinite(now) ? now : Date.now();
+  const iat = Math.floor(iatMs / 1000);
+  return mintSignedToken(secret, {
+    purpose: "human-review",
+    sub: subject.trim(),
+    reviewId: reviewId.trim(),
+    runId: runId.trim(),
+    conversationId: conversationId.trim(),
+    actionDigest: actionDigest.trim(),
+    jti: `review_${randomUUID()}`,
+    iat,
+    exp: iat + clampReviewExpiry(expiryWindowSeconds),
+  });
+}
+
+export function verifyReviewerToken(token, secret, expected = {}, opts = {}) {
+  const verdict = verifySignedToken(token, secret, opts);
+  if (!verdict.valid) return verdict;
+  const claims = verdict.claims;
+  const required = ["sub", "reviewId", "runId", "conversationId", "actionDigest", "jti"];
+  if (claims.purpose !== "human-review" || required.some((field) => typeof claims[field] !== "string" || !claims[field])) {
+    return { valid: false, reason: "wrong_purpose" };
+  }
+  for (const field of ["reviewId", "runId", "conversationId", "actionDigest"]) {
+    if (typeof expected[field] !== "string" || claims[field] !== expected[field]) {
+      return { valid: false, reason: "scope_mismatch" };
+    }
+  }
+  return verdict;
 }
 
 export const AUTH_EXPIRY = Object.freeze({
   DEFAULT_EXPIRY_SECONDS,
   MIN_EXPIRY_SECONDS,
   MAX_EXPIRY_SECONDS,
+});
+
+export const REVIEW_AUTH_EXPIRY = Object.freeze({
+  DEFAULT_REVIEW_EXPIRY_SECONDS,
+  MIN_REVIEW_EXPIRY_SECONDS,
+  MAX_REVIEW_EXPIRY_SECONDS,
 });
 
 /**

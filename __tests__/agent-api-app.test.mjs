@@ -104,6 +104,25 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
     "previous-response",
   ]);
   assert.equal(app.readiness().runningAgents.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().sandboxAgents.contractReady, true);
+  assert.equal(app.readiness().sandboxAgents.configured, false);
+  assert.equal(app.readiness().sandboxAgents.controlPlaneOwner, "agentic-canvas-os");
+  assert.equal(app.readiness().sandboxAgents.executionOwner, "injected-container-provider");
+  assert.deepEqual(app.readiness().sandboxAgents.stateSurfaces, [
+    "active-session",
+    "resume-checkpoint",
+    "workspace-snapshot",
+  ]);
+  assert.deepEqual(app.readiness().sandboxAgents.supportedCapabilities, [
+    "files",
+    "commands",
+    "packages",
+    "ports",
+    "snapshots",
+    "resume",
+  ]);
+  assert.equal(app.readiness().sandboxAgents.containerExecutionStatus, "unverified");
+  assert.equal(app.readiness().sandboxAgents.independentContainmentProof, "unverified");
   assert.equal(app.readiness().toolSearch.contractReady, true);
   assert.equal(app.readiness().toolSearch.configured, false);
   assert.equal(app.readiness().toolSearch.initialExposure, "direct-definitions-and-deferred-metadata");

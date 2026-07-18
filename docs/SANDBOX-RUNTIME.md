@@ -24,6 +24,8 @@ invocations:
 
 The native runtime compiles one source-backed policy and returns deterministic, fail-closed authorization decisions. It introduces no external runtime package, second gateway, copied schema, or compatibility remap.
 
+`SANDBOX-AGENTS.md` owns the separate provider-neutral container workspace controller. That controller may forward an already-authorized operation to an injected container provider, but it does not upgrade this policy preflight into OS or kernel enforcement. Keep policy authorization, container execution, and independent containment proof as three distinct claims.
+
 ## Security Boundary
 
 | Layer | Current state | Claim |

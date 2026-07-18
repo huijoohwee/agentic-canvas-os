@@ -66,6 +66,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `AGENT-DEFINITIONS.md` | Agent definition registry | Model and ordered instruction ownership, reference-only optional behavior, revision fencing, handoff verification, structured-output validation, and provider-proof boundaries. |
 | `MODELS-AND-PROVIDERS.md` | Model and transport selection runtime | Revision-fenced provider registration, explicit defaults, feature matching, transport strategy, sanitized environment readiness, and live-provider proof boundaries. |
 | `RUNNING-AGENTS.md` | Application-turn lifecycle contract | Bounded agent loops, exclusive continuation strategies, same-loop streaming, pause and resume, settlement, cost evidence, and provider-proof boundaries. |
+| `SANDBOX-AGENTS.md` | Container workspace control plane | Provider-neutral workspace creation, authorized files, commands, packages, preview ports, opaque snapshots, cross-controller resume, cleanup, and containment-proof boundaries. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |
 | `TOOL-SEARCH.md` | Deferred-definition loading contract | Session catalogs, metadata-only initial exposure, bounded client and hosted resolution, exact definition validation, authorization, and provider-proof boundaries. |
 | `DICTIONARY-COMMAND.md` | Slash dictionary | `/` command-route intents, bindings, filters, and VCC signals. |
@@ -90,6 +91,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 - A caller can load durable agent identity from `SOUL.md` into prompt slot 1 without silent hardcoded defaults.
 - A caller can compile stable prompt prefixes once, reuse an opaque revision-bound handle for dynamic request tails, and keep local reuse distinct from provider cache-hit proof.
 - A caller can preserve compatible reasoning across stable turns, reset rendered reasoning on invariant drift, and keep request intent distinct from provider-effective confirmation.
+- A caller can route approved file, command, package, and preview-port work through an injected container provider, snapshot the workspace, and resume exact state without exposing credentials or provider state.
 - A caller can expose strict application functions, enforce explicit selection and parallel policy, continue with same-id outputs and active reasoning items, and keep execution under the real tool gateway.
 - A caller can reduce predictable read-only tool stages through a provider-attested hosted program while keeping local JavaScript execution forbidden and all writes, approvals, citations, and semantic judgment on the direct path.
 - A caller can keep optional schemas deferred, search only the active session catalog, append exact selected definitions, and require top-level loading before a hosted program uses them.

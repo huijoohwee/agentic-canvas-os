@@ -11,6 +11,7 @@ import { createModelProviderRuntime } from "../agent-api/src/model-providers.js"
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
 import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
+import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
 import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
 import { CanvasRoom } from "./canvas-room.js";
 
@@ -24,6 +25,7 @@ const MODEL_PROVIDERS_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
 const RUNNING_AGENTS_BY_ENV = new WeakMap();
+const SANDBOX_AGENTS_BY_ENV = new WeakMap();
 const TOOL_SEARCH_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
@@ -61,6 +63,7 @@ function createWorkerApp(env) {
   let reasoningContinuity;
   let programmaticToolCalling;
   let runningAgents;
+  let sandboxAgents;
   let toolSearch;
   if (env && typeof env === "object") {
     agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
@@ -93,6 +96,11 @@ function createWorkerApp(env) {
       runningAgents = createRunningAgentRuntime();
       RUNNING_AGENTS_BY_ENV.set(env, runningAgents);
     }
+    sandboxAgents = SANDBOX_AGENTS_BY_ENV.get(env);
+    if (!sandboxAgents) {
+      sandboxAgents = createSandboxAgentRuntime();
+      SANDBOX_AGENTS_BY_ENV.set(env, sandboxAgents);
+    }
     toolSearch = TOOL_SEARCH_BY_ENV.get(env);
     if (!toolSearch) {
       toolSearch = createToolSearchRuntime();
@@ -107,6 +115,7 @@ function createWorkerApp(env) {
     reasoningContinuity,
     programmaticToolCalling,
     runningAgents,
+    sandboxAgents,
     toolSearch,
     fetchImpl: (req) => fetch(req.url, {
       method: req.method,

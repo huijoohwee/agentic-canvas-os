@@ -94,6 +94,8 @@ export function createAgentApiApp({
           executionOwner: "downstream-hosted-sandbox",
           programRouting: "bounded-read-only-stages",
           directRouting: "writes-approvals-semantic-judgment",
+          continuationModes: ["stored", "stateless-replay"],
+          callerContract: "function-call-output-preserves-caller",
           localJavaScriptExecution: "forbidden",
           providerContextIsolation: "unverified",
           ...programmaticStats,

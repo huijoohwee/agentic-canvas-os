@@ -292,13 +292,14 @@ Programmatic tool calling uses provider-hosted JavaScript only for predictable r
 
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
-| Validate | Run id, JSON input, capability flags, tool declarations, and validators | Immutable request or typed preflight block | Hosted sandbox, response continuation, caller lineage, adapter, and gateway are mandatory. |
-| Advance | Initial input or previous response identity plus caller-preserving tool results | Provider-normalized hosted turn and actual cost log | Missing attestation, cost, completed status, or typed items blocks. |
+| Select | Task-shape facts for call count, control flow, reduction, judgment, evidence, approval, and mutation | Direct or programmatic route plus typed reason | Programmatic is limited to predictable multi-call structured reductions. |
+| Validate | Run id, JSON input, continuation mode, capability flags, allowed callers, schemas, approval policy, and validators | Immutable request or typed preflight block | Hosted sandbox, matching stored or stateless continuation, caller lineage, adapter, and gateway are mandatory. |
+| Advance | Initial input, stored response identity plus new outputs, or the full ordered stateless replay | Provider-normalized hosted turn and actual cost log | Missing attestation, cost, completed status, fingerprint, or typed items blocks. |
 | Authorize | Program lineage, tool identity, arguments, risk, and idempotency | Eligible call or direct-route requirement | Only validated read-only idempotent tools may run programmatically. |
-| Execute | Eligible calls within parallel and timeout bounds | Schema-valid bounded results | Real tool policy, validator, approval, audit, hook, and cost owners remain authoritative. |
+| Execute | Eligible calls within parallel and timeout bounds | Schema-valid `function_call_output` items with unchanged caller identity | Real tool policy, validator, approval, audit, hook, and cost owners remain authoritative. |
 | Finalize | Provider final message | Final output, compact evidence, and aggregate cost | Generated code and intermediate tool payloads are neither persisted nor returned. |
 
-The controller bounds model turns, calls, batch width, program size, result size, and stage duration. Duplicate run and tool-call identities fail closed. Offline proof confirms the controller contract only; provider-hosted execution and context isolation remain unverified until a live adapter returns matching attestation.
+The controller bounds model turns, calls, batch width, program size, result size, and stage duration. Duplicate run and function-call identities fail closed. Generated source, opaque fingerprints, reasoning items, and intermediate payloads exist only inside the active loop and never cross the final result boundary. Offline proof confirms the controller contract only; provider-hosted execution and context isolation remain unverified until a live adapter returns matching attestation.
 
 ### Tool Category Guardrails
 

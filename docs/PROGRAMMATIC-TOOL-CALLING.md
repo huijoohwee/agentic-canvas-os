@@ -35,9 +35,11 @@ The cited OpenAI guide informs the capability class only. No external implementa
 
 ## Typed Contract
 
-The controller accepts one run id, JSON-compatible task input, explicit capability flags, and a tool catalog. Every tool declares caller modes, risk class, idempotency, input and output schemas, and executable validators. Malformed input fails before any provider or tool call.
+The controller accepts one run id, JSON-compatible task input, explicit capability flags, a continuation mode, and a client-function catalog. Every function declares its type, specific name and description, `allowedCallers`, risk class, idempotency, approval requirement, object-shaped input and output schemas, and executable validators. Malformed input fails before any provider or tool call.
 
-A normalized hosted turn contains a response id, completed status, actual cost log, fresh-isolation attestation, and typed items. Program items carry code only across the adapter boundary for size and lineage validation. Tool calls must reference a known program. Program outputs must reference the same lineage. Continuation sends only tool results plus the previous response id.
+A normalized hosted turn contains a response id, completed status, actual cost log, fresh-isolation attestation, and typed items. Program items carry generated source, caller identity, and an opaque replay fingerprint only inside the active adapter loop. A nested `function_call` must carry `caller.callerId` equal to a known program `callId`; its client-owned result becomes `function_call_output` with the original call id and structurally unchanged caller object. The adapter alone maps provider wire fields such as `call_id` and `caller_id` to this canonical local camel-case contract and decodes or encodes JSON strings.
+
+Stored continuation sends only new function outputs plus the previous response id. Stateless continuation retains the initial request and every returned program, opaque reasoning, function-call, function-output, and program-output item in order for the active run, then replays that sequence without a previous response id. Neither mode persists or returns generated source, reasoning items, fingerprints, or intermediate payloads after finalization.
 
 The completed result contains final output, aggregate cost, and compact evidence: model turns, tool count, tool names, hosted-program count, execution boundary, context-isolation attestation, and the fact that intermediate results were not returned. It contains no generated source or intermediate tool payloads.
 
@@ -46,10 +48,10 @@ The completed result contains final output, aggregate cost, and compact evidence
 | Stage | Input | Output | Stop condition |
 |---|---|---|---|
 | Validate | Run, capabilities, tools, schemas, validators | Normalized immutable request or typed rejection | Missing hosted sandbox, continuation, lineage, adapter, or gateway blocks before spend. |
-| Advance | Initial request or previous response id plus tool results | Provider-normalized hosted turn | Provider error, incomplete response, missing cost, or missing attestation blocks. |
+| Advance | Initial request, stored response identity plus new outputs, or full stateless replay | Provider-normalized hosted turn | Provider error, incomplete response, missing cost, missing continuation capability, or missing attestation blocks. |
 | Authorize | Program lineage and requested tool identity | Eligible read-only idempotent call or direct-route requirement | Unknown, direct-only, mutating, approval-sensitive, or non-idempotent tools block. |
 | Execute tools | Schema-valid arguments through the injected gateway | Schema-valid bounded results | Tool failure, invalid output, abort, timeout, or result overflow blocks. |
-| Continue | Response identity and caller-preserving results | Next hosted turn | Repeated call id, turn limit, call limit, or program-size limit blocks. |
+| Continue | Stored response identity or ordered replay plus caller-preserving results | Next hosted turn | Repeated call id, missing fingerprint, turn limit, call limit, or program-size limit blocks. |
 | Finalize | Final message from a provider-attested turn | Output, evidence, and cost log | No source or intermediate result crosses the final result boundary. |
 
 ## Bounds And Concurrency
@@ -66,12 +68,13 @@ Every hosted turn must report `model`, `prompt_tokens`, `completion_tokens`, `ca
 
 ## Selection Rule
 
-Use the programmatic path only for predictable read-only stages whose structured intermediate results can be reduced before final model judgment. Use a direct tool call when one call is enough, the next step requires semantic judgment, a citation or native artifact must be preserved, or the action requires approval or mutation.
+`agent-api/src/programmatic-tool-routing.js` makes route selection executable. It chooses the programmatic path only when several calls have predictable control flow and can yield a smaller structured result. It chooses direct calls for a single action, semantic adaptation, missing reduction evidence, citation or native-artifact validation, approval, or mutation. The controller then rechecks every actual call, so route selection never grants tool permission.
 
 ## VCCs
 
-- Given two eligible read-only tools, when a provider-attested hosted program requests both, then the gateway validates and runs them within bounds, continuation preserves response and caller identity, and the final result exposes only final output and compact evidence.
-- Given missing hosted execution evidence, invalid lineage, a mutating tool, malformed arguments, invalid output, excess turns or calls, duplicate work, timeout, or oversized data, when the controller evaluates the run, then it returns a typed blocked result without local JavaScript execution.
+- Given two eligible read-only tools, when a provider-attested hosted program requests both, then the gateway validates and runs them within bounds, stored continuation preserves the prior response identity, stateless continuation replays every opaque item in order, and both preserve exact caller identity while returning only final output and compact evidence.
+- Given missing hosted execution evidence, continuation capability, fingerprint, lineage, a mutating or approval-sensitive tool, malformed arguments, invalid output, excess turns or calls, duplicate work, timeout, or oversized data, when the controller evaluates the run, then it returns a typed blocked result without local JavaScript execution.
 - Given an unconfigured Worker, when `/api/ready` is read, then the contract is visible as ready while execution and provider context isolation remain explicitly unverified.
+- Given a task-shape packet, when route selection runs, then only predictable multi-call structured reductions select programmatic execution; all authorization, semantic, citation, native-artifact, or single-call cases stay direct.
 
 VCC: run `npm run programmatic-tool-calling:check` and the affected app and Worker tests; require zero failures, no generated code in returned results, no Prod mirror mutation, and no Cloudflare action.

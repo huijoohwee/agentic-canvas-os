@@ -35,6 +35,13 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().reasoningContinuity.configured, true);
   assert.equal(app.readiness().reasoningContinuity.stableMode, "all_turns-with-previous-response");
   assert.equal(app.readiness().reasoningContinuity.providerEffectiveContext, "unverified");
+  assert.equal(app.readiness().functionCalling.contractReady, true);
+  assert.equal(app.readiness().functionCalling.configured, false);
+  assert.equal(app.readiness().functionCalling.executionOwner, "application-tool-gateway");
+  assert.equal(app.readiness().functionCalling.schemaMode, "explicit-strict");
+  assert.deepEqual(app.readiness().functionCalling.selectionModes, ["auto", "required", "none", "forced", "allowed"]);
+  assert.equal(app.readiness().functionCalling.callIdentity, "function-call-output-preserves-call-id");
+  assert.equal(app.readiness().functionCalling.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().programmaticToolCalling.contractReady, true);
   assert.equal(app.readiness().programmaticToolCalling.configured, false);
   assert.equal(app.readiness().programmaticToolCalling.localJavaScriptExecution, "forbidden");

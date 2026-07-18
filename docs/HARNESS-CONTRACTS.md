@@ -137,6 +137,7 @@ harness:
 | Tool Gateway | Route web, image, TTS, and browser tool calls through existing infrastructure | `{ category, provider, input, approvals[] }` | Tool result, unavailable provider, approval-required, cost log, or typed fallback | Paid, egress, generated-media, and browser-auth actions require approval |
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
+| Function Calling | Continue direct model-requested functions through the application gateway | `{ runId, input, tools[], capabilities, toolChoice, approvals[] }` | Final output, same-id outputs, separate model and gateway costs, or typed block | Strict schemas and explicit capabilities required; the real gateway retains authorization, mutation, approval, audit, and cost |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Instruction Task Quality | Screen final-answer behavior after structural instruction changes | `{ suite, candidate }` | `agentic-instruction-task-quality/v1` per-case findings and aggregate score | Model-agnostic lexical rubric; exact provenance and human review required; no private reasoning access or deployment authority |
@@ -285,6 +286,20 @@ Tool Search harnesses minimize model-visible schema load for eligible MCP and no
 | Load | Client names or provider-normalized hosted definitions | Append-only canonical definitions. | Unknown, altered, duplicate, direct, over-limit, replayed, or cost-unreported output fails closed. |
 | Authorize | `{ sessionId, toolName, caller }` | Canonical definition or typed refusal. | Direct tools remain available; deferred tools require prior load; the real gateway still owns execution policy. |
 | Audit | Readiness and session counters | Bounds, search mode, loaded count, and blocked count. | No provider reduction, cache hit, spend, or live execution is inferred. |
+
+## Function Calling Harness Contract
+
+Direct function calling exposes strict application-owned declarations to a model and returns gateway-owned results under exact call identities. The cited provider guide informs the capability class; local implementation, schemas, examples, tests, fixtures, and prose remain independently authored.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Validate | Run id, JSON input, strict tools, selection, capabilities, approvals | Immutable request or typed preflight block | Adapter, gateway, strict validation, previous-response continuation, and reasoning replay are mandatory. |
+| Advance | Initial input or prior response plus active reasoning and same-id outputs | Provider-normalized turn and actual model cost | Missing cost, completed status, response identity, or supported typed items blocks. |
+| Select | Returned calls plus auto, required, none, forced, or allowed policy | Exact eligible direct tool records | Unknown, replayed, caller-disabled, subset, forced-name, or parallel-policy violations block. |
+| Execute | Validated arguments, direct caller, approvals, and policy metadata | Gateway envelope, bounded output, and gateway cost | The real gateway owns permission, approval, risk, audit, hooks, execution, and fallback. |
+| Finalize | One final message after required calls | Final output, compact evidence, model cost, and gateway cost | Reasoning, arguments, approvals, and intermediate results remain active-loop only. |
+
+The controller bounds tools, schema size, model turns, total calls, parallel width, result size, and stage duration. Tool Search supplies only direct or already-loaded definitions; Programmatic Tool Calling remains a separate route for predictable read-only reductions. Offline proof does not establish live provider or gateway execution.
 
 ## Programmatic Tool Calling Harness Contract
 

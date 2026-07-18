@@ -22,13 +22,9 @@
   ],
   "vars": {
     "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
-    "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
-    "AGENT_MODEL_PROVIDER": "sealion",
-    "AGENT_MODEL_BASE_URL": "https://api.sea-lion.ai/v1",
-    "AGENT_MODEL_ID": "aisingapore/Gemma-SEA-LION-v4-27B-IT",
-    "AGENT_MODEL_API_KEY_ENV": "SEA_LION_API_KEY"
+    "CANVAS_BASE_URL": "https://airvio.co/knowgrph"
   },
   "secrets": {
-    "required": ["AGENT_API_JWT_SECRET", "SEA_LION_API_KEY"]
+    "required": ["AGENT_API_JWT_SECRET"]
   }
 }

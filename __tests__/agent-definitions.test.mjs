@@ -12,9 +12,8 @@ function minimalDefinition(overrides = {}) {
     revision: "briefing-v1",
     name: "Briefing Agent",
     model: {
-      provider: "configured-provider",
-      protocol: "configured-protocol",
-      model: "configured-model",
+      providerId: "configured-provider",
+      modelId: "configured-model",
     },
     instructions: [
       { name: "purpose", content: "Prepare a concise source-backed briefing." },
@@ -35,7 +34,7 @@ test("registers and prepares a minimal immutable agent packet", async () => {
 
   const prepared = await registry.prepare({ agentId: "briefing-agent", revision: "briefing-v1" });
   assert.equal(prepared.status, "ready");
-  assert.equal(prepared.agent.model.model, "configured-model");
+  assert.equal(prepared.agent.model.modelId, "configured-model");
   assert.deepEqual(prepared.agent.instructions.map((instruction) => instruction.name), ["purpose", "boundary"]);
   assert.deepEqual(prepared.agent.behavior, {
     tools: [],
@@ -171,9 +170,8 @@ test("revision conflicts, stale prepares, unknown fields, and capacity fail clos
     () => registry.register(minimalDefinition({
       revision: "briefing-v2",
       model: {
-        provider: "configured-provider",
-        protocol: "configured-protocol",
-        model: "configured-model",
+        providerId: "configured-provider",
+        modelId: "configured-model",
         apiKey: "forbidden",
       },
     })),

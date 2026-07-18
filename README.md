@@ -86,13 +86,13 @@ knowgrph control plane
   airvio.co/knowgrph/control-plane/mcp
   airvio.co/knowgrph/doc-view?run=<runId>
 
-SEA-LION hosted API
-  https://api.sea-lion.ai/v1/chat/completions
+application-registered model provider
+  provider adapter + selected transport
 ```
 
 The connector contracts are authored and proven in the knowgrph monorepo. This
 repo is the split product tier and keeps only the runtime seams it needs:
-Cloudflare request adaptation, MCP forwarding, SEA-LION route metadata, and the
+Cloudflare request adaptation, MCP forwarding, model-provider selection, and the
 run-scoped canvas embed URL.
 
 ## Layout
@@ -116,7 +116,8 @@ run-scoped canvas embed URL.
 | `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
 | `agent-api/src/tool-search.js` | Session-scoped deferred-definition controller, metadata-only initial exposure, exact search loading, and call authorization. |
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
-| `agent-api/src/model-config.js` | Server-side SEA-LION route metadata; stores only the API key env-name. |
+| `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
+| `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
 | `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
 | `scripts/instruction-task-quality.mjs` | Validates the task-quality scenario suite or scores provenance-bound candidate final answers. |
@@ -130,11 +131,17 @@ requires:
 
 - `AGENT_API_JWT_SECRET`
 - `KNOWGRPH_MCP_ENDPOINT`
-- valid SEA-LION model route metadata
-- the secret binding named by `AGENT_MODEL_API_KEY_ENV` / `SEA_LION_API_KEY_ENV`
-  defaulting to `SEA_LION_API_KEY`
+- one complete `AGENT_MODEL_*` provider, model, adapter, and transport definition
+- the secret binding named by `AGENT_MODEL_API_KEY_ENV`
 
-The response reports `apiKeyPresent`; it never includes the secret value.
+The `modelProviders` response reports selection policy, bounded registry counters,
+sanitized environment metadata, and `apiKeyPresent`; it never includes the secret
+value. Model resolution uses agent selection, then a run default, then the process
+default. A provider default can fill only an omitted model or transport. Exact
+feature, delivery, and connection requirements fail closed before adapter execution.
+Provider execution remains `unverified` until the Running Agents adapter completes
+a real bounded run and reports evidence.
+
 It also reports the bounded cache-context policy and local registry counters.
 `providerCacheStatus` remains `unverified` until the downstream model owner
 returns cache-read or cache-write usage; a local stable-prefix reuse is not a
@@ -193,14 +200,24 @@ size with an exact Git revision without rewriting either source.
 
 `npm run instruction-quality:check` validates the separate final-answer evaluation suite and scorer. Use `npm run instruction-quality:evaluate -- --candidate=<path> --json` for a recorded or live candidate; the local evaluator invokes no model and does not claim general quality improvement.
 
-Default SEA-LION route:
+No provider or model is baked into the repository. An operator must choose and
+revision-bind each deployment route explicitly:
 
 ```bash
-AGENT_MODEL_PROVIDER=sealion
-AGENT_MODEL_BASE_URL=https://api.sea-lion.ai/v1
-AGENT_MODEL_ID=aisingapore/Gemma-SEA-LION-v4-27B-IT
-AGENT_MODEL_API_KEY_ENV=SEA_LION_API_KEY
+AGENT_MODEL_PROVIDER=primary
+AGENT_MODEL_PROVIDER_REVISION=primary-v1
+AGENT_MODEL_ADAPTER=registered-adapter
+AGENT_MODEL_ENDPOINT=https://models.example.invalid/v1/run
+AGENT_MODEL_ID=selected-model
+AGENT_MODEL_API_KEY_ENV=PRIMARY_MODEL_KEY
+AGENT_MODEL_TRANSPORT=request
+AGENT_MODEL_TRANSPORT_DELIVERY=complete
+AGENT_MODEL_TRANSPORT_CONNECTION=per-run
+AGENT_MODEL_FEATURES=tool-calling,structured-output
 ```
+
+See [`docs/MODELS-AND-PROVIDERS.md`](./docs/MODELS-AND-PROVIDERS.md) for
+selection precedence, transport strategy, ownership, and acceptance proof.
 
 ## Develop
 
@@ -211,6 +228,7 @@ npm run reasoning-continuity:check
 npm run function-gateway:check
 npm run programmatic-tool-calling:check
 npm run tool-search:check
+npm run model-providers:check
 npm run instruction-audit:check
 npm run instruction-quality:check
 npm run dev
@@ -220,7 +238,8 @@ Deployment is operator-gated:
 
 ```bash
 wrangler secret put AGENT_API_JWT_SECRET
-wrangler secret put SEA_LION_API_KEY
+MODEL_KEY_BINDING=PRIMARY_MODEL_KEY
+wrangler secret put "$MODEL_KEY_BINDING"
 npm run cloudflare:deploy
 ```
 

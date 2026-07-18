@@ -5,7 +5,7 @@
 //
 // These probes need NO secrets or tokens. They assert that each critical route
 // is wired and healthy on the freshly deployed Worker:
-//   - GET  /api/ready              -> 200 JSON object (SEA-LION readiness)
+//   - GET  /api/ready              -> 200 JSON object (sanitized runtime readiness)
 //   - GET  /api/canvas/room?room=… -> 400/401 (Durable Object route + auth live)
 //   - POST /api/invoke             -> 401 (MCP forward route live, auth-gated)
 //

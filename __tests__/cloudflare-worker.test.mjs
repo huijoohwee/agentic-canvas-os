@@ -10,7 +10,17 @@ import { handleCloudflareRequest } from "../worker/index.js";
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
   KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
-  SEA_LION_API_KEY: "server-side-sealion-key",
+  AGENT_MODEL_PROVIDER: "workspace-provider",
+  AGENT_MODEL_PROVIDER_REVISION: "workspace-provider-v1",
+  AGENT_MODEL_ADAPTER: "workspace-adapter",
+  AGENT_MODEL_ENDPOINT: "https://models.example/v1",
+  AGENT_MODEL_ID: "workspace-model",
+  AGENT_MODEL_API_KEY_ENV: "WORKSPACE_MODEL_KEY",
+  AGENT_MODEL_TRANSPORT: "stream-channel",
+  AGENT_MODEL_TRANSPORT_DELIVERY: "incremental",
+  AGENT_MODEL_TRANSPORT_CONNECTION: "reusable",
+  AGENT_MODEL_FEATURES: "tool-calling,structured-output",
+  WORKSPACE_MODEL_KEY: "server-side-model-key",
 });
 
 function request(path, { method = "GET", headers = {}, body } = {}) {
@@ -35,14 +45,25 @@ async function withMockedFetch(mockFetch, run) {
   }
 }
 
-test("GET /api/ready reports SEA-LION runtime readiness without leaking the key", async () => {
+test("GET /api/ready reports provider-neutral runtime readiness without leaking the key", async () => {
   const res = await handleCloudflareRequest(request("/api/ready"), ENV);
   assert.equal(res.status, 200);
   const body = await json(res);
   assert.equal(body.configured, true);
-  assert.equal(body.model.provider, "sealion");
-  assert.equal(body.model.endpoint, "https://api.sea-lion.ai/v1/chat/completions");
-  assert.equal(body.model.apiKeyPresent, true);
+  assert.equal(body.modelProviders.configured, true);
+  assert.equal(body.modelProviders.contractReady, true);
+  assert.deepEqual(body.modelProviders.selectionPrecedence, [
+    "agent",
+    "run-default",
+    "process-default",
+    "provider-default",
+  ]);
+  assert.equal(body.modelProviders.environment.providerId, "workspace-provider");
+  assert.equal(body.modelProviders.environment.modelId, "workspace-model");
+  assert.equal(body.modelProviders.environment.transportId, "stream-channel");
+  assert.equal(body.modelProviders.environment.apiKeyPresent, true);
+  assert.equal(body.modelProviders.executionOwner, "running-agents-adapter");
+  assert.equal(body.modelProviders.providerExecutionStatus, "unverified");
   assert.equal(body.agentDefinitions.contractReady, true);
   assert.equal(body.agentDefinitions.configured, false);
   assert.equal(body.agentDefinitions.definitionOwner, "application-agent-registry");
@@ -98,7 +119,7 @@ test("GET /api/ready reports SEA-LION runtime readiness without leaking the key"
   assert.equal(body.toolSearch.loadedDefinitionPlacement, "append-only-search-output");
   assert.equal(body.toolSearch.programSearchPolicy, "top-level-before-hosted-program");
   assert.equal(body.toolSearch.providerContextReduction, "unverified");
-  assert.equal(JSON.stringify(body).includes("server-side-sealion-key"), false);
+  assert.equal(JSON.stringify(body).includes("server-side-model-key"), false);
 });
 
 test("POST /api/auth/session mints a session token", async () => {

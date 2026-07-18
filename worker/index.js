@@ -1,12 +1,13 @@
 // Cloudflare Worker entrypoint for agentic-canvas-os.
 //
 // One Worker owns the product tier: static assets, auth/session, run forwarding,
-// and SEA-LION readiness. It delegates static files to Workers Static Assets and
+// and model-provider readiness. It delegates static files to Workers Static Assets and
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
 import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
@@ -19,6 +20,7 @@ const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const APP_BY_ENV = new WeakMap();
 const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
+const MODEL_PROVIDERS_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
 const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
 const RUNNING_AGENTS_BY_ENV = new WeakMap();
@@ -55,6 +57,7 @@ function createWorkerApp(env) {
   if (env && typeof env === "object" && APP_BY_ENV.has(env)) return APP_BY_ENV.get(env);
   let agentDefinitions;
   let cacheContext;
+  let modelProviders;
   let reasoningContinuity;
   let programmaticToolCalling;
   let runningAgents;
@@ -69,6 +72,11 @@ function createWorkerApp(env) {
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
       CACHE_CONTEXT_BY_ENV.set(env, cacheContext);
+    }
+    modelProviders = MODEL_PROVIDERS_BY_ENV.get(env);
+    if (!modelProviders) {
+      modelProviders = createModelProviderRuntime();
+      MODEL_PROVIDERS_BY_ENV.set(env, modelProviders);
     }
     reasoningContinuity = REASONING_CONTINUITY_BY_ENV.get(env);
     if (!reasoningContinuity) {
@@ -95,6 +103,7 @@ function createWorkerApp(env) {
     env,
     agentDefinitions,
     cacheContext,
+    modelProviders,
     reasoningContinuity,
     programmaticToolCalling,
     runningAgents,

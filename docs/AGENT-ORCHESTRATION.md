@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "runtime-ready-dev"
 authority: "multi-agent topology, branch routing, conversation ownership, and final-answer ownership"
 runtime_scope: "provider-neutral manager delegation and explicit conversation handoff"
-runtime_claim: "local orchestration controller is runtime-ready in Dev; downstream provider execution remains unverified"
+runtime_claim: "local controller is runtime-ready in Dev and one manager delegation plus specialist handoff passed bounded live proof; the default Worker remains unconfigured"
 runtime_owner: "../agent-api/src/agent-orchestration.js; ../agent-api/src/agent-orchestration-contract.js"
 runtime_proof: "../__tests__/agent-orchestration.test.mjs"
 external_pattern_source: "https://developers.openai.com/api/docs/guides/agents/models; https://openai.github.io/openai-agents-js/guides/agents/; https://openai.github.io/openai-agents-js/guides/multi-agent/; https://openai.github.io/openai-agents-js/guides/handoffs/; https://openai.github.io/openai-agents-js/guides/tools/; https://openai.github.io/openai-agents-js/guides/results/"
@@ -87,6 +87,8 @@ Completed results expose the exact branch, conversation owner, final-answer owne
 
 Readiness exposes only configuration, modes, ownership authorities, limits, and counters. The default Worker injects no resolver, runner, or authorizer, so `configured` is false and `providerExecutionStatus` remains `unverified`. Offline tests establish controller behavior only.
 
+`LIVE-AGENT-PROVIDER-PROOF.md` is the separate approved evidence lane. It runs one manager-owned delegation followed by one specialist-owned handoff through the composition owner, caps the concrete adapter at three provider attempts, and leaves the default Worker unconfigured.
+
 ## VCCs
 
 - Given a delegate branch, when the target completes, then the source manager receives the private result, produces the only public output, and remains both conversation and final-answer owner.
@@ -95,5 +97,6 @@ Readiness exposes only configuration, modes, ownership authorities, limits, and 
 - Given a specialist-owned conversation, when a registered handoff targets the manager, then ownership returns to the manager only after successful completion.
 - Given denial, stale workflow revision, unknown branch, mismatched agent revision, replay, concurrency, malformed outcome, capacity, abort, or timeout, when the controller evaluates the turn, then it fails closed with bounded evidence.
 - Given an unconfigured Worker, when readiness is read, then the contract and explicit ownership policy remain visible while live provider execution stays unverified.
+- Given the bounded live proof, when all three provider calls complete, then delegation remains manager-owned, handoff becomes specialist-owned, and only hashed continuation plus returned usage crosses the proof boundary.
 
 VCC: run `npm run agent-orchestration:check` plus the affected app and Worker tests; require zero failures, explicit ownership on every branch, no delegate intermediate in public output, honest costs, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.

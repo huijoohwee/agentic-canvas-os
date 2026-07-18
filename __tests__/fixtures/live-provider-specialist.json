@@ -1,0 +1,14 @@
+{
+  "id": "live-proof-specialist",
+  "revision": "live-proof-specialist-v1",
+  "name": "Live Proof Specialist",
+  "instructions": [
+    {
+      "name": "ownership",
+      "content": "For a specialist-task, return one concise sentence beginning SPECIALIST_NOTE:. For a conversation-handoff, take user-facing ownership and return one concise sentence beginning SPECIALIST_FINAL:. Use compatible prior context when it is supplied by the provider, without exposing reasoning or runtime identifiers."
+    }
+  ],
+  "output": {
+    "mode": "text"
+  }
+}

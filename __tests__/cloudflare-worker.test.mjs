@@ -23,6 +23,15 @@ const ENV = Object.freeze({
   WORKSPACE_MODEL_KEY: "server-side-model-key",
 });
 
+const DURABLE_ENV = Object.freeze({
+  ...ENV,
+  AGENT_REVIEW_JWT_SECRET: "review-signing-secret",
+  AGENT_STATE: Object.freeze({
+    idFromName: (name) => name,
+    get: () => Object.freeze({ fetch: async () => new Response("{}", { status: 200 }) }),
+  }),
+});
+
 function request(path, { method = "GET", headers = {}, body } = {}) {
   return new Request(`https://agentic-canvas-os.example${path}`, {
     method,
@@ -90,7 +99,8 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   ]);
   assert.deepEqual(body.guardrailsHumanReview.reviewDecisions, ["approve", "reject", "edit"]);
   assert.equal(body.guardrailsHumanReview.interruptionOwner, "running-agents-same-turn-state");
-  assert.equal(body.guardrailsHumanReview.reviewStatePolicy, "single-consume-bounded-expiry");
+  assert.equal(body.guardrailsHumanReview.reviewStatePolicy, "atomic-single-consume-bounded-expiry");
+  assert.equal(body.guardrailsHumanReview.reviewerEvidencePolicy, "purpose-scoped-signed-token");
   assert.equal(body.guardrailsHumanReview.providerExecutionStatus, "unverified");
   assert.equal(body.agentOrchestration.contractReady, true);
   assert.equal(body.agentOrchestration.configured, false);
@@ -152,6 +162,8 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.runningAgents.loopOwner, "application-turn-controller");
   assert.equal(body.runningAgents.streamingOwner, "same-loop-event-channel");
   assert.equal(body.runningAgents.pauseSemantics, "resume-same-turn");
+  assert.equal(body.runningAgents.recoveryPolicy, "atomic-claim-resume-commit");
+  assert.equal(body.runningAgents.pausedTurnStoreConfigured, false);
   assert.equal(body.runningAgents.continuationPolicy, "one-strategy-per-conversation");
   assert.deepEqual(body.runningAgents.continuationStrategies, [
     "application-history",
@@ -189,6 +201,20 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.toolSearch.programSearchPolicy, "top-level-before-hosted-program");
   assert.equal(body.toolSearch.providerContextReduction, "unverified");
   assert.equal(JSON.stringify(body).includes("server-side-model-key"), false);
+});
+
+test("GET /api/ready exposes durable review and paused-turn recovery bindings", async () => {
+  const res = await handleCloudflareRequest(request("/api/ready"), DURABLE_ENV);
+  assert.equal(res.status, 200);
+  const body = await json(res);
+  assert.equal(body.guardrailsHumanReview.configured, true);
+  assert.equal(body.guardrailsHumanReview.reviewerAuthenticatorConfigured, true);
+  assert.equal(body.guardrailsHumanReview.persistence, "durable-object");
+  assert.equal(body.guardrailsHumanReview.atomicConsume, true);
+  assert.equal(body.runningAgents.pausedTurnStoreConfigured, true);
+  assert.equal(body.runningAgents.persistence, "durable-object");
+  assert.equal(body.runningAgents.atomicClaims, true);
+  assert.equal(body.runningAgents.recovery, "cross-isolate");
 });
 
 test("POST /api/auth/session mints a session token", async () => {

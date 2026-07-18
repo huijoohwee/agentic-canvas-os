@@ -367,7 +367,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
   let toolCalls = 0;
 
   async function run({ runId, input, tools, capabilities, toolChoice,
-    parallelToolCalls = true, approvals = [], signal } = {}) {
+    parallelToolCalls = true, signal } = {}) {
     const safeRunId = assertIdentifier(runId, "runId");
     const safeInput = normalizeJson(input, "input");
     const safeTools = normalizeTools(tools, { maxTools, maxSchemaChars });
@@ -375,8 +375,6 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
     const publicTools = publicToolDeclarations(safeTools);
     const safeChoice = normalizeToolChoice(toolChoice, new Set(toolsByName.keys()));
     const supported = normalizeCapabilities(capabilities);
-    const safeApprovals = normalizeJson(approvals, "approvals");
-    if (!Array.isArray(safeApprovals)) throw new TypeError("approvals must be an array.");
     if (typeof parallelToolCalls !== "boolean") throw new TypeError("parallelToolCalls must be boolean.");
 
     const notRun = emptyCostLog("not-run");
@@ -417,7 +415,6 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
           tools: publicTools,
           toolChoice: providerToolChoice,
           parallelToolCalls,
-          approvals: safeApprovals,
           ...(priorResponseId ? { previousResponseId: priorResponseId } : {}),
         }, timeoutMs, signal, controller, "Model function-calling turn"));
         if (usedResponseIds.has(response.responseId)) {
@@ -459,7 +456,6 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
                 name: call.name,
                 arguments: call.arguments,
                 caller: Object.freeze({ type: "direct" }),
-                approvals: safeApprovals,
                 policy: Object.freeze({
                   riskClass: tool.riskClass,
                   idempotent: tool.idempotent,

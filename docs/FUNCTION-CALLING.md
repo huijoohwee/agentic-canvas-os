@@ -2,7 +2,7 @@
 title: "Function Calling Runtime Contract"
 graphId: "md:function-calling-runtime"
 doc_type: "Runtime Contract"
-date: "2026-07-18"
+date: "2026-07-19"
 lang: "en-US"
 schema: "function-calling-runtime-contract/v1"
 frontmatter_contract: "required"
@@ -25,13 +25,13 @@ The cited OpenAI guide informs the capability class only. The controller, canoni
 
 ## Concrete Dev Wiring
 
-`POST /api/function-call` is the authenticated application entry point. The caller supplies a bounded run id, prompt, selection mode, parallel preference, and approval references; it cannot submit function schemas, validators, provider credentials, endpoints, or policy metadata. The application registry currently exposes one independently authored function, `read_agentic_os_status`, only when that exact name appears in `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST`.
+`POST /api/function-call` is the authenticated application entry point. The caller supplies only a bounded run id, prompt, selection mode, and parallel preference; unknown fields, including caller-authored approval arrays, are rejected. The application registry currently exposes one independently authored function, `read_agentic_os_status`, only when that exact name appears in `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST`.
 
 The OpenAI adapter sends strict application declarations through the Responses protocol, preserves opaque reasoning items, continues by `previous_response_id`, correlates `function_call_output` with the original call id, and translates returned usage into the repository cost log. Its static instructions and stable function declarations precede changing prompt and tool-result content. Configuration fails closed unless the server supplies `OPENAI_FUNCTION_CALLING_MODEL`, the named API-key binding, and uncached-input, cached-input, cache-write, and output rates; source does not embed a provider pricing table, multiplier, or credential.
 
 Required and forced selections apply until the first valid gateway call completes. The continuation request then uses automatic selection so the provider can produce final output; the controller retains the original run-level requirement in evidence and still rejects a repeated forced call.
 
-The Knowgrph gateway maps the application name to the existing `knowgrph.os.status` MCP tool. It checks the allowlist, direct caller, immutable risk and idempotency metadata, exact arguments, approval policy, strict reduced output, and upstream zero-cost evidence before completion. Model-visible names never become arbitrary MCP dispatch authority. This first tool is read-only and zero-model; later mutating mappings must add an exact run-and-tool approval grant and retain Knowgrph's native gate.
+The Knowgrph gateway maps the application name to the existing `knowgrph.os.status` MCP tool. It checks the allowlist, direct caller, immutable risk and idempotency metadata, exact arguments, tool-input guardrail, strict reduced output, tool-output guardrail, and upstream zero-cost evidence before completion. Model-visible names never become arbitrary MCP dispatch authority. Application policy may mark this concrete path review-required: the gateway then pauses before MCP, accepts only an exact signed reviewer token, and executes once after the stored action matches. Later mutating mappings must retain their native Knowgrph gate as a separate authority.
 
 Readiness reports adapter key presence, pricing readiness, model, protocol, bounds, gateway allowlist, and counters without returning secrets. Configuration is not live proof: `providerExecutionStatus` remains `unverified` until a bounded provider run returns actual response identity, usage, function call, gateway result, continuation, and final output.
 
@@ -44,6 +44,9 @@ Readiness reports adapter key presence, pricing readiness, model, protocol, boun
 | `OPENAI_FUNCTION_CALLING_CACHE_WRITE_USD_PER_MILLION` | Current cache-write rate used only for returned usage estimation. |
 | `OPENAI_FUNCTION_CALLING_OUTPUT_USD_PER_MILLION` | Current output rate used only for returned usage estimation. |
 | `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST` | Exact comma-separated application function names enabled for this runtime. |
+| `KNOWGRPH_FUNCTION_REVIEW_REQUIRED` | Enabled function names that application policy pauses before gateway execution. |
+| `AGENT_REVIEW_JWT_SECRET` | Separate server-side key for exact-scoped reviewer evidence; never the session key. |
+| `AGENT_STATE` | Per-review and per-conversation Durable Object binding used by the Worker state adapters. |
 | `KNOWGRPH_MCP_ENDPOINT` | Existing Knowgrph MCP owner; no new proxy is introduced. |
 | `KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN` | Optional server-managed service credential for an authenticated MCP owner. |
 
@@ -59,9 +62,9 @@ Readiness reports adapter key presence, pricing readiness, model, protocol, boun
 
 ## Typed Contract
 
-`run` accepts a run id, JSON-compatible input, explicit capabilities, current tool records, a selection policy, a parallel-call preference, approval references, and an optional abort signal. Approval references reach both adapters, but neither authentication nor reference presence grants an action. Every tool has one globally unique name, an independently authored description, strict object parameters, a strict output schema, direct-caller policy, risk and approval metadata, and executable argument and output validators.
+`run` accepts a run id, JSON-compatible input, explicit capabilities, current tool records, a selection policy, a parallel-call preference, and an optional abort signal. Review evidence enters only the review-resolution owner; it is never model input or a generic Function Calling request field. Every tool has one globally unique name, an independently authored description, strict object parameters, a strict output schema, direct-caller policy, risk and review metadata, and executable argument and output validators.
 
-Only the provider-facing function fields leave the controller. Risk, approvals, validators, output schemas, and owner metadata stay application-side. The adapter maps provider wire names and encoded arguments into the canonical camel-case items used here.
+Only the provider-facing function fields leave the controller. Risk, review state, validators, output schemas, and owner metadata stay application-side. The adapter maps provider wire names and encoded arguments into the canonical camel-case items used here.
 
 A normalized model turn contains a response id, completed status, actual cost log, and typed items. Supported active-loop items are opaque reasoning, function calls, and one final message. A function call contains a unique call id, exact tool name, and JSON arguments. The gateway result becomes a `function_call_output` with that same call id. Reasoning items returned beside calls are passed into the next turn with the correlated outputs and previous response id, but are neither persisted nor returned in the completed result.
 
@@ -91,14 +94,14 @@ Parallel calls require both an explicit request and adapter capability. Disablin
 
 | Stage | Input | Output | Stop condition |
 |---|---|---|---|
-| Validate | Run, capabilities, strict tools, choice, approvals | Immutable request or typed rejection | Missing adapter, gateway, continuation, reasoning replay, or requested parallel capability blocks before spend. |
+| Validate | Run, capabilities, strict tools, and choice | Immutable request or typed rejection | Unknown request fields, missing adapter, gateway, continuation, reasoning replay, or requested parallel capability block before spend. |
 | Advance | Initial request or previous response plus reasoning and correlated outputs | Provider-normalized turn and actual model cost | Incomplete, malformed, cost-unreported, replayed, or unsupported items block. |
 | Select | Function calls and choice policy | Eligible exact tool records | Unknown, direct-disabled, disallowed-subset, forced-name, or parallel violation blocks. |
-| Execute | Validated arguments, direct caller identity, approvals, policy metadata | Gateway envelope with typed output and cost | Gateway denial, missing approval, invalid arguments or output, timeout, or size overflow blocks. |
+| Execute | Validated arguments, direct caller identity, and policy metadata | Gateway envelope with typed output and cost | Tool guardrail denial, required-review pause, reviewer failure, invalid arguments or output, timeout, or size overflow blocks. |
 | Continue | Previous response id, reasoning items, and same-id outputs | Next model turn | Turn, call, duplicate-id, abort, or timeout limit blocks. |
 | Finalize | One final message after required calls | Final output, compact evidence, and separate costs | No reasoning or intermediate payload is returned. |
 
-The gateway envelope may complete or return a typed policy block. A block keeps its reason and returned cost evidence; the controller never converts it into a synthetic tool result or retries it automatically.
+The gateway envelope may complete or return a typed policy block. A block keeps its reason and returned cost evidence; the controller never converts it into a synthetic tool result or retries it automatically. The direct HTTP controller does not preserve a provider response chain across a long human-review delay; that continuation requires a manager-owned durable state surface before it can be claimed runtime-ready.
 
 ## Bounds And Cost Evidence
 
@@ -113,6 +116,8 @@ Every attempted model turn and gateway execution must return the repository cost
 - Given a strict direct function, when the adapter returns reasoning plus one call, then the gateway receives the exact call identity, the next turn receives that reasoning plus a same-id output and previous response id, and the completed result excludes reasoning and intermediate payloads.
 - Given automatic, required, none, forced, or allowed selection, when a response violates the selected policy, then the controller blocks before an unauthorized gateway action.
 - Given parallel output, missing capabilities, lax schemas, unknown or repeated calls, invalid arguments or outputs, approval denial, excess bounds, abort, or timeout, when the controller evaluates the run, then it returns typed evidence with honest model and gateway cost states.
+- Given a caller-authored approval array, when the HTTP boundary validates it, then the field is rejected before model or gateway execution.
+- Given application policy requiring review on the concrete status function, when exact signed reviewer evidence resolves its stored action, then input and output guardrails bracket the sole MCP call and replay cannot execute it again.
 - Given an unconfigured Worker, when readiness is read, then contract, adapter, gateway, and bounds remain visible without a secret value or live-provider claim.
 - Given configured offline transports, when OpenAI returns reasoning plus a strict function call, then the application calls only `knowgrph.os.status`, replays the opaque reasoning and same-id output with the prior response id, and returns final text plus actual model usage and zero-cost gateway evidence.
 

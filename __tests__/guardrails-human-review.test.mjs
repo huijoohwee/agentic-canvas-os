@@ -15,6 +15,17 @@ const COST = Object.freeze({
   cache_hits: 0,
   estimated_cost_usd: 0,
 });
+const REVIEWER_EVIDENCE = Object.freeze({ token: "signed-review-evidence" });
+
+function authenticateReviewer({ evidence }) {
+  if (evidence?.token !== REVIEWER_EVIDENCE.token) return { authenticated: false };
+  return {
+    authenticated: true,
+    subjectId: "operator-1",
+    evidenceId: "review-token-1",
+    assurance: "signed-review-token",
+  };
+}
 
 function validation(overrides = {}) {
   return {
@@ -106,8 +117,12 @@ test("fails closed for rejected, missing, malformed, and tool-adjacent guardrail
   );
 });
 
-test("pauses sensitive actions and consumes an approval exactly once", async () => {
-  const runtime = createGuardrailsHumanReviewRuntime({ createReviewId: () => "review-1", now: () => 100 });
+test("pauses sensitive actions and consumes an authenticated approval exactly once", async () => {
+  const runtime = createGuardrailsHumanReviewRuntime({
+    authenticateReviewer,
+    createReviewId: () => "review-1",
+    now: () => 100,
+  });
   const paused = await runtime.requestReview(review());
 
   assert.equal(paused.status, "paused");
@@ -120,7 +135,7 @@ test("pauses sensitive actions and consumes an approval exactly once", async () 
     resolution: {
       reviewId: "review-1",
       decision: "approve",
-      reviewerId: "operator-1",
+      reviewerEvidence: REVIEWER_EVIDENCE,
       reason: "Confirmed with the customer.",
     },
   });
@@ -128,10 +143,13 @@ test("pauses sensitive actions and consumes an approval exactly once", async () 
   assert.equal(approved.edited, false);
   assert.deepEqual(approved.action.payload, { orderId: 123 });
   assert.equal(approved.audit.decision, "approve");
+  assert.equal(approved.audit.reviewerSubjectId, "operator-1");
+  assert.equal(approved.audit.reviewerAssurance, "signed-review-token");
+  assert.equal(JSON.stringify(approved).includes(REVIEWER_EVIDENCE.token), false);
 
   const replay = await runtime.resolveReview({
     state: paused.resumeState,
-    resolution: { reviewId: "review-1", decision: "approve", reviewerId: "operator-1" },
+    resolution: { reviewId: "review-1", decision: "approve", reviewerEvidence: REVIEWER_EVIDENCE },
   });
   assert.equal(replay.reasonCode, "review_missing_or_consumed");
   assert.equal(runtime.stats().approvedReviews, 1);
@@ -142,6 +160,7 @@ test("supports reject, edit with revalidation, expiry, and bounded store capacit
   let sequence = 0;
   let currentTime = 100;
   const runtime = createGuardrailsHumanReviewRuntime({
+    authenticateReviewer,
     createReviewId: () => `review-${++sequence}`,
     now: () => currentTime,
     reviewTtlMs: 10,
@@ -149,7 +168,7 @@ test("supports reject, edit with revalidation, expiry, and bounded store capacit
   const rejectedPause = await runtime.requestReview(review());
   const rejected = await runtime.resolveReview({
     state: rejectedPause.resumeState,
-    resolution: { reviewId: "review-1", decision: "reject", reviewerId: "operator-1" },
+    resolution: { reviewId: "review-1", decision: "reject", reviewerEvidence: REVIEWER_EVIDENCE },
   });
   assert.equal(rejected.status, "rejected");
 
@@ -159,7 +178,7 @@ test("supports reject, edit with revalidation, expiry, and bounded store capacit
     resolution: {
       reviewId: "review-2",
       decision: "edit",
-      reviewerId: "operator-1",
+      reviewerEvidence: REVIEWER_EVIDENCE,
       editedPayload: { orderId: 456 },
     },
   });
@@ -171,7 +190,7 @@ test("supports reject, edit with revalidation, expiry, and bounded store capacit
   currentTime = 111;
   const expired = await runtime.resolveReview({
     state: expiredPause.resumeState,
-    resolution: { reviewId: "review-3", decision: "approve", reviewerId: "operator-1" },
+    resolution: { reviewId: "review-3", decision: "approve", reviewerEvidence: REVIEWER_EVIDENCE },
   });
   assert.equal(expired.reasonCode, "review_expired");
 
@@ -185,7 +204,7 @@ test("supports reject, edit with revalidation, expiry, and bounded store capacit
 });
 
 test("uses the Running Agents interruption to resume the same streamed or ordinary turn", async () => {
-  const reviews = createGuardrailsHumanReviewRuntime({ createReviewId: () => "review-running" });
+  const reviews = createGuardrailsHumanReviewRuntime({ authenticateReviewer, createReviewId: () => "review-running" });
   const adapterCalls = [];
   const runningAgents = createRunningAgentRuntime({
     createResumeToken: () => "resume-running",
@@ -224,11 +243,39 @@ test("uses the Running Agents interruption to resume the same streamed or ordina
     resolution: {
       reviewId: "review-running",
       decision: "approve",
-      reviewerId: "operator-1",
+      reviewerEvidence: REVIEWER_EVIDENCE,
     },
   });
   assert.equal(completed.status, "completed");
   assert.equal(completed.turn, 1);
   assert.deepEqual(completed.output, { executed: true, orderId: 123 });
   assert.equal(adapterCalls.length, 2);
+});
+
+test("rejects unauthenticated reviewer evidence without consuming the pending review", async () => {
+  const runtime = createGuardrailsHumanReviewRuntime({
+    authenticateReviewer,
+    createReviewId: () => "review-auth",
+  });
+  const paused = await runtime.requestReview(review());
+  const rejected = await runtime.resolveReview({
+    state: paused.resumeState,
+    resolution: {
+      reviewId: "review-auth",
+      decision: "approve",
+      reviewerEvidence: { token: "forged" },
+    },
+  });
+  assert.equal(rejected.reasonCode, "reviewer_unauthenticated");
+
+  const approved = await runtime.resolveReview({
+    state: paused.resumeState,
+    resolution: {
+      reviewId: "review-auth",
+      decision: "approve",
+      reviewerEvidence: REVIEWER_EVIDENCE,
+    },
+  });
+  assert.equal(approved.status, "approved");
+  assert.equal(runtime.stats().authenticatedReviews, 1);
 });

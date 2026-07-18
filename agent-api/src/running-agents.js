@@ -11,13 +11,43 @@ import {
   defaultResumeToken,
   normalizeAdapterResponse,
   normalizeBoundedJson,
+  normalizeCostLog,
   normalizeContinuation,
   withDeadline,
 } from "./running-agent-contract.js";
 
+const DEFAULT_PAUSED_TURN_TTL_MS = 86_400_000;
+const DEFAULT_PAUSED_TURN_CLAIM_TTL_MS = 60_000;
+const DEFAULT_MAX_PAUSED_TURN_CHARS = 450_000;
+const PAUSED_TURN_SCHEMA = "running-agent-paused-turn/v1";
+
+function assertOwner(value, methods, field) {
+  if (value === undefined) return;
+  if (!value || typeof value !== "object") throw new TypeError(`${field} must be an object when provided.`);
+  for (const method of methods) {
+    if (typeof value[method] !== "function") throw new TypeError(`${field}.${method} must be a function.`);
+  }
+}
+
+function assertNonNegativeInteger(value, field) {
+  if (!Number.isInteger(value) || value < 0) throw new TypeError(`${field} must be a non-negative integer.`);
+  return value;
+}
+
+function exactKeys(value, keys) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).sort().join("\0") === [...keys].sort().join("\0");
+}
+
 export function createRunningAgentRuntime({
   advanceAgent,
   createResumeToken = defaultResumeToken,
+  createClaimId = defaultResumeToken,
+  pausedTurnStore,
+  now = Date.now,
+  pausedTurnTtlMs = DEFAULT_PAUSED_TURN_TTL_MS,
+  pausedTurnClaimTtlMs = DEFAULT_PAUSED_TURN_CLAIM_TTL_MS,
+  maxPausedTurnChars = DEFAULT_MAX_PAUSED_TURN_CHARS,
   maxSteps = RUNNING_AGENT_DEFAULTS.maxSteps,
   maxHistoryItems = RUNNING_AGENT_DEFAULTS.maxHistoryItems,
   maxInputChars = RUNNING_AGENT_DEFAULTS.maxInputChars,
@@ -38,9 +68,15 @@ export function createRunningAgentRuntime({
     maxEvents,
     maxConversations,
     timeoutMs,
+    pausedTurnTtlMs,
+    pausedTurnClaimTtlMs,
+    maxPausedTurnChars,
   };
   for (const [field, value] of Object.entries(limits)) assertPositiveInteger(value, field);
   if (typeof createResumeToken !== "function") throw new TypeError("createResumeToken must be a function.");
+  if (typeof createClaimId !== "function") throw new TypeError("createClaimId must be a function.");
+  if (typeof now !== "function") throw new TypeError("now must be a function.");
+  assertOwner(pausedTurnStore, ["put", "get", "claim", "commit", "release", "replace", "delete"], "pausedTurnStore");
 
   const adapterConfigured = typeof advanceAgent === "function";
   const conversations = new Map();
@@ -52,6 +88,86 @@ export function createRunningAgentRuntime({
   let resumedTurns = 0;
   let adapterSteps = 0;
   let loopEvents = 0;
+
+  function pausedTurnSnapshot(context, paused) {
+    const createdAt = now();
+    if (!Number.isFinite(createdAt)) throw new RunningAgentBlock("paused_state_invalid", "Paused-turn clock is invalid.");
+    return normalizeBoundedJson({
+      schema: PAUSED_TURN_SCHEMA,
+      runId: context.runId,
+      conversationId: context.conversationId,
+      resumeToken: paused.resumeToken,
+      resumeState: paused.resumeState,
+      interruptions: paused.interruptions,
+      expiresAt: createdAt + pausedTurnTtlMs,
+      context: {
+        agent: context.agent,
+        input: context.input,
+        continuation: context.continuation,
+        turn: context.turn,
+        step: context.step,
+        attemptedSteps: context.attemptedSteps,
+        emittedEvents: context.emittedEvents,
+        transitions: context.transitions,
+        agents: [...context.agents],
+        costLogs: context.costLogs,
+      },
+    }, "pausedTurn", maxPausedTurnChars);
+  }
+
+  function restorePausedTurn(value) {
+    const paused = normalizeBoundedJson(value, "pausedTurn", maxPausedTurnChars);
+    if (!exactKeys(paused, ["schema", "runId", "conversationId", "resumeToken", "resumeState", "interruptions", "expiresAt", "context"])
+      || paused.schema !== PAUSED_TURN_SCHEMA) {
+      throw new RunningAgentBlock("paused_state_invalid", "Paused-turn state schema is invalid.");
+    }
+    const currentTime = now();
+    if (!Number.isFinite(currentTime) || !Number.isFinite(paused.expiresAt) || paused.expiresAt <= currentTime) {
+      throw new RunningAgentBlock("paused_state_expired", "Paused-turn state has expired.");
+    }
+    const context = paused.context;
+    if (!exactKeys(context, ["agent", "input", "continuation", "turn", "step", "attemptedSteps", "emittedEvents", "transitions", "agents", "costLogs"])) {
+      throw new RunningAgentBlock("paused_state_invalid", "Paused-turn execution context is invalid.");
+    }
+    if (!exactKeys(context.transitions, ["model", "tool", "handoff"])) {
+      throw new RunningAgentBlock("paused_state_invalid", "Paused-turn transition evidence is invalid.");
+    }
+    const agents = Array.isArray(context.agents)
+      ? context.agents.map((agent, index) => assertIdentifier(agent, `pausedTurn.context.agents[${index}]`))
+      : null;
+    if (!agents || agents.length === 0 || !Array.isArray(context.costLogs)) {
+      throw new RunningAgentBlock("paused_state_invalid", "Paused-turn evidence is invalid.");
+    }
+    return {
+      runId: assertIdentifier(paused.runId, "pausedTurn.runId"),
+      conversationId: assertIdentifier(paused.conversationId, "pausedTurn.conversationId"),
+      resumeToken: assertIdentifier(paused.resumeToken, "pausedTurn.resumeToken"),
+      resumeState: paused.resumeState,
+      interruptions: paused.interruptions,
+      expiresAt: paused.expiresAt,
+      context: {
+        runId: paused.runId,
+        conversationId: paused.conversationId,
+        agent: assertIdentifier(context.agent, "pausedTurn.context.agent"),
+        input: normalizeBoundedJson(context.input, "pausedTurn.context.input", maxInputChars),
+        continuation: normalizeContinuation(context.continuation, maxHistoryItems, maxStateChars),
+        turn: assertPositiveInteger(context.turn, "pausedTurn.context.turn"),
+        step: assertPositiveInteger(context.step, "pausedTurn.context.step"),
+        attemptedSteps: assertPositiveInteger(context.attemptedSteps, "pausedTurn.context.attemptedSteps"),
+        emittedEvents: assertNonNegativeInteger(context.emittedEvents, "pausedTurn.context.emittedEvents"),
+        transitions: {
+          model: assertNonNegativeInteger(context.transitions.model, "pausedTurn.context.transitions.model"),
+          tool: assertNonNegativeInteger(context.transitions.tool, "pausedTurn.context.transitions.tool"),
+          handoff: assertNonNegativeInteger(context.transitions.handoff, "pausedTurn.context.transitions.handoff"),
+        },
+        agents: new Set(agents),
+        costLogs: context.costLogs.map((costLog) => normalizeCostLog(costLog)),
+        isResume: true,
+        resume: undefined,
+        acceptingEvents: false,
+      },
+    };
+  }
 
   function touchConversation(conversationId, record) {
     conversations.delete(conversationId);
@@ -148,12 +264,13 @@ export function createRunningAgentRuntime({
     });
   }
 
-  async function drive(context, record, signal, channel) {
+  async function drive(context, record, signal, channel, durableClaim) {
     const controller = new AbortController();
     const emitter = createEmitter(context, channel);
     activeRunIds.add(context.runId);
     record.status = "active";
     context.acceptingEvents = true;
+    let durableClaimSettled = false;
     touchConversation(context.conversationId, record);
     emitter.runtime(context.isResume ? "turn_resumed" : "turn_started", {
       agent: context.agent,
@@ -203,6 +320,10 @@ export function createRunningAgentRuntime({
         record.continuation = response.continuation;
 
         if (response.status === "completed") {
+          if (durableClaim && await pausedTurnStore.commit(context.conversationId, durableClaim.claimId) !== true) {
+            throw new RunningAgentBlock("paused_state_commit_failed", "Paused-turn recovery could not be committed.");
+          }
+          durableClaimSettled = Boolean(durableClaim);
           record.status = "idle";
           record.turn = context.turn;
           record.paused = null;
@@ -221,15 +342,29 @@ export function createRunningAgentRuntime({
               `Resume-token generation failed: ${error instanceof Error ? error.message : String(error)}`,
             );
           }
-          record.status = "paused";
-          record.turn = context.turn;
-          record.paused = {
+          const paused = {
             runId: context.runId,
             resumeToken,
             resumeState: response.resumeState,
             interruptions: response.interruptions,
             context,
           };
+          if (context.emittedEvents >= maxEvents) {
+            throw new RunningAgentBlock("stream_event_limit", `Agent turn exceeds ${maxEvents} events.`);
+          }
+          if (pausedTurnStore) {
+            const snapshot = pausedTurnSnapshot(context, paused);
+            const stored = durableClaim
+              ? await pausedTurnStore.replace(context.conversationId, durableClaim.claimId, snapshot)
+              : await pausedTurnStore.put(snapshot);
+            if (stored !== true) {
+              throw new RunningAgentBlock("paused_state_conflict", "Paused-turn state could not be stored atomically.");
+            }
+            durableClaimSettled = Boolean(durableClaim);
+          }
+          record.status = "paused";
+          record.turn = context.turn;
+          record.paused = paused;
           pausedTurns += 1;
           emitter.runtime("turn_paused", { interruptionCount: response.interruptions.length });
           return Object.freeze({
@@ -249,6 +384,13 @@ export function createRunningAgentRuntime({
       }
       throw new RunningAgentBlock("step_limit", `Agent turn exceeds ${maxSteps} steps.`);
     } catch (error) {
+      if (durableClaim && !durableClaimSettled) {
+        try {
+          await pausedTurnStore.release(context.conversationId, durableClaim.claimId);
+        } catch {
+          // Preserve the original bounded failure; the claim expires independently.
+        }
+      }
       const reasonCode = error instanceof RunningAgentBlock ? error.reasonCode : "runtime_failed";
       const message = error instanceof Error ? error.message : String(error);
       record.status = "blocked";
@@ -323,6 +465,17 @@ export function createRunningAgentRuntime({
       blockedTurns += 1;
       return blockedResult(emptyContext, "recover", "conversation_blocked", "Clear the blocked conversation before starting another turn.");
     }
+    if (!record && pausedTurnStore) {
+      try {
+        if (await pausedTurnStore.get(safe.conversationId)) {
+          blockedTurns += 1;
+          return blockedResult(emptyContext, "resume", "conversation_paused", "Resume or clear the paused turn before starting another.");
+        }
+      } catch {
+        blockedTurns += 1;
+        return blockedResult(emptyContext, "resume", "paused_state_unavailable", "Paused-turn state could not be checked.");
+      }
+    }
     if (record && !continuationMatches(record.continuation, safe.continuation)) {
       blockedTurns += 1;
       return blockedResult(emptyContext, "continuation", "continuation_mismatch", "Continuation strategy or state changed for this conversation.");
@@ -348,20 +501,47 @@ export function createRunningAgentRuntime({
     const conversationId = assertIdentifier(request.conversationId, "conversationId");
     const resumeToken = assertIdentifier(request.resumeToken, "resumeToken");
     const resolution = normalizeBoundedJson(request.resolution, "resolution", maxStateChars);
-    const record = conversations.get(conversationId);
-    if (!record || record.status !== "paused" || !record.paused) {
+    let record = conversations.get(conversationId);
+    let paused = record?.status === "paused" ? record.paused : null;
+    let durableClaim;
+    if (pausedTurnStore) {
+      if (record?.status === "active") throw new TypeError("The paused turn is already being resumed.");
+      const claimId = assertIdentifier(createClaimId(), "claimId");
+      const claimedAt = now();
+      if (!Number.isFinite(claimedAt)) throw new TypeError("now must return a finite timestamp.");
+      const stored = await pausedTurnStore.claim(conversationId, claimId, claimedAt + pausedTurnClaimTtlMs);
+      if (!stored) throw new TypeError("The conversation has no resumable paused turn.");
+      try {
+        paused = restorePausedTurn(stored);
+        if (paused.runId !== runId || paused.resumeToken !== resumeToken || paused.conversationId !== conversationId) {
+          throw new TypeError("Resume identity or token does not match the paused turn.");
+        }
+      } catch (error) {
+        await pausedTurnStore.release(conversationId, claimId);
+        throw error;
+      }
+      durableClaim = { claimId };
+      record = {
+        status: "paused",
+        turn: paused.context.turn,
+        continuation: paused.context.continuation,
+        paused,
+      };
+      conversations.set(conversationId, record);
+    }
+    if (!paused || !record || record.status !== "paused") {
       throw new TypeError("The conversation has no paused turn to resume.");
     }
-    if (record.paused.runId !== runId || record.paused.resumeToken !== resumeToken) {
+    if (paused.runId !== runId || paused.resumeToken !== resumeToken) {
       throw new TypeError("Resume identity or token does not match the paused turn.");
     }
-    const context = record.paused.context;
+    const context = paused.context;
     context.isResume = true;
-    context.resume = Object.freeze({ state: record.paused.resumeState, resolution });
+    context.resume = Object.freeze({ state: paused.resumeState, resolution });
     context.step += 1;
     record.paused = null;
     resumedTurns += 1;
-    return drive(context, record, request.signal, channel);
+    return drive(context, record, request.signal, channel, durableClaim);
   }
 
   function streamOperation(operation, request) {
@@ -386,15 +566,17 @@ export function createRunningAgentRuntime({
     resume: (request) => resume(request),
     stream: (request) => streamOperation(start, request),
     resumeStream: (request) => streamOperation(resume, request),
-    clearConversation(conversationId) {
+    async clearConversation(conversationId) {
       const safeConversationId = assertIdentifier(conversationId, "conversationId");
       const record = conversations.get(safeConversationId);
-      if (!record) return false;
-      if (record.status === "active") throw new TypeError("An active conversation cannot be cleared.");
-      return conversations.delete(safeConversationId);
+      if (record?.status === "active") throw new TypeError("An active conversation cannot be cleared.");
+      const deletedLocal = conversations.delete(safeConversationId);
+      const deletedDurable = pausedTurnStore ? await pausedTurnStore.delete(safeConversationId) : false;
+      return deletedLocal || deletedDurable;
     },
     stats: () => Object.freeze({
       adapterConfigured,
+      pausedTurnStoreConfigured: Boolean(pausedTurnStore),
       continuationStrategies: Object.freeze([...CONTINUATION_STRATEGIES]),
       activeRuns: activeRunIds.size,
       conversations: conversations.size,
@@ -407,6 +589,7 @@ export function createRunningAgentRuntime({
       adapterSteps,
       loopEvents,
       ...limits,
+      ...(typeof pausedTurnStore?.stats === "function" ? pausedTurnStore.stats() : { persistence: "isolate-memory" }),
     }),
   });
 }

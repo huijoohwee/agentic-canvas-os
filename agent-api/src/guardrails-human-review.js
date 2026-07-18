@@ -200,7 +200,7 @@ function normalizeStoredReview(value, maxValueChars) {
 }
 
 function normalizeResolution(value, maxValueChars) {
-  assertExactKeys(value, ["reviewId", "decision", "reviewerId", "reason", "editedPayload"], "resolution");
+  assertExactKeys(value, ["reviewId", "decision", "reviewerEvidence", "reason", "editedPayload"], "resolution");
   if (!REVIEW_DECISIONS.has(value.decision)) throw new TypeError("resolution.decision is unsupported.");
   if (value.decision === "edit" && value.editedPayload === undefined) {
     throw new TypeError("resolution.editedPayload is required for an edit decision.");
@@ -211,11 +211,22 @@ function normalizeResolution(value, maxValueChars) {
   return Object.freeze({
     reviewId: assertIdentifier(value.reviewId, "resolution.reviewId"),
     decision: value.decision,
-    reviewerId: assertIdentifier(value.reviewerId, "resolution.reviewerId"),
+    reviewerEvidence: normalizeBoundedJson(value.reviewerEvidence, "resolution.reviewerEvidence", maxValueChars),
     ...(value.reason === undefined ? {} : { reason: assertText(value.reason, "resolution.reason") }),
     ...(value.editedPayload === undefined
       ? {}
       : { editedPayload: normalizeBoundedJson(value.editedPayload, "resolution.editedPayload", maxValueChars) }),
+  });
+}
+
+function normalizeReviewerAuthentication(value) {
+  assertExactKeys(value, ["authenticated", "subjectId", "evidenceId", "assurance"], "reviewerAuthentication");
+  if (value.authenticated !== true) return Object.freeze({ authenticated: false });
+  return Object.freeze({
+    authenticated: true,
+    subjectId: assertIdentifier(value.subjectId, "reviewerAuthentication.subjectId"),
+    evidenceId: assertIdentifier(value.evidenceId, "reviewerAuthentication.evidenceId"),
+    assurance: assertIdentifier(value.assurance, "reviewerAuthentication.assurance"),
   });
 }
 
@@ -241,6 +252,7 @@ export function createMemoryHumanReviewStore({ maxPendingReviews = DEFAULT_MAX_P
 
 export function createGuardrailsHumanReviewRuntime({
   evaluateGuardrail,
+  authenticateReviewer,
   reviewStore = createMemoryHumanReviewStore(),
   createReviewId = randomUUID,
   now = Date.now,
@@ -250,6 +262,9 @@ export function createGuardrailsHumanReviewRuntime({
 } = {}) {
   if (evaluateGuardrail !== undefined && typeof evaluateGuardrail !== "function") {
     throw new TypeError("evaluateGuardrail must be a function when provided.");
+  }
+  if (authenticateReviewer !== undefined && typeof authenticateReviewer !== "function") {
+    throw new TypeError("authenticateReviewer must be a function when provided.");
   }
   assertOwner(reviewStore, ["put", "take"], "reviewStore");
   if (typeof createReviewId !== "function") throw new TypeError("createReviewId must be a function.");
@@ -268,6 +283,7 @@ export function createGuardrailsHumanReviewRuntime({
   let rejectedReviews = 0;
   let editedReviews = 0;
   let blockedReviews = 0;
+  let authenticatedReviews = 0;
 
   async function validate(value = {}) {
     const request = normalizeValidationRequest(value, limits);
@@ -365,6 +381,26 @@ export function createGuardrailsHumanReviewRuntime({
       blockedReviews += 1;
       return Object.freeze({ status: "blocked", reasonCode: "review_identity_mismatch" });
     }
+    if (typeof authenticateReviewer !== "function") {
+      blockedReviews += 1;
+      return Object.freeze({ status: "blocked", reasonCode: "reviewer_authenticator_unconfigured" });
+    }
+    let reviewer;
+    try {
+      reviewer = normalizeReviewerAuthentication(await authenticateReviewer(Object.freeze({
+        state: safeState,
+        reviewId: safeResolution.reviewId,
+        evidence: safeResolution.reviewerEvidence,
+      })));
+    } catch {
+      blockedReviews += 1;
+      return Object.freeze({ status: "blocked", reasonCode: "reviewer_authentication_failed" });
+    }
+    if (!reviewer.authenticated) {
+      blockedReviews += 1;
+      return Object.freeze({ status: "blocked", reasonCode: "reviewer_unauthenticated" });
+    }
+    authenticatedReviews += 1;
     const storedRecord = await reviewStore.take(safeState.reviewId);
     if (!storedRecord) {
       blockedReviews += 1;
@@ -397,7 +433,9 @@ export function createGuardrailsHumanReviewRuntime({
       conversationId: record.conversationId,
       actionId: record.action.actionId,
       decision: safeResolution.decision,
-      reviewerId: safeResolution.reviewerId,
+      reviewerSubjectId: reviewer.subjectId,
+      reviewerEvidenceId: reviewer.evidenceId,
+      reviewerAssurance: reviewer.assurance,
       decidedAt,
       ...(safeResolution.reason === undefined ? {} : { reason: safeResolution.reason }),
     });
@@ -418,6 +456,7 @@ export function createGuardrailsHumanReviewRuntime({
     const storeStats = typeof reviewStore.stats === "function" ? reviewStore.stats() : {};
     return Object.freeze({
       guardrailEvaluatorConfigured: typeof evaluateGuardrail === "function",
+      reviewerAuthenticatorConfigured: typeof authenticateReviewer === "function",
       reviewStoreConfigured: true,
       automaticStages: Object.freeze([...GUARDRAIL_STAGES]),
       reviewDecisions: Object.freeze([...REVIEW_DECISIONS]),
@@ -429,6 +468,7 @@ export function createGuardrailsHumanReviewRuntime({
       approvedReviews,
       rejectedReviews,
       editedReviews,
+      authenticatedReviews,
       blockedReviews,
       ...storeStats,
       ...limits,

@@ -2,8 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import { mintReviewerToken, verifyReviewerToken } from "../agent-api/src/auth.js";
+import { createGuardrailsHumanReviewRuntime } from "../agent-api/src/guardrails-human-review.js";
 import {
   createKnowgrphFunctionGateway,
+  createKnowgrphGuardrailEvaluator,
   KNOWGRPH_FUNCTION_TOOL_NAMES,
 } from "../agent-api/src/knowgrph-function-gateway.js";
 import {
@@ -147,6 +150,9 @@ test("OpenAI adapter redacts provider bodies and configuration fails closed with
 
 test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", async () => {
   let calls = 0;
+  const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
+    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+  });
   const gateway = createKnowgrphFunctionGateway({
     allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
     mcpClient: {
@@ -167,6 +173,7 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
         };
       },
     },
+    guardrailsHumanReview,
   });
   const base = {
     runId: "run-a",
@@ -174,7 +181,6 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
     name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
     arguments: { view: "capabilities" },
     caller: { type: "direct" },
-    approvals: [],
     policy: { riskClass: "read-only", idempotent: true, approvalRequired: false },
   };
   const mismatch = await gateway.callTool({ ...base, policy: { ...base.policy, riskClass: "mutation" } });
@@ -187,6 +193,8 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
   assert.deepEqual(completed.output.entry_ids, ["knowgrph.os.status"]);
   assert.equal(completed.costLog.estimated_cost_usd, 0);
   assert.equal(calls, 1);
+  assert.equal(gateway.stats().inputGuardrailChecks, 1);
+  assert.equal(gateway.stats().outputGuardrailChecks, 1);
 
   const nonzeroGateway = createKnowgrphFunctionGateway({
     allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
@@ -205,10 +213,89 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
         },
       }),
     },
+    guardrailsHumanReview,
   });
   const rejectedCost = await nonzeroGateway.callTool(base);
   assert.equal(rejectedCost.status, "blocked");
   assert.equal(rejectedCost.reasonCode, "tool_output_invalid");
+});
+
+test("Knowgrph gateway resumes a review-required status call with exact signed reviewer evidence", async () => {
+  const reviewSecret = "review-secret";
+  let mcpCalls = 0;
+  const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
+    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    createReviewId: () => "status-review-1",
+    authenticateReviewer: async ({ state, evidence }) => {
+      const verdict = verifyReviewerToken(evidence?.token, reviewSecret, state);
+      return verdict.valid
+        ? {
+          authenticated: true,
+          subjectId: verdict.claims.sub,
+          evidenceId: verdict.claims.jti,
+          assurance: "signed-review-token",
+        }
+        : { authenticated: false };
+    },
+  });
+  const gateway = createKnowgrphFunctionGateway({
+    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
+    reviewRequiredToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
+    guardrailsHumanReview,
+    mcpClient: {
+      callTool: async () => {
+        mcpCalls += 1;
+        return {
+          ok: true,
+          view: "capabilities",
+          entries: [{ toolId: "knowgrph.os.status" }],
+          unavailableSources: [],
+          cost_log: {
+            model: "none",
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            cache_hits: 0,
+            estimated_cost_usd: 0,
+          },
+        };
+      },
+    },
+  });
+  const call = {
+    runId: "reviewed-run",
+    conversationId: "reviewed-conversation",
+    callId: "reviewed-call",
+    name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
+    arguments: { view: "capabilities" },
+    caller: { type: "direct" },
+    policy: { riskClass: "read-only", idempotent: true, approvalRequired: true },
+  };
+
+  const paused = await gateway.callTool(call);
+  assert.equal(paused.status, "paused");
+  assert.equal(mcpCalls, 0);
+  const reviewerToken = mintReviewerToken({
+    secret: reviewSecret,
+    subject: "operator-1",
+    ...paused.resumeState,
+  });
+  const completed = await gateway.callTool({
+    ...call,
+    review: {
+      state: paused.resumeState,
+      resolution: {
+        reviewId: paused.resumeState.reviewId,
+        decision: "approve",
+        reviewerEvidence: { token: reviewerToken },
+      },
+    },
+  });
+  assert.equal(completed.status, "completed");
+  assert.deepEqual(completed.output.entry_ids, ["knowgrph.os.status"]);
+  assert.equal(mcpCalls, 1);
+  assert.deepEqual(gateway.stats().reviewRequiredToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.status]);
+  assert.equal(gateway.stats().reviewPauses, 1);
+  assert.equal(gateway.stats().reviewResolutions, 1);
 });
 
 test("Agent API completes one authenticated OpenAI and Knowgrph function loop without exposing keys", async () => {
@@ -300,6 +387,17 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
   assert.equal(openAiBodies[1].tool_choice, "auto");
   assert.equal(JSON.stringify(result.body).includes("sealed-a"), false);
   assert.equal(JSON.stringify(result.body).includes("openai-secret"), false);
+
+  const spoofedApproval = await app.functionCall({
+    headers: { authorization: `Bearer ${session.body.token}` },
+    body: {
+      runId: "spoofed-approval",
+      prompt: "Read status.",
+      approvals: [{ decision: "approve" }],
+    },
+  });
+  assert.equal(spoofedApproval.statusCode, 400);
+  assert.deepEqual(spoofedApproval.body.fields[0], { field: "approvals", reason: "unsupported field" });
 });
 
 test("function endpoint rejects unauthenticated and unconfigured calls before transport", async () => {

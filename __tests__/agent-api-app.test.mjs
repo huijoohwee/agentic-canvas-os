@@ -82,7 +82,8 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   ]);
   assert.deepEqual(app.readiness().guardrailsHumanReview.reviewDecisions, ["approve", "reject", "edit"]);
   assert.equal(app.readiness().guardrailsHumanReview.interruptionOwner, "running-agents-same-turn-state");
-  assert.equal(app.readiness().guardrailsHumanReview.reviewStatePolicy, "single-consume-bounded-expiry");
+  assert.equal(app.readiness().guardrailsHumanReview.reviewStatePolicy, "atomic-single-consume-bounded-expiry");
+  assert.equal(app.readiness().guardrailsHumanReview.reviewerEvidencePolicy, "purpose-scoped-signed-token");
   assert.equal(app.readiness().guardrailsHumanReview.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().agentOrchestration.contractReady, true);
   assert.equal(app.readiness().agentOrchestration.configured, false);
@@ -144,6 +145,8 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().runningAgents.loopOwner, "application-turn-controller");
   assert.equal(app.readiness().runningAgents.streamingOwner, "same-loop-event-channel");
   assert.equal(app.readiness().runningAgents.pauseSemantics, "resume-same-turn");
+  assert.equal(app.readiness().runningAgents.recoveryPolicy, "atomic-claim-resume-commit");
+  assert.equal(app.readiness().runningAgents.pausedTurnStoreConfigured, false);
   assert.equal(app.readiness().runningAgents.continuationPolicy, "one-strategy-per-conversation");
   assert.deepEqual(app.readiness().runningAgents.continuationStrategies, [
     "application-history",

@@ -123,11 +123,11 @@ export function createAgentRuntimeComposition({
     return JSON.stringify([conversationId, agentId]);
   }
 
-  function reserveConversation() {
+  async function reserveConversation() {
     if (conversations.size < maxConversations) return true;
     const evictable = [...conversations.entries()].find(([, record]) => !record.active);
     if (!evictable) return false;
-    runningAgents.clearConversation(evictable[1].internalConversationId);
+    await runningAgents.clearConversation(evictable[1].internalConversationId);
     conversations.delete(evictable[0]);
     return true;
   }
@@ -236,7 +236,7 @@ export function createAgentRuntimeComposition({
       key = conversationKey(externalConversationId, agentId);
       record = conversations.get(key);
       if (!record) {
-        if (!reserveConversation()) throw new TypeError("Agent runtime composition capacity is exhausted.");
+        if (!await reserveConversation()) throw new TypeError("Agent runtime composition capacity is exhausted.");
         const internalConversationId = `agent-runtime-${++identitySequence}`;
         record = {
           externalConversationId,
@@ -278,7 +278,7 @@ export function createAgentRuntimeComposition({
       });
       executionContexts.delete(record.internalConversationId);
       if (result.status !== "completed") {
-        runningAgents.clearConversation(record.internalConversationId);
+        await runningAgents.clearConversation(record.internalConversationId);
         conversations.delete(key);
         throw new TypeError("Running Agents did not complete the composed stage.");
       }
@@ -292,7 +292,7 @@ export function createAgentRuntimeComposition({
         value: result.output,
       });
       if (guardedOutput.status !== "passed") {
-        runningAgents.clearConversation(record.internalConversationId);
+        await runningAgents.clearConversation(record.internalConversationId);
         conversations.delete(key);
         throw new TypeError("Agent output guardrails blocked completion.");
       }
@@ -303,7 +303,7 @@ export function createAgentRuntimeComposition({
         output: guardedOutput.value,
       });
       if (validated.status !== "valid") {
-        runningAgents.clearConversation(record.internalConversationId);
+        await runningAgents.clearConversation(record.internalConversationId);
         conversations.delete(key);
         throw new TypeError("Agent output did not satisfy its definition.");
       }
@@ -325,12 +325,12 @@ export function createAgentRuntimeComposition({
     }
   }
 
-  function clearConversation(conversationId) {
+  async function clearConversation(conversationId) {
     const safeConversationId = assertIdentifier(conversationId, "conversationId");
     const matches = [...conversations.entries()].filter(([, record]) => record.externalConversationId === safeConversationId);
     if (matches.some(([, record]) => record.active)) throw new TypeError("An active conversation cannot be cleared.");
     for (const [key, record] of matches) {
-      runningAgents.clearConversation(record.internalConversationId);
+      await runningAgents.clearConversation(record.internalConversationId);
       conversations.delete(key);
     }
     return matches.length;

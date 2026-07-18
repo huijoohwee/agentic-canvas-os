@@ -2,16 +2,16 @@
 title: "Running Agents Runtime Contract"
 graphId: "md:running-agents-runtime"
 doc_type: "Runtime Contract"
-date: "2026-07-18"
+date: "2026-07-19"
 lang: "en-US"
 schema: "running-agents-runtime-contract/v1"
 frontmatter_contract: "required"
 status: "runtime-ready-dev"
 authority: "bounded application-turn lifecycle for Agentic Canvas OS"
 runtime_scope: "provider-neutral agent loop, continuation policy, pause and resume, and same-loop streaming"
-runtime_claim: "local controller is runtime-ready in Dev; previous-response continuation, handoff, and final settlement have bounded live proof while tools, pause, and streaming remain offline-only"
-runtime_owner: "../agent-api/src/running-agents.js; ../agent-api/src/running-agent-contract.js"
-runtime_proof: "../__tests__/running-agents.test.mjs"
+runtime_claim: "the controller and durable paused-turn recovery are runtime-ready in Dev; previous-response continuation, handoff, and final settlement have bounded live proof while pause recovery remains offline-only"
+runtime_owner: "../agent-api/src/running-agents.js; ../agent-api/src/running-agent-contract.js; ../agent-api/src/durable-object-state-store.js; ../worker/agent-state.js"
+runtime_proof: "../__tests__/running-agents.test.mjs; ../__tests__/durable-agent-state.test.mjs"
 external_pattern_source: "https://developers.openai.com/api/docs/guides/agents/running-agents; https://developers.openai.com/api/docs/guides/function-calling"
 external_source_policy: "concept reference only; forbid copied code, examples, prompts, schemas, event fixtures, tests, or prose"
 publish_policy: "Dev-only until explicit operator approval"
@@ -27,12 +27,12 @@ The cited OpenAI guides inform only the capability class. The controller, vocabu
 
 | Owner | Responsibility | Forbidden claim |
 |---|---|---|
-| Running Agents controller | Serialize turns, enforce bounds, advance transitions, retain pause state, lock continuation, normalize events, and settle once. | It does not call a provider, execute a tool, choose permissions, persist durable sessions, or infer model support. |
+| Running Agents controller | Serialize turns, enforce bounds, advance transitions, retain or restore pause state, lock continuation, normalize events, and settle once. | It does not call a provider, execute a tool, choose permissions, persist provider sessions, or infer model support. |
 | Agent-step adapter | Advance the selected provider or agent runtime by one normalized stage and return actual continuation and cost evidence. | Configuration alone does not prove a provider call, tool use, handoff, session, or stream. |
 | Function Calling controller | Validate and run direct application functions through the real gateway. | The outer loop never duplicates tool schemas, selection policy, approvals, or gateway execution. |
 | Programmatic Tool Calling controller | Run eligible hosted-program reductions behind its own capability and isolation gates. | The outer loop never evaluates generated code or weakens direct-call policy. |
 | Guardrails and tool gateway | Validate bounded input, output, tool arguments, and results; authorize identity, risk, approval, execution, audit, and tool cost. | An agent transition, guardrail pass, or continuation token grants no tool authority. |
-| Durable state owner | Store application history, provider session identity, provider conversation identity, or previous response identity when required. | The in-memory Dev registry is not durable storage or cross-isolate continuity proof. |
+| Durable paused-turn owner | Store one bounded paused turn per conversation and grant one expiring resume claim. | It does not persist provider-owned sessions, grant approval, or authorize a repeated side effect. |
 
 ## Turn Contract
 
@@ -50,7 +50,7 @@ The adapter receives the same identifiers plus the turn and step numbers, curren
 | Outcome | Required adapter data | Controller behavior |
 |---|---|---|
 | `continue` | `model`, `tool`, or `handoff` transition; next input; continuation update; optional actual cost | Advance one bounded step; a handoff also changes the active agent. |
-| `paused` | Public interruptions, opaque resume state, continuation update, optional actual cost | Store state only inside the runtime and return a new opaque resume token. |
+| `paused` | Public interruptions, opaque resume state, continuation update, optional actual cost | Store bounded state locally or through the injected durable owner and return a new opaque resume token. |
 | `completed` | Final JSON output, continuation update, optional actual cost | Settle the turn once and expose only final output, continuation, compact evidence, and honest cost. |
 
 Malformed status, transition, output, history, response identity, interruption, event, cost, or resume state blocks the conversation. Provider-specific wire objects never become the local contract.
@@ -95,13 +95,13 @@ The event iterable closes only after the loop settles. Consumers must await `com
 
 ## Pause And Recovery
 
-A pause returns only normalized interruption descriptions and an opaque token. The adapter resume state stays in the isolate-scoped controller. `resume` and `resumeStream` require the exact original run id, conversation id, and token plus a bounded resolution. The next adapter request receives the state and resolution once, while turn number, step count, costs, transitions, and agent history continue from the paused turn.
+A pause returns only normalized interruption descriptions and an opaque token. With no store adapter, resume state remains isolate-local. With `AGENT_STATE`, the Worker writes a bounded JSON snapshot under the conversation identity before returning paused. `resume` and `resumeStream` require the exact original run id, conversation id, and token plus a bounded resolution. A fresh controller may claim that record, reconstruct turn number, step count, costs, transitions, agent history, input, and continuation, then pass state and resolution once to the next adapter step.
 
-Starting another run on a paused conversation blocks. A failed active turn marks the conversation blocked because a downstream side effect or provider response may already exist. `clearConversation` is the explicit abandon or recovery boundary and refuses to clear an active turn.
+Only one claim may be active. Completion commits it, another pause replaces it, and a bounded adapter failure releases it for retry; expired claims recover the still-live record. Starting another run on a paused conversation blocks even after an isolate restart. `clearConversation` is the explicit abandon boundary, removes local and durable state, and refuses to clear an active turn.
 
 ## Bounds And Evidence
 
-Defaults allow 12 adapter steps, 128 application-history items, 200,000 serialized characters for input, state, or output, 32,000 characters per event, 1,024 events, 256 in-memory conversations, and 60 seconds per adapter stage. Recent run identities are retained in a bounded replay fence. Idle conversations may be evicted at capacity; active, paused, and blocked records are not silently discarded.
+Defaults allow 12 adapter steps, 128 application-history items, 200,000 serialized characters for input, state, or output, 450,000 characters per paused-turn snapshot, 32,000 characters per event, 1,024 events, 256 local conversations, 60 seconds per adapter stage, a 24-hour pause lifetime, and a 60-second resume claim. Recent run identities are retained in a bounded replay fence. Idle local conversations may be evicted at capacity; active, paused, and blocked records are not silently discarded.
 
 Every result reports steps, model transitions, tool transitions, handoffs, participating agent identities, logical event count, and aggregate cost. Missing adapter cost is `unreported`, mixed evidence is `partial`, complete returned evidence is `reported`, and preflight failure is `not-run`; attempted work never becomes fabricated zero cost.
 
@@ -113,7 +113,8 @@ Readiness exposes bounds, counters, strategy names, loop owner, same-loop stream
 - Given any strategy, when another strategy or stale state is submitted for the same conversation, then the runtime blocks before another adapter call.
 - Given streamed model output, when the terminal stage is still pending, then events arrive incrementally while `completed` remains unsettled; the iterable closes only after terminal settlement.
 - Given a pause, when another run starts, then it blocks; when exact resume identity and resolution arrive, then execution continues at the next step of the same turn without exposing opaque state.
+- Given a pause stored by one runtime instance, when a fresh instance presents the exact identity and token, then one atomic claimant resumes and terminal completion removes the durable record.
 - Given duplicate run identity, active concurrency, step overflow, event overflow, abort, timeout, malformed adapter output, or missing configuration, when the controller evaluates the turn, then it fails closed with bounded and honest evidence.
 - Given an unconfigured Worker, when readiness is read, then contract, policy, bounds, and counters remain visible while configuration and provider execution remain false or unverified.
 
-VCC: run `npm run running-agents:check` plus the affected app and Worker tests; require zero failures, exact strategy isolation, incremental settlement, same-turn resume, bounded costs and events, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.
+VCC: run `npm run running-agents:check`, `npm run durable-agent-state:check`, plus the affected app and Worker tests; require zero failures, exact strategy isolation, incremental settlement, same-turn and cross-isolate resume, atomic claim settlement, bounded costs and events, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.

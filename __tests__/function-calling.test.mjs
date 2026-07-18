@@ -122,7 +122,7 @@ test("relaxes a satisfied required selection before requesting final output", as
   assert.equal(result.evidence.toolCalls, 1);
 });
 
-test("exposes only provider function fields and forwards application policy to the gateway", async () => {
+test("exposes only provider function fields and forwards policy without caller-supplied approvals", async () => {
   const adapterCalls = [];
   const gatewayCalls = [];
   const runtime = createFunctionCallingRuntime({
@@ -135,15 +135,14 @@ test("exposes only provider function fields and forwards application policy to t
     callTool: async (call) => { gatewayCalls.push(call); return completedGateway(); },
   });
   const result = await runtime.run(request({
-    approvals: [{ gate: "record-write", decision: "approved" }],
     tools: [tool("write_record", { riskClass: "mutation", idempotent: false, approvalRequired: true })],
   }));
 
   assert.equal(result.status, "completed");
   assert.deepEqual(Object.keys(adapterCalls[0].tools[0]).sort(), ["description", "name", "parameters", "strict", "type"]);
-  assert.deepEqual(adapterCalls[0].approvals, [{ decision: "approved", gate: "record-write" }]);
+  assert.equal(adapterCalls[0].approvals, undefined);
   assert.deepEqual(gatewayCalls[0].policy, { riskClass: "mutation", idempotent: false, approvalRequired: true });
-  assert.deepEqual(gatewayCalls[0].approvals, [{ decision: "approved", gate: "record-write" }]);
+  assert.equal(gatewayCalls[0].approvals, undefined);
 });
 
 test("executes bounded parallel calls and blocks parallel output when disabled", async () => {

@@ -46,6 +46,7 @@ prompt_preset_contract:
   runtime_command_authority: "SKILLS.md and DICTIONARY-COMMAND.md"
   execution_boundary: "selection resolves and loads the source-backed runtime prompt without submit; Send remains the execution boundary"
   semantic_contract_authority: "PROMPT-PRESETS.md prompt preset entry fields"
+  invocation_routes: "llm-chat-response uses the active Chat provider, endpoint, and model; native-chat-response uses the named shared runtime; mcp-invocation resolves the matching runtime command through knowgrph.agentic_canvas_os.docs.invoke without executing it"
 external_pattern_sources:
   - "https://github.com/NousResearch/hermes-agent"
   - "https://hermes-agent.nousresearch.com/docs/"
@@ -74,6 +75,9 @@ direct_resolution:
   "/personality.overlay": "DICTIONARY-COMMAND.md#/personality.overlay"
   "/moa": "DICTIONARY-COMMAND.md#/moa"
   "/video-agent": "DICTIONARY-COMMAND.md#/video-agent"
+  "/sme-care-agent": "DICTIONARY-COMMAND.md#/sme-care-agent"
+  "/investment-research-agent": "DICTIONARY-COMMAND.md#/investment-research-agent"
+  "/crawler-agent": "DICTIONARY-COMMAND.md#/crawler-agent"
   "/image.to-threejs": "DICTIONARY-COMMAND.md#/image.to-threejs"
   "/image.to-glb": "DICTIONARY-COMMAND.md#/image.to-glb"
   "/camera.frame": "DICTIONARY-COMMAND.md#/camera.frame"
@@ -268,16 +272,13 @@ direct_resolution:
   "@instruction-source": "DICTIONARY-BINDING.md#@instruction-source"
   "@instruction-eval-suite": "DICTIONARY-BINDING.md#@instruction-eval-suite"
 truth_tokens:
-  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/image.to-threejs", "/image.to-glb", "/knowgrph.probe-tree", "/animation.control", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/instruction.audit", "/instruction.quality-evaluate", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
+  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/sme-care-agent", "/investment-research-agent", "/crawler-agent", "/image.to-threejs", "/image.to-glb", "/knowgrph.probe-tree", "/animation.control", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/instruction.audit", "/instruction.quality-evaluate", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
   semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#spec.low", "#spec.medium", "#spec.high", "#thinking.type.enabled", "#thinking.type.disabled", "#thinking.type.auto", "#token-cap.low", "#token-cap.medium", "#token-cap.high", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#instruction-audit", "#instruction-quality", "#image-to-threejs", "#image-to-glb", "#knowgrph.probe-tree", "#character-motion", "#action-path", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
   bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@instruction-source", "@instruction-eval-suite", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@image-to-threejs", "@image-to-glb", "@knowgrph.probe-tree", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
 ---
 # Agentic OS Facts
-
 `FACTS.md` is the shared truth layer for `docs`. Agents should read it before using local memory or role instructions. It is stronger than tool-specific helper files such as `CLAUDE.md` when those files exist in an adjacent environment, because this file defines repo-owned truth for this documentation control surface.
-
 This file does not replace system, developer, or operator instructions. It defines the source-backed facts that local agents should reference consistently while working inside this docs folder.
-
 ## Layer Contract
 
 | Layer | Owns | Does not own |
@@ -291,7 +292,6 @@ This file does not replace system, developer, or operator instructions. It defin
 | `DICTIONARY-COMMAND.md` | Slash command definitions. | Command runtime or parser fork. |
 | `DICTIONARY-SEMANTIC.md` | Hash semantic definitions. | Semantic registry fork or runtime-ready promotion by prose. |
 | `DICTIONARY-BINDING.md` | At binding definitions. | Secrets, approval grants, or deployment authorization. |
-
 ## Precedence Facts
 
 | Fact | Rule | Proof or source |
@@ -301,7 +301,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | User profile | `USER.md` persists explicit operator preferences, communication style, and expectations separately from agent notes. | `USER.md` frontmatter and body. |
 | Roles | `AGENTS.md` governs how agents edit and validate this folder. | `AGENTS.md` scope and validation sections. |
 | Invocation grammar | `/`, `#`, and `@` tokens resolve through dictionary files, not prose-only UI labels. | `DICTIONARY-COMMAND.md`, `DICTIONARY-SEMANTIC.md`, `DICTIONARY-BINDING.md`. |
-| Prompt preset selection | FloatingPanel Prompt Presets expose catalog-owned `/*-prompt-preset` selection aliases while executable `/...-agent` routes remain owned by `SKILLS.md` and `DICTIONARY-COMMAND.md`; selection loads without submit. | `PROMPT-PRESETS.md`, `SKILLS.md`, `DICTIONARY-COMMAND.md`. |
+| Prompt preset selection | FloatingPanel Prompt Presets expose catalog-owned selection aliases while executable runtime routes remain owned by `SKILLS.md` and `DICTIONARY-COMMAND.md`; selection loads without submit, LLM responses use the active Chat tuple, and MCP resolves the same runtime token read-only through `knowgrph.agentic_canvas_os.docs.invoke`. | `PROMPT-PRESETS.md`, `SKILLS.md`, `DICTIONARY-COMMAND.md`. |
 | Canonical docs revision | Every normal Knowgrph Dev port consumes `$GITHUB_ROOT/agentic-canvas-os/docs` from one clean local checkout whose `HEAD` equals fetched `origin/main`. Port numbers and Knowgrph task mode cannot select or relax that revision. | `source_revision_contract` above and the Knowgrph runtime guard named there. |
 | Cross-device parity | Devices are in parity only when their visible runtime identities report identical exact Knowgrph and Agentic Canvas OS commit SHAs. A shared branch name, port, route, or device label is not revision proof. | `source_revision_contract` above, `START-WORKFLOW.md`, and `VALIDATION-RUNBOOK.md`. |
 | Visible runtime identity | The running surface must expose exact `knowgrphRevision`, `agenticCanvasOsRevision`, `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and `/`, `#`, `@` counts. Hidden build metadata or terminal-only branch output is insufficient. | `VALIDATION-RUNBOOK.md` runtime identity schema and `RUNTIME-PROOF.md`. |

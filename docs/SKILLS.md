@@ -81,9 +81,10 @@ skill_contracts:
   - "stream.trace"
   - "superagent.run"
   - "sme.risk.profile"
+  - "crawler.run"
   - "sandbox.policy.author"
   - "sandbox.gateway.troubleshoot"
-skill_variants: ["agent.moa", "agent.investment-research", "agent.sme-care", "agent.video", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
+skill_variants: ["agent.moa", "agent.investment-research", "agent.sme-care", "agent.video", "agent.crawler", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
 kgCanvasSurfaceMode: "2d"
 kgCanvasRenderMode: "2d"
 kgCanvas2dRenderer: "storyboard"
@@ -131,7 +132,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
 | Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `kanban.collaborate` | `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
-| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `sme.risk.profile`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
+| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
 ## Specialized Contracts
 
@@ -144,7 +145,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
-Variants remain metadata aliases over registered owners: `agent.moa`, `agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and `agent.orchestrator`. A variant does not create a wildcard command or a second execution registry.
+Variants remain metadata aliases over registered owners: `agent.moa`, `agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`, `agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and `agent.orchestrator`. The domain variants resolve through `/investment-research-agent`, `/sme-care-agent`, `/video-agent`, and `/crawler-agent`; a variant does not create a wildcard command or a second execution registry.
 
 ## Selection And Mutation
 

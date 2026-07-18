@@ -365,6 +365,27 @@ Expected:
 - Capability, adapter, gateway, call, parallel, result, duplicate, timeout, and cost failures stay typed and bounded.
 - Offline transport proof reports actual-shaped usage and zero-cost gateway evidence while provider execution stays `unverified`; no unapproved paid call, Prod mirror write, or Cloudflare action occurs.
 
+## Running Agents Runtime Checks
+
+Run the application-turn controller and affected readiness checks after changing agent-loop transitions, continuation state, streaming, pause and resume, settlement, bounds, or cost evidence:
+
+```bash
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run running-agents:check
+node --test \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/agent-api-app.test.mjs" \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/cloudflare-worker.test.mjs"
+```
+
+Expected:
+
+- One application turn advances model, tool, and handoff transitions within explicit step, event, state, output, conversation, and timeout bounds.
+- Application history, downstream session, downstream conversation, and previous-response continuation are mutually exclusive and locked to one conversation.
+- Streaming uses the same loop as ordinary runs, yields incremental bounded events, and closes only after completed, paused, or blocked settlement.
+- Pause state stays opaque; exact resume identity continues at the next step of the same turn while competing turns fail closed.
+- Active conversations and recent run ids serialize; stale continuation, malformed adapter output, event overflow, timeout, and missing configuration return typed bounded evidence.
+- Readiness exposes sanitized policy, limits, and counters while adapter configuration is false and provider execution remains `unverified` without live proof.
+- No external provider code, agent implementation, schemas, prompts, examples, event fixtures, tests, or prose are copied; no paid call, Prod mirror write, or Cloudflare action occurs.
+
 ## Tool Search Runtime Checks
 
 Run the focused controller and affected readiness checks after changing deferred catalog shape, search resolution, programmatic availability, or provider-proof boundaries:
@@ -509,6 +530,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 | Tools and toolsets | Focused docs route check reports `tools-and-toolsets route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool function catalog, toolset state, platform scope, policy, approval, cost, and fallback proof. |
 | Tool Gateway | Focused docs route check reports `tool-gateway route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool catalog, provider select, web/image/TTS/browser route, schema, approval, egress, cost, and fallback proof. |
 | Function Calling | `npm run function-gateway:check` exits zero; controller, OpenAI Responses adapter, Knowgrph allowlist gateway, app, and Worker tests confirm strict schemas, exact call-id and prior-response continuation, opaque reasoning replay, usage accounting, policy enforcement, secret redaction, and sanitized configured or unconfigured state. Live provider execution remains gated. |
+| Running Agents | `npm run running-agents:check` exits zero; affected app and Worker tests confirm one bounded lifecycle, exclusive continuation state, same-loop incremental streaming, same-turn pause resume, serialization, replay fencing, honest costs, sanitized unconfigured readiness, and no provider overclaim. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |
 | Computing-flow | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |

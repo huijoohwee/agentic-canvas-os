@@ -51,6 +51,19 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().programmaticToolCalling.providerContextIsolation, "unverified");
   assert.deepEqual(app.readiness().programmaticToolCalling.continuationModes, ["stored", "stateless-replay"]);
   assert.equal(app.readiness().programmaticToolCalling.callerContract, "function-call-output-preserves-caller");
+  assert.equal(app.readiness().runningAgents.contractReady, true);
+  assert.equal(app.readiness().runningAgents.configured, false);
+  assert.equal(app.readiness().runningAgents.loopOwner, "application-turn-controller");
+  assert.equal(app.readiness().runningAgents.streamingOwner, "same-loop-event-channel");
+  assert.equal(app.readiness().runningAgents.pauseSemantics, "resume-same-turn");
+  assert.equal(app.readiness().runningAgents.continuationPolicy, "one-strategy-per-conversation");
+  assert.deepEqual(app.readiness().runningAgents.continuationStrategies, [
+    "application-history",
+    "session",
+    "conversation",
+    "previous-response",
+  ]);
+  assert.equal(app.readiness().runningAgents.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().toolSearch.contractReady, true);
   assert.equal(app.readiness().toolSearch.configured, false);
   assert.equal(app.readiness().toolSearch.initialExposure, "direct-definitions-and-deferred-metadata");

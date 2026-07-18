@@ -8,6 +8,7 @@ import {
 } from "../scripts/probe-tree-contract.mjs";
 
 const documentNames = [
+  "PROBE-TREE.md",
   "PROMPT-PRESETS.md",
   "FACTS.md",
   "DICTIONARY-COMMAND.md",
@@ -35,17 +36,17 @@ test("repository Probe-Tree contract keeps action topics semantic and bounded", 
 
 test("removing an action-topic class fails the contract", () => {
   const documents = withReplacement(
-    "PROMPT-PRESETS.md",
+    "PROBE-TREE.md",
     '["RECOMMEND", "COMPARE", "ASSESS", "PLAN"]',
     '["RECOMMEND", "COMPARE", "ASSESS"]',
   );
   const failures = validateProbeTreeContractDocuments(documents);
-  assert.equal(failures.some((failure) => failure.includes("clarification_action_topics")), true);
+  assert.equal(failures.some((failure) => failure.includes("PROBE-TREE.md: clarification_topics")), true);
 });
 
 test("mechanical action-verb terminal classification fails the contract", () => {
   const documents = withReplacement(
-    "PROMPT-PRESETS.md",
+    "PROBE-TREE.md",
     '"runtime-recognized selected-child terminal continuation only"',
     '"root action verb or selected-child terminal continuation"',
   );
@@ -55,7 +56,7 @@ test("mechanical action-verb terminal classification fails the contract", () => 
 
 test("mechanical clarification cards fail the contract", () => {
   const documents = withReplacement(
-    "PROMPT-PRESETS.md",
+    "PROBE-TREE.md",
     'clarification_card_kind: "semantic"',
     'clarification_card_kind: "mechanical"',
   );
@@ -65,7 +66,7 @@ test("mechanical clarification cards fail the contract", () => {
 
 test("stale card-local routing fails the contract", () => {
   const documents = withReplacement(
-    "PROMPT-PRESETS.md",
+    "PROBE-TREE.md",
     'model_route: "active Chat provider, endpoint, and model"',
     'model_route: "card-local provider and model"',
   );
@@ -75,10 +76,30 @@ test("stale card-local routing fails the contract", () => {
 
 test("hardcoded or zero-model fallback permission fails the contract", () => {
   const documents = withReplacement(
-    "PROMPT-PRESETS.md",
+    "PROBE-TREE.md",
     '"fail closed; query-specific hardcoding and zero-model fallback cards are forbidden"',
     '"fallback cards are permitted"',
   );
   const failures = validateProbeTreeContractDocuments(documents);
   assert.equal(failures.some((failure) => failure.includes("fallback_policy")), true);
+});
+
+test("preset projection drift fails the canonical Probe-Tree contract", () => {
+  const documents = withReplacement(
+    "PROMPT-PRESETS.md",
+    'clarification_action_topics: ["RECOMMEND", "COMPARE", "ASSESS", "PLAN"]',
+    'clarification_action_topics: ["RECOMMEND", "COMPARE", "ASSESS"]',
+  );
+  const failures = validateProbeTreeContractDocuments(documents);
+  assert.equal(failures.some((failure) => failure.includes("clarification_action_topics")), true);
+});
+
+test("keyword-only matching fails the semantic case-insensitive contract", () => {
+  const documents = withReplacement(
+    "PROBE-TREE.md",
+    'clarification_topic_match: "semantic and case-insensitive"',
+    'clarification_topic_match: "case-sensitive keyword only"',
+  );
+  const failures = validateProbeTreeContractDocuments(documents);
+  assert.equal(failures.some((failure) => failure.includes("clarification_topic_match")), true);
 });

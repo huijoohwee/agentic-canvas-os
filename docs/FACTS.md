@@ -40,12 +40,13 @@ dictionary_links:
   semantic: "DICTIONARY-SEMANTIC.md"
   binding: "DICTIONARY-BINDING.md"
 prompt_preset_catalog: "PROMPT-PRESETS.md"
+probe_tree_contract: "PROBE-TREE.md"
 prompt_preset_contract:
   selection_alias_suffix: "-prompt-preset"
   selection_alias_authority: "PROMPT-PRESETS.md"
   runtime_command_authority: "SKILLS.md and DICTIONARY-COMMAND.md"
   execution_boundary: "selection resolves and loads the source-backed runtime prompt without submit; Send remains the execution boundary"
-  semantic_contract_authority: "PROMPT-PRESETS.md prompt preset entry fields"
+  semantic_contract_authority: "PROBE-TREE.md"
   invocation_routes: "llm-chat-response uses the active Chat provider, endpoint, and model; native-chat-response uses the named shared runtime; mcp-invocation resolves the matching runtime command through knowgrph.agentic_canvas_os.docs.invoke without executing it"
 external_pattern_sources:
   - "https://github.com/NousResearch/hermes-agent"
@@ -280,7 +281,6 @@ truth_tokens:
 `FACTS.md` is the shared truth layer for `docs`. Agents should read it before using local memory or role instructions. It is stronger than tool-specific helper files such as `CLAUDE.md` when those files exist in an adjacent environment, because this file defines repo-owned truth for this documentation control surface.
 This file does not replace system, developer, or operator instructions. It defines the source-backed facts that local agents should reference consistently while working inside this docs folder.
 ## Layer Contract
-
 | Layer | Owns | Does not own |
 |---|---|---|
 | `SOUL.md` | Durable agent identity, voice, style, and communication defaults. | Project commands, architecture rules, memory persistence, deploy permission, or provider state. |
@@ -293,7 +293,6 @@ This file does not replace system, developer, or operator instructions. It defin
 | `DICTIONARY-SEMANTIC.md` | Hash semantic definitions. | Semantic registry fork or runtime-ready promotion by prose. |
 | `DICTIONARY-BINDING.md` | At binding definitions. | Secrets, approval grants, or deployment authorization. |
 ## Precedence Facts
-
 | Fact | Rule | Proof or source |
 |---|---|---|
 | Shared truth | `FACTS.md` is the first local docs file to consult for stable Agentic OS truth. | This file plus `README.md` document map. |
@@ -302,6 +301,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Roles | `AGENTS.md` governs how agents edit and validate this folder. | `AGENTS.md` scope and validation sections. |
 | Invocation grammar | `/`, `#`, and `@` tokens resolve through dictionary files, not prose-only UI labels. | `DICTIONARY-COMMAND.md`, `DICTIONARY-SEMANTIC.md`, `DICTIONARY-BINDING.md`. |
 | Prompt preset selection | FloatingPanel Prompt Presets expose catalog-owned selection aliases while executable runtime routes remain owned by `SKILLS.md` and `DICTIONARY-COMMAND.md`; selection loads without submit, LLM responses use the active Chat tuple, and MCP resolves the same runtime token read-only through `knowgrph.agentic_canvas_os.docs.invoke`. | `PROMPT-PRESETS.md`, `SKILLS.md`, `DICTIONARY-COMMAND.md`. |
+| Probe-Tree semantic clarification | `RECOMMEND`, `COMPARE`, `ASSESS`, and `PLAN` are semantic, case-insensitive clarification families. Initial and root requests produce 2-4 cards; only a runtime-recognized selected-child terminal continuation bypasses generation. | `PROBE-TREE.md`, with validated projections in `PROMPT-PRESETS.md` and the three dictionaries. |
 | Canonical docs revision | Every normal Knowgrph Dev port consumes `$GITHUB_ROOT/agentic-canvas-os/docs` from one clean local checkout whose `HEAD` equals fetched `origin/main`. Port numbers and Knowgrph task mode cannot select or relax that revision. | `source_revision_contract` above and the Knowgrph runtime guard named there. |
 | Cross-device parity | Devices are in parity only when their visible runtime identities report identical exact Knowgrph and Agentic Canvas OS commit SHAs. A shared branch name, port, route, or device label is not revision proof. | `source_revision_contract` above, `START-WORKFLOW.md`, and `VALIDATION-RUNBOOK.md`. |
 | Visible runtime identity | The running surface must expose exact `knowgrphRevision`, `agenticCanvasOsRevision`, `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and `/`, `#`, `@` counts. Hidden build metadata or terminal-only branch output is insufficient. | `VALIDATION-RUNBOOK.md` runtime identity schema and `RUNTIME-PROOF.md`. |

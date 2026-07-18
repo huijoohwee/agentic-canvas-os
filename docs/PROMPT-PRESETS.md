@@ -12,6 +12,7 @@ runtime_scope: "zero-spend prompt selection with explicit Chat-response and MCP-
 runtime_claim: "source-backed prompt text and invocation metadata only; selection and MCP metadata resolution do not approve execution, provider spend, persistence, Prod, or Cloudflare mutation"
 publish_policy: "Dev-only until explicit operator approval"
 preset_invocation_authority: "PROMPT-PRESETS.md"
+probe_tree_contract: "PROBE-TREE.md"
 runtime_command_authority: "SKILLS.md and DICTIONARY-COMMAND.md"
 invocation_suffix: "-prompt-preset"
 dictionary_links:
@@ -71,6 +72,7 @@ prompt_presets:
     chat_route: "active Chat provider, endpoint, and model"
     mcp_tool: "knowgrph.agentic_canvas_os.docs.invoke"
     mcp_token: "/knowgrph.probe-tree"
+    semantic_contract: "PROBE-TREE.md"
     clarification_action_topics: ["RECOMMEND", "COMPARE", "ASSESS", "PLAN"]
     clarification_topic_match: "semantic and case-insensitive"
     clarification_card_kind: "semantic"
@@ -82,7 +84,7 @@ prompt_presets:
     prompt: |-
       /knowgrph.probe-tree
 
-      Generate 2-4 bounded, editable next-question cards from this Widget Card. Derive every question and every 2-4 answer choice from the selected user input, give every card a different user-named focus, and attach 2-6 short context anchors copied verbatim from that input. Every answer choice must express a decision-relevant preference, tradeoff, or consequence rather than a mechanical number, range, unit, named entity, or topic fragment. Never reuse a choice label, one card's complete choice set, or a subset/superset of it in another card. For a continuation, the selected child and its committed Output own the next topic; the root is lineage only. Classify the action-topic families RECOMMEND, COMPARE, ASSESS, and PLAN semantically and case-insensitively as clarification requests; an imperative or action verb never establishes terminal intent. Only a runtime-recognized selected-child terminal continuation bypasses card generation. Never substitute stock evidence, policy, reviewer, approval, system-of-record, recalled-exemplar, or fixture content unless the user actually named it. Keep the source card unchanged and connect each candidate branch. Publish output only through user-authored edges to an explicitly targeted Widget Card or Rich Media Panel; never infer, merge, or auto-create an output edge. Stop visibly at depth 8. Widget Run authorizes the bounded MCP context call followed by the active Chat provider, endpoint, and model. Never use stale card-local routing or materialize query-specific hardcoding or zero-model fallback cards; fail closed when fewer than two semantic cards survive.
+      Generate 2-4 bounded, editable next-question cards from this Widget Card under the semantic clarification contract in PROBE-TREE.md. Derive every question and every 2-4 answer choice from the selected user input, give every card a different user-named focus, and attach 2-6 short context anchors copied verbatim from that input. Every answer choice must express a decision-relevant preference, tradeoff, or consequence rather than a mechanical number, range, unit, named entity, or topic fragment. Never reuse a choice label, one card's complete choice set, or a subset/superset of it in another card. For a continuation, the selected child and its committed Output own the next topic; the root is lineage only. Classify the action-topic families RECOMMEND, COMPARE, ASSESS, and PLAN semantically and case-insensitively as clarification requests; an imperative or action verb never establishes terminal intent. Only a runtime-recognized selected-child terminal continuation bypasses card generation. Never substitute stock evidence, policy, reviewer, approval, system-of-record, recalled-exemplar, or fixture content unless the user actually named it. Keep the source card unchanged and connect each candidate branch. Publish output only through user-authored edges to an explicitly targeted Widget Card or Rich Media Panel; never infer, merge, or auto-create an output edge. Stop visibly at depth 8. Widget Run authorizes the bounded MCP context call followed by the active Chat provider, endpoint, and model. Never use stale card-local routing or materialize query-specific hardcoding or zero-model fallback cards; fail closed when fewer than two semantic cards survive.
   - id: "sme-care-agent"
     label: "SME Care Agent"
     slash_command: "/sme-care-prompt-preset"

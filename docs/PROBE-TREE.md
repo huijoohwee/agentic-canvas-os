@@ -92,9 +92,11 @@ active Chat provider, endpoint, and model. MCP resolution, preset selection,
 and contract validation alone do not execute a model, approve spend, or grant
 mutation authority.
 
-Generated output is published only through user-authored edges to an explicitly
-targeted Widget Card or Rich Media Panel. The runtime must not infer, merge, or
-auto-create an output edge.
+User-authored edges to explicitly targeted Widget Cards or Rich Media Panels
+remain authoritative. A runtime-recognized selected-child terminal continuation
+atomically creates or reuses one owned `Generated Result` Rich Media Panel and
+one typed output edge from that selected child. The runtime must not merge
+targets, attach an unrelated panel, or infer edges for non-terminal output.
 
 ## Validation Contract
 

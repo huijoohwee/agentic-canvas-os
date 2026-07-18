@@ -16,6 +16,7 @@
     "build": "npm run web:build",
     "cache-context:check": "node --test __tests__/cache-context.test.mjs",
     "programmatic-tool-calling:check": "node --test __tests__/programmatic-tool-calling.test.mjs",
+    "progressive-agents:check": "node --test __tests__/progressive-agents.test.mjs",
     "running-agents:check": "node --test __tests__/running-agents.test.mjs",
     "sandbox-agents:check": "node --test __tests__/sandbox-agents.test.mjs",
     "sandbox-provider:check": "node --test __tests__/sandbox-agents.test.mjs __tests__/docker-sandbox-provider.test.mjs",

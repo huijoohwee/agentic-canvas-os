@@ -143,6 +143,7 @@ harness:
 | Running Agents | Drive one bounded application turn across model, tool, handoff, pause, and final stages | `{ runId, conversationId, agent, input, continuation }` | Completed, paused, or blocked settlement plus continuation, evidence, and honest cost | One strategy per conversation; streaming shares the same loop; adapters and gateways retain execution policy |
 | Agent Orchestration | Route one exact manager or specialist branch with explicit public ownership | `{ runId, conversationId, workflowId, workflowRevision, branchId, input }` | Source-owned delegated answer, target-owned handoff answer, or typed block | Every branch fixes conversation and final-answer ownership; authorization, exact agent resolution, and Running Agents execution remain separate |
 | Agent Runtime Composition | Join exact definition, model selection, lifecycle, output validation, and orchestration interfaces | `{ agent, role, workflow, branch, input }` | Validated final output and fully reported cost, or bounded block | Existing owners remain authoritative; missing or changed evidence fails before public output |
+| Progressive Agents | Grow from one exact agent run to tool-bearing definitions and explicit specialist workflows | `{ runId, conversationId, agentId, revision, input }` or an exact workflow request | Agent-owned direct output, manager-owned delegation, specialist-owned handoff, or bounded block | Facade delegates to existing owners; tool authorization, execution, provider transport, and answer ownership never move into the facade |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Instruction Task Quality | Screen final-answer behavior after structural instruction changes | `{ suite, candidate }` | `agentic-instruction-task-quality/v1` per-case findings and aggregate score | Model-agnostic lexical rubric; exact provenance and human review required; no private reasoning access or deployment authority |
@@ -352,6 +353,21 @@ Composition owns only the adapter seams between source-backed Agent Definitions,
 Only a fully reported aggregate cost becomes a downstream cost log. Missing or partial usage remains unreported. Offline proof establishes integrated owner behavior without establishing provider reachability, quality, usage, price, or spend.
 
 The separately approved Node-only live proof injects an OpenAI Responses adapter without changing Worker defaults. It permits exactly one specialist-manager-specialist sequence and at most three provider attempts, uses stored previous-response continuation only for the returning specialist, requires provider-confirmed effective reasoning context and complete usage, and emits no raw response id, output, reasoning, or credential.
+
+## Progressive Agents Harness Contract
+
+Progressive Agents owns only a small application facade over the definition,
+composition, Function Calling, and orchestration owners. Direct runs accept an
+exact agent revision and return that revision as final-answer owner only after
+the composition validates output. Tool-bearing definitions retain their
+authorized references and rely on the injected application adapter to use the
+existing Function Calling owner. Specialist workflows remain exact registered
+topologies with branch-owned conversation and final-answer identity.
+
+The facade exposes no external SDK objects, callbacks, provider payloads,
+credentials, tool schemas, or inferred routers. Offline proof establishes the
+incremental owner wiring and one local gateway invocation; it does not establish
+provider reachability, SDK compatibility, model quality, live usage, or spend.
 
 ## Function Calling Harness Contract
 

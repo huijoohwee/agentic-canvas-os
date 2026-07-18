@@ -91,6 +91,19 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentRuntimeComposition.outputValidationOwner, "agent-definitions");
   assert.equal(app.readiness().agentRuntimeComposition.executionAdapterConfigured, false);
   assert.equal(app.readiness().agentRuntimeComposition.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().progressiveAgents.contractReady, true);
+  assert.equal(app.readiness().progressiveAgents.configured, false);
+  assert.equal(app.readiness().progressiveAgents.progressionPolicy, "single-agent-then-tools-then-specialists");
+  assert.deepEqual(app.readiness().progressiveAgents.growthStages, [
+    "single-agent",
+    "tool-enabled-agent",
+    "specialist-workflow",
+  ]);
+  assert.equal(app.readiness().progressiveAgents.definitionOwner, "agent-definitions");
+  assert.equal(app.readiness().progressiveAgents.toolExecutionOwner, "function-calling-through-application-adapter");
+  assert.equal(app.readiness().progressiveAgents.specialistOwner, "agent-orchestration");
+  assert.equal(app.readiness().progressiveAgents.externalSdkDependency, false);
+  assert.equal(app.readiness().progressiveAgents.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().cacheContext.configured, true);
   assert.equal(app.readiness().cacheContext.providerCacheStatus, "unverified");
   assert.equal(app.readiness().reasoningContinuity.configured, true);

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "agent-definitions:check": "node --test __tests__/agent-definitions.test.mjs",
+    "agent-orchestration:check": "node --test __tests__/agent-orchestration.test.mjs",
     "build": "npm run web:build",
     "cache-context:check": "node --test __tests__/cache-context.test.mjs",
     "programmatic-tool-calling:check": "node --test __tests__/programmatic-tool-calling.test.mjs",

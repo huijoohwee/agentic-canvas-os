@@ -118,6 +118,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/handler.js` | Request validation and fail-closed MCP forwarding. |
 | `agent-api/src/model-config.js` | Strict provider-neutral environment adapter; stores only the API key binding name and presence. |
 | `agent-api/src/model-providers.js` | Revision-fenced provider registry with explicit model defaults, transport selection, and feature matching. |
+| `agent-api/src/agent-orchestration.js` | Revision-fenced manager and specialist topology with explicit delegation, handoff, conversation, and final-answer ownership. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
 | `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
 | `scripts/instruction-task-quality.mjs` | Validates the task-quality scenario suite or scores provenance-bound candidate final answers. |
@@ -176,6 +177,14 @@ same turn, and streams canonical events through the same loop used by ordinary
 runs. The default Worker has no agent-step adapter, so `configured` is false and
 `providerExecutionStatus` remains `unverified`; the controller does not replace
 Function Calling, Programmatic Tool Calling, or the real gateway policy owner.
+
+Agent Orchestration readiness exposes a separate revision-fenced manager and
+specialist topology. Each branch declares `delegate` or `handoff` plus its
+conversation and final-answer owner. Delegation keeps the specialist behind the
+source manager and returns only manager synthesis; handoff transfers both owners
+to the target. The default Worker injects no resolver, runner, or authorizer, so
+configuration is false and provider execution remains `unverified`. See
+[`docs/AGENT-ORCHESTRATION.md`](./docs/AGENT-ORCHESTRATION.md).
 
 Sandbox Agents readiness exposes a separate container-workspace control plane.
 It validates one fresh workspace or saved snapshot, routes application-approved

@@ -141,6 +141,7 @@ harness:
 | Agent Definitions | Package one specialist's intrinsic runtime configuration without granting execution authority | `{ definition, revision, applicationAuthorizer }` | Immutable prepared packet, validated output, or typed block | Capabilities stay reference-only; Running Agents, gateways, MCP owners, and output validators retain execution and policy |
 | Models And Providers | Resolve an application-registered provider revision, model, and transport without executing it | `{ agentModel, runDefault, processDefault, requirements }` | Immutable selection packet or typed block | Exact registration, feature, delivery, and connection matching precede adapter execution; credentials and provider calls stay external |
 | Running Agents | Drive one bounded application turn across model, tool, handoff, pause, and final stages | `{ runId, conversationId, agent, input, continuation }` | Completed, paused, or blocked settlement plus continuation, evidence, and honest cost | One strategy per conversation; streaming shares the same loop; adapters and gateways retain execution policy |
+| Agent Orchestration | Route one exact manager or specialist branch with explicit public ownership | `{ runId, conversationId, workflowId, workflowRevision, branchId, input }` | Source-owned delegated answer, target-owned handoff answer, or typed block | Every branch fixes conversation and final-answer ownership; authorization, exact agent resolution, and Running Agents execution remain separate |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
 | Instruction Task Quality | Screen final-answer behavior after structural instruction changes | `{ suite, candidate }` | `agentic-instruction-task-quality/v1` per-case findings and aggregate score | Model-agnostic lexical rubric; exact provenance and human review required; no private reasoning access or deployment authority |
@@ -318,6 +319,22 @@ Running Agents owns application-turn lifecycle without absorbing provider, Funct
 | Finalize | Final adapter output and continuation update | Output, continuation, transition evidence, and honest aggregate cost | Intermediate inputs, raw adapter objects, resume state, and provider wire events remain internal. |
 
 The controller supports application history, downstream session identity, downstream conversation identity, or previous-response identity, never a mixture. Bounds cover steps, history, input, state, output, event size and count, conversation capacity, recent run replay, and stage time. Offline proof establishes lifecycle only; live model, tool, handoff, session, and provider streaming remain unverified.
+
+## Agent Orchestration And Handoffs Harness Contract
+
+Agent Orchestration owns explicit manager and specialist topology without absorbing Agent Definitions, model selection, Running Agents lifecycle, gateway policy, or durable conversation state. The cited provider guides inform the capability class; local branch modes, ownership fields, role inputs, results, evidence, tests, and prose remain independently authored.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Register | Exact manager, specialists, responsibilities, revisions, branches, and ownership | Immutable workflow revision | Duplicates, orphans, unknown agents, self-routes, unsupported fields, and revision drift fail closed. |
+| Authorize | Exact delegate or handoff action, workflow, branch, identities, and input | Approval identity | Policy runs before resolution and execution; topology never grants authority. |
+| Resolve | Source and target agent references | Exact identity and revision evidence | Both participants must match the registered revision. |
+| Delegate | Target specialist task followed by source manager synthesis | Source-owned public output | The target stays behind the source; specialist intermediate output is never returned separately. |
+| Handoff | Target user-facing task | Target-owned public output | Conversation and final-answer ownership transfer together after successful completion. |
+| Continue | Current conversation owner plus the next registered branch | Next owner or typed block | Branch source must equal current owner; workflow revision cannot drift. |
+| Finalize | Completed agent outcomes and cost logs | Public output, owner identities, approval, cost, and compact evidence | Failed work does not change ownership; raw errors and adapter details remain private. |
+
+Bounds cover workflow revisions, participants, branches, input, output, conversations, replay identities, and stage time. Offline proof establishes orchestration behavior only; provider execution and durable cross-isolate conversation ownership remain unverified.
 
 ## Function Calling Harness Contract
 

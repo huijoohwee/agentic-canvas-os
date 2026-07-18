@@ -109,7 +109,6 @@ ARTIFACT_PATTERN='https?://local'"host"'[:/]|kg_media_'"token"'|data:'"image"'|V
 EXTERNAL_COPY_PATTERN='hermes-agent/src|agentskills\.io/skills|You are Hermes Agent|kawaii Cute expressions|catgirl Neko|hermes moa preset example|MoA provider config example|GEPA optimizer code|DSPy optimizer code|langgraph/graph\.py|StateGraph example|MessagesState example|deer-flow/backend|deerflow/models|deerflow/sandbox|deerflow config example|tools/tool_search\.py|tests/tools/test_tool_search\.py|openclaw-tool-search-report|tool_search\.py|test_tool_search\.py|prompt_builder\.py|subdirectory_hints\.py|context_references\.py|reference_expander\.py|test_context_references\.py|kanban_runtime\.py|test_kanban\.py'
 ! (rg -n "$EXTERNAL_COPY_PATTERN" "$DOCS_ROOT" | rg -v 'VALIDATION-RUNBOOK\.md:[0-9]+:EXTERNAL_COPY_PATTERN=')
 ```
-
 Expected:
 
 - Frontmatter parses for every Markdown file in this folder; missing frontmatter fails.
@@ -370,7 +369,7 @@ Expected:
 Run the application-turn controller and affected readiness checks after changing agent-loop transitions, continuation state, streaming, pause and resume, settlement, bounds, or cost evidence:
 
 ```bash
-npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run running-agents:check
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run running-agents:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run agent-orchestration:check
 node --test \
   "$AGENTIC_CANVAS_OS_ROOT/__tests__/agent-api-app.test.mjs" \
   "$AGENTIC_CANVAS_OS_ROOT/__tests__/cloudflare-worker.test.mjs"
@@ -384,6 +383,7 @@ Expected:
 - Pause state stays opaque; exact resume identity continues at the next step of the same turn while competing turns fail closed.
 - Active conversations and recent run ids serialize; stale continuation, malformed adapter output, event overflow, timeout, and missing configuration return typed bounded evidence.
 - Readiness exposes sanitized policy, limits, and counters while adapter configuration is false and provider execution remains `unverified` without live proof.
+- Orchestration branches name conversation and final-answer ownership explicitly: delegation keeps the source manager public, handoff transfers both owners to the target, and only the current owner may start the next branch.
 - No external provider code, agent implementation, schemas, prompts, examples, event fixtures, tests, or prose are copied; no paid call, Prod mirror write, or Cloudflare action occurs.
 
 ## Agent Definitions And Model Providers Runtime Checks
@@ -555,6 +555,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 | Agent Definitions | `npm run agent-definitions:check` exits zero; affected app and Worker tests confirm immutable packets, exact revision fencing, reference-only authorization, verified handoffs, bounded text or structured output validation, sanitized empty-registry readiness, and no provider overclaim. |
 | Models and Providers | `npm run model-providers:check` exits zero; Agent Definition, app, and Worker tests confirm exact default precedence, revision fencing, feature and transport matching, strict neutral environment fields, secret redaction, sanitized readiness, and unverified live execution. |
 | Running Agents | `npm run running-agents:check` exits zero; affected app and Worker tests confirm one bounded lifecycle, exclusive continuation state, same-loop incremental streaming, same-turn pause resume, serialization, replay fencing, honest costs, sanitized unconfigured readiness, and no provider overclaim. |
+| Agent Orchestration | `npm run agent-orchestration:check` exits zero; affected app and Worker tests confirm revision-fenced topology, explicit branch ownership, source-owned delegation, target-owned handoff, owner-only continuation, handback, authorization, serialization, replay fencing, hidden intermediates, honest costs, and no provider overclaim. |
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check` must report a fresh verified proof, 20 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |

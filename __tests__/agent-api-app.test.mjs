@@ -70,6 +70,15 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
   assert.equal(app.readiness().agentDefinitions.executionOwner, "running-agents-adapter");
   assert.equal(app.readiness().agentDefinitions.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().agentOrchestration.contractReady, true);
+  assert.equal(app.readiness().agentOrchestration.configured, false);
+  assert.equal(app.readiness().agentOrchestration.topologyOwner, "application-orchestration-registry");
+  assert.equal(app.readiness().agentOrchestration.definitionOwner, "agent-definitions");
+  assert.equal(app.readiness().agentOrchestration.executionOwner, "running-agents-adapter");
+  assert.equal(app.readiness().agentOrchestration.conversationOwnership, "branch-explicit");
+  assert.equal(app.readiness().agentOrchestration.finalAnswerOwnership, "branch-explicit");
+  assert.deepEqual(app.readiness().agentOrchestration.modes, ["delegate", "handoff"]);
+  assert.equal(app.readiness().agentOrchestration.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().cacheContext.configured, true);
   assert.equal(app.readiness().cacheContext.providerCacheStatus, "unverified");
   assert.equal(app.readiness().reasoningContinuity.configured, true);

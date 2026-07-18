@@ -139,7 +139,7 @@ function nextContinuation(response, current, maxHistoryItems, maxStateChars) {
   return current;
 }
 
-function normalizeCostLog(value) {
+export function normalizeCostLog(value) {
   if (value === undefined) return null;
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new RunningAgentBlock("cost_log_invalid", "costLog must be an object when reported.");

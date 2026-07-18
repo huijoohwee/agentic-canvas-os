@@ -23,6 +23,7 @@
     "function-calling:check": "node --test __tests__/function-calling.test.mjs",
     "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/openai-function-gateway.test.mjs",
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
+    "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",

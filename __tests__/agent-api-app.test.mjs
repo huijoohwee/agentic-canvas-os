@@ -9,6 +9,17 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
   KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
+  AGENT_MODEL_PROVIDER: "workspace-provider",
+  AGENT_MODEL_PROVIDER_REVISION: "workspace-provider-v1",
+  AGENT_MODEL_ADAPTER: "workspace-adapter",
+  AGENT_MODEL_ENDPOINT: "https://models.example/v1",
+  AGENT_MODEL_ID: "workspace-model",
+  AGENT_MODEL_API_KEY_ENV: "WORKSPACE_MODEL_KEY",
+  AGENT_MODEL_TRANSPORT: "stream-channel",
+  AGENT_MODEL_TRANSPORT_DELIVERY: "incremental",
+  AGENT_MODEL_TRANSPORT_CONNECTION: "reusable",
+  AGENT_MODEL_FEATURES: "tool-calling,structured-output",
+  WORKSPACE_MODEL_KEY: "server-side-model-key",
 });
 
 function mcpStub(structuredContent) {
@@ -30,6 +41,21 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
     fetchImpl: mcpStub({ state: "blocked", approvalGates: [1, 2, 3, 4, 5] }),
   });
   assert.equal(app.configured, true);
+  assert.equal(app.readiness().modelProviders.configured, true);
+  assert.equal(app.readiness().modelProviders.contractReady, true);
+  assert.deepEqual(app.readiness().modelProviders.selectionPrecedence, [
+    "agent",
+    "run-default",
+    "process-default",
+    "provider-default",
+  ]);
+  assert.equal(app.readiness().modelProviders.environment.providerId, "workspace-provider");
+  assert.equal(app.readiness().modelProviders.environment.modelId, "workspace-model");
+  assert.equal(app.readiness().modelProviders.environment.transportId, "stream-channel");
+  assert.equal(app.readiness().modelProviders.environment.apiKeyPresent, true);
+  assert.equal(app.readiness().modelProviders.executionOwner, "running-agents-adapter");
+  assert.equal(app.readiness().modelProviders.providerExecutionStatus, "unverified");
+  assert.equal(JSON.stringify(app.readiness()).includes("server-side-model-key"), false);
   assert.equal(app.readiness().agentDefinitions.contractReady, true);
   assert.equal(app.readiness().agentDefinitions.configured, false);
   assert.equal(app.readiness().agentDefinitions.definitionOwner, "application-agent-registry");

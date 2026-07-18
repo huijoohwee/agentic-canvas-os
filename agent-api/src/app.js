@@ -8,7 +8,7 @@
 //   KNOWGRPH_MCP_ENDPOINT  — knowgrph control-plane MCP Streamable HTTP endpoint
 //   KNOWGRPH_FUNCTION_TOOL_ALLOWLIST — explicit application function names
 //   OPENAI_FUNCTION_CALLING_* — Responses adapter model, pricing, and key route
-//   AGENT_MODEL_*          — optional Hermes-like model route overrides
+//   AGENT_MODEL_*          — explicit provider, model, transport, and secret route
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
@@ -20,7 +20,8 @@ import {
   createKnowgrphFunctionGateway,
   parseKnowgrphFunctionToolAllowlist,
 } from "./knowgrph-function-gateway.js";
-import { agentModelConfigReady, resolveAgentModelConfig } from "./model-config.js";
+import { resolveModelProviderEnvironment } from "./model-config.js";
+import { createModelProviderRuntime } from "./model-providers.js";
 import {
   createOpenAiResponsesFunctionAdapter,
   OPENAI_FUNCTION_CALLING_CAPABILITIES,
@@ -48,6 +49,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createProgrammaticToolCallingRuntime>} [opts.programmaticToolCalling] hosted-program controller
  * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
  * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
+ * @param {ReturnType<createModelProviderRuntime>} [opts.modelProviders] model and transport selection controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
 export function createAgentApiApp({
@@ -60,12 +62,13 @@ export function createAgentApiApp({
   programmaticToolCalling: providedProgrammaticToolCalling,
   runningAgents: providedRunningAgents,
   toolSearch: providedToolSearch,
+  modelProviders: providedModelProviders,
 } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
   const endpoint = typeof e.KNOWGRPH_MCP_ENDPOINT === "string" ? e.KNOWGRPH_MCP_ENDPOINT.trim() : "";
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
-  const agentModelConfig = resolveAgentModelConfig(e);
+  const modelProviderEnvironment = resolveModelProviderEnvironment(e);
   const openAiFunctionConfig = resolveOpenAiResponsesFunctionConfig(e);
   const agentDefinitions = providedAgentDefinitions || createAgentDefinitionRegistry();
   const cacheContext = providedCacheContext || createCacheContextRegistry();
@@ -73,7 +76,11 @@ export function createAgentApiApp({
   const programmaticToolCalling = providedProgrammaticToolCalling || createProgrammaticToolCallingRuntime();
   const runningAgents = providedRunningAgents || createRunningAgentRuntime();
   const toolSearch = providedToolSearch || createToolSearchRuntime();
-  const modelKeyPresent = typeof e[agentModelConfig.apiKeyEnv] === "string" && Boolean(e[agentModelConfig.apiKeyEnv].trim());
+  const modelProviders = providedModelProviders || createModelProviderRuntime();
+  if (modelProviderEnvironment.ready) {
+    modelProviders.registerProvider(modelProviderEnvironment.providerDefinition);
+    modelProviders.configureProcessDefault(modelProviderEnvironment.processDefault);
+  }
 
   let mcpClient = null;
   if (endpoint) {
@@ -98,8 +105,9 @@ export function createAgentApiApp({
   });
 
   return {
-    configured: Boolean(secret && endpoint),
-    agentModelConfig,
+    configured: Boolean(secret && endpoint && modelProviderEnvironment.ready && modelProviderEnvironment.apiKeyPresent),
+    modelProviderEnvironment,
+    modelProviders,
     agentDefinitions,
     cacheContext,
     reasoningContinuity,
@@ -117,18 +125,45 @@ export function createAgentApiApp({
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
       const runningAgentStats = runningAgents.stats();
       const toolSearchStats = toolSearch.stats();
+      const modelProviderStats = modelProviders.stats();
       return {
-        configured: Boolean(secret && endpoint && agentModelConfigReady(agentModelConfig) && modelKeyPresent),
+        configured: Boolean(
+          secret
+          && endpoint
+          && modelProviderEnvironment.ready
+          && modelProviderEnvironment.apiKeyPresent
+          && modelProviderStats.providers > 0
+          && modelProviderStats.processDefaultConfigured
+        ),
         auth: { configured: Boolean(secret) },
         controlPlane: { configured: Boolean(endpoint), endpoint },
-        model: {
-          configured: agentModelConfigReady(agentModelConfig),
-          provider: agentModelConfig.provider,
-          protocol: agentModelConfig.protocol,
-          endpoint: agentModelConfig.endpoint,
-          model: agentModelConfig.model,
-          apiKeyEnv: agentModelConfig.apiKeyEnv,
-          apiKeyPresent: modelKeyPresent,
+        modelProviders: {
+          configured: modelProviderEnvironment.ready
+            && modelProviderEnvironment.apiKeyPresent
+            && modelProviderStats.providers > 0
+            && modelProviderStats.processDefaultConfigured,
+          contractReady: true,
+          selectionPrecedence: ["agent", "run-default", "process-default", "provider-default"],
+          providerPolicy: "application-registered-revision-bound",
+          transportPolicy: "feature-delivery-connection-matched",
+          executionOwner: "running-agents-adapter",
+          providerExecutionStatus: "unverified",
+          environment: {
+            configured: modelProviderEnvironment.ready,
+            providerId: modelProviderEnvironment.providerId,
+            providerRevision: modelProviderEnvironment.providerRevision,
+            adapterId: modelProviderEnvironment.adapterId,
+            endpoint: modelProviderEnvironment.endpoint,
+            modelId: modelProviderEnvironment.modelId,
+            apiKeyEnv: modelProviderEnvironment.apiKeyEnv,
+            apiKeyPresent: modelProviderEnvironment.apiKeyPresent,
+            transportId: modelProviderEnvironment.transportId,
+            delivery: modelProviderEnvironment.delivery,
+            connection: modelProviderEnvironment.connection,
+            features: modelProviderEnvironment.features,
+            issues: modelProviderEnvironment.issues,
+          },
+          ...modelProviderStats,
         },
         agentDefinitions: {
           configured: agentDefinitionStats.agents > 0,

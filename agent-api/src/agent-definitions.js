@@ -42,11 +42,10 @@ function assertExactKeys(value, allowedKeys, field) {
 }
 
 function normalizeModel(value) {
-  assertExactKeys(value, ["provider", "protocol", "model"], "model");
+  assertExactKeys(value, ["providerId", "modelId"], "model");
   return Object.freeze({
-    provider: assertIdentifier(value.provider, "model.provider"),
-    protocol: assertIdentifier(value.protocol, "model.protocol"),
-    model: assertIdentifier(value.model, "model.model"),
+    providerId: assertIdentifier(value.providerId, "model.providerId"),
+    modelId: assertIdentifier(value.modelId, "model.modelId"),
   });
 }
 

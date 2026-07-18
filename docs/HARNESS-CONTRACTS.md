@@ -139,6 +139,7 @@ harness:
 | Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
 | Function Calling | Continue direct model-requested functions through the application gateway | `{ runId, input, tools[], capabilities, toolChoice, approvals[] }` | Final output, same-id outputs, separate model and gateway costs, or typed block | Strict schemas and explicit capabilities required; the real gateway retains authorization, mutation, approval, audit, and cost |
 | Agent Definitions | Package one specialist's intrinsic runtime configuration without granting execution authority | `{ definition, revision, applicationAuthorizer }` | Immutable prepared packet, validated output, or typed block | Capabilities stay reference-only; Running Agents, gateways, MCP owners, and output validators retain execution and policy |
+| Models And Providers | Resolve an application-registered provider revision, model, and transport without executing it | `{ agentModel, runDefault, processDefault, requirements }` | Immutable selection packet or typed block | Exact registration, feature, delivery, and connection matching precede adapter execution; credentials and provider calls stay external |
 | Running Agents | Drive one bounded application turn across model, tool, handoff, pause, and final stages | `{ runId, conversationId, agent, input, continuation }` | Completed, paused, or blocked settlement plus continuation, evidence, and honest cost | One strategy per conversation; streaming shares the same loop; adapters and gateways retain execution policy |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
 | Instruction Audit | Keep durable guidance and the skill catalog lean without losing required intent | `{ documents, baselineDocuments? }` | `agentic-instruction-audit/v1` report with metrics, violations, cost, and deploy state | Read-only and model-free; no automatic rewrite or deployment authority |
@@ -288,6 +289,20 @@ Tool Search harnesses minimize model-visible schema load for eligible MCP and no
 | Load | Client names or provider-normalized hosted definitions | Append-only canonical definitions. | Unknown, altered, duplicate, direct, over-limit, replayed, or cost-unreported output fails closed. |
 | Authorize | `{ sessionId, toolName, caller }` | Canonical definition or typed refusal. | Direct tools remain available; deferred tools require prior load; the real gateway still owns execution policy. |
 | Audit | Readiness and session counters | Bounds, search mode, loaded count, and blocked count. | No provider reduction, cache hit, spend, or live execution is inferred. |
+
+## Models And Providers Harness Contract
+
+Models and Providers owns deterministic selection without absorbing provider SDK, endpoint lifecycle, credential, pricing, or Running Agents responsibilities. The cited provider guide informs the capability class; local definitions, precedence, transport metadata, tests, fixtures, and prose remain independently authored.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Register | Provider id, revision, adapter id, model features, transports, and provider-local defaults | Immutable provider definition | Same-revision drift, unknown fields, invalid defaults, duplicates, and capacity fail closed. |
+| Select | Agent model, run default, and process default | Winning provider and model source | Agent precedes run, run precedes process, and a provider default only fills an omitted model. |
+| Match | Selected provider plus model feature, delivery, and connection requirements | Exact compatible model and transport | Missing features or incompatible transport behavior blocks before adapter execution. |
+| Prepare | Provider revision, adapter id, model id, transport id, sources, and requirements | Immutable Running Agents adapter packet | Endpoints, credentials, prompts, provider objects, usage, and cost remain outside the packet. |
+| Report | Registry counters, limits, and sanitized environment facts | `modelProviders` readiness | Secret values and fabricated provider execution evidence are forbidden. |
+
+The environment adapter requires one complete neutral route and ignores provider-specific aliases. Multi-provider applications register additional definitions and adapters directly. Offline proof establishes configuration and resolution only; live capability, delivery, connection, usage, and cost remain unverified.
 
 ## Running Agents Harness Contract
 

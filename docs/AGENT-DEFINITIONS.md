@@ -41,7 +41,7 @@ Every registration requires `id`, `revision`, `name`, a model route, and at leas
 | Field | Local shape | Runtime rule |
 |---|---|---|
 | Identity | `id`, `revision`, `name` | Identity is bounded and immutable. Reusing a revision with different content fails; a new revision replaces the prior active revision. |
-| Model | `provider`, `protocol`, `model` | The route is descriptive configuration only. Credentials, endpoints, arbitrary settings, and provider objects are rejected as unknown fields. |
+| Model | `providerId`, `modelId` | The route is descriptive selection only. Transport, credentials, endpoints, arbitrary settings, and provider objects stay with the Models and Providers owner and are rejected here as unknown fields. |
 | Instructions | Ordered `{ name, content }[]` | Names are unique, content is bounded, order is preserved, and no hidden dynamic function enters the registry. |
 | Tools | `{ name, loading }[]` | `loading` is `direct` or `deferred`; the actual Function Calling or Tool Search owner still resolves and authorizes it. |
 | Guardrails | `{ name, stage }[]` | Input and output references identify application-owned checks; they never replace tool approval or gateway policy. |

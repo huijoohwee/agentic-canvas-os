@@ -3,6 +3,7 @@ import { verifySessionToken } from "./auth.js";
 const PROMPT_MAX = 8_000;
 const RUN_ID_MAX = 128;
 const REQUEST_FIELDS = Object.freeze(["runId", "prompt", "parallelToolCalls", "toolChoice"]);
+const RECOVER_FIELDS = Object.freeze(["runId"]);
 const RESUME_FIELDS = Object.freeze(["runId", "resumeToken", "decision", "reviewerToken", "reason", "editedPayload"]);
 const REVIEW_DECISIONS = new Set(["approve", "reject", "edit"]);
 
@@ -72,6 +73,26 @@ export function createFunctionCallingHandler({ secret, functionCallingManager, t
       parallelToolCalls: validated.value.parallelToolCalls,
     });
     return json(result.status === "completed" ? 200 : result.status === "paused" ? 202 : 409, result);
+  };
+}
+
+export function createFunctionCallingRecoveryHandler({ secret, functionCallingManager, now } = {}) {
+  const configured = Boolean(functionCallingManager && typeof functionCallingManager.recover === "function"
+    && functionCallingManager.stats?.().configured);
+  return async function recoverFunctionCall(request = {}) {
+    if (!secret) return json(501, { error: "auth not configured" });
+    const verdict = verifySessionToken(bearer(request.headers), secret, { now });
+    if (!verdict.valid) return json(401, { error: "unauthorized" });
+    if (!configured) return json(501, { error: "function calling not configured" });
+    const input = request.body && typeof request.body === "object" && !Array.isArray(request.body) ? request.body : {};
+    const runId = typeof input.runId === "string" ? input.runId.trim() : "";
+    const fields = Object.keys(input)
+      .filter((field) => !RECOVER_FIELDS.includes(field))
+      .map((field) => ({ field, reason: "unsupported field" }));
+    if (!runId || runId.length > RUN_ID_MAX) fields.push({ field: "runId", reason: `required, at most ${RUN_ID_MAX} characters` });
+    if (fields.length > 0) return json(400, { error: "invalid request", fields });
+    const result = await functionCallingManager.recover({ runId });
+    return json(result.status === "paused" ? 200 : 409, result);
   };
 }
 

@@ -84,7 +84,7 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
       });
     }
     if (url.pathname === "/api/auth/session") return Response.json({ token: "session-token" });
-    if (url.pathname === "/api/function-call") {
+    if (url.pathname === "/api/function-call" || url.pathname === "/api/function-call/recover") {
       return Response.json({
         status: "paused",
         stage: "review",
@@ -171,6 +171,28 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
     "/knowgrph/control-plane/mcp",
     "/api/auth/session",
     "/api/function-call",
+    "/api/function-call/resume",
+    "/knowgrph/control-plane/mcp/runs/dev-provider-proof-manifest-test",
+  ]);
+
+  calls.length = 0;
+  const recoveredProof = await runLiveFunctionRunNoteProof({
+    fetchImpl,
+    env: {
+      AGENTIC_LIVE_PROVIDER_APPROVAL: LIVE_FUNCTION_RUN_NOTE_APPROVAL,
+      AGENTIC_DEV_URL: "https://agentic-canvas-os-dev.example.workers.dev",
+      KNOWGRPH_DEV_MCP_ENDPOINT: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
+      KNOWGRPH_AGENT_RUNTIME_BEARER_TOKEN: "mcp-secret",
+      AGENT_REVIEW_JWT_SECRET: "review-secret",
+      AGENTIC_LIVE_PROOF_SUFFIX: "test",
+      AGENTIC_LIVE_PROOF_RECOVER: "1",
+    },
+  });
+  assert.equal(recoveredProof.recoveredContinuation, true);
+  assert.deepEqual(calls.map((call) => call.path), [
+    "/api/ready",
+    "/api/auth/session",
+    "/api/function-call/recover",
     "/api/function-call/resume",
     "/knowgrph/control-plane/mcp/runs/dev-provider-proof-manifest-test",
   ]);

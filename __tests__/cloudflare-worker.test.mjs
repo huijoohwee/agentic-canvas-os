@@ -336,6 +336,14 @@ test("POST /api/function-call/resume requires session authentication", async () 
   assert.equal(res.status, 401);
 });
 
+test("POST /api/function-call/recover requires session authentication", async () => {
+  const res = await handleCloudflareRequest(request("/api/function-call/recover", {
+    method: "POST",
+    body: { runId: "run-1" },
+  }), ENV);
+  assert.equal(res.status, 401);
+});
+
 test("non-API requests delegate to the Cloudflare assets binding", async () => {
   const env = {
     ...ENV,

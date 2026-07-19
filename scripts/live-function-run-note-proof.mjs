@@ -89,6 +89,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
   const targetRunId = `dev-provider-proof-manifest-${suffix}`;
   const functionRunId = `dev-provider-proof-function-${suffix}`;
   const note = `Reviewed Dev provider proof ${suffix}.`;
+  const recoverContinuation = env.AGENTIC_LIVE_PROOF_RECOVER === "1";
 
   const ready = (await jsonRequest(fetchImpl, new URL("/api/ready", agenticBase))).body;
   if (!ready.functionCalling?.configured || !ready.guardrailsHumanReview?.configured
@@ -102,31 +103,38 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
     authToken: mcpBearer,
     fetchImpl: mcpTransport(fetchImpl),
   });
-  const seeded = await mcpClient.runVideoRemix({
-    runId: targetRunId,
-    referenceUrl: "https://example.com/dev-provider-proof.mp4",
-    brief: "Create one deterministic dry-run manifest for reviewed Dev receipt proof.",
-    mode: "dry-run",
-    budgetUsd: 0.01,
-    shotCount: 1,
-  });
-  if (seeded?.runId !== targetRunId || seeded?.persistence?.persisted !== true) {
-    throw new Error("Knowgrph Dev Worker did not persist the proof manifest.");
+  if (!recoverContinuation) {
+    const seeded = await mcpClient.runVideoRemix({
+      runId: targetRunId,
+      referenceUrl: "https://example.com/dev-provider-proof.mp4",
+      brief: "Create one deterministic dry-run manifest for reviewed Dev receipt proof.",
+      mode: "dry-run",
+      budgetUsd: 0.01,
+      shotCount: 1,
+    });
+    if (seeded?.runId !== targetRunId || seeded?.persistence?.persisted !== true) {
+      throw new Error("Knowgrph Dev Worker did not persist the proof manifest.");
+    }
   }
 
   const session = (await jsonRequest(fetchImpl, new URL("/api/auth/session", agenticBase), {
     method: "POST", body: {},
   })).body;
   const authorization = { authorization: `Bearer ${session.token}` };
-  const paused = (await jsonRequest(fetchImpl, new URL("/api/function-call", agenticBase), {
+  const paused = (await jsonRequest(fetchImpl, new URL(
+    recoverContinuation ? "/api/function-call/recover" : "/api/function-call",
+    agenticBase,
+  ), {
     method: "POST",
     headers: authorization,
-    body: {
-      runId: functionRunId,
-      prompt: `Set run ${targetRunId} operator note to exactly: ${note}`,
-      toolChoice: { mode: "forced", name: FUNCTION_NAME },
-      parallelToolCalls: false,
-    },
+    body: recoverContinuation
+      ? { runId: functionRunId }
+      : {
+          runId: functionRunId,
+          prompt: `Set run ${targetRunId} operator note to exactly: ${note}`,
+          toolChoice: { mode: "forced", name: FUNCTION_NAME },
+          parallelToolCalls: false,
+        },
   })).body;
   const reviewState = reviewStateFromPause(paused);
   const reviewerToken = mintReviewerToken({
@@ -165,6 +173,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
     logicalProviderRuns: 1,
     providerRequests: completed.evidence.modelTurns,
     functionCalls: completed.evidence.toolCalls,
+    recoveredContinuation: recoverContinuation,
     review: Object.freeze({ required: true, decision: "approve", signedEvidence: true }),
     functionRunId,
     targetRunId,

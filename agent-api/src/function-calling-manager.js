@@ -200,6 +200,24 @@ export function createFunctionCallingManager({
     return publicResult(result);
   }
 
+  async function recover({ runId } = {}) {
+    const safeRunId = assertIdentifier(runId, "runId");
+    const record = await continuationStore.get(safeRunId);
+    if (!record || record.schema !== STATE_SCHEMA || record.phase !== "paused" || record.expiresAt <= timestamp()) {
+      blockedRuns += 1;
+      return blocked(safeRunId, "continuation_missing", "No recoverable Function Calling continuation exists.");
+    }
+    return Object.freeze({
+      runId: record.runId,
+      status: "paused",
+      stage: "review",
+      resumeToken: record.resumeToken,
+      expiresAt: record.expiresAt,
+      interruptions: record.interruptions,
+      recovered: true,
+    });
+  }
+
   async function resume({ runId, resumeToken, decision, reviewerEvidence, reason, editedPayload, signal } = {}) {
     const safeRunId = assertIdentifier(runId, "runId");
     const safeToken = assertIdentifier(resumeToken, "resumeToken");
@@ -272,7 +290,7 @@ export function createFunctionCallingManager({
     });
   }
 
-  return Object.freeze({ run, resume, stats });
+  return Object.freeze({ run, recover, resume, stats });
 }
 
 export const FUNCTION_CALLING_MANAGER_DEFAULTS = Object.freeze({

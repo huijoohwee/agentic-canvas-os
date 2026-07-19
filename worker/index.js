@@ -191,6 +191,12 @@ export async function handleCloudflareRequest(request, env = {}) {
     return toResponse(await app.functionCall({ headers: headerBag(request), body }));
   }
 
+  if (url.pathname === "/api/function-call/recover" || url.pathname === "/function-call/recover") {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    return toResponse(await app.functionCallRecover({ headers: headerBag(request), body }));
+  }
+
   if (url.pathname === "/api/function-call/resume" || url.pathname === "/function-call/resume") {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
     const body = await readJsonBody(request);

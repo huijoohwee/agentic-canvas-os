@@ -168,6 +168,8 @@ and bounded parallel calls are contract-ready. A server-configured OpenAI
 Responses adapter and explicit Knowgrph function allowlist wire
 `POST /api/function-call` to the existing MCP owner; callers cannot submit
 schemas, routing, credentials, or policy. A review pause returns an opaque token;
+`POST /api/function-call/recover` can re-read that safe pause envelope after a
+client restart without exposing the private provider checkpoint;
 `POST /api/function-call/resume` atomically claims the private `AGENT_STATE`
 checkpoint and accepts only a decision plus exact signed reviewer evidence.
 Readiness reports only sanitized adapter, gateway, and manager state, and

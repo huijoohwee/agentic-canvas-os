@@ -18,7 +18,11 @@ import { createAgentDefinitionRegistry } from "./agent-definitions.js";
 import { createAgentOrchestrationRuntime } from "./agent-orchestration.js";
 import { createAgentRuntimeComposition } from "./agent-runtime-composition.js";
 import { createCacheContextRegistry } from "./cache-context.js";
-import { createFunctionCallingHandler, createFunctionCallingResumeHandler } from "./function-calling-handler.js";
+import {
+  createFunctionCallingHandler,
+  createFunctionCallingRecoveryHandler,
+  createFunctionCallingResumeHandler,
+} from "./function-calling-handler.js";
 import { createFunctionCallingManager } from "./function-calling-manager.js";
 import { createFunctionCallingRuntime } from "./function-calling.js";
 import { createGuardrailsHumanReviewRuntime } from "./guardrails-human-review.js";
@@ -418,6 +422,10 @@ export function createAgentApiApp({
       secret,
       functionCallingManager,
       tools: functionGateway.tools,
+    }),
+    functionCallRecover: createFunctionCallingRecoveryHandler({
+      secret,
+      functionCallingManager,
     }),
     functionCallResume: createFunctionCallingResumeHandler({
       secret,

@@ -112,7 +112,8 @@ test("pull request metadata round-trips the current fencing identity", () => {
     heartbeatAt: "2026-07-17T10:00:00.000Z",
     expiresAt: "2026-07-17T10:30:00.000Z",
   };
-  const parsed = parseWriterLeasePullRequestBody(renderWriterLeasePullRequestBody(lease));
+  const body = renderWriterLeasePullRequestBody(lease);
+  const parsed = parseWriterLeasePullRequestBody(body);
   assert.deepEqual(parsed, {
     schema: lease.schema,
     status: lease.status,
@@ -126,5 +127,6 @@ test("pull request metadata round-trips the current fencing identity", () => {
     heartbeatAt: lease.heartbeatAt,
     expiresAt: lease.expiresAt,
   });
-  assert.doesNotMatch(renderWriterLeasePullRequestBody(lease), /worktrees\/runtime-leases/);
+  assert.match(body, /^---\naction: \/change\nscope: "#runtime-leases"\nactor: "@mac-a"\nbase_sha: "a{40}"\n---\n/);
+  assert.doesNotMatch(body, /worktrees\/runtime-leases/);
 });

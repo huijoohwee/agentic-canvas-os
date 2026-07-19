@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { verifySessionToken } from "../agent-api/src/auth.js";
-import { handleCloudflareRequest } from "../worker/index.js";
+import { createWorkerFetch, handleCloudflareRequest } from "../worker/index.js";
 
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
@@ -43,6 +43,41 @@ function request(path, { method = "GET", headers = {}, body } = {}) {
 async function json(res) {
   return JSON.parse(await res.text());
 }
+
+test("Worker transport uses the Dev service binding only for the configured MCP origin", async () => {
+  const serviceRequests = [];
+  const publicRequests = [];
+  const transport = createWorkerFetch({
+    KNOWGRPH_MCP_ENDPOINT: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
+    KNOWGRPH_MCP_SERVICE: {
+      fetch: async (request) => {
+        serviceRequests.push(request);
+        return Response.json({ owner: "service-binding" });
+      },
+    },
+  }, async (url, init) => {
+    publicRequests.push({ url, init });
+    return Response.json({ owner: "public-fetch" });
+  });
+  const mcpResponse = await transport({
+    url: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
+    method: "POST",
+    headers: { authorization: "Bearer secret" },
+    body: { jsonrpc: "2.0" },
+  });
+  const providerResponse = await transport({
+    url: "https://api.openai.com/v1/responses",
+    method: "POST",
+    headers: { authorization: "Bearer provider-secret" },
+    body: { model: "test" },
+  });
+  assert.equal((await mcpResponse.json()).owner, "service-binding");
+  assert.equal((await providerResponse.json()).owner, "public-fetch");
+  assert.equal(serviceRequests.length, 1);
+  assert.equal(new URL(serviceRequests[0].url).pathname, "/knowgrph/control-plane/mcp");
+  assert.equal(publicRequests.length, 1);
+  assert.equal(publicRequests[0].url, "https://api.openai.com/v1/responses");
+});
 
 async function withMockedFetch(mockFetch, run) {
   const originalFetch = globalThis.fetch;

@@ -53,6 +53,9 @@
         { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] },
         { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
       ],
+      "services": [
+        { "binding": "KNOWGRPH_MCP_SERVICE", "service": "knowgrph-mcp-dev" }
+      ],
       "vars": {
         "KNOWGRPH_MCP_ENDPOINT": "https://knowgrph-mcp-dev.huijoohwee.workers.dev/knowgrph/control-plane/mcp",
         "KNOWGRPH_FUNCTION_TOOL_ALLOWLIST": "update_agent_run_note",

@@ -30,5 +30,42 @@
   },
   "secrets": {
     "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET"]
+  },
+  "env": {
+    "dev": {
+      "name": "agentic-canvas-os-dev",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "assets": {
+        "directory": "./web/dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*", "/ready", "/auth/session", "/run", "/invoke", "/function-call", "/canvas/room"]
+      },
+      "durable_objects": {
+        "bindings": [
+          { "name": "CANVAS_ROOM", "class_name": "CanvasRoom" },
+          { "name": "AGENT_STATE", "class_name": "AgentState" }
+        ]
+      },
+      "migrations": [
+        { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] },
+        { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
+      ],
+      "vars": {
+        "KNOWGRPH_MCP_ENDPOINT": "https://knowgrph-mcp-dev.huijoohwee.workers.dev/knowgrph/control-plane/mcp",
+        "KNOWGRPH_FUNCTION_TOOL_ALLOWLIST": "update_agent_run_note",
+        "KNOWGRPH_FUNCTION_REVIEW_REQUIRED": "update_agent_run_note",
+        "OPENAI_FUNCTION_CALLING_ENDPOINT": "https://api.openai.com/v1/responses",
+        "OPENAI_FUNCTION_CALLING_API_KEY_ENV": "OPENAI_API_KEY",
+        "OPENAI_FUNCTION_CALLING_REASONING_EFFORT": "low",
+        "OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS": "256",
+        "CANVAS_BASE_URL": "https://airvio.co/knowgrph"
+      },
+      "secrets": {
+        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN"]
+      }
+    }
   }
 }

@@ -90,6 +90,9 @@ function plan(record, request, replayed = record.phase === "completed") {
     requestDigest: record.requestDigest,
     phase: record.phase,
     replayed,
+    ...(record.phase === "completed" && record.upstreamReceipt
+      ? { upstreamReceipt: normalizeJson(record.upstreamReceipt, "executionReceipt.upstreamReceipt") }
+      : {}),
   });
   return Object.freeze({
     status: record.phase,

@@ -174,6 +174,15 @@ Readiness reports only sanitized adapter, gateway, and manager state, and
 `providerExecutionStatus` remains `unverified` until a bounded live run returns
 actual usage and continuation evidence.
 
+The reviewed Function Calling proof has an isolated Cloudflare Dev lane. Run
+`npm run function-gateway:live-proof:check` and a Wrangler `--env dev --dry-run`
+before deployment. `npm run function-gateway:deploy:dev` accepts only model and
+pricing variables; credentials must be configured as Dev Worker secrets.
+`npm run function-gateway:live-proof` then seeds one dry-run Knowgrph manifest,
+pauses one forced run-note call for exact signed review, resumes the same
+Responses chain, and emits sanitized usage plus application and native receipt
+evidence. Neither Dev environment declares a production route.
+
 Programmatic tool-calling readiness is also sanitized. The local controller is
 contract-ready, but `configured` and `providerContextIsolation` remain false or
 `unverified` until a downstream hosted-sandbox adapter and real tool gateway are

@@ -184,6 +184,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
       usedCallIds: [...state.usedCallIds],
       usedResponseIds: [...state.usedResponseIds],
       usedToolNames: [...state.usedToolNames],
+      executionReceipts: state.executionReceipts,
       modelCosts: state.modelCosts,
       gatewayCosts: state.gatewayCosts,
       providerAttempts: state.providerAttempts,
@@ -256,6 +257,15 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
     return Object.freeze({ type: "function_call_output", callId: call.callId, output });
   }
 
+  function recordExecutionReceipt(state, call, gatewayResult) {
+    if (gatewayResult.executionReceipt === undefined) return;
+    state.executionReceipts.push(Object.freeze({
+      callId: call.callId,
+      toolName: call.name,
+      receipt: normalizeJson(gatewayResult.executionReceipt, `tool.${call.name}.executionReceipt`),
+    }));
+  }
+
   async function execute(context, state, signal, controller) {
     let priorResponseId = state.priorResponseId;
     let nextInput = state.nextInput;
@@ -322,6 +332,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
                 throw new FunctionCallingBlock(reasonCode, message);
               }
               state.usedToolNames.add(call.name);
+              recordExecutionReceipt(state, call, gatewayResult);
               return validateGatewayOutput(tool, call, gatewayResult);
             }));
             outputs.push(...batchOutputs);
@@ -350,6 +361,8 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
               callIdentity: "preserved",
               reasoningItemsReturned: false,
               providerExecutionStatus: "adapter-reported",
+              providerResponseIds: Object.freeze([...state.usedResponseIds]),
+              executionReceipts: Object.freeze([...state.executionReceipts]),
             }),
             costLog: aggregateCostLogs(state.modelCosts),
             gatewayCostLog: state.gatewayCosts.length > 0 ? aggregateCostLogs(state.gatewayCosts) : emptyCostLog("not-run"),
@@ -378,6 +391,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
       throw new FunctionCallingBlock(reasonCode, message, { retryable, continuationState });
     }
     state.usedToolNames.add(call.name);
+    recordExecutionReceipt(state, call, gatewayResult);
     const output = validateGatewayOutput(tool, call, gatewayResult);
     return execute(context, { ...state, nextInput: Object.freeze([...state.nextInput, output]) }, signal, controller);
   }
@@ -435,7 +449,8 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
       priorResponseId: undefined,
       nextInput: Object.freeze([{ type: "request", value: safeInput }]),
       nextTurn: 1,
-      modelCosts: [], gatewayCosts: [], usedCallIds: new Set(), usedResponseIds: new Set(), usedToolNames: new Set(),
+      modelCosts: [], gatewayCosts: [], executionReceipts: [],
+      usedCallIds: new Set(), usedResponseIds: new Set(), usedToolNames: new Set(),
       providerAttempts: 0, gatewayAttempts: 0, runToolCalls: 0, executedRequiredCall: false,
     };
     return runExecution(context, state, signal);
@@ -460,6 +475,7 @@ export function createFunctionCallingRuntime({ advanceModel, callTool,
       nextTurn: restored.nextTurn,
       pendingCall: restored.pendingCall,
       modelCosts: [...restored.modelCosts], gatewayCosts: [...restored.gatewayCosts],
+      executionReceipts: [...restored.executionReceipts],
       usedCallIds: new Set(restored.usedCallIds), usedResponseIds: new Set(restored.usedResponseIds),
       usedToolNames: new Set(restored.usedToolNames), providerAttempts: restored.providerAttempts,
       gatewayAttempts: restored.gatewayAttempts, runToolCalls: restored.runToolCalls,

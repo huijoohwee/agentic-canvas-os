@@ -104,6 +104,7 @@ test("reuses one durable idempotency key after an uncertain mutating result and 
   });
   assert.equal(completed.status, "completed");
   assert.equal(completed.evidence.replayed, false);
+  assert.equal(completed.evidence.upstreamReceipt.status, "replayed");
   assert.equal(mutations, 1);
 
   const third = createFunctionExecutionReceiptRuntime({ executionReceiptStore: store, createId: ids("third") });
@@ -235,6 +236,7 @@ test("gateway persists review authorization before mutation and replays a fresh-
   const completed = await freshGateway.callTool(call);
   assert.equal(completed.status, "completed");
   assert.equal(completed.executionReceipt.phase, "completed");
+  assert.equal(completed.executionReceipt.upstreamReceipt.status, "replayed");
   assert.equal(mutationCalls, 1);
   assert.equal(mcpCalls, 2);
 

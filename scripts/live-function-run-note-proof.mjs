@@ -57,7 +57,13 @@ export function reviewStateFromPause(paused) {
     reviewId: interruption.id,
     runId: paused.runId,
     conversationId: paused.runId,
-    actionDigest: createHash("sha256").update(JSON.stringify(action)).digest("hex"),
+    actionDigest: createHash("sha256").update(JSON.stringify({
+      actionId: action.actionId,
+      kind: action.kind,
+      name: action.name,
+      riskClass: action.riskClass,
+      payload: action.payload,
+    })).digest("hex"),
   });
 }
 

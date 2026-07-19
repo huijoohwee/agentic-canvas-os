@@ -41,15 +41,18 @@ test("review state is derived from the exact public interruption", () => {
           actionId: "call-1",
           kind: "function-tool",
           name: "update_agent_run_note",
-          riskClass: "mutation",
           payload: { run_id: "manifest-1", note: "Reviewed." },
+          riskClass: "mutation",
         },
       },
     }],
   });
   assert.equal(state.reviewId, "review-1");
   assert.equal(state.conversationId, "run-1");
-  assert.match(state.actionDigest, /^[a-f0-9]{64}$/);
+  assert.equal(
+    state.actionDigest,
+    "871995b837b8f2e725bbd26693faa41fd945cf44dcfbcfa95c73db65dc46f8b1",
+  );
 });
 
 test("live proof composes seed, pause, signed resume, receipt, and read-back without exposing secrets", async () => {

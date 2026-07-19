@@ -14,6 +14,7 @@ import path from "node:path";
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
+export const DEFAULT_PULL_REQUEST_ACTION = "/change";
 export const DEVICE_BRANCH_PATTERN =
   /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
 const LOCK_STALE_MS = 30 * 1000;
@@ -237,6 +238,13 @@ export function renderWriterLeasePullRequestBody(lease) {
     expiresAt: lease.expiresAt,
   });
   return [
+    "---",
+    `action: ${DEFAULT_PULL_REQUEST_ACTION}`,
+    `scope: "#${lease.scope}"`,
+    `actor: "@${lease.device}"`,
+    `base_sha: "${lease.baseSha}"`,
+    "---",
+    "",
     "Device branch claimed for protected, scope-aware delivery.",
     "",
     `<!-- ${WRITER_LEASE_SCHEMA} ${payload} -->`,

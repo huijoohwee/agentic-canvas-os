@@ -24,6 +24,24 @@ import { AgentState } from "./agent-state.js";
 
 export { AgentState, CanvasRoom };
 
+export function createWorkerFetch(env = {}, publicFetch) {
+  const mcpEndpoint = typeof env.KNOWGRPH_MCP_ENDPOINT === "string" ? env.KNOWGRPH_MCP_ENDPOINT : "";
+  const mcpOrigin = mcpEndpoint ? new URL(mcpEndpoint).origin : "";
+  const mcpService = env.KNOWGRPH_MCP_SERVICE;
+  return (req) => {
+    const init = {
+      method: req.method,
+      headers: req.headers,
+      body: JSON.stringify(req.body),
+      signal: req.signal,
+    };
+    if (mcpOrigin && new URL(req.url).origin === mcpOrigin && typeof mcpService?.fetch === "function") {
+      return mcpService.fetch(new Request(req.url, init));
+    }
+    return (publicFetch || fetch)(req.url, init);
+  };
+}
+
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const APP_BY_ENV = new WeakMap();
 const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
@@ -147,12 +165,7 @@ function createWorkerApp(env) {
     functionExecutionReceiptStore,
     sandboxAgents,
     toolSearch,
-    fetchImpl: (req) => fetch(req.url, {
-      method: req.method,
-      headers: req.headers,
-      body: JSON.stringify(req.body),
-      signal: req.signal,
-    }),
+    fetchImpl: createWorkerFetch(env),
   });
   if (env && typeof env === "object") APP_BY_ENV.set(env, app);
   return app;

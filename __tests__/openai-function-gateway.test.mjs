@@ -479,6 +479,7 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
   assert.equal(result.body.output, "Knowgrph capabilities loaded.");
   assert.equal(result.body.evidence.toolCalls, 1);
   assert.equal(result.body.evidence.callIdentity, "preserved");
+  assert.deepEqual(result.body.evidence.providerResponseIds, ["resp-a", "resp-b"]);
   assert.equal(mcpCalls[0].params.name, "knowgrph.os.status");
   assert.equal(openAiBodies[1].previous_response_id, "resp-a");
   assert.equal(openAiBodies[1].input[1].call_id, "call-a");

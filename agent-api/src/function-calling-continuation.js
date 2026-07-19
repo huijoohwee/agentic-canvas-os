@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { normalizeJson, serializedJsonLength } from "./json-contract.js";
 import { assertIdentifier, FunctionCallingBlock, normalizeCostLog } from "./function-calling-runtime-support.js";
 
-const CONTINUATION_SCHEMA = "function-calling-continuation/v1";
+const CONTINUATION_SCHEMA = "function-calling-continuation/v2";
 const MAX_CONTINUATION_CHARS = 450_000;
 
 function exactKeys(value, keys) {
@@ -56,7 +56,7 @@ export function restoreFunctionContinuationState(value, { tools, maxModelTurns, 
   const fields = [
     "schema", "runId", "toolFingerprint", "capabilities", "toolChoice", "parallelToolCalls",
     "previousResponseId", "reasoningItems", "pendingCall", "usedCallIds", "usedResponseIds",
-    "usedToolNames", "modelCosts", "gatewayCosts", "providerAttempts", "gatewayAttempts",
+    "usedToolNames", "executionReceipts", "modelCosts", "gatewayCosts", "providerAttempts", "gatewayAttempts",
     "runToolCalls", "executedRequiredCall", "nextTurn",
   ];
   if (!exactKeys(state, fields) || state.schema !== CONTINUATION_SCHEMA) {
@@ -71,7 +71,8 @@ export function restoreFunctionContinuationState(value, { tools, maxModelTurns, 
   if (typeof state.parallelToolCalls !== "boolean" || typeof state.executedRequiredCall !== "boolean") {
     throw new FunctionCallingBlock("continuation_state_invalid", "Function-calling continuation flags are invalid.");
   }
-  if (!Array.isArray(state.reasoningItems) || !Array.isArray(state.modelCosts) || !Array.isArray(state.gatewayCosts)) {
+  if (!Array.isArray(state.reasoningItems) || !Array.isArray(state.executionReceipts)
+    || !Array.isArray(state.modelCosts) || !Array.isArray(state.gatewayCosts)) {
     throw new FunctionCallingBlock("continuation_state_invalid", "Function-calling continuation arrays are invalid.");
   }
   const pending = state.pendingCall;
@@ -121,6 +122,8 @@ export function restoreFunctionContinuationState(value, { tools, maxModelTurns, 
     usedCallIds,
     usedResponseIds,
     usedToolNames,
+    executionReceipts: Object.freeze(state.executionReceipts.map((receipt, index) =>
+      normalizeJson(receipt, `continuationState.executionReceipts[${index}]`))),
     modelCosts: Object.freeze(state.modelCosts.map((cost) => normalizeCostLog(cost, "model"))),
     gatewayCosts: Object.freeze(state.gatewayCosts.map((cost) => normalizeCostLog(cost, "gateway"))),
     providerAttempts,

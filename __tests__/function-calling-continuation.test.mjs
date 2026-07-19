@@ -226,6 +226,8 @@ test("resumes an exact provider chain through a fresh durable manager after sign
   assert.equal(competing.reasonCode, "continuation_missing_or_active");
   assert.equal(completed.status, "completed");
   assert.equal(completed.output, "Capabilities loaded.");
+  assert.deepEqual(completed.evidence.providerResponseIds, ["response-before-review", "response-after-review"]);
+  assert.equal(completed.evidence.executionReceipts[0].receipt.phase, "completed");
   assert.equal(mcpCalls, 1);
   assert.equal(initialModelCalls, 1);
   assert.equal(resumedModelCalls.length, 1);

@@ -8,6 +8,7 @@ import {
 } from "../agent-api/src/durable-object-state-store.js";
 import {
   createFunctionCallingHandler,
+  createFunctionCallingRecoveryHandler,
   createFunctionCallingResumeHandler,
 } from "../agent-api/src/function-calling-handler.js";
 import { createFunctionCallingManager } from "../agent-api/src/function-calling-manager.js";
@@ -200,6 +201,13 @@ test("resumes an exact provider chain through a fresh durable manager after sign
   assert.equal(mcpCalls, 0);
   assert.equal(resumedModelCalls.length, 0);
 
+  const recovered = await secondManager.recover({ runId: paused.runId });
+  assert.equal(recovered.status, "paused");
+  assert.equal(recovered.recovered, true);
+  assert.equal(recovered.resumeToken, paused.resumeToken);
+  assert.deepEqual(recovered.interruptions, paused.interruptions);
+  assert.equal(JSON.stringify(recovered).includes("opaque-reasoning"), false);
+
   const stored = captured.record;
   const reviewerToken = mintReviewerToken({
     secret: reviewSecret,
@@ -294,9 +302,16 @@ test("keeps the HTTP resume boundary authenticated and forbids caller-authored a
       resumeRequest = request;
       return { runId: request.runId, status: "completed", stage: "final", output: "done" };
     },
+    recover: async ({ runId }) => ({
+      runId, status: "paused", stage: "review", resumeToken: "opaque-resume",
+      expiresAt: Date.now() + 60_000,
+      interruptions: [{ id: "review-1", kind: "approval", message: "Review." }],
+      recovered: true,
+    }),
   };
   const tools = [{ name: "reviewed_read" }];
   const start = createFunctionCallingHandler({ secret, functionCallingManager: manager, tools });
+  const recover = createFunctionCallingRecoveryHandler({ secret, functionCallingManager: manager });
   const resume = createFunctionCallingResumeHandler({ secret, functionCallingManager: manager });
   const authorization = { authorization: `Bearer ${token}` };
   const paused = await start({
@@ -305,6 +320,10 @@ test("keeps the HTTP resume boundary authenticated and forbids caller-authored a
   });
   assert.equal(paused.statusCode, 202);
   assert.equal(paused.body.resumeToken, "opaque-resume");
+
+  const recovered = await recover({ headers: authorization, body: { runId: "http-review-run" } });
+  assert.equal(recovered.statusCode, 200);
+  assert.equal(recovered.body.resumeToken, "opaque-resume");
 
   const rawApproval = await resume({
     headers: authorization,

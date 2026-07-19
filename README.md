@@ -176,6 +176,12 @@ Readiness reports only sanitized adapter, gateway, and manager state, and
 `providerExecutionStatus` remains `unverified` until a bounded live run returns
 actual usage and continuation evidence.
 
+The accepted 2026-07-19 Dev proof satisfied that evidence gate for one exact
+run: one recovered durable continuation completed two Responses requests, one
+signed review, one applied native mutation, and persisted revision 1. See
+[`docs/LIVE-REVIEWED-FUNCTION-PROOF.md`](./docs/LIVE-REVIEWED-FUNCTION-PROOF.md)
+for the sanitized usage, receipt, version, and non-Prod evidence.
+
 The reviewed Function Calling proof has an isolated Cloudflare Dev lane. Run
 `npm run function-gateway:live-proof:check` and a Wrangler `--env dev --dry-run`
 before deployment. `npm run function-gateway:deploy:dev` accepts only model and

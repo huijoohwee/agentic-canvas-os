@@ -122,6 +122,7 @@ dictionary_entries:
   - "/camera.play"
   - "/camera.scrub"
   - "/animation.control"
+  - "/motion.control"
   - "/canvas.interaction.tune"
   - "/canvas.physics.tune"
   - "/canvas.center"
@@ -239,6 +240,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/camera.play` | Play or pause the shared camera motion track. | exactly `@camera` | exactly `#camera-motion` | Playback state routes through the canonical Timeline transport and shared XR runtime. |
 | `/camera.scrub` | Move the shared camera motion playhead to a bounded time. | exactly `@camera` | exactly `#camera-motion` | The requested time clamps to scene duration and updates the canonical Timeline transport without duplicating transport state. |
 | `/animation.control` | Apply, clear, play, pause, scrub, or export native XR character motion and action-path choreography through one shared runtime. | `@selected-actor` for apply or clear; `@canvas` for transport or export | exactly one of `#character-motion` or `#action-path` for apply or clear; no semantic token for transport or export | Typed preset and operation fields validate before the shared XR motion-reference plan is updated; BottomPanel Timeline remains transport owner, FloatingPanel remains a projection, and export returns a deterministic native motion-reference package. |
+| `/motion.control` | Describe open, start, or stop intent for Motion Control on the Canvas. | exactly `@canvas` | exactly `#pose` | Source catalog metadata resolves the operation and Knowgrph ownership handoff; the row does not prove camera access, pose inference, XR behavior, executable MCP tooling, runtime readiness, or deployment. |
 | `/canvas.interaction.tune` | Tune pointer mode, run mode, drag alpha target, and flow interaction behavior through existing canvas owners. | `@flow-run-mode`, `@drag-alpha-target`, `@interaction-speed`, `@canvas` | `#canvas-interaction`, `#canvas-flow`, `#canvas-wheel`, `#vcc` | Interaction update resolves existing toolbar, store, and Flow owners; missing support returns typed unsupported state without a floating-panel alias. |
 | `/canvas.physics.tune` | Tune or reset schema-owned 2D physics forces without keeping panel-local slider state. | `@physics-2d`, `@layout-forces`, `@canvas`, `@runtime-proof` | `#canvas-physics`, `#canvas-layout`, `#vcc` | Charge, collision, speed, overlap, label, and drag-force values clamp through the schema owner and report applied, reset, or blocked state. |
 | `/canvas.center` | Center the viewport on the active selection or all items through shared arrange and centroid utilities. | `@centroid-target`, `@selected-node` when scoped to selection, `@canvas` | `#canvas-centroid`, `#canvas-selection`, `#vcc` | Centering resolves selection or all-items scope, dispatches through shared arrange utilities, and reports a typed missing-selection result when needed. |

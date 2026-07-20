@@ -259,6 +259,17 @@ closed until resolver, planner, worker, synthesizer, receipt-verifier, and autho
 live provider execution remains `unverified`. See
 [`docs/AGENT-SWARM.md`](./docs/AGENT-SWARM.md).
 
+Agent Toolkit readiness adds a framework-neutral observation layer without
+becoming another runner. Authenticated `/api/agent-toolkit/*` routes and the
+local `instrument` wrapper persist only digest-bound caller-declared revision
+metadata, server timing, one owner-aggregate cost, evaluator evidence,
+deterministic same-cohort comparison, and review-pending proposals. An
+application authorizer owns source verification; remote-submitted telemetry is
+marked untrusted and excluded from comparison. Raw prompts, inputs, outputs,
+tool payloads, private reasoning, default egress, and automatic application are
+excluded; measured speed, quality, and cost improvements remain `unverified`.
+See [`docs/AGENT-TOOLKIT.md`](./docs/AGENT-TOOLKIT.md).
+
 Sandbox Agents readiness exposes a separate container-workspace control plane.
 It validates one fresh workspace or saved snapshot, routes application-approved
 file, command, package, and private-preview-port work to an injected provider,

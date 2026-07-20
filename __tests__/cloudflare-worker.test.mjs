@@ -4,7 +4,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { verifySessionToken } from "../agent-api/src/auth.js";
+import { mintSessionToken, verifySessionToken } from "../agent-api/src/auth.js";
+import { createAgentToolkitHandlers } from "../agent-api/src/agent-toolkit-handler.js";
 import { createWorkerFetch, handleCloudflareRequest } from "../worker/index.js";
 
 const ENV = Object.freeze({
@@ -31,6 +32,29 @@ const DURABLE_ENV = Object.freeze({
     get: () => Object.freeze({ fetch: async () => new Response("{}", { status: 200 }) }),
   }),
 });
+
+const TOOLKIT_PROFILE = Object.freeze({
+  evaluator: Object.freeze({ id: "worker-evaluator", revision: "eval-v1", digest: "3".repeat(64) }),
+  dataset: Object.freeze({ id: "worker-dataset", revision: "dataset-v1", digest: "4".repeat(64) }),
+  metric: Object.freeze({
+    id: "worker-quality",
+    revision: "metric-v1",
+    digest: "5".repeat(64),
+    direction: "maximize",
+  }),
+});
+
+function toolkitStartRequest(runId, cohortId = "worker-toolkit-cohort") {
+  return {
+    runId,
+    cohortId,
+    target: { kind: "team", id: "worker-team", revision: "team-v1", digest: "1".repeat(64) },
+    candidate: { id: "worker-policy", revision: "policy-v1", digest: "a".repeat(64) },
+    adapter: { id: "worker-adapter", revision: "adapter-v1", digest: "2".repeat(64) },
+    operation: "worker-observe",
+    profile: TOOLKIT_PROFILE,
+  };
+}
 
 function request(path, { method = "GET", headers = {}, body } = {}) {
   return new Request(`https://agentic-canvas-os.example${path}`, {
@@ -173,6 +197,15 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentSwarm.stateStore.persistence, "isolate-memory");
   assert.equal(body.agentSwarm.stateStore.horizontalRecovery, false);
   assert.equal(body.agentSwarm.providerExecutionStatus, "unverified");
+  assert.equal(body.agentToolkit.contractReady, true);
+  assert.equal(body.agentToolkit.configured, true);
+  assert.equal(body.agentToolkit.instrumentation, "server-timed-metadata-only");
+  assert.equal(body.agentToolkit.learning, "review-pending-proposal-only");
+  assert.equal(body.agentToolkit.defaultEgress, false);
+  assert.equal(body.agentToolkit.externalRuntimeDependency, false);
+  assert.equal(body.agentToolkit.measuredImprovementStatus, "unverified");
+  assert.equal(body.agentToolkit.stateStore.persistence, "isolate-memory");
+  assert.equal(body.agentToolkit.stateStore.horizontalRecovery, false);
   assert.equal(body.progressiveAgents.contractReady, true);
   assert.equal(body.progressiveAgents.configured, false);
   assert.equal(body.progressiveAgents.progressionPolicy, "single-agent-then-tools-then-specialists");
@@ -280,6 +313,10 @@ test("GET /api/ready exposes durable review and paused-turn recovery bindings", 
   assert.equal(body.agentSwarm.stateStore.atomicClaims, true);
   assert.equal(body.agentSwarm.stateStore.horizontalRecovery, true);
   assert.equal(body.agentSwarm.stateStore.owner, "agent-swarm");
+  assert.equal(body.agentToolkit.stateStore.persistence, "durable-object");
+  assert.equal(body.agentToolkit.stateStore.atomicClaims, true);
+  assert.equal(body.agentToolkit.stateStore.horizontalRecovery, true);
+  assert.equal(body.agentToolkit.stateStore.owner, "agent-toolkit");
 });
 
 test("POST /api/auth/session mints a session token", async () => {
@@ -313,6 +350,102 @@ test("POST /api/run without auth is 401 before any control-plane forward", async
     ENV,
   );
   assert.equal(res.status, 401);
+});
+
+test("Agent Toolkit Worker routes require authentication and POST", async () => {
+  const unauthorized = await handleCloudflareRequest(request("/api/agent-toolkit/start", {
+    method: "POST",
+    body: {},
+  }), ENV);
+  assert.equal(unauthorized.status, 401);
+  const wrongMethod = await handleCloudflareRequest(request("/api/agent-toolkit/status"), ENV);
+  assert.equal(wrongMethod.status, 405);
+});
+
+test("Agent Toolkit handlers preserve outcome semantics and mark HTTP telemetry unverified", async () => {
+  const secret = "toolkit-handler-secret";
+  const token = mintSessionToken({ secret, subject: "toolkit-handler-owner" });
+  let result = { status: "blocked", reasonCode: "run_not_found" };
+  let observedContext;
+  const handlers = createAgentToolkitHandlers({
+    secret,
+    agentToolkit: {
+      stats: () => ({ configured: true }),
+      start: async (_body, context) => {
+        observedContext = context;
+        return result;
+      },
+    },
+  });
+  const requestContext = { headers: { authorization: `Bearer ${token}` }, body: {} };
+  const cases = [
+    [{ status: "blocked", reasonCode: "run_not_found" }, 404],
+    [{ status: "blocked", reasonCode: "cohort_not_found" }, 404],
+    [{ status: "blocked", reasonCode: "toolkit_denied" }, 403],
+    [{ status: "blocked", reasonCode: "run_forbidden" }, 403],
+    [{ status: "blocked", reasonCode: "evaluator_unconfigured" }, 501],
+    [{ status: "blocked", reasonCode: "runtime_unconfigured" }, 501],
+    [{ status: "blocked", reasonCode: "cohort_unavailable" }, 503],
+    [{ status: "insufficient-evidence", reasonCode: "trusted_sample_count" }, 200],
+    [{ status: "review_pending" }, 202],
+  ];
+  for (const [outcome, expectedStatus] of cases) {
+    result = outcome;
+    assert.equal((await handlers.start(requestContext)).statusCode, expectedStatus);
+  }
+  assert.equal(observedContext.principalId, "toolkit-handler-owner");
+  assert.equal(observedContext.telemetryTrust, "remote-unverified");
+});
+
+test("Agent Toolkit Worker accepts an authenticated metadata-only lifecycle", async () => {
+  const session = await handleCloudflareRequest(request("/api/auth/session", { method: "POST", body: {} }), ENV);
+  const token = (await json(session)).token;
+  const headers = { authorization: `Bearer ${token}` };
+  const runId = "worker-toolkit-lifecycle";
+  const started = await handleCloudflareRequest(request("/api/agent-toolkit/start", {
+    method: "POST",
+    headers,
+    body: toolkitStartRequest(runId),
+  }), ENV);
+  assert.equal(started.status, 202);
+  const startBody = await json(started);
+  assert.equal(startBody.status, "running");
+  assert.equal(startBody.telemetryTrust, "remote-unverified");
+
+  const running = await handleCloudflareRequest(request("/api/agent-toolkit/status", {
+    method: "POST",
+    headers,
+    body: { runId },
+  }), ENV);
+  assert.equal(running.status, 202);
+  assert.equal((await json(running)).runId, runId);
+
+  const completed = await handleCloudflareRequest(request("/api/agent-toolkit/complete", {
+    method: "POST",
+    headers,
+    body: { runId, operationId: "worker-complete", status: "completed" },
+  }), ENV);
+  assert.equal(completed.status, 200);
+  const completeBody = await json(completed);
+  assert.equal(completeBody.status, "completed");
+  assert.equal(completeBody.completion.cost.status, "unreported");
+
+  const terminal = await handleCloudflareRequest(request("/api/agent-toolkit/status", {
+    method: "POST",
+    headers,
+    body: { runId },
+  }), ENV);
+  assert.equal(terminal.status, 200);
+  assert.equal((await json(terminal)).status, "completed");
+});
+
+test("Worker rejects JSON request bodies above the bounded ingestion limit", async () => {
+  const response = await handleCloudflareRequest(request("/api/auth/session", {
+    method: "POST",
+    body: JSON.stringify({ value: "x".repeat(512 * 1024) }),
+  }), ENV);
+  assert.equal(response.status, 413);
+  assert.equal((await json(response)).code, "request_body_too_large");
 });
 
 test("POST /api/invoke forwards an authed grammar query through the worker", async () => {

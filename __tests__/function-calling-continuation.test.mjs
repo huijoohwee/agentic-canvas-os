@@ -44,6 +44,7 @@ class MemoryStorage {
   constructor() {
     this.records = new Map();
     this.transactionTail = Promise.resolve();
+    this.alarmAt = null;
   }
 
   async transaction(operation) {
@@ -55,6 +56,9 @@ class MemoryStorage {
   async get(key) { return this.records.get(key); }
   async put(key, value) { this.records.set(key, value); }
   async delete(key) { return this.records.delete(key); }
+  async getAlarm() { return this.alarmAt; }
+  async setAlarm(value) { this.alarmAt = Number(value); }
+  async deleteAlarm() { this.alarmAt = null; }
 }
 
 function agentStateNamespace() {

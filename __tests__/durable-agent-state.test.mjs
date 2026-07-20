@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createDurableObjectHumanReviewStore,
   createDurableObjectPausedTurnStore,
+  createDurableObjectSwarmRunStore,
 } from "../agent-api/src/durable-object-state-store.js";
 import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
 import { AgentState } from "../worker/agent-state.js";
@@ -99,6 +100,47 @@ test("Durable Object paused turns enforce claim, release, replace, and commit", 
   assert.ok(await store.claim(base.conversationId, "claim-4", Date.now() + 30_000));
   assert.equal(await store.commit(base.conversationId, "claim-4"), true);
   assert.equal(await store.get(base.conversationId), null);
+});
+
+test("Agent Swarm ledgers coordinate atomic claims across isolate adapters", async () => {
+  const namespace = createAgentStateNamespace();
+  const first = createDurableObjectSwarmRunStore({ namespace });
+  const second = createDurableObjectSwarmRunStore({ namespace });
+  const ledger = {
+    schema: "agent-swarm-run/v1",
+    runId: "swarm-run-1",
+    status: "running",
+    revision: 1,
+    expiresAt: Date.now() + 60_000,
+  };
+
+  assert.equal(await first.put(ledger), true);
+  assert.equal(await second.put(ledger), false);
+  const [firstClaim, secondClaim] = await Promise.all([
+    first.claim(ledger.runId, "worker-a", Date.now() + 30_000),
+    second.claim(ledger.runId, "worker-b", Date.now() + 30_000),
+  ]);
+  assert.equal([firstClaim, secondClaim].filter(Boolean).length, 1);
+  const winner = firstClaim ? [first, "worker-a"] : [second, "worker-b"];
+  const replacement = { ...ledger, revision: 2 };
+  assert.equal(await winner[0].replace(ledger.runId, winner[1], replacement), true);
+  assert.deepEqual(await second.get(ledger.runId), replacement);
+  assert.ok(await first.claim(ledger.runId, "expiring-coordinator", Date.now() + 5));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await second.put({ ...ledger, revision: 3 }), false);
+  assert.deepEqual(await second.get(ledger.runId), replacement);
+  assert.ok(await first.claim(ledger.runId, "conditional-discard", Date.now() + 30_000));
+  assert.equal(await second.commit(ledger.runId, "wrong-discard"), false);
+  assert.deepEqual(await second.get(ledger.runId), replacement);
+  assert.equal(await first.commit(ledger.runId, "conditional-discard"), true);
+  assert.equal(await second.get(ledger.runId), null);
+  assert.deepEqual(first.stats(), {
+    persistence: "durable-object",
+    atomicClaims: true,
+    horizontalRecovery: true,
+    owner: "agent-swarm",
+    activeRuns: null,
+  });
 });
 
 test("Running Agents resumes one durable paused turn after an isolate restart", async () => {

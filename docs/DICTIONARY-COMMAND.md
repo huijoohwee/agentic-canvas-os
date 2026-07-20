@@ -90,6 +90,7 @@ dictionary_entries:
   - "/skill.evolve"
   - "/identity.reflect"
   - "/orchestration.graph"
+  - "/agent.swarm"
   - "/state.checkpoint"
   - "/human.review"
   - "/stream.trace"
@@ -211,6 +212,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/skill.evolve` | Improve an existing skill through bounded evaluation and human-reviewed diff proposal. | `@skill-catalog`, `@runtime-proof`, `@operator` | `#skill-evolution`, `#vcc`, `#approval-gate` | Evaluation packet, focused checks, semantic-preservation note, and proposed diff are present; no direct auto-commit occurs. |
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
+| `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
 | `/state.checkpoint` | Define checkpoint, resume, recovery, and idempotency behavior for long-running runs. | `@checkpoint-store`, `@state-store`, `@runtime-proof` | `#durable-execution`, `#stateful-agent`, `#vcc` | Checkpoint contract names scope, storage owner, resume token, retry policy, and recovery proof. |
 | `/human.review` | Interrupt a run for operator inspection, edit, approval, rejection, and resume. | `@human-review`, `@operator`, `@approval-gate` | `#human-in-loop`, `#approval-gate`, `#vcc` | Run remains paused until review result is present; resume payload and audit event are typed. |
 | `/stream.trace` | Surface execution progress, state transitions, cost, and stop events as a typed trace. | `@runtime-proof`, `@cost-log`, `@orchestration-graph` | `#durable-execution`, `#token-economics`, `#vcc` | Trace events are ordered, bounded, secret-free, and do not mutate source state. |
@@ -298,6 +300,7 @@ command:
 | `/reference.expand` targets sensitive, binary, missing, outside-workspace, or over-hard-limit content | Append typed warning or refuse expansion before injecting content. |
 | `/reference.expand` runs on a platform that does not support inline expansion | Preserve the raw message and report unsupported-platform without rewriting the text. |
 | `/kanban.task` or `/kanban.handoff` lacks a row id, owner profile, status, or acceptance field | Reject before write; do not create partial board rows. |
+| `/agent.swarm` receives caller-authored roles, specialists, tasks, branches, or workflow topology, or cannot resolve the exact base-agent revision | Reject before planning or spend; do not infer a handcrafted workflow or stale agent. |
 | `/kanban.sync` sees conflicting writes to the same row | Preserve both evidence fields and require explicit resolution; do not overwrite another profile's handoff. |
 | `/tool.route` targets a paid, mutating, browser-auth, egress, or generated-media tool | Require `@operator` approval and fail closed without approval. |
 | `/tool.provider.select` includes credentials or browser secrets | Reject and require server-managed secret setup; do not write secrets into docs or client state. |
@@ -319,6 +322,7 @@ command:
 | `/soul.load` | `FACTS.md` direct-resolution entry for durable identity loading. |
 | `/personality.overlay` | `FACTS.md` direct-resolution entry for temporary personality overlays. |
 | `/moa` | `FACTS.md` direct-resolution entry for one-shot Mixture of Agents routing. |
+| `/agent.swarm` | `FACTS.md` direct-resolution entry for native dynamic horizontal worker coordination. |
 | `/sme-care-agent` | `FACTS.md` direct-resolution entry for source-grounded SME care responses. |
 | `/investment-research-agent` | `FACTS.md` direct-resolution entry for source-grounded investment research responses. |
 | `/crawler-agent` | `FACTS.md` direct-resolution entry for the native website crawl route. |

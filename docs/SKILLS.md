@@ -76,6 +76,7 @@ skill_contracts:
   - "skill.evolve"
   - "identity.reflect"
   - "orchestration.graph"
+  - "agent.swarm"
   - "state.checkpoint"
   - "human.review"
   - "stream.trace"
@@ -131,7 +132,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
-| Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `kanban.collaborate` | `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
+| Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.swarm`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `kanban.collaborate` | `AGENT-SWARM.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
 | Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
 ## Specialized Contracts
@@ -143,6 +144,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Image to Three.js | `IMAGE-TO-THREEJS-SKILL.md` |
 | Image to GLB | `IMAGE-TO-GLB-SKILL.md` |
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
+| Agent Swarm | `AGENT-SWARM.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
 Variants remain metadata aliases over registered owners: `agent.moa`, `agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`, `agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and `agent.orchestrator`. The domain variants resolve through `/investment-research-agent`, `/sme-care-agent`, `/video-agent`, and `/crawler-agent`; a variant does not create a wildcard command or a second execution registry.

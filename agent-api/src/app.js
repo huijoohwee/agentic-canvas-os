@@ -17,6 +17,8 @@ import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from 
 import { createAgentDefinitionRegistry } from "./agent-definitions.js";
 import { createAgentOrchestrationRuntime } from "./agent-orchestration.js";
 import { createAgentRuntimeComposition } from "./agent-runtime-composition.js";
+import { createAgentSwarmHandlers } from "./agent-swarm-handler.js";
+import { createAgentSwarmRuntime } from "./agent-swarm.js";
 import { createCacheContextRegistry } from "./cache-context.js";
 import {
   createFunctionCallingHandler,
@@ -58,6 +60,8 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createAgentDefinitionRegistry>} [opts.agentDefinitions] isolate-scoped agent definition registry
  * @param {ReturnType<createAgentOrchestrationRuntime>} [opts.agentOrchestration] multi-agent ownership controller
  * @param {ReturnType<createAgentRuntimeComposition>} [opts.agentRuntimeComposition] definition-to-execution adapter
+ * @param {ReturnType<createAgentSwarmRuntime>} [opts.agentSwarm] dynamic horizontal task coordinator
+ * @param {object} [opts.swarmRunStore] optional atomic Agent Swarm run ledger store
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
@@ -81,6 +85,8 @@ export function createAgentApiApp({
   agentDefinitions: providedAgentDefinitions,
   agentOrchestration: providedAgentOrchestration,
   agentRuntimeComposition: providedAgentRuntimeComposition,
+  agentSwarm: providedAgentSwarm,
+  swarmRunStore,
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
@@ -149,6 +155,9 @@ export function createAgentApiApp({
     resolveAgent: agentRuntimeComposition.resolveAgent,
     runAgent: agentRuntimeComposition.runAgent,
   });
+  const agentSwarm = providedAgentSwarm || createAgentSwarmRuntime({
+    ...(swarmRunStore ? { stateStore: swarmRunStore } : {}),
+  });
   const progressiveAgents = providedProgressiveAgents || createProgressiveAgentsRuntime({
     agentDefinitions,
     agentRuntimeComposition,
@@ -185,6 +194,7 @@ export function createAgentApiApp({
     capabilities: openAiFunctionAdapter?.capabilities || OPENAI_FUNCTION_CALLING_CAPABILITIES,
     ...(functionContinuationStore ? { continuationStore: functionContinuationStore } : {}),
   });
+  const agentSwarmHandlers = createAgentSwarmHandlers({ secret, agentSwarm });
 
   return {
     configured: Boolean(secret && endpoint && modelProviderEnvironment.ready && modelProviderEnvironment.apiKeyPresent),
@@ -193,6 +203,7 @@ export function createAgentApiApp({
     agentDefinitions,
     agentOrchestration,
     agentRuntimeComposition,
+    agentSwarm,
     cacheContext,
     reasoningContinuity,
     functionCalling,
@@ -205,10 +216,16 @@ export function createAgentApiApp({
     runningAgents,
     sandboxAgents,
     toolSearch,
+    agentSwarmStart: agentSwarmHandlers.start,
+    agentSwarmWork: agentSwarmHandlers.work,
+    agentSwarmSettle: agentSwarmHandlers.settle,
+    agentSwarmStatus: agentSwarmHandlers.status,
+    agentSwarmCancel: agentSwarmHandlers.cancel,
     readiness: () => {
       const agentDefinitionStats = agentDefinitions.stats();
       const agentOrchestrationStats = agentOrchestration.stats();
       const agentRuntimeCompositionStats = agentRuntimeComposition.stats();
+      const agentSwarmStats = agentSwarm.stats();
       const programmaticStats = programmaticToolCalling.stats();
       const progressiveAgentStats = progressiveAgents.stats();
       const functionCallingStats = functionCalling.stats();
@@ -305,6 +322,25 @@ export function createAgentApiApp({
           outputValidationOwner: "agent-definitions",
           providerExecutionStatus: "unverified",
           ...agentRuntimeCompositionStats,
+        },
+        agentSwarm: {
+          configured: agentSwarmStats.configured,
+          contractReady: true,
+          coordinationOwner: "agent-swarm-durable-ledger",
+          taskModel: "runtime-generated-objectives-and-dependencies",
+          workerModel: "stateless-ephemeral-claims",
+          definitionResolutionOwner: "application-injected-agent-resolver",
+          executionOwner: "application-injected-worker-adapter",
+          synthesisOwner: "base-agent",
+          receiptVerificationOwner: "application-injected-durable-receipt-verifier",
+          mutationPolicy: "read-only-or-idempotent-with-verified-stable-key-receipt",
+          runOwnership: "authenticated-session-principal",
+          runDeadlinePolicy: "fixed-from-admission-with-full-lease-window",
+          sessionLifetimePolicy: "must-cover-fixed-run-deadline",
+          publicOutputPolicy: "base-agent-synthesis-only",
+          externalRuntimeDependency: false,
+          providerExecutionStatus: "unverified",
+          ...agentSwarmStats,
         },
         progressiveAgents: {
           configured: progressiveAgentStats.configured,

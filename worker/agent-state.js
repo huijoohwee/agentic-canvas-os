@@ -40,9 +40,17 @@ export class AgentState {
   async put(value, now) {
     if (!exactKeys(value, ["record"]) || !activeValue(value.record, now)) return json(400, { error: "invalid record" });
     const stored = await this.transact(async (storage) => {
-      const current = activeValue(await storage.get(ACTIVE_KEY), now);
-      const claim = claimedValue(await storage.get(CLAIM_KEY), now);
-      if (current || claim) return false;
+      const priorClaim = await storage.get(CLAIM_KEY);
+      const claim = claimedValue(priorClaim, now);
+      let current = activeValue(await storage.get(ACTIVE_KEY), now);
+      if (!current && !claim && priorClaim?.record) current = activeValue(priorClaim.record, now);
+      if (current || claim) {
+        if (!claim && current) {
+          await storage.delete(CLAIM_KEY);
+          await storage.put(ACTIVE_KEY, current);
+        }
+        return false;
+      }
       await storage.delete(ACTIVE_KEY);
       await storage.delete(CLAIM_KEY);
       await storage.put(ACTIVE_KEY, value.record);

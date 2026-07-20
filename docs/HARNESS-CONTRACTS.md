@@ -142,6 +142,7 @@ harness:
 | Models And Providers | Resolve an application-registered provider revision, model, and transport without executing it | `{ agentModel, runDefault, processDefault, requirements }` | Immutable selection packet or typed block | Exact registration, feature, delivery, and connection matching precede adapter execution; credentials and provider calls stay external |
 | Running Agents | Drive one bounded application turn across model, tool, handoff, pause, and final stages | `{ runId, conversationId, agent, input, continuation }` | Completed, paused, or blocked settlement plus continuation, evidence, and honest cost | One strategy per conversation; streaming shares the same loop; adapters and gateways retain execution policy |
 | Agent Orchestration | Route one exact manager or specialist branch with explicit public ownership | `{ runId, conversationId, workflowId, workflowRevision, branchId, input }` | Source-owned delegated answer, target-owned handoff answer, or typed block | Every branch fixes conversation and final-answer ownership; authorization, exact agent resolution, and Running Agents execution remain separate |
+| Agent Swarm | Dynamically decompose one goal and coordinate bounded independent work horizontally | `{ runId, conversationId, agent, goal, input, maxParallel }` | One base-agent synthesis, recoverable ledger, sanitized trace, verified receipts, cost, or typed block | Callers cannot define roles, tasks, workflows, principals, or signals; authorization and exact-agent resolution precede spend and existing tool owners retain side effects |
 | Agent Runtime Composition | Join exact definition, model selection, lifecycle, output validation, and orchestration interfaces | `{ agent, role, workflow, branch, input }` | Validated final output and fully reported cost, or bounded block | Existing owners remain authoritative; missing or changed evidence fails before public output |
 | Progressive Agents | Grow from one exact agent run to tool-bearing definitions and explicit specialist workflows | `{ runId, conversationId, agentId, revision, input }` or an exact workflow request | Agent-owned direct output, manager-owned delegation, specialist-owned handoff, or bounded block | Facade delegates to existing owners; tool authorization, execution, provider transport, and answer ownership never move into the facade |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
@@ -243,7 +244,7 @@ Kanban collaboration harnesses coordinate named profiles through `kanban.md` row
 |---|---|
 | Durable rows | Every task and handoff is a Markdown row readable by all profiles. |
 | Shared utilities | Use existing multi-dimensional table/Kanban utilities only. |
-| No swarm | Do not coordinate through fragile in-process subagent state. |
+| No hidden swarm | Named-profile coordination cannot use process-local subagent state; a dynamic application swarm requires its explicit durable ledger contract. |
 | No deploy mutation | Board writes do not imply Prod mirror or Cloudflare deploy. |
 
 ## Mixture Of Agents Harness Contract
@@ -509,6 +510,17 @@ Stateful orchestration harnesses model long-running agent work as neutral graph 
 | Durable resume | Checkpoints prove resume from the latest accepted state, not from stale recomputation. |
 | Human gate | Review interrupts block until approve, reject, or edit result is typed. |
 | No external copy | Do not import LangGraph code, API schemas, examples, tests, fixtures, or prose. |
+
+## Agent Swarm Harness Contract
+
+Agent Swarm turns one authorized goal into runtime-generated task briefs. Kimi Agent Swarm may inform the capability class, but local code and contracts must not copy or depend on its runtime, APIs, prompts, schemas, examples, tests, limits, UI assets, or prose.
+
+| Stage | Harness input | Harness output | Guard |
+|---|---|---|---|
+| Plan | `{ goal, input, bounds }` plus server-owned principal and resolved exact agent | One validated acyclic task plan | No caller roles, tasks, workflow, recursive fan-out, or spend before authorization and resolution. |
+| Claim | `{ runId, workerId }` under the verified run principal | Atomic task lease, idle, capacity, or terminal state | Durable short claims fence stale workers across isolates and deny other sessions. |
+| Execute | Isolated task brief and completed dependency results | Result, verified receipt, cost, retry, or failure | Effects are read-only or carry a durable-owner-verified stable task idempotency receipt. |
+| Synthesize | Completed task evidence and original base agent | Only public final answer or bounded block | The base agent owns synthesis; intermediate worker output stays private. |
 
 ### Reasoning Continuity Harness
 

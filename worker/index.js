@@ -12,6 +12,7 @@ import {
   createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
   createDurableObjectPausedTurnStore,
+  createDurableObjectSwarmRunStore,
 } from "../agent-api/src/durable-object-state-store.js";
 import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
@@ -107,6 +108,9 @@ function createWorkerApp(env) {
   const functionExecutionReceiptStore = durableStateConfigured
     ? createDurableObjectFunctionExecutionReceiptStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const swarmRunStore = durableStateConfigured
+    ? createDurableObjectSwarmRunStore({ namespace: env.AGENT_STATE })
+    : undefined;
   if (env && typeof env === "object") {
     agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
     if (!agentDefinitions) {
@@ -163,6 +167,7 @@ function createWorkerApp(env) {
     pausedTurnStore,
     functionContinuationStore,
     functionExecutionReceiptStore,
+    swarmRunStore,
     sandboxAgents,
     toolSearch,
     fetchImpl: createWorkerFetch(env),
@@ -214,6 +219,22 @@ export async function handleCloudflareRequest(request, env = {}) {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
     const body = await readJsonBody(request);
     return toResponse(await app.functionCallResume({ headers: headerBag(request), body }));
+  }
+
+  const swarmAction = url.pathname.startsWith("/api/agent-swarm/")
+    ? url.pathname.slice("/api/agent-swarm/".length)
+    : "";
+  if (["start", "work", "settle", "status", "cancel"].includes(swarmAction)) {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    const handler = {
+      start: app.agentSwarmStart,
+      work: app.agentSwarmWork,
+      settle: app.agentSwarmSettle,
+      status: app.agentSwarmStatus,
+      cancel: app.agentSwarmCancel,
+    }[swarmAction];
+    return toResponse(await handler({ headers: headerBag(request), body, signal: request.signal }));
   }
 
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {

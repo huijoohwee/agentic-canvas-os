@@ -158,6 +158,21 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentRuntimeComposition.guardrailRuntimeConfigured, true);
   assert.equal(body.agentRuntimeComposition.executionAdapterConfigured, false);
   assert.equal(body.agentRuntimeComposition.providerExecutionStatus, "unverified");
+  assert.equal(body.agentSwarm.contractReady, true);
+  assert.equal(body.agentSwarm.configured, false);
+  assert.equal(body.agentSwarm.coordinationOwner, "agent-swarm-durable-ledger");
+  assert.equal(body.agentSwarm.taskModel, "runtime-generated-objectives-and-dependencies");
+  assert.equal(body.agentSwarm.workerModel, "stateless-ephemeral-claims");
+  assert.equal(body.agentSwarm.definitionResolutionOwner, "application-injected-agent-resolver");
+  assert.equal(body.agentSwarm.synthesisOwner, "base-agent");
+  assert.equal(body.agentSwarm.receiptVerificationOwner, "application-injected-durable-receipt-verifier");
+  assert.equal(body.agentSwarm.runOwnership, "authenticated-session-principal");
+  assert.equal(body.agentSwarm.runDeadlinePolicy, "fixed-from-admission-with-full-lease-window");
+  assert.equal(body.agentSwarm.sessionLifetimePolicy, "must-cover-fixed-run-deadline");
+  assert.equal(body.agentSwarm.externalRuntimeDependency, false);
+  assert.equal(body.agentSwarm.stateStore.persistence, "isolate-memory");
+  assert.equal(body.agentSwarm.stateStore.horizontalRecovery, false);
+  assert.equal(body.agentSwarm.providerExecutionStatus, "unverified");
   assert.equal(body.progressiveAgents.contractReady, true);
   assert.equal(body.progressiveAgents.configured, false);
   assert.equal(body.progressiveAgents.progressionPolicy, "single-agent-then-tools-then-specialists");
@@ -261,6 +276,10 @@ test("GET /api/ready exposes durable review and paused-turn recovery bindings", 
   assert.equal(body.functionCalling.gateway.executionReceipts.persistence, "durable-object");
   assert.equal(body.functionCalling.gateway.executionReceipts.atomicClaims, true);
   assert.equal(body.functionCalling.gateway.executionReceipts.recovery, "cross-isolate");
+  assert.equal(body.agentSwarm.stateStore.persistence, "durable-object");
+  assert.equal(body.agentSwarm.stateStore.atomicClaims, true);
+  assert.equal(body.agentSwarm.stateStore.horizontalRecovery, true);
+  assert.equal(body.agentSwarm.stateStore.owner, "agent-swarm");
 });
 
 test("POST /api/auth/session mints a session token", async () => {
@@ -361,6 +380,26 @@ test("POST /api/function-call requires auth before adapter or gateway configurat
     ENV,
   );
   assert.equal(res.status, 401);
+});
+
+test("POST /api/agent-swarm/start requires auth before runtime configuration", async () => {
+  const unauthorized = await handleCloudflareRequest(
+    request("/api/agent-swarm/start", { method: "POST", body: { runId: "swarm-run" } }),
+    ENV,
+  );
+  assert.equal(unauthorized.status, 401);
+  const session = await handleCloudflareRequest(request("/api/auth/session", { method: "POST", body: {} }), ENV);
+  const token = (await json(session)).token;
+  const unconfigured = await handleCloudflareRequest(
+    request("/api/agent-swarm/start", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: { runId: "swarm-run" },
+    }),
+    ENV,
+  );
+  assert.equal(unconfigured.status, 501);
+  assert.deepEqual(await json(unconfigured), { error: "agent swarm not configured" });
 });
 
 test("POST /api/function-call/resume requires session authentication", async () => {

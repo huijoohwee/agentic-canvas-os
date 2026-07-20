@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import { createAgentSwarmRuntime } from "../agent-api/src/agent-swarm.js";
 
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
@@ -106,6 +107,24 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentRuntimeComposition.guardrailRuntimeConfigured, true);
   assert.equal(app.readiness().agentRuntimeComposition.executionAdapterConfigured, false);
   assert.equal(app.readiness().agentRuntimeComposition.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().agentSwarm.contractReady, true);
+  assert.equal(app.readiness().agentSwarm.configured, false);
+  assert.equal(app.readiness().agentSwarm.coordinationOwner, "agent-swarm-durable-ledger");
+  assert.equal(app.readiness().agentSwarm.taskModel, "runtime-generated-objectives-and-dependencies");
+  assert.equal(app.readiness().agentSwarm.workerModel, "stateless-ephemeral-claims");
+  assert.equal(app.readiness().agentSwarm.definitionResolutionOwner, "application-injected-agent-resolver");
+  assert.equal(app.readiness().agentSwarm.synthesisOwner, "base-agent");
+  assert.equal(app.readiness().agentSwarm.receiptVerificationOwner, "application-injected-durable-receipt-verifier");
+  assert.equal(app.readiness().agentSwarm.mutationPolicy, "read-only-or-idempotent-with-verified-stable-key-receipt");
+  assert.equal(app.readiness().agentSwarm.runOwnership, "authenticated-session-principal");
+  assert.equal(app.readiness().agentSwarm.runDeadlinePolicy, "fixed-from-admission-with-full-lease-window");
+  assert.equal(app.readiness().agentSwarm.sessionLifetimePolicy, "must-cover-fixed-run-deadline");
+  assert.equal(app.readiness().agentSwarm.externalRuntimeDependency, false);
+  assert.equal(app.readiness().agentSwarm.stateStore.persistence, "isolate-memory");
+  assert.equal(app.readiness().agentSwarm.stateStore.atomicClaims, true);
+  assert.equal(app.readiness().agentSwarm.stateStore.horizontalRecovery, false);
+  assert.equal(app.readiness().agentSwarm.recursiveFanOut, false);
+  assert.equal(app.readiness().agentSwarm.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().progressiveAgents.contractReady, true);
   assert.equal(app.readiness().progressiveAgents.configured, false);
   assert.equal(app.readiness().progressiveAgents.progressionPolicy, "single-agent-then-tools-then-specialists");
@@ -251,4 +270,111 @@ test("auth/session honors an env default expiry", async () => {
   const [, payloadB64] = session.body.token.split(".");
   const claims = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
   assert.equal(claims.exp - claims.iat, 900);
+});
+
+test("Agent Swarm handlers authenticate and delegate only to the configured native owner", async () => {
+  const calls = [];
+  const agentSwarm = Object.freeze({
+    stats: () => Object.freeze({ configured: true }),
+    start: async (body, context) => {
+      calls.push(["start", body, context]);
+      return { status: "running", stage: "agent-swarm", runId: body.runId };
+    },
+    work: async (body) => ({ status: "idle", stage: "agent-swarm-worker", runId: body.runId }),
+    settle: async (body) => ({ status: "pending", stage: "agent-swarm-synthesis", runId: body.runId }),
+    status: async (runId) => ({ status: "running", stage: "agent-swarm", runId }),
+    cancel: async (body) => ({ status: "canceled", stage: "agent-swarm", runId: body.runId }),
+  });
+  const app = createAgentApiApp({ env: { AGENT_API_JWT_SECRET: "swarm-secret" }, agentSwarm });
+  const unauthorized = await app.agentSwarmStart({ body: { runId: "swarm-http-run" } });
+  assert.equal(unauthorized.statusCode, 401);
+  const session = await app.authSession({ body: {} });
+  const headers = { authorization: `Bearer ${session.body.token}` };
+  const body = { runId: "swarm-http-run", goal: "Dynamic goal only." };
+  const started = await app.agentSwarmStart({ headers, body });
+  assert.equal(started.statusCode, 202);
+  const [, sessionPayload] = session.body.token.split(".");
+  const sessionClaims = JSON.parse(Buffer.from(sessionPayload, "base64url").toString("utf8"));
+  const accessContext = { principalId: sessionClaims.sub, principalExpiresAt: sessionClaims.exp * 1000 };
+  assert.deepEqual(calls, [["start", body, accessContext]]);
+  const serverAbort = new AbortController();
+  const signaledBody = { runId: "swarm-http-signaled", goal: "Server-owned abort only." };
+  assert.equal((await app.agentSwarmStart({
+    headers,
+    body: signaledBody,
+    signal: serverAbort.signal,
+  })).statusCode, 202);
+  assert.equal(calls[1][1].signal, serverAbort.signal);
+  assert.deepEqual({ ...calls[1][1], signal: undefined }, { ...signaledBody, signal: undefined });
+  assert.deepEqual(calls[1][2], accessContext);
+  const status = await app.agentSwarmStatus({ headers, body: { runId: body.runId } });
+  assert.equal(status.statusCode, 202);
+  assert.equal(status.body.runId, body.runId);
+  const invalidStatus = await app.agentSwarmStatus({ headers, body: { runId: body.runId, roles: ["invented"] } });
+  assert.equal(invalidStatus.statusCode, 400);
+  const canceled = await app.agentSwarmCancel({ headers, body: { runId: body.runId } });
+  assert.equal(canceled.statusCode, 200);
+
+  const costLog = {
+    model: "offline-swarm-model",
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    cache_hits: 0,
+    estimated_cost_usd: 0,
+  };
+  const ownedRuntime = createAgentSwarmRuntime({
+    resolveAgent: async ({ agent }) => ({ status: "ready", ...agent }),
+    authorize: async () => ({ allowed: true, approvalId: "http-owner-approval" }),
+    planTasks: async () => ({
+      status: "completed",
+      planId: "http-owner-plan",
+      tasks: [{ taskId: "owned-task", objective: "Complete owned work.", dependencies: [], context: null }],
+      costLog,
+    }),
+    executeTask: async () => ({ status: "completed", output: "private", effect: "read-only", costLog }),
+    synthesize: async () => ({ status: "completed", output: "public", costLog }),
+    verifyReceipt: async ({ receipt }) => ({ verified: true, ...receipt }),
+  });
+  const ownedApp = createAgentApiApp({
+    env: { AGENT_API_JWT_SECRET: "owned-swarm-secret" },
+    agentSwarm: ownedRuntime,
+  });
+  const ownerSession = await ownedApp.authSession({ body: {} });
+  const otherSession = await ownedApp.authSession({ body: {} });
+  const shortSession = await ownedApp.authSession({ body: { expiryWindowSeconds: 300 } });
+  const ownerHeaders = { authorization: `Bearer ${ownerSession.body.token}` };
+  const otherHeaders = { authorization: `Bearer ${otherSession.body.token}` };
+  const ownedRequest = {
+    runId: "http-principal-owned-run",
+    conversationId: "http-principal-conversation",
+    agent: { agentId: "http-base-agent", revision: "http-base-v1" },
+    goal: "Complete the owned goal.",
+    input: null,
+    maxParallel: 1,
+  };
+  const shortStart = await ownedApp.agentSwarmStart({
+    headers: { authorization: `Bearer ${shortSession.body.token}` },
+    body: { ...ownedRequest, runId: "http-short-session-run" },
+  });
+  assert.equal(shortStart.statusCode, 409);
+  assert.equal(shortStart.body.code, "session_too_short");
+  assert.equal((await ownedApp.agentSwarmStart({ headers: ownerHeaders, body: ownedRequest })).statusCode, 202);
+  const forbiddenStatus = await ownedApp.agentSwarmStatus({
+    headers: otherHeaders,
+    body: { runId: ownedRequest.runId },
+  });
+  assert.equal(forbiddenStatus.statusCode, 403);
+  assert.equal(forbiddenStatus.body.reasonCode, "run_forbidden");
+  assert.equal((await ownedApp.agentSwarmCancel({
+    headers: otherHeaders,
+    body: { runId: ownedRequest.runId, operationId: "foreign-http-cancel" },
+  })).statusCode, 403);
+  assert.equal((await ownedApp.agentSwarmStart({
+    headers: ownerHeaders,
+    body: { ...ownedRequest, runId: "http-signal-spoof", signal: { aborted: false } },
+  })).statusCode, 400);
+  assert.equal((await ownedApp.agentSwarmCancel({
+    headers: ownerHeaders,
+    body: { runId: ownedRequest.runId, operationId: "owner-http-cancel" },
+  })).statusCode, 200);
 });

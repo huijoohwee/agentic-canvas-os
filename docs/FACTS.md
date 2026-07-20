@@ -10,7 +10,7 @@ status: "runtime-ready"
 authority: "shared truth layer for Agentic Canvas OS docs"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "source-backed facts and invocation definitions only; no separate parser, command runner, memory store, provider panel, or deploy claim"
-publish_policy: "Dev-only until explicit operator approval"
+publish_policy: "protected green main authorizes only the repository-owned automatic release controller"
 runtime_proof: "RUNTIME-PROOF.md"
 source_revision_contract:
   canonical_repository: "$GITHUB_ROOT/agentic-canvas-os"
@@ -311,7 +311,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Catalog freshness | `catalogRevision` must equal `agenticCanvasOsRevision`. Hydration caches use that revision as part of their key, invalidate on revision change, and stop after no more than two explicit refresh attempts with a visible `fresh`, `blocked`, or `stale` result. | `VALIDATION-RUNBOOK.md` and `RELEASE-WORKFLOW.md`. |
 | Primary identity inspiration | External SOUL systems are pattern references only. This repo may adopt a neutral durable identity contract that occupies prompt slot 1 when an approved runtime assembles prompts. | Official Hermes Agent SOUL docs listed in frontmatter. |
 | Runtime status | `runtime-ready` requires surfaced proof; prose alone cannot promote external runtime claims. | `RUNTIME-READINESS.md` and `VALIDATION-RUNBOOK.md`. |
-| Deployment boundary | Dev, Prod mirror, and Cloudflare are separate. Prod and Cloudflare stay forbidden until explicit operator instruction. | `MEMORY.md`, `AGENTS.md`, `RUNTIME-READINESS.md`. |
+| Deployment boundary | Dev, Prod mirror, and Cloudflare are separate. A protected green `main` merge is standing authority only for the repository-owned automatic release controller; every local or alternate mutation path remains forbidden. | `CANONICAL-LIFECYCLE.md`, `AGENTS.md`, `RUNTIME-READINESS.md`. |
 | Learning-loop inspiration | External self-improving agent systems are pattern references only. This repo may adopt neutral contracts for experience capture, memory search, skill proposals, bounded evolution, and identity reflection. | Official Hermes Agent docs and repositories listed in frontmatter. |
 | Persistent memory inspiration | External persistent-memory systems are pattern references only. This repo may adopt neutral contracts for bounded agent notes, bounded user profile, frozen prompt snapshots, capacity errors, write actions, security scanning, and session search. | Official Hermes Agent memory docs listed in frontmatter. |
 | Skills system inspiration | External skill systems are pattern references only. This repo may adopt neutral contracts for on-demand skills, progressive disclosure, bundles, managed writes, open-standard frontmatter, and resource loading. | Official Hermes Agent skills docs and Agent Skills specification listed in frontmatter. |

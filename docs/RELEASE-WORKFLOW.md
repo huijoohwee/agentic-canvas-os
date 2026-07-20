@@ -8,7 +8,7 @@ schema: "knowgrph-release-workflow/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "end-to-end Knowgrph release operating model"
-publish_policy: "execution requires explicit @operator invocation"
+publish_policy: "protected green main automatically invokes the repository-owned release controller"
 runtime_scope: "Dev integration, Prod mirror promotion, Cloudflare deployment, and verification"
 runtime_claim: "bounded release contract; no deployment occurs by reading this document"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -56,7 +56,7 @@ completion_requires:
 
 ## Purpose
 
-`/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` requests the complete Knowgrph release workflow. The invocation opens the release lane but does not weaken validation, ownership, approval, cost, or stop conditions.
+Protected integration of a green Knowgrph `main` revision automatically requests the complete release workflow. `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` remains the explicit diagnostic or recovery invocation and does not weaken validation, ownership, cost, or stop conditions.
 
 The three invocation dictionaries in this folder remain the only `/`, `#`, and `@` authority. Knowgrph and its deployed routes consume their MCP projection; production never reads a developer-machine filesystem path.
 
@@ -147,8 +147,9 @@ Require its pull-request, merge, and exact `main` SHA evidence, then restart the
 local Dev runtime from that `mainSha` and rerun the original acceptance path.
 Branch-only, stashed, pushed, open-pull-request, or auto-merge-pending work
 remains incomplete. `device:park` is only a paused or blocked exit. This Dev
-completion gate does not itself open the Prod or Cloudflare stages; those still
-require the explicit operator invocation governing this release workflow.
+completion gate does not deploy from the checkout. The protected merge event
+opens Prod and Cloudflare stages only inside the repository-owned automatic
+release controller.
 
 ### 8. Promote Prod
 
@@ -197,6 +198,6 @@ Stop without downstream mutation when any of these is true:
 
 ## Completion VCC
 
-Given an explicit `/release.complete` invocation with the required semantics and bindings, when every ordered stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, Dev is merged through protected integration, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, and residual risk.
+Given a protected green merge to Knowgrph `main`, when every ordered automatic stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, rollback target, and residual risk.
 
 VCC: verify `npm run collaboration:gate` exits zero with two distinct automated peers, at least two active room peers, one common verification digest, remote document propagation, exact app/docs SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.

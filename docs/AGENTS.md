@@ -11,7 +11,7 @@ authority: "durable repository guidance for Agentic Canvas OS docs"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "small always-on instruction layer with delegated workflow and validation detail"
 runtime_proof: "RUNTIME-PROOF.md"
-publish_policy: "Dev-only until explicit operator approval"
+publish_policy: "protected green main authorizes only the repository-owned automatic release controller"
 source_docs:
   - "FACTS.md"
   - "START-WORKFLOW.md"
@@ -43,7 +43,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 - Treat external projects and documentation as design references only. Do not copy their code, prose, prompts, schemas, tests, fixtures, or dependencies.
 - Keep claims proportional to evidence. A source contract is not live-provider, deployment, or runtime proof.
 - Prefer focused checks for touched behavior. Use the validation owner rather than restating commands here.
-- Prod mirrors and Cloudflare remain unchanged unless the operator explicitly authorizes release or deployment.
+- Prod mirrors and Cloudflare change only through the protected-main automatic release controller; local agents and task worktrees have no deploy authority.
 
 ## Owner Routing
 
@@ -58,6 +58,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Runtime schemas, cost, fallbacks, and orchestration | `HARNESS-CONTRACTS.md` |
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
 | Session ownership and release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
+| Canonical checkout sync and automatic CI/CD lifecycle | `CANONICAL-LIFECYCLE.md` |
 | Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
 | Planning lifecycle | `TODO.md` and the active monthly shard |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |

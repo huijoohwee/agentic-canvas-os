@@ -35,8 +35,8 @@ source_docs:
   - "SKILLS.md"
   - "kanban.md"
   - "VALIDATION-RUNBOOK.md"
-publish_policy: "Dev-only until explicit operator approval"
-external_runtime_policy: "knowgrph runtime, Prod mirror, and Cloudflare require separate focused proof or approval"
+publish_policy: "protected green main authorizes only the repository-owned automatic release controller"
+external_runtime_policy: "Knowgrph, Prod mirror, and Cloudflare require separate focused proof from the automatic release controller"
 kgCanvasSurfaceMode: "2d"
 kgCanvasRenderMode: "2d"
 kgCanvas2dRenderer: "storyboard"
@@ -217,6 +217,7 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Image to Three.js skill has Dev proof | Eight focused conversion, projection, source-replacement, fallback, and disposal selectors pass; the browser-smoke contract passes; task-mode browser proof renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and typed fallback on the visual Canvas. Canvas TypeScript and hygiene gates pass, package manifests remain unchanged, and no external plugin code or dependency is present. | Passed |
 | Canonical docs source has Dev proof | The registered Agentic Canvas OS `main` worktree remains the only normal runtime docs source and must be clean at fetched `origin/main`. Focused coordination tests prove additional registered task worktrees can mutate branch-exclusive scopes without becoming runtime sources. Knowgrph consumer predev alignment with this v2 policy remains a separate downstream gate. | Passed for Agentic Canvas OS; downstream consumer alignment pending |
 | Deploy guard holds | Scoped git status shows no `content/knowgrph` mutation and no deploy command was run. | Passed |
+| Canonical automatic lifecycle contract holds | `CANONICAL-LIFECYCLE.md` defines remote-authoritative multi-device convergence, protected-main standing authorization, immutable promotion, production smoke, rollback, mirror publication, and exact-SHA runtime-ready acceptance without per-release manual intervention. | Contract passed; downstream Knowgrph and huijoohwee executable gates own runtime proof |
 
 ## Promotion Boundary
 
@@ -250,8 +251,8 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Image to Three.js skill Dev runtime | Runtime-ready in Dev | Native PNG/JPG/JPEG textured-plane and SVG fill/stroke geometry projections have focused conversion, lifecycle, fallback, TypeScript, hygiene, and shared-surface browser proof; protected integration, Prod mirror, and Cloudflare remain gated. |
 | Long-horizon SuperAgent docs contracts | Runtime-ready for docs | Contracts are route-complete, sandbox-scoped, message-gated, artifact-backed, no-copy, bounded, and cost-gated; live runtime remains separately gated. |
 | `knowgrph` local runtime capabilities | Gated by focused proof | Must be proven by the relevant `knowgrph` tests or local MCP calls. |
-| Prod mirror | Gated by operator approval | Forbidden until explicit instruction. |
-| Cloudflare | Gated by operator approval | Forbidden until explicit instruction and returned live evidence. |
+| Prod mirror | Automatic after protected integration | Published only after immutable build, mirror parity, deployment, and live smoke succeed. |
+| Cloudflare | Automatic after protected integration | Repository-owned release controller deploys the exact green `main` SHA, captures rollback evidence, and requires returned live proof. |
 
 ## Revalidation
 

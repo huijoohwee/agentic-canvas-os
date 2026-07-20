@@ -30,8 +30,8 @@ workspace:
   dev_commands: ["npm run dev:apex", "npm run dev", "npm run dev:latest"]
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
 deploy_gate:
-  prod_mirror: "forbidden until explicit operator instruction"
-  cloudflare: "forbidden until explicit operator instruction"
+  prod_mirror: "automatic only after protected main integration under CANONICAL-LIFECYCLE.md"
+  cloudflare: "automatic only through the repository-owned release controller after protected main integration"
 operating_priorities: ["minimum-viable-maximum-value", "time-to-value", "high-ROI", "TCO", "token-economics", "FOSS-first"]
 coordination:
   base_ref: "origin/main"
@@ -93,8 +93,8 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Dev | Author in leased task worktrees; run normal Knowgrph Dev only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`. Use `npm run dev:apex`, `npm run dev`, and `npm run dev:latest` only through repository-owned scripts after integration. |
 | Immutable publication | Use Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane only for an already-created commit whose writer stopped or when recovering a checkout-independent delivery. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
 | Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
-| Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Mutation is forbidden until the operator explicitly requests promotion or release. |
-| Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Deployment is forbidden until the operator explicitly requests it. |
+| Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Only the protected-main automatic release controller may publish it. |
+| Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Only the protected-main automatic release controller may deploy them. |
 
 ## Engineering Contract
 

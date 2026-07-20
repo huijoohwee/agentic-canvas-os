@@ -60,6 +60,8 @@
     "rollback": "wrangler rollback",
     "smoke": "node ./scripts/smoke.mjs",
     "sync:live": "node ./scripts/live-sync.mjs",
+    "sync:workspace": "node ./scripts/workspace-sync.mjs",
+    "sync:workspace:watch": "node ./scripts/workspace-sync.mjs --watch",
     "test": "node --test __tests__/*.test.mjs",
     "web:build": "node web/build.mjs",
     "cloudflare:dev": "npm run web:build && wrangler dev",

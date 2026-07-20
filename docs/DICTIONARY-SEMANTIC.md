@@ -149,6 +149,7 @@ dictionary_entries:
   - "#identity-model"
   - "#orchestration-graph"
   - "#agent-swarm"
+  - "#agent-toolkit"
   - "#stateful-agent"
   - "#durable-execution"
   - "#human-in-loop"
@@ -288,6 +289,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#identity-model` | Stable, source-backed operator and project preference model. | A repeated preference or boundary should persist across sessions. | Store only non-secret, operator-relevant, source-backed facts; reject unsupported personal inference. |
 | `#orchestration-graph` | State, node, edge, and compile-check contract for agent workflows. | A workflow needs explicit topology, conditional routing, parallel branches, or bounded loops. | State schema, node ids, edge rules, entry/exit nodes, stop condition, and orphan-node check are present. |
 | `#agent-swarm` | Dynamic bounded horizontal work decomposition for one base-agent goal. | Independent work can overlap and does not require predefined specialists or a handcrafted workflow. | Runtime-generated tasks, session-owned durable atomic claims, observed bounded overlap, isolated contexts, recovery, verified receipts, and base-agent synthesis are proven. |
+| `#agent-toolkit` | Cross-cutting observation, bounded evaluation, evidence-backed comparison, and reviewed learning for digest-bound agent-system revisions. | A digest-bound agent or team revision and framework-neutral adapter require metadata-only analysis without changing the execution owner. | Caller-declared digests and application authority, server timing, telemetry trust, bounded unique evidence, metric direction, honest cost, deterministic same-cohort policy, and review-pending learning are explicit. |
 | `#stateful-agent` | Long-running agent with explicit state across turns or sessions. | A run persists working state, memory, checkpoints, or resumable context. | State owner, memory boundary, checkpoint plan, and resume behavior are named. |
 | `#durable-execution` | Fault-tolerant execution that can resume after interruption or failure. | A run may exceed one request, retry, pause, crash, or recover. | Checkpoint, idempotency, retry, timeout, circuit breaker, and recovery VCCs are present. |
 | `#human-in-loop` | Operator inspection or approval inside a run. | A workflow pauses for human review, editing, approval, or rejection. | Interrupt payload, resume payload, audit event, and approval gate are typed. |
@@ -374,6 +376,7 @@ semantic:
 | `/identity.reflect #identity-model @identity-model` | Persist stable operator preferences without secrets or unsupported inference. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Declare and validate state, node, edge, and stop-condition topology. |
 | `/agent.swarm #agent-swarm @swarm-run @agent` | Generate bounded task briefs, coordinate atomic worker claims, and return one base-agent synthesis. |
+| `/agent.toolkit #agent-toolkit @agent-toolkit-observer` | Observe application-authorized digest-bound revisions, evaluate bounded trusted evidence, compare one cohort, and emit only a review-pending proposal. |
 | `/state.checkpoint #durable-execution @checkpoint-store` | Define resumable checkpoints for long-running stateful runs. |
 | `/human.review #human-in-loop @human-review` | Pause a workflow for operator inspection and typed resume. |
 | `/stream.trace #durable-execution @runtime-proof` | Surface ordered, secret-free state transition events. |
@@ -400,6 +403,7 @@ semantic:
 | `#worker-process` | `FACTS.md` direct-resolution entry for full OS worker processes. |
 | `#multi-agent-collaboration` | `FACTS.md` direct-resolution entry for durable row-based collaboration. |
 | `#agent-swarm` | `FACTS.md` direct-resolution entry for dynamic horizontal agent scaling. |
+| `#agent-toolkit` | `FACTS.md` direct-resolution entry for metadata-only observation, evaluation, comparison, and reviewed learning. |
 | `#agentic-ecs` | `FACTS.md` direct-resolution entry for KGC-backed native ECS semantics. |
 | `#tool-gateway` | `FACTS.md` direct-resolution entry for existing-infrastructure tool routing. |
 | `#tool-function` | `FACTS.md` direct-resolution entry for callable tool functions. |

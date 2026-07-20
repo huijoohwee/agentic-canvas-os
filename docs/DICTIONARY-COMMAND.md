@@ -91,6 +91,7 @@ dictionary_entries:
   - "/identity.reflect"
   - "/orchestration.graph"
   - "/agent.swarm"
+  - "/agent.toolkit"
   - "/state.checkpoint"
   - "/human.review"
   - "/stream.trace"
@@ -221,6 +222,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
+| `/agent.toolkit` | Observe, evaluate, and compare digest-bound agent or team candidate revisions through framework-neutral adapters. | `@agent-toolkit-observer`, `@runtime-proof`, and `@operator` for evaluator spend or proposal persistence | `#agent-toolkit`, `#runtime-ready`, `#token-economics` | The authenticated session returns bounded metadata-only evidence, honest cost and metric provenance, a deterministic compare decision or review-pending proposal, and no automatic application. |
 | `/state.checkpoint` | Define checkpoint, resume, recovery, and idempotency behavior for long-running runs. | `@checkpoint-store`, `@state-store`, `@runtime-proof` | `#durable-execution`, `#stateful-agent`, `#vcc` | Checkpoint contract names scope, storage owner, resume token, retry policy, and recovery proof. |
 | `/human.review` | Interrupt a run for operator inspection, edit, approval, rejection, and resume. | `@human-review`, `@operator`, `@approval-gate` | `#human-in-loop`, `#approval-gate`, `#vcc` | Run remains paused until review result is present; resume payload and audit event are typed. |
 | `/stream.trace` | Surface execution progress, state transitions, cost, and stop events as a typed trace. | `@runtime-proof`, `@cost-log`, `@orchestration-graph` | `#durable-execution`, `#token-economics`, `#vcc` | Trace events are ordered, bounded, secret-free, and do not mutate source state. |
@@ -317,6 +319,7 @@ command:
 | `/reference.expand` runs on a platform that does not support inline expansion | Preserve the raw message and report unsupported-platform without rewriting the text. |
 | `/kanban.task` or `/kanban.handoff` lacks a row id, owner profile, status, or acceptance field | Reject before write; do not create partial board rows. |
 | `/agent.swarm` receives caller-authored roles, specialists, tasks, branches, or workflow topology, or cannot resolve the exact base-agent revision | Reject before planning or spend; do not infer a handcrafted workflow or stale agent. |
+| `/agent.toolkit` receives a missing, malformed, changed, or application-denied revision digest, raw telemetry content, undeclared metric direction, caller-owned signal, or apply request | Reject before observation, evaluator spend, persistence, or mutation; remote metadata that passes schema remains untrusted and cannot enter comparison evidence. |
 | `/kanban.sync` sees conflicting writes to the same row | Preserve both evidence fields and require explicit resolution; do not overwrite another profile's handoff. |
 | `/tool.route` targets a paid, mutating, browser-auth, egress, or generated-media tool | Require `@operator` approval and fail closed without approval. |
 | `/tool.provider.select` includes credentials or browser secrets | Reject and require server-managed secret setup; do not write secrets into docs or client state. |
@@ -339,6 +342,7 @@ command:
 | `/personality.overlay` | `FACTS.md` direct-resolution entry for temporary personality overlays. |
 | `/moa` | `FACTS.md` direct-resolution entry for one-shot Mixture of Agents routing. |
 | `/agent.swarm` | `FACTS.md` direct-resolution entry for native dynamic horizontal worker coordination. |
+| `/agent.toolkit` | `FACTS.md` direct-resolution entry for native metadata-only agent and team observation, evaluation, comparison, and proposal. |
 | `/sme-care-agent` | `FACTS.md` direct-resolution entry for source-grounded SME care responses. |
 | `/investment-research-agent` | `FACTS.md` direct-resolution entry for source-grounded investment research responses. |
 | `/crawler-agent` | `FACTS.md` direct-resolution entry for the native website crawl route. |

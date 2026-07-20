@@ -139,6 +139,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Learn from experience | Given prior runs, failures, proof packets, or operator corrections, when the learning loop runs, then it searches scoped memory, captures source-backed experience, proposes skill changes, and reflects stable identity facts without copying external artifacts or direct self-modification. | Must |
 | Orchestrate stateful agents | Given a long-running workflow, when `/orchestration.graph` is declared, then state, nodes, edges, checkpoints, human review, streaming trace, and stop conditions are typed without copying an external graph framework. | Must |
 | Scale independent agent work horizontally | Given one resolved exact base agent and goal, when `/agent.swarm` runs, then runtime-generated tasks use session-owned durable atomic claims, bounded parallel workers, isolated contexts, recovery, verified receipts, and one base-agent synthesis without predefined roles or caller workflow topology. | Must |
+| Observe and improve digest-bound agent teams | Given application-authorized caller-declared target, candidate, adapter, evaluator, dataset, and metric revision digests, when `/agent.toolkit` runs, existing owners retain execution while the Toolkit records metadata-only trust labels, evaluates unique opaque evidence, excludes remote-unverified samples, compares one bounded cohort, and emits at most a review-pending proposal. | Must |
 | Run long-horizon SuperAgent work | Given a research, coding, or creation goal, when `/superagent.run` runs, then graph, memory, skills, tools, sandbox workspace, message gateway, artifacts, verification, stop condition, and cost ledger are typed before execution. | Must |
 | Render Canvas dashboards | Given a typed run manifest or source-backed document, when Canvas opens it, then existing Source Files, frontmatter, KGC, and Storyboard owners render the state without a dashboard-only renderer. | Should |
 | Prove runtime readiness | Given a capability marked runtime-ready, when validation runs, then its VCCs surface parse, route, execute, cost, bound, and deploy-boundary proof. | Must |
@@ -168,6 +169,8 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Stateful graph without checkpoint, stop condition, or human-review gate where needed | 0 |
 | Agent Swarm run accepting caller roles, tasks, or workflow topology | 0 |
 | Agent Swarm task result admitted without a current lease or required execution receipt | 0 |
+| Agent Toolkit record containing raw prompts, inputs, outputs, tool payloads, private reasoning, secrets, or duplicated nested cost | 0 |
+| Agent Toolkit comparison using cross-cohort, reused, remote-unverified, or unreported evidence, or automatically applied proposal | 0 |
 | SuperAgent run without sandbox scope, message gateway, artifacts, verification, and cost ledger | 0 |
 | Unreviewed self-modifying skill changes | 0 |
 | Copied external skill bodies, examples, layouts, prompt text, tests, fixtures, or prose | 0 |
@@ -182,7 +185,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 
 | Tier | Scope |
 |---|---|
-| Must | MCP discovery, soul identity contract, bounded memory/profile contracts, on-demand skills system contracts, context-file contracts, context-reference contracts, Kanban collaboration contracts, tool/toolset contracts, Tool Gateway contracts, Tool Search contracts, OS status read views, local harness contracts, MoA contracts, dynamic Agent Swarm runtime, stateful orchestration contracts, long-horizon SuperAgent contracts, learning-loop contracts, cost logs, approval gates, VCCs, Dev-only deploy guard. |
+| Must | MCP discovery, soul identity contract, bounded memory/profile contracts, on-demand skills system contracts, context-file contracts, context-reference contracts, Kanban collaboration contracts, tool/toolset contracts, Tool Gateway contracts, Tool Search contracts, OS status read views, local harness contracts, MoA contracts, dynamic Agent Swarm runtime, metadata-only Agent Toolkit runtime, stateful orchestration contracts, long-horizon SuperAgent contracts, learning-loop contracts, cost logs, approval gates, VCCs, Dev-only deploy guard. |
 | Should | Canvas dashboard projection, live control-plane Worker parity where already deployed, demo pack assembly, operator-friendly validation runbook. |
 | Could | Additional provider adapters, richer run history, dashboard comparison, deploy proof after explicit approval. |
 | Won't | New dashboard datastore, Vercel/AWS product tier, browser-owned secrets, compatibility aliases, unbounded loops, direct downstream patches. |
@@ -246,6 +249,7 @@ flowchart TB
 | Learning loop | Search memory, capture experience, propose skills, evolve skills, and reflect identity facts | `FACTS.md`, `MEMORY.md`, `SKILLS.md`, and approval-gated runtime owners |
 | Stateful orchestration | Define graph state, nodes, edges, checkpoints, human review, and streaming trace | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing KGC/Canvas owners |
 | Agent Swarm | Generate one bounded task DAG, coordinate durable atomic worker claims, recover interrupted work, and synthesize through the base agent | `agent-api/src/agent-swarm*.js`, `AGENT-SWARM.md`, `AGENT_STATE`, dictionaries, Worker routes, and focused tests |
+| Agent Toolkit | Observe application-authorized digest-bound agent/team revisions, evaluate unique opaque evidence, compare one trusted target/adapter/operation/profile cohort, and persist review-pending proposals without owning execution | `agent-api/src/agent-toolkit*.js`, `AGENT-TOOLKIT.md`, `AGENT_STATE`, dictionaries, authenticated Worker routes, and the combined Toolkit integration suite |
 | SuperAgent harness | Run long-horizon research, coding, and creation with workspace, message, artifact, verification, and cost proof | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and approved local harness owners |
 | Canvas dashboard | Render source-backed runtime state | Source Files, KGC/frontmatter, Storyboard owners |
 | Control-plane MCP | Remote approval-gated orchestration where deployed | Cloudflare McpAgent Worker owners |
@@ -269,6 +273,7 @@ flowchart TB
 | Mixture | `/moa` resolves a local preset, caps reference calls, blocks recursive aggregators, preserves normal tool gates, and logs reference plus aggregator cost. |
 | Orchestrate | Stateful graph contracts name typed state, nodes, edges, entry, exit, checkpoint, human-review gate when needed, and stream trace VCCs. |
 | Swarm | `/agent.swarm` rejects caller roles/tasks/workflows/principals/signals; validates a dynamic bounded DAG; proves atomic claims, observed overlap, recovery, stable idempotency, verified receipts, cost, cancellation, and base-agent-only synthesis. |
+| Toolkit | `/agent.toolkit` fixes caller-declared target, candidate, adapter, evaluator, dataset, and metric revision digests for application authorization; stores trust-labelled metadata only; fences evaluator spend with a stable idempotency key; excludes reused and remote-unverified evidence; and can persist only `review_pending`, never applied, proposals. |
 | SuperAgent | `/superagent.run` names goal, graph, sandbox workspace, message gateway, checkpoints, stop condition, artifacts, verification, approvals, and cost ledger. |
 | Learn | Experience capture, memory search, skill proposal, skill evolution, and identity reflection stay source-backed, bounded, no-copy, and review-gated. |
 | Approval | Paid, mutating, payment, and deploy actions require `@operator` approval. |
@@ -296,6 +301,7 @@ flowchart TB
 | ADR-AOS-16 | Stateful orchestration is source-backed | Enables long-running agents while forbidding external runtime copying, hidden graph stores, unbounded loops, and stale state recomputation. |
 | ADR-AOS-17 | SuperAgent is a bounded harness | Enables long-horizon research, code, and creation while forbidding copied DeerFlow runtime layouts, hidden sandboxes, message side channels, and unbounded loops. |
 | ADR-AOS-18 | Agent Swarm is dynamic, durable, and base-agent-owned | Enables horizontal scaling without predefined roles or handcrafted workflows while forbidding hidden coordination state, recursive fan-out, copied external runtime artifacts, and worker-owned public answers. |
+| ADR-AOS-19 | Agent Toolkit observes but does not execute or apply | Adds framework-neutral trust-labelled metadata, evaluation, and comparison across existing runtimes while requiring application verification of caller-declared digests and forbidding remote evidence promotion, raw payload retention, duplicated orchestration, fabricated improvement, copied external artifacts, and autonomous learning mutation. |
 
 ## VCCs
 
@@ -317,6 +323,7 @@ flowchart TB
 | Learning loop is review-gated | Skill proposal or evolution returns review-pending diff and validation evidence; no direct commit, deploy, or external copy occurs. |
 | Stateful orchestration compiles | Graph contract rejects orphaned nodes, missing stop conditions, missing checkpoints for long runs, and hidden mutation. |
 | Agent Swarm scales safely | Independent generated tasks overlap within `maxParallel`; stale claims fence late output; idempotent effects carry receipt-owner-verified stable keys; recovery preserves the session-owned durable ledger; and only the resolved original base agent exposes synthesis. |
+| Agent Toolkit improves only through evidence and review | Two runtime instances share principal-derived atomic run/cohort state; one stable-idempotency evaluator fence wins; persisted traces contain no raw payload; reused, remote-unverified, missing-quality, or missing-cost evidence holds; passing trusted cohort thresholds yield only an immutable `review_pending` proposal; no apply method or external dependency exists. |
 | SuperAgent run is bounded | `/superagent.run` reports sandbox workspace, message gateway, checkpoint policy, artifact manifest, verification state, cost log, stop condition, and no-copy boundary. |
 | Canvas dashboard is source-backed | Dashboard opens from Markdown/frontmatter/KGC owners; no dashboard-only graph store exists. |
 | Deploy boundary is clean | Canonical checkout shows no Prod mirror mutation and no Cloudflare deploy command was run. |

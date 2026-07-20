@@ -8,6 +8,7 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import {
+  createDurableObjectAgentToolkitStore,
   createDurableObjectFunctionExecutionReceiptStore,
   createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
@@ -44,6 +45,7 @@ export function createWorkerFetch(env = {}, publicFetch) {
 }
 
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
+const MAX_JSON_BODY_BYTES = 512 * 1024;
 const APP_BY_ENV = new WeakMap();
 const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
@@ -67,13 +69,41 @@ function headerBag(request) {
   return out;
 }
 
+class JsonBodyError extends Error {
+  constructor(statusCode, code, message) {
+    super(message);
+    this.name = "JsonBodyError";
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
 async function readJsonBody(request) {
-  const text = await request.text();
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BODY_BYTES) {
+    throw new JsonBodyError(413, "request_body_too_large", "JSON request body exceeds the 512 KiB limit.");
+  }
+  if (!request.body) return {};
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_JSON_BODY_BYTES) {
+      await reader.cancel();
+      throw new JsonBodyError(413, "request_body_too_large", "JSON request body exceeds the 512 KiB limit.");
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  text += decoder.decode();
   if (!text) return {};
   try {
     return JSON.parse(text);
   } catch {
-    return {};
+    throw new JsonBodyError(400, "invalid_json", "Request body must be valid JSON.");
   }
 }
 
@@ -110,6 +140,9 @@ function createWorkerApp(env) {
     : undefined;
   const swarmRunStore = durableStateConfigured
     ? createDurableObjectSwarmRunStore({ namespace: env.AGENT_STATE })
+    : undefined;
+  const agentToolkitStore = durableStateConfigured
+    ? createDurableObjectAgentToolkitStore({ namespace: env.AGENT_STATE })
     : undefined;
   if (env && typeof env === "object") {
     agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
@@ -168,6 +201,7 @@ function createWorkerApp(env) {
     functionContinuationStore,
     functionExecutionReceiptStore,
     swarmRunStore,
+    agentToolkitStore,
     sandboxAgents,
     toolSearch,
     fetchImpl: createWorkerFetch(env),
@@ -176,7 +210,7 @@ function createWorkerApp(env) {
   return app;
 }
 
-export async function handleCloudflareRequest(request, env = {}) {
+async function dispatchCloudflareRequest(request, env = {}) {
   const url = new URL(request.url);
   const app = createWorkerApp(env);
 
@@ -237,6 +271,25 @@ export async function handleCloudflareRequest(request, env = {}) {
     return toResponse(await handler({ headers: headerBag(request), body, signal: request.signal }));
   }
 
+  const toolkitAction = url.pathname.startsWith("/api/agent-toolkit/")
+    ? url.pathname.slice("/api/agent-toolkit/".length)
+    : "";
+  if (["start", "start-span", "finish-span", "complete", "evaluate", "compare", "propose", "status"].includes(toolkitAction)) {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    const handler = {
+      start: app.agentToolkitStart,
+      "start-span": app.agentToolkitStartSpan,
+      "finish-span": app.agentToolkitFinishSpan,
+      complete: app.agentToolkitComplete,
+      evaluate: app.agentToolkitEvaluate,
+      compare: app.agentToolkitCompare,
+      propose: app.agentToolkitPropose,
+      status: app.agentToolkitStatus,
+    }[toolkitAction];
+    return toResponse(await handler({ headers: headerBag(request), body, signal: request.signal }));
+  }
+
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
     // WebSocket upgrade to the room's Durable Object. The room uses the
     // WebSocket Hibernation API; account quota and billing remain deployment
@@ -256,6 +309,17 @@ export async function handleCloudflareRequest(request, env = {}) {
   }
 
   return json(404, { error: "not found" });
+}
+
+export async function handleCloudflareRequest(request, env = {}) {
+  try {
+    return await dispatchCloudflareRequest(request, env);
+  } catch (error) {
+    if (error instanceof JsonBodyError) {
+      return json(error.statusCode, { error: error.message, code: error.code });
+    }
+    throw error;
+  }
 }
 
 export default {

@@ -28,6 +28,26 @@ function claimedValue(entry, now) {
   return entry && finiteFuture(entry.claimExpiresAt, now) && activeValue(entry.record, now) ? entry : null;
 }
 
+function claimAlarmAt(claim) {
+  return Math.min(claim.claimExpiresAt, claim.record.expiresAt);
+}
+
+async function reconcileState(storage, now) {
+  const priorClaim = await storage.get(CLAIM_KEY);
+  const claim = claimedValue(priorClaim, now);
+  if (claim) {
+    await storage.delete(ACTIVE_KEY);
+    return { active: null, claim, alarmAt: claimAlarmAt(claim) };
+  }
+
+  let active = activeValue(await storage.get(ACTIVE_KEY), now);
+  if (!active && priorClaim?.record) active = activeValue(priorClaim.record, now);
+  await storage.delete(CLAIM_KEY);
+  if (active) await storage.put(ACTIVE_KEY, active);
+  else await storage.delete(ACTIVE_KEY);
+  return { active, claim: null, alarmAt: active?.expiresAt ?? null };
+}
+
 export class AgentState {
   constructor(ctx) {
     this.ctx = ctx;
@@ -37,96 +57,96 @@ export class AgentState {
     return this.ctx.storage.transaction(async (storage) => operation(storage));
   }
 
+  async scheduleExpiry(alarmAt) {
+    const scheduled = await this.ctx.storage.getAlarm();
+    if (Number.isFinite(alarmAt)) {
+      if (scheduled !== alarmAt) await this.ctx.storage.setAlarm(alarmAt);
+      return;
+    }
+    if (scheduled !== null) await this.ctx.storage.deleteAlarm();
+  }
+
   async put(value, now) {
     if (!exactKeys(value, ["record"]) || !activeValue(value.record, now)) return json(400, { error: "invalid record" });
-    const stored = await this.transact(async (storage) => {
-      const priorClaim = await storage.get(CLAIM_KEY);
-      const claim = claimedValue(priorClaim, now);
-      let current = activeValue(await storage.get(ACTIVE_KEY), now);
-      if (!current && !claim && priorClaim?.record) current = activeValue(priorClaim.record, now);
-      if (current || claim) {
-        if (!claim && current) {
-          await storage.delete(CLAIM_KEY);
-          await storage.put(ACTIVE_KEY, current);
-        }
-        return false;
-      }
-      await storage.delete(ACTIVE_KEY);
-      await storage.delete(CLAIM_KEY);
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      if (state.active || state.claim) return { stored: false, alarmAt: state.alarmAt };
       await storage.put(ACTIVE_KEY, value.record);
-      return true;
+      return { stored: true, alarmAt: value.record.expiresAt };
     });
-    return json(200, { stored });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { stored: outcome.stored });
   }
 
   async take(value, now) {
     if (!exactKeys(value, [])) return json(400, { error: "invalid take" });
-    const record = await this.transact(async (storage) => {
-      const current = activeValue(await storage.get(ACTIVE_KEY), now);
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      if (state.claim) return { record: null, alarmAt: state.alarmAt };
       await storage.delete(ACTIVE_KEY);
-      return current;
+      return { record: state.active, alarmAt: null };
     });
-    return json(200, { record });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { record: outcome.record });
   }
 
   async get(value, now) {
     if (!exactKeys(value, [])) return json(400, { error: "invalid get" });
-    const record = await this.transact(async (storage) => {
-      const priorClaim = await storage.get(CLAIM_KEY);
-      const liveClaim = claimedValue(priorClaim, now);
-      if (liveClaim) return liveClaim.record;
-      let current = activeValue(await storage.get(ACTIVE_KEY), now);
-      if (!current && priorClaim?.record) current = activeValue(priorClaim.record, now);
-      await storage.delete(CLAIM_KEY);
-      if (!current) await storage.delete(ACTIVE_KEY);
-      else await storage.put(ACTIVE_KEY, current);
-      return current;
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      return { record: state.claim?.record ?? state.active, alarmAt: state.alarmAt };
     });
-    return json(200, { record });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { record: outcome.record });
   }
 
   async claim(value, now) {
     if (!exactKeys(value, ["claimId", "claimExpiresAt"])) return json(400, { error: "invalid claim" });
     const claimId = identifier(value.claimId);
     if (!claimId || !finiteFuture(value.claimExpiresAt, now)) return json(400, { error: "invalid claim" });
-    const record = await this.transact(async (storage) => {
-      const priorClaim = await storage.get(CLAIM_KEY);
-      const liveClaim = claimedValue(priorClaim, now);
-      if (liveClaim) return null;
-      let current = activeValue(await storage.get(ACTIVE_KEY), now);
-      if (!current && priorClaim?.record) current = activeValue(priorClaim.record, now);
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      if (state.claim || !state.active) {
+        return { record: null, alarmAt: state.alarmAt };
+      }
       await storage.delete(ACTIVE_KEY);
-      await storage.delete(CLAIM_KEY);
-      if (!current) return null;
-      await storage.put(CLAIM_KEY, { claimId, claimExpiresAt: value.claimExpiresAt, record: current });
-      return current;
+      const claim = { claimId, claimExpiresAt: value.claimExpiresAt, record: state.active };
+      await storage.put(CLAIM_KEY, claim);
+      return { record: state.active, alarmAt: claimAlarmAt(claim) };
     });
-    return json(200, { record });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { record: outcome.record });
   }
 
   async commit(value, now) {
     if (!exactKeys(value, ["claimId"])) return json(400, { error: "invalid commit" });
     const claimId = identifier(value.claimId);
-    const committed = await this.transact(async (storage) => {
-      const claim = claimedValue(await storage.get(CLAIM_KEY), now);
-      if (!claim || claim.claimId !== claimId) return false;
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      if (!state.claim || state.claim.claimId !== claimId) {
+        return { committed: false, alarmAt: state.alarmAt };
+      }
       await storage.delete(CLAIM_KEY);
-      return true;
+      return { committed: true, alarmAt: null };
     });
-    return json(200, { committed });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { committed: outcome.committed });
   }
 
   async release(value, now) {
     if (!exactKeys(value, ["claimId"])) return json(400, { error: "invalid release" });
     const claimId = identifier(value.claimId);
-    const released = await this.transact(async (storage) => {
-      const claim = claimedValue(await storage.get(CLAIM_KEY), now);
-      if (!claim || claim.claimId !== claimId) return false;
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      if (!state.claim || state.claim.claimId !== claimId) {
+        return { released: false, alarmAt: state.alarmAt };
+      }
       await storage.delete(CLAIM_KEY);
-      await storage.put(ACTIVE_KEY, claim.record);
-      return true;
+      await storage.put(ACTIVE_KEY, state.claim.record);
+      return { released: true, alarmAt: state.claim.record.expiresAt };
     });
-    return json(200, { released });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { released: outcome.released });
   }
 
   async replace(value, now) {
@@ -134,14 +154,17 @@ export class AgentState {
       return json(400, { error: "invalid replacement" });
     }
     const claimId = identifier(value.claimId);
-    const replaced = await this.transact(async (storage) => {
-      const claim = claimedValue(await storage.get(CLAIM_KEY), now);
-      if (!claim || claim.claimId !== claimId) return false;
+    const outcome = await this.transact(async (storage) => {
+      const state = await reconcileState(storage, now);
+      if (!state.claim || state.claim.claimId !== claimId) {
+        return { replaced: false, alarmAt: state.alarmAt };
+      }
       await storage.delete(CLAIM_KEY);
       await storage.put(ACTIVE_KEY, value.record);
-      return true;
+      return { replaced: true, alarmAt: value.record.expiresAt };
     });
-    return json(200, { replaced });
+    await this.scheduleExpiry(outcome.alarmAt);
+    return json(200, { replaced: outcome.replaced });
   }
 
   async delete(value) {
@@ -150,7 +173,13 @@ export class AgentState {
       await storage.delete(ACTIVE_KEY);
       await storage.delete(CLAIM_KEY);
     });
+    await this.scheduleExpiry(null);
     return json(200, { deleted: true });
+  }
+
+  async alarm() {
+    const state = await this.transact(async (storage) => reconcileState(storage, Date.now()));
+    await this.scheduleExpiry(state.alarmAt);
   }
 
   async fetch(request) {

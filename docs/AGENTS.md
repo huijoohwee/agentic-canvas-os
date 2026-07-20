@@ -58,6 +58,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Runtime schemas, cost, fallbacks, and orchestration | `HARNESS-CONTRACTS.md` |
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
 | Session ownership and release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
+| Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
 | Planning lifecycle | `TODO.md` and the active monthly shard |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |
 

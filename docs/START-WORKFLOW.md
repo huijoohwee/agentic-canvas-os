@@ -364,6 +364,39 @@ For work intentionally paused or blocked, run `npm run device:park` and report
 the state explicitly. Parking may preserve a dirty task branch in a named stash
 and detach that task worktree at `origin/main`, but it never satisfies completion.
 
+### Session-End Worktree Lifecycle
+
+Audit the current task worktree at the end of every chat, session, or thread, but
+do not equate conversation end with task completion. First choose exactly one
+durable state: complete through the protected merge protocol, park unfinished
+work, or keep an active leased lane when the same task is intentionally
+continuing.
+
+Run the repository-owned lifecycle check from the canonical main worktree:
+
+```sh
+npm run worktree:lifecycle:check
+```
+
+The check retains the canonical main worktree, active unexpired task lanes,
+delivery lanes, and explicitly parked lanes. It fails closed on dirty,
+unregistered, stale, ambiguous, invalid, or already-completed residual task
+worktrees. A completed task becomes cleanup-eligible only after
+`device:complete` verifies its merged pull request, detaches it cleanly at the
+exact fetched `origin/main`, and records the completed writer-lease state.
+
+Remove one eligible checkout explicitly from the canonical main worktree:
+
+```sh
+npm run worktree:lifecycle:cleanup -- --worktree="$TASK_WORKTREE"
+```
+
+Cleanup uses `git worktree remove` without force and then prunes registration
+metadata. It preserves the task branch and commits. It never removes canonical,
+active, delivery, parked, dirty, divergent, or unclassified worktrees; uncertain
+files remain for manual review or recoverable archival. Branch deletion is a
+separate operator-authorized action.
+
 Given a completion claim, when the protocol runs, then the protected Dev pull
 request is merged, the task worktree is detached and clean at the exact fetched
 `origin/main` revision containing that merge, the registered main worktree is
@@ -377,6 +410,12 @@ detached; `npm run sync:live` leaves the registered main worktree aligned with
 `origin/main`; the local runtime identifies that
 exact `mainSha`; and the original browser acceptance passes. Any missing item
 leaves the task pending, paused, or blocked rather than complete.
+
+Session-end VCC: Verify the lifecycle report names every registered worktree and
+its state; cleanup accepts only the completed clean detached target; the target
+registration disappears; the preserved branch still resolves to its original
+commit; canonical main remains clean and equal to fetched `origin/main`; and no
+Prod mirror or Cloudflare action occurs.
 
 Otherwise fetch, inspect, and activate a new reconciliation or task branch in a detached registered task worktree. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
 

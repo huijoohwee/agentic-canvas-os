@@ -30,6 +30,26 @@ function createGitText(responses) {
   };
 }
 
+function createCompletionLeaseStore() {
+  return {
+    complete: ({ branch, pullRequestUrl, mergeCommitSha, mainSha }) => ({
+      schema: "agentic-writer-lease/v2",
+      status: "completed",
+      epoch: 4,
+      sessionId: "chat-a",
+      device: "device",
+      scope: "scope",
+      branch,
+      baseSha: "a".repeat(40),
+      fenceSha: "f".repeat(40),
+      pullRequestUrl,
+      heartbeatAt: "2026-07-20T10:00:00.000Z",
+      expiresAt: "2026-07-20T10:00:00.000Z",
+      completion: { mergeCommitSha, mainSha },
+    }),
+  };
+}
+
 test("formatParkTimestamp emits git-friendly UTC stamps", () => {
   assert.equal(formatParkTimestamp(new Date("2026-07-14T22:30:45.123Z")), "20260714T223045Z");
   assert.equal(
@@ -427,6 +447,7 @@ test("completeSession detaches the task worktree only after the task pull reques
       mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
       headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
     }),
+    leaseStore: createCompletionLeaseStore(),
     run: (command, args) => calls.push([command, ...args]),
     log: message => logs.push(message),
   });
@@ -523,6 +544,7 @@ test("completeSession emits machine-readable merge and main evidence", () => {
       mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
       headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
     }),
+    leaseStore: createCompletionLeaseStore(),
     run: () => {},
     log: message => logs.push(message),
     json: true,

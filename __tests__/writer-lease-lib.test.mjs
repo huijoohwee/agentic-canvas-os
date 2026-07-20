@@ -130,3 +130,37 @@ test("pull request metadata round-trips the current fencing identity", () => {
   assert.match(body, /^---\naction: \/change\nscope: "#runtime-leases"\nactor: "@mac-a"\nbase_sha: "a{40}"\n---\n/);
   assert.doesNotMatch(body, /worktrees\/runtime-leases/);
 });
+
+test("merged completion becomes an explicit cleanup fence", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  const store = createWriterLeaseStore({ gitCommonDir });
+  const branch = "agent/mac-a/runtime-leases";
+  try {
+    store.claim({
+      sessionId: "chat-a",
+      device: "mac-a",
+      scope: "runtime-leases",
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      baseSha: "a".repeat(40),
+    });
+    store.annotate({ sessionId: "chat-a", branch, values: {
+      fenceSha: "b".repeat(40),
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+    } });
+    const completed = store.complete({
+      branch,
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+    });
+    assert.equal(completed.status, "completed");
+    assert.deepEqual(completed.completion, {
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+    });
+    assert.throws(() => store.verify({ sessionId: "chat-a", branch }), /No active writer lease/);
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});

@@ -305,6 +305,7 @@ export function completeSession({
   repo,
   gitText,
   ghText,
+  leaseStore,
   run,
   log = console.log,
   json = false,
@@ -364,6 +365,13 @@ export function completeSession({
     mainSha,
     status: "ok",
   };
+  if (!leaseStore) throw new Error("Completion requires the repository writer-lease store.");
+  leaseStore.complete({
+    branch,
+    pullRequestUrl: pullRequest.url,
+    mergeCommitSha,
+    mainSha,
+  });
 
   if (json) {
     log(JSON.stringify(summary));

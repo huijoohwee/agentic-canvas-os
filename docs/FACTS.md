@@ -2,7 +2,7 @@
 title: "Agentic OS Facts"
 graphId: "md:agentic-os-facts"
 doc_type: "Agentic OS Facts"
-date: "2026-07-18"
+date: "2026-07-20"
 lang: "en-US"
 schema: "agentic-os-facts/v1"
 frontmatter_contract: "required"
@@ -72,6 +72,9 @@ external_pattern_sources:
   - "https://github.com/NVIDIA/openshell"
 direct_resolution:
   "/session.start": "DICTIONARY-COMMAND.md#/session.start"
+  "/ecs.session-start": "DICTIONARY-COMMAND.md#/ecs.session-start"
+  "/ecs.world-tick": "DICTIONARY-COMMAND.md#/ecs.world-tick"
+  "/ecs.decision-persist": "DICTIONARY-COMMAND.md#/ecs.decision-persist"
   "/release.complete": "DICTIONARY-COMMAND.md#/release.complete"
   "/soul.load": "DICTIONARY-COMMAND.md#/soul.load"
   "/personality.overlay": "DICTIONARY-COMMAND.md#/personality.overlay"
@@ -179,6 +182,7 @@ direct_resolution:
   "#worker-process": "DICTIONARY-SEMANTIC.md##worker-process"
   "#multi-agent-collaboration": "DICTIONARY-SEMANTIC.md##multi-agent-collaboration"
   "#runtime-ready": "DICTIONARY-SEMANTIC.md##runtime-ready"
+  "#agentic-ecs": "DICTIONARY-SEMANTIC.md##agentic-ecs"
   "#tool-gateway": "DICTIONARY-SEMANTIC.md##tool-gateway"
   "#tool-routing": "DICTIONARY-SEMANTIC.md##tool-routing"
   "#web-search": "DICTIONARY-SEMANTIC.md##web-search"
@@ -272,13 +276,14 @@ direct_resolution:
   "@message-gateway": "DICTIONARY-BINDING.md#@message-gateway"
   "@operator": "DICTIONARY-BINDING.md#@operator"
   "@source.frontmatter": "DICTIONARY-BINDING.md#@source.frontmatter"
+  "@ecs-session": "DICTIONARY-BINDING.md#@ecs-session"
   "@runtime-proof": "DICTIONARY-BINDING.md#@runtime-proof"
   "@instruction-source": "DICTIONARY-BINDING.md#@instruction-source"
   "@instruction-eval-suite": "DICTIONARY-BINDING.md#@instruction-eval-suite"
 truth_tokens:
-  commands: ["/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/sme-care-agent", "/investment-research-agent", "/crawler-agent", "/image.to-threejs", "/image.to-glb", "/knowgrph.probe-tree", "/animation.control", "/motion.control", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/instruction.audit", "/instruction.quality-evaluate", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
-  semantics: ["#truth", "#frontmatter", "#harness", "#token-economics", "#spec.low", "#spec.medium", "#spec.high", "#thinking.type.enabled", "#thinking.type.disabled", "#thinking.type.auto", "#token-cap.low", "#token-cap.medium", "#token-cap.high", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#instruction-audit", "#instruction-quality", "#image-to-threejs", "#image-to-glb", "#knowgrph.probe-tree", "#character-motion", "#pose", "#action-path", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
-  bindings: ["@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@instruction-source", "@instruction-eval-suite", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@image-to-threejs", "@image-to-glb", "@knowgrph.probe-tree", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
+  commands: ["/ecs.session-start", "/ecs.world-tick", "/ecs.decision-persist", "/query", "/soul.load", "/personality.overlay", "/moa", "/video-agent", "/sme-care-agent", "/investment-research-agent", "/crawler-agent", "/image.to-threejs", "/image.to-glb", "/knowgrph.probe-tree", "/animation.control", "/motion.control", "/memory.seed", "/memory.write", "/memory.compact", "/memory.search", "/session.search", "/user.profile", "/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/instruction.audit", "/instruction.quality-evaluate", "/context.discover", "/context.load", "/context.audit", "/reference.expand", "/reference.audit", "/kanban.task", "/kanban.handoff", "/kanban.sync", "/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable", "/tool.search", "/tool.describe", "/tool.call", "/experience.capture", "/skill.propose", "/skill.evolve", "/identity.reflect", "/orchestration.graph", "/state.checkpoint", "/human.review", "/stream.trace", "/superagent.run", "/sandbox.policy.validate", "/sandbox.policy.authorize", "/prd-tad.create", "/runtime-ready.check", "/session.start", "/release.complete", "/deploy.guard"]
+  semantics: ["#agentic-ecs", "#truth", "#frontmatter", "#harness", "#token-economics", "#spec.low", "#spec.medium", "#spec.high", "#thinking.type.enabled", "#thinking.type.disabled", "#thinking.type.auto", "#token-cap.low", "#token-cap.medium", "#token-cap.high", "#vcc", "#no-hardcode", "#soul", "#primary-identity", "#personality-overlay", "#mixture-of-agents", "#reference-agents", "#aggregator-agent", "#learning-loop", "#persistent-memory", "#user-profile", "#frozen-snapshot", "#memory-capacity", "#session-search", "#skill-system", "#instruction-audit", "#instruction-quality", "#image-to-threejs", "#image-to-glb", "#knowgrph.probe-tree", "#character-motion", "#pose", "#action-path", "#progressive-disclosure", "#skill-bundle", "#agentskills-compatible", "#skill-security", "#context-file", "#project-context", "#cwd-discovery", "#context-reference", "#inline-context", "#attached-context", "#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration", "#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#tool-search", "#deferred-tool-schema", "#bridge-tool", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser", "#skill-evolution", "#memory-search", "#identity-model", "#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#agent-sandbox-policy", "#message-gateway"]
+  bindings: ["@ecs-session", "@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@instruction-source", "@instruction-eval-suite", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@image-to-threejs", "@image-to-glb", "@knowgrph.probe-tree", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
 ---
 # Agentic OS Facts
 `FACTS.md` is the shared truth layer for `docs`. Agents should read it before using local memory or role instructions. It is stronger than tool-specific helper files such as `CLAUDE.md` when those files exist in an adjacent environment, because this file defines repo-owned truth for this documentation control surface.
@@ -537,9 +542,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Session search | Past conversations can be searched on demand for specifics, but search results do not become memory until captured explicitly. | `/session.search`, `#session-search`, `@session-index`. |
 | Security | Memory/profile entries must be scanned for prompt injection, exfiltration, secrets, invisible control characters, and unsupported inference before persistence. | `@memory-policy`, `VALIDATION-RUNBOOK.md`. |
 | External pattern boundary | Hermes Agent memory may inform layer semantics; local docs must not copy Hermes memory code, database schemas, sample entries, prompt renderers, tests, fixtures, or prose. | `VALIDATION-RUNBOOK.md`, `SKILLS.md`, `HARNESS-CONTRACTS.md`. |
-
 ## Soul Facts
-
 | Fact | Rule | Proof or source |
 |---|---|---|
 | Durable identity | `SOUL.md` owns who the Agentic OS agent is and how it speaks. | `/soul.load`, `#soul`, `@soul-profile`. |
@@ -549,9 +552,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Overlay boundary | `/personality.overlay` is temporary session style and cannot mutate `SOUL.md` or bypass safety, facts, roles, approval, or deploy gates. | `#personality-overlay`, `@personality-overlay`. |
 | Safety | Soul content must be scanned and bounded before prompt inclusion. Missing, empty, unsafe, or unreadable soul source yields typed fallback. | `HARNESS-CONTRACTS.md`, `SKILLS.md`. |
 | External pattern boundary | Hermes Agent SOUL may inform layer semantics; local docs must not copy Hermes code, default identity text, personality preset text, prompt assembly code, schemas, tests, fixtures, or prose. | `VALIDATION-RUNBOOK.md`, `SOUL.md`. |
-
 ## Mixture Of Agents Facts
-
 | Fact | Rule | Proof or source |
 |---|---|---|
 | One-shot invocation | `/moa` applies a local preset to the current prompt or scoped query and then restores the prior model or agent context. | `/moa`, `@moa-preset`, official MoA docs listed in frontmatter. |
@@ -562,9 +563,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Failure handling | A failed reference can be represented as a typed advisory failure while the aggregator continues with available references, unless local policy requires fail-closed. | `HARNESS-CONTRACTS.md`, `SKILLS.md`. |
 | Recursion boundary | An MoA aggregator must not be another MoA preset, and bare `/moa` must return usage instead of switching the global model. | `DICTIONARY-COMMAND.md`, `VALIDATION-RUNBOOK.md`. |
 | External pattern boundary | Hermes Agent MoA may inform routing semantics; local docs must not copy Hermes code, prompts, preset examples, schemas, tests, fixtures, or prose. | `VALIDATION-RUNBOOK.md`, `SKILLS.md`, `HARNESS-CONTRACTS.md`. |
-
 ## Stateful Orchestration Facts
-
 | Fact | Rule | Proof or source |
 |---|---|---|
 | Graph topology | Stateful orchestration is represented as typed state, nodes, and edges. | `/orchestration.graph`, `#orchestration-graph`, `@orchestration-graph`. |
@@ -572,6 +571,7 @@ This file does not replace system, developer, or operator instructions. It defin
 | Human review | Human-in-loop stages are explicit interrupts with inspect, edit, approve, reject, and resume outcomes. | `/human.review`, `#human-in-loop`, `@human-review`. |
 | Streaming trace | Agent runs may surface streaming events for progress and state transitions, but not as source mutation. | `/stream.trace`, `@runtime-proof`, `@cost-log`. |
 | SuperAgent run | Long-horizon research, code, and creation tasks compose orchestration, skills, memory, tools, sandboxed workspace, message gateway, artifacts, and verification under one bounded harness. | `/superagent.run`, `#long-horizon-harness`, `@sandbox-workspace`, `@message-gateway`. |
+| Agentic ECS | Three exact Dev-only MCP routes hydrate KGC state, advance a private transactional world, and atomically persist only pending `EcsDecision` nodes; Agentic Canvas OS owns invocation truth, Knowgrph owns execution and Canvas projection, and no bitECS artifact or dependency is copied. | `/ecs.session-start`, `/ecs.world-tick`, `/ecs.decision-persist`, `#agentic-ecs`, `@ecs-session`. |
 | External pattern boundary | OpenAI orchestration, handoff, and Sandbox Agents guides, Docker documentation, LangGraph, and DeerFlow may inform semantics or platform usage; local docs and runtime must not copy external code, APIs, schemas, tests, examples, prompts, provider configs, runtime layouts, or prose. | `AGENT-RUNTIME-COMPOSITION.md`, `AGENT-ORCHESTRATION.md`, `SANDBOX-AGENTS.md`, `VALIDATION-RUNBOOK.md`, `HARNESS-CONTRACTS.md`. |
 
 ## Resolution Rules

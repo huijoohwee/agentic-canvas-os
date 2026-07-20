@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-07-18"
+date: "2026-07-20"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -54,6 +54,7 @@ dictionary_entries:
   - "@aggregator-agent"
   - "@operator"
   - "@source.frontmatter"
+  - "@ecs-session"
   - "@source.body"
   - "@local-harness"
   - "@runtime-proof"
@@ -182,6 +183,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@aggregator-agent` | Single acting agent in a Mixture of Agents run. | Approved local harness or provider router. | Owns final answer, tool calls, approvals, transcript persistence, and follow-up iteration through normal gates. |
 | `@operator` | Human approval authority and final release gate. | The user. | Required before paid, mutating, payment, browser-auth, Prod, or Cloudflare actions. |
 | `@source.frontmatter` | Parsed YAML frontmatter. | Authored document source. | SSOT for identity, routing, renderer flags, and runtime gates. |
+| `@ecs-session` | Opaque id for one bounded in-memory ECS world hydrated from a validated KGC document. | Knowgrph's private ECS MCP session store. | Session ids grant no filesystem path, network, deployment, or caller-authored decision authority; TTL, maximum count, terminal persistence, and lazy sweep bound their lifetime. |
 | `@source.body` | Authored Markdown body. | Authored document source. | SSOT for operator workflow, guardrails, and checklist language. |
 | `@local-harness` | Dev-local typed harness or dry-run path. | Shared local runtime owner. | Default proof path before paid calls or deploy. |
 | `@runtime-proof` | Surfaced validation evidence. | Command output, typed result, parsed field, or focused test. | Must be observable; narrative alone is not proof. |
@@ -297,6 +299,7 @@ binding:
 | Missing `@operator` for paid, mutating, payment, browser-auth, Prod, or Cloudflare action | Return approval-required or blocked with zero spend. |
 | Missing `@source.frontmatter` for parser or routing claims | Keep status spec-complete and request source. |
 | Missing `@runtime-proof` for runtime-ready promotion | Do not promote; report proof gap. |
+| Missing, expired, or disposed `@ecs-session` for tick or persistence | Return a typed session error; do not recreate the world, accept caller-supplied decisions, or mutate source. |
 | Missing `@working-directory` for `/context.discover` or `/context.audit` | Return missing-working-directory; do not scan arbitrary paths. |
 | Missing `@context-policy` for `/context.load` | Block before inclusion; context files cannot self-authorize loading. |
 | Missing `@reference-policy` for `/reference.expand` | Preserve raw message text and return reference-policy-required. |
@@ -319,6 +322,9 @@ binding:
 |---|---|
 | `/memory.seed #frontmatter @source.frontmatter @source.body` | Build memory from authored source. |
 | `/runtime-ready.check #harness @local-harness @runtime-proof` | Prove runtime status locally. |
+| `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Bind validated KGC source to one private bounded ECS session. |
+| `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Resolve and advance the live session without exposing its world object. |
+| `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Persist the session's pending decisions atomically and dispose it only after a terminal success. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
@@ -375,6 +381,7 @@ binding:
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
 | `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
 | `@knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
+| `@ecs-session` | `FACTS.md` direct-resolution entry for private bounded ECS session identity. |
 | `@memory-entry` | `FACTS.md` direct-resolution entry for bounded memory entries. |
 | `@skill-index` | `FACTS.md` direct-resolution entry for progressive skill discovery. |
 | `@skill-source` | `FACTS.md` direct-resolution entry for selected skill source loading. |

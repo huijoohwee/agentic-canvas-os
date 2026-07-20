@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { validateProbeTreeContractDocuments } from "./probe-tree-contract.mjs";
 import { validatePromptPresetContractDocuments } from "./prompt-preset-contract.mjs";
+import { validateXrInvocationContractDocuments } from "./xr-invocation-contract.mjs";
 
 const DOCS_ROOT = path.resolve("docs");
 const REQUIRED_KEYS = [
@@ -63,6 +64,7 @@ for (const name of files) {
 
 failures.push(...validateProbeTreeContractDocuments(documents));
 failures.push(...validatePromptPresetContractDocuments(documents));
+failures.push(...validateXrInvocationContractDocuments(documents));
 
 if (failures.length > 0) fail(failures.join("\n"));
 console.log(`docs contract ok (${files.length} files)`);

@@ -122,10 +122,18 @@ dictionary_entries:
   - "/canvas.layout.tune"
   - "/canvas.viewport.inspect"
   - "/canvas.viewport.transform"
+  - "/camera.select"
   - "/camera.frame"
   - "/camera.animate"
   - "/camera.play"
   - "/camera.scrub"
+  - "/xr.stage"
+  - "/xr.place"
+  - "/xr.transform"
+  - "/xr.label"
+  - "/xr.remove"
+  - "/xr.physics"
+  - "/xr.present"
   - "/animation.control"
   - "/motion.control"
   - "/canvas.interaction.tune"
@@ -245,10 +253,18 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/canvas.layout.tune` | Tune or reset schema-owned Canvas layout mode and forces through the graph schema owner. | `@layout-forces`, `@physics-2d`, `@canvas`, `@runtime-proof` | `#canvas-layout`, `#canvas-physics`, `#canvas`, `#vcc` | Layout mode and force values are stored in schema layout state, with reset/preset behavior reported from the schema owner. |
 | `/canvas.viewport.inspect` | Read the current viewport size, zoom, center, and transform through shared zoom/projection owners. | `@viewport-readout`, `@viewport-transform`, `@canvas` | `#canvas-viewport`, `#canvas-transform`, `#vcc` | Readout reports viewport dimensions, zoom percent, center, scale, and translation from shared viewport utilities without panel-local recalculation. |
 | `/canvas.viewport.transform` | Apply or audit viewport transform, zoom modes, wheel behavior, and speed tuning through shared camera owners. | `@viewport-transform`, `@zoom-mode`, `@wheel-input`, `@interaction-speed`, `@canvas` | `#canvas-viewport`, `#canvas-transform`, `#canvas-zoom`, `#canvas-wheel` | Transform or audit result names the active shared camera owner, clamp bounds, gesture policy, and applied or blocked state. |
+| `/camera.select` | Select fixed-follow or free-orbit as the shared Camera source. | exactly `@camera` | exactly `#camera` | Browser-local WebMCP tool `knowgrph.control_local_camera` validates `camera=fixed-follow|free-orbit` and reports the selected source; this dictionary row defines invocation truth but does not execute the Camera runtime. |
 | `/camera.frame` | Frame the shared Camera around the active camera or selected actor. | exactly one of `@camera` or `@selected-actor` | exactly `#camera-shot` | Angle, level, shot size, and focal length resolve through the shared Camera framing owner and report the applied pose. |
 | `/camera.animate` | Add or update a camera motion mark on the canonical BottomPanel Timeline. | exactly one of `@camera` or `@selected-actor` | exactly `#camera-motion` | Rig and time parameters validate before one shared XR camera track is updated; no FloatingPanel timeline copy is created. |
 | `/camera.play` | Play or pause the shared camera motion track. | exactly `@camera` | exactly `#camera-motion` | Playback state routes through the canonical Timeline transport and shared XR runtime. |
 | `/camera.scrub` | Move the shared camera motion playhead to a bounded time. | exactly `@camera` | exactly `#camera-motion` | The requested time clamps to scene duration and updates the canonical Timeline transport without duplicating transport state. |
+| `/xr.stage` | Select one catalog environment for the canonical XR scene. | exactly one dynamic `@<environment-id>` binding | no semantic token | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` resolves and persists the catalog stage through one shared scene owner or returns a typed block; this dictionary does not execute it. |
+| `/xr.place` | Place one catalog 3D asset in the canonical XR scene with an optional bounded non-empty label and `linear|hold` transition. | exactly one dynamic `@<asset-id>` binding | no semantic token | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` creates and persists one scene-authored subject or returns a typed block; this dictionary does not create a renderer or asset store. |
+| `/xr.transform` | Update one scene-authored subject's asset, position, yaw rotation, scale, or color. | exactly one dynamic `@<subject-id>` binding | exactly `#transform` | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` validates bounded transform fields and persists the shared subject or returns a typed block; this dictionary does not own scene mutation. |
+| `/xr.label` | Assign a bounded non-empty label to one scene-authored subject. | exactly one dynamic `@<subject-id>` binding | no semantic token | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` validates and persists the label through the shared scene owner or returns a typed block. |
+| `/xr.remove` | Remove one scene-authored subject from the canonical XR scene. | exactly one dynamic `@<subject-id>` binding | no semantic token | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` removes and persists the subject through the shared scene owner or returns a typed block. |
+| `/xr.physics` | Control the canonical XR world, subject body, impulse, or native controller scope. | exactly `@canvas` | exactly one of `#world`, `#body`, `#impulse`, or `#controller` | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` validates the scoped operation and reports applied or blocked state; Knowgrph remains the single physics owner and Agentic Canvas OS adds no physics runtime. |
+| `/xr.present` | Commit the current canonical XR scene at the active immersive AR placement target. | exactly `@scene` | exactly `#reticle` | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` commits the current hit-test placement or returns a typed block; this dictionary grants no camera, sensor, persistence, or deployment authority. |
 | `/animation.control` | Apply, clear, play, pause, scrub, or export native XR character motion and action-path choreography through one shared runtime. | `@selected-actor` for apply or clear; `@canvas` for transport or export | exactly one of `#character-motion` or `#action-path` for apply or clear; no semantic token for transport or export | Typed preset and operation fields validate before the shared XR motion-reference plan is updated; BottomPanel Timeline remains transport owner, FloatingPanel remains a projection, and export returns a deterministic native motion-reference package. |
 | `/motion.control` | Describe open, start, or stop intent for Motion Control on the Canvas. | exactly `@canvas` | exactly `#pose` | Source catalog metadata resolves the operation and Knowgrph ownership handoff; the row does not prove camera access, pose inference, XR behavior, executable MCP tooling, runtime readiness, or deployment. |
 | `/canvas.interaction.tune` | Tune pointer mode, run mode, drag alpha target, and flow interaction behavior through existing canvas owners. | `@flow-run-mode`, `@drag-alpha-target`, `@interaction-speed`, `@canvas` | `#canvas-interaction`, `#canvas-flow`, `#canvas-wheel`, `#vcc` | Interaction update resolves existing toolbar, store, and Flow owners; missing support returns typed unsupported state without a floating-panel alias. |

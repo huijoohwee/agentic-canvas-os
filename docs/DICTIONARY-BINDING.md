@@ -74,6 +74,7 @@ dictionary_entries:
   - "@video"
   - "@mcp-gateway"
   - "@canvas"
+  - "@scene"
   - "@camera"
   - "@selected-actor"
   - "@selected-node"
@@ -205,6 +206,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
 | `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
+| `@scene` | Current canonical XR scene and immersive placement scope. | Browser-local Knowgrph scene, hit-test, and shared Canvas projection owners. | Carries no camera or sensor grant and creates no duplicate renderer, persistence owner, approval, credential, Prod, or Cloudflare authority. |
 | `@camera` | First-class shared Camera framing and XR motion runtime. | Application-root Camera runtime, shared framing utilities, and canonical BottomPanel Timeline transport. | Does not create a panel-local Camera store, timeline, selection owner, credential, or deployment grant. |
 | `@selected-actor` | Actor selected for framing, cast marks, or camera choreography. | Shared Canvas graph selection and XR cast runtime. | Missing actor selection fails closed; the binding never keeps a FloatingPanel-only selection copy. |
 | `@selected-node` | Current Canvas node selection resolved through shared graph selection state. | Existing Canvas selection owner. | Missing selection returns a typed no-selection result; commands must not keep a panel-local selected-node cache. |

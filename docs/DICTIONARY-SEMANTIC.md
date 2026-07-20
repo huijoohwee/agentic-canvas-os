@@ -86,6 +86,12 @@ dictionary_entries:
   - "#character-motion"
   - "#pose"
   - "#action-path"
+  - "#transform"
+  - "#world"
+  - "#body"
+  - "#impulse"
+  - "#controller"
+  - "#reticle"
   - "#canvas-transform"
   - "#canvas-zoom"
   - "#canvas-wheel"
@@ -214,12 +220,18 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#canvas-layout` | Schema-owned Canvas layout force tuning, preset, or reset intent. | A command changes anti-line, post-fit, or layout-force behavior. | Layout values live in graph schema state and focused proof reports the applied or reset values. |
 | `#canvas-selection` | Current Canvas node or edge selection used as the active invocation subject. | A command needs the active node/edge rather than a global panel-local target. | Selection source, selected id, and missing-selection behavior are typed before mutation or chat append. |
 | `#canvas-viewport` | Viewport readout, visible bounds, center point, or active camera state. | A command inspects or changes visible canvas position, dimensions, or center. | Readout is derived from shared viewport utilities and reports missing viewport state as typed empty output. |
-| `#camera` | Shared Camera framing and motion runtime across 2D, 3D, and XR surface modes. | A command inspects, frames, animates, plays, or scrubs the Camera. | One application runtime owns Camera state; FloatingPanel projects controls and BottomPanel Timeline owns motion transport. |
+| `#camera` | Shared Camera source selection, framing, and motion runtime across 2D, 3D, and XR surface modes. | A command inspects, selects via `/camera.select`, frames, animates, plays, or scrubs the Camera. | One application runtime owns Camera state; FloatingPanel projects controls and BottomPanel Timeline owns motion transport. |
 | `#camera-shot` | Camera angle, level, shot size, and focal-length framing parameters. | `/camera.frame` changes composition around the selected subject. | Parameters validate against shared Camera framing options and return the exact applied pose. |
 | `#camera-motion` | Camera rig, numbered camera marks, playhead, duration, and playback state. | `/camera.animate`, `/camera.play`, or `/camera.scrub` controls choreography. | Rig and time values update one canonical XR camera track and BottomPanel Timeline transport with bounded runtime proof. |
 | `#character-motion` | Native procedural performance applied to an XR cast track, such as fight, dance, sit, drink, jump, playing cards, or squirt-gun action. | `/animation.control` applies or clears a typed character-motion preset for the selected actor. | Preset id, compatible subject category, deterministic pose sampling, timing, persistence, and package export are proven through the shared XR runtime without external animation assets. |
 | `#pose` | Human-pose intent used to classify Motion Control catalog metadata. | `/motion.control` describes an open, start, or stop operation for `@canvas`. | Dictionary and facts cross-links prove only the source catalog and Knowgrph ownership handoff; the tag does not prove camera access, inference, XR behavior, runtime readiness, or deployment. |
 | `#action-path` | Native meter-based trajectory applied to an XR cast track, such as plane landing, helicopter orbit, car chase, or collapsing debris. | `/animation.control` applies or clears a typed action-path preset for the selected actor. | Bounded marks, altitude, facing, timing, deterministic sampling, persistence, and package export are proven through the shared XR runtime without a second path or timeline owner. |
+| `#transform` | Scene-authored XR subject asset, position, yaw rotation, scale, or color transform. | `/xr.transform` targets exactly one dynamic subject binding. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` validates bounded transform fields and persists through one shared scene owner; this semantic token does not execute or duplicate that runtime. |
+| `#world` | Canonical XR physics-world transport and configuration scope. | `/xr.physics @canvas #world` requests `play`, `pause`, `stop`, `reset`, `step`, or `configure`. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` owns fixed-step world state and returns applied or blocked proof; the dictionary adds no physics owner. |
+| `#body` | Physics-body component scope for one scene-authored XR subject. | `/xr.physics @canvas #body` requests `attach`, `configure`, or `detach` with a bounded non-empty subject id. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` owns component validation and persistence; Agentic ECS remains a separate composition lane and does not own the rendered body. |
+| `#impulse` | Bounded impulse-vector scope for one dynamic XR subject. | `/xr.physics @canvas #impulse` requests `impulse` with a bounded non-empty subject id and `x,y,z` vector. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` applies the vector only to an eligible live body and reports typed failure otherwise. |
+| `#controller` | Native XR controller development and lifecycle scope. | `/xr.physics @canvas #controller` requests `develop-run`, `pause`, `resume`, `reset`, `exit`, or `select`. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` owns the controller mode and lifecycle; the token grants no external controller, device, or deployment authority. |
+| `#reticle` | Current immersive AR hit-test placement target for the canonical XR scene. | `/xr.present @scene #reticle` requests one placement commit. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` commits only a current valid reticle and returns a typed block otherwise; the token does not grant sensor or camera access. |
 | `#canvas-transform` | Zoom scale and screen-space translation for the active canvas viewport. | A command inspects, applies, clamps, or audits the zoom transform. | Transform values resolve through shared zoom/projection owners, not a floating-panel recalculation. |
 | `#canvas-zoom` | Zoom mode, zoom speed, fit-to-screen, or zoom-to-selection behavior. | A request changes or audits zoom modes, bounds, duration, or selection fitting. | Mode, duration, and scale bounds are read from existing store/schema owners and fail closed on unsupported renderer state. |
 | `#canvas-wheel` | Wheel or trackpad gesture routing, speed, modifier boost, or overlay proxy behavior. | A request changes or audits wheel input, trackpad input, or overlay wheel routing. | Gesture policy names the current shared owner and preserves overlay guard behavior. |

@@ -187,6 +187,36 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
+  function complete({ branch, pullRequestUrl, mergeCommitSha, mainSha }) {
+    requireSha(mergeCommitSha, "mergeCommitSha");
+    requireSha(mainSha, "mainSha");
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (!current || !["active", "delivery"].includes(current.status)) {
+        throw new Error(`No completable writer lease owns ${branch}.`);
+      }
+      if (current.pullRequestUrl && current.pullRequestUrl !== pullRequestUrl) {
+        throw new Error(`Writer lease pull request ${current.pullRequestUrl} does not match ${pullRequestUrl}.`);
+      }
+      const timestamp = now().toISOString();
+      const lease = {
+        ...current,
+        status: "completed",
+        pullRequestUrl,
+        completion: { mergeCommitSha, mainSha },
+        heartbeatAt: timestamp,
+        expiresAt: timestamp,
+      };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
+      return lease;
+    });
+  }
+
   function release({ sessionId, branch, status = "released" }) {
     return withLock(() => {
       const registry = readRegistry();
@@ -220,7 +250,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     }
   }
 
-  return { annotate, claim, heartbeat, read, readRegistry, release, statePath, verify };
+  return { annotate, claim, complete, heartbeat, read, readRegistry, release, statePath, verify };
 }
 
 export function renderWriterLeasePullRequestBody(lease) {
@@ -236,6 +266,7 @@ export function renderWriterLeasePullRequestBody(lease) {
     fenceSha: lease.fenceSha,
     heartbeatAt: lease.heartbeatAt,
     expiresAt: lease.expiresAt,
+    ...(lease.completion || {}),
   });
   return [
     "---",
@@ -249,6 +280,12 @@ export function renderWriterLeasePullRequestBody(lease) {
     "",
     `<!-- ${WRITER_LEASE_SCHEMA} ${payload} -->`,
   ].join("\n");
+}
+
+function requireSha(value, label) {
+  if (!/^[0-9a-f]{40}$/.test(String(value || ""))) {
+    throw new Error(`${label} must be an exact lowercase 40-character Git commit SHA.`);
+  }
 }
 
 export function parseWriterLeasePullRequestBody(body) {

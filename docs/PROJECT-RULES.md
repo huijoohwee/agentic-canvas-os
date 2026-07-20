@@ -69,6 +69,11 @@ document can express the same contract.
   acceptance path.
 - Use `npm run device:park` only for work explicitly reported as paused or
   blocked. Parking preserves work but never satisfies completion.
+- Audit the task worktree at every chat, session, or thread end. Remove it only
+  through `worktree:lifecycle:cleanup` after the runtime classifies it as clean,
+  detached at exact `origin/main`, and explicitly completed. Retain active,
+  delivery, and parked lanes; fail closed on dirt or ambiguity; preserve task
+  branches and commits unless branch deletion is separately authorized.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
 - Suggest next steps in `/GitHub/knowgrph/{todo-log.md, docs/}` and
   `/GitHub/huijoohwee.github.io/schema/AgenticRAG` when relevant.

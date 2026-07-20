@@ -46,6 +46,8 @@
     "device:start": "node ./scripts/device-branch.mjs start",
     "device:publish": "node ./scripts/device-branch.mjs publish",
     "device:resume": "node ./scripts/device-branch.mjs resume",
+    "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
+    "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",

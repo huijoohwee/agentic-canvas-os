@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-18"
+date: "2026-07-20"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -70,6 +70,7 @@ dictionary_entries:
   - "#foss"
   - "#ttv"
   - "#runtime-ready"
+  - "#agentic-ecs"
   - "#dev-only"
   - "#mcp"
   - "#canvas"
@@ -201,6 +202,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#foss` | Open-source, local, zero-egress, or vendor-neutral alternative. | A dependency or hosted service is under consideration. | Alternative path is named before paid or proprietary adoption. |
 | `#ttv` | Time to value for min-viable-max-value scope. | Scope needs prioritization or a feature could become broad. | Must/Should/Could/Won't or equivalent ROI cut is present. |
 | `#runtime-ready` | Claim can be proven from surfaced runtime output. | A spec-complete artifact is being promoted. | Parse, route, schema, cost, bound, approval, and focused validation proof are surfaced. |
+| `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by Knowgrph. | One of the three ECS MCP commands operates on a KGC-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
@@ -302,6 +304,9 @@ semantic:
 | Pattern | Meaning |
 |---|---|
 | `/runtime-ready.check #harness #vcc @local-harness` | Prove an AI-capable contract with local checks. |
+| `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Hydrate one private bounded ECS session from validated KGC source. |
+| `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Run ordered transactional systems and surface real or deferred reasoning cost evidence. |
+| `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Atomically persist only pending validated decision nodes, then close the successful session. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
@@ -379,6 +384,7 @@ semantic:
 | `#profile-handoff` | `FACTS.md` direct-resolution entry for handoff row contracts. |
 | `#worker-process` | `FACTS.md` direct-resolution entry for full OS worker processes. |
 | `#multi-agent-collaboration` | `FACTS.md` direct-resolution entry for durable row-based collaboration. |
+| `#agentic-ecs` | `FACTS.md` direct-resolution entry for KGC-backed native ECS semantics. |
 | `#tool-gateway` | `FACTS.md` direct-resolution entry for existing-infrastructure tool routing. |
 | `#tool-function` | `FACTS.md` direct-resolution entry for callable tool functions. |
 | `#toolset` | `FACTS.md` direct-resolution entry for logical tool bundles. |

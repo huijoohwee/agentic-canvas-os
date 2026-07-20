@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-18"
+date: "2026-07-20"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -101,6 +101,9 @@ dictionary_entries:
   - "/instruction.audit"
   - "/instruction.quality-evaluate"
   - "/session.start"
+  - "/ecs.session-start"
+  - "/ecs.world-tick"
+  - "/ecs.decision-persist"
   - "/release.complete"
   - "/deploy.guard"
   - "/harness.define"
@@ -219,6 +222,9 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
 | `/session.start` | Start one conflict-safe Codex build lane from current remote state. | `@operator`, `@working-directory`, `@runtime-proof` | `#multi-agent-collaboration`, `#runtime-ready`, `#vcc` | Remote refs are fetched, the clean registered `main` worktree remains the runtime owner, and one detached registered task worktree claims a unique contract-valid `agent/<device>/<semantic-scope>` branch and branch-bound lease; `.local` remains valid only in the device segment, invalid identity fails before checkout mutation, and Prod or Cloudflare remains unchanged. |
+| `/ecs.session-start` | Hydrate one bounded native ECS session from a repository-owned KGC Markdown document. | `@source.frontmatter`, `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#mcp`, `#dev-only` | `knowgrph.ecs.session_start` validates a safe workspace-relative `.md` path, hydrates registered components and entities deterministically, and returns a private session id plus zero-spend proof without network, Prod, or Cloudflare capability. |
+| `/ecs.world-tick` | Advance one hydrated ECS session through its ordered systems and bounded reasoning boundary. | `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#token-economics`, `#dev-only` | `knowgrph.ecs.world_tick` resolves a live session, commits successful systems in order, rolls back only a failing system, and reports decisions plus `cost_logs`; timeout or unavailable reasoning defers without invented decisions or spend. |
+| `/ecs.decision-persist` | Persist only pending ECS decisions from one live session into its source KGC document. | `@ecs-session`, `@source.frontmatter`, `@runtime-proof` | `#agentic-ecs`, `#frontmatter`, `#dev-only` | `knowgrph.ecs.decision_persist` atomically and idempotently appends validated `EcsDecision` nodes, preserves unrelated authored bytes, closes the session on success or zero pending decisions, and retains it after failure for retry. |
 | `/release.complete` | Execute the bounded Knowgrph Dev-to-Prod-to-Cloudflare release workflow. | `@operator`, `@source.frontmatter`, `@runtime-proof` | `#runtime-ready`, `#multi-agent-collaboration`, `#vcc` | Unique ownership, protected integration, mirror parity, deployment evidence, and both production-route probes pass for one promoted SHA. |
 | `/deploy.guard` | Stop accidental Prod mirror or Cloudflare mutation. | `@operator`, `@dev-only` | `#no-deploy`, `#approval-gate` | Output states Dev-only status and no Prod/Cloudflare mutation occurred. |
 | `/harness.define` | Define typed input, output, fallback, cost, and bounds for an AI-capable component. | `@local-harness`, `@cost-log` | `#harness`, `#token-economics`, `#vcc` | Harness contract includes schemas, cost fields, fallback paths, and max iteration. |
@@ -301,6 +307,7 @@ command:
 | `/tool.call` lacks described schema or real tool policy | Block before execution; never treat the bridge as approval. |
 | `/moa` references an MoA preset as aggregator | Reject with a typed recursion error before token spend. |
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
+| An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
 | Command conflicts with source frontmatter | Fix the source or shared owner; do not add a downstream alias. |
 | Command is unknown | Reject with a typed unsupported-command result and suggest nearest dictionary entries. |
@@ -328,6 +335,9 @@ command:
 | `/kanban.task` | `FACTS.md` direct-resolution entry for durable Kanban task rows. |
 | `/kanban.handoff` | `FACTS.md` direct-resolution entry for profile handoff rows. |
 | `/kanban.sync` | `FACTS.md` direct-resolution entry for shared board reconciliation. |
+| `/ecs.session-start` | `FACTS.md` direct-resolution entry for KGC-backed native ECS session hydration. |
+| `/ecs.world-tick` | `FACTS.md` direct-resolution entry for transactional ECS tick execution. |
+| `/ecs.decision-persist` | `FACTS.md` direct-resolution entry for atomic pending-decision persistence. |
 | `/tool.catalog` | `FACTS.md` direct-resolution entry for tool gateway discovery. |
 | `/tool.route` | `FACTS.md` direct-resolution entry for per-tool routing. |
 | `/toolset.enable` | `FACTS.md` direct-resolution entry for platform-scoped toolset enablement. |

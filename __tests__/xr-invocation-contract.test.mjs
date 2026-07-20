@@ -74,6 +74,16 @@ test("a missing canonical XR command fails the contract", () => {
   assert.equal(failures.some((failure) => failure.includes("missing dictionary entry /xr.present")), true);
 });
 
+test("an unescaped pipe that splits an XR dictionary row fails the contract", () => {
+  const documents = withReplacement(
+    "DICTIONARY-COMMAND.md",
+    "`camera=fixed-follow` or `camera=free-orbit`",
+    "`camera=fixed-follow|free-orbit`",
+  );
+  const failures = validateXrInvocationContractDocuments(documents);
+  assert.equal(failures.some((failure) => failure.includes("expected 5 Markdown table columns, found 6")), true);
+});
+
 test("routing XR physics through Agentic ECS fails the ownership contract", () => {
   const documents = withReplacement(
     "DICTIONARY-SEMANTIC.md",

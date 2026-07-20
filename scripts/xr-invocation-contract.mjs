@@ -42,9 +42,9 @@ export const FACTS_COMPACTED_CONTRACTS = Object.freeze({
 });
 
 const COMMAND_MARKERS = Object.freeze({
-  "/camera.select": ["exactly `@camera`", "exactly `#camera`", "camera=fixed-follow|free-orbit", "knowgrph.control_local_camera"],
+  "/camera.select": ["exactly `@camera`", "exactly `#camera`", "`camera=fixed-follow` or `camera=free-orbit`", "knowgrph.control_local_camera"],
   "/xr.stage": ["@<environment-id>", "no semantic token", "knowgrph.control_local_xr_scene"],
-  "/xr.place": ["@<asset-id>", "bounded non-empty label", "linear|hold", "no semantic token", "knowgrph.control_local_xr_scene"],
+  "/xr.place": ["@<asset-id>", "bounded non-empty label", "`linear` or `hold`", "no semantic token", "knowgrph.control_local_xr_scene"],
   "/xr.transform": ["@<subject-id>", "exactly `#transform`", "knowgrph.control_local_xr_scene"],
   "/xr.label": ["@<subject-id>", "bounded non-empty label", "no semantic token", "knowgrph.control_local_xr_scene"],
   "/xr.remove": ["@<subject-id>", "shared scene owner", "no semantic token", "knowgrph.control_local_xr_scene"],
@@ -92,15 +92,21 @@ export function validateXrInvocationContractDocuments(documents) {
 
   for (const token of XR_INVOCATION_COMMANDS) {
     requireDictionaryToken(command, facts, "DICTIONARY-COMMAND.md", token, failures);
-    requireMarkers(findTableRow(command, token), `DICTIONARY-COMMAND.md ${token} row`, COMMAND_MARKERS[token], failures);
+    const row = findTableRow(command, token);
+    requireTableShape(row, `DICTIONARY-COMMAND.md ${token} row`, 5, failures);
+    requireMarkers(row, `DICTIONARY-COMMAND.md ${token} row`, COMMAND_MARKERS[token], failures);
   }
   for (const token of XR_INVOCATION_SEMANTICS) {
     requireDictionaryToken(semantic, facts, "DICTIONARY-SEMANTIC.md", token, failures);
-    requireMarkers(findTableRow(semantic, token), `DICTIONARY-SEMANTIC.md ${token} row`, SEMANTIC_MARKERS[token], failures);
+    const row = findTableRow(semantic, token);
+    requireTableShape(row, `DICTIONARY-SEMANTIC.md ${token} row`, 4, failures);
+    requireMarkers(row, `DICTIONARY-SEMANTIC.md ${token} row`, SEMANTIC_MARKERS[token], failures);
   }
   for (const token of XR_INVOCATION_BINDINGS) {
     requireDictionaryToken(binding, facts, "DICTIONARY-BINDING.md", token, failures);
-    requireMarkers(findTableRow(binding, token), `DICTIONARY-BINDING.md ${token} row`, [
+    const row = findTableRow(binding, token);
+    requireTableShape(row, `DICTIONARY-BINDING.md ${token} row`, 4, failures);
+    requireMarkers(row, `DICTIONARY-BINDING.md ${token} row`, [
       "Current canonical XR scene",
       "Browser-local Knowgrph",
       "no camera or sensor grant",
@@ -144,6 +150,36 @@ function findTableRow(text, token) {
 
 function findPlainTableRow(text, label) {
   return text.split("\n").find((line) => line.startsWith(`| ${label} |`)) || "";
+}
+
+function requireTableShape(row, label, expectedColumns, failures) {
+  if (!row) return;
+  const actualColumns = splitMarkdownTableRow(row).length;
+  if (actualColumns !== expectedColumns) {
+    failures.push(`${label}: expected ${expectedColumns} Markdown table columns, found ${actualColumns}`);
+  }
+}
+
+function splitMarkdownTableRow(row) {
+  const cells = [];
+  let cell = "";
+  let escaped = false;
+  for (const character of row.slice(1, -1)) {
+    if (escaped) {
+      cell += character;
+      escaped = false;
+    } else if (character === "\\") {
+      cell += character;
+      escaped = true;
+    } else if (character === "|") {
+      cells.push(cell.trim());
+      cell = "";
+    } else {
+      cell += character;
+    }
+  }
+  cells.push(cell.trim());
+  return cells;
 }
 
 function readJsonFrontmatterField(text, field, failures) {

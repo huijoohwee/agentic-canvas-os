@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createDurableObjectAgentToolkitStore,
   createDurableObjectHumanReviewStore,
   createDurableObjectPausedTurnStore,
   createDurableObjectSwarmRunStore,
@@ -21,6 +22,7 @@ class MemoryStorage {
   constructor() {
     this.records = new Map();
     this.transactionTail = Promise.resolve();
+    this.alarmAt = null;
   }
 
   async transaction(operation) {
@@ -39,6 +41,18 @@ class MemoryStorage {
 
   async delete(key) {
     return this.records.delete(key);
+  }
+
+  async getAlarm() {
+    return this.alarmAt;
+  }
+
+  async setAlarm(value) {
+    this.alarmAt = Number(value);
+  }
+
+  async deleteAlarm() {
+    this.alarmAt = null;
   }
 }
 
@@ -71,6 +85,33 @@ test("Durable Object review records store once and consume atomically", async ()
   const consumed = await Promise.all([first.take(record.reviewId), second.take(record.reviewId)]);
   assert.equal(consumed.filter(Boolean).length, 1);
   assert.deepEqual(consumed.find(Boolean), record);
+});
+
+test("AgentState alarms recover expired claims and physically remove expired records", async () => {
+  const operationNow = Date.now() - 2_000;
+  const liveStorage = new MemoryStorage();
+  const liveState = new AgentState({ storage: liveStorage });
+  const liveRecord = { id: "recoverable", expiresAt: operationNow + 62_000 };
+  const expiredClaimAt = operationNow + 1_000;
+
+  await liveState.put({ record: liveRecord }, operationNow);
+  assert.equal(liveStorage.alarmAt, liveRecord.expiresAt);
+  await liveState.claim({ claimId: "expired-claim", claimExpiresAt: expiredClaimAt }, operationNow);
+  assert.equal(liveStorage.alarmAt, expiredClaimAt);
+  await liveState.alarm();
+  assert.deepEqual(liveStorage.records.get("active"), liveRecord);
+  assert.equal(liveStorage.records.has("claim"), false);
+  assert.equal(liveStorage.alarmAt, liveRecord.expiresAt);
+
+  const expiredStorage = new MemoryStorage();
+  const expiredState = new AgentState({ storage: expiredStorage });
+  const expiredRecord = { id: "expired", expiresAt: operationNow + 1_000 };
+  await expiredState.put({ record: expiredRecord }, operationNow);
+  assert.equal(expiredStorage.alarmAt, expiredRecord.expiresAt);
+  await expiredState.alarm();
+  assert.equal(expiredStorage.records.has("active"), false);
+  assert.equal(expiredStorage.records.has("claim"), false);
+  assert.equal(expiredStorage.alarmAt, null);
 });
 
 test("Durable Object paused turns enforce claim, release, replace, and commit", async () => {
@@ -140,6 +181,44 @@ test("Agent Swarm ledgers coordinate atomic claims across isolate adapters", asy
     horizontalRecovery: true,
     owner: "agent-swarm",
     activeRuns: null,
+  });
+});
+
+test("Agent Toolkit records coordinate atomic claims across isolate adapters", async () => {
+  const namespace = createAgentStateNamespace();
+  const first = createDurableObjectAgentToolkitStore({ namespace });
+  const second = createDurableObjectAgentToolkitStore({ namespace });
+  const record = {
+    schema: "agent-toolkit-run/v1",
+    recordId: "run:toolkit-run-1",
+    status: "running",
+    revision: 1,
+    expiresAt: Date.now() + 60_000,
+  };
+
+  assert.equal(await first.put(record), true);
+  assert.equal(await second.put(record), false);
+  const [firstClaim, secondClaim] = await Promise.all([
+    first.claim(record.recordId, "observer-a", Date.now() + 30_000),
+    second.claim(record.recordId, "observer-b", Date.now() + 30_000),
+  ]);
+  assert.equal([firstClaim, secondClaim].filter(Boolean).length, 1);
+  const winner = firstClaim ? [first, "observer-a"] : [second, "observer-b"];
+  const replacement = { ...record, revision: 2 };
+  assert.equal(await winner[0].replace(record.recordId, winner[1], replacement), true);
+  assert.deepEqual(await second.get(record.recordId), replacement);
+  assert.ok(await first.claim(record.recordId, "expiring-observer", Date.now() + 5));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await second.put({ ...record, revision: 3 }), false);
+  assert.deepEqual(await second.get(record.recordId), replacement);
+  assert.equal(await first.delete(record.recordId), true);
+  assert.equal(await second.get(record.recordId), null);
+  assert.deepEqual(first.stats(), {
+    persistence: "durable-object",
+    atomicClaims: true,
+    horizontalRecovery: true,
+    owner: "agent-toolkit",
+    records: null,
   });
 });
 

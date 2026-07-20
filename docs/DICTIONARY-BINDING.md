@@ -140,6 +140,7 @@ dictionary_entries:
   - "@skill-catalog"
   - "@identity-model"
   - "@orchestration-graph"
+  - "@swarm-run"
   - "@state-store"
   - "@checkpoint-store"
   - "@human-review"
@@ -269,6 +270,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@skill-catalog` | Reusable skill contract catalog. | `SKILLS.md` plus existing shared skill registry owner when present. | Skill changes are proposals until reviewed; direct auto-commit and external copying are forbidden. |
 | `@identity-model` | Stable model of operator preferences, project boundaries, and agent operating rules. | `FACTS.md`, `MEMORY.md`, and operator-approved memory. | Stores non-secret, source-backed facts only; no sensitive profiling or unsupported personal inference. |
 | `@orchestration-graph` | Source-backed state, node, edge, and stop-condition topology. | `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing Canvas/KGC graph owners. | No external graph runtime import, hidden node registry, or direct graph-store mutation. |
+| `@swarm-run` | Durable ledger for one dynamically planned Agent Swarm run. | `AGENT-SWARM.md`, Agent Swarm runtime, and the injected atomic state-store adapter. | Holds bounded private task results for dependencies and synthesis plus state, claims, leases, verified receipts, cost, and trace; never exposes those results publicly or stores provider secrets, caller roles, or workflow topology. |
 | `@state-store` | Scoped current-state snapshot for a stateful run. | Existing approved local state owner. | Typed, bounded, secret-free state only; writes require mutation approval. |
 | `@checkpoint-store` | Durable checkpoint and resume surface. | Existing approved local persistence owner. | Checkpoints require scope, recovery proof, idempotency, and cleanup path. |
 | `@human-review` | Operator review interrupt and resume binding. | The operator or approved review gate. | Continuation is blocked until approve, reject, or edit result is typed. |
@@ -306,6 +308,7 @@ binding:
 | `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before injecting content into `@attached-context`. |
 | Missing `@kanban-board` for `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` | Return missing-board; do not create a second board store. |
 | Missing `@agent-profile` or `@worker-process` for a handoff | Return missing-profile; do not spawn an anonymous worker. |
+| Missing or unconfigured `@swarm-run` state, exact-agent resolver, planner, worker, synthesizer, receipt verifier, authorizer, or authenticated run principal | Return a typed block before work, disclosure, spend, or cancellation; never accept a caller-supplied substitute. |
 | Missing `@tool-policy` for paid, egress, generated-media, or browser automation | Return blocked before executing the tool. |
 | Missing `@platform-surface` for `/toolset.enable` or `/toolset.disable` | Return scoped-platform-required before changing toolset state. |
 | Missing `@deferred-tool-catalog` for `/tool.search` or `/tool.describe` | Return no-deferred-catalog before schema disclosure or execution. |
@@ -370,6 +373,7 @@ binding:
 | `/memory.search #memory-search @memory-store` | Retrieve prior context from scoped local memory. |
 | `/identity.reflect #identity-model @identity-model` | Persist stable non-secret preferences with operator authority. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Validate graph topology through source-backed owners. |
+| `/agent.swarm #agent-swarm @swarm-run @agent` | Coordinate runtime-generated tasks through one durable atomic run ledger. |
 | `/state.checkpoint #durable-execution @checkpoint-store` | Persist resumable checkpoints with recovery proof. |
 | `/human.review #human-in-loop @human-review` | Pause and resume a run through operator review. |
 | `/superagent.run #long-horizon-harness @sandbox-workspace @message-gateway` | Run bounded long-horizon work with typed workspace, handoff, checkpoint, and artifact proof. |
@@ -401,6 +405,7 @@ binding:
 | `@handoff-row` | `FACTS.md` direct-resolution entry for handoff row binding. |
 | `@agent-profile` | `FACTS.md` direct-resolution entry for named profile binding. |
 | `@worker-process` | `FACTS.md` direct-resolution entry for full OS process worker binding. |
+| `@swarm-run` | `FACTS.md` direct-resolution entry for one dynamic swarm run ledger. |
 | `@tool-gateway` | `FACTS.md` direct-resolution entry for existing-infrastructure tool routing. |
 | `@tool-provider` | `FACTS.md` direct-resolution entry for per-tool provider state. |
 | `@tool-function` | `FACTS.md` direct-resolution entry for callable tool functions. |

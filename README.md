@@ -127,6 +127,7 @@ run-scoped canvas embed URL.
 | `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
 | `agent-api/src/progressive-agents.js` | Incremental facade for one exact agent run, tool-bearing definitions, and explicit specialist workflows. |
 | `agent-api/src/agent-orchestration.js` | Revision-fenced manager and specialist topology with explicit delegation, handoff, conversation, and final-answer ownership. |
+| `agent-api/src/agent-swarm*.js` | Dynamic goal planning, durable atomic run ledger, horizontally claimable worker tasks, recovery, receipts, cancellation, and base-agent synthesis. |
 | `docs/` | Agentic Canvas OS docs/control surface for `/`, `#`, and `@` invocation dictionaries. |
 | `scripts/instruction-audit.mjs` | Model-free budgets, intent preservation, duplicate detection, and canonical-owner checks for durable guidance. |
 | `scripts/instruction-task-quality.mjs` | Validates the task-quality scenario suite or scores provenance-bound candidate final answers. |
@@ -245,6 +246,18 @@ source manager and returns only manager synthesis; handoff transfers both owners
 to the target. The default Worker receives resolver and runner interfaces from
 Agent Runtime Composition but no authorizer, so configuration is false and provider execution remains `unverified`. See
 [`docs/AGENT-ORCHESTRATION.md`](./docs/AGENT-ORCHESTRATION.md).
+
+Agent Swarm readiness is a separate dynamic horizontal-scaling path. A caller
+supplies one exact base agent and goal, never roles, tasks, or workflow topology.
+The runtime resolves the exact agent, validates generated task dependencies, coordinates short atomic
+claims through the existing `AGENT_STATE` Durable Object, executes independent
+work outside the ledger lock, binds each run to its session principal, fences stale output,
+and requires durable-owner-verified receipts with stable task idempotency keys
+for effects before only the base agent may synthesize the public result.
+Authenticated `/api/agent-swarm/{start,work,settle,status,cancel}` routes fail
+closed until resolver, planner, worker, synthesizer, receipt-verifier, and authorizer adapters are injected;
+live provider execution remains `unverified`. See
+[`docs/AGENT-SWARM.md`](./docs/AGENT-SWARM.md).
 
 Sandbox Agents readiness exposes a separate container-workspace control plane.
 It validates one fresh workspace or saved snapshot, routes application-approved

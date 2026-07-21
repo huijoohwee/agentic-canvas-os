@@ -85,6 +85,7 @@ dictionary_entries:
   - "#camera-motion"
   - "#character-motion"
   - "#pose"
+  - "#gameplay"
   - "#action-path"
   - "#transform"
   - "#world"
@@ -225,6 +226,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#camera-motion` | Camera rig, numbered camera marks, playhead, duration, and playback state. | `/camera.animate`, `/camera.play`, or `/camera.scrub` controls choreography. | Rig and time values update one canonical XR camera track and BottomPanel Timeline transport with bounded runtime proof. |
 | `#character-motion` | Native procedural performance applied to an XR cast track, such as fight, dance, sit, drink, jump, playing cards, or squirt-gun action. | `/animation.control` applies or clears a typed character-motion preset for the selected actor. | Preset id, compatible subject category, deterministic pose sampling, timing, persistence, and package export are proven through the shared XR runtime without external animation assets. |
 | `#pose` | Human-pose intent used to classify Motion Control catalog metadata. | `/motion.control` describes an open, start, or stop operation for `@canvas`. | Dictionary and facts cross-links prove only the source catalog and Knowgrph ownership handoff; the tag does not prove camera access, inference, XR behavior, runtime readiness, or deployment. |
+| `#gameplay` | Deterministic Game Mode scope for scored Agentic ECS decisions, local collision and hitscan, player controls, HUD errors, and validated Decision persistence. | `/game.mode @canvas #gameplay` requests one browser-local Game Mode inspection or control operation. | Dev-only WebMCP tools `knowgrph.inspect_local_game_mode` and `knowgrph.control_local_game_mode` reuse Knowgrph's existing Canvas, XR Mode, Motion Control, ECS, and workspace owners; this token adds no model, network, renderer, camera, persistence, Prod, or Cloudflare authority. |
 | `#action-path` | Native meter-based trajectory applied to an XR cast track, such as plane landing, helicopter orbit, car chase, or collapsing debris. | `/animation.control` applies or clears a typed action-path preset for the selected actor. | Bounded marks, altitude, facing, timing, deterministic sampling, persistence, and package export are proven through the shared XR runtime without a second path or timeline owner. |
 | `#transform` | Scene-authored XR subject asset, position, yaw rotation, scale, or color transform. | `/xr.transform` targets exactly one dynamic subject binding. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` validates bounded transform fields and persists through one shared scene owner; this semantic token does not execute or duplicate that runtime. |
 | `#world` | Canonical XR physics-world transport and configuration scope. | `/xr.physics @canvas #world` requests `play`, `pause`, `stop`, `reset`, `step`, or `configure`. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` owns fixed-step world state and returns applied or blocked proof; the dictionary adds no physics owner. |

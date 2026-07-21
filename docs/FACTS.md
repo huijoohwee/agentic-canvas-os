@@ -2,7 +2,7 @@
 title: "Agentic OS Facts"
 graphId: "md:agentic-os-facts"
 doc_type: "Agentic OS Facts"
-date: "2026-07-20"
+date: "2026-07-21"
 lang: "en-US"
 schema: "agentic-os-facts/v1"
 frontmatter_contract: "required"
@@ -26,6 +26,8 @@ source_revision_contract:
   runtime_identity_projection_rule: "MainPanel Settings exposes Cross-device Identity Gate as a normal section inside the Settings body using the shared Key-Type-Value row layout; it must not render above or replace the KTV header"
   runtime_identity_attestation_rule: "the repository-owned collaboration gate creates two isolated authenticated runtime peers, relays short-lived digest-bound canonical snapshots without owning or persisting identity, and passes only on exact SHA, catalog-count, active-peer, and common-digest parity; physical devices and manual JSON exports are not required"
   catalog_freshness_rule: "catalog hydration is keyed by the Agentic Canvas OS docs revision; a revision change invalidates the prior catalog and permits at most two explicit refresh attempts before returning a visible blocked or stale result"
+  production_owner_rule: "Knowgrph is the sole production build, Cloudflare deploy, live-fidelity, rollback, and mirror-publication owner for airvio.co; Agentic Canvas OS has no production deploy workflow"
+  production_attestation_rule: "both public surfaces expose byte-identical knowgrph-production-runtime-readiness/v2 JSON binding exact app tree, docs, catalog, manifest, artifact, mirror, and surface identities"
 layer_contract:
   {soul: "durable agent identity and voice", facts: "shared truth and precedence", memory: "persistence, routing memory, and reusable local context", planning: "bounded index plus append-only cross-repository monthly shards", user: "bounded user preferences, communication style, and expectations", skills: "on-demand procedural knowledge and progressive disclosure contracts", agents: "agent roles, editing rules, and operational behavior", dictionaries: "direct token definitions for /, #, and @ invocation grammar"}
 dictionary_links: {command: "DICTIONARY-COMMAND.md", semantic: "DICTIONARY-SEMANTIC.md", binding: "DICTIONARY-BINDING.md"}

@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Proof"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-proof"
 doc_type: "Runtime Proof Ledger"
-date: "2026-07-18"
+date: "2026-07-21"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-proof/v1"
 frontmatter_contract: "required"
@@ -217,7 +217,7 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Image to Three.js skill has Dev proof | Eight focused conversion, projection, source-replacement, fallback, and disposal selectors pass; the browser-smoke contract passes; task-mode browser proof renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and typed fallback on the visual Canvas. Canvas TypeScript and hygiene gates pass, package manifests remain unchanged, and no external plugin code or dependency is present. | Passed |
 | Canonical docs source has Dev proof | The registered Agentic Canvas OS `main` worktree remains the only normal runtime docs source and must be clean at fetched `origin/main`. Focused coordination tests prove additional registered task worktrees can mutate branch-exclusive scopes without becoming runtime sources. Knowgrph consumer predev alignment with this v2 policy remains a separate downstream gate. | Passed for Agentic Canvas OS; downstream consumer alignment pending |
 | Deploy guard holds | Scoped git status shows no `content/knowgrph` mutation and no deploy command was run. | Passed |
-| Canonical automatic lifecycle contract holds | `CANONICAL-LIFECYCLE.md` defines remote-authoritative multi-device convergence, protected-main standing authorization, immutable promotion, production smoke, rollback, mirror publication, and exact-SHA runtime-ready acceptance without per-release manual intervention. | Contract passed; downstream Knowgrph and huijoohwee executable gates own runtime proof |
+| Canonical automatic lifecycle contract holds | Focused tests prove disposable-candidate validation occurs before canonical fast-forward, rejection preserves the prior checkout, dirty files remain in place while a hashed quarantine copy is recorded, and the strict v2 production attestation rejects revision drift and unknown fields. Mutable-tag Actions and the dormant Agentic production deploy, preview, and rollback workflows are absent. | Executable source contract passed; downstream Knowgrph and huijoohwee own production proof |
 
 ## Promotion Boundary
 

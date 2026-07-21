@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Validation Runbook"
 graphId: "md:knowgrph-agentic-canvas-os-validation-runbook"
 doc_type: "Validation Runbook"
-date: "2026-07-18"
+date: "2026-07-21"
 lang: "en-US"
 schema: "agentic-canvas-os-validation-runbook/v1"
 frontmatter_contract: "required"
@@ -119,11 +119,11 @@ Expected:
 
 ## Repository-Owned Collaboration Gate
 
-Run the complete collaboration and runtime-identity gate from the Agentic Canvas OS repository:
+First run `node --test __tests__/workspace-sync.test.mjs __tests__/production-runtime-readiness-contract.test.mjs __tests__/github-lifecycle-policy.test.mjs`.
+It proves candidate-first sync, retained last-known-good state, hashed quarantine,
+exact runtime identity binding, and rejection of drift or unknown fields.
 
-```bash
-npm run collaboration:gate
-```
+Then run `npm run collaboration:gate` from the Agentic Canvas OS repository.
 
 This is the only required operator command. It resolves the sibling Knowgrph checkout from the repository root, verifies that Knowgrph still owns `collaboration:readiness:check`, and delegates to that canonical runtime owner. The gate automatically:
 

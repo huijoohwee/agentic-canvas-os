@@ -26,6 +26,7 @@
     "reasoning-continuity:check": "node --test __tests__/reasoning-continuity.test.mjs",
     "tool-search:check": "node --test __tests__/tool-search.test.mjs",
     "xr-invocation-contract:check": "node --test __tests__/xr-invocation-contract.test.mjs && npm run docs:check",
+    "game-mode-invocation-contract:check": "node --test __tests__/game-mode-invocation-contract.test.mjs && npm run docs:check",
     "check": "npm test && npm run web:build && npm run docs:check",
     "function-calling:check": "node --test __tests__/function-calling.test.mjs",
     "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/function-calling-continuation.test.mjs __tests__/function-execution-receipts.test.mjs __tests__/openai-function-gateway.test.mjs __tests__/knowgrph-mcp-client.test.mjs",

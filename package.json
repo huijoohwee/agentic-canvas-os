@@ -34,6 +34,7 @@
     "function-gateway:live-proof": "node ./scripts/live-function-run-note-proof.mjs",
     "function-gateway:live-proof:check": "node --test __tests__/live-function-run-note-proof.test.mjs",
     "guardrails-human-review:check": "node --test __tests__/guardrails-human-review.test.mjs __tests__/durable-agent-state.test.mjs",
+    "runtime-readiness-contract:check": "node --test __tests__/production-runtime-readiness-contract.test.mjs",
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
@@ -57,15 +58,13 @@
     "durable-agent-state:check": "node --test __tests__/durable-agent-state.test.mjs",
     "git:configure": "git config core.hooksPath .githooks",
     "github:configure": "node ./scripts/configure-github.mjs",
-    "rollback": "wrangler rollback",
     "smoke": "node ./scripts/smoke.mjs",
     "sync:live": "node ./scripts/live-sync.mjs",
     "sync:workspace": "node ./scripts/workspace-sync.mjs",
     "sync:workspace:watch": "node ./scripts/workspace-sync.mjs --watch",
     "test": "node --test __tests__/*.test.mjs",
     "web:build": "node web/build.mjs",
-    "cloudflare:dev": "npm run web:build && wrangler dev",
-    "cloudflare:deploy": "npm run web:build && wrangler deploy"
+    "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
     "wrangler": "4.110.0"

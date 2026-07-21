@@ -2,9 +2,9 @@
 title: "Canonical Checkout And Automatic Runtime Lifecycle"
 graphId: "md:canonical-checkout-automatic-runtime-lifecycle"
 doc_type: "Lifecycle Contract"
-date: "2026-07-20"
+date: "2026-07-21"
 lang: "en-US"
-schema: "canonical-runtime-lifecycle/v1"
+schema: "canonical-runtime-lifecycle/v2"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "canonical main synchronization, protected integration, automatic promotion, and runtime-readiness evidence"
@@ -32,10 +32,10 @@ outside canonical Git worktrees.
 
 | Observed canonical state | Automatic action | Result |
 |---|---|---|
-| clean and equal to fetched `origin/main` | verify the exact SHA and readiness record | healthy |
-| clean and strictly behind | apply `git merge --ff-only origin/main`, then validate | converged |
+| clean and equal to fetched `origin/main` | verify protected checks and the last-known-good readiness record | healthy |
+| clean and strictly behind | validate the fetched SHA in a disposable worktree, then apply `git merge --ff-only origin/main` | converged |
 | ahead or diverged | preserve diagnostics and fail closed | blocked |
-| modified or unexpectedly untracked | preserve a content-addressed quarantine copy and fail closed | blocked |
+| modified or unexpectedly untracked | copy content-addressed evidence without moving the original and fail closed | blocked |
 | remote unavailable | keep the last verified runtime active and retry with bounded backoff | degraded |
 | candidate validation fails | keep the previous verified runtime active | rejected |
 
@@ -46,17 +46,20 @@ preserved.
 
 ## Multi-Device Contract
 
-Each device runs the repository-owned reconciler at login, after network
-recovery, and on a bounded interval. A reconciler acquires one device-local
-lock, fetches and prunes `origin`, verifies the protected-main CI result,
-prepares the exact revision, runs the repository readiness command, and changes
-the active runtime only after all checks pass.
+Each device runs the repository-owned reconciler after network recovery and on a
+bounded interval. A reconciler acquires one device-local metadata lock with
+stale-owner recovery, fetches and prunes `origin`, verifies the required GitHub
+check runs for every remote SHA, prepares every changed revision in disposable
+worktrees, and runs repository readiness commands before any canonical
+fast-forward. Candidate failure leaves every canonical checkout at its prior
+last-known-good revision.
 
 Run `npm run sync:workspace` for one reconciliation or keep the repository-owned
 daemon active with `npm run sync:workspace:watch`. The daemon defaults to a
-five-minute interval, applies a workspace-scoped lock, quarantines unexpected
-untracked paths under `$GITHUB_ROOT/.runtime-state`, and validates only revisions
-that advanced.
+five-minute interval, applies bounded exponential retry with jitter, writes
+`canonical-workspace-readiness/v2` under `$GITHUB_ROOT/.runtime-state`, and
+copies hashed dirty-checkout evidence to quarantine without changing the source
+checkout.
 
 One device never pushes local canonical state to repair another device. Task
 handoff uses an exact pushed commit SHA. Pull-request metadata, protected checks,
@@ -93,6 +96,11 @@ The release controller performs these stages in order:
 10. Publish the exact verified mirror to `huijoohwee/main`.
 11. Emit the immutable manifest, deployment identity, proof, and cost ledger.
 
+Agentic Canvas OS does not own an independent production Worker. Its dormant
+deploy, preview, and manual rollback workflows are absent; Dev proof remains
+available locally, while Knowgrph is the sole production and rollback owner for
+`airvio.co`.
+
 If a post-deploy probe fails, automation rolls Pages back to the captured
 successful production deployment, re-runs smoke, leaves the mirror remote at
 the last known-good revision, and reports a typed failure. Storage or schema
@@ -117,6 +125,13 @@ reproducible lockfile build, green protected checks, exact artifact digests,
 successful Dev and production probes, a retained rollback target, deployment
 concurrency fencing, structured observability, and zero unexplained cost or
 secret exposure.
+
+Both public surfaces expose byte-identical
+`knowgrph-production-runtime-readiness/v2` JSON validated against
+`docs/schemas/production-runtime-readiness.v2.schema.json`. The record binds the
+Knowgrph commit and tree, Agentic Canvas OS commit, catalog commit, immutable
+manifest digest, build-artifact digest, mirror repository, and `/` plus
+`/knowgrph` surface set. HTML fallbacks and unknown fields fail closed.
 
 Missing credentials, missing branch protection, a manually gated production
 environment, mutable dependency references, dirty mirrors, absent live proof,

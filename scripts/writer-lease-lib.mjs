@@ -193,7 +193,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
-      if (!current || !["active", "delivery"].includes(current.status)) {
+      if (!current || !["active", "delivery", "review_ready"].includes(current.status)) {
         throw new Error(`No completable writer lease owns ${branch}.`);
       }
       if (current.pullRequestUrl && current.pullRequestUrl !== pullRequestUrl) {
@@ -217,18 +217,42 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
-  function release({ sessionId, branch, status = "released" }) {
+  function release({ sessionId, branch, status = "released", expectedLease = null, timestamp = null, values = {} }) {
     return withLock(() => {
       const registry = readRegistry();
       const current = verify({ sessionId, branch, allowExpired: true });
-      const timestamp = now().toISOString();
-      const lease = { ...current, status, heartbeatAt: timestamp, expiresAt: timestamp };
+      if (expectedLease && JSON.stringify(current) !== JSON.stringify(expectedLease)) {
+        throw new Error(`Writer lease for ${branch} changed before ${status}.`);
+      }
+      const instant = timestamp ? new Date(timestamp) : now();
+      const exactTimestamp = instant.toISOString();
+      if (timestamp && exactTimestamp !== timestamp) throw new Error("Release timestamp must be canonical ISO UTC.");
+      const lease = { ...current, ...values, schema: WRITER_LEASE_SCHEMA, status, heartbeatAt: exactTimestamp, expiresAt: exactTimestamp };
       writeRegistry({
         ...registry,
         revision: Number(registry.revision || 0) + 1,
         leases: { ...registry.leases, [branch]: lease },
       });
       return lease;
+    });
+  }
+
+  function rollbackClaim({ sessionId, branch, epoch, fenceSha, previousLease = null }) {
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (!current || current.status !== "active" || current.sessionId !== sessionId ||
+          current.branch !== branch || current.epoch !== epoch || current.fenceSha !== fenceSha) {
+        throw new Error(`Writer lease claim for ${branch} changed before rollback.`);
+      }
+      if (previousLease && (previousLease.schema !== WRITER_LEASE_SCHEMA || previousLease.branch !== branch)) {
+        throw new Error(`Previous writer lease for ${branch} is invalid.`);
+      }
+      const leases = { ...registry.leases };
+      if (previousLease) leases[branch] = previousLease;
+      else delete leases[branch];
+      writeRegistry({ ...registry, revision: Number(registry.revision || 0) + 1, leases });
+      return previousLease;
     });
   }
 
@@ -250,10 +274,33 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     }
   }
 
-  return { annotate, claim, complete, heartbeat, read, readRegistry, release, statePath, verify };
+  return { annotate, claim, complete, heartbeat, read, readRegistry, release, rollbackClaim, statePath, verify };
 }
 
 export function renderWriterLeasePullRequestBody(lease) {
+  return [
+    "---",
+    `action: ${DEFAULT_PULL_REQUEST_ACTION}`,
+    `scope: "#${lease.scope}"`,
+    `actor: "@${lease.device}"`,
+    `base_sha: "${lease.baseSha}"`,
+    "---",
+    "",
+    "Device branch claimed for protected, scope-aware delivery.",
+    "",
+    renderWriterLeaseMarker(lease),
+  ].join("\n");
+}
+
+export function updateWriterLeasePullRequestBody(body, lease) {
+  const source = String(body || "").trimEnd();
+  const marker = renderWriterLeaseMarker(lease);
+  const pattern = new RegExp(`<!--\\s*${escapeRegExp(WRITER_LEASE_SCHEMA)}\\s+\\{.*?\\}\\s*-->`, "s");
+  if (pattern.test(source)) return source.replace(pattern, marker);
+  return source ? `${source}\n\n${marker}` : renderWriterLeasePullRequestBody(lease);
+}
+
+function renderWriterLeaseMarker(lease) {
   const payload = JSON.stringify({
     schema: lease.schema,
     status: lease.status,
@@ -266,20 +313,12 @@ export function renderWriterLeasePullRequestBody(lease) {
     fenceSha: lease.fenceSha,
     heartbeatAt: lease.heartbeatAt,
     expiresAt: lease.expiresAt,
+    ...(lease.reviewHeadSha ? { reviewHeadSha: lease.reviewHeadSha } : {}),
+    ...(lease.deliveryHeadSha ? { deliveryHeadSha: lease.deliveryHeadSha } : {}),
+    ...(lease.parkHeadSha ? { parkHeadSha: lease.parkHeadSha, parkStashRef: lease.parkStashRef ?? null } : {}),
     ...(lease.completion || {}),
   });
-  return [
-    "---",
-    `action: ${DEFAULT_PULL_REQUEST_ACTION}`,
-    `scope: "#${lease.scope}"`,
-    `actor: "@${lease.device}"`,
-    `base_sha: "${lease.baseSha}"`,
-    "---",
-    "",
-    "Device branch claimed for protected, scope-aware delivery.",
-    "",
-    `<!-- ${WRITER_LEASE_SCHEMA} ${payload} -->`,
-  ].join("\n");
+  return `<!-- ${WRITER_LEASE_SCHEMA} ${payload} -->`;
 }
 
 function requireSha(value, label) {
@@ -289,7 +328,7 @@ function requireSha(value, label) {
 }
 
 export function parseWriterLeasePullRequestBody(body) {
-  const escapedSchema = WRITER_LEASE_SCHEMA.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedSchema = escapeRegExp(WRITER_LEASE_SCHEMA);
   const match = String(body || "").match(new RegExp(`<!--\\s*${escapedSchema}\\s+(\\{.*\\})\\s*-->`));
   if (!match) return null;
   const value = JSON.parse(match[1]);
@@ -303,6 +342,10 @@ export function parseWriterLeasePullRequestBody(body) {
     !Number.isFinite(Date.parse(value.expiresAt))
   ) return null;
   return value;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function acquireLock(lockPath) {

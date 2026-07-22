@@ -9,15 +9,17 @@ import {
 const canonicalSha = "a".repeat(40);
 const main = { path: "/repo", head: canonicalSha, branch: "refs/heads/main" };
 
-test("lifecycle keeps canonical, active, and parked lanes while surfacing completed cleanup", () => {
+test("lifecycle keeps canonical, active, review-ready, and parked lanes while surfacing completed cleanup", () => {
   const records = [
     main,
     { path: "/tasks/active", head: "b".repeat(40), branch: "refs/heads/agent/mac/active" },
+    { path: "/tasks/review", head: "e".repeat(40), branch: "refs/heads/agent/mac/review" },
     { path: "/tasks/parked", head: canonicalSha, detached: true },
     { path: "/tasks/completed", head: canonicalSha, detached: true },
   ];
   const leases = [
     { epoch: 1, status: "active", expiresAt: "2026-07-20T11:00:00.000Z", worktreePath: "/tasks/active" },
+    { epoch: 4, status: "review_ready", worktreePath: "/tasks/review" },
     { epoch: 2, status: "parked", worktreePath: "/tasks/parked" },
     { epoch: 3, status: "completed", branch: "agent/mac/completed", worktreePath: "/tasks/completed" },
   ];
@@ -28,7 +30,7 @@ test("lifecycle keeps canonical, active, and parked lanes while surfacing comple
     dirt: new Map(),
     now: new Date("2026-07-20T10:00:00.000Z"),
   });
-  assert.deepEqual(result.map(item => item.state), ["canonical", "active", "parked", "cleanup-ready"]);
+  assert.deepEqual(result.map(item => item.state), ["canonical", "active", "review-ready", "parked", "cleanup-ready"]);
 });
 
 test("lifecycle never upgrades dirty, ambiguous, or stale active lanes to cleanup-ready", () => {

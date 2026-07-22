@@ -56,6 +56,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Reusable skill discovery and selection | `SKILLS.md` |
 | Command, semantic, and binding tokens | `DICTIONARY-COMMAND.md`, `DICTIONARY-SEMANTIC.md`, and `DICTIONARY-BINDING.md` |
 | Runtime schemas, cost, fallbacks, and orchestration | `HARNESS-CONTRACTS.md` |
+| Managed implementation-run invocation and lifecycle | `MANAGED-IMPLEMENTATION-RUNS.md` |
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
 | Session ownership and release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
 | Canonical checkout sync and automatic CI/CD lifecycle | `CANONICAL-LIFECYCLE.md` |

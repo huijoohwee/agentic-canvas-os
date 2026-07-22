@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 
-const SAFE_STATES = new Set(["canonical", "active", "delivery", "parked"]);
+const SAFE_STATES = new Set(["canonical", "active", "review-ready", "delivery", "parked"]);
 
 export function classifyWorktreeLifecycle({ records, canonicalSha, leases = [], dirt = new Map(), now = new Date() }) {
   const mainRecords = records.filter(record => record.branch === "refs/heads/main");
@@ -23,6 +23,7 @@ export function classifyWorktreeLifecycle({ records, canonicalSha, leases = [], 
         return { ...base, state: "active" };
       }
       if (lease?.status === "delivery") return { ...base, state: "delivery" };
+      if (lease?.status === "review_ready") return { ...base, state: "review-ready" };
       return { ...base, state: "review-required" };
     }
     if (lease?.status === "parked") return { ...base, state: "parked" };

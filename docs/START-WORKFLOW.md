@@ -278,9 +278,11 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
   --session="$AGENTIC_SESSION_ID" --repository="$TASK_WORKTREE"
 ```
 
+Heartbeat independently queries the exact ownership PR and requires it to remain draft before renewing the local lease. Manual readiness or any PR identity mismatch fails closed without extending the TTL.
+
 If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. Never reuse a dirty worktree, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session.
 
-Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command claims `remote epoch + 1`, creates a descendant fencing commit, and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery:
+Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
@@ -299,7 +301,7 @@ git -C "$TASK_WORKTREE" merge-base --is-ancestor origin/main HEAD
 git -C "$TASK_WORKTREE" rev-parse HEAD
 ```
 
-The task path must appear exactly once in the worktree registry; its branch must appear in no other worktree; the checkout must be clean; the branch must match the claimed scope; the lease session, worktree path, and epoch must be current; its draft pull request must own that scope; and the claim commit must be an ancestor of `HEAD`.
+The task path must appear exactly once in the worktree registry; its branch must appear in no other worktree; the checkout must be clean; the branch must match the claimed scope; the lease session, worktree path, and epoch must be current; its exact open pull request must own that scope and report `isDraft: true`; and the claim commit must be an ancestor of `HEAD`.
 
 #### Automated Collaboration And Runtime Identity Gate
 
@@ -358,7 +360,7 @@ Completion and parking are mutually exclusive states. Dirty, stashed,
 branch-only, pushed, open-pull-request, or auto-merge-pending work is not
 complete.
 
-Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, and marks the PR ready without an automerge label or merge call. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. `device:publish` remains the explicit protected auto-merge path.
+Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, marks the PR ready without an automerge label or merge call, and independently proves `isDraft: false`. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. Requested changes must use fenced resume, which restores and proves draft ownership before mutation. `device:publish` remains the explicit protected auto-merge path.
 
 For a completed task:
 

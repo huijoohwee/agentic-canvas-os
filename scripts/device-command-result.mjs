@@ -21,7 +21,7 @@ const LEASE_FIELDS = [
   "expiresAt",
 ];
 
-export function createDeviceCommandResult({ action, repoRoot, worktreePath, branch, lease, result, provisioned = false }) {
+export function createDeviceCommandResult({ action, repoRoot, worktreePath, branch, lease, result, provisioned = false, pullRequestIsDraft = null }) {
   const normalizedLease = projectLease(lease);
   const resolvedBranch = branch || normalizedLease?.branch || result?.branch || "";
   const response = {
@@ -33,7 +33,7 @@ export function createDeviceCommandResult({ action, repoRoot, worktreePath, bran
     branch: resolvedBranch,
     worktreePath,
     provisioned,
-    pullRequest: projectPullRequest(normalizedLease?.pullRequestUrl),
+    pullRequest: projectPullRequest(normalizedLease?.pullRequestUrl, pullRequestIsDraft),
     lease: normalizedLease,
   };
   if (action === "park") {
@@ -63,10 +63,10 @@ function projectLease(lease) {
   return Object.fromEntries(LEASE_FIELDS.map(field => [field, lease[field] ?? null]));
 }
 
-function projectPullRequest(url) {
+function projectPullRequest(url, isDraft) {
   if (!url) return null;
   const match = String(url).match(/\/pull\/(\d+)(?:[/?#]|$)/);
-  return { url, number: match ? Number(match[1]) : null };
+  return { url, number: match ? Number(match[1]) : null, isDraft: typeof isDraft === "boolean" ? isDraft : null };
 }
 
 function resolveStatus({ action, branch, lease }) {

@@ -50,12 +50,19 @@ function runResume(localLease = parked, options = {}) {
       return values[key];
     },
     gitOptional: args => args[0] === "show-ref" ? localSha : args[0] === "config" ? "device" : "",
-    ghText: () => JSON.stringify([{
+    ghText: args => args[1] === "list" ? JSON.stringify([{
       number: 42,
       headRefName: branch,
       url: pullRequestUrl,
       body: renderWriterLeasePullRequestBody(parked),
-    }]),
+    }]) : JSON.stringify({
+      url: pullRequestUrl,
+      state: "OPEN",
+      isDraft: true,
+      headRefName: branch,
+      baseRefName: "main",
+      body: renderWriterLeasePullRequestBody(parked),
+    }),
     leaseStore: {
       read: () => localLease,
       claim: input => { calls.push(["lease", "claim"]); claimInput = input; return { ...resumed, fenceSha: null }; },

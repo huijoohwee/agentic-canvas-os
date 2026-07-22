@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { assertNoUnmergedPaths, assertRegisteredWorktree } from "./repository-guards.mjs";
 import { parseWriterLeasePullRequestBody, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
+import { requireOwnershipPullRequestDraft } from "./device-pull-request-state.mjs";
 
 export function park({
   invocationPath,
@@ -43,6 +44,7 @@ export function park({
   assertLeaseWorktree(lease, repo);
   requireRemoteFence({ branch, lease, gitOptional });
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
+  requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
 
   if (lease.status === "active") {
     if (!lease.pullRequestUrl) throw new Error("Park requires the exact ownership pull request created by device:start.");
@@ -56,9 +58,13 @@ export function park({
     if (!/^[0-9a-f]{40}$/.test(parkHeadSha)) throw new Error("Park requires an exact origin/main commit SHA.");
     const parkValues = { parkHeadSha, parkStashRef: stashRef };
     const projected = { ...lease, ...parkValues, status: "parked", heartbeatAt: timestamp, expiresAt: timestamp };
+    const pullRequest = requireOwnershipPullRequestDraft({
+      url: lease.pullRequestUrl, branch, ghText, expectedDraft: true,
+    });
     run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", updateWriterLeasePullRequestBody(
-      readRemotePullRequestBody({ url: lease.pullRequestUrl, ghText }), projected,
+      pullRequest.body, projected,
     )]);
+    requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
     lease = leaseStore.release({
       sessionId,
       branch,
@@ -112,14 +118,13 @@ function replayDetachedPark({ worktree, repo, gitText, gitOptional, ghText, leas
 
 function requireParkedPullRequest(lease, ghText) {
   if (!lease.pullRequestUrl) throw new Error("Parked replay lacks its ownership pull request.");
-  const remote = parseWriterLeasePullRequestBody(readRemotePullRequestBody({ url: lease.pullRequestUrl, ghText }));
+  const pullRequest = requireOwnershipPullRequestDraft({
+    url: lease.pullRequestUrl, branch: lease.branch, ghText, expectedDraft: true,
+  });
+  const remote = parseWriterLeasePullRequestBody(pullRequest.body);
   for (const field of ["status", "epoch", "sessionId", "branch", "baseSha", "fenceSha", "heartbeatAt", "expiresAt", "parkHeadSha", "parkStashRef"]) {
     if (remote?.[field] !== lease[field]) throw new Error(`Parked pull request evidence disagrees on ${field}.`);
   }
-}
-
-function readRemotePullRequestBody({ url, ghText }) {
-  return ghText(["pr", "view", url, "--json", "body", "--jq", ".body"]);
 }
 
 function requireRemoteFence({ branch, lease, gitOptional }) {

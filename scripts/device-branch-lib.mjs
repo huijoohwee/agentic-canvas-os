@@ -11,6 +11,7 @@ import {
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import { sanitizeDevice } from "./device-branch-identity.mjs";
+import { readOwnershipPullRequest, requireOwnershipPullRequestDraft } from "./device-pull-request-state.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
 export { park, createParkMessage, formatParkTimestamp } from "./device-park-lib.mjs";
@@ -33,14 +34,18 @@ export function heartbeat({
   const current = leaseStore.verify({ sessionId, branch });
   assertLeaseWorktree(current, repo);
   requireRemoteFence({ branch, lease: current, gitOptional });
-  const lease = leaseStore.heartbeat({ sessionId, branch, ttlMs: leaseTtlMs });
-  if (!lease.pullRequestUrl || !lease.fenceSha) {
+  if (!current.pullRequestUrl || !current.fenceSha) {
     throw new Error("Writer lease is missing its draft pull request or fencing SHA.");
   }
+  const pullRequest = requireOwnershipPullRequestDraft({
+    url: current.pullRequestUrl, branch, ghText, expectedDraft: true,
+  });
+  const lease = leaseStore.heartbeat({ sessionId, branch, ttlMs: leaseTtlMs });
   run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", updateWriterLeasePullRequestBody(
-    readRemotePullRequestBody({ url: lease.pullRequestUrl, ghText }),
+    pullRequest.body,
     lease,
   )]);
+  requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
   log(`Renewed ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}.`);
   return lease;
 }
@@ -80,30 +85,38 @@ export function resume({
   ]));
   const owner = assertNoCompetingPullRequests(pulls, branchName);
   if (!owner?.url) throw new Error(`No draft ownership pull request exists for ${branchName}.`);
-  const remoteLease = parseWriterLeasePullRequestBody(owner.body);
+  const pullRequest = readOwnershipPullRequest({ url: owner.url, branch: branchName, ghText });
+  const remoteLease = parseWriterLeasePullRequestBody(pullRequest.body);
   if (!remoteLease || remoteLease.branch !== branchName) {
     throw new Error(`Pull request ${owner.url} has no matching writer-lease metadata.`);
   }
+  const remoteRef = `origin/${branchName}`;
+  const remoteSha = gitText(["rev-parse", remoteRef]).trim();
+  const replay = reconcileResumeReplay({
+    branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
+    pullRequest, leaseStore, gitText, gitOptional, ghText, run, log, now,
+  });
+  if (replay) return replay;
   const expired = Date.parse(remoteLease.expiresAt) <= now().getTime();
   const sameSessionDelivery = remoteLease.status === "delivery" && remoteLease.sessionId === sessionId;
   const reviewHandoff = remoteLease.status === "review_ready";
   if (reviewHandoff && !/^[0-9a-f]{40}$/.test(String(remoteLease.reviewHeadSha || ""))) throw new Error("Reviewed handoff requires an exact reviewHeadSha.");
+  if (sameSessionDelivery && !/^[0-9a-f]{40}$/.test(String(remoteLease.deliveryHeadSha || ""))) throw new Error("Delivery revision requires an exact deliveryHeadSha.");
   if (remoteLease.status !== "parked" && !(remoteLease.status === "active" && expired) && !sameSessionDelivery && !reviewHandoff) {
     throw new Error(
       `Semantic scope ${identity.scope} remains ${remoteLease.status} under another session until ${remoteLease.expiresAt}.`,
     );
   }
 
-  const remoteRef = `origin/${branchName}`;
-  const remoteSha = gitText(["rev-parse", remoteRef]).trim();
   if (remoteLease.fenceSha) run("git", ["merge-base", "--is-ancestor", remoteLease.fenceSha, remoteRef]);
   if (currentBranch) {
     if (currentBranch !== branchName || (!reviewHandoff && !sameSessionDelivery)) {
       throw new Error("Attached resume is allowed only for the exact reviewed handoff or same-session delivery revision.");
     }
     const localSha = gitText(["rev-parse", "HEAD"]).trim();
-    if (localSha !== remoteSha || (remoteLease.reviewHeadSha && localSha !== remoteLease.reviewHeadSha)) {
-      throw new Error("Attached handoff HEAD does not match its exact reviewed remote evidence.");
+    const handoffHead = reviewHandoff ? remoteLease.reviewHeadSha : remoteLease.deliveryHeadSha;
+    if (localSha !== remoteSha || localSha !== handoffHead) {
+      throw new Error("Attached handoff HEAD does not match its exact remote handoff evidence.");
     }
   } else if (gitOptional(["show-ref", "--verify", `refs/heads/${branchName}`])) {
     run("git", ["switch", branchName]);
@@ -124,6 +137,16 @@ export function resume({
     run("git", ["switch", "--create", branchName, "--track", remoteRef]);
   }
 
+  if (!pullRequest.isDraft) {
+    if (!reviewHandoff && !sameSessionDelivery) {
+      throw new Error(`Ownership pull request ${owner.url} must be draft before resume.`);
+    }
+    run("gh", ["pr", "ready", "--undo", owner.url]);
+  }
+  const draftPullRequest = requireOwnershipPullRequestDraft({
+    url: owner.url, branch: branchName, ghText, expectedDraft: true,
+  });
+
   const previousLocalLease = leaseStore.read?.(branchName) || null;
   const device = sanitizeDevice(gitOptional(["config", "--get", "agentic.device"]) || os.hostname());
   const claimed = leaseStore.claim({
@@ -136,7 +159,7 @@ export function resume({
     previousEpoch: remoteLease.epoch,
     ttlMs: leaseTtlMs,
   });
-  run("git", ["commit", "--allow-empty", "-m", `chore(coordination): claim ${identity.scope} lease ${claimed.epoch}`]);
+  run("git", ["commit", "--allow-empty", "-m", resumeClaimSubject(identity.scope, claimed.epoch)]);
   const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
   const lease = leaseStore.annotate({
     sessionId,
@@ -146,11 +169,15 @@ export function resume({
   try {
     run("git", ["push", "origin", branchName]);
   } catch (error) {
-    leaseStore.rollbackClaim({ sessionId, branch: branchName, epoch: lease.epoch, fenceSha, previousLease: previousLocalLease });
-    run("git", ["switch", "--detach", remoteRef]);
+    const observedRemote = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branchName}`]).split(/\s+/)[0] || "";
+    if (observedRemote !== fenceSha) {
+      leaseStore.rollbackClaim({ sessionId, branch: branchName, epoch: lease.epoch, fenceSha, previousLease: previousLocalLease });
+      run("git", ["switch", "--detach", remoteRef]);
+    }
     throw error;
   }
-  run("gh", ["pr", "edit", owner.url, "--body", updateWriterLeasePullRequestBody(owner.body, lease)]);
+  run("gh", ["pr", "edit", owner.url, "--body", updateWriterLeasePullRequestBody(draftPullRequest.body, lease)]);
+  requireOwnershipPullRequestDraft({ url: owner.url, branch: branchName, ghText, expectedDraft: true });
   log(
     `Resumed ${branchName} at epoch ${lease.epoch} with fence ${fenceSha.slice(0, 12)}; prior writers are fenced by the fast-forward remote head.`,
   );
@@ -190,17 +217,18 @@ export function review({
   run("npm", ["run", "check"]);
   run("git", ["push", "--set-upstream", "origin", branch]);
   const url = requireLeasePullRequest({ lease, ghOptional });
-  const draft = ghOptional(["pr", "view", "--json", "isDraft", "--jq", ".isDraft"]);
-  if (draft !== "true" && draft !== "false") throw new Error(`Cannot prove draft state for ${url}.`);
-  if (draft === "true") run("gh", ["pr", "ready", url]);
+  const pullRequest = readOwnershipPullRequest({ url, branch, ghText });
+  if (pullRequest.isDraft) run("gh", ["pr", "ready", url]);
+  const readyPullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   const reviewHeadSha = gitText(["rev-parse", "HEAD"]).trim();
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
   leaseStore.annotate({ sessionId, branch, values: { reviewHeadSha } });
   const readyLease = leaseStore.release({ sessionId, branch, status: "review_ready" });
   run("gh", ["pr", "edit", url, "--title", title, "--body", updateWriterLeasePullRequestBody(
-    readRemotePullRequestBody({ url, ghText }),
+    readyPullRequest.body,
     readyLease,
   )]);
+  requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   log(`Marked ${url} ready for review without enabling merge or deployment.`);
   return url;
 }
@@ -227,6 +255,7 @@ export function publish({
   if (!lease.pullRequestUrl || !lease.fenceSha) {
     throw new Error("Publish requires the draft ownership pull request and fencing SHA created by device:start.");
   }
+  requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
   requireNoCompetingPullRequest({ branch, ghText });
   run("npm", ["run", "check"]);
@@ -239,6 +268,7 @@ export function publish({
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
   run("gh", ["pr", "edit", url, "--title", title, "--add-label", "automerge"]);
   run("gh", ["pr", "ready", url]);
+  requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   run("gh", ["pr", "merge", "--auto", "--squash", url]);
   const deliveryHeadSha = gitText(["rev-parse", "HEAD"]).trim();
   leaseStore.annotate({ sessionId, branch, values: { deliveryHeadSha } });
@@ -336,6 +366,74 @@ export function completeSession({
   return summary;
 }
 
+function reconcileResumeReplay({
+  branch, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
+  pullRequest, leaseStore, gitText, gitOptional, ghText, run, log, now,
+}) {
+  let local = leaseStore.read?.(branch) || null;
+  if (!local || local.status !== "active" || local.sessionId !== sessionId || currentBranch !== branch ||
+      local.branch !== branch || local.device !== identity.device || local.scope !== identity.scope ||
+      !local.worktreePath || path.resolve(local.worktreePath) !== path.resolve(repo) ||
+      Date.parse(local.expiresAt) <= now().getTime()) return null;
+  const markerFields = ["schema", "status", "epoch", "sessionId", "device", "scope", "branch", "baseSha", "fenceSha", "heartbeatAt", "expiresAt"];
+  const activeReplay = remoteLease.status === "active" && markerFields.every(field => remoteLease[field] === local[field]);
+  const handoffHead = remoteLease.status === "review_ready" ? remoteLease.reviewHeadSha :
+    remoteLease.status === "delivery" && remoteLease.sessionId === sessionId ? remoteLease.deliveryHeadSha : null;
+  const pendingHandoff = /^[0-9a-f]{40}$/.test(String(handoffHead || "")) &&
+    local.baseSha === handoffHead && local.epoch === remoteLease.epoch + 1;
+  if (!activeReplay && !pendingHandoff) return null;
+  if (!pullRequest.isDraft) throw new Error(`Ownership pull request ${owner.url} must be draft before active resume replay.`);
+  let headSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (activeReplay && (local.pullRequestUrl !== owner.url || local.fenceSha !== remoteSha || headSha !== remoteSha)) return null;
+  if (pendingHandoff) {
+    if (headSha === handoffHead) {
+      if (local.fenceSha || local.pullRequestUrl) throw new Error("Uncommitted resume claim has unexpected fence or pull-request evidence.");
+      run("git", ["commit", "--allow-empty", "-m", resumeClaimSubject(identity.scope, local.epoch)]);
+      headSha = gitText(["rev-parse", "HEAD"]).trim();
+    }
+    requireResumeClaimCommit({ lease: local, headSha, gitText });
+    if (!local.fenceSha && local.pullRequestUrl) {
+      throw new Error("Resume claim has partial pull-request annotation without its exact fence.");
+    }
+    if (!local.fenceSha) {
+      local = leaseStore.annotate({ sessionId, branch, values: { fenceSha: headSha, pullRequestUrl: owner.url } });
+    } else if (local.fenceSha !== headSha || local.pullRequestUrl !== owner.url) {
+      throw new Error("Resume claim annotation does not match its exact local claim commit and pull request.");
+    }
+    if (remoteSha === handoffHead) run("git", ["push", "origin", branch]);
+    else if (remoteSha !== headSha) throw new Error("Resume claim remote is neither the handed-off head nor the exact claim commit.");
+    const observedRemote = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]).split(/\s+/)[0] || "";
+    if (observedRemote !== headSha) throw new Error("Resume claim push did not establish its exact remote fence.");
+  }
+  run("git", ["merge-base", "--is-ancestor", local.baseSha, local.fenceSha]);
+  run("git", ["merge-base", "--is-ancestor", remoteLease.fenceSha, local.fenceSha]);
+  const verified = leaseStore.verify({ sessionId, branch });
+  assertLeaseWorktree(verified, repo);
+  if (pendingHandoff) {
+    run("gh", ["pr", "edit", owner.url, "--body", updateWriterLeasePullRequestBody(pullRequest.body, verified)]);
+    requireOwnershipPullRequestDraft({ url: owner.url, branch, ghText, expectedDraft: true });
+  }
+  log(`Resume is already active for ${branch} at fence ${local.fenceSha.slice(0, 12)}.`);
+  return verified;
+}
+
+function requireResumeClaimCommit({ lease, headSha, gitText }) {
+  const parents = gitText(["rev-list", "--parents", "-n", "1", "HEAD"]).trim().split(/\s+/);
+  if (parents.length !== 2 || parents[0] !== headSha || parents[1] !== lease.baseSha) {
+    throw new Error("Resume recovery requires the exact single-parent claim commit.");
+  }
+  if (gitText(["log", "-1", "--pretty=%s"]).trim() !== resumeClaimSubject(lease.scope, lease.epoch)) {
+    throw new Error("Resume recovery claim subject does not match its lease epoch.");
+  }
+  if (gitText(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]).trim()) {
+    throw new Error("Resume recovery claim commit must not change the source tree.");
+  }
+}
+
+function resumeClaimSubject(scope, epoch) {
+  return `chore(coordination): claim ${scope} lease ${epoch}`;
+}
+
 function requireRepositorySafety({ invocationPath, repo, gitText }) {
   if (path.resolve(invocationPath) !== path.resolve(repo)) {
     throw new Error(`Repository commands must start at the registered worktree root ${repo}; received ${invocationPath}`);
@@ -399,15 +497,13 @@ function requireReviewReplay({ branch, lease, gitText, gitOptional, ghText, ghOp
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
   requireNoCompetingPullRequest({ branch, ghText });
   const url = requireLeasePullRequest({ lease, ghOptional });
-  const pullRequest = JSON.parse(ghText(["pr", "view", url, "--json", "state,isDraft"]));
-  if (pullRequest.state !== "OPEN" || pullRequest.isDraft !== false) {
-    throw new Error("Review-ready replay requires the matching open, non-draft pull request.");
-  }
+  const pullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
   run("gh", ["pr", "edit", url, "--title", title, "--body", updateWriterLeasePullRequestBody(
-    readRemotePullRequestBody({ url, ghText }),
+    pullRequest.body,
     lease,
   )]);
+  requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
 }
 
 function readRemotePullRequestBody({ url, ghText }) {

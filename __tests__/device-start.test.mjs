@@ -55,6 +55,14 @@ test("start reconciles a draft PR created before its response was lost", () => {
         owner = { number: 42, headRefName: branch, url: pullRequestUrl, body: renderWriterLeasePullRequestBody(lease), isDraft: true };
         throw new Error("response lost after draft creation");
       }
+      if (args[1] === "view") return JSON.stringify({
+        url: pullRequestUrl,
+        state: "OPEN",
+        isDraft: true,
+        headRefName: branch,
+        baseRefName: "main",
+        body: owner.body,
+      });
       throw new Error(`unexpected gh command: ${args.join(" ")}`);
     },
     leaseStore: {

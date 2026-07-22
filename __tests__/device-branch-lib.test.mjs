@@ -20,6 +20,7 @@ import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mj
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
+const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({ url, state: "OPEN", isDraft, headRefName: branch, baseRefName: "main", body });
 
 function createGitText(responses) {
   return args => {
@@ -76,7 +77,6 @@ test("start rejects an invalid device before checkout mutation", () => {
     "status --porcelain": "",
     "branch --show-current": "",
   });
-
   assert.throws(() => start({
     scope: "runtime-leases",
     invocationPath: repo,
@@ -95,6 +95,7 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
   const calls = [];
   const annotations = [];
   const logs = [];
+  const pullRequestUrl = "https://github.test/pull/1";
   const gitText = createGitText({
     "worktree list --porcelain -z": detachedWorktree,
     "diff --name-only --diff-filter=U": "",
@@ -134,14 +135,14 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
       };
     },
   };
-
   const branch = start({
     scope: "runtime-leases",
     invocationPath: repo,
     repo,
     gitText,
     gitOptional: args => args[0] === "config" ? "device" : "",
-    ghText: args => args[0] === "pr" && args[1] === "list" ? "[]" : "https://github.test/pull/1\n",
+    ghText: args => args[1] === "list" ? "[]" : args[1] === "create" ? `${pullRequestUrl}\n` :
+      pullJson(pullRequestUrl, "agent/device/runtime-leases"),
     leaseStore,
     sessionId: "chat-a",
     leaseTtlMs: 1_800_000,
@@ -194,13 +195,12 @@ test("park stashes a dirty task branch and detaches its worktree at origin main"
     "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
     "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
   });
-
   const result = park({
     invocationPath: repo,
     repo,
     gitText,
     gitOptional: () => `${activeLease.fenceSha}\trefs/heads/${branch}`,
-    ghText: () => renderWriterLeasePullRequestBody(activeLease),
+    ghText: () => pullJson(pullRequestUrl, branch, renderWriterLeasePullRequestBody(activeLease)),
     leaseStore: {
       read: () => activeLease,
       verify: () => activeLease,
@@ -242,7 +242,6 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
     "ls-files -u": "",
     "branch --show-current": `${branch}\n`,
   });
-
   assert.throws(() => heartbeat({
     invocationPath: repo,
     repo,
@@ -273,12 +272,15 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     "rev-parse HEAD": "c".repeat(40),
   });
   let releaseStatus = null;
+  let isDraft = true;
 
   const result = publish({
     invocationPath: repo,
     repo,
     gitText,
-    ghText: () => JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }]),
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+      : args.includes("--jq") ? "" : pullJson(pullRequestUrl, branch, "", isDraft),
     ghOptional: () => pullRequestUrl,
     leaseStore: {
       verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
@@ -301,7 +303,9 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
       },
     },
     sessionId: "chat-a",
-    run: (command, args) => calls.push([command, ...args]),
+    run: (command, args) => {
+      calls.push([command, ...args]); if (command === "gh" && args[1] === "ready") isDraft = false;
+    },
     log: () => {},
   });
 
@@ -320,6 +324,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
     const calls = [];
     const branch = "agent/old-device/runtime-leases";
     const pullRequestUrl = "https://github.test/pull/1";
+    let isDraft = handoff.status === "parked";
     const priorLease = {
       schema: "agentic-writer-lease/v2",
       status: handoff.status,
@@ -331,6 +336,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       baseSha: "a".repeat(40),
       fenceSha: "b".repeat(40),
       ...(handoff.status === "review_ready" ? { reviewHeadSha: "c".repeat(40) } : {}),
+      ...(handoff.status === "delivery" ? { deliveryHeadSha: "c".repeat(40) } : {}),
       heartbeatAt: "2026-07-17T10:00:00.000Z",
       expiresAt: "2026-07-17T10:00:00.000Z",
     };
@@ -363,19 +369,18 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       repo,
       gitText,
       gitOptional: args => args[0] === "config" ? "new-device" : "",
-      ghText: () => JSON.stringify([{
-        number: 1,
-        headRefName: branch,
-        url: pullRequestUrl,
-        body: renderWriterLeasePullRequestBody(priorLease),
-      }]),
+      ghText: args => args[1] === "list"
+        ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+        : pullJson(pullRequestUrl, branch, renderWriterLeasePullRequestBody(priorLease), isDraft),
       leaseStore: {
         claim: input => { claimInput = input; return { ...resumedLease, fenceSha: null }; },
         annotate: () => resumedLease,
       },
       sessionId: handoff.sessionId,
       leaseTtlMs: 1_800_000,
-      run: (command, args) => calls.push([command, ...args]),
+      run: (command, args) => {
+        calls.push([command, ...args]); if (command === "gh" && args[1] === "ready" && args[2] === "--undo") isDraft = true;
+      },
       log: () => {},
       now: () => new Date("2026-07-17T10:05:00.000Z"),
     });
@@ -408,6 +413,7 @@ test("resume rejects a delivery revision claimed by another session", () => {
     "ls-files -u": "",
     "status --porcelain": "",
     "branch --show-current": "",
+    [`rev-parse origin/${branch}`]: "b".repeat(40),
   });
 
   assert.throws(() => resume({
@@ -416,12 +422,9 @@ test("resume rejects a delivery revision claimed by another session", () => {
     repo,
     gitText,
     gitOptional: () => "",
-    ghText: () => JSON.stringify([{
-      number: 1,
-      headRefName: branch,
-      url: "https://github.test/pull/1",
-      body: renderWriterLeasePullRequestBody(priorLease),
-    }]),
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: "https://github.test/pull/1" }])
+      : pullJson("https://github.test/pull/1", branch, renderWriterLeasePullRequestBody(priorLease), false),
     leaseStore: {},
     sessionId: "chat-new",
     leaseTtlMs: 1_800_000,

@@ -65,6 +65,7 @@ test("park replays an exact parked lease after detachment was interrupted", () =
     expiresAt: "2026-07-22T01:00:00.000Z",
   };
   let remoteBody = renderWriterLeasePullRequestBody(lease);
+  let isDraft = true;
   let detachAttempts = 0;
   let detached = false;
   const values = {
@@ -89,7 +90,14 @@ test("park replays an exact parked lease after detachment was interrupted", () =
       return values[key];
     },
     gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
-    ghText: () => remoteBody,
+    ghText: () => JSON.stringify({
+      url: pullRequestUrl,
+      state: "OPEN",
+      isDraft,
+      headRefName: branch,
+      baseRefName: "main",
+      body: remoteBody,
+    }),
     leaseStore: {
       read: requestedBranch => requestedBranch ? lease : { leases: { [branch]: lease } },
       verify: () => lease,
@@ -113,10 +121,12 @@ test("park replays an exact parked lease after detachment was interrupted", () =
 
   assert.throws(() => park(context), /detachment interrupted/);
   assert.equal(lease.status, "parked");
+  assert.equal(isDraft, true);
   const result = park(context);
   assert.equal(result.branch, branch);
   assert.equal(result.headSha, mainSha);
   assert.equal(detachAttempts, 2);
   const replay = park(context);
   assert.deepEqual(replay, result);
+  assert.equal(isDraft, true);
 });

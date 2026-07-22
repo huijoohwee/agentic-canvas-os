@@ -41,9 +41,9 @@ Safe pause or blocked exit:
 npm run device:park
 ```
 
-This preserves local task-branch work, detaches that task worktree at fetched
-`origin/main`, and marks the task as paused or blocked. A parked branch is never
-completed work.
+This preserves local task-branch work, proves the ownership pull request remains
+draft, detaches that task worktree at fetched `origin/main`, and marks the task
+as paused or blocked. A parked branch is never completed work.
 
 Managed autonomous runs hand work to the team without merging it:
 
@@ -51,7 +51,7 @@ Managed autonomous runs hand work to the team without merging it:
 npm run device:review -- --json
 ```
 
-This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes. `device:publish` remains the separate explicit protected-delivery action.
+This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes; it restores and proves draft ownership before a new writer claim. `device:publish` remains the separate explicit protected-delivery action.
 
 Mandatory completion gate:
 

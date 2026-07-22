@@ -530,6 +530,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
 | Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
+| Reviewed runtime handoff | `device:serve-reviewed` and `device:runtime-status` report `ready` only when the clean local, remote, PR, lease, listener, HTTP, and canonical Agentic Canvas OS identities match the exact `reviewHeadSha`; `device:runtime-stop` refuses an unrelated listener PID. |
 | Multi-worktree writer coordination | Focused writer-lease, repository-guard, and device-branch tests exit zero; same-worktree competing sessions, branch reuse, and duplicate active scopes fail, while distinct registered worktrees and scopes coexist and heartbeat extends only the owning session's bounded branch lease. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |

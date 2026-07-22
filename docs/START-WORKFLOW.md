@@ -72,7 +72,7 @@ completion_requires:
 
 Fetch before starting every Codex session; keep one clean registered `main` worktree as the runtime and synchronization owner; activate each task branch only in its own registered task worktree; pull only when intentionally updating a clean, exclusively owned branch.
 
-The canonical `main` worktree remains the only normal Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from normal Dev ports. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task worktrees serving as canonical runtime sources are forbidden.
+The canonical `main` worktree remains the only normal Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from normal Dev ports. The sole runtime exception is an explicit reviewed-head handoff on a reserved noncanonical port after `device:review` proves the clean exact `reviewHeadSha`; it never becomes the canonical runtime owner. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and implicit task-worktree runtime sources are forbidden.
 
 Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
 
@@ -90,7 +90,7 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` in the registered `main` worktree is the global, centralized, frontmatter-first SSOT. It must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts. Additional registered task worktrees may author isolated branches but never become runtime docs sources. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. |
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
 | Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
-| Dev | Author in leased task worktrees; run normal Knowgrph Dev only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`. Use `npm run dev:apex`, `npm run dev`, and `npm run dev:latest` only through repository-owned scripts after integration. |
+| Dev | Author in leased task worktrees; run normal Knowgrph Dev only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`. After review, `device:serve-reviewed` may explicitly serve the exact clean `reviewHeadSha` on reserved port `5176`; port `5173` requires `--allow-canonical-port` and still refuses an existing listener. After integration, canonical `mainSha` retakes normal runtime ownership. |
 | Immutable publication | Use Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane only for an already-created commit whose writer stopped or when recovering a checkout-independent delivery. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
 | Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Only the protected-main automatic release controller may publish it. |
@@ -362,6 +362,28 @@ complete.
 
 Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, marks the PR ready without an automerge label or merge call, and independently proves `isDraft: false`. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. Requested changes must use fenced resume, which restores and proves draft ownership before mutation. `device:publish` remains the explicit protected auto-merge path.
 
+### Reviewed Runtime Handoff
+
+When a managed implementation turn reaches `review_ready` and local runtime acceptance is relevant, leave one explicit reviewed runtime using the exact `reviewHeadSha`:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:serve-reviewed -- \
+  --repository="$TASK_WORKTREE" --port=5176 --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:runtime-status -- \
+  --repository="$TASK_WORKTREE" --port=5176 --json
+```
+
+The start command requires a clean registered agent worktree, `HEAD == reviewHeadSha`, the exact remote branch head, an open non-draft ownership PR at that head, repository-owned `dev:apex`, and clean canonical Agentic Canvas OS `main == origin/main`. It starts no arbitrary command, binds only `127.0.0.1`, records its PID, port, URL, log, app revision, and docs revision under Git metadata, waits for HTTP 200, and reports structured proof. It uses the target's canonical `docs/` path as the workspace namespace anchor and mounts canonical Agentic Canvas OS `docs/` explicitly so Prompt Presets and other ACOS-backed runtime surfaces resolve from the recorded docs revision. It refuses an occupied port and never kills an unrelated process. Port `5173` additionally requires `--allow-canonical-port`; that flag grants no permission to stop its current owner.
+
+Status re-proves source, remote, PR, listener, HTTP, and docs-main identity. Any changed head, dirt, draft or closed PR, listener replacement, unavailable HTTP surface, or docs drift reports non-ready. Stop is explicit and accepts only the listener PID recorded by the reviewed-runtime owner:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:runtime-stop -- \
+  --repository="$TASK_WORKTREE" --port=5176 --json
+```
+
+This is a review handoff, not completion, merge, release, deployment, or canonical runtime promotion. Active, parked, blocked, failed, canceled, and read-only turns have no reviewed-head server obligation. They preserve any unrelated local server and report that no reviewed runtime was established.
+
 For a completed task:
 
 1. Commit intentionally and pass focused validation on the task branch.
@@ -398,6 +420,8 @@ do not equate conversation end with task completion. First choose exactly one
 durable state: complete through the protected merge protocol, park unfinished
 work, or keep an active leased lane when the same task is intentionally
 continuing.
+
+For a `review_ready` lane with runtime acceptance in scope, `device:runtime-status` must finish ready at the exact `reviewHeadSha`; otherwise stop the owned reviewed server or report the missing proof. For completed work, stop any review server before canonical `mainSha` retakes the normal Dev port.
 
 Run the repository-owned lifecycle check from the canonical main worktree:
 
@@ -439,10 +463,11 @@ exact `mainSha`; and the original browser acceptance passes. Any missing item
 leaves the task pending, paused, or blocked rather than complete.
 
 Session-end VCC: Verify the lifecycle report names every registered worktree and
-its state; cleanup accepts only the completed clean detached target; the target
-registration disappears; the preserved branch still resolves to its original
-commit; canonical main remains clean and equal to fetched `origin/main`; and no
-Prod mirror or Cloudflare action occurs.
+its state; a runtime-relevant review-ready lane reports one ready server whose
+app SHA equals `reviewHeadSha`, docs SHA equals clean canonical Agentic Canvas OS
+`origin/main`, listener PID owns its reserved port, and HTTP returns 200; cleanup
+accepts only the completed clean detached target; canonical main remains clean;
+and no unrelated server, Prod mirror, or Cloudflare action is mutated.
 
 Otherwise fetch, inspect, and activate a new reconciliation or task branch in a detached registered task worktree. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
 

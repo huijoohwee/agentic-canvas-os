@@ -14,6 +14,7 @@ source_docs:
   - "MEMORY.md"
   - "AGENTS.md"
   - "HARNESS-CONTRACTS.md"
+  - "APPLICATION-COMPOSITION.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "START-WORKFLOW.md"
@@ -89,6 +90,7 @@ dictionary_entries:
   - "/skill.propose"
   - "/skill.evolve"
   - "/identity.reflect"
+  - "/application.compose"
   - "/orchestration.graph"
   - "/agent.swarm"
   - "/agent.toolkit"
@@ -222,6 +224,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/skill.propose` | Propose a new reusable skill from repeated experience without directly modifying runtime code. | `@experience`, `@skill-catalog`, `@operator` | `#skill-evolution`, `#harness`, `#vcc` | Proposal includes intent, schemas, bounds, cost fields, source evidence, and review status. |
 | `/skill.evolve` | Improve an existing skill through bounded evaluation and human-reviewed diff proposal. | `@skill-catalog`, `@runtime-proof`, `@operator` | `#skill-evolution`, `#vcc`, `#approval-gate` | Evaluation packet, focused checks, semantic-preservation note, and proposed diff are present; no direct auto-commit occurs. |
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
+| `/application.compose` | Compile or execute one version-locked agent or LLM application from interoperable component and integration interfaces. | `@application-manifest`, `@component-catalog`, `@integration-profile`, `@runtime-proof`, and `@operator` only for live or mutating execution | `#application-composition`, `#runtime-ready`, `#no-hardcode` | Plan returns one immutable digest over exact revisions, schema digests, owners, bounds, and a deterministic dependency DAG; execute delegates bounded ready steps without silent upgrade, retry, migration, or deploy. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
 | `/agent.toolkit` | Observe, evaluate, and compare digest-bound agent or team candidate revisions through framework-neutral adapters. | `@agent-toolkit-observer`, `@runtime-proof`, and `@operator` for evaluator spend or proposal persistence | `#agent-toolkit`, `#runtime-ready`, `#token-economics` | The authenticated session returns bounded metadata-only evidence, honest cost and metric provenance, a deterministic compare decision or review-pending proposal, and no automatic application. |
@@ -334,6 +337,7 @@ command:
 | `/moa` references an MoA preset as aggregator | Reject with a typed recursion error before token spend. |
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
 | `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
+| `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
 | Command conflicts with source frontmatter | Fix the source or shared owner; do not add a downstream alias. |
@@ -343,6 +347,7 @@ command:
 
 | Token | Facts source |
 |---|---|
+| `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
 | `/soul.load` | `FACTS.md` direct-resolution entry for durable identity loading. |
 | `/personality.overlay` | `FACTS.md` direct-resolution entry for temporary personality overlays. |
 | `/moa` | `FACTS.md` direct-resolution entry for one-shot Mixture of Agents routing. |

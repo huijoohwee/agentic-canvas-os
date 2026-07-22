@@ -18,9 +18,7 @@ kgFrontmatterModeEnabled: true
 kgMultiDimTableModeEnabled: true
 kgDocumentStructureBaselineLock: false
 socket_types:
-  validation_parse_signal:
-    label: "Validation parse signal"
-    cardinality: "one-to-many"
+  validation_parse_signal: {label: "Validation parse signal", cardinality: "one-to-many"}
   validation_route_signal:
     label: "Validation route signal"
     cardinality: "one-to-many"
@@ -556,6 +554,7 @@ The proof must show one atomic Git-common-directory lease registry, parallel cla
 | Models and Providers | `npm run model-providers:check` exits zero; Agent Definition, app, and Worker tests confirm exact default precedence, revision fencing, feature and transport matching, strict neutral environment fields, secret redaction, sanitized readiness, and unverified live execution. |
 | Running Agents | `npm run running-agents:check` and `npm run durable-agent-state:check` exit zero; app and Worker tests confirm bounded lifecycle, exclusive continuation, same-loop streaming, same-turn and cross-isolate pause resume, atomic claims, replay fencing, honest costs, and no provider overclaim. |
 | Guardrails, Progressive Agents, Runtime Composition, Orchestration, Agent Swarm, and Agent Toolkit | `npm run guardrails-human-review:check`, `npm run progressive-agents:check`, `npm run agent-runtime-composition:check`, `npm run agent-orchestration:check`, `npm run agent-swarm:check`, and `npm run agent-toolkit:check` exit zero; the combined affected gateway, definition, durable-state, app, and Worker suites confirm authenticated identity, atomic claims, application-authorized digest/evaluator fencing, trust-labelled metadata, remote-evidence exclusion, honest costs, proposal-only learning, and sanitized readiness. |
+| Application Composition | `npm run application-composition-contract:check` exits zero and validates the exact host alias tuple, three MCP tool ids, connection-negotiated protocol/capability evidence, exact revisions and schema digests, deterministic immutable plan, opaque integration profiles, bounded existing-owner sequencing, explicit non-automatic migration diagnostics, and no new loop, proxy, silent retry, upgrade, or deploy. |
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check` must report a fresh verified proof, 20 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |

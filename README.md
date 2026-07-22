@@ -244,6 +244,16 @@ source verifier, execution adapter, or authorizer, so configuration is false and
 live provider behavior stays `unverified`. See
 [`docs/AGENT-RUNTIME-COMPOSITION.md`](./docs/AGENT-RUNTIME-COMPOSITION.md).
 
+Application Composition adds a versioned application layer over those owners.
+The canonical host aliases compile exact component, interface, schema, and
+capability revisions into one immutable deterministic dependency plan; the
+three `knowgrph.application.*` MCP tools catalog, plan, and optionally sequence
+bounded ready steps through existing agent, model, tool, integration, policy,
+and persistence owners. Opaque integration profiles keep endpoints, commands,
+and credentials outside manifests, while explicit migration diagnostics avoid
+silent upgrades or technology lock-in. See
+[`docs/APPLICATION-COMPOSITION.md`](./docs/APPLICATION-COMPOSITION.md).
+
 Progressive Agents provides the application-facing growth path over those
 owners: register one source-backed agent and run one bounded turn, add authorized
 tool references through the existing Function Calling adapter boundary, then

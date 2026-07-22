@@ -390,6 +390,7 @@ binding:
 | `/tool.route #text-to-speech @tts-tool` | Execute TTS with voice and output bounds. |
 | `/tool.route #cloud-browser @browser-tool` | Execute cloud browser automation with isolated session and redaction. |
 | `/skill.propose #skill-evolution @skill-catalog` | Draft a reusable skill contract for review. |
+| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Invoke `knowgrph.skill.evolve` through the catalog, policy, proof, and human authority owners; no binding grants automatic apply. |
 | `/memory.search #memory-search @memory-store` | Retrieve prior context from scoped local memory. |
 | `/identity.reflect #identity-model @identity-model` | Persist stable non-secret preferences with operator authority. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Validate graph topology through source-backed owners. |

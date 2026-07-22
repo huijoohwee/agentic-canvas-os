@@ -431,7 +431,7 @@ Learning harnesses are source-backed and proposal-first. External self-improving
 | Session search | `{ query, cursor, topK }` | Cited prior-session matches or empty result. | Search results are not memory until explicitly captured. |
 | Experience capture | `{ sourceRef, proofRef, eventType, lesson }` | Experience record with applicability, expiry risk, cost, and approval state. | Reject missing provenance, secrets, copied code, or deploy artifacts. |
 | Skill proposal | `{ experienceRefs[], targetGap }` | Skill draft with schemas, fallback, bounds, cost fields, and VCCs. | Reject duplicate catalog entries and hardcoded provider assumptions. |
-| Skill evolution | `{ skillId, evalPacket, candidateDiff }` | Proposed diff plus validation and semantic-preservation statement. | Require focused checks and human review; never direct auto-commit. |
+| Skill evolution | Load the canonical request from `SKILL-EVOLUTION.md`. | `knowgrph-skill-evolution-result/v1` full snapshot. | The selected owner exclusively defines operations, schemas, candidate roles, validation isolation, bounds, and review-only behavior; this table defines no alternate input contract. |
 | Identity reflection | `{ proposedFact, evidenceRefs[], sensitivity }` | Stable identity note or rejected inference result. | Store only non-secret, source-backed operator and project facts. |
 
 ## Skill System Harness Contract
@@ -459,10 +459,10 @@ Skills are on-demand procedural knowledge. External systems may inform the patte
 
 | Guardrail | Requirement |
 |---|---|
-| Bounded optimizer | Any evaluation or variant generation names max iteration, timeout, budget, and circuit breaker. |
+| Bounded optimizer | Every evolution run names epochs, batch and mini-batch size, learning-rate schedule, candidates, adapter calls, mutation operations, changed characters, tokens, cost, duration, patience, and circuit breaker. |
 | Semantic preservation | Proposed changes state what behavior must remain unchanged. |
 | Focused tests | Evolution output names focused checks and their result before promotion. |
-| Human review | Proposed diffs stay review-pending until the operator approves persistence. |
+| Human review | Proposed diffs stay review-pending with `applied: false` until the operator separately invokes the managed skill-write owner. |
 | No external copy | Do not import external code, prompt bodies, schemas, test files, fixtures, or prose. |
 | No deploy mutation | Skill evolution cannot write the Prod mirror or deploy Cloudflare. |
 

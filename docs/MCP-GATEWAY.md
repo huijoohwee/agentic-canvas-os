@@ -102,6 +102,7 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 
 - Capabilities are deduplicated by `toolId`.
 - Every capability lists `sourceCatalogs[]`.
+- Each connection negotiates and persists its exact mutually supported MCP protocol revision and capability set before any tool is available; reconnect renegotiates, absent capabilities are unsupported, and this contract does not hard-code a future protocol revision.
 - Optional unreachable catalogs are reported in `unreachableCatalogs[]`; they do not fail local discovery.
 - Read-only discovery never invokes paid models.
 - Spend-bearing orchestration routes through approval-gated control-plane owners.
@@ -195,6 +196,16 @@ Stateful orchestration tools are discoverable without model spend. Runtime execu
 | `knowgrph.superagent.workspace` | Report sandbox workspace roots, allowed operations, artifact manifest, diff summary, scan state, and cleanup policy. | Read-only unless an approved run owns the workspace. |
 | `knowgrph.superagent.messages` | Report typed user, agent, worker, tool, review, and artifact messages for a run. | Read-only ledger; cannot bypass tool, approval, cost, or deploy gates. |
 
+## Application Composition Capabilities
+
+Application composition is a local, provider-neutral compiler and bounded dependency sequencer. The `/`, `#`, and `@` tokens in `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` are host aliases, not MCP wire methods; `@operator` is added only for live or mutating execution. Existing agent, model, tool, integration, policy, persistence, lifecycle, and orchestration owners retain execution authority.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.application.catalog` | Return bounded immutable component, interface, schema, capability, owner, readiness, and opaque integration-profile metadata. | Read-only and zero-spend; no copied registry, transport configuration, endpoint, credential, command, or provider payload. |
+| `knowgrph.application.plan` | Resolve exact revisions and digests, negotiate capabilities, compile a deterministic dependency DAG, and return an immutable `application-composition-plan/v1` digest. | Read-only; mutable references, drift, incompatibility, cycles, implicit fallback, install, upgrade, migration, connection, or execution fail closed. |
+| `knowgrph.application.execute` | Revalidate one exact plan and sequence only dependency-ready steps through injected existing runtime owners. | Bounded and idempotency-fenced; no new agent loop or integration proxy, silent retry, automatic migration, provider fallback, continuation beyond bounds, deploy, or approval inference. |
+
 ## Managed Implementation Run Capabilities
 
 Managed implementation runs are local stdio MCP capabilities backed by Knowgrph's durable run ledger and one supervisor per claimed run. Agentic Canvas OS remains the invocation, safe worktree, branch, lease, fence, and pull-request lifecycle owner through its stable JSON CLI; the MCP server never parses lifecycle prose or creates a second Git lock.
@@ -257,6 +268,7 @@ capability:
 | Resume checkpointed run | Local stdio MCP with approved state owner | Uses typed checkpoint and recovery proof before continuation. |
 | Pause for human review | Local stdio MCP or control-plane gate where deployed | Blocks paid or mutating continuation until operator result. |
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
+| Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 
@@ -273,6 +285,7 @@ capability:
 | Tool gateway is existing-infra | Tool routing uses local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owners; no new proxy is introduced. |
 | Tool providers are per-category | Web, image, TTS, and browser categories each expose gateway, direct, local, or unavailable state. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |
+| Application plans are immutable | Equivalent manifests produce one digest over exact revisions, interface and schema digests, owners, edges, order, and bounds; drift or migration needs a new explicit plan and never mutates execution automatically. |
 | Tool secrets stay server-managed | Provider keys and browser sessions never appear in docs, client state, tests, or fixtures. |
 | Soul identity is source-backed | Prompt assembly rejects silent hardcoded defaults and returns typed fallback for missing, empty, unsafe, or unreadable soul source. |
 | MoA fan-out is bounded | MoA capabilities reject missing preset, uncapped references, recursive aggregators, and copied external preset examples. |

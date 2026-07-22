@@ -213,8 +213,8 @@ The host aliases `/knowledge.graph.ingest`, `/knowledge.graph.query`, and `/know
 | Capability | MCP role | Default boundary |
 |---|---|---|
 | `knowgrph.knowledge_graph.ingest` | Deterministically parse one bounded local workspace into a canonical digest-bound graph snapshot with source evidence and explanation for every edge. | Local generated-artifact mutation only; source files remain unchanged, operator authority is required, and model, network, embedding, vector store, external graph service, and Graphify dependency paths are forbidden. |
-| `knowgrph.knowledge_graph.query` | Run bounded deterministic lexical, predicate, neighborhood, and path operations over one exact snapshot. | Read-only and zero-spend; stale digest and unsupported query return typed results without selecting another snapshot or using a model/vector fallback. |
-| `knowgrph.knowledge_graph.explain_edge` | Return one stored edge's endpoints, kind, resolution class, deterministic explanation, and canonical source evidence. | Read-only and zero-spend; no reparse, inference, network request, model call, vector lookup, or mutation. |
+| `knowgrph.knowledge_graph.query` | Run bounded deterministic lexical search, exact node selection, edge-label-filtered neighborhood, impact, path, and summary operations over one exact artifact. | Read-only and zero-spend; stale digest and unsupported query return typed results, while bounds expose completeness and truncation, without selecting another artifact or using a model/vector fallback. |
+| `knowgrph.knowledge_graph.explain_edge` | Return one stored edge's endpoints, label, evidence kind, deterministic explanation, parser/source span and excerpt, confidence, premises, and candidate count. | Read-only and zero-spend; no reparse, inference, network request, model call, vector lookup, or mutation. |
 
 ## Managed Implementation Run Capabilities
 

@@ -52,7 +52,7 @@ The three dictionaries remain the only authority for `/`, `#`, and `@` token ide
 |---|---|---|
 | Parser-supported code | Local concrete or abstract syntax parser emits files, declarations, symbols, imports, calls, inheritance, references, and containment supported by that parser. | Unsupported language or syntax is reported with parser identity and reason; regex guesses do not masquerade as AST facts. |
 | Markdown and text docs | Local structural parser emits documents, headings, code fences, links, and explicit named references. | Authored text may support lexical references only; no model invents concepts or relationships. |
-| SQL | Local statement parser emits schemas, tables, columns, keys, views, and explicit dependencies. | Unrecognized dialect constructs remain typed omissions rather than approximate edges. |
+| SQL | Local statement parser emits tables, columns, primary keys, foreign-key references, and exact-name cross-file table resolution. | Unrecognized dialect constructs remain typed omissions rather than approximate edges. |
 | JSON, YAML, TOML, and registered configs | Local format parser emits files, keys, sections, declared references, and bounded value metadata. | Secrets and raw credential-like values are redacted or omitted; configuration never authorizes execution. |
 | Text-bearing PDF | Local deterministic text extraction emits document, page, section, and explicit reference evidence. | Encrypted, malformed, image-only, or extraction-unavailable input returns a typed gap; OCR and model fallbacks are outside this contract. |
 
@@ -66,10 +66,10 @@ The runtime normalizes `@working-directory`, rejects traversal and symlink escap
 |---|---|---|
 | Snapshot | schema and contract revisions, source-set digest, graph digest, ordered source/parser manifest, diagnostics, and generated artifact reference | Digest covers canonical data, not timestamps or absolute machine-specific paths. |
 | Node | stable id, type, label, workspace-relative source, plus parser-supported qualified identity and span fields where observable | Identity derives only from normalized source evidence and documented canonical fields. |
-| Edge | stable id, source id, target id, kind, resolution class, explanation, evidence array | Identity derives from endpoints, kind, and canonical evidence; duplicate canonical edges collapse deterministically. |
+| Edge | stable id, source id, target id, label, evidence kind, explanation, and parser/source provenance | Identity derives from endpoints, label, extraction rule, source path, and canonical source anchor; duplicate canonical edges collapse deterministically. |
 | Evidence | workspace-relative source, line and column span, bounded source excerpt and its digest, parser id and revision, rule id, confidence, and premises where applicable | Evidence must be sufficient to audit the edge without accepting the explanation on trust. |
 
-Every edge has a non-empty deterministic explanation generated from repository-owned templates and its canonical evidence. Explanations never contain model output. An edge that cannot name valid endpoints, relationship kind, resolution class, and source evidence is rejected before snapshot publication.
+Every edge has a non-empty deterministic explanation generated from repository-owned templates and its canonical evidence. Explanations never contain model output. An edge that cannot name valid endpoints, label, evidence kind, extraction rule, parser identity, and source evidence is rejected before snapshot publication.
 
 The graph artifact is a canonical local snapshot, not a second authored source store. Re-ingesting unchanged admitted bytes and parser revisions yields the same graph digest and record order. A changed source set or parser revision yields a different proof identity; query and explanation reject a stale digest rather than silently selecting another snapshot.
 
@@ -79,7 +79,7 @@ Query supports bounded normalized lexical search, exact id or label node selecti
 
 The query tool does not use embeddings, similarity vectors, a vector store, a language model, generated Cypher, or an external graph service. It returns a typed empty or unsupported-query result when the local grammar cannot represent a request.
 
-Explanation accepts exactly one edge id plus the expected snapshot digest. It returns the stored endpoints, relationship kind, resolution class, explanation, and canonical evidence. Missing, stale, ambiguous, or malformed edge identity fails closed. Explanation performs no file scan, parser run, inference, model call, network request, or artifact mutation.
+Explanation accepts exactly one edge id plus the expected snapshot digest. It returns the stored endpoints, edge label, evidence kind, explanation, parser identity and revision, source span and excerpt, confidence, premises, and candidate count. Missing, stale, or malformed edge identity fails closed. Explanation performs no file scan, parser run, inference, model call, network request, or artifact mutation.
 
 ## Ownership And Mutation
 

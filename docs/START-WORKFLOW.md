@@ -72,7 +72,7 @@ completion_requires:
 
 Fetch before starting every Codex session; keep one clean registered `main` worktree as the runtime and synchronization owner; activate each task branch only in its own registered task worktree; pull only when intentionally updating a clean, exclusively owned branch.
 
-The canonical `main` worktree remains the only normal Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from normal Dev ports. The sole runtime exception is an explicit reviewed-head handoff on a reserved noncanonical port after `device:review` proves the clean exact `reviewHeadSha`; it never becomes the canonical runtime owner. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and implicit task-worktree runtime sources are forbidden.
+The canonical `main` worktree remains the only normal Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from normal Dev ports. An explicit reviewed-head handoff may use a reserved noncanonical port, or `device:turn-end` may take over canonical port `5173`, only after `device:review` proves the clean exact `reviewHeadSha`. The takeover remains a review handoff rather than canonical runtime ownership. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and implicit task-worktree runtime sources are forbidden.
 
 Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
 
@@ -364,16 +364,16 @@ Managed implementation runs normally stop before completion through `npm run dev
 
 ### Reviewed Runtime Handoff
 
-When a managed implementation turn reaches `review_ready` and local runtime acceptance is relevant, leave one explicit reviewed runtime using the exact `reviewHeadSha`:
+Every managed implementation turn that reaches `review_ready` must end with one explicit reviewed runtime using the exact `reviewHeadSha`:
 
 ```sh
-npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:serve-reviewed -- \
-  --repository="$TASK_WORKTREE" --port=5176 --json
-npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:runtime-status -- \
-  --repository="$TASK_WORKTREE" --port=5176 --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:turn-end -- \
+  --repository="$TASK_WORKTREE" --json
 ```
 
-The start command requires a clean registered agent worktree, `HEAD == reviewHeadSha`, the exact remote branch head, an open non-draft ownership PR at that head, repository-owned `dev:apex`, and clean canonical Agentic Canvas OS `main == origin/main`. It starts no arbitrary command, binds only `127.0.0.1`, records its PID, port, URL, log, app revision, and docs revision under Git metadata, waits for HTTP 200, and reports structured proof. It uses the target's canonical `docs/` path as the workspace namespace anchor and mounts canonical Agentic Canvas OS `docs/` explicitly so Prompt Presets and other ACOS-backed runtime surfaces resolve from the recorded docs revision. It refuses an occupied port and never kills an unrelated process. Port `5173` additionally requires `--allow-canonical-port`; that flag grants no permission to stop its current owner.
+The turn-end command requires a clean registered agent worktree, `HEAD == reviewHeadSha`, the exact remote branch head, an open non-draft ownership PR at that head, repository-owned `dev:apex`, and clean canonical Agentic Canvas OS `main == origin/main`. It acquires a host-wide lock for port `5173`, inspects every IPv4 and IPv6 listener, validates all listener owners before mutation, and may stop only Vite process groups whose Git common directory matches the reviewed candidate. An unrelated or unclassifiable listener blocks the entire takeover before any process is stopped. The command then starts no arbitrary command, binds only `127.0.0.1`, records its PID, port, URL, log, app revision, and docs revision under Git metadata, and requires HTTP 200 through both `127.0.0.1` and `localhost`.
+
+Success reports exactly one listener plus `noCompetingListeners`, `listenerRepositoryMatches`, and `localhostMatchesReviewedRuntime`. The final response must cite that exact `reviewHeadSha`; a raw `npm run dev`, source-only check, prior turn proof, or HTTP response without matching listener identity cannot support a runtime-ready claim. The lower-level `device:serve-reviewed`, `device:runtime-status`, and `device:runtime-stop` commands remain available for explicit noncanonical-port diagnostics.
 
 Status re-proves source, remote, PR, listener, HTTP, and docs-main identity. Any changed head, dirt, draft or closed PR, listener replacement, unavailable HTTP surface, or docs drift reports non-ready. Stop is explicit and accepts only the listener PID recorded by the reviewed-runtime owner:
 
@@ -382,7 +382,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:runtime-stop -- \
   --repository="$TASK_WORKTREE" --port=5176 --json
 ```
 
-This is a review handoff, not completion, merge, release, deployment, or canonical runtime promotion. Active, parked, blocked, failed, canceled, and read-only turns have no reviewed-head server obligation. They preserve any unrelated local server and report that no reviewed runtime was established.
+This is a review handoff, not completion, merge, release, deployment, or canonical runtime promotion. Active, parked, blocked, failed, and canceled turns cannot manufacture a reviewed SHA; they preserve unrelated local servers and report that no reviewed runtime was established. A read-only follow-up to an existing review-ready lane reruns `device:turn-end` idempotently before claiming that its reviewed server remains ready.
 
 For a completed task:
 

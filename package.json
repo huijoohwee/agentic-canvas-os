@@ -48,6 +48,7 @@
     "device:park": "node ./scripts/device-branch.mjs park",
     "device:review": "node ./scripts/device-branch.mjs review",
     "device:serve-reviewed": "node ./scripts/reviewed-runtime.mjs start",
+    "device:turn-end": "node ./scripts/reviewed-runtime.mjs handoff",
     "device:runtime-status": "node ./scripts/reviewed-runtime.mjs status",
     "device:runtime-stop": "node ./scripts/reviewed-runtime.mjs stop",
     "device:start": "node ./scripts/device-branch.mjs start",

@@ -3,6 +3,7 @@
 import {
   DEFAULT_REVIEWED_RUNTIME_HOST,
   DEFAULT_REVIEWED_RUNTIME_PORT,
+  endReviewedRuntimeTurn,
   readReviewedRuntimeStatus,
   serveReviewedRuntime,
   stopReviewedRuntime,
@@ -12,22 +13,24 @@ const [action, ...args] = process.argv.slice(2);
 const json = args.includes("--json");
 
 try {
-  if (!["start", "status", "stop"].includes(action)) usage();
+  if (!["start", "handoff", "status", "stop"].includes(action)) usage();
   const options = {
     repository: readOption(args, "repository") || process.env.AGENTIC_TARGET_REPOSITORY || "",
     host: readOption(args, "host") || DEFAULT_REVIEWED_RUNTIME_HOST,
-    port: Number(readOption(args, "port") || DEFAULT_REVIEWED_RUNTIME_PORT),
+    port: Number(readOption(args, "port") || (action === "handoff" ? 5173 : DEFAULT_REVIEWED_RUNTIME_PORT)),
     timeoutMs: Number(readOption(args, "timeout-ms") || 90_000),
-    allowCanonicalPort: args.includes("--allow-canonical-port"),
+    allowCanonicalPort: action === "handoff" || args.includes("--allow-canonical-port"),
   };
   const result = action === "start"
     ? await serveReviewedRuntime(options)
+    : action === "handoff"
+      ? await endReviewedRuntimeTurn(options)
     : action === "status"
       ? await readReviewedRuntimeStatus(options)
       : await stopReviewedRuntime(options);
   if (json) console.log(JSON.stringify(result));
   else printHuman(result);
-  if (action === "status" && !result.ready) process.exitCode = 1;
+  if ((action === "status" || action === "handoff") && !result.ready) process.exitCode = 1;
 } catch (error) {
   const result = {
     schema: "agentic-reviewed-runtime/v1",
@@ -59,6 +62,6 @@ function printHuman(result) {
 }
 
 function usage() {
-  console.error("Usage: node scripts/reviewed-runtime.mjs <start|status|stop> --repository=<review-ready-worktree> [--port=5176] [--timeout-ms=90000] [--allow-canonical-port] [--json]");
+  console.error("Usage: node scripts/reviewed-runtime.mjs <start|handoff|status|stop> --repository=<review-ready-worktree> [--port=5176] [--timeout-ms=90000] [--allow-canonical-port] [--json]");
   process.exit(2);
 }

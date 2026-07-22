@@ -67,6 +67,12 @@ document can express the same contract.
   and main SHAs; fast-forward the registered main worktree with `npm run sync:live`,
   then restart the local runtime from that clean `main` and rerun the original
   acceptance path.
+- Before the final response of every implementation turn that has reached
+  `review_ready`, run `npm run device:turn-end -- --repository=<task-worktree>
+  --json`. Runtime-ready may be claimed only when its JSON proves the exact
+  reviewed SHA, one listener on `localhost:5173`, and no competing port owner.
+  The command may replace only same-repository Vite process groups and must
+  fail closed without stopping an unrelated listener.
 - Use `npm run device:park` only for work explicitly reported as paused or
   blocked. Parking preserves work but never satisfies completion.
 - Audit the task worktree at every chat, session, or thread end. Remove it only

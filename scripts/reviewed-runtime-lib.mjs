@@ -22,6 +22,73 @@ export const DEFAULT_REVIEWED_RUNTIME_TIMEOUT_MS = 90_000;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const CANONICAL_DEV_PORT = 5173;
 
+export async function endReviewedRuntimeTurn(options, dependencies = {}) {
+  const deps = createDependencies(dependencies);
+  const normalized = normalizeOptions({ ...options, port: options?.port || CANONICAL_DEV_PORT, allowCanonicalPort: true });
+  const candidate = inspectReviewedRuntimeCandidate(normalized, deps);
+  const lockPath = hostPortLockPath(candidate, normalized.port);
+  const releaseLock = deps.acquirePortLock(lockPath);
+  try {
+    const existingState = readRuntimeState(runtimeStatePath(candidate.gitCommonDir, normalized.port));
+    const listeners = deps.readListenerPids(normalized.port);
+    const existingStatus = existingState
+      ? await inspectReviewedRuntimeState(existingState, candidate, deps).catch(() => null)
+      : null;
+    if (!(existingStatus?.ready && listeners.length === 1 && listeners[0] === existingStatus.listenerPid)) {
+      const processes = listeners.map(pid => deps.inspectListenerProcess(pid));
+      await reconcileTurnEndListeners({ processes, candidate, port: normalized.port }, deps);
+    }
+
+    const runtime = await serveReviewedRuntime(normalized, deps);
+    const finalListeners = deps.readListenerPids(normalized.port);
+    if (finalListeners.length !== 1 || finalListeners[0] !== runtime.listenerPid) {
+      throw new Error(`Turn-end runtime requires exactly one listener on port ${normalized.port}; observed ${finalListeners.join(", ") || "none"}.`);
+    }
+    validateTurnEndListenerOwnership(deps.inspectListenerProcess(runtime.listenerPid), candidate);
+    const localhostUrl = `http://localhost:${normalized.port}/`;
+    const localhostStatus = await deps.readHttpStatus(localhostUrl);
+    if (localhostStatus !== 200) throw new Error(`Turn-end localhost readiness returned ${localhostStatus || "no response"}.`);
+    return {
+      ...runtime,
+      action: "turn-end",
+      url: localhostUrl,
+      proof: {
+        ...runtime.proof,
+        listenerCount: finalListeners.length,
+        noCompetingListeners: true,
+        listenerRepositoryMatches: true,
+        localhostMatchesReviewedRuntime: true,
+      },
+    };
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function reconcileTurnEndListeners({ processes, candidate, port }, dependencies = {}) {
+  const deps = createDependencies(dependencies);
+  processes.forEach(processEvidence => validateTurnEndListenerOwnership(processEvidence, candidate));
+  [...new Set(processes.map(processEvidence => processEvidence.processGroupId))]
+    .forEach(processGroupId => deps.stopProcessGroup(processGroupId));
+  if (processes.length) await deps.waitForPortRelease(port, 10_000);
+}
+
+export function validateTurnEndListenerOwnership(processEvidence, candidate) {
+  if (!Number.isInteger(processEvidence?.pid) || processEvidence.pid <= 0) {
+    throw new Error("Turn-end listener has no valid PID.");
+  }
+  if (!Number.isInteger(processEvidence.processGroupId) || processEvidence.processGroupId <= 0) {
+    throw new Error(`Turn-end listener PID ${processEvidence.pid} has no valid process group.`);
+  }
+  if (path.resolve(processEvidence.gitCommonDir || "") !== path.resolve(candidate.gitCommonDir || "")) {
+    throw new Error(`Port listener PID ${processEvidence.pid} belongs to an unrelated repository; refusing takeover.`);
+  }
+  if (!String(processEvidence.command || "").includes("node_modules/.bin/vite")) {
+    throw new Error(`Port listener PID ${processEvidence.pid} is not a repository-owned Vite runtime; refusing takeover.`);
+  }
+  return true;
+}
+
 export async function serveReviewedRuntime(options, dependencies = {}) {
   const deps = createDependencies(dependencies);
   const normalized = normalizeOptions(options);
@@ -262,6 +329,10 @@ function runtimeStatePath(gitCommonDir, port) {
   return path.join(gitCommonDir, "agentic-canvas-os", "reviewed-runtime", `${port}.json`);
 }
 
+function hostPortLockPath(candidate, port) {
+  return path.join(path.dirname(candidate.canonicalRepository), ".runtime-state", "agentic-canvas-os", "ports", `${port}.lock`);
+}
+
 function readRuntimeState(statePath) {
   if (!existsSync(statePath)) return null;
   return JSON.parse(readFileSync(statePath, "utf8"));
@@ -324,6 +395,9 @@ function createDependencies(overrides) {
       "run", "dev:apex", "--", "--host", host, "--port", String(port), "--strictPort",
     ], { cwd, env, detached: true, stdio: ["ignore", logFd, logFd] }),
     readListenerPid: port => readListenerPid(port),
+    readListenerPids: port => readListenerPids(port),
+    inspectListenerProcess: pid => inspectListenerProcess(pid),
+    acquirePortLock: lockPath => acquirePortLock(lockPath),
     waitForHttp,
     readHttpStatus,
     stopProcessGroup: pid => { try { process.kill(-pid, "SIGTERM"); } catch (error) { if (error?.code !== "ESRCH") throw error; } },
@@ -334,15 +408,57 @@ function createDependencies(overrides) {
 }
 
 function readListenerPid(port) {
+  const pids = readListenerPids(port);
+  if (pids.length > 1) throw new Error(`Port ${port} has multiple listener PIDs: ${pids.join(", ")}`);
+  return pids[0] || null;
+}
+
+function readListenerPids(port) {
   try {
     const output = execFileSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], { encoding: "utf8" }).trim();
-    const pids = output.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger);
-    if (pids.length > 1) throw new Error(`Port ${port} has multiple listener PIDs: ${pids.join(", ")}`);
-    return pids[0] || null;
+    return [...new Set(output.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger))];
   } catch (error) {
-    if (error?.status === 1) return null;
+    if (error?.status === 1) return [];
     throw error;
   }
+}
+
+function inspectListenerProcess(pid) {
+  const cwdOutput = execFileSync("lsof", ["-a", "-p", String(pid), "-d", "cwd", "-Fn"], { encoding: "utf8" });
+  const cwd = cwdOutput.split("\n").find(line => line.startsWith("n"))?.slice(1).trim() || "";
+  if (!cwd) throw new Error(`Unable to resolve listener PID ${pid} working directory.`);
+  const processGroupId = Number(execFileSync("ps", ["-o", "pgid=", "-p", String(pid)], { encoding: "utf8" }).trim());
+  const command = execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" }).trim();
+  const gitCommonDirText = execFileSync("git", ["-C", cwd, "rev-parse", "--git-common-dir"], { encoding: "utf8" }).trim();
+  return {
+    pid,
+    processGroupId,
+    command,
+    cwd,
+    gitCommonDir: path.resolve(cwd, gitCommonDirText),
+  };
+}
+
+export function acquirePortLock(lockPath) {
+  mkdirSync(path.dirname(lockPath), { recursive: true });
+  let lockFd;
+  try {
+    lockFd = openSync(lockPath, "wx");
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+    const owner = JSON.parse(readFileSync(lockPath, "utf8"));
+    try {
+      process.kill(Number(owner.pid), 0);
+      throw new Error(`Turn-end port lock is held by active PID ${owner.pid}.`);
+    } catch (ownerError) {
+      if (ownerError?.code !== "ESRCH") throw ownerError;
+      unlinkSync(lockPath);
+      lockFd = openSync(lockPath, "wx");
+    }
+  }
+  writeFileSync(lockFd, `${JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() })}\n`, "utf8");
+  closeSync(lockFd);
+  return () => { if (existsSync(lockPath)) unlinkSync(lockPath); };
 }
 
 async function waitForHttp(url, timeoutMs) {

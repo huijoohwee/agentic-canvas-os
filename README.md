@@ -56,6 +56,17 @@ npm run device:review -- --json
 
 This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes; it restores and proves draft ownership before a new writer claim. `device:publish` remains the separate explicit protected-delivery action.
 
+End each review-ready implementation turn with one exact local runtime:
+
+```bash
+npm run device:turn-end -- --repository=<review-ready-task-worktree> --json
+```
+
+This host-locks `localhost:5173`, removes only proven same-repository stale Vite
+process groups, rejects unrelated listeners before mutation, and succeeds only
+when the exact reviewed SHA owns the sole IPv4/IPv6 listener and responds through
+both `127.0.0.1` and `localhost`.
+
 Mandatory completion gate:
 
 ```bash

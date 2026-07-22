@@ -122,7 +122,7 @@ If the combined operation is interrupted after the lease claim, the durable call
 - Git worktree isolation is not kernel or container isolation. The result must name the effective containment class; a source-backed sandbox-policy preflight cannot claim host enforcement it does not provide.
 - Allowed paths are normalized against the task root. Traversal or symbolic-link path inputs, lifecycle metadata edits, and undeclared task-tree changes fail verification. A worktree diff cannot detect arbitrary writes elsewhere on the host; pre/post canonical and registry evidence may expose drift but does not replace kernel or container containment.
 - Verification commands are configured argv arrays with per-command and aggregate time bounds. Empty, unconfigured, or over-limit verification fails closed.
-- Evidence redaction replaces exact configured runner environment values and values associated with heuristic secret-key labels; it cannot recognize arbitrary file-derived secrets or environment dumps. Callers and runners must not emit secrets. Oversized logs are rejected before durable storage or return.
+- Evidence redaction replaces exact configured runner environment values and values associated with heuristic secret-key labels; it cannot recognize arbitrary file-derived secrets or environment dumps. Callers and runners must not emit secrets. Output portions beyond `maxOutputBytes` are truncated before durable storage or return, the evidence marks that truncation, and exceeding the capture bound does not by itself reject the producer or run.
 
 ## Team Control Semantics
 

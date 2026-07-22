@@ -223,7 +223,11 @@ export function createCanonicalWorkspaceSynchronizer({
       }
 
       for (const inspection of inspections.filter(item => item.current !== item.remote)) {
-        run(inspection.repository.root, 'git', ['merge', '--ff-only', 'origin/main'])
+        run(inspection.repository.root, 'git', ['merge', '--ff-only', inspection.remote])
+        const integrated = git(inspection.repository.root, ['rev-parse', 'HEAD'])
+        if (integrated !== inspection.remote || statusEntries(inspection.repository.root).length > 0) {
+          throw new Error(`${inspection.repository.id} canonical checkout did not integrate exact verified revision ${inspection.remote}`)
+        }
       }
       const verifiedAt = now().toISOString()
       const nextState = {

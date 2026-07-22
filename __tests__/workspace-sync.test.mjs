@@ -59,6 +59,34 @@ test('canonical sync validates a disposable candidate before fast-forward and re
   assert.equal(JSON.parse(fs.readFileSync(synchronizer.statePath, 'utf8')).repositories.sample.revision, remoteRevision)
 })
 
+test('canonical sync integrates the verified object when a sibling fetch advances origin/main', async t => {
+  const root = fs.mkdtempSync(path.resolve(os.tmpdir(), 'canonical-sync-pin-test-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  const repository = createRepository(root)
+  const verifiedRevision = advance(repository)
+  let advancedRevision = null
+  const synchronizer = createCanonicalWorkspaceSynchronizer({
+    workspaceRoot: root,
+    repositories: [{ id: 'sample', root: repository.canonical, requiredChecks: ['gate'] }],
+    verifyRevision: (_entry, revision) => assert.equal(revision, verifiedRevision),
+    verifyCandidate: candidate => {
+      assert.equal(git(candidate.candidateRoot, ['rev-parse', 'HEAD']), verifiedRevision)
+      fs.writeFileSync(path.resolve(repository.seed, 'value.txt'), 'three\n')
+      git(repository.seed, ['add', 'value.txt'])
+      git(repository.seed, ['commit', '-m', 'advance again'])
+      git(repository.seed, ['push', 'origin', 'main'])
+      advancedRevision = git(repository.seed, ['rev-parse', 'HEAD'])
+      git(repository.canonical, ['fetch', '--quiet', 'origin', 'main'])
+    },
+  })
+
+  const report = await synchronizer.cycle()
+  assert.notEqual(advancedRevision, verifiedRevision)
+  assert.equal(git(repository.canonical, ['rev-parse', 'origin/main']), advancedRevision)
+  assert.equal(git(repository.canonical, ['rev-parse', 'HEAD']), verifiedRevision)
+  assert.equal(report.repositories.sample.revision, verifiedRevision)
+})
+
 test('canonical sync keeps the prior checkout when candidate validation fails', async t => {
   const root = fs.mkdtempSync(path.resolve(os.tmpdir(), 'canonical-sync-reject-'))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))

@@ -29,13 +29,18 @@ function gitTextFor(overrides = {}) {
   };
 }
 
-test("provision creates a detached task worktree only from exact clean canonical main", () => {
+test("provision creates a detached task worktree from the one exact fetched main object", () => {
   const calls = [];
+  const advancedSha = "b".repeat(40);
+  let originReads = 0;
+  const baseGitText = gitTextFor();
   const result = provisionTaskWorktree({
     invocationPath: repoRoot,
     repoRoot,
     targetPath: target,
-    gitText: gitTextFor(),
+    gitText: args => args.join(" ") === "rev-parse origin/main"
+      ? (++originReads === 1 ? sha : advancedSha)
+      : baseGitText(args),
     run: (command, args) => calls.push([command, ...args]),
     makeDirectory: () => {},
     pathExists: candidate => candidate === path.dirname(safeRoot),
@@ -44,9 +49,10 @@ test("provision creates a detached task worktree only from exact clean canonical
 
   assert.equal(result.target, target);
   assert.equal(result.baseSha, sha);
+  assert.equal(originReads, 1);
   assert.deepEqual(calls, [
     ["git", "fetch", "origin", "main"],
-    ["git", "worktree", "add", "--detach", target, "origin/main"],
+    ["git", "worktree", "add", "--detach", target, sha],
   ]);
 });
 

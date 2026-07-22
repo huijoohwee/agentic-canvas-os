@@ -20,7 +20,7 @@ test('workspace synchronization is bounded, fast-forward-only, and recoverable',
   for (const repository of ['agentic-canvas-os', 'knowgrph', 'huijoohwee']) {
     assert.match(synchronizer, new RegExp(`id: '${repository}'`))
   }
-  assert.match(synchronizerLibrary, /\['merge', '--ff-only', 'origin\/main'\]/)
+  assert.match(synchronizerLibrary, /\['merge', '--ff-only', inspection\.remote\]/)
   assert.match(synchronizerLibrary, /canonical-checkout-quarantine\/v2/)
   assert.match(synchronizerLibrary, /canonical-workspace-readiness\/v2/)
   assert.match(synchronizer, /Math\.max\(30, Math\.min\(3600/)

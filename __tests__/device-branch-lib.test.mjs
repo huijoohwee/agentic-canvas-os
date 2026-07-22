@@ -384,28 +384,44 @@ test("resume rejects a delivery revision claimed by another session", () => {
   }), /remains delivery under another session/);
 });
 
-test("park fails closed when local main does not equal origin/main after refresh", () => {
-  const gitText = createGitText({
+test("main park merges and verifies the one fetched main object when the shared ref advances", () => {
+  const pinnedMainSha = "b".repeat(40);
+  const advancedMainSha = "c".repeat(40);
+  let originMainSha = pinnedMainSha;
+  let originReads = 0;
+  const calls = [];
+  const baseGitText = createGitText({
     "worktree list --porcelain -z": branchWorktree("main"),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "main\n",
     "status --porcelain": "",
     "stash list --format=%H%x00%gs": "",
-    "rev-parse HEAD": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-    "rev-parse origin/main": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
+    "rev-parse HEAD": ["a".repeat(40), pinnedMainSha],
+  });
+  const gitText = args => {
+    if (args.join(" ") === "rev-parse origin/main") {
+      originReads += 1;
+      return originMainSha;
+    }
+    return baseGitText(args);
+  };
+
+  const result = park({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "",
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "git" && args[0] === "merge") originMainSha = advancedMainSha;
+    },
+    log: () => {},
   });
 
-  assert.throws(
-    () => park({
-      invocationPath: repo,
-      repo,
-      gitText,
-      gitOptional: () => "",
-      run: () => {},
-    }),
-    /main must match origin\/main after park/,
-  );
+  assert.equal(result.headSha, pinnedMainSha);
+  assert.equal(originReads, 1);
+  assert.ok(calls.some(call => call.join(" ") === `git merge --ff-only ${pinnedMainSha}`));
 });
 
 test("completeSession detaches the task worktree only after the task pull request is merged", () => {

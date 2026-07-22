@@ -51,8 +51,9 @@ function resolveKnownConflicts({ number, headRef, headSha }) {
   git(["config", "user.name", "github-actions[bot]"]);
   git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"]);
   git(["fetch", "--no-tags", "origin", "main", headRef]);
+  const mainSha = gitText(["rev-parse", "origin/main"]).trim();
   git(["checkout", "--detach", headSha]);
-  const merge = git(["merge", "--no-edit", "origin/main"], { allowFailure: true });
+  const merge = git(["merge", "--no-edit", mainSha], { allowFailure: true });
   if (merge.status === 0) return pushMerge(number, headRef);
 
   const conflicts = gitText(["diff", "--name-only", "--diff-filter=U"])

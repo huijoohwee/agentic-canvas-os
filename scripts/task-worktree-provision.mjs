@@ -49,7 +49,7 @@ export function provisionTaskWorktree({
   }
   makeDirectory(safeRoot, { recursive: true, mode: 0o700 });
   assertNoSymlinkAncestors({ repoRoot: canonicalRoot, target, pathExists, pathStat });
-  run("git", ["worktree", "add", "--detach", target, "origin/main"]);
+  run("git", ["worktree", "add", "--detach", target, baseSha]);
   return { baseSha, canonicalRoot, safeRoot, target };
 }
 

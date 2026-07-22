@@ -33,7 +33,11 @@ async function syncOnce() {
   const before = gitText(root, ["rev-parse", "HEAD"]).trim();
   const after = gitText(root, ["rev-parse", "origin/main"]).trim();
   if (before === after) return;
-  run(root, "git", ["merge", "--ff-only", "origin/main"]);
+  run(root, "git", ["merge", "--ff-only", after]);
+  const integrated = gitText(root, ["rev-parse", "HEAD"]).trim();
+  if (integrated !== after || gitText(root, ["status", "--porcelain"]).trim()) {
+    throw new Error(`Canonical checkout did not integrate the exact pinned main object ${after}.`);
+  }
   console.log(`Canonical checkout updated ${before.slice(0, 12)} -> ${after.slice(0, 12)}.`);
 }
 

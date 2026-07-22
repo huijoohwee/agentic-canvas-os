@@ -45,10 +45,11 @@ test("park rejects remote fence advancement before stash, detach, release, or PR
   assert.deepEqual(calls, []);
 });
 
-test("park replays an exact parked lease after detachment was interrupted", () => {
+test("park pins one main object across active detach, attached replay, and detached replay", () => {
   const pullRequestUrl = "https://github.test/org/repo/pull/42";
   const fenceSha = "b".repeat(40);
   const mainSha = "a".repeat(40);
+  const advancedMainSha = "c".repeat(40);
   let lease = {
     schema: "agentic-writer-lease/v2",
     status: "active",
@@ -68,12 +69,15 @@ test("park replays an exact parked lease after detachment was interrupted", () =
   let isDraft = true;
   let detachAttempts = 0;
   let detached = false;
+  let detachedSha = null;
+  let originMainSha = mainSha;
+  let originReads = 0;
+  const switchTargets = [];
   const values = {
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
     "stash list --format=%H%x00%gs": "",
-    "rev-parse origin/main": mainSha,
   };
   const context = {
     invocationPath: repo,
@@ -86,7 +90,11 @@ test("park replays an exact parked lease after detachment was interrupted", () =
           : `worktree ${repo}\0HEAD ${fenceSha}\0branch refs/heads/${branch}\0`;
       }
       if (key === "branch --show-current") return detached ? "" : branch;
-      if (key === "rev-parse HEAD") return detached ? mainSha : fenceSha;
+      if (key === "rev-parse HEAD") return detached ? detachedSha : fenceSha;
+      if (key === "rev-parse origin/main") {
+        originReads += 1;
+        return originMainSha;
+      }
       if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
       return values[key];
     },
@@ -102,19 +110,29 @@ test("park replays an exact parked lease after detachment was interrupted", () =
     leaseStore: {
       read: requestedBranch => requestedBranch ? lease : { leases: { [branch]: lease } },
       verify: () => lease,
-      release: input => (lease = {
-        ...input.expectedLease,
-        ...input.values,
-        status: "parked",
-        heartbeatAt: input.timestamp,
-        expiresAt: input.timestamp,
-      }),
+      release: input => {
+        lease = {
+          ...input.expectedLease,
+          ...input.values,
+          status: "parked",
+          heartbeatAt: input.timestamp,
+          expiresAt: input.timestamp,
+        };
+        // Model a sibling worktree fetching a newer main during the external
+        // lease/PR phase, after this park has already pinned its main object.
+        originMainSha = advancedMainSha;
+        return lease;
+      },
     },
     sessionId: "session-a",
     run: (command, args) => {
       if (command === "gh" && args[0] === "pr" && args[1] === "edit") remoteBody = args[4];
-      if (command === "git" && args[0] === "switch" && detachAttempts++ === 0) throw new Error("detachment interrupted");
-      if (command === "git" && args[0] === "switch") detached = true;
+      if (command === "git" && args[0] === "switch") {
+        switchTargets.push(args[2]);
+        if (detachAttempts++ === 0) throw new Error("detachment interrupted");
+        detachedSha = args[2] === "origin/main" ? originMainSha : args[2];
+        detached = true;
+      }
     },
     log: () => {},
     now: () => new Date("2026-07-22T00:05:00.000Z"),
@@ -127,7 +145,11 @@ test("park replays an exact parked lease after detachment was interrupted", () =
   assert.equal(result.branch, branch);
   assert.equal(result.headSha, mainSha);
   assert.equal(detachAttempts, 2);
+  assert.equal(lease.parkHeadSha, mainSha);
+  assert.equal(originReads, 1);
+  assert.deepEqual(switchTargets, [mainSha, mainSha]);
   const replay = park(context);
   assert.deepEqual(replay, result);
   assert.equal(isDraft, true);
+  assert.equal(originReads, 1);
 });

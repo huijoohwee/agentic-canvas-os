@@ -26,6 +26,7 @@ export function park({
   if (!branch) return replayDetachedPark({ worktree, repo, gitText, gitOptional, ghText, leaseStore, sessionId, run, log });
   const instant = now();
   let stash = null;
+  let parkHeadSha;
 
   if (branch === "main") {
     const message = createParkMessage(branch, instant);
@@ -36,9 +37,10 @@ export function park({
       repo, gitText, gitOptional, run,
     });
     run("git", ["fetch", "origin", "main"]);
-    run("git", ["merge", "--ff-only", "origin/main"]);
-    const headSha = requireCleanMain(gitText);
-    log(stash ? `Parked ${branch} in ${stash.ref} at ${stash.sha.slice(0, 12)}; task worktree is detached at ${headSha.slice(0, 12)}.` : `main is already clean at ${headSha.slice(0, 12)}.`);
+    parkHeadSha = requireSha(gitText(["rev-parse", "origin/main"]).trim(), "Main park origin/main");
+    run("git", ["merge", "--ff-only", parkHeadSha]);
+    const headSha = requireCleanAtSha(gitText, parkHeadSha, "Main park");
+    log(stash ? `Parked ${branch} in ${stash.ref} at ${stash.sha.slice(0, 12)}; canonical main is pinned at ${headSha.slice(0, 12)}.` : `main is already clean at ${headSha.slice(0, 12)}.`);
     return parkResult({ branch, headSha, stash });
   }
   if (!branch.startsWith("agent/")) throw new Error(`Refusing unexpected device branch: ${branch}`);
@@ -67,7 +69,7 @@ export function park({
     if (lease.parkStashSha) dropParkedStashObject({ lease, repo, gitText, run });
     run("git", ["fetch", "origin", "main"]);
     const timestamp = instant.toISOString();
-    const parkHeadSha = requireSha(gitText(["rev-parse", "origin/main"]).trim(), "Park origin/main");
+    parkHeadSha = requireSha(gitText(["rev-parse", "origin/main"]).trim(), "Park origin/main");
     const parkValues = {
       parkHeadSha,
       parkBranchHeadSha: branchHeadSha,
@@ -94,15 +96,19 @@ export function park({
       timestamp,
       values: parkValues,
     });
+    if (lease.parkHeadSha !== parkHeadSha) {
+      throw new Error(`Released park lease changed its pinned main SHA from ${parkHeadSha} to ${lease.parkHeadSha || "missing"}.`);
+    }
   } else {
     requireClean(gitText);
     requireParkedPullRequest(lease, ghText);
     stash = requireParkedStashObject({ lease, gitText, gitOptional });
+    parkHeadSha = requireSha(lease.parkHeadSha, "Parked lease main SHA");
     run("git", ["fetch", "origin", "main"]);
   }
 
-  run("git", ["switch", "--detach", "origin/main"]);
-  const headSha = requireCleanMain(gitText);
+  run("git", ["switch", "--detach", parkHeadSha]);
+  const headSha = requireCleanAtSha(gitText, parkHeadSha, "Detached park");
   const summary = stash
     ? `Parked ${branch} in ${stash.ref} at ${stash.sha.slice(0, 12)}; task worktree is detached at ${headSha.slice(0, 12)}.`
     : `Detached the task worktree from ${branch} at ${headSha.slice(0, 12)}.`;
@@ -439,10 +445,11 @@ function requireRemoteFence({ branch, lease, gitOptional }) {
   }
 }
 
-function requireCleanMain(gitText) {
+function requireCleanAtSha(gitText, expectedSha, label) {
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
-  if (headSha !== canonicalSha) throw new Error(`main must match origin/main after park; local main is ${headSha.slice(0, 12)} but origin/main is ${canonicalSha.slice(0, 12)}`);
+  if (headSha !== expectedSha) {
+    throw new Error(`${label} HEAD ${headSha.slice(0, 12)} does not match pinned main ${expectedSha.slice(0, 12)}.`);
+  }
   requireClean(gitText);
   return headSha;
 }

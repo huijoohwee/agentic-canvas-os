@@ -51,12 +51,12 @@ The three dictionaries remain the only authority for `/`, `#`, and `@` token ide
 | Source class | Deterministic extraction | Typed boundary |
 |---|---|---|
 | Parser-supported code | Local concrete or abstract syntax parser emits files, declarations, symbols, imports, calls, inheritance, references, and containment supported by that parser. | Unsupported language or syntax is reported with parser identity and reason; regex guesses do not masquerade as AST facts. |
-| Markdown and text docs | Local structural parser emits documents, headings, code fences, links, and explicit named references. | Authored text may support lexical references only; no model invents concepts or relationships. |
+| Markdown; other text docs | Local structural parser emits a source document, Markdown headings, containment, Markdown links, and bounded non-code text units for lexical query. | Plain-text and unregistered document formats remain inventory-only with typed unsupported diagnostics; code fences and prose references are not promoted to inferred graph relationships. |
 | SQL | Local statement parser emits tables, columns, primary keys, foreign-key references, and exact-name cross-file table resolution. | Unrecognized dialect constructs remain typed omissions rather than approximate edges. |
-| JSON, YAML, TOML, and registered configs | Local format parser emits files, keys, sections, declared references, and bounded value metadata. | Secrets and raw credential-like values are redacted or omitted; configuration never authorizes execution. |
-| Text-bearing PDF | Local deterministic text extraction emits document, page, section, and explicit reference evidence. | Encrypted, malformed, image-only, or extraction-unavailable input returns a typed gap; OCR and model fallbacks are outside this contract. |
+| JSON, YAML, TOML, and registered configs | Local format parser emits source files, JSON object keys and array positions, scalar value types, and structural config sections, blocks, keys, or instruction names. | Raw scalar, assignment, command, and credential values are omitted; configuration never authorizes execution or implies a reference edge. |
+| Text-bearing PDF | Local deterministic text extraction feeds page headings, bounded extracted text units, extracted headings, and Markdown-style links into the same structural document parser. | Encrypted, malformed, image-only, or extraction-unavailable input returns a typed gap; zero extracted text does too, while OCR, prose-reference inference, and model fallbacks remain outside this contract. |
 
-The runtime normalizes `@working-directory`, rejects traversal and symlink escape, never scans a home directory or unrelated repository implicitly, and orders admitted workspace-relative paths by a locale-independent ordinal comparator. Every admitted file is bound to its byte digest. Parser identity, parser revision, source digest, and typed omission counts are part of `@runtime-proof`.
+The runtime normalizes `@working-directory`, rejects traversal and symlink escape, never scans a home directory or unrelated repository implicitly, and orders admitted workspace-relative paths by a locale-independent ordinal comparator. Every admitted file is bound to its byte digest. Parser identity, parser revision, source digest, and typed diagnostics are part of `@runtime-proof`.
 
 ## Graph Snapshot
 

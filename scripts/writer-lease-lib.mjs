@@ -91,7 +91,14 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       const current = registry.leases[branch] || null;
       const instant = now();
       const normalizedWorktreePath = path.resolve(worktreePath);
+      if (current?.status === "completing") {
+        throw new Error(`Branch ${branch} is completing merged cleanup and cannot be reclaimed.`);
+      }
       for (const candidate of Object.values(registry.leases)) {
+        if (candidate?.status === "completing" && candidate.branch !== branch &&
+            path.resolve(candidate.worktreePath) === normalizedWorktreePath) {
+          throw new Error(`Worktree ${normalizedWorktreePath} is completing merged cleanup for ${candidate.scope}.`);
+        }
         if (!isActive(candidate, instant) || candidate.branch === branch) continue;
         if (path.resolve(candidate.worktreePath) === normalizedWorktreePath) {
           throw new Error(
@@ -187,12 +194,17 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
-  function complete({ branch, pullRequestUrl, mergeCommitSha, mainSha }) {
+  function beginCompletion({ branch, pullRequestUrl, mergeCommitSha, mainSha }) {
     requireSha(mergeCommitSha, "mergeCommitSha");
     requireSha(mainSha, "mainSha");
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
+      if (["completing", "completed"].includes(current?.status)) {
+        if (current.pullRequestUrl === pullRequestUrl && current.completion?.mergeCommitSha === mergeCommitSha &&
+            /^[0-9a-f]{40}$/.test(String(current.completion?.mainSha || ""))) return current;
+        throw new Error(`Completion intent for ${branch} does not match the requested merge evidence.`);
+      }
       if (!current || !["active", "delivery", "review_ready"].includes(current.status)) {
         throw new Error(`No completable writer lease owns ${branch}.`);
       }
@@ -202,8 +214,43 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       const timestamp = now().toISOString();
       const lease = {
         ...current,
-        status: "completed",
+        status: "completing",
         pullRequestUrl,
+        completion: { mergeCommitSha, mainSha },
+        heartbeatAt: timestamp,
+        expiresAt: timestamp,
+      };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
+      return lease;
+    });
+  }
+
+  function complete({ branch, pullRequestUrl, mergeCommitSha, mainSha }) {
+    requireSha(mergeCommitSha, "mergeCommitSha");
+    requireSha(mainSha, "mainSha");
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (current?.status === "completed") {
+        if (current.pullRequestUrl === pullRequestUrl && current.completion?.mergeCommitSha === mergeCommitSha &&
+            current.completion?.mainSha === mainSha) return current;
+        throw new Error(`Completed writer lease for ${branch} does not match the requested merge evidence.`);
+      }
+      if (!current || current.status !== "completing") {
+        throw new Error(`No completing writer lease owns ${branch}.`);
+      }
+      if (current.pullRequestUrl !== pullRequestUrl || current.completion?.mergeCommitSha !== mergeCommitSha ||
+          !/^[0-9a-f]{40}$/.test(String(current.completion?.mainSha || ""))) {
+        throw new Error(`Completion intent for ${branch} does not match the requested merge evidence.`);
+      }
+      const timestamp = now().toISOString();
+      const lease = {
+        ...current,
+        status: "completed",
         completion: { mergeCommitSha, mainSha },
         heartbeatAt: timestamp,
         expiresAt: timestamp,
@@ -274,7 +321,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     }
   }
 
-  return { annotate, claim, complete, heartbeat, read, readRegistry, release, rollbackClaim, statePath, verify };
+  return { annotate, beginCompletion, claim, complete, heartbeat, read, readRegistry, release, rollbackClaim, statePath, verify };
 }
 
 export function renderWriterLeasePullRequestBody(lease) {
@@ -315,7 +362,16 @@ function renderWriterLeaseMarker(lease) {
     expiresAt: lease.expiresAt,
     ...(lease.reviewHeadSha ? { reviewHeadSha: lease.reviewHeadSha } : {}),
     ...(lease.deliveryHeadSha ? { deliveryHeadSha: lease.deliveryHeadSha } : {}),
-    ...(lease.parkHeadSha ? { parkHeadSha: lease.parkHeadSha, parkStashRef: lease.parkStashRef ?? null } : {}),
+    ...(lease.parkHeadSha ? {
+      parkHeadSha: lease.parkHeadSha,
+      parkBranchHeadSha: lease.parkBranchHeadSha,
+      parkSourceEpoch: lease.parkSourceEpoch,
+      parkSourceFenceSha: lease.parkSourceFenceSha,
+      parkStashRef: lease.parkStashRef ?? null,
+      parkStashSha: lease.parkStashSha ?? null,
+      parkStashMessage: lease.parkStashMessage ?? null,
+      parkStashStatus: lease.parkStashStatus ?? null,
+    } : {}),
     ...(lease.completion || {}),
   });
   return `<!-- ${WRITER_LEASE_SCHEMA} ${payload} -->`;

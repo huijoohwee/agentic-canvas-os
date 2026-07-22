@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { resume, review } from "../scripts/device-branch-lib.mjs";
+import { heartbeat, park, resume, review } from "../scripts/device-branch-lib.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const repo = process.cwd();
@@ -40,9 +40,32 @@ function gitText(args) {
   return values[key];
 }
 
+test("heartbeat fails closed before renewal when an active ownership PR was manually readied", () => {
+  let renewed = false;
+  const calls = [];
+  assert.throws(() => heartbeat({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => `${lease.fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson({ body: renderWriterLeasePullRequestBody(lease), isDraft: false }),
+    leaseStore: {
+      verify: () => lease,
+      heartbeat: () => { renewed = true; },
+    },
+    sessionId: "session-a",
+    leaseTtlMs: 1_800_000,
+    run: (command, args) => calls.push([command, ...args]),
+  }), /must be draft/);
+  assert.equal(renewed, false);
+  assert.deepEqual(calls, []);
+});
+
 test("review validates, pushes, and marks the matching PR ready without merge", () => {
   const calls = [];
   const originalBody = "## Work item\n\nAcceptance stays visible.";
+  let remoteBody = originalBody;
+  let isDraft = true;
   let saved = lease;
   const result = review({
     invocationPath: repo,
@@ -51,8 +74,8 @@ test("review validates, pushes, and marks the matching PR ready without merge", 
     gitOptional: () => "",
     ghText: args => args[1] === "list"
       ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
-      : originalBody,
-    ghOptional: args => args.includes("isDraft") ? "true" : pullRequestUrl,
+      : pullRequestJson({ body: remoteBody, isDraft }),
+    ghOptional: () => pullRequestUrl,
     leaseStore: {
       read: () => saved,
       verify: () => saved,
@@ -60,13 +83,18 @@ test("review validates, pushes, and marks the matching PR ready without merge", 
       release: ({ status }) => { saved = { ...saved, status }; return saved; },
     },
     sessionId: "session-a",
-    run: (command, args) => calls.push([command, ...args]),
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") remoteBody = args[args.indexOf("--body") + 1];
+    },
     log: () => {},
   });
 
   assert.equal(result, pullRequestUrl);
   assert.equal(saved.status, "review_ready");
   assert.equal(saved.reviewHeadSha, headSha);
+  assert.equal(isDraft, false);
   assert.ok(calls.some(call => call.join(" ") === "npm run check"));
   assert.ok(calls.some(call => call[0] === "git" && call[1] === "push"));
   assert.ok(calls.some(call => call.join(" ") === `gh pr ready ${pullRequestUrl}`));
@@ -87,9 +115,7 @@ test("review replays an exact same-session ready handoff without verification or
     gitOptional: () => `${headSha}\trefs/heads/${branch}`,
     ghText: args => args[1] === "list"
       ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
-      : args.includes("state,isDraft")
-        ? JSON.stringify({ state: "OPEN", isDraft: false })
-        : "## Work item\n\nPreserve me.",
+      : pullRequestJson({ body: "## Work item\n\nPreserve me.", isDraft: false }),
     ghOptional: () => pullRequestUrl,
     leaseStore: { read: () => ready },
     sessionId: "session-a",
@@ -111,6 +137,8 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
   const nextFence = "d".repeat(40);
   let headReads = 0;
   let claimInput = null;
+  let isDraft = false;
+  let remoteBody = renderWriterLeasePullRequestBody(prior);
   const resumed = { ...prior, status: "active", epoch: 4, sessionId: "session-b", fenceSha: nextFence };
   const result = resume({
     branchName: branch,
@@ -131,25 +159,87 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
       return values[key];
     },
     gitOptional: args => args[0] === "config" ? "device-b" : "",
-    ghText: () => JSON.stringify([{
+    ghText: args => args[1] === "list" ? JSON.stringify([{
       number: 42,
       headRefName: branch,
       url: pullRequestUrl,
-      body: renderWriterLeasePullRequestBody(prior),
-    }]),
+      body: remoteBody,
+    }]) : pullRequestJson({ body: remoteBody, isDraft }),
     leaseStore: {
-      claim: input => { claimInput = input; return { ...resumed, fenceSha: null }; },
+      read: () => prior,
+      claim: input => { calls.push(["lease", "claim"]); claimInput = input; return { ...resumed, fenceSha: null }; },
       annotate: () => resumed,
     },
     sessionId: "session-b",
     leaseTtlMs: 1_800_000,
-    run: (command, args) => calls.push([command, ...args]),
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready" && args.includes("--undo")) isDraft = true;
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") remoteBody = args[args.indexOf("--body") + 1];
+    },
     log: () => {},
   });
 
   assert.equal(claimInput.previousEpoch, 3);
   assert.equal(claimInput.sessionId, "session-b");
   assert.equal(result.fenceSha, nextFence);
+  assert.equal(isDraft, true);
+  assert.ok(calls.findIndex(call => call.join(" ") === `gh pr ready --undo ${pullRequestUrl}`) <
+    calls.findIndex(call => call.join(" ") === "lease claim"));
   assert.equal(calls.some(call => call[1] === "switch"), false);
   assert.ok(calls.some(call => call.join(" ") === `git push origin ${branch}`));
+
+  const parkCalls = [];
+  const mainSha = "a".repeat(40);
+  let parkedLease = null;
+  let parkHeadReads = 0;
+  const parked = park({
+    invocationPath: repo,
+    repo,
+    gitText: args => {
+      const values = {
+        "worktree list --porcelain -z": `worktree ${repo}\0HEAD ${nextFence}\0branch refs/heads/${branch}\0`,
+        "diff --name-only --diff-filter=U": "",
+        "ls-files -u": "",
+        "branch --show-current": branch,
+        "status --porcelain": "",
+        "stash list --format=%H%x00%gs": "",
+        "rev-parse origin/main": mainSha,
+        "rev-parse HEAD": nextFence,
+      };
+      const key = args.join(" ");
+      if (key === "rev-parse HEAD") return parkHeadReads++ ? mainSha : nextFence;
+      if (!(key in values)) throw new Error(`unexpected park git command: ${key}`);
+      return values[key];
+    },
+    gitOptional: args => args[0] === "ls-remote" ? `${nextFence}\trefs/heads/${branch}` : "",
+    ghText: () => pullRequestJson({ body: remoteBody, isDraft }),
+    leaseStore: {
+      read: () => resumed,
+      verify: () => resumed,
+      release: input => (parkedLease = { ...input.expectedLease, ...input.values, status: "parked" }),
+    },
+    sessionId: "session-b",
+    run: (command, args) => {
+      parkCalls.push([command, ...args]);
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") remoteBody = args[args.indexOf("--body") + 1];
+    },
+    log: () => {},
+    now: () => new Date("2026-07-22T00:05:00.000Z"),
+  });
+  assert.equal(parked.branch, branch);
+  assert.equal(parkedLease.status, "parked");
+  assert.equal(isDraft, true);
+  assert.equal(parkCalls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"), false);
 });
+
+function pullRequestJson({ body, isDraft }) {
+  return JSON.stringify({
+    url: pullRequestUrl,
+    state: "OPEN",
+    isDraft,
+    headRefName: branch,
+    baseRefName: "main",
+    body,
+  });
+}

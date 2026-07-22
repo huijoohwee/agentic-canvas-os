@@ -20,6 +20,7 @@ import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mj
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
+const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({ url, state: "OPEN", isDraft, headRefName: branch, baseRefName: "main", body });
 
 function createGitText(responses) {
   return args => {
@@ -31,22 +32,31 @@ function createGitText(responses) {
   };
 }
 
-function createCompletionLeaseStore() {
+function createCompletionLeaseStore(overrides = {}) {
+  const branch = "agent/device/scope";
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "delivery",
+    epoch: 4,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "scope",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: "f".repeat(40),
+    pullRequestUrl: "https://github.com/example/repo/pull/42",
+    heartbeatAt: "2026-07-20T10:00:00.000Z",
+    expiresAt: "2026-07-20T10:00:00.000Z",
+    ...overrides,
+  };
   return {
-    complete: ({ branch, pullRequestUrl, mergeCommitSha, mainSha }) => ({
-      schema: "agentic-writer-lease/v2",
-      status: "completed",
-      epoch: 4,
-      sessionId: "chat-a",
-      device: "device",
-      scope: "scope",
-      branch,
-      baseSha: "a".repeat(40),
-      fenceSha: "f".repeat(40),
-      pullRequestUrl,
-      heartbeatAt: "2026-07-20T10:00:00.000Z",
-      expiresAt: "2026-07-20T10:00:00.000Z",
-      completion: { mergeCommitSha, mainSha },
+    read: requested => requested ? lease : { leases: { [branch]: lease } },
+    beginCompletion: ({ pullRequestUrl, mergeCommitSha, mainSha }) => (lease = {
+      ...lease, status: "completing", pullRequestUrl, completion: { mergeCommitSha, mainSha },
+    }),
+    complete: ({ pullRequestUrl, mergeCommitSha, mainSha }) => (lease = {
+      ...lease, status: "completed", pullRequestUrl, completion: { mergeCommitSha, mainSha },
     }),
   };
 }
@@ -76,7 +86,6 @@ test("start rejects an invalid device before checkout mutation", () => {
     "status --porcelain": "",
     "branch --show-current": "",
   });
-
   assert.throws(() => start({
     scope: "runtime-leases",
     invocationPath: repo,
@@ -95,6 +104,7 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
   const calls = [];
   const annotations = [];
   const logs = [];
+  const pullRequestUrl = "https://github.test/pull/1";
   const gitText = createGitText({
     "worktree list --porcelain -z": detachedWorktree,
     "diff --name-only --diff-filter=U": "",
@@ -134,14 +144,14 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
       };
     },
   };
-
   const branch = start({
     scope: "runtime-leases",
     invocationPath: repo,
     repo,
     gitText,
     gitOptional: args => args[0] === "config" ? "device" : "",
-    ghText: args => args[0] === "pr" && args[1] === "list" ? "[]" : "https://github.test/pull/1\n",
+    ghText: args => args[1] === "list" ? "[]" : args[1] === "create" ? `${pullRequestUrl}\n` :
+      pullJson(pullRequestUrl, "agent/device/runtime-leases"),
     leaseStore,
     sessionId: "chat-a",
     leaseTtlMs: 1_800_000,
@@ -164,75 +174,6 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
   assert.doesNotMatch(logs[0], /chat-a/);
 });
 
-test("park stashes a dirty task branch and detaches its worktree at origin main", () => {
-  const calls = [];
-  const logs = [];
-  const branch = "agent/device/scope";
-  const pullRequestUrl = "https://github.test/pull/1";
-  const activeLease = {
-    schema: "agentic-writer-lease/v2",
-    status: "active",
-    epoch: 1,
-    sessionId: "chat-a",
-    device: "device",
-    scope: "scope",
-    branch,
-    worktreePath: repo,
-    baseSha: "a".repeat(40),
-    fenceSha: "b".repeat(40),
-    pullRequestUrl,
-    heartbeatAt: "2026-07-14T22:00:00.000Z",
-    expiresAt: "2026-07-14T23:00:00.000Z",
-  };
-  const gitText = createGitText({
-    "worktree list --porcelain -z": branchWorktree(branch),
-    "diff --name-only --diff-filter=U": "",
-    "ls-files -u": "",
-    "branch --show-current": `${branch}\n`,
-    "status --porcelain": [" M docs/task.md\n", ""],
-    "stash list --format=%gd -n 1": "stash@{0}\n",
-    "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
-    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
-  });
-
-  const result = park({
-    invocationPath: repo,
-    repo,
-    gitText,
-    gitOptional: () => `${activeLease.fenceSha}\trefs/heads/${branch}`,
-    ghText: () => renderWriterLeasePullRequestBody(activeLease),
-    leaseStore: {
-      read: () => activeLease,
-      verify: () => activeLease,
-      release: input => ({
-        ...input.expectedLease,
-        ...input.values,
-        status: "parked",
-        heartbeatAt: input.timestamp,
-        expiresAt: input.timestamp,
-      }),
-    },
-    sessionId: "chat-a",
-    run: (command, args) => calls.push([command, ...args]),
-    log: message => logs.push(message),
-    now: () => new Date("2026-07-14T22:30:45.123Z"),
-  });
-
-  assert.deepEqual(calls.map(call => call.slice(0, 3)), [
-    ["git", "merge-base", "--is-ancestor"],
-    ["git", "stash", "push"],
-    ["git", "fetch", "origin"],
-    ["gh", "pr", "edit"],
-    ["git", "switch", "--detach"],
-  ]);
-  assert.deepEqual(result, {
-    branch: "agent/device/scope",
-    headSha: "1234567890abcdef1234567890abcdef12345678",
-    stashRef: "stash@{0}",
-  });
-  assert.equal(logs[0], "Parked agent/device/scope in stash@{0}; task worktree is detached at 1234567890ab.");
-});
-
 test("heartbeat rejects a session after the remote fencing commit advances", () => {
   const branch = "agent/device/runtime-leases";
   let renewed = false;
@@ -242,7 +183,6 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
     "ls-files -u": "",
     "branch --show-current": `${branch}\n`,
   });
-
   assert.throws(() => heartbeat({
     invocationPath: repo,
     repo,
@@ -273,12 +213,15 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     "rev-parse HEAD": "c".repeat(40),
   });
   let releaseStatus = null;
+  let isDraft = true;
 
   const result = publish({
     invocationPath: repo,
     repo,
     gitText,
-    ghText: () => JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }]),
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+      : args.includes("--jq") ? "" : pullJson(pullRequestUrl, branch, "", isDraft),
     ghOptional: () => pullRequestUrl,
     leaseStore: {
       verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
@@ -301,7 +244,9 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
       },
     },
     sessionId: "chat-a",
-    run: (command, args) => calls.push([command, ...args]),
+    run: (command, args) => {
+      calls.push([command, ...args]); if (command === "gh" && args[1] === "ready") isDraft = false;
+    },
     log: () => {},
   });
 
@@ -320,6 +265,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
     const calls = [];
     const branch = "agent/old-device/runtime-leases";
     const pullRequestUrl = "https://github.test/pull/1";
+    let isDraft = handoff.status === "parked";
     const priorLease = {
       schema: "agentic-writer-lease/v2",
       status: handoff.status,
@@ -330,7 +276,18 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       branch,
       baseSha: "a".repeat(40),
       fenceSha: "b".repeat(40),
+      ...(handoff.status === "parked" ? {
+        parkHeadSha: "a".repeat(40),
+        parkBranchHeadSha: "c".repeat(40),
+        parkSourceEpoch: 4,
+        parkSourceFenceSha: "b".repeat(40),
+        parkStashRef: null,
+        parkStashSha: null,
+        parkStashMessage: null,
+        parkStashStatus: null,
+      } : {}),
       ...(handoff.status === "review_ready" ? { reviewHeadSha: "c".repeat(40) } : {}),
+      ...(handoff.status === "delivery" ? { deliveryHeadSha: "c".repeat(40) } : {}),
       heartbeatAt: "2026-07-17T10:00:00.000Z",
       expiresAt: "2026-07-17T10:00:00.000Z",
     };
@@ -363,19 +320,18 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       repo,
       gitText,
       gitOptional: args => args[0] === "config" ? "new-device" : "",
-      ghText: () => JSON.stringify([{
-        number: 1,
-        headRefName: branch,
-        url: pullRequestUrl,
-        body: renderWriterLeasePullRequestBody(priorLease),
-      }]),
+      ghText: args => args[1] === "list"
+        ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+        : pullJson(pullRequestUrl, branch, renderWriterLeasePullRequestBody(priorLease), isDraft),
       leaseStore: {
         claim: input => { claimInput = input; return { ...resumedLease, fenceSha: null }; },
         annotate: () => resumedLease,
       },
       sessionId: handoff.sessionId,
       leaseTtlMs: 1_800_000,
-      run: (command, args) => calls.push([command, ...args]),
+      run: (command, args) => {
+        calls.push([command, ...args]); if (command === "gh" && args[1] === "ready" && args[2] === "--undo") isDraft = true;
+      },
       log: () => {},
       now: () => new Date("2026-07-17T10:05:00.000Z"),
     });
@@ -408,6 +364,7 @@ test("resume rejects a delivery revision claimed by another session", () => {
     "ls-files -u": "",
     "status --porcelain": "",
     "branch --show-current": "",
+    [`rev-parse origin/${branch}`]: "b".repeat(40),
   });
 
   assert.throws(() => resume({
@@ -416,12 +373,9 @@ test("resume rejects a delivery revision claimed by another session", () => {
     repo,
     gitText,
     gitOptional: () => "",
-    ghText: () => JSON.stringify([{
-      number: 1,
-      headRefName: branch,
-      url: "https://github.test/pull/1",
-      body: renderWriterLeasePullRequestBody(priorLease),
-    }]),
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: "https://github.test/pull/1" }])
+      : pullJson("https://github.test/pull/1", branch, renderWriterLeasePullRequestBody(priorLease), false),
     leaseStore: {},
     sessionId: "chat-new",
     leaseTtlMs: 1_800_000,
@@ -437,6 +391,7 @@ test("park fails closed when local main does not equal origin/main after refresh
     "ls-files -u": "",
     "branch --show-current": "main\n",
     "status --porcelain": "",
+    "stash list --format=%H%x00%gs": "",
     "rev-parse HEAD": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
     "rev-parse origin/main": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
   });
@@ -446,6 +401,7 @@ test("park fails closed when local main does not equal origin/main after refresh
       invocationPath: repo,
       repo,
       gitText,
+      gitOptional: () => "",
       run: () => {},
     }),
     /main must match origin\/main after park/,
@@ -460,8 +416,9 @@ test("completeSession detaches the task worktree only after the task pull reques
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
-    "stash list --format=%s": "",
+    "stash list --format=%H%x00%gd%x00%gs": "",
     "status --porcelain": ["", ""],
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
     "rev-parse HEAD": [
       "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
       "1234567890abcdef1234567890abcdef12345678\n",
@@ -487,8 +444,8 @@ test("completeSession detaches the task worktree only after the task pull reques
 
   assert.deepEqual(calls, [
     ["git", "fetch", "origin", "main"],
-    ["git", "merge-base", "--is-ancestor", "abcdefabcdefabcdefabcdefabcdefabcdefabcd", "origin/main"],
-    ["git", "switch", "--detach", "origin/main"],
+    ["git", "merge-base", "--is-ancestor", "abcdefabcdefabcdefabcdefabcdefabcdefabcd", "1234567890abcdef1234567890abcdef12345678"],
+    ["git", "switch", "--detach", "1234567890abcdef1234567890abcdef12345678"],
   ]);
   assert.deepEqual(summary, {
     completedBranch: "agent/device/scope",
@@ -506,7 +463,7 @@ test("completeSession fails closed while the pull request is open", () => {
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
-    "stash list --format=%s": "",
+    "stash list --format=%H%x00%gd%x00%gs": "",
     "status --porcelain": "",
   });
 
@@ -522,6 +479,7 @@ test("completeSession fails closed while the pull request is open", () => {
         mergeCommit: null,
         headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
       }),
+      leaseStore: createCompletionLeaseStore(),
       run: () => {},
     }),
     /remains pending.*not merged/,
@@ -534,7 +492,7 @@ test("completeSession fails closed while task work remains parked", () => {
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
-    "stash list --format=%s": "On agent/device/scope: park: agent/device/scope 20260717T010203Z\n",
+    "stash list --format=%H%x00%gd%x00%gs": `${"f".repeat(40)}\0stash@{0}\0On agent/device/scope: park: agent/device/scope 20260717T010203Z\n`,
     "status --porcelain": "",
   });
 
@@ -544,6 +502,7 @@ test("completeSession fails closed while task work remains parked", () => {
       repo,
       gitText,
       ghText: () => "",
+      leaseStore: createCompletionLeaseStore(),
       run: () => {},
     }),
     /remains parked in a named stash/,
@@ -557,8 +516,9 @@ test("completeSession emits machine-readable merge and main evidence", () => {
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "branch --show-current": "agent/device/scope\n",
-    "stash list --format=%s": "",
+    "stash list --format=%H%x00%gd%x00%gs": "",
     "status --porcelain": ["", ""],
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
     "rev-parse HEAD": [
       "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
       "1234567890abcdef1234567890abcdef12345678\n",
@@ -594,4 +554,68 @@ test("completeSession emits machine-readable merge and main evidence", () => {
     logs[0],
     JSON.stringify(summary),
   );
+});
+
+test("completeSession pins fetched origin/main when another worktree advances the shared ref", () => {
+  const oldMain = "1".repeat(40);
+  const newMain = "2".repeat(40);
+  const calls = [];
+  let originReads = 0;
+  const baseGitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": ["agent/device/scope", "agent/device/scope"],
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": ["", ""],
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+    "rev-parse HEAD": [
+      "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+      oldMain,
+    ],
+  });
+  const gitText = args => args.join(" ") === "rev-parse origin/main"
+    ? (++originReads === 1 ? oldMain : newMain)
+    : baseGitText(args);
+  const summary = completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify({
+      state: "MERGED", baseRefName: "main",
+      url: "https://github.com/example/repo/pull/42",
+      mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+      headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+    }),
+    leaseStore: createCompletionLeaseStore(),
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  });
+
+  assert.equal(summary.mainSha, oldMain);
+  assert.equal(originReads, 1);
+  assert.deepEqual(calls.filter(call => call[0] === "git" && call[1] === "switch"), [
+    ["git", "switch", "--detach", oldMain],
+  ]);
+  assert.ok(calls.some(call => call.join(" ") ===
+    `git merge-base --is-ancestor abcdefabcdefabcdefabcdefabcdefabcdefabcd ${oldMain}`));
+});
+
+test("completeSession rejects partial parked-stash completion evidence", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope",
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": "",
+  });
+  assert.throws(() => completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => "",
+    leaseStore: createCompletionLeaseStore({ parkStashSha: "f".repeat(40), parkStashStatus: null }),
+    run: () => {},
+  }), /Parked stash evidence is incomplete/);
 });

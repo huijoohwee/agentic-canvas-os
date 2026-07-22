@@ -28,11 +28,20 @@ test("managed implementation contract exposes the exact MCP and lifecycle bounda
   assert.match(managed, /managed-run default terminal state is `delivery_ready`/);
   assert.match(managed, /ACOS lease\/CLI has reached `review_ready`/);
   assert.match(managed, /agentic-device-command-result\/v1/);
+  assert.match(managed, /pullRequest: \{ url, number, isDraft \}/);
+  assert.match(managed, /A manually readied active PR makes heartbeat fail before lease renewal/);
+  assert.match(managed, /gh pr ready --undo/);
+  assert.match(managed, /Resume is replay-safe after PR demotion, local claim, empty claim commit, lease annotation, remote push, or PR-body edit/);
+  assert.match(managed, /verifier profile ids/);
+  assert.match(managed, /exact host-owned command/);
+  assert.match(managed, /96-bit run-id suffix/);
+  assert.match(managed, /stash@\{0\}.*never durable evidence/);
+  assert.match(managed, /stashRef`, `stashSha`, and `stashStatus`/);
   assert.match(managed, /No Symphony code, prose, prompt, schema/);
   assert.match(managed, /automatic merge|automerge/);
   assert.match(managed, /deploy/);
   assert.equal(packageJson.scripts["device:review"], "node ./scripts/device-branch.mjs review");
-  assert.equal(packageJson.scripts["managed-implementation-runs:check"], "node --test __tests__/managed-implementation-runs-contract.test.mjs __tests__/device-branch-cli.test.mjs __tests__/device-command-result.test.mjs __tests__/device-park.test.mjs __tests__/device-resume.test.mjs __tests__/device-review.test.mjs __tests__/device-start.test.mjs __tests__/task-worktree-provision.test.mjs");
+  assert.equal(packageJson.scripts["managed-implementation-runs:check"], "node --test __tests__/managed-implementation-runs-contract.test.mjs __tests__/device-branch-cli.test.mjs __tests__/device-command-result.test.mjs __tests__/device-park-stash.test.mjs __tests__/device-park.test.mjs __tests__/device-resume.test.mjs __tests__/device-review-resume-recovery.test.mjs __tests__/device-review.test.mjs __tests__/device-start.test.mjs __tests__/task-worktree-provision.test.mjs");
   assert.doesNotMatch(JSON.stringify({
     dependencies: packageJson.dependencies,
     devDependencies: packageJson.devDependencies,

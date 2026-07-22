@@ -65,13 +65,14 @@ test("park replays an exact parked lease after detachment was interrupted", () =
     expiresAt: "2026-07-22T01:00:00.000Z",
   };
   let remoteBody = renderWriterLeasePullRequestBody(lease);
+  let isDraft = true;
   let detachAttempts = 0;
   let detached = false;
   const values = {
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
-    "rev-parse HEAD": mainSha,
+    "stash list --format=%H%x00%gs": "",
     "rev-parse origin/main": mainSha,
   };
   const context = {
@@ -85,11 +86,19 @@ test("park replays an exact parked lease after detachment was interrupted", () =
           : `worktree ${repo}\0HEAD ${fenceSha}\0branch refs/heads/${branch}\0`;
       }
       if (key === "branch --show-current") return detached ? "" : branch;
+      if (key === "rev-parse HEAD") return detached ? mainSha : fenceSha;
       if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
       return values[key];
     },
-    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
-    ghText: () => remoteBody,
+    gitOptional: args => args[0] === "ls-remote" ? `${fenceSha}\trefs/heads/${branch}` : "",
+    ghText: () => JSON.stringify({
+      url: pullRequestUrl,
+      state: "OPEN",
+      isDraft,
+      headRefName: branch,
+      baseRefName: "main",
+      body: remoteBody,
+    }),
     leaseStore: {
       read: requestedBranch => requestedBranch ? lease : { leases: { [branch]: lease } },
       verify: () => lease,
@@ -113,10 +122,12 @@ test("park replays an exact parked lease after detachment was interrupted", () =
 
   assert.throws(() => park(context), /detachment interrupted/);
   assert.equal(lease.status, "parked");
+  assert.equal(isDraft, true);
   const result = park(context);
   assert.equal(result.branch, branch);
   assert.equal(result.headSha, mainSha);
   assert.equal(detachAttempts, 2);
   const replay = park(context);
   assert.deepEqual(replay, result);
+  assert.equal(isDraft, true);
 });

@@ -12,6 +12,7 @@ import {
   renderWriterLeasePullRequestBody,
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
+import { requireOwnershipPullRequestDraft } from "./device-pull-request-state.mjs";
 
 export function start({
   scope,
@@ -43,11 +44,17 @@ export function start({
   }
   const openBefore = readOpenPullRequests(ghText);
   const existingOwner = requireSingleOwner(openBefore, branch);
+  if (existingOwner?.isDraft !== undefined && existingOwner.isDraft !== true) {
+    throw new Error(`Ownership pull request ${existingOwner.url} must be draft before device:start.`);
+  }
   let lease = leaseStore.read?.(branch) || null;
   let freshClaim = false;
 
   if (lease) {
     requireRecoverableLease({ lease, branch, device, scope: normalizedScope, repo, sessionId });
+    if (lease.pullRequestUrl && (!existingOwner || existingOwner.url !== lease.pullRequestUrl)) {
+      throw new Error(`Draft pull request evidence for ${branch} does not match ${lease.pullRequestUrl}.`);
+    }
     if (!currentBranch && !worktree.detached) throw new Error("device:start recovery requires a detached or exact attached task worktree.");
     if (Date.parse(lease.expiresAt) <= now().getTime() && lease.pullRequestUrl) {
       throw new Error("Completed start lease expired; use the explicit park/resume handoff instead of renewing it through start.");
@@ -130,6 +137,7 @@ export function start({
     if (!url) throw new Error(`GitHub did not return a draft pull request URL for ${branch}.`);
     lease = leaseStore.annotate({ sessionId, branch, values: { pullRequestUrl: url } });
   }
+  requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: true });
   log(`Claimed ${branch} in ${url} with fence ${headSha.slice(0, 12)}; heartbeat before ${lease.expiresAt}.`);
   return branch;
 }

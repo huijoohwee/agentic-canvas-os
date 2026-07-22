@@ -4,6 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import path from "node:path";
 import { completeSession, heartbeat, park, publish, resume, review, start } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
+import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { provisionTaskWorktree, rollbackUnclaimedProvision } from "./task-worktree-provision.mjs";
 import { createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS } from "./writer-lease-lib.mjs";
 
@@ -98,6 +99,7 @@ function emitJson(action, context, result, { provisioned }) {
   }
   const branch = resolveResultBranch(action, result);
   const lease = branch ? context.leaseStore.read(branch) : null;
+  const pullRequestIsDraft = lease?.pullRequestUrl ? readMachinePullRequestDraft({ action, branch, lease, ghText: context.ghText }) : null;
   console.log(JSON.stringify(createDeviceCommandResult({
     action,
     repoRoot: context.repo,
@@ -106,7 +108,23 @@ function emitJson(action, context, result, { provisioned }) {
     lease,
     result,
     provisioned,
+    pullRequestIsDraft,
   })));
+}
+
+function readMachinePullRequestDraft({ action, branch, lease, ghText }) {
+  const pullRequest = readOwnershipPullRequest({
+    url: lease.pullRequestUrl,
+    branch,
+    ghText,
+    requireOpen: action !== "publish",
+  });
+  const expected = ["start", "resume", "heartbeat", "park"].includes(action) ? true :
+    ["review", "publish"].includes(action) ? false : null;
+  if (expected !== null && pullRequest.isDraft !== expected) {
+    throw new Error(`Machine result for ${action} cannot prove pull request draft state ${expected}.`);
+  }
+  return pullRequest.isDraft;
 }
 
 function resolveResultBranch(action, result) {

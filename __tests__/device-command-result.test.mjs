@@ -33,6 +33,7 @@ test("device command results project stable lease and pull-request evidence", ()
     branch: lease.branch,
     lease,
     result: lease.branch,
+    pullRequestIsDraft: true,
   });
 
   assert.equal(result.schema, DEVICE_COMMAND_RESULT_SCHEMA);
@@ -41,6 +42,7 @@ test("device command results project stable lease and pull-request evidence", ()
   assert.deepEqual(result.pullRequest, {
     url: lease.pullRequestUrl,
     number: 42,
+    isDraft: true,
   });
   assert.equal(result.lease.epoch, 12);
   assert.equal(result.lease.fenceSha, "b".repeat(40));
@@ -59,6 +61,8 @@ test("park results retain deterministic detached-worktree evidence", () => {
   assert.equal(result.branch, "agent/device/scope");
   assert.equal(result.headSha, "c".repeat(40));
   assert.equal(result.stashRef, null);
+  assert.equal(result.stashSha, null);
+  assert.equal(result.stashStatus, null);
   assert.equal(result.lease, null);
 });
 
@@ -98,10 +102,12 @@ test("every managed lifecycle action preserves its authoritative branch and leas
       lease: { ...lease, status },
       result: { branch: lease.branch },
       provisioned: action === "start",
+      pullRequestIsDraft: !["review", "publish"].includes(action),
     });
     assert.equal(result.action, action);
     assert.equal(result.status, status);
     assert.equal(result.branch, lease.branch);
     assert.equal(result.provisioned, action === "start");
+    assert.equal(result.pullRequest.isDraft, !["review", "publish"].includes(action));
   }
 });

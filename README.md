@@ -41,8 +41,11 @@ Safe pause or blocked exit:
 npm run device:park
 ```
 
-This preserves local task-branch work, detaches that task worktree at fetched
-`origin/main`, and marks the task as paused or blocked. A parked branch is never
+This preserves local task-branch work, proves the ownership pull request remains
+draft, pins dirty work to an immutable per-lease stash ref and commit, detaches
+that task worktree at fetched `origin/main`, and marks the task as paused or
+blocked. Exact same-session resume restores and verifies that object; moving
+`stash@{n}` selectors are never lifecycle identity. A parked branch is never
 completed work.
 
 Managed autonomous runs hand work to the team without merging it:
@@ -51,7 +54,7 @@ Managed autonomous runs hand work to the team without merging it:
 npm run device:review -- --json
 ```
 
-This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes. `device:publish` remains the separate explicit protected-delivery action.
+This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes; it restores and proves draft ownership before a new writer claim. `device:publish` remains the separate explicit protected-delivery action.
 
 Mandatory completion gate:
 
@@ -62,7 +65,10 @@ npm run device:complete -- --json
 This fails while work is dirty, stashed, branch-only, or attached to an open
 pull request. After the protected Dev pull request is merged, it verifies the
 merge commit is contained by `origin/main`, detaches the clean task worktree at
-that exact revision, and emits the pull request, merge, and main SHAs. Fast-forward
+that exact revision, and emits the pull request, merge, and main SHAs. Completion
+first records a durable `completing` cleanup intent, retires only the exact
+restored stash/ref, and records `completed` only after clean detachment; retries
+finish any interrupted phase and accept a later descendant `origin/main`. Fast-forward
 the registered main worktree separately with `npm run sync:live` before runtime
 acceptance. `device:end` uses the same fail-closed completion gate; use
 `device:park` for paused or blocked work.

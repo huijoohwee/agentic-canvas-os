@@ -39,11 +39,15 @@ test("managed implementation contract exposes the exact MCP and lifecycle bounda
   }), /symphony/i);
 });
 
-test("managed runner evidence states the implemented redaction boundary", () => {
+test("managed runner evidence states the implemented redaction and truncation boundary", () => {
   assert.match(managed, /exact configured runner environment values/);
   assert.match(managed, /heuristic secret-key labels/);
   assert.match(managed, /cannot recognize arbitrary file-derived secrets or environment dumps/);
   assert.match(managed, /Callers and runners must not emit secrets/);
+  assert.match(managed, /Output portions beyond `maxOutputBytes` are truncated before durable storage or return/);
+  assert.match(managed, /evidence marks that truncation/);
+  assert.match(managed, /does not by itself reject the producer or run/);
+  assert.doesNotMatch(managed, /Oversized logs are rejected/);
   assert.doesNotMatch(managed, /Secrets, credentials, environment dumps, and oversized logs are redacted or rejected/);
 });
 

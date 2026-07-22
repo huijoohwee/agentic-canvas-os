@@ -15,7 +15,7 @@ publish_policy: "Dev-only until explicit operator approval"
 invocation:
   action: "/application.compose"
   semantics: ["#application-composition", "#runtime-ready"]
-  bindings: ["@application-manifest", "@component-catalog", "@integration-profile", "@runtime-proof", "@operator"]
+  bindings: ["@application-manifest", "@component-catalog", "@integration-profile", "@runtime-proof"]
 mcp_tools:
   - "knowgrph.application.catalog"
   - "knowgrph.application.plan"

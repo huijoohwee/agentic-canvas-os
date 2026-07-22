@@ -21,6 +21,15 @@ const routes = [
 ];
 
 test("application composition invocation tokens are canonical dictionary facts", () => {
+  const frontmatterBindings = readInvocationList(application, "bindings");
+  assert.deepEqual(frontmatterBindings, [
+    "@application-manifest",
+    "@component-catalog",
+    "@integration-profile",
+    "@runtime-proof",
+  ]);
+  assert.equal(frontmatterBindings.includes("@operator"), false);
+
   for (const [file, token] of routes) {
     const source = read(file);
     assert.equal(matches(source, `^  - "${escapeRegExp(token)}"$`).length, 1, `${token} frontmatter`);
@@ -119,6 +128,17 @@ function read(file) {
 
 function matches(source, pattern) {
   return [...source.matchAll(new RegExp(pattern, "gm"))];
+}
+
+function readInvocationList(source, key) {
+  const frontmatterEnd = source.indexOf("\n---\n", 4);
+  assert.ok(source.startsWith("---\n") && frontmatterEnd > 4, "frontmatter");
+  const frontmatter = source.slice(4, frontmatterEnd);
+  const invocation = frontmatter.match(/^invocation:\n((?:  .+\n?)+)/m);
+  assert.ok(invocation, "invocation frontmatter");
+  const line = invocation[1].match(new RegExp(`^  ${escapeRegExp(key)}: \\[(.*)\\]$`, "m"));
+  assert.ok(line, `invocation.${key}`);
+  return [...line[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
 }
 
 function escapeRegExp(value) {

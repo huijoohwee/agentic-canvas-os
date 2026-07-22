@@ -13,9 +13,9 @@ runtime_claim: "Agentic Canvas OS owns invocation truth; Knowgrph local MCP owns
 runtime_proof: "RUNTIME-PROOF.md"
 publish_policy: "Dev-only until explicit operator approval"
 invocations:
-  - {action: "/knowledge.graph.ingest", semantics: ["#knowledge-graph"], bindings: ["@working-directory", "@knowledge-graph", "@operator", "@runtime-proof"]}
-  - {action: "/knowledge.graph.query", semantics: ["#knowledge-graph"], bindings: ["@knowledge-graph", "@runtime-proof"]}
-  - {action: "/knowledge.graph.explain", semantics: ["#knowledge-graph"], bindings: ["@knowledge-graph", "@runtime-proof"]}
+  - {action: "/knowledge.graph.ingest", semantics: ["#knowledge-graph", "#mcp", "#runtime-ready"], bindings: ["@working-directory", "@knowledge-graph", "@operator", "@runtime-proof"]}
+  - {action: "/knowledge.graph.query", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
+  - {action: "/knowledge.graph.explain", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
 mcp_dispatch:
   "/knowledge.graph.ingest": "knowgrph.knowledge_graph.ingest"
   "/knowledge.graph.query": "knowgrph.knowledge_graph.query"
@@ -38,9 +38,9 @@ The referenced [Graphify repository](https://github.com/Graphify-Labs/graphify) 
 
 | Host invocation | Exact Knowgrph local MCP tool | Boundary |
 |---|---|---|
-| `/knowledge.graph.ingest #knowledge-graph @working-directory @knowledge-graph @operator @runtime-proof` | `knowgrph.knowledge_graph.ingest` | Creates or replaces only the requested generated snapshot under the bounded workspace artifact owner. |
-| `/knowledge.graph.query #knowledge-graph @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.query` | Reads one exact snapshot and returns a bounded deterministically ordered subgraph. |
-| `/knowledge.graph.explain #knowledge-graph @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.explain_edge` | Reads one exact edge and returns its stored explanation and evidence without reparsing or generation. |
+| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | `knowgrph.knowledge_graph.ingest` | Creates or replaces only the requested generated snapshot under the bounded workspace artifact owner. |
+| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.query` | Reads one exact snapshot and returns a bounded deterministically ordered subgraph. |
+| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.explain_edge` | Reads one exact edge and returns its stored explanation and evidence without reparsing or generation. |
 
 The three dictionaries remain the only authority for `/`, `#`, and `@` token identity. This table records the required cross-repository handoff; it is not an alias registry. The host resolves invocation metadata, validates the exact tuple, and then explicitly calls the mapped tool.
 
@@ -56,18 +56,18 @@ The three dictionaries remain the only authority for `/`, `#`, and `@` token ide
 | JSON, YAML, TOML, and registered configs | Local format parser emits files, keys, sections, declared references, and bounded value metadata. | Secrets and raw credential-like values are redacted or omitted; configuration never authorizes execution. |
 | Text-bearing PDF | Local deterministic text extraction emits document, page, section, and explicit reference evidence. | Encrypted, malformed, image-only, or extraction-unavailable input returns a typed gap; OCR and model fallbacks are outside this contract. |
 
-The runtime normalizes `@working-directory`, rejects traversal and symlink escape, never scans a home directory or unrelated repository implicitly, and orders admitted workspace-relative paths by their normalized byte form. Every admitted file is bound to its byte digest. Parser identity, parser revision, source digest, and typed omission counts are part of `@runtime-proof`.
+The runtime normalizes `@working-directory`, rejects traversal and symlink escape, never scans a home directory or unrelated repository implicitly, and orders admitted workspace-relative paths by a locale-independent ordinal comparator. Every admitted file is bound to its byte digest. Parser identity, parser revision, source digest, and typed omission counts are part of `@runtime-proof`.
 
 ## Graph Snapshot
 
-`@knowledge-graph` identifies one immutable, digest-addressed local snapshot and its bounded manifest. It is not a database credential, global index, vector store, approval token, or writable source-of-truth graph.
+`@knowledge-graph` identifies one digest-fenced local snapshot view and its bounded manifest. Ingestion atomically replaces only its configured generated artifact; the returned digest identifies the exact content, and a prior digest fails after replacement. The binding is not a database credential, global index, vector store, approval token, or writable source-of-truth graph.
 
 | Record | Required fields | Determinism rule |
 |---|---|---|
-| Snapshot | schema revision, workspace identity, source-set digest, graph digest, ordered parser ledger, counts, omissions, created artifact reference | Digest covers canonical data, not timestamps or absolute machine-specific paths. |
-| Node | stable id, kind, label, qualified identity where available, workspace-relative source, span, source digest, parser evidence | Identity derives only from normalized source evidence and documented canonical fields. |
+| Snapshot | schema and contract revisions, source-set digest, graph digest, ordered source/parser manifest, diagnostics, and generated artifact reference | Digest covers canonical data, not timestamps or absolute machine-specific paths. |
+| Node | stable id, type, label, workspace-relative source, plus parser-supported qualified identity and span fields where observable | Identity derives only from normalized source evidence and documented canonical fields. |
 | Edge | stable id, source id, target id, kind, resolution class, explanation, evidence array | Identity derives from endpoints, kind, and canonical evidence; duplicate canonical edges collapse deterministically. |
-| Evidence | workspace-relative source, line and byte span when available, parser id and revision, observed construct, source digest | Evidence must be sufficient to audit the edge without accepting the explanation on trust. |
+| Evidence | workspace-relative source, line and column span, bounded source excerpt and its digest, parser id and revision, rule id, confidence, and premises where applicable | Evidence must be sufficient to audit the edge without accepting the explanation on trust. |
 
 Every edge has a non-empty deterministic explanation generated from repository-owned templates and its canonical evidence. Explanations never contain model output. An edge that cannot name valid endpoints, relationship kind, resolution class, and source evidence is rejected before snapshot publication.
 
@@ -75,7 +75,7 @@ The graph artifact is a canonical local snapshot, not a second authored source s
 
 ## Query And Explanation
 
-Query supports bounded exact identifiers, normalized lexical terms, node and edge predicates, neighborhood traversal, and path traversal. Matching, traversal, limits, tie-breaking, and result ordering are deterministic and versioned. Results include snapshot digest, matched nodes, traversed edges, stored explanations, evidence, omissions relevant to the request, and truncation state.
+Query supports bounded normalized lexical search, exact id or label node selection, exact edge-label traversal filters, neighborhoods, impact traversal, shortest paths, and graph summaries. Matching, traversal, limits, tie-breaking, and result ordering are deterministic and versioned. Results include the snapshot digest plus matched or traversed nodes, edges, stored explanations, and evidence; summary mode also returns the artifact diagnostics and parser coverage.
 
 The query tool does not use embeddings, similarity vectors, a vector store, a language model, generated Cypher, or an external graph service. It returns a typed empty or unsupported-query result when the local grammar cannot represent a request.
 

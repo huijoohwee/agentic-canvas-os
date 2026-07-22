@@ -21,6 +21,21 @@ const dispatch = new Map([
   ["/knowledge.graph.explain", "knowgrph.knowledge_graph.explain_edge"],
 ]);
 
+const invocationTuples = new Map([
+  ["/knowledge.graph.ingest", {
+    semantics: ["#knowledge-graph", "#mcp", "#runtime-ready"],
+    bindings: ["@working-directory", "@knowledge-graph", "@operator", "@runtime-proof"],
+  }],
+  ["/knowledge.graph.query", {
+    semantics: ["#knowledge-graph", "#mcp", "#vcc"],
+    bindings: ["@knowledge-graph", "@runtime-proof"],
+  }],
+  ["/knowledge.graph.explain", {
+    semantics: ["#knowledge-graph", "#mcp", "#vcc"],
+    bindings: ["@knowledge-graph", "@runtime-proof"],
+  }],
+]);
+
 const dictionaryRoutes = [
   ...[...dispatch.keys()].map((token) => ["docs/DICTIONARY-COMMAND.md", commands, token]),
   ["docs/DICTIONARY-SEMANTIC.md", semantics, "#knowledge-graph"],
@@ -47,9 +62,16 @@ test("host actions dispatch to exactly three explicit Knowgrph local MCP tools",
   );
 
   for (const [action, tool] of dispatch) {
-    assert.equal(matches(frontmatter, `action: "${escapeRegExp(action)}"`).length, 1, `${action} invocation declaration`);
+    const tuple = invocationTuples.get(action);
+    const inline = `{action: "${action}", semantics: [${tuple.semantics.map((token) => `"${token}"`).join(", ")}], bindings: [${tuple.bindings.map((token) => `"${token}"`).join(", ")}]}`;
+    assert.equal(frontmatter.split(inline).length - 1, 1, `${action} exact invocation declaration`);
     assert.equal(matches(gateway, `^\\| \`${escapeRegExp(tool)}\` \\|`).length, 1, `${tool} gateway capability`);
     assert.match(commands, new RegExp(`^\\| \`${escapeRegExp(action)}\` .*\`${escapeRegExp(tool)}\``, "m"));
+    const renderedTuple = [action, ...tuple.semantics, ...tuple.bindings].join(" ");
+    const tupleRow = new RegExp("^\\| `" + escapeRegExp(renderedTuple) + "` \\|", "m");
+    assert.match(contract, tupleRow);
+    assert.match(semantics, tupleRow);
+    assert.match(bindings, tupleRow);
   }
   assert.equal(dispatch.size, 3);
 });
@@ -67,12 +89,12 @@ test("dictionary lookup is metadata-only and execution remains an explicit tool 
 test("source, graph, query, and explanation contracts are deterministic and auditable", () => {
   for (const expected of [
     /parser-supported source code, authored documentation, SQL definitions, structured configuration, and text-bearing PDFs/,
-    /orders admitted workspace-relative paths by their normalized byte form/,
+    /orders admitted workspace-relative paths by a locale-independent ordinal comparator/,
     /Every admitted file is bound to its byte digest/,
     /Every edge has a non-empty deterministic explanation/,
     /source evidence is rejected before snapshot publication/,
     /Re-ingesting unchanged admitted bytes and parser revisions yields the same graph digest and record order/,
-    /bounded exact identifiers, normalized lexical terms, node and edge predicates, neighborhood traversal, and path traversal/,
+    /bounded normalized lexical search, exact id or label node selection, exact edge-label traversal filters, neighborhoods, impact traversal, shortest paths, and graph summaries/,
     /Explanation performs no file scan, parser run, inference, model call, network request, or artifact mutation/,
   ]) assert.match(contract, expected);
 

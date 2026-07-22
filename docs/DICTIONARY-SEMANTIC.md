@@ -336,9 +336,9 @@ semantic:
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
-| `/knowledge.graph.ingest #knowledge-graph @working-directory @knowledge-graph @operator @runtime-proof` | Build one digest-bound local snapshot with deterministic parsers and explained source-backed edges. |
-| `/knowledge.graph.query #knowledge-graph @knowledge-graph @runtime-proof` | Run bounded deterministic lexical and graph traversal without a model, embedding, or vector store. |
-| `/knowledge.graph.explain #knowledge-graph @knowledge-graph @runtime-proof` | Return one stored edge explanation and its exact source evidence without recomputation. |
+| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Build one digest-bound local snapshot with deterministic parsers and explained source-backed edges. |
+| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Run bounded deterministic lexical and graph traversal without a model, embedding, or vector store. |
+| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Return one stored edge explanation and its exact source evidence without recomputation. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |

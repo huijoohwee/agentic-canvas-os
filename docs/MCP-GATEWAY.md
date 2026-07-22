@@ -279,7 +279,7 @@ capability:
 | Pause for human review | Local stdio MCP or control-plane gate where deployed | Blocks paid or mutating continuation until operator result. |
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
-| Ingest, query, or explain a codebase knowledge graph | Local stdio MCP | Uses one bounded local digest-addressed snapshot, deterministic source parsers, auditable edge evidence, and explicit tool dispatch without models, vectors, external graph services, or Graphify execution. |
+| Ingest, query, or explain a codebase knowledge graph | Local stdio MCP | Uses one bounded local digest-fenced artifact, deterministic source parsers, auditable edge evidence, and explicit tool dispatch without models, vectors, external graph services, or Graphify execution. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 

@@ -67,7 +67,7 @@ test("service ownership binds listener group repository command and token", () =
     processGroupId: 100,
     command: "node /workspace/knowgrph/node_modules/.bin/vite --strictPort",
     gitCommonDir: "/workspace/knowgrph/.git",
-    supervisorEnvironment: `npm run dev:apex AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`,
+    listenerEnvironment: `node_modules/.bin/vite AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`,
   };
   assert.equal(validateOwnedService({ service, processEvidence: evidence, token, tokenDigest, candidate: validCandidate() }), true);
   assert.throws(
@@ -79,7 +79,7 @@ test("service ownership binds listener group repository command and token", () =
     /process group/,
   );
   assert.throws(
-    () => validateOwnedService({ service, processEvidence: { ...evidence, supervisorEnvironment: "npm run dev:apex" }, token, tokenDigest, candidate: validCandidate() }),
+    () => validateOwnedService({ service, processEvidence: { ...evidence, listenerEnvironment: "node_modules/.bin/vite" }, token, tokenDigest, candidate: validCandidate() }),
     /ownership token/,
   );
 });

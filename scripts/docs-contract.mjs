@@ -7,6 +7,7 @@ import { validateProbeTreeContractDocuments } from "./probe-tree-contract.mjs";
 import { validatePromptPresetContractDocuments } from "./prompt-preset-contract.mjs";
 import { validateXrInvocationContractDocuments } from "./xr-invocation-contract.mjs";
 import { validateGameModeInvocationContractDocuments } from "./game-mode-invocation-contract.mjs";
+import { validateSkillEvolutionContractDocuments } from "./skill-evolution-contract.mjs";
 
 const DOCS_ROOT = path.resolve("docs");
 const REQUIRED_KEYS = [
@@ -67,6 +68,7 @@ failures.push(...validateProbeTreeContractDocuments(documents));
 failures.push(...validatePromptPresetContractDocuments(documents));
 failures.push(...validateXrInvocationContractDocuments(documents));
 failures.push(...validateGameModeInvocationContractDocuments(documents));
+failures.push(...validateSkillEvolutionContractDocuments(documents));
 
 if (failures.length > 0) fail(failures.join("\n"));
 console.log(`docs contract ok (${files.length} files)`);

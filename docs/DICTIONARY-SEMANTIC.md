@@ -291,7 +291,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#image-generation` | Image generation tool category. | A task requests generated or edited images. | Approval, model/provider selection, prompt bounds, output manifest, and cost log are present. |
 | `#text-to-speech` | Text-to-speech tool category. | A task requests narration, voice note, or audio output. | Voice/provider, text bounds, output manifest, and cost log are present. |
 | `#cloud-browser` | Cloud browser automation tool category. | A task requires remote browser navigation, click, type, vision, or screenshot actions. | Isolated session, action schema, redaction, approval gate, and trace proof are present. |
-| `#skill-evolution` | Bounded improvement of reusable skill contracts. | A skill is created or improved from experience, tests, traces, or evaluation packets. | Evaluation packet, semantic-preservation note, focused validation, human review, and no direct self-modifying commit. |
+| `#skill-evolution` | Bounded improvement of reusable skill contracts. | Skill text is proposed or optimized through source-fenced epochs, mini-batches, and disjoint held-out validation. | Learning rate limits text mutation rather than model weights; every accepted candidate passes required gates and remains review-pending until separately managed. |
 | `#memory-search` | Scoped retrieval from local memory or past conversation indexes. | An agent needs prior decisions, proof, or preferences before acting. | Ranked sources cite local storage scope and return typed empty results when no match exists. |
 | `#identity-model` | Stable, source-backed operator and project preference model. | A repeated preference or boundary should persist across sessions. | Store only non-secret, operator-relevant, source-backed facts; reject unsupported personal inference. |
 | `#orchestration-graph` | State, node, edge, and compile-check contract for agent workflows. | A workflow needs explicit topology, conditional routing, parallel branches, or bounded loops. | State schema, node ids, edge rules, entry/exit nodes, stop condition, and orphan-node check are present. |
@@ -380,7 +380,7 @@ semantic:
 | `/tool.route #image-generation @image-tool` | Run image generation only after approval, artifact-boundary, and cost checks. |
 | `/tool.route #text-to-speech @tts-tool` | Run TTS only with voice, text, output, and cost bounds. |
 | `/tool.route #cloud-browser @browser-tool` | Run browser automation only with session isolation, redaction, and approval. |
-| `/skill.evolve #skill-evolution @skill-catalog @runtime-proof` | Evaluate and propose a bounded skill improvement without direct self-modifying commit. |
+| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Plan, start, step, inspect, or cancel the bounded `knowgrph.skill.evolve` harness; successful output remains a review-pending proposal. |
 | `/memory.search #memory-search @memory-store` | Retrieve scoped prior context before spending tokens or mutating source. |
 | `/identity.reflect #identity-model @identity-model` | Persist stable operator preferences without secrets or unsupported inference. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Declare and validate state, node, edge, and stop-condition topology. |

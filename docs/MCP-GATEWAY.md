@@ -169,7 +169,7 @@ Learning-loop tools are discoverable like other capabilities, but mutation remai
 | `knowgrph.kanban.sync` | Reconcile board rows across full OS worker processes. | Read/write is conflict-aware and deploy-free. |
 | `knowgrph.experience.capture` | Persist typed lessons from source-backed proof or operator correction. | Write requires explicit scope and no-copy validation. |
 | `knowgrph.skill.propose` | Draft a new reusable skill contract from repeated experience. | Proposal-only until operator review. |
-| `knowgrph.skill.evolve` | Evaluate and propose an improvement to an existing skill. | Human review required; direct auto-commit forbidden. |
+| `knowgrph.skill.evolve` | Run source-fenced `plan/start/step/status/cancel` skill-text optimization with epochs, mini-batches, learning-rate mutation budgets, and held-out gates. | Resumable revisions and explicit bounds are required; output stays review-pending with no apply, model-weight mutation, merge, or deploy. |
 | `knowgrph.identity.reflect` | Persist stable non-secret operator and project facts. | Operator authority required; unsupported inference rejected. |
 
 ## Mixture Of Agents Capabilities

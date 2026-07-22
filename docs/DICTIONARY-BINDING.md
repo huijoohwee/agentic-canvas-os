@@ -17,6 +17,7 @@ source_docs:
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "APPLICATION-COMPOSITION.md"
+  - "KNOWLEDGE-GRAPH.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
@@ -129,6 +130,7 @@ dictionary_entries:
   - "@application-manifest"
   - "@component-catalog"
   - "@integration-profile"
+  - "@knowledge-graph"
   - "@handoff-row"
   - "@agent-profile"
   - "@worker-process"
@@ -266,6 +268,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@application-manifest` | Bounded source-backed application slots, dependency edges, entrypoints, outputs, bounds, and exact revisions and digests. | Authored application source selected by the operator or project owner. | No latest tags, ranges, fallbacks, callbacks, packages, commands, endpoints, headers, environment maps, credentials, or embedded code. |
 | `@component-catalog` | Immutable exact component, source, interface, schema, capability, runtime-owner, risk, and readiness records. | Knowgrph local component catalog owner. | Same-revision drift, missing evidence, disabled records, and implicit fallback or upgrade block planning. |
 | `@integration-profile` | Opaque host-approved integration id, exact profile revision, and exact declared capability revision. | Existing integration registry, gateway, or transport owner. | Executable, arguments, transport, endpoint, headers, secrets, credentials, sessions, and provider payloads remain owner-private. |
+| `@knowledge-graph` | One exact digest-fenced local graph snapshot view plus its source, parser, omission, and artifact manifest. | Knowgrph local MCP knowledge-graph artifact owner under the selected `@working-directory`. | The binding is not a database credential, global index, vector store, approval, or executable graph; atomic replacement makes prior digests stale, source files stay authored SSOT, and query or explanation cannot select or mutate another snapshot. |
 | `@handoff-row` | One validated handoff row in `kanban.md`. | Shared table row parser and named profiles. | Requires from profile, to profile, task id, context refs, blockers, resume state, and acceptance criteria. |
 | `@agent-profile` | Named profile that can own or receive board work. | `SOUL.md`, `USER.md`, profile config, or explicit operator-defined profile source. | Profile identity is explicit and non-secret; it cannot imply deploy, spend, or hidden memory ownership. |
 | `@worker-process` | Full OS process worker for a named profile. | Approved local process launcher or operator-run terminal. | Process has cwd, identity, command, proof, cleanup, and resource bounds; no fragile in-process subagent swarm. |
@@ -349,6 +352,9 @@ binding:
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run @sandbox-workspace` | Execute one bounded work item inside its fenced run workspace and stop `delivery_ready` with ACOS `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Compile exact host-owned interfaces into one immutable plan and delegate bounded ready steps to their existing owners. |
+| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Bind one explicit workspace to one atomically replaced, digest-fenced local graph artifact. |
+| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Read one exact snapshot through bounded deterministic graph operations. |
+| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Read one exact stored edge explanation and its canonical source evidence. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |
@@ -406,6 +412,7 @@ binding:
 | `@application-manifest` | `FACTS.md` direct-resolution entry for bounded version-locked application source. |
 | `@component-catalog` | `FACTS.md` direct-resolution entry for immutable local component and interface records. |
 | `@integration-profile` | `FACTS.md` direct-resolution entry for opaque host-owned integration capability bindings. |
+| `@knowledge-graph` | `FACTS.md` direct-resolution entry for one exact digest-fenced local graph snapshot view. |
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
 | `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
 | `@knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |

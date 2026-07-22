@@ -206,6 +206,16 @@ Application composition is a local, provider-neutral compiler and bounded depend
 | `knowgrph.application.plan` | Resolve exact revisions and digests, negotiate capabilities, compile a deterministic dependency DAG, and return an immutable `application-composition-plan/v1` digest. | Read-only; mutable references, drift, incompatibility, cycles, implicit fallback, install, upgrade, migration, connection, or execution fail closed. |
 | `knowgrph.application.execute` | Revalidate one exact plan and sequence only dependency-ready steps through injected existing runtime owners. | Bounded and idempotency-fenced; no new agent loop or integration proxy, silent retry, automatic migration, provider fallback, continuation beyond bounds, deploy, or approval inference. |
 
+## Deterministic Knowledge Graph Capabilities
+
+The host aliases `/knowledge.graph.ingest`, `/knowledge.graph.query`, and `/knowledge.graph.explain`, with `#knowledge-graph` and `@knowledge-graph`, resolve from the canonical dictionaries as metadata. `knowgrph.agentic_canvas_os.docs.invoke` does not execute them. After validating the exact tuple, a host must explicitly call the corresponding local stdio tool; there is no token-to-tool name inference or duplicate registry.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.knowledge_graph.ingest` | Deterministically parse one bounded local workspace into a canonical digest-bound graph snapshot with source evidence and explanation for every edge. | Local generated-artifact mutation only; source files remain unchanged, operator authority is required, and model, network, embedding, vector store, external graph service, and Graphify dependency paths are forbidden. |
+| `knowgrph.knowledge_graph.query` | Run bounded deterministic lexical search, exact node selection, edge-label-filtered neighborhood, impact, path, and summary operations over one exact artifact. | Read-only and zero-spend; stale digest and unsupported query return typed results, while bounds expose completeness and truncation, without selecting another artifact or using a model/vector fallback. |
+| `knowgrph.knowledge_graph.explain_edge` | Return one stored edge's endpoints, label, evidence kind, deterministic explanation, parser/source span and excerpt, confidence, premises, and candidate count. | Read-only and zero-spend; no reparse, inference, network request, model call, vector lookup, or mutation. |
+
 ## Managed Implementation Run Capabilities
 
 Managed implementation runs are local stdio MCP capabilities backed by Knowgrph's durable run ledger and one supervisor per claimed run. Agentic Canvas OS remains the invocation, safe worktree, branch, lease, fence, and pull-request lifecycle owner through its stable JSON CLI; the MCP server never parses lifecycle prose or creates a second Git lock.
@@ -269,6 +279,7 @@ capability:
 | Pause for human review | Local stdio MCP or control-plane gate where deployed | Blocks paid or mutating continuation until operator result. |
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
+| Ingest, query, or explain a codebase knowledge graph | Local stdio MCP | Uses one bounded local digest-fenced artifact, deterministic source parsers, auditable edge evidence, and explicit tool dispatch without models, vectors, external graph services, or Graphify execution. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 
@@ -286,6 +297,7 @@ capability:
 | Tool providers are per-category | Web, image, TTS, and browser categories each expose gateway, direct, local, or unavailable state. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |
 | Application plans are immutable | Equivalent manifests produce one digest over exact revisions, interface and schema digests, owners, edges, order, and bounds; drift or migration needs a new explicit plan and never mutates execution automatically. |
+| Knowledge graphs are local and auditable | Ingestion is deterministic and workspace-scoped, every published edge has canonical source evidence and a stored explanation, query and explanation are read-only, and no model, embedding, vector store, external graph service, or Graphify runtime participates. |
 | Tool secrets stay server-managed | Provider keys and browser sessions never appear in docs, client state, tests, or fixtures. |
 | Soul identity is source-backed | Prompt assembly rejects silent hardcoded defaults and returns typed fallback for missing, empty, unsafe, or unreadable soul source. |
 | MoA fan-out is bounded | MoA capabilities reject missing preset, uncapped references, recursive aggregators, and copied external preset examples. |

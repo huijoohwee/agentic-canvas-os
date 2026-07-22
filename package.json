@@ -16,6 +16,7 @@
     "agent-swarm:check": "node --test __tests__/agent-swarm.test.mjs __tests__/durable-agent-state.test.mjs __tests__/agent-api-app.test.mjs __tests__/cloudflare-worker.test.mjs",
     "agent-toolkit:check": "node --test __tests__/agent-toolkit.test.mjs __tests__/durable-agent-state.test.mjs __tests__/agent-api-app.test.mjs __tests__/cloudflare-worker.test.mjs",
     "application-composition-contract:check": "node --test __tests__/application-composition-contract.test.mjs",
+    "knowledge-graph-contract:check": "node --test __tests__/knowledge-graph-contract.test.mjs",
     "build": "npm run web:build",
     "cache-context:check": "node --test __tests__/cache-context.test.mjs",
     "programmatic-tool-calling:check": "node --test __tests__/programmatic-tool-calling.test.mjs",

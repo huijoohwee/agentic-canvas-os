@@ -15,7 +15,13 @@ const LEASE_FIELDS = [
   "reviewHeadSha",
   "deliveryHeadSha",
   "parkHeadSha",
+  "parkBranchHeadSha",
+  "parkSourceEpoch",
+  "parkSourceFenceSha",
   "parkStashRef",
+  "parkStashSha",
+  "parkStashMessage",
+  "parkStashStatus",
   "acquiredAt",
   "heartbeatAt",
   "expiresAt",
@@ -39,6 +45,8 @@ export function createDeviceCommandResult({ action, repoRoot, worktreePath, bran
   if (action === "park") {
     response.headSha = result?.headSha || null;
     response.stashRef = result?.stashRef || null;
+    response.stashSha = result?.stashSha || null;
+    response.stashStatus = result?.stashStatus || null;
   }
   return response;
 }

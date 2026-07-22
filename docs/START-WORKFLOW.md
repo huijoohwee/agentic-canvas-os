@@ -280,7 +280,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
 
 Heartbeat independently queries the exact ownership PR and requires it to remain draft before renewing the local lease. Manual readiness or any PR identity mismatch fails closed without extending the TTL.
 
-If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. Never reuse a dirty worktree, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session.
+If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session.
 
 Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
 
@@ -372,15 +372,24 @@ For a completed task:
 
 The completion wrapper fails closed unless the working tree is clean, the task
 branch has a merged pull request targeting `main`, its merge commit is contained
-by fetched `origin/main`, the task worktree detaches at that exact `origin/main`,
-and the checkout remains clean. Its JSON must name
+by fetched `origin/main`, the task worktree detaches at that exact commit object,
+and the checkout remains clean. It records a durable `completing` intent before
+cleanup, retires only fully proven restored stash/ref evidence under the shared
+stash-operation lock, and records `completed` only after clean detachment. A
+retry may start detached, proves the recorded merge and prior main SHA remain
+ancestors of the current canonical tip, and finishes only the missing phase.
+Its JSON must name
 `completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and
 `"status":"ok"`. `device:end` enforces the same gate for existing callers; it
 must never park unmerged work and label the result complete.
 
 For work intentionally paused or blocked, run `npm run device:park` and report
-the state explicitly. Parking may preserve a dirty task branch in a named stash
-and detach that task worktree at `origin/main`, but it never satisfies completion.
+the state explicitly. Parking preserves dirty work under a deterministic message,
+exact stash commit, and immutable per-lease `refs/agentic-canvas-os/parked/...`
+ref before detaching at `origin/main`. Resume restores that exact object and
+verifies staged, tracked, untracked, mode, and conflict state. Repeated park
+cycles pin the successor before retiring only the prior restored object; unrelated
+worktree stash entries and refs must survive. Parking never satisfies completion.
 
 ### Session-End Worktree Lifecycle
 

@@ -72,7 +72,7 @@ test("park replays an exact parked lease after detachment was interrupted", () =
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
     "status --porcelain": "",
-    "rev-parse HEAD": mainSha,
+    "stash list --format=%H%x00%gs": "",
     "rev-parse origin/main": mainSha,
   };
   const context = {
@@ -86,10 +86,11 @@ test("park replays an exact parked lease after detachment was interrupted", () =
           : `worktree ${repo}\0HEAD ${fenceSha}\0branch refs/heads/${branch}\0`;
       }
       if (key === "branch --show-current") return detached ? "" : branch;
+      if (key === "rev-parse HEAD") return detached ? mainSha : fenceSha;
       if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
       return values[key];
     },
-    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    gitOptional: args => args[0] === "ls-remote" ? `${fenceSha}\trefs/heads/${branch}` : "",
     ghText: () => JSON.stringify({
       url: pullRequestUrl,
       state: "OPEN",

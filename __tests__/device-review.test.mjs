@@ -192,6 +192,7 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
   const parkCalls = [];
   const mainSha = "a".repeat(40);
   let parkedLease = null;
+  let parkHeadReads = 0;
   const parked = park({
     invocationPath: repo,
     repo,
@@ -202,14 +203,16 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
         "ls-files -u": "",
         "branch --show-current": branch,
         "status --porcelain": "",
+        "stash list --format=%H%x00%gs": "",
         "rev-parse origin/main": mainSha,
-        "rev-parse HEAD": mainSha,
+        "rev-parse HEAD": nextFence,
       };
       const key = args.join(" ");
+      if (key === "rev-parse HEAD") return parkHeadReads++ ? mainSha : nextFence;
       if (!(key in values)) throw new Error(`unexpected park git command: ${key}`);
       return values[key];
     },
-    gitOptional: () => `${nextFence}\trefs/heads/${branch}`,
+    gitOptional: args => args[0] === "ls-remote" ? `${nextFence}\trefs/heads/${branch}` : "",
     ghText: () => pullRequestJson({ body: remoteBody, isDraft }),
     leaseStore: {
       read: () => resumed,

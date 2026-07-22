@@ -61,6 +61,8 @@ test("park results retain deterministic detached-worktree evidence", () => {
   assert.equal(result.branch, "agent/device/scope");
   assert.equal(result.headSha, "c".repeat(40));
   assert.equal(result.stashRef, null);
+  assert.equal(result.stashSha, null);
+  assert.equal(result.stashStatus, null);
   assert.equal(result.lease, null);
 });
 

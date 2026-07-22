@@ -216,7 +216,7 @@ test("writer lease updates replace only the hidden marker and preserve handoff c
   assert.equal(parseWriterLeasePullRequestBody(updated).epoch, 2);
 });
 
-test("merged completion becomes an explicit cleanup fence", () => {
+test("merged completion uses an explicit cleanup intent before the final fence", () => {
   const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
   const store = createWriterLeaseStore({ gitCommonDir });
   const branch = "agent/mac-a/runtime-leases";
@@ -233,6 +233,18 @@ test("merged completion becomes an explicit cleanup fence", () => {
       fenceSha: "b".repeat(40),
       pullRequestUrl: "https://github.com/example/repo/pull/42",
     } });
+    const completing = store.beginCompletion({
+      branch,
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+    });
+    assert.equal(completing.status, "completing");
+    assert.throws(() => store.verify({ sessionId: "chat-a", branch }), /No active writer lease/);
+    assert.throws(() => store.claim({
+      sessionId: "chat-a", device: "mac-a", scope: "runtime-leases", branch,
+      worktreePath: "/worktrees/runtime-leases", baseSha: "a".repeat(40),
+    }), /completing merged cleanup/);
     const completed = store.complete({
       branch,
       pullRequestUrl: "https://github.com/example/repo/pull/42",
@@ -244,7 +256,12 @@ test("merged completion becomes an explicit cleanup fence", () => {
       mergeCommitSha: "c".repeat(40),
       mainSha: "d".repeat(40),
     });
-    assert.throws(() => store.verify({ sessionId: "chat-a", branch }), /No active writer lease/);
+    assert.deepEqual(store.complete({
+      branch,
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+    }), completed);
   } finally {
     rmSync(gitCommonDir, { recursive: true, force: true });
   }

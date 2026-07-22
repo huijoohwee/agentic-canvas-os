@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-canvas-os.dev/schemas/local-runtime-readiness/v1",
+  "title": "Knowgrph Local Runtime Readiness v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "application",
+    "surface",
+    "source",
+    "agenticCanvasOs",
+    "catalogRevision",
+    "host",
+    "ports",
+    "services",
+    "probes",
+    "protectedChecks",
+    "ownershipTokenDigest",
+    "startedAt",
+    "verifiedAt"
+  ],
+  "properties": {
+    "schema": { "const": "agentic-local-runtime-readiness/v1" },
+    "status": { "const": "runtime-ready" },
+    "application": { "const": "knowgrph" },
+    "surface": { "const": "apex" },
+    "source": { "$ref": "#/$defs/revision" },
+    "agenticCanvasOs": { "$ref": "#/$defs/revision" },
+    "catalogRevision": { "$ref": "#/$defs/gitSha" },
+    "host": { "const": "127.0.0.1" },
+    "ports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apex", "storage"],
+      "properties": {
+        "apex": { "const": 5173 },
+        "storage": { "const": 8787 }
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["storage", "apex"],
+      "properties": {
+        "storage": { "$ref": "#/$defs/service" },
+        "apex": { "$ref": "#/$defs/service" }
+      }
+    },
+    "probes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apex", "storage", "storageProxy"],
+      "properties": {
+        "apex": { "const": 200 },
+        "storage": { "const": 200 },
+        "storageProxy": { "const": 200 }
+      }
+    },
+    "protectedChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentic-canvas-os", "knowgrph"],
+      "properties": {
+        "agentic-canvas-os": { "$ref": "#/$defs/checks" },
+        "knowgrph": { "$ref": "#/$defs/checks" }
+      }
+    },
+    "ownershipTokenDigest": { "$ref": "#/$defs/sha256" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "verifiedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "revision"],
+      "properties": {
+        "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "revision": { "$ref": "#/$defs/gitSha" }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "port", "supervisorPid", "listenerPid", "commandMarker", "logPath", "healthUrl", "httpStatus", "processStartedAt"],
+      "properties": {
+        "name": { "enum": ["apex", "storage"] },
+        "port": { "enum": [5173, 8787] },
+        "supervisorPid": { "type": "integer", "minimum": 1 },
+        "listenerPid": { "type": "integer", "minimum": 1 },
+        "commandMarker": { "type": "string", "minLength": 1 },
+        "logPath": { "type": "string", "minLength": 1 },
+        "healthUrl": { "type": "string", "pattern": "^http://127\\.0\\.0\\.1:(5173|8787)/" },
+        "httpStatus": { "const": 200 },
+        "processStartedAt": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

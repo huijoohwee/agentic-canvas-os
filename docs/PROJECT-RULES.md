@@ -67,6 +67,11 @@ document can express the same contract.
   and main SHAs; fast-forward the registered main worktree with `npm run sync:live`,
   then restart the local runtime from that clean `main` and rerun the original
   acceptance path.
+- Before the final response of every implementation turn, run `npm run turn:end
+  -- --repository=<canonical-knowgrph-root> --json`. Runtime-ready may be
+  claimed only when its JSON proves clean exact protected `main` SHAs, the
+  private-token-owned Apex and storage listeners, and all HTTP probes. The
+  command must fail closed without stopping an unrelated listener.
 - Use `npm run device:park` only for work explicitly reported as paused or
   blocked. Parking preserves work but never satisfies completion.
 - Audit the task worktree at every chat, session, or thread end. Remove it only

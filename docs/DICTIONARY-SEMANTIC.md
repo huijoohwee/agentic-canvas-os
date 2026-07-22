@@ -17,6 +17,7 @@ source_docs:
   - "RUNTIME-READINESS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
+  - "KNOWLEDGE-GRAPH.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
@@ -136,6 +137,7 @@ dictionary_entries:
   - "#multi-agent-collaboration"
   - "#managed-implementation-run"
   - "#application-composition"
+  - "#knowledge-graph"
   - "#tool-gateway"
   - "#tool-routing"
   - "#tool-function"
@@ -279,6 +281,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#multi-agent-collaboration` | Durable collaboration through shared rows rather than transient subagents. | Several named profiles coordinate through board state. | Every task and handoff is readable/writable as rows, with no hidden process memory as SSOT. |
 | `#managed-implementation-run` | Durable work-item-oriented autonomous implementation with isolated source mutation and team-visible control. | A project task should proceed through configured execution, bounded verification, pause/cancel/retry/review controls, and evidence without continuous agent supervision. | One versioned run ledger, safe fenced task worktree, configured runner, bounded attempts and time, exact review head, and `delivery_ready` default are proven; ACOS `review_ready` is distinct and automatic merge/deploy remain absent. |
 | `#application-composition` | Exact versioned component and interface composition for agent and LLM applications. | An application joins agent, model, tool, workflow, memory, guardrail, or integration components without absorbing their runtimes. | Exact source and component revisions, interface and schema digests, negotiated capabilities, runtime owners, one immutable plan digest, a deterministic dependency DAG, and explicit non-mutating migration diagnostics are present before execution. |
+| `#knowledge-graph` | Local deterministic graph of source-backed codebase entities and relationships with auditable evidence. | A request ingests, queries, traverses, or explains a graph derived from a bounded workspace containing code, docs, SQL, configs, or text-bearing PDFs. | Exact snapshot digest, parser and source digests, stable node and edge identities, deterministic ordering, typed omissions, and non-empty source evidence plus explanation for every edge are present; model, embedding, vector store, external graph service, and Graphify runtime paths are absent. |
 | `#tool-gateway` | Existing-infrastructure routing for tool calls. | A request uses web search, image generation, TTS, cloud browser, or another tool surface. | Tool route resolves to local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owner without adding a proxy. |
 | `#tool-routing` | Per-tool provider selection and fallback. | A tool category can use gateway, direct, local, or unavailable provider state. | Provider state, fallback, approval, cost, and secret boundary are explicit before execution. |
 | `#tool-function` | Callable function that extends agent capability. | A capability can be invoked as a typed tool call. | Function schema, owner, risk class, approval policy, cost posture, and typed fallback are present. |
@@ -333,6 +336,9 @@ semantic:
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
+| `/knowledge.graph.ingest #knowledge-graph @working-directory @knowledge-graph @operator @runtime-proof` | Build one digest-bound local snapshot with deterministic parsers and explained source-backed edges. |
+| `/knowledge.graph.query #knowledge-graph @knowledge-graph @runtime-proof` | Run bounded deterministic lexical and graph traversal without a model, embedding, or vector store. |
+| `/knowledge.graph.explain #knowledge-graph @knowledge-graph @runtime-proof` | Return one stored edge explanation and its exact source evidence without recomputation. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |
@@ -396,6 +402,7 @@ semantic:
 | Token | Facts source |
 |---|---|
 | `#application-composition` | `FACTS.md` direct-resolution entry for exact component, interface, capability, and dependency planning. |
+| `#knowledge-graph` | `FACTS.md` direct-resolution entry for deterministic local graph ingestion, query, and edge explanation. |
 | `#truth` | `FACTS.md` direct-resolution entry for shared source-backed facts. |
 | `#soul` | `FACTS.md` direct-resolution entry for durable agent identity. |
 | `#knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for bounded Probe-Tree semantics. |

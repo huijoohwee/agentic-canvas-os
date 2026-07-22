@@ -63,7 +63,7 @@ export async function readLocalRuntimeStatus(options = {}, dependencies = {}) {
 export async function stopLocalRuntime(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
   const normalized = normalizeOptions(options);
-  const candidate = inspectCanonicalCandidate(normalized, deps, { verifyProtected: false });
+  const candidate = inspectOwnershipCandidate(normalized, deps);
   const locations = runtimeLocations(candidate.workspaceRoot);
   const releaseLock = deps.acquireLock(locations.lockPath);
   try {
@@ -117,7 +117,7 @@ export function validateOwnedService({ service, processEvidence, token, tokenDig
   if (!String(processEvidence.command || "").includes(service.commandMarker)) {
     throw new Error(`${service.name} listener command does not match its runtime owner.`);
   }
-  if (!String(processEvidence.supervisorEnvironment || "").includes(`AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`)) {
+  if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`)) {
     throw new Error(`${service.name} process ownership token is missing or changed.`);
   }
   if (sha256(token) !== tokenDigest) throw new Error("Runtime ownership token digest does not match local state.");
@@ -208,7 +208,7 @@ async function launchService(spec, candidate, environment, timeoutMs, deps) {
       logPath: spec.logPath,
       healthUrl: spec.healthUrl,
       httpStatus,
-      processStartedAt: deps.inspectListenerProcess(listenerPid, child.pid).processStartedAt,
+      processStartedAt: deps.inspectListenerProcess(listenerPid).processStartedAt,
     };
   } catch (error) {
     deps.stopProcessGroup(child.pid);
@@ -222,7 +222,7 @@ async function inspectRuntimeState(state, candidate, locations, deps) {
     const token = deps.readPrivateFile(locations.tokenPath).trim();
     for (const service of Object.values(state.services)) {
       const listenerPid = deps.readListenerPid(service.port);
-      const processEvidence = listenerPid ? deps.inspectListenerProcess(listenerPid, service.supervisorPid) : null;
+      const processEvidence = listenerPid ? deps.inspectListenerProcess(listenerPid) : null;
       validateOwnedService({ service, processEvidence, token, tokenDigest: state.ownershipTokenDigest, candidate });
     }
     const probes = await probeRuntime(deps);
@@ -254,7 +254,7 @@ async function stopRecordedServices(state, candidate, locations, deps) {
   for (const service of Object.values(state.services)) {
     const listenerPid = deps.readListenerPid(service.port);
     if (!listenerPid) continue;
-    const processEvidence = deps.inspectListenerProcess(listenerPid, service.supervisorPid);
+    const processEvidence = deps.inspectListenerProcess(listenerPid);
     validateOwnedService({ service, processEvidence, token, tokenDigest: state.ownershipTokenDigest, candidate });
     owned.push(service);
   }
@@ -283,6 +283,23 @@ function inspectCanonicalCandidate(options, deps, { verifyProtected }) {
     },
   });
   return { workspaceRoot, agenticCanvasOsRoot, knowgrph: { ...evidence.knowgrph, root: knowgrphRoot }, agenticCanvasOs: evidence.agenticCanvasOs, protectedChecks };
+}
+
+function inspectOwnershipCandidate(options, deps) {
+  const invokingRoot = realpathSync(options.agenticCanvasOsRoot);
+  const agenticCanvasOsRoot = path.dirname(resolveGitCommonDir(invokingRoot, deps));
+  const workspaceRoot = path.dirname(agenticCanvasOsRoot);
+  const knowgrphRoot = realpathSync(options.repository || path.join(workspaceRoot, "knowgrph"));
+  return {
+    workspaceRoot,
+    agenticCanvasOsRoot,
+    agenticCanvasOs: { headSha: deps.gitText(agenticCanvasOsRoot, ["rev-parse", "HEAD"]).trim() },
+    knowgrph: {
+      root: knowgrphRoot,
+      headSha: deps.gitText(knowgrphRoot, ["rev-parse", "HEAD"]).trim(),
+      gitCommonDir: resolveGitCommonDir(knowgrphRoot, deps),
+    },
+  };
 }
 
 function inspectRepository(id, root, deps, verifyProtected) {
@@ -456,7 +473,7 @@ function readListenerPids(port) {
   }
 }
 
-function inspectListenerProcess(pid, supervisorPid) {
+function inspectListenerProcess(pid) {
   const cwdOutput = execFileSync("lsof", ["-a", "-p", String(pid), "-d", "cwd", "-Fn"], { encoding: "utf8" });
   const cwd = cwdOutput.split("\n").find(line => line.startsWith("n"))?.slice(1).trim() || "";
   if (!cwd) throw new Error(`Unable to resolve listener PID ${pid} working directory.`);
@@ -466,7 +483,7 @@ function inspectListenerProcess(pid, supervisorPid) {
     processGroupId: Number(execFileSync("ps", ["-o", "pgid=", "-p", String(pid)], { encoding: "utf8" }).trim()),
     processStartedAt: execFileSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8" }).trim(),
     command: execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" }).trim(),
-    supervisorEnvironment: execFileSync("ps", ["eww", "-p", String(supervisorPid), "-o", "command="], { encoding: "utf8" }),
+    listenerEnvironment: execFileSync("ps", ["eww", "-p", String(pid), "-o", "command="], { encoding: "utf8" }),
     gitCommonDir: path.resolve(cwd, execFileSync("git", ["-C", cwd, "rev-parse", "--git-common-dir"], { encoding: "utf8" }).trim()),
   };
 }

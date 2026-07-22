@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 const application = read("docs/APPLICATION-COMPOSITION.md");
@@ -80,6 +82,52 @@ test("plans are exact, deterministic, immutable, and fail closed", () => {
   assert.match(application, /A newer record never changes an existing plan/);
 });
 
+test("source-bound host component packs are bounded, deterministic, and inert", () => {
+  for (const required of [
+    /at most 16 component packs/,
+    /pure JSON data with a pack id, exact pack revision/,
+    /no more than 16 component records/,
+    /at most 100 components/,
+    /`workspace:\/`, `kgdoc:`, and `urn:knowgrph:`/,
+    /`source\.sha256` field containing exactly 64 lowercase hexadecimal characters/,
+    /after removing only `source\.sha256`/,
+    /packs by `\(pack id, exact revision, source URI\)`/,
+    /components by `\(component id, exact revision\)`/,
+    /composite `catalogDigest` covers the complete normalized catalog/,
+    /exactly one revision per pack id/,
+  ]) {
+    assert.match(application, required);
+  }
+  assert.match(application, /Let `SEG` be the exact lowercase ASCII grammar `\[a-z0-9\]\+\(\?:\[\._-\]\[a-z0-9\]\+\)\*`/);
+  assert.match(application, /`workspace:\/SEG\[\/SEG\.\.\.\]`, `kgdoc:SEG\[\/SEG\.\.\.\]`, and `urn:knowgrph:SEG\[:SEG\.\.\.\]`/);
+  assert.match(application, /first URN segment cannot be `http`, `https`, `file`, `ftp`, `ws`, or `wss`/);
+  assert.match(application, /dot-only, traversal, consecutive or trailing punctuation, uppercase, tilde, backslash, authority, query, fragment, percent-encoded, nested-scheme, and network-shaped values are invalid/);
+  assert.match(application, /never dereferenced by the composition subsystem/);
+  assert.match(application, /MCP callers and application manifests cannot provide, select, or override packs/);
+  assert.match(application, /pack-content digest mismatch is admission drift/);
+  assert.match(application, /none of the three tools becomes available for that rejected set/);
+  assert.match(application, /`knowgrph\.application\.catalog` returns its current digests, while plan and execute reject the stale proof/);
+  assert.match(application, /does not claim a persisted cross-process baseline/);
+  assert.match(application, /definition digests cover its normalized component definition independently of unrelated members/);
+  assert.match(application, /requires explicit proof refresh and replanning/);
+  assert.match(application, /no last-known-good fallback, partial acceptance, or silent replacement/);
+  for (const rule of [
+    /`stableApplicationJson\/v1`/,
+    /finite numbers serialized with ECMAScript `JSON\.stringify`/,
+    /object keys recursively sorted by ascending UTF-16 code units/,
+    /SHA-256 hashes the UTF-8 bytes/,
+    /accessors, symbols, custom prototypes, cycles, sparse arrays, hidden properties, non-finite numbers, and non-JSON values rejected/,
+  ]) assert.match(application, rule);
+});
+
+test("host-only resolvers add interoperability without execution authority", () => {
+  assert.match(application, /Runtime adapters and owner resolvers are supplied privately and process-locally by the embedding host/);
+  assert.match(application, /never through MCP arguments, manifests, source URIs, URLs, environment paths, filesystem scans, package discovery, or pack fields/);
+  assert.match(application, /performs no discovery, download, install, upgrade, migration, or fallback/);
+  assert.match(application, /grants no execution authority/);
+  assert.match(application, /delegates only to an already-injected existing runtime owner/);
+});
+
 test("integration and migration boundaries prevent hidden coupling", () => {
   assert.match(application, /opaque host-owned binding/);
   assert.match(application, /packages, commands, endpoints, headers, environment maps, and credentials are invalid/);
@@ -108,9 +156,19 @@ test("documentation projections, checks, line budgets, and no-copy dependency bo
   assert.doesNotMatch(JSON.stringify({
     dependencies: packageJson.dependencies,
     devDependencies: packageJson.devDependencies,
-  }), /symphony/i);
-  assert.match(application, /external_dependency: "none"/);
-  assert.match(application, /No Symphony code, prose, prompts, APIs, schemas, fixtures, tests, package, service, or runtime dependency is copied or required/);
+    optionalDependencies: packageJson.optionalDependencies,
+    peerDependencies: packageJson.peerDependencies,
+  }), /langchain/i);
+  assert.deepEqual(forbiddenLockDependencies(JSON.parse(read("package-lock.json"))), []);
+  assert.match(application, /external_pattern_sources: \["https:\/\/github\.com\/langchain-ai\/langchain"\]/);
+  assert.match(application, /external_dependency: "forbidden"/);
+  assert.match(application, /clean-room work/);
+  assert.match(application, /Copying its code, prose, prompts, APIs, schemas, fixtures, tests, package conventions, services, or dependencies is forbidden/);
+  assert.match(application, /composition-subsystem boundary, not a claim about separately owned optional integrations/);
+  assert.match(application, /catalog, plan, and bounded offline proof must pass with network access unavailable and without any LangChain package or service/);
+  for (const [file, source] of trackedTextSources()) {
+    assert.equal(hasHashedWordWindow(source, 35, "b8d9788fdce0dc5681d4fa3bd666357b9fa3c35b4ec07a6dc8806741c08b1fdb"), false, `${file} must not persist the external README tagline`);
+  }
 
   for (const file of [
     "docs/APPLICATION-COMPOSITION.md",
@@ -124,6 +182,41 @@ test("documentation projections, checks, line budgets, and no-copy dependency bo
 
 function read(file) {
   return readFileSync(file, "utf8");
+}
+
+function hasHashedWordWindow(source, size, expectedDigest) {
+  const words = source.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase().split(" ");
+  for (let index = 0; index + size <= words.length; index += 1) {
+    const digest = createHash("sha256").update(words.slice(index, index + size).join(" ")).digest("hex");
+    if (digest === expectedDigest) return true;
+  }
+  return false;
+}
+
+function trackedTextSources() {
+  const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
+  return files.flatMap((file) => {
+    const bytes = readFileSync(file);
+    return bytes.includes(0) ? [] : [[file, bytes.toString("utf8")]];
+  });
+}
+
+function forbiddenLockDependencies(lock) {
+  const names = new Set();
+  const collect = (record) => {
+    if (!record || typeof record !== "object") return;
+    for (const section of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+      if (record[section] && typeof record[section] === "object") for (const name of Object.keys(record[section])) names.add(name);
+    }
+  };
+  collect(lock);
+  for (const [path, record] of Object.entries(lock.packages || {})) {
+    collect(record);
+    const marker = "node_modules/";
+    const index = path.lastIndexOf(marker);
+    if (index >= 0) names.add(path.slice(index + marker.length));
+  }
+  return [...names].filter((name) => /^(?:langchain(?:[-_].*)?|@langchain\/|langgraph(?:[-_].*)?|langsmith(?:[-_].*)?|langserve(?:[-_].*)?|deepagents(?:[-_].*)?)/i.test(name)).sort();
 }
 
 function matches(source, pattern) {

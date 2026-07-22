@@ -123,6 +123,8 @@ dictionary_entries:
   - "@attached-context"
   - "@kanban-board"
   - "@task-row"
+  - "@work-item"
+  - "@implementation-run"
   - "@handoff-row"
   - "@agent-profile"
   - "@worker-process"
@@ -255,6 +257,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
 | `@kanban-board` | Durable `kanban.md` task board. | Authored Markdown table source plus existing multi-dimensional table/Kanban utilities. | Board rows are the SSOT for task and handoff state; no browser-only, process-only, or copied board store. |
 | `@task-row` | One validated task row in `kanban.md`. | Shared table row parser and operator-approved task schema. | Requires stable id, title, owner profile, status, priority, acceptance, evidence, and next action. |
+| `@work-item` | One durable implementation request with objective, acceptance, repository, semantic scope, allowed paths, configured runner id, verification argv, and attempt/time bounds. | Operator-approved project source or management surface. | Contains no raw shell text, credentials, provider secrets, arbitrary environment, merge grant, or deployment authority. |
+| `@implementation-run` | Versioned durable ledger identity for one managed implementation attempt series. | Knowgrph local MCP run store and its single supervisor. | Records exact work item, state version, worktree, branch, lease epoch, fence, PR, runner attempt, evidence, and transition; idempotent compare-and-set writes only. |
 | `@handoff-row` | One validated handoff row in `kanban.md`. | Shared table row parser and named profiles. | Requires from profile, to profile, task id, context refs, blockers, resume state, and acceptance criteria. |
 | `@agent-profile` | Named profile that can own or receive board work. | `SOUL.md`, `USER.md`, profile config, or explicit operator-defined profile source. | Profile identity is explicit and non-secret; it cannot imply deploy, spend, or hidden memory ownership. |
 | `@worker-process` | Full OS process worker for a named profile. | Approved local process launcher or operator-run terminal. | Process has cwd, identity, command, proof, cleanup, and resource bounds; no fragile in-process subagent swarm. |
@@ -312,6 +316,7 @@ binding:
 | `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before injecting content into `@attached-context`. |
 | Missing `@kanban-board` for `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` | Return missing-board; do not create a second board store. |
 | Missing `@agent-profile` or `@worker-process` for a handoff | Return missing-profile; do not spawn an anonymous worker. |
+| Missing `@work-item` or `@implementation-run` for `/implementation.run` | Return missing-managed-run-context before worktree creation, process launch, model spend, or mutation. |
 | Missing or unconfigured `@swarm-run` state, exact-agent resolver, planner, worker, synthesizer, receipt verifier, authorizer, or authenticated run principal | Return a typed block before work, disclosure, spend, or cancellation; never accept a caller-supplied substitute. |
 | Missing `@agent-toolkit-observer` authorizer, changed revision digest, or cross-principal access | Block mutation or disclosure; a missing evaluator blocks new evaluation spend but not owner reads or comparison over already committed eligible evidence. |
 | Missing `@tool-policy` for paid, egress, generated-media, or browser automation | Return blocked before executing the tool. |
@@ -334,6 +339,7 @@ binding:
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Resolve and advance the live session without exposing its world object. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Persist the session's pending decisions atomically and dispose it only after a terminal success. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
+| `/implementation.run #managed-implementation-run @work-item @implementation-run @sandbox-workspace` | Execute one bounded work item inside its fenced run workspace and stop `delivery_ready` with ACOS `review_ready`. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |

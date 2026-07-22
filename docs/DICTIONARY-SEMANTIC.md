@@ -133,6 +133,7 @@ dictionary_entries:
   - "#profile-handoff"
   - "#worker-process"
   - "#multi-agent-collaboration"
+  - "#managed-implementation-run"
   - "#tool-gateway"
   - "#tool-routing"
   - "#tool-function"
@@ -274,6 +275,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#profile-handoff` | Explicit row-level transfer between named agent profiles. | One worker pauses, delegates, resumes, or requests review from another profile. | Handoff row names source profile, target profile, context refs, blockers, acceptance, and resume state. |
 | `#worker-process` | Full OS process worker with its own identity and runtime state. | Work should run outside fragile in-process subagent swarms. | Worker profile, command, cwd, proof, and cleanup boundary are explicit. |
 | `#multi-agent-collaboration` | Durable collaboration through shared rows rather than transient subagents. | Several named profiles coordinate through board state. | Every task and handoff is readable/writable as rows, with no hidden process memory as SSOT. |
+| `#managed-implementation-run` | Durable work-item-oriented autonomous implementation with isolated source mutation and team-visible control. | A project task should proceed through configured execution, bounded verification, pause/cancel/retry/review controls, and evidence without continuous agent supervision. | One versioned run ledger, safe fenced task worktree, configured runner, bounded attempts and time, exact review head, and `delivery_ready` default are proven; ACOS `review_ready` is distinct and automatic merge/deploy remain absent. |
 | `#tool-gateway` | Existing-infrastructure routing for tool calls. | A request uses web search, image generation, TTS, cloud browser, or another tool surface. | Tool route resolves to local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owner without adding a proxy. |
 | `#tool-routing` | Per-tool provider selection and fallback. | A tool category can use gateway, direct, local, or unavailable provider state. | Provider state, fallback, approval, cost, and secret boundary are explicit before execution. |
 | `#tool-function` | Callable function that extends agent capability. | A capability can be invoked as a typed tool call. | Function schema, owner, risk class, approval policy, cost posture, and typed fallback are present. |
@@ -326,6 +328,7 @@ semantic:
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Run ordered transactional systems and surface real or deferred reasoning cost evidence. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Atomically persist only pending validated decision nodes, then close the successful session. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
+| `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |

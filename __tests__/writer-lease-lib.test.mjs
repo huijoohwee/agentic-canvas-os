@@ -9,6 +9,7 @@ import {
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
+  updateWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
 
 test("device branch identity separates device from semantic scope", () => {
@@ -97,6 +98,69 @@ test("writer lease rejects branch metadata that disagrees with its parsed identi
   }
 });
 
+test("failed remote claim publication restores only the exact previous local lease", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  const store = createWriterLeaseStore({ gitCommonDir });
+  const input = {
+    sessionId: "chat-a", device: "mac-a", scope: "runtime-leases",
+    branch: "agent/mac-a/runtime-leases", worktreePath: "/worktrees/runtime-leases",
+    baseSha: "a".repeat(40),
+  };
+  try {
+    store.claim(input);
+    store.annotate({ sessionId: input.sessionId, branch: input.branch, values: { fenceSha: "b".repeat(40) } });
+    const previousLease = store.release({ sessionId: input.sessionId, branch: input.branch, status: "parked" });
+    const claimed = store.claim({ ...input, previousEpoch: previousLease.epoch });
+    const active = store.annotate({ sessionId: input.sessionId, branch: input.branch, values: { fenceSha: "c".repeat(40) } });
+    assert.throws(() => store.rollbackClaim({
+      sessionId: input.sessionId, branch: input.branch, epoch: claimed.epoch,
+      fenceSha: "d".repeat(40), previousLease,
+    }), /changed before rollback/);
+    store.rollbackClaim({
+      sessionId: input.sessionId, branch: input.branch, epoch: claimed.epoch,
+      fenceSha: active.fenceSha, previousLease,
+    });
+    assert.deepEqual(store.read(input.branch), previousLease);
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
+test("park release refuses a lease snapshot changed after PR projection", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  let instant = new Date("2026-07-22T00:00:00.000Z");
+  const store = createWriterLeaseStore({ gitCommonDir, now: () => instant });
+  const branch = "agent/mac-a/runtime-leases";
+  try {
+    const claimed = store.claim({
+      sessionId: "chat-a",
+      device: "mac-a",
+      scope: "runtime-leases",
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      baseSha: "a".repeat(40),
+    });
+    const projectedFrom = store.annotate({
+      sessionId: "chat-a",
+      branch,
+      values: { fenceSha: "b".repeat(40), pullRequestUrl: "https://github.test/pull/42" },
+    });
+    assert.equal(projectedFrom.epoch, claimed.epoch);
+    instant = new Date("2026-07-22T00:01:00.000Z");
+    store.heartbeat({ sessionId: "chat-a", branch });
+    assert.throws(() => store.release({
+      sessionId: "chat-a",
+      branch,
+      status: "parked",
+      expectedLease: projectedFrom,
+      timestamp: "2026-07-22T00:02:00.000Z",
+    }), /changed before parked/);
+    assert.equal(store.read(branch).status, "active");
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
 test("pull request metadata round-trips the current fencing identity", () => {
   const lease = {
     schema: "agentic-writer-lease/v2",
@@ -129,6 +193,27 @@ test("pull request metadata round-trips the current fencing identity", () => {
   });
   assert.match(body, /^---\naction: \/change\nscope: "#runtime-leases"\nactor: "@mac-a"\nbase_sha: "a{40}"\n---\n/);
   assert.doesNotMatch(body, /worktrees\/runtime-leases/);
+});
+
+test("writer lease updates replace only the hidden marker and preserve handoff context", () => {
+  const active = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "session-a",
+    device: "device",
+    scope: "scope",
+    branch: "agent/device/scope",
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    heartbeatAt: "2026-07-22T00:00:00.000Z",
+    expiresAt: "2026-07-22T00:30:00.000Z",
+  };
+  const original = `## Work item\n\nAcceptance and evidence.\n\n${renderWriterLeasePullRequestBody(active)}`;
+  const updated = updateWriterLeasePullRequestBody(original, { ...active, epoch: 2 });
+  assert.match(updated, /Acceptance and evidence/);
+  assert.equal((updated.match(/<!-- agentic-writer-lease\/v2/g) || []).length, 1);
+  assert.equal(parseWriterLeasePullRequestBody(updated).epoch, 2);
 });
 
 test("merged completion becomes an explicit cleanup fence", () => {

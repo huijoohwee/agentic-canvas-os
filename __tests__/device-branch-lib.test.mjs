@@ -9,6 +9,7 @@ import {
   park,
   publish,
   resume,
+  review,
   sanitize,
   sanitizeDevice,
   sanitizeScope,
@@ -101,7 +102,7 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
     "status --porcelain": "",
     "branch --show-current": "",
     "rev-parse origin/main": "a".repeat(40),
-    "rev-parse HEAD": ["a".repeat(40), "b".repeat(40)],
+    "rev-parse HEAD": ["a".repeat(40), "a".repeat(40), "b".repeat(40)],
   });
   const leaseStore = {
     claim: values => ({
@@ -139,7 +140,7 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
     invocationPath: repo,
     repo,
     gitText,
-    gitOptional: () => "device",
+    gitOptional: args => args[0] === "config" ? "device" : "",
     ghText: args => args[0] === "pr" && args[1] === "list" ? "[]" : "https://github.test/pull/1\n",
     leaseStore,
     sessionId: "chat-a",
@@ -166,11 +167,28 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
 test("park stashes a dirty task branch and detaches its worktree at origin main", () => {
   const calls = [];
   const logs = [];
+  const branch = "agent/device/scope";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const activeLease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "scope",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    heartbeatAt: "2026-07-14T22:00:00.000Z",
+    expiresAt: "2026-07-14T23:00:00.000Z",
+  };
   const gitText = createGitText({
-    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "worktree list --porcelain -z": branchWorktree(branch),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
-    "branch --show-current": "agent/device/scope\n",
+    "branch --show-current": `${branch}\n`,
     "status --porcelain": [" M docs/task.md\n", ""],
     "stash list --format=%gd -n 1": "stash@{0}\n",
     "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
@@ -181,9 +199,18 @@ test("park stashes a dirty task branch and detaches its worktree at origin main"
     invocationPath: repo,
     repo,
     gitText,
+    gitOptional: () => `${activeLease.fenceSha}\trefs/heads/${branch}`,
+    ghText: () => renderWriterLeasePullRequestBody(activeLease),
     leaseStore: {
-      verify: () => ({ status: "active", worktreePath: repo }),
-      release: () => ({ status: "parked" }),
+      read: () => activeLease,
+      verify: () => activeLease,
+      release: input => ({
+        ...input.expectedLease,
+        ...input.values,
+        status: "parked",
+        heartbeatAt: input.timestamp,
+        expiresAt: input.timestamp,
+      }),
     },
     sessionId: "chat-a",
     run: (command, args) => calls.push([command, ...args]),
@@ -191,10 +218,12 @@ test("park stashes a dirty task branch and detaches its worktree at origin main"
     now: () => new Date("2026-07-14T22:30:45.123Z"),
   });
 
-  assert.deepEqual(calls, [
-    ["git", "stash", "push", "-u", "-m", "park: agent/device/scope 20260714T223045Z"],
-    ["git", "fetch", "origin", "main"],
-    ["git", "switch", "--detach", "origin/main"],
+  assert.deepEqual(calls.map(call => call.slice(0, 3)), [
+    ["git", "merge-base", "--is-ancestor"],
+    ["git", "stash", "push"],
+    ["git", "fetch", "origin"],
+    ["gh", "pr", "edit"],
+    ["git", "switch", "--detach"],
   ]);
   assert.deepEqual(result, {
     branch: "agent/device/scope",
@@ -241,6 +270,7 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     "status --porcelain": "",
     "branch --show-current": `${branch}\n`,
     "log -1 --pretty=%s": "fix: coordination runtime\n",
+    "rev-parse HEAD": "c".repeat(40),
   });
   let releaseStatus = null;
 
@@ -252,6 +282,7 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     ghOptional: () => pullRequestUrl,
     leaseStore: {
       verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
+      annotate: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
       release: ({ status }) => {
         releaseStatus = status;
         return {
@@ -284,6 +315,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
   for (const handoff of [
     { status: "parked", priorSessionId: "chat-old", sessionId: "chat-new" },
     { status: "delivery", priorSessionId: "chat-new", sessionId: "chat-new" },
+    { status: "review_ready", priorSessionId: "chat-new", sessionId: "chat-new" },
   ]) {
     const calls = [];
     const branch = "agent/old-device/runtime-leases";
@@ -298,6 +330,7 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
       branch,
       baseSha: "a".repeat(40),
       fenceSha: "b".repeat(40),
+      ...(handoff.status === "review_ready" ? { reviewHeadSha: "c".repeat(40) } : {}),
       heartbeatAt: "2026-07-17T10:00:00.000Z",
       expiresAt: "2026-07-17T10:00:00.000Z",
     };

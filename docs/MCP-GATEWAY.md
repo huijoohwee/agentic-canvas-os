@@ -195,6 +195,17 @@ Stateful orchestration tools are discoverable without model spend. Runtime execu
 | `knowgrph.superagent.workspace` | Report sandbox workspace roots, allowed operations, artifact manifest, diff summary, scan state, and cleanup policy. | Read-only unless an approved run owns the workspace. |
 | `knowgrph.superagent.messages` | Report typed user, agent, worker, tool, review, and artifact messages for a run. | Read-only ledger; cannot bypass tool, approval, cost, or deploy gates. |
 
+## Managed Implementation Run Capabilities
+
+Managed implementation runs are local stdio MCP capabilities backed by Knowgrph's durable run ledger and one supervisor per claimed run. Agentic Canvas OS remains the invocation, safe worktree, branch, lease, fence, and pull-request lifecycle owner through its stable JSON CLI; the MCP server never parses lifecycle prose or creates a second Git lock.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.implementation_run.plan` | Validate `/implementation.run`, `#managed-implementation-run`, `@work-item`, `@implementation-run`, repository state, configured runner, sandbox-policy preflight, and bounded verification without creating a run. | Read-only, zero model spend, no worktree, process, branch, lease, PR, merge, or deploy mutation. |
+| `knowgrph.implementation_run.start` | Persist an idempotent run request, provision and claim one fenced task worktree through ACOS, and launch the configured supervisor. | New task lane and durable run state only; canonical main, arbitrary shell input, automatic merge, Prod, and Cloudflare remain forbidden. |
+| `knowgrph.implementation_run.list` | Return bounded durable run state, work-item identity, blocker, evidence references, cost, and next team action. | Read-only and bounded; secrets, raw environment, and unbounded logs are excluded. |
+| `knowgrph.implementation_run.control` | Apply a version-fenced pause, cancel, retry, review, or operator decision; retry performs ACOS resumption when needed. | Control must match current run version and allowed transition; `delivery_ready` maps to ACOS `review_ready` and grants no merge or deploy authority. |
+
 ## Capability Entry Shape
 
 ```yaml
@@ -246,6 +257,7 @@ capability:
 | Resume checkpointed run | Local stdio MCP with approved state owner | Uses typed checkpoint and recovery proof before continuation. |
 | Pause for human review | Local stdio MCP or control-plane gate where deployed | Blocks paid or mutating continuation until operator result. |
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
+| Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 
 ## Gateway VCCs
@@ -275,6 +287,7 @@ capability:
 | Stateful orchestration is bounded | Graph capabilities reject orphaned nodes, missing stop conditions, missing checkpoint contracts, and unbounded cycles. |
 | Orchestration copy is blocked | Graph capabilities reject copied external runtime code, APIs, schemas, examples, tests, fixtures, and prose. |
 | SuperAgent is bounded | SuperAgent capabilities reject missing sandbox scope, message gateway, checkpoint policy, stop condition, artifact manifest, and copied external runtime layouts. |
+| Managed implementation is bounded | Plan is zero-mutation; start requires idempotency, configured argv runner, safe worktree, current lease fence, allowed paths, attempt/time limits, and verification; control is version-fenced; default completion is `delivery_ready`, not merge or deploy. |
 
 ## Mermaid Topology
 

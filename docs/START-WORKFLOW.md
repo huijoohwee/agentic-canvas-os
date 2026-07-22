@@ -257,6 +257,20 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
   --repository="$TASK_WORKTREE"
 ```
 
+Machine supervisors may safely provision the new detached worktree and claim it in one command. Canonical `main` must be clean at fetched `origin/main`, and the absent target must be a safe direct child of the derived sibling `.worktrees/<repository-name>` root:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
+  "<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
+  --repository="$KNOWGRPH_ROOT" --provision --worktree="$TASK_WORKTREE" --json
+```
+
+If this combined call is interrupted after the claim, retry from the recorded
+`$TASK_WORKTREE` without `--provision`. `device:start` reconciles only the exact
+same-session activation base, claim subject, fence, remote head, and single
+matching draft pull request; it does not add another claim commit or pull
+request. A target, branch, lease, PR, or session mismatch fails closed.
+
 Heartbeat before the 30-minute default TTL expires:
 
 ```sh
@@ -266,7 +280,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
 
 If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. Never reuse a dirty worktree, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session.
 
-Resume only a parked or expired handoff branch, or a delivered branch that the same session must revise after a failed protected check. The command fetches its exact remote SHA, requires matching pull-request lease metadata, claims `remote epoch + 1`, creates a descendant fencing commit, and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery:
+Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command claims `remote epoch + 1`, creates a descendant fencing commit, and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
@@ -343,6 +357,8 @@ Use pull only when all conditions are true:
 Completion and parking are mutually exclusive states. Dirty, stashed,
 branch-only, pushed, open-pull-request, or auto-merge-pending work is not
 complete.
+
+Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, and marks the PR ready without an automerge label or merge call. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. `device:publish` remains the explicit protected auto-merge path.
 
 For a completed task:
 

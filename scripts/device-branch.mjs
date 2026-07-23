@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { completeSession, heartbeat, park, publish, resume, review, start } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
+import { integrateSession } from "./device-integrate-lib.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { provisionTaskWorktree, rollbackUnclaimedProvision } from "./task-worktree-provision.mjs";
 import { createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS } from "./writer-lease-lib.mjs";
 
 const [command, ...args] = process.argv.slice(2);
-if (!command || !["start", "resume", "heartbeat", "review", "publish", "park", "complete", "end"].includes(command)) usage();
+const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+if (!command || !["start", "resume", "heartbeat", "review", "publish", "integrate", "park", "complete", "end"].includes(command)) usage();
 
 const json = args.includes("--json");
 const provisionRequested = args.includes("--provision");
@@ -88,12 +91,25 @@ function execute(action, context) {
   if (action === "heartbeat") return heartbeat(context);
   if (action === "review") return review(context);
   if (action === "publish") return publish(context);
+  if (action === "integrate") return integrateSession({
+    ...context,
+    commitMessage: readOption(args, "commit-message"),
+    pathsManifest: readOption(args, "paths-manifest"),
+    runtime: readOption(args, "runtime") || "canonical",
+    runtimeRepository: readOption(args, "runtime-repository"),
+    waitSeconds: Number(readOption(args, "wait-seconds") || 900),
+    pollSeconds: Number(readOption(args, "poll-seconds") || 5),
+    controllerRoot,
+    publishTask: () => publish(context),
+    completeTask: () => completeSession({ ...context, json: false }),
+    runText,
+  });
   if (action === "park") return park(context);
   return completeSession({ ...context, json: false });
 }
 
 function emitJson(action, context, result, { provisioned }) {
-  if (action === "complete" || action === "end") {
+  if (action === "complete" || action === "end" || action === "integrate") {
     console.log(JSON.stringify(result));
     return;
   }
@@ -179,9 +195,13 @@ function run(command, args) {
   if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed`);
 }
 
+function runText(command, args, options = {}) {
+  return execFileSync(command, args, { encoding: "utf8", ...options });
+}
+
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--provision --worktree=<absolute-new-path>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--json] | heartbeat --session=<id> --repository=<path> [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--provision --worktree=<absolute-new-path>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--json] | heartbeat --session=<id> --repository=<path> [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
   );
   process.exit(2);
 }

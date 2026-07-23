@@ -136,15 +136,17 @@ Separate unrelated scopes into branch-exclusive leased task worktrees. Commit in
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
-After the protected pull request reports `MERGED`, run the completion wrapper
-from the task branch:
+Use the explicit integration wrapper from the leased task worktree when the
+operator intends protected delivery:
 
 ```bash
-npm run device:complete -- --json
+npm run device:integrate -- --session="$AGENTIC_SESSION_ID" --json
 ```
 
-Require its pull-request, merge, and exact `main` SHA evidence, then restart the
-local Dev runtime from that `mainSha` and rerun the original acceptance path.
+For dirty work, also provide the intentional `--commit-message` and exact
+external `agentic-change-manifest/v1` through `--paths-manifest`. Require its
+commit, manifest/diff digest, pull-request, merge, integrated-source SHA, and
+managed-runtime evidence, then rerun the original acceptance path.
 Branch-only, stashed, pushed, open-pull-request, or auto-merge-pending work
 remains incomplete. `device:park` is only a paused or blocked exit. This Dev
 completion gate does not deploy from the checkout. The protected merge event

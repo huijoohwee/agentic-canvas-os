@@ -386,13 +386,37 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:stop -- \
 
 This is local runtime supervision, not completion, merge, release, or deployment. Task worktrees never become runtime sources. A read-only follow-up reruns `runtime:local:status` before claiming readiness; an implementation turn reruns `turn:end` idempotently.
 
-For a completed task:
+For a completed task, use the explicit integration command from the leased task
+worktree. It validates and commits only an exact approved dirty-path set,
+preflights and merges the current fetched protected `main`, publishes through
+the protected pull request, waits a bounded time for `MERGED`, completes the
+durable lease, fast-forwards the integrated canonical source, and reconciles the
+managed Knowgrph runtime through the Agentic Canvas OS `turn:end` supervisor:
 
-1. Commit intentionally and pass focused validation on the task branch.
-2. Publish through the protected Dev pull-request path and wait for `MERGED`.
-3. Run `npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:complete -- --json --repository="$TASK_WORKTREE"` from that task branch.
-4. Fast-forward the clean registered main worktree with `npm run sync:live`, then restart or reload the local runtime from the emitted exact `mainSha` and
-   rerun the original browser acceptance path.
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:integrate -- \
+  --session="$AGENTIC_SESSION_ID" \
+  --repository="$TASK_WORKTREE" \
+  --commit-message="<intentional single-line subject>" \
+  --paths-manifest="<absolute-path-to-change-manifest.json>" \
+  --json
+```
+
+The commit options are required only while the worktree is dirty. The manifest
+is external coordination input, not an authored task file, and has this exact
+shape:
+
+```json
+{"schema":"agentic-change-manifest/v1","branch":"agent/<device>/<scope>","baseSha":"<lease-base-sha>","paths":["path/owned-by-task"]}
+```
+
+Changed paths must equal `paths` before and after `npm run check`; the command
+stages those paths explicitly and rejects any residue. A clean worktree must
+already contain an authored commit beyond its fence. Runtime reconciliation
+targets the sibling canonical Knowgrph checkout by default; use
+`--runtime-repository=<path>` only for a nonstandard workspace layout.
+`--runtime=none` is an explicit recovery escape hatch: it emits `integrated`,
+not `runtime_ready`, and cannot support a runtime-ready completion claim.
 
 The completion wrapper fails closed unless the working tree is clean, the task
 branch has a merged pull request targeting `main`, its merge commit is contained
@@ -457,11 +481,13 @@ fast-forwarded separately, and the original failure is
 retested on a local runtime started from that same SHA. Dev integration alone
 does not authorize Prod mirror or Cloudflare action.
 
-VCC: Verify `npm run device:complete -- --json` exits zero and emits the required
-branch, pull-request, merge, and main evidence; the task worktree is clean and
-detached; `npm run sync:live` leaves the registered main worktree aligned with
-`origin/main`; the local runtime identifies that
-exact `mainSha`; and the original browser acceptance passes. Any missing item
+VCC: Verify `npm run device:integrate -- --json` exits zero with schema
+`agentic-device-integration-result/v1` and status `runtime_ready`; it emits the
+required commit/tree/digest, branch, pull-request, merge, integrated-source, and
+runtime evidence; the task worktree is clean and detached; all registered
+canonical sources align with `origin/main`; the managed local runtime identifies
+the exact Knowgrph application SHA and integrated source SHA; and the original
+browser acceptance passes. Any missing item
 leaves the task pending, paused, or blocked rather than complete.
 
 Session-end VCC: Verify the lifecycle report names every registered worktree and

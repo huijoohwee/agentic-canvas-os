@@ -56,6 +56,16 @@ npm run device:review -- --json
 
 This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes; it restores and proves draft ownership before a new writer claim. `device:publish` remains the separate explicit protected-delivery action.
 
+End each implementation turn with the canonical local runtime ready:
+
+```bash
+npm run turn:end -- --repository=<canonical-knowgrph-root> --json
+```
+
+This verifies clean protected `main` for both repositories, owns the fixed Apex
+and storage ports through a private supervisor token, rejects unmanaged
+listeners before mutation, and proves direct and proxied HTTP readiness.
+
 Mandatory completion gate:
 
 ```bash

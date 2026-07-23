@@ -72,7 +72,7 @@ completion_requires:
 
 Fetch before starting every Codex session; keep one clean registered `main` worktree as the runtime and synchronization owner; activate each task branch only in its own registered task worktree; pull only when intentionally updating a clean, exclusively owned branch.
 
-The canonical `main` worktree remains the only normal Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from normal Dev ports. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task worktrees serving as canonical runtime sources are forbidden.
+The canonical `main` worktree remains the only Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from canonical ports. The Agentic Canvas OS supervisor may own those ports only after both canonical repositories are clean exact fetched `origin/main` revisions with required protected checks successful. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task-worktree runtime sources are forbidden.
 
 Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
 
@@ -90,7 +90,7 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` in the registered `main` worktree is the global, centralized, frontmatter-first SSOT. It must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts. Additional registered task worktrees may author isolated branches but never become runtime docs sources. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. |
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
 | Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
-| Dev | Author in leased task worktrees; run normal Knowgrph Dev only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`. Use `npm run dev:apex`, `npm run dev`, and `npm run dev:latest` only through repository-owned scripts after integration. |
+| Dev | Author in leased task worktrees. Run Knowgrph only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`; Agentic Canvas OS owns the fixed Apex `5173` and storage `8787` supervisor after exact-main and protected-check verification. |
 | Immutable publication | Use Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane only for an already-created commit whose writer stopped or when recovering a checkout-independent delivery. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
 | Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Only the protected-main automatic release controller may publish it. |
@@ -362,12 +362,36 @@ complete.
 
 Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, marks the PR ready without an automerge label or merge call, and independently proves `isDraft: false`. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. Requested changes must use fenced resume, which restores and proves draft ownership before mutation. `device:publish` remains the explicit protected auto-merge path.
 
+### Canonical Local Runtime Handoff
+
+End every implementation turn with the canonical Knowgrph runtime supervised by Agentic Canvas OS:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run turn:end -- \
+  --repository="$GITHUB_ROOT/knowgrph" --json
+```
+
+The command runs the worktree lifecycle audit and fetches both canonical repositories. It requires clean `main == origin/main`, successful protected checks (`test`, `build`, `docs-contract`, and `collaboration-integration` for Agentic Canvas OS; `Integration Gate` for Knowgrph), and repository-owned runtime scripts. It acquires a host-wide lock, rejects unmanaged listeners before mutation, and may stop only a previously recorded process group whose private token, command, working directory, Git common directory, and port ownership still agree.
+
+The supervisor starts only Knowgrph's repository-owned Apex and storage commands on `127.0.0.1:5173` and `127.0.0.1:8787`. State, logs, and a private token live outside both repositories. Success records token hash rather than token value and proves Apex, direct storage export, and the same export through the Vite proxy. A raw `npm run dev`, source-only check, prior-turn proof, or HTTP response without matching process ownership cannot support a runtime-ready claim.
+
+Status re-proves source, protected checks, process ownership, listeners, and HTTP without mutation. Stop accepts only token-owned recorded process groups:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:status -- \
+  --repository="$GITHUB_ROOT/knowgrph" --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:stop -- \
+  --repository="$GITHUB_ROOT/knowgrph" --json
+```
+
+This is local runtime supervision, not completion, merge, release, or deployment. Task worktrees never become runtime sources. A read-only follow-up reruns `runtime:local:status` before claiming readiness; an implementation turn reruns `turn:end` idempotently.
+
 For a completed task, use the explicit integration command from the leased task
-worktree. It validates, commits only an exact approved dirty-path set, publishes
-through the protected pull request, waits a bounded time for `MERGED`, completes
-the current fetched protected `main` into the clean task branch, completes the durable lease,
-fast-forwards the integrated canonical source, and reconciles
-the managed Knowgrph runtime through the Agentic Canvas OS `turn:end` supervisor:
+worktree. It validates and commits only an exact approved dirty-path set,
+preflights and merges the current fetched protected `main`, publishes through
+the protected pull request, waits a bounded time for `MERGED`, completes the
+durable lease, fast-forwards the integrated canonical source, and reconciles the
+managed Knowgrph runtime through the Agentic Canvas OS `turn:end` supervisor:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:integrate -- \
@@ -423,6 +447,8 @@ durable state: complete through the protected merge protocol, park unfinished
 work, or keep an active leased lane when the same task is intentionally
 continuing.
 
+For every implementation lane, `turn:end` must finish ready against the canonical protected SHAs or the final response must report the missing integration or runtime proof. Task heads never replace canonical runtime ownership.
+
 Run the repository-owned lifecycle check from the canonical main worktree:
 
 ```sh
@@ -465,10 +491,11 @@ browser acceptance passes. Any missing item
 leaves the task pending, paused, or blocked rather than complete.
 
 Session-end VCC: Verify the lifecycle report names every registered worktree and
-its state; cleanup accepts only the completed clean detached target; the target
-registration disappears; the preserved branch still resolves to its original
-commit; canonical main remains clean and equal to fetched `origin/main`; and no
-Prod mirror or Cloudflare action occurs.
+its state; a runtime-relevant review-ready lane reports one ready server whose
+app SHA equals `reviewHeadSha`, docs SHA equals clean canonical Agentic Canvas OS
+`origin/main`, listener PID owns its reserved port, and HTTP returns 200; cleanup
+accepts only the completed clean detached target; canonical main remains clean;
+and no unrelated server, Prod mirror, or Cloudflare action is mutated.
 
 Otherwise fetch, inspect, and activate a new reconciliation or task branch in a detached registered task worktree. Never use pull to absorb unexplained dirt or resolve multi-writer ownership.
 

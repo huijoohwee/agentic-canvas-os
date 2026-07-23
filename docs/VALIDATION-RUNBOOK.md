@@ -524,13 +524,13 @@ Run the focused writer-coordination proof before any broader docs or build check
 ```sh
 node --test __tests__/writer-lease-lib.test.mjs __tests__/repository-guards.test.mjs __tests__/device-branch-lib.test.mjs
 ```
-
 The proof must show one atomic Git-common-directory lease registry, parallel claims for distinct registered worktrees and scopes, same-worktree exclusion, increasing epochs after expiry, bounded heartbeat renewal, session/branch/worktree fencing, different-scope pull-request coexistence, duplicate-scope rejection, machine-path-free remote metadata, and a draft ownership pull request created before normal authoring.
 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
 | Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
+| Canonical local runtime | `turn:end` reports `ready` only when clean exact protected `main` revisions, private-token process ownership, fixed Apex/storage listeners, and direct plus proxied HTTP probes agree; `runtime:local:stop` refuses unrelated processes. |
 | Multi-worktree writer coordination | Focused writer-lease, repository-guard, and device-branch tests exit zero; same-worktree competing sessions, branch reuse, and duplicate active scopes fail, while distinct registered worktrees and scopes coexist and heartbeat extends only the owning session's bounded branch lease. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |

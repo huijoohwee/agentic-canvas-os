@@ -75,6 +75,14 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       runText: (command, args, options) => {
         runtimeCommands.push({ command, args, options });
         if (command === "git") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+            preservedBranch: branch,
+          });
+        }
         if (command === "node") return "";
         return JSON.stringify({
           schema: "agentic-local-runtime-readiness/v1",
@@ -127,6 +135,10 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     });
     assert.equal(runtimeCommands[3].command, "npm");
     assert.ok(runtimeCommands[3].args.includes(`--repository=${canonicalKnowgrphRoot}`));
+    assert.equal(runtimeCommands[3].options.cwd, canonicalAgenticRoot);
+    assert.equal(runtimeCommands[4].command, "node");
+    assert.ok(runtimeCommands[4].args.includes(`--worktree=${repo}`));
+    assert.equal(result.cleanup.status, "cleaned");
   } finally {
     rmSync(repo, { recursive: true, force: true });
     rmSync(manifestPath, { force: true });
@@ -227,6 +239,12 @@ test("bounded merge waiting preserves delivery state for replay", () => {
 
 test("a protected-main merge preserves the approved authored commit evidence", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-"));
+  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  mkdirSync(canonicalKnowgrphRoot, { recursive: true });
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
   const refreshedHeadSha = "2".repeat(40);
   const integration = {
     schema: "agentic-integration-commit/v1",
@@ -263,7 +281,17 @@ test("a protected-main merge preserves the approved authored commit evidence", (
       },
       sessionId: "session-a",
       run: (command, args) => commands.push([command, ...args]),
-      runText: () => "merge preflight",
+      runText: (command, args) => {
+        if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        return "merge preflight";
+      },
       publishTask: () => {
         lease = { ...lease, status: "delivery", deliveryHeadSha: refreshedHeadSha };
       },

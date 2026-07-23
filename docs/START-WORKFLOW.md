@@ -417,6 +417,9 @@ targets the sibling canonical Knowgrph checkout by default; use
 `--runtime-repository=<path>` only for a nonstandard workspace layout.
 `--runtime=none` is an explicit recovery escape hatch: it emits `integrated`,
 not `runtime_ready`, and cannot support a runtime-ready completion claim.
+After canonical convergence (and, by default, runtime proof), the command uses
+the lifecycle cleaner to remove only its own clean detached completed checkout;
+the task branch and commits remain recoverable.
 
 The completion wrapper fails closed unless the working tree is clean, the task
 branch has a merged pull request targeting `main`, its merge commit is contained
@@ -456,7 +459,8 @@ npm run worktree:lifecycle:check
 ```
 
 The check retains the canonical main worktree, active unexpired task lanes,
-delivery lanes, and explicitly parked lanes. It fails closed on dirty,
+delivery lanes, explicitly parked lanes, and clean detached completion-proven
+lanes pending cleanup. It fails closed on dirty,
 unregistered, stale, ambiguous, invalid, or already-completed residual task
 worktrees. A completed task becomes cleanup-eligible only after
 `device:complete` verifies its merged pull request, detaches it cleanly at the

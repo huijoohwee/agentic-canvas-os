@@ -84,6 +84,10 @@ to report `MERGED`, records durable completion, fast-forwards the exact canonica
 source, and delegates runtime restart to Agentic Canvas OS's `turn:end` supervisor. It never kills an unknown
 port owner, never mutates canonical dirty state, and never treats an open PR or
 an unverified runtime as complete.
+After runtime readiness succeeds, the controller removes only its own clean,
+detached, completion-proven task checkout and preserves the task branch. A
+completed checkout remains audit-safe while cleanup is pending when its recorded
+completion SHA is a proven ancestor of current protected `main`.
 
 ## Automatic CI/CD
 

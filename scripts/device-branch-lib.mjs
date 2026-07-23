@@ -314,9 +314,11 @@ function reconcileResumeReplay({
       !local.worktreePath || path.resolve(local.worktreePath) !== path.resolve(repo)) return null;
   const markerFields = ["schema", "status", "epoch", "sessionId", "device", "scope", "branch", "baseSha", "fenceSha", "heartbeatAt", "expiresAt"];
   const activeReplay = remoteLease.status === "active" && markerFields.every(field => remoteLease[field] === local[field]);
+  const expiredActiveHandoff = remoteLease.status === "active" && Date.parse(remoteLease.expiresAt) <= now().getTime();
   const handoffHead = remoteLease.status === "review_ready" ? remoteLease.reviewHeadSha :
     remoteLease.status === "delivery" && remoteLease.sessionId === sessionId ? remoteLease.deliveryHeadSha :
-    remoteLease.status === "parked" ? requireParkedResumeHead(remoteLease) : null;
+    remoteLease.status === "parked" ? requireParkedResumeHead(remoteLease) :
+    expiredActiveHandoff ? remoteLease.fenceSha : null;
   const pendingHandoff = /^[0-9a-f]{40}$/.test(String(handoffHead || "")) &&
     local.baseSha === handoffHead && local.epoch === remoteLease.epoch + 1;
   if (!activeReplay && !pendingHandoff) return null;

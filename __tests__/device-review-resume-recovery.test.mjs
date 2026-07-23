@@ -49,6 +49,25 @@ test("review-ready resume reconciles every externally interruptible transition",
   }
 });
 
+test("expired active takeover replays after its claim commit or push", async t => {
+  for (const phase of ["commit", "push"]) {
+    await t.test(`after ${phase}`, () => {
+      const harness = createExpiredActiveHarness(phase);
+      assert.throws(() => harness.invoke(), new RegExp(`interrupted after ${phase}`));
+      const result = harness.invoke();
+      const state = harness.state();
+
+      assert.equal(result.status, "active");
+      assert.equal(result.fenceSha, nextFence);
+      assert.equal(state.head, nextFence);
+      assert.equal(state.remoteHead, nextFence);
+      assert.equal(parseWriterLeasePullRequestBody(state.remoteBody).epoch, 4);
+      assert.equal(state.claims, 1);
+      assert.equal(state.commits, 1);
+    });
+  }
+});
+
 function createHarness(failPhase) {
   let failed = false;
   let isDraft = false;
@@ -159,5 +178,113 @@ function createHarness(failPhase) {
   return {
     invoke: () => resume(context),
     state: () => ({ calls, claims, commits, rollbacks, isDraft, head, remoteHead, remoteBody, localLease }),
+  };
+}
+
+function createExpiredActiveHarness(failPhase) {
+  const expired = {
+    ...prior,
+    status: "active",
+    sessionId: "session-a",
+    reviewHeadSha: null,
+    fenceSha: reviewedHead,
+    baseSha: "a".repeat(40),
+    expiresAt: "2026-07-22T00:00:00.000Z",
+  };
+  let failed = false;
+  let currentBranch = "";
+  let head = reviewedHead;
+  let remoteHead = reviewedHead;
+  let remoteBody = renderWriterLeasePullRequestBody(expired);
+  let localLease = expired;
+  let claims = 0;
+  let commits = 0;
+  const interrupt = phase => {
+    if (!failed && phase === failPhase) {
+      failed = true;
+      throw new Error(`interrupted after ${phase}`);
+    }
+  };
+  const context = {
+    branchName: branch,
+    invocationPath: repo,
+    repo,
+    gitText: args => {
+      const key = args.join(" ");
+      const values = {
+        "worktree list --porcelain -z": () => currentBranch
+          ? `worktree ${repo}\0HEAD ${head}\0branch refs/heads/${branch}\0`
+          : `worktree ${repo}\0HEAD ${head}\0detached\0`,
+        "diff --name-only --diff-filter=U": () => "",
+        "ls-files -u": () => "",
+        "status --porcelain": () => "",
+        "branch --show-current": () => currentBranch,
+        [`rev-parse origin/${branch}`]: () => remoteHead,
+        "rev-parse HEAD": () => head,
+        "rev-list --parents -n 1 HEAD": () => `${head} ${reviewedHead}`,
+        "log -1 --pretty=%s": () => "chore(coordination): claim managed-run lease 4",
+        "diff-tree --no-commit-id --name-only -r HEAD": () => "",
+      };
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key]();
+    },
+    gitOptional: args => {
+      if (args[0] === "config") return "device";
+      if (args[0] === "show-ref") return reviewedHead;
+      if (args[0] === "ls-remote") return `${remoteHead}\trefs/heads/${branch}`;
+      return "";
+    },
+    ghText: args => args[1] === "list" ? JSON.stringify([{
+      number: 42, headRefName: branch, url: pullRequestUrl, body: remoteBody,
+    }]) : JSON.stringify({
+      url: pullRequestUrl,
+      state: "OPEN",
+      isDraft: true,
+      headRefName: branch,
+      baseRefName: "main",
+      body: remoteBody,
+    }),
+    leaseStore: {
+      read: () => localLease,
+      claim: () => {
+        claims += 1;
+        localLease = {
+          ...expired,
+          status: "active",
+          epoch: 4,
+          sessionId: "session-b",
+          baseSha: reviewedHead,
+          fenceSha: null,
+          pullRequestUrl: null,
+          heartbeatAt: "2026-07-22T00:10:00.000Z",
+          expiresAt: "2026-07-22T00:40:00.000Z",
+        };
+        return localLease;
+      },
+      annotate: ({ values }) => (localLease = { ...localLease, ...values }),
+      verify: () => localLease,
+    },
+    sessionId: "session-b",
+    leaseTtlMs: 1_800_000,
+    run: (command, args) => {
+      const call = [command, ...args];
+      if (call.join(" ") === `git switch ${branch}`) currentBranch = branch;
+      else if (command === "git" && args[0] === "commit") {
+        commits += 1;
+        head = nextFence;
+        interrupt("commit");
+      } else if (call.join(" ") === `git push origin ${branch}`) {
+        remoteHead = head;
+        interrupt("push");
+      } else if (command === "gh" && args[0] === "pr" && args[1] === "edit") {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+    now: () => new Date("2026-07-22T00:10:00.000Z"),
+  };
+  return {
+    invoke: () => resume(context),
+    state: () => ({ head, remoteHead, remoteBody, localLease, claims, commits }),
   };
 }

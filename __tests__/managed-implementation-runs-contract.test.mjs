@@ -41,7 +41,8 @@ test("managed implementation contract exposes the exact MCP and lifecycle bounda
   assert.match(managed, /automatic merge|automerge/);
   assert.match(managed, /deploy/);
   assert.equal(packageJson.scripts["device:review"], "node ./scripts/device-branch.mjs review");
-  assert.equal(packageJson.scripts["managed-implementation-runs:check"], "node --test __tests__/managed-implementation-runs-contract.test.mjs __tests__/device-branch-cli.test.mjs __tests__/device-command-result.test.mjs __tests__/device-park-stash.test.mjs __tests__/device-park.test.mjs __tests__/device-resume.test.mjs __tests__/device-review-resume-recovery.test.mjs __tests__/device-review.test.mjs __tests__/device-start.test.mjs __tests__/task-worktree-provision.test.mjs");
+  assert.equal(packageJson.scripts["device:integrate"], "node ./scripts/device-branch.mjs integrate");
+  assert.equal(packageJson.scripts["managed-implementation-runs:check"], "node --test __tests__/managed-implementation-runs-contract.test.mjs __tests__/device-branch-cli.test.mjs __tests__/device-command-result.test.mjs __tests__/device-integrate.test.mjs __tests__/device-park-stash.test.mjs __tests__/device-park.test.mjs __tests__/device-resume.test.mjs __tests__/device-review-resume-recovery.test.mjs __tests__/device-review.test.mjs __tests__/device-start.test.mjs __tests__/task-worktree-provision.test.mjs");
   assert.doesNotMatch(JSON.stringify({
     dependencies: packageJson.dependencies,
     devDependencies: packageJson.devDependencies,

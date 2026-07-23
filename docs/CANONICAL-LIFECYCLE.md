@@ -76,6 +76,15 @@ and immutable artifacts are the shared coordination surface.
 - Automation credentials may bypass neither required checks nor source/mirror
   provenance validation.
 
+`device:integrate` is the explicit device-local convergence controller. It may
+create one intentional commit only when the exact dirty path set matches an
+external `agentic-change-manifest/v1` before and after repository validation.
+It preflights and merges the fetched protected `origin/main`, then reuses protected publication and waits a bounded time for the exact PR head
+to report `MERGED`, records durable completion, fast-forwards the exact canonical
+source, and delegates runtime restart to Agentic Canvas OS's `turn:end` supervisor. It never kills an unknown
+port owner, never mutates canonical dirty state, and never treats an open PR or
+an unverified runtime as complete.
+
 ## Automatic CI/CD
 
 The merge of a protected, green `main` revision is standing operator

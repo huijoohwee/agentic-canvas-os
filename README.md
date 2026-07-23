@@ -104,6 +104,7 @@ agentic-canvas-os Cloudflare Worker
   /api/auth/session  -> stateless Auth_Token
   /api/invoke        -> MCP forward to knowgrph.agentic_canvas_os.docs.invoke
   /api/run           -> MCP forward to knowgrph.video_remix.run
+  /api/agent/run     -> opt-in authenticated composed agent execution
   /api/ready         -> sanitized runtime readiness
 
 knowgrph control plane
@@ -149,6 +150,8 @@ run-scoped canvas embed URL.
 | `agent-api/src/function-execution-receipts.js` | Pre-side-effect receipt owner for stable idempotency keys, atomic execution claims, native mutation evidence, and terminal replay. |
 | `worker/agent-state.js` | Per-identity transactional Durable Object state owner. |
 | `agent-api/src/agent-runtime-composition.js` | Source-verified definition preparation, model selection, Running Agents lifecycle, final-output validation, and orchestration adapters. |
+| `agent-api/src/autonomous-runtime-config.js` | Explicit runtime and spend gates, source digest verification, model alignment, and bounded default definition registration. |
+| `agent-api/src/agent-runtime-handler.js` | Session-authenticated composed-agent HTTP boundary with strict caller fields and principal-scoped identities. |
 | `agent-api/src/progressive-agents.js` | Incremental facade for one exact agent run, tool-bearing definitions, and explicit specialist workflows. |
 | `agent-api/src/agent-orchestration.js` | Revision-fenced manager and specialist topology with explicit delegation, handoff, conversation, and final-answer ownership. |
 | `agent-api/src/agent-swarm*.js` | Dynamic goal planning, durable atomic run ledger, horizontally claimable worker tasks, recovery, receipts, cancellation, and base-agent synthesis. |
@@ -175,6 +178,15 @@ default. A provider default can fill only an omitted model or transport. Exact
 feature, delivery, and connection requirements fail closed before adapter execution.
 Provider execution remains `unverified` until the Running Agents adapter completes
 a real bounded run and reports evidence.
+
+The shipped Worker keeps autonomous execution off. An operator can expose the
+source-verified composed path at `POST /api/agent/run` only by aligning the
+`AGENT_MODEL_*` and `OPENAI_AGENT_*` settings and supplying every
+`AGENT_RUNTIME_*` enablement, spend, source, identity, and provider-call gate.
+The request accepts only run id, conversation id, and bounded input; agent
+identity, model, policy, and transport remain server-owned. See
+[`docs/AUTONOMOUS-RUNTIME.md`](./docs/AUTONOMOUS-RUNTIME.md) and run
+`npm run autonomous-runtime:check` for the zero-network acceptance proof.
 
 It also reports the bounded cache-context policy and local registry counters.
 `providerCacheStatus` remains `unverified` until the downstream model owner
@@ -229,8 +241,9 @@ conversation to one of four continuation strategies, resumes pauses within the
 same turn, and streams canonical events through the same loop used by ordinary
 runs. The `AGENT_STATE` binding stores bounded paused turns per conversation;
 atomic claims allow a fresh Worker isolate to resume once and commit, replace,
-or release the state. The default Worker still has no agent-step adapter, so
-`configured` is false and provider execution remains `unverified`.
+or release the state. Without the complete opt-in autonomous configuration the
+Worker injects no agent-step adapter, so `configured` is false and provider
+execution remains `unverified`.
 
 Guardrails and Human Review adds one application control owner around that
 lifecycle. Agent Runtime Composition runs source-referenced input checks before
@@ -381,6 +394,7 @@ npm run cache-context:check
 npm run reasoning-continuity:check
 npm run function-gateway:check
 npm run guardrails-human-review:check
+npm run autonomous-runtime:check
 npm run programmatic-tool-calling:check
 npm run tool-search:check
 npm run model-providers:check

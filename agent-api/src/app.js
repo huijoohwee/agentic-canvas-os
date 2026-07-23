@@ -9,12 +9,18 @@
 //   KNOWGRPH_FUNCTION_TOOL_ALLOWLIST — explicit application function names
 //   KNOWGRPH_FUNCTION_REVIEW_REQUIRED — enabled functions that require signed human review
 //   OPENAI_FUNCTION_CALLING_* — Responses adapter model, pricing, and key route
+//   OPENAI_AGENT_*        — opt-in Responses agent adapter model, pricing, and bounds
 //   AGENT_MODEL_*          — explicit provider, model, transport, and secret route
+//   AGENT_RUNTIME_*        — explicit runtime, spend, source, and provider-call gates
 //   AGENT_API_AUTH_EXPIRY  — optional session expiry seconds [300, 86400]
 
 import { verifyReviewerToken } from "./auth.js";
 import { createAuthSessionHandler, createRunHandler, createInvokeHandler } from "./handler.js";
-import { createAgentDefinitionRegistry } from "./agent-definitions.js";
+import { createAgentRuntimeHandler } from "./agent-runtime-handler.js";
+import {
+  createAutonomousAgentDefinitionRegistry,
+  resolveAutonomousRuntimeEnvironment,
+} from "./autonomous-runtime-config.js";
 import { createAgentOrchestrationRuntime } from "./agent-orchestration.js";
 import { createAgentRuntimeComposition } from "./agent-runtime-composition.js";
 import { createAgentSwarmHandlers } from "./agent-swarm-handler.js";
@@ -38,6 +44,10 @@ import {
 import { resolveModelProviderEnvironment } from "./model-config.js";
 import { createModelProviderRuntime } from "./model-providers.js";
 import {
+  createOpenAiResponsesAgentAdapter,
+  resolveOpenAiResponsesAgentConfig,
+} from "./openai-responses-agent-adapter.js";
+import {
   createOpenAiResponsesFunctionAdapter,
   OPENAI_FUNCTION_CALLING_CAPABILITIES,
   resolveOpenAiResponsesFunctionConfig,
@@ -59,7 +69,7 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {object} [opts]
  * @param {object} [opts.env] environment bag (default process.env)
  * @param {Function} [opts.fetchImpl] injectable MCP transport (tests)
- * @param {ReturnType<createAgentDefinitionRegistry>} [opts.agentDefinitions] isolate-scoped agent definition registry
+ * @param {ReturnType<createAutonomousAgentDefinitionRegistry>} [opts.agentDefinitions] isolate-scoped agent definition registry
  * @param {ReturnType<createAgentOrchestrationRuntime>} [opts.agentOrchestration] multi-agent ownership controller
  * @param {ReturnType<createAgentRuntimeComposition>} [opts.agentRuntimeComposition] definition-to-execution adapter
  * @param {ReturnType<createAgentSwarmRuntime>} [opts.agentSwarm] dynamic horizontal task coordinator
@@ -114,10 +124,16 @@ export function createAgentApiApp({
   const endpoint = typeof e.KNOWGRPH_MCP_ENDPOINT === "string" ? e.KNOWGRPH_MCP_ENDPOINT.trim() : "";
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
   const modelProviderEnvironment = resolveModelProviderEnvironment(e);
+  const openAiAgentConfig = resolveOpenAiResponsesAgentConfig(e);
+  const autonomousRuntimeEnvironment = resolveAutonomousRuntimeEnvironment(e, {
+    modelProviderEnvironment,
+    openAiAgentConfig,
+  });
   const openAiFunctionConfig = resolveOpenAiResponsesFunctionConfig(e);
   const configuredReviewSecret = typeof e.AGENT_REVIEW_JWT_SECRET === "string" ? e.AGENT_REVIEW_JWT_SECRET : "";
   const reviewSecret = configuredReviewSecret && configuredReviewSecret !== secret ? configuredReviewSecret : "";
-  const agentDefinitions = providedAgentDefinitions || createAgentDefinitionRegistry();
+  const agentDefinitions = providedAgentDefinitions
+    || createAutonomousAgentDefinitionRegistry(autonomousRuntimeEnvironment);
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const authenticateReviewer = reviewSecret
@@ -152,10 +168,19 @@ export function createAgentApiApp({
     modelProviders.registerProvider(modelProviderEnvironment.providerDefinition);
     modelProviders.configureProcessDefault(modelProviderEnvironment.processDefault);
   }
+  const openAiAgentAdapter = autonomousRuntimeEnvironment.ready
+    ? createOpenAiResponsesAgentAdapter({
+      ...openAiAgentConfig,
+      maxTurns: autonomousRuntimeEnvironment.maxProviderCalls,
+      fetchImpl,
+    })
+    : null;
   const agentRuntimeComposition = providedAgentRuntimeComposition || createAgentRuntimeComposition({
     agentDefinitions,
     guardrailsHumanReview,
     modelProviders,
+    executeAgentStep: openAiAgentAdapter?.advanceAgent,
+    ...(pausedTurnStore ? { pausedTurnStore } : {}),
   });
   const agentOrchestration = providedAgentOrchestration || createAgentOrchestrationRuntime({
     resolveAgent: agentRuntimeComposition.resolveAgent,
@@ -206,6 +231,16 @@ export function createAgentApiApp({
   });
   const agentSwarmHandlers = createAgentSwarmHandlers({ secret, agentSwarm });
   const agentToolkitHandlers = createAgentToolkitHandlers({ secret, agentToolkit });
+  const agentRuntimeRun = createAgentRuntimeHandler({
+    secret,
+    agentRuntimeComposition,
+    agentReference: autonomousRuntimeEnvironment.ready
+      ? Object.freeze({
+        agentId: autonomousRuntimeEnvironment.agentId,
+        revision: autonomousRuntimeEnvironment.agentRevision,
+      })
+      : null,
+  });
 
   return {
     configured: Boolean(secret && endpoint && modelProviderEnvironment.ready && modelProviderEnvironment.apiKeyPresent),
@@ -214,6 +249,7 @@ export function createAgentApiApp({
     agentDefinitions,
     agentOrchestration,
     agentRuntimeComposition,
+    agentRuntimeRun,
     agentSwarm,
     agentToolkit,
     cacheContext,
@@ -223,6 +259,7 @@ export function createAgentApiApp({
     functionGateway,
     guardrailsHumanReview,
     openAiFunctionAdapter,
+    openAiAgentAdapter,
     programmaticToolCalling,
     progressiveAgents,
     runningAgents,
@@ -254,7 +291,9 @@ export function createAgentApiApp({
       const functionGatewayStats = functionGateway.stats();
       const guardrailsHumanReviewStats = guardrailsHumanReview.stats();
       const openAiFunctionStats = openAiFunctionAdapter?.stats();
-      const runningAgentStats = runningAgents.stats();
+      const runningAgentStats = agentRuntimeCompositionStats.configured
+        ? agentRuntimeCompositionStats.runningAgents
+        : runningAgents.stats();
       const sandboxAgentStats = sandboxAgents.stats();
       const toolSearchStats = toolSearch.stats();
       const modelProviderStats = modelProviders.stats();
@@ -343,6 +382,26 @@ export function createAgentApiApp({
           outputValidationOwner: "agent-definitions",
           providerExecutionStatus: "unverified",
           ...agentRuntimeCompositionStats,
+        },
+        autonomousRuntime: {
+          configured: autonomousRuntimeEnvironment.ready && agentRuntimeCompositionStats.configured,
+          enabled: autonomousRuntimeEnvironment.enabled,
+          contractReady: true,
+          route: autonomousRuntimeEnvironment.route,
+          auth: autonomousRuntimeEnvironment.auth,
+          spendApproved: autonomousRuntimeEnvironment.spendApproved,
+          sourceVerification: autonomousRuntimeEnvironment.sourceVerification,
+          sourceDigestPresent: autonomousRuntimeEnvironment.sourceDigestPresent,
+          sourceDigestMatches: autonomousRuntimeEnvironment.sourceDigestMatches,
+          controlPlaneConfigured: autonomousRuntimeEnvironment.controlPlaneConfigured,
+          agentId: autonomousRuntimeEnvironment.agentId,
+          agentRevision: autonomousRuntimeEnvironment.agentRevision,
+          adapterId: autonomousRuntimeEnvironment.adapterId,
+          maxProviderCalls: autonomousRuntimeEnvironment.maxProviderCalls,
+          maxOutputTokens: openAiAgentConfig.maxOutputTokens,
+          providerExecutionStatus: "unverified",
+          issues: autonomousRuntimeEnvironment.issues,
+          adapter: openAiAgentAdapter?.stats() || Object.freeze({ configured: false }),
         },
         agentSwarm: {
           configured: agentSwarmStats.configured,

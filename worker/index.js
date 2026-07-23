@@ -5,7 +5,6 @@
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
-import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import {
   createDurableObjectAgentToolkitStore,
@@ -47,7 +46,6 @@ export function createWorkerFetch(env = {}, publicFetch) {
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const MAX_JSON_BODY_BYTES = 512 * 1024;
 const APP_BY_ENV = new WeakMap();
-const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
 const MODEL_PROVIDERS_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
@@ -113,7 +111,6 @@ function toResponse(result) {
 
 function createWorkerApp(env) {
   if (env && typeof env === "object" && APP_BY_ENV.has(env)) return APP_BY_ENV.get(env);
-  let agentDefinitions;
   let cacheContext;
   let modelProviders;
   let reasoningContinuity;
@@ -145,11 +142,6 @@ function createWorkerApp(env) {
     ? createDurableObjectAgentToolkitStore({ namespace: env.AGENT_STATE })
     : undefined;
   if (env && typeof env === "object") {
-    agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
-    if (!agentDefinitions) {
-      agentDefinitions = createAgentDefinitionRegistry();
-      AGENT_DEFINITIONS_BY_ENV.set(env, agentDefinitions);
-    }
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
@@ -190,7 +182,6 @@ function createWorkerApp(env) {
   }
   const app = createAgentApiApp({
     env,
-    agentDefinitions,
     cacheContext,
     modelProviders,
     reasoningContinuity,
@@ -235,6 +226,12 @@ async function dispatchCloudflareRequest(request, env = {}) {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
     const body = await readJsonBody(request);
     return toResponse(await app.invoke({ headers: headerBag(request), body }));
+  }
+
+  if (url.pathname === "/api/agent/run" || url.pathname === "/agent/run") {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    return toResponse(await app.agentRuntimeRun({ headers: headerBag(request), body, signal: request.signal }));
   }
 
   if (url.pathname === "/api/function-call" || url.pathname === "/function-call") {

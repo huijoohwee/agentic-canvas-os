@@ -225,6 +225,67 @@ test("bounded merge waiting preserves delivery state for replay", () => {
   }
 });
 
+test("a protected-main merge preserves the approved authored commit evidence", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-"));
+  const refreshedHeadSha = "2".repeat(40);
+  const integration = {
+    schema: "agentic-integration-commit/v1",
+    commitSha,
+    treeSha,
+    manifestDigest: "3".repeat(64),
+    stagedDiffDigest: "4".repeat(64),
+    paths: ["scripts/device-integrate-lib.mjs"],
+  };
+  let lease = createLease({ repo, integration });
+  const commands = [];
+  try {
+    const result = integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === "diff --name-only -z HEAD --" || key === "ls-files --others --exclude-standard -z" ||
+            key === "status --porcelain") return "";
+        if (key === "rev-parse HEAD") return refreshedHeadSha;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "MERGED",
+        baseRefName: "main",
+        headRefOid: refreshedHeadSha,
+        mergeCommit: { oid: mergeSha },
+      }),
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+      },
+      sessionId: "session-a",
+      run: (command, args) => commands.push([command, ...args]),
+      runText: () => "merge preflight",
+      publishTask: () => {
+        lease = { ...lease, status: "delivery", deliveryHeadSha: refreshedHeadSha };
+      },
+      completeTask: () => {
+        lease = { ...lease, status: "completed", completion: { mergeCommitSha: mergeSha, mainSha } };
+        return lease.completion;
+      },
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    });
+
+    assert.deepEqual(result.commit, integration);
+    assert.ok(commands.some(call => call.join(" ") ===
+      `git merge-base --is-ancestor ${commitSha} HEAD`));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 function createLease({ repo, ...overrides }) {
   return {
     schema: "agentic-writer-lease/v2",

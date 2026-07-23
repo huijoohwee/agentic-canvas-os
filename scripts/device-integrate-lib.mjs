@@ -158,6 +158,10 @@ function prepareIntegrationCommit({
     throw new Error("No authored or committed task change exists beyond the writer fence.");
   }
   if (lease.integration?.commitSha === headSha) return lease.integration;
+  if (SHA_PATTERN.test(String(lease.integration?.commitSha || ""))) {
+    run("git", ["merge-base", "--is-ancestor", lease.integration.commitSha, "HEAD"]);
+    return lease.integration;
+  }
   return annotateIntegration({
     branch, leaseStore, sessionId, gitText, now,
     values: {

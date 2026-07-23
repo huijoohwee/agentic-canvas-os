@@ -76,15 +76,26 @@ export function integrateSession({
     throw new Error("Integration completion did not emit an exact canonical main SHA.");
   }
 
+  const canonicalIntegration = convergeCanonicalSource({
+    canonicalRoot,
+    mainSha,
+    controllerRoot,
+    runtimeRepository,
+    runText,
+  });
   const runtimeReadiness = runtime === "canonical"
     ? reconcileCanonicalRuntime({
-      canonicalRoot,
+      canonicalIntegration,
+      integrationWorktree: repo,
       mainSha,
-      controllerRoot,
-      runtimeRepository,
       runText,
     })
     : null;
+  const cleanup = runtimeReadiness?.cleanup || cleanupIntegrationWorktree({
+    canonicalIntegration,
+    integrationWorktree: repo,
+    runText,
+  });
   const status = runtimeReadiness ? "runtime_ready" : "integrated";
   const result = {
     schema: DEVICE_INTEGRATION_RESULT_SCHEMA,
@@ -96,6 +107,8 @@ export function integrateSession({
     commit: commitEvidence,
     mergeCommitSha: completion?.mergeCommitSha || null,
     mainSha,
+    canonical: canonicalIntegration.integratedSource,
+    cleanup,
     runtime: runtimeReadiness,
   };
   log(
@@ -229,7 +242,7 @@ function waitForMergedPullRequest({
   }
 }
 
-function reconcileCanonicalRuntime({ canonicalRoot, mainSha, controllerRoot, runtimeRepository, runText }) {
+function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runtimeRepository, runText }) {
   const controller = path.resolve(controllerRoot || "");
   if (!controllerRoot || !path.isAbsolute(controllerRoot)) {
     throw new Error("Canonical integration requires the absolute Agentic Canvas OS controller root.");
@@ -241,16 +254,24 @@ function reconcileCanonicalRuntime({ canonicalRoot, mainSha, controllerRoot, run
   }
 
   const repositories = resolveRuntimeRepositories({ canonicalRoot, runtimeRepository });
+  return {
+    integratedSource: { repository: path.basename(canonicalRoot), root: canonicalRoot, mainSha },
+    repositories,
+  };
+}
+
+function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, mainSha, runText }) {
+  const { repositories, integratedSource } = canonicalIntegration;
   const output = runText("npm", [
     "--prefix", repositories.agenticCanvasOsRoot,
     "run", "turn:end", "--",
     `--repository=${repositories.knowgrphRoot}`,
     "--json",
-  ]);
+  ], { cwd: repositories.agenticCanvasOsRoot });
   const line = String(output || "").trim().split(/\r?\n/).reverse().find(value => value.trim().startsWith("{"));
   if (!line) throw new Error("Canonical runtime reconciler returned no machine-readable readiness result.");
   const result = JSON.parse(line);
-  const integratedRepository = path.basename(canonicalRoot);
+  const integratedRepository = integratedSource.repository;
   const integratedRevision = integratedRepository === "agentic-canvas-os"
     ? result.agenticCanvasOs?.revision
     : integratedRepository === "knowgrph"
@@ -260,10 +281,26 @@ function reconcileCanonicalRuntime({ canonicalRoot, mainSha, controllerRoot, run
       result.status !== "runtime-ready" || integratedRevision !== mainSha) {
     throw new Error("Canonical runtime readiness did not match the integrated main SHA.");
   }
-  return {
-    integratedSource: { repository: integratedRepository, root: canonicalRoot, mainSha },
-    readiness: result,
-  };
+  const cleanup = cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree, runText });
+  return { integratedSource, readiness: result, cleanup };
+}
+
+function cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree, runText }) {
+  const { integratedSource, repositories } = canonicalIntegration;
+  const output = runText("node", [
+    path.join(repositories.agenticCanvasOsRoot, "scripts", "worktree-lifecycle.mjs"),
+    "cleanup",
+    `--repository=${integratedSource.root}`,
+    `--worktree=${integrationWorktree}`,
+  ], { cwd: repositories.agenticCanvasOsRoot });
+  const line = String(output || "").trim().split(/\r?\n/).reverse().find(value => value.trim().startsWith("{"));
+  if (!line) throw new Error("Integration worktree cleanup returned no machine-readable result.");
+  const result = JSON.parse(line);
+  if (result.schema !== "agentic-worktree-lifecycle-report/v1" || result.status !== "cleaned" ||
+      path.resolve(result.removedWorktree || "") !== path.resolve(integrationWorktree)) {
+    throw new Error("Integration worktree cleanup did not remove the completed task checkout.");
+  }
+  return result;
 }
 
 function resolveRuntimeRepositories({ canonicalRoot, runtimeRepository }) {

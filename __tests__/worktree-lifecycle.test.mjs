@@ -21,16 +21,38 @@ test("lifecycle keeps canonical, active, review-ready, and parked lanes while su
     { epoch: 1, status: "active", expiresAt: "2026-07-20T11:00:00.000Z", worktreePath: "/tasks/active" },
     { epoch: 4, status: "review_ready", worktreePath: "/tasks/review" },
     { epoch: 2, status: "parked", worktreePath: "/tasks/parked" },
-    { epoch: 3, status: "completed", branch: "agent/mac/completed", worktreePath: "/tasks/completed" },
+    { epoch: 3, status: "completed", branch: "agent/mac/completed", worktreePath: "/tasks/completed", completion: { mainSha: canonicalSha } },
   ];
   const result = classifyWorktreeLifecycle({
     records,
     canonicalSha,
     leases,
     dirt: new Map(),
+    integratedCompletionShas: new Set([canonicalSha]),
     now: new Date("2026-07-20T10:00:00.000Z"),
   });
   assert.deepEqual(result.map(item => item.state), ["canonical", "active", "review-ready", "parked", "cleanup-ready"]);
+});
+
+test("completed historical main objects remain cleanup-ready after canonical main advances", () => {
+  const completedSha = "c".repeat(40);
+  const records = [main, { path: "/tasks/completed-old", head: completedSha, detached: true }];
+  const leases = [{
+    epoch: 3,
+    status: "completed",
+    branch: "agent/mac/completed-old",
+    worktreePath: "/tasks/completed-old",
+    completion: { mainSha: completedSha },
+  }];
+  const integrated = classifyWorktreeLifecycle({
+    records,
+    canonicalSha,
+    leases,
+    integratedCompletionShas: new Set([completedSha]),
+  });
+  const unproven = classifyWorktreeLifecycle({ records, canonicalSha, leases });
+  assert.equal(integrated[1].state, "cleanup-ready");
+  assert.equal(unproven[1].state, "review-required");
 });
 
 test("lifecycle never upgrades dirty, ambiguous, or stale active lanes to cleanup-ready", () => {

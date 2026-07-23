@@ -13,6 +13,7 @@
     "agent-live-provider:check": "node --test __tests__/openai-agent-live-proof.test.mjs",
     "agent-live-provider:proof": "node ./scripts/live-agent-provider-proof.mjs",
     "agent-runtime-composition:check": "node --test __tests__/agent-runtime-composition.test.mjs",
+    "autonomous-runtime:check": "node --test __tests__/autonomous-runtime.test.mjs __tests__/agent-api-app.test.mjs __tests__/cloudflare-worker.test.mjs",
     "agent-swarm:check": "node --test __tests__/agent-swarm.test.mjs __tests__/durable-agent-state.test.mjs __tests__/agent-api-app.test.mjs __tests__/cloudflare-worker.test.mjs",
     "agent-toolkit:check": "node --test __tests__/agent-toolkit.test.mjs __tests__/durable-agent-state.test.mjs __tests__/agent-api-app.test.mjs __tests__/cloudflare-worker.test.mjs",
     "application-composition-contract:check": "node --test __tests__/application-composition-contract.test.mjs",

@@ -348,7 +348,7 @@ semantic:
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
-| `/repository.pack #repository-packing @repository-root @runtime-proof` | Create one deterministic bounded local artifact through `knowgrph.repository.pack`; the alias grants no remote, model, external dependency, Prod, or Cloudflare authority. |
+| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |

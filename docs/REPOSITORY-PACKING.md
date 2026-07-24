@@ -10,7 +10,7 @@ status: "spec-complete"
 invocation: "/repository.pack #repository-packing @repository-root @runtime-proof"
 skill_id: "repository.pack"
 mcp_tool: "knowgrph.repository.pack"
-runtime_owner: "$GITHUB_ROOT/knowgrph"
+runtime_owner: "$GITHUB_ROOT/knowgrph/mcp/repository-pack-contract.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-error.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-format.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-git.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-publisher.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-runtime.js; $GITHUB_ROOT/knowgrph/mcp/local-tool-contract.js; $GITHUB_ROOT/knowgrph/mcp/os-status-runtime.js; $GITHUB_ROOT/knowgrph/mcp/server.js"
 runtime_surface: "local stdio MCP"
 publish_policy: "Dev-only; no Prod or Cloudflare authority"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -62,16 +62,20 @@ The MCP input schema is closed and accepts only these fields:
 | Field | Type | Default | Rule |
 |---|---|---|---|
 | `repositoryPath` | string | `.` | Repository-relative path under the configured Knowgrph MCP root; it must resolve to an exact Git worktree root. |
-| `outputDirectory` | string | `data/outputs/repository-packs` | Repository-relative directory under the MCP root; it must remain outside the packed inventory. |
+| `outputDirectory` | string | `data/outputs/repository-packs` | Repository-relative directory beneath the selected Git worktree; it must remain outside the packed inventory. |
 | `includePaths` | array of strings | `[]` | Optional repository-relative file or directory prefixes; empty means every eligible path. |
 | `excludePaths` | array of strings | `[]` | Optional repository-relative file or directory prefixes applied after inclusion. |
-| `maxFiles` | integer | `12000` | Positive and no greater than `20000`. |
+| `maxFiles` | integer | `12000` | Positive selected-candidate limit applied after include/exclude policy; no greater than `20000`. |
 | `maxFileBytes` | integer | `2097152` | Positive and no greater than `8388608`. |
 | `maxTotalBytes` | integer | `134217728` | Positive and no greater than `268435456`. |
 
 Unknown fields, absolute paths, URL schemes, NUL or control characters,
 backslashes, empty path segments, `.` or `..` segments, duplicate policy paths,
 and bounds outside their hard ceilings fail before discovery.
+
+Only `maxFiles`, `maxFileBytes`, and `maxTotalBytes` are caller-lowerable.
+Policy-path, normalized-path, output-artifact, runtime, and MCP-response limits
+are host-owned and cannot be raised or bypassed through MCP input.
 
 ## Deterministic Pipeline
 
@@ -81,14 +85,15 @@ and bounds outside their hard ceilings fail before discovery.
 3. Discover tracked and untracked non-ignored candidates with
    `git ls-files --cached --others --exclude-standard -z`.
 4. Normalize repository-relative POSIX paths, deduplicate them, apply closed
-   include/exclude prefix policy, and sort by UTF-8 bytes.
+   include/exclude prefix policy, enforce the selected-candidate limit after include/exclude policy,
+   and sort by UTF-8 bytes.
 5. Exclude the output directory and staging files before any source read.
 6. Reject root escapes and classify symlinks, submodules, directories,
    non-regular files, sensitive paths, binary files, and over-limit files.
 7. Open eligible regular files without following symlinks, read within bounds,
    compute SHA-256, and retain their exact bytes.
 8. Revalidate file identity and source digest before publication.
-9. Render the original Markdown grammar below and publish with an exclusive temporary file plus atomic rename.
+9. Render the original Markdown grammar below and publish with an exclusive temporary file plus atomic no-replace publication.
 10. Return only bounded structured metadata through MCP; never return the packed
     source bytes in the tool response.
 
@@ -100,9 +105,10 @@ loaded or executed by the packer.
 
 The artifact is UTF-8 Markdown with one final newline and these fixed sections:
 
-1. `Repository Pack Manifest` with schema, revision, normalized request,
-   source-set digest, file and byte counts, bounds, and omission counts.
-2. `Path Index` with every discovered path and its content state.
+1. `Repository Pack Manifest` with schema, revision, normalized numeric bounds
+   and policy counts (never policy path values), source-set digest, file and
+   byte counts, and omission counts.
+2. `Path Index` with every selected candidate and its content state.
 3. `Source Records` in canonical byte order.
 
 Each embedded record contains the repository-relative path, source byte count,
@@ -110,6 +116,8 @@ SHA-256 digest, and exact text inside a dynamically sized Markdown fence.
 Absolute roots, usernames, timestamps, random ids, environment values, and
 secrets are forbidden. Binary bytes are never embedded; their path, size,
 digest, and typed omission reason remain visible in the path index.
+Paths omitted by include/exclude policy are counted in aggregate but never named
+in the artifact, path index, or MCP result.
 
 The artifact name is its lowercase SHA-256 digest plus `.md`. An identical
 existing artifact is reused. A different artifact is never overwritten under
@@ -120,7 +128,8 @@ valid-looking partial artifact.
 
 | Condition | Result |
 |---|---|
-| Git-ignored or explicitly excluded path | Not discovered or recorded as policy-excluded when known. |
+| Git-ignored path | Not discovered or recorded. |
+| Path outside include policy or matched by exclude policy | Counted as policy-excluded in aggregate, but never named or indexed. |
 | Binary, invalid UTF-8, or NUL-bearing file | Metadata-only omission; bytes are not embedded. |
 | Sensitive path or high-confidence credential | Whole operation blocks before publication and reports only safe relative paths. |
 | Symlink, submodule, directory, or special file | Typed omission unless it can escape the root, in which case the operation blocks. |
@@ -151,17 +160,19 @@ artifact is readable and its returned digest matches the published bytes.
 
 | Dimension | Default | Hard ceiling |
 |---|---:|---:|
-| Candidate files | 12000 | 20000 |
+| Selected candidate files | 12000 | 20000 |
 | Bytes per embedded file | 2097152 | 8388608 |
 | Total embedded source bytes | 134217728 | 268435456 |
+| Output artifact bytes | 268435456 | 536870912 |
 | Include prefixes | 0 | 256 |
 | Exclude prefixes | 0 | 256 |
 | Normalized path bytes | 1024 | 1024 |
 | Runtime | 60000 ms | 120000 ms |
 | MCP response bytes | 65536 | 65536 |
 
-Bounds are checked before publication. A caller can lower, but never raise, the
-hard ceilings.
+Bounds are checked before publication. A caller can lower only the three
+numeric request bounds; host configuration may lower the output and runtime
+defaults but can never exceed their hard ceilings.
 
 ## Clean-Room Boundary
 
@@ -206,7 +217,7 @@ Knowgrph revisions:
 | MCP parity | `knowgrph.repository.pack` is listed once and its closed schema matches this request. |
 | Determinism | An unchanged fixture produces byte-identical artifacts and the same two digests. |
 | Containment | Traversal, symlink, root swap, and output escape cases fail closed. |
-| Completeness | Every Git-discovered candidate is embedded or receives one typed state in the path index. |
+| Completeness | Every selected candidate is embedded or receives one typed state in the path index; policy-excluded paths are counted without disclosure. |
 | Atomicity | Failure leaves no published or staging artifact; replay safely reuses identical output. |
 | Confidentiality | Sensitive content blocks publication and tool results never return source bytes. |
 | Independence | No external package, binary, service, network path, copied artifact, or runtime fallback exists. |

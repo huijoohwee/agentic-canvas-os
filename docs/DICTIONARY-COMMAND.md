@@ -154,6 +154,8 @@ dictionary_entries:
   - "/source.ingest"
   - "/source.parse"
   - "/source.normalize"
+  - "/git.run"
+  - "/file.sync"
   - "/ingest-url"
   - "/computing-flow"
 ---
@@ -289,6 +291,8 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/source.ingest` | Inspect or run source intake through existing Source Files and workspace owners. | `@operator`, `@source.body`, `@dev-only` | `#frontmatter`, `#no-hardcode`, `#dev-only` | Source intake is registered, rejected, or blocked with provenance and no generated-artifact backfill. |
 | `/source.parse` | Parse current source frontmatter and body into normalized graph, table, KTV, or KGC context. | `@source.frontmatter`, `@source.body`, `@runtime-proof` | `#frontmatter`, `#runtime-ready`, `#vcc` | Parse result succeeds without repair-only fallback or returns a typed parse error before model spend. |
 | `/source.normalize` | Neutralize conflicting or stale source content at the upstream document or shared owner. | `@source.frontmatter`, `@source.body` | `#no-hardcode`, `#frontmatter`, `#no-legacy` | Stale, duplicate, or hardcoded content is removed at source without downstream aliasing. |
+| `/git.run` | Inspect or mutate the browser-persisted Git repository, and fetch from or push to one configured remote through the Dev Worker relay. | `@local-git-repository`, `@git-remote` | `#git-remote`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns a typed repository result; remote credentials remain Worker-only, rejected authority paths fail atomically, and local stdio returns only a browser-runtime handoff. |
+| `/file.sync` | Pull or push a file or directory between browser persisted cache and one configured cloud-storage provider. | `@persisted-cache`, `@file-sync-provider` | `#multi-provider-file-sync`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns per-file typed outcomes with hash skips, bounded retries, conflict state, and offline FIFO; provider credentials remain Worker-only and local stdio performs no storage or network work. |
 | `/ingest-url` | Ingest an operator-provided URL through the approved URL intake and source-file pipeline. | `@operator`, `@approval-gate`, `@dev-only` | `#no-hardcode`, `#approval-gate`, `#dev-only` | URL is accepted, fetched, or rejected through the shared intake path without writing the URL into source docs. |
 | `/computing-flow` | Generate or validate a source-backed KGC computing-flow DAG. | `@operator`, `@source.frontmatter`, `@local-harness`, `@runtime-proof` | `#computing-flow`, `#frontmatter`, `#harness`, `#vcc` | `kgc-computing-flow/v1` frontmatter validates and routes through KGC validation before Canvas projection. |
 | Bare `/moa` | Return usage for the MoA route. | `@agent` | `#mixture-of-agents` | Usage response explains required query or scoped selection; it does not switch model, mutate state, or call a provider. |
@@ -384,6 +388,8 @@ command:
 | `/tool.search` | `FACTS.md` direct-resolution entry for session-scoped deferred tool search. |
 | `/tool.describe` | `FACTS.md` direct-resolution entry for on-demand deferred tool schema loading. |
 | `/tool.call` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool execution. |
+| `/git.run` | `FACTS.md` direct-resolution entry for browser Git and opaque remote relay operations. |
+| `/file.sync` | `FACTS.md` direct-resolution entry for bidirectional provider-neutral file and directory synchronization. |
 | `/query` | `FACTS.md` direct-resolution entry for source-backed read-only answers. |
 
 ## VCCs

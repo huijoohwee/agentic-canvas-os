@@ -81,7 +81,6 @@ flow:
       target: {key: target, type: string, value: "deploy_guard"}
       type: {key: type, type: string, value: "validation_proof_signal"}
 ---
-
 # Validation Runbook
 
 Use focused validation only. Do not run indefinite full-codebase checks for documentation changes.
@@ -501,6 +500,7 @@ Expected:
 - `/memory.search`, `/experience.capture`, `/skill.propose`, `/skill.evolve`, `/identity.reflect`, learning tags, learning bindings, and `agent.learning` route through dictionaries and `SKILLS.md`; Skill Evolution additionally proves the exact resumable MCP contract and clean-room, validation, review, and frozen-model boundaries.
 - `/orchestration.graph`, `/agent.swarm`, `/agent.toolkit`, `/state.checkpoint`, `/human.review`, `/stream.trace`, orchestration, swarm, and Toolkit tags/bindings, `agent.swarm`, `agent.toolkit`, and `agent.orchestrator` route through dictionaries and `SKILLS.md`.
 - `/superagent.run`, long-horizon tags, sandbox/message bindings, and `superagent.run` route through dictionaries and `SKILLS.md`.
+- `/git.run @local-git-repository @git-remote #git-remote` and `/file.sync @persisted-cache @file-sync-provider #multi-provider-file-sync` resolve exactly once, advertise browser WebMCP execution plus local-stdio handoff, keep credentials Worker-only, and stop before Prod or Cloudflare deployment.
 - `/computing-flow`, `#computing-flow`, and `flow.computing` route through KGC/frontmatter contracts.
 - No entry requires a FloatingPanel-only duplicate registry.
 

@@ -120,6 +120,10 @@ dictionary_entries:
   - "@diff"
   - "@staged"
   - "@git:"
+  - "@local-git-repository"
+  - "@git-remote"
+  - "@persisted-cache"
+  - "@file-sync-provider"
   - "@url:"
   - "@reference-policy"
   - "@attached-context"
@@ -258,6 +262,10 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@diff` | Context reference to the current unstaged diff. | Current canonical VCS checkout. | Read-only, secret-scanned, bounded, and never treated as approval to write or revert. |
 | `@staged` | Context reference to the current staged diff. | Current VCS index. | Read-only, secret-scanned, bounded, and never treated as commit approval. |
 | `@git:` | Context reference to recent commit metadata or patch range. | Current VCS repository. | Count is clamped to a small maximum, missing revisions warn, and sensitive content remains blocked. |
+| `@local-git-repository` | Browser-owned persisted Git object, ref, worktree, and outbox state. | Knowgrph storage-engine IndexedDB owner. | Carries no credential; controls require active IndexedDB, bounded paths and objects, atomic authority checks, and typed offline state. |
+| `@git-remote` | Opaque configured remote alias used for browser Git fetch or push. | Authenticated Dev Worker storage relay and its static allowlist. | Browser payloads contain neither credentials nor upstream URLs; the relay revalidates loopback origin, membership, role, size, path, and compare-before-update state. |
+| `@persisted-cache` | Browser-owned binary and metadata cache used by file synchronization. | Knowgrph storage-engine IndexedDB owner. | Chunked values stay within browser limits, credentials are rejected, and degraded persistence blocks mutating controls. |
+| `@file-sync-provider` | Opaque configured provider alias for file or directory pull and push. | Authenticated Dev Worker provider registry. | Alias exposes no provider resource id or credential; unsupported native documents, shortcuts, symlinks, and unverifiable hashes fail explicitly. |
 | `@url:` | Context reference to fetched external content. | Approved URL fetch/extract owner. | Requires egress policy, cache/citation metadata, size bounds, and no credentials in URL or headers. |
 | `@reference-policy` | Workspace, scan, size, platform, URL egress, warning, and refusal rules for context references. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved composer or CLI owner. | Missing policy preserves raw text; unsupported surfaces pass raw `@` references through with typed warning. |
 | `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
@@ -427,6 +435,8 @@ binding:
 | `@diff` | `FACTS.md` direct-resolution entry for unstaged diff references. |
 | `@staged` | `FACTS.md` direct-resolution entry for staged diff references. |
 | `@git:` | `FACTS.md` direct-resolution entry for bounded git history references. |
+| `@local-git-repository`, `@git-remote` | `FACTS.md` direct-resolution entries for the browser Git owner and opaque Worker relay binding. |
+| `@persisted-cache`, `@file-sync-provider` | `FACTS.md` direct-resolution entries for browser cache ownership and opaque provider relay binding. |
 | `@url:` | `FACTS.md` direct-resolution entry for URL context references. |
 | `@reference-policy` | `FACTS.md` direct-resolution entry for reference expansion policy. |
 | `@attached-context` | `FACTS.md` direct-resolution entry for appended expansion packets. |

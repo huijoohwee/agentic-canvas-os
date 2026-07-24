@@ -42,6 +42,7 @@
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
+    "repository-packing-contract:check": "node --test __tests__/repository-packing-contract.test.mjs && node ./scripts/repository-packing-contract.mjs",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",
     "device:complete": "node ./scripts/device-branch.mjs complete",

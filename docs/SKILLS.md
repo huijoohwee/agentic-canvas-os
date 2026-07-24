@@ -15,6 +15,7 @@ source_docs:
   - "DICTIONARY-BINDING.md"
   - "HARNESS-CONTRACTS.md"
   - "AGENT-TEAM.md"
+  - "REPOSITORY-PACKING.md"
   - "SKILL-EVOLUTION.md"
   - "RUNTIME-READINESS.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
@@ -87,6 +88,7 @@ skill_contracts:
   - "stream.trace"
   - "superagent.run"
   - "implementation.run"
+  - "repository.pack"
   - "sme.risk.profile"
   - "crawler.run"
   - "sandbox.policy.author"
@@ -134,7 +136,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 
 | Family | Skill ids | Detail owner |
 |---|---|---|
-| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md` |
+| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md` |
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
@@ -155,6 +157,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Agent Toolkit | `AGENT-TOOLKIT.md` |
 | Skill Evolution | `SKILL-EVOLUTION.md` |
 | Managed implementation runs | `MANAGED-IMPLEMENTATION-RUNS.md` |
+| Repository packing | `REPOSITORY-PACKING.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
 Variants remain metadata aliases over registered owners: `agent.moa`, `agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`, `agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and `agent.orchestrator`. The domain variants resolve through `/investment-research-agent`, `/sme-care-agent`, `/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`; a variant does not create a wildcard command or a second execution registry.

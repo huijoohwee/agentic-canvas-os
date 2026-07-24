@@ -12,6 +12,7 @@ import {
   validateAgentTeamContractDocuments,
   validateAgentTeamDocumentLineBudgets,
 } from "./agent-team-contract.mjs";
+import { validateRepositoryPackingContractDocuments } from "./repository-packing-contract.mjs";
 
 const DOCS_ROOT = path.resolve("docs");
 const REQUIRED_KEYS = [
@@ -75,6 +76,7 @@ failures.push(...validateGameModeInvocationContractDocuments(documents));
 failures.push(...validateSkillEvolutionContractDocuments(documents));
 failures.push(...validateAgentTeamContractDocuments(documents));
 failures.push(...validateAgentTeamDocumentLineBudgets(documents));
+failures.push(...validateRepositoryPackingContractDocuments(documents));
 
 if (failures.length > 0) fail(failures.join("\n"));
 console.log(`docs contract ok (${files.length} files)`);

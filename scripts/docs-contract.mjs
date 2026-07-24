@@ -7,6 +7,7 @@ import { validateProbeTreeContractDocuments } from "./probe-tree-contract.mjs";
 import { validatePromptPresetContractDocuments } from "./prompt-preset-contract.mjs";
 import { validateXrInvocationContractDocuments } from "./xr-invocation-contract.mjs";
 import { validateGameModeInvocationContractDocuments } from "./game-mode-invocation-contract.mjs";
+import { validateVoiceStudioContractDocuments } from "./voice-studio-contract.mjs";
 import { validateSkillEvolutionContractDocuments } from "./skill-evolution-contract.mjs";
 import {
   validateAgentTeamContractDocuments,
@@ -72,6 +73,7 @@ failures.push(...validateProbeTreeContractDocuments(documents));
 failures.push(...validatePromptPresetContractDocuments(documents));
 failures.push(...validateXrInvocationContractDocuments(documents));
 failures.push(...validateGameModeInvocationContractDocuments(documents));
+failures.push(...validateVoiceStudioContractDocuments(documents));
 failures.push(...validateSkillEvolutionContractDocuments(documents));
 failures.push(...validateAgentTeamContractDocuments(documents));
 failures.push(...validateAgentTeamDocumentLineBudgets(documents));

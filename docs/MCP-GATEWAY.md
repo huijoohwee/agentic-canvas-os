@@ -227,6 +227,14 @@ Application composition is a local, provider-neutral compiler and bounded depend
 | `knowgrph.application.plan` | Resolve exact revisions and digests, negotiate capabilities, compile a deterministic dependency DAG, and return an immutable `application-composition-plan/v1` digest. | Read-only; mutable references, drift, incompatibility, cycles, implicit fallback, install, upgrade, migration, connection, or execution fail closed. |
 | `knowgrph.application.execute` | Revalidate one exact plan and sequence only dependency-ready steps through injected existing runtime owners. | Bounded and idempotency-fenced; no new agent loop or integration proxy, silent retry, automatic migration, provider fallback, continuation beyond bounds, deploy, or approval inference. |
 
+## Repository Packing Capability
+
+Repository packing is one local stdio MCP capability. `/repository.pack #repository-packing @repository-root @runtime-proof` is its exact host alias, not an alternate wire method. Agentic Canvas OS owns invocation and safety truth; Knowgrph owns Git discovery, symlink-safe bounded reads, deterministic rendering, atomic content-addressed publication, and structured proof.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.repository.pack` | Convert every eligible path in one exact local Git worktree into one deterministic AI-friendly Markdown artifact and return verified metadata only. | Local, idempotent, bounded, zero-network, zero-model, and zero-cost; secrets, traversal, symlinks, source drift, hard-limit overflow, external dependency, Prod, and Cloudflare fail before publication. |
+
 ## Managed Implementation Run Capabilities
 
 Managed implementation runs are local stdio MCP capabilities backed by Knowgrph's durable run ledger and one supervisor per claimed run. Agentic Canvas OS remains the invocation, safe worktree, branch, lease, fence, and pull-request lifecycle owner through its stable JSON CLI; the MCP server never parses lifecycle prose or creates a second Git lock.
@@ -292,6 +300,7 @@ capability:
 | Orchestrate a role-based Agent Team | Local stdio MCP | Plans and supervises one revision-fenced team through existing agent owners, durable checkpoints, explicit review, and exact delegate or handoff answer ownership. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
+| Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `knowgrph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 
 ## Gateway VCCs
@@ -325,6 +334,7 @@ capability:
 | Orchestration copy is blocked | Graph capabilities reject copied external runtime code, APIs, schemas, examples, tests, fixtures, and prose. |
 | SuperAgent is bounded | SuperAgent capabilities reject missing sandbox scope, message gateway, checkpoint policy, stop condition, artifact manifest, and copied external runtime layouts. |
 | Managed implementation is bounded | Plan is zero-mutation; start requires idempotency, configured argv runner, safe worktree, current lease fence, allowed paths, attempt/time limits, and verification; control is version-fenced; default completion is `delivery_ready`, not merge or deploy. |
+| Repository packing is deterministic and independent | Canonical Git discovery, byte-ordered paths, typed omissions, source and artifact digests, self-exclusion, atomic publication, hard bounds, and dependency/name plus provenance review prove one local clean-room owner with zero network, model, token, cost, Prod, or Cloudflare activity. |
 
 ## Mermaid Topology
 

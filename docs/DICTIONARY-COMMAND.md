@@ -16,6 +16,7 @@ source_docs:
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
+  - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
@@ -158,6 +159,7 @@ dictionary_entries:
   - "/source.normalize"
   - "/git.run"
   - "/file.sync"
+  - "/repository.pack"
   - "/ingest-url"
   - "/computing-flow"
 ---
@@ -294,6 +296,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/source.ingest` | Inspect or run source intake through existing Source Files and workspace owners. | `@operator`, `@source.body`, `@dev-only` | `#frontmatter`, `#no-hardcode`, `#dev-only` | Source intake is registered, rejected, or blocked with provenance and no generated-artifact backfill. |
 | `/source.parse` | Parse current source frontmatter and body into normalized graph, table, KTV, or KGC context. | `@source.frontmatter`, `@source.body`, `@runtime-proof` | `#frontmatter`, `#runtime-ready`, `#vcc` | Parse result succeeds without repair-only fallback or returns a typed parse error before model spend. |
 | `/source.normalize` | Neutralize conflicting or stale source content at the upstream document or shared owner. | `@source.frontmatter`, `@source.body` | `#no-hardcode`, `#frontmatter`, `#no-legacy` | Stale, duplicate, or hardcoded content is removed at source without downstream aliasing. |
+| `/repository.pack` | Pack the eligible text files in one exact local Git worktree into a deterministic content-addressed Markdown artifact. | exactly `@repository-root` and `@runtime-proof` | exactly `#repository-packing` | Knowgrph local stdio MCP returns `knowgrph-repository-pack-result/v1` with a verified repository-relative artifact path, source and artifact digests, typed counts, hard bounds, and exact zero network, model, token, and cost evidence. |
 | `/git.run` | Inspect or mutate the browser-persisted Git repository, and fetch from or push to one configured remote through the Dev Worker relay. | `@local-git-repository`, `@git-remote` | `#git-remote`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns a typed repository result; remote credentials remain Worker-only, rejected authority paths fail atomically, and local stdio returns only a browser-runtime handoff. |
 | `/file.sync` | Pull or push a file or directory between browser persisted cache and one configured cloud-storage provider. | `@persisted-cache`, `@file-sync-provider` | `#multi-provider-file-sync`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns per-file typed outcomes with hash skips, bounded retries, conflict state, and offline FIFO; provider credentials remain Worker-only and local stdio performs no storage or network work. |
 | `/ingest-url` | Ingest an operator-provided URL through the approved URL intake and source-file pipeline. | `@operator`, `@approval-gate`, `@dev-only` | `#no-hardcode`, `#approval-gate`, `#dev-only` | URL is accepted, fetched, or rejected through the shared intake path without writing the URL into source docs. |
@@ -349,6 +352,7 @@ command:
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
 | `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
+| `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
 | Command conflicts with source frontmatter | Fix the source or shared owner; do not add a downstream alias. |
@@ -391,6 +395,7 @@ command:
 | `/tool.search` | `FACTS.md` direct-resolution entry for session-scoped deferred tool search. |
 | `/tool.describe` | `FACTS.md` direct-resolution entry for on-demand deferred tool schema loading. |
 | `/tool.call` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool execution. |
+| `/repository.pack` | `FACTS.md` direct-resolution entry for bounded clean-room repository packing. |
 | `/git.run` | `FACTS.md` direct-resolution entry for browser Git and opaque remote relay operations. |
 | `/file.sync` | `FACTS.md` direct-resolution entry for bidirectional provider-neutral file and directory synchronization. |
 | `/query` | `FACTS.md` direct-resolution entry for source-backed read-only answers. |

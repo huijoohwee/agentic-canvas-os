@@ -18,6 +18,7 @@ source_docs:
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
+  - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
@@ -76,6 +77,7 @@ dictionary_entries:
   - "#agentic-ecs"
   - "#dev-only"
   - "#mcp"
+  - "#repository-packing"
   - "#git-remote"
   - "#multi-provider-file-sync"
   - "#canvas"
@@ -224,6 +226,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by Knowgrph. | One of the three ECS MCP commands operates on a KGC-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
+| `#repository-packing` | Deterministic, bounded conversion of one exact local Git worktree into one AI-friendly content-addressed Markdown artifact. | `/repository.pack #repository-packing @repository-root @runtime-proof` requests the local stdio MCP owner. | Canonical Git discovery, typed omissions, source and artifact digests, path containment, atomic publication, independence proof, and zero network, model, token, cost, Prod, and Cloudflare activity are explicit. |
 | `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
 | `#multi-provider-file-sync` | Bidirectional file or directory transfer through a provider-neutral browser contract. | `/file.sync` pulls or pushes a configured provider prefix. | Provider capability, pagination, hash semantics, per-file outcomes, both-sides-changed conflicts, size/time bounds, offline FIFO, and secret-free browser payloads are proven. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
@@ -345,6 +348,7 @@ semantic:
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
+| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |
@@ -436,6 +440,7 @@ semantic:
 | `#toolset` | `FACTS.md` direct-resolution entry for logical tool bundles. |
 | `#platform-toolset` | `FACTS.md` direct-resolution entry for platform-scoped toolset state. |
 | `#tool-search` | `FACTS.md` direct-resolution entry for opt-in deferred tool progressive disclosure. |
+| `#repository-packing` | `FACTS.md` direct-resolution entry for deterministic bounded local repository packing. |
 | `#deferred-tool-schema` | `FACTS.md` direct-resolution entry for on-demand deferred schema loading. |
 | `#bridge-tool` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool calls. |
 | `#mixture-of-agents` | `FACTS.md` direct-resolution entry for bounded MoA routing. |

@@ -18,6 +18,7 @@ source_docs:
   - "VALIDATION-RUNBOOK.md"
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
+  - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
@@ -116,6 +117,7 @@ dictionary_entries:
   - "@skill-policy"
   - "@context-file"
   - "@working-directory"
+  - "@repository-root"
   - "@context-policy"
   - "@file:"
   - "@folder:"
@@ -259,6 +261,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@skill-policy` | Skill trust, scan, compatibility, write approval, and validation policy. | `FACTS.md`, `SKILLS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | Unsafe external sources, incompatible requirements, copied artifacts, or unreviewed writes fail closed. |
 | `@context-file` | One discovered project-local context file. | Working directory, ancestor, or touched subdirectory under the approved project scope. | Read-only unless operator requests edits; must scan, bound, and never override `FACTS.md`, `SOUL.md`, system, developer, or operator instructions. |
 | `@working-directory` | Current startup or tool-call working directory used for context discovery. | Runtime session state or explicit operator path. | Must be explicit, normalized, and scoped; no home-wide or global scan unless approved. |
+| `@repository-root` | Exact local Git worktree root selected for deterministic repository packing. | Explicit operator path resolved under the configured Knowgrph local MCP root. | Must equal Git's canonical worktree root after symlink-safe validation; it grants reads only within that root and one content-addressed write under the approved output directory. |
 | `@context-policy` | Precedence, scan, truncation, and progressive-discovery rules for context files. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | First-match project context, per-directory visited set, prompt-injection block, capacity bound, and deploy gate are required. |
 | `@file:` | Context reference to one workspace file or 1-indexed line range. | Explicit message text plus normalized workspace path. | Text only, workspace-scoped, sensitive path blocked, path traversal blocked, binary rejected, and bounded before expansion. |
 | `@folder:` | Context reference to a directory listing or bounded folder summary. | Explicit message text plus normalized workspace directory. | Maximum entry cap, no recursive content dump by default, sensitive children skipped with warnings. |
@@ -332,6 +335,7 @@ binding:
 | Missing `@runtime-proof` for runtime-ready promotion | Do not promote; report proof gap. |
 | Missing, expired, or disposed `@ecs-session` for tick or persistence | Return a typed session error; do not recreate the world, accept caller-supplied decisions, or mutate source. |
 | Missing `@working-directory` for `/context.discover` or `/context.audit` | Return missing-working-directory; do not scan arbitrary paths. |
+| Missing, non-Git, unsafe, changed, or escaping `@repository-root` for `/repository.pack` | Return a typed repository-root block before discovery or publication; do not broaden `@working-directory`, follow a symlink, or use a remote fallback. |
 | Missing `@context-policy` for `/context.load` | Block before inclusion; context files cannot self-authorize loading. |
 | Missing `@reference-policy` for `/reference.expand` | Preserve raw message text and return reference-policy-required. |
 | `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before injecting content into `@attached-context`. |
@@ -365,6 +369,7 @@ binding:
 | `/implementation.run #managed-implementation-run @work-item @implementation-run @sandbox-workspace` | Execute one bounded work item inside its fenced run workspace and stop `delivery_ready` with ACOS `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Compile exact host-owned interfaces into one immutable plan and delegate bounded ready steps to their existing owners. |
 | `/agent.team #role-based-agent-team @agent-team` | Resolve one revision-fenced role-based team and hand typed plan/start/list/control lifecycle ownership to the Knowgrph local stdio MCP runtime without creating a second scheduler or broadening Agent Swarm. |
+| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |
@@ -436,6 +441,7 @@ binding:
 | `@skill-source` | `FACTS.md` direct-resolution entry for selected skill source loading. |
 | `@context-file` | `FACTS.md` direct-resolution entry for one discovered context file. |
 | `@working-directory` | `FACTS.md` direct-resolution entry for context discovery root. |
+| `@repository-root` | `FACTS.md` direct-resolution entry for one symlink-safe local Git worktree root. |
 | `@context-policy` | `FACTS.md` direct-resolution entry for context precedence, scan, and bounds. |
 | `@file:` | `FACTS.md` direct-resolution entry for file and line-range context references. |
 | `@folder:` | `FACTS.md` direct-resolution entry for folder context references. |

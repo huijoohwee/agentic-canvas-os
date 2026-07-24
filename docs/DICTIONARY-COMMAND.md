@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-20"
+date: "2026-07-24"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -15,6 +15,7 @@ source_docs:
   - "AGENTS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
+  - "AGENT-TEAM.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "START-WORKFLOW.md"
@@ -92,6 +93,7 @@ dictionary_entries:
   - "/identity.reflect"
   - "/application.compose"
   - "/orchestration.graph"
+  - "/agent.team"
   - "/agent.swarm"
   - "/agent.toolkit"
   - "/state.checkpoint"
@@ -226,6 +228,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/application.compose` | Compile or execute one version-locked agent or LLM application from interoperable component and integration interfaces. | `@application-manifest`, `@component-catalog`, `@integration-profile`, `@runtime-proof`, and `@operator` only for live or mutating execution | `#application-composition`, `#runtime-ready`, `#no-hardcode` | Plan returns one immutable digest over exact revisions, schema digests, owners, bounds, and a deterministic dependency DAG; execute delegates bounded ready steps without silent upgrade, retry, migration, or deploy. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
+| `/agent.team` | Plan, start, list, or control one exact source-backed role-playing agent team through the Knowgrph local stdio MCP owner. | exactly `@agent-team` | exactly `#role-based-agent-team` | `/agent.team #role-based-agent-team @agent-team` resolves exact Agent Definition and Agent Orchestration revisions, preserves delegate or handoff ownership, enforces bounded durable state and human review, and returns typed proof without broadening Agent Swarm. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
 | `/agent.toolkit` | Observe, evaluate, and compare digest-bound agent or team candidate revisions through framework-neutral adapters. | `@agent-toolkit-observer`, `@runtime-proof`, and `@operator` for evaluator spend or proposal persistence | `#agent-toolkit`, `#runtime-ready`, `#token-economics` | The authenticated session returns bounded metadata-only evidence, honest cost and metric provenance, a deterministic compare decision or review-pending proposal, and no automatic application. |
 | `/state.checkpoint` | Define checkpoint, resume, recovery, and idempotency behavior for long-running runs. | `@checkpoint-store`, `@state-store`, `@runtime-proof` | `#durable-execution`, `#stateful-agent`, `#vcc` | Checkpoint contract names scope, storage owner, resume token, retry policy, and recovery proof. |
@@ -325,6 +328,7 @@ command:
 | `/reference.expand` targets sensitive, binary, missing, outside-workspace, or over-hard-limit content | Append typed warning or refuse expansion before injecting content. |
 | `/reference.expand` runs on a platform that does not support inline expansion | Preserve the raw message and report unsupported-platform without rewriting the text. |
 | `/kanban.task` or `/kanban.handoff` lacks a row id, owner profile, status, or acceptance field | Reject before write; do not create partial board rows. |
+| `/agent.team` lacks exact team, agent-definition, workflow, branch, review-policy, bound, plan-digest, idempotency, or state-version fences | Reject before model, tool, state, or spend mutation; do not infer a role, route, owner, review decision, retry, or Agent Swarm fallback. |
 | `/agent.swarm` receives caller-authored roles, specialists, tasks, branches, or workflow topology, or cannot resolve the exact base-agent revision | Reject before planning or spend; do not infer a handcrafted workflow or stale agent. |
 | `/agent.toolkit` receives a missing, malformed, changed, or application-denied revision digest, raw telemetry content, undeclared metric direction, caller-owned signal, or apply request | Reject before observation, evaluator spend, persistence, or mutation; remote metadata that passes schema remains untrusted and cannot enter comparison evidence. |
 | `/kanban.sync` sees conflicting writes to the same row | Preserve both evidence fields and require explicit resolution; do not overwrite another profile's handoff. |
@@ -348,6 +352,7 @@ command:
 | Token | Facts source |
 |---|---|
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
+| `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable Knowgrph MCP control. |
 | `/soul.load` | `FACTS.md` direct-resolution entry for durable identity loading. |
 | `/personality.overlay` | `FACTS.md` direct-resolution entry for temporary personality overlays. |
 | `/moa` | `FACTS.md` direct-resolution entry for one-shot Mixture of Agents routing. |

@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS MCP Gateway"
 graphId: "md:knowgrph-agentic-canvas-os-mcp-gateway"
 doc_type: "MCP Gateway Contract"
-date: "2026-07-07"
+date: "2026-07-24"
 lang: "en-US"
 schema: "agentic-canvas-os-mcp-gateway/v1"
 frontmatter_contract: "required"
@@ -196,6 +196,19 @@ Stateful orchestration tools are discoverable without model spend. Runtime execu
 | `knowgrph.superagent.workspace` | Report sandbox workspace roots, allowed operations, artifact manifest, diff summary, scan state, and cleanup policy. | Read-only unless an approved run owns the workspace. |
 | `knowgrph.superagent.messages` | Report typed user, agent, worker, tool, review, and artifact messages for a run. | Read-only ledger; cannot bypass tool, approval, cost, or deploy gates. |
 
+## Agent Team Capabilities
+
+Role-based Agent Team tools are local stdio MCP capabilities. `/agent.team #role-based-agent-team @agent-team` is the one host alias tuple, not an alternate wire protocol. Agentic Canvas OS owns invocation, source shape, exact revisions, routing semantics, owner policy, and hard bounds. Knowgrph owns durable supervision, checkpoints, replay fences, cancellation, review state, and projection; existing Agent Definitions, Progressive Agents, Agent Orchestration, models, tools, guardrails, and persistence owners retain their authority.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.agent_team.plan` | Resolve one exact team source, Agent Definition revisions, Agent Orchestration workflow and branches, review policy, task digest, and effective bounds into an immutable plan digest. | Read-only and model-free; no durable run, model/tool call, state mutation, spend, Agent Swarm fallback, or owner inference. |
+| `knowgrph.agent_team.start` | Revalidate exact plan, team, source, agent, workflow, branch, policy, idempotency, and state-version fences; then create one durable bounded run. | Manager owns the initial conversation; start grants no model, tool, approval, provider, persistence, Prod, or Cloudflare authority. |
+| `knowgrph.agent_team.list` | Return bounded sanitized run summaries, state versions, current and final-answer owners, budget use, blockers, review state, and evidence references. | Read-only and zero-model; private intermediate output, hidden instructions, secrets, and raw provider payloads are excluded. |
+| `knowgrph.agent_team.control` | Serialize version-fenced pause, resume, cancel, retry, review request, or review receipt transitions with an exact checkpoint. | Cancellation is terminal; stale versions, replay conflicts, missing review receipts, drift, or exhausted turn/depth/fanout/retry/time/token/cost bounds fail before new work. |
+
+Delegate output remains private to the source-agent synthesis and leaves ownership with the source. A successful handoff moves conversation and final-answer ownership to the target. Roles, goals, personas, membership, call order, and last response never override registered ownership.
+
 ## Application Composition Capabilities
 
 Application composition is a local, provider-neutral compiler and bounded dependency sequencer. The `/`, `#`, and `@` tokens in `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` are host aliases, not MCP wire methods; `@operator` is added only for live or mutating execution. Existing agent, model, tool, integration, policy, persistence, lifecycle, and orchestration owners retain execution authority.
@@ -268,6 +281,7 @@ capability:
 | Resume checkpointed run | Local stdio MCP with approved state owner | Uses typed checkpoint and recovery proof before continuation. |
 | Pause for human review | Local stdio MCP or control-plane gate where deployed | Blocks paid or mutating continuation until operator result. |
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
+| Orchestrate a role-based Agent Team | Local stdio MCP | Plans and supervises one revision-fenced team through existing agent owners, durable checkpoints, explicit review, and exact delegate or handoff answer ownership. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
@@ -298,6 +312,7 @@ capability:
 | Learning mutation is gated | Skill and identity writes require operator approval; discovery and search remain zero-spend. |
 | External copy is blocked | Learning capabilities reject copied external code, prompts, schemas, tests, fixtures, and prose. |
 | Stateful orchestration is bounded | Graph capabilities reject orphaned nodes, missing stop conditions, missing checkpoint contracts, and unbounded cycles. |
+| Agent Team ownership is fenced | The four Agent Team tools require exact source, agent, workflow, branch, plan-digest, idempotency, state-version, review, and budget evidence; roles and personas grant no authority, delegate intermediates stay private, and Agent Swarm remains unchanged. |
 | Orchestration copy is blocked | Graph capabilities reject copied external runtime code, APIs, schemas, examples, tests, fixtures, and prose. |
 | SuperAgent is bounded | SuperAgent capabilities reject missing sandbox scope, message gateway, checkpoint policy, stop condition, artifact manifest, and copied external runtime layouts. |
 | Managed implementation is bounded | Plan is zero-mutation; start requires idempotency, configured argv runner, safe worktree, current lease fence, allowed paths, attempt/time limits, and verification; control is version-fenced; default completion is `delivery_ready`, not merge or deploy. |

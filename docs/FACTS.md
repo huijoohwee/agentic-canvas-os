@@ -87,6 +87,7 @@ direct_resolution:
   "/skill.evolve": "DICTIONARY-COMMAND.md#/skill.evolve"
   "/identity.reflect": "DICTIONARY-COMMAND.md#/identity.reflect"
   "/orchestration.graph": "DICTIONARY-COMMAND.md#/orchestration.graph"
+  "/agent.team": "DICTIONARY-COMMAND.md#/agent.team"
   "/agent.swarm": "DICTIONARY-COMMAND.md#/agent.swarm"
   "/agent.toolkit": "DICTIONARY-COMMAND.md#/agent.toolkit"
   "/state.checkpoint": "DICTIONARY-COMMAND.md#/state.checkpoint"
@@ -173,6 +174,7 @@ direct_resolution:
   "#memory-search": "DICTIONARY-SEMANTIC.md##memory-search"
   "#identity-model": "DICTIONARY-SEMANTIC.md##identity-model"
   "#orchestration-graph": "DICTIONARY-SEMANTIC.md##orchestration-graph"
+  "#role-based-agent-team": "DICTIONARY-SEMANTIC.md##role-based-agent-team"
   "#agent-swarm": "DICTIONARY-SEMANTIC.md##agent-swarm"
   "#agent-toolkit": "DICTIONARY-SEMANTIC.md##agent-toolkit"
   "#stateful-agent": "DICTIONARY-SEMANTIC.md##stateful-agent"
@@ -257,6 +259,7 @@ direct_resolution:
   "@skill-catalog": "DICTIONARY-BINDING.md#@skill-catalog"
   "@identity-model": "DICTIONARY-BINDING.md#@identity-model"
   "@orchestration-graph": "DICTIONARY-BINDING.md#@orchestration-graph"
+  "@agent-team": "DICTIONARY-BINDING.md#@agent-team"
   "@swarm-run": "DICTIONARY-BINDING.md#@swarm-run"
   "@agent-toolkit-observer": "DICTIONARY-BINDING.md#@agent-toolkit-observer"
   "@state-store": "DICTIONARY-BINDING.md#@state-store"
@@ -277,8 +280,7 @@ truth_tokens:
   bindings: ["@ecs-session", "@agent", "@operator", "@source.frontmatter", "@source.body", "@local-harness", "@runtime-proof", "@instruction-source", "@instruction-eval-suite", "@soul-profile", "@identity-slot", "@personality-overlay", "@moa-preset", "@reference-agents", "@aggregator-agent", "@video-generation-demo-script", "@provider.byteplus", "@provider.openai", "@text", "@image", "@image-to-threejs", "@image-to-glb", "@knowgrph.probe-tree", "@scene", "@canvas", "@audio", "@video", "@experience", "@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index", "@skill-index", "@skill-source", "@skill-reference", "@skill-bundle", "@skill-policy", "@context-file", "@working-directory", "@context-policy", "@file:", "@folder:", "@diff", "@staged", "@git:", "@local-git-repository", "@git-remote", "@persisted-cache", "@file-sync-provider", "@url:", "@reference-policy", "@attached-context", "@kanban-board", "@task-row", "@work-item", "@implementation-run", "@application-manifest", "@component-catalog", "@integration-profile", "@handoff-row", "@agent-profile", "@worker-process", "@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@deferred-tool-catalog", "@bridge-tool", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy", "@skill-catalog", "@identity-model", "@orchestration-graph", "@swarm-run", "@agent-toolkit-observer", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@sandbox-policy", "@message-gateway"]
 ---
 # Agentic OS Facts
-`FACTS.md` is the shared truth layer for `docs`. Agents should read it before using local memory or role instructions. It is stronger than tool-specific helper files such as `CLAUDE.md` when those files exist in an adjacent environment, because this file defines repo-owned truth for this documentation control surface.
-This file does not replace system, developer, or operator instructions. It defines the source-backed facts that local agents should reference consistently while working inside this docs folder.
+`FACTS.md` is the shared truth layer for `docs`. Agents should read it before using local memory or role instructions. It is stronger than tool-specific helper files such as `CLAUDE.md` when those files exist in an adjacent environment, because this file defines repo-owned truth for this documentation control surface. It does not replace system, developer, or operator instructions.
 ## Layer Contract
 | Layer | Owns | Does not own |
 |---|---|---|
@@ -566,11 +568,12 @@ This file does not replace system, developer, or operator instructions. It defin
 | SuperAgent run | Long-horizon research, code, and creation tasks compose orchestration, skills, memory, tools, sandboxed workspace, message gateway, artifacts, and verification under one bounded harness. | `/superagent.run`, `#long-horizon-harness`, `@sandbox-workspace`, `@message-gateway`. |
 | Managed implementation run | Agentic Canvas OS owns canonical invocation and the fenced worktree/lease/PR lifecycle; Knowgrph owns the durable local MCP supervisor and team projection; the managed run stops `delivery_ready` when ACOS reports `review_ready`, without automatic merge or deploy. | `/implementation.run`, `#managed-implementation-run`, `@work-item`, `@implementation-run`, `MANAGED-IMPLEMENTATION-RUNS.md`. |
 | Application composition | Agentic Canvas OS owns the exact invocation, interface, plan-digest, and owner-separation contract; Knowgrph catalogs and plans exact components, then bounded execution delegates dependency-ready work to existing agent, model, tool, integration, policy, and persistence owners without a new loop, proxy, silent upgrade, retry, migration, or deploy. | `/application.compose`, `#application-composition`, `@application-manifest`, `@component-catalog`, `@integration-profile`, `APPLICATION-COMPOSITION.md`. |
+| Role-based Agent Team | `/agent.team #role-based-agent-team @agent-team` composes exact Agent Definition and Agent Orchestration revisions; Knowgrph owns durable MCP plan/start/list/control state, while roles, goals, and personas grant no authority, delegate intermediates stay private, and the agent named by the registered branch's final-answer ownership field owns the final answer. | `AGENT-TEAM.md`, `knowgrph.agent_team.plan`, `knowgrph.agent_team.start`, `knowgrph.agent_team.list`, `knowgrph.agent_team.control`. |
 | Agentic ECS | Three exact Dev-only MCP routes hydrate KGC state, advance a private transactional world, and atomically persist only pending `EcsDecision` nodes; Agentic Canvas OS owns invocation truth, Knowgrph owns execution and Canvas projection, and no bitECS artifact or dependency is copied. | `/ecs.session-start`, `/ecs.world-tick`, `/ecs.decision-persist`, `#agentic-ecs`, `@ecs-session`. |
 | Camera and XR scene invocation catalog | Camera source selection plus XR stage, asset, transform, physics, and immersive-placement grammar resolve canonically in the dictionaries; browser-local WebMCP tools `knowgrph.control_local_camera` and `knowgrph.control_local_xr_scene` remain the execution and persistence owners, while Agentic ECS stays a separate three-tool stdio/KGC composition lane with no renderer or physics ownership. | `/camera.select`, `/xr.stage`, `/xr.place`, `/xr.transform`, `/xr.label`, `/xr.remove`, `/xr.physics`, `/xr.present`, `@scene`, `#transform`, `#world`, `#body`, `#impulse`, `#controller`, `#reticle`. |
 | Game Mode invocation catalog | `/game.mode @canvas #gameplay` resolves one Dev-only browser-local Game Mode inspection or control handoff; Knowgrph WebMCP owns deterministic Agentic ECS gameplay, scored `hold`, `alert`, `engage`, or `flee` decisions, the existing Canvas and XR Mode renderer, Motion Control input reuse, local HUD errors, and validated Decision-only persistence without a model, network dependency, second renderer, Prod mutation, or Cloudflare deployment. | `/game.mode`, `@canvas`, `#gameplay`, `knowgrph.inspect_local_game_mode`, `knowgrph.control_local_game_mode`. |
 | Agent Toolkit | Application-authorized caller-declared revision digests may emit metadata-only observations, bounded evaluator evidence, declared-threshold compare decisions, and review-pending learning proposals; remote-unverified telemetry is excluded, and existing owners retain execution, scheduling, tools, policy, and application. | `/agent.toolkit`, `#agent-toolkit`, `@agent-toolkit-observer`, `AGENT-TOOLKIT.md`. |
-| External pattern boundary | OpenAI orchestration, handoff, and Sandbox Agents guides, Docker documentation, LangGraph, DeerFlow, Kimi Agent Swarm, and NVIDIA NeMo Agent Toolkit may inform semantics or platform usage; local docs and runtime must not copy or depend on external code, APIs, schemas, tests, examples, prompts, provider configs, runtime layouts, defaults, algorithms, services, or prose. | `AGENT-RUNTIME-COMPOSITION.md`, `AGENT-ORCHESTRATION.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `SANDBOX-AGENTS.md`, `VALIDATION-RUNBOOK.md`, `HARNESS-CONTRACTS.md`. |
+| External pattern boundary | Official OpenAI guides, Docker documentation, LangGraph, DeerFlow, Kimi Agent Swarm, NVIDIA NeMo Agent Toolkit, and CrewAI may inform abstract semantics or platform usage only; local docs and runtime must not copy or depend on external code, APIs, schemas, tests, examples, prompts, vocabulary sets, provider configs, runtime layouts, defaults, algorithms, services, packages, or prose. | `AGENT-RUNTIME-COMPOSITION.md`, `AGENT-ORCHESTRATION.md`, `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `SANDBOX-AGENTS.md`, `VALIDATION-RUNBOOK.md`, `HARNESS-CONTRACTS.md`. |
 ## Resolution Rules
 | Situation | Resolution |
 |---|---|

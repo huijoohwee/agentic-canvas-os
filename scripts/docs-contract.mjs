@@ -8,6 +8,10 @@ import { validatePromptPresetContractDocuments } from "./prompt-preset-contract.
 import { validateXrInvocationContractDocuments } from "./xr-invocation-contract.mjs";
 import { validateGameModeInvocationContractDocuments } from "./game-mode-invocation-contract.mjs";
 import { validateSkillEvolutionContractDocuments } from "./skill-evolution-contract.mjs";
+import {
+  validateAgentTeamContractDocuments,
+  validateAgentTeamDocumentLineBudgets,
+} from "./agent-team-contract.mjs";
 
 const DOCS_ROOT = path.resolve("docs");
 const REQUIRED_KEYS = [
@@ -69,6 +73,8 @@ failures.push(...validatePromptPresetContractDocuments(documents));
 failures.push(...validateXrInvocationContractDocuments(documents));
 failures.push(...validateGameModeInvocationContractDocuments(documents));
 failures.push(...validateSkillEvolutionContractDocuments(documents));
+failures.push(...validateAgentTeamContractDocuments(documents));
+failures.push(...validateAgentTeamDocumentLineBudgets(documents));
 
 if (failures.length > 0) fail(failures.join("\n"));
 console.log(`docs contract ok (${files.length} files)`);

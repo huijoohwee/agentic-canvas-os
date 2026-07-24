@@ -17,6 +17,7 @@ source_docs:
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "APPLICATION-COMPOSITION.md"
+  - "AGENT-TEAM.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
@@ -133,6 +134,7 @@ dictionary_entries:
   - "@application-manifest"
   - "@component-catalog"
   - "@integration-profile"
+  - "@agent-team"
   - "@handoff-row"
   - "@agent-profile"
   - "@worker-process"
@@ -292,6 +294,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@skill-catalog` | Reusable skill contract catalog. | `SKILLS.md` plus existing shared skill registry owner when present. | Skill changes are proposals until reviewed; direct auto-commit and external copying are forbidden. |
 | `@identity-model` | Stable model of operator preferences, project boundaries, and agent operating rules. | `FACTS.md`, `MEMORY.md`, and operator-approved memory. | Stores non-secret, source-backed facts only; no sensitive profiling or unsupported personal inference. |
 | `@orchestration-graph` | Source-backed state, node, edge, and stop-condition topology. | `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing Canvas/KGC graph owners. | No external graph runtime import, hidden node registry, or direct graph-store mutation. |
+| `@agent-team` | Exact source URI and digest, team revision, participant-to-Agent-Definition revisions, registered workflow revision and branches, role metadata, review policy, and hard bounds. | `AGENT-TEAM.md` defines the source contract; Knowgrph local stdio MCP owns durable lifecycle state; existing agent owners retain execution authority. | Roles, goals, personas, membership, and MCP requests cannot grant facts, instructions, models, tools, credentials, approval, routing, final-answer ownership, Prod, or Cloudflare authority; drift and mutable aliases fail closed. |
 | `@swarm-run` | Durable ledger for one dynamically planned Agent Swarm run. | `AGENT-SWARM.md`, Agent Swarm runtime, and the injected atomic state-store adapter. | Holds bounded private task results for dependencies and synthesis plus state, claims, leases, verified receipts, cost, and trace; never exposes those results publicly or stores provider secrets, caller roles, or workflow topology. |
 | `@agent-toolkit-observer` | Injected metadata observer and digest-bound evaluator for one Toolkit principal. | `AGENT-TOOLKIT.md`, Agent Toolkit runtime, and the application-owned authorizer, adapter, or evaluator. | Accepts bounded redacted lifecycle metadata, declared metrics, unique evidence references, and owner-aggregate cost; caller-declared digests need application verification, and remote telemetry stays untrusted and comparison-ineligible. |
 | `@state-store` | Scoped current-state snapshot for a stateful run. | Existing approved local state owner. | Typed, bounded, secret-free state only; writes require mutation approval. |
@@ -357,6 +360,7 @@ binding:
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run @sandbox-workspace` | Execute one bounded work item inside its fenced run workspace and stop `delivery_ready` with ACOS `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Compile exact host-owned interfaces into one immutable plan and delegate bounded ready steps to their existing owners. |
+| `/agent.team #role-based-agent-team @agent-team` | Resolve one revision-fenced role-based team and hand typed plan/start/list/control lifecycle ownership to the Knowgrph local stdio MCP runtime without creating a second scheduler or broadening Agent Swarm. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |
@@ -413,6 +417,7 @@ binding:
 | Token | Facts source |
 |---|---|
 | `@application-manifest` | `FACTS.md` direct-resolution entry for bounded version-locked application source. |
+| `@agent-team` | `FACTS.md` direct-resolution entry for one exact source-backed Agent Team binding. |
 | `@component-catalog` | `FACTS.md` direct-resolution entry for immutable local component and interface records. |
 | `@integration-profile` | `FACTS.md` direct-resolution entry for opaque host-owned integration capability bindings. |
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |

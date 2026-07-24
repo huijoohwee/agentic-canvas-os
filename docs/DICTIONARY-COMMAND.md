@@ -17,6 +17,7 @@ source_docs:
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
+  - "VOICE-STUDIO.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "START-WORKFLOW.md"
@@ -54,6 +55,7 @@ dictionary_entries:
   - "/personality.overlay"
   - "/moa"
   - "/video-agent"
+  - "/voice.studio"
   - "/sme-care-agent"
   - "/investment-research-agent"
   - "/crawler-agent"
@@ -192,6 +194,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/personality.overlay` | Apply a temporary session-level style or mode overlay. | `@personality-overlay`, `@operator`, `@runtime-proof` | `#personality-overlay`, `#soul`, `#approval-gate` | Overlay is session-scoped, cannot mutate `SOUL.md`, and remains subordinate to facts, roles, memory, safety, and deploy gates. |
 | `/moa` | Run a one-shot Mixture of Agents pass for a hard query without switching the global model or creating a copied provider preset. | `@moa-preset`, `@reference-agents`, `@aggregator-agent`, `@cost-log`, `@operator` when paid calls are possible | `#mixture-of-agents`, `#reference-agents`, `#aggregator-agent`, `#token-economics` | Local preset resolves; reference calls are no-tool, capped, and advisory; aggregator returns the only user-visible answer; tool calls use normal approval gates; cost log records reference and aggregator tokens; prior context is restored. |
 | `/video-agent` | Run a source-backed, approval-gated video workflow from authored script through structured planning, media generation, persistence, read-back, and shared Canvas projection. | `@operator`, `@video-generation-demo-script`, one `@provider.*` binding, one or more of `@text`, `@image`, `@audio`, `@video`, `@cost-log`, `@runtime-proof` | one `#spec.*`, one `#thinking.type.*`, one `#token-cap.*`, `#approval-gate`, `#token-economics`, `#vcc` | The text stage returns Character, Scene, Dialogue, Visual asset, Audio, Timing, Metadata, and Prompt sheets; approved media stages persist and read back typed artifacts; Cards, Widgets, Rich Media Panels, and Timeline reuse the same identities; missing approval, credentials, entitlement, budget, persistence, read-back, or capability stops terminally. |
+| `/voice.studio` | Select one bounded AI voice studio operation without creating operation-specific slash aliases. | Route-dependent `@audio`, `@text`, `@voice-profile`, `@approval-gate`, `@cost-log`, and `@runtime-proof` exactly as defined in `VOICE-STUDIO.md`. | Exactly one of `#voice-clone`, `#speech-to-text`, or `#text-to-speech`. | The exact host route resolves metadata for `clone`, `dictate`, or `create`; consent and approval remain separate, and only the `knowgrph.voice.studio` MCP wire tool may execute. Missing rights, consent, disclosure, capability, bounds, or proof fails before audio read, adapter work, spend, or persistence. |
 | `/sme-care-agent` | Produce provider-neutral SME exposure, coverage-gap, comparison, and assessment responses through the shared slash-agent owner. | `@source.frontmatter`, `@source.body`, `@local-harness`, `@cost-log`, `@runtime-proof` | `#frontmatter`, `#harness`, `#token-economics`, `#runtime-ready`, `#approval-gate` | The active Chat provider, endpoint, and model returns a source-grounded response or a focused material clarification; unknown coverage remains unknown, and missing route, evidence, approval, or capability fails closed before quote, bind, purchase, provider contact, persistence, Prod, or Cloudflare mutation. |
 | `/investment-research-agent` | Produce source-grounded investment research, comparisons, and plan assessments through the shared slash-agent owner. | `@source.frontmatter`, `@source.body`, `@cost-log`, `@runtime-proof` | `#frontmatter`, `#token-economics`, `#runtime-ready`, `#approval-gate` | The active Chat provider, endpoint, and model separates evidence, assumptions, contradictions, risks, catalysts, and verification gaps or asks one material clarification; missing route or evidence fails closed without invented market facts, transactions, personalized financial advice, persistence, Prod, or Cloudflare mutation. |
 | `/crawler-agent` | Run the native headless website crawl through the existing Import URL and Canvas output owners. | `@url:`, `@reference-policy`, `@runtime-proof` | `#canvas`, `#dev-only`, `#approval-gate` | The native shared runtime returns a persisted crawl report and pipe-table output or a typed URL, policy, download, storage, or capability error; paid-provider, authenticated, and external mutation actions stay blocked without approval. |

@@ -19,6 +19,7 @@ source_docs:
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
+  - "VOICE-STUDIO.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
@@ -74,6 +75,7 @@ dictionary_entries:
   - "@image-to-glb"
   - "@knowgrph.probe-tree"
   - "@audio"
+  - "@voice-profile"
   - "@video"
   - "@mcp-gateway"
   - "@canvas"
@@ -217,6 +219,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@image-to-glb` | Bind one existing PNG, JPG, JPEG, or SVG source to the native procedural `image.to-glb` asset contract. | Shared Card, Widget, image-to-threejs source utilities, and GLB asset-pipeline owners. | Uses only the selected source URL; source media remains unchanged, external plugin/copy paths are forbidden, and any LLM execution requires its separately approved runtime. |
 | `@knowgrph.probe-tree` | Bind one Widget Card or answered branch to the shared Probe-Tree generation context. | Authored graph identity, selected child Output including numbered multi-selections and Other, bounded ancestor lineage, local MCP Probe-Tree tools, shared Storyboard publication owners, and the active Chat provider, endpoint, and model. | Carries no credentials or implicit provider approval; the selected child replaces any same-ID root alias as continuation owner, every accepted question and clarification suggestion traces to the selected child or bounded lineage through verbatim anchors, stale card-local routing is forbidden, and graph mutation remains atomic through the owning publication transaction. |
 | `@audio` | Request narration, dialogue, sound, music, subtitle-sync, and master-audio artifacts. | Shared audio/video generation, media-probe, persistence, and Timeline owners. | Languages, synchronization, media kind, persistence, and read-back identity must be typed before projection. |
+| `@voice-profile` | Bind one exact revision of a consented voice-profile manifest for profile creation or disclosed synthesis. | Knowgrph's voice-studio runtime resolves opaque profile identity, source digests, speaker authorization, permitted uses, retention, disclosure, and revocation state through existing media and policy owners. | It contains no voice embedding, raw audio, credential, mutable provider alias, or implicit consent; a missing, expired, mismatched, or revoked profile blocks adapter work, spend, persistence, and output. |
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
 | `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
@@ -342,6 +345,7 @@ binding:
 | Missing or mutable `@application-manifest`, `@component-catalog`, or `@integration-profile`, or changed source, interface, schema, capability, owner, or plan evidence | Return a typed composition block before execution or spend; never infer, upgrade, install, reconnect, retry, migrate, or deploy. |
 | Missing or unconfigured `@swarm-run` state, exact-agent resolver, planner, worker, synthesizer, receipt verifier, authorizer, or authenticated run principal | Return a typed block before work, disclosure, spend, or cancellation; never accept a caller-supplied substitute. |
 | Missing `@agent-toolkit-observer` authorizer, changed revision digest, or cross-principal access | Block mutation or disclosure; a missing evaluator blocks new evaluation spend but not owner reads or comparison over already committed eligible evidence. |
+| Missing, expired, mismatched, or revoked `@voice-profile`, speaker consent, recording rights, permitted use, or required disclosure for `/voice.studio` | Return a typed authorization block before audio read, adapter selection, provider call, spend, persistence, or generated artifact. |
 | Missing `@tool-policy` for paid, egress, generated-media, or browser automation | Return blocked before executing the tool. |
 | Missing `@platform-surface` for `/toolset.enable` or `/toolset.disable` | Return scoped-platform-required before changing toolset state. |
 | Missing `@deferred-tool-catalog` for `/tool.search` or `/tool.describe` | Return no-deferred-catalog before schema disclosure or execution. |
@@ -405,6 +409,9 @@ binding:
 | `/tool.route #web-search @web-search-tool` | Execute search or extraction with citations and egress policy. |
 | `/tool.route #image-generation @image-tool` | Execute image generation with approval and artifact manifest. |
 | `/tool.route #text-to-speech @tts-tool` | Execute TTS with voice and output bounds. |
+| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `clone` route; `knowgrph.voice.studio` remains the only wire executor. |
+| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `dictate` route; `knowgrph.voice.studio` remains the only wire executor. |
+| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Bind bounded text and one active profile revision to the metadata-only `create` route; `knowgrph.voice.studio` remains the only wire executor. |
 | `/tool.route #cloud-browser @browser-tool` | Execute cloud browser automation with isolated session and redaction. |
 | `/skill.propose #skill-evolution @skill-catalog` | Draft a reusable skill contract for review. |
 | `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Invoke `knowgrph.skill.evolve` through the catalog, policy, proof, and human authority owners; no binding grants automatic apply. |

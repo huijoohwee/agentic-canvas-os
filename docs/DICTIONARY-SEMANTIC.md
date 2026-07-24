@@ -19,6 +19,7 @@ source_docs:
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
+  - "VOICE-STUDIO.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
@@ -152,6 +153,8 @@ dictionary_entries:
   - "#bridge-tool"
   - "#web-search"
   - "#image-generation"
+  - "#voice-clone"
+  - "#speech-to-text"
   - "#text-to-speech"
   - "#cloud-browser"
   - "#skill-evolution"
@@ -298,7 +301,9 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#bridge-tool` | Small model-visible bridge used for search, describe, or call. | A deferred tool is invoked through a bridge instead of direct schema exposure. | Bridge unwraps to the real tool identity for validation, approval, hooks, audit, cost, and fallback. |
 | `#web-search` | Web search and extraction tool category. | A task needs search, extraction, citations, or source fetch. | Source scope, citations, egress policy, cache behavior, and cost log are present. |
 | `#image-generation` | Image generation tool category. | A task requests generated or edited images. | Approval, model/provider selection, prompt bounds, output manifest, and cost log are present. |
-| `#text-to-speech` | Text-to-speech tool category. | A task requests narration, voice note, or audio output. | Voice/provider, text bounds, output manifest, and cost log are present. |
+| `#voice-clone` | Authorized voice-profile derivation from one immutable source-audio artifact. | `/voice.studio` selects `clone` with `@audio` and `@voice-profile`. | Exact speaker consent, recording rights, permitted use, retention, disclosure, source digest, bounds, approval, cost, and revocation behavior are present before adapter work. |
+| `#speech-to-text` | Authorized transcription of one immutable source-audio artifact into bounded text. | `/voice.studio` selects `dictate` with `@audio` and `@text`. | Recording rights, participant notice, language and segment bounds, source provenance, approval, cost, and uncertainty posture are present before adapter work. |
+| `#text-to-speech` | Text-to-speech tool category, including the `/voice.studio` `create` route. | A task requests narration, voice note, or disclosed audio output from bounded text and, for Voice Studio, one exact active `@voice-profile` revision. | Voice/provider or profile authorization, text bounds, disclosure, output manifest, approval, cost, provenance, and revocation checks are present. |
 | `#cloud-browser` | Cloud browser automation tool category. | A task requires remote browser navigation, click, type, vision, or screenshot actions. | Isolated session, action schema, redaction, approval gate, and trace proof are present. |
 | `#skill-evolution` | Bounded improvement of reusable skill contracts. | Skill text is proposed or optimized through source-fenced epochs, mini-batches, and disjoint held-out validation. | Learning rate limits text mutation rather than model weights; every accepted candidate passes required gates and remains review-pending until separately managed. |
 | `#memory-search` | Scoped retrieval from local memory or past conversation indexes. | An agent needs prior decisions, proof, or preferences before acting. | Ranked sources cite local storage scope and return typed empty results when no match exists. |
@@ -390,6 +395,9 @@ semantic:
 | `/tool.route #web-search @web-search-tool` | Run search or extraction with source scope, citations, egress, and cost proof. |
 | `/tool.route #image-generation @image-tool` | Run image generation only after approval, artifact-boundary, and cost checks. |
 | `/tool.route #text-to-speech @tts-tool` | Run TTS only with voice, text, output, and cost bounds. |
+| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Resolve the `clone` metadata-only route; only `knowgrph.voice.studio` may execute after separate consent and approval checks. |
+| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Resolve the `dictate` metadata-only route; only `knowgrph.voice.studio` may execute after recording-rights and approval checks. |
+| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Resolve the `create` metadata-only route; only `knowgrph.voice.studio` may execute with an active permitted profile and required disclosure. |
 | `/tool.route #cloud-browser @browser-tool` | Run browser automation only with session isolation, redaction, and approval. |
 | `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Plan, start, step, inspect, or cancel the bounded `knowgrph.skill.evolve` harness; successful output remains a review-pending proposal. |
 | `/memory.search #memory-search @memory-store` | Retrieve scoped prior context before spending tokens or mutating source. |

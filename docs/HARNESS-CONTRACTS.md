@@ -419,7 +419,7 @@ The controller bounds model turns, calls, batch width, program size, result size
 | Platform toolset | Enablement is scoped to one platform surface and does not transfer across CLI, chat, browser, MCP, or control plane. |
 | Web search/extract | Source scope, citations, egress policy, cache behavior, and cost log. |
 | Image generation | Approval gate, prompt bounds, artifact manifest, and cost log. |
-| Text-to-speech | Voice/provider, text bounds, output manifest, duration guard, and cost log. |
+| Voice and speech | `VOICE-STUDIO.md` owns clone, speech-to-text, and text-to-speech detail; shared harnesses require consent or recording rights where applicable, exact source/profile/text provenance, disclosure, approval, duration and size bounds, output manifest, revocation checks, and cost log. |
 | Cloud browser | Isolated session, action schema, screenshot/vision bounds, redaction, trace, and approval. |
 | Tool Search | Session-scoped metadata exposure, exact on-demand definition loading, gateway authorization, and no copied search implementation. |
 

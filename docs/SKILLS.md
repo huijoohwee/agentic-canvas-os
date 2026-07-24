@@ -15,6 +15,7 @@ source_docs:
   - "DICTIONARY-BINDING.md"
   - "HARNESS-CONTRACTS.md"
   - "AGENT-TEAM.md"
+  - "VOICE-STUDIO.md"
   - "SKILL-EVOLUTION.md"
   - "RUNTIME-READINESS.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
@@ -75,6 +76,7 @@ skill_contracts:
   - "tool.search"
   - "tool.describe"
   - "tool.call"
+  - "voice.studio"
   - "skill.propose"
   - "skill.evolve"
   - "identity.reflect"
@@ -139,7 +141,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
 | Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `implementation.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `MANAGED-IMPLEMENTATION-RUNS.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
-| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
+| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
 ## Specialized Contracts
 
@@ -149,6 +151,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Instruction task quality | `INSTRUCTION-QUALITY-EVALUATION.md` |
 | Image to Three.js | `IMAGE-TO-THREEJS-SKILL.md` |
 | Image to GLB | `IMAGE-TO-GLB-SKILL.md` |
+| AI Voice Studio | `VOICE-STUDIO.md` |
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
 | Agent Team | `AGENT-TEAM.md` |
 | Agent Swarm | `AGENT-SWARM.md` |

@@ -134,6 +134,14 @@ Tool capabilities expose callable functions and platform-scoped toolsets through
 
 Tool Search capabilities are model-visible bridge routes for eligible MCP and non-core plugin tools only. Core direct tools remain exposed directly; deferred catalogs are rebuilt from session-scoped granted toolsets and cannot reveal disabled or out-of-scope tools.
 
+## Voice Studio Capability
+
+`/voice.studio` plus `#voice-clone`, `#speech-to-text`, or `#text-to-speech` and their route-specific bindings are host metadata, not MCP wire methods. Agentic Canvas OS owns the canonical operation and safety contract in `VOICE-STUDIO.md`; Knowgrph owns execution, media identity, persistence, and proof through one local stdio tool.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.voice.studio` | Validate and execute exactly one discriminated `clone`, `dictate`, or `create` request through an injected bounded voice adapter. | Consent, recording rights, permitted use, revocation, disclosure, approval, capability, source digest, bounds, idempotency, cost, provenance, and read-back must pass; missing live configuration fails before audio read, adapter work, spend, or persistence. |
+
 ## Soul Identity Capabilities
 
 Soul identity tools are discoverable without model spend. Runtime prompt assembly remains gated behind scan, bounds, and typed fallback behavior.
@@ -265,7 +273,7 @@ capability:
 | Discover tool routes | Local stdio MCP, Pages HTTP MCP, or existing control-plane catalog | Returns web, image, TTS, and browser provider states without executing tools. |
 | Search deferred tool schemas | Local stdio MCP or approved tool-search harness | Keeps large eligible MCP/plugin schemas behind session-scoped search and describe routes. |
 | Route web search/extract | Local stdio MCP or approved search harness | Keeps citations, source scope, egress, cache, and cost observable. |
-| Route image or TTS generation | Local stdio MCP or approved media harness | Requires approval, artifact/output manifest, and cost log. |
+| Route image, TTS, or voice-studio generation | Local stdio MCP or approved media harness | Requires consent or recording rights where applicable, approval, artifact/output manifest, provenance, and cost log. |
 | Route cloud browser automation | Browser WebMCP or approved browser harness | Keeps session isolated, redacted, and approval-gated. |
 | Run MoA deliberation | Local stdio MCP or approved control-plane harness | Keeps reference fan-out capped, aggregator-owned, and cost-logged. |
 | Search prior memory | Local stdio MCP or approved local memory index | Keeps scoped conversation context local and cited. |
@@ -298,6 +306,7 @@ capability:
 | Reviewed run-note mutation | `update_agent_run_note` maps only to `knowgrph.run_manifest.note.update`, cannot disable review, and completes only after exact native receipt echo. |
 | Tool gateway is existing-infra | Tool routing uses local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owners; no new proxy is introduced. |
 | Tool providers are per-category | Web, image, TTS, and browser categories each expose gateway, direct, local, or unavailable state. |
+| Voice Studio ownership is singular | Three exact host metadata routes map to one `knowgrph.voice.studio` wire tool; consent never follows from a binding, and no copied runtime or provider dependency is required. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |
 | Application plans are immutable | Equivalent manifests produce one digest over exact revisions, interface and schema digests, owners, edges, order, and bounds; drift or migration needs a new explicit plan and never mutates execution automatically. |
 | Tool secrets stay server-managed | Provider keys and browser sessions never appear in docs, client state, tests, or fixtures. |

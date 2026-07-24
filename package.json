@@ -10,6 +10,7 @@
   "scripts": {
     "agent-definitions:check": "node --test __tests__/agent-definitions.test.mjs",
     "agent-orchestration:check": "node --test __tests__/agent-orchestration.test.mjs",
+    "agent-team:check": "node --test __tests__/agent-team-contract.test.mjs && node ./scripts/agent-team-contract.mjs",
     "agent-live-provider:check": "node --test __tests__/openai-agent-live-proof.test.mjs",
     "agent-live-provider:proof": "node ./scripts/live-agent-provider-proof.mjs",
     "agent-runtime-composition:check": "node --test __tests__/agent-runtime-composition.test.mjs",

@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-20"
+date: "2026-07-24"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -17,6 +17,7 @@ source_docs:
   - "RUNTIME-READINESS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
+  - "AGENT-TEAM.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
@@ -136,6 +137,7 @@ dictionary_entries:
   - "#multi-agent-collaboration"
   - "#managed-implementation-run"
   - "#application-composition"
+  - "#role-based-agent-team"
   - "#tool-gateway"
   - "#tool-routing"
   - "#tool-function"
@@ -295,6 +297,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#memory-search` | Scoped retrieval from local memory or past conversation indexes. | An agent needs prior decisions, proof, or preferences before acting. | Ranked sources cite local storage scope and return typed empty results when no match exists. |
 | `#identity-model` | Stable, source-backed operator and project preference model. | A repeated preference or boundary should persist across sessions. | Store only non-secret, operator-relevant, source-backed facts; reject unsupported personal inference. |
 | `#orchestration-graph` | State, node, edge, and compile-check contract for agent workflows. | A workflow needs explicit topology, conditional routing, parallel branches, or bounded loops. | State schema, node ids, edge rules, entry/exit nodes, stop condition, and orphan-node check are present. |
+| `#role-based-agent-team` | Exact source-backed collaboration among named agent-definition revisions and one registered orchestration workflow. | A task needs declared roles, goals, or personas while retaining existing delegate, handoff, guardrail, model, tool, review, and persistence owners. | `/agent.team #role-based-agent-team @agent-team`, four `knowgrph.agent_team.*` lifecycle tools, revision and state fences, hard turn/depth/fanout/retry/time/token/cost bounds, private intermediates, and exact final-answer ownership are proven; role metadata grants no authority. |
 | `#agent-swarm` | Dynamic bounded horizontal work decomposition for one base-agent goal. | Independent work can overlap and does not require predefined specialists or a handcrafted workflow. | Runtime-generated tasks, session-owned durable atomic claims, observed bounded overlap, isolated contexts, recovery, verified receipts, and base-agent synthesis are proven. |
 | `#agent-toolkit` | Cross-cutting observation, bounded evaluation, evidence-backed comparison, and reviewed learning for digest-bound agent-system revisions. | A digest-bound agent or team revision and framework-neutral adapter require metadata-only analysis without changing the execution owner. | Caller-declared digests and application authority, server timing, telemetry trust, bounded unique evidence, metric direction, honest cost, deterministic same-cohort policy, and review-pending learning are explicit. |
 | `#stateful-agent` | Long-running agent with explicit state across turns or sessions. | A run persists working state, memory, checkpoints, or resumable context. | State owner, memory boundary, checkpoint plan, and resume behavior are named. |
@@ -396,6 +399,7 @@ semantic:
 | Token | Facts source |
 |---|---|
 | `#application-composition` | `FACTS.md` direct-resolution entry for exact component, interface, capability, and dependency planning. |
+| `#role-based-agent-team` | `FACTS.md` direct-resolution entry for exact role-based team semantics without authority inference. |
 | `#truth` | `FACTS.md` direct-resolution entry for shared source-backed facts. |
 | `#soul` | `FACTS.md` direct-resolution entry for durable agent identity. |
 | `#knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for bounded Probe-Tree semantics. |

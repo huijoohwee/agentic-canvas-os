@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-20"
+date: "2026-07-24"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -74,6 +74,8 @@ dictionary_entries:
   - "#agentic-ecs"
   - "#dev-only"
   - "#mcp"
+  - "#git-remote"
+  - "#multi-provider-file-sync"
   - "#canvas"
   - "#canvas-node"
   - "#canvas-edge"
@@ -217,6 +219,8 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by Knowgrph. | One of the three ECS MCP commands operates on a KGC-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
+| `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
+| `#multi-provider-file-sync` | Bidirectional file or directory transfer through a provider-neutral browser contract. | `/file.sync` pulls or pushes a configured provider prefix. | Provider capability, pagination, hash semantics, per-file outcomes, both-sides-changed conflicts, size/time bounds, offline FIFO, and secret-free browser payloads are proven. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
 | `#canvas-node` | Canvas graph node selection, creation, opening, linking, or deletion intent. | A command acts on a node, creates a node, or needs selected-node context. | Node id, type, label, graph point, mutation owner, and selection state are explicit. |
 | `#canvas-edge` | Canvas graph edge selection, creation, endpoint update, or provenance intent. | A command creates, opens, rewires, or serializes an edge. | Source, target, label, selected edge id, and duplicate-edge handling are explicit. |
@@ -423,6 +427,8 @@ semantic:
 | `#deferred-tool-schema` | `FACTS.md` direct-resolution entry for on-demand deferred schema loading. |
 | `#bridge-tool` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool calls. |
 | `#mixture-of-agents` | `FACTS.md` direct-resolution entry for bounded MoA routing. |
+| `#git-remote` | `FACTS.md` direct-resolution entry for browser Git with Worker-owned remote transport. |
+| `#multi-provider-file-sync` | `FACTS.md` direct-resolution entry for provider-neutral bidirectional synchronization. |
 
 ## VCCs
 

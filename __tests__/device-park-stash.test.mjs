@@ -31,7 +31,7 @@ test("park stash lock never removes a live owner and safely takes over a dead st
   }
 });
 
-test("interleaved worktree stashes retain immutable identity and restore exact same-session work", () => {
+test("interleaved worktree stashes retain immutable identity and recover an expired pending restore", () => {
   const fixture = createFixture();
   try {
     const laneA = fixture.lanes[0];
@@ -77,7 +77,9 @@ test("interleaved worktree stashes retain immutable identity and restore exact s
       }
     })), /lost restore response/);
     assert.equal(laneA.lease.parkStashStatus, "pending");
-    const resumedA = resume(fixture.context(laneA));
+    const expiredRestoreContext = fixture.context(laneA);
+    expiredRestoreContext.now = () => new Date("2026-07-22T00:40:00.000Z");
+    const resumedA = resume(expiredRestoreContext);
     const resumedB = resume(fixture.context(laneB));
 
     assert.equal(resumedA.parkStashStatus, "restored");
@@ -328,6 +330,11 @@ function leaseStore(lane) {
       expiresAt: "2026-07-22T00:35:00.000Z",
     }),
     annotate: ({ values }) => (lane.lease = { ...lane.lease, ...values }),
+    heartbeat: () => (lane.lease = {
+      ...lane.lease,
+      heartbeatAt: "2026-07-22T00:40:00.000Z",
+      expiresAt: "2026-07-22T01:10:00.000Z",
+    }),
     beginCompletion: ({ pullRequestUrl, mergeCommitSha, mainSha }) => (lane.lease = {
       ...lane.lease, status: "completing", pullRequestUrl,
       completion: { mergeCommitSha, mainSha },

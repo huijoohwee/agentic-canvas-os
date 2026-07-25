@@ -314,6 +314,8 @@ function reconcileResumeReplay({
       !local.worktreePath || path.resolve(local.worktreePath) !== path.resolve(repo)) return null;
   const markerFields = ["schema", "status", "epoch", "sessionId", "device", "scope", "branch", "baseSha", "fenceSha", "heartbeatAt", "expiresAt"];
   const activeReplay = remoteLease.status === "active" && markerFields.every(field => remoteLease[field] === local[field]);
+  const pendingStashRestoreReplay = activeReplay && local.parkStashStatus === "pending" &&
+    PARK_STASH_FIELDS.every(field => remoteLease[field] === local[field]);
   const expiredActiveHandoff = remoteLease.status === "active" && Date.parse(remoteLease.expiresAt) <= now().getTime();
   const handoffHead = remoteLease.status === "review_ready" ? remoteLease.reviewHeadSha :
     remoteLease.status === "delivery" && remoteLease.sessionId === sessionId ? remoteLease.deliveryHeadSha :
@@ -323,7 +325,7 @@ function reconcileResumeReplay({
     local.baseSha === handoffHead && local.epoch === remoteLease.epoch + 1;
   if (!activeReplay && !pendingHandoff) return null;
   const expired = Date.parse(local.expiresAt) <= now().getTime();
-  if (expired && !pendingHandoff) return null;
+  if (expired && !pendingHandoff && !pendingStashRestoreReplay) return null;
   if (!pullRequest.isDraft) throw new Error(`Ownership pull request ${owner.url} must be draft before active resume replay.`);
   const parkedStashValues = remoteLease.status === "parked"
     ? requireReplayParkedStash({ remoteLease, local, owner, repo, sessionId, gitText, gitOptional })
@@ -373,6 +375,9 @@ function reconcileResumeReplay({
     else if (remoteSha !== headSha) throw new Error("Resume claim remote is neither the handed-off head nor the exact claim commit.");
     const observedRemote = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]).split(/\s+/)[0] || "";
     if (observedRemote !== headSha) throw new Error("Resume claim push did not establish its exact remote fence.");
+  }
+  if (expired && pendingStashRestoreReplay) {
+    local = leaseStore.heartbeat({ sessionId, branch, ttlMs: leaseTtlMs });
   }
   run("git", ["merge-base", "--is-ancestor", local.baseSha, local.fenceSha]);
   run("git", ["merge-base", "--is-ancestor", remoteLease.fenceSha, local.fenceSha]);

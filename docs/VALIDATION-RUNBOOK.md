@@ -124,12 +124,12 @@ Then run `npm run collaboration:gate` from the Agentic Canvas OS repository.
 This is the only required operator command. It resolves the sibling Knowgrph checkout from the repository root, verifies that Knowgrph still owns `collaboration:readiness:check`, and delegates to that canonical runtime owner. The gate automatically:
 
 1. Runs focused collaboration documentation, protocol, runtime, and MainPanel checks.
-2. Reuses healthy local services or boots owner `5173`, guest `5174`, and storage worker `8787` processes.
+2. Allocates unique local owner, guest, and worker ports plus an external per-run Wrangler state root; it never reuses or stops canonical `5173`/`8787`.
 3. Opens isolated owner and guest browser contexts, authenticates both sessions, and joins the same full document room key.
 4. Requires connected two-peer rosters, a worker room status of at least two active peers, remote document propagation, two distinct runtime identities, exact app/docs/catalog revision parity, fresh bounded catalog hydration, and one common verification digest.
-5. Emits a machine-readable proof summary, captures owner and guest screenshots on failure, and cleans up services it started.
+5. Emits `agentic-collaboration-gate-result/v2`, captures bounded failure diagnostics, and cleans up only its run-owned processes and persistence.
 
-The automated contexts model two independent collaboration peers; the gate does not require two physical devices. It does not export runtime-identity JSON, require clipboard actions, or accept manually assembled evidence. `Copy diagnostic JSON` remains optional troubleshooting only. A nonzero exit, fewer than two peers, a room-key mismatch, duplicate runtime identity, revision mismatch, stale hydration, different digest, propagation failure, or leaked local process blocks parity and release.
+The automated contexts model two independent collaboration peers; the gate does not require two physical devices. It does not accept clipboard actions or manually assembled evidence; its private run-scoped proof artifact is validator-owned and deleted after success. `Copy diagnostic JSON` remains optional troubleshooting only. A nonzero exit, fewer than two peers, a room-key mismatch, duplicate runtime identity, revision mismatch, stale hydration, different digest, propagation failure, or leaked run-owned process blocks parity and release without blocking ownership-qualified isolated authoring.
 
 `KNOWGRPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 

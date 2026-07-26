@@ -105,6 +105,44 @@ test("review validates, pushes, and marks the matching PR ready without merge", 
   assert.ok(bodyEdit.includes("--title"));
 });
 
+test("an immutable auto-delivery lease wakes the controller without calling merge locally", () => {
+  const calls = [];
+  let remoteBody = "## Work item";
+  let isDraft = true;
+  let saved = { ...lease, autoDelivery: true, runtimeRequired: true };
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "",
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
+      : pullRequestJson({ body: remoteBody, isDraft }),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: () => saved,
+      verify: () => saved,
+      annotate: ({ values }) => { saved = { ...saved, ...values }; return saved; },
+      release: ({ status }) => { saved = { ...saved, status }; return saved; },
+    },
+    sessionId: "session-a",
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit" && args.includes("--body")) {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.equal(saved.status, "review_ready");
+  assert.equal(saved.reviewHeadSha, headSha);
+  assert.ok(calls.some(call => call.join(" ") === `gh pr edit ${pullRequestUrl} --add-label agentic/auto-delivery`));
+  assert.doesNotMatch(calls.map(call => call.join(" ")).join("\n"), /gh pr merge|--auto/);
+});
+
 test("review replays an exact same-session ready handoff without verification or push", () => {
   const calls = [];
   const ready = { ...lease, status: "review_ready", reviewHeadSha: headSha };

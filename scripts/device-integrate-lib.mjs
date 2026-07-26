@@ -41,6 +41,10 @@ export function integrateSession({
 
   const canonicalRoot = resolveCanonicalMainWorktree(gitText(["worktree", "list", "--porcelain", "-z"]));
   let commitEvidence = lease.integration || null;
+  const autoDeliveryReview = isAutoDeliveryReviewLease(lease);
+  if (autoDeliveryReview && runtime !== "canonical") {
+    throw new Error("Auto-delivery integration requires canonical runtime readiness; --runtime=none is not permitted.");
+  }
   if (lease.status === "active") {
     commitEvidence = prepareIntegrationCommit({
       branch, lease, repo, gitText, leaseStore, sessionId, run,
@@ -49,7 +53,7 @@ export function integrateSession({
     refreshTaskBranchFromMain({ repo, gitText, run, runText });
     publishTask();
     lease = leaseStore.read(branch);
-  } else if (!['delivery', 'completing', 'completed'].includes(lease.status)) {
+  } else if (!['delivery', 'completing', 'completed'].includes(lease.status) && !autoDeliveryReview) {
     throw new Error(
       `Integration requires an active, delivery, completing, or completed lease; ${branch} is ${lease.status}. ` +
       "Resume review-ready work before protected integration.",
@@ -60,7 +64,8 @@ export function integrateSession({
   if (!['completing', 'completed'].includes(lease.status)) {
     const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
-      expectedHeadSha: lease.deliveryHeadSha || commitEvidence?.commitSha,
+      expectedHeadSha: lease.deliveryHeadSha || commitEvidence?.commitSha ||
+        (autoDeliveryReview ? lease.reviewHeadSha : null),
       ghText, waitSeconds, pollSeconds, now, sleep,
     });
     log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);
@@ -91,7 +96,13 @@ export function integrateSession({
       runText,
     })
     : null;
-  const cleanup = runtimeReadiness?.cleanup || cleanupIntegrationWorktree({
+  const finalizedLease = finalizeIntegrationLease({
+    leaseStore,
+    branch,
+    completion,
+  });
+  lease = finalizedLease;
+  const cleanup = cleanupIntegrationWorktree({
     canonicalIntegration,
     integrationWorktree: repo,
     runText,
@@ -117,6 +128,27 @@ export function integrateSession({
       : `Integrated ${branch} at canonical main ${mainSha.slice(0, 12)}; runtime reconciliation was explicitly disabled.`,
   );
   return result;
+}
+
+function finalizeIntegrationLease({ leaseStore, branch, completion }) {
+  const current = leaseStore.read(branch);
+  if (current?.status === "completed") return current;
+  if (current?.status !== "completing") {
+    throw new Error("Integration runtime proof cannot finalize a lease that is not completing.");
+  }
+  return leaseStore.complete({
+    branch,
+    pullRequestUrl: current.pullRequestUrl,
+    mergeCommitSha: completion?.mergeCommitSha,
+    mainSha: completion?.mainSha,
+  });
+}
+
+function isAutoDeliveryReviewLease(lease) {
+  return lease?.status === "review_ready" &&
+    lease.autoDelivery === true &&
+    lease.runtimeRequired === true &&
+    SHA_PATTERN.test(String(lease.reviewHeadSha || ""));
 }
 
 function refreshTaskBranchFromMain({ repo, gitText, run, runText }) {
@@ -281,8 +313,7 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
       result.status !== "runtime-ready" || integratedRevision !== mainSha) {
     throw new Error("Canonical runtime readiness did not match the integrated main SHA.");
   }
-  const cleanup = cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree, runText });
-  return { integratedSource, readiness: result, cleanup };
+  return { integratedSource, readiness: result };
 }
 
 function cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree, runText }) {

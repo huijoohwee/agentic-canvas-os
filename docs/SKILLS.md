@@ -186,6 +186,8 @@ A variant does not create a wildcard command or a second execution registry.
 
 A catalog entry is spec-complete when its identity, owner, schemas, bounds, cost posture, fallback, and VCC are source-backed. Runtime-ready status additionally requires focused executable proof from the shared owner. Catalog presence alone never proves provider availability, live execution, artifact persistence, or deployment.
 
+The shared `knowgrph.agentic_canvas_os.docs.invoke` projection binds the three invocation dictionaries into one deterministic SHA-256 catalog digest over token, kind, label, summary, and source path. FloatingPanel Skills & Commands may mix local executable behavior with those rows, but source-backed dictionary metadata wins token collisions; hydration is fresh only after exact `/`, `#`, and `@` counts and browser-recomputed digest parity pass.
+
 `instruction.audit` is model-free. It audits `AGENTS.md` and this catalog for required intent, bounded instruction density, duplicate instructions, route-detail load, and canonical-owner leakage. Its typed report contains zero model tokens and no mutation or deployment authority.
 
 `instruction.quality.evaluate` scores provenance-bound final answers against the selected repository suite. The evaluator invokes no model, reads no private reasoning, and requires a complete candidate packet plus human review before any quality promotion.

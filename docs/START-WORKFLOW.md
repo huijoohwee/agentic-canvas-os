@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-07-18"
+date: "2026-07-26"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -58,10 +58,10 @@ completion_requires:
   - "one clean registered main worktree plus zero or more isolated registered task worktrees"
   - "task branch active only in its leased task worktree"
   - "recorded branch and base SHA"
-  - "visible runtime identity with exact Knowgrph, Agentic Canvas OS, and catalog revisions"
+  - "visible runtime identity with exact Knowgrph, Agentic Canvas OS, and catalog revisions plus the deterministic catalog digest"
   - "one application-root canonical identity owner with a MainPanel Settings KTV projection"
   - "repository-owned collaboration gate pass with two isolated runtime peers and one common verification digest when parity is claimed"
-  - "fresh revision-keyed catalog hydration within at most two explicit refresh attempts"
+  - "fresh revision-keyed catalog hydration with identical MCP counts and digest plus browser recomputation within at most two explicit refresh attempts"
   - "memory-log structural compliance"
   - "monthly planning-shard structural compliance"
 ---
@@ -520,6 +520,6 @@ Stop before build mutation when a target worktree is unregistered, dirty, prunab
 
 ## Completion VCC
 
-Given a declared device, session, semantic scope, and task worktree, when `/session.start` completes, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog hydration is fresh, memory and planning shards are compliant, and Codex mutates only its leased task worktree.
+Given a declared device, session, semantic scope, and task worktree, when `/session.start` completes, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog hydration is fresh with matching full-catalog counts and one browser-verified SHA-256 catalog digest across `/`, `#`, and `@`, memory and planning shards are compliant, and Codex mutates only its leased task worktree.
 
 VCC: verify both fetches exit zero; `git worktree list --porcelain -z` identifies one registered `main` owner plus the declared task worktree; every checked-out branch is unique; the Agentic Canvas OS main worktree is clean with `HEAD` equal to fetched `origin/main`; the task lease registry entry matches its session, branch, and path; `npm run collaboration:gate` exits zero with two distinct automated peers and one common verification digest; memory and planning checks pass; the Knowgrph main worktree remains clean; and no Prod mirror or Cloudflare action occurred.

@@ -1,10 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 
-const SAFE_STATES = new Set(["canonical", "active", "review-ready", "delivery", "parked", "cleanup-ready"]);
+const SAFE_STATES = new Set([
+  "canonical",
+  "active",
+  "review-ready",
+  "delivery",
+  "parked",
+  "owned-untracked",
+  "cleanup-ready",
+]);
 
 export function classifyWorktreeLifecycle({
   records,
@@ -17,14 +25,41 @@ export function classifyWorktreeLifecycle({
   const mainRecords = records.filter(record => record.branch === "refs/heads/main");
   if (mainRecords.length !== 1) throw new Error(`Expected one canonical main worktree; found ${mainRecords.length}.`);
   return records.map(record => {
-    const dirty = Boolean(dirt.get(path.resolve(record.path)));
+    const dirtState = normalizeDirt(dirt.get(path.resolve(record.path)));
     const lease = latestLeaseForPath(leases, record.path);
     const base = { path: record.path, head: record.head, branch: record.branch || null, lease: lease || null };
     if (record === mainRecords[0]) {
-      return { ...base, state: !dirty && record.head === canonicalSha ? "canonical" : "blocked-canonical" };
+      return {
+        ...base,
+        state: !dirtState.dirty && record.head === canonicalSha ? "canonical" : "blocked-canonical",
+      };
     }
-    if (dirty) return { ...base, state: "blocked-dirty" };
     if (record.bare || record.prunable || record.locked) return { ...base, state: "blocked-invalid" };
+    if (dirtState.dirty) {
+      if (dirtState.untrackedPaths.length > 0 && hasDurableOwner(lease, record)) {
+        return {
+          ...base,
+          state: "owned-untracked",
+          blockScope: "semantic-scope",
+          cleanupEligible: false,
+          authoredState: {
+            schema: "agentic-owned-untracked-state/v1",
+            preservation: "in-place",
+            observedAt: dirtState.observedAt || now.toISOString(),
+            paths: dirtState.untrackedPaths,
+            files: dirtState.untrackedFiles,
+            owner: {
+              sessionId: lease.sessionId,
+              branch: lease.branch,
+              scope: lease.scope,
+              epoch: lease.epoch,
+              pullRequestUrl: lease.pullRequestUrl,
+            },
+          },
+        };
+      }
+      return { ...base, state: "blocked-dirty" };
+    }
     if (record.branch) {
       if (lease?.status === "active" && Date.parse(lease.expiresAt) > now.getTime()) {
         return { ...base, state: "active" };
@@ -47,14 +82,19 @@ export function buildLifecycleReport({
   git = runGit,
   readLeases = readRepositoryLeases,
   isAncestor = isGitAncestor,
+  describeUntracked = describeUntrackedFile,
 } = {}) {
   const root = path.resolve(repository || process.cwd());
   const records = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]));
   const canonicalSha = git(root, ["rev-parse", "origin/main"]).trim();
-  const dirt = new Map(records.map(record => [
-    path.resolve(record.path),
-    Boolean(git(record.path, ["status", "--porcelain"]).trim()),
-  ]));
+  const observedAt = new Date().toISOString();
+  const dirt = new Map(records.map(record => {
+    const porcelain = git(record.path, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+    const dirtState = parseDirtState(porcelain, observedAt);
+    dirtState.untrackedFiles = dirtState.untrackedPaths.map(relativePath =>
+      describeUntracked(record.path, relativePath, git));
+    return [path.resolve(record.path), dirtState];
+  }));
   const leases = readLeases(root, git);
   const integratedCompletionShas = new Set(leases
     .filter(lease => lease?.status === "completed" && lease.completion?.mainSha &&
@@ -92,6 +132,58 @@ function latestLeaseForPath(leases, worktreePath) {
   return leases
     .filter(lease => lease?.worktreePath && path.resolve(lease.worktreePath) === normalized)
     .sort((left, right) => Number(right.epoch || 0) - Number(left.epoch || 0))[0] || null;
+}
+
+function normalizeDirt(value) {
+  if (!value) return { dirty: false, untrackedPaths: [], untrackedFiles: [], observedAt: null };
+  if (typeof value === "boolean") {
+    return { dirty: value, untrackedPaths: [], untrackedFiles: [], observedAt: null };
+  }
+  return {
+    dirty: Boolean(value.dirty),
+    untrackedPaths: Array.isArray(value.untrackedPaths) ? [...value.untrackedPaths] : [],
+    untrackedFiles: Array.isArray(value.untrackedFiles) ? [...value.untrackedFiles] : [],
+    observedAt: typeof value.observedAt === "string" ? value.observedAt : null,
+  };
+}
+
+function parseDirtState(porcelain, observedAt) {
+  const entries = porcelain.split("\0").filter(Boolean);
+  return {
+    dirty: entries.length > 0,
+    untrackedPaths: entries
+      .filter(entry => entry.startsWith("?? "))
+      .map(entry => entry.slice(3))
+      .sort(),
+    observedAt,
+  };
+}
+
+function describeUntrackedFile(worktreePath, relativePath, git) {
+  const root = path.resolve(worktreePath);
+  const absolutePath = path.resolve(root, relativePath);
+  if (!absolutePath.startsWith(`${root}${path.sep}`)) {
+    throw new Error(`Untracked path escapes its owning worktree: ${relativePath}`);
+  }
+  return {
+    path: relativePath,
+    sizeBytes: lstatSync(absolutePath).size,
+    gitObjectId: git(root, ["hash-object", "--no-filters", "--", relativePath]).trim(),
+  };
+}
+
+function hasDurableOwner(lease, record) {
+  const checkedOutBranch = record.branch?.replace(/^refs\/heads\//, "") || null;
+  return Boolean(
+    lease?.sessionId &&
+    lease?.branch &&
+    lease?.scope &&
+    Number(lease?.epoch) > 0 &&
+    lease?.pullRequestUrl &&
+    lease?.worktreePath &&
+    path.resolve(lease.worktreePath) === path.resolve(record.path) &&
+    (!checkedOutBranch || checkedOutBranch === lease.branch),
+  );
 }
 
 function readRepositoryLeases(repository, git) {

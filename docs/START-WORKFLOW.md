@@ -48,6 +48,8 @@ coordination:
   writer_lease_ttl_seconds: 1800
   writer_lease_registry: "one atomic Git-common-directory registry keyed by branch plus one draft ownership pull request per semantic scope"
   fencing_identity: "monotonic lease epoch plus claim commit SHA"
+  post_baseline_authored_state: "new or untracked paths remain in their physical owning task worktree and pull request"
+  owned_untracked_state: "preserve in place; block only the owning semantic scope; forbid cleanup, stash, masking, or adoption"
 stage_order: ["discover", "fetch", "inspect", "claim", "activate", "verify", "memory", "planning", "start"]
 completion_requires:
   - "fetched remote refs"
@@ -75,6 +77,10 @@ Fetch before starting every Codex session; keep one clean registered `main` work
 The canonical `main` worktree remains the only Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from canonical ports. The Agentic Canvas OS supervisor may own those ports only after both canonical repositories are clean exact fetched `origin/main` revisions with required protected checks successful. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task-worktree runtime sources are forbidden.
 
 Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
+
+Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
+
+New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` and blocks runtime/parity globally; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
@@ -237,7 +243,7 @@ git -C "$KNOWGRPH_ROOT" worktree list
 git -C "$KNOWGRPH_ROOT" rev-parse origin/main
 ```
 
-Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. Dirt in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane.
+Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. `owned-untracked` state in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane; its registered worktree and pull request remain the durable owner.
 
 ### 4. Claim
 
@@ -305,6 +311,8 @@ git -C "$TASK_WORKTREE" rev-parse HEAD
 ```
 
 The task path must appear exactly once in the worktree registry; its branch must appear in no other worktree; the checkout must be clean; the branch must match the claimed scope; the lease session, worktree path, and epoch must be current; its exact open pull request must own that scope and report `isDraft: true`; and the claim commit must be an ancestor of `HEAD`.
+
+Record a zero-content status baseline after this verification. Subsequent rescans compare physical worktree paths, never just branch names. If another lane gains post-baseline untracked paths, retain that lane and continue only when the current lane's scope is distinct. If the current lane gains them, keep authoring in place under its existing lease and pull request; do not move the bytes to make a global check appear clean.
 
 #### Automated Collaboration And Runtime Identity Gate
 
@@ -466,10 +474,13 @@ npm run worktree:lifecycle:check
 ```
 
 The check retains the canonical main worktree, active unexpired task lanes,
-delivery lanes, explicitly parked lanes, and clean detached completion-proven
-lanes pending cleanup. It fails closed on dirty,
-unregistered, stale, ambiguous, invalid, or already-completed residual task
-worktrees. A completed task becomes cleanup-eligible only after
+delivery lanes, explicitly parked lanes, `owned-untracked` lanes, and clean
+detached completion-proven lanes pending cleanup. `owned-untracked` requires a
+worktree-bound session, branch, scope, epoch, and pull request; its report records
+the observed paths, byte sizes, Git object ids, and observation time without
+copying or storing their contents. It fails closed on
+unattributed dirt, unregistered, stale, ambiguous, invalid, or already-completed
+residual task worktrees. A completed task becomes cleanup-eligible only after
 `device:complete` verifies its merged pull request, detaches it cleanly at the
 exact fetched `origin/main`, and records the completed writer-lease state.
 
@@ -481,9 +492,11 @@ npm run worktree:lifecycle:cleanup -- --worktree="$TASK_WORKTREE"
 
 Cleanup uses `git worktree remove` without force and then prunes registration
 metadata. It preserves the task branch and commits. It never removes canonical,
-active, delivery, parked, dirty, divergent, or unclassified worktrees; uncertain
-files remain for manual review or recoverable archival. Branch deletion is a
-separate operator-authorized action.
+active, delivery, parked, `owned-untracked`, dirty, divergent, or unclassified
+worktrees; uncertain files remain in their physical owning lane. Automatic park
+or stash is forbidden for `owned-untracked`; only its owner may explicitly
+choose a later supported handoff. Branch deletion is a separate
+operator-authorized action.
 
 Given a completion claim, when the protocol runs, then the protected Dev pull
 request is merged, the task worktree is detached and clean at the exact fetched
@@ -515,6 +528,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in a 
 - A handoff names the exact pushed commit SHA and paired app/docs/catalog manifest digest; the sender stops writing before the receiver starts.
 - A writer handoff also marks the prior lease parked, names its final epoch and fence SHA, and requires the receiver to claim a strictly newer epoch before mutation.
 - Same-device and different-device chats may mutate different scopes concurrently through distinct registered worktrees or clones. The Git-common-directory registry serializes each local worktree and branch; duplicate scope pull requests, expired sessions, and stale fencing ancestry fail closed.
+- Post-baseline authored or untracked paths remain owned by their physical task worktree and pull request across chat, turn, and session boundaries. An unrelated lane may inspect attribution but must not delete, stash, mask, relocate, commit, park, or claim those paths.
 - A runtime handoff includes the successful `npm run collaboration:gate` summary with two distinct automated peers, exact visible revisions, and the common non-empty verification digest; a branch name, screenshot, clipboard export, or manually assembled JSON never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.

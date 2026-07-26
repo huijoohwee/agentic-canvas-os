@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-24"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -38,8 +38,8 @@ metadata_consumers:
   - id: "mcp"
     surface: "MCP capability metadata"
     owner: "knowgrph/mcp/local-tool-contract.js"
-    metadata_fields: ["token", "prefix", "meaning", "match_when", "required_proof", "publish_policy", "source_docs"]
-    behavior: "reference and filter metadata only; no standalone MCP tool execution"
+    metadata_fields: ["token", "prefix", "meaning", "match_when", "required_proof", "publish_policy", "source_docs", "catalog_digest"]
+    behavior: "reference and filter metadata plus the deterministic full-catalog digest; no standalone MCP tool execution"
 entry_metadata_contract:
   token: "dictionary_entries item and first Tags table column"
   label: "runtime mirror derives a concise display label from the token"
@@ -47,7 +47,7 @@ entry_metadata_contract:
   group: "Agentic OS semantic dictionary"
   sourcePath: "this dictionary document"
   keywords: "token parts plus Meaning, Match when, and Required proof text"
-  mcp: "MCP consumers may expose semantic filters as metadata for routing and audit, but must not treat a tag as approval or execution"
+  mcp: "MCP consumers expose semantic filters, full-catalog counts, and one deterministic catalog digest for routing and audit, but must not treat a tag as approval or execution"
 dictionary_entries:
   - "#truth"
   - "#soul"
@@ -192,7 +192,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 |---|---|---|---|
 | Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Tags table Meaning, Match when, and Required proof. | Inserts the `#` token and preserves the editable query; unknown tags stay raw text. |
 | Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local semantic list. |
-| MCP | Token, prefix, meaning, match criteria, required proof, publish policy, source docs. | Tags table plus frontmatter policy fields. | Metadata is reference and filter context only; a semantic tag does not authorize tool execution, spend, mutation, or deploy. |
+| MCP | Token, prefix, meaning, match criteria, required proof, publish policy, source docs, full-catalog counts, and catalog digest. | Tags table plus frontmatter policy fields; deterministic digest input is token, kind, label, summary, and source path across all three dictionaries. | Metadata is reference and filter context only; every sigil query returns the same full-catalog digest, and a semantic tag does not authorize tool execution, spend, mutation, or deploy. |
 
 ## Tags
 

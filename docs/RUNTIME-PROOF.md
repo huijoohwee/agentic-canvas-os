@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Proof"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-proof"
 doc_type: "Runtime Proof Ledger"
-date: "2026-07-21"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-proof/v1"
 frontmatter_contract: "required"
@@ -232,12 +232,14 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Canonical docs source has Dev proof | The registered Agentic Canvas OS `main` worktree remains the only normal runtime docs source and must be clean at fetched `origin/main`. Focused coordination tests prove additional registered task worktrees can mutate branch-exclusive scopes without becoming runtime sources. Knowgrph consumer predev alignment with this v2 policy remains a separate downstream gate. | Passed for Agentic Canvas OS; downstream consumer alignment pending |
 | Deploy guard holds | Scoped git status shows no `content/knowgrph` mutation and no deploy command was run. | Passed |
 | Canonical automatic lifecycle contract holds | Focused tests prove disposable-candidate validation occurs before canonical fast-forward, rejection preserves the prior checkout, dirty files remain in place while a hashed quarantine copy is recorded, and the strict v2 production attestation rejects revision drift and unknown fields. Mutable-tag Actions and the dormant Agentic production deploy, preview, and rollback workflows are absent. | Executable source contract passed; downstream Knowgrph and huijoohwee own production proof |
+| Invocation catalog digest parity has focused Dev proof | `npm run docs:check`; the managed-implementation, instruction-audit, and production-readiness contract tests; Knowgrph's MCP docs runtime test; Canvas TypeScript; revision rollover, retry, provenance, digest-drift, source-metadata precedence, FloatingPanel projection, and runtime-identity attestation selectors; and the cross-repo dictionary consumer test passed. The source catalog contains 111 commands, 121 semantics, and 116 bindings with SHA-256 digest `0936ac2acaae3272c5ed30df55747bdc87dfef2610d915cd9db8d3e9c696ad6f`. | Passed in isolated Dev task lanes; protected integration and deployment remain separate |
 
 ## Promotion Boundary
 
 | Claim | Status | Reason |
 |---|---|---|
 | Agentic Canvas OS docs control surface | Runtime-ready | Parse, route, scan, proof, and deploy-boundary checks are reproducible locally. |
+| Invocation catalog digest parity | Runtime-ready in Dev | The docs MCP emits exact full-catalog counts and one deterministic SHA-256 digest; browser hydration replaces all three sigil slices, recomputes the digest, exposes it in FloatingPanel and runtime identity, preserves source metadata on token collisions, and fails stale or blocked on drift. Protected integration, Prod, and Cloudflare remain gated. |
 | Soul identity docs contracts | Runtime-ready for docs | Contracts are route-complete, source-backed, scan-bounded, no-copy, and no-hardcoded-default; live prompt runtime remains separately gated. |
 | Persistent memory docs contracts | Runtime-ready for docs | Contracts are route-complete, bounded, target-separated, scan-gated, capacity-aware, and no-copy; live memory runtime remains separately gated. |
 | Skills system docs contracts | Runtime-ready for docs | Contracts are route-complete, metadata-first, progressive, resource-bounded, scan-gated, open-standard-compatible, and no-copy; live skill runtime remains separately gated. |

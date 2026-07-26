@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-24"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -40,8 +40,8 @@ metadata_consumers:
   - id: "mcp"
     surface: "MCP capability metadata"
     owner: "knowgrph/mcp/local-tool-contract.js"
-    metadata_fields: ["token", "prefix", "intent", "required_bindings", "semantic_filters", "completion_signal", "publish_policy", "source_docs"]
-    behavior: "reference and handoff metadata only; no standalone MCP tool execution"
+    metadata_fields: ["token", "prefix", "intent", "required_bindings", "semantic_filters", "completion_signal", "publish_policy", "source_docs", "catalog_digest"]
+    behavior: "reference and handoff metadata plus the deterministic full-catalog digest; no standalone MCP tool execution"
 entry_metadata_contract:
   token: "dictionary_entries item and first Commands table column"
   label: "runtime mirror derives a concise display label from the token"
@@ -49,7 +49,7 @@ entry_metadata_contract:
   group: "Agentic OS command dictionary"
   sourcePath: "this dictionary document"
   keywords: "token parts plus Intent, Required bindings, Semantic filters, and Completion signal text"
-  mcp: "MCP consumers may expose command intent and required context, but must fail closed before spend, mutation, or deploy"
+  mcp: "MCP consumers expose command intent, required context, full-catalog counts, and one deterministic catalog digest; digest or count drift fails closed before spend, mutation, or deploy"
 dictionary_entries:
   - "/soul.load"
   - "/personality.overlay"
@@ -184,7 +184,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 |---|---|---|---|
 | Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Commands table Intent plus Required bindings, Semantic filters, and Completion signal. | Inserts the `/` token and preserves the editable query; unknown tokens stay raw text. |
 | Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local command list. |
-| MCP | Token, prefix, intent, required bindings, semantic filters, completion signal, publish policy, source docs. | Commands table plus frontmatter policy fields. | Metadata is reference and handoff context only; a dictionary row does not become an executable MCP tool without a separate shared runtime owner. |
+| MCP | Token, prefix, intent, required bindings, semantic filters, completion signal, publish policy, source docs, full-catalog counts, and catalog digest. | Commands table plus frontmatter policy fields; deterministic digest input is token, kind, label, summary, and source path across all three dictionaries. | Metadata is reference and handoff context only; every sigil query returns the same full-catalog digest, and a dictionary row does not become an executable MCP tool without a separate shared runtime owner. |
 
 ## Commands
 

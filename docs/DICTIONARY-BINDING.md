@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-07-24"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -38,8 +38,8 @@ metadata_consumers:
   - id: "mcp"
     surface: "MCP capability metadata"
     owner: "knowgrph/mcp/local-tool-contract.js"
-    metadata_fields: ["token", "prefix", "meaning", "authority", "boundary", "secret_policy", "publish_policy", "source_docs"]
-    behavior: "reference and binding metadata only; no standalone MCP tool execution or secret storage"
+    metadata_fields: ["token", "prefix", "meaning", "authority", "boundary", "secret_policy", "publish_policy", "source_docs", "catalog_digest"]
+    behavior: "reference and binding metadata plus the deterministic full-catalog digest; no standalone MCP tool execution or secret storage"
 entry_metadata_contract:
   token: "dictionary_entries item and first Bindings table column"
   label: "runtime mirror derives a concise display label from the token"
@@ -47,7 +47,7 @@ entry_metadata_contract:
   group: "Agentic OS binding dictionary"
   sourcePath: "this dictionary document"
   keywords: "token parts plus Meaning, Authority, and Boundary text"
-  mcp: "MCP consumers may expose binding authority and boundaries, but must never store credentials or treat bindings as approval"
+  mcp: "MCP consumers expose binding authority, boundaries, full-catalog counts, and one deterministic catalog digest, but must never store credentials or treat bindings as approval"
 dictionary_entries:
   - "@agent"
   - "@soul-profile"
@@ -187,7 +187,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 |---|---|---|---|
 | Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Bindings table Meaning, Authority, and Boundary. | Inserts the `@` token and preserves the editable query; unknown bindings stay raw text. |
 | Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local binding list. |
-| MCP | Token, prefix, meaning, authority, boundary, secret policy, publish policy, source docs. | Bindings table plus frontmatter policy fields. | Metadata is reference and binding context only; bindings do not store secrets, approve tool calls, or become executable MCP tools. |
+| MCP | Token, prefix, meaning, authority, boundary, secret policy, publish policy, source docs, full-catalog counts, and catalog digest. | Bindings table plus frontmatter policy fields; deterministic digest input is token, kind, label, summary, and source path across all three dictionaries. | Metadata is reference and binding context only; every sigil query returns the same full-catalog digest, and bindings do not store secrets, approve tool calls, or become executable MCP tools. |
 
 ## Bindings
 

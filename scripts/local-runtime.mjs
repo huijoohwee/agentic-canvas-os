@@ -5,6 +5,9 @@ import {
   endLocalRuntimeTurn,
   ensureLocalRuntime,
   readLocalRuntimeStatus,
+  readSessionRuntimeStatus,
+  startSessionRuntime,
+  stopSessionRuntime,
   stopLocalRuntime,
 } from "./local-runtime-lib.mjs";
 
@@ -12,11 +15,12 @@ const [action, ...args] = process.argv.slice(2);
 const json = args.includes("--json");
 
 try {
-  if (!["ensure", "status", "stop", "turn-end"].includes(action)) usage();
+  if (!["ensure", "status", "stop", "turn-end", "session-start", "session-status", "session-stop"].includes(action)) usage();
   const options = {
     repository: readOption(args, "repository"),
     agenticCanvasOsRoot: readOption(args, "agentic-canvas-os-root") || process.cwd(),
     timeoutMs: Number(readOption(args, "timeout-ms") || 120_000),
+    sessionId: readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "",
   };
   const result = action === "ensure"
     ? await ensureLocalRuntime(options)
@@ -24,10 +28,17 @@ try {
       ? await readLocalRuntimeStatus(options)
       : action === "stop"
         ? await stopLocalRuntime(options)
-        : await endLocalRuntimeTurn(options);
+        : action === "turn-end"
+          ? await endLocalRuntimeTurn(options)
+          : action === "session-start"
+            ? await startSessionRuntime(options)
+            : action === "session-status"
+              ? await readSessionRuntimeStatus(options)
+              : await stopSessionRuntime(options);
   if (json) console.log(JSON.stringify(result));
   else printHuman(result);
   if ((action === "status" || action === "turn-end") && !result.ready) process.exitCode = 1;
+  if (action === "session-status" && result.status !== "session-dev") process.exitCode = 1;
 } catch (error) {
   const result = {
     schema: LOCAL_RUNTIME_SCHEMA,
@@ -47,6 +58,14 @@ function readOption(values, name) {
 }
 
 function printHuman(result) {
+  if (result.status === "session-dev") {
+    console.log(`Knowgrph session-owned Vite is available at http://${result.host}:${result.ports.apex}/.`);
+    return;
+  }
+  if (result.status === "session-stopped") {
+    console.log("Knowgrph session-owned Vite is stopped.");
+    return;
+  }
   if (!result.ready) {
     console.log(`Knowgrph local runtime ${result.status}.`);
     if (result.reason) console.log(result.reason);
@@ -59,6 +78,6 @@ function printHuman(result) {
 }
 
 function usage() {
-  console.error("Usage: node scripts/local-runtime.mjs <ensure|status|stop|turn-end> [--repository=<canonical-knowgrph-root>] [--timeout-ms=120000] [--json]");
+  console.error("Usage: node scripts/local-runtime.mjs <ensure|status|stop|turn-end|session-start|session-status|session-stop> [--repository=<canonical-knowgrph-root>] [--session=<stable-session-id>] [--timeout-ms=120000] [--json]");
   process.exit(2);
 }

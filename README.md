@@ -116,6 +116,24 @@ This verifies clean protected `main` for both repositories, owns the fixed Apex
 and storage ports through a private supervisor token, rejects unmanaged
 listeners before mutation, and proves direct and proxied HTTP readiness.
 
+For interactive browser work that must hand off automatically at turn end,
+launch Vite through the session owner instead of invoking `dev:apex` directly:
+
+```bash
+npm run runtime:session:start -- \
+  --session="$AGENTIC_SESSION_ID" \
+  --repository=<canonical-knowgrph-root> --json
+```
+
+The launcher records a private token plus the exact session, PID and process
+group, process start time, command, working directory, Git common directory,
+source SHA, and port. The normal `turn:end` command reads `AGENTIC_SESSION_ID`,
+stops only that exact session-owned Vite group, and starts the canonical Apex
+and storage runtime under the same host lock. It returns success only after the
+canonical runtime is `runtime-ready`. Raw or mismatched listeners remain
+untouched and block the handoff. `runtime:session:status` and
+`runtime:session:stop` provide explicit diagnostics and recovery.
+
 Mandatory completion gate:
 
 ```bash

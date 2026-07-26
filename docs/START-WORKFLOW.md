@@ -375,6 +375,18 @@ The command runs the worktree lifecycle audit and fetches both canonical reposit
 
 The supervisor starts only Knowgrph's repository-owned Apex and storage commands on `127.0.0.1:5173` and `127.0.0.1:8787`. State, logs, and a private token live outside both repositories. Success records token hash rather than token value and proves Apex, direct storage export, and the same export through the Vite proxy. A raw `npm run dev`, source-only check, prior-turn proof, or HTTP response without matching process ownership cannot support a runtime-ready claim.
 
+Interactive browser work may use a session-owned Vite process when it is launched through Agentic Canvas OS from clean exact canonical Knowgrph `main`:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:session:start -- \
+  --session="$AGENTIC_SESSION_ID" \
+  --repository="$GITHUB_ROOT/knowgrph" --json
+```
+
+The session launcher may stop only an already-recorded canonical runtime whose private token and process evidence still agree. It then records a separate private session token and the exact session id, supervisor and listener PIDs, process group, process start identity, Vite command, working directory, Git common directory, source SHA, and fixed Apex port. It reports `session-dev`, never `runtime-ready`.
+
+`turn:end` automatically performs the inverse handoff when `--session` or `AGENTIC_SESSION_ID` matches that record. After canonical-source, lifecycle, and protected-check preflight, one host lock covers validation of the session listener, graceful process-group stop, port release, canonical storage and Apex startup, and all three HTTP probes. A wrong or missing session, reused PID, changed start time, command, directory, repository, source SHA, token, or listener blocks before termination. An unrecorded `npm run dev:apex` process remains unmanaged and is never adopted or killed.
+
 Status re-proves source, protected checks, process ownership, listeners, and HTTP without mutation. Stop accepts only token-owned recorded process groups:
 
 ```sh
@@ -382,6 +394,10 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:status -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:stop -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:session:status -- \
+  --session="$AGENTIC_SESSION_ID" --repository="$GITHUB_ROOT/knowgrph" --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:session:stop -- \
+  --session="$AGENTIC_SESSION_ID" --repository="$GITHUB_ROOT/knowgrph" --json
 ```
 
 This is local runtime supervision, not completion, merge, release, or deployment. Task worktrees never become runtime sources. A read-only follow-up reruns `runtime:local:status` before claiming readiness; an implementation turn reruns `turn:end` idempotently.

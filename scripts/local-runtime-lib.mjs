@@ -17,6 +17,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 export const LOCAL_RUNTIME_SCHEMA = "agentic-local-runtime-readiness/v1";
+export const SESSION_RUNTIME_SCHEMA = "agentic-session-runtime/v1";
 export const LOCAL_RUNTIME_HOST = "127.0.0.1";
 export const APEX_PORT = 5173;
 export const STORAGE_PORT = 8787;
@@ -31,20 +32,11 @@ const REQUIRED_CHECKS = Object.freeze({
 export async function ensureLocalRuntime(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
   const normalized = normalizeOptions(options);
-  const candidate = inspectCanonicalCandidate(normalized, deps, { verifyProtected: true });
+  const candidate = resolveCanonicalCandidate(normalized, deps, { verifyProtected: true });
   const locations = runtimeLocations(candidate.workspaceRoot);
   const releaseLock = deps.acquireLock(locations.lockPath);
   try {
-    const currentState = readJson(locations.statePath);
-    if (currentState) {
-      const currentStatus = await inspectRuntimeState(currentState, candidate, locations, deps);
-      if (currentStatus.ready) return currentStatus;
-      await stopRecordedServices(currentState, candidate, locations, deps);
-      deps.removeFile(locations.statePath);
-      deps.removeFile(locations.tokenPath);
-    }
-    assertPortsUnclaimed(deps);
-    return await startRuntime(candidate, normalized, locations, deps);
+    return await ensureLocalRuntimeLocked(candidate, normalized, locations, deps);
   } finally {
     releaseLock();
   }
@@ -53,7 +45,7 @@ export async function ensureLocalRuntime(options = {}, dependencies = {}) {
 export async function readLocalRuntimeStatus(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
   const normalized = normalizeOptions(options);
-  const candidate = inspectCanonicalCandidate(normalized, deps, { verifyProtected: true });
+  const candidate = resolveCanonicalCandidate(normalized, deps, { verifyProtected: true });
   const locations = runtimeLocations(candidate.workspaceRoot);
   const state = readJson(locations.statePath);
   if (!state) return stoppedProjection(candidate);
@@ -81,10 +73,71 @@ export async function stopLocalRuntime(options = {}, dependencies = {}) {
 export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
   const normalized = normalizeOptions(options);
-  const candidate = inspectCanonicalCandidate(normalized, deps, { verifyProtected: false });
-  const lifecycle = deps.runLifecycle(candidate.agenticCanvasOsRoot);
-  const runtime = await ensureLocalRuntime(normalized, deps);
-  return { ...runtime, action: "turn-end", lifecycle };
+  const preflight = resolveCanonicalCandidate(normalized, deps, { verifyProtected: false });
+  const lifecycle = deps.runLifecycle(preflight.agenticCanvasOsRoot);
+  const candidate = resolveCanonicalCandidate(normalized, deps, { verifyProtected: true });
+  const locations = runtimeLocations(candidate.workspaceRoot);
+  const releaseLock = deps.acquireLock(locations.lockPath);
+  try {
+    const handoff = await stopOwnedSessionRuntimeLocked(candidate, normalized, locations, deps);
+    const runtime = await ensureLocalRuntimeLocked(candidate, normalized, locations, deps);
+    return { ...runtime, action: "turn-end", lifecycle, handoff };
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function startSessionRuntime(options = {}, dependencies = {}) {
+  const deps = createDependencies(dependencies);
+  const normalized = normalizeOptions(options, { requireSession: true });
+  const candidate = resolveCanonicalCandidate(normalized, deps, { verifyProtected: false });
+  const locations = runtimeLocations(candidate.workspaceRoot);
+  const releaseLock = deps.acquireLock(locations.lockPath);
+  try {
+    const existingSession = readJson(locations.sessionStatePath);
+    if (existingSession) {
+      return inspectSessionRuntimeState(existingSession, candidate, normalized, locations, deps);
+    }
+    const canonicalState = readJson(locations.statePath);
+    if (canonicalState) {
+      await stopRecordedServices(canonicalState, candidate, locations, deps);
+      deps.removeFile(locations.statePath);
+      deps.removeFile(locations.tokenPath);
+    }
+    assertPortsUnclaimed(deps);
+    return await launchSessionRuntime(candidate, normalized, locations, deps);
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function readSessionRuntimeStatus(options = {}, dependencies = {}) {
+  const deps = createDependencies(dependencies);
+  const normalized = normalizeOptions(options, { requireSession: true });
+  const candidate = resolveCanonicalCandidate(normalized, deps, { verifyProtected: false });
+  const locations = runtimeLocations(candidate.workspaceRoot);
+  const state = readJson(locations.sessionStatePath);
+  return state
+    ? inspectSessionRuntimeState(state, candidate, normalized, locations, deps)
+    : stoppedSessionProjection(candidate, normalized.sessionId);
+}
+
+export async function stopSessionRuntime(options = {}, dependencies = {}) {
+  const deps = createDependencies(dependencies);
+  const normalized = normalizeOptions(options, { requireSession: true });
+  const candidate = resolveOwnershipCandidate(normalized, deps);
+  const locations = runtimeLocations(candidate.workspaceRoot);
+  const releaseLock = deps.acquireLock(locations.lockPath);
+  try {
+    const state = readJson(locations.sessionStatePath);
+    if (!state) return stoppedSessionProjection(candidate, normalized.sessionId);
+    const stopped = await stopSessionRuntimeState(state, candidate, normalized, locations, deps);
+    deps.removeFile(locations.sessionStatePath);
+    deps.removeFile(locations.sessionTokenPath);
+    return { ...stopped, status: "session-stopped" };
+  } finally {
+    releaseLock();
+  }
 }
 
 export function validateCanonicalRuntimeCandidate(evidence) {
@@ -122,6 +175,164 @@ export function validateOwnedService({ service, processEvidence, token, tokenDig
   }
   if (sha256(token) !== tokenDigest) throw new Error("Runtime ownership token digest does not match local state.");
   return true;
+}
+
+export function validateOwnedSessionService({ state, processEvidence, token, candidate, sessionId }) {
+  const service = state?.service;
+  validateSessionStateIdentity({ state, token, sessionId });
+  if (!service || !Number.isInteger(service.supervisorPid) || service.supervisorPid <= 0) {
+    throw new Error("Session runtime state has no valid supervisor PID.");
+  }
+  if (!processEvidence || processEvidence.pid !== service.listenerPid) {
+    throw new Error("Session Vite listener PID no longer matches recorded ownership.");
+  }
+  if (processEvidence.processGroupId !== service.supervisorPid) {
+    throw new Error("Session Vite listener no longer belongs to its recorded process group.");
+  }
+  if (processEvidence.processStartedAt !== service.processStartedAt) {
+    throw new Error("Session Vite process start identity changed.");
+  }
+  if (!service.listenerCwd || path.resolve(processEvidence.cwd || "") !== path.resolve(service.listenerCwd)) {
+    throw new Error("Session Vite working directory changed.");
+  }
+  if (path.resolve(processEvidence.gitCommonDir || "") !== path.resolve(candidate.knowgrph.gitCommonDir)) {
+    throw new Error("Session Vite listener belongs to an unrelated repository.");
+  }
+  if (!String(processEvidence.command || "").includes(service.commandMarker)) {
+    throw new Error("Session Vite listener command does not match its runtime owner.");
+  }
+  if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTIC_SESSION_RUNTIME_TOKEN=${token}`)) {
+    throw new Error("Session Vite ownership token is missing or changed.");
+  }
+  if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTIC_SESSION_ID=${sessionId}`)) {
+    throw new Error("Session Vite process session identity is missing or changed.");
+  }
+  if (!String(processEvidence.listenerEnvironment || "").includes(`KNOWGRPH_SOURCE_REVISION=${state.source?.revision}`)) {
+    throw new Error("Session Vite source revision evidence is missing or changed.");
+  }
+  if (!String(processEvidence.listenerEnvironment || "").includes(
+    `KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${state.agenticCanvasOs?.revision}`,
+  )) {
+    throw new Error("Session Vite Agentic Canvas OS revision evidence is missing or changed.");
+  }
+  return true;
+}
+
+function validateSessionStateIdentity({ state, token, sessionId }) {
+  if (state?.schema !== SESSION_RUNTIME_SCHEMA || state.status !== "session-dev") {
+    throw new Error("Session runtime state has an unsupported schema or status.");
+  }
+  if (!sessionId || state.sessionId !== sessionId) {
+    throw new Error("Session runtime belongs to another session.");
+  }
+  if (!SHA_PATTERN.test(String(state.source?.revision || "")) ||
+      !SHA_PATTERN.test(String(state.agenticCanvasOs?.revision || ""))) {
+    throw new Error("Session runtime state lacks exact source revisions.");
+  }
+  if (sha256(token) !== state.ownershipTokenDigest) {
+    throw new Error("Session Vite ownership token digest does not match local state.");
+  }
+}
+
+async function ensureLocalRuntimeLocked(candidate, options, locations, deps) {
+  const currentState = readJson(locations.statePath);
+  if (currentState) {
+    const currentStatus = await inspectRuntimeState(currentState, candidate, locations, deps);
+    if (currentStatus.ready) return currentStatus;
+    await stopRecordedServices(currentState, candidate, locations, deps);
+    deps.removeFile(locations.statePath);
+    deps.removeFile(locations.tokenPath);
+  }
+  assertPortsUnclaimed(deps);
+  return startRuntime(candidate, options, locations, deps);
+}
+
+async function launchSessionRuntime(candidate, options, locations, deps) {
+  deps.mkdir(locations.runtimeRoot);
+  const token = randomUUID();
+  deps.writePrivateFile(locations.sessionTokenPath, `${token}\n`);
+  const environment = {
+    ...process.env,
+    AGENTIC_SESSION_ID: options.sessionId,
+    AGENTIC_SESSION_RUNTIME_TOKEN: token,
+    KNOWGRPH_SOURCE_REVISION: candidate.knowgrph.headSha,
+    KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+    KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+  };
+  try {
+    const service = await launchService({
+      name: "session-apex",
+      port: APEX_PORT,
+      commandMarker: "node_modules/.bin/vite",
+      command: ["npm", ["run", "dev:apex", "--", "--host", LOCAL_RUNTIME_HOST, "--port", String(APEX_PORT), "--strictPort"]],
+      healthUrl: `http://${LOCAL_RUNTIME_HOST}:${APEX_PORT}/`,
+      logPath: locations.sessionApexLogPath,
+    }, candidate, environment, options.timeoutMs, deps);
+    const state = {
+      schema: SESSION_RUNTIME_SCHEMA,
+      status: "session-dev",
+      ready: false,
+      sessionId: options.sessionId,
+      source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
+      agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: candidate.agenticCanvasOs.headSha },
+      host: LOCAL_RUNTIME_HOST,
+      ports: { apex: APEX_PORT },
+      service,
+      ownershipTokenDigest: sha256(token),
+      startedAt: deps.now().toISOString(),
+      verifiedAt: deps.now().toISOString(),
+    };
+    writeJsonAtomic(locations.sessionStatePath, state, deps);
+    return projectSessionState(state);
+  } catch (error) {
+    deps.removeFile(locations.sessionTokenPath);
+    throw error;
+  }
+}
+
+async function inspectSessionRuntimeState(state, candidate, options, locations, deps) {
+  const token = deps.readPrivateFile(locations.sessionTokenPath).trim();
+  const listenerPid = deps.readListenerPid(APEX_PORT);
+  const processEvidence = listenerPid ? deps.inspectListenerProcess(listenerPid) : null;
+  validateOwnedSessionService({ state, processEvidence, token, candidate, sessionId: options.sessionId });
+  if (state.source.revision !== candidate.knowgrph.headSha ||
+      state.agenticCanvasOs.revision !== candidate.agenticCanvasOs.headSha) {
+    throw new Error("Session Vite revisions no longer match canonical main.");
+  }
+  const httpStatus = await deps.readHttpStatus(`http://${LOCAL_RUNTIME_HOST}:${APEX_PORT}/`);
+  if (httpStatus !== 200) throw new Error("Session Vite HTTP readiness is unavailable.");
+  return projectSessionState({ ...state, verifiedAt: deps.now().toISOString() });
+}
+
+async function stopSessionRuntimeState(state, candidate, options, locations, deps) {
+  const token = deps.readPrivateFile(locations.sessionTokenPath).trim();
+  validateSessionStateIdentity({ state, token, sessionId: options.sessionId });
+  const listenerPid = deps.readListenerPid(APEX_PORT);
+  if (listenerPid) {
+    const processEvidence = deps.inspectListenerProcess(listenerPid);
+    validateOwnedSessionService({ state, processEvidence, token, candidate, sessionId: options.sessionId });
+    deps.stopProcessGroup(state.service.supervisorPid);
+    await deps.waitForPortRelease(APEX_PORT, 10_000);
+  }
+  return projectSessionState(state);
+}
+
+async function stopOwnedSessionRuntimeLocked(candidate, options, locations, deps) {
+  const state = readJson(locations.sessionStatePath);
+  if (!state) return { status: "not-required", stoppedSessionRuntime: false };
+  if (!options.sessionId) {
+    throw new Error("A matching --session or AGENTIC_SESSION_ID is required to hand off the session Vite runtime.");
+  }
+  await stopSessionRuntimeState(state, candidate, options, locations, deps);
+  deps.removeFile(locations.sessionStatePath);
+  deps.removeFile(locations.sessionTokenPath);
+  return {
+    status: "session-runtime-stopped",
+    stoppedSessionRuntime: true,
+    sessionId: options.sessionId,
+    sourceRevision: state.source.revision,
+  };
 }
 
 async function startRuntime(candidate, options, locations, deps) {
@@ -199,6 +410,7 @@ async function launchService(spec, candidate, environment, timeoutMs, deps) {
     const httpStatus = await deps.waitForHttp(spec.healthUrl, timeoutMs);
     const listenerPid = deps.readListenerPid(spec.port);
     if (!listenerPid) throw new Error(`${spec.name} responded without an observable listener PID.`);
+    const processEvidence = deps.inspectListenerProcess(listenerPid);
     return {
       name: spec.name,
       port: spec.port,
@@ -208,7 +420,8 @@ async function launchService(spec, candidate, environment, timeoutMs, deps) {
       logPath: spec.logPath,
       healthUrl: spec.healthUrl,
       httpStatus,
-      processStartedAt: deps.inspectListenerProcess(listenerPid).processStartedAt,
+      processStartedAt: processEvidence.processStartedAt,
+      listenerCwd: processEvidence.cwd,
     };
   } catch (error) {
     deps.stopProcessGroup(child.pid);
@@ -285,6 +498,18 @@ function inspectCanonicalCandidate(options, deps, { verifyProtected }) {
   return { workspaceRoot, agenticCanvasOsRoot, knowgrph: { ...evidence.knowgrph, root: knowgrphRoot }, agenticCanvasOs: evidence.agenticCanvasOs, protectedChecks };
 }
 
+function resolveCanonicalCandidate(options, deps, settings) {
+  return typeof deps.inspectCanonicalCandidate === "function"
+    ? deps.inspectCanonicalCandidate(options, settings)
+    : inspectCanonicalCandidate(options, deps, settings);
+}
+
+function resolveOwnershipCandidate(options, deps) {
+  return typeof deps.inspectOwnershipCandidate === "function"
+    ? deps.inspectOwnershipCandidate(options)
+    : inspectOwnershipCandidate(options, deps);
+}
+
 function inspectOwnershipCandidate(options, deps) {
   const invokingRoot = realpathSync(options.agenticCanvasOsRoot);
   const agenticCanvasOsRoot = path.dirname(resolveGitCommonDir(invokingRoot, deps));
@@ -336,9 +561,13 @@ function verifyProtectedChecks(id, root, revision, requiredNames) {
 
 function assertPortsUnclaimed(deps) {
   for (const port of [APEX_PORT, STORAGE_PORT]) {
-    const pids = deps.readListenerPids(port);
-    if (pids.length) throw new Error(`Port ${port} is owned by unmanaged PID ${pids.join(", ")}; refusing takeover.`);
+    assertPortUnclaimed(port, deps);
   }
+}
+
+function assertPortUnclaimed(port, deps) {
+  const pids = deps.readListenerPids(port);
+  if (pids.length) throw new Error(`Port ${port} is owned by unmanaged PID ${pids.join(", ")}; refusing takeover.`);
 }
 
 async function probeRuntime(deps) {
@@ -358,6 +587,9 @@ function runtimeLocations(workspaceRoot) {
     lockPath: path.join(runtimeRoot, "supervisor.lock"),
     apexLogPath: path.join(runtimeRoot, "apex.log"),
     storageLogPath: path.join(runtimeRoot, "storage.log"),
+    sessionStatePath: path.join(runtimeRoot, "session-runtime.json"),
+    sessionTokenPath: path.join(runtimeRoot, "session-owner.token"),
+    sessionApexLogPath: path.join(runtimeRoot, "session-apex.log"),
   };
 }
 
@@ -386,6 +618,23 @@ function projectState(state) {
   };
 }
 
+function projectSessionState(state) {
+  return {
+    schema: state.schema,
+    status: state.status,
+    ready: false,
+    sessionId: state.sessionId,
+    source: state.source,
+    agenticCanvasOs: state.agenticCanvasOs,
+    host: state.host,
+    ports: state.ports,
+    service: state.service,
+    ownershipTokenDigest: state.ownershipTokenDigest,
+    startedAt: state.startedAt,
+    verifiedAt: state.verifiedAt,
+  };
+}
+
 function stoppedProjection(candidate) {
   return {
     schema: LOCAL_RUNTIME_SCHEMA,
@@ -401,13 +650,32 @@ function stoppedProjection(candidate) {
   };
 }
 
-function normalizeOptions(options) {
+function stoppedSessionProjection(candidate, sessionId) {
+  return {
+    schema: SESSION_RUNTIME_SCHEMA,
+    status: "session-stopped",
+    ready: false,
+    sessionId,
+    source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
+    agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: candidate.agenticCanvasOs.headSha },
+    host: LOCAL_RUNTIME_HOST,
+    ports: { apex: APEX_PORT },
+  };
+}
+
+function normalizeOptions(options, { requireSession = false } = {}) {
   const timeoutMs = Number(options.timeoutMs || DEFAULT_TIMEOUT_MS);
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 300_000) throw new Error("--timeout-ms must be from 1000 to 300000.");
+  const sessionId = String(options.sessionId || "").trim();
+  if (requireSession && !sessionId) throw new Error("A stable --session or AGENTIC_SESSION_ID is required.");
+  if (sessionId && (!/^[A-Za-z0-9._:-]+$/.test(sessionId) || sessionId.length > 200)) {
+    throw new Error("Session id must use 1-200 safe identifier characters.");
+  }
   return {
     repository: String(options.repository || "").trim() ? path.resolve(options.repository) : "",
     agenticCanvasOsRoot: path.resolve(options.agenticCanvasOsRoot || process.cwd()),
     timeoutMs,
+    sessionId,
   };
 }
 

@@ -120,7 +120,7 @@ export function validateAgentTeamContractDocuments(documents) {
 
   const contract = required["AGENT-TEAM.md"];
   requireMarkers(contract, "AGENT-TEAM.md canonical contract", [
-    'status: "spec-complete"',
+    'status: "runtime-ready"',
     `invocation: "${AGENT_TEAM_INVOCATION.text}"`,
     'schema: "agent-team-invocation-contract/v1"',
     'external_dependency: "forbidden"',

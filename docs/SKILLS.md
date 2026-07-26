@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Skills"
 graphId: "md:knowgrph-agentic-canvas-os-skills"
 doc_type: "Skill Contract Catalog"
-date: "2026-07-24"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-canvas-os-skills/v1"
 frontmatter_contract: "required"
@@ -95,7 +95,7 @@ skill_contracts:
   - "crawler.run"
   - "sandbox.policy.author"
   - "sandbox.gateway.troubleshoot"
-skill_variants: ["agent.moa", "agent.investment-research", "agent.sme-care", "agent.video", "agent.crawler", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
+skill_variants: ["agent.moa", "agent.collaboration-manager", "agent.evidence-scout", "agent.risk-reviewer", "agent.investment-research", "agent.sme-care", "agent.video", "agent.crawler", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
 kgCanvasSurfaceMode: "2d"
 kgCanvasRenderMode: "2d"
 kgCanvas2dRenderer: "storyboard"
@@ -163,7 +163,16 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Repository packing | `REPOSITORY-PACKING.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
-Variants remain metadata aliases over registered owners: `agent.moa`, `agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`, `agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and `agent.orchestrator`. The domain variants resolve through `/investment-research-agent`, `/sme-care-agent`, `/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`; a variant does not create a wildcard command or a second execution registry.
+Variants remain metadata aliases over registered owners: `agent.moa`,
+`agent.collaboration-manager`, `agent.evidence-scout`, `agent.risk-reviewer`,
+`agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`,
+`agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and
+`agent.orchestrator`. The collaboration variants resolve through the exact
+Knowgrph Agent Definition registry and its `/collaboration-manager-agent`,
+`/evidence-scout-agent`, and `/risk-reviewer-agent` routes. The other domain
+variants resolve through `/investment-research-agent`, `/sme-care-agent`,
+`/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`.
+A variant does not create a wildcard command or a second execution registry.
 
 ## Selection And Mutation
 

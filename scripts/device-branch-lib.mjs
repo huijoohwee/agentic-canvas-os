@@ -106,6 +106,18 @@ export function resume({
   }
   const remoteRef = `origin/${branchName}`;
   const remoteSha = gitText(["rev-parse", remoteRef]).trim();
+  const integrationContinuation = resolveExpiredIntegrationContinuation({
+    branch: branchName,
+    currentBranch,
+    identity,
+    localLease: localAtInvocation,
+    remoteLease,
+    remoteSha,
+    repo,
+    sessionId,
+    gitText,
+    now,
+  });
   const replay = reconcileResumeReplay({
     branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
     pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
@@ -129,13 +141,20 @@ export function resume({
   if (remoteLease.fenceSha) run("git", ["merge-base", "--is-ancestor", remoteLease.fenceSha, remoteRef]);
   let claimBaseSha = remoteSha;
   if (currentBranch) {
-    if (currentBranch !== branchName || (!reviewHandoff && !sameSessionDelivery)) {
+    if (currentBranch !== branchName || (!reviewHandoff && !sameSessionDelivery && !integrationContinuation)) {
       throw new Error("Attached resume is allowed only for the exact reviewed handoff or same-session delivery revision.");
     }
     const localSha = gitText(["rev-parse", "HEAD"]).trim();
-    const handoffHead = reviewHandoff ? remoteLease.reviewHeadSha : remoteLease.deliveryHeadSha;
-    if (localSha !== remoteSha || localSha !== handoffHead) {
-      throw new Error("Attached handoff HEAD does not match its exact remote handoff evidence.");
+    if (integrationContinuation) {
+      if (localSha !== integrationContinuation.headSha) {
+        throw new Error("Interrupted integration continuation changed after its exact recovery proof.");
+      }
+      claimBaseSha = localSha;
+    } else {
+      const handoffHead = reviewHandoff ? remoteLease.reviewHeadSha : remoteLease.deliveryHeadSha;
+      if (localSha !== remoteSha || localSha !== handoffHead) {
+        throw new Error("Attached handoff HEAD does not match its exact remote handoff evidence.");
+      }
     }
   } else if (gitOptional(["show-ref", "--verify", `refs/heads/${branchName}`])) {
     run("git", ["switch", branchName]);
@@ -187,7 +206,12 @@ export function resume({
   const lease = leaseStore.annotate({
     sessionId,
     branch: branchName,
-    values: { fenceSha, pullRequestUrl: owner.url, ...(parkedStashValues || {}) },
+    values: {
+      fenceSha,
+      pullRequestUrl: owner.url,
+      ...(integrationContinuation ? { integration: integrationContinuation.integration } : {}),
+      ...(parkedStashValues || {}),
+    },
   });
   try {
     run("git", ["push", "origin", branchName]);
@@ -204,6 +228,51 @@ export function resume({
     `Resumed ${branchName} at epoch ${restoredLease.epoch} with fence ${fenceSha.slice(0, 12)}; prior writers are fenced by the fast-forward remote head.`,
   );
   return restoredLease;
+}
+
+function resolveExpiredIntegrationContinuation({
+  branch, currentBranch, identity, localLease, remoteLease, remoteSha, repo, sessionId, gitText, now,
+}) {
+  if (
+    currentBranch !== branch ||
+    remoteLease.status !== "active" ||
+    Date.parse(remoteLease.expiresAt) > now().getTime() ||
+    !localLease ||
+    localLease.status !== "active" ||
+    localLease.sessionId !== sessionId ||
+    localLease.device !== identity.device ||
+    localLease.scope !== identity.scope ||
+    localLease.branch !== branch ||
+    !localLease.worktreePath ||
+    path.resolve(localLease.worktreePath) !== path.resolve(repo) ||
+    remoteSha !== remoteLease.fenceSha ||
+    localLease.fenceSha !== remoteLease.fenceSha ||
+    localLease.baseSha !== remoteLease.baseSha ||
+    !localLease.pullRequestUrl
+  ) return null;
+
+  const integration = localLease.integration;
+  if (
+    integration?.schema !== "agentic-integration-commit/v1" ||
+    !/^[0-9a-f]{40}$/.test(String(integration.commitSha || "")) ||
+    !/^[0-9a-f]{40}$/.test(String(integration.treeSha || ""))
+  ) return null;
+
+  const integrationTree = gitText(["rev-parse", `${integration.commitSha}^{tree}`]).trim();
+  if (integrationTree !== integration.treeSha) {
+    throw new Error("Interrupted integration evidence tree does not match its recorded commit.");
+  }
+  gitText(["merge-base", "--is-ancestor", remoteSha, integration.commitSha]);
+  gitText(["merge-base", "--is-ancestor", integration.commitSha, "HEAD"]);
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (headSha !== integration.commitSha) {
+    const parents = gitText(["rev-list", "--parents", "-n", "1", "HEAD"]).trim().split(/\s+/);
+    if (parents.length !== 3 || parents[0] !== headSha || parents[1] !== integration.commitSha) {
+      throw new Error("Interrupted integration continuation permits only one protected-main merge after the recorded commit.");
+    }
+    gitText(["merge-base", "--is-ancestor", parents[2], "origin/main"]);
+  }
+  return { headSha, integration };
 }
 export function review({
   invocationPath,

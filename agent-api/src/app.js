@@ -76,6 +76,9 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {object} [opts.swarmRunStore] optional atomic Agent Swarm run ledger store
  * @param {ReturnType<createAgentToolkitRuntime>} [opts.agentToolkit] metadata-only observation and evaluation runtime
  * @param {object} [opts.agentToolkitStore] optional atomic Agent Toolkit run and cohort store
+ * @param {Function} [opts.agentToolkitAuthorize] optional application revision authorizer
+ * @param {Function} [opts.agentToolkitEvaluate] optional application evaluator
+ * @param {Function} [opts.agentToolkitTelemetry] optional metadata-only telemetry exporter
  * @param {ReturnType<createCacheContextRegistry>} [opts.cacheContext] isolate-scoped stable-prefix registry
  * @param {ReturnType<createReasoningContinuityRegistry>} [opts.reasoningContinuity] isolate-scoped turn-continuity registry
  * @param {ReturnType<createFunctionCallingRuntime>} [opts.functionCalling] direct function-call controller
@@ -103,6 +106,9 @@ export function createAgentApiApp({
   swarmRunStore,
   agentToolkit: providedAgentToolkit,
   agentToolkitStore,
+  agentToolkitAuthorize,
+  agentToolkitEvaluate,
+  agentToolkitTelemetry,
   cacheContext: providedCacheContext,
   reasoningContinuity: providedReasoningContinuity,
   functionCalling: providedFunctionCalling,
@@ -191,7 +197,10 @@ export function createAgentApiApp({
   });
   const agentToolkit = providedAgentToolkit || createAgentToolkitRuntime({
     ...(agentToolkitStore ? { stateStore: agentToolkitStore } : {}),
-    authorize: async () => ({ allowed: true, authorizationId: "authenticated-or-application-owner" }),
+    authorize: agentToolkitAuthorize
+      || (async () => ({ allowed: true, authorizationId: "authenticated-session-owner" })),
+    ...(agentToolkitEvaluate ? { evaluate: agentToolkitEvaluate } : {}),
+    ...(agentToolkitTelemetry ? { telemetry: agentToolkitTelemetry } : {}),
   });
   const progressiveAgents = providedProgressiveAgents || createProgressiveAgentsRuntime({
     agentDefinitions,
@@ -278,6 +287,8 @@ export function createAgentApiApp({
     agentToolkitCompare: agentToolkitHandlers.compare,
     agentToolkitPropose: agentToolkitHandlers.propose,
     agentToolkitStatus: agentToolkitHandlers.status,
+    agentToolkitProfile: agentToolkitHandlers.profile,
+    agentToolkitOptimize: agentToolkitHandlers.optimize,
     readiness: () => {
       const agentDefinitionStats = agentDefinitions.stats();
       const agentOrchestrationStats = agentOrchestration.stats();
@@ -425,6 +436,7 @@ export function createAgentApiApp({
         agentToolkit: {
           configured: agentToolkitStats.configured,
           contractReady: true,
+          revisionAuthorizerConfigured: typeof agentToolkitAuthorize === "function",
           observationOwner: "agent-toolkit-metadata-ledger",
           executionOwner: "existing-runtime-or-injected-adapter",
           evaluationOwner: "application-injected-revision-bound-evaluator",
@@ -436,6 +448,14 @@ export function createAgentApiApp({
           externalRuntimeDependency: false,
           measuredImprovementStatus: "unverified",
           providerExecutionStatus: "unverified",
+          productionReady: Boolean(
+            agentToolkitStats.configured
+            && typeof agentToolkitAuthorize === "function"
+            && agentToolkitStats.evaluatorConfigured
+            && agentToolkitStats.admission?.configured
+            && agentToolkitStats.observability?.configured
+            && agentToolkitStats.stateStore?.persistence === "durable-object"
+          ),
           ...agentToolkitStats,
         },
         progressiveAgents: {

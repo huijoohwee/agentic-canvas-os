@@ -4,8 +4,12 @@
   "main": "worker/index.js",
   "workers_dev": true,
   "preview_urls": true,
-  "compatibility_date": "2026-07-05",
+  "compatibility_date": "2026-07-26",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "assets": {
     "directory": "./web/dist",
     "binding": "ASSETS",
@@ -26,7 +30,8 @@
   ],
   "vars": {
     "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
-    "CANVAS_BASE_URL": "https://airvio.co/knowgrph"
+    "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+    "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
   },
   "secrets": {
     "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET"]
@@ -37,6 +42,10 @@
       "workers_dev": true,
       "preview_urls": true,
       "routes": [],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
       "assets": {
         "directory": "./web/dist",
         "binding": "ASSETS",
@@ -64,7 +73,8 @@
         "OPENAI_FUNCTION_CALLING_API_KEY_ENV": "OPENAI_API_KEY",
         "OPENAI_FUNCTION_CALLING_REASONING_EFFORT": "low",
         "OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS": "256",
-        "CANVAS_BASE_URL": "https://airvio.co/knowgrph"
+        "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+        "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
       },
       "secrets": {
         "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN"]

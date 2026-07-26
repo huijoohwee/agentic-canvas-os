@@ -16,7 +16,11 @@ function responseStatus(result) {
   if (["run_not_found", "cohort_not_found", "span_not_found"].includes(result.reasonCode)) return 404;
   if (["run_forbidden", "toolkit_denied"].includes(result.reasonCode)) return 403;
   if (["runtime_unconfigured", "evaluator_unconfigured"].includes(result.reasonCode)) return 501;
-  if (["cohort_unavailable", "state_busy"].includes(result.reasonCode)) return 503;
+  if (["cohort_unavailable", "state_busy", "admission_busy", "admission_failed"].includes(result.reasonCode)) return 503;
+  if ([
+    "rate_limited", "run_quota_exceeded", "cohort_quota_exceeded",
+    "principal_quota_exceeded", "admission_required",
+  ].includes(result.reasonCode)) return 429;
   if (result.status === "insufficient-evidence") return 200;
   if (result.status === "review_pending" || result.status === "running") return 202;
   if (["completed", "failed", "canceled"].includes(result.status)) return 200;
@@ -70,5 +74,7 @@ export function createAgentToolkitHandlers({ secret, agentToolkit, now } = {}) {
     compare: handler("compare", (body, context) => agentToolkit.compare(body, context)),
     propose: handler("propose", (body, context) => agentToolkit.propose(body, context)),
     status: handler("status", (body, context) => agentToolkit.status(statusRunId(body), context)),
+    profile: handler("profile", (body, context) => agentToolkit.profile(statusRunId(body), context)),
+    optimize: handler("optimize", (body, context) => agentToolkit.optimize(body, context)),
   });
 }

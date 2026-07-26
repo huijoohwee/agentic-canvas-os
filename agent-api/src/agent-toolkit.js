@@ -1,11 +1,9 @@
 import {
-  AGENT_TOOLKIT_DEFAULTS,
   AgentToolkitBlock,
   assertIdentifier,
   normalizeAccessContext,
   normalizeAuthorization,
   normalizeCompareRequest,
-  normalizeComparisonPolicy,
   normalizeCompleteRequest,
   normalizeEvaluateRequest,
   normalizeEvaluationOutcome,
@@ -35,6 +33,14 @@ import {
   runRecordId,
   startToolkitSpan,
 } from "./agent-toolkit-ledger.js";
+import { createAgentToolkitAdmissionController } from "./agent-toolkit-admission.js";
+import { normalizeAgentToolkitLimits } from "./agent-toolkit-limits.js";
+import { createAgentToolkitObservability } from "./agent-toolkit-observability.js";
+import {
+  normalizeOptimizationRequest,
+  optimizeToolkitCohort,
+} from "./agent-toolkit-optimizer.js";
+import { profileToolkitRun } from "./agent-toolkit-profiler.js";
 import { createAgentToolkitMemoryStore } from "./agent-toolkit-store.js";
 import { normalizeJson } from "./json-contract.js";
 import { RunningAgentBlock, withDeadline } from "./running-agent-contract.js";
@@ -51,53 +57,6 @@ function publicRequest(request) {
   const result = { ...request };
   delete result.signal;
   return result;
-}
-
-const LIMIT_FIELDS = new Set([
-  "maxSpans", "maxSamples", "maxProposals", "maxRecordChars", "runTtlMs", "cohortTtlMs",
-  "operationTimeoutMs", "evaluationLeaseMs", "storeClaimTtlMs", "storeClaimAttempts",
-  "storeClaimRetryMs", "maxEvaluationAttempts", "comparison",
-]);
-const TIMER_MAX_MS = 2_147_483_647;
-
-function normalizeLimits(overrides) {
-  const unknown = Object.keys(overrides).filter((key) => !LIMIT_FIELDS.has(key));
-  if (unknown.length) throw new TypeError(`Unsupported Agent Toolkit limits: ${unknown.join(", ")}.`);
-  const limits = {
-    ...AGENT_TOOLKIT_DEFAULTS,
-    ...overrides,
-    comparison: normalizeComparisonPolicy(
-      overrides.comparison === undefined
-        ? undefined
-        : { ...AGENT_TOOLKIT_DEFAULTS.comparison, ...overrides.comparison },
-      AGENT_TOOLKIT_DEFAULTS.comparison,
-    ),
-  };
-  for (const field of [
-    "maxSpans", "maxSamples", "maxProposals", "maxRecordChars", "runTtlMs", "cohortTtlMs",
-    "operationTimeoutMs", "evaluationLeaseMs", "storeClaimTtlMs", "storeClaimAttempts",
-    "maxEvaluationAttempts",
-  ]) {
-    if (!Number.isSafeInteger(limits[field]) || limits[field] < 1) {
-      throw new TypeError(`${field} must be a positive safe integer.`);
-    }
-  }
-  if (!Number.isSafeInteger(limits.storeClaimRetryMs) || limits.storeClaimRetryMs < 0) {
-    throw new TypeError("storeClaimRetryMs must be a non-negative safe integer.");
-  }
-  for (const field of [
-    "runTtlMs", "cohortTtlMs", "operationTimeoutMs", "evaluationLeaseMs",
-    "storeClaimTtlMs", "storeClaimRetryMs",
-  ]) {
-    if (limits[field] > TIMER_MAX_MS) throw new RangeError(`${field} exceeds the supported timer range.`);
-  }
-  if (limits.evaluationLeaseMs <= limits.operationTimeoutMs + limits.storeClaimTtlMs) {
-    throw new RangeError("evaluationLeaseMs must exceed operationTimeoutMs plus storeClaimTtlMs.");
-  }
-  if (limits.runTtlMs <= limits.evaluationLeaseMs + limits.storeClaimTtlMs) {
-    throw new RangeError("runTtlMs must cover an evaluation lease and state claim.");
-  }
-  return Object.freeze(limits);
 }
 
 function safeReason(error, fallback, extras = []) {
@@ -119,12 +78,15 @@ export function createAgentToolkitRuntime({
   stateStore,
   authorize,
   evaluate: evaluateAdapter,
+  telemetry,
   now = () => Date.now(),
   ...overrides
 } = {}) {
   if (typeof now !== "function") throw new TypeError("now must be a function.");
-  const limits = normalizeLimits(overrides);
+  const limits = normalizeAgentToolkitLimits(overrides);
   const store = stateStore || createAgentToolkitMemoryStore({ now });
+  const admission = createAgentToolkitAdmissionController({ stateStore: store, now, limits });
+  const observability = createAgentToolkitObservability({ exporter: telemetry, now });
   const configured = typeof authorize === "function";
   const evaluatorConfigured = typeof evaluateAdapter === "function";
 
@@ -412,6 +374,34 @@ export function createAgentToolkitRuntime({
     }
   }
 
+  async function profile(runId, access = {}) {
+    const context = normalizeAccessContext(access);
+    const normalizedRunId = assertIdentifier(runId, "runId");
+    const record = await store.get(runRecordId(context.principalId, normalizedRunId));
+    if (!record) return blocked("run_not_found");
+    try {
+      assertToolkitOwner(record, context.principalId);
+      return profileToolkitRun(record);
+    } catch (error) {
+      return blocked(error.reasonCode);
+    }
+  }
+
+  async function optimize(value, access = {}) {
+    const request = normalizeOptimizationRequest(value, limits);
+    const context = normalizeAccessContext(access);
+    const cohort = await store.get(cohortRecordId(context.principalId, request.cohortId));
+    if (!cohort) return blocked("cohort_not_found");
+    try {
+      assertToolkitOwner(cohort, context.principalId);
+      await authorizeAction("optimize", request, context);
+      return optimizeToolkitCohort(cohort, request);
+    } catch (error) {
+      if (error instanceof AgentToolkitBlock) return blocked(error.reasonCode);
+      return blocked("optimization_failed");
+    }
+  }
+
   async function instrument(value, operation, access = {}) {
     if (typeof operation !== "function") throw new TypeError("operation must be a function.");
     const request = normalizeStartRequest(value);
@@ -507,26 +497,88 @@ export function createAgentToolkitRuntime({
     }
   }
 
+  async function executeObserved(action, identity, access, operation) {
+    const context = normalizeAccessContext(access);
+    const startedAt = instant();
+    let verdict;
+    try {
+      verdict = await admission.admit({ action, principalId: context.principalId, ...identity });
+    } catch {
+      verdict = Object.freeze({ allowed: false, reasonCode: "admission_failed" });
+    }
+    const result = verdict.allowed
+      ? await operation()
+      : Object.freeze({
+        status: "blocked",
+        reasonCode: verdict.reasonCode,
+        ...(verdict.retryAfterMs ? { retryAfterMs: verdict.retryAfterMs } : {}),
+      });
+    await observability.emit({ action, context, identity, result, startedAt });
+    return result;
+  }
+
   return Object.freeze({
-    start,
-    startSpan,
-    finishSpan,
-    complete,
-    evaluate,
-    status,
-    compare,
-    propose,
-    instrument,
+    start: async (value, access = {}) => {
+      const request = normalizeStartRequest(value);
+      return executeObserved("start", {
+        runId: request.runId, cohortId: request.cohortId,
+      }, access, () => start(value, access));
+    },
+    startSpan: async (value, access = {}) => {
+      const request = normalizeSpanStartRequest(value);
+      return executeObserved("start-span", { runId: request.runId }, access, () => startSpan(value, access));
+    },
+    finishSpan: async (value, access = {}) => {
+      const request = normalizeSpanFinishRequest(value);
+      return executeObserved("finish-span", { runId: request.runId }, access, () => finishSpan(value, access));
+    },
+    complete: async (value, access = {}) => {
+      const request = normalizeCompleteRequest(value);
+      return executeObserved("complete", { runId: request.runId }, access, () => complete(value, access));
+    },
+    evaluate: async (value, access = {}) => {
+      const request = normalizeEvaluateRequest(value);
+      return executeObserved("evaluate", { runId: request.runId }, access, () => evaluate(value, access));
+    },
+    status: async (runId, access = {}) => {
+      const normalizedRunId = assertIdentifier(runId, "runId");
+      return executeObserved("status", { runId: normalizedRunId }, access, () => status(normalizedRunId, access));
+    },
+    compare: async (value, access = {}) => {
+      const request = normalizeCompareRequest(value, limits.comparison);
+      return executeObserved("compare", { cohortId: request.cohortId }, access, () => compare(value, access));
+    },
+    propose: async (value, access = {}) => {
+      const request = normalizeProposalRequest(value, limits.comparison);
+      return executeObserved("propose", { cohortId: request.cohortId }, access, () => propose(value, access));
+    },
+    profile: async (runId, access = {}) => {
+      const normalizedRunId = assertIdentifier(runId, "runId");
+      return executeObserved("profile", { runId: normalizedRunId }, access, () => profile(normalizedRunId, access));
+    },
+    optimize: async (value, access = {}) => {
+      const request = normalizeOptimizationRequest(value, limits);
+      return executeObserved("optimize", { cohortId: request.cohortId }, access, () => optimize(value, access));
+    },
+    instrument: async (value, operation, access = {}) => {
+      const request = normalizeStartRequest(value);
+      return executeObserved("instrument", {
+        runId: request.runId, cohortId: request.cohortId,
+      }, access, () => instrument(value, operation, access));
+    },
     stats: () => Object.freeze({
       configured,
       evaluatorConfigured,
       instrumentation: "server-timed-metadata-only",
-      comparison: "same-cohort-deterministic-thresholds",
-      learning: "review-pending-proposal-only",
+      comparison: "same-cohort-deterministic-thresholds-with-percentile-profile",
+      optimization: "deterministic-quality-latency-cost-recommendation",
+      learning: "review-pending-proposal-only-never-auto-apply",
       defaultEgress: false,
       externalRuntimeDependency: false,
       runTtlMs: limits.runTtlMs,
       cohortTtlMs: limits.cohortTtlMs,
+      admission: admission.stats(),
+      observability: observability.stats(),
       stateStore: store.stats(),
     }),
   });

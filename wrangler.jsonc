@@ -62,7 +62,8 @@
   ],
   "vars": {
     "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
-    "CANVAS_BASE_URL": "https://airvio.co/knowgrph"
+    "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+    "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
   },
   "secrets": {
     "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET"]
@@ -135,7 +136,8 @@
         "OPENAI_FUNCTION_CALLING_API_KEY_ENV": "OPENAI_API_KEY",
         "OPENAI_FUNCTION_CALLING_REASONING_EFFORT": "low",
         "OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS": "256",
-        "CANVAS_BASE_URL": "https://airvio.co/knowgrph"
+        "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+        "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
       },
       "secrets": {
         "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN"]

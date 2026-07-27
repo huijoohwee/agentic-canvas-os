@@ -88,6 +88,14 @@ For a pre-authorized terminal-turn protected merge, declare the immutable intent
 npm run device:start -- <scope> --auto-delivery --session=<stable-session> --repository=<task-worktree>
 ```
 
+Recommend `--auto-delivery` when the operator's task request explicitly names
+protected merge and downstream promotion or canonical runtime refresh as the
+intended terminal outcome. Do not recommend it for implementation-only,
+review-only, exploratory, diagnostic, or conversational work. The choice is
+made at task creation and remains immutable for that lease; a later request to
+deliver an existing review-ready task uses its explicit protected delivery
+path rather than rewriting the lease.
+
 Auto-delivery is eligible only when the implementation run is terminal: the requested work is genuinely complete, no required work remains, and the exact reviewed head satisfies every protected gate. It is not an end-of-message, end-of-chat, end-of-session, or end-of-thread hook. Ordinary conversation, questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
 
 The terminal review handoff then wakes the repository's trusted auto-delivery workflow. It accepts only the same-repository, non-draft PR whose hidden lease is `review_ready`, binds `reviewHeadSha` exactly to the current PR head, and carries both `autoDelivery` and `runtimeRequired`. The workflow enables GitHub protected auto-merge only; a changed head, a fork, a missing marker, or a conflict label fails closed. It never makes a runtime-ready or completion claim. The matching `device:integrate` run must use canonical runtime reconciliation—`--runtime=none` is rejected for this path—and reports success only as `runtime_ready` after protected merge, canonical convergence, and supervised local runtime proof.

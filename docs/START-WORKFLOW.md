@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-07-26"
+date: "2026-07-27"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -408,6 +408,30 @@ complete.
 Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, marks the PR ready without an automerge label or merge call by default, and independently proves `isDraft: false`. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. Requested changes must use fenced resume, which restores and proves draft ownership before mutation. `device:publish` remains the explicit protected auto-merge path.
 
 An operator or durable work-item policy may pre-authorize one terminal-turn protected merge only at `device:start` with `--auto-delivery`. The resulting immutable lease carries `autoDelivery: true` and `runtimeRequired: true`.
+
+### Terminal Delivery Authorization Recommendation
+
+When the task request explicitly includes protected merge plus downstream
+promotion or canonical runtime refresh as its intended terminal outcome,
+recommend `device:start --auto-delivery`. This is the preferred task-creation
+policy for an operator-authored merge/promote task because it records the
+authority before implementation begins and still requires the exact reviewed
+head, protected checks, protected merge, canonical convergence, and runtime
+proof.
+
+| Requested outcome at task creation | Recommended authorization |
+|---|---|
+| Implement and hand off for review | Start without `--auto-delivery`; stop at `review_ready`. |
+| Implement, protected-merge, and promote or refresh the canonical runtime when terminal | Start with `--auto-delivery`. |
+| Explore, diagnose, answer, wait, or report status | Do not create delivery authorization. |
+
+Do not infer merge or promotion authority from words such as `finish`, from the
+end of a response, or from an ordinary implementation request. Do not retrofit
+`autoDelivery` onto an existing lease. If the operator later requests delivery
+of an already-started or review-ready task, use the explicit protected
+`device:publish` or `device:integrate` path authorized by that request; never
+rewrite the lease marker, bypass checks, or recreate completed work merely to
+obtain automatic delivery.
 
 Terminal-turn auto-delivery is an implementation-run completion policy, not an unconditional conversational-turn hook. It is eligible only after the requested implementation is genuinely complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. Ending a message, chat, session, or thread is not sufficient. Questions, status reports, read-only work, waits, partial progress, dirty or parked work, and blocked outcomes do not apply the wake label, enable auto-merge, or claim delivery.
 

@@ -24,6 +24,7 @@ export function completeSession({
   run,
   log = console.log,
   json = false,
+  finalize = true,
 }) {
   requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
@@ -33,6 +34,9 @@ export function completeSession({
   const { branch, lease: completionLease } = resolveCompletionLease({
     attachedBranch, repo, leaseStore,
   });
+  if (finalize && completionLease.autoDelivery === true && completionLease.runtimeRequired === true) {
+    throw new Error("Auto-delivery completion requires device:integrate so canonical runtime readiness cannot be bypassed.");
+  }
   const parkedStashes = readStashEntries(gitText(["stash", "list", "--format=%H%x00%gd%x00%gs"]))
     .filter(entry => entry.subject.includes(`park: ${branch} `));
   const exactRestoredStash = requireCompletionStash({
@@ -75,7 +79,7 @@ export function completeSession({
   }
   detachCanonicalHead({ canonicalSha, gitText, run });
   const mainSha = canonicalSha;
-  if (durableLease.status !== "completed") {
+  if (finalize && durableLease.status !== "completed") {
     durableLease = leaseStore.complete({
       branch,
       pullRequestUrl: pullRequest.url,
@@ -89,14 +93,15 @@ export function completeSession({
     pullRequestUrl: pullRequest.url,
     mergeCommitSha,
     mainSha,
-    status: "ok",
+    status: finalize ? "ok" : "runtime_pending",
   };
   if (json) {
     log(JSON.stringify(summary));
     return summary;
   }
-  log(
-    `Task integrated through ${summary.pullRequestUrl}; clean main is ${summary.mainSha.slice(0, 12)}. Restart the local runtime from this SHA and rerun the original browser acceptance before claiming completion.`,
+  log(finalize
+    ? `Task integrated through ${summary.pullRequestUrl}; clean main is ${summary.mainSha.slice(0, 12)}. Restart the local runtime from this SHA and rerun the original browser acceptance before claiming completion.`
+    : `Protected merge is recorded for ${summary.pullRequestUrl}; canonical runtime proof is pending for ${summary.mainSha.slice(0, 12)}.`,
   );
   return summary;
 }

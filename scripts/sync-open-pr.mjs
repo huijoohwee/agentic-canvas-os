@@ -3,23 +3,24 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { assertUniquePullRequestScopes } from "./repository-guards.mjs";
+import { isAuthorizedAutoDeliveryPullRequest } from "./auto-delivery-lib.mjs";
 
 const repo = requiredEnv("GITHUB_REPOSITORY");
+const autoDeliveryOnly = process.argv.includes("--auto-delivery");
 const pulls = ghJson(["api", "--method", "GET", `repos/${repo}/pulls`, "-f", "state=open", "-f", "base=main", "-f", "sort=created", "-f", "direction=asc", "-f", "per_page=100"]);
 if (pulls.length > 0) {
   assertUniquePullRequestScopes(
     pulls.map((candidate) => ({ number: candidate.number, headRefName: candidate.head?.ref })),
   );
 }
-const pull = pulls.find((candidate) =>
-  !candidate.draft &&
-  candidate.head?.repo?.full_name === repo &&
-  candidate.labels?.some((label) => label.name === "automerge") &&
-  !candidate.labels?.some((label) => label.name === "automerge/conflict")
-);
+const pull = pulls.find((candidate) => autoDeliveryOnly
+  ? isAuthorizedAutoDeliveryPullRequest(candidate, repo)
+  : isLegacyAutomergePullRequest(candidate, repo));
 
 if (!pull) {
-  console.log("No eligible automerge PR needs synchronization.");
+  console.log(autoDeliveryOnly
+    ? "No exact reviewed auto-delivery PR is eligible."
+    : "No eligible automerge PR needs synchronization.");
   process.exit(0);
 }
 
@@ -28,6 +29,18 @@ const number = current.number;
 const headSha = current.head.sha;
 const headRef = current.head.ref;
 console.log(`Synchronizing PR #${number} (${headRef}@${headSha.slice(0, 12)}; state=${current.mergeable_state}).`);
+
+if (autoDeliveryOnly) {
+  if (!isAuthorizedAutoDeliveryPullRequest(current, repo)) {
+    throw new Error(`PR #${number} changed after selection; protected auto-delivery was not enabled.`);
+  }
+  const auto = gh(["pr", "merge", String(number), "--repo", repo, "--auto", "--squash"], { allowFailure: true });
+  if (auto.status !== 0 && !/already.*auto-merge|auto-merge.*enabled/i.test(`${auto.stdout}\n${auto.stderr}`)) {
+    throw new Error(`Could not enable protected auto-delivery for PR #${number}: ${auto.stderr || auto.stdout}`);
+  }
+  console.log(`Enabled protected auto-delivery for exact reviewed PR #${number}; canonical runtime proof remains required before completion.`);
+  process.exit(0);
+}
 
 if (current.mergeable_state === "dirty") {
   resolveKnownConflicts({ number, headRef, headSha });
@@ -39,6 +52,13 @@ if (current.mergeable_state === "dirty") {
   } else {
     console.log(`Requested an update of PR #${number} to current main.`);
   }
+}
+
+function isLegacyAutomergePullRequest(candidate, repository) {
+  return !candidate.draft &&
+    candidate.head?.repo?.full_name === repository &&
+    candidate.labels?.some((label) => label.name === "automerge") &&
+    !candidate.labels?.some((label) => label.name === "automerge/conflict");
 }
 
 gh(["pr", "edit", String(number), "--remove-label", "automerge/conflict"], { allowFailure: true });

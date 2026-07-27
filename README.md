@@ -56,13 +56,15 @@ npm run device:review -- --json
 
 This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call by default. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes; it restores and proves draft ownership before a new writer claim. `device:publish` remains the separate explicit protected-delivery action.
 
-For a pre-authorized automatic protected merge, declare the immutable intent when the task lease is created:
+For a pre-authorized terminal-turn protected merge, declare the immutable intent when the task lease is created:
 
 ```bash
 npm run device:start -- <scope> --auto-delivery --session=<stable-session> --repository=<task-worktree>
 ```
 
-The review handoff then wakes the repository's trusted auto-delivery workflow. It accepts only the same-repository, non-draft PR whose hidden lease is `review_ready`, binds `reviewHeadSha` exactly to the current PR head, and carries both `autoDelivery` and `runtimeRequired`. The workflow enables GitHub protected auto-merge only; a changed head, a fork, a missing marker, or a conflict label fails closed. It never makes a runtime-ready or completion claim. The matching `device:integrate` run must use canonical runtime reconciliation—`--runtime=none` is rejected for this path—and reports success only as `runtime_ready` after protected merge, canonical convergence, and supervised local runtime proof.
+Auto-delivery is eligible only when the implementation run is terminal: the requested work is genuinely complete, no required work remains, and the exact reviewed head satisfies every protected gate. It is not an end-of-message, end-of-chat, end-of-session, or end-of-thread hook. Ordinary conversation, questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
+
+The terminal review handoff then wakes the repository's trusted auto-delivery workflow. It accepts only the same-repository, non-draft PR whose hidden lease is `review_ready`, binds `reviewHeadSha` exactly to the current PR head, and carries both `autoDelivery` and `runtimeRequired`. The workflow enables GitHub protected auto-merge only; a changed head, a fork, a missing marker, or a conflict label fails closed. It never makes a runtime-ready or completion claim. The matching `device:integrate` run must use canonical runtime reconciliation—`--runtime=none` is rejected for this path—and reports success only as `runtime_ready` after protected merge, canonical convergence, and supervised local runtime proof.
 
 End each implementation turn with the canonical local runtime ready:
 

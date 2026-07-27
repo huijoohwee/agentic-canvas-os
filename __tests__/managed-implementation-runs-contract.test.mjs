@@ -27,6 +27,8 @@ test("managed implementation contract exposes the exact MCP and lifecycle bounda
   }
   assert.match(managed, /managed-run default terminal state is `delivery_ready`/);
   assert.match(managed, /ACOS lease\/CLI has reached `review_ready`/);
+  assert.match(managed, /never inferred from an ordinary message, chat, session, or thread ending/);
+  assert.match(managed, /Ordinary conversation, questions, status or read-only turns, waits, partial progress, dirty or parked work, and blocked outcomes never trigger that handoff/);
   assert.match(managed, /agentic-device-command-result\/v1/);
   assert.match(managed, /pullRequest: \{ url, number, isDraft \}/);
   assert.match(managed, /A manually readied active PR makes heartbeat fail before lease renewal/);

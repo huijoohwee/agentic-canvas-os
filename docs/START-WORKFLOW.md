@@ -433,7 +433,16 @@ of an already-started or review-ready task, use the explicit protected
 rewrite the lease marker, bypass checks, or recreate completed work merely to
 obtain automatic delivery.
 
-Terminal-turn auto-delivery is an implementation-run completion policy, not an unconditional conversational-turn hook. It is eligible only after the requested implementation is genuinely complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. Ending a message, chat, session, or thread is not sufficient. Questions, status reports, read-only work, waits, partial progress, dirty or parked work, and blocked outcomes do not apply the wake label, enable auto-merge, or claim delivery.
+For a task whose immutable lease already carries `autoDelivery: true` and
+`runtimeRequired: true`, recommend its terminal implementation-turn ending as
+the delivery checkpoint. That turn must run `device:review`, wake the protected
+controller for the exact reviewed head, wait for protected merge, and continue
+through canonical runtime reconciliation rather than returning a
+`review_ready` result as if the requested merge/promote outcome were complete.
+The turn ending consumes prior operator authority; it is not a new source of
+merge or promotion authority.
+
+Terminal-turn auto-delivery is an implementation-run completion policy, not an unconditional conversational-turn hook. It is eligible only after the requested implementation is genuinely complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. An ordinary ending of a message, chat, session, or thread is not sufficient. Questions, status reports, read-only work, waits, partial progress, dirty or parked work, and blocked outcomes do not apply the wake label, enable auto-merge, or claim delivery.
 
 At terminal review, ACOS writes the exact `reviewHeadSha` before applying the `agentic/auto-delivery` wake label. The repository-owned `pull_request_target` controller accepts only a same-repository, non-draft PR at that exact SHA with the matching `review_ready` lease; it enables GitHub protected auto-merge and never pushes, rebases, resolves conflicts, bypasses required checks, or deploys. A head change, malformed marker, fork, or conflict label is ineligible and requires a fresh fenced review handoff. Protected merge is not completion: the authorized local `device:integrate` continuation may consume that reviewed lease after `MERGED`, but it requires canonical runtime reconciliation and rejects `--runtime=none`. Only its `agentic-device-integration-result/v1` result with status `runtime_ready` proves completion.
 

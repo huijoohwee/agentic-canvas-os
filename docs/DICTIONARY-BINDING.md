@@ -165,6 +165,12 @@ dictionary_entries:
   - "@sandbox-workspace"
   - "@sandbox-policy"
   - "@message-gateway"
+  - "@payment-rail"
+  - "@payment-intent"
+  - "@payment-provider"
+  - "@payment-event"
+  - "@payment-record"
+  - "@payment-readiness"
 ---
 
 # Binding Dictionary
@@ -309,6 +315,12 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@sandbox-workspace` | Scoped workspace for long-horizon agent file reads, writes, execution, uploads, and outputs. | Approved sandbox, local workspace, or per-run output owner. | Must declare root, allowed operations, diff summary, artifact manifest, secret scan, timeout, cleanup, and approval gates. |
 | `@sandbox-policy` | Source-backed declarative policy for one agent runtime boundary. | Runtime policy source selected by the operator or owning harness. | Carries policy identity and path only; never credential values, implicit approval, compatibility aliases, or an isolation claim. |
 | `@message-gateway` | Typed message bus for user, agent, worker, tool, review, and artifact events. | Approved local harness, MCP gateway, or control-plane owner where deployed. | Messages require schema, sender, recipient, run id, state transition, replay rule, and visibility boundary. |
+| `@payment-rail` | Registry of provider-backed settlement paths plus the one rail selected for an intent. | Existing payments capability owner and its rail registry source. | Names rail identifiers, supported currencies, and supported settlement assets only; never a credential, and never a second payment routing tier. |
+| `@payment-intent` | The locally owned record of one requested payment, keyed by a client-generated intent key. | Existing payments capability owner and its intent store. | Carries intent identity, minor-unit amount, currency, settlement asset, selected rail, and state; excludes card numbers, verification values, and full bank account numbers. |
+| `@payment-provider` | The server-side trust boundary that holds provider credentials and issues every provider call. | Existing server-side payment runtime and its secret store. | Credentials stay server-side over transport-secured requests only; browser source, bundle output, local storage, and URLs are rejected, and one provider API version is pinned per deployment. |
+| `@payment-event` | One inbound provider settlement callback plus its recorded processing identity. | Existing provider event ingress owner and its event ledger. | Authenticity must be verified before the payload is read, and provider state remains the settlement authority over the payload. |
+| `@payment-record` | The serialized projection of terminal payment records for local audit and receipts. | Existing payment record serializer and its document store. | Deterministic and byte-stable; excludes credentials, card numbers, bank account numbers, buyer email addresses, and provider customer identifiers. |
+| `@payment-readiness` | Per-rail configuration completeness snapshot for the payments capability. | Existing per-rail readiness gate. | Read-only; reports required credential names, presence, pinned version, configured integration model, and terminal sandbox proof without mutating configuration or granting deploy authority. |
 
 ## Binding Shape
 

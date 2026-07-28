@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { access, chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -13,11 +13,14 @@ async function readWorkflow(name) {
   return readFile(path.join(workflowDirectory, name), 'utf8');
 }
 
-test('CI and security workflows are merge-queue safe and immutable', async () => {
-  for (const name of ['ci.yml', 'security.yml']) {
+test('required CI is merge-queue safe and every workflow pins actions immutably', async () => {
+  const ci = await readWorkflow('ci.yml');
+  assert.match(ci, /^\s*merge_group:/m);
+  assert.match(ci, /^\s*timeout-minutes:\s*\d+/m);
+
+  for (const name of await readdir(workflowDirectory)) {
+    if (!name.endsWith('.yml') && !name.endsWith('.yaml')) continue;
     const source = await readWorkflow(name);
-    assert.match(source, /^\s*merge_group:/m, `${name} must run for merge groups`);
-    assert.match(source, /^\s*timeout-minutes:\s*\d+/m, `${name} must bound job runtime`);
     assert.doesNotMatch(
       source,
       /^\s*-?\s*uses:\s*[^\s]+@v\d+/m,
@@ -26,26 +29,59 @@ test('CI and security workflows are merge-queue safe and immutable', async () =>
   }
 });
 
-test('CI keeps protected checks while installing dependencies only once', async () => {
+test('CI keeps protected checks on Node 22 slim runners without dependency caches', async () => {
   const source = await readWorkflow('ci.yml');
   assert.match(source, /pull_request:\n\s+paths:\n\s+- "\*\*"/);
   for (const name of ['test', 'build', 'docs-contract', 'collaboration-integration']) {
     assert.match(source, new RegExp(`^\\s+name: ${name}$`, 'm'));
   }
-  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 1);
-  assert.equal((source.match(/^\s+cache: npm$/gm) || []).length, 1);
-  assert.match(source, /npm ci --ignore-scripts --no-audit --no-fund/);
+  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 0);
+  assert.equal((source.match(/^\s+cache: npm$/gm) || []).length, 0);
+  assert.equal((source.match(/^\s+runs-on: ubuntu-slim$/gm) || []).length, 4);
+  assert.equal((source.match(/^\s+node-version: 22$/gm) || []).length, 4);
   assert.doesNotMatch(source, /timeout-minutes: (?:1[1-9]|[2-9]\d)/);
 });
 
-test('security and synchronization avoid unnecessary installs and runs', async () => {
+test('source and dependency security use separate minimal trigger scopes', async () => {
   const security = await readWorkflow('security.yml');
   assert.match(security, /pull_request:\n\s+paths:/);
   assert.match(security, /push:\n\s+branches: \[main\]\n\s+paths:/);
-  assert.match(security, /npm audit --package-lock-only --audit-level=high/);
+  assert.doesNotMatch(security, /^\s*merge_group:/m);
+  assert.doesNotMatch(security, /npm audit|dependency-review-action/);
+  assert.match(security, /trap-caching: false/);
+
+  const dependencySecurity = await readWorkflow('dependency-security.yml');
+  assert.match(dependencySecurity, /"package\.json"/);
+  assert.match(dependencySecurity, /"package-lock\.json"/);
+  assert.match(dependencySecurity, /npm audit --package-lock-only --audit-level=high/);
+  assert.match(dependencySecurity, /actions\/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48/);
+  assert.match(dependencySecurity, /runs-on: ubuntu-slim/);
+  assert.match(dependencySecurity, /node-version: 22/);
+  assert.doesNotMatch(dependencySecurity, /^\s+- run: npm ci\b/gm);
+  assert.doesNotMatch(dependencySecurity, /^\s+cache: npm$/gm);
+
+  const sync = await readWorkflow('sync-open-prs.yml');
+  assert.match(sync, /node-version: 22/);
+  assert.doesNotMatch(sync, /^\s+- run: npm ci\b/gm);
+  assert.doesNotMatch(sync, /^\s+cache: npm$/gm);
+  assert.match(sync, /timeout-minutes: 5/);
+
+  const autoDelivery = await readWorkflow('auto-delivery.yml');
+  assert.match(autoDelivery, /node-version: 22/);
+});
+
+test('the project runtime matches the pinned Wrangler engine', async () => {
+  const packageJson = JSON.parse(await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'));
+  const lock = JSON.parse(await readFile(path.join(repositoryRoot, 'package-lock.json'), 'utf8'));
+  assert.equal(packageJson.engines.node, '>=22');
+  assert.equal(lock.packages[''].engines.node, '>=22');
+  assert.match(lock.packages['node_modules/wrangler'].engines.node, />=22/);
+});
+
+test('synchronization avoids unnecessary installs and cache restores', async () => {
+  const security = await readWorkflow('security.yml');
   assert.doesNotMatch(security, /^\s+- run: npm ci\b/gm);
   assert.doesNotMatch(security, /^\s+cache: npm$/gm);
-  assert.match(security, /trap-caching: false/);
 
   const sync = await readWorkflow('sync-open-prs.yml');
   assert.doesNotMatch(sync, /^\s+- run: npm ci\b/gm);

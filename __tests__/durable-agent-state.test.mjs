@@ -119,6 +119,7 @@ test("AgentState alarms recover expired claims and physically remove expired rec
   assert.equal(liveStorage.alarmAt, liveRecord.expiresAt);
   await liveState.claim({ claimId: "expired-claim", claimExpiresAt: expiredClaimAt }, operationNow);
   assert.equal(liveStorage.alarmAt, expiredClaimAt);
+  liveStorage.alarmAt = null; // the Workers runtime consumes the firing alarm
   await liveState.alarm();
   assert.deepEqual(liveStorage.records.get("active"), liveRecord);
   assert.equal(liveStorage.records.has("claim"), false);
@@ -129,6 +130,7 @@ test("AgentState alarms recover expired claims and physically remove expired rec
   const expiredRecord = { id: "expired", expiresAt: operationNow + 1_000 };
   await expiredState.put({ record: expiredRecord }, operationNow);
   assert.equal(expiredStorage.alarmAt, expiredRecord.expiresAt);
+  expiredStorage.alarmAt = null; // the Workers runtime consumes the firing alarm
   await expiredState.alarm();
   assert.equal(expiredStorage.records.has("active"), false);
   assert.equal(expiredStorage.records.has("claim"), false);
@@ -143,15 +145,42 @@ test("AgentState reads do not rewrite healthy or absent Durable Object state", a
 
   await liveState.put({ record }, now);
   const liveWrites = liveStorage.writeCount();
+  const liveAlarmReads = liveStorage.operations.getAlarm;
   const liveResponse = await liveState.get({}, now);
   assert.deepEqual((await liveResponse.json()).record, record);
+  await liveState.get({}, now);
   assert.equal(liveStorage.writeCount(), liveWrites);
+  assert.equal(liveStorage.operations.getAlarm, liveAlarmReads);
 
   const emptyStorage = new MemoryStorage();
   const emptyState = new AgentState({ storage: emptyStorage });
   const emptyResponse = await emptyState.get({}, now);
   assert.equal((await emptyResponse.json()).record, null);
+  await emptyState.get({}, now);
   assert.equal(emptyStorage.writeCount(), 0);
+  assert.equal(emptyStorage.operations.getAlarm, 1);
+});
+
+test("AgentState rejects unbounded record and claim retention", async () => {
+  const now = Date.now();
+  const storage = new MemoryStorage();
+  const state = new AgentState({ storage });
+
+  const recordResponse = await state.put({
+    record: { id: "unbounded", expiresAt: now + 31 * 24 * 60 * 60 * 1000 },
+  }, now);
+  assert.equal(recordResponse.status, 400);
+  assert.equal(storage.writeCount(), 0);
+
+  const validRecord = { id: "bounded", expiresAt: now + 60_000 };
+  assert.equal((await state.put({ record: validRecord }, now)).status, 200);
+  const writesBeforeClaim = storage.writeCount();
+  const claimResponse = await state.claim({
+    claimId: "unbounded-claim",
+    claimExpiresAt: now + 61 * 60 * 1000,
+  }, now);
+  assert.equal(claimResponse.status, 400);
+  assert.equal(storage.writeCount(), writesBeforeClaim);
 });
 
 test("Durable Object paused turns enforce claim, release, replace, and commit", async () => {

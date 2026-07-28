@@ -69,6 +69,30 @@ function headerBag(request) {
   return out;
 }
 
+function rateLimitKey(request, scope) {
+  const actor = request.headers.get("cf-connecting-ip")?.trim() || "unknown";
+  return `${scope}:${actor.slice(0, 128)}`;
+}
+
+async function rateLimitAllows(binding, request, scope) {
+  if (!binding || typeof binding.limit !== "function") return true;
+  try {
+    const verdict = await binding.limit({ key: rateLimitKey(request, scope) });
+    return verdict?.success === true;
+  } catch {
+    // A configured but unhealthy admission owner fails closed so it cannot
+    // become a denial-of-wallet path into Durable Objects or token issuance.
+    return false;
+  }
+}
+
+function rateLimited() {
+  return new Response(JSON.stringify({ error: "rate limit exceeded" }), {
+    status: 429,
+    headers: { ...JSON_HEADERS, "retry-after": "60" },
+  });
+}
+
 class JsonBodyError extends Error {
   constructor(statusCode, code, message) {
     super(message);
@@ -228,6 +252,9 @@ async function dispatchCloudflareRequest(request, env = {}) {
     if (request.headers.get("Upgrade") !== "websocket") {
       return json(426, { error: "expected websocket upgrade" });
     }
+    if (!await rateLimitAllows(env.CANVAS_ROOM_RATE_LIMITER, request, "canvas-room")) {
+      return rateLimited();
+    }
     const id = env.CANVAS_ROOM.idFromName(roomId);
     const stub = env.CANVAS_ROOM.get(id);
     return stub.fetch(request);
@@ -242,6 +269,9 @@ async function dispatchCloudflareRequest(request, env = {}) {
 
   if (url.pathname === "/api/auth/session" || url.pathname === "/auth/session") {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    if (!await rateLimitAllows(env.AUTH_SESSION_RATE_LIMITER, request, "auth-session")) {
+      return rateLimited();
+    }
     const body = await readJsonBody(request);
     return toResponse(await app.authSession({ headers: headerBag(request), body }));
   }

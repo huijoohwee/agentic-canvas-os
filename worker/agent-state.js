@@ -2,6 +2,8 @@ const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const ACTIVE_KEY = "active";
 const CLAIM_KEY = "claim";
 const MAX_BODY_CHARS = 600_000;
+const MAX_RECORD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_CLAIM_TTL_MS = 60 * 60 * 1000;
 
 function json(status, body) {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
@@ -16,16 +18,20 @@ function identifier(value) {
   return typeof value === "string" && value.trim() && value.length <= 512 ? value.trim() : "";
 }
 
-function finiteFuture(value, now) {
-  return Number.isFinite(value) && value > now;
+function finiteFuture(value, now, maxTtlMs) {
+  return Number.isFinite(value) && value > now && value <= now + maxTtlMs;
 }
 
 function activeValue(entry, now) {
-  return entry && finiteFuture(entry.expiresAt, now) ? entry : null;
+  return entry && finiteFuture(entry.expiresAt, now, MAX_RECORD_TTL_MS) ? entry : null;
 }
 
 function claimedValue(entry, now) {
-  return entry && finiteFuture(entry.claimExpiresAt, now) && activeValue(entry.record, now) ? entry : null;
+  return entry
+    && finiteFuture(entry.claimExpiresAt, now, MAX_CLAIM_TTL_MS)
+    && activeValue(entry.record, now)
+    ? entry
+    : null;
 }
 
 function claimAlarmAt(claim) {
@@ -57,6 +63,7 @@ async function reconcileState(storage, now) {
 export class AgentState {
   constructor(ctx) {
     this.ctx = ctx;
+    this.scheduledAlarmAt = undefined;
   }
 
   async transact(operation) {
@@ -64,12 +71,22 @@ export class AgentState {
   }
 
   async scheduleExpiry(alarmAt) {
-    const scheduled = await this.ctx.storage.getAlarm();
+    let scheduled = this.scheduledAlarmAt;
+    if (scheduled === undefined) {
+      scheduled = await this.ctx.storage.getAlarm();
+      this.scheduledAlarmAt = scheduled;
+    }
     if (Number.isFinite(alarmAt)) {
-      if (scheduled !== alarmAt) await this.ctx.storage.setAlarm(alarmAt);
+      if (scheduled !== alarmAt) {
+        await this.ctx.storage.setAlarm(alarmAt);
+        this.scheduledAlarmAt = alarmAt;
+      }
       return;
     }
-    if (scheduled !== null) await this.ctx.storage.deleteAlarm();
+    if (scheduled !== null) {
+      await this.ctx.storage.deleteAlarm();
+      this.scheduledAlarmAt = null;
+    }
   }
 
   async put(value, now) {
@@ -109,7 +126,9 @@ export class AgentState {
   async claim(value, now) {
     if (!exactKeys(value, ["claimId", "claimExpiresAt"])) return json(400, { error: "invalid claim" });
     const claimId = identifier(value.claimId);
-    if (!claimId || !finiteFuture(value.claimExpiresAt, now)) return json(400, { error: "invalid claim" });
+    if (!claimId || !finiteFuture(value.claimExpiresAt, now, MAX_CLAIM_TTL_MS)) {
+      return json(400, { error: "invalid claim" });
+    }
     const outcome = await this.transact(async (storage) => {
       const state = await reconcileState(storage, now);
       if (state.claim || !state.active) {
@@ -186,6 +205,8 @@ export class AgentState {
   }
 
   async alarm() {
+    // Cloudflare has consumed the alarm that invoked this method.
+    this.scheduledAlarmAt = null;
     const state = await this.transact(async (storage) => reconcileState(storage, Date.now()));
     await this.scheduleExpiry(state.alarmAt);
   }

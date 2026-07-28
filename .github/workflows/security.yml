@@ -1,8 +1,8 @@
-name: Security
+name: Security (CodeQL)
 
-# Dependency and static-analysis scanning for the multi-device collaboration
-# tier. Runs on PRs and main, plus a weekly scheduled sweep so newly disclosed
-# advisories are caught even without a push.
+# Static analysis for executable source. Dependency-only scanning lives in
+# dependency-security.yml so source-only pull requests do not spend two extra
+# runner allocations on an unchanged package lock.
 
 on:
   pull_request:
@@ -14,10 +14,7 @@ on:
       - "**/*.tsx"
       - "**/*.jsx"
       - "**/*.html"
-      - "package*.json"
-      - "**/*.jsonc"
-      - ".github/workflows/**"
-  merge_group:
+      - ".github/workflows/security.yml"
   push:
     branches: [main]
     paths:
@@ -28,9 +25,7 @@ on:
       - "**/*.tsx"
       - "**/*.jsx"
       - "**/*.html"
-      - "package*.json"
-      - "**/*.jsonc"
-      - ".github/workflows/**"
+      - ".github/workflows/security.yml"
   schedule:
     - cron: "0 6 * * 1"
 
@@ -42,17 +37,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  audit:
-    name: npm audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 20
-      - run: npm audit --package-lock-only --audit-level=high
-
   codeql:
     name: codeql
     runs-on: ubuntu-latest
@@ -69,18 +53,3 @@ jobs:
       - uses: github/codeql-action/analyze@ddf5ce7296213f5548c91e2dd19df2d77d2b2d66 # v3
         with:
           category: "/language:javascript"
-
-  dependency-review:
-    name: dependency-review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: on-failure

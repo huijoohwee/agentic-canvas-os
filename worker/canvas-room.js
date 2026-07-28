@@ -51,6 +51,8 @@ export class CanvasRoom {
     this.env = env;
     this.roomId = "";
     this.roomLogId = "";
+    this.persisted = false;
+    this.scheduledAlarmAt = undefined;
     this.recentOpIds = [];
     // In-memory only. After hibernation eviction a reconnect safely falls back
     // to a full snapshot because this bounded replay window starts empty.
@@ -62,17 +64,18 @@ export class CanvasRoom {
     this.state = null;
     this.loaded = this.ctx.blockConcurrencyWhile(async () => {
       const stored = await this.ctx.storage.get(STORAGE_KEY);
+      this.persisted = stored !== undefined && stored !== null;
       if (stored && typeof stored === "object" && stored.graph) {
         this.state = stored.graph;
         this.recentOpIds = Array.isArray(stored.recentOpIds) ? stored.recentOpIds.slice(-MAX_RECENT_OP_IDS) : [];
         this.lastActivityAt = Number.isFinite(stored.lastActivityAt) ? stored.lastActivityAt : Date.now();
-        this.roomId = typeof stored.roomId === "string" ? stored.roomId : "";
-        this.roomLogId = roomCorrelationId(this.roomId);
+        this.roomLogId = typeof stored.roomLogId === "string"
+          ? stored.roomLogId
+          : roomCorrelationId(typeof stored.roomId === "string" ? stored.roomId : "");
       } else {
         // Backward-compatible read of the original graph-only value.
         this.state = stored && typeof stored === "object" ? stored : createEmptyRoomState();
       }
-      if (stored !== undefined && stored !== null) await this.scheduleExpiry();
     });
   }
 
@@ -88,8 +91,9 @@ export class CanvasRoom {
       graph: this.state,
       recentOpIds: this.recentOpIds,
       lastActivityAt: this.lastActivityAt,
-      roomId: this.roomId,
+      roomLogId: this.roomLogId,
     });
+    this.persisted = true;
     await this.scheduleExpiry();
   }
 
@@ -98,12 +102,19 @@ export class CanvasRoom {
       typeof this.ctx.storage.getAlarm !== "function"
       || typeof this.ctx.storage.setAlarm !== "function"
     ) return;
-    const scheduled = await this.ctx.storage.getAlarm();
+    let scheduled = this.scheduledAlarmAt;
+    if (scheduled === undefined) {
+      scheduled = await this.ctx.storage.getAlarm();
+      this.scheduledAlarmAt = scheduled;
+    }
     if (
       scheduled === null
       || scheduled > at
       || (replaceExisting && scheduled !== at)
-    ) await this.ctx.storage.setAlarm(at);
+    ) {
+      await this.ctx.storage.setAlarm(at);
+      this.scheduledAlarmAt = at;
+    }
   }
 
   send(ws, payload) {
@@ -155,6 +166,19 @@ export class CanvasRoom {
       return this.ctx.getWebSockets().length;
     } catch {
       return 0;
+    }
+  }
+
+  restoreRoomLogId(ws) {
+    if (this.roomLogId) return;
+    try {
+      const attachment = ws.deserializeAttachment();
+      if (/^room_[a-f0-9]{24}$/.test(attachment?.roomLogId || "")) {
+        this.roomLogId = attachment.roomLogId;
+      }
+    } catch {
+      // A missing legacy attachment leaves correlation empty but never leaks
+      // the bearer room capability.
     }
   }
 
@@ -220,7 +244,7 @@ export class CanvasRoom {
     // messages without tearing down `server`'s open connection, and — the
     // whole point — does NOT bill duration while hibernated.
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ subject: verdict.claims.sub || "" });
+    server.serializeAttachment({ subject: verdict.claims.sub || "", roomLogId: this.roomLogId });
 
     const sinceParam = url.searchParams.get("since");
     const since = sinceParam === null ? NaN : Number(sinceParam);
@@ -237,13 +261,13 @@ export class CanvasRoom {
 
     this.metrics = recordRoomEvent(this.metrics, "join");
     this.log("join", { subject: verdict.claims.sub || "anonymous", init: sentInitial ? "catchup" : "snapshot", rev: this.state.rev });
-    await this.persist();
 
     return new Response(null, { status: 101, webSocket: client });
   }
 
   async webSocketMessage(ws, message) {
     await this.ensureLoaded();
+    this.restoreRoomLogId(ws);
     if (typeof message !== "string" || message.length > MAX_MESSAGE_BYTES) {
       this.send(ws, { type: "error", error: "message too large or not text" });
       return;
@@ -302,6 +326,7 @@ export class CanvasRoom {
   }
 
   async webSocketClose(ws, code, reason, wasClean) {
+    this.restoreRoomLogId(ws);
     // The runtime may still list a mid-close socket, so explicitly exclude it
     // while deriving the new live roster.
     this.broadcastPresence(ws);
@@ -311,7 +336,7 @@ export class CanvasRoom {
     // per-instance activity (joins, applied, conflicts, errors) without a
     // separate metrics store.
     this.log("metrics", { ...metricsSummary(this.metrics, { room: this.roomLogId }), connections: remaining });
-    await this.persist();
+    if (this.persisted) await this.persist();
   }
 
   async webSocketError(ws, error) {
@@ -322,6 +347,8 @@ export class CanvasRoom {
 
   async alarm() {
     await this.ensureLoaded();
+    // Cloudflare has consumed the alarm that invoked this method.
+    this.scheduledAlarmAt = null;
     const now = Date.now();
     if (this.liveConnections() > 0) {
       await this.scheduleExpiry(now + ROOM_TTL_MS, { replaceExisting: true });
@@ -334,6 +361,8 @@ export class CanvasRoom {
 
     if (typeof this.ctx.storage.deleteAll === "function") await this.ctx.storage.deleteAll();
     else if (typeof this.ctx.storage.delete === "function") await this.ctx.storage.delete(STORAGE_KEY);
+    this.persisted = false;
+    this.scheduledAlarmAt = null;
     this.state = createEmptyRoomState();
     this.recentOpIds = [];
     this.eventLog = [];

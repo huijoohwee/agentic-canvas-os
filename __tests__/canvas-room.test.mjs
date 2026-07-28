@@ -176,6 +176,8 @@ test("a fresh join receives a full snapshot with capacity metadata", async () =>
   assert.equal(snapshot.rev, 0);
   assert.equal(snapshot.limits.maxNodes, 500);
   assert.deepEqual(snapshot.counts, { nodes: 0, links: 0 });
+  assert.equal(ctx.operations.put, 0, "an empty room is not persisted on join");
+  assert.equal(ctx.operations.setAlarm, 0, "an empty room has no retention alarm");
 });
 
 test("an applied op is acked to the sender and broadcast to peers", async () => {
@@ -194,16 +196,46 @@ test("an applied op is acked to the sender and broadcast to peers", async () => 
   assert.equal(broadcast.opId, "op-n1-000000000000");
 });
 
-test("ordinary room activity persists once without rewriting an existing alarm", async () => {
+test("ordinary room activity verifies an alarm once and does not rewrite it", async () => {
   const { room, ctx } = makeRoom();
   const ws = await connect(room, ctx, { subject: "op" });
-  const putsBefore = ctx.operations.put;
-  const alarmsBefore = ctx.operations.setAlarm;
-
   await room.webSocketMessage(ws, upsert("n1"));
+  const putsAfterFirst = ctx.operations.put;
+  const alarmReadsAfterFirst = ctx.operations.getAlarm;
+  const alarmWritesAfterFirst = ctx.operations.setAlarm;
 
-  assert.equal(ctx.operations.put, putsBefore + 1);
-  assert.equal(ctx.operations.setAlarm, alarmsBefore);
+  await room.webSocketMessage(ws, upsert("n2"));
+
+  assert.equal(ctx.operations.put, putsAfterFirst + 1);
+  assert.equal(ctx.operations.getAlarm, alarmReadsAfterFirst);
+  assert.equal(ctx.operations.setAlarm, alarmWritesAfterFirst);
+});
+
+test("an empty room that disconnects consumes no durable storage or alarm writes", async () => {
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "observer" });
+  ctx.sockets = ctx.sockets.filter((socket) => socket !== ws);
+
+  await room.webSocketClose(ws, 1000, "", true);
+
+  assert.equal(ctx.store.has("room-state-v1"), false);
+  assert.equal(ctx.operations.put, 0);
+  assert.equal(ctx.operations.setAlarm, 0);
+});
+
+test("a hibernated empty room persists only after its first mutation", async () => {
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "observer" });
+  const resumed = new CanvasRoom(ctx, { AGENT_API_JWT_SECRET: SECRET });
+
+  await resumed.webSocketMessage(ws, upsert("after-hibernation"));
+
+  const stored = ctx.store.get("room-state-v1");
+  assert.equal(stored.graph.rev, 1);
+  assert.match(stored.roomLogId, /^room_[a-f0-9]{24}$/);
+  assert.equal(Object.hasOwn(stored, "roomId"), false, "the bearer capability is not persisted");
+  assert.equal(ctx.operations.put, 1);
+  assert.equal(ctx.operations.setAlarm, 1);
 });
 
 test("a duplicate opId is acknowledged as a no-op replay, not applied twice", async () => {
@@ -372,6 +404,7 @@ test("structured room logs summarize joins, applied ops, duplicates, conflicts, 
 test("room alarms preserve live rooms and delete expired disconnected state", async () => {
   const { room, ctx } = makeRoom();
   const ws = await connect(room, ctx, { subject: "observer" });
+  await room.webSocketMessage(ws, upsert("persisted"));
   assert.equal(ctx.store.has("room-state-v1"), true);
   assert.equal(Number.isFinite(ctx.alarmAt), true);
 
@@ -395,6 +428,7 @@ test("room alarms preserve live rooms and delete expired disconnected state", as
 test("an early alarm for a disconnected room is retained until its exact idle deadline", async () => {
   const { room, ctx } = makeRoom();
   const ws = await connect(room, ctx, { subject: "observer" });
+  await room.webSocketMessage(ws, upsert("persisted"));
   ctx.sockets = ctx.sockets.filter((socket) => socket !== ws);
   room.lastActivityAt = Date.now() - ROOM_TTL_MS + 60_000;
   const expectedAlarm = room.lastActivityAt + ROOM_TTL_MS;

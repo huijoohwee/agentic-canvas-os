@@ -430,6 +430,8 @@ subject to GitHub's normal eviction policy.
   without installing packages or restoring npm caches;
 - CodeQL runs for executable source, while dependency review and `npm audit`
   share one separate package-lock-scoped job plus the weekly sweep;
+- lightweight auto-delivery and pull-request synchronization controllers also
+  use `ubuntu-slim`;
 - CodeQL's legacy TRAP cache is disabled, and every job has a short timeout.
 
 Review current [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)

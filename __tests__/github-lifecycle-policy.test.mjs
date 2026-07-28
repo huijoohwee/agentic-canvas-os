@@ -61,12 +61,14 @@ test('source and dependency security use separate minimal trigger scopes', async
   assert.doesNotMatch(dependencySecurity, /^\s+cache: npm$/gm);
 
   const sync = await readWorkflow('sync-open-prs.yml');
+  assert.match(sync, /runs-on: ubuntu-slim/);
   assert.match(sync, /node-version: 22/);
   assert.doesNotMatch(sync, /^\s+- run: npm ci\b/gm);
   assert.doesNotMatch(sync, /^\s+cache: npm$/gm);
   assert.match(sync, /timeout-minutes: 5/);
 
   const autoDelivery = await readWorkflow('auto-delivery.yml');
+  assert.match(autoDelivery, /runs-on: ubuntu-slim/);
   assert.match(autoDelivery, /node-version: 22/);
 });
 

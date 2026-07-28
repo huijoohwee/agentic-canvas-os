@@ -48,7 +48,7 @@ This runtime ends in the `authoring` lane. A passing result does not merge, mirr
 
 The source files are selected by explicit input locator and verified by content digest. File names, directory names, repository layout, and mirrors provide no semantic evidence.
 
-The observed source baseline in frontmatter identifies the exact bytes implemented by this contract. A different revision or digest is a new baseline and requires a fresh rule extraction and task derivation. The runtime never silently accepts drift.
+The observed source baseline in frontmatter identifies the exact bytes implemented by this contract. The source checkout may advance only when the pinned revision remains its ancestor; verification always reads the documents from that pinned commit and hashes those historical bytes rather than the mutable worktree. A different pinned revision or digest is a new baseline and requires a fresh rule extraction and task derivation. The runtime never silently accepts drift.
 
 The parser:
 

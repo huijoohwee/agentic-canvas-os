@@ -51,7 +51,10 @@ export async function verifyGuidelineBaseline(options = {}) {
     manifest.repository.locator,
     environment,
   );
-  const observedRevision = await resolveRevision(repositoryLocator);
+  const observedRevision = await resolveRevision(
+    repositoryLocator,
+    manifest.repository.revision,
+  );
   assertEqual(
     observedRevision,
     manifest.repository.revision,
@@ -387,10 +390,15 @@ function resolveLocator(value, environment) {
   return path.resolve(expanded);
 }
 
-async function gitRevision(repositoryLocator) {
+async function gitRevision(repositoryLocator, revision) {
+  await execFileAsync(
+    "git",
+    ["-C", repositoryLocator, "merge-base", "--is-ancestor", revision, "HEAD"],
+    { encoding: "utf8" },
+  );
   const { stdout } = await execFileAsync(
     "git",
-    ["-C", repositoryLocator, "rev-parse", "HEAD"],
+    ["-C", repositoryLocator, "rev-parse", "--verify", `${revision}^{commit}`],
     { encoding: "utf8" },
   );
   return stdout.trim();

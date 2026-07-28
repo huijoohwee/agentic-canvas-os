@@ -39,6 +39,7 @@ test("baseline proof binds revision, bytes, Rule IDs, classes, and closed bounda
   const fixture = makeFixture();
   const beforeManifest = structuredClone(fixture.manifest);
   const revisionReads = [];
+  const revisionResolutions = [];
   const result = await verifyGuidelineBaseline({
     currentDirectory: "/repo",
     environment: { GITHUB_ROOT: "/workspace" },
@@ -48,7 +49,10 @@ test("baseline proof binds revision, bytes, Rule IDs, classes, and closed bounda
       revisionReads.push(request);
       return fixture.files.get(request.locator);
     },
-    resolveRevision: async () => fixture.manifest.repository.revision,
+    resolveRevision: async (repositoryLocator, revision) => {
+      revisionResolutions.push({ repositoryLocator, revision });
+      return revision;
+    },
   });
 
   assert.equal(result.schema, "agentic-sdlc-guideline-source-proof/v1");
@@ -65,6 +69,10 @@ test("baseline proof binds revision, bytes, Rule IDs, classes, and closed bounda
   assert.deepEqual(result.deployBoundary, { lane: "authoring", state: "closed" });
   assert.deepEqual(fixture.manifest, beforeManifest);
   assert.equal(revisionReads.length, 2);
+  assert.deepEqual(revisionResolutions, [{
+    repositoryLocator: "/workspace/source",
+    revision: fixture.manifest.repository.revision,
+  }]);
   assert.ok(revisionReads.every(({ repositoryLocator, revision }) =>
     repositoryLocator === "/workspace/source"
     && revision === fixture.manifest.repository.revision));

@@ -2,6 +2,8 @@ const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const ACTIVE_KEY = "active";
 const CLAIM_KEY = "claim";
 const MAX_BODY_CHARS = 600_000;
+const MAX_RECORD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_CLAIM_TTL_MS = 60 * 60 * 1000;
 
 function json(status, body) {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
@@ -16,41 +18,52 @@ function identifier(value) {
   return typeof value === "string" && value.trim() && value.length <= 512 ? value.trim() : "";
 }
 
-function finiteFuture(value, now) {
-  return Number.isFinite(value) && value > now;
+function finiteFuture(value, now, maxTtlMs) {
+  return Number.isFinite(value) && value > now && value <= now + maxTtlMs;
 }
 
 function activeValue(entry, now) {
-  return entry && finiteFuture(entry.expiresAt, now) ? entry : null;
+  return entry && finiteFuture(entry.expiresAt, now, MAX_RECORD_TTL_MS) ? entry : null;
 }
 
 function claimedValue(entry, now) {
-  return entry && finiteFuture(entry.claimExpiresAt, now) && activeValue(entry.record, now) ? entry : null;
+  return entry
+    && finiteFuture(entry.claimExpiresAt, now, MAX_CLAIM_TTL_MS)
+    && activeValue(entry.record, now)
+    ? entry
+    : null;
 }
 
 function claimAlarmAt(claim) {
   return Math.min(claim.claimExpiresAt, claim.record.expiresAt);
 }
 
+function isStored(value) {
+  return value !== undefined && value !== null;
+}
+
 async function reconcileState(storage, now) {
   const priorClaim = await storage.get(CLAIM_KEY);
   const claim = claimedValue(priorClaim, now);
   if (claim) {
-    await storage.delete(ACTIVE_KEY);
+    const priorActive = await storage.get(ACTIVE_KEY);
+    if (isStored(priorActive)) await storage.delete(ACTIVE_KEY);
     return { active: null, claim, alarmAt: claimAlarmAt(claim) };
   }
 
-  let active = activeValue(await storage.get(ACTIVE_KEY), now);
+  const priorActive = await storage.get(ACTIVE_KEY);
+  let active = activeValue(priorActive, now);
   if (!active && priorClaim?.record) active = activeValue(priorClaim.record, now);
-  await storage.delete(CLAIM_KEY);
-  if (active) await storage.put(ACTIVE_KEY, active);
-  else await storage.delete(ACTIVE_KEY);
+  if (isStored(priorClaim)) await storage.delete(CLAIM_KEY);
+  if (active && active !== priorActive) await storage.put(ACTIVE_KEY, active);
+  else if (!active && isStored(priorActive)) await storage.delete(ACTIVE_KEY);
   return { active, claim: null, alarmAt: active?.expiresAt ?? null };
 }
 
 export class AgentState {
   constructor(ctx) {
     this.ctx = ctx;
+    this.scheduledAlarmAt = undefined;
   }
 
   async transact(operation) {
@@ -58,12 +71,22 @@ export class AgentState {
   }
 
   async scheduleExpiry(alarmAt) {
-    const scheduled = await this.ctx.storage.getAlarm();
+    let scheduled = this.scheduledAlarmAt;
+    if (scheduled === undefined) {
+      scheduled = await this.ctx.storage.getAlarm();
+      this.scheduledAlarmAt = scheduled;
+    }
     if (Number.isFinite(alarmAt)) {
-      if (scheduled !== alarmAt) await this.ctx.storage.setAlarm(alarmAt);
+      if (scheduled !== alarmAt) {
+        await this.ctx.storage.setAlarm(alarmAt);
+        this.scheduledAlarmAt = alarmAt;
+      }
       return;
     }
-    if (scheduled !== null) await this.ctx.storage.deleteAlarm();
+    if (scheduled !== null) {
+      await this.ctx.storage.deleteAlarm();
+      this.scheduledAlarmAt = null;
+    }
   }
 
   async put(value, now) {
@@ -83,7 +106,7 @@ export class AgentState {
     const outcome = await this.transact(async (storage) => {
       const state = await reconcileState(storage, now);
       if (state.claim) return { record: null, alarmAt: state.alarmAt };
-      await storage.delete(ACTIVE_KEY);
+      if (state.active) await storage.delete(ACTIVE_KEY);
       return { record: state.active, alarmAt: null };
     });
     await this.scheduleExpiry(outcome.alarmAt);
@@ -103,7 +126,9 @@ export class AgentState {
   async claim(value, now) {
     if (!exactKeys(value, ["claimId", "claimExpiresAt"])) return json(400, { error: "invalid claim" });
     const claimId = identifier(value.claimId);
-    if (!claimId || !finiteFuture(value.claimExpiresAt, now)) return json(400, { error: "invalid claim" });
+    if (!claimId || !finiteFuture(value.claimExpiresAt, now, MAX_CLAIM_TTL_MS)) {
+      return json(400, { error: "invalid claim" });
+    }
     const outcome = await this.transact(async (storage) => {
       const state = await reconcileState(storage, now);
       if (state.claim || !state.active) {
@@ -170,14 +195,18 @@ export class AgentState {
   async delete(value) {
     if (!exactKeys(value, [])) return json(400, { error: "invalid delete" });
     await this.transact(async (storage) => {
-      await storage.delete(ACTIVE_KEY);
-      await storage.delete(CLAIM_KEY);
+      const active = await storage.get(ACTIVE_KEY);
+      const claim = await storage.get(CLAIM_KEY);
+      if (isStored(active)) await storage.delete(ACTIVE_KEY);
+      if (isStored(claim)) await storage.delete(CLAIM_KEY);
     });
     await this.scheduleExpiry(null);
     return json(200, { deleted: true });
   }
 
   async alarm() {
+    // Cloudflare has consumed the alarm that invoked this method.
+    this.scheduledAlarmAt = null;
     const state = await this.transact(async (storage) => reconcileState(storage, Date.now()));
     await this.scheduleExpiry(state.alarmAt);
   }

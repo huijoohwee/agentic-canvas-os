@@ -415,14 +415,77 @@ npm run instruction-quality:check
 npm run dev
 ```
 
-Deployment is operator-gated:
+## GitHub Actions economics
+
+This public repository reported zero billable Ubuntu runner minutes at the
+2026-07-28 audit. Standard GitHub-hosted runners for public repositories are
+free, so these controls reduce queued work, compute, and cache pressure rather
+than an existing minutes invoice. The same audit found 2.35 GB of repository
+caches, including 2.14 GB across 36 CodeQL entries; existing entries remain
+subject to GitHub's normal eviction policy.
+
+- ownership-only pull requests with no changed files do not start CI;
+- the four protected CI check names and merge-queue coverage remain unchanged,
+  while their dependency-free scripts run on Node 22 `ubuntu-slim` runners
+  without installing packages or restoring npm caches;
+- CodeQL runs for executable source, while dependency review and `npm audit`
+  share one separate package-lock-scoped job plus the weekly sweep;
+- lightweight auto-delivery and pull-request synchronization controllers also
+  use `ubuntu-slim`;
+- CodeQL's legacy TRAP cache is disabled, and every job has a short timeout.
+
+Review current [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+and [dependency-cache behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching)
+before changing repository visibility, runner type, or retention assumptions.
+
+## Cloudflare free-tier posture
+
+The Worker configuration and runtime keep routine usage economical:
+
+- static assets bypass Worker execution; only API, readiness, auth, run, function,
+  and canvas routes run the Worker;
+- invalid canvas upgrades are authenticated before a Durable Object request,
+  and valid token/room admission is bounded per Cloudflare location before
+  Durable Object dispatch;
+- empty rooms do not create storage rows or alarms, and reconnects reuse the
+  same unexpired one-hour room token;
+- healthy agent-state reads do not rewrite SQLite rows, and room activity keeps
+  the earliest expiry alarm until it fires; records and claims also have hard
+  retention horizons;
+- Workers Logs keep a 1% sample of secret-safe custom events; invocation URL
+  logs and traces are disabled, and room capability ids are one-way hashed;
+- Worker CPU is capped at the Free-plan 10 ms ceiling; root `workers_dev` and
+  all version preview URLs are disabled, while the explicit `dev`
+  `workers.dev` environment remains available.
+
+At the 2026-07-28 audit, the key Free plan ceilings were 100,000 Worker
+requests per day with 10 ms CPU per HTTP request; 100,000 Durable Object
+requests, 5 million SQLite rows read, and 100,000 rows written per day; and
+200,000 Workers Logs events per day with three-day retention.
+
+These controls reduce usage; they do not guarantee zero cost. Check the current
+[Workers limits](https://developers.cloudflare.com/workers/platform/limits/),
+[Durable Objects pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/),
+and [Workers Logs limits](https://developers.cloudflare.com/workers/observability/logs/workers-logs/)
+before changing traffic or retention assumptions. The Worker rate-limit API is
+per-location and eventually consistent, so Cloudflare WAF/Turnstile or an
+authenticated creation grant remains the stronger production admission layer.
+
+Configuration validation is deployment-free:
 
 ```bash
-wrangler secret put AGENT_API_JWT_SECRET
-MODEL_KEY_BINDING=PRIMARY_MODEL_KEY
-wrangler secret put "$MODEL_KEY_BINDING"
-npm run cloudflare:deploy
+npm ci --engine-strict --ignore-scripts --no-audit --no-fund
+npm run build
+DRY_RUN_DIR="$(mktemp -d)"
+npx wrangler deploy --env="" --dry-run --outdir "$DRY_RUN_DIR/root"
+npx wrangler deploy --env dev --dry-run --outdir "$DRY_RUN_DIR/dev"
 ```
+
+Deployment remains operator-gated and dev-only in this repository.
+[`scripts/deploy-dev-function-gateway.mjs`](./scripts/deploy-dev-function-gateway.mjs)
+defines all four required secret bindings and five required model/pricing
+variables; do not run its deploy command until every binding is configured and
+deployment is explicitly authorized.
 
 For collaboration, open `?room=new` once and share the resulting URL. The
 generated 128-bit room id is a bearer capability; anyone with that URL can join

@@ -2,23 +2,46 @@ name: Enable authorized auto-delivery
 
 on:
   pull_request_target:
-    types: [labeled, ready_for_review, synchronize, reopened]
+    types: [labeled, unlabeled, edited, converted_to_draft, ready_for_review, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Exact pull request number to reconcile
+        required: true
+        type: number
 
 permissions:
   contents: write
   pull-requests: write
 
-concurrency:
-  group: auto-delivery-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
-
 jobs:
   enable:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+      (
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (
+          (
+            (github.event.action == 'labeled' || github.event.action == 'unlabeled') &&
+            (
+              github.event.label.name == 'agentic/auto-delivery' ||
+              github.event.label.name == 'automerge/conflict'
+            )
+          ) ||
+          (
+            github.event.action != 'labeled' &&
+            github.event.action != 'unlabeled' &&
+            contains(github.event.pull_request.labels.*.name, 'agentic/auto-delivery')
+          )
+        )
+      )
+    # Apply concurrency only after the event filter. Otherwise an unrelated
+    # label event can replace a pending head-drift revocation before this job
+    # is even admitted.
+    concurrency:
+      group: auto-delivery-${{ github.event.pull_request.number || inputs.pull_request_number }}
+      cancel-in-progress: false
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -27,8 +50,9 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Enable protected auto-delivery for the exact reviewed head
         env:
           GH_TOKEN: ${{ github.token }}
+          AUTO_DELIVERY_PR_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
         run: node scripts/sync-open-pr.mjs --auto-delivery

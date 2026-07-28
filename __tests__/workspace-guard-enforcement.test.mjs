@@ -18,6 +18,10 @@ import {
   applyHookInstall,
   resolveWorkspaceRoot,
 } from "../scripts/install-workspace-guards.mjs";
+import {
+  clearLocalGitEnvironment,
+  readSiblingLanes,
+} from "../scripts/workspace-guard-hook.mjs";
 
 const ZERO = "0".repeat(40);
 const OLD = "a".repeat(40);
@@ -33,6 +37,60 @@ const ownedLane = {
   untrackedPaths: 0,
   recoveryRef: null,
 };
+
+test("hook subprocesses discard worktree-local Git environment before inspecting siblings", () => {
+  const clean = clearLocalGitEnvironment({
+    PATH: "/usr/bin",
+    AGENTIC_SESSION_ID: "session-a",
+    GIT_DIR: "/workspace/repository/.git/worktrees/task",
+    GIT_WORK_TREE: "/workspace/task",
+    GIT_INDEX_FILE: "/workspace/repository/.git/worktrees/task/index",
+  });
+  assert.deepEqual(clean, { PATH: "/usr/bin", AGENTIC_SESSION_ID: "session-a" });
+});
+
+test("sibling inspection passes a clean Git environment to every worktree query", () => {
+  const inherited = {
+    AGENTIC_SESSION_ID: "session-a",
+    GIT_DIR: "/workspace/repository/.git/worktrees/task",
+  };
+  const spawn = (command, args, options) => {
+    assert.equal(command, "git");
+    assert.equal(options.env.GIT_DIR, undefined);
+    assert.equal(options.env.AGENTIC_SESSION_ID, "session-a");
+    const operation = args.join(" ");
+    if (operation === "worktree list --porcelain") {
+      return {
+        status: 0,
+        stdout: "worktree /workspace/repository\n\nworktree /workspace/.worktrees/repository/task\n\n",
+        stderr: "",
+      };
+    }
+    if (operation === "status --porcelain=v1 --untracked-files=normal") {
+      return { status: 0, stdout: "", stderr: "" };
+    }
+    if (operation === "symbolic-ref --quiet HEAD") {
+      return {
+        status: 0,
+        stdout: options.cwd.endsWith("/task") ? "refs/heads/agent/device/task\n" : "refs/heads/main\n",
+        stderr: "",
+      };
+    }
+    if (operation === "rev-parse --show-toplevel") {
+      return { status: 0, stdout: "/workspace/.worktrees/repository/task\n", stderr: "" };
+    }
+    throw new Error(`unexpected git operation: ${operation}`);
+  };
+  const lanes = readSiblingLanes({
+    cwd: "/workspace/.worktrees/repository/task",
+    env: inherited,
+    spawn,
+  });
+  assert.deepEqual(lanes.map(lane => lane.branch), [
+    "refs/heads/main",
+    "refs/heads/agent/device/task",
+  ]);
+});
 
 test("zero sha detection accepts both sha1 and sha256 widths", () => {
   assert.equal(isZeroSha(ZERO), true);

@@ -23,27 +23,50 @@ import {
 const scriptPath = fileURLToPath(import.meta.url);
 const BYPASS_ENV = "AGENTIC_WORKSPACE_GUARD_BYPASS";
 const BYPASS_TOKEN = "i-accept-destroying-unrecoverable-work";
+const LOCAL_GIT_ENVIRONMENT = Object.freeze([
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_CONFIG",
+  "GIT_CONFIG_COUNT",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_DIR",
+  "GIT_GRAFT_FILE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_NO_REPLACE_OBJECTS",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_PREFIX",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_SHALLOW_FILE",
+  "GIT_WORK_TREE",
+]);
 
-function git(args, { cwd = process.cwd(), spawn = spawnSync } = {}) {
-  const result = spawn("git", args, { cwd, encoding: "utf8" });
+export function clearLocalGitEnvironment(env = process.env) {
+  const clean = { ...env };
+  for (const name of LOCAL_GIT_ENVIRONMENT) delete clean[name];
+  return clean;
+}
+
+function git(args, { cwd = process.cwd(), env = process.env, spawn = spawnSync } = {}) {
+  const result = spawn("git", args, { cwd, encoding: "utf8", env: clearLocalGitEnvironment(env) });
   if (result.error) throw result.error;
   return { status: result.status ?? 1, stdout: String(result.stdout || ""), stderr: String(result.stderr || "") };
 }
 
 export function readLane({ cwd = process.cwd(), env = process.env, spawn = spawnSync } = {}) {
-  const top = git(["rev-parse", "--show-toplevel"], { cwd, spawn });
+  const top = git(["rev-parse", "--show-toplevel"], { cwd, env, spawn });
   if (top.status !== 0) throw new Error(`Not a Git worktree: ${cwd}`);
   const worktree = top.stdout.trim();
-  const commonDir = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd, spawn });
+  const commonDir = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd, env, spawn });
   const repositoryRoot = commonDir.status === 0
     ? path.dirname(commonDir.stdout.trim())
     : worktree;
-  const branch = git(["symbolic-ref", "--quiet", "HEAD"], { cwd, spawn });
-  const status = git(["status", "--porcelain=v1", "--untracked-files=normal"], { cwd, spawn });
+  const branch = git(["symbolic-ref", "--quiet", "HEAD"], { cwd, env, spawn });
+  const status = git(["status", "--porcelain=v1", "--untracked-files=normal"], { cwd, env, spawn });
   const rows = status.stdout.split(/\r?\n/).filter(Boolean);
   const untrackedPaths = rows.filter((row) => row.startsWith("??")).length;
   const branchRef = branch.status === 0 ? branch.stdout.trim() : null;
-  const recovery = git(["for-each-ref", "--format=%(refname)", "refs/heads/recovery", "refs/tags/recovery"], { cwd, spawn });
+  const recovery = git(["for-each-ref", "--format=%(refname)", "refs/heads/recovery", "refs/tags/recovery"], { cwd, env, spawn });
   const recoveryRefs = recovery.status === 0 ? recovery.stdout.split(/\r?\n/).filter(Boolean) : [];
 
   return {
@@ -62,17 +85,17 @@ export function readLane({ cwd = process.cwd(), env = process.env, spawn = spawn
 }
 
 export function readSiblingLanes({ cwd = process.cwd(), env = process.env, spawn = spawnSync } = {}) {
-  const listed = git(["worktree", "list", "--porcelain"], { cwd, spawn });
+  const listed = git(["worktree", "list", "--porcelain"], { cwd, env, spawn });
   if (listed.status !== 0) return [];
   const session = String(env.AGENTIC_SESSION_ID || "local").trim() || "local";
   const paths = listed.stdout.split(/\r?\n/)
     .filter((line) => line.startsWith("worktree "))
     .map((line) => line.slice("worktree ".length).trim());
   return paths.map((worktree) => {
-    const status = git(["status", "--porcelain=v1", "--untracked-files=normal"], { cwd: worktree, spawn });
+    const status = git(["status", "--porcelain=v1", "--untracked-files=normal"], { cwd: worktree, env, spawn });
     const rows = status.stdout.split(/\r?\n/).filter(Boolean);
     const untrackedPaths = rows.filter((row) => row.startsWith("??")).length;
-    const branch = git(["symbolic-ref", "--quiet", "HEAD"], { cwd: worktree, spawn });
+    const branch = git(["symbolic-ref", "--quiet", "HEAD"], { cwd: worktree, env, spawn });
     const branchRef = branch.status === 0 ? branch.stdout.trim() : null;
     return {
       repository: path.basename(path.dirname(worktree)) === ".git-worktrees"
@@ -80,7 +103,7 @@ export function readSiblingLanes({ cwd = process.cwd(), env = process.env, spawn
         : path.basename(worktree),
       worktree,
       branch: branchRef,
-      session: path.normalize(worktree) === path.normalize(git(["rev-parse", "--show-toplevel"], { cwd, spawn }).stdout.trim())
+      session: path.normalize(worktree) === path.normalize(git(["rev-parse", "--show-toplevel"], { cwd, env, spawn }).stdout.trim())
         ? session
         : `foreign:${path.basename(worktree)}`,
       scope: branchRef ? branchRef.split("/").slice(-1)[0] : null,
@@ -127,7 +150,7 @@ export function runPrePush({ cwd = process.cwd(), env = process.env, spawn = spa
   if (updates.length === 0) return 0;
 
   const isAncestor = (from, to) => (
-    git(["merge-base", "--is-ancestor", from, to], { cwd, spawn }).status === 0
+    git(["merge-base", "--is-ancestor", from, to], { cwd, env, spawn }).status === 0
   );
 
   const deletions = updates.filter((update) => isZeroSha(update.newSha));
@@ -162,7 +185,7 @@ export function runReferenceTransaction({ cwd = process.cwd(), env = process.env
   if (relevant.length === 0) return 0;
 
   const isAncestor = (from, to) => (
-    git(["merge-base", "--is-ancestor", from, to], { cwd, spawn }).status === 0
+    git(["merge-base", "--is-ancestor", from, to], { cwd, env, spawn }).status === 0
   );
   const destructive = relevant.filter((update) => (
     isZeroSha(update.newSha) || (!isZeroSha(update.oldSha) && !isAncestor(update.oldSha, update.newSha))

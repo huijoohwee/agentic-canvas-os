@@ -13,9 +13,11 @@ const safeRoot = deriveTaskWorktreeRoot(repoRoot);
 const target = path.join(safeRoot, "work-item-42");
 const sha = "a".repeat(40);
 const canonicalRecord = `worktree ${repoRoot}\0HEAD ${sha}\0branch refs/heads/main\0`;
+const gitCommonDir = path.join(repoRoot, ".git");
 
 function gitTextFor(overrides = {}) {
   const responses = {
+    "rev-parse --git-common-dir": gitCommonDir,
     "worktree list --porcelain -z": canonicalRecord,
     "status --porcelain": "",
     "rev-parse origin/main": sha,
@@ -54,6 +56,16 @@ test("provision creates a detached task worktree from the one exact fetched main
     ["git", "fetch", "origin", "main"],
     ["git", "worktree", "add", "--detach", target, sha],
   ]);
+});
+
+test("provision derives the shared task root from Git ownership when canonical main is displaced", () => {
+  assert.equal(
+    deriveTaskWorktreeRoot(
+      "/workspace/.worktrees/canonical/repository",
+      "/workspace/repository/.git",
+    ),
+    path.resolve("/workspace/.worktrees/repository"),
+  );
 });
 
 test("provision rejects collisions and paths outside the derived safe root before git mutation", () => {

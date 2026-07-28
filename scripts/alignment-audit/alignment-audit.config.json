@@ -1,0 +1,45 @@
+{
+  "guidelineRoots": [
+    {
+      "roleLabel": "guideline",
+      "locator": "scripts/alignment-audit/__fixtures__/guideline",
+      "revisionIdentifier": "fixture-guideline-v1",
+      "includeGlobs": ["**/*.md"],
+      "excludeGlobs": []
+    }
+  ],
+  "runtimeRoots": [
+    {
+      "roleLabel": "runtime",
+      "locator": "scripts/alignment-audit/__fixtures__/runtime",
+      "revisionIdentifier": "fixture-runtime-v1",
+      "includeGlobs": ["**/*.md"],
+      "excludeGlobs": []
+    }
+  ],
+  "auditOutputDirectory": "audit/alignment-audit",
+  "operatorDeployInstruction": null,
+  "readinessLadder": [
+    "undocumented",
+    "spec-complete",
+    "dev-proven",
+    "runtime-ready",
+    "production-verified"
+  ],
+  "requiredFrontmatterKeys": [
+    "title",
+    "graphId",
+    "doc_type",
+    "date",
+    "lang",
+    "schema",
+    "frontmatter_contract",
+    "status"
+  ],
+  "economicsStatements": [
+    "return-on-investment",
+    "12-month-total-cost-of-ownership",
+    "token-budget",
+    "time-to-value"
+  ]
+}

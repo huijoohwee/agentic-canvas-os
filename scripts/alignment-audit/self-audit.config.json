@@ -1,0 +1,84 @@
+{
+  "guidelineRoots": [
+    {
+      "roleLabel": "alignment-audit-specification",
+      "locator": "${GITHUB_ROOT}/.kiro/specs/guideline-runtime-alignment-audit",
+      "revisionIdentifier": "workspace-specification",
+      "includeGlobs": ["requirements.md", "design.md", "tasks.md"],
+      "excludeGlobs": [],
+      "documentDefaults": {
+        "title": "Guideline Runtime Alignment Audit Specification",
+        "graphId": "alignment-audit-specification",
+        "doc_type": "Specification Source",
+        "date": "2026-07-28",
+        "lang": "en",
+        "schema": "alignment-audit-specification/v1",
+        "frontmatter_contract": "configured-source-adapter/v1",
+        "status": "spec-complete",
+        "universal_scope": "false"
+      }
+    },
+    {
+      "roleLabel": "alignment-audit-guideline",
+      "locator": "${AGENTIC_CANVAS_OS_ROOT}/scripts/alignment-audit/__fixtures__/guideline",
+      "revisionIdentifier": "fixture-guideline-v1",
+      "includeGlobs": ["**/*.md"],
+      "excludeGlobs": []
+    }
+  ],
+  "runtimeRoots": [
+    {
+      "roleLabel": "alignment-audit-runtime",
+      "locator": "${AGENTIC_CANVAS_OS_ROOT}/scripts/alignment-audit",
+      "revisionIdentifier": "working-tree-runtime",
+      "includeGlobs": ["**/*.mjs", "**/*.json", "**/*.md"],
+      "excludeGlobs": ["__fixtures__/**"],
+      "documentDefaults": {
+        "title": "Alignment Auditor Runtime Source",
+        "graphId": "alignment-audit-runtime-source",
+        "doc_type": "Runtime Source",
+        "date": "2026-07-28",
+        "lang": "en",
+        "schema": "alignment-audit-runtime-source/v1",
+        "frontmatter_contract": "configured-source-adapter/v1",
+        "status": "dev-proven",
+        "universal_scope": "false",
+        "capability_id": "alignment-audit",
+        "runtime_scope": "alignment-audit",
+        "owner": "alignment-audit-contract"
+      }
+    },
+    {
+      "roleLabel": "alignment-audit-runtime-contract",
+      "locator": "${AGENTIC_CANVAS_OS_ROOT}/scripts/alignment-audit/__fixtures__/runtime",
+      "revisionIdentifier": "fixture-runtime-v1",
+      "includeGlobs": ["**/*.md"],
+      "excludeGlobs": []
+    }
+  ],
+  "auditOutputDirectory": "audit/alignment-audit-self",
+  "operatorDeployInstruction": null,
+  "readinessLadder": [
+    "undocumented",
+    "spec-complete",
+    "dev-proven",
+    "runtime-ready",
+    "production-verified"
+  ],
+  "requiredFrontmatterKeys": [
+    "title",
+    "graphId",
+    "doc_type",
+    "date",
+    "lang",
+    "schema",
+    "frontmatter_contract",
+    "status"
+  ],
+  "economicsStatements": [
+    "return-on-investment",
+    "12-month-total-cost-of-ownership",
+    "token-budget",
+    "time-to-value"
+  ]
+}

@@ -320,6 +320,10 @@ capability:
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `knowgrph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
+| Select a settlement rail or read payment status | Local stdio MCP | Deterministic, model-free selection and a four-field public projection stay inside the payments owner. |
+| Create, settle, reconcile, or refund a payment | Local stdio MCP with the server-side payment trust boundary | Credentials, idempotency, event authenticity, and provider-authoritative settlement stay in one owner; agent-originated spend routes through the existing approval gate. |
+| Check per-rail payment readiness | Local stdio MCP or the command-invoked readiness gate | Read-only credential-name and sandbox-proof reporting without configuration mutation or deploy authority. |
+| Federate an external provider payment tool surface | External provider MCP registered as one transport | Read-only tools federate freely; mutating tools stay confirmation-required and approval-gated, and no payment proxy tier is added. |
 
 ## Gateway VCCs
 
@@ -332,6 +336,11 @@ capability:
 | Spend is gated | Any paid or mutating route requires the relevant approval gate. |
 | Reviewed run-note mutation | `update_agent_run_note` maps only to `knowgrph.run_manifest.note.update`, cannot disable review, and completes only after exact native receipt echo. |
 | Tool gateway is existing-infra | Tool routing uses local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owners; no new proxy is introduced. |
+| Payment path is model-free | A full intent-to-settlement run reports zero model calls and exact zero model cost for selection, creation, settlement, reconciliation, and serialization. |
+| Payment credentials stay server-side | No credential name or value appears in client bundle output or visible runtime variables, and a planted secret fails the readiness gate before configuration changes. |
+| Payment settlement is at-most-once | Duplicate event delivery yields one side effect, a conflicting payload preserves prior state, and provider-read state gates every settled transition. |
+| Payment spend is gated | Every agent-originated payment-creating or money-moving route requires the existing approval gate, and an unapproved call is rejected with zero provider calls and a zero-cost entry. |
+| Payment federation adds no tier | Federated provider payment transports are registered as transports only, with confirmation required on every mutating tool and no new payment proxy. |
 | Tool providers are per-category | Web, image, TTS, and browser categories each expose gateway, direct, local, or unavailable state. |
 | Voice Studio ownership is singular | Three exact host metadata routes map to one `knowgrph.voice.studio` wire tool; consent never follows from a binding, and no copied runtime or provider dependency is required. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |

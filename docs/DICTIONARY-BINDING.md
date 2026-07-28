@@ -390,6 +390,11 @@ binding:
 | `/soul.load #primary-identity @soul-profile @identity-slot` | Load durable identity into prompt slot 1 through a scanned source-backed contract. |
 | `/personality.overlay #personality-overlay @personality-overlay` | Apply a temporary session style overlay without mutating durable identity. |
 | `/cost.audit #token-economics @cost-log @operator` | Inspect and gate spend. |
+| `/payment.rail.select #payment-rail-selection @payment-rail @payment-intent @payment-readiness` | Resolve exactly one settlement rail and persist the selection reason before any provider call. |
+| `/payment.intent.create #payment-idempotency @payment-intent @payment-provider @cost-log` | Create one provider payment object behind a client-generated intent key inside the server-side trust boundary. |
+| `/payment.event.settle #payment-settlement-integrity @payment-event @payment-intent @payment-provider` | Apply one authenticated provider event at most once against provider-authoritative state. |
+| `/payment.reconcile #offline-intent-queue @payment-intent @payment-provider @runtime-proof` | Resolve queued intents to a terminal state from provider-read state under a bounded retry schedule. |
+| `/payment.readiness #payment-readiness @payment-readiness @payment-rail @runtime-proof` | Report per-rail configuration completeness read-only without mutating configuration or granting deploy authority. |
 | `/deploy.guard #dev-only @operator @cloudflare` | Confirm release remains gated until operator explicitly authorizes deploy. |
 | `/moa #mixture-of-agents @moa-preset @reference-agents @aggregator-agent` | Run one-shot advisory fan-out and aggregator-owned response under cost and approval gates. |
 | `/experience.capture #learning-loop @experience` | Store a bounded lesson from proof before proposing reuse. |

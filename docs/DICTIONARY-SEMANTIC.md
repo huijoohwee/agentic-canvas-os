@@ -364,6 +364,11 @@ semantic:
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |
+| `/payment.rail.select #payment-rail-selection #no-hardcode @payment-rail @payment-readiness` | Choose exactly one settlement rail deterministically from currency, settlement asset, and readiness. |
+| `/payment.intent.create #payment-idempotency #approval-gate @payment-intent @payment-provider` | Keep payment creation replay-safe and keep agent-originated spend behind the existing approval gate. |
+| `/payment.event.settle #payment-settlement-integrity #truth @payment-event @payment-provider` | Settle only from authenticated events plus provider-authoritative state. |
+| `/payment.receipt.project #payment-data-minimization #vcc @payment-record @payment-intent` | Project terminal records into one byte-stable local document that carries no prohibited identifier. |
+| `/payment.readiness #payment-readiness #dev-only @payment-readiness @payment-rail` | Prove a rail is configured before it is exposed, without mutation or deploy authority. |
 | `/pipeline.trace #token-economics @cost-log` | Review FloatingPanel Chat pipeline and token economics through the cost ledger. |
 | `/workspace.review #frontmatter @source.body` | Review workspace context without turning display labels into standalone prose commands. |
 | `/canvas.render #canvas @runtime-proof` | Project parsed source state through existing Canvas owners. |

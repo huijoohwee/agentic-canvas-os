@@ -56,6 +56,35 @@ document can express the same contract.
 - Resolve issues and verify no regressions before handoff.
 - Allow same-device and cross-device parallel mutation only for different semantic scopes in distinct registered task worktrees or clones. Bind each task worktree to one session lease and branch; reject shared-worktree sessions, duplicate scopes, and stale fencing epochs.
 
+## Concurrent Sessions
+
+Parallel sessions across the sibling repositories in one workspace root are the
+intended mode. `docs/WORKSPACE-PARALLELISM.md` is the contract; these are the rules
+that bind every session and tool.
+
+- Claim one lane per session: one repository plus one registered worktree. Never
+  share a worktree, never check one branch out in two worktrees, and never claim a
+  semantic scope another session already holds in that repository.
+- Run `npm run workspace:parallelism:check` before any operation in the forbidden
+  catalog. Treat a blocked report as a stop, not as a cleanup task.
+- Never reset a working tree, remove untracked files, force a checkout, rewrite
+  pushed history, delete a lane, prune objects, or fast-forward a lane while any
+  session holds uncommitted or untracked work in that repository. This applies to
+  every repository in the workspace, not only the one being worked on.
+- Never run a destructive operation on a lane the current session does not own, and
+  never assume an idle-looking lane is unowned. Absence of recent output is not
+  evidence that a session ended.
+- Treat untracked files as unrecoverable. They have no object in the store, so no
+  recovery reference can restore them and no destructive operation over them is
+  permitted.
+- Before any permitted destructive operation on an owned dirty lane, create a durable
+  recovery reference: a branch, a tag, or a bundle under the workspace backup
+  directory. A stash does not qualify.
+- Commit early and on a branch when work must survive a concurrent session. An
+  uncommitted edit is the only state this contract cannot fully protect.
+- When a collision is found, name it and stop. Resolving it by discarding the other
+  side is forbidden regardless of which session is further along.
+
 ## Post-Task
 
 - Update cross-repo and API docs when the change affects them.

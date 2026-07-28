@@ -171,6 +171,8 @@ dictionary_entries:
   - "@payment-event"
   - "@payment-record"
   - "@payment-readiness"
+  - "@workspace-lane"
+  - "@recovery-reference"
 ---
 
 # Binding Dictionary
@@ -320,6 +322,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@payment-provider` | The server-side trust boundary that holds provider credentials and issues every provider call. | Existing server-side payment runtime and its secret store. | Credentials stay server-side over transport-secured requests only; browser source, bundle output, local storage, and URLs are rejected, and one provider API version is pinned per deployment. |
 | `@payment-event` | One inbound provider settlement callback plus its recorded processing identity. | Existing provider event ingress owner and its event ledger. | Authenticity must be verified before the payload is read, and provider state remains the settlement authority over the payload. |
 | `@payment-record` | The serialized projection of terminal payment records for local audit and receipts. | Existing payment record serializer and its document store. | Deterministic and byte-stable; excludes credentials, card numbers, bank account numbers, buyer email addresses, and provider customer identifiers. |
+| `@workspace-lane` | One unit of parallel work: one repository plus one registered worktree, its branch, its claimed semantic scope, and its dirty and untracked counts. | `WORKSPACE-PARALLELISM.md` plus the existing worktree registry, writer lease, and lifecycle owners. | Exactly one session owns a lane, one branch is live in at most one worktree, and one semantic scope per repository has one session owner; the binding reads Git state and never stages, resets, cleans, checks out, prunes, or removes anything. |
+| `@recovery-reference` | The durable ref that a lane's uncommitted work can be restored from before a permitted destructive operation. | The owning session, recorded as a branch, tag, or workspace bundle. | Must exist and must be durable; `refs/stash` is rejected as anonymous, and no reference can cover untracked paths, which stay unrecoverable and therefore undeletable. |
 | `@payment-readiness` | Per-rail configuration completeness snapshot for the payments capability. | Existing per-rail readiness gate. | Read-only; reports required credential names, presence, pinned version, configured integration model, and terminal sandbox proof without mutating configuration or granting deploy authority. |
 
 ## Binding Shape
@@ -395,6 +399,8 @@ binding:
 | `/payment.event.settle #payment-settlement-integrity @payment-event @payment-intent @payment-provider` | Apply one authenticated provider event at most once against provider-authoritative state. |
 | `/payment.reconcile #offline-intent-queue @payment-intent @payment-provider @runtime-proof` | Resolve queued intents to a terminal state from provider-read state under a bounded retry schedule. |
 | `/payment.readiness #payment-readiness @payment-readiness @payment-rail @runtime-proof` | Report per-rail configuration completeness read-only without mutating configuration or granting deploy authority. |
+| `/workspace.parallelism.check #workspace-parallelism @workspace-lane @recovery-reference @runtime-proof` | Prove lane isolation across every repository in the workspace root and name every lane whose work is unrecoverable. |
+| `/workspace.operation.review #destructive-operation-guard @workspace-lane @recovery-reference @operator` | Refuse a destructive operation before it runs whenever it would cross a lane boundary or discard work that cannot be restored. |
 | `/deploy.guard #dev-only @operator @cloudflare` | Confirm release remains gated until operator explicitly authorizes deploy. |
 | `/moa #mixture-of-agents @moa-preset @reference-agents @aggregator-agent` | Run one-shot advisory fan-out and aggregator-owned response under cost and approval gates. |
 | `/experience.capture #learning-loop @experience` | Store a bounded lesson from proof before proposing reuse. |

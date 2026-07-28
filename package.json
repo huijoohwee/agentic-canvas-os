@@ -59,6 +59,8 @@
     "device:publish": "node ./scripts/device-branch.mjs publish",
     "device:integrate": "node ./scripts/device-branch.mjs integrate",
     "device:resume": "node ./scripts/device-branch.mjs resume",
+    "workspace:parallelism:check": "node ./scripts/workspace-parallelism-guard.mjs",
+    "workspace:parallelism:test": "node --test __tests__/workspace-parallelism.test.mjs",
     "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
     "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
     "dev": "npm run cloudflare:dev",

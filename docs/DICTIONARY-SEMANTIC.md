@@ -176,6 +176,8 @@ dictionary_entries:
   - "#offline-intent-queue"
   - "#payment-data-minimization"
   - "#payment-readiness"
+  - "#workspace-parallelism"
+  - "#destructive-operation-guard"
 ---
 
 # Semantic Dictionary
@@ -330,6 +332,8 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#payment-settlement-integrity` | At-most-once settlement from authenticated events and provider-authoritative state. | An inbound provider callback or a reconciliation pass could unlock paid capability. | Event authenticity is verified before payload read, provider state is the authority, a paid transition requires matching intent identifier, minor-unit amount, and currency, and duplicate delivery produces one side effect. |
 | `#offline-intent-queue` | Locally durable payment intent held while the server-side trust boundary is unreachable. | A payment is confirmed with no network path, or a client reloads before submission. | The queue survives reload with zero egress, carries no credential or account identifier, submits in creation order one intent key at a time, and never asserts payment on its own. |
 | `#payment-data-minimization` | Smallest regulated-data footprint that still supports audit. | Payment data is stored, projected into a receipt, sent to a provider, or exposed to a caller. | No card number, verification value, or full bank account number is stored, no personal identifier enters an idempotency key or provider metadata, no payment record field enters a model prompt, and the public status projection carries only its permitted fields. |
+| `#workspace-parallelism` | Concurrent sessions working across sibling repositories in one workspace root as the intended mode. | More than one session, device, or tool can hold live work in the workspace at the same time. | Lane ownership, branch exclusivity, and scope exclusivity are each proven separately, every at-risk lane is named, and serialization is never used as the safety mechanism. |
+| `#destructive-operation-guard` | Fail-closed review of an operation that can destroy work another session still holds. | A working-tree reset, untracked removal, forced checkout, history rewrite, lane removal, object prune, or fast-forward integration is proposed. | The operation is matched against the explicit forbidden catalog, foreign lane ownership and foreign uncommitted work refuse it, untracked paths refuse it outright, dirty tracked paths require a durable recovery reference, and the strongest outcome is allow-with-recovery. |
 | `#payment-readiness` | Per-rail proof that a settlement rail is configured well enough to accept money. | A rail is about to be enabled, re-enabled, or exposed to a buyer or agent. | Required credential names, server-side presence, absence from visible configuration, pinned provider version, configured integration model, and one terminal sandbox payment are reported read-only, with a non-zero exit on any missing required input. |
 
 ## Semantic Shape
@@ -369,6 +373,8 @@ semantic:
 | `/payment.event.settle #payment-settlement-integrity #truth @payment-event @payment-provider` | Settle only from authenticated events plus provider-authoritative state. |
 | `/payment.receipt.project #payment-data-minimization #vcc @payment-record @payment-intent` | Project terminal records into one byte-stable local document that carries no prohibited identifier. |
 | `/payment.readiness #payment-readiness #dev-only @payment-readiness @payment-rail` | Prove a rail is configured before it is exposed, without mutation or deploy authority. |
+| `/workspace.parallelism.check #workspace-parallelism #truth @workspace-lane @recovery-reference` | Keep concurrent sessions the default while proving no lane holds work a destructive operation could not restore. |
+| `/workspace.operation.review #destructive-operation-guard #approval-gate @workspace-lane @operator` | Gate every catalog operation behind lane ownership, foreign-work checks, and a durable recovery reference. |
 | `/pipeline.trace #token-economics @cost-log` | Review FloatingPanel Chat pipeline and token economics through the cost ledger. |
 | `/workspace.review #frontmatter @source.body` | Review workspace context without turning display labels into standalone prose commands. |
 | `/canvas.render #canvas @runtime-proof` | Project parsed source state through existing Canvas owners. |

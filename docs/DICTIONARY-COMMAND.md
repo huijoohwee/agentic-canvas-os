@@ -19,6 +19,7 @@ source_docs:
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "MCP-GATEWAY.md"
+  - "WORKSPACE-PARALLELISM.md"
   - "VALIDATION-RUNBOOK.md"
   - "START-WORKFLOW.md"
   - "RELEASE-WORKFLOW.md"
@@ -126,6 +127,8 @@ dictionary_entries:
   - "/payment.receipt.project"
   - "/payment.refund"
   - "/payment.readiness"
+  - "/workspace.parallelism.check"
+  - "/workspace.operation.review"
   - "/canvas.project"
   - "/canvas.render"
   - "/canvas.node.add"
@@ -271,6 +274,8 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/payment.reconcile` | Resolve queued or in-flight payment intents to a terminal state from provider-read state under a bounded retry schedule. | `@payment-intent`, `@payment-provider`, `@runtime-proof` | `#offline-intent-queue`, `#payment-settlement-integrity`, `#vcc` | Queued intents persist offline with zero egress, submissions are ordered one intent key at a time, terminal state comes only from provider-read state, local queue state never unlocks paid capability, and an unresolvable record stops at the stated attempt bound with an operator-visible entry. |
 | `/payment.receipt.project` | Serialize terminal payment records into one locally readable document and parse that document back without loss. | `@payment-record`, `@payment-intent`, `@runtime-proof` | `#payment-data-minimization`, `#offline-intent-queue`, `#vcc` | Every terminal record yields exactly one entry, parse then print and print then parse then print are byte-identical, a malformed document returns a typed parse error naming the failing line with bytes unchanged, no prohibited identifier appears in any entry, and the receipt view renders with zero network requests. |
 | `/payment.refund` | Create one refund on the rail that settled the original payment. | `@payment-intent`, `@payment-provider`, `@cost-log`, `@operator` | `#payment-settlement-integrity`, `#approval-gate`, `#vcc` | A refund on a settled record records a refund reference on the settling rail, a repeated request leaves the refunded amount unchanged, a non-settled record returns a typed not-applicable result with zero provider contact, and every recorded failure carries the provider request identifier where the provider supplies one. |
+| `/workspace.parallelism.check` | Audit every lane across the sibling repositories in one workspace root and report which lanes hold work no destructive operation could restore. | `@workspace-lane`, `@recovery-reference`, `@runtime-proof` | `#workspace-parallelism`, `#dev-only`, `#truth` | One lane owns one session, one branch is live in at most one worktree, one semantic scope per repository has one session owner, every at-risk lane is named with its dirty and untracked counts, the audit writes nothing, and readiness is true only when no lane holds untracked work or unreferenced modifications. |
+| `/workspace.operation.review` | Return one fail-closed decision for a candidate destructive Git operation before it runs. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#approval-gate`, `#vcc` | The operation is classified against the explicit forbidden catalog, a foreign-owned lane is refused, any other session holding uncommitted or untracked work in that repository refuses the operation, untracked paths in the target lane refuse it outright, modified tracked paths without a durable recovery reference refuse it, and no catalog operation ever returns a plain allow. |
 | `/payment.readiness` | Report per-rail payment configuration completeness without mutating configuration. | `@payment-readiness`, `@payment-rail`, `@runtime-proof` | `#payment-readiness`, `#dev-only`, `#runtime-ready` | The gate lists required credential names per rail, reports presence in server-side secret storage, fails when a credential name or value appears in client bundle output or visible runtime variables, reports the pinned provider API version and configured integration model, marks a rail ready only after a sandbox payment on that rail reached a terminal state, performs zero writes, and exits non-zero on any missing required input. |
 | `/canvas.project` | Project source-backed runtime state into existing Canvas owners. | `@source.frontmatter`, `@source.body`, `@canvas` | `#canvas`, `#frontmatter`, `#runtime-ready` | Source-backed graph, table, or Storyboard surface renders without dashboard-only storage. |
 | `/canvas.render` | Inspect or trigger projection through existing Canvas render owners without mutating source graph data. | `@canvas`, `@source.frontmatter`, `@runtime-proof` | `#canvas`, `#runtime-ready`, `#vcc` | Canvas projection reports rendered graph, table, KGC, or Storyboard state without direct store mutation. |

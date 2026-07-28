@@ -366,8 +366,8 @@ function renderRuntimeDocument(documentKey, seeds) {
   };
 }
 
-function escapeTable(value) {
-  return String(value).replace(/\|/gu, "\\|");
+export function escapeTable(value) {
+  return String(value).replace(/\\/gu, "\\\\").replace(/\|/gu, "\\|");
 }
 
 export function expectedGuidelineElements(generated) {

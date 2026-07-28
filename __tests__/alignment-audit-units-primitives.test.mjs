@@ -14,6 +14,11 @@ import {
   elementIdFrom,
   normalizeContent,
 } from "../scripts/alignment-audit/normalize.mjs";
+import { escapeTable } from "./lib/alignment-audit-arbitraries.mjs";
+
+test("property fixture table escaping preserves backslashes before escaping pipes", () => {
+  assert.equal(escapeTable(String.raw`a\b|c`), String.raw`a\\b\|c`);
+});
 
 test("normalizeContent is idempotent and canonicalizes line endings and trailing space", () => {
   const source = "first  \r\nsecond\t\r\n\r\n";

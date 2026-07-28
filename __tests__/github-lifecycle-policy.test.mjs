@@ -29,13 +29,15 @@ test('required CI is merge-queue safe and every workflow pins actions immutably'
   }
 });
 
-test('CI keeps protected checks on Node 22 slim runners without dependency caches', async () => {
+test('CI installs test dependencies once on Node 22 slim runners without dependency caches', async () => {
   const source = await readWorkflow('ci.yml');
   assert.match(source, /pull_request:\n\s+paths:\n\s+- "\*\*"/);
   for (const name of ['test', 'build', 'docs-contract', 'collaboration-integration']) {
     assert.match(source, new RegExp(`^\\s+name: ${name}$`, 'm'));
   }
-  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 0);
+  const testJob = source.slice(source.indexOf('\n  test:'), source.indexOf('\n  build:'));
+  assert.match(testJob, /^\s+- run: npm ci --ignore-scripts --no-audit --no-fund$/m);
+  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 1);
   assert.equal((source.match(/^\s+cache: npm$/gm) || []).length, 0);
   assert.equal((source.match(/^\s+runs-on: ubuntu-slim$/gm) || []).length, 4);
   assert.equal((source.match(/^\s+node-version: 22$/gm) || []).length, 4);

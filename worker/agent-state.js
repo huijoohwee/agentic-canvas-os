@@ -32,19 +32,25 @@ function claimAlarmAt(claim) {
   return Math.min(claim.claimExpiresAt, claim.record.expiresAt);
 }
 
+function isStored(value) {
+  return value !== undefined && value !== null;
+}
+
 async function reconcileState(storage, now) {
   const priorClaim = await storage.get(CLAIM_KEY);
   const claim = claimedValue(priorClaim, now);
   if (claim) {
-    await storage.delete(ACTIVE_KEY);
+    const priorActive = await storage.get(ACTIVE_KEY);
+    if (isStored(priorActive)) await storage.delete(ACTIVE_KEY);
     return { active: null, claim, alarmAt: claimAlarmAt(claim) };
   }
 
-  let active = activeValue(await storage.get(ACTIVE_KEY), now);
+  const priorActive = await storage.get(ACTIVE_KEY);
+  let active = activeValue(priorActive, now);
   if (!active && priorClaim?.record) active = activeValue(priorClaim.record, now);
-  await storage.delete(CLAIM_KEY);
-  if (active) await storage.put(ACTIVE_KEY, active);
-  else await storage.delete(ACTIVE_KEY);
+  if (isStored(priorClaim)) await storage.delete(CLAIM_KEY);
+  if (active && active !== priorActive) await storage.put(ACTIVE_KEY, active);
+  else if (!active && isStored(priorActive)) await storage.delete(ACTIVE_KEY);
   return { active, claim: null, alarmAt: active?.expiresAt ?? null };
 }
 
@@ -83,7 +89,7 @@ export class AgentState {
     const outcome = await this.transact(async (storage) => {
       const state = await reconcileState(storage, now);
       if (state.claim) return { record: null, alarmAt: state.alarmAt };
-      await storage.delete(ACTIVE_KEY);
+      if (state.active) await storage.delete(ACTIVE_KEY);
       return { record: state.active, alarmAt: null };
     });
     await this.scheduleExpiry(outcome.alarmAt);
@@ -170,8 +176,10 @@ export class AgentState {
   async delete(value) {
     if (!exactKeys(value, [])) return json(400, { error: "invalid delete" });
     await this.transact(async (storage) => {
-      await storage.delete(ACTIVE_KEY);
-      await storage.delete(CLAIM_KEY);
+      const active = await storage.get(ACTIVE_KEY);
+      const claim = await storage.get(CLAIM_KEY);
+      if (isStored(active)) await storage.delete(ACTIVE_KEY);
+      if (isStored(claim)) await storage.delete(CLAIM_KEY);
     });
     await this.scheduleExpiry(null);
     return json(200, { deleted: true });

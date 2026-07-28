@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Runtime Proof"
 graphId: "md:knowgrph-agentic-canvas-os-runtime-proof"
 doc_type: "Runtime Proof Ledger"
-date: "2026-07-26"
+date: "2026-07-28"
 lang: "en-US"
 schema: "agentic-canvas-os-runtime-proof/v1"
 frontmatter_contract: "required"
@@ -161,6 +161,7 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Agentic video workflow | Dev runtime proves native model-backed script, character, storyboard, pending-shot render, checkpoint resume, landscape guard, context compaction, bounded retry, and an inspectable nine-stage multi-agent pipeline with typed handoffs, semantic assets, resource accounting, and dependency-propagated state. | Prod mirror writes, Cloudflare deploy, copied ViMax implementation artifacts, or uncontrolled paid calls. |
 | KGC computing-flow | Docs declare `kgc-computing-flow/v1`, explicit handles, bounded execution, and KGC validation ownership. | Separate chat-local flow engine or direct graph mutation. |
 | Cost and gates | Documentation validation is zero model spend; one separately approved three-call proof records returned usage and USD 0.00447 estimated cost while keeping mutation and deploy gates explicit. | Additional or repeated paid calls, payment, browser-auth, Prod mirror, or Cloudflare deploy. |
+| Free-tier economics | Required GitHub checks keep their exact names and merge-queue triggers while no-op claims, redundant installs, CodeQL TRAP caches, and unrelated security runs are filtered. Exact-head auto-delivery authorization is revoked after label or head drift. Cloudflare rejects invalid room upgrades before Durable Object access, avoids state writes on healthy reads, coalesces expiry alarms, samples secret-safe custom logs at 1%, disables invocation logs and traces, hashes room ids in logs, and disables root preview endpoints. | Zero-cost or unlimited-capacity guarantees, live quota utilization, billing assertions, caller-authorized issuance of arbitrary secure room ids, legacy reconnect token amplification, Prod, or Cloudflare deployment. |
 | Deployment boundary | Dev docs are changed locally only. | Prod mirror and Cloudflare runtime proof. |
 
 ## Proof Ledger
@@ -231,6 +232,7 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Canonical docs source has Dev proof | The registered Agentic Canvas OS `main` worktree remains the only normal runtime docs source and must be clean at fetched `origin/main`. Focused coordination tests prove additional registered task worktrees can mutate branch-exclusive scopes without becoming runtime sources. Knowgrph consumer predev alignment with this v2 policy remains a separate downstream gate. | Passed for Agentic Canvas OS; downstream consumer alignment pending |
 | Deploy guard holds | Scoped git status shows no `content/knowgrph` mutation and no deploy command was run. | Passed |
 | Canonical automatic lifecycle contract holds | Focused tests prove disposable-candidate validation occurs before canonical fast-forward, rejection preserves the prior checkout, dirty files remain in place while a hashed quarantine copy is recorded, and the strict v2 production attestation rejects revision drift and unknown fields. Mutable-tag Actions and the dormant Agentic production deploy, preview, and rollback workflows are absent. | Executable source contract passed; downstream Knowgrph and huijoohwee own production proof |
+| Free-tier economics source contract holds | Focused lifecycle, Worker preflight, AgentState, and CanvasRoom tests prove four required CI check names remain present, dependency installation is single-owner, security and synchronization avoid installs, exact-head auto-delivery authorization is revoked on drift, invalid canvas requests make zero Durable Object namespace calls, healthy reads make zero storage writes, new invalid rooms create no alarms, ordinary activity does not reset an existing alarm, early alarms retain the exact idle deadline, and structured logs omit raw room capabilities. Wrangler 4.113.0 root and explicit Dev dry runs both bundle one asset at 625.95 KiB raw and 122.06 KiB gzip without deployment. | Dev source and bundle proof only; live quota, billing, deployment, admission/rate limiting for otherwise valid self-issued room ids, legacy reconnect token reuse, and production-route behavior remain unverified |
 | Invocation catalog digest parity has focused Dev proof | `npm run docs:check`; the managed-implementation, instruction-audit, and production-readiness contract tests; Knowgrph's MCP docs runtime test; Canvas TypeScript; revision rollover, retry, provenance, digest-drift, source-metadata precedence, FloatingPanel projection, and runtime-identity attestation selectors; and the cross-repo dictionary consumer test passed. The source catalog contains 111 commands, 121 semantics, and 116 bindings with SHA-256 digest `0936ac2acaae3272c5ed30df55747bdc87dfef2610d915cd9db8d3e9c696ad6f`. | Passed in isolated Dev task lanes; protected integration and deployment remain separate |
 
 ## Promotion Boundary
@@ -273,6 +275,7 @@ This ledger proves the local Agentic Canvas OS docs control surface and records 
 | Long-horizon SuperAgent docs contracts | Runtime-ready for docs | Contracts are route-complete, sandbox-scoped, message-gated, artifact-backed, no-copy, bounded, and cost-gated; live runtime remains separately gated. |
 | `knowgrph` local runtime capabilities | Gated by focused proof | Must be proven by the relevant `knowgrph` tests or local MCP calls. |
 | Prod mirror | Automatic after protected integration | Published only after immutable build, mirror parity, deployment, and live smoke succeed. |
+| Cloudflare free-tier posture | Source-ready in Dev | Static assets bypass the Worker, root preview endpoints are disabled, secret-safe custom observability is sampled, invocation logs and traces are off, Durable Object calls and writes are guarded, and dry-run bundle validation is required. Current quota consumption, valid-room admission/rate limiting, legacy reconnect behavior, and billing require separate provider or client evidence. |
 | Cloudflare | Automatic after protected integration | Repository-owned release controller deploys the exact green `main` SHA, captures rollback evidence, and requires returned live proof. |
 
 ## Revalidation

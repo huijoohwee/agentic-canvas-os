@@ -23,6 +23,14 @@ class MemoryStorage {
     this.records = new Map();
     this.transactionTail = Promise.resolve();
     this.alarmAt = null;
+    this.operations = {
+      get: 0,
+      put: 0,
+      delete: 0,
+      getAlarm: 0,
+      setAlarm: 0,
+      deleteAlarm: 0,
+    };
   }
 
   async transaction(operation) {
@@ -32,27 +40,40 @@ class MemoryStorage {
   }
 
   async get(key) {
+    this.operations.get += 1;
     return this.records.get(key);
   }
 
   async put(key, value) {
+    this.operations.put += 1;
     this.records.set(key, value);
   }
 
   async delete(key) {
+    this.operations.delete += 1;
     return this.records.delete(key);
   }
 
   async getAlarm() {
+    this.operations.getAlarm += 1;
     return this.alarmAt;
   }
 
   async setAlarm(value) {
+    this.operations.setAlarm += 1;
     this.alarmAt = Number(value);
   }
 
   async deleteAlarm() {
+    this.operations.deleteAlarm += 1;
     this.alarmAt = null;
+  }
+
+  writeCount() {
+    return this.operations.put
+      + this.operations.delete
+      + this.operations.setAlarm
+      + this.operations.deleteAlarm;
   }
 }
 
@@ -112,6 +133,25 @@ test("AgentState alarms recover expired claims and physically remove expired rec
   assert.equal(expiredStorage.records.has("active"), false);
   assert.equal(expiredStorage.records.has("claim"), false);
   assert.equal(expiredStorage.alarmAt, null);
+});
+
+test("AgentState reads do not rewrite healthy or absent Durable Object state", async () => {
+  const now = Date.now();
+  const liveStorage = new MemoryStorage();
+  const liveState = new AgentState({ storage: liveStorage });
+  const record = { id: "read-only", expiresAt: now + 60_000 };
+
+  await liveState.put({ record }, now);
+  const liveWrites = liveStorage.writeCount();
+  const liveResponse = await liveState.get({}, now);
+  assert.deepEqual((await liveResponse.json()).record, record);
+  assert.equal(liveStorage.writeCount(), liveWrites);
+
+  const emptyStorage = new MemoryStorage();
+  const emptyState = new AgentState({ storage: emptyStorage });
+  const emptyResponse = await emptyState.get({}, now);
+  assert.equal((await emptyResponse.json()).record, null);
+  assert.equal(emptyStorage.writeCount(), 0);
 });
 
 test("Durable Object paused turns enforce claim, release, replace, and commit", async () => {

@@ -13,6 +13,7 @@ import { mintSessionToken } from "../agent-api/src/auth.js";
 
 const SECRET = "integration-test-secret";
 const ROOM_ID = "a".repeat(32); // satisfies isSecureRoomCapability (>=128 bits hex)
+const ROOM_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 // --- Workers-runtime global stubs -------------------------------------------
 
@@ -73,15 +74,39 @@ class FakeDurableObjectCtx {
   constructor() {
     this.store = new Map();
     this.sockets = [];
+    this.alarmAt = null;
+    this.operations = {
+      get: 0,
+      put: 0,
+      delete: 0,
+      deleteAll: 0,
+      getAlarm: 0,
+      setAlarm: 0,
+    };
     this.storage = {
-      get: async (key) => this.store.get(key),
+      get: async (key) => {
+        this.operations.get += 1;
+        return this.store.get(key);
+      },
       put: async (key, value) => {
+        this.operations.put += 1;
         this.store.set(key, value);
       },
       delete: async (key) => {
+        this.operations.delete += 1;
         this.store.delete(key);
       },
+      deleteAll: async () => {
+        this.operations.deleteAll += 1;
+        this.store.clear();
+        this.alarmAt = null;
+      },
+      getAlarm: async () => {
+        this.operations.getAlarm += 1;
+        return this.alarmAt;
+      },
       setAlarm: async (value) => {
+        this.operations.setAlarm += 1;
         this.alarmAt = value;
       },
     };
@@ -129,6 +154,7 @@ test("rejects a websocket join with no auth secret configured", async () => {
   const room = new CanvasRoom(ctx, {}); // no AGENT_API_JWT_SECRET
   const res = await room.fetch(joinRequest());
   assert.equal(res.status, 501);
+  assert.equal(ctx.operations.setAlarm, 0, "an invalid new room does not create an alarm write");
 });
 
 test("rejects a join carrying a token for a different room", async () => {
@@ -166,6 +192,18 @@ test("an applied op is acked to the sender and broadcast to peers", async () => 
   const broadcast = b.messagesOfType("nodeUpserted").at(-1);
   assert.equal(broadcast.node.id, "n1");
   assert.equal(broadcast.opId, "op-n1-000000000000");
+});
+
+test("ordinary room activity persists once without rewriting an existing alarm", async () => {
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "op" });
+  const putsBefore = ctx.operations.put;
+  const alarmsBefore = ctx.operations.setAlarm;
+
+  await room.webSocketMessage(ws, upsert("n1"));
+
+  assert.equal(ctx.operations.put, putsBefore + 1);
+  assert.equal(ctx.operations.setAlarm, alarmsBefore);
 });
 
 test("a duplicate opId is acknowledged as a no-op replay, not applied twice", async () => {
@@ -234,6 +272,8 @@ test("a join emits a structured join log with subject, init mode, and live conne
   assert.equal(join.subject, "op-log");
   assert.equal(join.init, "snapshot");
   assert.equal(join.connections, 1);
+  assert.match(join.room, /^room_[a-f0-9]{24}$/);
+  assert.equal(logLines.some((line) => line.includes(ROOM_ID)), false, "logs do not expose the room capability");
   assert.match(join.ts, /^\d{4}-\d{2}-\d{2}T/);
 });
 
@@ -336,13 +376,33 @@ test("room alarms preserve live rooms and delete expired disconnected state", as
   assert.equal(Number.isFinite(ctx.alarmAt), true);
 
   room.lastActivityAt = 0;
+  ctx.alarmAt = null;
   await room.alarm();
   assert.equal(ctx.store.has("room-state-v1"), true, "a live connection prevents collection");
+  assert.ok(ctx.alarmAt > Date.now(), "a live room schedules its next bounded check");
 
   ctx.sockets = ctx.sockets.filter((socket) => socket !== ws);
   room.lastActivityAt = 0;
+  ctx.alarmAt = null;
   await room.alarm();
   assert.equal(ctx.store.has("room-state-v1"), false);
+  assert.equal(ctx.operations.deleteAll, 1);
+  assert.equal(ctx.alarmAt, null);
   assert.deepEqual(room.state, { nodes: {}, links: {}, rev: 0 });
   assert.equal(parsedLogs().some((entry) => entry.event === "room_expired"), true);
+});
+
+test("an early alarm for a disconnected room is retained until its exact idle deadline", async () => {
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "observer" });
+  ctx.sockets = ctx.sockets.filter((socket) => socket !== ws);
+  room.lastActivityAt = Date.now() - ROOM_TTL_MS + 60_000;
+  const expectedAlarm = room.lastActivityAt + ROOM_TTL_MS;
+  ctx.alarmAt = null;
+
+  await room.alarm();
+
+  assert.equal(ctx.store.has("room-state-v1"), true);
+  assert.equal(ctx.operations.deleteAll, 0);
+  assert.equal(ctx.alarmAt, expectedAlarm);
 });

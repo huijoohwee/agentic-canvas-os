@@ -2,10 +2,22 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "agentic-canvas-os",
   "main": "worker/index.js",
-  "workers_dev": true,
-  "preview_urls": true,
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-07-05",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.01,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 0.01,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": false
+    }
+  },
   "assets": {
     "directory": "./web/dist",
     "binding": "ASSETS",
@@ -37,6 +49,18 @@
       "workers_dev": true,
       "preview_urls": true,
       "routes": [],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 0.01,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 0.01,
+          "invocation_logs": false
+        },
+        "traces": {
+          "enabled": false
+        }
+      },
       "assets": {
         "directory": "./web/dist",
         "binding": "ASSETS",

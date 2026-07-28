@@ -6,9 +6,31 @@ name: Security
 
 on:
   pull_request:
+    paths:
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "**/*.html"
+      - "package*.json"
+      - "**/*.jsonc"
+      - ".github/workflows/**"
   merge_group:
   push:
     branches: [main]
+    paths:
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "**/*.html"
+      - "package*.json"
+      - "**/*.jsonc"
+      - ".github/workflows/**"
   schedule:
     - cron: "0 6 * * 1"
 
@@ -23,20 +45,18 @@ jobs:
   audit:
     name: npm audit
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm audit --audit-level=high
+      - run: npm audit --package-lock-only --audit-level=high
 
   codeql:
     name: codeql
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
@@ -45,6 +65,7 @@ jobs:
       - uses: github/codeql-action/init@ddf5ce7296213f5548c91e2dd19df2d77d2b2d66 # v3
         with:
           languages: javascript
+          trap-caching: false
       - uses: github/codeql-action/analyze@ddf5ce7296213f5548c91e2dd19df2d77d2b2d66 # v3
         with:
           category: "/language:javascript"
@@ -53,7 +74,7 @@ jobs:
     name: dependency-review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     permissions:
       contents: read
       pull-requests: write

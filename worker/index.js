@@ -5,6 +5,7 @@
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import { isSecureRoomCapability, sessionCanJoinRoom, verifySessionToken } from "../agent-api/src/auth.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import {
   createDurableObjectAgentToolkitStore,
@@ -20,6 +21,7 @@ import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-co
 import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
 import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
 import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
+import { isValidRoomId } from "../src/collab-room.js";
 import { CanvasRoom } from "./canvas-room.js";
 import { AgentState } from "./agent-state.js";
 
@@ -203,6 +205,34 @@ function createWorkerApp(env) {
 
 async function dispatchCloudflareRequest(request, env = {}) {
   const url = new URL(request.url);
+
+  if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
+    if (request.method !== "GET") return json(405, { error: "method not allowed" });
+    const roomId = url.searchParams.get("room") || "";
+    if (!isValidRoomId(roomId) || !isSecureRoomCapability(roomId)) {
+      return json(400, { error: "invalid room" });
+    }
+    if (
+      !env?.CANVAS_ROOM
+      || typeof env.CANVAS_ROOM.idFromName !== "function"
+      || typeof env.CANVAS_ROOM.get !== "function"
+    ) {
+      return json(501, { error: "canvas collaboration not configured" });
+    }
+    const secret = typeof env.AGENT_API_JWT_SECRET === "string" ? env.AGENT_API_JWT_SECRET : "";
+    if (!secret) return json(501, { error: "canvas authentication not configured" });
+    const verdict = verifySessionToken(url.searchParams.get("token") || "", secret);
+    if (!verdict.valid || !sessionCanJoinRoom(verdict.claims, roomId)) {
+      return json(401, { error: "unauthorized" });
+    }
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return json(426, { error: "expected websocket upgrade" });
+    }
+    const id = env.CANVAS_ROOM.idFromName(roomId);
+    const stub = env.CANVAS_ROOM.get(id);
+    return stub.fetch(request);
+  }
+
   const app = createWorkerApp(env);
 
   if (url.pathname === "/api/ready" || url.pathname === "/ready") {
@@ -285,20 +315,6 @@ async function dispatchCloudflareRequest(request, env = {}) {
       status: app.agentToolkitStatus,
     }[toolkitAction];
     return toResponse(await handler({ headers: headerBag(request), body, signal: request.signal }));
-  }
-
-  if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
-    // WebSocket upgrade to the room's Durable Object. The room uses the
-    // WebSocket Hibernation API; account quota and billing remain deployment
-    // concerns rather than source-code guarantees.
-    if (!env || !env.CANVAS_ROOM || typeof env.CANVAS_ROOM.idFromName !== "function") {
-      return json(501, { error: "canvas collaboration not configured" });
-    }
-    const roomId = url.searchParams.get("room") || "";
-    if (!roomId) return json(400, { error: "missing room" });
-    const id = env.CANVAS_ROOM.idFromName(roomId);
-    const stub = env.CANVAS_ROOM.get(id);
-    return stub.fetch(request);
   }
 
   if (env && env.ASSETS && typeof env.ASSETS.fetch === "function") {

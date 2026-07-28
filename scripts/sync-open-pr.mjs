@@ -3,17 +3,30 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { assertUniquePullRequestScopes } from "./repository-guards.mjs";
-import { isAuthorizedAutoDeliveryPullRequest } from "./auto-delivery-lib.mjs";
+import {
+  AUTO_DELIVERY_LABEL,
+  isAuthorizedAutoDeliveryPullRequest,
+} from "./auto-delivery-lib.mjs";
 
 const repo = requiredEnv("GITHUB_REPOSITORY");
 const autoDeliveryOnly = process.argv.includes("--auto-delivery");
+const autoDeliveryEventNumber = autoDeliveryOnly
+  ? optionalPullRequestNumber(process.env.AUTO_DELIVERY_PR_NUMBER)
+  : null;
+const eventPull = autoDeliveryEventNumber
+  ? ghJson(["api", "--method", "GET", `repos/${repo}/pulls/${autoDeliveryEventNumber}`])
+  : null;
+if (eventPull && !isAuthorizedAutoDeliveryPullRequest(eventPull, repo)) {
+  revokeAutoDelivery(eventPull);
+  process.exit(0);
+}
 const pulls = ghJson(["api", "--method", "GET", `repos/${repo}/pulls`, "-f", "state=open", "-f", "base=main", "-f", "sort=created", "-f", "direction=asc", "-f", "per_page=100"]);
 if (pulls.length > 0) {
   assertUniquePullRequestScopes(
     pulls.map((candidate) => ({ number: candidate.number, headRefName: candidate.head?.ref })),
   );
 }
-const pull = pulls.find((candidate) => autoDeliveryOnly
+const pull = eventPull || pulls.find((candidate) => autoDeliveryOnly
   ? isAuthorizedAutoDeliveryPullRequest(candidate, repo)
   : isLegacyAutomergePullRequest(candidate, repo));
 
@@ -32,9 +45,12 @@ console.log(`Synchronizing PR #${number} (${headRef}@${headSha.slice(0, 12)}; st
 
 if (autoDeliveryOnly) {
   if (!isAuthorizedAutoDeliveryPullRequest(current, repo)) {
-    throw new Error(`PR #${number} changed after selection; protected auto-delivery was not enabled.`);
+    revokeAutoDelivery(current);
+    process.exit(0);
   }
-  const auto = gh(["pr", "merge", String(number), "--repo", repo, "--auto", "--squash"], { allowFailure: true });
+  const auto = gh([
+    "pr", "merge", String(number), "--repo", repo, "--auto", "--squash", "--match-head-commit", headSha,
+  ], { allowFailure: true });
   if (auto.status !== 0 && !/already.*auto-merge|auto-merge.*enabled/i.test(`${auto.stdout}\n${auto.stderr}`)) {
     throw new Error(`Could not enable protected auto-delivery for PR #${number}: ${auto.stderr || auto.stdout}`);
   }
@@ -59,6 +75,33 @@ function isLegacyAutomergePullRequest(candidate, repository) {
     candidate.head?.repo?.full_name === repository &&
     candidate.labels?.some((label) => label.name === "automerge") &&
     !candidate.labels?.some((label) => label.name === "automerge/conflict");
+}
+
+function revokeAutoDelivery(pullRequest) {
+  const number = pullRequest.number;
+  const disabled = gh(
+    ["pr", "merge", String(number), "--repo", repo, "--disable-auto"],
+    { allowFailure: true },
+  );
+  let refreshed = ghJson(["api", "--method", "GET", `repos/${repo}/pulls/${number}`]);
+  if (refreshed.auto_merge !== null) {
+    throw new Error(
+      `Could not confirm auto-merge revocation for PR #${number}: ${disabled.stderr || disabled.stdout || "auto-merge remains enabled"}`,
+    );
+  }
+  if (refreshed.labels?.some((label) => label?.name === AUTO_DELIVERY_LABEL)) {
+    const removed = gh(
+      ["pr", "edit", String(number), "--repo", repo, "--remove-label", AUTO_DELIVERY_LABEL],
+      { allowFailure: true },
+    );
+    refreshed = ghJson(["api", "--method", "GET", `repos/${repo}/pulls/${number}`]);
+    if (refreshed.labels?.some((label) => label?.name === AUTO_DELIVERY_LABEL)) {
+      throw new Error(
+        `Auto-merge is disabled for PR #${number}, but stale authorization could not be removed: ${removed.stderr || removed.stdout || "label remains present"}`,
+      );
+    }
+  }
+  console.log(`Revoked stale auto-delivery authorization for PR #${number}.`);
 }
 
 gh(["pr", "edit", String(number), "--remove-label", "automerge/conflict"], { allowFailure: true });
@@ -149,6 +192,15 @@ function requiredEnv(name) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
   return value;
+}
+
+function optionalPullRequestNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  if (!Number.isInteger(number) || number <= 0) {
+    throw new Error("AUTO_DELIVERY_PR_NUMBER must be a positive integer when provided.");
+  }
+  return number;
 }
 
 function ghJson(args) {

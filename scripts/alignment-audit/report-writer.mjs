@@ -1,5 +1,5 @@
 import { printArtifactIndex } from "./artifact-printer.mjs";
-import { compareFindings } from "./finding.mjs";
+import { compareFindings, FINDING_TYPES } from "./finding.mjs";
 import { printGuidelineModel } from "./guideline-printer.mjs";
 import { OUT_OF_SCOPE_DEPLOYMENT_RECORD } from "./deploy-gate.mjs";
 import { incrementPatchVersion } from "./output-boundary.mjs";
@@ -52,6 +52,12 @@ export function renderAuditReport(run = {}, metadata = {}) {
     "| capability | assigned level | local readiness | deployed readiness | gap statement | priority | exit criterion |",
     "|---|---|---|---|---|---|---|",
     ...readinessRows(assignments),
+    "",
+    "## Finding Type Counts",
+    "",
+    "| finding type | count |",
+    "|---|---:|",
+    ...findingTypeCountRows(run.findingTypeCounts, findings),
     "",
     "## Findings",
     "",
@@ -191,6 +197,7 @@ function summaryRows(run, findings) {
     row("artifact-bearing total", integerOf(coverage.artifactBearingTotal)),
     row("artifact-bearing linked", integerOf(coverage.artifactBearingLinked)),
     row("linked ratio", decimalOf(coverage.linkedRatio, 1)),
+    row("advisory rules", integerOf(coverage.advisoryCount ?? counts.advisoryElements)),
     row("documented invocation routes", integerOf(routeCounts.documented)),
     row("resolved invocation routes", integerOf(routeCounts.resolved)),
     row("findings", findings.length),
@@ -200,6 +207,20 @@ function summaryRows(run, findings) {
     row("elapsed ms", decimalOf(run.elapsedMs, 0)),
     row("modified outside output count", integerOf(run.modifiedOutsideOutputCount)),
   ];
+}
+
+function findingTypeCountRows(counts, findings) {
+  const supplied = counts && typeof counts === "object"
+    ? counts
+    : Object.fromEntries(FINDING_TYPES.map((findingType) => [findingType, 0]));
+  if (!counts) {
+    for (const finding of findings) {
+      if (finding.findingType in supplied) supplied[finding.findingType] += 1;
+    }
+  }
+  return FINDING_TYPES.map(
+    (findingType) => `| ${cell(findingType)} | ${integerOf(supplied[findingType])} |`,
+  );
 }
 
 function vendorRows(counts = {}) {

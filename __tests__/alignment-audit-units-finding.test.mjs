@@ -10,8 +10,8 @@ import {
 } from "../scripts/alignment-audit/finding.mjs";
 
 test("Finding_Type enumeration is closed and contains all documented types", () => {
-  assert.equal(FINDING_TYPES.length, 34);
-  assert.equal(new Set(FINDING_TYPES).size, 34);
+  assert.equal(FINDING_TYPES.length, 53);
+  assert.equal(new Set(FINDING_TYPES).size, 53);
   assert.deepEqual(Object.keys(DEFAULT_SEVERITY).sort(), [...FINDING_TYPES].sort());
 });
 
@@ -42,7 +42,7 @@ test("makeFinding fills explicit not-applicable references and validates remedia
   });
   assert.equal(finding.guidelineAnchor, "-");
   assert.equal(finding.artifactReference, "-");
-  assert.equal(finding.severity, "major");
+  assert.equal(finding.severity, "minor");
   assert.equal(finding.remediation.state, "proposed");
 });
 
@@ -67,7 +67,7 @@ test("canonical comparison orders blocker before major before minor", () => {
     });
   const findings = [
     make("unguided-artifact"),
-    make("unknown-status"),
+    make("unimplemented-guideline"),
     make("unbounded-loop"),
   ].sort(compareFindings);
   assert.deepEqual(

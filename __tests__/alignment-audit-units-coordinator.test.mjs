@@ -66,7 +66,7 @@ test("coordinator reports every unreadable document and still emits a report", a
   ]);
   assert.equal(result.counts.auditedDocuments, 2);
   assert.equal(
-    result.findings.filter((finding) => finding.findingType === "unreadable-input")
+    result.findings.filter((finding) => finding.findingType === "malformed-document")
       .length,
     2,
   );
@@ -97,7 +97,7 @@ test("coordinator converts a rejected read into an unreadable Finding", async ()
   );
   assert.equal(result.counts.auditedDocuments, 1);
   assert.equal(result.findings.filter(({ findingType, artifactReference }) =>
-    findingType === "unreadable-input" &&
+    findingType === "malformed-document" &&
     artifactReference === "rejected-read").length, 1);
   assert.equal(result.baselineVerified, true);
   assert.equal(result.modifiedOutsideOutputCount, 0);
@@ -454,17 +454,15 @@ function assertEvidenceResultState(result, recordedResult, accepted, surface) {
   assert.ok(gate, `missing gate for ${recordedResult}`);
   assert.equal(
     assignment.assignedLevel,
-    accepted
-      ? surface === "production"
-        ? "production-verified"
-        : "runtime-ready"
+    accepted && surface === "local"
+      ? "runtime-ready"
       : "spec-complete",
     `${surface}: ${recordedResult}`,
   );
   assert.equal(
     assignment.deployedReadiness,
     accepted && surface === "production"
-      ? "production-verified"
+      ? "runtime-ready"
       : "undocumented",
     `${surface}: ${recordedResult}`,
   );

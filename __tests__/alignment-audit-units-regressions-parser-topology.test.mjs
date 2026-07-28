@@ -218,6 +218,44 @@ test("gate parser accepts the required evidence type label", () => {
   assert.equal(parsed.gates[0].requiredEvidenceType, "recorded local result");
 });
 
+test("fenced examples do not become directives, advisories, or gates", () => {
+  for (const fence of ["```", "~~~~"]) {
+    const parsed = parseGuidelineSet([{
+      content: [
+        "---",
+        "title: Fenced Examples",
+        "---",
+        "",
+        "## Runtime Rules",
+        "",
+        "- Every real report must exist.",
+        `${fence}markdown`,
+        "- Every fake report must exist.",
+        "- Prefer a fake advisory report.",
+        "Gate: fake-gate",
+        "Entry condition: fake input exists",
+        "Exit condition: fake report exists",
+        "Required evidence: fake proof",
+        fence,
+        "- State the real evidence.",
+        "",
+      ].join("\n"),
+    }]).value;
+
+    assert.deepEqual(
+      parsed.elements.map(({ class: elementClass, text }) => ({
+        class: elementClass,
+        text: text.trim(),
+      })),
+      [
+        { class: "artifact-bearing", text: "Every real report must exist." },
+        { class: "artifact-bearing", text: "State the real evidence." },
+      ],
+    );
+    assert.deepEqual(parsed.gates, []);
+  }
+});
+
 test("an explicit universal-scope false declaration overrides prose inference", () => {
   const parse = (frontmatterLine) => parseGuidelineSet([{
     content: [
@@ -454,4 +492,3 @@ test("deploy words in headings do not turn a negated requirement into a breach",
   assert.equal(result.findings.some(({ findingType }) =>
     findingType === "deploy-boundary-breach"), false);
 });
-

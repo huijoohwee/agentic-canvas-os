@@ -25,23 +25,36 @@ export function assignReadiness(chain = {}, operatorInstruction = null) {
   const documented = arrayOf(chain.entryIds).length > 0 ||
     arrayOf(chain.links).length > 0 ||
     Boolean(chain.documented);
-  const hasLocalProof = evidence.some(isReproducibleLocalResult);
-  const closure = isEvidenceClosed(conditions, evidence);
-  const hasProductionProof = evidence.some(isRecordedProductionResult);
+  const authoringEvidence = evidence.filter(isAuthoringEvidence);
+  const deliveredEvidence = evidence.filter((item) =>
+    ["mirror", "delivery", "production"].includes(evidenceSurface(item)));
+  const hasLocalProof = authoringEvidence.some(isRecordedResult);
+  const localClosure = closesConditions(conditions, authoringEvidence);
+  const deliveredClosure = closesConditions(conditions, deliveredEvidence);
+  const hasProductionProof = evidence.some((item) =>
+    ["delivery", "production"].includes(evidenceSurface(item)) &&
+    isRecordedResult(item));
 
-  let localReadiness = documented ? "spec-complete" : "undocumented";
-  if (hasLocalProof) localReadiness = "dev-proven";
-  if (closure) localReadiness = "runtime-ready";
+  let localRung = documented ? "spec-complete" : "undocumented";
+  if (hasLocalProof) localRung = "dev-proven";
+  if (localClosure) localRung = "runtime-ready";
 
-  const productionVerified = closure && hasProductionProof && hasOperatorInstruction(operatorInstruction);
-  const deployedReadiness = productionVerified ? "production-verified" : "undocumented";
-  const assignedLevel = productionVerified ? "production-verified" : localReadiness;
-  const uncovered = firstUncoveredCondition(conditions, evidence);
+  let deliveredRung = deliveredEvidence.some(isRecordedResult)
+    ? "dev-proven"
+    : "undocumented";
+  if (deliveredClosure) deliveredRung = "runtime-ready";
+  const productionVerified = localClosure && hasProductionProof &&
+    hasOperatorInstruction(operatorInstruction);
+  if (productionVerified) deliveredRung = "production-verified";
+  const assignedLevel = productionVerified ? "production-verified" : localRung;
+  const uncovered = firstUncoveredCondition(conditions, authoringEvidence);
 
   return {
     capabilityId: String(chain.capabilityId ?? "unknown-capability"),
-    localReadiness,
-    deployedReadiness,
+    localRung,
+    deliveredRung,
+    localReadiness: localRung,
+    deployedReadiness: deliveredRung,
     assignedLevel,
     evidenceCount: evidence.length,
     gapStatement: gapFor(assignedLevel, uncovered),
@@ -54,16 +67,27 @@ export function readinessRank(level) {
   return READINESS_LADDER.indexOf(level);
 }
 
-function isReproducibleLocalResult(evidence) {
-  return String(evidence.reproducible ?? evidence.surface ?? "").trim().toLowerCase() === "local" &&
-    isSuccessfulRecordedResult(evidence) &&
+function evidenceSurface(evidence) {
+  return String(evidence.surface ?? evidence.reproducible ?? "").trim().toLowerCase();
+}
+
+function isAuthoringEvidence(evidence) {
+  const surface = evidenceSurface(evidence);
+  return ["authoring", "local"].includes(surface);
+}
+
+function isRecordedResult(evidence) {
+  return isSuccessfulRecordedResult(evidence) &&
     String(evidence.checkName ?? evidence.command ?? "").trim().length > 0;
 }
 
-function isRecordedProductionResult(evidence) {
-  return String(evidence.reproducible ?? evidence.surface ?? "").trim().toLowerCase() === "production" &&
-    isSuccessfulRecordedResult(evidence) &&
-    String(evidence.checkName ?? evidence.command ?? "").trim().length > 0;
+function closesConditions(conditions, evidence) {
+  return isEvidenceClosed(conditions, evidence.map((item) => ({
+    ...item,
+    reproducible: ["delivery", "production"].includes(evidenceSurface(item))
+      ? "production"
+      : "local",
+  })));
 }
 
 function hasOperatorInstruction(value) {

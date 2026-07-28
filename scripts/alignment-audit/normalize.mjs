@@ -53,6 +53,15 @@ export function slugify(value, fallback = "document") {
   return slug || fallback;
 }
 
+export function headingAnchor(value, fallback = "section") {
+  const anchor = String(value ?? "")
+    .trim()
+    .toLocaleLowerCase("en-US")
+    .replace(/[^\p{Letter}\p{Number}\p{Mark}\s_-]/gu, "")
+    .replace(/\s/gu, "-");
+  return anchor || fallback;
+}
+
 export function documentKeyFrom(input = {}, content = "", occupiedKeys = []) {
   const frontmatter = asFrontmatter(input);
   const sourceContent =

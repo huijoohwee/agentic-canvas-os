@@ -67,7 +67,7 @@ test("Property 24: mixed degraded inputs complete with document-specific typed F
         }
         for (const document of unreadable) {
           const findings = result.findings.filter((finding) =>
-            finding.findingType === "unreadable-input" &&
+            finding.findingType === "malformed-document" &&
             finding.artifactReference === document.subject);
           assert.equal(findings.length, 1);
         }

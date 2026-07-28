@@ -391,17 +391,15 @@ function assertEvidenceResultState(result, recordedResult, accepted, surface) {
   assert.ok(gate, `missing gate for ${recordedResult}`);
   assert.equal(
     assignment.assignedLevel,
-    accepted
-      ? surface === "production"
-        ? "production-verified"
-        : "runtime-ready"
+    accepted && surface === "local"
+      ? "runtime-ready"
       : "spec-complete",
     `${surface}: ${recordedResult}`,
   );
   assert.equal(
     assignment.deployedReadiness,
     accepted && surface === "production"
-      ? "production-verified"
+      ? "runtime-ready"
       : "undocumented",
     `${surface}: ${recordedResult}`,
   );

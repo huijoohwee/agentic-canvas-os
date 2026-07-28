@@ -2,10 +2,10 @@ import { frontmatterValue, missingFrontmatterKeys, scanFrontmatter } from "./fro
 import { makeFinding } from "./finding.mjs";
 import { createGuidelineModel, NORMATIVE_ELEMENT_CLASSES, NORMATIVE_ELEMENT_KINDS } from "./guideline-model.mjs";
 import { consumeContinuation, continuationParagraph, markConsumed, splitDirectiveCandidate } from "./guideline-lines.mjs";
-import { contentDigest, documentKeyFrom, elementIdFrom, normalizeContent, slugify } from "./normalize.mjs";
-const MODAL = /\b(?:must|must not|shall|shall not|required|require(?:s|d)?|never|do not|ensure|prohibit(?:s|ed)?)\b/iu;
-const ARTIFACT_REQUIRED =
-  /\b(?:document|record|table|diagram|schema|contract|artifact|file|report|check|command|proof|evidence|metric|value|field|status|reference|matrix|entry)\b/iu;
+import { contentDigest, documentKeyFrom, elementIdFrom, headingAnchor, normalizeContent, slugify } from "./normalize.mjs";
+const MODAL = /\b(?:must|must not|shall|shall not|required|require(?:s|d)?|never|do not|ensure|forbid(?:s|den)?|prohibit(?:s|ed)?)\b/iu;
+const IMPERATIVE = /^(?:assign|derive|emit|every|express|group|limit|pair|record|set|state)\b/iu;
+const ARTIFACT_REQUIRED = /\b(?:documents?|records?|tables?|diagrams?|schemas?|contracts?|artifacts?|files?|reports?|checks?|tests?|commands?|proofs?|evidence|metrics?|values?|fields?|statuses?|references?|matrices|entries|ids?|findings?|verdicts?|tasks?|vccs?|mechanisms?|dependencies|graphs?|outputs?|results?|budgets?|bounds?|changes?|grants?|scopes?|decisions?|approvals?|gates?|states?|transitions?|reasons?|returns?|dispatches?|runs?|writes?|transmissions?|credentials?|endpoints?|anchors?|propert(?:y|ies))\b/iu;
 const ADVISORY = /\b(?:prefer|ideally|recommend|consider|guidance|framing|may|should)\b/iu;
 export function parseGuidelineSet(docs, requiredKeys = []) {
   const prepared = prepareDocuments(docs, requiredKeys);
@@ -17,41 +17,30 @@ export function parseGuidelineSet(docs, requiredKeys = []) {
     if (document.readState !== "ok") continue;
     const documentKey = document.documentKey;
     for (const key of document.missingKeys) {
-      findings.push(
-        makeFinding({
-          findingType: "missing-frontmatter-key",
-          guidelineAnchor: `frontmatter:${key}`,
-          artifactReference: documentKey,
-          evidenceExcerpt: `Missing required frontmatter key: ${key}`,
-          remediation: {
-            class: "documentation-change",
-            statement: `Declare the required frontmatter key ${key} in ${documentKey}.`,
-          },
-        }),
-      );
+      findings.push(makeFinding({
+        findingType: "missing-frontmatter-key",
+        guidelineAnchor: `frontmatter:${key}`,
+        artifactReference: documentKey,
+        evidenceExcerpt: `Missing required frontmatter key: ${key}`,
+        remediation: { class: "documentation-change",
+          statement: `Declare the required frontmatter key ${key} in ${documentKey}.` },
+      }));
     }
     const sections = splitSections(document.body);
     for (const section of sections) {
-      const gate = extractGateDeclaration(section);
-      if (!gate) continue;
-      section.gate = gate;
-      gates.push({
-        ...gate,
-        documentKey,
-        sectionAnchor: section.anchor,
-        order: gates.length,
-      });
+      section.gates = extractGateDeclarations(section);
+      for (const gate of section.gates) {
+        gates.push({ ...gate, documentKey, sectionAnchor: section.anchor, order: gates.length });
+      }
     }
     const extracted = extractElements(document, sections);
     const sectionAnchors = sections
       .filter((section) => section.heading !== null)
       .map((section) => section.anchor);
-    if (extracted.some((element) => element.sectionAnchor === "frontmatter")) {
+    if (extracted.some((element) => element.sectionAnchor === "frontmatter"))
       sectionAnchors.unshift("frontmatter");
-    }
-    if (extracted.some((element) => element.sectionAnchor === "preamble")) {
+    if (extracted.some((element) => element.sectionAnchor === "preamble"))
       sectionAnchors.unshift("preamble");
-    }
     documents.set(documentKey, {
       documentKey,
       frontmatterKeys: [...document.frontmatter.keys()],
@@ -60,39 +49,26 @@ export function parseGuidelineSet(docs, requiredKeys = []) {
     });
     elements.push(...extracted);
   }
-  return {
-    value: createGuidelineModel(documents, elements, gates),
-    findings: findings.sort(findingOrder),
-  };
+  return { value: createGuidelineModel(documents, elements, gates),
+    findings: findings.sort(findingOrder) };
 }
-
 export function parseGuidelineDigest(digest) {
   const scanned = scanFrontmatter(digest);
-  if (scanned.readState !== "ok") {
+  if (scanned.readState !== "ok")
     return { value: createGuidelineModel(), findings: [], errors: [scanned.error] };
-  }
   if (frontmatterValue(scanned.frontmatter, "digest_schema") !== "guideline-digest/v1") {
-    return {
-      value: createGuidelineModel(),
-      findings: [],
-      errors: ["unsupported or missing digest_schema"],
-    };
+    return { value: createGuidelineModel(), findings: [],
+      errors: ["unsupported or missing digest_schema"] };
   }
   try {
     const parsed = parseDigestBody(scanned.body);
-    return {
-      value: createGuidelineModel(parsed.documents, parsed.elements, parsed.gates),
-      findings: [],
-    };
+    return { value: createGuidelineModel(parsed.documents, parsed.elements, parsed.gates),
+      findings: [] };
   } catch (error) {
-    return {
-      value: createGuidelineModel(),
-      findings: [],
-      errors: [error instanceof Error ? error.message : String(error)],
-    };
+    return { value: createGuidelineModel(), findings: [],
+      errors: [error instanceof Error ? error.message : String(error)] };
   }
 }
-
 export function classifyNormativeElement(text) {
   const value = String(text ?? "");
   if (ARTIFACT_REQUIRED.test(value) && (MODAL.test(value) || !ADVISORY.test(value))) {
@@ -106,14 +82,10 @@ function prepareDocuments(docs, requiredKeys) {
   const occupied = new Set();
   for (const candidate of [...candidates].sort((left, right) =>
     `${left.requestedKey}\0${left.digest}`.localeCompare(
-      `${right.requestedKey}\0${right.digest}`,
-      "en",
-    ),
-  )) {
+      `${right.requestedKey}\0${right.digest}`, "en"))) {
     let key = candidate.requestedKey;
-    if (occupied.has(key)) {
+    if (occupied.has(key))
       key = documentKeyFrom(candidate.frontmatter ?? {}, candidate.body, occupied);
-    }
     candidate.documentKey = key;
     occupied.add(key);
   }
@@ -149,23 +121,28 @@ function prepareDocument(doc, index, requiredKeys) {
   const requestedKey = source.documentKey
     ? String(source.documentKey)
     : documentKeyFrom(frontmatter ?? {}, body || digest);
-  return {
-    index,
-    inputRole: String(source.inputRole ?? "guideline"),
-    requestedKey,
-    documentKey: requestedKey,
-    frontmatter,
-    body,
-    readState,
-    missingKeys,
-    digest,
-  };
+  return { index, inputRole: String(source.inputRole ?? "guideline"), requestedKey,
+    documentKey: requestedKey, frontmatter, body, readState, missingKeys, digest };
 }
 
 function splitSections(body) {
   const lines = normalizeContent(body).split("\n");
   const sections = [{ heading: null, anchor: "preamble", lines: [], sectionIndex: -1 }];
+  const anchorCounts = new Map();
+  let fence = null;
   for (const [lineIndex, line] of lines.entries()) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line);
+    if (fence) {
+      sections.at(-1).lines.push({ text: "", lineIndex });
+      if (marker && marker[1][0] === fence.character &&
+          marker[1].length >= fence.length && marker[2].trim() === "") fence = null;
+      continue;
+    }
+    if (marker) {
+      fence = { character: marker[1][0], length: marker[1].length };
+      sections.at(-1).lines.push({ text: "", lineIndex });
+      continue;
+    }
     const match = /^##(?!#)\s+(.+?)\s*$/u.exec(line);
     if (!match) {
       sections.at(-1).lines.push({ text: line, lineIndex });
@@ -173,9 +150,12 @@ function splitSections(body) {
     }
     const explicit = /\s+\{#([^}]+)\}\s*$/u.exec(match[1]);
     const heading = match[1].replace(/\s+\{#[^}]+\}\s*$/u, "").trim();
+    const baseAnchor = explicit?.[1] ?? headingAnchor(heading, "section");
+    const count = anchorCounts.get(baseAnchor) ?? 0;
+    anchorCounts.set(baseAnchor, count + 1);
     sections.push({
       heading,
-      anchor: explicit?.[1] ?? slugify(heading, "section"),
+      anchor: count === 0 ? baseAnchor : `${baseAnchor}-${count}`,
       lines: [],
       sectionIndex: sections.length - 1,
     });
@@ -203,16 +183,17 @@ function extractElements(document, sections) {
 
   for (const section of sections) {
     let context = section.heading ?? "";
-    let gateId = section.gate?.gateId ?? gateIdFrom(context);
+    const sectionGates = section.gates ?? [];
+    let gateId = sectionGates.length === 1 ? sectionGates[0].gateId : gateIdFrom(context);
     const used = new Set();
     const candidates = [];
-    if (section.gate) {
-      for (const condition of section.gate.conditions) {
+    for (const gate of sectionGates) {
+      for (const condition of gate.conditions) {
         candidates.push(
           candidate(
             section.anchor,
             "phase-gate-condition",
-            section.gate.gateId,
+            gate.gateId,
             condition.position,
             `${condition.label}: ${condition.value}`,
           ),
@@ -224,11 +205,7 @@ function extractElements(document, sections) {
       if (used.has(index)) continue;
       const line = section.lines[index].text;
       const subheading = /^#{3,6}\s+(.+?)\s*$/u.exec(line);
-      if (subheading) {
-        context = subheading[1];
-        gateId = gateIdFrom(context) ?? gateId;
-        continue;
-      }
+      if (subheading) { context = subheading[1]; gateId = gateIdFrom(context) ?? gateId; continue; }
       const declaredGate = /^\s*(?:[-*+]\s+)?gate[ _-]?id\s*:\s*(.+?)\s*$/iu.exec(line);
       if (declaredGate) {
         gateId = slugify(stripInlineMarkup(declaredGate[1]), "gate");
@@ -264,16 +241,14 @@ function extractElements(document, sections) {
     }
 
     context = section.heading ?? "";
-    gateId = section.gate?.gateId ?? gateIdFrom(context);
+    gateId = sectionGates.length === 1 ? sectionGates[0].gateId : gateIdFrom(context);
     for (let index = 0; index < section.lines.length; index += 1) {
       if (used.has(index)) continue;
       const line = section.lines[index].text;
       const subheading = /^#{3,6}\s+(.+?)\s*$/u.exec(line);
-      if (subheading) {
-        context = subheading[1];
-        gateId = gateIdFrom(context) ?? gateId;
-        continue;
-      }
+      if (subheading) { context = subheading[1]; gateId = gateIdFrom(context) ?? gateId; continue; }
+      const labelledContext = /^\s*\*\*(directives?|guidance)\*\*\s*:\s*$/iu.exec(line);
+      if (labelledContext) { context = labelledContext[1]; continue; }
       const declaredGate = /^\s*(?:[-*+]\s+)?gate[ _-]?id\s*:\s*(.+?)\s*$/iu.exec(line);
       if (declaredGate) {
         gateId = slugify(stripInlineMarkup(declaredGate[1]), "gate");
@@ -328,14 +303,19 @@ function extractElements(document, sections) {
         );
         continue;
       }
-      if (listItem && /directive|rule|safeguard/iu.test(context)) {
-        candidates.push(candidate(section.anchor, "directive", gateId, index,
-          consumeContinuation(section.lines, used, index, listItem[1])));
+      if (listItem && (
+        /directive|guidance|rule|safeguard/iu.test(context) ||
+        IMPERATIVE.test(listItem[1])
+      )) {
+        const item = candidate(section.anchor, "directive", gateId, index,
+          consumeContinuation(section.lines, used, index, listItem[1]));
+        if (/guidance/iu.test(context)) item.class = "advisory";
+        candidates.push(item);
         continue;
       }
       if (MODAL.test(line) && !/^\s*(?:<!--|>|\|)/u.test(line)) {
         candidates.push(candidate(section.anchor, "directive", gateId, index,
-          consumeContinuation(section.lines, used, index, line.trim())));
+          consumeContinuation(section.lines, used, index, listItem?.[1] ?? line.trim())));
       }
     }
 
@@ -347,7 +327,7 @@ function extractElements(document, sections) {
           documentKey: document.documentKey,
           sectionAnchor: item.sectionAnchor,
           kind: item.kind,
-          class: classifyNormativeElement(item.text),
+          class: item.class ?? classifyNormativeElement(item.text),
           gateId: item.gateId,
           ordinal,
           text: item.text,
@@ -379,39 +359,73 @@ function templateField(line) {
 }
 
 function gateIdFrom(value) {
-  const match = /(?:phase|gate)\s*(?:id)?\s*[:—-]?\s*(.+)$/iu.exec(String(value ?? ""));
+  const text = String(value ?? "").trim();
+  if (/^phase\b/iu.test(text)) return headingAnchor(text, "gate");
+  const match = /\bgate\s*(?:id)?\s*[:—-]\s*(.+)$/iu.exec(text);
   return match ? slugify(match[1], "gate") : null;
 }
 
-function extractGateDeclaration(section) {
-  if (!section.heading) return null;
-  const fields = new Map();
-  const conditions = [];
+function extractGateDeclarations(section) {
+  if (!section.heading) return [];
+  const declarations = [];
+  let context = section.heading;
   for (let index = 0; index < section.lines.length; index += 1) {
-    const match = /^\s*(gate|entry condition|exit condition|required evidence(?: type)?)\s*:\s*(.*?)\s*$/iu.exec(
-      section.lines[index].text,
-    );
-    if (!match) continue;
-    const paragraph = continuationParagraph(section.lines, index, match[2]);
-    const label = match[1].toLocaleLowerCase("en-US")
-      .replace("required evidence type", "required evidence");
-    fields.set(label, paragraph.value);
-    conditions.push({
-      label: match[1],
-      value: paragraph.value,
-      position: index,
-      endPosition: paragraph.endPosition,
-    });
-    index = paragraph.endPosition;
+    const subheading = /^#{3,6}\s+(.+?)\s*$/u.exec(section.lines[index].text);
+    if (subheading) { context = subheading[1]; continue; }
+    const gateMatch = gateField(section.lines[index].text);
+    if (!gateMatch || gateMatch.label !== "gate") continue;
+    const gateValue = gateParagraph(section.lines, index, gateMatch.value);
+    const fields = new Map();
+    const conditions = [{
+      label: gateMatch.rawLabel, value: gateValue.value,
+      position: index, endPosition: gateValue.endPosition }];
+    let cursor = gateValue.endPosition + 1;
+    while (cursor < section.lines.length) {
+      if (/^#{3,6}\s/u.test(section.lines[cursor].text)) break;
+      const field = gateField(section.lines[cursor].text);
+      if (field?.label === "gate") break;
+      if (!field) { cursor += 1; continue; }
+      const paragraph = gateParagraph(section.lines, cursor, field.value);
+      fields.set(field.label, paragraph.value);
+      conditions.push({
+        label: field.rawLabel, value: paragraph.value,
+        position: cursor, endPosition: paragraph.endPosition });
+      cursor = paragraph.endPosition + 1;
+    }
+    const declaredId = fields.size > 0 || /^`?[A-Za-z0-9][A-Za-z0-9._-]*`?$/u.test(gateValue.value);
+    declarations.push({
+      gateId: declaredId ? slugify(stripInlineMarkup(gateValue.value), "gate")
+        : gateIdFrom(context) ?? headingAnchor(context, "gate"),
+      entryCondition: fields.get("entry condition") ?? "",
+      exitCondition: fields.get("exit condition") ?? (declaredId ? "" : gateValue.value),
+      requiredEvidenceType: fields.get("required evidence") ?? "",
+      conditions });
+    index = cursor - 1;
   }
-  if (!fields.has("gate")) return null;
+  return declarations;
+}
+
+function gateField(line) {
+  const match = /^\s*(?:[-*+]\s+)?(?:\*\*)?(gate|entry condition|exit condition|required evidence(?: type)?)(?:\*\*)?\s*:\s*(.*?)\s*$/iu.exec(line);
+  if (!match) return null;
   return {
-    gateId: slugify(stripInlineMarkup(fields.get("gate")), "gate"),
-    entryCondition: fields.get("entry condition") ?? "",
-    exitCondition: fields.get("exit condition") ?? "",
-    requiredEvidenceType: fields.get("required evidence") ?? "",
-    conditions,
-  };
+    rawLabel: match[1],
+    label: match[1].toLocaleLowerCase("en-US")
+      .replace("required evidence type", "required evidence"),
+    value: match[2] };
+}
+
+function gateParagraph(lines, startIndex, initial) {
+  const parts = [String(initial).trim()].filter(Boolean);
+  let endPosition = startIndex;
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index].text;
+    if (line.trim() === "" || /^#{2,6}\s/u.test(line) ||
+        /^\s*[-*+]\s/u.test(line) || gateField(line)) break;
+    parts.push(line.trim());
+    endPosition = index;
+  }
+  return { value: parts.join(" ").trim(), endPosition };
 }
 
 function isPhaseContext(context, sectionHeading) {

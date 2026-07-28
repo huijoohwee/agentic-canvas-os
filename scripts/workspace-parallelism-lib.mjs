@@ -18,19 +18,25 @@ export const DESTRUCTIVE_OPERATION_CLASSES = Object.freeze({
   blindIntegration: "moves a lane to a remote tip while uncommitted work is present",
 });
 
-const DESTRUCTIVE_MATCHERS = Object.freeze([
-  { class: "workingTreeReset", match: (a) => a[0] === "reset" && a.some((t) => ["--hard", "--merge", "--keep"].includes(t)) },
-  { class: "untrackedRemoval", match: (a) => a[0] === "clean" && a.some((t) => /^-[a-z]*[fdx]/.test(t)) },
-  { class: "forcedCheckout", match: (a) => ["checkout", "switch", "restore"].includes(a[0]) && a.some((t) => ["-f", "--force", "--worktree", "--discard-changes"].includes(t)) },
-  { class: "historyRewrite", match: (a) => (a[0] === "push" && a.some((t) => ["-f", "--force", "--force-with-lease", "--mirror"].includes(t))) || (a[0] === "rebase" && !a.includes("--abort")) || a[0] === "filter-branch" },
-  { class: "laneRemoval", match: (a) => (a[0] === "branch" && a.includes("-D")) || (a[0] === "worktree" && a[1] === "remove" && a.some((t) => ["-f", "--force"].includes(t))) },
-  { class: "objectPruning", match: (a) => (a[0] === "gc" && a.some((t) => t.startsWith("--prune"))) || (a[0] === "reflog" && a[1] === "expire") || (a[0] === "prune" && !a.includes("--dry-run")) },
-  { class: "blindIntegration", match: (a) => ["pull", "merge"].includes(a[0]) && !a.includes("--no-ff") },
+// Static single-character option letters, never derived from caller input, so a
+// fixed literal character class is safe here: it cannot be redefined at runtime.
+const CLEAN_SHORT_FLAG = /^-[a-z]*[fdx]/;
+
+const DESTRUCTIVE_CATALOG_ENTRIES = Object.freeze([
+  { class: "workingTreeReset", isDestructive: (a) => a[0] === "reset" && a.some((t) => ["--hard", "--merge", "--keep"].includes(t)) },
+  { class: "untrackedRemoval", isDestructive: (a) => a[0] === "clean" && a.some((t) => CLEAN_SHORT_FLAG.test(t)) },
+  { class: "forcedCheckout", isDestructive: (a) => ["checkout", "switch", "restore"].includes(a[0]) && a.some((t) => ["-f", "--force", "--worktree", "--discard-changes"].includes(t)) },
+  { class: "historyRewrite", isDestructive: (a) => (a[0] === "push" && a.some((t) => ["-f", "--force", "--force-with-lease", "--mirror"].includes(t))) || (a[0] === "rebase" && !a.includes("--abort")) || a[0] === "filter-branch" },
+  { class: "laneRemoval", isDestructive: (a) => (a[0] === "branch" && a.includes("-D")) || (a[0] === "worktree" && a[1] === "remove" && a.some((t) => ["-f", "--force"].includes(t))) },
+  { class: "objectPruning", isDestructive: (a) => (a[0] === "gc" && a.some((t) => t.startsWith("--prune"))) || (a[0] === "reflog" && a[1] === "expire") || (a[0] === "prune" && !a.includes("--dry-run")) },
+  { class: "blindIntegration", isDestructive: (a) => ["pull", "merge"].includes(a[0]) && !a.includes("--no-ff") },
 ]);
 
 /**
  * Classify one git invocation without executing it.
  * Unknown operations are non-destructive; the catalog is explicit, not heuristic.
+ * Every catalog predicate compares tokens against fixed literal strings only; no
+ * caller-supplied text is ever used to build or evaluate a regular expression.
  */
 export function classifyGitOperation(argv) {
   const tokens = (Array.isArray(argv) ? argv : String(argv || "").split(/\s+/))
@@ -38,13 +44,13 @@ export function classifyGitOperation(argv) {
     .filter(Boolean);
   const args = tokens[0] === "git" ? tokens.slice(1) : tokens;
   if (args.length === 0) throw new Error("Operation classification requires a git invocation.");
-  for (const matcher of DESTRUCTIVE_MATCHERS) {
-    if (matcher.match(args)) {
+  for (const entry of DESTRUCTIVE_CATALOG_ENTRIES) {
+    if (entry.isDestructive(args)) {
       return Object.freeze({
         operation: args.join(" "),
         destructive: true,
-        class: matcher.class,
-        reason: DESTRUCTIVE_OPERATION_CLASSES[matcher.class],
+        class: entry.class,
+        reason: DESTRUCTIVE_OPERATION_CLASSES[entry.class],
       });
     }
   }

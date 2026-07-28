@@ -170,6 +170,14 @@ dictionary_entries:
   - "#sandboxed-workspace"
   - "#agent-sandbox-policy"
   - "#message-gateway"
+  - "#payment-rail-selection"
+  - "#payment-idempotency"
+  - "#payment-settlement-integrity"
+  - "#offline-intent-queue"
+  - "#payment-data-minimization"
+  - "#payment-readiness"
+  - "#workspace-parallelism"
+  - "#destructive-operation-guard"
 ---
 
 # Semantic Dictionary
@@ -319,6 +327,14 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#sandboxed-workspace` | Isolated or scoped filesystem/execution workspace for agent-created artifacts. | A run reads, writes, edits, executes, or summarizes generated files. | Workspace root, allowed operations, artifact manifest, diff summary, secret scan, cleanup, and approval gates are explicit. |
 | `#agent-sandbox-policy` | Native declarative deny-first policy for agent filesystem, process, network, credential, and audit decisions. | An autonomous or tool-bearing run needs preflight authorization. | Policy source, digest, typed decision, redacted audit result, and OS/kernel enforcement gap are explicit. |
 | `#message-gateway` | Typed handoff channel between user, agent, worker, tool, and review stages. | A workflow fans out, pauses, resumes, or sends tool/status messages across actors. | Message schema, sender, recipient, state transition, replay/idempotency rule, and visibility boundary are present. |
+| `#payment-rail-selection` | Deterministic choice of exactly one settlement rail for one payment intent. | More than one provider-backed settlement path can serve a requested currency or settlement asset. | Selection inputs, the selected rail identifier, and the selection reason are recorded before any provider call, identical inputs return identical output, and no ready rail returns a typed unavailable result. |
+| `#payment-idempotency` | Replay-safe creation of a provider payment object behind a client-generated intent key. | A payment request can be retried after a lost response, a reconnect, or an agent retry. | The key is derived from the client intent key without a personal identifier, a replay yields exactly one provider object, and a changed-parameter replay returns a typed conflict instead of a second object. |
+| `#payment-settlement-integrity` | At-most-once settlement from authenticated events and provider-authoritative state. | An inbound provider callback or a reconciliation pass could unlock paid capability. | Event authenticity is verified before payload read, provider state is the authority, a paid transition requires matching intent identifier, minor-unit amount, and currency, and duplicate delivery produces one side effect. |
+| `#offline-intent-queue` | Locally durable payment intent held while the server-side trust boundary is unreachable. | A payment is confirmed with no network path, or a client reloads before submission. | The queue survives reload with zero egress, carries no credential or account identifier, submits in creation order one intent key at a time, and never asserts payment on its own. |
+| `#payment-data-minimization` | Smallest regulated-data footprint that still supports audit. | Payment data is stored, projected into a receipt, sent to a provider, or exposed to a caller. | No card number, verification value, or full bank account number is stored, no personal identifier enters an idempotency key or provider metadata, no payment record field enters a model prompt, and the public status projection carries only its permitted fields. |
+| `#workspace-parallelism` | Concurrent sessions working across sibling repositories in one workspace root as the intended mode. | More than one session, device, or tool can hold live work in the workspace at the same time. | Lane ownership, branch exclusivity, and scope exclusivity are each proven separately, every at-risk lane is named, and serialization is never used as the safety mechanism. |
+| `#destructive-operation-guard` | Fail-closed review of an operation that can destroy work another session still holds. | A working-tree reset, untracked removal, forced checkout, history rewrite, lane removal, object prune, or fast-forward integration is proposed. | The operation is matched against the explicit forbidden catalog, foreign lane ownership and foreign uncommitted work refuse it, untracked paths refuse it outright, dirty tracked paths require a durable recovery reference, and the strongest outcome is allow-with-recovery. |
+| `#payment-readiness` | Per-rail proof that a settlement rail is configured well enough to accept money. | A rail is about to be enabled, re-enabled, or exposed to a buyer or agent. | Required credential names, server-side presence, absence from visible configuration, pinned provider version, configured integration model, and one terminal sandbox payment are reported read-only, with a non-zero exit on any missing required input. |
 
 ## Semantic Shape
 
@@ -352,6 +368,13 @@ semantic:
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |
+| `/payment.rail.select #payment-rail-selection #no-hardcode @payment-rail @payment-readiness` | Choose exactly one settlement rail deterministically from currency, settlement asset, and readiness. |
+| `/payment.intent.create #payment-idempotency #approval-gate @payment-intent @payment-provider` | Keep payment creation replay-safe and keep agent-originated spend behind the existing approval gate. |
+| `/payment.event.settle #payment-settlement-integrity #truth @payment-event @payment-provider` | Settle only from authenticated events plus provider-authoritative state. |
+| `/payment.receipt.project #payment-data-minimization #vcc @payment-record @payment-intent` | Project terminal records into one byte-stable local document that carries no prohibited identifier. |
+| `/payment.readiness #payment-readiness #dev-only @payment-readiness @payment-rail` | Prove a rail is configured before it is exposed, without mutation or deploy authority. |
+| `/workspace.parallelism.check #workspace-parallelism #truth @workspace-lane @recovery-reference` | Keep concurrent sessions the default while proving no lane holds work a destructive operation could not restore. |
+| `/workspace.operation.review #destructive-operation-guard #approval-gate @workspace-lane @operator` | Gate every catalog operation behind lane ownership, foreign-work checks, and a durable recovery reference. |
 | `/pipeline.trace #token-economics @cost-log` | Review FloatingPanel Chat pipeline and token economics through the cost ledger. |
 | `/workspace.review #frontmatter @source.body` | Review workspace context without turning display labels into standalone prose commands. |
 | `/canvas.render #canvas @runtime-proof` | Project parsed source state through existing Canvas owners. |

@@ -54,6 +54,16 @@ worktrees, and runs repository readiness commands before any canonical
 fast-forward. Candidate failure leaves every canonical checkout at its prior
 last-known-good revision.
 
+Canonical discovery follows the single registered worktree whose branch is
+`refs/heads/main`; it never assumes the Git common-directory owner is the runtime
+checkout. This permits the canonical pair to live under
+`$GITHUB_ROOT/.worktrees/canonical` while feature checkouts remain occupied.
+Task provisioning derives `$GITHUB_ROOT/.worktrees/<repository>` from the Git
+common directory, and hook subprocesses discard worktree-local Git environment
+before inspecting sibling lanes. A valid lifecycle report may retain
+`attention-required` for an unrelated dirty or review lane without replacing
+canonical runtime proof; malformed reports and canonical-source drift still fail.
+
 Run `npm run sync:workspace` for one reconciliation or keep the repository-owned
 daemon active with `npm run sync:workspace:watch`. The daemon defaults to a
 five-minute interval, applies bounded exponential retry with jitter, writes

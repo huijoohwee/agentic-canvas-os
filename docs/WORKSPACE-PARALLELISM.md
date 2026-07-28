@@ -141,6 +141,65 @@ report:
 report is the normal signal that a session is mid-edit somewhere, and it is not a
 reason to clean anything.
 
+## Enforcement Surfaces
+
+A contract that only this repository's own scripts honor is advice, not enforcement.
+These surfaces apply to any tool that shells out to Git, including tools that have
+never read this document.
+
+| Surface | Mechanism | Classes it can refuse | What it proves |
+|---|---|---|---|
+| `pre-commit` | Git hook | none (committing is never destructive) | The lane is registered, conflict-free, and isolated before a commit is recorded. |
+| `pre-push` | Git hook, reads the update list on stdin | `historyRewrite`, `laneRemoval` | Forced updates and remote ref deletions are refused without lane ownership and a recovery reference. Fast-forward pushes pass untouched. |
+| `reference-transaction` | Git hook, fires on every ref transaction in the `prepared` state | `workingTreeReset`, `historyRewrite`, `laneRemoval`, `blindIntegration` | Ref deletions and rewinds are refused before the transaction commits, whichever command triggered them. |
+| Wrapper (`git-guarded`) | PATH shim executed in place of `git` | every class in the catalog | Each invocation is classified before the real Git process runs. |
+
+### Hook coverage gap
+
+Git exposes no hook for commands that only touch the working tree, and none for
+object maintenance. Three classes are therefore unreachable from hooks:
+
+| Class | Why no hook sees it |
+|---|---|
+| `untrackedRemoval` | `clean` changes no ref and creates no transaction. |
+| `forcedCheckout` | `checkout --force` and `restore --worktree` overwrite files without a ref update; `post-checkout` fires after the damage. |
+| `objectPruning` | `gc`, `prune`, and `reflog expire` neither commit a ref transaction nor push. |
+
+The wrapper is the only surface that closes this gap. Installing hooks without the
+wrapper leaves the single most destructive command in the catalog, `clean -fdx`,
+completely ungated. `buildEnforcementCoverageReport()` reports this gap as data so
+the claim cannot silently drift from the implementation.
+
+### Install
+
+| Need | Command |
+|---|---|
+| Preview what would be installed | `npm run workspace:guards:install -- --dry-run` |
+| Install hooks in every workspace repository plus the PATH shim | `npm run workspace:guards:install` |
+| Read the coverage report | `npm run workspace:guards:coverage` |
+
+The installer sets `core.hooksPath` in each repository to this repository's
+`.githooks` directory, so there is one hook source of truth and no copied hook
+drift. It writes hook configuration and the shim only; it never touches tracked
+files, refs, or working-tree state in any repository.
+
+To guard external tooling, put the generated shim directory ahead of Git on `PATH`:
+
+```sh
+export PATH="[guard home]/.githooks/bin:$PATH"
+```
+
+### Bypass
+
+The bypass is deliberately not a flag and deliberately verbose, so it cannot be
+typed by reflex or hidden in an alias:
+
+```sh
+AGENTIC_WORKSPACE_GUARD_BYPASS=i-accept-destroying-unrecoverable-work git clean -fdx
+```
+
+A bypassed operation still prints what it is destroying before it proceeds.
+
 ## Invocation
 
 | Need | Command |
@@ -148,6 +207,7 @@ reason to clean anything.
 | Audit every lane in the workspace | `npm run workspace:parallelism:check` |
 | Machine-readable audit | `npm run workspace:parallelism:check -- --json` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
+| Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 
 Environment inputs: `AGENTIC_WORKSPACE_ROOT` overrides the discovered workspace root,
 and `AGENTIC_SESSION_ID` names the acting session. Both default without failing so an
@@ -178,3 +238,9 @@ audit is always runnable.
 | Destructive operations never return plain allow | The strongest outcome for a catalog operation is `allow-with-recovery` and it carries the recovery reference. |
 | Audit is read-only | A full workspace audit reports lanes and at-risk work without mutating any repository. |
 | Report readiness is honest | `ready` is true only when no lane holds untracked work or unreferenced modifications. |
+| Ref transactions are classified | Create, fast-forward update, noop, rewind, and delete are distinguished, and only rewind and delete are gated. |
+| Hooks refuse external commands | A `branch -D` or forced push issued by any tool is refused while the lane holds untracked work or lacks a recovery reference. |
+| The coverage gap is reported, not hidden | The coverage report names every class no hook can reach and marks the wrapper as required. |
+| One hook source of truth | Every workspace repository points `core.hooksPath` at one directory; no hook file is copied into a second location. |
+| The installer mutates nothing else | Installation writes hook configuration and the PATH shim only, with no ref, index, or working-tree change in any repository. |
+| Bypass is explicit and loud | Override requires a full sentinel value in the environment, never a flag, and still reports what it destroys. |

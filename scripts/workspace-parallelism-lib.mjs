@@ -222,3 +222,111 @@ export function buildWorkspaceParallelismReport({ workspaceRoot, lanes, now = ()
     ready: atRisk.length === 0,
   });
 }
+
+const ZERO_SHA = /^0{40,64}$/;
+
+export function isZeroSha(value) {
+  return ZERO_SHA.test(String(value || "").trim());
+}
+
+/**
+ * Classify one ref update without executing it.
+ * `rewind` is the dangerous case: the old tip is not reachable from the new tip,
+ * so commits become unreferenced and only the reflog stands between them and
+ * `objectPruning`.
+ */
+export function classifyRefUpdate({ ref, oldSha, newSha, isAncestor = () => true }) {
+  const name = String(ref || "").trim();
+  if (!name) throw new Error("Ref update classification requires a ref name.");
+  const from = String(oldSha || "").trim();
+  const to = String(newSha || "").trim();
+  if (isZeroSha(to)) return Object.freeze({ ref: name, kind: "delete", oldSha: from, newSha: to });
+  if (isZeroSha(from)) return Object.freeze({ ref: name, kind: "create", oldSha: from, newSha: to });
+  if (from === to) return Object.freeze({ ref: name, kind: "noop", oldSha: from, newSha: to });
+  const fastForward = Boolean(isAncestor(from, to));
+  return Object.freeze({
+    ref: name,
+    kind: fastForward ? "update" : "rewind",
+    oldSha: from,
+    newSha: to,
+  });
+}
+
+/**
+ * Gate a ref transaction. Deletions and rewinds are lane-destroying, so they need
+ * lane ownership and a durable recovery reference; ordinary creates and
+ * fast-forward updates pass untouched.
+ */
+export function assertRefTransactionSafety({ updates, lane, session, refs = [], isAncestor }) {
+  const target = normalizeLane(lane, 0);
+  const actor = String(session || "").trim();
+  if (!actor) throw new Error("Ref transaction review requires the acting session id.");
+
+  const classified = (Array.isArray(updates) ? updates : []).map((update) => (
+    classifyRefUpdate({ ...update, isAncestor })
+  ));
+  const destructive = classified.filter((update) => ["delete", "rewind"].includes(update.kind));
+  if (destructive.length === 0) {
+    return Object.freeze({ decision: "allow", updates: Object.freeze(classified), lane: laneKey(target) });
+  }
+
+  if (target.session !== actor) {
+    const names = destructive.map((update) => `${update.kind} ${update.ref}`).join(", ");
+    throw new Error(`Session ${actor} cannot apply ${names} on ${laneKey(target)}; lane is owned by ${target.session}.`);
+  }
+
+  if (target.untrackedPaths > 0) {
+    throw new Error(`Ref transaction refused: ${laneKey(target)} holds ${target.untrackedPaths} untracked path(s) that no ref can restore.`);
+  }
+
+  assertRecoveryReference({ lane: target, refs });
+
+  return Object.freeze({
+    decision: "allow-with-recovery",
+    updates: Object.freeze(classified),
+    lane: laneKey(target),
+    recoveryRef: target.recoveryRef,
+  });
+}
+
+/**
+ * Enforcement surfaces and their honest coverage.
+ * Git exposes no hook for working-tree-only commands, so `untrackedRemoval` and
+ * `forcedCheckout` are unreachable from hooks and require the wrapper. Recording
+ * the gap is part of the contract; claiming full hook coverage would be false.
+ */
+export const ENFORCEMENT_SURFACES = Object.freeze({
+  "pre-commit": Object.freeze({
+    covers: Object.freeze([]),
+    proves: "lane is registered, conflict-free, and isolated before a commit is recorded",
+  }),
+  "pre-push": Object.freeze({
+    covers: Object.freeze(["historyRewrite", "laneRemoval"]),
+    proves: "forced updates and remote ref deletions are refused without lane ownership and a recovery reference",
+  }),
+  "reference-transaction": Object.freeze({
+    covers: Object.freeze(["workingTreeReset", "historyRewrite", "laneRemoval", "blindIntegration"]),
+    proves: "ref deletions and rewinds are refused before the transaction commits",
+  }),
+  wrapper: Object.freeze({
+    covers: Object.freeze(Object.keys(DESTRUCTIVE_OPERATION_CLASSES)),
+    proves: "every catalog class is classified before the real git process is executed",
+  }),
+});
+
+export function buildEnforcementCoverageReport() {
+  const hookCovered = new Set();
+  for (const [surface, entry] of Object.entries(ENFORCEMENT_SURFACES)) {
+    if (surface === "wrapper") continue;
+    for (const cls of entry.covers) hookCovered.add(cls);
+  }
+  const hookGap = Object.keys(DESTRUCTIVE_OPERATION_CLASSES)
+    .filter((cls) => !hookCovered.has(cls))
+    .sort();
+  return Object.freeze({
+    surfaces: ENFORCEMENT_SURFACES,
+    hookCoveredClasses: Object.freeze([...hookCovered].sort()),
+    hookGapClasses: Object.freeze(hookGap),
+    wrapperRequired: hookGap.length > 0,
+  });
+}

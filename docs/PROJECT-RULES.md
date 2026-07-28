@@ -67,6 +67,12 @@ that bind every session and tool.
   semantic scope another session already holds in that repository.
 - Run `npm run workspace:parallelism:check` before any operation in the forbidden
   catalog. Treat a blocked report as a stop, not as a cleanup task.
+- Install the enforcement surfaces once per machine with
+  `npm run workspace:guards:install`, and put the generated shim directory ahead of
+  Git on `PATH` so external tooling is guarded too. Hooks alone leave `clean`,
+  forced checkout, and object pruning ungated; the wrapper is not optional.
+- Never disable a guard to make a command succeed. The bypass sentinel exists for a
+  deliberate, explained decision, not for unblocking a workflow.
 - Never reset a working tree, remove untracked files, force a checkout, rewrite
   pushed history, delete a lane, prune objects, or fast-forward a lane while any
   session holds uncommitted or untracked work in that repository. This applies to

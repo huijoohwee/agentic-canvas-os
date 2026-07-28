@@ -42,6 +42,9 @@
     "runtime-readiness-contract:check": "node --test __tests__/production-runtime-readiness-contract.test.mjs",
     "alignment-audit:check": "node --test __tests__/alignment-audit-*.test.mjs && node ./scripts/alignment-audit.mjs scripts/alignment-audit/alignment-audit.config.json --mode verify && npm run docs:check",
     "alignment-audit:run": "node ./scripts/alignment-audit.mjs scripts/alignment-audit/alignment-audit.config.json --mode run",
+    "agentic-sdlc:check": "node --test __tests__/agentic-sdlc-*.test.mjs __tests__/alignment-audit-guideline-v17*.test.mjs && npm run docs:check",
+    "agentic-sdlc:source:check": "node ./scripts/agentic-sdlc-source.mjs",
+    "agentic-sdlc:verify": "node ./scripts/agentic-sdlc.mjs",
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
@@ -87,6 +90,7 @@
     "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
+    "ajv": "8.17.1",
     "fast-check": "3.23.2",
     "wrangler": "4.113.0"
   },

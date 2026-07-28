@@ -163,7 +163,7 @@ test("Property 25: emitted reports are structurally complete, ordered, and front
         const readinessRows = tableRows(
           report,
           "## Readiness Gap Matrix",
-          "## Findings",
+          "## Finding Type Counts",
         ).filter((row) => row[0] !== "(none)");
         assert.equal(readinessRows.length, assignments.length);
         for (const row of readinessRows) {

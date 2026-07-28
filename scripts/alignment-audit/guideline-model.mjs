@@ -56,8 +56,13 @@ export function normalizeNormativeElement(element) {
   if (!Number.isSafeInteger(ordinal) || ordinal < 0) {
     throw new TypeError("Normative_Element ordinal must be a non-negative integer");
   }
+  const ruleId = ruleIdFrom(sectionAnchor, ordinal);
+  if (element.ruleId !== undefined && String(element.ruleId) !== ruleId) {
+    throw new TypeError(`Normative_Element ruleId must be derived as ${ruleId}`);
+  }
   return {
     elementId: String(element.elementId ?? elementIdFrom(sectionAnchor, text)),
+    ruleId,
     documentKey: String(element.documentKey ?? ""),
     sectionAnchor,
     kind,
@@ -69,6 +74,14 @@ export function normalizeNormativeElement(element) {
     ordinal,
     text,
   };
+}
+
+export function ruleIdFrom(sectionAnchor, zeroBasedOrdinal) {
+  const ordinal = Number(zeroBasedOrdinal);
+  if (!Number.isSafeInteger(ordinal) || ordinal < 0) {
+    throw new TypeError("Rule ordinal must be a non-negative integer");
+  }
+  return `${String(sectionAnchor)}#${ordinal + 1}`;
 }
 
 export function normalizeGateDeclaration(gate) {
@@ -140,6 +153,7 @@ export function guidelineModelsEqual(leftInput, rightInput) {
         const normalized = normalizeNormativeElement(element);
         return stableSerialize([
           normalized.elementId,
+          normalized.ruleId,
           normalized.documentKey,
           normalized.sectionAnchor,
           normalized.kind,

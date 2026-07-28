@@ -46,7 +46,7 @@ test("economics checker consumes prepared Markdown frontmatter flags", () => {
   assert.equal(findings.filter(({ findingType }) =>
     findingType === "missing-economics-metric").length, 4);
   assert.equal(findings.filter(({ findingType }) =>
-    findingType === "missing-delivery-statement").length, 3);
+    findingType === "incomplete-delivery-reach").length, 3);
   assert.equal(findings.filter(({ findingType }) =>
     findingType === "unbounded-loop").length, 1);
 });
@@ -202,7 +202,7 @@ test("empty and placeholder delivery values remain missing", () => {
     ].join("\n"),
   }]);
   assert.deepEqual(findings
-    .filter(({ findingType }) => findingType === "missing-delivery-statement")
+    .filter(({ findingType }) => findingType === "incomplete-delivery-reach")
     .map(({ guidelineAnchor }) => guidelineAnchor)
     .sort(), [
       "delivery:browser-reach",

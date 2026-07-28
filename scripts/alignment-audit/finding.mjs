@@ -1,81 +1,65 @@
-export const FINDING_TYPES = Object.freeze([
-  "missing-frontmatter-key",
-  "unknown-status",
-  "unimplemented-guideline",
-  "unguided-artifact",
-  "unproven-claim",
-  "unresolvable-reference",
-  "gate-order-drift",
-  "gate-sequence-violation",
-  "status-conflict",
-  "stale-evidence",
-  "duplicate-owner",
-  "blended-status",
-  "missing-companion",
-  "vendor-coupling",
-  "path-derived-claim",
-  "non-modular-section",
-  "scope-contradiction",
-  "missing-economics-metric",
-  "blended-deployment-tco",
-  "missing-foss-comparison",
-  "unbounded-loop",
-  "paid-read-path",
-  "missing-delivery-statement",
-  "orphan-route",
-  "ambiguous-route",
-  "unfederated-tool",
-  "uncatalogued-tool",
-  "missing-lane",
-  "incomplete-lane-transition",
-  "deploy-boundary-breach",
-  "ungated-promotion",
-  "incomplete-topology-node",
-  "malformed-document",
-  "unreadable-input",
-]);
-
-export const SEVERITY_RANK = Object.freeze({
-  blocker: 0,
-  major: 1,
-  minor: 2,
-});
-
 export const DEFAULT_SEVERITY = Object.freeze({
-  "missing-frontmatter-key": "major",
-  "unknown-status": "major",
+  "missing-frontmatter-key": "minor",
+  "malformed-document": "major",
+  "unknown-status": "minor",
+  "unproven-claim": "blocker",
+  "blended-status": "minor",
   "unimplemented-guideline": "major",
   "unguided-artifact": "minor",
-  "unproven-claim": "blocker",
   "unresolvable-reference": "major",
+  "stale-evidence": "major",
+  "missing-companion": "major",
+  "duplicate-owner": "major",
+  "status-conflict": "major",
   "gate-order-drift": "major",
   "gate-sequence-violation": "major",
-  "status-conflict": "major",
-  "stale-evidence": "major",
-  "duplicate-owner": "major",
-  "blended-status": "minor",
-  "missing-companion": "major",
   "vendor-coupling": "major",
   "path-derived-claim": "major",
   "non-modular-section": "minor",
-  "scope-contradiction": "major",
   "missing-economics-metric": "major",
   "blended-deployment-tco": "major",
   "missing-foss-comparison": "major",
   "unbounded-loop": "blocker",
   "paid-read-path": "major",
-  "missing-delivery-statement": "major",
+  "incomplete-delivery-reach": "major",
   "orphan-route": "major",
   "ambiguous-route": "major",
   "unfederated-tool": "major",
   "uncatalogued-tool": "major",
-  "missing-lane": "major",
+  "missing-lane": "blocker",
   "incomplete-lane-transition": "major",
   "deploy-boundary-breach": "blocker",
-  "ungated-promotion": "major",
-  "incomplete-topology-node": "minor",
-  "malformed-document": "major",
-  "unreadable-input": "major",
+  "ungated-promotion": "blocker",
+  "incomplete-topology-node": "major",
+  "self-graded-verdict": "blocker",
+  "unnamed-evaluator": "blocker",
+  "ungrounded-task": "major",
+  "unexecuted-condition": "major",
+  "task-cycle": "blocker",
+  "concurrent-write-conflict": "major",
+  "state-without-reason": "minor",
+  "oversized-task": "minor",
+  "unsurfaced-result": "major",
+  "unenumerated-change": "minor",
+  "self-escalated-capability": "blocker",
+  "out-of-scope-write": "major",
+  "ungated-irreversible-operation": "blocker",
+  "unbounded-task": "blocker",
+  "budget-raised-under-pressure": "major",
+  "unrecorded-consumption": "minor",
+  "fix-without-witness": "major",
+  "unproven-property": "major",
+  "evidence-without-run": "blocker",
+  "unresumable-run": "major",
+  "assumed-operator-decision": "blocker",
+});
+
+export const FINDING_TYPES = Object.freeze(Object.keys(DEFAULT_SEVERITY));
+
+export const SEVERITY_RANK = Object.freeze({
+  blocker: 0,
+  major: 1,
+  minor: 2,
 });
 
 export const REMEDIATION_CLASSES = Object.freeze([
@@ -90,17 +74,18 @@ export const REMEDIATION_STATES = Object.freeze([
   "operator-approved",
 ]);
 
-const CRITERION_SEVERITY = Object.freeze({
-  "unproven-claim": "blocker",
-  "unbounded-loop": "blocker",
-  "deploy-boundary-breach": "blocker",
+const LEGACY_FINDING_TYPE = Object.freeze({
+  "missing-delivery-statement": "incomplete-delivery-reach",
+  "scope-contradiction": "non-modular-section",
+  "unreadable-input": "malformed-document",
 });
 const FINDING_TYPE_SET = new Set(FINDING_TYPES);
 
 export function resolveSeverity(findingType, requestedSeverity, defaults = DEFAULT_SEVERITY) {
-  assertFindingType(findingType);
-  if (CRITERION_SEVERITY[findingType]) return CRITERION_SEVERITY[findingType];
-  const severity = requestedSeverity ?? defaults[findingType];
+  const canonicalType = canonicalFindingType(findingType);
+  assertFindingType(canonicalType);
+  if (DEFAULT_SEVERITY[canonicalType] === "blocker") return "blocker";
+  const severity = requestedSeverity ?? defaults[canonicalType];
   if (!(severity in SEVERITY_RANK)) {
     throw new TypeError(`invalid severity for ${findingType}: ${String(severity)}`);
   }
@@ -111,13 +96,16 @@ export function makeFinding(input) {
   if (!input || typeof input !== "object") {
     throw new TypeError("makeFinding expects an object");
   }
-  const findingType = String(input.findingType ?? "");
+  const findingType = canonicalFindingType(input.findingType);
   assertFindingType(findingType);
   const remediation = normalizeRemediation(input.remediation);
   return Object.freeze({
     findingType,
     severity: resolveSeverity(findingType, input.severity),
-    guidelineAnchor: populated(input.guidelineAnchor, "-"),
+    guidelineAnchor: populated(
+      input.ruleId ?? input.ruleAnchor ?? input.guidelineAnchor,
+      "-",
+    ),
     artifactReference: populated(input.artifactReference, "-"),
     evidenceExcerpt: populated(input.evidenceExcerpt),
     remediation,
@@ -149,6 +137,11 @@ export function assertFindingType(findingType) {
   if (!FINDING_TYPE_SET.has(findingType)) {
     throw new TypeError(`unknown Finding_Type: ${String(findingType)}`);
   }
+}
+
+export function canonicalFindingType(findingType) {
+  const supplied = String(findingType ?? "");
+  return LEGACY_FINDING_TYPE[supplied] ?? supplied;
 }
 
 function normalizeRemediation(remediation) {

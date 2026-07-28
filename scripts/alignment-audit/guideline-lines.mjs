@@ -1,5 +1,5 @@
 const MODAL =
-  /\b(?:must|must not|shall|shall not|required|require(?:s|d)?|never|do not|ensure|prohibit(?:s|ed)?)\b/iu;
+  /\b(?:must|must not|shall|shall not|required|require(?:s|d)?|never|do not|ensure|forbid(?:s|den)?|prohibit(?:s|ed)?)\b/iu;
 
 export function continuationParagraph(lines, startIndex, initial) {
   const parts = [String(initial).trim()].filter(Boolean);
@@ -10,6 +10,7 @@ export function continuationParagraph(lines, startIndex, initial) {
       line.trim() === "" ||
       /^#{2,6}\s/u.test(line) ||
       /^\s*[-*+]\s/u.test(line) ||
+      /^\s*\*\*(?:directives?|guidance)\*\*\s*:\s*$/iu.test(line) ||
       /^\s*(?:gate|entry condition|exit condition|required evidence(?: type)?)\s*:/iu
         .test(line) ||
       isIndependentNormativeLine(line)

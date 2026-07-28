@@ -86,7 +86,7 @@ test("Property 15: economics and delivery omissions have exact multiplicity", ()
       );
       assert.deepEqual(
         findings
-          .filter(({ findingType }) => findingType === "missing-delivery-statement")
+          .filter(({ findingType }) => findingType === "incomplete-delivery-reach")
           .map(({ evidenceExcerpt }) => evidenceExcerpt.replace("Missing delivery statement: ", ""))
           .sort(),
         [...missingDelivery].sort(),

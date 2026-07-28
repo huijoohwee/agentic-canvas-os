@@ -7,7 +7,7 @@ const TYPES = Object.freeze({
   vendor: "vendor-coupling",
   path: "path-derived-claim",
   modular: "non-modular-section",
-  scope: "scope-contradiction",
+  scope: "non-modular-section",
 });
 
 // Feature: guideline-runtime-alignment-audit, Property 14: Neutrality rule detection and modularity scope exclusion

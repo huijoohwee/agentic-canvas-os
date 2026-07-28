@@ -7,7 +7,7 @@ import {
 import { detectDrift } from "./drift-detector.mjs";
 import { checkEconomics } from "./economics-checker.mjs";
 import { finalizeFindings } from "./finding-pipeline.mjs";
-import { makeFinding } from "./finding.mjs";
+import { FINDING_TYPES, makeFinding } from "./finding.mjs";
 import { scanFrontmatter } from "./frontmatter.mjs";
 import { evaluateGates } from "./gate-evaluator.mjs";
 import { parseGuidelineSet } from "./guideline-parser.mjs";
@@ -178,6 +178,8 @@ export async function runAudit(config, reader, sink, options = {}) {
   componentFindings.push(...arrayOf(topology.findings));
 
   const normativeElementCount = arrayOf(guideline.value?.elements).length;
+  const advisoryElementCount = arrayOf(guideline.value?.elements)
+    .filter((element) => element?.class === "advisory").length;
   const artifactEntryCount = arrayOf(artifact.value?.entries).length;
   const findings = finalizeFindings(componentFindings, {
     normativeElementCount,
@@ -187,6 +189,12 @@ export async function runAudit(config, reader, sink, options = {}) {
   });
   const bound = normativeElementCount + artifactEntryCount;
   const findingBoundSatisfied = findings.length <= bound;
+  const findingTypeCounts = Object.fromEntries(
+    FINDING_TYPES.map((findingType) => [findingType, 0]),
+  );
+  for (const finding of findings) {
+    findingTypeCounts[finding.findingType] += 1;
+  }
   const integrityBeforeEmit = await verifyContentBaseline(baseline, reader);
   assertSourceIntegrity(integrityBeforeEmit);
   const elapsedBeforeEmit = now() - startedAt;
@@ -196,12 +204,16 @@ export async function runAudit(config, reader, sink, options = {}) {
     guidelineModel: guideline.value,
     artifactIndex: artifact.value,
     mapping: mapped,
-    coverage: mapped.coverage,
+    coverage: {
+      ...mapped.coverage,
+      advisoryCount: advisoryElementCount,
+    },
     readiness,
     gates,
     routeCounts: invocation.routeCounts,
     vendorCouplingCountByRole: neutrality.vendorCouplingCountByRole,
     findings,
+    findingTypeCounts,
     findingBoundSatisfied,
     findingBound: bound,
     baseline,
@@ -216,6 +228,7 @@ export async function runAudit(config, reader, sink, options = {}) {
     counts: {
       auditedDocuments: descriptors.length,
       normativeElements: normativeElementCount,
+      advisoryElements: advisoryElementCount,
       artifactEntries: artifactEntryCount,
       findings: findings.length,
     },

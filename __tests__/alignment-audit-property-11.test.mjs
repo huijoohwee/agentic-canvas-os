@@ -45,12 +45,20 @@ test("Property 11: a null operator instruction keeps every deploy path closed", 
             statedCheck: `verify-${index}`,
             constraint: "configured production surface",
           }],
-          evidence: [{
-            conditionId: `condition-${index}`,
-            checkName: `verify-${index}`,
-            recordedResult: "passed",
-            reproducible: "production",
-          }],
+          evidence: [
+            {
+              conditionId: `condition-${index}`,
+              checkName: `verify-${index}`,
+              recordedResult: "passed",
+              reproducible: "local",
+            },
+            {
+              conditionId: `condition-${index}`,
+              checkName: `verify-${index}`,
+              recordedResult: "passed",
+              reproducible: "production",
+            },
+          ],
         }));
         const remediations = inputs.map((input, index) => ({
           class: "local-reproducible-check",

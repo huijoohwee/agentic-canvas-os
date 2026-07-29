@@ -15,6 +15,8 @@ test('canonical lifecycle defines a provider-neutral joined receipt protocol', (
   const [neutralProtocol, referenceMapping] = lifecycle.split('## Reference Implementation Mapping')
   assert.ok(referenceMapping, 'reference implementation mapping must be explicit')
   for (const term of [
+    'Overlap Preservation Receipt',
+    'Overlap Disposition Receipt',
     'Integration Receipt',
     'Runtime Review Receipt',
     'Candidate Manifest',
@@ -44,13 +46,16 @@ test('canonical lifecycle defines a provider-neutral joined receipt protocol', (
   assert.match(referenceMapping, /GitHub `origin\/main`/)
   assert.match(referenceMapping, /Agentic Canvas OS `turn:end`/)
   assert.match(referenceMapping, /Cloudflare release controller/)
+  assert.match(referenceMapping, /content-addressed stash plus durable recovery ref/)
 })
 
 test('session and release profiles preserve multi-user fences and the human boundary', () => {
   assert.match(startWorkflow, /Parallel users, devices, sessions, and chats/)
   assert.match(startWorkflow, /shared\s+remote pull-request set is the cross-user and cross-device scope registry/)
+  assert.match(startWorkflow, /Keep\s+overlapping work retained with its recovery handle/)
   assert.match(startWorkflow, /no local command, terminal turn, merge event, user, device, or\s+agent may synthesize the Human Authorization Receipt/)
   assert.match(releaseWorkflow, /profile_type: "reference-implementation"/)
+  assert.match(releaseWorkflow, /Retain overlapping work; restore only exact disjoint state/)
   assert.match(releaseWorkflow, /complete app, Agentic Canvas OS, catalog, schema, generated mirror, build,\s+policy, target, review, and transitive dependency closure/)
   assert.match(releaseWorkflow, /Exactly one\s+environment-scoped controller may deploy/)
   assert.doesNotMatch(runtimeProof, /Automatic after protected integration/)

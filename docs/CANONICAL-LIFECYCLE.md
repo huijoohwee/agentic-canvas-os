@@ -59,6 +59,12 @@ Actor ID
   revision plus joined evidence. Mutable filesystem transfer is not a handoff.
 - Post-baseline authored state stays with its physical lane. Cleanup may remove
   only state whose exact ownership, integration, and retention proof is closed.
+- Before convergence, every pre-existing non-canonical work item is inventoried
+  by owner, write set, state digest, overlap class, preservation mode, and opaque
+  recovery handle. No controller may erase, adopt, or hide it to create cleanliness.
+- Overlapping work remains retained in its owning lane or immutable recovery
+  object. Disjoint work may be restored only when its state and recovery identity
+  still match exactly; ambiguity keeps it retained and blocks the affected scope.
 - Integration revalidates the remote fence, scope ownership, declared paths,
   protected checks, and immutable head immediately before mutation.
 
@@ -66,7 +72,9 @@ Actor ID
 
 | Receipt | Required identity | Authority created |
 |---|---|---|
-| `Integration Receipt` | Canonical source revision and tree, full dependency-closure digest, protected checks, evaluator, collaboration tuple, integration target, and receipt digest | Authoring closes; controlled review may begin |
+| `Overlap Preservation Receipt` | Convergence base, protected tip, capture adapter, and every observed work item's collaboration tuple, write-set digest, state digest, recovery handle, preservation mode, overlap class, time, and receipt digest | Preservation disposition may be evaluated; no integration, review, or deployment authority |
+| `Overlap Disposition Receipt` | Preservation Receipt digest and an exact retained-or-restored observation for every preserved item | Protected convergence may proceed when all work is accounted for |
+| `Integration Receipt` | Preservation and Disposition Receipt digests, canonical source revision and tree, full dependency-closure digest, protected checks, evaluator, collaboration tuple, integration target, and receipt digest | Authoring closes; controlled review may begin |
 | `Runtime Review Receipt` | Integration Receipt digest, controlled review-surface identity, source and dependency closure, policy digest, probes, reviewer identity, issue time, and expiry | Candidate preparation may begin |
 | `Candidate Manifest` | Runtime Review Receipt digest, source and transitive dependencies, policy and target digests, artifact digest, immutable-manifest digest, rollback target, and candidate digest | One immutable candidate exists |
 | `Human Authorization Receipt` | Candidate digest, target digest, authenticated human decision reference, authority-adapter identity, issue time, expiry, consumption state, and receipt digest | One forward deployment attempt may begin |
@@ -74,15 +82,18 @@ Actor ID
 | `Publication Receipt` | Live Verification Receipt digest and exact downstream mirror or publication identities | Downstream publication closes |
 
 Every receipt is typed, immutable, content-addressed, and joined to its
-predecessor by digest. Missing or unknown identity fields fail closed. Runtime
-review and deployment authorization are distinct human decisions; neither
-source review nor a successful build grants forward-deployment authority.
+predecessor by digest. Missing or unknown identity fields fail closed.
+Preservation proves recoverability only and cannot substitute for integration,
+runtime review, or authorization. Runtime review and deployment authorization
+are distinct human decisions; neither source review nor a successful build
+grants forward-deployment authority.
 
 ## End-to-End State Machine
 
 | State | Required transition | Fail-closed invariant |
 |---|---|---|
 | **Authored** | Fenced task lanes produce verified changes against a declared scope | Unleased, stale-fenced, overlapping, or unexplained mutation cannot integrate |
+| **Preserved** | Capture all pre-existing non-canonical work and account for every item as retained or exactly restored | Missing ownership, bytes, write-set, fence, recovery identity, or disposition blocks convergence; overlapping work cannot be auto-restored |
 | **Integrated** | Required checks pass and exact reviewed changes converge into the canonical protected source ref | Bypass, mutable head, or unjoined dependency state emits no Integration Receipt |
 | **Reviewed** | An operator-controlled surface runs the exact integrated source and full pinned dependency closure | Task-lane, stale-process, dependency, policy, check, or probe mismatch emits no Runtime Review Receipt |
 | **Prepared** | Build once and bind review, complete source/dependency closure, policy, target, artifact, manifest, and rollback identities | Mutable refs, labels, timestamps, unresolved dependencies, and "latest" selectors are invalid identity |
@@ -114,7 +125,8 @@ these identities changes:
 
 - canonical source revision or tree;
 - any direct or transitive runtime, build, catalog, schema, or data dependency;
-- collaboration fence or integrated scope;
+- collaboration fence, integrated scope, preserved-work state, recovery identity,
+  overlap class, or preservation disposition;
 - policy, authority-adapter, target configuration, or rollback target;
 - review, artifact, immutable-manifest, candidate, or predecessor-receipt digest;
 - authorization status, expiry, target, decision identity, or consumption state.
@@ -130,6 +142,8 @@ consumed, or target-mismatched authorization fails closed.
 Runtime readiness requires:
 
 - one exact joined receipt chain through the highest claimed stage;
+- exact accounting for every pre-existing non-canonical work item, with
+  overlapping work retained and every recovery handle still resolvable;
 - a clean canonical checkout at the fetched protected source identity;
 - current leases and fences for all contributing scopes;
 - reproducible dependency resolution and build output;
@@ -165,6 +179,7 @@ follows. These names are implementation facts, not universal lifecycle terms.
 |---|---|
 | Canonical protected source ref | GitHub `origin/main` with protected pull-request integration |
 | Collaboration identity | `agent/<device>/<semantic-scope>`, `agentic-writer-lease/v2`, lease epoch, claim SHA, draft ownership pull request, and authenticated pull-request actor |
+| Overlap preservation | Registered worktree and pull-request ownership for active lanes; a locked, content-addressed stash plus durable recovery ref only when canonical review requires temporary isolation; exact digest verification before any safe restoration |
 | Integration Receipt | Protected merge SHA, paired immutable manifest, required checks, lease and pull-request evidence |
 | Controlled runtime review | Repository-owned localhost runtime supervised by Agentic Canvas OS `turn:end` |
 | Runtime Review Receipt | `agentic-local-review-candidate/v1` |
@@ -199,12 +214,15 @@ expand/migrate/contract stages because code rollback does not reverse data.
 
 ## VCC
 
-Given disjoint fenced authoring lanes across multiple actors, devices, sessions,
-and worktrees, when protected integration emits one exact Integration Receipt,
+Given fenced authoring lanes across multiple actors, devices, sessions, and
+worktrees, including safely retained overlapping work, when preservation and
+disposition receipts account for every observed item and protected integration
+emits one exact Integration Receipt,
 an operator reviews the exact dependency closure, a controller builds one
 immutable candidate, and an authenticated human authorizes that candidate for
 the target, then exactly one idempotent controller deploys the same bytes,
 proves live identity, publishes only after verification, and leaves every
-participant able to converge independently. Any scope collision, stale fence,
-dependency, policy, target, artifact, authorization, controller, or live-proof
-drift fails closed or restores the last-known-good deployment.
+participant able to converge independently. Any loss, unsafe restoration, scope
+collision, stale fence, dependency, policy, target, artifact, authorization,
+controller, or live-proof drift fails closed or restores the last-known-good
+deployment.

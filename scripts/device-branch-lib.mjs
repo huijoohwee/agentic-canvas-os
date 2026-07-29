@@ -128,6 +128,9 @@ export function resume({
   const reviewHandoff = remoteLease.status === "review_ready";
   if (reviewHandoff && !/^[0-9a-f]{40}$/.test(String(remoteLease.reviewHeadSha || ""))) throw new Error("Reviewed handoff requires an exact reviewHeadSha.");
   if (sameSessionDelivery && !/^[0-9a-f]{40}$/.test(String(remoteLease.deliveryHeadSha || ""))) throw new Error("Delivery revision requires an exact deliveryHeadSha.");
+  const deliveryHandoffHead = sameSessionDelivery
+    ? resolveSameSessionDeliveryHandoff({ remoteLease, remoteSha, remoteRef, gitText })
+    : null;
   if (remoteLease.status !== "parked" && !(remoteLease.status === "active" && expired) && !sameSessionDelivery && !reviewHandoff) {
     throw new Error(
       `Semantic scope ${identity.scope} remains ${remoteLease.status} under another session until ${remoteLease.expiresAt}.`,
@@ -151,7 +154,7 @@ export function resume({
       }
       claimBaseSha = localSha;
     } else {
-      const handoffHead = reviewHandoff ? remoteLease.reviewHeadSha : remoteLease.deliveryHeadSha;
+      const handoffHead = reviewHandoff ? remoteLease.reviewHeadSha : deliveryHandoffHead;
       if (localSha !== remoteSha || localSha !== handoffHead) {
         throw new Error("Attached handoff HEAD does not match its exact remote handoff evidence.");
       }
@@ -229,6 +232,17 @@ export function resume({
     `Resumed ${branchName} at epoch ${restoredLease.epoch} with fence ${fenceSha.slice(0, 12)}; prior writers are fenced by the fast-forward remote head.`,
   );
   return restoredLease;
+}
+
+export function resolveSameSessionDeliveryHandoff({ remoteLease, remoteSha, remoteRef, gitText }) {
+  const deliveryHeadSha = String(remoteLease?.deliveryHeadSha || "");
+  if (remoteSha === deliveryHeadSha) return deliveryHeadSha;
+  const parents = gitText(["rev-list", "--parents", "-n", "1", remoteRef]).trim().split(/\s+/);
+  if (parents.length !== 3 || parents[0] !== remoteSha || parents[1] !== deliveryHeadSha) {
+    throw new Error("Delivered branch advanced beyond its exact protected-main refresh.");
+  }
+  gitText(["merge-base", "--is-ancestor", parents[2], "origin/main"]);
+  return remoteSha;
 }
 
 function resolveExpiredIntegrationContinuation({

@@ -71,6 +71,18 @@ test("protected source with joined evidence is eligible", () => {
   assert.equal(Object.isFrozen(result), true);
 });
 
+test("projection is admitted only when protected source evidence is eligible", () => {
+  const result = evaluateUpstreamDependencies(input({
+    dependencies: [dependency({ projectionRequested: true })],
+  }));
+
+  assert.equal(result.decisions[0].status, "eligible");
+  assert.equal(
+    result.findings.some((finding) => finding.type === "upstream-projection-premature"),
+    false,
+  );
+});
+
 test("candidate deferral isolates the exact consumer closure and continues disjoint work", () => {
   const result = evaluateUpstreamDependencies(input({
     dependencies: [dependency({

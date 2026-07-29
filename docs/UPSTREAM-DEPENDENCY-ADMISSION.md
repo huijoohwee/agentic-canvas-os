@@ -68,6 +68,8 @@ structurally invalid input contract.
 
 - Protected source becomes `eligible` only when exactly one non-overlapping
   owner, current source evidence, and all named checks join
+- A projection request is admitted only after that protected-source eligibility
+  decision; projection intent cannot promote source state
 - A candidate becomes `deferred` only before its finite deadline
 - Local-only or missing source remains `blocked`
 - Projection requested from anything except protected source raises

@@ -13,6 +13,7 @@ runtime_scope: "integration planning, canonical convergence, and release-frontie
 runtime_claim: "deterministic model-free contract; reading or checking this document causes no repository mutation or deployment"
 runtime_proof: "RUNTIME-PROOF.md"
 runtime_readiness_policy: "fail-closed"
+runtime_readiness_finding: "runtime-readiness-unproven"
 guideline_source_version: "1.6.0"
 guideline_module_version: "1.0.0"
 guideline_source_revision: "bc78529f6ab4ec29beb26f0b67d015aed24d08c1"

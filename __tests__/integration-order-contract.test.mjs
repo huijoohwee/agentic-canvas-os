@@ -302,6 +302,7 @@ test("documentation binds runtime readiness to immutable protected source proven
 
   assert.match(documentation, /\nstatus: "runtime-ready"\n/);
   assert.match(documentation, /\nruntime_readiness_policy: "fail-closed"\n/);
+  assert.match(documentation, /\nruntime_readiness_finding: "runtime-readiness-unproven"\n/);
   assert.match(documentation, /\nguideline_source_version: "1\.6\.0"\n/);
   assert.match(
     documentation,

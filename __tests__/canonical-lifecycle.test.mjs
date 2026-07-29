@@ -8,9 +8,11 @@ const synchronizerLibrary = fs.readFileSync(new URL('../scripts/workspace-sync-l
 const synchronizationRuntime = `${synchronizer}\n${synchronizerLibrary}`
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-test('canonical lifecycle defines protected automatic promotion and SHA convergence', () => {
+test('canonical lifecycle defines protected Dev integration, human authorization, and SHA convergence', () => {
   assert.match(lifecycle, /protected, green `main`/)
-  assert.match(lifecycle, /automatic promotion/)
+  assert.match(lifecycle, /proves Dev integration only/)
+  assert.match(lifecycle, /authenticated human reviewer/)
+  assert.match(lifecycle, /must never deploy `latest main` or rebuild after approval/)
   assert.match(lifecycle, /origin\/main SHA/)
   assert.match(lifecycle, /production runtime identity SHA/)
   assert.match(lifecycle, /rolls Pages back/)

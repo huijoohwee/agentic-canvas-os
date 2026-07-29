@@ -1,20 +1,20 @@
 ---
-title: "Canonical Checkout And Automatic Runtime Lifecycle"
+title: "Canonical Checkout And Human-Authorized Runtime Lifecycle"
 graphId: "md:canonical-checkout-automatic-runtime-lifecycle"
 doc_type: "Lifecycle Contract"
-date: "2026-07-21"
+date: "2026-07-29"
 lang: "en-US"
 schema: "canonical-runtime-lifecycle/v2"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "canonical main synchronization, protected integration, automatic promotion, and runtime-readiness evidence"
-publish_policy: "protected main is the pre-authorized automatic promotion boundary"
+authority: "canonical main synchronization, protected integration, exact-candidate human authorization, and runtime-readiness evidence"
+publish_policy: "protected main authorizes Dev integration only; Production requires an exact-candidate human decision"
 runtime_scope: "agentic-canvas-os, knowgrph, and huijoohwee"
-runtime_claim: "repository-owned gates converge canonical checkouts and promote only verified immutable revisions"
+runtime_claim: "repository-owned gates converge canonical checkouts and deploy only human-authorized immutable candidates"
 runtime_proof: "RUNTIME-PROOF.md"
 ---
 
-# Canonical Checkout And Automatic Runtime Lifecycle
+# Canonical Checkout And Human-Authorized Runtime Lifecycle
 
 ## Authority
 
@@ -82,7 +82,7 @@ and immutable artifacts are the shared coordination surface.
 - The Integration Gate is the required merge status.
 - A merge queue may merge a non-draft pull request automatically after every
   required check passes and scope ownership remains unique.
-- The merged `main` SHA is the only automatic promotion input.
+- The merged `main` SHA is the only canonical Dev input and carries no Production authorization.
 - Automation credentials may bypass neither required checks nor source/mirror
   provenance validation.
 
@@ -99,25 +99,42 @@ detached, completion-proven task checkout and preserves the task branch. A
 completed checkout remains audit-safe while cleanup is pending when its recorded
 completion SHA is a proven ancestor of current protected `main`.
 
-## Automatic CI/CD
+## Human-Authorized CI/CD
 
-The merge of a protected, green `main` revision is standing operator
-authorization for the repository-owned release workflow. No per-release button,
-typed confirmation, developer checkout, or local credential is required.
+The merge of a protected, green `main` revision proves Dev integration only.
+At `turn:end`, the local reconciler fetches and fast-forwards clean canonical
+`main` to the exact `origin/main` commit, starts the repository-owned runtime
+from that commit and the exact Agentic Canvas OS commit, and persists an
+`agentic-local-review-candidate/v1` receipt containing both commit and tree
+identities plus a digest of live probes and protected-check evidence.
+
+The repository-owned release controller may then build exactly once and bind
+the localhost-review digest, source and Agentic Canvas OS commits and trees,
+catalog revision, build-artifact digest, and immutable-manifest digest into one
+`agentic-production-release-candidate/v1`. Forward deployment remains stopped
+until an authenticated human reviewer explicitly authorizes that exact
+candidate digest in the protected GitHub `production` environment. A merge,
+push, schedule, agent action, prior authorization, or `turn:end` result cannot
+substitute for that decision.
 
 The release controller performs these stages in order:
 
 1. Check out the exact merged SHA with immutable Agentic Canvas OS dependency.
 2. Re-run the integration and runtime-readiness gates.
-3. Build once and bind the artifact to the app, docs, catalog, and mirror SHAs.
-4. Synchronize the generated `huijoohwee` artifact in an ephemeral checkout.
-5. Verify source-to-mirror parity.
+3. Require the exact `turn:end` localhost-review receipt for those source identities.
+4. Build once and bind the artifact, immutable manifest, app, docs, catalog, and local-review digest.
+5. Synchronize and verify the generated `huijoohwee` artifact in an ephemeral checkout without publishing it.
 6. Capture the current production deployment as the rollback target.
-7. Deploy the verified artifact with a single environment concurrency lock.
-8. Reconcile canonical documents only after the application deploy succeeds.
-9. Run production health and critical-path smoke probes.
-10. Publish the exact verified mirror to `huijoohwee/main`.
-11. Emit the immutable manifest, deployment identity, proof, and cost ledger.
+7. Pause at the protected `production` environment for an authenticated human decision on the exact candidate digest.
+8. Revalidate `origin/main`, localhost `main`, source and docs trees, catalog, artifact, manifest, and candidate digests without rebuilding.
+9. Deploy the already-built authorized artifact with a single environment concurrency lock.
+10. Run production health and critical-path smoke probes.
+11. Publish only the exact verified mirror and emit authorization, deployment, proof, and cost evidence.
+
+Any identity or digest difference invalidates authorization immediately. A new
+`main` commit, dependency movement, manifest change, or rebuild requires a new
+`turn:end`, localhost review, candidate, and human authorization. The controller
+must never deploy `latest main` or rebuild after approval.
 
 Agentic Canvas OS does not own an independent production Worker. Its dormant
 deploy, preview, and manual rollback workflows are absent; Dev proof remains
@@ -156,8 +173,9 @@ Knowgrph commit and tree, Agentic Canvas OS commit, catalog commit, immutable
 manifest digest, build-artifact digest, mirror repository, and `/` plus
 `/knowgrph` surface set. HTML fallbacks and unknown fields fail closed.
 
-Missing credentials, missing branch protection, a manually gated production
-environment, mutable dependency references, dirty mirrors, absent live proof,
+Missing credentials, missing branch protection, a production environment
+without required human reviewers, missing or drifted candidate authorization,
+mutable dependency references, dirty mirrors, absent live proof,
 or SHA disagreement reports `blocked`; it never reports `runtime-ready`.
 
 ## Ownership
@@ -167,15 +185,16 @@ or SHA disagreement reports `blocked`; it never reports `runtime-ready`.
 | Lifecycle semantics and acceptance | `agentic-canvas-os/docs/CANONICAL-LIFECYCLE.md` |
 | Task ownership and worktree activation | `agentic-canvas-os/docs/START-WORKFLOW.md` |
 | Release stage detail and evidence | `agentic-canvas-os/docs/RELEASE-WORKFLOW.md` |
-| Dev integration and automatic release controller | `knowgrph` |
+| Dev integration and human-authorized release controller | `knowgrph` |
 | Generated production mirror validation | `huijoohwee` |
 | Cloudflare deployment state | repository-owned Knowgrph release workflow |
 
 ## VCC
 
-Given a merged, protected Knowgrph `main` commit, when the automatic release
-workflow runs, then it validates the immutable app/docs pair, builds and verifies
-one mirror artifact, deploys under one production lock, proves live readiness,
+Given a merged, protected Knowgrph `main` commit, when `turn:end` records exact
+localhost review, the release workflow builds one immutable candidate, and an
+authenticated human authorizes that exact digest, then the controller revalidates
+zero drift, deploys the same bytes under one production lock, proves live readiness,
 publishes the verified mirror SHA, and leaves every canonical device able to
 fast-forward independently. A failed deployment or probe restores the captured
 Pages deployment and does not publish a new mirror revision.

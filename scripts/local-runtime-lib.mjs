@@ -17,6 +17,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { parseWorktreeRecords } from "./repository-guards.mjs";
+import { createLocalReviewCandidate } from "./production-release-authorization-contract.mjs";
 
 export const LOCAL_RUNTIME_SCHEMA = "agentic-local-runtime-readiness/v1";
 export const LOCAL_RUNTIME_HOST = "127.0.0.1";
@@ -86,7 +87,21 @@ export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
   const candidate = inspectCanonicalCandidate(normalized, deps, { verifyProtected: false });
   const lifecycle = deps.runLifecycle(candidate.agenticCanvasOsRoot);
   const runtime = await ensureLocalRuntime(normalized, deps);
-  return { ...runtime, action: "turn-end", lifecycle };
+  const reviewCandidate = createLocalReviewCandidate(runtime, {
+    source: {
+      repository: runtime.source.repository,
+      revision: candidate.knowgrph.headSha,
+      tree: candidate.knowgrph.treeSha,
+    },
+    agenticCanvasOs: {
+      repository: runtime.agenticCanvasOs.repository,
+      revision: candidate.agenticCanvasOs.headSha,
+      tree: candidate.agenticCanvasOs.treeSha,
+    },
+  });
+  const locations = runtimeLocations(candidate.workspaceRoot);
+  writeJsonAtomic(locations.reviewCandidatePath, reviewCandidate, deps);
+  return { ...runtime, action: "turn-end", lifecycle, reviewCandidate };
 }
 
 export function validateCanonicalRuntimeCandidate(evidence) {
@@ -314,6 +329,7 @@ function inspectRepository(id, root, deps, verifyProtected) {
   deps.gitText(root, ["fetch", "--quiet", "--prune", "origin", "main"]);
   const headSha = deps.gitText(root, ["rev-parse", "HEAD"]).trim();
   const remoteSha = deps.gitText(root, ["rev-parse", "origin/main"]).trim();
+  const treeSha = deps.gitText(root, ["rev-parse", "HEAD^{tree}"]).trim();
   const checks = verifyProtected ? deps.verifyProtectedChecks(id, root, remoteSha, REQUIRED_CHECKS[id]) : ["cached-status-check"];
   return {
     id,
@@ -323,6 +339,7 @@ function inspectRepository(id, root, deps, verifyProtected) {
     clean: deps.gitText(root, ["status", "--porcelain"]).trim() === "",
     headSha,
     remoteSha,
+    treeSha,
     protectedChecksVerified: checks.length > 0,
     checks,
   };
@@ -362,6 +379,7 @@ function runtimeLocations(workspaceRoot) {
   return {
     runtimeRoot,
     statePath: path.join(runtimeRoot, "readiness.json"),
+    reviewCandidatePath: path.join(runtimeRoot, "review-candidate.json"),
     tokenPath: path.join(runtimeRoot, "owner.token"),
     lockPath: path.join(runtimeRoot, "supervisor.lock"),
     apexLogPath: path.join(runtimeRoot, "apex.log"),

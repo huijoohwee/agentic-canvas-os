@@ -2,13 +2,13 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-18"
+date: "2026-07-29"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "end-to-end Knowgrph release operating model"
-publish_policy: "protected green main automatically invokes the repository-owned release controller"
+publish_policy: "protected green main authorizes Dev integration only; exact-candidate human authorization opens Production"
 runtime_scope: "Dev integration, Prod mirror promotion, Cloudflare deployment, and verification"
 runtime_claim: "bounded release contract; no deployment occurs by reading this document"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -56,7 +56,7 @@ completion_requires:
 
 ## Purpose
 
-Protected integration of a green Knowgrph `main` revision automatically requests the complete release workflow. `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` remains the explicit diagnostic or recovery invocation and does not weaken validation, ownership, cost, or stop conditions.
+Protected integration of a green Knowgrph `main` revision closes Dev and creates no Production authority. The repository-owned controller may prepare one immutable candidate, but forward deployment remains stopped until an authenticated human explicitly authorizes that exact candidate digest in the protected Production environment. `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` remains the explicit diagnostic or recovery invocation and does not weaken validation, ownership, cost, or stop conditions.
 
 The three invocation dictionaries in this folder remain the only `/`, `#`, and `@` authority. Knowgrph and its deployed routes consume their MCP projection; production never reads a developer-machine filesystem path.
 
@@ -64,7 +64,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 | Contract | Required fields |
 |---|---|
-| Input | Operator approval, device identity, semantic scope, task branch, base branch, base SHA, memory base ref, planning base ref, planning shard, planning context, exact app/docs/catalog manifest, Dev repository, Prod mirror, production routes. |
+| Input | Exact localhost-review receipt, authenticated Operator authorization, device identity, semantic scope, task branch, base branch, base SHA, memory base ref, planning base ref, planning shard, planning context, exact app/docs/catalog manifest, build-artifact digest, immutable-manifest digest, Dev repository, Prod mirror, production routes. |
 | Output | Reconciliation ledger, memory and planning compliance, validation ledger, immutable manifest digest, Dev commits and merge SHA, promoted SHA, mirror parity proof, deployment identifiers, production verification, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
@@ -150,22 +150,22 @@ managed-runtime evidence, then rerun the original acceptance path.
 Branch-only, stashed, pushed, open-pull-request, or auto-merge-pending work
 remains incomplete. `device:park` is only a paused or blocked exit. This Dev
 completion gate does not deploy from the checkout. The protected merge event
-opens Prod and Cloudflare stages only inside the repository-owned automatic
-release controller.
+permits immutable candidate preparation only; Prod and Cloudflare remain closed
+until the protected Production environment records exact-candidate human authorization.
 
 ### 8. Promote Prod
 
-Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Synchronize the merged Dev SHA, remove stale hashed artifacts through the canonical process, and run production build, publish-contract, schema, asset-manifest, and mirror-parity checks.
+Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Require the exact `turn:end` local-review receipt, synchronize its merged Dev SHA, build once, and bind source and Agentic Canvas OS commits and trees, catalog revision, local-review digest, artifact digest, and immutable-manifest digest into one immutable candidate. Run publish-contract, schema, asset-manifest, and mirror-parity checks without publishing.
 
 When mirror-parity fails because the schema mirror is missing a `knowgrph/docs/documents/*` node, regenerate `huijoohwee.github.io/schema/AgenticRAG/knowgrph-documents-map.graph.jsonld` through `python3 $GITHUB_ROOT/huijoohwee.github.io/schema/AgenticRAG/sync_map.py --mode write`, commit that mirror change in `huijoohwee.github.io`, and rerun release verification. Never hand-edit the generated graph file.
 
-Require zero unexplained Dev/Prod drift. Never manually patch or backfill the mirror.
+Require zero unexplained Dev/Prod drift. Never manually patch or backfill the mirror. Any new source commit, dependency movement, tree change, artifact change, manifest change, or rebuild invalidates the candidate and requires a new localhost review and authorization.
 
 ### 9. Deploy Cloudflare
 
-Deploy only the verified promoted SHA with repository-owned Cloudflare configuration. Never expose secrets or hardcode account ids, credentials, routes, local paths, or invocation catalogs. Prevent concurrent deployments to the same environment and capture immutable version evidence.
+Deploy only the already-built candidate whose exact digest an authenticated human reviewer authorized in the protected GitHub `production` environment. Revalidate fetched `origin/main`, canonical localhost `main`, reviewed source and Agentic Canvas OS identities, catalog revision, artifact digest, immutable-manifest digest, and candidate digest immediately before deployment. Never deploy `latest main`, rebuild after authorization, expose secrets, or hardcode account ids, credentials, routes, local paths, or invocation catalogs. Prevent concurrent deployments to the same environment and capture immutable version evidence.
 
-The GitHub `production` environment must provide non-empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets before the deploy job starts. Treat an empty-secret failure as missing deployment authority, not as a reason to weaken the workflow or bypass the environment gate.
+The GitHub `production` environment must require a human reviewer and provide non-empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets before the deploy job starts. Treat absent review or an empty-secret failure as missing deployment authority, not as a reason to weaken the workflow or bypass the environment gate.
 
 On partial success, stop further mutation and report the exact state. Do not loop or stack patches.
 
@@ -200,6 +200,6 @@ Stop without downstream mutation when any of these is true:
 
 ## Completion VCC
 
-Given a protected green merge to Knowgrph `main`, when every ordered automatic stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, rollback target, and residual risk.
+Given a protected green merge to Knowgrph `main`, when `turn:end` records exact localhost evidence, the controller builds one immutable candidate, an authenticated human authorizes its exact digest, and every ordered verification stage succeeds without drift or rebuild, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact authorized Dev artifact, both production routes return matching live evidence, and the final ledger reports ownership, authorization, validation, cost, deployment, rollback target, and residual risk.
 
 VCC: verify `npm run collaboration:gate` exits zero with two distinct automated peers, at least two active room peers, one common verification digest, remote document propagation, exact app/docs SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.

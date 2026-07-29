@@ -2,19 +2,21 @@
 title: "Dependency-Ordered Integration Contract"
 graphId: "md:dependency-ordered-integration-contract"
 doc_type: "Integration Workflow Contract"
-date: "2026-07-29"
+date: "2026-07-30"
 lang: "en-US"
 schema: "agentic-integration-order/v1"
 frontmatter_contract: "required"
-status: "spec-complete"
+status: "runtime-ready"
 authority: "provider-neutral integration ordering and exact-canonical frontier advancement"
 publish_policy: "authoring and protected integration only; no deployment authority"
 runtime_scope: "integration planning, canonical convergence, and release-frontier sealing"
 runtime_claim: "deterministic model-free contract; reading or checking this document causes no repository mutation or deployment"
 runtime_proof: "RUNTIME-PROOF.md"
-guideline_source_version: "1.3.0"
+runtime_readiness_policy: "fail-closed"
+guideline_source_version: "1.6.0"
 guideline_module_version: "1.0.0"
-guideline_candidate_revision: "a726e465d81659e0abd5e4fe2c7895dbebd6f1ff"
+guideline_source_revision: "bc78529f6ab4ec29beb26f0b67d015aed24d08c1"
+guideline_source_digest: "d200775cf96c7cb6e7ae973dde8b03baca81ba7acaafadf365fa6ab2daa07195"
 ---
 
 # Dependency-Ordered Integration Contract
@@ -183,12 +185,12 @@ are in `__tests__/integration-order-contract.test.mjs`. The executable is pure:
 it validates and returns frozen records, and performs no filesystem, network,
 repository, merge, release, or deployment mutation.
 
-The `guideline_candidate_revision` frontmatter value records review provenance
-only. Merge the universal guideline source first, then replace this candidate
-value with the fetched protected source revision and re-run review checks before
-the consumer integration or release frontier is sealed. A squash, rebase, or
-other protected merge may change the source revision even when its content is
-equivalent; equivalence must be recorded explicitly rather than inferred.
+The `guideline_source_revision` and `guideline_source_digest` frontmatter values
+bind this adapter to the fetched protected guideline source and its exact bytes.
+A squash, rebase, or other protected merge may change the source revision even
+when its content is equivalent; equivalence must be recorded explicitly rather
+than inferred. Source drift returns this module to `blocked` until the exact
+source and focused evidence are revalidated.
 
 ## Validation
 
@@ -201,7 +203,10 @@ npm run integration-order:check
 The check proves deterministic plan identity, dependency ordering, disjoint
 waves, cycle and duplicate rejection, stale-frontier rejection, evidence-backed
 no-op and supersession, runtime convergence requirements, plan-integrity
-validation, release-frontier sealing, and neutral-core separation.
+validation, release-frontier sealing, neutral-core separation, and immutable
+guideline-source provenance. `runtime-ready` applies only to this pure local
+contract at the bound source revision; it does not claim protected integration,
+canonical runtime convergence, release authorization, publication, or deployment.
 
 ## VCC
 

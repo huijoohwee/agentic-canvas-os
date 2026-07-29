@@ -293,3 +293,27 @@ test("documentation keeps the neutral core separate from the reference adapter",
     assert.match(documentation, new RegExp(phrase, "i"));
   }
 });
+
+test("documentation binds runtime readiness to immutable protected source provenance", async () => {
+  const documentation = await readFile(
+    new URL("../docs/INTEGRATION-ORDER.md", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(documentation, /\nstatus: "runtime-ready"\n/);
+  assert.match(documentation, /\nruntime_readiness_policy: "fail-closed"\n/);
+  assert.match(documentation, /\nguideline_source_version: "1\.6\.0"\n/);
+  assert.match(
+    documentation,
+    /\nguideline_source_revision: "bc78529f6ab4ec29beb26f0b67d015aed24d08c1"\n/,
+  );
+  assert.match(
+    documentation,
+    /\nguideline_source_digest: "d200775cf96c7cb6e7ae973dde8b03baca81ba7acaafadf365fa6ab2daa07195"\n/,
+  );
+  assert.doesNotMatch(documentation, /guideline_candidate_revision/);
+  assert.match(
+    documentation,
+    /`runtime-ready` applies only to this pure local\s+contract at the bound source revision/,
+  );
+});

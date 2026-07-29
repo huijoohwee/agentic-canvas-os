@@ -53,7 +53,11 @@ function request(method, body, token) {
     {
       method,
       headers: token ? { authorization: `Bearer ${token}` } : {},
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined
+        ? undefined
+        : typeof body === "string"
+          ? body
+          : JSON.stringify(body),
     },
   );
 }
@@ -130,4 +134,29 @@ test("structural input errors and missing auth configuration fail closed", async
     {},
   );
   assert.equal(unconfigured.status, 501);
+});
+
+test("Worker transport rejects invalid and oversized JSON before evaluation", async () => {
+  const token = mintSessionToken({ secret: SECRET, subject: "application-test" });
+  const headers = { authorization: `Bearer ${token}` };
+  const invalidJson = await handleCloudflareRequest(
+    request("POST", "{", token),
+    ENV,
+  );
+  assert.equal(invalidJson.status, 400);
+  assert.equal((await responseJson(invalidJson)).code, "invalid_json");
+
+  const oversized = await handleCloudflareRequest(
+    new Request(
+      "https://agentic-canvas-os.example/api/upstream-dependency-admission/evaluate",
+      {
+        method: "POST",
+        headers: { ...headers, "content-length": String(512 * 1024 + 1) },
+        body: "{}",
+      },
+    ),
+    ENV,
+  );
+  assert.equal(oversized.status, 413);
+  assert.equal((await responseJson(oversized)).code, "request_body_too_large");
 });

@@ -8,9 +8,9 @@ schema: "agentic-upstream-dependency-admission/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "provider-neutral upstream dependency admission and bounded continuation"
-publish_policy: "authoring and protected integration only; no deployment authority"
-runtime_scope: "pure dependency admission, consumer-closure isolation, and disjoint-work continuation"
-runtime_claim: "deterministic model-free evaluator with no filesystem, network, repository, release, or deployment mutation"
+publish_policy: "protected integration followed by exact-revision explicitly owned non-production deployment only"
+runtime_scope: "authenticated application dependency admission, consumer-closure isolation, and disjoint-work continuation"
+runtime_claim: "deterministic model-free evaluator behind a bounded authenticated application route; evaluator performs no filesystem, network, repository, release, or deployment mutation"
 runtime_proof: "RUNTIME-PROOF.md"
 runtime_readiness_policy: "fail-closed"
 runtime_readiness_finding: "runtime-readiness-unproven"
@@ -106,10 +106,29 @@ decision is emitted.
 
 ## Agentic Canvas OS Reference Implementation
 
-The executable owner is `scripts/upstream-dependency-admission.mjs`; focused
-proof is `__tests__/upstream-dependency-admission.test.mjs`. The implementation
-maps the neutral contract into frozen JavaScript records without changing its
-vocabulary or authority boundary.
+The executable owner is
+`agent-api/src/upstream-dependency-admission.js`; focused pure-runtime proof is
+`__tests__/upstream-dependency-admission.test.mjs`. The implementation maps the
+neutral contract into frozen JavaScript records without changing its vocabulary
+or authority boundary.
+
+## Application Runtime
+
+The application exposes
+`POST /api/upstream-dependency-admission/evaluate` through the existing
+Agent-API and Cloudflare Worker. It requires the existing session Bearer token
+and accepts at most 512 KiB of JSON.
+
+- `200` returns any structurally valid domain result, including `blocked`
+- `400` rejects invalid JSON or invalid admission structure with a typed code
+- `401` rejects a missing, invalid, or expired session
+- `405` rejects unsupported methods
+- `413` rejects a body over the fixed limit
+- `501` fails closed when session authentication is not configured
+
+`GET /api/ready` exposes only sanitized route, authentication, source,
+continuation, mutation, and model-free execution metadata. It never exposes the
+session signing secret.
 
 The guideline revision and module digest bind this implementation to exact
 protected source bytes. Any source, implementation, dependency, or focused-proof
@@ -122,17 +141,33 @@ Run:
 
 ```sh
 npm run upstream-dependency-admission:check
+npm run upstream-dependency-admission:application:check
 ```
 
-The check covers protected eligibility, bounded candidate deferral, local-only
-rejection, ambiguous and overlapping owners, stale evidence, premature
-projection, consumer-closure isolation, disjoint continuation, deadline
-fallbacks, plan-overblocking detection, deterministic replay, strict inputs,
-neutral vocabulary, and immutable guideline provenance.
+The checks cover the pure decisions plus authenticated HTTP routing, sanitized
+readiness, valid blocked responses, disjoint continuation, invalid structure,
+unsupported methods, and fail-closed missing authentication.
 
-`runtime-ready` applies only to this pure evaluator at the recorded source and
-implementation revision. It does not promote evaluated dependencies, consumers,
-canonical runtime, protected integration, release, publication, or deployment.
+## Dev Deployment
+
+Deployment is a separate protected gate. Run only from a clean canonical
+`main` whose `HEAD` exactly equals fetched `origin/main`:
+
+```sh
+npm run upstream-dependency-admission:deploy:dev
+```
+
+The command reruns application proof and the web build, then invokes the pinned
+Wrangler dependency for the `dev` environment with `--keep-vars` and `--strict`.
+It preserves remote variables and secrets that this model-free endpoint does
+not own and fails on conflicting remote configuration. It cannot deploy an
+Agentic Canvas OS production Worker; production remains owned by the protected
+consumer release controller.
+
+`runtime-ready` applies to the evaluator and application route at the recorded
+protected source revision. It does not promote evaluated dependencies or
+consumers, and it does not establish deployment until an exact-revision Dev
+version and live authenticated response are recorded.
 
 ## VCC
 
@@ -140,4 +175,4 @@ canonical runtime, protected integration, release, publication, or deployment.
 |---|---|
 | Variables | Fixed evaluation time, plan DAG, dependency records, immutable revisions and digests, deadlines, fallbacks, projection intent. |
 | Constraints | Exact identities, one owner, acyclic plan, protected-source projection, bounded deferral, consumer-closure isolation, no authority expansion. |
-| Checks | Focused evaluator suite, documentation contract, neutral-core scan, exact protected guideline revision and digest. |
+| Checks | Focused evaluator and application suites, authenticated Worker route, sanitized readiness, documentation contract, neutral-core scan, exact protected guideline revision and digest, exact-main Dev deployment guard. |

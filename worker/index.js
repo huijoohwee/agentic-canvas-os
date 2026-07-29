@@ -312,6 +312,18 @@ async function dispatchCloudflareRequest(request, env = {}) {
     return toResponse(await app.functionCallResume({ headers: headerBag(request), body }));
   }
 
+  if (
+    url.pathname === "/api/upstream-dependency-admission/evaluate"
+    || url.pathname === "/upstream-dependency-admission/evaluate"
+  ) {
+    if (request.method !== "POST") return json(405, { error: "method not allowed" });
+    const body = await readJsonBody(request);
+    return toResponse(await app.upstreamDependencyAdmissionEvaluate({
+      headers: headerBag(request),
+      body,
+    }));
+  }
+
   const swarmAction = url.pathname.startsWith("/api/agent-swarm/")
     ? url.pathname.slice("/api/agent-swarm/".length)
     : "";

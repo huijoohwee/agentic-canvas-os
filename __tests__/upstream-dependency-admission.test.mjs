@@ -5,7 +5,7 @@ import test from "node:test";
 import {
   UPSTREAM_ADMISSION_SCHEMA,
   evaluateUpstreamDependencies,
-} from "../scripts/upstream-dependency-admission.mjs";
+} from "../agent-api/src/upstream-dependency-admission.js";
 
 const revision = (character) => character.repeat(40);
 const digest = (character) => character.repeat(64);

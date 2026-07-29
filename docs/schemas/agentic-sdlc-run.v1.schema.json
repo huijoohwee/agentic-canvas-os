@@ -56,7 +56,8 @@
     "priorFindings": {"type":"array","items":{"$ref":"#/$defs/finding"}},
     "consumption": {"$ref":"#/$defs/consumption"},
     "guidelineLoadCost": {"$ref":"#/$defs/loadCost"},
-    "operatorDecisions": {"type":"array","items":{"$ref":"#/$defs/operatorDecision"},"default":[]}
+    "operatorDecisions": {"type":"array","items":{"$ref":"#/$defs/operatorDecision"},"default":[]},
+    "releaseLifecycle": {"$ref":"https://agentic-canvas-os.dev/schemas/collaborative-release-lifecycle/v1"}
   },
   "$defs": {
     "nonempty": {"type":"string","minLength":1},

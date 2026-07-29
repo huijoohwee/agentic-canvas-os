@@ -2,7 +2,7 @@
 title: "Managed Autonomous Implementation Runs"
 graphId: "md:agentic-canvas-os-managed-implementation-runs"
 doc_type: "Runtime Contract"
-date: "2026-07-22"
+date: "2026-07-29"
 lang: "en-US"
 schema: "managed-implementation-runs/v1"
 frontmatter_contract: "required"
@@ -21,6 +21,7 @@ mcp_tools:
   - "knowgrph.implementation_run.start"
   - "knowgrph.implementation_run.list"
   - "knowgrph.implementation_run.control"
+  - "knowgrph.agentic_sdlc.observe"
 external_pattern_sources:
   - "https://github.com/openai/symphony/blob/1f3219bb1ea5f69a1305dc594e79b0db57c113c5/SPEC.md"
   - "https://openai.com/index/open-source-codex-orchestration-symphony/"
@@ -42,6 +43,14 @@ The managed-run default terminal state is `delivery_ready`: durable run evidence
 ```
 
 The exact `/`, `#`, and `@` tokens resolve only from the three dictionaries. Unknown tokens remain unknown and must fail before provisioning, model spend, mutation, or lifecycle claims. A dictionary match supplies invocation metadata; it does not itself grant execution or approval.
+
+The separate read-only observation composition is:
+
+```text
+/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof
+```
+
+It reads an immutable run-ledger receipt and projects source state through existing KGC, GraphData, and Canvas owners. It does not invoke `/implementation.run`, control a run, grade a task, or grant delivery or deployment authority.
 
 ## Ownership
 
@@ -68,8 +77,17 @@ Knowgrph retains caller `semanticScope` as human metadata and derives a distinct
 | `knowgrph.implementation_run.start` | Persist one idempotent run request, provision and claim its fenced task lane through Agentic Canvas OS, then start the configured supervisor. | Mutates only the run ledger, new task worktree, task branch, lease, and ownership PR. |
 | `knowgrph.implementation_run.list` | Return bounded run summaries, blockers, evidence references, and next team action. | Read-only; no polling loop or model call. |
 | `knowgrph.implementation_run.control` | Pause, cancel, retry, request review, or record an operator decision against a current run version. Retry performs fenced ACOS resumption when the prior lane must reactivate. | Explicit control plus state precondition required; delivery remains a separate operator-authorized action. |
+| `knowgrph.agentic_sdlc.observe` | Validate one exact immutable ledger receipt and return a deterministic, bounded end-to-end KGC and GraphData projection for the existing Canvas. | Read-only, local, model-free, network-free, zero-token, zero-cost, and Dev-only; no run, ledger, source, Canvas, review, release, Prod, or Cloudflare mutation. |
 
 The tools are MCP-invocable. The exact invocation tokens also make the capability `/`, `#`, and `@` discoverable through the existing catalog projection; they do not create alternate tool names or a second dispatcher.
+
+## Observation Boundary
+
+The observer request names the exact invocation, `runId`, bounded `view`, `expectedRevision`, and `expectedLedgerDigest`, plus an optional cursor and limit. Its prerequisite is the receipt at `state.result.agenticSdlcLedger` with schema `agentic-sdlc-ledger-receipt/v1`, local artifact reference, digest, byte count, canonical run id, ledger revision, and exact Agentic Canvas OS revision. The receipt and artifact bytes must agree before projection.
+
+The tool returns `knowgrph-agentic-sdlc-observation/v1`. Its `projection` is `agentic-sdlc-canvas-projection/v1`, containing deterministic GraphData plus KGC Markdown rather than a copied run store, graph database, dashboard, or renderer. Run, criterion, VCC, task, transition, dispatch, return, check, evidence, finding, budget, receipt, gate, and checkpoint records retain their source identities and typed relationships. Views and pages are digest-bound, stubs preserve typed missing endpoints, and cache reuse requires the same receipt digest, revision, view, cursor, and limit.
+
+Managed run evidence may project `delivery_ready` only when it is joined to ACOS `review_ready` at the exact review head. That operational state is not the canonical Agentic SDLC success state `verified`; only the named independent Evaluator can produce the latter in a conforming ledger. `deployed` is a third release-lifecycle observation that requires exact existing Human Authorization and Live Verification receipts. The observer never converts among these claims and never supplies missing canonical VCC, grant, budget, role, transition, consumption, receipt, authorization, or deployment evidence.
 
 ## Run State Model
 
@@ -151,4 +169,5 @@ No Symphony code, prose, prompt, schema, vocabulary set, algorithm, fixture, tes
 | Reviewed runtime is exact | Focused tests reject dirt, active or mismatched leases, local/remote/PR head drift, draft PRs, missing repository Dev ownership, canonical docs drift, and unrelated listener PIDs; live proof requires HTTP 200 at the recorded loopback URL. |
 | Reactivation is fenced | Exact review head, remote branch, PR lease marker, prior epoch, and new fence are proven before another attempt. |
 | Runtime is managed | Knowgrph focused tests prove idempotent plan/start, durable restart recovery, configured argv launch, pause/cancel/retry/review controls, bounded verification, and list projection. |
+| Observation is source-backed and non-mutating | The ACOS catalog test plus Knowgrph observer tests require one exact immutable ledger receipt, deterministic KGC and GraphData output through existing Canvas owners, typed `verified`/`delivery_ready`/`deployed` separation, and exact zero network, model, token, and cost evidence. |
 | Deployment stays closed | A run stops at `delivery_ready` with ACOS lifecycle status `review_ready` unless an explicit operator chooses the separate protected delivery workflow. |

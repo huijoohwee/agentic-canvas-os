@@ -11,9 +11,22 @@ import {
   array,
   object,
   stableJson,
+  stableValue,
   text,
   uniqueSortedStrings,
 } from "./normalize.mjs";
+
+const RELEASE_LIFECYCLE_RECEIPT_ORDER = new Map([
+  ["agentic-overlap-preservation-receipt/v1\u0000preserved", 0],
+  ["agentic-overlap-disposition-receipt/v1\u0000accounted", 1],
+  ["agentic-integration-receipt/v2\u0000integrated", 2],
+  ["agentic-runtime-review-receipt/v1\u0000reviewed", 3],
+  ["agentic-candidate-manifest/v1\u0000awaiting-human-authorization", 4],
+  ["agentic-human-authorization-receipt/v1\u0000authorized", 5],
+  ["agentic-human-authorization-receipt/v1\u0000consumed", 6],
+  ["agentic-live-verification-receipt/v1\u0000verified", 7],
+  ["agentic-publication-receipt/v1\u0000published", 8],
+]);
 
 export function normalizeValidationRequest(input, explicitRuleBindings) {
   const request = object(input);
@@ -239,7 +252,25 @@ export function normalizeCanonicalRun(artifactInput) {
       id: text(task?.taskId ?? task?.id),
       text: text(task?.text),
     })),
+    ...(Object.hasOwn(artifact, "releaseLifecycle")
+      ? { releaseLifecycle: normalizeReleaseLifecycle(artifact.releaseLifecycle) }
+      : {}),
   };
+}
+
+function normalizeReleaseLifecycle(input) {
+  const receipts = array(object(input).receipts)
+    .map((receipt) => stableValue(receipt))
+    .sort((left, right) =>
+      releaseLifecycleReceiptRank(left) - releaseLifecycleReceiptRank(right)
+      || stableJson(left).localeCompare(stableJson(right), "en"));
+  return { receipts };
+}
+
+function releaseLifecycleReceiptRank(receipt) {
+  const key = `${text(receipt?.schema)}\u0000${text(receipt?.status)}`;
+  return RELEASE_LIFECYCLE_RECEIPT_ORDER.get(key)
+    ?? RELEASE_LIFECYCLE_RECEIPT_ORDER.size;
 }
 
 function normalizeVcc(vcc) {

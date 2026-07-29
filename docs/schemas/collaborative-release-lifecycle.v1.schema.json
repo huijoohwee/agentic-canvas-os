@@ -19,6 +19,7 @@
           {"$ref": "#/$defs/integrationReceipt"},
           {"$ref": "#/$defs/runtimeReviewReceipt"},
           {"$ref": "#/$defs/candidateManifest"},
+          {"$ref": "#/$defs/authorizationInteractionReceipt"},
           {"$ref": "#/$defs/issuedHumanAuthorizationReceipt"},
           {"$ref": "#/$defs/consumedHumanAuthorizationReceipt"},
           {"$ref": "#/$defs/liveVerificationReceipt"},
@@ -232,6 +233,38 @@
         "receiptDigest": {"$ref": "#/$defs/sha256"}
       }
     },
+    "authorizationInteractionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "status",
+        "candidateDigest",
+        "targetDigest",
+        "humanActorId",
+        "interactionAdapterId",
+        "transportClass",
+        "browserRequired",
+        "challengeDigest",
+        "responseDigest",
+        "recordedAt",
+        "receiptDigest"
+      ],
+      "properties": {
+        "schema": {"const": "agentic-authorization-interaction-receipt/v1"},
+        "status": {"const": "observed"},
+        "candidateDigest": {"$ref": "#/$defs/sha256"},
+        "targetDigest": {"$ref": "#/$defs/sha256"},
+        "humanActorId": {"$ref": "#/$defs/nonempty"},
+        "interactionAdapterId": {"$ref": "#/$defs/nonempty"},
+        "transportClass": {"$ref": "#/$defs/nonempty"},
+        "browserRequired": {"type": "boolean"},
+        "challengeDigest": {"$ref": "#/$defs/sha256"},
+        "responseDigest": {"$ref": "#/$defs/sha256"},
+        "recordedAt": {"$ref": "#/$defs/instant"},
+        "receiptDigest": {"$ref": "#/$defs/sha256"}
+      }
+    },
     "issuedHumanAuthorizationReceipt": {
       "type": "object",
       "additionalProperties": false,
@@ -245,13 +278,14 @@
         "humanActorId",
         "decisionRef",
         "authorityAdapterId",
+        "interactionReceiptDigest",
         "issuedAt",
         "expiresAt",
         "consumedAt",
         "receiptDigest"
       ],
       "properties": {
-        "schema": {"const": "agentic-human-authorization-receipt/v1"},
+        "schema": {"const": "agentic-human-authorization-receipt/v2"},
         "status": {"const": "authorized"},
         "candidateDigest": {"$ref": "#/$defs/sha256"},
         "targetDigest": {"$ref": "#/$defs/sha256"},
@@ -260,6 +294,7 @@
         "humanActorId": {"$ref": "#/$defs/nonempty"},
         "decisionRef": {"$ref": "#/$defs/nonempty"},
         "authorityAdapterId": {"$ref": "#/$defs/nonempty"},
+        "interactionReceiptDigest": {"$ref": "#/$defs/sha256"},
         "issuedAt": {"$ref": "#/$defs/instant"},
         "expiresAt": {"$ref": "#/$defs/instant"},
         "consumedAt": {"type": "null"},
@@ -279,6 +314,7 @@
         "humanActorId",
         "decisionRef",
         "authorityAdapterId",
+        "interactionReceiptDigest",
         "issuedAt",
         "expiresAt",
         "consumedAt",
@@ -287,7 +323,7 @@
         "receiptDigest"
       ],
       "properties": {
-        "schema": {"const": "agentic-human-authorization-receipt/v1"},
+        "schema": {"const": "agentic-human-authorization-receipt/v2"},
         "status": {"const": "consumed"},
         "candidateDigest": {"$ref": "#/$defs/sha256"},
         "targetDigest": {"$ref": "#/$defs/sha256"},
@@ -296,6 +332,7 @@
         "humanActorId": {"$ref": "#/$defs/nonempty"},
         "decisionRef": {"$ref": "#/$defs/nonempty"},
         "authorityAdapterId": {"$ref": "#/$defs/nonempty"},
+        "interactionReceiptDigest": {"$ref": "#/$defs/sha256"},
         "issuedAt": {"$ref": "#/$defs/instant"},
         "expiresAt": {"$ref": "#/$defs/instant"},
         "consumedAt": {"$ref": "#/$defs/instant"},

@@ -22,10 +22,11 @@ const RELEASE_LIFECYCLE_RECEIPT_ORDER = new Map([
   ["agentic-integration-receipt/v2\u0000integrated", 2],
   ["agentic-runtime-review-receipt/v1\u0000reviewed", 3],
   ["agentic-candidate-manifest/v1\u0000awaiting-human-authorization", 4],
-  ["agentic-human-authorization-receipt/v1\u0000authorized", 5],
-  ["agentic-human-authorization-receipt/v1\u0000consumed", 6],
-  ["agentic-live-verification-receipt/v1\u0000verified", 7],
-  ["agentic-publication-receipt/v1\u0000published", 8],
+  ["agentic-authorization-interaction-receipt/v1\u0000observed", 5],
+  ["agentic-human-authorization-receipt/v2\u0000authorized", 6],
+  ["agentic-human-authorization-receipt/v2\u0000consumed", 7],
+  ["agentic-live-verification-receipt/v1\u0000verified", 8],
+  ["agentic-publication-receipt/v1\u0000published", 9],
 ]);
 
 export function normalizeValidationRequest(input, explicitRuleBindings) {

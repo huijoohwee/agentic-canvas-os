@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   consumeHumanAuthorizationReceipt,
+  createAuthorizationInteractionReceipt,
   createCandidateManifest,
   createHumanAuthorizationReceipt,
   createIntegrationReceipt,
@@ -12,6 +13,7 @@ import {
   createOverlapPreservationReceipt,
   createPublicationReceipt,
   createRuntimeReviewReceipt,
+  AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA,
   CANDIDATE_MANIFEST_SCHEMA,
   HUMAN_AUTHORIZATION_RECEIPT_SCHEMA,
   INTEGRATION_RECEIPT_SCHEMA,
@@ -43,6 +45,7 @@ const expectedOrder = [
   [INTEGRATION_RECEIPT_SCHEMA, "integrated"],
   [RUNTIME_REVIEW_RECEIPT_SCHEMA, "reviewed"],
   [CANDIDATE_MANIFEST_SCHEMA, "awaiting-human-authorization"],
+  [AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA, "observed"],
   [HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "authorized"],
   [HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "consumed"],
   [LIVE_VERIFICATION_RECEIPT_SCHEMA, "verified"],
@@ -77,16 +80,22 @@ const expectedReceiptFields = {
     "artifactDigest", "manifestDigest", "rollbackTargetDigest", "builtAt",
     "receiptDigest",
   ],
+  authorizationInteractionReceipt: [
+    "schema", "status", "candidateDigest", "targetDigest", "humanActorId",
+    "interactionAdapterId", "transportClass", "browserRequired",
+    "challengeDigest", "responseDigest", "recordedAt", "receiptDigest",
+  ],
   issuedHumanAuthorizationReceipt: [
     "schema", "status", "candidateDigest", "targetDigest", "releaseKey",
     "decisionKind", "humanActorId", "decisionRef", "authorityAdapterId",
-    "issuedAt", "expiresAt", "consumedAt", "receiptDigest",
+    "interactionReceiptDigest", "issuedAt", "expiresAt", "consumedAt",
+    "receiptDigest",
   ],
   consumedHumanAuthorizationReceipt: [
     "schema", "status", "candidateDigest", "targetDigest", "releaseKey",
     "decisionKind", "humanActorId", "decisionRef", "authorityAdapterId",
-    "issuedAt", "expiresAt", "consumedAt", "controllerId",
-    "authorizationReceiptDigest", "receiptDigest",
+    "interactionReceiptDigest", "issuedAt", "expiresAt", "consumedAt",
+    "controllerId", "authorizationReceiptDigest", "receiptDigest",
   ],
   liveVerificationReceipt: [
     "schema", "status", "authorizationReceiptDigest", "candidateDigest",
@@ -163,28 +172,41 @@ function completeLifecycle() {
     rollbackTargetDigest: digest("e"),
     builtAt: "2026-07-29T00:04:00.000Z",
   });
-  const authorization = createHumanAuthorizationReceipt(candidate, {
-    decisionKind: "human",
+  const interaction = createAuthorizationInteractionReceipt(candidate, {
     humanActorId: "human:one",
-    decisionRef: "decision:one",
-    authorityAdapterId: "authority:one",
-    issuedAt: "2026-07-29T00:05:00.000Z",
-    expiresAt: "2026-07-29T00:35:00.000Z",
+    interactionAdapterId: "interaction:one",
+    transportClass: "interactive-reference-transport",
+    browserRequired: false,
+    challengeDigest: digest("f"),
+    responseDigest: digest("0"),
+    recordedAt: "2026-07-29T00:05:00.000Z",
   });
+  const authorization = createHumanAuthorizationReceipt(
+    candidate,
+    interaction,
+    {
+      decisionKind: "human",
+      humanActorId: "human:one",
+      decisionRef: "decision:one",
+      authorityAdapterId: "authority:one",
+      issuedAt: "2026-07-29T00:06:00.000Z",
+      expiresAt: "2026-07-29T00:36:00.000Z",
+    },
+  );
   const consumed = consumeHumanAuthorizationReceipt(authorization, {
-    consumedAt: "2026-07-29T00:06:00.000Z",
+    consumedAt: "2026-07-29T00:07:00.000Z",
     controllerId: "controller:one",
   });
   const live = createLiveVerificationReceipt(consumed, {
     deployedArtifactDigest: candidate.artifactDigest,
-    observedRuntimeDigest: digest("f"),
+    observedRuntimeDigest: digest("1"),
     probesDigest: digest("0"),
     rollbackTargetDigest: candidate.rollbackTargetDigest,
-    verifiedAt: "2026-07-29T00:07:00.000Z",
+    verifiedAt: "2026-07-29T00:08:00.000Z",
   });
   const publication = createPublicationReceipt(live, {
     publicationIdentitiesDigest: digest("1"),
-    publishedAt: "2026-07-29T00:08:00.000Z",
+    publishedAt: "2026-07-29T00:09:00.000Z",
   });
   return {
     receipts: [
@@ -193,6 +215,7 @@ function completeLifecycle() {
       integration,
       review,
       candidate,
+      interaction,
       authorization,
       consumed,
       live,
@@ -292,6 +315,11 @@ test("the external schema rejects identical duplicates, malformed receipts, and 
     }],
     ["invalid instant", (run) => {
       run.releaseLifecycle.receipts[0].capturedAt = "not-an-instant";
+    }],
+    ["non-boolean interaction capability", (run) => {
+      const interaction = run.releaseLifecycle.receipts.find((receipt) =>
+        receipt.schema === AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA);
+      interaction.browserRequired = "false";
     }],
     ["unsafe lease epoch", (run) => {
       run.releaseLifecycle.receipts[0].entries[0].collaboration.leaseEpoch =

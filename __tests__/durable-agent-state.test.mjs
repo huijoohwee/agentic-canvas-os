@@ -235,8 +235,9 @@ test("Agent Swarm ledgers coordinate atomic claims across isolate adapters", asy
   const replacement = { ...ledger, revision: 2 };
   assert.equal(await winner[0].replace(ledger.runId, winner[1], replacement), true);
   assert.deepEqual(await second.get(ledger.runId), replacement);
-  assert.ok(await first.claim(ledger.runId, "expiring-coordinator", Date.now() + 5));
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  // Leave enough admission headroom for contended CI runners before proving expiry recovery.
+  assert.ok(await first.claim(ledger.runId, "expiring-coordinator", Date.now() + 1_000));
+  await new Promise((resolve) => setTimeout(resolve, 1_100));
   assert.equal(await second.put({ ...ledger, revision: 3 }), false);
   assert.deepEqual(await second.get(ledger.runId), replacement);
   assert.ok(await first.claim(ledger.runId, "conditional-discard", Date.now() + 30_000));

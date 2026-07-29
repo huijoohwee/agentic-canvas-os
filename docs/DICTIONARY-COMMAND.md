@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-24"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -16,7 +16,10 @@ source_docs:
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
   - "AGENT-TEAM.md"
+  - "REPOSITORY-PACKING.md"
+  - "VOICE-STUDIO.md"
   - "MCP-GATEWAY.md"
+  - "WORKSPACE-PARALLELISM.md"
   - "VALIDATION-RUNBOOK.md"
   - "START-WORKFLOW.md"
   - "RELEASE-WORKFLOW.md"
@@ -38,8 +41,8 @@ metadata_consumers:
   - id: "mcp"
     surface: "MCP capability metadata"
     owner: "knowgrph/mcp/local-tool-contract.js"
-    metadata_fields: ["token", "prefix", "intent", "required_bindings", "semantic_filters", "completion_signal", "publish_policy", "source_docs"]
-    behavior: "reference and handoff metadata only; no standalone MCP tool execution"
+    metadata_fields: ["token", "prefix", "intent", "required_bindings", "semantic_filters", "completion_signal", "publish_policy", "source_docs", "catalog_digest"]
+    behavior: "reference and handoff metadata plus the deterministic full-catalog digest; no standalone MCP tool execution"
 entry_metadata_contract:
   token: "dictionary_entries item and first Commands table column"
   label: "runtime mirror derives a concise display label from the token"
@@ -47,12 +50,13 @@ entry_metadata_contract:
   group: "Agentic OS command dictionary"
   sourcePath: "this dictionary document"
   keywords: "token parts plus Intent, Required bindings, Semantic filters, and Completion signal text"
-  mcp: "MCP consumers may expose command intent and required context, but must fail closed before spend, mutation, or deploy"
+  mcp: "MCP consumers expose command intent, required context, full-catalog counts, and one deterministic catalog digest; digest or count drift fails closed before spend, mutation, or deploy"
 dictionary_entries:
   - "/soul.load"
   - "/personality.overlay"
   - "/moa"
   - "/video-agent"
+  - "/voice.studio"
   - "/sme-care-agent"
   - "/investment-research-agent"
   - "/crawler-agent"
@@ -116,6 +120,16 @@ dictionary_entries:
   - "/harness.define"
   - "/mcp.capabilities"
   - "/cost.audit"
+  - "/payment.rail.select"
+  - "/payment.intent.create"
+  - "/payment.event.settle"
+  - "/payment.reconcile"
+  - "/payment.receipt.project"
+  - "/payment.refund"
+  - "/payment.readiness"
+  - "/workspace.parallelism.check"
+  - "/workspace.operation.review"
+  - "/workspace.guards.install"
   - "/canvas.project"
   - "/canvas.render"
   - "/canvas.node.add"
@@ -158,6 +172,7 @@ dictionary_entries:
   - "/source.normalize"
   - "/git.run"
   - "/file.sync"
+  - "/repository.pack"
   - "/ingest-url"
   - "/computing-flow"
 ---
@@ -182,7 +197,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 |---|---|---|---|
 | Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Commands table Intent plus Required bindings, Semantic filters, and Completion signal. | Inserts the `/` token and preserves the editable query; unknown tokens stay raw text. |
 | Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local command list. |
-| MCP | Token, prefix, intent, required bindings, semantic filters, completion signal, publish policy, source docs. | Commands table plus frontmatter policy fields. | Metadata is reference and handoff context only; a dictionary row does not become an executable MCP tool without a separate shared runtime owner. |
+| MCP | Token, prefix, intent, required bindings, semantic filters, completion signal, publish policy, source docs, full-catalog counts, and catalog digest. | Commands table plus frontmatter policy fields; deterministic digest input is token, kind, label, summary, and source path across all three dictionaries. | Metadata is reference and handoff context only; every sigil query returns the same full-catalog digest, and a dictionary row does not become an executable MCP tool without a separate shared runtime owner. |
 
 ## Commands
 
@@ -192,6 +207,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/personality.overlay` | Apply a temporary session-level style or mode overlay. | `@personality-overlay`, `@operator`, `@runtime-proof` | `#personality-overlay`, `#soul`, `#approval-gate` | Overlay is session-scoped, cannot mutate `SOUL.md`, and remains subordinate to facts, roles, memory, safety, and deploy gates. |
 | `/moa` | Run a one-shot Mixture of Agents pass for a hard query without switching the global model or creating a copied provider preset. | `@moa-preset`, `@reference-agents`, `@aggregator-agent`, `@cost-log`, `@operator` when paid calls are possible | `#mixture-of-agents`, `#reference-agents`, `#aggregator-agent`, `#token-economics` | Local preset resolves; reference calls are no-tool, capped, and advisory; aggregator returns the only user-visible answer; tool calls use normal approval gates; cost log records reference and aggregator tokens; prior context is restored. |
 | `/video-agent` | Run a source-backed, approval-gated video workflow from authored script through structured planning, media generation, persistence, read-back, and shared Canvas projection. | `@operator`, `@video-generation-demo-script`, one `@provider.*` binding, one or more of `@text`, `@image`, `@audio`, `@video`, `@cost-log`, `@runtime-proof` | one `#spec.*`, one `#thinking.type.*`, one `#token-cap.*`, `#approval-gate`, `#token-economics`, `#vcc` | The text stage returns Character, Scene, Dialogue, Visual asset, Audio, Timing, Metadata, and Prompt sheets; approved media stages persist and read back typed artifacts; Cards, Widgets, Rich Media Panels, and Timeline reuse the same identities; missing approval, credentials, entitlement, budget, persistence, read-back, or capability stops terminally. |
+| `/voice.studio` | Select one bounded AI voice studio operation without creating operation-specific slash aliases. | Route-dependent `@audio`, `@text`, `@voice-profile`, `@approval-gate`, `@cost-log`, and `@runtime-proof` exactly as defined in `VOICE-STUDIO.md`. | Exactly one of `#voice-clone`, `#speech-to-text`, or `#text-to-speech`. | The exact host route resolves metadata for `clone`, `dictate`, or `create`; consent and approval remain separate, and only the `knowgrph.voice.studio` MCP wire tool may execute. Missing rights, consent, disclosure, capability, bounds, or proof fails before audio read, adapter work, spend, or persistence. |
 | `/sme-care-agent` | Produce provider-neutral SME exposure, coverage-gap, comparison, and assessment responses through the shared slash-agent owner. | `@source.frontmatter`, `@source.body`, `@local-harness`, `@cost-log`, `@runtime-proof` | `#frontmatter`, `#harness`, `#token-economics`, `#runtime-ready`, `#approval-gate` | The active Chat provider, endpoint, and model returns a source-grounded response or a focused material clarification; unknown coverage remains unknown, and missing route, evidence, approval, or capability fails closed before quote, bind, purchase, provider contact, persistence, Prod, or Cloudflare mutation. |
 | `/investment-research-agent` | Produce source-grounded investment research, comparisons, and plan assessments through the shared slash-agent owner. | `@source.frontmatter`, `@source.body`, `@cost-log`, `@runtime-proof` | `#frontmatter`, `#token-economics`, `#runtime-ready`, `#approval-gate` | The active Chat provider, endpoint, and model separates evidence, assumptions, contradictions, risks, catalysts, and verification gaps or asks one material clarification; missing route or evidence fails closed without invented market facts, transactions, personalized financial advice, persistence, Prod, or Cloudflare mutation. |
 | `/crawler-agent` | Run the native headless website crawl through the existing Import URL and Canvas output owners. | `@url:`, `@reference-policy`, `@runtime-proof` | `#canvas`, `#dev-only`, `#approval-gate` | The native shared runtime returns a persisted crawl report and pipe-table output or a typed URL, policy, download, storage, or capability error; paid-provider, authenticated, and external mutation actions stay blocked without approval. |
@@ -255,6 +271,16 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/harness.define` | Define typed input, output, fallback, cost, and bounds for an AI-capable component. | `@local-harness`, `@cost-log` | `#harness`, `#token-economics`, `#vcc` | Harness contract includes schemas, cost fields, fallback paths, and max iteration. |
 | `/mcp.capabilities` | Discover tool capabilities through the existing MCP gateway contract. | `@mcp-gateway`, `@local-harness` | `#mcp`, `#runtime-ready`, `#cost` | Capability list is deduplicated and discovery reports zero model spend. |
 | `/cost.audit` | Inspect token, cache, and TCO impact before running a model-bearing path. | `@cost-log`, `@operator` | `#token-economics`, `#tco`, `#foss` | Cost log fields are present and budget breach blocks before spend. |
+| `/payment.rail.select` | Resolve exactly one settlement rail for one payment intent from requested currency, requested settlement asset, and per-rail readiness. | `@payment-rail`, `@payment-intent`, `@payment-readiness`, `@runtime-proof` | `#payment-rail-selection`, `#no-hardcode`, `#vcc` | Selection is deterministic for identical inputs, the rail identifier and selection reason persist before any provider call, and no ready rail returns a typed unavailable result with zero provider objects created. |
+| `/payment.intent.create` | Create one provider payment object on the selected rail behind a client-generated intent key. | `@payment-intent`, `@payment-provider`, `@cost-log`, `@runtime-proof`, and `@operator` or `@approval-gate` for agent-originated calls | `#payment-idempotency`, `#approval-gate`, `#token-economics` | The server-side trust boundary holds every credential, a replayed key yields exactly one provider object, a parameter conflict returns a typed conflict without a second object, one cost log entry exists per provider call, and zero model calls are recorded. |
+| `/payment.event.settle` | Authenticate one inbound provider event and apply its settlement side effect at most once. | `@payment-event`, `@payment-intent`, `@payment-provider`, `@runtime-proof` | `#payment-settlement-integrity`, `#vcc`, `#truth` | Signature or source authenticity is verified before the payload is read, provider state is read as the authority, a paid transition requires matching intent identifier, minor-unit amount, and currency, duplicate delivery yields one side effect, and a conflicting payload preserves prior state. |
+| `/payment.reconcile` | Resolve queued or in-flight payment intents to a terminal state from provider-read state under a bounded retry schedule. | `@payment-intent`, `@payment-provider`, `@runtime-proof` | `#offline-intent-queue`, `#payment-settlement-integrity`, `#vcc` | Queued intents persist offline with zero egress, submissions are ordered one intent key at a time, terminal state comes only from provider-read state, local queue state never unlocks paid capability, and an unresolvable record stops at the stated attempt bound with an operator-visible entry. |
+| `/payment.receipt.project` | Serialize terminal payment records into one locally readable document and parse that document back without loss. | `@payment-record`, `@payment-intent`, `@runtime-proof` | `#payment-data-minimization`, `#offline-intent-queue`, `#vcc` | Every terminal record yields exactly one entry, parse then print and print then parse then print are byte-identical, a malformed document returns a typed parse error naming the failing line with bytes unchanged, no prohibited identifier appears in any entry, and the receipt view renders with zero network requests. |
+| `/payment.refund` | Create one refund on the rail that settled the original payment. | `@payment-intent`, `@payment-provider`, `@cost-log`, `@operator` | `#payment-settlement-integrity`, `#approval-gate`, `#vcc` | A refund on a settled record records a refund reference on the settling rail, a repeated request leaves the refunded amount unchanged, a non-settled record returns a typed not-applicable result with zero provider contact, and every recorded failure carries the provider request identifier where the provider supplies one. |
+| `/workspace.parallelism.check` | Audit every lane across the sibling repositories in one workspace root and report which lanes hold work no destructive operation could restore. | `@workspace-lane`, `@recovery-reference`, `@runtime-proof` | `#workspace-parallelism`, `#dev-only`, `#truth` | One lane owns one session, one branch is live in at most one worktree, one semantic scope per repository has one session owner, every at-risk lane is named with its dirty and untracked counts, the audit writes nothing, and readiness is true only when no lane holds untracked work or unreferenced modifications. |
+| `/workspace.operation.review` | Return one fail-closed decision for a candidate destructive Git operation before it runs. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#approval-gate`, `#vcc` | The operation is classified against the explicit forbidden catalog, a foreign-owned lane is refused, any other session holding uncommitted or untracked work in that repository refuses the operation, untracked paths in the target lane refuse it outright, modified tracked paths without a durable recovery reference refuse it, and no catalog operation ever returns a plain allow. |
+| `/workspace.guards.install` | Install the destructive-operation enforcement surfaces across every repository in the workspace root and report the classes no hook can reach. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#workspace-parallelism`, `#runtime-ready` | Every repository points `core.hooksPath` at one hook directory with no copied hook file, the pre-commit, pre-push, and reference-transaction surfaces are active, the PATH shim exposes the wrapper to external tooling, the coverage report names `untrackedRemoval`, `forcedCheckout`, and `objectPruning` as hook-unreachable and marks the wrapper required, and installation writes only hook configuration and the shim without touching any ref, index, or working tree. |
+| `/payment.readiness` | Report per-rail payment configuration completeness without mutating configuration. | `@payment-readiness`, `@payment-rail`, `@runtime-proof` | `#payment-readiness`, `#dev-only`, `#runtime-ready` | The gate lists required credential names per rail, reports presence in server-side secret storage, fails when a credential name or value appears in client bundle output or visible runtime variables, reports the pinned provider API version and configured integration model, marks a rail ready only after a sandbox payment on that rail reached a terminal state, performs zero writes, and exits non-zero on any missing required input. |
 | `/canvas.project` | Project source-backed runtime state into existing Canvas owners. | `@source.frontmatter`, `@source.body`, `@canvas` | `#canvas`, `#frontmatter`, `#runtime-ready` | Source-backed graph, table, or Storyboard surface renders without dashboard-only storage. |
 | `/canvas.render` | Inspect or trigger projection through existing Canvas render owners without mutating source graph data. | `@canvas`, `@source.frontmatter`, `@runtime-proof` | `#canvas`, `#runtime-ready`, `#vcc` | Canvas projection reports rendered graph, table, KGC, or Storyboard state without direct store mutation. |
 | `/canvas.node.add` | Create a graph node through existing Canvas owners at the resolved insertion point. | `@canvas`, `@canvas-center`, `@source.frontmatter` | `#canvas-node`, `#canvas-selection`, `#vcc` | Node creation uses shared graph mutation utilities, selects the committed node, and reports the resolved graph-space point. |
@@ -295,6 +321,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/source.ingest` | Inspect or run source intake through existing Source Files and workspace owners. | `@operator`, `@source.body`, `@dev-only` | `#frontmatter`, `#no-hardcode`, `#dev-only` | Source intake is registered, rejected, or blocked with provenance and no generated-artifact backfill. |
 | `/source.parse` | Parse current source frontmatter and body into normalized graph, table, KTV, or KGC context. | `@source.frontmatter`, `@source.body`, `@runtime-proof` | `#frontmatter`, `#runtime-ready`, `#vcc` | Parse result succeeds without repair-only fallback or returns a typed parse error before model spend. |
 | `/source.normalize` | Neutralize conflicting or stale source content at the upstream document or shared owner. | `@source.frontmatter`, `@source.body` | `#no-hardcode`, `#frontmatter`, `#no-legacy` | Stale, duplicate, or hardcoded content is removed at source without downstream aliasing. |
+| `/repository.pack` | Pack the eligible text files in one exact local Git worktree into a deterministic content-addressed Markdown artifact. | exactly `@repository-root` and `@runtime-proof` | exactly `#repository-packing` | Knowgrph local stdio MCP returns `knowgrph-repository-pack-result/v1` with a verified repository-relative artifact path, source and artifact digests, typed counts, hard bounds, and exact zero network, model, token, and cost evidence. |
 | `/git.run` | Inspect or mutate the browser-persisted Git repository, and fetch from or push to one configured remote through the Dev Worker relay. | `@local-git-repository`, `@git-remote` | `#git-remote`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns a typed repository result; remote credentials remain Worker-only, rejected authority paths fail atomically, and local stdio returns only a browser-runtime handoff. |
 | `/file.sync` | Pull or push a file or directory between browser persisted cache and one configured cloud-storage provider. | `@persisted-cache`, `@file-sync-provider` | `#multi-provider-file-sync`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns per-file typed outcomes with hash skips, bounded retries, conflict state, and offline FIFO; provider credentials remain Worker-only and local stdio performs no storage or network work. |
 | `/ingest-url` | Ingest an operator-provided URL through the approved URL intake and source-file pipeline. | `@operator`, `@approval-gate`, `@dev-only` | `#no-hardcode`, `#approval-gate`, `#dev-only` | URL is accepted, fetched, or rejected through the shared intake path without writing the URL into source docs. |
@@ -350,6 +377,7 @@ command:
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
 | `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
+| `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
 | Command conflicts with source frontmatter | Fix the source or shared owner; do not add a downstream alias. |
@@ -392,6 +420,7 @@ command:
 | `/tool.search` | `FACTS.md` direct-resolution entry for session-scoped deferred tool search. |
 | `/tool.describe` | `FACTS.md` direct-resolution entry for on-demand deferred tool schema loading. |
 | `/tool.call` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool execution. |
+| `/repository.pack` | `FACTS.md` direct-resolution entry for bounded clean-room repository packing. |
 | `/git.run` | `FACTS.md` direct-resolution entry for browser Git and opaque remote relay operations. |
 | `/file.sync` | `FACTS.md` direct-resolution entry for bidirectional provider-neutral file and directory synchronization. |
 | `/query` | `FACTS.md` direct-resolution entry for source-backed read-only answers. |

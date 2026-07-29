@@ -473,6 +473,29 @@ test("completeSession detaches the task worktree only after the task pull reques
   assert.match(logs[0], /Restart the local runtime from this SHA/);
 });
 
+test("completeSession refuses auto-delivery completion without canonical runtime reconciliation", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": "agent/device/scope",
+  });
+  assert.throws(() => completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => "",
+    leaseStore: createCompletionLeaseStore({
+      status: "review_ready",
+      autoDelivery: true,
+      runtimeRequired: true,
+      reviewHeadSha: "c".repeat(40),
+    }),
+    run: () => {},
+  }), /requires device:integrate/);
+});
+
 test("completeSession fails closed while the pull request is open", () => {
   const gitText = createGitText({
     "worktree list --porcelain -z": branchWorktree("agent/device/scope"),

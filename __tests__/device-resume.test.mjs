@@ -118,6 +118,95 @@ test("resume rejects a non-descendant parked local head before issuing a new cla
   assert.equal(calls.some(call => call.join(" ") === `git push origin ${branch}`), false);
 });
 
+test("resume recovers one clean protected-main merge after an expired recorded integration", () => {
+  const integrationCommit = "f".repeat(40);
+  const integrationTree = "a".repeat(40);
+  const refreshedMain = "1".repeat(40);
+  const refreshedHead = "2".repeat(40);
+  const recoveredFence = "3".repeat(40);
+  const expired = {
+    schema: parked.schema,
+    status: "active",
+    epoch: 4,
+    sessionId: "session-a",
+    device: "device",
+    scope: "managed-run",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: remoteSha,
+    pullRequestUrl,
+    heartbeatAt: "2026-07-22T00:00:00.000Z",
+    expiresAt: "2026-07-22T00:01:00.000Z",
+  };
+  let head = refreshedHead;
+  let remoteHead = remoteSha;
+  let localLease = {
+    ...expired,
+    integration: {
+      schema: "agentic-integration-commit/v1",
+      commitSha: integrationCommit,
+      treeSha: integrationTree,
+    },
+  };
+  const calls = [];
+  const result = resume({
+    branchName: branch,
+    invocationPath: repo,
+    repo,
+    gitText: args => {
+      const key = args.join(" ");
+      const values = {
+        "worktree list --porcelain -z": `worktree ${repo}\0HEAD ${head}\0branch refs/heads/${branch}\0`,
+        "diff --name-only --diff-filter=U": "",
+        "ls-files -u": "",
+        "status --porcelain": "",
+        "branch --show-current": branch,
+        [`rev-parse origin/${branch}`]: remoteHead,
+        [`rev-parse ${integrationCommit}^{tree}`]: integrationTree,
+        [`merge-base --is-ancestor ${remoteSha} ${integrationCommit}`]: "",
+        [`merge-base --is-ancestor ${integrationCommit} HEAD`]: "",
+        "rev-parse HEAD": head,
+        "rev-list --parents -n 1 HEAD": `${refreshedHead} ${integrationCommit} ${refreshedMain}`,
+        [`merge-base --is-ancestor ${refreshedMain} origin/main`]: "",
+        [`merge-base --is-ancestor ${remoteSha} origin/${branch}`]: "",
+      };
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    },
+    gitOptional: args => args[0] === "config" ? "device" : "",
+    ghText: args => args[1] === "list" ? JSON.stringify([{
+      number: 42, headRefName: branch, url: pullRequestUrl, body: renderWriterLeasePullRequestBody(expired),
+    }]) : JSON.stringify({
+      url: pullRequestUrl, state: "OPEN", isDraft: true,
+      headRefName: branch, baseRefName: "main", body: renderWriterLeasePullRequestBody(expired),
+    }),
+    leaseStore: {
+      read: () => localLease,
+      claim: input => {
+        assert.equal(input.baseSha, refreshedHead);
+        localLease = { ...expired, epoch: 5, baseSha: refreshedHead, fenceSha: null, pullRequestUrl: null };
+        return localLease;
+      },
+      annotate: ({ values }) => (localLease = { ...localLease, ...values }),
+      verify: () => localLease,
+    },
+    sessionId: "session-a",
+    leaseTtlMs: 1_800_000,
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "git" && args[0] === "commit") head = recoveredFence;
+      if (command === "git" && args[0] === "push") remoteHead = recoveredFence;
+    },
+    log: () => {},
+    now: () => new Date("2026-07-22T00:10:00.000Z"),
+  });
+
+  assert.equal(result.fenceSha, recoveredFence);
+  assert.equal(result.integration.commitSha, integrationCommit);
+  assert.ok(calls.some(call => call.join(" ") === `git push origin ${branch}`));
+});
+
 test("resume preserves the exact pending claim when a push result is uncertain", () => {
   const calls = [];
   const push = `git push origin ${branch}`;

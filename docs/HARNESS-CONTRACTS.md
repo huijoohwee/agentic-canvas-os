@@ -83,7 +83,6 @@ flow:
       target: {key: target, type: string, value: "consumer"}
       type: {key: type, type: string, value: "harness_proof_signal"}
 ---
-
 # Harness Contracts
 
 Every AI-capable Agentic Canvas OS component must be a harness: typed input, typed output, bounded execution, cost logging, and explicit fallback.
@@ -123,6 +122,7 @@ harness:
 |---|---|---|---|---|
 | OS Status | Read process, capability, cost, gate, and breaker views | `{ view, filters }` | Typed read view with zero cost | None; read-only |
 | Capability Discovery | Deduplicate local, browser, Pages, and control-plane catalogs | `{ includeRemote, trustBoundary }` | `Capability_Entry[]`, `sourceCatalogs[]`, `unreachableCatalogs[]` | None; discovery must be zero-token |
+| Repository Packing | Convert one exact local Git worktree into a deterministic content-addressed Markdown artifact | `{ repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes }` | `knowgrph-repository-pack-result/v1` metadata, typed omissions, verified digests, or source-byte-free block | Explicit local artifact request only; secrets, escape, drift, overflow, external dependency, network, model, Prod, and Cloudflare fail before publication |
 | Soul Identity | Load durable agent identity into prompt slot 1 | `{ soulRef, promptSlot, overlayRef }` | Identity packet, typed fallback, scan result, or blocked reason | Mutation only when editing `SOUL.md`; prompt use requires scan |
 | Mixture Of Agents | Run bounded advisory reference fan-out and one aggregator-owned response | `{ prompt, presetRef, contextRef, approvals[] }` | Aggregator response, reference ledger, cost log, or blocked reason | Paid reference calls, paid aggregator calls, tool calls, mutation, deploy |
 | Video Remix Director | Research, storyboard, render, publish, checkout workflow | `{ referenceUrl, brief, budgetUsd, approvals[] }` | Run manifest, evidence pack, storyboard, asset or blocked state | Paid model, render, payment, deploy |
@@ -419,7 +419,7 @@ The controller bounds model turns, calls, batch width, program size, result size
 | Platform toolset | Enablement is scoped to one platform surface and does not transfer across CLI, chat, browser, MCP, or control plane. |
 | Web search/extract | Source scope, citations, egress policy, cache behavior, and cost log. |
 | Image generation | Approval gate, prompt bounds, artifact manifest, and cost log. |
-| Text-to-speech | Voice/provider, text bounds, output manifest, duration guard, and cost log. |
+| Voice and speech | `VOICE-STUDIO.md` owns clone, speech-to-text, and text-to-speech detail; shared harnesses require consent or recording rights where applicable, exact source/profile/text provenance, disclosure, approval, duration and size bounds, output manifest, revocation checks, and cost log. |
 | Cloud browser | Isolated session, action schema, screenshot/vision bounds, redaction, trace, and approval. |
 | Tool Search | Session-scoped metadata exposure, exact on-demand definition loading, gateway authorization, and no copied search implementation. |
 

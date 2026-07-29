@@ -314,6 +314,129 @@ test("a protected-main merge preserves the approved authored commit evidence", (
   }
 });
 
+test("authorized auto-delivery completes only through canonical runtime readiness", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-auto-"));
+  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  mkdirSync(canonicalKnowgrphRoot, { recursive: true });
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  let lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: true,
+    runtimeRequired: true,
+    reviewHeadSha: commitSha,
+  });
+  let publishCalled = false;
+  let runtimeProven = false;
+  let completedAfterRuntime = false;
+  try {
+    const result = integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "MERGED",
+        baseRefName: "main",
+        headRefOid: commitSha,
+        mergeCommit: { oid: mergeSha },
+      }),
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+        complete: values => {
+          assert.equal(runtimeProven, true);
+          completedAfterRuntime = true;
+          lease = { ...lease, status: "completed", completion: {
+            mergeCommitSha: values.mergeCommitSha,
+            mainSha: values.mainSha,
+          } };
+          return lease;
+        },
+      },
+      sessionId: "session-a",
+      run: () => {},
+      runText: (command, args) => {
+        if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        if (command === "node") return "";
+        runtimeProven = true;
+        return JSON.stringify({
+          schema: "agentic-local-runtime-readiness/v1",
+          ready: true,
+          status: "runtime-ready",
+          source: { repository: "huijoohwee/knowgrph", revision: knowgrphSha },
+          agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: mainSha },
+        });
+      },
+      publishTask: () => { publishCalled = true; },
+      completeTask: () => {
+        lease = { ...lease, status: "completing", completion: { mergeCommitSha: mergeSha, mainSha } };
+        return lease.completion;
+      },
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    });
+
+    assert.equal(result.status, "runtime_ready");
+    assert.equal(result.commit, null);
+    assert.equal(publishCalled, false);
+    assert.equal(completedAfterRuntime, true);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("authorized auto-delivery rejects integration without canonical runtime proof", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-auto-"));
+  const lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: true,
+    runtimeRequired: true,
+    reviewHeadSha: commitSha,
+  });
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => "",
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      run: () => {},
+      runText: () => "",
+      publishTask: () => {},
+      completeTask: () => {},
+      runtime: "none",
+      controllerRoot: repo,
+      log: () => {},
+    }), /requires canonical runtime readiness/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 function createLease({ repo, ...overrides }) {
   return {
     schema: "agentic-writer-lease/v2",

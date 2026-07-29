@@ -2,22 +2,22 @@
 title: "Role-Based Agent Team Invocation Contract"
 graphId: "md:role-based-agent-team"
 doc_type: "Invocation And MCP Ownership Contract"
-date: "2026-07-24"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agent-team-invocation-contract/v1"
 frontmatter_contract: "required"
-status: "spec-complete"
+status: "runtime-ready"
 authority: "canonical role-based team invocation, source shape, lifecycle semantics, bounds, and owner separation"
 runtime_scope: "provider-neutral role-playing collaboration composed from existing Agentic Canvas OS agent owners"
-runtime_claim: "Agentic Canvas OS supplies a model-free validated contract; executable durable plan/start/list/control readiness belongs only to the matching Knowgrph local stdio MCP runtime and its proof"
+runtime_claim: "Agentic Canvas OS supplies the model-free validated contract; the matching Knowgrph local stdio MCP now proves durable plan/start/list/control execution with host-owned verification, control, review receipts, and an explicitly configured local model"
 runtime_owner: "$GITHUB_ROOT/knowgrph/mcp"
-runtime_proof: "../scripts/agent-team-contract.mjs; ../__tests__/agent-team-contract.test.mjs"
+runtime_proof: "../scripts/agent-team-contract.mjs; ../__tests__/agent-team-contract.test.mjs; $GITHUB_ROOT/knowgrph npm run agent-team:check"
 invocation: "/agent.team #role-based-agent-team @agent-team"
 mcp_tools: ["knowgrph.agent_team.plan", "knowgrph.agent_team.start", "knowgrph.agent_team.list", "knowgrph.agent_team.control"]
 external_pattern_source: "https://github.com/crewaiinc/crewai"
 external_source_policy: "official abstract capability inspiration only; local source, vocabulary, schemas, prompts, fixtures, tests, and prose are independently authored"
 external_dependency: "forbidden"
-publish_policy: "Dev-only until matching Knowgrph runtime proof and explicit operator approval"
+publish_policy: "runtime-ready in local Dev only; provider, remote Worker, Prod, and Cloudflare remain separately gated"
 ---
 
 # Role-Based Agent Team
@@ -135,6 +135,31 @@ The effective value is the lowest of the source, caller, application, provider, 
 `npm run agent-team:check` is model-free. Its deterministic fixture validates exact document projections, owner and state tables, bounds, dependency and reference-name guards, line ceilings, and fail-closed mutations with `tokens: 0` and `costUsd: 0`.
 
 A matching Knowgrph deterministic runtime proof must use exact fake source digests, fixed Agent Definition revisions, a fixed Agent Orchestration workflow, an injected response table, and a temporary durable-state adapter. It must prove plan idempotency, start fencing, manager-owned delegate synthesis, target-owned handoff, private-output suppression, checkpoint recovery, stale-version rejection, replay rejection, cancellation precedence, human-review continuation, every hard bound, the four wire tools, and durable restart behavior before runtime-ready promotion. Neither proof makes a provider, production, or deployment readiness claim.
+
+## Matching Local Dev Runtime
+
+Knowgrph's canonical local stdio registrar now privately installs the four
+required host owners: exact Agent Definition/workflow/review verification,
+local control authorization, file-backed expiring review-receipt verification,
+and a revisioned replay-safe local Ollama adapter with a zero-spend estimate.
+None is caller-configurable through MCP.
+
+The checked-in `team.collaborative-intelligence@1.0.0` source binds
+`agent.collaboration-manager@1.0.0`, `agent.evidence-scout@1.0.0`, and
+`agent.risk-reviewer@1.0.0` to two ordered delegate branches. The manager owns
+both branch synthesis and the final public answer. The operator must explicitly
+select an exact model with `KNOWGRPH_AGENT_TEAM_MODEL`; loopback Ollama is the
+default, no model is downloaded or hard-coded, and unconfigured execution
+fails before durable state or model work.
+
+The matching focused proof resolves this contract's exact `/`, `#`, and `@`
+tuple through canonical stdio, executes both specialists plus manager
+synthesis through a loopback fake model endpoint, reports zero cost, suppresses
+private outputs, and proves idempotent replay makes no additional model call.
+Separate pending/completed local effect receipts block uncertain restart
+repetition. `npm run agent-team:check` also covers exact reference drift,
+review receipt expiry, control authorization, bounds, cancellation,
+checkpoint/event integrity, and the clean-room dependency guard.
 
 ## Clean-Room Boundary
 

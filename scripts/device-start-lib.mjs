@@ -24,6 +24,7 @@ export function start({
   leaseStore,
   sessionId,
   leaseTtlMs,
+  autoDelivery = false,
   run,
   log = console.log,
   now = () => new Date(),
@@ -82,6 +83,7 @@ export function start({
       branch,
       worktreePath: repo,
       baseSha,
+      autoDelivery,
       ttlMs: leaseTtlMs,
     });
     freshClaim = true;

@@ -188,6 +188,8 @@ test("pull request metadata round-trips the current fencing identity", () => {
     branch: lease.branch,
     baseSha: lease.baseSha,
     fenceSha: lease.fenceSha,
+    autoDelivery: false,
+    runtimeRequired: false,
     heartbeatAt: lease.heartbeatAt,
     expiresAt: lease.expiresAt,
   });

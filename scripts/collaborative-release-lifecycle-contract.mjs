@@ -5,7 +5,8 @@ export const OVERLAP_DISPOSITION_RECEIPT_SCHEMA = "agentic-overlap-disposition-r
 export const INTEGRATION_RECEIPT_SCHEMA = "agentic-integration-receipt/v2";
 export const RUNTIME_REVIEW_RECEIPT_SCHEMA = "agentic-runtime-review-receipt/v1";
 export const CANDIDATE_MANIFEST_SCHEMA = "agentic-candidate-manifest/v1";
-export const HUMAN_AUTHORIZATION_RECEIPT_SCHEMA = "agentic-human-authorization-receipt/v1";
+export const AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA = "agentic-authorization-interaction-receipt/v1";
+export const HUMAN_AUTHORIZATION_RECEIPT_SCHEMA = "agentic-human-authorization-receipt/v2";
 export const LIVE_VERIFICATION_RECEIPT_SCHEMA = "agentic-live-verification-receipt/v1";
 export const PUBLICATION_RECEIPT_SCHEMA = "agentic-publication-receipt/v1";
 
@@ -170,28 +171,53 @@ export function createCandidateManifest(review, input) {
   });
 }
 
-export function createHumanAuthorizationReceipt(candidate, input) {
+export function createAuthorizationInteractionReceipt(candidate, input) {
   validateCandidateManifest(candidate);
   requireExact(input, [
-    "decisionKind",
-    "humanActorId",
-    "decisionRef",
-    "authorityAdapterId",
-    "issuedAt",
-    "expiresAt",
+    "humanActorId", "interactionAdapterId", "transportClass", "browserRequired",
+    "challengeDigest", "responseDigest", "recordedAt",
+  ], "Authorization Interaction Receipt input");
+  for (const field of ["humanActorId", "interactionAdapterId", "transportClass"]) requireText(input[field], field);
+  requireBoolean(input.browserRequired, "browserRequired");
+  requireDigest(input.challengeDigest, "challengeDigest");
+  requireDigest(input.responseDigest, "responseDigest");
+  requireInstant(input.recordedAt, "recordedAt");
+  if (Date.parse(input.recordedAt) < Date.parse(candidate.builtAt)) throw new Error(
+    "Authorization interaction cannot predate the Candidate Manifest.",
+  );
+  return receipt({
+    schema: AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA,
+    status: "observed",
+    candidateDigest: candidate.receiptDigest,
+    targetDigest: candidate.targetDigest,
+    ...input,
+  });
+}
+
+export function createHumanAuthorizationReceipt(candidate, interaction, input) {
+  validateCandidateManifest(candidate);
+  validateAuthorizationInteractionReceipt(interaction);
+  requireExact(input, [
+    "decisionKind", "humanActorId", "decisionRef", "authorityAdapterId", "issuedAt", "expiresAt",
   ], "Human Authorization Receipt input");
   if (input.decisionKind !== "human") throw new Error("Forward deployment requires an authenticated human decision.");
   for (const field of ["humanActorId", "decisionRef", "authorityAdapterId"]) requireText(input[field], field);
   requireWindow(input.issuedAt, input.expiresAt, "Human Authorization Receipt");
-  if (Date.parse(input.issuedAt) < Date.parse(candidate.builtAt)) {
-    throw new Error("Human authorization cannot predate the Candidate Manifest.");
+  if (interaction.candidateDigest !== candidate.receiptDigest ||
+      interaction.targetDigest !== candidate.targetDigest ||
+      interaction.humanActorId !== input.humanActorId) {
+    throw new Error("Human authorization interaction is bound to another candidate, target, or actor.");
   }
+  if (Date.parse(input.issuedAt) < Date.parse(interaction.recordedAt)) throw new Error(
+    "Human authorization cannot predate its interaction evidence.",
+  );
   return receipt({
     schema: HUMAN_AUTHORIZATION_RECEIPT_SCHEMA,
     status: "authorized",
     candidateDigest: candidate.receiptDigest,
     targetDigest: candidate.targetDigest,
     releaseKey: releaseKey(candidate.targetDigest, candidate.receiptDigest),
+    interactionReceiptDigest: interaction.receiptDigest,
     ...input,
     consumedAt: null,
   });
@@ -407,10 +433,19 @@ function validateCandidateManifest(value) {
   ]);
 }
 
+function validateAuthorizationInteractionReceipt(value) {
+  validateReceipt(value, AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA, "observed", [
+    "candidateDigest", "targetDigest", "humanActorId", "interactionAdapterId",
+    "transportClass", "browserRequired", "challengeDigest", "responseDigest", "recordedAt",
+  ]);
+  requireBoolean(value.browserRequired, "browserRequired");
+}
+
 function validateHumanAuthorizationReceipt(value) {
   validateReceipt(value, HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "authorized", [
     "candidateDigest", "targetDigest", "releaseKey", "decisionKind", "humanActorId",
-    "decisionRef", "authorityAdapterId", "issuedAt", "expiresAt", "consumedAt",
+    "decisionRef", "authorityAdapterId", "interactionReceiptDigest",
+    "issuedAt", "expiresAt", "consumedAt",
   ]);
   if (value.decisionKind !== "human" || value.consumedAt !== null) {
     throw new Error("Human Authorization Receipt is not an unconsumed human decision.");
@@ -420,7 +455,8 @@ function validateHumanAuthorizationReceipt(value) {
 function validateConsumedAuthorizationReceipt(value) {
   validateReceipt(value, HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "consumed", [
     "candidateDigest", "targetDigest", "releaseKey", "decisionKind", "humanActorId",
-    "decisionRef", "authorityAdapterId", "issuedAt", "expiresAt", "consumedAt",
+    "decisionRef", "authorityAdapterId", "interactionReceiptDigest",
+    "issuedAt", "expiresAt", "consumedAt",
     "controllerId", "authorizationReceiptDigest",
   ]);
   requireInstant(value.consumedAt, "consumedAt");
@@ -517,6 +553,10 @@ function assertUnique(keys, label) {
 
 function requireEnum(value, options, label) {
   if (!options.includes(value)) throw new Error(`${label} must be one of: ${options.join(", ")}.`);
+}
+
+function requireBoolean(value, label) {
+  if (typeof value !== "boolean") throw new Error(`${label} must be a boolean.`);
 }
 
 function requireWindow(issuedAt, expiresAt, label) {

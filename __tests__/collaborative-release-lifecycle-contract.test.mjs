@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   consumeHumanAuthorizationReceipt,
+  createAuthorizationInteractionReceipt,
   createCandidateManifest,
   createHumanAuthorizationReceipt,
   createIntegrationReceipt,
@@ -125,7 +126,16 @@ function buildChain(overrides = {}) {
     rollbackTargetDigest: digest("5"),
     builtAt: clock.built,
   });
-  const authorization = createHumanAuthorizationReceipt(candidate, {
+  const interaction = createAuthorizationInteractionReceipt(candidate, {
+    humanActorId: "operator:release-authorizer",
+    interactionAdapterId: "interaction:replaceable-adapter",
+    transportClass: "interactive-reference-transport",
+    browserRequired: false,
+    challengeDigest: digest("6"),
+    responseDigest: digest("7"),
+    recordedAt: clock.authorized,
+  });
+  const authorization = createHumanAuthorizationReceipt(candidate, interaction, {
     decisionKind: "human",
     humanActorId: "operator:release-authorizer",
     decisionRef: "decision:immutable-reference",
@@ -133,7 +143,7 @@ function buildChain(overrides = {}) {
     issuedAt: clock.authorized,
     expiresAt: clock.authorizationExpires,
   });
-  return { preservation, disposition, integration, review, candidate, authorization };
+  return { preservation, disposition, integration, review, candidate, interaction, authorization };
 }
 
 function current(chain) {
@@ -277,10 +287,37 @@ test("overlap disposition fails closed on missing, changed, or unaccounted work"
   );
 });
 
-test("authorization cannot be synthesized by a machine or issued before the candidate", () => {
+test("authorization interaction is candidate-bound, transport-explicit, and browser-capability explicit", () => {
   const { candidate } = buildChain();
+  const interaction = createAuthorizationInteractionReceipt(candidate, {
+    humanActorId: "operator",
+    interactionAdapterId: "adapter",
+    transportClass: "interactive-transport",
+    browserRequired: false,
+    challengeDigest: digest("1"),
+    responseDigest: digest("2"),
+    recordedAt: clock.authorized,
+  });
+  assert.equal(interaction.candidateDigest, candidate.receiptDigest);
+  assert.equal(interaction.browserRequired, false);
   assert.throws(
-    () => createHumanAuthorizationReceipt(candidate, {
+    () => createAuthorizationInteractionReceipt(candidate, {
+      humanActorId: "operator",
+      interactionAdapterId: "adapter",
+      transportClass: "interactive-transport",
+      browserRequired: "false",
+      challengeDigest: digest("1"),
+      responseDigest: digest("2"),
+      recordedAt: clock.authorized,
+    }),
+    /must be a boolean/,
+  );
+});
+
+test("authorization cannot be synthesized by a machine, detached from interaction, or issued before it", () => {
+  const { candidate, interaction } = buildChain();
+  assert.throws(
+    () => createHumanAuthorizationReceipt(candidate, interaction, {
       decisionKind: "machine",
       humanActorId: "agent",
       decisionRef: "decision",
@@ -291,15 +328,26 @@ test("authorization cannot be synthesized by a machine or issued before the cand
     /authenticated human decision/,
   );
   assert.throws(
-    () => createHumanAuthorizationReceipt(candidate, {
+    () => createHumanAuthorizationReceipt(candidate, interaction, {
       decisionKind: "human",
-      humanActorId: "operator",
+      humanActorId: "operator:release-authorizer",
       decisionRef: "decision",
       authorityAdapterId: "adapter",
       issuedAt: "2026-07-28T23:59:00.000Z",
       expiresAt: clock.authorizationExpires,
     }),
-    /cannot predate/,
+    /cannot predate its interaction evidence/,
+  );
+  assert.throws(
+    () => createHumanAuthorizationReceipt(candidate, interaction, {
+      decisionKind: "human",
+      humanActorId: "operator:another-human",
+      decisionRef: "decision",
+      authorityAdapterId: "adapter",
+      issuedAt: clock.authorized,
+      expiresAt: clock.authorizationExpires,
+    }),
+    /another candidate, target, or actor/,
   );
 });
 

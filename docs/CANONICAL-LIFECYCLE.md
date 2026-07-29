@@ -4,12 +4,12 @@ graphId: "md:provider-neutral-collaborative-runtime-lifecycle"
 doc_type: "Lifecycle Contract"
 date: "2026-07-29"
 lang: "en-US"
-schema: "canonical-runtime-lifecycle/v3"
+schema: "canonical-runtime-lifecycle/v4"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "provider-neutral multi-user, multi-device, parallel authoring, integration, review, authorization, deployment, verification, and rollback semantics"
 publish_policy: "protected integration creates no forward-deployment authority; one exact-candidate authenticated human decision is required"
-runtime_scope: "source, dependency, policy, review, build, authorization, target, deployment, verification, publication, and rollback adapters"
+runtime_scope: "source, dependency, policy, review, build, authorization interaction, authority, target, deployment, verification, publication, and rollback adapters"
 runtime_claim: "fenced collaboration and joined immutable receipts prevent mutable-ref, cross-device, parallel-controller, and authorization drift"
 runtime_proof: "RUNTIME-PROOF.md"
 ---
@@ -24,8 +24,9 @@ processes, review hosts, branch labels, environment labels, and deployment
 timestamps are not source identity. Every participant fetches the authority
 independently and compares exact immutable object identities.
 
-This document owns protocol semantics. Source-control, review, build, approval,
-hosting, and publication products are replaceable adapters. An adapter is
+This document owns protocol semantics. Source-control, review, build,
+authorization-interaction, authority, hosting, and publication products are
+replaceable adapters. An adapter is
 conforming only when it preserves the identities, receipts, human boundary,
 fences, idempotency, drift checks, and fail-closed results defined here.
 
@@ -77,7 +78,8 @@ Actor ID
 | `Integration Receipt` | Preservation and Disposition Receipt digests, canonical source revision and tree, full dependency-closure digest, protected checks, evaluator, collaboration tuple, integration target, and receipt digest | Authoring closes; controlled review may begin |
 | `Runtime Review Receipt` | Integration Receipt digest, controlled review-surface identity, source and dependency closure, policy digest, probes, reviewer identity, issue time, and expiry | Candidate preparation may begin |
 | `Candidate Manifest` | Runtime Review Receipt digest, source and transitive dependencies, policy and target digests, artifact digest, immutable-manifest digest, rollback target, and candidate digest | One immutable candidate exists |
-| `Human Authorization Receipt` | Candidate digest, target digest, authenticated human decision reference, authority-adapter identity, issue time, expiry, consumption state, and receipt digest | One forward deployment attempt may begin |
+| `Authorization Interaction Receipt` | Candidate and target digests, authenticated human actor, interaction-adapter identity, transport class, declared browser dependency, challenge and response digests, observation time, and receipt digest | A human interaction is observed; no deployment authority |
+| `Human Authorization Receipt` | Authorization Interaction Receipt, candidate, and target digests; authenticated human decision reference; authority-adapter identity; issue time; expiry; consumption state; and receipt digest | One forward deployment attempt may begin |
 | `Live Verification Receipt` | Authorization Receipt digest, deployed artifact and target identities, observed runtime identity, health and critical-path probes, rollback target, and receipt digest | The candidate is live and verified |
 | `Publication Receipt` | Live Verification Receipt digest and exact downstream mirror or publication identities | Downstream publication closes |
 
@@ -88,6 +90,12 @@ runtime review, or authorization. Runtime review and deployment authorization
 are distinct human decisions; neither source review nor a successful build
 grants forward-deployment authority.
 
+The interaction adapter and authority adapter are independent modules. A
+transport can present and return the exact candidate challenge but cannot grant
+authority; the authority adapter can accept a human decision only when the
+joined interaction evidence identifies the same human, candidate, and target.
+Transport names and products are profile facts, not universal protocol terms.
+
 ## End-to-End State Machine
 
 | State | Required transition | Fail-closed invariant |
@@ -97,8 +105,8 @@ grants forward-deployment authority.
 | **Integrated** | Required checks pass and exact reviewed changes converge into the canonical protected source ref | Bypass, mutable head, or unjoined dependency state emits no Integration Receipt |
 | **Reviewed** | An operator-controlled surface runs the exact integrated source and full pinned dependency closure | Task-lane, stale-process, dependency, policy, check, or probe mismatch emits no Runtime Review Receipt |
 | **Prepared** | Build once and bind review, complete source/dependency closure, policy, target, artifact, manifest, and rollback identities | Mutable refs, labels, timestamps, unresolved dependencies, and "latest" selectors are invalid identity |
-| **Awaiting authorization** | Candidate preparation completes without mutating the target | Merge, push, schedule, agent action, prior approval, or review cannot substitute for a human decision |
-| **Authorized** | An authenticated human authorizes the exact candidate digest for the exact target | Authorization is absent by default, target-specific, expiring, non-transferable, and single-consumption |
+| **Awaiting authorization** | A replaceable interaction adapter presents the exact candidate and target challenge without mutating the target | Merge, push, schedule, agent action, prior approval, review, or transport activity cannot substitute for a human decision |
+| **Authorized** | An authenticated human authorizes the exact candidate digest for the exact target and the authority adapter joins that decision to the interaction receipt | Authorization is absent by default, actor-bound, target-specific, expiring, non-transferable, and single-consumption |
 | **Deployed** | Zero drift is revalidated and the already-built bytes deploy under one target-scoped fence | Rebuild, dependency resolution, retargeting, or source selection after authorization is forbidden |
 | **Verified** | Live identity and critical probes match the authorization and Candidate Manifest | Failed or ambiguous proof triggers recovery and leaves publication closed |
 | **Published** | Only the exact Live Verification Receipt is projected to downstream mirrors or surfaces | Publication cannot lead live verification |
@@ -127,9 +135,11 @@ these identities changes:
 - any direct or transitive runtime, build, catalog, schema, or data dependency;
 - collaboration fence, integrated scope, preserved-work state, recovery identity,
   overlap class, or preservation disposition;
-- policy, authority-adapter, target configuration, or rollback target;
+- policy, interaction-adapter, interaction transport, declared browser
+  dependency, authority-adapter, target configuration, or rollback target;
 - review, artifact, immutable-manifest, candidate, or predecessor-receipt digest;
-- authorization status, expiry, target, decision identity, or consumption state.
+- interaction challenge, response, actor, or receipt digest; or authorization
+  status, expiry, target, decision identity, or consumption state.
 
 Revalidate the canonical source and complete dependency closure immediately
 before deployment. A rebuild from unchanged source is still a new candidate.
@@ -148,7 +158,8 @@ Runtime readiness requires:
 - current leases and fences for all contributing scopes;
 - reproducible dependency resolution and build output;
 - complete source, dependency, policy, target, artifact, and manifest identity;
-- one authenticated human authorization for the deployed candidate and target;
+- one joined Authorization Interaction Receipt and authenticated human
+  authorization for the deployed candidate and target;
 - one target-scoped deployment controller with durable idempotency evidence;
 - successful live health, critical-path, and observed-identity proof;
 - a retained immutable rollback target and successful rollback probe when used;
@@ -168,6 +179,7 @@ reports `blocked`; prose, local state, and provider success labels cannot report
 | Task activation, leases, fences, and handoff | Session-start contract |
 | Integration, candidate, deployment, verification, and rollback stage detail | Release workflow contract |
 | Concrete source-control, review, approval, build, hosting, and mirror behavior | Reference implementation adapters |
+| Human decision interaction transport | Replaceable Interaction Adapter |
 | Human forward-deployment decision | Authenticated Operator |
 
 ## Reference Implementation Mapping
@@ -184,6 +196,7 @@ follows. These names are implementation facts, not universal lifecycle terms.
 | Controlled runtime review | Repository-owned localhost runtime supervised by Agentic Canvas OS `turn:end` |
 | Runtime Review Receipt | `agentic-local-review-candidate/v1` |
 | Candidate Manifest | `agentic-production-release-candidate/v1`, binding Knowgrph, Agentic Canvas OS, catalog, mirror, artifact, and immutable-manifest identities |
+| Human interaction adapter | Knowgrph `npm run production:authorize` interactive terminal command; it downloads the exact candidate, requires an exact-digest challenge response in a TTY, calls the authority API directly, and neither launches nor requires a browser |
 | Human authority adapter | Protected GitHub `production` environment with an authenticated required reviewer |
 | Deployment adapter | Knowgrph repository-owned Cloudflare release controller |
 | Publication adapter | Generated `huijoohwee` mirror, published only after live verification |
@@ -201,7 +214,10 @@ rebase, stash, force checkout, and destructive cleanup are not recovery.
 PR head to merge, records durable completion, fast-forwards canonical source,
 and delegates runtime review to `turn:end`. That receipt is review evidence, not
 Production authorization. Knowgrph may then build once and wait at the protected
-GitHub environment. After an authenticated human decision, the controller
+GitHub environment. The reference operator uses the terminal interaction
+adapter; the browser is not part of the production path. After the adapter
+records the exact challenge response and the protected environment records the
+same authenticated human decision, the controller
 revalidates every bound identity without rebuilding, deploys under one
 environment concurrency lock, proves both production routes, then publishes the
 exact verified mirror.

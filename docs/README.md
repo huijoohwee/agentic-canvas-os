@@ -18,7 +18,7 @@ source_of_truth:
   - "SKILLS.md"
   - "INSTRUCTION-AUDIT.md"
   - "INSTRUCTION-QUALITY-EVALUATION.md"
-publish_policy: "protected green main authorizes only the repository-owned automatic release controller"
+publish_policy: "protected green main authorizes Dev integration only; forward Production requires exact-candidate human authorization"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "documentation control surface for making knowgrph a runtime-ready Agentic Canvas OS"
 runtime_proof: "RUNTIME-PROOF.md"

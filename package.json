@@ -61,6 +61,7 @@
     "runtime:local:status": "node ./scripts/local-runtime.mjs status",
     "runtime:local:stop": "node ./scripts/local-runtime.mjs stop",
     "turn:end": "node ./scripts/local-runtime.mjs turn-end",
+    "collaborative-release-lifecycle:check": "node --test ./__tests__/collaborative-release-lifecycle-contract.test.mjs ./__tests__/canonical-lifecycle.test.mjs",
     "production-release-authorization:check": "node --test ./__tests__/production-release-authorization-contract.test.mjs",
     "device:start": "node ./scripts/device-branch.mjs start",
     "device:publish": "node ./scripts/device-branch.mjs publish",

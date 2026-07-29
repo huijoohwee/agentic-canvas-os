@@ -4,13 +4,13 @@ graphId: "md:provider-neutral-collaborative-runtime-lifecycle"
 doc_type: "Lifecycle Contract"
 date: "2026-07-29"
 lang: "en-US"
-schema: "canonical-runtime-lifecycle/v4"
+schema: "canonical-runtime-lifecycle/v5"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "provider-neutral multi-user, multi-device, parallel authoring, integration, review, authorization, deployment, verification, and rollback semantics"
 publish_policy: "protected integration creates no forward-deployment authority; one exact-candidate authenticated human decision is required"
-runtime_scope: "source, dependency, policy, review, build, authorization interaction, authority, target, deployment, verification, publication, and rollback adapters"
-runtime_claim: "fenced collaboration and joined immutable receipts prevent mutable-ref, cross-device, parallel-controller, and authorization drift"
+runtime_scope: "source, dependency, policy, review, build, readiness-bound authorization prompting, authorization interaction, authority, target, deployment, verification, publication, and rollback adapters"
+runtime_claim: "fenced collaboration, runtime-ready review binding, and joined immutable receipts prevent mutable-ref, cross-device, parallel-controller, and authorization drift"
 runtime_proof: "RUNTIME-PROOF.md"
 ---
 
@@ -95,6 +95,14 @@ transport can present and return the exact candidate challenge but cannot grant
 authority; the authority adapter can accept a human decision only when the
 joined interaction evidence identifies the same human, candidate, and target.
 Transport names and products are profile facts, not universal protocol terms.
+
+An authorization prompt is eligible only while the controlled review surface
+still reports runtime-ready for the exact Integration Receipt and Candidate
+Manifest. It must present the candidate digest, canonical source revision,
+release-run reference, controlled review-surface locator, and one exact
+candidate-bound response. Prompt presentation creates no authority. Any missing
+field, failed probe, expired review, or identity drift blocks the prompt and
+requires a fresh runtime review before another human decision.
 
 ## End-to-End State Machine
 
@@ -196,6 +204,7 @@ follows. These names are implementation facts, not universal lifecycle terms.
 | Controlled runtime review | Repository-owned localhost runtime supervised by Agentic Canvas OS `turn:end` |
 | Runtime Review Receipt | `agentic-local-review-candidate/v1` |
 | Candidate Manifest | `agentic-production-release-candidate/v1`, binding Knowgrph, Agentic Canvas OS, catalog, mirror, artifact, and immutable-manifest identities |
+| Runtime-ready authorization prompt | ACOS `agentic-production-authorization-prompt/v1`, derived from the current `turn:end` runtime, exact local-review receipt, candidate, source revision, release run, and loopback Apex URL |
 | Human interaction adapter | Knowgrph `npm run production:authorize` interactive terminal command; it downloads the exact candidate, requires an exact-digest challenge response in a TTY, calls the authority API directly, and neither launches nor requires a browser |
 | Human authority adapter | Protected GitHub `production` environment with an authenticated required reviewer |
 | Deployment adapter | Knowgrph repository-owned Cloudflare release controller |
@@ -221,6 +230,28 @@ same authenticated human decision, the controller
 revalidates every bound identity without rebuilding, deploys under one
 environment concurrency lock, proves both production routes, then publishes the
 exact verified mirror.
+
+The reference adapter may display the authorization gate only after `turn:end`
+returns `runtime-ready` for the exact candidate source and its supervised
+loopback Apex surface. It renders this contract-owned template:
+
+```text
+The release is verified and awaiting fresh human authorization.
+
+Candidate: `{{candidate_digest}}`
+Source: `{{source_revision}}`
+Run: `{{release_run_reference}}`
+localhost: `{{localhost_review_url}}`
+
+Reply exactly:
+
+`authorize {{candidate_digest}}`
+```
+
+The localhost value is derived from the current runtime receipt, not accepted
+as free-form operator input. It is a review locator, never an authority adapter;
+the exact reply must still produce a joined Authorization Interaction Receipt
+and a separate authenticated Human Authorization Receipt.
 
 Agentic Canvas OS owns no independent production Worker. Knowgrph is the sole
 forward-deployment and rollback owner for `airvio.co`. Failed post-deploy probes

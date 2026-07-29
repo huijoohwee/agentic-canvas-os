@@ -3,8 +3,11 @@ import test from "node:test";
 
 import {
   PRODUCTION_RELEASE_AUTHORIZATION_SCHEMA,
+  createProductionAuthorizationPrompt,
   createLocalReviewCandidate,
   createProductionReleaseCandidate,
+  formatProductionAuthorizationPrompt,
+  validateProductionAuthorizationPrompt,
   validateProductionReleaseAuthorization,
 } from "../scripts/production-release-authorization-contract.mjs";
 
@@ -22,6 +25,8 @@ const runtime = {
   probes: { apex: 200, storage: 200, storageProxy: 200 },
   protectedChecks: { knowgrph: ["Integration Gate"], "agentic-canvas-os": ["test"] },
   ownershipTokenDigest: "e".repeat(64),
+  host: "127.0.0.1",
+  ports: { apex: 5173, storage: 8787 },
 };
 
 const trees = {
@@ -129,5 +134,78 @@ test("authorization rejects unknown fields", () => {
       agenticCanvasOsSha: docsRevision,
     }),
     /malformed/,
+  );
+});
+
+test("runtime-ready localhost review emits the exact future human authorization template", () => {
+  const localReview = createLocalReviewCandidate(runtime, trees);
+  const candidate = createProductionReleaseCandidate(localReview, readiness);
+  const prompt = createProductionAuthorizationPrompt(runtime, localReview, candidate, {
+    runRef: "run:30426035584",
+  });
+  assert.equal(validateProductionAuthorizationPrompt(prompt), prompt);
+  assert.equal(
+    formatProductionAuthorizationPrompt(prompt),
+    [
+      "The release is verified and awaiting fresh human authorization.",
+      "",
+      `Candidate: \`${candidate.candidateDigest}\``,
+      `Source: \`${sourceRevision}\``,
+      "Run: `run:30426035584`",
+      "localhost: `http://127.0.0.1:5173/`",
+      "",
+      "Reply exactly:",
+      "",
+      `\`authorize ${candidate.candidateDigest}\``,
+    ].join("\n"),
+  );
+});
+
+test("authorization prompt fails closed without current runtime readiness or a bound loopback review surface", () => {
+  const localReview = createLocalReviewCandidate(runtime, trees);
+  const candidate = createProductionReleaseCandidate(localReview, readiness);
+  for (const drift of [
+    { status: "blocked", ready: false },
+    { host: "review.example.test" },
+    { ports: { ...runtime.ports, apex: 0 } },
+    { probes: { ...runtime.probes, apex: 503 } },
+  ]) {
+    assert.throws(
+      () => createProductionAuthorizationPrompt(
+        { ...runtime, ...drift },
+        localReview,
+        candidate,
+        { runRef: "run:30426035584" },
+      ),
+      /runtime-ready|loopback|probes|drifted/,
+    );
+  }
+});
+
+test("authorization prompt rejects candidate, source, run-reference, and rendered-evidence drift", () => {
+  const localReview = createLocalReviewCandidate(runtime, trees);
+  const candidate = createProductionReleaseCandidate(localReview, readiness);
+  assert.throws(
+    () => createProductionAuthorizationPrompt(runtime, localReview, {
+      ...candidate,
+      localReviewCandidateDigest: "2".repeat(64),
+    }, { runRef: "run:30426035584" }),
+    /digest|drifted/,
+  );
+  assert.throws(
+    () => createProductionAuthorizationPrompt(runtime, localReview, candidate, {
+      runRef: "run with whitespace",
+    }),
+    /bounded run reference/,
+  );
+  const prompt = createProductionAuthorizationPrompt(runtime, localReview, candidate, {
+    runRef: "run:30426035584",
+  });
+  assert.throws(
+    () => validateProductionAuthorizationPrompt({
+      ...prompt,
+      localhostReviewUrl: "https://review.example.test/",
+    }),
+    /localhost|malformed/,
   );
 });

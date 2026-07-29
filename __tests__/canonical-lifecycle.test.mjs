@@ -20,6 +20,7 @@ test('canonical lifecycle defines a provider-neutral joined receipt protocol', (
     'Integration Receipt',
     'Runtime Review Receipt',
     'Candidate Manifest',
+    'Authorization Interaction Receipt',
     'Human Authorization Receipt',
     'Live Verification Receipt',
     'Publication Receipt',
@@ -47,6 +48,8 @@ test('canonical lifecycle defines a provider-neutral joined receipt protocol', (
   assert.match(referenceMapping, /Agentic Canvas OS `turn:end`/)
   assert.match(referenceMapping, /Cloudflare release controller/)
   assert.match(referenceMapping, /content-addressed stash plus durable recovery ref/)
+  assert.match(referenceMapping, /interactive terminal command/)
+  assert.match(referenceMapping, /neither launches nor requires a browser/)
 })
 
 test('session and release profiles preserve multi-user fences and the human boundary', () => {

@@ -9,10 +9,23 @@ const schema = JSON.parse(readFileSync(
   ),
   "utf8",
 ));
-const validate = new Ajv2020({
+const releaseLifecycleSchema = JSON.parse(readFileSync(
+  new URL(
+    "../../docs/schemas/collaborative-release-lifecycle.v1.schema.json",
+    import.meta.url,
+  ),
+  "utf8",
+));
+const ajv = new Ajv2020({
   allErrors: true,
   strict: true,
-}).compile(schema);
+});
+ajv.addFormat("date-time", {
+  type: "string",
+  validate: (value) => !Number.isNaN(Date.parse(value)),
+});
+ajv.addSchema(releaseLifecycleSchema);
+const validate = ajv.compile(schema);
 
 export function assertCanonicalRunSchema(artifact) {
   if (validate(artifact)) return artifact;
@@ -26,4 +39,7 @@ export function assertCanonicalRunSchema(artifact) {
   );
 }
 
-export { schema as AGENTIC_SDLC_RUN_JSON_SCHEMA };
+export {
+  schema as AGENTIC_SDLC_RUN_JSON_SCHEMA,
+  releaseLifecycleSchema as COLLABORATIVE_RELEASE_LIFECYCLE_JSON_SCHEMA,
+};

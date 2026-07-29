@@ -3,6 +3,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { textCommandOptions } from "./command-text-options.mjs";
 import { completeSession, heartbeat, park, publish, resume, review, start } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
 import { integrateSession } from "./device-integrate-lib.mjs";
@@ -177,20 +178,20 @@ function configureHooks() {
 }
 
 function gitText(args) {
-  return execFileSync("git", args, { encoding: "utf8" });
+  return execFileSync("git", args, textCommandOptions());
 }
 
 function gitOptional(args) {
-  const result = spawnSync("git", args, { encoding: "utf8" });
+  const result = spawnSync("git", args, textCommandOptions());
   return result.status === 0 ? result.stdout.trim() : "";
 }
 
 function ghText(args) {
-  return execFileSync("gh", args, { encoding: "utf8" });
+  return execFileSync("gh", args, textCommandOptions());
 }
 
 function ghOptional(args) {
-  const result = spawnSync("gh", args, { encoding: "utf8" });
+  const result = spawnSync("gh", args, textCommandOptions());
   return result.status === 0 ? result.stdout.trim() : "";
 }
 
@@ -201,7 +202,7 @@ function run(command, args) {
 }
 
 function runText(command, args, options = {}) {
-  return execFileSync(command, args, { encoding: "utf8", ...options });
+  return execFileSync(command, args, textCommandOptions(options));
 }
 
 function usage() {

@@ -90,7 +90,7 @@ behind the current remote fence.
 
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 
-New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` and blocks runtime/parity globally; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.
+New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` for runtime/parity, but an unrelated scope may activate from a clean detached fetched ref after recording the dirty state as retained overlap; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
@@ -257,7 +257,7 @@ git -C "$KNOWGRPH_ROOT" worktree list
 git -C "$KNOWGRPH_ROOT" rev-parse origin/main
 ```
 
-Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. `owned-untracked` state in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane; its registered worktree and pull request remain the durable owner.
+Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. Attributed canonical dirt blocks canonical mutation and runtime, but not manual activation of an unrelated detached fetched-ref lane; bind it to an Overlap Preservation Receipt and leave its bytes in place. `owned-untracked` state in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane; its registered worktree and pull request remain the durable owner.
 
 ### 4. Claim
 
@@ -280,7 +280,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
   --repository="$TASK_WORKTREE"
 ```
 
-Machine supervisors may safely provision the new detached worktree and claim it in one command. Canonical `main` must be clean at fetched `origin/main`, and the absent target must be a safe direct child of the derived sibling `.worktrees/<repository-name>` root:
+Machine supervisors may safely provision the new detached worktree and claim it in one command. Canonical `main` must be clean at fetched `origin/main`, and the absent target must be a safe direct child of the derived sibling `.worktrees/<repository-name>` root. When attributed canonical work is retained, use the explicit detached-worktree sequence above; combined provisioning remains blocked:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
@@ -503,6 +503,11 @@ work, or keep an active leased lane when the same task is intentionally
 continuing.
 
 For every implementation lane, `turn:end` must finish ready against the canonical protected SHAs or the final response must report the missing integration or runtime proof. Task heads never replace canonical runtime ownership.
+
+Before canonical convergence or temporary review isolation, emit joined Overlap
+Preservation and Disposition Receipts under the shared operation lock. Keep
+overlapping work retained with its recovery handle; restore only exact disjoint
+state, and retain it on any path, byte, fence, or protected-tip drift.
 
 Run the repository-owned lifecycle check from the canonical main worktree:
 

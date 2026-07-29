@@ -4,14 +4,14 @@ graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
 date: "2026-07-29"
 lang: "en-US"
-schema: "knowgrph-release-workflow/v2"
+schema: "knowgrph-release-workflow/v3"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "Knowgrph reference implementation adapter for the provider-neutral lifecycle"
 profile_type: "reference-implementation"
 protocol_contract: "CANONICAL-LIFECYCLE.md"
 publish_policy: "protected green main authorizes Dev integration only; exact-candidate human authorization opens Production"
-runtime_scope: "Dev integration, Prod mirror promotion, Cloudflare deployment, and verification"
+runtime_scope: "Dev integration, runtime-ready localhost review and authorization prompting, Prod mirror promotion, Cloudflare deployment, and verification"
 runtime_claim: "bounded release contract; no deployment occurs by reading this document"
 runtime_proof: "RUNTIME-PROOF.md"
 invocation:
@@ -53,7 +53,8 @@ completion_requires:
   - "append-only monthly planning-shard compliance"
   - "centralized planning task-row compliance"
   - "protected integration"
-  - "joined Integration, Runtime Review, Candidate, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "runtime-ready authorization prompt bound to the exact candidate, source, release run, and supervised localhost review URL"
   - "one target-and-candidate idempotency key and one target-scoped deployment controller"
   - "Prod mirrors the promoted Dev SHA"
   - "both production routes return verified evidence"
@@ -78,9 +79,12 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 
 | Neutral receipt or boundary | Knowgrph reference adapter |
 |---|---|
+| Overlap Preservation and Disposition Receipts | Registered worktree/PR ownership for active lanes; locked content-addressed recovery object and durable ref only for required canonical isolation; exact retained-or-restored accounting before convergence |
 | Integration Receipt | Protected GitHub merge SHA, checks, paired immutable manifest, scope PR, actor, lease epoch, and fence SHA |
 | Runtime Review Receipt | `turn:end` emits `agentic-local-review-candidate/v1` from canonical localhost runtime proof |
 | Candidate Manifest | `agentic-production-release-candidate/v1` binds app, Agentic Canvas OS, catalog, policy, target, mirror, artifact, and manifest digests |
+| Authorization prompt | ACOS `agentic-production-authorization-prompt/v1` revalidates runtime readiness and renders candidate, source, run, supervised localhost URL, and exact reply |
+| Authorization Interaction Receipt | `npm run production:authorize` records the authenticated terminal challenge and response for the same candidate and target without browser dependence |
 | Human Authorization Receipt | Protected GitHub `production` environment records reviewer, candidate digest, target, issue time, expiry, and consumption |
 | Live Verification Receipt | Cloudflare deployment identity plus both production-route identity and smoke proof |
 | Publication Receipt | Exact verified `huijoohwee` mirror revision, emitted only after live verification |
@@ -89,8 +93,8 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 
 | Contract | Required fields |
 |---|---|
-| Input | Exact joined Integration and Runtime Review Receipts; authenticated human authorization when deploying; actor, device, session, worktree, branch, semantic scope, lease epoch, and fence; base SHA; memory and planning refs; complete app/docs/catalog dependency closure; policy and target digests; artifact and manifest digests; Dev repository; Prod mirror; production routes. |
-| Output | Reconciliation ledger, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, deployment identifiers, Live Verification Receipt, Publication Receipt, remaining risks. |
+| Input | Exact joined Overlap Preservation, Overlap Disposition, Integration, and Runtime Review Receipts; authenticated human authorization when deploying; actor, device, session, worktree, branch, semantic scope, lease epoch, and fence; base SHA; memory and planning refs; complete app/docs/catalog dependency closure; policy and target digests; artifact and manifest digests; Dev repository; Prod mirror; production routes. |
+| Output | Reconciliation ledger, preservation inventory and dispositions, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, deployment identifiers, Live Verification Receipt, Publication Receipt, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
 
@@ -113,6 +117,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
+- Before convergence or canonical review isolation, content-bind every pre-existing non-canonical item and its owner, write set, fence, overlap class, state, preservation mode, and recovery handle. Retain overlapping work; restore only exact disjoint state; never treat preservation as Production authority.
 - Treat `memory/YYYY-MM.md` as append-only evidence: validate its hybrid format and compare historical bytes with the recorded Agentic Canvas OS memory base ref before integration.
 - Treat `todo/YYYY-MM.md` as append-only cross-repository planning evidence: validate the index and shards, compare historical bytes with the recorded Agentic Canvas OS planning base ref, and require the declared strict task row before integration.
 - Require one appended active-shard row matching the declared `planning_context`; reject repository-local todo files before integration.
@@ -174,10 +179,12 @@ Separate unrelated scopes into branch-exclusive leased task worktrees. Commit in
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
-After protected convergence, emit the neutral Integration Receipt with the
+Before protected convergence, emit the Overlap Preservation Receipt and account
+for every item in the joined Disposition Receipt. After convergence, emit the neutral Integration Receipt with the
 canonical merge commit and tree, full dependency-closure digest, protected
 checks, authenticated pull-request actor, device, session, worktree, branch,
-semantic scope, lease epoch, fence SHA, and paired immutable-manifest digest.
+semantic scope, lease epoch, fence SHA, paired immutable-manifest digest, and
+both preservation receipt digests.
 Candidate preparation must reject a missing, stale, overlapping, or unjoined
 Integration Receipt.
 
@@ -227,6 +234,31 @@ immutable-manifest, candidate, and predecessor receipts immediately before
 deployment. Never deploy `latest main`, rebuild after authorization, expose
 secrets, or hardcode account ids, credentials, routes, local paths, or
 invocation catalogs.
+
+Before asking for authorization, call the ACOS prompt contract with the current
+`turn:end` result, local-review receipt, immutable candidate, and release-run
+reference. It must re-prove `runtime-ready`, HTTP 200 canonical probes, exact
+source and Agentic Canvas OS identities, the candidate's local-review digest,
+and a supervised loopback Apex URL. On success, display exactly:
+
+```text
+The release is verified and awaiting fresh human authorization.
+
+Candidate: `{{candidate_digest}}`
+Source: `{{source_revision}}`
+Run: `{{release_run_reference}}`
+localhost: `{{localhost_review_url}}`
+
+Reply exactly:
+
+`authorize {{candidate_digest}}`
+```
+
+The localhost URL is a bound review surface, not Production authority, and may
+not be supplied as free-form confirmation input. A stale process, failed probe,
+non-loopback URL, source or dependency movement, candidate mismatch, or missing
+run reference blocks prompt emission and requires a fresh `turn:end`, candidate,
+and human authorization.
 
 Key the controller by target digest plus candidate digest. Exactly one
 environment-scoped controller may deploy. Coalesce an exact duplicate dispatch

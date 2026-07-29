@@ -48,6 +48,8 @@ coordination:
   writer_lease_ttl_seconds: 1800
   writer_lease_registry: "one atomic Git-common-directory registry keyed by branch plus one draft ownership pull request per semantic scope"
   fencing_identity: "monotonic lease epoch plus claim commit SHA"
+  post_baseline_authored_state: "new or untracked paths remain in their physical owning task worktree and pull request"
+  owned_untracked_state: "preserve in place; block only the owning semantic scope; forbid cleanup, stash, masking, or adoption"
 stage_order: ["discover", "fetch", "inspect", "claim", "activate", "verify", "memory", "planning", "start"]
 completion_requires:
   - "fetched remote refs"
@@ -75,6 +77,10 @@ Fetch before starting every Codex session; keep one clean registered `main` work
 The canonical `main` worktree remains the only Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from canonical ports. The Agentic Canvas OS supervisor may own those ports only after both canonical repositories are clean exact fetched `origin/main` revisions with required protected checks successful. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task-worktree runtime sources are forbidden.
 
 Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
+
+Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
+
+New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` and blocks runtime/parity globally; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
@@ -129,6 +135,9 @@ agentic_canvas_os_runtime_sha: <visible-running-docs-sha>
 catalog_revision: <visible-running-docs-sha>
 catalog_hydration: <fresh|blocked|stale>
 catalog_refresh_attempts: <integer-0-to-2>
+authoring_status: <ready|blocked>
+parity_status: <passed|deferred|blocked>
+block_scope: <none|global|semantic-scope|runtime-proof>
 memory_base_ref: <fetched-agentic-canvas-os-origin-main-sha>
 memory_compliance: passed
 planning_base_ref: <fetched-agentic-canvas-os-origin-main-sha>
@@ -234,7 +243,7 @@ git -C "$KNOWGRPH_ROOT" worktree list
 git -C "$KNOWGRPH_ROOT" rev-parse origin/main
 ```
 
-Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. Dirt in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane.
+Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains unexplained dirt; when either `origin/main` is unavailable; when either registered main worktree differs from its fetched `origin/main`; or when another active branch, lease, or pull request owns the same semantic scope. `owned-untracked` state in another task worktree blocks only that worktree and any overlapping scope, not an unrelated isolated task lane; its registered worktree and pull request remain the durable owner.
 
 ### 4. Claim
 
@@ -303,6 +312,8 @@ git -C "$TASK_WORKTREE" rev-parse HEAD
 
 The task path must appear exactly once in the worktree registry; its branch must appear in no other worktree; the checkout must be clean; the branch must match the claimed scope; the lease session, worktree path, and epoch must be current; its exact open pull request must own that scope and report `isDraft: true`; and the claim commit must be an ancestor of `HEAD`.
 
+Record a zero-content status baseline after this verification. Subsequent rescans compare physical worktree paths, never just branch names. If another lane gains post-baseline untracked paths, retain that lane and continue only when the current lane's scope is distinct. If the current lane gains them, keep authoring in place under its existing lease and pull request; do not move the bytes to make a global check appear clean.
+
 #### Automated Collaboration And Runtime Identity Gate
 
 Before claiming parity or handing off a running surface, run the repository-owned gate from Agentic Canvas OS:
@@ -311,13 +322,17 @@ Before claiming parity or handing off a running surface, run the repository-owne
 npm run collaboration:gate
 ```
 
+The gate allocates a run-scoped owner, guest, worker, persistence root, credentials, proof path, and screenshot prefix outside every repository. It must not reuse, stop, reconfigure, or write through the canonical `5173`/`8787` runtime. Concurrent gates use distinct registered allocations and clean up only their own process groups and persistence. A failed proof preserves bounded diagnostics but grants no parity claim.
+
+Classify startup through `npm run session:start:classify` with the inspected fetch, canonical, scope-ownership, task-worktree, memory, planning, and parity states. `authoring_status: ready` requires every non-runtime gate to pass. `parity_status: deferred` or `blocked` permits read-only work and isolated source authoring only when `authoring_status` is already `ready`; it forbids runtime-ready, browser-parity, review, integration, release, and deployment claims. An unrelated dirty task worktree does not block another unique leased scope, while an overlapping scope remains `block_scope: semantic-scope` and fail-closed.
+
 This command creates isolated local owner and guest browser contexts and a local storage worker or reuses healthy services. It does not require two physical devices, visual comparison, clipboard transfer, or runtime-identity JSON files. Matching branch names, ports, routes, or labels do not satisfy the gate.
 
 Open the gate through MainPanel Settings. `Cross-device Identity Gate` must be one collapsible section inside the Settings body, below the shared KTV header, and every identity field/action must use the shared Key-Type-Value row contract. A gate above the KTV header, in Skills & Commands, or rendered through a private table/list layout fails startup compliance.
 
 The gate's focused checks must prove that Knowgrph mounts exactly one canonical identity runtime at the application root. Settings consumes that global snapshot; `/`, `#`, and `@` catalog hydration may publish the docs revision, counts, and hydration state as one facet but must not define, scope, or own the identity component. Any second store, surface-local owner, or catalog-coupled Settings identity hook blocks parity even when the displayed SHAs happen to match.
 
-The automated peers join the dedicated identity room with separate authenticated sessions and runtime identities. The room issues a short-lived challenge, the reporters read the canonical identity snapshot, and the gate verifies distinct peers plus challenge, TTL, digest, exact revisions, hydration, counts, and remote document propagation. Continue only when the command exits zero with `2/2` peers and a non-empty common verification digest. `collecting`, `mismatch`, `stale`, `blocked`, transport failure, duplicate/replayed evidence, room-key mismatch, or different digests blocks startup parity. `Copy diagnostic JSON` is optional troubleshooting only.
+The automated peers join the dedicated identity room with separate authenticated sessions and runtime identities. The room issues a short-lived challenge, the reporters read the canonical identity snapshot, and the gate verifies distinct peers plus challenge, TTL, digest, exact revisions, hydration, counts, and remote document propagation. Continue into parity-dependent work only when the command exits zero with `2/2` peers and a non-empty common verification digest. `collecting`, `mismatch`, `stale`, `blocked`, transport failure, duplicate/replayed evidence, room-key mismatch, or different digests blocks startup parity without revoking an otherwise valid isolated authoring lane. `Copy diagnostic JSON` is optional troubleshooting only.
 
 The identity must also report `catalogRevision`, `catalogHydration.status`, `catalogHydration.attempts`, and separate `/`, `#`, and `@` counts. Require `catalogRevision == agenticCanvasOsRevision`. Hydration and cache keys must include the docs revision so a revision change invalidates the prior catalog instead of reusing a page-lifetime snapshot.
 
@@ -465,10 +480,13 @@ npm run worktree:lifecycle:check
 ```
 
 The check retains the canonical main worktree, active unexpired task lanes,
-delivery lanes, explicitly parked lanes, and clean detached completion-proven
-lanes pending cleanup. It fails closed on dirty,
-unregistered, stale, ambiguous, invalid, or already-completed residual task
-worktrees. A completed task becomes cleanup-eligible only after
+delivery lanes, explicitly parked lanes, `owned-untracked` lanes, and clean
+detached completion-proven lanes pending cleanup. `owned-untracked` requires a
+worktree-bound session, branch, scope, epoch, and pull request; its report records
+the observed paths, byte sizes, Git object ids, and observation time without
+copying or storing their contents. It fails closed on
+unattributed dirt, unregistered, stale, ambiguous, invalid, or already-completed
+residual task worktrees. A completed task becomes cleanup-eligible only after
 `device:complete` verifies its merged pull request, detaches it cleanly at the
 exact fetched `origin/main`, and records the completed writer-lease state.
 
@@ -480,9 +498,11 @@ npm run worktree:lifecycle:cleanup -- --worktree="$TASK_WORKTREE"
 
 Cleanup uses `git worktree remove` without force and then prunes registration
 metadata. It preserves the task branch and commits. It never removes canonical,
-active, delivery, parked, dirty, divergent, or unclassified worktrees; uncertain
-files remain for manual review or recoverable archival. Branch deletion is a
-separate operator-authorized action.
+active, delivery, parked, `owned-untracked`, dirty, divergent, or unclassified
+worktrees; uncertain files remain in their physical owning lane. Automatic park
+or stash is forbidden for `owned-untracked`; only its owner may explicitly
+choose a later supported handoff. Branch deletion is a separate
+operator-authorized action.
 
 Given a completion claim, when the protocol runs, then the protected Dev pull
 request is merged, the task worktree is detached and clean at the exact fetched
@@ -514,6 +534,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in a 
 - A handoff names the exact pushed commit SHA and paired app/docs/catalog manifest digest; the sender stops writing before the receiver starts.
 - A writer handoff also marks the prior lease parked, names its final epoch and fence SHA, and requires the receiver to claim a strictly newer epoch before mutation.
 - Same-device and different-device chats may mutate different scopes concurrently through distinct registered worktrees or clones. The Git-common-directory registry serializes each local worktree and branch; duplicate scope pull requests, expired sessions, and stale fencing ancestry fail closed.
+- Post-baseline authored or untracked paths remain owned by their physical task worktree and pull request across chat, turn, and session boundaries. An unrelated lane may inspect attribution but must not delete, stash, mask, relocate, commit, park, or claim those paths.
 - A runtime handoff includes the successful `npm run collaboration:gate` summary with two distinct automated peers, exact visible revisions, and the common non-empty verification digest; a branch name, screenshot, clipboard export, or manually assembled JSON never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
 - Resolve conflicts at the source owner; remove stale or duplicate logic instead of stacking aliases or downstream patches.
@@ -526,6 +547,6 @@ Stop before build mutation when a target worktree is unregistered, dirty, prunab
 
 ## Completion VCC
 
-Given a declared device, session, semantic scope, and task worktree, when `/session.start` completes, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, catalog hydration is fresh with matching full-catalog counts and one browser-verified SHA-256 catalog digest across `/`, `#`, and `@`, memory and planning shards are compliant, and Codex mutates only its leased task worktree.
+Given a declared device, session, semantic scope, and task worktree, when `/session.start` reports `authoring_status: ready`, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, memory and planning shards are compliant, and Codex mutates only its leased task worktree. When it additionally reports `parity_status: passed`, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, and catalog hydration is fresh with matching full-catalog counts and one browser-verified SHA-256 catalog digest across `/`, `#`, and `@`.
 
-VCC: verify both fetches exit zero; `git worktree list --porcelain -z` identifies one registered `main` owner plus the declared task worktree; every checked-out branch is unique; the Agentic Canvas OS main worktree is clean with `HEAD` equal to fetched `origin/main`; the task lease registry entry matches its session, branch, and path; `npm run collaboration:gate` exits zero with two distinct automated peers and one common verification digest; memory and planning checks pass; the Knowgrph main worktree remains clean; and no Prod mirror or Cloudflare action occurred.
+VCC: verify both fetches exit zero; `git worktree list --porcelain -z` identifies one registered `main` owner plus the declared task worktree; every checked-out branch is unique; the Agentic Canvas OS main worktree is clean with `HEAD` equal to fetched `origin/main`; the task lease registry entry matches its session, branch, and path; memory and planning checks pass; the Knowgrph main worktree remains clean; and no Prod mirror or Cloudflare action occurred. Before any parity-dependent handoff, additionally verify `npm run collaboration:gate -- --json` exits zero with schema `agentic-collaboration-gate-result/v2`, two distinct automated peers, exact revisions, fresh bounded hydration, and one common verification digest.

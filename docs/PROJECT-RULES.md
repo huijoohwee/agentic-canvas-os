@@ -54,7 +54,7 @@ document can express the same contract.
 
 - Test focused diffs only; do not run indefinite full-codebase sweeps.
 - Resolve issues and verify no regressions before handoff.
-- Allow same-device and cross-device parallel mutation only for different semantic scopes in distinct registered task worktrees or clones. Bind each task worktree to one session lease and branch; reject shared-worktree sessions, duplicate scopes, and stale fencing epochs.
+- Allow same-device and cross-device parallel mutation only for different semantic scopes in distinct registered task worktrees or clones. Bind each task worktree to one session lease, branch, and pull request; preserve post-baseline untracked files in that physical lane as cleanup-ineligible `owned-untracked` state, and reject shared-worktree sessions, duplicate scopes, stale fencing epochs, deletion, stash, masking, relocation, or adoption by another task.
 
 ## Concurrent Sessions
 

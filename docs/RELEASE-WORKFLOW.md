@@ -4,14 +4,14 @@ graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
 date: "2026-07-29"
 lang: "en-US"
-schema: "knowgrph-release-workflow/v2"
+schema: "knowgrph-release-workflow/v3"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "Knowgrph reference implementation adapter for the provider-neutral lifecycle"
 profile_type: "reference-implementation"
 protocol_contract: "CANONICAL-LIFECYCLE.md"
 publish_policy: "protected green main authorizes Dev integration only; exact-candidate human authorization opens Production"
-runtime_scope: "Dev integration, Prod mirror promotion, Cloudflare deployment, and verification"
+runtime_scope: "Dev integration, runtime-ready localhost review and authorization prompting, Prod mirror promotion, Cloudflare deployment, and verification"
 runtime_claim: "bounded release contract; no deployment occurs by reading this document"
 runtime_proof: "RUNTIME-PROOF.md"
 invocation:
@@ -53,7 +53,8 @@ completion_requires:
   - "append-only monthly planning-shard compliance"
   - "centralized planning task-row compliance"
   - "protected integration"
-  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "runtime-ready authorization prompt bound to the exact candidate, source, release run, and supervised localhost review URL"
   - "one target-and-candidate idempotency key and one target-scoped deployment controller"
   - "Prod mirrors the promoted Dev SHA"
   - "both production routes return verified evidence"
@@ -82,6 +83,8 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 | Integration Receipt | Protected GitHub merge SHA, checks, paired immutable manifest, scope PR, actor, lease epoch, and fence SHA |
 | Runtime Review Receipt | `turn:end` emits `agentic-local-review-candidate/v1` from canonical localhost runtime proof |
 | Candidate Manifest | `agentic-production-release-candidate/v1` binds app, Agentic Canvas OS, catalog, policy, target, mirror, artifact, and manifest digests |
+| Authorization prompt | ACOS `agentic-production-authorization-prompt/v1` revalidates runtime readiness and renders candidate, source, run, supervised localhost URL, and exact reply |
+| Authorization Interaction Receipt | `npm run production:authorize` records the authenticated terminal challenge and response for the same candidate and target without browser dependence |
 | Human Authorization Receipt | Protected GitHub `production` environment records reviewer, candidate digest, target, issue time, expiry, and consumption |
 | Live Verification Receipt | Cloudflare deployment identity plus both production-route identity and smoke proof |
 | Publication Receipt | Exact verified `huijoohwee` mirror revision, emitted only after live verification |
@@ -220,6 +223,31 @@ immutable-manifest, candidate, and predecessor receipts immediately before
 deployment. Never deploy `latest main`, rebuild after authorization, expose
 secrets, or hardcode account ids, credentials, routes, local paths, or
 invocation catalogs.
+
+Before asking for authorization, call the ACOS prompt contract with the current
+`turn:end` result, local-review receipt, immutable candidate, and release-run
+reference. It must re-prove `runtime-ready`, HTTP 200 canonical probes, exact
+source and Agentic Canvas OS identities, the candidate's local-review digest,
+and a supervised loopback Apex URL. On success, display exactly:
+
+```text
+The release is verified and awaiting fresh human authorization.
+
+Candidate: `{{candidate_digest}}`
+Source: `{{source_revision}}`
+Run: `{{release_run_reference}}`
+localhost: `{{localhost_review_url}}`
+
+Reply exactly:
+
+`authorize {{candidate_digest}}`
+```
+
+The localhost URL is a bound review surface, not Production authority, and may
+not be supplied as free-form confirmation input. A stale process, failed probe,
+non-loopback URL, source or dependency movement, candidate mismatch, or missing
+run reference blocks prompt emission and requires a fresh `turn:end`, candidate,
+and human authorization.
 
 Key the controller by target digest plus candidate digest. Exactly one
 environment-scoped controller may deploy. Coalesce an exact duplicate dispatch

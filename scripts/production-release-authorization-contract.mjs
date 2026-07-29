@@ -5,6 +5,7 @@ import { validateProductionRuntimeReadiness } from "./production-runtime-readine
 export const LOCAL_REVIEW_CANDIDATE_SCHEMA = "agentic-local-review-candidate/v1";
 export const PRODUCTION_RELEASE_CANDIDATE_SCHEMA = "agentic-production-release-candidate/v1";
 export const PRODUCTION_RELEASE_AUTHORIZATION_SCHEMA = "agentic-production-release-authorization/v1";
+export const PRODUCTION_AUTHORIZATION_PROMPT_SCHEMA = "agentic-production-authorization-prompt/v1";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
@@ -13,6 +14,7 @@ export function createLocalReviewCandidate(runtime, trees) {
   if (runtime?.status !== "runtime-ready" || runtime.ready !== true) {
     throw new Error("Local review requires runtime-ready evidence.");
   }
+  const localhostReviewUrl = resolveLocalhostReviewUrl(runtime);
   if (runtime.source?.revision !== trees?.source?.revision ||
       runtime.agenticCanvasOs?.revision !== trees?.agenticCanvasOs?.revision ||
       runtime.catalogRevision !== trees?.agenticCanvasOs?.revision) {
@@ -45,6 +47,7 @@ export function createLocalReviewCandidate(runtime, trees) {
       probes: runtime.probes,
       protectedChecks: runtime.protectedChecks,
       ownershipTokenDigest: runtime.ownershipTokenDigest,
+      localhostReviewUrl,
     }),
   };
   return Object.freeze({ ...evidence, candidateDigest: digest(evidence) });
@@ -101,6 +104,78 @@ export function validateProductionReleaseAuthorization(candidate, authorization,
     throw new Error("Production authorization is invalid because source, artifact, manifest, or runtime identity drifted.");
   }
   return true;
+}
+
+export function createProductionAuthorizationPrompt(runtime, localReview, candidate, input) {
+  if (!isExactObject(input, ["runRef"])) {
+    throw new Error("Production authorization prompt input is malformed.");
+  }
+  validateLocalReviewCandidate(localReview);
+  validateProductionReleaseCandidate(candidate);
+  const reboundLocalReview = createLocalReviewCandidate(runtime, {
+    source: localReview.source,
+    agenticCanvasOs: localReview.agenticCanvasOs,
+  });
+  if (reboundLocalReview.candidateDigest !== localReview.candidateDigest ||
+      candidate.localReviewCandidateDigest !== localReview.candidateDigest ||
+      candidate.source.revision !== localReview.source.revision ||
+      candidate.agenticCanvasOs.revision !== localReview.agenticCanvasOs.revision) {
+    throw new Error("Production authorization prompt drifted from runtime-ready localhost review.");
+  }
+  const runRef = requirePromptReference(input.runRef);
+  const evidence = {
+    schema: PRODUCTION_AUTHORIZATION_PROMPT_SCHEMA,
+    status: "awaiting-human-authorization",
+    candidateDigest: candidate.candidateDigest,
+    sourceRevision: candidate.source.revision,
+    runRef,
+    localhostReviewUrl: resolveLocalhostReviewUrl(runtime),
+    authorizationReply: `authorize ${candidate.candidateDigest}`,
+  };
+  return Object.freeze({ ...evidence, promptDigest: digest(evidence) });
+}
+
+export function formatProductionAuthorizationPrompt(value) {
+  validateProductionAuthorizationPrompt(value);
+  return [
+    "The release is verified and awaiting fresh human authorization.",
+    "",
+    `Candidate: \`${value.candidateDigest}\``,
+    `Source: \`${value.sourceRevision}\``,
+    `Run: \`${value.runRef}\``,
+    `localhost: \`${value.localhostReviewUrl}\``,
+    "",
+    "Reply exactly:",
+    "",
+    `\`${value.authorizationReply}\``,
+  ].join("\n");
+}
+
+export function validateProductionAuthorizationPrompt(value) {
+  if (!isExactObject(value, [
+    "schema",
+    "status",
+    "candidateDigest",
+    "sourceRevision",
+    "runRef",
+    "localhostReviewUrl",
+    "authorizationReply",
+    "promptDigest",
+  ]) ||
+      value.schema !== PRODUCTION_AUTHORIZATION_PROMPT_SCHEMA ||
+      value.status !== "awaiting-human-authorization" ||
+      !SHA256_PATTERN.test(String(value.candidateDigest || "")) ||
+      !SHA_PATTERN.test(String(value.sourceRevision || "")) ||
+      value.localhostReviewUrl !== requireLocalhostUrl(value.localhostReviewUrl) ||
+      value.runRef !== requirePromptReference(value.runRef) ||
+      value.authorizationReply !== `authorize ${value.candidateDigest}`) {
+    throw new Error("Production authorization prompt is malformed.");
+  }
+  const { promptDigest, ...evidence } = value;
+  if (promptDigest !== digest(evidence)) {
+    throw new Error("Production authorization prompt digest does not match its evidence.");
+  }
+  return value;
 }
 
 export function validateLocalReviewCandidate(value) {
@@ -169,6 +244,40 @@ function assertDigest(value, label) {
       !SHA256_PATTERN.test(String(value.digest || ""))) {
     throw new Error(`${label} must contain an exact SHA-256 digest.`);
   }
+}
+
+function resolveLocalhostReviewUrl(runtime) {
+  const host = runtime?.host;
+  const port = runtime?.ports?.apex;
+  if (!["127.0.0.1", "localhost", "::1"].includes(host) ||
+      !Number.isSafeInteger(port) ||
+      port < 1 ||
+      port > 65535) {
+    throw new Error("Local review requires a bound loopback Apex surface.");
+  }
+  return `http://${host === "::1" ? "[::1]" : host}:${port}/`;
+}
+
+function requireLocalhostUrl(value) {
+  const match = /^http:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})\/$/.exec(String(value || ""));
+  if (!match) {
+    throw new Error("Production authorization prompt requires a loopback localhost URL.");
+  }
+  const port = Number(match[1]);
+  if (!Number.isSafeInteger(port) || port > 65535) {
+    throw new Error("Production authorization prompt requires a valid localhost port.");
+  }
+  return value;
+}
+
+function requirePromptReference(value) {
+  if (typeof value !== "string" ||
+      value.length < 1 ||
+      value.length > 2048 ||
+      /[\s`]/.test(value)) {
+    throw new Error("Production authorization prompt requires one bounded run reference.");
+  }
+  return value;
 }
 
 function digest(value) {

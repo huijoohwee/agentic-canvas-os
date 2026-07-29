@@ -28,6 +28,7 @@ test('canonical lifecycle defines a provider-neutral joined receipt protocol', (
     'Device ID',
     'Session ID',
     'target-scoped deployment fence',
+    'controlled review-surface locator',
   ]) {
     assert.match(neutralProtocol, new RegExp(term))
   }
@@ -50,6 +51,10 @@ test('canonical lifecycle defines a provider-neutral joined receipt protocol', (
   assert.match(referenceMapping, /content-addressed stash plus durable recovery ref/)
   assert.match(referenceMapping, /interactive terminal command/)
   assert.match(referenceMapping, /neither launches nor requires a browser/)
+  assert.match(referenceMapping, /agentic-production-authorization-prompt\/v1/)
+  assert.match(referenceMapping, /The release is verified and awaiting fresh human authorization\./)
+  assert.match(referenceMapping, /localhost: `\{\{localhost_review_url\}\}`/)
+  assert.match(referenceMapping, /`authorize \{\{candidate_digest\}\}`/)
 })
 
 test('session and release profiles preserve multi-user fences and the human boundary', () => {
@@ -61,6 +66,8 @@ test('session and release profiles preserve multi-user fences and the human boun
   assert.match(releaseWorkflow, /Retain overlapping work; restore only exact disjoint state/)
   assert.match(releaseWorkflow, /complete app, Agentic Canvas OS, catalog, schema, generated mirror, build,\s+policy, target, review, and transitive dependency closure/)
   assert.match(releaseWorkflow, /Exactly one\s+environment-scoped controller may deploy/)
+  assert.match(releaseWorkflow, /re-prove `runtime-ready`, HTTP 200 canonical probes/)
+  assert.match(releaseWorkflow, /localhost URL is a bound review surface, not Production authority/)
   assert.doesNotMatch(runtimeProof, /Automatic after protected integration/)
 })
 

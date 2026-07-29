@@ -82,6 +82,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     branch,
     worktreePath,
     baseSha,
+    autoDelivery = false,
     previousEpoch = 0,
     ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
   }) {
@@ -132,6 +133,8 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         baseSha,
         fenceSha: null,
         pullRequestUrl: null,
+        autoDelivery: Boolean(autoDelivery),
+        runtimeRequired: Boolean(autoDelivery),
         acquiredAt: timestamp,
         heartbeatAt: timestamp,
         expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),
@@ -358,6 +361,8 @@ function renderWriterLeaseMarker(lease) {
     branch: lease.branch,
     baseSha: lease.baseSha,
     fenceSha: lease.fenceSha,
+    autoDelivery: lease.autoDelivery === true,
+    runtimeRequired: lease.runtimeRequired === true,
     heartbeatAt: lease.heartbeatAt,
     expiresAt: lease.expiresAt,
     ...(lease.reviewHeadSha ? { reviewHeadSha: lease.reviewHeadSha } : {}),
@@ -397,6 +402,8 @@ export function parseWriterLeasePullRequestBody(body) {
     !/^[0-9a-f]{40}$/.test(String(value.fenceSha || "")) ||
     !Number.isFinite(Date.parse(value.expiresAt))
   ) return null;
+  if (value.autoDelivery !== undefined && typeof value.autoDelivery !== "boolean") return null;
+  if (value.runtimeRequired !== undefined && typeof value.runtimeRequired !== "boolean") return null;
   return value;
 }
 

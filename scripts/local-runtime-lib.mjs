@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
   closeSync,
@@ -15,6 +15,8 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+
+import { parseWorktreeRecords } from "./repository-guards.mjs";
 
 export const LOCAL_RUNTIME_SCHEMA = "agentic-local-runtime-readiness/v1";
 export const LOCAL_RUNTIME_HOST = "127.0.0.1";
@@ -263,11 +265,7 @@ async function stopRecordedServices(state, candidate, locations, deps) {
 }
 
 function inspectCanonicalCandidate(options, deps, { verifyProtected }) {
-  const invokingRoot = realpathSync(options.agenticCanvasOsRoot);
-  const commonDir = resolveGitCommonDir(invokingRoot, deps);
-  const agenticCanvasOsRoot = path.dirname(commonDir);
-  const workspaceRoot = path.dirname(agenticCanvasOsRoot);
-  const knowgrphRoot = realpathSync(options.repository || path.join(workspaceRoot, "knowgrph"));
+  const { workspaceRoot, agenticCanvasOsRoot, knowgrphRoot } = resolveCanonicalRuntimeRoots(options, deps);
   const repositories = [
     inspectRepository("agentic-canvas-os", agenticCanvasOsRoot, deps, verifyProtected),
     inspectRepository("knowgrph", knowgrphRoot, deps, verifyProtected),
@@ -286,10 +284,7 @@ function inspectCanonicalCandidate(options, deps, { verifyProtected }) {
 }
 
 function inspectOwnershipCandidate(options, deps) {
-  const invokingRoot = realpathSync(options.agenticCanvasOsRoot);
-  const agenticCanvasOsRoot = path.dirname(resolveGitCommonDir(invokingRoot, deps));
-  const workspaceRoot = path.dirname(agenticCanvasOsRoot);
-  const knowgrphRoot = realpathSync(options.repository || path.join(workspaceRoot, "knowgrph"));
+  const { workspaceRoot, agenticCanvasOsRoot, knowgrphRoot } = resolveCanonicalRuntimeRoots(options, deps);
   return {
     workspaceRoot,
     agenticCanvasOsRoot,
@@ -300,6 +295,19 @@ function inspectOwnershipCandidate(options, deps) {
       gitCommonDir: resolveGitCommonDir(knowgrphRoot, deps),
     },
   };
+}
+
+function resolveCanonicalRuntimeRoots(options, deps) {
+  const invokingRoot = realpathSync(options.agenticCanvasOsRoot);
+  const workspaceRoot = resolveWorkspaceRootFromGitCommonDir(resolveGitCommonDir(invokingRoot, deps));
+  const agenticCanvasOsRoot = realpathSync(resolveCanonicalMainWorktree(
+    deps.gitText(invokingRoot, ["worktree", "list", "--porcelain", "-z"]),
+  ));
+  const requestedKnowgrphRoot = realpathSync(options.repository || path.join(workspaceRoot, "knowgrph"));
+  const knowgrphRoot = realpathSync(resolveCanonicalMainWorktree(
+    deps.gitText(requestedKnowgrphRoot, ["worktree", "list", "--porcelain", "-z"]),
+  ));
+  return { workspaceRoot, agenticCanvasOsRoot, knowgrphRoot };
 }
 
 function inspectRepository(id, root, deps, verifyProtected) {
@@ -415,6 +423,40 @@ function resolveGitCommonDir(repository, deps) {
   return path.resolve(repository, deps.gitText(repository, ["rev-parse", "--git-common-dir"]).trim());
 }
 
+export function resolveCanonicalMainWorktree(porcelain) {
+  const matches = parseWorktreeRecords(porcelain)
+    .filter(record => record.branch === "refs/heads/main" && !record.bare && !record.prunable && !record.locked);
+  if (matches.length !== 1) {
+    throw new Error(`Canonical runtime requires exactly one registered main worktree; found ${matches.length}.`);
+  }
+  return path.resolve(matches[0].path);
+}
+
+export function resolveWorkspaceRootFromGitCommonDir(commonDir) {
+  const resolved = path.resolve(String(commonDir || ""));
+  if (!String(commonDir || "").trim()) throw new Error("Canonical runtime requires the Git common directory.");
+  return path.dirname(path.dirname(resolved));
+}
+
+export function parseLifecycleCommandResult(result) {
+  if (result?.error) throw result.error;
+  const status = Number(result?.status);
+  if (![0, 1].includes(status)) {
+    throw new Error(`Worktree lifecycle command failed with exit ${Number.isFinite(status) ? status : "unknown"}: ${String(result?.stderr || "").trim()}`);
+  }
+  let report;
+  try {
+    report = JSON.parse(String(result?.stdout || ""));
+  } catch {
+    throw new Error("Worktree lifecycle command returned invalid JSON.");
+  }
+  if (report?.schema !== "agentic-worktree-lifecycle-report/v1" ||
+      !["ready", "attention-required"].includes(report.status)) {
+    throw new Error("Worktree lifecycle command returned an unsupported report.");
+  }
+  return report;
+}
+
 function readJson(filePath) {
   if (!existsSync(filePath)) return null;
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -451,7 +493,11 @@ function createDependencies(overrides) {
     waitForPortRelease,
     stopProcessGroup: pid => { try { process.kill(-pid, "SIGTERM"); } catch (error) { if (error?.code !== "ESRCH") throw error; } },
     acquireLock,
-    runLifecycle: root => JSON.parse(execFileSync("node", ["./scripts/worktree-lifecycle.mjs", "check", `--repository=${root}`], { cwd: root, encoding: "utf8" })),
+    runLifecycle: root => parseLifecycleCommandResult(spawnSync(
+      process.execPath,
+      ["./scripts/worktree-lifecycle.mjs", "check", `--repository=${root}`],
+      { cwd: root, encoding: "utf8" },
+    )),
     now: () => new Date(),
     ...overrides,
   };

@@ -12,6 +12,8 @@ const LEASE_FIELDS = [
   "baseSha",
   "fenceSha",
   "pullRequestUrl",
+  "autoDelivery",
+  "runtimeRequired",
   "reviewHeadSha",
   "deliveryHeadSha",
   "parkHeadSha",

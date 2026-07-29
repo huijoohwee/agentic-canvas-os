@@ -198,6 +198,7 @@ export function resume({
     branch: branchName,
     worktreePath: repo,
     baseSha: claimBaseSha,
+    autoDelivery: remoteLease.autoDelivery === true && remoteLease.runtimeRequired === true,
     previousEpoch: remoteLease.epoch,
     ttlMs: leaseTtlMs,
   });
@@ -320,7 +321,12 @@ export function review({
     readyLease,
   )]);
   requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
-  log(`Marked ${url} ready for review without enabling merge or deployment.`);
+  if (readyLease.autoDelivery === true && readyLease.runtimeRequired === true) {
+    run("gh", ["pr", "edit", url, "--add-label", "agentic/auto-delivery"]);
+    log(`Marked ${url} ready for review; the authorized auto-delivery controller may enable protected merge for this exact reviewed SHA.`);
+  } else {
+    log(`Marked ${url} ready for review without enabling merge or deployment.`);
+  }
   return url;
 }
 
@@ -638,6 +644,9 @@ function requireReviewReplay({ branch, lease, gitText, gitOptional, ghText, ghOp
     lease,
   )]);
   requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
+  if (lease.autoDelivery === true && lease.runtimeRequired === true) {
+    run("gh", ["pr", "edit", url, "--add-label", "agentic/auto-delivery"]);
+  }
 }
 
 function readRemotePullRequestBody({ url, ghText }) {

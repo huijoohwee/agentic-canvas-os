@@ -97,6 +97,7 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 | Browser WebMCP | In-page inspection and local browser surface | Browser session | 0 for discovery |
 | MainPanel MCP | Browser-local readiness and non-secret setup view for Knowgrph-owned and external tool servers | Browser session | 0 for discovery |
 | Cloudflare McpAgent | Approval-gated control-plane orchestration where deployed | Cloudflare Worker | 0 for discovery; spend only behind gates |
+| External provider MCP | Federated third-party tool surface registered as one transport, never absorbed into a proxy tier | Provider-operated | 0 for discovery; mutating tools require human confirmation plus the existing approval gate |
 
 ## Federation Rules
 
@@ -246,6 +247,23 @@ Managed implementation runs are local stdio MCP capabilities backed by Knowgrph'
 | `knowgrph.implementation_run.list` | Return bounded durable run state, work-item identity, blocker, evidence references, cost, and next team action. | Read-only and bounded; secrets, raw environment, and unbounded logs are excluded. |
 | `knowgrph.implementation_run.control` | Apply a version-fenced pause, cancel, retry, review, or operator decision; retry performs ACOS resumption when needed. | Control must match current run version and allowed transition; `delivery_ready` maps to ACOS `review_ready` and grants no merge or deploy authority. |
 
+## Payments Capabilities
+
+Payments capabilities are discoverable without model spend. The money path performs zero model calls by contract, so a non-zero model cost on rail selection, intent creation, event settlement, reconciliation, or record serialization is a defect rather than a budget overrun. The `/payment.*` commands plus their `@payment-*` bindings and `#payment-*` tags are host metadata; Agentic Canvas OS owns invocation and safety truth, and the Knowgrph payments capability owner owns rails, credentials, settlement, persistence, and proof.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.payment.rail.select` | Resolve exactly one settlement rail from requested currency, requested settlement asset, and per-rail readiness. | Read-only and model-free; the rail identifier and selection reason persist before any provider call, and no ready rail returns a typed unavailable result with zero provider objects. |
+| `knowgrph.payment.intent.create` | Create one provider payment object on the selected rail behind a client-generated intent key. | Credentials stay server-side; agent-originated calls require the existing approval gate before any provider contact; a replayed key yields exactly one provider object and one cost log entry per call. |
+| `knowgrph.payment.status` | Return the public projection of one payment intent. | Read-only; carries only intent identity, state, minor-unit amount, and currency, and never provider customer identifiers, provider metadata, or hosted payment URLs. |
+| `knowgrph.payment.event.settle` | Authenticate one inbound provider event and apply its settlement side effect at most once. | Authenticity is verified before payload read, provider state is the settlement authority, and a mismatch of intent identity, minor-unit amount, or currency leaves the record unsettled. |
+| `knowgrph.payment.reconcile` | Resolve queued or in-flight intents to a terminal state from provider-read state. | Bounded retry per record; local queue state never unlocks paid capability, and an unresolvable record stops at the stated attempt bound with an operator-visible entry. |
+| `knowgrph.payment.receipt.project` | Serialize terminal records to one byte-stable local document and parse it back without loss. | Local, deterministic, zero-network, and zero-model; prohibited identifiers fail before write, and a malformed document returns a typed parse error with bytes unchanged. |
+| `knowgrph.payment.refund` | Create one refund on the rail that settled the original payment. | Approval-gated; a repeated request leaves the refunded amount unchanged, and a non-settled record returns a typed not-applicable result with zero provider contact. |
+| `knowgrph.payment.readiness` | Report per-rail credential names, presence, pinned provider version, configured integration model, and terminal sandbox proof. | Read-only with a non-zero exit on any missing required input; writes nothing, grants no deploy authority, and fails when a credential name or value appears in a visible surface. |
+
+External provider MCP transports may be federated for read-only payment tools. Every payment-mutating federated tool is registered as confirmation-required and routed through the existing approval gate. Federating a provider transport is not a parity claim for any other provider, and no payment proxy tier is introduced.
+
 ## Capability Entry Shape
 
 ```yaml
@@ -302,6 +320,10 @@ capability:
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `knowgrph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
+| Select a settlement rail or read payment status | Local stdio MCP | Deterministic, model-free selection and a four-field public projection stay inside the payments owner. |
+| Create, settle, reconcile, or refund a payment | Local stdio MCP with the server-side payment trust boundary | Credentials, idempotency, event authenticity, and provider-authoritative settlement stay in one owner; agent-originated spend routes through the existing approval gate. |
+| Check per-rail payment readiness | Local stdio MCP or the command-invoked readiness gate | Read-only credential-name and sandbox-proof reporting without configuration mutation or deploy authority. |
+| Federate an external provider payment tool surface | External provider MCP registered as one transport | Read-only tools federate freely; mutating tools stay confirmation-required and approval-gated, and no payment proxy tier is added. |
 
 ## Gateway VCCs
 
@@ -314,6 +336,11 @@ capability:
 | Spend is gated | Any paid or mutating route requires the relevant approval gate. |
 | Reviewed run-note mutation | `update_agent_run_note` maps only to `knowgrph.run_manifest.note.update`, cannot disable review, and completes only after exact native receipt echo. |
 | Tool gateway is existing-infra | Tool routing uses local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owners; no new proxy is introduced. |
+| Payment path is model-free | A full intent-to-settlement run reports zero model calls and exact zero model cost for selection, creation, settlement, reconciliation, and serialization. |
+| Payment credentials stay server-side | No credential name or value appears in client bundle output or visible runtime variables, and a planted secret fails the readiness gate before configuration changes. |
+| Payment settlement is at-most-once | Duplicate event delivery yields one side effect, a conflicting payload preserves prior state, and provider-read state gates every settled transition. |
+| Payment spend is gated | Every agent-originated payment-creating or money-moving route requires the existing approval gate, and an unapproved call is rejected with zero provider calls and a zero-cost entry. |
+| Payment federation adds no tier | Federated provider payment transports are registered as transports only, with confirmation required on every mutating tool and no new payment proxy. |
 | Tool providers are per-category | Web, image, TTS, and browser categories each expose gateway, direct, local, or unavailable state. |
 | Voice Studio ownership is singular | Three exact host metadata routes map to one `knowgrph.voice.studio` wire tool; consent never follows from a binding, and no copied runtime or provider dependency is required. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |

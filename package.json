@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Cloudflare Worker product tier that calls the knowgrph control plane over MCP and embeds the live knowgrph canvas. Holds no model provider keys.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "agent-definitions:check": "node --test __tests__/agent-definitions.test.mjs",
@@ -40,6 +40,11 @@
     "function-gateway:live-proof:check": "node --test __tests__/live-function-run-note-proof.test.mjs",
     "guardrails-human-review:check": "node --test __tests__/guardrails-human-review.test.mjs __tests__/durable-agent-state.test.mjs",
     "runtime-readiness-contract:check": "node --test __tests__/production-runtime-readiness-contract.test.mjs",
+    "alignment-audit:check": "node --test __tests__/alignment-audit-*.test.mjs && node ./scripts/alignment-audit.mjs scripts/alignment-audit/alignment-audit.config.json --mode verify && npm run docs:check",
+    "alignment-audit:run": "node ./scripts/alignment-audit.mjs scripts/alignment-audit/alignment-audit.config.json --mode run",
+    "agentic-sdlc:check": "node --test __tests__/agentic-sdlc-*.test.mjs __tests__/alignment-audit-guideline-v17*.test.mjs && npm run docs:check",
+    "agentic-sdlc:source:check": "node ./scripts/agentic-sdlc-source.mjs",
+    "agentic-sdlc:verify": "node ./scripts/agentic-sdlc.mjs",
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
@@ -60,6 +65,10 @@
     "device:publish": "node ./scripts/device-branch.mjs publish",
     "device:integrate": "node ./scripts/device-branch.mjs integrate",
     "device:resume": "node ./scripts/device-branch.mjs resume",
+    "workspace:guards:coverage": "node ./scripts/workspace-guard-hook.mjs coverage",
+    "workspace:guards:install": "node ./scripts/install-workspace-guards.mjs",
+    "workspace:parallelism:check": "node ./scripts/workspace-parallelism-guard.mjs",
+    "workspace:parallelism:test": "node --test __tests__/workspace-parallelism.test.mjs __tests__/workspace-guard-enforcement.test.mjs",
     "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
     "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
     "dev": "npm run cloudflare:dev",
@@ -68,7 +77,7 @@
     "instruction-quality:check": "node --test __tests__/instruction-task-quality.test.mjs && node ./scripts/instruction-task-quality.mjs --validate-suite",
     "instruction-quality:evaluate": "node ./scripts/instruction-task-quality.mjs",
     "skill-evolution:check": "node --test __tests__/skill-evolution-contract.test.mjs __tests__/knowgrph-mcp-client.test.mjs && node ./scripts/skill-evolution-contract.mjs",
-    "managed-implementation-runs:check": "node --test __tests__/managed-implementation-runs-contract.test.mjs __tests__/device-branch-cli.test.mjs __tests__/device-command-result.test.mjs __tests__/device-integrate.test.mjs __tests__/device-park-stash.test.mjs __tests__/device-park.test.mjs __tests__/device-resume.test.mjs __tests__/device-review-resume-recovery.test.mjs __tests__/device-review.test.mjs __tests__/device-start.test.mjs __tests__/local-runtime.test.mjs __tests__/task-worktree-provision.test.mjs",
+    "managed-implementation-runs:check": "node --test __tests__/auto-delivery-lib.test.mjs __tests__/managed-implementation-runs-contract.test.mjs __tests__/device-branch-cli.test.mjs __tests__/device-command-result.test.mjs __tests__/device-integrate.test.mjs __tests__/device-park-stash.test.mjs __tests__/device-park.test.mjs __tests__/device-resume.test.mjs __tests__/device-review-resume-recovery.test.mjs __tests__/device-review.test.mjs __tests__/device-start.test.mjs __tests__/local-runtime.test.mjs __tests__/task-worktree-provision.test.mjs",
     "doctor": "node ./scripts/doctor.mjs",
     "durable-agent-state:check": "node --test __tests__/durable-agent-state.test.mjs",
     "git:configure": "git config core.hooksPath .githooks",
@@ -82,6 +91,8 @@
     "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
+    "ajv": "8.17.1",
+    "fast-check": "3.23.2",
     "wrangler": "4.113.0"
   },
   "overrides": {

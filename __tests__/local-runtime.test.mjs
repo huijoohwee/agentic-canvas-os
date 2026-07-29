@@ -9,6 +9,9 @@ import {
   LOCAL_RUNTIME_SCHEMA,
   STORAGE_PORT,
   acquireLock,
+  parseLifecycleCommandResult,
+  resolveCanonicalMainWorktree,
+  resolveWorkspaceRootFromGitCommonDir,
   validateCanonicalRuntimeCandidate,
   validateOwnedService,
 } from "../scripts/local-runtime-lib.mjs";
@@ -44,6 +47,51 @@ function validCandidate(overrides = {}) {
 
 test("canonical runtime accepts only clean protected exact-main sources", () => {
   assert.equal(validateCanonicalRuntimeCandidate(validCandidate()).knowgrph.headSha, applicationSha);
+});
+
+test("canonical runtime follows the single registered main worktree from a feature checkout", () => {
+  const porcelain = [
+    "worktree /workspace/agentic-canvas-os",
+    `HEAD ${docsSha}`,
+    "branch refs/heads/docs/feature",
+    "",
+    "worktree /workspace/.worktrees/canonical/agentic-canvas-os",
+    `HEAD ${docsSha}`,
+    "branch refs/heads/main",
+    "",
+  ].join("\n");
+  assert.equal(
+    resolveCanonicalMainWorktree(porcelain),
+    path.resolve("/workspace/.worktrees/canonical/agentic-canvas-os"),
+  );
+  assert.equal(
+    resolveWorkspaceRootFromGitCommonDir("/workspace/agentic-canvas-os/.git"),
+    path.resolve("/workspace"),
+  );
+  assert.throws(
+    () => resolveCanonicalMainWorktree(porcelain.replace("branch refs/heads/main", "detached")),
+    /found 0/,
+  );
+});
+
+test("canonical runtime retains a valid attention lifecycle report without hiding command failures", () => {
+  const report = {
+    schema: "agentic-worktree-lifecycle-report/v1",
+    status: "attention-required",
+    worktrees: [],
+  };
+  assert.deepEqual(
+    parseLifecycleCommandResult({ status: 1, stdout: JSON.stringify(report), stderr: "" }),
+    report,
+  );
+  assert.throws(
+    () => parseLifecycleCommandResult({ status: 2, stdout: "", stderr: "fatal" }),
+    /exit 2: fatal/,
+  );
+  assert.throws(
+    () => parseLifecycleCommandResult({ status: 1, stdout: "not-json", stderr: "" }),
+    /invalid JSON/,
+  );
 });
 
 for (const [name, candidate, expected] of [

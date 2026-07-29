@@ -60,6 +60,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
 | Session ownership and release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
 | Dependency-ordered cross-repository integration | `INTEGRATION-ORDER.md` |
+| Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
 | Canonical checkout sync and human-authorized CI/CD lifecycle | `CANONICAL-LIFECYCLE.md` |
 | Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
 | Planning lifecycle | `TODO.md` and the active monthly shard |

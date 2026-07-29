@@ -60,6 +60,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
 | `CANONICAL-LIFECYCLE.md` | Automatic runtime lifecycle | Canonical multi-device synchronization, protected integration, immutable promotion, automatic rollback, and runtime-ready SHA convergence. |
 | `INTEGRATION-ORDER.md` | Dependency-ordered integration contract | Provider-neutral integration units, DAG waves, exact-canonical frontier advancement, no-op and supersession evidence, runtime convergence, and release-frontier sealing. |
+| `UPSTREAM-DEPENDENCY-ADMISSION.md` | Upstream dependency admission runtime | Early source admission, bounded deferral, exact consumer-closure isolation, protected-source-only projection, and disjoint-work continuation. |
 | `INSTRUCTION-AUDIT.md` | Instruction audit runtime | Model-free context budgets, intent preservation, duplication checks, owner-boundary checks, baseline reduction, and zero-cost proof. |
 | `INSTRUCTION-QUALITY-EVALUATION.md` | Instruction task-quality evaluation | Provenance-bound final-answer scenarios, deterministic rubric findings, model-agnostic execution, and human-review promotion boundaries. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |

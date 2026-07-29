@@ -159,6 +159,17 @@ Stop on any required failure. Never promote by skipping tests, editing fixtures 
 
 ### 7. Integrate Dev and Emit the Integration Receipt
 
+For a release containing multiple integration units, first validate the
+provider-neutral plan in `INTEGRATION-ORDER.md`. Integrate dependency waves
+before consumers, permit parallelism only for disjoint write scopes, and fetch
+the protected revision after each frontier advancement. Record
+`already-integrated` only with equivalence evidence and `superseded` only with
+equivalence plus capability-coverage evidence. Recompute the remaining plan
+against the new exact canonical revision and complete runtime convergence for
+every runtime-impact unit before sealing the release frontier. A stale plan,
+duplicate change identity, unresolved dependency, overlapping active scope, or
+unsealed release frontier blocks candidate preparation.
+
 Separate unrelated scopes into branch-exclusive leased task worktrees. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, immutable manifest digest, and handoff evidence. Use the repository-owned checkout-free publication command only for a stopped writer's existing commit or recovery path. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.

@@ -372,6 +372,14 @@ Imported pre-adoption rows remain historical evidence. Do not normalize them in 
 
 Start Codex with `$TASK_WORKTREE` as its working directory. Declare the task invocation, semantic scope, bindings, branch, base SHA, worktree path, ownership, acceptance criteria, and deploy boundary before editing. Normal Vite runtime remains bound to the clean registered main worktree; task worktrees use focused source and test commands unless a separate runtime-port policy explicitly authorizes them.
 
+When one outcome contains multiple independently authored integration units,
+load `INTEGRATION-ORDER.md` before protected integration. Declare immutable
+change identities, write scopes, dependency edges, named checks, runtime impact,
+and the current canonical dependency closure. Integrate dependencies before
+consumers, serialize overlapping scopes, fetch after every canonical
+advancement, and recompute remaining waves. Branch order, pull-request age, and
+task-branch check completion do not define integration order.
+
 ## Updating an Existing Owned Branch
 
 Use pull only when all conditions are true:

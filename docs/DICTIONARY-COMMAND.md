@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-26"
+date: "2026-07-29"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -18,6 +18,8 @@ source_docs:
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
+  - "AGENTIC-SDLC-RUNTIME.md"
+  - "MANAGED-IMPLEMENTATION-RUNS.md"
   - "MCP-GATEWAY.md"
   - "WORKSPACE-PARALLELISM.md"
   - "VALIDATION-RUNBOOK.md"
@@ -112,6 +114,7 @@ dictionary_entries:
   - "/instruction.quality-evaluate"
   - "/session.start"
   - "/implementation.run"
+  - "/sdlc.observe"
   - "/ecs.session-start"
   - "/ecs.world-tick"
   - "/ecs.decision-persist"
@@ -263,6 +266,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
 | `/session.start` | Start one conflict-safe Codex build lane from current remote state. | `@operator`, `@working-directory`, `@runtime-proof` | `#multi-agent-collaboration`, `#runtime-ready`, `#vcc` | Remote refs are fetched, the clean registered `main` worktree remains the runtime owner, and one detached registered task worktree claims a unique contract-valid `agent/<device>/<semantic-scope>` branch and branch-bound lease; `.local` remains valid only in the device segment, invalid identity fails before checkout mutation, and Prod or Cloudflare remains unchanged. |
 | `/implementation.run` | Turn one durable work item into an isolated, managed implementation run through the Knowgrph local MCP supervisor and ACOS lifecycle owner. | `@work-item`, `@implementation-run`, `@sandbox-workspace`, `@runtime-proof`, and `@operator` for mutating start, review, or delivery control | `#managed-implementation-run`, `#multi-agent-collaboration`, `#runtime-ready` | Plan is zero-mutation; start provisions and claims one fenced task worktree; configured execution and bounded verification produce durable evidence; pause, cancel, retry, and review controls are explicit, with retry performing fenced resumption when needed; the run stops `delivery_ready` when ACOS reports `review_ready`, without automatic merge or deploy. |
+| `/sdlc.observe` | Project one immutable local Agentic SDLC ledger receipt into end-to-end execution, evidence, cost, gate, and release-lifecycle graph context through the existing Knowgrph Canvas owner. | exactly `@implementation-run`, `@canvas`, and `@runtime-proof` | exactly `#agentic-sdlc-observability` | `knowgrph.agentic_sdlc.observe` returns `knowgrph-agentic-sdlc-observation/v1` with source identity, typed status and conformance, deterministic GraphData plus KGC Markdown, cache evidence, and zero model, network, token, and cost use; `verified`, `delivery_ready`, and `deployed` remain distinct claims, and no ledger, Canvas source, release state, Prod mirror, or Cloudflare target is mutated. |
 | `/ecs.session-start` | Hydrate one bounded native ECS session from a repository-owned KGC Markdown document. | `@source.frontmatter`, `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#mcp`, `#dev-only` | `knowgrph.ecs.session_start` validates a safe workspace-relative `.md` path, hydrates registered components and entities deterministically, and returns a private session id plus zero-spend proof without network, Prod, or Cloudflare capability. |
 | `/ecs.world-tick` | Advance one hydrated ECS session through its ordered systems and bounded reasoning boundary. | `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#token-economics`, `#dev-only` | `knowgrph.ecs.world_tick` resolves a live session, commits successful systems in order, rolls back only a failing system, and reports decisions plus `cost_logs`; timeout or unavailable reasoning defers without invented decisions or spend. |
 | `/ecs.decision-persist` | Persist only pending ECS decisions from one live session into its source KGC document. | `@ecs-session`, `@source.frontmatter`, `@runtime-proof` | `#agentic-ecs`, `#frontmatter`, `#dev-only` | `knowgrph.ecs.decision_persist` atomically and idempotently appends validated `EcsDecision` nodes, preserves unrelated authored bytes, closes the session on success or zero pending decisions, and retains it after failure for retry. |
@@ -376,6 +380,7 @@ command:
 | `/moa` references an MoA preset as aggregator | Reject with a typed recursion error before token spend. |
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
 | `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
+| `/sdlc.observe` lacks an exact immutable `agentic-sdlc-ledger-receipt/v1`, expected revision, or expected ledger digest, or the source bytes drift | Return a typed read-only block before projection; do not infer a receipt, repair a ledger, translate `delivery_ready` into `verified`, infer `deployed`, call a model or network, or create a second graph store or renderer. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
 | `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
@@ -388,6 +393,7 @@ command:
 | Token | Facts source |
 |---|---|
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
+| `/sdlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only Agentic SDLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable Knowgrph MCP control. |
 | `/soul.load` | `FACTS.md` direct-resolution entry for durable identity loading. |
 | `/personality.overlay` | `FACTS.md` direct-resolution entry for temporary personality overlays. |
@@ -433,3 +439,4 @@ command:
 | No duplicate runtime | No body section claims a new parser, command server, or provider panel. |
 | Fail-closed command path | Every command row names required bindings and a measurable completion signal. |
 | Deploy boundary preserved | `/deploy.guard` remains Dev-only unless explicit operator approval is present. |
+| Agentic SDLC observation stays read-only | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` resolves exactly one local tool and requires an immutable ledger receipt before deterministic existing-Canvas projection. |

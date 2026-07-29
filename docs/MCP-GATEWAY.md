@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS MCP Gateway"
 graphId: "md:knowgrph-agentic-canvas-os-mcp-gateway"
 doc_type: "MCP Gateway Contract"
-date: "2026-07-24"
+date: "2026-07-29"
 lang: "en-US"
 schema: "agentic-canvas-os-mcp-gateway/v1"
 frontmatter_contract: "required"
@@ -247,6 +247,16 @@ Managed implementation runs are local stdio MCP capabilities backed by Knowgrph'
 | `knowgrph.implementation_run.list` | Return bounded durable run state, work-item identity, blocker, evidence references, cost, and next team action. | Read-only and bounded; secrets, raw environment, and unbounded logs are excluded. |
 | `knowgrph.implementation_run.control` | Apply a version-fenced pause, cancel, retry, review, or operator decision; retry performs ACOS resumption when needed. | Control must match current run version and allowed transition; `delivery_ready` maps to ACOS `review_ready` and grants no merge or deploy authority. |
 
+## Agentic SDLC Observability Capability
+
+`/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` is one host composition over a local stdio wire tool. Agentic Canvas OS owns its invocation, state-meaning, graph-vocabulary, and deployment-boundary truth. Knowgrph validates the immutable local ledger receipt, performs the deterministic projection, and hands GraphData and KGC Markdown to existing Canvas owners.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.agentic_sdlc.observe` | Read one exact `agentic-sdlc-ledger-receipt/v1` plus its digest-bound local artifact and return `knowgrph-agentic-sdlc-observation/v1`; its `agentic-sdlc-canvas-projection/v1` payload supplies bounded deterministic GraphData and `kgc-computing-flow/v1` Markdown for the existing Canvas. | Read-only, local, deterministic, model-free, network-free, zero-token, zero-cost, and Dev-only. Receipt, revision, digest, containment, view, cursor, and limit fail closed; the tool creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer, Prod mirror write, or Cloudflare action. |
+
+The response keeps source, status, conformance, projection, cache, and economics separate. `verified` requires the named independent Evaluator's canonical ledger transition and evidence; `delivery_ready` remains a managed-run review handoff; `deployed` requires joined existing Human Authorization and Live Verification receipts. The tool observes these exact claims but cannot create, merge, translate, or promote them.
+
 ## Payments Capabilities
 
 Payments capabilities are discoverable without model spend. The money path performs zero model calls by contract, so a non-zero model cost on rail selection, intent creation, event settlement, reconciliation, or record serialization is a defect rather than a budget overrun. The `/payment.*` commands plus their `@payment-*` bindings and `#payment-*` tags are host metadata; Agentic Canvas OS owns invocation and safety truth, and the Knowgrph payments capability owner owns rails, credentials, settlement, persistence, and proof.
@@ -318,6 +328,7 @@ capability:
 | Orchestrate a role-based Agent Team | Local stdio MCP | Plans and supervises one revision-fenced team through existing agent owners, durable checkpoints, explicit review, and exact delegate or handoff answer ownership. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
+| Observe one Agentic SDLC run end to end | Local stdio MCP | Requires one immutable local ledger receipt and deterministically projects bounded KGC and GraphData through the existing Canvas without a model, network, spend, mutation, state promotion, or deployment. |
 | Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `knowgrph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 | Select a settlement rail or read payment status | Local stdio MCP | Deterministic, model-free selection and a four-field public projection stay inside the payments owner. |
@@ -361,6 +372,7 @@ capability:
 | Orchestration copy is blocked | Graph capabilities reject copied external runtime code, APIs, schemas, examples, tests, fixtures, and prose. |
 | SuperAgent is bounded | SuperAgent capabilities reject missing sandbox scope, message gateway, checkpoint policy, stop condition, artifact manifest, and copied external runtime layouts. |
 | Managed implementation is bounded | Plan is zero-mutation; start requires idempotency, configured argv runner, safe worktree, current lease fence, allowed paths, attempt/time limits, and verification; control is version-fenced; default completion is `delivery_ready`, not merge or deploy. |
+| Agentic SDLC observation is deterministic and read-only | The exact observer invocation resolves one local tool; an immutable receipt gates stable node and edge ordering, KGC and GraphData output, cache identity, typed state distinctions, zero economics, and the closed Dev-only boundary. |
 | Repository packing is deterministic and independent | Canonical Git discovery, byte-ordered paths, typed omissions, source and artifact digests, self-exclusion, atomic publication, hard bounds, and dependency/name plus provenance review prove one local clean-room owner with zero network, model, token, cost, Prod, or Cloudflare activity. |
 
 ## Mermaid Topology

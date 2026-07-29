@@ -2,7 +2,7 @@
 title: "Agentic Software Development Lifecycle Runtime"
 graphId: "md:agentic-software-development-lifecycle-runtime"
 doc_type: "Runtime Contract"
-date: "2026-07-28"
+date: "2026-07-29"
 lang: "en-US"
 schema: "agentic-sdlc-runtime/v1"
 frontmatter_contract: "required"
@@ -169,6 +169,46 @@ The result contains:
 - authoring-domain local readiness derived from evidence;
 - a closed Deploy Boundary.
 
+## Read-Only End-to-End Observation
+
+The canonical host composition is:
+
+```text
+/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof
+```
+
+It resolves to one local stdio MCP tool, `knowgrph.agentic_sdlc.observe`. The tool observes already-persisted evidence; it is not an Evaluator, runner, release controller, graph store, dashboard, or renderer. It performs no model call, network call, token spend, paid call, ledger mutation, source mutation, Canvas mutation, release transition, Prod mirror write, or Cloudflare action.
+
+Observation starts only from the immutable receipt stored at `state.result.agenticSdlcLedger`:
+
+```yaml
+schema: "agentic-sdlc-ledger-receipt/v1"
+artifact: "<local-ledger-artifact-reference>"
+digest: "<sha256>"
+bytes: "<positive-integer>"
+canonicalRunId: "<run-id>"
+ledgerRevision: "<immutable-revision>"
+acosRevision: "<exact-acos-revision>"
+```
+
+The request carries the exact invocation, `runId`, `view`, `expectedRevision`, and `expectedLedgerDigest`, with optional `cursor` and `limit`. Receipt schema, local artifact containment, byte count, run identity, revision, and digest must agree before any source record is projected. Missing or drifting evidence returns a typed block; the observer does not search for a substitute, repair the ledger, or read hidden Implementer state.
+
+Receipt and request digest values use `sha256:<64-lowercase-hex>`. The wire request's invocation object is exact: action `/sdlc.observe`, semantic `#agentic-sdlc-observability`, and bindings ordered as `@implementation-run`, `@canvas`, `@runtime-proof`.
+
+The response schema is `knowgrph-agentic-sdlc-observation/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`. `projection` carries `agentic-sdlc-canvas-projection/v1` with `schema`, `projectionDigest`, `pageDigest`, `view`, `ordering`, `page`, `graphData`, and `kgcMarkdown`. KGC frontmatter declares `kgSchema: "kgc-computing-flow/v1"` so the same source-backed projection enters existing KGC, GraphData, and Canvas owners without dashboard-only persistence.
+
+The complete node vocabulary is `run`, `criterion`, `vcc`, `task`, `transition`, `dispatch`, `return`, `check`, `evidence`, `finding`, `budget`, `receipt`, `gate`, and `checkpoint`. The complete edge vocabulary is `defines`, `covers`, `dependsOn`, `transitionsTo`, `dispatchedAs`, `returnedAs`, `verifiedBy`, `evidencedBy`, `consumes`, `gatedBy`, and `persistedAs`. Nodes order by type rank then id; edges order by relation rank, source, target, then id. Missing or page-bound endpoints remain the same typed nodes with `properties.stub=true`; they never become a second placeholder type. The bounded views are `overview`, `plan`, `execution`, `evidence`, `economics`, `recovery`, `receipts`, and `full`.
+
+Status remains three typed, non-interchangeable claims:
+
+| Claim | Source evidence | Observation rule |
+|---|---|---|
+| `verified` | A canonical task transition produced by the named mechanically independent Evaluator. | Display only when the immutable ledger contains the joined verdict and Evidence Reference; never derive from a passing-looking return or artifact. |
+| `delivery_ready` | Knowgrph managed-run evidence joined to ACOS `review_ready` at the exact review head. | Display as a review handoff only; never translate it into `verified`, merged, accepted, or deployed. |
+| `deployed` | Exact release receipt-chain evidence through Human Authorization and Live Verification for the same immutable candidate and target. | Display only from joined existing receipts; observation creates no authorization, deployment attempt, or publication evidence. |
+
+The projection and page digests bind canonical source identity, exact view and page, ordered nodes and edges, and the closed Dev-only boundary. Cache reuse requires the same ledger digest, revision, view, cursor, and limit. Economics reports exact zeros for network calls, model calls, prompt tokens, completion tokens, and estimated cost. This catalog route does not alter the pinned guideline baseline above and does not claim current-guideline, protected Knowgrph, cross-device, Prod, or Cloudflare runtime parity.
+
 ## Commands
 
 ```sh
@@ -191,4 +231,5 @@ The first command runs the source/parser, state-machine, negative finding, deter
 | Evidence earns readiness | Valid-run end-to-end test | One concrete authoring-surface Evidence Reference per VCC from an executed check. |
 | Recovery is reconstructable | Persistence and replay tests | Every terminal transition persisted; partial state fails; verified replay rejected. |
 | Results are deterministic | Permutation and input-immutability tests | Same semantic input produces the same report and digest. |
+| Observation is deterministic and non-promoting | `node --test __tests__/agentic-sdlc-observability-contract.test.mjs` plus the protected Knowgrph observer suite | One immutable receipt projects stable KGC and GraphData through existing owners; typed status remains source-derived, all economics are zero, and the Dev deploy boundary remains closed. |
 | Deployment stays closed | Source and runtime checks | No mirror, delivery, Prod, Cloudflare, or inferred Operator action. |

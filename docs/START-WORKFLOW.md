@@ -7,7 +7,7 @@ lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "Knowgrph Codex session-start and same-device multi-worktree operating model"
+authority: "Knowgrph multi-user, multi-device, multi-session, parallel-worktree session-start operating model"
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
 runtime_scope: "remote synchronization, ownership inspection, and isolated task-branch activation in registered worktrees"
 runtime_claim: "bounded session-start contract; reading or resolving this document performs no Git mutation"
@@ -35,6 +35,8 @@ deploy_gate:
 operating_priorities: ["minimum-viable-maximum-value", "time-to-value", "high-ROI", "TCO", "token-economics", "FOSS-first"]
 coordination:
   base_ref: "origin/main"
+  actor_identity: "authenticated source-control principal recorded on the ownership pull request and integration evidence"
+  collaboration_identity: "actor + device + session + worktree + branch + semantic scope + lease epoch + fence revision"
   branch_pattern: "^agent/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
   device_segment_contract: "lowercase alphanumeric boundaries with interior dot, underscore, or hyphen"
   semantic_scope_segment_contract: "lowercase alphanumeric boundaries with interior hyphen only"
@@ -46,7 +48,7 @@ coordination:
   writer_lease_schema: "agentic-writer-lease/v2"
   writer_lease_registry_schema: "agentic-writer-lease-registry/v2"
   writer_lease_ttl_seconds: 1800
-  writer_lease_registry: "one atomic Git-common-directory registry keyed by branch plus one draft ownership pull request per semantic scope"
+  writer_lease_registry: "one device-local atomic Git-common-directory registry keyed by branch plus one shared-remote draft ownership pull request per semantic scope"
   fencing_identity: "monotonic lease epoch plus claim commit SHA"
   post_baseline_authored_state: "new or untracked paths remain in their physical owning task worktree and pull request"
   owned_untracked_state: "preserve in place; block only the owning semantic scope; forbid cleanup, stash, masking, or adoption"
@@ -76,7 +78,15 @@ Fetch before starting every Codex session; keep one clean registered `main` work
 
 The canonical `main` worktree remains the only Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from canonical ports. The Agentic Canvas OS supervisor may own those ports only after both canonical repositories are clean exact fetched `origin/main` revisions with required protected checks successful. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task-worktree runtime sources are forbidden.
 
-Parallel chats on the same device may mutate different semantic scopes concurrently when each owns a different registered task worktree, branch, lease, and draft pull request. The Git common directory holds one atomic lease registry across all linked worktrees. The same worktree, branch, or semantic scope always serializes behind the current fencing SHA.
+Parallel users, devices, sessions, and chats may mutate different semantic
+scopes concurrently when each owns a different registered task worktree,
+branch, lease, and draft ownership pull request. The Git common directory holds
+one device-local atomic lease registry across linked worktrees; the shared
+remote pull-request set is the cross-user and cross-device scope registry. The
+authenticated pull-request principal supplies Actor ID, while the lease and
+branch carry device, session, worktree, scope, epoch, and fence identity. The
+same worktree, branch, semantic scope, or declared artifact always serializes
+behind the current remote fence.
 
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 
@@ -84,7 +94,11 @@ New or untracked authored paths stay byte-for-byte in their actual owning task w
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
-`START-WORKFLOW.md` owns session startup. `RELEASE-WORKFLOW.md` owns integration and release after development is complete. The three invocation dictionaries remain the only `/`, `#`, and `@` token authority.
+`START-WORKFLOW.md` owns session startup. `CANONICAL-LIFECYCLE.md` owns the
+provider-neutral receipt protocol. `RELEASE-WORKFLOW.md` is its current
+reference implementation for integration and release after development is
+complete. The three invocation dictionaries remain the only `/`, `#`, and `@`
+token authority.
 
 ## Session Context Contract
 
@@ -405,7 +419,16 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:stop -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
 ```
 
-This is local runtime supervision and exact-candidate review evidence, not Production authorization or deployment. Task worktrees never become runtime sources. `turn:end` persists an `agentic-local-review-candidate/v1` receipt that binds the canonical Knowgrph and Agentic Canvas OS commits and trees to live probe and protected-check evidence. A read-only follow-up reruns `runtime:local:status` before claiming readiness; an implementation turn reruns `turn:end` idempotently.
+This is the reference adapter for the neutral Runtime Review Receipt, not
+Production authorization or deployment. Task worktrees never become runtime
+sources. `turn:end` persists an `agentic-local-review-candidate/v1` receipt that
+joins the protected Integration Receipt and binds canonical Knowgrph and Agentic
+Canvas OS commits, trees, dependency closure, policy, live probes, and protected
+checks. Candidate preparation may be dispatched idempotently from that joined
+receipt, but no local command, terminal turn, merge event, user, device, or
+agent may synthesize the Human Authorization Receipt. A read-only follow-up
+reruns `runtime:local:status` before claiming readiness; an implementation turn
+reruns `turn:end` idempotently.
 
 For a completed task, use the explicit integration command from the leased task
 worktree. It validates and commits only an exact approved dirty-path set,

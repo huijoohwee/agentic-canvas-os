@@ -7,6 +7,8 @@ import {
   createHumanAuthorizationReceipt,
   createIntegrationReceipt,
   createLiveVerificationReceipt,
+  createOverlapDispositionReceipt,
+  createOverlapPreservationReceipt,
   createPublicationReceipt,
   createRuntimeReviewReceipt,
   dispatchReleaseController,
@@ -16,6 +18,8 @@ import {
 const digest = character => character.repeat(64);
 const clock = {
   integrated: "2026-07-29T00:00:00.000Z",
+  preserved: "2026-07-28T23:58:00.000Z",
+  dispositioned: "2026-07-28T23:59:00.000Z",
   reviewed: "2026-07-29T00:01:00.000Z",
   reviewExpires: "2026-07-29T01:01:00.000Z",
   built: "2026-07-29T00:02:00.000Z",
@@ -26,24 +30,83 @@ const clock = {
   published: "2026-07-29T00:06:00.000Z",
 };
 
+function collaboration(overrides = {}) {
+  return {
+    actorId: "actor:authenticated-user",
+    deviceId: "device:workstation-a",
+    sessionId: "session:one",
+    worktreeId: "worktree:scope-a",
+    branchId: "branch:scope-a",
+    scopeId: "scope:a",
+    leaseEpoch: 7,
+    fenceRevision: "immutable-fence-revision",
+    ...overrides,
+  };
+}
+
 function buildChain(overrides = {}) {
-  const integration = createIntegrationReceipt({
+  const primaryCollaboration = collaboration(overrides.collaboration);
+  const secondaryCollaboration = collaboration({
+    actorId: "actor:preserved-concurrent-user",
+    deviceId: "device:workstation-c",
+    sessionId: "session:preserved",
+    worktreeId: "worktree:preserved-scope",
+    branchId: "branch:preserved-scope",
+    scopeId: "scope:preserved",
+    leaseEpoch: 9,
+    fenceRevision: "preserved-immutable-fence",
+  });
+  const preservation = createOverlapPreservationReceipt({
+    convergenceBaseDigest: digest("8"),
+    protectedTipDigest: digest("9"),
+    captureAdapterId: "adapter:replaceable-capture",
+    entries: [
+      {
+        collaboration: primaryCollaboration,
+        writeSetDigest: digest("6"),
+        stateDigest: digest("7"),
+        recoveryHandle: "recovery:active-owned-lane",
+        preservationMode: "active-lane",
+        overlapClass: "overlapping",
+      },
+      {
+        collaboration: secondaryCollaboration,
+        writeSetDigest: digest("0"),
+        stateDigest: digest("a"),
+        recoveryHandle: "recovery:immutable-object",
+        preservationMode: "immutable-recovery-object",
+        overlapClass: "disjoint",
+      },
+    ],
+    capturedAt: clock.preserved,
+  });
+  const disposition = createOverlapDispositionReceipt(preservation, {
+    preservationReceiptDigest: preservation.receiptDigest,
+    convergenceBaseDigest: preservation.convergenceBaseDigest,
+    protectedTipDigest: preservation.protectedTipDigest,
+    observations: [
+      {
+        collaboration: primaryCollaboration,
+        stateDigest: digest("7"),
+        recoveryHandle: "recovery:active-owned-lane",
+        disposition: "retained",
+      },
+      {
+        collaboration: secondaryCollaboration,
+        stateDigest: digest("a"),
+        recoveryHandle: "recovery:immutable-object",
+        disposition: "restored",
+      },
+    ],
+    observedAt: clock.dispositioned,
+  });
+  const integration = createIntegrationReceipt(preservation, disposition, {
     sourceRevision: "immutable-source-revision",
     sourceDigest: digest("a"),
     dependencyClosureDigest: digest("b"),
     checksDigest: digest("c"),
     evaluatorId: "evaluator:protected-checks",
-    collaboration: {
-      actorId: "actor:authenticated-user",
-      deviceId: "device:workstation-a",
-      sessionId: "session:one",
-      worktreeId: "worktree:scope-a",
-      branchId: "branch:scope-a",
-      scopeId: "scope:a",
-      leaseEpoch: 7,
-      fenceRevision: "immutable-fence-revision",
-      ...overrides.collaboration,
-    },
+    collaboration: primaryCollaboration,
     integrationTargetDigest: digest("d"),
     integratedAt: clock.integrated,
   });
@@ -70,11 +133,13 @@ function buildChain(overrides = {}) {
     issuedAt: clock.authorized,
     expiresAt: clock.authorizationExpires,
   });
-  return { integration, review, candidate, authorization };
+  return { preservation, disposition, integration, review, candidate, authorization };
 }
 
 function current(chain) {
   return {
+    preservationReceiptDigest: chain.preservation.receiptDigest,
+    overlapDispositionReceiptDigest: chain.disposition.receiptDigest,
     integrationReceiptDigest: chain.integration.receiptDigest,
     runtimeReviewReceiptDigest: chain.review.receiptDigest,
     candidateDigest: chain.candidate.receiptDigest,
@@ -112,8 +177,9 @@ test("collaboration identity distinguishes actors, devices, sessions, worktrees,
     },
   }).integration;
   assert.notEqual(first.receiptDigest, second.receiptDigest);
+  const chain = buildChain();
   assert.throws(
-    () => createIntegrationReceipt({
+    () => createIntegrationReceipt(chain.preservation, chain.disposition, {
       sourceRevision: "revision",
       sourceDigest: digest("a"),
       dependencyClosureDigest: digest("b"),
@@ -136,6 +202,8 @@ test("collaboration identity distinguishes actors, devices, sessions, worktrees,
 });
 
 for (const field of [
+  "preservationReceiptDigest",
+  "overlapDispositionReceiptDigest",
   "sourceDigest",
   "dependencyClosureDigest",
   "policyDigest",
@@ -157,6 +225,57 @@ for (const field of [
     );
   });
 }
+
+test("overlapping work remains retained while exact disjoint state may be restored", () => {
+  const chain = buildChain();
+  assert.equal(chain.preservation.entries.length, 2);
+  assert.deepEqual(
+    new Set(chain.disposition.observations.map(entry => entry.disposition)),
+    new Set(["retained", "restored"]),
+  );
+  const overlapping = chain.preservation.entries.find(entry => entry.overlapClass === "overlapping");
+  assert.throws(
+    () => createOverlapDispositionReceipt(chain.preservation, {
+      preservationReceiptDigest: chain.preservation.receiptDigest,
+      convergenceBaseDigest: chain.preservation.convergenceBaseDigest,
+      protectedTipDigest: chain.preservation.protectedTipDigest,
+      observations: chain.disposition.observations.map(entry => ({
+        ...entry,
+        disposition: entry.collaboration.scopeId === overlapping.collaboration.scopeId ? "restored" : entry.disposition,
+      })),
+      observedAt: clock.dispositioned,
+    }),
+    /must remain retained/,
+  );
+});
+
+test("overlap disposition fails closed on missing, changed, or unaccounted work", () => {
+  const chain = buildChain();
+  const observations = chain.disposition.observations;
+  assert.throws(
+    () => createOverlapDispositionReceipt(chain.preservation, {
+      preservationReceiptDigest: chain.preservation.receiptDigest,
+      convergenceBaseDigest: chain.preservation.convergenceBaseDigest,
+      protectedTipDigest: chain.preservation.protectedTipDigest,
+      observations: observations.slice(1),
+      observedAt: clock.dispositioned,
+    }),
+    /account for every preserved entry/,
+  );
+  assert.throws(
+    () => createOverlapDispositionReceipt(chain.preservation, {
+      preservationReceiptDigest: chain.preservation.receiptDigest,
+      convergenceBaseDigest: chain.preservation.convergenceBaseDigest,
+      protectedTipDigest: chain.preservation.protectedTipDigest,
+      observations: observations.map((entry, index) => ({
+        ...entry,
+        stateDigest: index === 0 ? digest("f") : entry.stateDigest,
+      })),
+      observedAt: clock.dispositioned,
+    }),
+    /state or recovery identity drifted/,
+  );
+});
 
 test("authorization cannot be synthesized by a machine or issued before the candidate", () => {
   const { candidate } = buildChain();

@@ -53,7 +53,7 @@ completion_requires:
   - "append-only monthly planning-shard compliance"
   - "centralized planning task-row compliance"
   - "protected integration"
-  - "joined Integration, Runtime Review, Candidate, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
   - "one target-and-candidate idempotency key and one target-scoped deployment controller"
   - "Prod mirrors the promoted Dev SHA"
   - "both production routes return verified evidence"
@@ -78,6 +78,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 
 | Neutral receipt or boundary | Knowgrph reference adapter |
 |---|---|
+| Overlap Preservation and Disposition Receipts | Registered worktree/PR ownership for active lanes; locked content-addressed recovery object and durable ref only for required canonical isolation; exact retained-or-restored accounting before convergence |
 | Integration Receipt | Protected GitHub merge SHA, checks, paired immutable manifest, scope PR, actor, lease epoch, and fence SHA |
 | Runtime Review Receipt | `turn:end` emits `agentic-local-review-candidate/v1` from canonical localhost runtime proof |
 | Candidate Manifest | `agentic-production-release-candidate/v1` binds app, Agentic Canvas OS, catalog, policy, target, mirror, artifact, and manifest digests |
@@ -89,8 +90,8 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 
 | Contract | Required fields |
 |---|---|
-| Input | Exact joined Integration and Runtime Review Receipts; authenticated human authorization when deploying; actor, device, session, worktree, branch, semantic scope, lease epoch, and fence; base SHA; memory and planning refs; complete app/docs/catalog dependency closure; policy and target digests; artifact and manifest digests; Dev repository; Prod mirror; production routes. |
-| Output | Reconciliation ledger, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, deployment identifiers, Live Verification Receipt, Publication Receipt, remaining risks. |
+| Input | Exact joined Overlap Preservation, Overlap Disposition, Integration, and Runtime Review Receipts; authenticated human authorization when deploying; actor, device, session, worktree, branch, semantic scope, lease epoch, and fence; base SHA; memory and planning refs; complete app/docs/catalog dependency closure; policy and target digests; artifact and manifest digests; Dev repository; Prod mirror; production routes. |
+| Output | Reconciliation ledger, preservation inventory and dispositions, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, deployment identifiers, Live Verification Receipt, Publication Receipt, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
 
@@ -113,6 +114,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
+- Before convergence or canonical review isolation, content-bind every pre-existing non-canonical item and its owner, write set, fence, overlap class, state, preservation mode, and recovery handle. Retain overlapping work; restore only exact disjoint state; never treat preservation as Production authority.
 - Treat `memory/YYYY-MM.md` as append-only evidence: validate its hybrid format and compare historical bytes with the recorded Agentic Canvas OS memory base ref before integration.
 - Treat `todo/YYYY-MM.md` as append-only cross-repository planning evidence: validate the index and shards, compare historical bytes with the recorded Agentic Canvas OS planning base ref, and require the declared strict task row before integration.
 - Require one appended active-shard row matching the declared `planning_context`; reject repository-local todo files before integration.
@@ -163,10 +165,12 @@ Separate unrelated scopes into branch-exclusive leased task worktrees. Commit in
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
-After protected convergence, emit the neutral Integration Receipt with the
+Before protected convergence, emit the Overlap Preservation Receipt and account
+for every item in the joined Disposition Receipt. After convergence, emit the neutral Integration Receipt with the
 canonical merge commit and tree, full dependency-closure digest, protected
 checks, authenticated pull-request actor, device, session, worktree, branch,
-semantic scope, lease epoch, fence SHA, and paired immutable-manifest digest.
+semantic scope, lease epoch, fence SHA, paired immutable-manifest digest, and
+both preservation receipt digests.
 Candidate preparation must reject a missing, stale, overlapping, or unjoined
 Integration Receipt.
 

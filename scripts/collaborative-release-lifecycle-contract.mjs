@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 
-export const INTEGRATION_RECEIPT_SCHEMA = "agentic-integration-receipt/v1";
+export const OVERLAP_PRESERVATION_RECEIPT_SCHEMA = "agentic-overlap-preservation-receipt/v1";
+export const OVERLAP_DISPOSITION_RECEIPT_SCHEMA = "agentic-overlap-disposition-receipt/v1";
+export const INTEGRATION_RECEIPT_SCHEMA = "agentic-integration-receipt/v2";
 export const RUNTIME_REVIEW_RECEIPT_SCHEMA = "agentic-runtime-review-receipt/v1";
 export const CANDIDATE_MANIFEST_SCHEMA = "agentic-candidate-manifest/v1";
 export const HUMAN_AUTHORIZATION_RECEIPT_SCHEMA = "agentic-human-authorization-receipt/v1";
@@ -19,7 +21,76 @@ const COLLABORATION_FIELDS = [
   "fenceRevision",
 ];
 
-export function createIntegrationReceipt(input) {
+export function createOverlapPreservationReceipt(input) {
+  requireExact(input, [
+    "convergenceBaseDigest",
+    "protectedTipDigest",
+    "captureAdapterId",
+    "entries",
+    "capturedAt",
+  ], "Overlap Preservation Receipt input");
+  requireDigest(input.convergenceBaseDigest, "convergenceBaseDigest");
+  requireDigest(input.protectedTipDigest, "protectedTipDigest");
+  requireText(input.captureAdapterId, "captureAdapterId");
+  requireInstant(input.capturedAt, "capturedAt");
+  const entries = normalizePreservationEntries(input.entries);
+  return receipt({
+    schema: OVERLAP_PRESERVATION_RECEIPT_SCHEMA,
+    status: "preserved",
+    ...input,
+    entries,
+  });
+}
+
+export function createOverlapDispositionReceipt(preservation, input) {
+  validateOverlapPreservationReceipt(preservation);
+  requireExact(input, [
+    "preservationReceiptDigest",
+    "convergenceBaseDigest",
+    "protectedTipDigest",
+    "observations",
+    "observedAt",
+  ], "Overlap Disposition Receipt input");
+  for (const field of ["preservationReceiptDigest", "convergenceBaseDigest", "protectedTipDigest"]) {
+    requireDigest(input[field], field);
+  }
+  requireInstant(input.observedAt, "observedAt");
+  if (input.preservationReceiptDigest !== preservation.receiptDigest ||
+      input.convergenceBaseDigest !== preservation.convergenceBaseDigest ||
+      input.protectedTipDigest !== preservation.protectedTipDigest) {
+    throw new Error("Overlap disposition drifted from its preservation receipt.");
+  }
+  if (Date.parse(input.observedAt) < Date.parse(preservation.capturedAt)) {
+    throw new Error("Overlap disposition cannot predate preservation.");
+  }
+  const observations = normalizeDispositionObservations(input.observations);
+  if (observations.length !== preservation.entries.length) {
+    throw new Error("Overlap disposition must account for every preserved entry exactly once.");
+  }
+  for (let index = 0; index < preservation.entries.length; index += 1) {
+    const entry = preservation.entries[index];
+    const observation = observations[index];
+    if (preservationEntryKey(entry) !== dispositionObservationKey(observation) ||
+        observation.stateDigest !== entry.stateDigest ||
+        observation.recoveryHandle !== entry.recoveryHandle) {
+      throw new Error("Overlapping work state or recovery identity drifted before convergence.");
+    }
+    if (entry.overlapClass === "overlapping" && observation.disposition !== "retained") {
+      throw new Error("Overlapping work must remain retained in its owning lane or recovery object.");
+    }
+  }
+  return receipt({
+    schema: OVERLAP_DISPOSITION_RECEIPT_SCHEMA,
+    status: "accounted",
+    ...input,
+    observations,
+  });
+}
+
+export function createIntegrationReceipt(preservation, disposition, input) {
+  validateOverlapPreservationReceipt(preservation);
+  validateOverlapDispositionReceipt(disposition);
+  validateJoinedOverlapDisposition(preservation, disposition);
   requireExact(input, [
     "sourceRevision",
     "sourceDigest",
@@ -37,9 +108,14 @@ export function createIntegrationReceipt(input) {
   requireText(input.evaluatorId, "evaluatorId");
   requireCollaboration(input.collaboration);
   requireInstant(input.integratedAt, "integratedAt");
+  if (Date.parse(input.integratedAt) < Date.parse(disposition.observedAt)) {
+    throw new Error("Integration cannot predate overlap disposition.");
+  }
   return receipt({
     schema: INTEGRATION_RECEIPT_SCHEMA,
     status: "integrated",
+    preservationReceiptDigest: preservation.receiptDigest,
+    overlapDispositionReceiptDigest: disposition.receiptDigest,
     ...input,
   });
 }
@@ -134,6 +210,8 @@ export function validateAuthorizedDeployment({
   validateCandidateManifest(candidate);
   validateHumanAuthorizationReceipt(authorization);
   requireExact(current, [
+    "preservationReceiptDigest",
+    "overlapDispositionReceiptDigest",
     "integrationReceiptDigest",
     "runtimeReviewReceiptDigest",
     "candidateDigest",
@@ -158,6 +236,8 @@ export function validateAuthorizedDeployment({
   if (authorization.consumedAt !== null) throw new Error("Human authorization was already consumed.");
   if (Date.parse(now) > Date.parse(authorization.expiresAt)) throw new Error("Human authorization expired.");
   const expected = {
+    preservationReceiptDigest: integration.preservationReceiptDigest,
+    overlapDispositionReceiptDigest: integration.overlapDispositionReceiptDigest,
     integrationReceiptDigest: integration.receiptDigest,
     runtimeReviewReceiptDigest: review.receiptDigest,
     candidateDigest: candidate.receiptDigest,
@@ -272,10 +352,45 @@ export function releaseKey(targetDigest, candidateDigest) {
 
 function validateIntegrationReceipt(value) {
   validateReceipt(value, INTEGRATION_RECEIPT_SCHEMA, "integrated", [
+    "preservationReceiptDigest", "overlapDispositionReceiptDigest",
     "sourceRevision", "sourceDigest", "dependencyClosureDigest", "checksDigest",
     "evaluatorId", "collaboration", "integrationTargetDigest", "integratedAt",
   ]);
   requireCollaboration(value.collaboration);
+}
+
+function validateOverlapPreservationReceipt(value) {
+  validateReceipt(value, OVERLAP_PRESERVATION_RECEIPT_SCHEMA, "preserved", [
+    "convergenceBaseDigest", "protectedTipDigest", "captureAdapterId", "entries", "capturedAt",
+  ]);
+  normalizePreservationEntries(value.entries);
+}
+
+function validateOverlapDispositionReceipt(value) {
+  validateReceipt(value, OVERLAP_DISPOSITION_RECEIPT_SCHEMA, "accounted", [
+    "preservationReceiptDigest", "convergenceBaseDigest", "protectedTipDigest",
+    "observations", "observedAt",
+  ]);
+  normalizeDispositionObservations(value.observations);
+}
+
+function validateJoinedOverlapDisposition(preservation, disposition) {
+  if (disposition.preservationReceiptDigest !== preservation.receiptDigest ||
+      disposition.convergenceBaseDigest !== preservation.convergenceBaseDigest ||
+      disposition.protectedTipDigest !== preservation.protectedTipDigest ||
+      disposition.observations.length !== preservation.entries.length) {
+    throw new Error("Integration overlap-preservation receipts are unjoined.");
+  }
+  for (let index = 0; index < preservation.entries.length; index += 1) {
+    const entry = preservation.entries[index];
+    const observation = disposition.observations[index];
+    if (preservationEntryKey(entry) !== dispositionObservationKey(observation) ||
+        observation.stateDigest !== entry.stateDigest ||
+        observation.recoveryHandle !== entry.recoveryHandle ||
+        (entry.overlapClass === "overlapping" && observation.disposition !== "retained")) {
+      throw new Error("Integration overlap-preservation receipts are unjoined.");
+    }
+  }
 }
 
 function validateRuntimeReviewReceipt(value) {
@@ -336,6 +451,72 @@ function requireCollaboration(value) {
   if (!Number.isSafeInteger(value.leaseEpoch) || value.leaseEpoch < 1) {
     throw new Error("leaseEpoch must be a positive integer.");
   }
+}
+
+function normalizePreservationEntries(entries) {
+  if (!Array.isArray(entries)) throw new Error("Preservation entries must be an array.");
+  const normalized = entries.map(entry => {
+    requireExact(entry, [
+      "collaboration",
+      "writeSetDigest",
+      "stateDigest",
+      "recoveryHandle",
+      "preservationMode",
+      "overlapClass",
+    ], "preservation entry");
+    requireCollaboration(entry.collaboration);
+    requireDigest(entry.writeSetDigest, "writeSetDigest");
+    requireDigest(entry.stateDigest, "stateDigest");
+    requireText(entry.recoveryHandle, "recoveryHandle");
+    requireEnum(entry.preservationMode, ["active-lane", "immutable-recovery-object"], "preservationMode");
+    requireEnum(entry.overlapClass, ["disjoint", "overlapping"], "overlapClass");
+    return Object.freeze({ ...entry, collaboration: Object.freeze({ ...entry.collaboration }) });
+  }).sort((left, right) => compareKeys(preservationEntryKey(left), preservationEntryKey(right)));
+  assertUnique(normalized.map(preservationEntryKey), "Preservation entries");
+  return Object.freeze(normalized);
+}
+
+function normalizeDispositionObservations(observations) {
+  if (!Array.isArray(observations)) throw new Error("Disposition observations must be an array.");
+  const normalized = observations.map(observation => {
+    requireExact(observation, [
+      "collaboration",
+      "stateDigest",
+      "recoveryHandle",
+      "disposition",
+    ], "disposition observation");
+    requireCollaboration(observation.collaboration);
+    requireDigest(observation.stateDigest, "stateDigest");
+    requireText(observation.recoveryHandle, "recoveryHandle");
+    requireEnum(observation.disposition, ["retained", "restored"], "disposition");
+    return Object.freeze({ ...observation, collaboration: Object.freeze({ ...observation.collaboration }) });
+  }).sort((left, right) => compareKeys(dispositionObservationKey(left), dispositionObservationKey(right)));
+  assertUnique(normalized.map(dispositionObservationKey), "Disposition observations");
+  return Object.freeze(normalized);
+}
+
+function preservationEntryKey(entry) {
+  return collaborationKey(entry.collaboration);
+}
+
+function dispositionObservationKey(observation) {
+  return collaborationKey(observation.collaboration);
+}
+
+function collaborationKey(collaboration) {
+  return COLLABORATION_FIELDS.map(field => String(collaboration[field])).join("\u0000");
+}
+
+function compareKeys(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function assertUnique(keys, label) {
+  if (new Set(keys).size !== keys.length) throw new Error(`${label} must identify each owned work item exactly once.`);
+}
+
+function requireEnum(value, options, label) {
+  if (!options.includes(value)) throw new Error(`${label} must be one of: ${options.join(", ")}.`);
 }
 
 function requireWindow(issuedAt, expiresAt, label) {

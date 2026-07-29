@@ -58,6 +58,7 @@ import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
 import { createRunningAgentRuntime } from "./running-agents.js";
 import { createSandboxAgentRuntime } from "./sandbox-agents.js";
 import { createToolSearchRuntime } from "./tool-search.js";
+import { createUpstreamDependencyAdmissionHandler } from "./upstream-dependency-admission-handler.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
 /**
@@ -265,6 +266,7 @@ export function createAgentApiApp({
     runningAgents,
     sandboxAgents,
     toolSearch,
+    upstreamDependencyAdmissionEvaluate: createUpstreamDependencyAdmissionHandler({ secret }),
     agentSwarmStart: agentSwarmHandlers.start,
     agentSwarmWork: agentSwarmHandlers.work,
     agentSwarmSettle: agentSwarmHandlers.settle,
@@ -541,6 +543,16 @@ export function createAgentApiApp({
           programSearchPolicy: "top-level-before-hosted-program",
           providerContextReduction: "unverified",
           ...toolSearchStats,
+        },
+        upstreamDependencyAdmission: {
+          configured: Boolean(secret),
+          contractReady: true,
+          route: "/api/upstream-dependency-admission/evaluate",
+          auth: "session-bearer",
+          sourcePolicy: "protected-exact-revision-only",
+          continuationPolicy: "exact-consumer-closure-with-disjoint-work",
+          mutationPolicy: "pure-no-source-adoption-projection-release-or-deployment",
+          providerExecutionStatus: "not-applicable-model-free",
         },
       };
     },

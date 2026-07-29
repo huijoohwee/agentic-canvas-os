@@ -183,6 +183,13 @@ are in `__tests__/integration-order-contract.test.mjs`. The executable is pure:
 it validates and returns frozen records, and performs no filesystem, network,
 repository, merge, release, or deployment mutation.
 
+The `guideline_candidate_revision` frontmatter value records review provenance
+only. Merge the universal guideline source first, then replace this candidate
+value with the fetched protected source revision and re-run review checks before
+the consumer integration or release frontier is sealed. A squash, rebase, or
+other protected merge may change the source revision even when its content is
+equivalent; equivalence must be recorded explicitly rather than inferred.
+
 ## Validation
 
 Run:

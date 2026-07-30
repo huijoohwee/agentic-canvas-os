@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 85,
-  "headDigest": "e50bbd74e64cc7633511ed45cdf4065c6c4101bc0b6f76b0bbd3353c8a15fd4a",
+  "sequence": 86,
+  "headDigest": "a55679237754682e67c114cbef9910a008b44b2cd3382a8cb140054f254c45e7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -4042,6 +4042,46 @@
       },
       "claimDigest": "a8df4d39acd30cdfb402a4f050489e6b861b6f00663ab909ff6e795b7488e30f",
       "digest": "e50bbd74e64cc7633511ed45cdf4065c6c4101bc0b6f76b0bbd3353c8a15fd4a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 86,
+      "parentDigest": "e50bbd74e64cc7633511ed45cdf4065c6c4101bc0b6f76b0bbd3353c8a15fd4a",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "883f6681710cce0d32234ac36c4a2972284c3179aeff014ea6b936b817ed1fd4",
+      "idempotencyKey": "27313ee1d68a62332918e8262ecb27f59a6787dac8d661f235dd28eb493e405f",
+      "requestDigest": "922bdadbba714228b362e7fa10d8a6fd67ccf056b20dfe3e4ba6c351042b0bd8",
+      "evaluationTime": "2026-07-30T18:24:03.000Z",
+      "claimCore": {
+        "claimId": "883f6681710cce0d32234ac36c4a2972284c3179aeff014ea6b936b817ed1fd4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:5953ae2b32b4cddcdf6040dff6441176a04bfd6c45c1e93151181b4af9aabfc8",
+        "sessionId": "session:42c02e01224b7ae909bba1096a7b22bd3765e26b0bc42ad4b737f63ff1021ade",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:b48d06920b53add23e86e27cf36ed7c25dabaa0057a5f9d41dfe31aeb265d9e1",
+        "canonicalBaseRevision": "5b79529a5c791cdfceed70548543f82358fa100c",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/agentic-sdlc-scoped-lane-admission.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:concurrent-lane-admission-guideline"
+        ],
+        "writeSetDigest": "a15e118db1d18a6c2b930747f5c37405428fe3cb87a85cc1ec3621d466c3787c",
+        "laneRevision": "eaf4d839a888d7cc6cdb5139f0bb1d163310bc8c",
+        "leaseEpoch": 3,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T18:17:41.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc74m4g-",
+        "predecessorClaimId": "fb6e7e3ac2e5dae0d6458f9462e8349c4737b4f582b51e01da03fe0c8cc67390",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3ba37a11b523fb4e5f6949618ef3cc22c954770ba517782ab3c7a3a7bbcae041",
+      "digest": "a55679237754682e67c114cbef9910a008b44b2cd3382a8cb140054f254c45e7"
     }
   ]
 }

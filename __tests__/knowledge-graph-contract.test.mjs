@@ -20,6 +20,13 @@ const EXPECTED_DISPATCH = [
   ["/knowledge.graph.query", EXPECTED_TOOLS[1]],
   ["/knowledge.graph.explain", EXPECTED_TOOLS[2]],
 ];
+const EXPECTED_FACTS_RESOLUTION = [
+  ["/knowledge.graph.ingest", "DICTIONARY-COMMAND.md#/knowledge.graph.ingest"],
+  ["/knowledge.graph.query", "DICTIONARY-COMMAND.md#/knowledge.graph.query"],
+  ["/knowledge.graph.explain", "DICTIONARY-COMMAND.md#/knowledge.graph.explain"],
+  ["#knowledge-graph", "DICTIONARY-SEMANTIC.md##knowledge-graph"],
+  ["@knowledge-graph", "DICTIONARY-BINDING.md#@knowledge-graph"],
+];
 const DOC_FILES = [
   "docs/KNOWLEDGE-GRAPH.md",
   "docs/DICTIONARY-COMMAND.md",
@@ -61,6 +68,42 @@ test("canonical commands map to exactly three Knowgrph-owned MCP tools", () => {
       `${file} tool projection`,
     );
   }
+});
+
+test("FACTS resolves every knowledge graph token exactly once", () => {
+  const frontmatter = readFrontmatter(read("docs/FACTS.md"));
+  const directResolution = readFrontmatterSection(
+    frontmatter,
+    "direct_resolution:",
+    "truth_tokens:",
+  );
+  const resolvedTokens = [...directResolution.matchAll(
+    /^  "([^"]+)": "([^"]+)"$/gmu,
+  )]
+    .map((match) => [match[1], match[2]])
+    .filter(([token]) => token.includes("knowledge.graph") || token === "#knowledge-graph"
+      || token === "@knowledge-graph");
+  assert.deepEqual(resolvedTokens, EXPECTED_FACTS_RESOLUTION);
+
+  const truthTokens = Object.fromEntries(
+    ["commands", "semantics", "bindings"].map((field) => {
+      const match = frontmatter.match(new RegExp(`^  ${field}: (\\[[^\\n]+\\])$`, "mu"));
+      assert.ok(match, `FACTS.md truth_tokens.${field}`);
+      return [field, JSON.parse(match[1])];
+    }),
+  );
+  assert.deepEqual(
+    truthTokens.commands.filter((token) => token.startsWith("/knowledge.graph.")),
+    EXPECTED_DISPATCH.map(([command]) => command),
+  );
+  assert.deepEqual(
+    truthTokens.semantics.filter((token) => token === "#knowledge-graph"),
+    ["#knowledge-graph"],
+  );
+  assert.deepEqual(
+    truthTokens.bindings.filter((token) => token === "@knowledge-graph"),
+    ["@knowledge-graph"],
+  );
 });
 
 test("Agentic Canvas OS retains contracts and client code, not a second graph runtime", () => {
@@ -119,6 +162,13 @@ function readFrontmatter(source) {
   const end = source.indexOf("\n---\n", 4);
   assert.ok(source.startsWith("---\n") && end > 4, "canonical document frontmatter");
   return source.slice(4, end);
+}
+
+function readFrontmatterSection(frontmatter, start, end) {
+  const startIndex = frontmatter.indexOf(start);
+  const endIndex = frontmatter.indexOf(end, startIndex + start.length);
+  assert.ok(startIndex >= 0 && endIndex > startIndex, `${start} section`);
+  return frontmatter.slice(startIndex, endIndex);
 }
 
 function lineCount(source) {

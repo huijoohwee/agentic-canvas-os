@@ -60,13 +60,30 @@ export function integrateSession({
     );
   }
 
+  let protectedMainRefresh = null;
   let completion = lease.completion || null;
   if (!['completing', 'completed'].includes(lease.status)) {
+    const allowProtectedMainRefresh = lease.status === "delivery" && lease.sessionId === sessionId;
     const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
       expectedHeadSha: lease.deliveryHeadSha || commitEvidence?.commitSha ||
         (autoDeliveryReview ? lease.reviewHeadSha : null),
       ghText, waitSeconds, pollSeconds, now, sleep,
+      onHeadAdvance: allowProtectedMainRefresh
+        ? ({ expectedHeadSha, observedHeadSha }) => {
+          if (protectedMainRefresh) {
+            throw new Error("Delivered pull request advanced more than once after protected publication.");
+          }
+          protectedMainRefresh = reconcileProtectedMainRefresh({
+            url: lease.pullRequestUrl,
+            expectedHeadSha,
+            observedHeadSha,
+            gitText,
+            run,
+          });
+          return protectedMainRefresh.refreshedHeadSha;
+        }
+        : null,
     });
     log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);
     completion = completeTask();
@@ -116,6 +133,7 @@ export function integrateSession({
     worktreePath: repo,
     pullRequestUrl: lease.pullRequestUrl,
     commit: commitEvidence,
+    ...(protectedMainRefresh ? { protectedMainRefresh } : {}),
     mergeCommitSha: completion?.mergeCommitSha || null,
     mainSha,
     canonical: canonicalIntegration.integratedSource,
@@ -236,13 +254,14 @@ function annotateIntegration({ branch, leaseStore, sessionId, gitText, now, valu
 }
 
 function waitForMergedPullRequest({
-  url, expectedHeadSha, ghText, waitSeconds, pollSeconds, now, sleep,
+  url, expectedHeadSha, ghText, waitSeconds, pollSeconds, now, sleep, onHeadAdvance = null,
 }) {
   if (!url) throw new Error("Integration requires the lease-owned pull request URL.");
   if (!SHA_PATTERN.test(String(expectedHeadSha || ""))) {
     throw new Error("Integration requires an exact delivered pull-request head SHA.");
   }
   const deadline = now().getTime() + waitSeconds * 1000;
+  let acceptedHeadSha = expectedHeadSha;
   for (;;) {
     const pullRequest = JSON.parse(ghText([
       "pr", "view", url, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
@@ -250,10 +269,17 @@ function waitForMergedPullRequest({
     if (pullRequest.url !== url || pullRequest.baseRefName !== "main") {
       throw new Error(`Pull request identity for ${url} changed during integration.`);
     }
-    if (pullRequest.headRefOid !== expectedHeadSha) {
-      throw new Error(
-        `Pull request head ${pullRequest.headRefOid || "unknown"} does not match delivered head ${expectedHeadSha}.`,
-      );
+    if (pullRequest.headRefOid !== acceptedHeadSha) {
+      const resolvedHeadSha = onHeadAdvance?.({
+        expectedHeadSha: acceptedHeadSha,
+        observedHeadSha: pullRequest.headRefOid,
+      });
+      if (resolvedHeadSha !== pullRequest.headRefOid) {
+        throw new Error(
+          `Pull request head ${pullRequest.headRefOid || "unknown"} does not match delivered head ${acceptedHeadSha}.`,
+        );
+      }
+      acceptedHeadSha = resolvedHeadSha;
     }
     if (pullRequest.state === "MERGED") {
       const mergeCommitSha = pullRequest.mergeCommit?.oid;
@@ -272,6 +298,50 @@ function waitForMergedPullRequest({
     }
     sleep(Math.min(pollSeconds * 1000, Math.max(1, deadline - now().getTime())));
   }
+}
+
+function reconcileProtectedMainRefresh({
+  url, expectedHeadSha, observedHeadSha, gitText, run,
+}) {
+  if (!SHA_PATTERN.test(String(expectedHeadSha || "")) ||
+      !SHA_PATTERN.test(String(observedHeadSha || ""))) {
+    throw new Error("Protected-main refresh requires exact delivered and observed head SHAs.");
+  }
+  const pullRequestNumber = parsePullRequestNumber(url);
+  run("git", ["fetch", "origin", "main"]);
+  run("git", ["fetch", "origin", `refs/pull/${pullRequestNumber}/head`]);
+  const fetchedHeadSha = gitText(["rev-parse", "FETCH_HEAD"]).trim();
+  if (fetchedHeadSha !== observedHeadSha) {
+    throw new Error("Fetched pull-request head does not match the observed protected refresh.");
+  }
+  const parents = gitText(["rev-list", "--parents", "-n", "1", "FETCH_HEAD"]).trim().split(/\s+/);
+  if (parents.length !== 3 || parents[0] !== observedHeadSha || parents[1] !== expectedHeadSha) {
+    throw new Error("Delivered pull request advanced beyond one exact protected-main refresh.");
+  }
+  const mainParentSha = parents[2];
+  gitText(["merge-base", "--is-ancestor", mainParentSha, "origin/main"]);
+
+  const localHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (localHeadSha !== expectedHeadSha && localHeadSha !== observedHeadSha) {
+    throw new Error("Local integration head does not match the delivered or protected-refreshed head.");
+  }
+  if (localHeadSha !== observedHeadSha) run("git", ["merge", "--ff-only", "FETCH_HEAD"]);
+  if (gitText(["rev-parse", "HEAD"]).trim() !== observedHeadSha ||
+      gitText(["status", "--porcelain"]).trim()) {
+    throw new Error("Protected-main refresh did not leave the exact clean pull-request head attached.");
+  }
+  return {
+    schema: "agentic-protected-main-refresh/v1",
+    deliveredHeadSha: expectedHeadSha,
+    refreshedHeadSha: observedHeadSha,
+    mainParentSha,
+  };
+}
+
+function parsePullRequestNumber(url) {
+  const match = String(url || "").match(/\/pull\/([1-9]\d*)\/?$/u);
+  if (!match) throw new Error("Protected-main refresh requires an exact pull-request URL.");
+  return match[1];
 }
 
 function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runtimeRepository, runText }) {

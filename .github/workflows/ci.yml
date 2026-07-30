@@ -2,8 +2,7 @@ name: CI
 
 on:
   pull_request:
-    paths:
-      - "**"
+    types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
   push:
     branches: [main]
@@ -60,3 +59,52 @@ jobs:
         with:
           node-version: 22
       - run: npm run collab:test
+
+  evaluate:
+    name: policy-runtime-readiness
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Resolve the pinned guideline source revision
+        id: guideline-source
+        run: >-
+          node --input-type=module -e
+          'import { appendFileSync } from "node:fs";
+          import { LIFECYCLE_POLICY_SOURCE } from "./scripts/lifecycle-conformance-policy.mjs";
+          const revision = String(LIFECYCLE_POLICY_SOURCE.revision ?? "");
+          if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error("guideline source revision must be a full commit SHA");
+          appendFileSync(process.env.GITHUB_OUTPUT, `revision=${revision}\n`);'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: huijoohwee/huijoohwee.github.io
+          ref: ${{ steps.guideline-source.outputs.revision }}
+          path: .agentic-sdlc-source/huijoohwee.github.io
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify repository policy-runtime readiness
+        env:
+          GITHUB_ROOT: ${{ github.workspace }}/.agentic-sdlc-source
+        run: |
+          npm run lifecycle:conformance:check
+          npm run agentic-sdlc:source:check
+
+  conformance:
+    name: agentic-sdlc-policy-runtime
+    needs: evaluate
+    if: ${{ always() }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Require policy-runtime readiness
+        env:
+          EVALUATE_RESULT: ${{ needs.evaluate.result }}
+        run: |
+          if [ "$EVALUATE_RESULT" != "success" ]; then
+            echo "policy-runtime readiness did not succeed: $EVALUATE_RESULT" >&2
+            exit 1
+          fi

@@ -11,12 +11,22 @@ import {
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import { sanitizeDevice } from "./device-branch-identity.mjs";
-import { readOwnershipPullRequest, requireOwnershipPullRequestDraft } from "./device-pull-request-state.mjs";
+import {
+  readOwnershipPullRequest,
+  requireOwnershipPullRequestDraft,
+  waitForOwnershipPullRequestHead,
+} from "./device-pull-request-state.mjs";
 import {
   park,
   requireParkedStashObject,
   restoreParkedStashObject,
 } from "./device-park-lib.mjs";
+import {
+  captureOwnedDirtEvidence,
+  requireOwnedDirtInvocation,
+  requireSameOwnedDirtEvidence,
+  resolveOwnedDirtRecovery,
+} from "./owned-dirt-resume-lib.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
 export { park, createParkMessage, formatParkTimestamp } from "./device-park-lib.mjs";
@@ -35,17 +45,34 @@ export function heartbeat({
   leaseStore,
   sessionId,
   leaseTtlMs,
+  repairPullRequestProjection = false,
   run,
   log = console.log,
+  now = () => new Date(),
 }) {
   requireSession(sessionId);
   requireRepositorySafety({ invocationPath, repo, gitText });
   const branch = gitText(["branch", "--show-current"]).trim();
-  const current = leaseStore.verify({ sessionId, branch });
+  let current = leaseStore.verify({ sessionId, branch });
   assertLeaseWorktree(current, repo);
-  requireRemoteFence({ branch, lease: current, gitOptional });
+  if (!repairPullRequestProjection) {
+    requireRemoteFence({ branch, lease: current, gitOptional });
+  }
   if (!current.pullRequestUrl || !current.fenceSha) {
     throw new Error("Writer lease is missing its draft pull request or fencing SHA.");
+  }
+  if (repairPullRequestProjection) {
+    current = repairOwnershipPullRequestProjection({
+      branch,
+      lease: current,
+      leaseStore,
+      sessionId,
+      gitText,
+      gitOptional,
+      ghText,
+      run,
+      now,
+    });
   }
   const pullRequest = requireOwnershipPullRequestDraft({
     url: current.pullRequestUrl, branch, ghText, expectedDraft: true,
@@ -59,6 +86,141 @@ export function heartbeat({
   log(`Renewed ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}.`);
   return lease;
 }
+
+export function repairOwnershipPullRequestProjection({
+  branch,
+  lease,
+  leaseStore,
+  sessionId,
+  gitText,
+  gitOptional,
+  ghText,
+  run,
+  now = () => new Date(),
+}) {
+  const expectedHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  requireProjectionRepairHead({ lease, expectedHeadSha, gitText });
+  requireExactRemoteHead({ branch, expectedHeadSha, gitOptional });
+  requireNoCompetingPullRequest({ branch, ghText });
+  const dirtEvidence = gitText(["status", "--porcelain"]).trim()
+    ? captureOwnedDirtEvidence({ gitText, gitOptional })
+    : null;
+  const existing = normalizePullRequestProjectionRepair(lease.pullRequestProjectionRepair);
+  const sourceUrl = existing?.sourcePullRequestUrl || lease.pullRequestUrl;
+  let source = readOwnershipPullRequest({
+    url: sourceUrl,
+    branch,
+    ghText,
+    requireOpen: false,
+  });
+  let repair = existing;
+  if (!repair) {
+    if (source.state !== "OPEN" || source.isDraft !== true) {
+      throw new Error("Pull-request projection repair requires the exact open draft ownership pull request.");
+    }
+    if (source.headRefOid === expectedHeadSha) {
+      throw new Error("Pull-request projection already matches the active writer fence.");
+    }
+    gitText(["merge-base", "--is-ancestor", source.headRefOid, expectedHeadSha]);
+    repair = createPullRequestProjectionRepair({
+      lease,
+      sourceUrl,
+      staleHeadSha: source.headRefOid,
+      expectedHeadSha,
+      dirtEvidence,
+      now,
+    });
+    lease = leaseStore.annotate({
+      sessionId,
+      branch,
+      values: { pullRequestProjectionRepair: repair },
+    });
+    run("gh", ["pr", "close", sourceUrl]);
+    run("gh", ["pr", "reopen", sourceUrl]);
+    source = readOwnershipPullRequest({
+      url: sourceUrl,
+      branch,
+      ghText,
+      requireOpen: false,
+    });
+  } else {
+    requireMatchingPullRequestProjectionRepair({
+      repair,
+      lease,
+      expectedHeadSha,
+      dirtEvidence,
+    });
+  }
+
+  let target = source;
+  let targetUrl = sourceUrl;
+  let outcome = "reopened";
+  if (source.state !== "OPEN" || source.headRefOid !== expectedHeadSha) {
+    if (source.state === "OPEN") run("gh", ["pr", "close", sourceUrl]);
+    const candidates = JSON.parse(ghText([
+      "pr", "list", "--state", "open", "--base", "main", "--head", branch,
+      "--limit", "10", "--json", "url,headRefName,headRefOid,isDraft",
+    ]));
+    if (candidates.length > 1) {
+      throw new Error("Pull-request projection repair found multiple replacement candidates.");
+    }
+    if (candidates.length === 1) {
+      targetUrl = candidates[0].url;
+    } else {
+      targetUrl = String(ghText([
+        "pr", "create", "--draft", "--base", "main", "--head", branch,
+        "--title", gitText(["log", "-1", "--pretty=%s"]).trim(),
+        "--body", updateWriterLeasePullRequestBody("", lease),
+      ])).trim().split(/\r?\n/).filter(Boolean).at(-1) || "";
+    }
+    if (!targetUrl || targetUrl === sourceUrl) {
+      throw new Error("Pull-request projection repair did not create a distinct replacement pull request.");
+    }
+    target = requireOwnershipPullRequestDraft({
+      url: targetUrl,
+      branch,
+      ghText,
+      expectedDraft: true,
+    });
+    outcome = "replaced";
+  }
+  if (target.state !== "OPEN" || target.isDraft !== true || target.headRefOid !== expectedHeadSha) {
+    throw new Error("Pull-request projection repair could not prove an exact open draft replacement.");
+  }
+  verifyPullRequestRepositoryIdentity({ pullRequest: target, url: targetUrl });
+  requireSameRepairDirt({ repair, dirtEvidence });
+  const completedRepair = finalizePullRequestProjectionRepair({
+    repair,
+    targetPullRequestUrl: targetUrl,
+    outcome,
+    now,
+  });
+  const repairedLease = leaseStore.annotate({
+    sessionId,
+    branch,
+    values: {
+      pullRequestUrl: targetUrl,
+      pullRequestProjectionRepair: completedRepair,
+    },
+  });
+  run("gh", ["pr", "edit", targetUrl, "--body", updateWriterLeasePullRequestBody(
+    target.body,
+    repairedLease,
+  )]);
+  const verified = requireOwnershipPullRequestDraft({
+    url: targetUrl,
+    branch,
+    ghText,
+    expectedDraft: true,
+  });
+  if (verified.headRefOid !== expectedHeadSha) {
+    throw new Error("Pull-request projection changed after its repaired lease marker was published.");
+  }
+  requireSameRepairDirt({ repair: completedRepair, dirtEvidence: gitText(["status", "--porcelain"]).trim()
+    ? captureOwnedDirtEvidence({ gitText, gitOptional })
+    : null });
+  return repairedLease;
+}
 export function resume({
   branchName,
   invocationPath,
@@ -69,6 +231,7 @@ export function resume({
   leaseStore,
   sessionId,
   leaseTtlMs,
+  recoverOwnedDirt = false,
   run,
   log = console.log,
   now = () => new Date(),
@@ -82,7 +245,23 @@ export function resume({
   const dirty = Boolean(gitText(["status", "--porcelain"]).trim());
   const dirtyRestoreReplay = currentBranch === branchName && localAtInvocation?.status === "active" &&
     localAtInvocation.sessionId === sessionId && ["pending", "restored"].includes(localAtInvocation.parkStashStatus);
-  if (dirty && !dirtyRestoreReplay) requireClean({ gitText });
+  if (recoverOwnedDirt && !dirty) {
+    throw new Error("--recover-owned-dirt requires an existing dirty worktree.");
+  }
+  const ownedDirtEvidence = recoverOwnedDirt
+    ? captureOwnedDirtEvidence({ gitText, gitOptional })
+    : null;
+  if (ownedDirtEvidence) {
+    requireOwnedDirtInvocation({
+      branch: branchName,
+      currentBranch,
+      evidence: ownedDirtEvidence,
+      localLease: localAtInvocation,
+      repo,
+      sessionId,
+    });
+  }
+  if (dirty && !dirtyRestoreReplay && !ownedDirtEvidence) requireClean({ gitText });
   run("git", ["fetch", "origin", "main", branchName]);
 
   const pulls = JSON.parse(ghText([
@@ -106,6 +285,27 @@ export function resume({
   }
   const remoteRef = `origin/${branchName}`;
   const remoteSha = gitText(["rev-parse", remoteRef]).trim();
+  const ownedDirtRecovery = ownedDirtEvidence
+    ? resolveOwnedDirtRecovery({
+      branch: branchName,
+      evidence: ownedDirtEvidence,
+      localHeadSha: gitText(["rev-parse", "HEAD"]).trim(),
+      localLease: localAtInvocation,
+      ownerUrl: owner.url,
+      pullRequestHeadSha: pullRequest.headRefOid,
+      remoteLease,
+      remoteSha,
+      repo,
+      sessionId,
+    })
+    : null;
+  const verifyOwnedDirt = () => {
+    if (!ownedDirtRecovery) return;
+    requireSameOwnedDirtEvidence(
+      ownedDirtRecovery,
+      captureOwnedDirtEvidence({ gitText, gitOptional }),
+    );
+  };
   const integrationContinuation = resolveExpiredIntegrationContinuation({
     branch: branchName,
     currentBranch,
@@ -120,9 +320,12 @@ export function resume({
   });
   const replay = reconcileResumeReplay({
     branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
-    pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
+    pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now, verifyOwnedDirt,
   });
-  if (replay) return replay;
+  if (replay) {
+    verifyOwnedDirt();
+    return replay;
+  }
   const expired = Date.parse(remoteLease.expiresAt) <= now().getTime();
   const sameSessionDelivery = remoteLease.status === "delivery" && remoteLease.sessionId === sessionId;
   const reviewHandoff = remoteLease.status === "review_ready";
@@ -202,11 +405,22 @@ export function resume({
     worktreePath: repo,
     baseSha: claimBaseSha,
     autoDelivery: remoteLease.autoDelivery === true && remoteLease.runtimeRequired === true,
+    ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
     previousEpoch: remoteLease.epoch,
     ttlMs: leaseTtlMs,
   });
-  run("git", ["commit", "--allow-empty", "-m", resumeClaimSubject(identity.scope, claimed.epoch)]);
+  run("git", [
+    "commit",
+    "--allow-empty",
+    ...(ownedDirtRecovery ? ["--only"] : []),
+    "-m",
+    resumeClaimSubject(identity.scope, claimed.epoch),
+  ]);
   const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (ownedDirtRecovery) {
+    requireResumeClaimCommit({ lease: claimed, headSha: fenceSha, gitText });
+    verifyOwnedDirt();
+  }
   const lease = leaseStore.annotate({
     sessionId,
     branch: branchName,
@@ -228,6 +442,7 @@ export function resume({
   const restoredLease = completeParkedStashRestore({
     branch: branchName, lease, owner, leaseStore, sessionId, gitText, gitOptional, ghText, run,
   });
+  verifyOwnedDirt();
   log(
     `Resumed ${branchName} at epoch ${restoredLease.epoch} with fence ${fenceSha.slice(0, 12)}; prior writers are fenced by the fast-forward remote head.`,
   );
@@ -299,6 +514,7 @@ export function review({
   leaseStore,
   sessionId,
   run,
+  wait,
   log = console.log,
 }) {
   requireSession(sessionId);
@@ -323,10 +539,17 @@ export function review({
   run("npm", ["run", "check"]);
   run("git", ["push", "--set-upstream", "origin", branch]);
   const url = requireLeasePullRequest({ lease, ghOptional });
-  const pullRequest = readOwnershipPullRequest({ url, branch, ghText });
+  const reviewHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  const pullRequest = waitForOwnershipPullRequestHead({
+    url,
+    branch,
+    expectedHeadSha: reviewHeadSha,
+    ghText,
+    ...(wait ? { wait } : {}),
+  });
   if (pullRequest.isDraft) run("gh", ["pr", "ready", url]);
   const readyPullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
-  const reviewHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  requirePullRequestHead({ pullRequest: readyPullRequest, expectedHeadSha: reviewHeadSha });
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
   leaseStore.annotate({ sessionId, branch, values: { reviewHeadSha } });
   const readyLease = leaseStore.release({ sessionId, branch, status: "review_ready" });
@@ -376,12 +599,21 @@ export function publish({
   if (!url || url.trim() !== lease.pullRequestUrl) {
     throw new Error(`Active pull request does not match the writer lease ${lease.pullRequestUrl}.`);
   }
+  const deliveryHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  requirePullRequestHead({
+    pullRequest: requireOwnershipPullRequestDraft({
+      url,
+      branch,
+      ghText,
+      expectedDraft: true,
+    }),
+    expectedHeadSha: deliveryHeadSha,
+  });
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
   run("gh", ["pr", "edit", url, "--title", title, "--add-label", "automerge"]);
   run("gh", ["pr", "ready", url]);
   requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   run("gh", ["pr", "merge", "--auto", "--squash", url]);
-  const deliveryHeadSha = gitText(["rev-parse", "HEAD"]).trim();
   leaseStore.annotate({ sessionId, branch, values: { deliveryHeadSha } });
   const deliveredLease = leaseStore.release({ sessionId, branch, status: "delivery" });
   run("gh", ["pr", "edit", url, "--body", updateWriterLeasePullRequestBody(
@@ -396,6 +628,7 @@ export function publish({
 function reconcileResumeReplay({
   branch, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
   pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
+  verifyOwnedDirt = () => {},
 }) {
   let local = leaseStore.read?.(branch) || null;
   if (!local || local.status !== "active" || local.sessionId !== sessionId || currentBranch !== branch ||
@@ -442,8 +675,15 @@ function reconcileResumeReplay({
       if (local.fenceSha) requireCarriedParkedStash({ local, expected: parkedStashValues });
     }
     if (atHandoffHead) {
-      run("git", ["commit", "--allow-empty", "-m", resumeClaimSubject(identity.scope, local.epoch)]);
+      run("git", [
+        "commit",
+        "--allow-empty",
+        ...(local.ownedDirtRecovery ? ["--only"] : []),
+        "-m",
+        resumeClaimSubject(identity.scope, local.epoch),
+      ]);
       headSha = gitText(["rev-parse", "HEAD"]).trim();
+      verifyOwnedDirt();
     }
     requireResumeClaimCommit({ lease: local, headSha, gitText });
     if (!local.fenceSha && local.pullRequestUrl) {
@@ -617,6 +857,31 @@ function requireRemoteFence({ branch, lease, gitOptional }) {
   );
 }
 
+function requireExactRemoteHead({ branch, expectedHeadSha, gitOptional }) {
+  const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
+  const remoteSha = remoteLine.split(/\s+/)[0] || "";
+  if (!SHA_PATTERN.test(String(expectedHeadSha || "")) || remoteSha !== expectedHeadSha) {
+    throw new Error(
+      `Remote head for ${branch} is ${remoteSha || "missing"}, not ${expectedHeadSha || "unknown"}.`,
+    );
+  }
+}
+
+function requireProjectionRepairHead({ lease, expectedHeadSha, gitText }) {
+  if (expectedHeadSha === lease.fenceSha) return;
+  const integrationHead = lease.integration?.commitSha;
+  if (!SHA_PATTERN.test(String(integrationHead || ""))) {
+    throw new Error("Pull-request projection repair requires the active fence or recorded integration head.");
+  }
+  gitText(["merge-base", "--is-ancestor", lease.fenceSha, integrationHead]);
+  if (expectedHeadSha === integrationHead) return;
+  const parents = gitText(["rev-list", "--parents", "-n", "1", "HEAD"]).trim().split(/\s+/);
+  if (parents.length !== 3 || parents[0] !== expectedHeadSha || parents[1] !== integrationHead) {
+    throw new Error("Pull-request projection repair permits only one protected-main refresh after integration.");
+  }
+  gitText(["merge-base", "--is-ancestor", parents[2], "origin/main"]);
+}
+
 function requireNoCompetingPullRequest({ branch, ghText }) {
   const pulls = JSON.parse(ghText(["pr", "list", "--state", "open", "--base", "main", "--limit", "100", "--json", "number,headRefName,url"]));
   assertNoCompetingPullRequests(pulls, branch);
@@ -652,6 +917,7 @@ function requireReviewReplay({ branch, lease, gitText, gitOptional, ghText, ghOp
   requireNoCompetingPullRequest({ branch, ghText });
   const url = requireLeasePullRequest({ lease, ghOptional });
   const pullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
+  requirePullRequestHead({ pullRequest, expectedHeadSha: headSha });
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
   run("gh", ["pr", "edit", url, "--title", title, "--body", updateWriterLeasePullRequestBody(
     pullRequest.body,
@@ -663,8 +929,137 @@ function requireReviewReplay({ branch, lease, gitText, gitOptional, ghText, ghOp
   }
 }
 
+function requirePullRequestHead({ pullRequest, expectedHeadSha }) {
+  if (!SHA_PATTERN.test(String(expectedHeadSha || "")) ||
+      pullRequest.headRefOid !== expectedHeadSha) {
+    throw new Error(
+      `Ownership pull request head ${pullRequest.headRefOid || "unknown"} does not match local head ${expectedHeadSha || "unknown"}.`,
+    );
+  }
+}
+
 function readRemotePullRequestBody({ url, ghText }) {
   return ghText(["pr", "view", url, "--json", "body", "--jq", ".body"]);
+}
+
+const PULL_REQUEST_PROJECTION_REPAIR_SCHEMA = "agentic-pull-request-projection-repair/v1";
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
+
+function createPullRequestProjectionRepair({
+  lease,
+  sourceUrl,
+  staleHeadSha,
+  expectedHeadSha,
+  dirtEvidence,
+  now,
+}) {
+  if (!SHA_PATTERN.test(String(staleHeadSha || "")) ||
+      !SHA_PATTERN.test(String(expectedHeadSha || ""))) {
+    throw new Error("Pull-request projection repair requires exact stale and expected head SHAs.");
+  }
+  return {
+    schema: PULL_REQUEST_PROJECTION_REPAIR_SCHEMA,
+    status: "repairing",
+    sourceEpoch: lease.epoch,
+    sourcePullRequestUrl: sourceUrl,
+    staleHeadSha,
+    expectedHeadSha,
+    dirtEvidenceDigest: dirtEvidence?.digest || null,
+    dirtPathCount: dirtEvidence?.pathCount || 0,
+    targetPullRequestUrl: null,
+    outcome: null,
+    startedAt: now().toISOString(),
+    completedAt: null,
+  };
+}
+
+function normalizePullRequestProjectionRepair(value) {
+  if (value === null || value === undefined) return null;
+  if (
+    value?.schema !== PULL_REQUEST_PROJECTION_REPAIR_SCHEMA ||
+    !["repairing", "completed"].includes(value.status) ||
+    !Number.isInteger(value.sourceEpoch) ||
+    value.sourceEpoch < 1 ||
+    !String(value.sourcePullRequestUrl || "").includes("/pull/") ||
+    !SHA_PATTERN.test(String(value.staleHeadSha || "")) ||
+    !SHA_PATTERN.test(String(value.expectedHeadSha || "")) ||
+    !Number.isInteger(value.dirtPathCount) ||
+    value.dirtPathCount < 0 ||
+    (value.dirtPathCount === 0) !== (value.dirtEvidenceDigest === null) ||
+    (value.dirtEvidenceDigest !== null &&
+      !/^[0-9a-f]{64}$/.test(String(value.dirtEvidenceDigest || ""))) ||
+    !String(value.startedAt || "").trim()
+  ) {
+    throw new Error("Pull-request projection repair receipt is malformed.");
+  }
+  if (value.status === "completed" && (
+    !String(value.targetPullRequestUrl || "").includes("/pull/") ||
+    !["reopened", "replaced"].includes(value.outcome) ||
+    !String(value.completedAt || "").trim()
+  )) {
+    throw new Error("Completed pull-request projection repair receipt is incomplete.");
+  }
+  return {
+    schema: PULL_REQUEST_PROJECTION_REPAIR_SCHEMA,
+    status: value.status,
+    sourceEpoch: value.sourceEpoch,
+    sourcePullRequestUrl: value.sourcePullRequestUrl,
+    staleHeadSha: value.staleHeadSha,
+    expectedHeadSha: value.expectedHeadSha,
+    dirtEvidenceDigest: value.dirtEvidenceDigest,
+    dirtPathCount: value.dirtPathCount,
+    targetPullRequestUrl: value.targetPullRequestUrl || null,
+    outcome: value.outcome || null,
+    startedAt: value.startedAt,
+    completedAt: value.completedAt || null,
+  };
+}
+
+function requireMatchingPullRequestProjectionRepair({
+  repair,
+  lease,
+  expectedHeadSha,
+  dirtEvidence,
+}) {
+  if (
+    repair.sourceEpoch !== lease.epoch ||
+    repair.expectedHeadSha !== expectedHeadSha
+  ) {
+    throw new Error("Pull-request projection repair replay does not match the active lease fence.");
+  }
+  requireSameRepairDirt({ repair, dirtEvidence });
+}
+
+function requireSameRepairDirt({ repair, dirtEvidence }) {
+  const digest = dirtEvidence?.digest || null;
+  const pathCount = dirtEvidence?.pathCount || 0;
+  if (repair.dirtEvidenceDigest !== digest || repair.dirtPathCount !== pathCount) {
+    throw new Error("Pull-request projection repair dirt changed from its preserved evidence.");
+  }
+}
+
+function finalizePullRequestProjectionRepair({
+  repair,
+  targetPullRequestUrl,
+  outcome,
+  now,
+}) {
+  return normalizePullRequestProjectionRepair({
+    ...repair,
+    status: "completed",
+    targetPullRequestUrl,
+    outcome,
+    completedAt: now().toISOString(),
+  });
+}
+
+function verifyPullRequestRepositoryIdentity({ pullRequest, url }) {
+  const match = String(url || "").match(/^https:\/\/github\.com\/([^/]+\/[^/]+)\/pull\/\d+(?:[/?#]|$)/);
+  const expected = match?.[1] || "";
+  const observed = pullRequest.headRepository?.nameWithOwner || "";
+  if (!expected || observed !== expected) {
+    throw new Error("Pull-request projection repair crossed repository ownership.");
+  }
 }
 
 function requireClean({ gitText }) {

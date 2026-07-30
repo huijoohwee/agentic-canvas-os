@@ -2,7 +2,7 @@
 title: "Agentic Software Development Lifecycle Runtime"
 graphId: "md:agentic-software-development-lifecycle-runtime"
 doc_type: "Runtime Contract"
-date: "2026-07-29"
+date: "2026-07-30"
 lang: "en-US"
 schema: "agentic-sdlc-runtime/v1"
 frontmatter_contract: "required"
@@ -34,6 +34,14 @@ The PRD/TAD/ADR authoring contract and the Agentic SDLC execution contract now h
 This runtime ends in the `authoring` lane. A passing result does not merge, mirror, release, deploy, transmit project content, infer an Operator decision, or open a Deploy Boundary.
 
 `runtimeReady` is deliberately scoped to the self-contained canonical ledger supplied to the evaluator under three cryptographically distinct pinned Dev Ed25519 authority keys. Those signatures authenticate the admitted authoring baseline, individual Operator decisions, and the whole persisted run against separate checked-in Dev trust roots; the evaluator also proves internal joins, receipts, causality, and the pinned guideline source. This does not authenticate an arbitrary project's PRD/TAD bytes, signer custody, or external persistence service. A protected operational projection remains gated until those production trust anchors and stable receipts exist.
+
+## Lifecycle Policy-Runtime Boundary
+
+The separately pinned Agentic SDLC v1.8 lifecycle module defines admission through publication for operational repositories. The protected `agentic-sdlc-policy-runtime` check proves only that this repository resolves the exact guideline source and that its deterministic policy-runtime contracts pass. It does not consume evidence from a managed implementation run or release.
+
+The repository-owned `npm run lifecycle:conformance -- --evidence=<path>` entry point therefore exits `3` with `AGENTIC_SDLC_EVIDENCE_ADAPTER_UNAVAILABLE`. Its machine result declares `enforcedStages: []` and all eight lifecycle stages as `unevaluatedStages`. A consumer adapter may remove stages from that list only after it supplies operation-derived evidence, exact policy/evaluator/schema/source identities, and predecessor receipts required by the source module.
+
+`npx`, registry fallback, and mutable version resolution have no policy, evaluator, gate, receipt, integration, runtime, or release authority.
 
 ## Ownership
 

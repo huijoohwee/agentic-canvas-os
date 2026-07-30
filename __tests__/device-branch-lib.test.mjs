@@ -20,7 +20,10 @@ import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mj
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
-const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({ url, state: "OPEN", isDraft, headRefName: branch, baseRefName: "main", body });
+const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({
+  url, state: "OPEN", isDraft, headRefName: branch,
+  headRefOid: "c".repeat(40), baseRefName: "main", body,
+});
 
 function createGitText(responses) {
   return args => {

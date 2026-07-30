@@ -94,7 +94,7 @@ jobs:
           npm run agentic-sdlc:source:check
 
   conformance:
-    name: agentic-sdlc-conformance
+    name: agentic-sdlc-policy-runtime
     needs: evaluate
     if: ${{ always() }}
     runs-on: ubuntu-slim

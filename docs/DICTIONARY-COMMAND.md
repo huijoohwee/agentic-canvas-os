@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-29"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -346,7 +346,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/repository.pack` | Pack the eligible text files in one exact local Git worktree into a deterministic content-addressed Markdown artifact. | exactly `@repository-root` and `@runtime-proof` | exactly `#repository-packing` | Knowgrph local stdio MCP returns `knowgrph-repository-pack-result/v1` with a verified repository-relative artifact path, source and artifact digests, typed counts, hard bounds, and exact zero network, model, token, and cost evidence. |
 | `/git.run` | Inspect or mutate the browser-persisted Git repository, and fetch from or push to one configured remote through the Dev Worker relay. | `@local-git-repository`, `@git-remote` | `#git-remote`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns a typed repository result; remote credentials remain Worker-only, rejected authority paths fail atomically, and local stdio returns only a browser-runtime handoff. |
 | `/file.sync` | Pull or push a file or directory between browser persisted cache and one configured cloud-storage provider. | `@persisted-cache`, `@file-sync-provider` | `#multi-provider-file-sync`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns per-file typed outcomes with hash skips, bounded retries, conflict state, and offline FIFO; provider credentials remain Worker-only and local stdio performs no storage or network work. |
-| `/ingest-url` | Ingest an operator-provided URL through the approved URL intake and source-file pipeline. | `@operator`, `@approval-gate`, `@dev-only` | `#no-hardcode`, `#approval-gate`, `#dev-only` | URL is accepted, fetched, or rejected through the shared intake path without writing the URL into source docs. |
+| `/ingest-url` | Import one operator-provided URL through the existing workspace URL intake, Source Files, and Canvas projection owners. | exactly one `@url:` value and `@reference-policy` | exactly `#canvas` | Canonical invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `knowgrph.agentic_canvas_os.docs.invoke` resolves source-backed metadata only, while guarded browser WebMCP tool `knowgrph.control_local_import_url` returns one typed imported, blocked, or failed result without a second importer, embedded URL, credential exposure, Prod mutation, or Cloudflare deployment. |
 | `/computing-flow` | Generate or validate a source-backed KGC computing-flow DAG. | `@operator`, `@source.frontmatter`, `@local-harness`, `@runtime-proof` | `#computing-flow`, `#frontmatter`, `#harness`, `#vcc` | `kgc-computing-flow/v1` frontmatter validates and routes through KGC validation before Canvas projection. |
 | Bare `/moa` | Return usage for the MoA route. | `@agent` | `#mixture-of-agents` | Usage response explains required query or scoped selection; it does not switch model, mutate state, or call a provider. |
 
@@ -424,6 +424,7 @@ command:
 | `/sme-care-agent` | `FACTS.md` direct-resolution entry for source-grounded SME care responses. |
 | `/investment-research-agent` | `FACTS.md` direct-resolution entry for source-grounded investment research responses. |
 | `/crawler-agent` | `FACTS.md` direct-resolution entry for the native website crawl route. |
+| `/ingest-url` | `FACTS.md` direct-resolution entry for the guarded browser-local Import URL route. |
 | `/knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for bounded Widget Card Probe-Tree generation. |
 | `/memory.write` | `FACTS.md` direct-resolution entry for bounded memory writes. |
 | `/user.profile` | `FACTS.md` direct-resolution entry for explicit user profile updates. |

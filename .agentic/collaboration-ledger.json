@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 74,
-  "headDigest": "4764f131cb5441ee7f0127fae12f97440efd24f774af590f3e00b5a2d9c00a22",
+  "sequence": 75,
+  "headDigest": "2fa135fcffd6946c242577e5c0502e61300b7624be9b5c9a0040503b5e870c5c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -3555,6 +3555,51 @@
       },
       "claimDigest": "a93ebf61bd6147e8d63b0bfdb77c119e85360c805e6af5cacf013748b901bed4",
       "digest": "4764f131cb5441ee7f0127fae12f97440efd24f774af590f3e00b5a2d9c00a22"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 75,
+      "parentDigest": "4764f131cb5441ee7f0127fae12f97440efd24f774af590f3e00b5a2d9c00a22",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "33a1a85a7c490ddb2ed7d56d5fcbec631f9a165f9cb8992e2c6fccc4a76ae22a",
+      "idempotencyKey": "10168fe349fe8edb6baa7f0624d8f208081a8fbfc85b35e38a81c6dcb8a58476",
+      "requestDigest": "99792bb4bd3a5fae4d9055af8b0331666be4e2562bfdc4b664e46bdc0e3c995b",
+      "evaluationTime": "2026-07-30T18:03:46.000Z",
+      "claimCore": {
+        "claimId": "33a1a85a7c490ddb2ed7d56d5fcbec631f9a165f9cb8992e2c6fccc4a76ae22a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:5953ae2b32b4cddcdf6040dff6441176a04bfd6c45c1e93151181b4af9aabfc8",
+        "sessionId": "session:42c02e01224b7ae909bba1096a7b22bd3765e26b0bc42ad4b737f63ff1021ade",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:b48d06920b53add23e86e27cf36ed7c25dabaa0057a5f9d41dfe31aeb265d9e1",
+        "canonicalBaseRevision": "1ad794c93bd4810e339e63eb26bebea9f6d2fc34",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/agentic-sdlc-scoped-lane-admission.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:concurrent-lane-admission-guideline"
+        ],
+        "writeSetDigest": "a15e118db1d18a6c2b930747f5c37405428fe3cb87a85cc1ec3621d466c3787c",
+        "laneRevision": "b64b940cd80aaa3356e6031c78212bf40a0918f3",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-07-31T16:08:34.000Z",
+        "evidenceDigest": "9fe9efcf4bd32bc61af9584aa01db9060a0559de0c86f1a685d55313a9aa5a77",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc74m4g-",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "abandoned",
+          "evidenceDigest": "a4b42fcf14d790d07e6b3e2a1b20e53db77ddf27c19c92dac3981e8657f3e254",
+          "integrationReceiptDigest": null,
+          "evaluationTime": "2026-07-30T18:03:46.000Z"
+        }
+      },
+      "claimDigest": "b52df0df1eee7195fdd8cd7456952293ae9873b9aa2865a83d119aade4a7de35",
+      "digest": "2fa135fcffd6946c242577e5c0502e61300b7624be9b5c9a0040503b5e870c5c"
     }
   ]
 }

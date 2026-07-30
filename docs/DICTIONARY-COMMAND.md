@@ -15,6 +15,7 @@ source_docs:
   - "AGENTS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
+  - "KNOWLEDGE-GRAPH.md"
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
@@ -99,6 +100,9 @@ dictionary_entries:
   - "/skill.evolve"
   - "/identity.reflect"
   - "/application.compose"
+  - "/knowledge.graph.ingest"
+  - "/knowledge.graph.query"
+  - "/knowledge.graph.explain"
   - "/orchestration.graph"
   - "/agent.team"
   - "/agent.swarm"
@@ -256,6 +260,9 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/skill.evolve` | Optimize existing skill text through resumable bounded epochs, batches, and mini-batches. | `@skill-catalog`, `@skill-policy`, `@runtime-proof`, `@operator` | `#skill-evolution`, `#learning-loop`, `#vcc` | A source-revision-fenced `knowgrph.skill.evolve` run applies a text-mutation learning-rate schedule and held-out gates; output is review-pending only, with no skill apply or model-weight change. |
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/application.compose` | Compile or execute one version-locked agent or LLM application from interoperable component and integration interfaces. | `@application-manifest`, `@component-catalog`, `@integration-profile`, `@runtime-proof`, and `@operator` only for live or mutating execution | `#application-composition`, `#runtime-ready`, `#no-hardcode` | Plan returns one immutable digest over exact revisions, schema digests, owners, bounds, and a deterministic dependency DAG; execute delegates bounded ready steps without silent upgrade, retry, migration, or deploy. |
+| `/knowledge.graph.ingest` | Compile one bounded local workspace containing parser-supported code, docs, SQL, configs, and text-bearing PDFs into one digest-fenced explained-edge graph snapshot. | `@working-directory`, `@knowledge-graph`, `@operator`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#runtime-ready` | `knowgrph.knowledge_graph.ingest` returns opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection; Agentic Canvas OS supplies invocation policy and typed forwarding only. |
+| `/knowledge.graph.query` | Query one exact local knowledge-graph snapshot with bounded deterministic lexical search, path, neighborhood, impact, or summary operations. | `@knowledge-graph`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#vcc` | `knowgrph.knowledge_graph.query` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `mode`, then returns ordered evidence from that exact snapshot; stale identity and vector lookup fail closed. |
+| `/knowledge.graph.explain` | Explain one exact relationship from one digest-bound local knowledge-graph snapshot. | `@knowledge-graph`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#vcc` | `knowgrph.knowledge_graph.explain_edge` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `edgeId`, then returns stored endpoints, relationship kind, deterministic explanation, source evidence, parser identity, and extraction rule without reparsing or inference. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
 | `/agent.team` | Plan, start, list, or control one exact source-backed role-playing agent team through the Knowgrph local stdio MCP owner. | exactly `@agent-team` | exactly `#role-based-agent-team` | `/agent.team #role-based-agent-team @agent-team` resolves exact Agent Definition and Agent Orchestration revisions, preserves delegate or handoff ownership, enforces bounded durable state and human review, and returns typed proof without broadening Agent Swarm. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
@@ -403,6 +410,9 @@ command:
 
 | Token | Facts source |
 |---|---|
+| `/knowledge.graph.ingest` | `FACTS.md` direct-resolution entry for bounded native parser generation and graph ingestion. |
+| `/knowledge.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
+| `/knowledge.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
 | `/sdlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only Agentic SDLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable Knowgrph MCP control. |

@@ -14,6 +14,10 @@ const evaluatorSource = fs.readFileSync(
   new URL("../scripts/repository-runtime-readiness.mjs", import.meta.url),
   "utf8",
 );
+const contractSource = fs.readFileSync(
+  new URL("../docs/REPOSITORY-RUNTIME-READINESS.md", import.meta.url),
+  "utf8",
+);
 
 function run(cwd, command, args) {
   const result = spawnSync(command, args, { cwd, encoding: "utf8" });
@@ -150,4 +154,16 @@ test("evaluator remains independent from the external reference", () => {
     assert.doesNotMatch(evaluatorSource, new RegExp(forbidden, "i"));
   }
   assert.doesNotMatch(evaluatorSource, /\bhttps?:\/\//);
+});
+
+test("contract binds the protected guideline revision", () => {
+  assert.match(
+    contractSource,
+    /guideline_candidate_revision: "5b79529a5c791cdfceed70548543f82358fa100c"/,
+  );
+  assert.match(contractSource, /guideline_protected_status: "verified"/);
+  assert.match(
+    contractSource,
+    /protected at\s+`5b79529a5c791cdfceed70548543f82358fa100c`/m,
+  );
 });

@@ -6,10 +6,10 @@ date: "2026-07-30"
 lang: "en-US"
 schema: "agentic-cloud-collaboration-contract/v1"
 frontmatter_contract: "required"
-status: "dev-proven"
+status: "runtime-ready"
 authority: "repository-owned cloud claim and fencing contract for concurrent GitHub collaboration"
 runtime_scope: "Agentic Canvas OS ledger contract, browser-dispatched GitHub Actions adapter, and provider-neutral lifecycle boundary"
-runtime_claim: "deterministic transition, schema, GitHub CAS adapter, exact-head controller, and delivery-gate proof; live ledger, ruleset, required check, and end-to-end GitHub receipts remain gated"
+runtime_claim: "GitHub-hosted Agentic Canvas OS coordination is runtime-ready at recorded revisions; private cross-repository writes, merge groups, physical multi-device and mobile execution, Production, and Cloudflare remain gated"
 runtime_owner: "../scripts/cloud-collaboration-contract.mjs; ../scripts/cloud-collaboration-primitives.mjs; ../scripts/github-cloud-collaboration-api.mjs; ../scripts/github-cloud-collaboration-mapping.mjs; ../scripts/github-cloud-collaboration-adapter.mjs; ../scripts/cloud-collaboration.mjs; ../scripts/cloud-collaboration-delivery-verifier.mjs; ../scripts/cloud-collaboration-check-run.mjs"
 runtime_proof: "../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/cloud-collaboration-cli.test.mjs; ../__tests__/cloud-collaboration-github-api.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/cloud-collaboration-delivery-verifier.test.mjs; RUNTIME-PROOF.md"
 provider_specific_reference_adapter: "GitHub Git Data and repository APIs through the repository-scoped GITHUB_TOKEN"
@@ -247,9 +247,23 @@ infrastructure, not offline cloud authority.
 | Cloud runtime-ready | The exact default-branch revision owns the live ledger ref and ruleset; workflow execution protection and the required PR check are active; one live claim, conflict-safe verify, heartbeat, review or handoff, and release cycle succeeds with exact revisions. |
 | Production-verified | Separately authorized protected integration and public-runtime evidence exist. Cloud collaboration alone grants neither Prod mirror nor Cloudflare authority. |
 
-The complete adapter and focused local suite pass, so report this capability as
-Dev-proven. Until every cloud runtime-ready item is recorded in
-`RUNTIME-PROOF.md`, report live GitHub authority as pending.
+The complete adapter and focused local suite pass. Protected source
+`ab76ef10e4ba1623d560ccc986eead76ad07b285` seeded the live ledger, and
+`RUNTIME-PROOF.md` records an exact claim, heartbeat, review-ready verification,
+GitHub Actions Check Run, release, app-bound required check, and no-bypass
+ledger ruleset. Report repository-owned GitHub coordination as cloud
+runtime-ready at those recorded revisions. A live read-only workflow dispatch
+also resolved the current ledger through the browser-compatible Actions route.
+Private cross-repository writes, merge-group membership proof, physical
+second-device or mobile execution, Prod mirror, Cloudflare, and every future
+revision remain behind their separate exact evidence gates.
+
+The first live bootstrap observed a transient ref `404` immediately after
+GitHub accepted ref creation. Exact replay succeeded without duplicating the
+claim. The adapter now continues directly from the authoritative creation
+receipt, retries a transient update-side `404` only inside the existing bounded
+CAS loop, and has a regression test that makes the created ref temporarily
+invisible. It never adds an unbounded sleep, force update, or second authority.
 
 ## Economics
 

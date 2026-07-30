@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
+import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
@@ -85,11 +86,22 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     baseSha,
     autoDelivery = false,
     ownedDirtRecovery = null,
+    integration = null,
+    preClaimIntegrationContinuation = null,
     previousEpoch = 0,
     ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
   }) {
     requireIdentity({ sessionId, device, scope, branch, worktreePath, baseSha });
     const normalizedOwnedDirtRecovery = normalizeOwnedDirtRecovery(ownedDirtRecovery);
+    const normalizedPreClaimIntegrationContinuation =
+      normalizePreClaimIntegrationContinuation(preClaimIntegrationContinuation);
+    if (normalizedPreClaimIntegrationContinuation && (
+      integration?.schema !== "agentic-integration-commit/v1" ||
+      integration.commitSha !== normalizedPreClaimIntegrationContinuation.integrationCommitSha ||
+      integration.treeSha !== normalizedPreClaimIntegrationContinuation.integrationTreeSha
+    )) {
+      throw new Error("Pre-claim continuation requires its exact integration commit and tree.");
+    }
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
@@ -139,6 +151,10 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         autoDelivery: Boolean(autoDelivery),
         runtimeRequired: Boolean(autoDelivery),
         ...(normalizedOwnedDirtRecovery ? { ownedDirtRecovery: normalizedOwnedDirtRecovery } : {}),
+        ...(normalizedPreClaimIntegrationContinuation ? {
+          integration,
+          preClaimIntegrationContinuation: normalizedPreClaimIntegrationContinuation,
+        } : {}),
         acquiredAt: timestamp,
         heartbeatAt: timestamp,
         expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),

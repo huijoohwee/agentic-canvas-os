@@ -129,7 +129,7 @@ test("session admission limits fail closed before token issuance", async () => {
   assert.equal(limitCalls, 1);
 });
 
-test("Wrangler bounds CPU, public surfaces, admission, and every dynamic root route", async () => {
+test("Wrangler delegates the Free-plan CPU ceiling and bounds every public route", async () => {
   const source = await readFile(path.join(repositoryRoot, "wrangler.jsonc"), "utf8");
   for (const route of [
     "/api/*",
@@ -145,7 +145,8 @@ test("Wrangler bounds CPU, public surfaces, admission, and every dynamic root ro
   ]) {
     assert.equal(source.split(JSON.stringify(route)).length - 1, 2, `${route} must run Worker-first in root and Dev`);
   }
-  assert.equal((source.match(/"cpu_ms": 10/g) || []).length, 2);
+  assert.doesNotMatch(source, /"cpu_ms"/);
+  assert.match(source, /Free plan enforces its 10 ms CPU ceiling/);
   assert.equal((source.match(/"AUTH_SESSION_RATE_LIMITER"/g) || []).length, 2);
   assert.equal((source.match(/"CANVAS_ROOM_RATE_LIMITER"/g) || []).length, 2);
   assert.equal((source.match(/"preview_urls": false/g) || []).length, 2);

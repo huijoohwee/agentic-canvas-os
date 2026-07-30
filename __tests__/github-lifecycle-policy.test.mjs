@@ -48,13 +48,13 @@ test('CI uses Node 22 slim runners without dependency caches', async () => {
   assert.doesNotMatch(source, /timeout-minutes: (?:1[1-9]|[2-9]\d)/);
 });
 
-test('CI reports policy-runtime readiness through an always-run terminal check', async () => {
+test('CI reports policy-runtime readiness without claiming consumer-run conformance', async () => {
   const source = await readWorkflow('ci.yml');
   const evaluateJob = source.slice(
     source.indexOf('\n  evaluate:'),
     source.indexOf('\n  conformance:'),
   );
-  const conformanceJob = source.slice(source.indexOf('\n  conformance:'));
+  const policyRuntimeJob = source.slice(source.indexOf('\n  conformance:'));
 
   assert.match(evaluateJob, /^\s+name: policy-runtime-readiness$/m);
   assert.match(
@@ -76,11 +76,12 @@ test('CI reports policy-runtime readiness through an always-run terminal check',
   );
   assert.doesNotMatch(evaluateJob, /agentic-sdlc:verify|consumer run conformance/i);
 
-  assert.match(conformanceJob, /^\s+name: agentic-sdlc-conformance$/m);
-  assert.match(conformanceJob, /^\s+needs: evaluate$/m);
-  assert.match(conformanceJob, /^\s+if: \$\{\{ always\(\) \}\}$/m);
-  assert.match(conformanceJob, /EVALUATE_RESULT: \$\{\{ needs\.evaluate\.result \}\}/);
-  assert.match(conformanceJob, /if \[ "\$EVALUATE_RESULT" != "success" \]/);
+  assert.match(policyRuntimeJob, /^\s+name: agentic-sdlc-policy-runtime$/m);
+  assert.doesNotMatch(policyRuntimeJob, /^\s+name: agentic-sdlc-conformance$/m);
+  assert.match(policyRuntimeJob, /^\s+needs: evaluate$/m);
+  assert.match(policyRuntimeJob, /^\s+if: \$\{\{ always\(\) \}\}$/m);
+  assert.match(policyRuntimeJob, /EVALUATE_RESULT: \$\{\{ needs\.evaluate\.result \}\}/);
+  assert.match(policyRuntimeJob, /if \[ "\$EVALUATE_RESULT" != "success" \]/);
 });
 
 test('source and dependency security use separate minimal trigger scopes', async () => {

@@ -34,6 +34,10 @@ import {
   resolveSameSessionDeliveryContinuation,
 } from "./expired-committed-continuation-lib.mjs";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import {
+  protectedMainRefreshHeads,
+  verifyProtectedMainRefreshChain,
+} from "./protected-main-refresh-lib.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
 export { park, createParkMessage, formatParkTimestamp } from "./device-park-lib.mjs";
@@ -327,6 +331,10 @@ export function resume({
       remoteSha,
       remoteRef,
       gitText,
+      localHeadSha: currentBranch === branchName
+        ? gitText(["rev-parse", "HEAD"]).trim()
+        : null,
+      run: currentBranch === branchName ? run : null,
     })
     : null;
   const deliveryContinuation = sameSessionDelivery
@@ -503,14 +511,46 @@ export function resume({
   return restoredLease;
 }
 
-export function resolveSameSessionDeliveryHandoff({ remoteLease, remoteSha, remoteRef, gitText }) {
+export function resolveSameSessionDeliveryHandoff({
+  remoteLease,
+  remoteSha,
+  remoteRef,
+  gitText,
+  localHeadSha = null,
+  run = null,
+}) {
   const deliveryHeadSha = String(remoteLease?.deliveryHeadSha || "");
-  if (remoteSha === deliveryHeadSha) return deliveryHeadSha;
-  const parents = gitText(["rev-list", "--parents", "-n", "1", remoteRef]).trim().split(/\s+/);
-  if (parents.length !== 3 || parents[0] !== remoteSha || parents[1] !== deliveryHeadSha) {
-    throw new Error("Delivered branch advanced beyond its exact protected-main refresh.");
+  const refresh = remoteSha === deliveryHeadSha
+    ? null
+    : verifyProtectedMainRefreshChain({
+      expectedHeadSha: deliveryHeadSha,
+      observedHeadSha: remoteSha,
+      gitText,
+    });
+  if (localHeadSha !== null) {
+    const exactHeads = refresh
+      ? protectedMainRefreshHeads(refresh)
+      : [deliveryHeadSha];
+    if (!exactHeads.includes(localHeadSha)) {
+      throw new Error(
+        "Delivered branch local HEAD is not an exact member of its protected-main refresh chain.",
+      );
+    }
+    if (localHeadSha !== remoteSha) {
+      if (!run) {
+        throw new Error("Delivered branch refresh catch-up requires its repository runner.");
+      }
+      run("git", ["merge", "--ff-only", remoteRef]);
+      if (
+        gitText(["rev-parse", "HEAD"]).trim() !== remoteSha ||
+        gitText(["status", "--porcelain"]).trim()
+      ) {
+        throw new Error(
+          "Delivered branch refresh catch-up did not leave the exact clean remote handoff.",
+        );
+      }
+    }
   }
-  gitText(["merge-base", "--is-ancestor", parents[2], "origin/main"]);
   return remoteSha;
 }
 
@@ -979,11 +1019,11 @@ function requireProjectionRepairHead({ lease, expectedHeadSha, gitText }) {
   }
   gitText(["merge-base", "--is-ancestor", lease.fenceSha, integrationHead]);
   if (expectedHeadSha === integrationHead) return;
-  const parents = gitText(["rev-list", "--parents", "-n", "1", "HEAD"]).trim().split(/\s+/);
-  if (parents.length !== 3 || parents[0] !== expectedHeadSha || parents[1] !== integrationHead) {
-    throw new Error("Pull-request projection repair permits only one protected-main refresh after integration.");
-  }
-  gitText(["merge-base", "--is-ancestor", parents[2], "origin/main"]);
+  verifyProtectedMainRefreshChain({
+    expectedHeadSha: integrationHead,
+    observedHeadSha: expectedHeadSha,
+    gitText,
+  });
 }
 
 function requireNoCompetingPullRequest({ branch, ghText }) {

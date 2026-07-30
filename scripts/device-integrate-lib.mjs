@@ -2,6 +2,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import {
+  appendProtectedMainRefresh,
+  protectedMainRefreshHeads,
+  verifyProtectedMainRefreshChain,
+} from "./protected-main-refresh-lib.mjs";
+import {
+  normalizePreClaimIntegrationContinuation,
+} from "./expired-committed-continuation-lib.mjs";
 
 export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
@@ -81,24 +89,25 @@ export function integrateSession({
       ghText, waitSeconds, pollSeconds, now, sleep,
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
-          if (protectedMainRefresh) {
-            throw new Error("Delivered pull request advanced more than once after protected publication.");
-          }
-          protectedMainRefresh = reconcileProtectedMainRefresh({
+          const refresh = reconcileProtectedMainRefresh({
             url: lease.pullRequestUrl,
             expectedHeadSha,
             observedHeadSha,
             gitText,
             run,
           });
+          protectedMainRefresh = appendProtectedMainRefresh(
+            protectedMainRefresh,
+            refresh,
+          );
           verifyCloudAuthority({
             pullRequestUrl: lease.pullRequestUrl,
             branch,
-            headSha: protectedMainRefresh.refreshedHeadSha,
+            headSha: refresh.refreshedHeadSha,
             canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
             cloudAuthority: lease.cloudAuthority || null,
           });
-          return protectedMainRefresh.refreshedHeadSha;
+          return refresh.refreshedHeadSha;
         }
         : null,
     });
@@ -288,7 +297,9 @@ function validateRecoveredCommittedContinuation({
   now,
 }) {
   const integration = lease.integration;
-  const continuation = lease.preClaimIntegrationContinuation;
+  const continuation = normalizePreClaimIntegrationContinuation(
+    lease.preClaimIntegrationContinuation,
+  );
   if (
     continuation?.schema !== "agentic-pre-claim-integration-continuation/v1" ||
     integration?.schema !== "agentic-integration-commit/v1" ||
@@ -299,6 +310,8 @@ function validateRecoveredCommittedContinuation({
     !["active", "delivery"].includes(continuation.sourceStatus) ||
     !SHA_PATTERN.test(String(continuation.sourceFenceSha || "")) ||
     !SHA_PATTERN.test(String(continuation.sourceBaseSha || "")) ||
+    !SHA_PATTERN.test(String(continuation.integrationSourceFenceSha || "")) ||
+    !SHA_PATTERN.test(String(continuation.integrationSourceBaseSha || "")) ||
     !/^[0-9a-f]{64}$/.test(String(integration.rangeDiffDigest || "")) ||
     !Array.isArray(integration.paths) ||
     integration.paths.length === 0
@@ -314,12 +327,12 @@ function validateRecoveredCommittedContinuation({
     repo: lease.worktreePath,
     branch,
     lease,
-    expectedBaseSha: continuation.sourceBaseSha,
+    expectedBaseSha: continuation.integrationSourceBaseSha,
     requirement: "Recovered committed continuation",
   });
   const committedPaths = splitNul(gitText([
     "diff", "--name-only", "-z",
-    continuation.sourceFenceSha,
+    continuation.integrationSourceFenceSha,
     integration.commitSha,
     "--",
   ]));
@@ -327,7 +340,7 @@ function validateRecoveredCommittedContinuation({
   requireExactPaths({ changed: committedPaths, approved: manifest.value.paths });
   const rangeDiffDigest = sha256(gitText([
     "diff", "--binary",
-    continuation.sourceFenceSha,
+    continuation.integrationSourceFenceSha,
     integration.commitSha,
     "--",
   ]));
@@ -340,7 +353,13 @@ function validateRecoveredCommittedContinuation({
   if (gitText(["rev-parse", `${continuation.headSha}^{tree}`]).trim() !== continuation.treeSha) {
     throw new Error("Recovered committed continuation handoff tree changed from its receipt.");
   }
-  run("git", ["merge-base", "--is-ancestor", continuation.sourceFenceSha, integration.commitSha]);
+  run("git", [
+    "merge-base",
+    "--is-ancestor",
+    continuation.integrationSourceFenceSha,
+    integration.commitSha,
+  ]);
+  run("git", ["merge-base", "--is-ancestor", continuation.sourceFenceSha, continuation.headSha]);
   run("git", ["merge-base", "--is-ancestor", integration.commitSha, continuation.headSha]);
   run("git", ["merge-base", "--is-ancestor", integration.commitSha, "HEAD"]);
   run("npm", ["run", "check"]);
@@ -435,28 +454,24 @@ function reconcileProtectedMainRefresh({
   if (fetchedHeadSha !== observedHeadSha) {
     throw new Error("Fetched pull-request head does not match the observed protected refresh.");
   }
-  const parents = gitText(["rev-list", "--parents", "-n", "1", "FETCH_HEAD"]).trim().split(/\s+/);
-  if (parents.length !== 3 || parents[0] !== observedHeadSha || parents[1] !== expectedHeadSha) {
-    throw new Error("Delivered pull request advanced beyond one exact protected-main refresh.");
-  }
-  const mainParentSha = parents[2];
-  gitText(["merge-base", "--is-ancestor", mainParentSha, "origin/main"]);
+  const refresh = verifyProtectedMainRefreshChain({
+    expectedHeadSha,
+    observedHeadSha,
+    gitText,
+  });
 
   const localHeadSha = gitText(["rev-parse", "HEAD"]).trim();
-  if (localHeadSha !== expectedHeadSha && localHeadSha !== observedHeadSha) {
-    throw new Error("Local integration head does not match the delivered or protected-refreshed head.");
+  if (!protectedMainRefreshHeads(refresh).includes(localHeadSha)) {
+    throw new Error(
+      "Local integration head is not an exact member of the protected-main refresh chain.",
+    );
   }
   if (localHeadSha !== observedHeadSha) run("git", ["merge", "--ff-only", "FETCH_HEAD"]);
   if (gitText(["rev-parse", "HEAD"]).trim() !== observedHeadSha ||
       gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Protected-main refresh did not leave the exact clean pull-request head attached.");
   }
-  return {
-    schema: "agentic-protected-main-refresh/v1",
-    deliveredHeadSha: expectedHeadSha,
-    refreshedHeadSha: observedHeadSha,
-    mainParentSha,
-  };
+  return refresh;
 }
 
 function parsePullRequestNumber(url) {

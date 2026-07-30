@@ -217,7 +217,28 @@ mutation lanes only. `npm run sync:workspace` validates changed revisions in
 disposable worktrees and permits only clean fast-forward convergence. Ahead,
 diverged, dirty, remote-unavailable, or failed candidates preserve the prior
 last-known-good checkout and content-addressed diagnostics. Blind pull, reset,
-rebase, stash, force checkout, and destructive cleanup are not recovery.
+rebase, moving stash selectors, force checkout, and destructive cleanup are not
+recovery.
+
+The exceptional `canonical:main:recover` adapter is available only in the
+primary registered `main` worktree and only with an explicit acknowledgement,
+stable session, and exact expected local and fetched `origin/main` SHAs. It
+rejects ordinary ahead, behind, merge, empty, or non-equivalent history: every
+local-only commit must be represented by both `git cherry` equivalence and a
+stable patch-id match in the remote divergence. Before changing the checked-out
+ref, it serializes on the shared park lock, pins the original HEAD, captures
+tracked, staged, and untracked state under an immutable stash ref, and emits
+content-addressed prepared and capture receipts with per-path disposition
+evidence. Ignored paths are retained in place only after proving their path-set
+digest, unchanged ignore rules, and absence of filesystem-aware exact,
+ancestor, or descendant collisions with the protected target. That proof is
+revalidated at every realignment boundary, and Git's no-overwrite-ignore guard
+closes the final proof-to-switch race; any collision fails closed. It then
+replays only the exact
+`main(old) -> detached(origin) -> main(origin)` transition and emits a completion
+receipt after proving a clean protected checkout. This is preservation and
+canonical-source reconciliation only; it grants no integration, review,
+deployment, publication, or restoration authority.
 
 `device:integrate` publishes through protected integration, waits for the exact
 PR head to merge, records durable completion, fast-forwards canonical source,

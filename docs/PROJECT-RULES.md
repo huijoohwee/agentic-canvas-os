@@ -80,12 +80,23 @@ that bind every session and tool.
 - Never run a destructive operation on a lane the current session does not own, and
   never assume an idle-looking lane is unowned. Absence of recent output is not
   evidence that a session ended.
-- Treat untracked files as unrecoverable. They have no object in the store, so no
-  recovery reference can restore them and no destructive operation over them is
-  permitted.
+- Treat untracked files as unrecoverable until a repository-owned capture has
+  written their exact blobs, modes, paths, and tree under an immutable recovery
+  ref and content-addressed receipt. Before that proof completes, no destructive
+  operation over them is permitted.
 - Before any permitted destructive operation on an owned dirty lane, create a durable
   recovery reference: a branch, a tag, or a bundle under the workspace backup
-  directory. A stash does not qualify.
+  directory. A moving or raw stash selector does not qualify. The only stash-backed
+  exception is a repository-owned adapter that holds the shared park lock, proves
+  the exact parent and message, pins the stash commit under an immutable ref,
+  records tracked, staged, untracked, symlink, and mode evidence, and emits a
+  content-addressed receipt before realignment.
+- Ignored local paths may remain in place across canonical realignment only
+  after a repository-owned adapter proves a stable path-set digest, unchanged
+  ignore rules, and no filesystem-aware exact, ancestor, or descendant
+  collision with the target tree. Revalidate that proof at every realignment
+  boundary and use Git's no-overwrite-ignore guard for the final switch.
+  Otherwise recovery stops before preservation or ref mutation.
 - Commit early and on a branch when work must survive a concurrent session. An
   uncommitted edit is the only state this contract cannot fully protect.
 - When a collision is found, name it and stop. Resolving it by discarding the other

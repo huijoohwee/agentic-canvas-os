@@ -147,6 +147,22 @@ Runtime handoff is canonical rather than branch-local. `npm run turn:end -- --re
 
 `park` first proves the matching ownership PR remains draft and verifies the remote fence and local ancestry. Dirty state is stashed with a deterministic lease message, resolved to its exact commit, and pinned under a dedicated immutable `refs/agentic-canvas-os/parked/...` ref; moving selectors such as `stash@{0}` are never durable evidence. Shared stash mutation uses an owned lock that never removes a live or successor owner. Park then writes the projected lease to the PR, re-proves draft state, conditionally releases the unchanged local lease at the same timestamp, and detaches last. If stash capture, PR projection, release, or detachment is interrupted, the same session replays only exact evidence. Resume reclaims and proves draft ownership before applying that exact stash with index state, verifies tracked, staged, untracked, file-mode, and conflict evidence, marks it `restored`, and retains the object/ref proof. A lost apply or PR-edit response is idempotently reconciled without applying a different or moving stash. A later park pins its successor before retiring the prior restored object; completion first records `completing`, preserves the multiset of all unrelated stash entries and immutable refs during exact cleanup, detaches at a pinned canonical commit, and only then records `completed`. Detached retry accepts canonical advancement only after proving the recorded main and merge are ancestors.
 
+Canonical divergence is not a task-lane park. The exceptional
+`canonical:main:recover` command accepts only the primary registered `main`
+worktree, an explicit acknowledgement, one stable session, and exact expected
+local and fetched protected heads. It refuses mutation unless there is genuine
+two-sided divergence and every single-parent local-only commit has both a
+negative `git cherry` result and a stable patch-id match in the remote
+divergence. Under the same shared park lock it pins the old HEAD, records an
+exact tracked, staged, and untracked path manifest, captures that dirty state
+beneath immutable refs and receipt blobs, and performs a replayable
+detached-target and compare-and-swap main-ref transition. Ignored paths remain
+in place only when their path digest is stable, ignore rules do not change, and
+no protected target path collides. The terminal machine result is
+`agentic-canonical-main-recovery-result/v1`; its receipt path, path-manifest
+digest, old-HEAD ref, stash ref/SHA, and prepared, capture, and completion
+receipt refs are preservation evidence only.
+
 ## Runner And Verification Boundary
 
 - Runner and verifier selection resolve from repository or operator-configured profiles. Knowgrph expands verifier profile ids to exact host-owned commands; a caller cannot provide raw shell text, verification argv, executable paths, provider credentials, or environment overrides.

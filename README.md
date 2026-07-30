@@ -48,6 +48,32 @@ blocked. Exact same-session resume restores and verifies that object; moving
 `stash@{n}` selectors are never lifecycle identity. A parked branch is never
 completed work.
 
+Exceptional canonical-main equivalence recovery is a separate, explicit
+operation:
+
+```bash
+npm run canonical:main:recover -- \
+  --repository=<primary-main-worktree> \
+  --session=<stable-session> \
+  --expected-local-head=<exact-local-sha> \
+  --expected-origin-head=<exact-protected-sha> \
+  --acknowledge-equivalent-realignment \
+  --json
+```
+
+Use it only after protected integration has produced a different commit with
+the same patch as every local-only canonical commit. It fails before authored
+state mutation for an ordinary ahead/behind checkout, non-equivalent history,
+a linked worktree, missing exact expectations, or missing acknowledgement. A
+successful run leaves clean `main` at the fetched protected SHA while retaining
+the prior HEAD and all tracked, staged, and untracked dirt under immutable refs
+and content-addressed receipts. Ignored paths remain in place only after the
+adapter proves unchanged ignore rules and no filesystem-aware exact, ancestor,
+or descendant protected-target collision, then revalidates that proof at each
+realignment boundary. Git's no-overwrite-ignore switch guard closes the final
+proof-to-mutation race. Any unsafe ignored path blocks before preservation. The
+command does not merge, restore preserved dirt, review, release, or deploy.
+
 Managed autonomous runs hand work to the team without merging it:
 
 ```bash

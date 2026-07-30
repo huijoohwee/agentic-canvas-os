@@ -31,7 +31,10 @@ test('required CI is merge-queue safe and every workflow pins actions immutably'
 
 test('CI uses Node 22 slim runners without dependency caches', async () => {
   const source = await readWorkflow('ci.yml');
-  assert.match(source, /on:\n\s+pull_request:\n\s+merge_group:/);
+  assert.match(
+    source,
+    /on:\n\s+pull_request:\n\s+types: \[opened, synchronize, reopened, ready_for_review\]\n\s+merge_group:/,
+  );
   assert.doesNotMatch(source, /pull_request:\n\s+paths:/);
   for (const name of ['test', 'build', 'docs-contract', 'collaboration-integration']) {
     assert.match(source, new RegExp(`^\\s+name: ${name}$`, 'm'));

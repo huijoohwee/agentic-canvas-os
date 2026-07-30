@@ -179,6 +179,14 @@ Separate unrelated scopes into branch-exclusive leased task worktrees. Commit in
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
+If attributed tracked bytes remain in canonical `main` after their exact task
+change has passed protected integration, use only the
+`canonical:main:fast-forward-equivalence` adapter described in
+`START-WORKFLOW.md`. Its completed content-bound receipt must prove the local
+working set is identical to the fetched protected descendant before canonical
+ref/index reconciliation. Any untracked, staged, conflicting, partial, extra,
+or drifted state remains blocking.
+
 Before protected convergence, emit the Overlap Preservation Receipt and account
 for every item in the joined Disposition Receipt. After convergence, emit the neutral Integration Receipt with the
 canonical merge commit and tree, full dependency-closure digest, protected

@@ -5,13 +5,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  evaluateLifecycleStage,
+  LIFECYCLE_STAGES,
 } from "./lifecycle-conformance-gate.mjs";
 import {
   lifecyclePolicyIdentity,
 } from "./lifecycle-conformance-policy.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
+export const LIFECYCLE_CONFORMANCE_ENFORCED_STAGES = Object.freeze([]);
+export const LIFECYCLE_CONFORMANCE_UNEVALUATED_STAGES =
+  Object.freeze([...LIFECYCLE_STAGES]);
 
 export function parseLifecycleConformanceArguments(values = []) {
   let evidencePath = "";
@@ -43,19 +46,10 @@ export async function runLifecycleConformance(
   );
   const readText = dependencies.readText ??
     ((locator) => readFile(locator, "utf8"));
-  const evaluate = dependencies.evaluate ?? evaluateLifecycleStage;
-  const write = dependencies.write ??
-    ((value) => process.stdout.write(`${value}\n`));
   const locator = path.resolve(currentDirectory, options.evidencePath);
   const operation = JSON.parse(await readText(locator));
   assertPinnedPolicy(operation?.policy);
-  const receipt = evaluate(operation);
-  write(JSON.stringify(receipt, null, options.pretty ? 2 : 0));
-  return Object.freeze({
-    exitCode: receipt.ready ? 0 : 1,
-    locator,
-    receipt,
-  });
+  throw createEvidenceAdapterUnavailableError(locator);
 }
 
 function assertPinnedPolicy(actual) {
@@ -71,6 +65,34 @@ function assertPinnedPolicy(actual) {
   }
 }
 
+export function createEvidenceAdapterUnavailableError(locator = "") {
+  const error = new Error(
+    "Operation-derived lifecycle evidence adapters, evaluator identity, and schema closure are unavailable; the repository currently proves policy-runtime readiness only.",
+  );
+  error.code = "AGENTIC_SDLC_EVIDENCE_ADAPTER_UNAVAILABLE";
+  error.locator = String(locator);
+  error.enforcedStages = LIFECYCLE_CONFORMANCE_ENFORCED_STAGES;
+  error.unevaluatedStages = LIFECYCLE_CONFORMANCE_UNEVALUATED_STAGES;
+  return error;
+}
+
+export function formatLifecycleConformanceFailure(error) {
+  return JSON.stringify({
+    schema: "agentic-sdlc-conformance-error/v1",
+    status: "error",
+    code: String(error?.code || "AGENTIC_SDLC_EVALUATOR_FAILURE"),
+    message: typeof error?.message === "string"
+      ? error.message
+      : String(error),
+    enforcedStages: Array.isArray(error?.enforcedStages)
+      ? error.enforcedStages
+      : [],
+    unevaluatedStages: Array.isArray(error?.unevaluatedStages)
+      ? error.unevaluatedStages
+      : [],
+  });
+}
+
 function requireValue(value, option) {
   const normalized = String(value ?? "").trim();
   if (!normalized) throw new Error(`${option} requires a value`);
@@ -82,10 +104,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
     const outcome = await runLifecycleConformance();
     process.exitCode = outcome.exitCode;
   } catch (error) {
-    process.stderr.write(
-      `[lifecycle-conformance] ${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    process.stderr.write(`${formatLifecycleConformanceFailure(error)}\n`);
     process.exitCode =
-      error?.code === "AGENTIC_SDLC_POLICY_IDENTITY_UNAVAILABLE" ? 3 : 2;
+      [
+        "AGENTIC_SDLC_POLICY_IDENTITY_UNAVAILABLE",
+        "AGENTIC_SDLC_EVIDENCE_ADAPTER_UNAVAILABLE",
+      ].includes(error?.code)
+        ? 3
+        : 2;
   }
 }

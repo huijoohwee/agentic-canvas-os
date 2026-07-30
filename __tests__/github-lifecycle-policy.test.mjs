@@ -125,7 +125,7 @@ test('source and dependency security use separate minimal trigger scopes', async
   assert.match(dependencySecurity, /"package\.json"/);
   assert.match(dependencySecurity, /"package-lock\.json"/);
   assert.match(dependencySecurity, /npm audit --package-lock-only --audit-level=high/);
-  assert.match(dependencySecurity, /actions\/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48/);
+  assert.match(dependencySecurity, /actions\/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294/);
   assert.match(dependencySecurity, /runs-on: ubuntu-slim/);
   assert.match(dependencySecurity, /node-version: 22/);
   assert.doesNotMatch(dependencySecurity, /^\s+- run: npm ci\b/gm);

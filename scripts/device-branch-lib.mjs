@@ -27,6 +27,7 @@ import {
   requireSameOwnedDirtEvidence,
   resolveOwnedDirtRecovery,
 } from "./owned-dirt-resume-lib.mjs";
+import { resolveExpiredCommittedContinuation } from "./expired-committed-continuation-lib.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
 export { park, createParkMessage, formatParkTimestamp } from "./device-park-lib.mjs";
@@ -306,13 +307,15 @@ export function resume({
       captureOwnedDirtEvidence({ gitText, gitOptional }),
     );
   };
-  const integrationContinuation = resolveExpiredIntegrationContinuation({
+  const integrationContinuation = resolveExpiredCommittedContinuation({
     branch: branchName,
     currentBranch,
     identity,
     localLease: localAtInvocation,
     remoteLease,
     remoteSha,
+    pullRequestHeadSha: pullRequest.headRefOid,
+    ownerUrl: owner.url,
     repo,
     sessionId,
     gitText,
@@ -321,6 +324,7 @@ export function resume({
   const replay = reconcileResumeReplay({
     branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
     pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now, verifyOwnedDirt,
+    integrationContinuation,
   });
   if (replay) {
     verifyOwnedDirt();
@@ -387,7 +391,7 @@ export function resume({
   }
 
   if (!pullRequest.isDraft) {
-    if (!reviewHandoff && !sameSessionDelivery) {
+    if (!reviewHandoff && !sameSessionDelivery && !integrationContinuation) {
       throw new Error(`Ownership pull request ${owner.url} must be draft before resume.`);
     }
     run("gh", ["pr", "ready", "--undo", owner.url]);
@@ -406,6 +410,11 @@ export function resume({
     baseSha: claimBaseSha,
     autoDelivery: remoteLease.autoDelivery === true && remoteLease.runtimeRequired === true,
     ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
+    ...(integrationContinuation ? {
+      integration: integrationContinuation.integration,
+      preClaimIntegrationContinuation:
+        integrationContinuation.preClaimIntegrationContinuation,
+    } : {}),
     previousEpoch: remoteLease.epoch,
     ttlMs: leaseTtlMs,
   });
@@ -428,15 +437,21 @@ export function resume({
       fenceSha,
       pullRequestUrl: owner.url,
       ...(integrationContinuation ? { integration: integrationContinuation.integration } : {}),
+      ...(integrationContinuation ? {
+        preClaimIntegrationContinuation:
+          integrationContinuation.preClaimIntegrationContinuation,
+      } : {}),
       ...(parkedStashValues || {}),
     },
   });
+  verifyOwnedDirt();
   try {
-    run("git", ["push", "origin", branchName]);
+    pushResumeClaim({ branch: branchName, ownedDirtRecovery, run });
   } catch (error) {
     gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branchName}`]);
     throw error;
   }
+  verifyOwnedDirt();
   run("gh", ["pr", "edit", owner.url, "--body", updateWriterLeasePullRequestBody(draftPullRequest.body, lease)]);
   requireOwnershipPullRequestDraft({ url: owner.url, branch: branchName, ghText, expectedDraft: true });
   const restoredLease = completeParkedStashRestore({
@@ -460,50 +475,6 @@ export function resolveSameSessionDeliveryHandoff({ remoteLease, remoteSha, remo
   return remoteSha;
 }
 
-function resolveExpiredIntegrationContinuation({
-  branch, currentBranch, identity, localLease, remoteLease, remoteSha, repo, sessionId, gitText, now,
-}) {
-  if (
-    currentBranch !== branch ||
-    remoteLease.status !== "active" ||
-    Date.parse(remoteLease.expiresAt) > now().getTime() ||
-    !localLease ||
-    localLease.status !== "active" ||
-    localLease.sessionId !== sessionId ||
-    localLease.device !== identity.device ||
-    localLease.scope !== identity.scope ||
-    localLease.branch !== branch ||
-    !localLease.worktreePath ||
-    path.resolve(localLease.worktreePath) !== path.resolve(repo) ||
-    remoteSha !== remoteLease.fenceSha ||
-    localLease.fenceSha !== remoteLease.fenceSha ||
-    localLease.baseSha !== remoteLease.baseSha ||
-    !localLease.pullRequestUrl
-  ) return null;
-
-  const integration = localLease.integration;
-  if (
-    integration?.schema !== "agentic-integration-commit/v1" ||
-    !/^[0-9a-f]{40}$/.test(String(integration.commitSha || "")) ||
-    !/^[0-9a-f]{40}$/.test(String(integration.treeSha || ""))
-  ) return null;
-
-  const integrationTree = gitText(["rev-parse", `${integration.commitSha}^{tree}`]).trim();
-  if (integrationTree !== integration.treeSha) {
-    throw new Error("Interrupted integration evidence tree does not match its recorded commit.");
-  }
-  gitText(["merge-base", "--is-ancestor", remoteSha, integration.commitSha]);
-  gitText(["merge-base", "--is-ancestor", integration.commitSha, "HEAD"]);
-  const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  if (headSha !== integration.commitSha) {
-    const parents = gitText(["rev-list", "--parents", "-n", "1", "HEAD"]).trim().split(/\s+/);
-    if (parents.length !== 3 || parents[0] !== headSha || parents[1] !== integration.commitSha) {
-      throw new Error("Interrupted integration continuation permits only one protected-main merge after the recorded commit.");
-    }
-    gitText(["merge-base", "--is-ancestor", parents[2], "origin/main"]);
-  }
-  return { headSha, integration };
-}
 export function review({
   invocationPath,
   repo,
@@ -629,6 +600,7 @@ function reconcileResumeReplay({
   branch, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
   pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
   verifyOwnedDirt = () => {},
+  integrationContinuation = null,
 }) {
   let local = leaseStore.read?.(branch) || null;
   if (!local || local.status !== "active" || local.sessionId !== sessionId || currentBranch !== branch ||
@@ -643,8 +615,12 @@ function reconcileResumeReplay({
     remoteLease.status === "delivery" && remoteLease.sessionId === sessionId ? remoteLease.deliveryHeadSha :
     remoteLease.status === "parked" ? requireParkedResumeHead(remoteLease) :
     expiredActiveHandoff ? remoteLease.fenceSha : null;
-  const pendingHandoff = /^[0-9a-f]{40}$/.test(String(handoffHead || "")) &&
+  const ordinaryPendingHandoff = /^[0-9a-f]{40}$/.test(String(handoffHead || "")) &&
     local.baseSha === handoffHead && local.epoch === remoteLease.epoch + 1;
+  const committedPendingHandoff = integrationContinuation?.pendingClaim === true &&
+    local.baseSha === integrationContinuation.headSha &&
+    local.epoch === remoteLease.epoch + 1;
+  const pendingHandoff = ordinaryPendingHandoff || committedPendingHandoff;
   if (!activeReplay && !pendingHandoff) return null;
   const expired = Date.parse(local.expiresAt) <= now().getTime();
   if (expired && !pendingHandoff && !pendingStashRestoreReplay) return null;
@@ -655,8 +631,13 @@ function reconcileResumeReplay({
   let headSha = gitText(["rev-parse", "HEAD"]).trim();
   if (activeReplay && (local.pullRequestUrl !== owner.url || local.fenceSha !== remoteSha || headSha !== remoteSha)) return null;
   if (pendingHandoff) {
-    const pushBase = remoteLease.status === "parked" ? remoteLease.parkSourceFenceSha : handoffHead;
-    const atHandoffHead = headSha === handoffHead;
+    const pushBase = remoteLease.status === "parked"
+      ? remoteLease.parkSourceFenceSha
+      : committedPendingHandoff
+        ? integrationContinuation.preClaimIntegrationContinuation.sourceFenceSha
+        : handoffHead;
+    const preClaimHead = committedPendingHandoff ? integrationContinuation.headSha : handoffHead;
+    const atHandoffHead = headSha === preClaimHead;
     if (atHandoffHead) {
       if (local.fenceSha || local.pullRequestUrl || hasCarriedParkedStash(local)) {
         throw new Error("Uncommitted resume claim has unexpected fence, pull-request, or parked-stash evidence.");
@@ -699,7 +680,9 @@ function reconcileResumeReplay({
     requireCarriedParkedStash({ local, expected: parkedStashValues });
     if (remoteSha === pushBase) {
       if (remoteLease.status === "parked") run("git", ["merge-base", "--is-ancestor", pushBase, handoffHead]);
-      run("git", ["push", "origin", branch]);
+      verifyOwnedDirt();
+      pushResumeClaim({ branch, ownedDirtRecovery: local.ownedDirtRecovery, run });
+      verifyOwnedDirt();
     }
     else if (remoteSha !== headSha) throw new Error("Resume claim remote is neither the handed-off head nor the exact claim commit.");
     const observedRemote = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]).split(/\s+/)[0] || "";
@@ -826,6 +809,15 @@ function requireResumeClaimCommit({ lease, headSha, gitText }) {
 
 function resumeClaimSubject(scope, epoch) {
   return `chore(coordination): claim ${scope} lease ${epoch}`;
+}
+
+function pushResumeClaim({ branch, ownedDirtRecovery, run }) {
+  run("git", [
+    "push",
+    ...(ownedDirtRecovery ? ["--no-verify"] : []),
+    "origin",
+    branch,
+  ]);
 }
 
 function requireRepositorySafety({ invocationPath, repo, gitText }) {

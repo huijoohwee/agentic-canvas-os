@@ -311,6 +311,8 @@ test("same-session owned-dirt recovery replays every interruptible resume transi
       );
       assert.ok(state.calls.some(call => call.join(" ") ===
         "git commit --allow-empty --only -m chore(coordination): claim managed-run lease 4"));
+      assert.ok(state.calls.some(call => call.join(" ") ===
+        `git push --no-verify origin ${branch}`));
     });
   }
 });
@@ -467,7 +469,7 @@ function createOwnedDirtHarness({
         commits += 1;
         head = nextFence;
         interrupt("commit");
-      } else if (call.join(" ") === `git push origin ${branch}`) {
+      } else if (call.join(" ") === `git push --no-verify origin ${branch}`) {
         remoteHead = head;
         interrupt("push");
       } else if (command === "gh" && args[0] === "pr" && args[1] === "edit") {

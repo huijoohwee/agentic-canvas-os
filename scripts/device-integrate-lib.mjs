@@ -187,6 +187,22 @@ function prepareIntegrationCommit({
 }) {
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
   const changedBeforeCheck = listChangedPaths(gitText);
+  if (lease.integration?.validationRequired === true) {
+    if (changedBeforeCheck.length) {
+      throw new Error("Recovered committed continuation must remain clean until integration validation.");
+    }
+    return validateRecoveredCommittedContinuation({
+      branch,
+      lease,
+      gitText,
+      leaseStore,
+      sessionId,
+      run,
+      commitMessage,
+      pathsManifest,
+      now,
+    });
+  }
   let manifest = null;
   if (changedBeforeCheck.length) {
     manifest = readChangeManifest({ filePath: pathsManifest, repo, branch, lease });
@@ -234,6 +250,81 @@ function prepareIntegrationCommit({
       paths: [],
     },
   });
+}
+
+function validateRecoveredCommittedContinuation({
+  branch,
+  lease,
+  gitText,
+  leaseStore,
+  sessionId,
+  run,
+  commitMessage,
+  pathsManifest,
+  now,
+}) {
+  const integration = lease.integration;
+  const continuation = lease.preClaimIntegrationContinuation;
+  if (
+    continuation?.schema !== "agentic-pre-claim-integration-continuation/v1" ||
+    integration?.schema !== "agentic-integration-commit/v1" ||
+    continuation.integrationCommitSha !== integration.commitSha ||
+    continuation.integrationTreeSha !== integration.treeSha ||
+    continuation.headSha !== integration.commitSha ||
+    !SHA_PATTERN.test(String(continuation.sourceFenceSha || "")) ||
+    !SHA_PATTERN.test(String(continuation.sourceBaseSha || "")) ||
+    !/^[0-9a-f]{64}$/.test(String(integration.rangeDiffDigest || "")) ||
+    !Array.isArray(integration.paths) ||
+    integration.paths.length === 0
+  ) {
+    throw new Error("Recovered committed continuation lacks exact pre-claim integration evidence.");
+  }
+  requireCommitMessage(commitMessage);
+  if (String(commitMessage).trim() !== integration.commitMessage) {
+    throw new Error("Recovered committed continuation commit message changed from its recorded intent.");
+  }
+  const manifest = readChangeManifest({
+    filePath: pathsManifest,
+    repo: lease.worktreePath,
+    branch,
+    lease,
+    expectedBaseSha: continuation.sourceBaseSha,
+    requirement: "Recovered committed continuation",
+  });
+  const committedPaths = splitNul(gitText([
+    "diff", "--name-only", "-z",
+    continuation.sourceFenceSha,
+    continuation.headSha,
+    "--",
+  ]));
+  requireExactPaths({ changed: committedPaths, approved: integration.paths });
+  requireExactPaths({ changed: committedPaths, approved: manifest.value.paths });
+  const rangeDiffDigest = sha256(gitText([
+    "diff", "--binary",
+    continuation.sourceFenceSha,
+    continuation.headSha,
+    "--",
+  ]));
+  if (rangeDiffDigest !== integration.rangeDiffDigest) {
+    throw new Error("Recovered committed continuation diff changed from its pre-claim evidence.");
+  }
+  if (gitText(["rev-parse", `${integration.commitSha}^{tree}`]).trim() !== integration.treeSha) {
+    throw new Error("Recovered committed continuation tree changed from its recorded commit.");
+  }
+  run("git", ["merge-base", "--is-ancestor", continuation.sourceFenceSha, integration.commitSha]);
+  run("git", ["merge-base", "--is-ancestor", integration.commitSha, "HEAD"]);
+  run("npm", ["run", "check"]);
+  if (listChangedPaths(gitText).length) {
+    throw new Error("Recovered committed continuation validation changed the clean worktree.");
+  }
+  const validated = {
+    ...integration,
+    manifestDigest: manifest.digest,
+    validationRequired: false,
+    validatedAt: now().toISOString(),
+  };
+  leaseStore.annotate({ sessionId, branch, values: { integration: validated } });
+  return validated;
 }
 
 function annotateIntegration({ branch, leaseStore, sessionId, gitText, now, values }) {
@@ -428,12 +519,19 @@ function resolveRuntimeRepositories({ canonicalRoot, runtimeRepository }) {
   return { agenticCanvasOsRoot, knowgrphRoot };
 }
 
-function readChangeManifest({ filePath, repo, branch, lease }) {
-  if (!filePath) throw new Error("Dirty integration requires --paths-manifest.");
+function readChangeManifest({
+  filePath,
+  repo,
+  branch,
+  lease,
+  expectedBaseSha = lease.baseSha,
+  requirement = "Dirty integration",
+}) {
+  if (!filePath) throw new Error(`${requirement} requires --paths-manifest.`);
   const absolutePath = path.resolve(filePath);
   const bytes = readFileSync(absolutePath);
   const value = JSON.parse(bytes.toString("utf8"));
-  if (value?.schema !== CHANGE_MANIFEST_SCHEMA || value.branch !== branch || value.baseSha !== lease.baseSha ||
+  if (value?.schema !== CHANGE_MANIFEST_SCHEMA || value.branch !== branch || value.baseSha !== expectedBaseSha ||
       !Array.isArray(value.paths) || value.paths.length === 0) {
     throw new Error(`Invalid ${CHANGE_MANIFEST_SCHEMA} at ${absolutePath}.`);
   }

@@ -2,16 +2,16 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-29"
+date: "2026-07-30"
 lang: "en-US"
-schema: "knowgrph-release-workflow/v3"
+schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "Knowgrph reference implementation adapter for the provider-neutral lifecycle"
 profile_type: "reference-implementation"
 protocol_contract: "CANONICAL-LIFECYCLE.md"
 publish_policy: "protected green main authorizes Dev integration only; exact-candidate human authorization opens Production"
-runtime_scope: "Dev integration, runtime-ready localhost review and authorization prompting, Prod mirror promotion, Cloudflare deployment, and verification"
+runtime_scope: "Dev integration, runtime-ready localhost review, immutable candidate authorization, Cloudflare deployment, direct D1 reconciliation, transport-separated verification, publication, rollback, and cleanup"
 runtime_claim: "bounded release contract; no deployment occurs by reading this document"
 runtime_proof: "RUNTIME-PROOF.md"
 invocation:
@@ -26,7 +26,7 @@ workspace:
   dev: "$GITHUB_ROOT/knowgrph"
   prod_mirror: "$GITHUB_ROOT/huijoohwee/content/knowgrph"
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
-stage_order: ["preflight", "reconcile", "ssot", "memory", "planning", "validate", "integrate", "promote", "deploy", "verify", "report"]
+stage_order: ["preflight", "reconcile", "ssot", "memory", "planning", "validate", "integrate", "review", "prepare", "authorize", "deploy", "state-reconcile", "verify-immutable", "verify-public", "publish", "close"]
 coordination:
   actor_identity: "authenticated source-control and Production-authorization principals"
   collaboration_identity: "actor + device + session + worktree + branch + semantic scope + lease epoch + fence revision"
@@ -53,11 +53,16 @@ completion_requires:
   - "append-only monthly planning-shard compliance"
   - "centralized planning task-row compliance"
   - "protected integration"
-  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Deployment, State Reconciliation, Live Verification, Publication, and Rollback receipts for every claimed stage"
   - "runtime-ready authorization prompt bound to the exact candidate, source, release run, and supervised localhost review URL"
   - "one target-and-candidate idempotency key and one target-scoped deployment controller"
+  - "one exact immutable deployment origin bound to the deployed artifact"
+  - "direct D1 readback with document, chunk, graph, content, and path-hash parity"
+  - "immutable-origin smoke, public-route smoke, browser fidelity, and returning-user service-worker convergence"
+  - "byte-identical readiness markers across immutable and public transports"
   - "Prod mirrors the promoted Dev SHA"
   - "both production routes return verified evidence"
+  - "only clean integrated completion-proven task lanes are removed"
 ---
 
 # Knowgrph Runtime-Ready Release Workflow
@@ -86,15 +91,18 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 | Authorization prompt | ACOS `agentic-production-authorization-prompt/v1` revalidates runtime readiness and renders candidate, source, run, supervised localhost URL, and exact reply |
 | Authorization Interaction Receipt | `npm run production:authorize` records the authenticated terminal challenge and response for the same candidate and target without browser dependence |
 | Human Authorization Receipt | Protected GitHub `production` environment records reviewer, candidate digest, target, issue time, expiry, and consumption |
-| Live Verification Receipt | Cloudflare deployment identity plus both production-route identity and smoke proof |
+| Deployment Receipt | Exact Cloudflare Pages deployment identifier and immutable candidate origin joined to the consumed authorization and artifact digest |
+| State Reconciliation Receipt | Repository-owned direct D1 reconciliation and readback with exact counts plus content and path-hash parity |
+| Live Verification Receipt | Immutable Pages origin smoke, public route identity and smoke, browser fidelity, returning-user service-worker convergence, and rollback target |
 | Publication Receipt | Exact verified `huijoohwee` mirror revision, emitted only after live verification |
+| Rollback Receipt | Restored last-known-good Pages deployment, state disposition, restored probes, and unchanged mirror identity when recovery runs |
 
 ## Inputs and Outputs
 
 | Contract | Required fields |
 |---|---|
 | Input | Exact joined Overlap Preservation, Overlap Disposition, Integration, and Runtime Review Receipts; authenticated human authorization when deploying; actor, device, session, worktree, branch, semantic scope, lease epoch, and fence; base SHA; memory and planning refs; complete app/docs/catalog dependency closure; policy and target digests; artifact and manifest digests; Dev repository; Prod mirror; production routes. |
-| Output | Reconciliation ledger, preservation inventory and dispositions, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, deployment identifiers, Live Verification Receipt, Publication Receipt, remaining risks. |
+| Output | Reconciliation ledger, preservation inventory and dispositions, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, Deployment Receipt, State Reconciliation Receipt, Live Verification Receipt, Publication or Rollback Receipt, cleanup disposition, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
 
@@ -232,6 +240,16 @@ mirror. Any new source commit, direct or transitive dependency movement, policy
 or target change, tree change, artifact change, manifest change, or rebuild
 invalidates the candidate and requires a new runtime review and authorization.
 
+Before dispatch, fetch and bind every protected authority in the Release
+Frontier: Knowgrph source, Agentic Canvas OS docs and catalog, schema policy and
+generated maps, publication-mirror base, target configuration, and rollback
+target. Inspect queued or concurrently merging protected changes. If any bound
+authority advances during verification or while authorization waits, cancel or
+retire the stale unapproved run, fast-forward only clean canonical owners, rerun
+their exact protected checks, reseal `turn:end`, and dispatch a fresh candidate.
+Never retarget a waiting run or treat tree-equivalent movement as authorization
+for a different policy revision.
+
 ### 9. Authorize and Deploy Cloudflare
 
 Deploy only the already-built candidate whose exact digest and target an
@@ -275,23 +293,66 @@ environment-scoped controller may deploy. Coalesce an exact duplicate dispatch
 onto its durable result, reject competing candidates or controllers, and record
 authorization consumption before releasing the fence.
 
+Capture the last-known-good Pages deployment, publication mirror revision, and
+D1 state contract before target mutation. Deploy the already-built artifact,
+record the exact Cloudflare Pages deployment identifier and immutable
+`pages.dev` candidate origin in the Deployment Receipt, and use that captured
+origin for candidate smoke. The custom domain remains a separately verified
+public transport; bot policy, caching, or routing behavior there must not cause
+CI to silently retarget or rebuild the candidate.
+
 The GitHub `production` environment must require a human reviewer and provide non-empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets before the deploy job starts. Treat absent review or an empty-secret failure as missing deployment authority, not as a reason to weaken the workflow or bypass the environment gate.
 
 On partial success, stop further mutation and report the exact state. Do not loop or stack patches.
 
-### 10. Verify Production and Publish
+### 10. Reconcile State, Verify Production, and Publish
 
-Verify `https://airvio.co` and `https://airvio.co/knowgrph` for HTTP status, route ownership, primary HTML and assets, stale asset references, MCP availability, invocation catalog resolution, runtime health, visible exact Knowgrph and Agentic Canvas OS SHA evidence, catalog/docs revision equality, bounded hydration evidence, local-path leakage, legacy aliases, and required responsive smoke paths.
+Reconcile canonical documents through the repository-owned direct D1 adapter,
+not through a public HTTP route. Require bounded idempotent operations followed
+by direct authoritative readback. Record expected and observed document, chunk,
+and graph counts plus path-hash and content parity in the State Reconciliation
+Receipt. Keep code rollback and D1 disposition separate; restoring Pages does
+not reverse state.
 
-Emit the Live Verification Receipt only when observed runtime and artifact
-identity match the Human Authorization Receipt. Publish the exact generated
-mirror only afterward and emit the Publication Receipt. Failed or ambiguous
-live proof restores the captured last-known-good deployment and leaves the
-previous mirror revision unchanged.
+Run the repository-owned agent-ready smoke against the immutable candidate
+origin and require every named check to pass. Verify exact deployment markers
+and browser fidelity against that same origin. Then verify returning-user
+service-worker convergence from the prior revision to the authorized source
+revision while preserving unrelated sibling caches and storage.
 
-### 11. Report
+Separately verify `https://airvio.co`, `https://airvio.co/knowgrph`, and the
+stable Pages route for HTTP status, route ownership, primary HTML and assets,
+stale asset references, MCP availability, invocation catalog resolution,
+runtime health, visible exact Knowgrph and Agentic Canvas OS SHA evidence,
+catalog/docs revision equality, bounded hydration evidence, local-path leakage,
+legacy aliases, and required responsive smoke paths. Require readiness-marker
+bytes to be identical across the immutable Pages origin, stable Pages route,
+and public custom domain.
 
-Report invocation intent, ownership, worktrees, base SHA, memory base ref, planning base ref, planning shard and Context, both append-only comparison results, the planning task-row result, handoffs, reconciled paths, SSOT commit, Dev commits and pull request, Integration Gate, merge SHA, validation and cost evidence, Prod parity, Cloudflare deployment identifiers, verified routes, and remaining risks.
+Emit the Live Verification Receipt only when the Deployment and State
+Reconciliation Receipts join the Human Authorization Receipt and all required
+transport claims pass. Publish the exact generated mirror only afterward,
+record its immutable commit, and emit the Publication Receipt. Failed or
+ambiguous live proof restores the captured last-known-good deployment, records
+the D1 disposition, emits the Rollback Receipt, and leaves the previous mirror
+revision unchanged.
+
+### 11. Close, Clean Up, and Report
+
+Persist the completed receipt artifact before cleanup. Remove only task
+worktrees whose exact pull request is merged, whose tree is clean and contained
+by protected main, and whose lease is completion-proven. Preserve active,
+parked, dirty, divergent, ambiguous, and unrelated runtime-document lanes.
+Branch deletion remains a separate authorized action.
+
+Report invocation intent, ownership, worktrees, base SHA, memory base ref,
+planning base ref, planning shard and Context, both append-only comparison
+results, the planning task-row result, handoffs, reconciled paths, SSOT commit,
+Dev commits and pull request, Integration Gate, merge SHA, Release Frontier,
+candidate and authorization digests, validation and cost evidence, Cloudflare
+deployment identifier and immutable origin, D1 counts and parity, immutable and
+public route results, browser and service-worker proof, mirror commit, receipt
+digests, rollback disposition, cleanup disposition, and remaining risks.
 
 ## Stop Conditions
 
@@ -311,11 +372,35 @@ Stop without downstream mutation when any of these is true:
 - a required gate fails;
 - Dev, Prod, and promoted SHA cannot be reconciled;
 - schema mirror parity is stale or missing generated document nodes for the promoted Dev SHA;
+- any protected Release Frontier authority advances after review or candidate sealing;
 - credentials or deployment authority are absent;
+- immutable candidate origin, D1 direct readback, required public routes, browser fidelity, client-cache convergence, or marker parity is missing or disagrees;
+- publication begins before the Live Verification Receipt;
+- cleanup targets a lane that is active, parked, dirty, divergent, ambiguous, unrelated, or not completion-proven;
 - deployment is partial or production verification disagrees with release evidence.
 
 ## Completion VCC
 
-Given a protected green merge to Knowgrph `main`, when `turn:end` records exact localhost evidence, the controller builds one immutable candidate, an authenticated human authorizes its exact digest, and every ordered verification stage succeeds without drift or rebuild, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact authorized Dev artifact, both production routes return matching live evidence, and the final ledger reports ownership, authorization, validation, cost, deployment, rollback target, and residual risk.
+Given a protected green merge to Knowgrph `main`, when `turn:end` records exact
+localhost evidence, the controller builds one immutable candidate, an
+authenticated human authorizes its exact digest, and every ordered deployment,
+state, transport, publication, and cleanup stage succeeds without drift or
+rebuild, then memory and centralized planning history are proven append-only,
+the declared planning row is compliant from its recorded base, one
+application-root runtime owns identity and MainPanel Settings projects it
+through shared KTV rows, participating runtime identities report identical
+exact app/docs SHAs, catalog revision equals the docs revision with bounded
+fresh hydration, Prod represents the exact authorized Dev artifact, and the
+terminal ledger joins deployment, state, live, publication or rollback, and
+cleanup evidence.
 
-VCC: verify `npm run collaboration:gate` exits zero with two distinct automated peers, at least two active room peers, one common verification digest, remote document propagation, exact app/docs SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.
+VCC: verify `npm run collaboration:gate` exits zero with two distinct automated
+peers, at least two active room peers, one common verification digest, remote
+document propagation, exact app/docs SHA and `/`, `#`, `@` count parity, and
+fresh catalog hydration in at most two attempts; the memory and planning gates
+pass; every protected Release Frontier identity is current; the immutable
+candidate smoke, D1 direct readback, browser fidelity, returning-user
+service-worker convergence, stable and public route probes, and byte-identical
+readiness-marker checks pass; the mirror commit names the promoted SHA; receipt
+artifacts persist; cleanup removes only completion-proven lanes; and execution
+stops after the first blocker.

@@ -58,10 +58,10 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Runtime schemas, cost, fallbacks, and orchestration | `HARNESS-CONTRACTS.md` |
 | Managed implementation-run invocation and lifecycle | `MANAGED-IMPLEMENTATION-RUNS.md` |
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
-| Session ownership and release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
+| Session ownership and reference release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
 | Dependency-ordered cross-repository integration | `INTEGRATION-ORDER.md` |
 | Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
-| Canonical checkout sync and human-authorized CI/CD lifecycle | `CANONICAL-LIFECYCLE.md` |
+| Provider-neutral release semantics, receipts, proof surfaces, and cleanup | `CANONICAL-LIFECYCLE.md` |
 | Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
 | Planning lifecycle | `TODO.md` and the active monthly shard |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |

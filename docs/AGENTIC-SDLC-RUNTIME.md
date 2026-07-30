@@ -39,7 +39,31 @@ This runtime ends in the `authoring` lane. A passing result does not merge, mirr
 
 The separately pinned Agentic SDLC v1.8 lifecycle module defines admission through publication for operational repositories. The protected `agentic-sdlc-policy-runtime` check proves only that this repository resolves the exact guideline source and that its deterministic policy-runtime contracts pass. It does not consume evidence from a managed implementation run or release.
 
-The repository-owned `npm run lifecycle:conformance -- --evidence=<path>` entry point therefore exits `3` with `AGENTIC_SDLC_EVIDENCE_ADAPTER_UNAVAILABLE`. Its machine result declares `enforcedStages: []` and all eight lifecycle stages as `unevaluatedStages`. A consumer adapter may remove stages from that list only after it supplies operation-derived evidence, exact policy/evaluator/schema/source identities, and predecessor receipts required by the source module.
+The repository-owned `npm run lifecycle:conformance -- --evidence=<path>` entry point now owns the admission-only adapter. It accepts only the closed `agentic-sdlc-admission-evidence/v1` schema. Before a domain verdict, it resolves an immutable policy, evaluator, and schema closure from the tracked, clean Agentic Canvas OS `HEAD`; the evaluator and schema digests are computed from the exact declared Git-object bytes at that revision. The evidence must separately supply exact source and dependency-closure identity.
+
+The structured pre-dispatch input binds:
+
+- a baselined PRD/TAD authoring envelope with its attestation, VCC revision, exact digest, existing verification lane, and zero open blockers;
+- complete VCC-to-criterion-to-task closure, including behavior claims, property obligations, an acyclic task graph whose positive numeric wave ordinals place every dependency before its consumer, declared write sets, and named checks;
+- positive token, iteration, wall-clock, and context budgets for every task, one-budget sizing, and the exact two-failure no-progress circuit breaker;
+- narrow capability grants with explicit intended uses and bounded scopes;
+- actor, device, session, worktree, branch, semantic scope, lease epoch, fence revision, and explicit unexpired collaboration identity at the supplied evaluation time, plus a complete inventory of other active writers on distinct worktree, branch, and semantic-scope lanes whose declared scopes do not overlap;
+- a complete evaluated dependency inventory and dependency-admission closure; and
+- a named Evaluator whose mechanism and implementation digest are mechanically independent from the Implementer.
+
+Exactly five producer contracts may supply those facts. Each operation joins its permitted mechanism and actor role to the exact input digest, evidence references, and a coherent recorded terminal result with an exit code and complete counts; a status assertion or prose summary alone is absent evidence. This evaluator validates the records, not their transport provenance: only a protected consumer adapter may construct and authenticate them for an actual managed run. Caller-authored JSON and fixture records have no gate authority.
+
+| Operation | Required producer |
+|---|---|
+| `admission:authoring-baseline` | Evaluator mechanism `agentic-sdlc-authoring-baseline/v1` |
+| `admission:task-plan` | Orchestrator mechanism `agentic-sdlc-task-plan/v1` |
+| `admission:collaboration` | Orchestrator mechanism `agentic-writer-lease/v2` |
+| `admission:dependency-admission` | Evaluator mechanism `agentic-upstream-dependency-admission/v1` |
+| `admission:execution-evaluator` | Orchestrator mechanism `agentic-sdlc-evaluator-selection/v1` |
+
+The adapter emits one digest-bound `agentic-sdlc-admission-stage-receipt/v1`. The receipt binds the exact policy, evaluator, schema, source, dependency closure, normalized input evidence, finding set, stage evidence, and final receipt digests. Source identity is only structurally self-consistent when its digest matches the caller-supplied repository, revision, and tree tuple; the later protected adapter must resolve those values to real immutable Git objects before calling them canonical. Exit `0` means the supplied admission contract verified; it becomes authoritative managed-run evidence only inside that protected producer adapter. Exit `1` means a typed blocked admission receipt; exit `2` means evaluator or schema failure before a domain verdict; exit `3` means required policy, evaluator, schema, source, or dependency identity is unavailable or mismatched. Both verified and blocked receipts declare `enforcedStages: ["admission"]`; review, integration, runtime, candidate, authorization, deployment, and publication remain explicitly unevaluated.
+
+The raw current Knowgrph observation is still identity-unavailable and unevaluated for this gate. It does not become admission evidence until a later protected producer supplies the complete structured pre-dispatch input and exact identities above. A complete local fixture can prove deterministic contract verification only; it is not managed-run, review, integration, runtime, candidate, release, deployment, publication, Prod, Cloudflare, or public evidence.
 
 `npx`, registry fallback, and mutable version resolution have no policy, evaluator, gate, receipt, integration, runtime, or release authority.
 
@@ -225,9 +249,10 @@ The projection and page digests bind canonical source identity, exact view and p
 npm run agentic-sdlc:check
 npm run agentic-sdlc:source:check
 npm run agentic-sdlc:verify -- --run /absolute/path/to/agentic-sdlc-run.json
+npm run lifecycle:conformance -- --evidence=/absolute/path/to/agentic-sdlc-admission-evidence.json
 ```
 
-The first command runs the source/parser, state-machine, negative finding, determinism, and valid-run suites with no network or paid calls. The second resolves the two explicit guideline locators beneath `$GITHUB_ROOT`, reads their bytes from the pinned Git revision rather than the mutable worktree, verifies the digests, parses the files, and proves the authoring/execution vocabulary and Rule-ID model. The third evaluates one explicit canonical run locator, writes a deterministic report, exits zero only for `runtimeReady: true`, exits one for a conformance failure, and exits two for malformed invocation or input.
+The first command runs the source/parser, state-machine, negative finding, determinism, and valid-run suites with no network or paid calls. The second resolves the two explicit guideline locators beneath `$GITHUB_ROOT`, reads their bytes from the pinned Git revision rather than the mutable worktree, verifies the digests, parses the files, and proves the authoring/execution vocabulary and Rule-ID model. The third evaluates one explicit canonical run locator, writes a deterministic report, exits zero only for `runtimeReady: true`, exits one for a conformance failure, and exits two for malformed invocation or input. The fourth evaluates only the admission stage from one explicit closed evidence document and emits the receipt or typed pre-verdict failure described above.
 
 ## VCCs
 
@@ -241,5 +266,6 @@ The first command runs the source/parser, state-machine, negative finding, deter
 | Evidence earns readiness | Valid-run end-to-end test | One concrete authoring-surface Evidence Reference per VCC from an executed check. |
 | Recovery is reconstructable | Persistence and replay tests | Every terminal transition persisted; partial state fails; verified replay rejected. |
 | Results are deterministic | Permutation and input-immutability tests | Same semantic input produces the same report and digest. |
+| Operational admission is independently evaluated | Lifecycle conformance admission and identity tests | Only complete operation-derived pre-dispatch evidence under the immutable repository-owned evaluator/schema closure can emit a verified admission receipt; all seven successor stages remain unevaluated. |
 | Observation is deterministic and non-promoting | `node --test __tests__/agentic-sdlc-observability-contract.test.mjs` plus the protected Knowgrph observer suite | One immutable receipt projects stable KGC and GraphData through existing owners; typed status remains source-derived, all economics are zero, and the Dev deploy boundary remains closed. |
 | Deployment stays closed | Source and runtime checks | No mirror, delivery, Prod, Cloudflare, or inferred Operator action. |

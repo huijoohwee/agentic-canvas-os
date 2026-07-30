@@ -46,7 +46,7 @@
     "agentic-sdlc:source:check": "node ./scripts/agentic-sdlc-source.mjs",
     "agentic-sdlc:verify": "node ./scripts/agentic-sdlc.mjs",
     "lifecycle:conformance": "node ./scripts/lifecycle-conformance.mjs",
-    "lifecycle:conformance:check": "node --test __tests__/lifecycle-conformance-*.test.mjs",
+    "lifecycle:conformance:check": "node --test __tests__/lifecycle-conformance-*.test.mjs __tests__/agentic-sdlc-admission-evaluator.test.mjs",
     "model-providers:check": "node --test __tests__/model-providers.test.mjs",
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",

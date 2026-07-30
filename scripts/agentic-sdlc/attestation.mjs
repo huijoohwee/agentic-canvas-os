@@ -2,6 +2,7 @@ import { verify } from "node:crypto";
 
 import { authoringBaselineEnvelope } from "./baseline-digest.mjs";
 import {
+  compareText,
   object,
   stableJson,
   stableValue,
@@ -97,12 +98,12 @@ function canonicalPersistenceValue(value, field = "") {
     const items = value.map((item) => canonicalPersistenceValue(item));
     if (["attempts", "options", "consequences"].includes(field)) return items;
     return items.sort((left, right) =>
-      JSON.stringify(left).localeCompare(JSON.stringify(right), "en"));
+      compareText(JSON.stringify(left), JSON.stringify(right)));
   }
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(
     Object.keys(value)
-      .sort((left, right) => left.localeCompare(right, "en"))
+      .sort(compareText)
       .map((key) => [key, canonicalPersistenceValue(value[key], key)]),
   );
 }

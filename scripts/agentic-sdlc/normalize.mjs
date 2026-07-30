@@ -1,3 +1,5 @@
+import { compareLexicalText } from "../lexical-compare.mjs";
+
 export function text(value) {
   return String(value ?? "").normalize("NFKC").trim();
 }
@@ -29,7 +31,7 @@ export function finiteNonNegative(value) {
 }
 
 export function compareText(left, right) {
-  return String(left).localeCompare(String(right), "en");
+  return compareLexicalText(left, right);
 }
 
 export function stableJson(value) {

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   array,
+  compareText,
   stableJson,
   stableValue,
   text,
@@ -30,7 +31,7 @@ export function authoringBaselineEnvelope(
   const vccs = array(vccsInput)
     .map(stableValue)
     .sort((left, right) =>
-      stableJson(left).localeCompare(stableJson(right), "en"));
+      compareText(stableJson(left), stableJson(right)));
   return {
     schema: "agentic-sdlc-authoring-baseline/v1",
     status: text(baseline.status),

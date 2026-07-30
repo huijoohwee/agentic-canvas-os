@@ -1,5 +1,6 @@
 import {
   array,
+  compareText,
   normalizePath,
   text,
   uniqueSortedStrings,
@@ -78,11 +79,11 @@ export function inspectTaskGraph(tasksInput) {
     acyclic: cycleNodes.size === 0,
     cycleNodes: Object.freeze([...cycleNodes].sort()),
     unknownDependencies: Object.freeze(unknownDependencies.sort((left, right) =>
-      left.taskId.localeCompare(right.taskId, "en")
-      || left.dependency.localeCompare(right.dependency, "en"))),
+      compareText(left.taskId, right.taskId)
+      || compareText(left.dependency, right.dependency))),
     writeConflicts: Object.freeze(writeConflicts.sort((left, right) =>
-      left.wave.localeCompare(right.wave, "en")
-      || left.leftTaskId.localeCompare(right.leftTaskId, "en")
-      || left.rightTaskId.localeCompare(right.rightTaskId, "en"))),
+      compareText(left.wave, right.wave)
+      || compareText(left.leftTaskId, right.leftTaskId)
+      || compareText(left.rightTaskId, right.rightTaskId))),
   });
 }

@@ -159,9 +159,12 @@ export function resolveOwnedDirtRecovery({
   if (remoteLease?.status === "review_ready") {
     if (recovery.sourceEpoch !== remoteLease.epoch ||
         recovery.sourceSessionId !== remoteLease.sessionId ||
+        remoteLease.device !== localLease.device ||
+        remoteLease.scope !== localLease.scope ||
+        remoteLease.branch !== localLease.branch ||
         recovery.reviewHeadSha !== remoteLease.reviewHeadSha ||
         localLease.baseSha !== remoteLease.reviewHeadSha ||
-        localLease.epoch !== remoteLease.epoch + 1) {
+        localLease.epoch <= recovery.sourceEpoch) {
       throw new Error("Owned-dirt recovery replay does not match its exact review-ready source epoch.");
     }
   } else if (remoteLease?.status === "active") {

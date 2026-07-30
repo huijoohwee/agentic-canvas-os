@@ -23,11 +23,15 @@ import {
 } from "./device-park-lib.mjs";
 import {
   captureOwnedDirtEvidence,
+  normalizeOwnedDirtRecovery,
   requireOwnedDirtInvocation,
   requireSameOwnedDirtEvidence,
   resolveOwnedDirtRecovery,
 } from "./owned-dirt-resume-lib.mjs";
-import { resolveExpiredCommittedContinuation } from "./expired-committed-continuation-lib.mjs";
+import {
+  normalizePreClaimIntegrationContinuation,
+  resolveExpiredCommittedContinuation,
+} from "./expired-committed-continuation-lib.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
 export { park, createParkMessage, formatParkTimestamp } from "./device-park-lib.mjs";
@@ -324,7 +328,7 @@ export function resume({
   const replay = reconcileResumeReplay({
     branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
     pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now, verifyOwnedDirt,
-    integrationContinuation,
+    integrationContinuation, ownedDirtRecovery,
   });
   if (replay) {
     verifyOwnedDirt();
@@ -601,6 +605,7 @@ function reconcileResumeReplay({
   pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
   verifyOwnedDirt = () => {},
   integrationContinuation = null,
+  ownedDirtRecovery = null,
 }) {
   let local = leaseStore.read?.(branch) || null;
   if (!local || local.status !== "active" || local.sessionId !== sessionId || currentBranch !== branch ||
@@ -615,11 +620,38 @@ function reconcileResumeReplay({
     remoteLease.status === "delivery" && remoteLease.sessionId === sessionId ? remoteLease.deliveryHeadSha :
     remoteLease.status === "parked" ? requireParkedResumeHead(remoteLease) :
     expiredActiveHandoff ? remoteLease.fenceSha : null;
+  const recordedOwnedDirt = ownedDirtRecovery
+    ? normalizeOwnedDirtRecovery(local.ownedDirtRecovery)
+    : null;
+  const ownedDirtPendingHandoff = recordedOwnedDirt &&
+    sameOwnedDirtRecovery(recordedOwnedDirt, ownedDirtRecovery) &&
+    remoteLease.status === "review_ready" &&
+    recordedOwnedDirt.sourceEpoch === remoteLease.epoch &&
+    recordedOwnedDirt.sourceSessionId === remoteLease.sessionId &&
+    recordedOwnedDirt.sourceSessionId === local.sessionId &&
+    recordedOwnedDirt.reviewHeadSha === remoteLease.reviewHeadSha &&
+    local.epoch > recordedOwnedDirt.sourceEpoch;
   const ordinaryPendingHandoff = /^[0-9a-f]{40}$/.test(String(handoffHead || "")) &&
-    local.baseSha === handoffHead && local.epoch === remoteLease.epoch + 1;
+    local.baseSha === handoffHead &&
+    (ownedDirtRecovery
+      ? ownedDirtPendingHandoff
+      : local.epoch === remoteLease.epoch + 1);
+  const continuationSource =
+    integrationContinuation?.preClaimIntegrationContinuation || null;
+  const recordedContinuation = continuationSource
+    ? normalizePreClaimIntegrationContinuation(
+      local.preClaimIntegrationContinuation,
+    )
+    : null;
   const committedPendingHandoff = integrationContinuation?.pendingClaim === true &&
+    samePreClaimContinuation(recordedContinuation, continuationSource) &&
     local.baseSha === integrationContinuation.headSha &&
-    local.epoch === remoteLease.epoch + 1;
+    local.integration?.commitSha === continuationSource.integrationCommitSha &&
+    local.integration?.treeSha === continuationSource.integrationTreeSha &&
+    continuationSource?.sourceEpoch === remoteLease.epoch &&
+    continuationSource?.sourceSessionId === remoteLease.sessionId &&
+    continuationSource?.sourceSessionId === local.sessionId &&
+    local.epoch > continuationSource.sourceEpoch;
   const pendingHandoff = ordinaryPendingHandoff || committedPendingHandoff;
   if (!activeReplay && !pendingHandoff) return null;
   const expired = Date.parse(local.expiresAt) <= now().getTime();
@@ -704,6 +736,20 @@ function reconcileResumeReplay({
   });
   log(`Resume is already active for ${branch} at fence ${local.fenceSha.slice(0, 12)}.`);
   return restored;
+}
+
+function sameOwnedDirtRecovery(left, right) {
+  return left.schema === right.schema &&
+    left.sourceEpoch === right.sourceEpoch &&
+    left.sourceSessionId === right.sourceSessionId &&
+    left.reviewHeadSha === right.reviewHeadSha &&
+    left.evidenceDigest === right.evidenceDigest &&
+    left.pathCount === right.pathCount;
+}
+
+function samePreClaimContinuation(left, right) {
+  if (!left || !right) return false;
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function requireParkedResumeHead(lease) {

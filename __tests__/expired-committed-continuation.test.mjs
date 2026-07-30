@@ -108,6 +108,48 @@ test("expired committed continuation fails closed before mutation", async t => {
   }
 });
 
+test("pending committed continuation accepts a source-recorded nonadjacent repository-global epoch", () => {
+  const harness = createHarness({ failPhase: "claim", claimEpoch: 12 });
+  assert.throws(() => harness.invoke(), /interrupted after claim/);
+
+  const result = harness.invoke();
+  const state = harness.state();
+
+  assert.equal(result.epoch, 12);
+  assert.equal(
+    result.preClaimIntegrationContinuation.sourceEpoch,
+    sourceLease.epoch,
+  );
+  assert.equal(state.remoteHead, claimFence);
+  assert.equal(parseWriterLeasePullRequestBody(state.remoteBody).epoch, 12);
+});
+
+test("pending committed nonadjacent replay rejects mismatched recorded source markers", async t => {
+  for (const [name, mutate] of [
+    ["epoch", continuation => ({ ...continuation, sourceEpoch: sourceLease.epoch - 1 })],
+    ["session", continuation => ({ ...continuation, sourceSessionId: "session-other" })],
+    ["fence", continuation => ({ ...continuation, sourceFenceSha: "9".repeat(40) })],
+  ]) {
+    await t.test(name, () => {
+      const harness = createHarness({ failPhase: "claim", claimEpoch: 12 });
+      assert.throws(() => harness.invoke(), /interrupted after claim/);
+      harness.mutateLocalLease(lease => ({
+        ...lease,
+        preClaimIntegrationContinuation:
+          mutate(lease.preClaimIntegrationContinuation),
+      }));
+
+      assert.throws(
+        () => harness.invoke(),
+        /no longer matches its source lease/,
+      );
+      const state = harness.state();
+      assert.equal(state.remoteHead, sourceFence);
+      assert.equal(state.commits, 0);
+    });
+  }
+});
+
 function createHarness({
   failPhase = null,
   sessionId = "session-a",
@@ -115,6 +157,7 @@ function createHarness({
   rejectAncestry = false,
   localLease: initialLocalLease = sourceLease,
   pullRequestHeadSha = null,
+  claimEpoch = sourceLease.epoch + 1,
 } = {}) {
   let failed = false;
   let isDraft = false;
@@ -157,7 +200,7 @@ function createHarness({
       [`merge-base --is-ancestor ${sourceFence} ${claimFence}`]: () => "",
       [`log -1 --pretty=%s ${committedHead}`]: () => "feat: preserve committed work",
       "log -1 --pretty=%s": () =>
-        `chore(coordination): claim committed-continuation lease ${sourceLease.epoch + 1}`,
+        `chore(coordination): claim committed-continuation lease ${claimEpoch}`,
       "rev-list --parents -n 1 HEAD": () => `${claimFence} ${committedHead}`,
       "diff-tree --no-commit-id --name-only -r HEAD": () => "",
     };
@@ -195,7 +238,7 @@ function createHarness({
         localLease = {
           ...sourceLease,
           status: "active",
-          epoch: sourceLease.epoch + 1,
+          epoch: claimEpoch,
           sessionId,
           baseSha: input.baseSha,
           fenceSha: null,
@@ -241,6 +284,7 @@ function createHarness({
   };
   return {
     invoke: () => resume(context),
+    mutateLocalLease: mutate => { localLease = mutate(localLease); },
     state: () => ({
       calls,
       claims,

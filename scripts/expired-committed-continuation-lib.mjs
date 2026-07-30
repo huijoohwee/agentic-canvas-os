@@ -185,7 +185,7 @@ function resolvePendingContinuation({
     localLease.device !== identity.device ||
     localLease.scope !== identity.scope ||
     localLease.branch !== branch ||
-    localLease.epoch !== stored.sourceEpoch + 1 ||
+    localLease.epoch <= stored.sourceEpoch ||
     localLease.baseSha !== stored.headSha ||
     !localLease.worktreePath ||
     path.resolve(localLease.worktreePath) !== path.resolve(repo)

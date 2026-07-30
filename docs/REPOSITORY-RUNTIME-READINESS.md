@@ -15,8 +15,8 @@ invocation:
   action: "/runtime-ready.check"
   semantics: ["#runtime-ready", "#harness", "#vcc", "#foss", "#ttv"]
   bindings: ["@repository-root", "@local-harness", "@runtime-proof"]
-guideline_candidate_revision: "4db68a72bfc3b6d4e5538550183a904a31491cb0"
-guideline_protected_status: "blocked"
+guideline_candidate_revision: "5b79529a5c791cdfceed70548543f82358fa100c"
+guideline_protected_status: "verified"
 reference_source:
   locator: "https://github.com/ava-labs/builders-hub/tree/master"
   revision: "c7714b94b0d7ed2c259d9cbbb272792aa862c12f"
@@ -161,15 +161,15 @@ Context7 was attempted first and quota-blocked. Primary official documentation i
 
 ## Cross-Repository Dependency Order
 
-The universal guideline candidate is
-`4db68a72bfc3b6d4e5538550183a904a31491cb0`. It is review provenance, not protected source authority.
+The universal guideline is protected at
+`5b79529a5c791cdfceed70548543f82358fa100c` through guideline pull request
+`#68`. That protected squash revision, rather than its pre-merge task commit,
+is the source authority for this adapter.
 
-1. Integrate the universal guideline through its protected repository.
-2. Fetch its protected revision.
-3. Replace `guideline_candidate_revision` with that revision and set `guideline_protected_status` only after verification.
-4. Rerun focused evaluator tests, target audit, docs contract, and no-copy review.
-5. Integrate Agentic Canvas OS.
-6. Advance Knowgrph's exact docs pin in a separately owned downstream scope before MCP or browser parity claims.
+1. Keep the protected guideline revision and successful guideline checks bound here.
+2. Rerun focused evaluator tests, target audit, docs contract, and no-copy review.
+3. Integrate Agentic Canvas OS through its protected repository.
+4. Advance Knowgrph's exact docs pin in a separately owned downstream scope before MCP or browser parity claims.
 
 No candidate or task head authorizes Prod mirror or Cloudflare action.
 

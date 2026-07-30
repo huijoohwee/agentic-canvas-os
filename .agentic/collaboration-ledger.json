@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 13,
-  "headDigest": "3da2eb7b89418963f5c96f8415d3c6eb3bffea6ed5201556fdd104b4638a5ded",
+  "sequence": 14,
+  "headDigest": "6686440ee9d5fa8c5c7ef595cc42257d7bdb10ac5896a39319028676042a7445",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -526,6 +526,46 @@
       },
       "claimDigest": "774cd235fe5df78dd84ec1c9e4f870370cada91459e5ba1c37e78deea5c69b8a",
       "digest": "3da2eb7b89418963f5c96f8415d3c6eb3bffea6ed5201556fdd104b4638a5ded"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 14,
+      "parentDigest": "3da2eb7b89418963f5c96f8415d3c6eb3bffea6ed5201556fdd104b4638a5ded",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b4d4cbcc021df235731951ae04bf175097496911248b08e0cff1114acc112ed9",
+      "idempotencyKey": "758dc4189bd904e12043ab0d49c30d5f6897f0fa56c726de78bdd20d98229831",
+      "requestDigest": "92a4ee06a652e52a3c12ee0405cf58ee0421dde460909fea6a3c6cf6e4dd14ee",
+      "evaluationTime": "2026-07-30T06:04:55.000Z",
+      "claimCore": {
+        "claimId": "b4d4cbcc021df235731951ae04bf175097496911248b08e0cff1114acc112ed9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:462f3c4e2484aa4a14fda7bfb4417c56b0adeaafc3e0e5fea618dba61eeca223",
+        "sessionId": "session:bab9dca49cde3b53f3623ee9d281a8e549fc433f9b6146c22fe78946b2b5c7d5",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:13170dccbd4af45a5e27c626e8ee483a4533fe87e549205d10d88fce2e50abdd",
+        "canonicalBaseRevision": "44b8e46d8c704b2ff37a1fcefb364a864d2aacf7",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:package.json",
+          "path:schema/AgenticRAG/agenticrag-guidelines-and-surfaces-map.graph.jsonld",
+          "path:scripts/check-agenticrag-guidelines-map.mjs"
+        ],
+        "writeSetDigest": "2fe6e77d250187506a800798e50e3318482c7e8ec38425fadfc9bbb13a05699d",
+        "laneRevision": "44b8e46d8c704b2ff37a1fcefb364a864d2aacf7",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T06:04:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "32437f027b50d2d1b901f69d2dc3c607ef2f5ba73d7f3efbc5095b5f6ee97d7c",
+      "digest": "6686440ee9d5fa8c5c7ef595cc42257d7bdb10ac5896a39319028676042a7445"
     }
   ]
 }

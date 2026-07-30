@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 76,
-  "headDigest": "1a8e7d916621a7fa9bb8bd7186a945cfea706e401ee6da59b3f144af44804999",
+  "sequence": 77,
+  "headDigest": "a7836a97116d994301f7e0dd187ed904f3a9e5272f51d1d9e144e53d5f6ff138",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -3651,6 +3651,46 @@
       },
       "claimDigest": "75143e1a0613b03d281f3ae9e39369e2a25277879d003d1e6eec327de33b60c2",
       "digest": "1a8e7d916621a7fa9bb8bd7186a945cfea706e401ee6da59b3f144af44804999"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 77,
+      "parentDigest": "1a8e7d916621a7fa9bb8bd7186a945cfea706e401ee6da59b3f144af44804999",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "fb6e7e3ac2e5dae0d6458f9462e8349c4737b4f582b51e01da03fe0c8cc67390",
+      "idempotencyKey": "49dd4baaddf04001e4cc412aed39fecb676396b91e49cd1e78212e03bf7ec848",
+      "requestDigest": "b5dc82e2122023177e30de635022d9726e968add5346b032ff3a5c727c93656a",
+      "evaluationTime": "2026-07-30T18:04:56.000Z",
+      "claimCore": {
+        "claimId": "fb6e7e3ac2e5dae0d6458f9462e8349c4737b4f582b51e01da03fe0c8cc67390",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:5953ae2b32b4cddcdf6040dff6441176a04bfd6c45c1e93151181b4af9aabfc8",
+        "sessionId": "session:42c02e01224b7ae909bba1096a7b22bd3765e26b0bc42ad4b737f63ff1021ade",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:b48d06920b53add23e86e27cf36ed7c25dabaa0057a5f9d41dfe31aeb265d9e1",
+        "canonicalBaseRevision": "5b79529a5c791cdfceed70548543f82358fa100c",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/agentic-sdlc-scoped-lane-admission.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:concurrent-lane-admission-guideline"
+        ],
+        "writeSetDigest": "a15e118db1d18a6c2b930747f5c37405428fe3cb87a85cc1ec3621d466c3787c",
+        "laneRevision": "14e8fb3423ded9fbd0b534da073144f7a94776b2",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T18:04:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "600f133c23cd7ce066d47b67150c41c9ff9490981ec9a8257b64613e6a682529",
+      "digest": "a7836a97116d994301f7e0dd187ed904f3a9e5272f51d1d9e144e53d5f6ff138"
     }
   ]
 }

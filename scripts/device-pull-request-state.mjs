@@ -1,7 +1,8 @@
 export function readOwnershipPullRequest({ url, branch, ghText, requireOpen = true }) {
   if (!url || !branch) throw new Error("Ownership pull request state requires an exact URL and branch.");
   const pullRequest = JSON.parse(ghText([
-    "pr", "view", url, "--json", "url,state,isDraft,headRefName,headRefOid,baseRefName,body",
+    "pr", "view", url, "--json",
+    "url,state,isDraft,headRefName,headRefOid,headRepository,baseRefName,body",
   ]));
   if (pullRequest?.url !== url || pullRequest.headRefName !== branch || pullRequest.baseRefName !== "main") {
     throw new Error(`Ownership pull request ${url} does not match ${branch} -> main.`);

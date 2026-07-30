@@ -19,6 +19,7 @@ const json = args.includes("--json");
 const provisionRequested = args.includes("--provision");
 const autoDelivery = args.includes("--auto-delivery");
 const recoverOwnedDirt = args.includes("--recover-owned-dirt");
+const repairPullRequestProjection = args.includes("--repair-pr-projection");
 const rawScope = args.find((value) => !value.startsWith("--"));
 const sessionId = readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "";
 if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
@@ -37,6 +38,9 @@ try {
   }
   if (recoverOwnedDirt && command !== "resume") {
     throw new Error("--recover-owned-dirt is accepted only by device:resume.");
+  }
+  if (repairPullRequestProjection && command !== "heartbeat") {
+    throw new Error("--repair-pr-projection is accepted only by device:heartbeat.");
   }
   const ttlSeconds = Number(readOption(args, "ttl-seconds") || DEFAULT_WRITER_LEASE_TTL_MS / 1000);
   if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) throw new Error("--ttl-seconds must be a positive number.");
@@ -78,6 +82,7 @@ try {
     leaseTtlMs: ttlSeconds * 1000,
     autoDelivery,
     recoverOwnedDirt,
+    repairPullRequestProjection,
     run,
     log: json ? () => {} : console.log,
     now: () => new Date(),
@@ -212,7 +217,7 @@ function runText(command, args, options = {}) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
   );
   process.exit(2);
 }

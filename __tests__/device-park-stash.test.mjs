@@ -285,7 +285,9 @@ function createFixture() {
           number: Number(item.url.split("/").at(-1)), headRefName: item.branch, url: item.url, body: item.body,
         }))) : args.includes("--jq") ? lane.body : JSON.stringify({
           url: lane.url, state: "OPEN", isDraft: lane.isDraft,
-          headRefName: lane.branch, baseRefName: "main", body: lane.body,
+          headRefName: lane.branch,
+          headRefOid: gitText(lane.worktree, ["rev-parse", "HEAD"]),
+          baseRefName: "main", body: lane.body,
         }),
         ghOptional: () => lane.url,
         leaseStore: leaseStore(lane),

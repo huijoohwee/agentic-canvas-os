@@ -374,6 +374,9 @@ function renderWriterLeaseMarker(lease) {
     ...(lease.ownedDirtRecovery ? {
       ownedDirtRecovery: normalizeOwnedDirtRecovery(lease.ownedDirtRecovery),
     } : {}),
+    ...(lease.pullRequestProjectionRepair ? {
+      pullRequestProjectionRepair: lease.pullRequestProjectionRepair,
+    } : {}),
     ...(lease.parkHeadSha ? {
       parkHeadSha: lease.parkHeadSha,
       parkBranchHeadSha: lease.parkBranchHeadSha,
@@ -411,6 +414,10 @@ export function parseWriterLeasePullRequestBody(body) {
   ) return null;
   if (value.autoDelivery !== undefined && typeof value.autoDelivery !== "boolean") return null;
   if (value.runtimeRequired !== undefined && typeof value.runtimeRequired !== "boolean") return null;
+  if (value.pullRequestProjectionRepair !== undefined && (
+    value.pullRequestProjectionRepair?.schema !== "agentic-pull-request-projection-repair/v1" ||
+    !["repairing", "completed"].includes(value.pullRequestProjectionRepair?.status)
+  )) return null;
   let ownedDirtRecovery;
   try {
     ownedDirtRecovery = normalizeOwnedDirtRecovery(value.ownedDirtRecovery);

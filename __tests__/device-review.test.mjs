@@ -277,6 +277,7 @@ function pullRequestJson({ body, isDraft }) {
     state: "OPEN",
     isDraft,
     headRefName: branch,
+    headRefOid: headSha,
     baseRefName: "main",
     body,
   });

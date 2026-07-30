@@ -29,19 +29,58 @@ test('required CI is merge-queue safe and every workflow pins actions immutably'
   }
 });
 
-test('CI installs test dependencies once on Node 22 slim runners without dependency caches', async () => {
+test('CI uses Node 22 slim runners without dependency caches', async () => {
   const source = await readWorkflow('ci.yml');
-  assert.match(source, /pull_request:\n\s+paths:\n\s+- "\*\*"/);
+  assert.match(
+    source,
+    /on:\n\s+pull_request:\n\s+types: \[opened, synchronize, reopened, ready_for_review\]\n\s+merge_group:/,
+  );
+  assert.doesNotMatch(source, /pull_request:\n\s+paths:/);
   for (const name of ['test', 'build', 'docs-contract', 'collaboration-integration']) {
     assert.match(source, new RegExp(`^\\s+name: ${name}$`, 'm'));
   }
   const testJob = source.slice(source.indexOf('\n  test:'), source.indexOf('\n  build:'));
   assert.match(testJob, /^\s+- run: npm ci --ignore-scripts --no-audit --no-fund$/m);
-  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 1);
+  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 2);
   assert.equal((source.match(/^\s+cache: npm$/gm) || []).length, 0);
-  assert.equal((source.match(/^\s+runs-on: ubuntu-slim$/gm) || []).length, 4);
-  assert.equal((source.match(/^\s+node-version: 22$/gm) || []).length, 4);
+  assert.equal((source.match(/^\s+runs-on: ubuntu-slim$/gm) || []).length, 6);
+  assert.equal((source.match(/^\s+node-version: 22$/gm) || []).length, 5);
   assert.doesNotMatch(source, /timeout-minutes: (?:1[1-9]|[2-9]\d)/);
+});
+
+test('CI reports policy-runtime readiness through an always-run terminal check', async () => {
+  const source = await readWorkflow('ci.yml');
+  const evaluateJob = source.slice(
+    source.indexOf('\n  evaluate:'),
+    source.indexOf('\n  conformance:'),
+  );
+  const conformanceJob = source.slice(source.indexOf('\n  conformance:'));
+
+  assert.match(evaluateJob, /^\s+name: policy-runtime-readiness$/m);
+  assert.match(
+    evaluateJob,
+    /npm run lifecycle:conformance:check/,
+  );
+  assert.match(evaluateJob, /npm run agentic-sdlc:source:check/);
+  assert.match(
+    evaluateJob,
+    /repository: huijoohwee\/huijoohwee\.github\.io\n\s+ref: \$\{\{ steps\.guideline-source\.outputs\.revision \}\}[\s\S]*?fetch-depth: 0/,
+  );
+  assert.match(
+    evaluateJob,
+    /LIFECYCLE_POLICY_SOURCE.*scripts\/lifecycle-conformance-policy\.mjs/,
+  );
+  assert.match(
+    evaluateJob,
+    /GITHUB_ROOT: \$\{\{ github\.workspace \}\}\/\.agentic-sdlc-source/,
+  );
+  assert.doesNotMatch(evaluateJob, /agentic-sdlc:verify|consumer run conformance/i);
+
+  assert.match(conformanceJob, /^\s+name: agentic-sdlc-conformance$/m);
+  assert.match(conformanceJob, /^\s+needs: evaluate$/m);
+  assert.match(conformanceJob, /^\s+if: \$\{\{ always\(\) \}\}$/m);
+  assert.match(conformanceJob, /EVALUATE_RESULT: \$\{\{ needs\.evaluate\.result \}\}/);
+  assert.match(conformanceJob, /if \[ "\$EVALUATE_RESULT" != "success" \]/);
 });
 
 test('source and dependency security use separate minimal trigger scopes', async () => {

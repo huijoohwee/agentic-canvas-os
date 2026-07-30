@@ -11,7 +11,11 @@ import {
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import { sanitizeDevice } from "./device-branch-identity.mjs";
-import { readOwnershipPullRequest, requireOwnershipPullRequestDraft } from "./device-pull-request-state.mjs";
+import {
+  readOwnershipPullRequest,
+  requireOwnershipPullRequestDraft,
+  waitForOwnershipPullRequestHead,
+} from "./device-pull-request-state.mjs";
 import {
   park,
   requireParkedStashObject,
@@ -510,6 +514,7 @@ export function review({
   leaseStore,
   sessionId,
   run,
+  wait,
   log = console.log,
 }) {
   requireSession(sessionId);
@@ -534,9 +539,14 @@ export function review({
   run("npm", ["run", "check"]);
   run("git", ["push", "--set-upstream", "origin", branch]);
   const url = requireLeasePullRequest({ lease, ghOptional });
-  const pullRequest = readOwnershipPullRequest({ url, branch, ghText });
   const reviewHeadSha = gitText(["rev-parse", "HEAD"]).trim();
-  requirePullRequestHead({ pullRequest, expectedHeadSha: reviewHeadSha });
+  const pullRequest = waitForOwnershipPullRequestHead({
+    url,
+    branch,
+    expectedHeadSha: reviewHeadSha,
+    ghText,
+    ...(wait ? { wait } : {}),
+  });
   if (pullRequest.isDraft) run("gh", ["pr", "ready", url]);
   const readyPullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   requirePullRequestHead({ pullRequest: readyPullRequest, expectedHeadSha: reviewHeadSha });

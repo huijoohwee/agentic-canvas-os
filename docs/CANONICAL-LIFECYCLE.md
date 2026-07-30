@@ -4,7 +4,7 @@ graphId: "md:provider-neutral-collaborative-runtime-lifecycle"
 doc_type: "Lifecycle Contract"
 date: "2026-07-29"
 lang: "en-US"
-schema: "canonical-runtime-lifecycle/v5"
+schema: "canonical-runtime-lifecycle/v6"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "provider-neutral multi-user, multi-device, parallel authoring, integration, review, authorization, deployment, verification, and rollback semantics"
@@ -80,8 +80,11 @@ Actor ID
 | `Candidate Manifest` | Runtime Review Receipt digest, source and transitive dependencies, policy and target digests, artifact digest, immutable-manifest digest, rollback target, and candidate digest | One immutable candidate exists |
 | `Authorization Interaction Receipt` | Candidate and target digests, authenticated human actor, interaction-adapter identity, transport class, declared browser dependency, challenge and response digests, observation time, and receipt digest | A human interaction is observed; no deployment authority |
 | `Human Authorization Receipt` | Authorization Interaction Receipt, candidate, and target digests; authenticated human decision reference; authority-adapter identity; issue time; expiry; consumption state; and receipt digest | One forward deployment attempt may begin |
-| `Live Verification Receipt` | Authorization Receipt digest, deployed artifact and target identities, observed runtime identity, health and critical-path probes, rollback target, and receipt digest | The candidate is live and verified |
+| `Deployment Receipt` | Consumed Authorization Receipt digest, controller fence, deployed artifact, immutable deployment identity, target, and receipt digest | Live verification may begin |
+| `State Reconciliation Receipt` | Deployment Receipt digest, state-contract digest, bounded operations, direct readback, counts, content parity, and receipt digest | State compatibility is proven for this deployment |
+| `Live Verification Receipt` | Deployment and State Reconciliation Receipt digests, deployed artifact and target identities, immutable-origin probes, public-route probes, observed runtime identity, client-cache convergence, rollback target, and receipt digest | The candidate is live and verified |
 | `Publication Receipt` | Live Verification Receipt digest and exact downstream mirror or publication identities | Downstream publication closes |
+| `Rollback Receipt` | Failed stage, last-known-good identity, restored deployment and state disposition, probes, terminal result, and receipt digest | Recovery closes without creating forward authority |
 
 Every receipt is typed, immutable, content-addressed, and joined to its
 predecessor by digest. Missing or unknown identity fields fail closed.
@@ -116,6 +119,7 @@ requires a fresh runtime review before another human decision.
 | **Awaiting authorization** | A replaceable interaction adapter presents the exact candidate and target challenge without mutating the target | Merge, push, schedule, agent action, prior approval, review, or transport activity cannot substitute for a human decision |
 | **Authorized** | An authenticated human authorizes the exact candidate digest for the exact target and the authority adapter joins that decision to the interaction receipt | Authorization is absent by default, actor-bound, target-specific, expiring, non-transferable, and single-consumption |
 | **Deployed** | Zero drift is revalidated and the already-built bytes deploy under one target-scoped fence | Rebuild, dependency resolution, retargeting, or source selection after authorization is forbidden |
+| **State reconciled** | Bounded compatible state operations complete with direct authoritative readback | Ambiguous, destructive, unreadable, or parity-mismatched state blocks live verification |
 | **Verified** | Live identity and critical probes match the authorization and Candidate Manifest | Failed or ambiguous proof triggers recovery and leaves publication closed |
 | **Published** | Only the exact Live Verification Receipt is projected to downstream mirrors or surfaces | Publication cannot lead live verification |
 | **Rolled back** | The recorded immutable last-known-good deployment is restored and re-probed | Rollback authority never grants forward-deployment authority |
@@ -155,6 +159,42 @@ Source advancement while authorization waits requires a new review, candidate,
 and human decision. Expired, malformed, unjoined, machine-generated, replayed,
 consumed, or target-mismatched authorization fails closed.
 
+## Production Proof Surfaces
+
+Production verification keeps transport claims separate:
+
+| Proof surface | Claim |
+|---|---|
+| Controlled review surface | The exact integrated runtime closure was reviewed |
+| Immutable deployment origin | The sealed artifact was deployed and observed |
+| Public target route | Routing, edge policy, caching, and public behavior work |
+| Authoritative state readback | Stored state matches the state contract |
+| Browser client | User-visible behavior and persisted client state converge |
+| Publication mirror | The verified release identity was projected downstream |
+
+No surface substitutes for another. A successful immutable origin cannot claim
+public routing. A successful public route cannot prove state readback. A mirror
+cannot prove deployment. Profiles declare the required surfaces, and each emits
+operation-derived evidence joined to the same candidate.
+
+Probe the immutable deployment origin before public aliases. Separately verify
+every required public route. When the target serves an identity marker through
+multiple transports, require byte-identical marker bytes for the same release.
+Where prior client bytes can survive promotion, require returning-client cache
+or service-worker convergence to the authorized source identity without
+removing unrelated client storage.
+
+Stateful promotion uses bounded idempotent expand, migrate, and contract
+operations with direct authoritative readback. Record expected and observed
+counts plus content or path-hash parity. Code rollback and state rollback remain
+separate dispositions because restoring code does not reverse state.
+
+Terminal cleanup removes only clean, integrated, completion-proven task lanes.
+Active, parked, dirty, divergent, ambiguous, and unrelated lanes remain
+preserved. A release is not terminal until controller, verification,
+publication or rollback, receipt persistence, and cleanup dispositions are all
+recorded.
+
 ## Runtime-Ready Acceptance
 
 Runtime readiness requires:
@@ -169,8 +209,12 @@ Runtime readiness requires:
 - one joined Authorization Interaction Receipt and authenticated human
   authorization for the deployed candidate and target;
 - one target-scoped deployment controller with durable idempotency evidence;
-- successful live health, critical-path, and observed-identity proof;
+- one Deployment Receipt and, where state is present, one State Reconciliation
+  Receipt with direct authoritative readback;
+- successful immutable-origin, required public-route, browser, client-cache,
+  health, critical-path, and observed-identity proof for the declared profile;
 - a retained immutable rollback target and successful rollback probe when used;
+- publication after live verification and ownership-safe cleanup disposition;
 - no unexplained spend, secret exposure, cross-scope mutation, mirror lead, or
   authorization drift.
 
@@ -208,6 +252,10 @@ follows. These names are implementation facts, not universal lifecycle terms.
 | Human interaction adapter | Knowgrph `npm run production:authorize` interactive terminal command; it downloads the exact candidate, requires an exact-digest challenge response in a TTY, calls the authority API directly, and neither launches nor requires a browser |
 | Human authority adapter | Protected GitHub `production` environment with an authenticated required reviewer |
 | Deployment adapter | Knowgrph repository-owned Cloudflare release controller |
+| Deployment Receipt | Exact Cloudflare Pages deployment identifier, immutable candidate origin, consumed authorization, controller identity, and deployed artifact digest |
+| State reconciler | Repository-owned direct D1 reconciliation with document, chunk, and graph readback plus content and path-hash parity |
+| State Reconciliation Receipt | Exact D1 counts, direct readback, parity results, and state-contract identity |
+| Live verification adapters | Immutable Pages origin smoke, public route smoke, browser fidelity, and returning-user service-worker revision convergence |
 | Publication adapter | Generated `huijoohwee` mirror, published only after live verification |
 | Production targets | `https://airvio.co` and `https://airvio.co/knowgrph` |
 
@@ -249,8 +297,10 @@ adapter; the browser is not part of the production path. After the adapter
 records the exact challenge response and the protected environment records the
 same authenticated human decision, the controller
 revalidates every bound identity without rebuilding, deploys under one
-environment concurrency lock, proves both production routes, then publishes the
-exact verified mirror.
+environment concurrency lock, captures the immutable Pages origin, reconciles
+D1 with direct readback, proves the immutable origin and both production routes,
+verifies browser fidelity and returning-user service-worker convergence, then
+publishes the exact verified mirror.
 
 The reference adapter may display the authorization gate only after `turn:end`
 returns `runtime-ready` for the exact candidate source and its supervised
@@ -279,6 +329,8 @@ forward-deployment and rollback owner for `airvio.co`. Failed post-deploy probes
 restore the captured successful Cloudflare deployment and leave the mirror at
 its last-known-good revision. Stateful changes use backward-compatible
 expand/migrate/contract stages because code rollback does not reverse data.
+Completed task worktrees are removed only after exact merge, clean-tree, and
+completion proof; unrelated runtime-document lanes remain preserved.
 
 ## VCC
 

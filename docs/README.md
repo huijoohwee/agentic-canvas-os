@@ -58,7 +58,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `TODO.md` | Bounded planning index | Cross-repository `todo-log/v1` monthly shards, append-only lifecycle, exact-first retrieval, size caps, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
-| `CANONICAL-LIFECYCLE.md` | Automatic runtime lifecycle | Canonical multi-device synchronization, protected integration, immutable promotion, automatic rollback, and runtime-ready SHA convergence. |
+| `CANONICAL-LIFECYCLE.md` | Provider-neutral release lifecycle | Fenced collaboration, exact Release Frontier, joined integration through rollback receipts, immutable-origin and public transport proof, state reconciliation, publication, and ownership-safe cleanup. |
 | `CLOUD-COLLABORATION.md` | Cloud-authoritative collaboration runtime | Protected append-only Git ledger, non-forced compare-and-swap claims, browser dispatch, offline admission boundary, exact-head checks, compact receipts, and zero-infrastructure economics. |
 | `INTEGRATION-ORDER.md` | Dependency-ordered integration contract | Provider-neutral integration units, DAG waves, exact-canonical frontier advancement, no-op and supersession evidence, runtime convergence, and release-frontier sealing. |
 | `UPSTREAM-DEPENDENCY-ADMISSION.md` | Upstream dependency admission runtime | Early source admission, bounded deferral, exact consumer-closure isolation, protected-source-only projection, and disjoint-work continuation. |
@@ -97,7 +97,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `MCP-GATEWAY.md` | MCP federation contract | Discovery-first gateway rules across local, Pages, browser, and control-plane surfaces. |
 | `VALIDATION-RUNBOOK.md` | Focused proof lane | Commands and checks for documentation, local runtime, and deploy guards. |
 | `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one canonical `main` runtime owner, registered task worktrees, branch-bound session leases, scope-aware draft PRs, fencing SHAs, and exact-SHA proof. |
-| `RELEASE-WORKFLOW.md` | Runtime-ready release contract | Conflict-safe Dev integration, Prod promotion, Cloudflare deployment, production verification, and evidence reporting. |
+| `RELEASE-WORKFLOW.md` | Runtime-ready reference release profile | Conflict-safe Dev integration, exact-candidate authorization, immutable Pages deployment, direct D1 reconciliation, transport-separated verification, mirror publication, rollback, cleanup, and terminal evidence. |
 
 ## Runtime Position
 

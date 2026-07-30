@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 89,
-  "headDigest": "7c9ea9b03e47b8eca0baf04444662284d578b171da05d7b0a282a40c9bb8e730",
+  "sequence": 90,
+  "headDigest": "f2a2758330217f416f7e674fc26a616c14863528ae5a2c9e56872de7080c7e0f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -4214,6 +4214,52 @@
       },
       "claimDigest": "2d22b953fb5c8d8ff80d48c7e02c0e23049f99ffbfb33b659c577d9fb50fca08",
       "digest": "7c9ea9b03e47b8eca0baf04444662284d578b171da05d7b0a282a40c9bb8e730"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 90,
+      "parentDigest": "7c9ea9b03e47b8eca0baf04444662284d578b171da05d7b0a282a40c9bb8e730",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1c63264549126733de7a0af4a267e2ed8bbc550bc5ac39aeeab553f32379fb4a",
+      "idempotencyKey": "1cdc2e4fe559864a953e26053cbeeb2f4d1a58ef6d8767ddfc1f158810fe170b",
+      "requestDigest": "7a71e247be5e914111e9562c86ed9859d291e601d088985e83e993b044acecd3",
+      "evaluationTime": "2026-07-30T18:46:36.000Z",
+      "claimCore": {
+        "claimId": "1c63264549126733de7a0af4a267e2ed8bbc550bc5ac39aeeab553f32379fb4a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b9c7d0e8e5c79d384146bb3bd0eab006f71d676caefd946936730e82cff11fdf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:40e492b1f8993dc262bff22bff7bfa1c464a32db024a6c15a9c942c17150e51c",
+        "canonicalBaseRevision": "2b3a0296cc1fc58d4c59090535c594ea39b58f63",
+        "declaredWriteScope": [
+          "path:__tests__/url-ingest-contract.test.mjs",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/FACTS.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/SKILLS.md",
+          "path:package.json",
+          "path:scripts/docs-contract.mjs",
+          "path:scripts/url-ingest-contract.mjs"
+        ],
+        "writeSetDigest": "bf629accc932733d65ff182675c9da10e0cf8361322bdb616b11668d527a9930",
+        "laneRevision": "616febd8832c94930e81402df559709a7fea3885",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "review-ready",
+        "expiresAt": "2026-07-30T19:45:58.000Z",
+        "evidenceDigest": "6982af016722f138c4eb8e153fae8d30a8e61b5942d61fae50592c728ca0d6e6",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM74nLtL",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1b1dbd64608ae15f1647b68ba0d2c79df45628149def44d99b18efe242b45b1b",
+      "digest": "f2a2758330217f416f7e674fc26a616c14863528ae5a2c9e56872de7080c7e0f"
     }
   ]
 }

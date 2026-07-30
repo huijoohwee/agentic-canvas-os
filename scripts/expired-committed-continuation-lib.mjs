@@ -18,6 +18,108 @@ const SOURCE_MARKER_FIELDS = [
   "heartbeatAt",
   "expiresAt",
 ];
+const DELIVERY_MARKER_FIELDS = [
+  ...SOURCE_MARKER_FIELDS,
+  "deliveryHeadSha",
+  "autoDelivery",
+  "runtimeRequired",
+];
+
+export function resolveSameSessionDeliveryContinuation({
+  branch,
+  currentBranch,
+  identity,
+  localLease,
+  remoteLease,
+  remoteSha,
+  deliveryHandoffHead,
+  pullRequestHeadSha,
+  ownerUrl,
+  repo,
+  sessionId,
+  gitText,
+  now,
+}) {
+  if (
+    remoteLease.status !== "delivery" ||
+    remoteLease.sessionId !== sessionId
+  ) return null;
+  if (currentBranch !== branch) {
+    throw new Error("Same-session delivery resume requires its exact attached branch.");
+  }
+
+  const stored = normalizePreClaimIntegrationContinuation(
+    localLease?.preClaimIntegrationContinuation,
+  );
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (stored) {
+    if (stored.sourceStatus !== "delivery") {
+      throw new Error("Same-session delivery resume found a continuation for another source status.");
+    }
+    return resolvePendingContinuation({
+      branch,
+      identity,
+      localLease,
+      remoteLease,
+      remoteSha,
+      pullRequestHeadSha,
+      ownerUrl,
+      repo,
+      sessionId,
+      headSha,
+      stored,
+      gitText,
+    });
+  }
+
+  requireDeliverySourceLease({
+    branch,
+    identity,
+    localLease,
+    remoteLease,
+    remoteSha,
+    deliveryHandoffHead,
+    pullRequestHeadSha,
+    ownerUrl,
+    repo,
+    sessionId,
+    headSha,
+  });
+  const integration = resolveDeliveryIntegrationEvidence({
+    integration: localLease.integration,
+    sourceFenceSha: remoteLease.fenceSha,
+    handoffHeadSha: deliveryHandoffHead,
+    gitText,
+    now,
+  });
+  const handoffTreeSha = gitText([
+    "rev-parse",
+    `${deliveryHandoffHead}^{tree}`,
+  ]).trim();
+  requireSha(handoffTreeSha, "Delivery continuation handoff tree");
+  return {
+    headSha: deliveryHandoffHead,
+    integration,
+    preClaimIntegrationContinuation: {
+      schema: PRE_CLAIM_INTEGRATION_CONTINUATION_SCHEMA,
+      sourceStatus: remoteLease.status,
+      sourceEpoch: remoteLease.epoch,
+      sourceSessionId: sessionId,
+      sourceDevice: remoteLease.device,
+      sourceScope: remoteLease.scope,
+      sourceBranch: branch,
+      sourceBaseSha: remoteLease.baseSha,
+      sourceFenceSha: remoteLease.fenceSha,
+      sourcePullRequestUrl: ownerUrl,
+      sourceDeliveryHeadSha: remoteLease.deliveryHeadSha,
+      headSha: deliveryHandoffHead,
+      treeSha: handoffTreeSha,
+      integrationCommitSha: integration.commitSha,
+      integrationTreeSha: integration.treeSha,
+    },
+    pendingClaim: false,
+  };
+}
 
 export function resolveExpiredCommittedContinuation({
   branch,
@@ -129,7 +231,7 @@ export function normalizePreClaimIntegrationContinuation(value) {
     value?.schema !== PRE_CLAIM_INTEGRATION_CONTINUATION_SCHEMA ||
     !Number.isInteger(value.sourceEpoch) ||
     value.sourceEpoch < 1 ||
-    value.sourceStatus !== "active" ||
+    !["active", "delivery"].includes(value.sourceStatus) ||
     !String(value.sourceSessionId || "") ||
     !String(value.sourceDevice || "") ||
     !String(value.sourceScope || "") ||
@@ -137,6 +239,14 @@ export function normalizePreClaimIntegrationContinuation(value) {
     !String(value.sourcePullRequestUrl || "")
   ) {
     throw new Error("Pre-claim integration continuation has invalid identity evidence.");
+  }
+  if (value.sourceStatus === "delivery") {
+    requireSha(
+      value.sourceDeliveryHeadSha,
+      "Pre-claim integration continuation sourceDeliveryHeadSha",
+    );
+  } else if (value.sourceDeliveryHeadSha !== undefined) {
+    throw new Error("Active continuation cannot carry delivery-head evidence.");
   }
   for (const field of [
     "sourceBaseSha",
@@ -157,6 +267,9 @@ export function normalizePreClaimIntegrationContinuation(value) {
     sourceBaseSha: value.sourceBaseSha,
     sourceFenceSha: value.sourceFenceSha,
     sourcePullRequestUrl: value.sourcePullRequestUrl,
+    ...(value.sourceStatus === "delivery"
+      ? { sourceDeliveryHeadSha: value.sourceDeliveryHeadSha }
+      : {}),
     headSha: value.headSha,
     treeSha: value.treeSha,
     integrationCommitSha: value.integrationCommitSha,
@@ -192,7 +305,10 @@ function resolvePendingContinuation({
   ) {
     throw new Error("Pending committed continuation no longer matches its successor lease.");
   }
-  const recoverableRemote = remoteSha === stored.sourceFenceSha ||
+  const sourceRemoteHead = stored.sourceStatus === "delivery"
+    ? stored.headSha
+    : stored.sourceFenceSha;
+  const recoverableRemote = remoteSha === sourceRemoteHead ||
     (SHA_PATTERN.test(String(localLease.fenceSha || "")) &&
       remoteSha === localLease.fenceSha);
   if (!recoverableRemote || pullRequestHeadSha !== remoteSha) {
@@ -205,7 +321,18 @@ function resolvePendingContinuation({
     throw new Error("Pending committed continuation lost its exact integration evidence.");
   }
   requireRecordedTrees({ stored, gitText });
-  gitText(["merge-base", "--is-ancestor", stored.sourceFenceSha, stored.headSha]);
+  gitText([
+    "merge-base",
+    "--is-ancestor",
+    stored.sourceFenceSha,
+    stored.integrationCommitSha,
+  ]);
+  gitText([
+    "merge-base",
+    "--is-ancestor",
+    stored.integrationCommitSha,
+    stored.headSha,
+  ]);
   if (headSha !== stored.headSha) {
     gitText(["merge-base", "--is-ancestor", stored.headSha, headSha]);
   }
@@ -263,10 +390,111 @@ function requireSourceMarker({ remoteLease, stored, branch, sessionId, ownerUrl 
     remoteLease.branch !== branch ||
     remoteLease.baseSha !== stored.sourceBaseSha ||
     remoteLease.fenceSha !== stored.sourceFenceSha ||
+    (stored.sourceStatus === "delivery" &&
+      remoteLease.deliveryHeadSha !== stored.sourceDeliveryHeadSha) ||
     ownerUrl !== stored.sourcePullRequestUrl
   ) {
     throw new Error("Pending committed continuation no longer matches its source lease.");
   }
+}
+
+function requireDeliverySourceLease({
+  branch,
+  identity,
+  localLease,
+  remoteLease,
+  remoteSha,
+  deliveryHandoffHead,
+  pullRequestHeadSha,
+  ownerUrl,
+  repo,
+  sessionId,
+  headSha,
+}) {
+  if (
+    !localLease ||
+    DELIVERY_MARKER_FIELDS.some(field => localLease[field] !== remoteLease[field])
+  ) {
+    throw new Error("Delivery continuation does not match the exact local and remote lease evidence.");
+  }
+  if (
+    localLease.status !== "delivery" ||
+    remoteLease.sessionId !== sessionId ||
+    remoteLease.device !== identity.device ||
+    remoteLease.scope !== identity.scope ||
+    remoteLease.branch !== branch ||
+    localLease.pullRequestUrl !== ownerUrl ||
+    !localLease.worktreePath ||
+    path.resolve(localLease.worktreePath) !== path.resolve(repo)
+  ) {
+    throw new Error("Delivery continuation belongs to another session, worktree, branch, or pull request.");
+  }
+  if (
+    !SHA_PATTERN.test(String(remoteLease.fenceSha || "")) ||
+    !SHA_PATTERN.test(String(remoteLease.deliveryHeadSha || "")) ||
+    remoteSha !== deliveryHandoffHead ||
+    pullRequestHeadSha !== remoteSha ||
+    headSha !== deliveryHandoffHead
+  ) {
+    throw new Error("Delivery continuation lost its exact local, remote, or pull-request handoff.");
+  }
+}
+
+function resolveDeliveryIntegrationEvidence({
+  integration,
+  sourceFenceSha,
+  handoffHeadSha,
+  gitText,
+  now,
+}) {
+  if (
+    integration?.schema !== "agentic-integration-commit/v1" ||
+    !SHA_PATTERN.test(String(integration.commitSha || "")) ||
+    !SHA_PATTERN.test(String(integration.treeSha || "")) ||
+    !String(integration.commitMessage || "").trim() ||
+    !Array.isArray(integration.paths) ||
+    integration.paths.length === 0
+  ) {
+    throw new Error("Same-session delivery resume requires exact prior integration evidence.");
+  }
+  const integrationTree = gitText([
+    "rev-parse",
+    `${integration.commitSha}^{tree}`,
+  ]).trim();
+  if (integrationTree !== integration.treeSha) {
+    throw new Error("Delivery continuation integration tree does not match its recorded commit.");
+  }
+  gitText(["merge-base", "--is-ancestor", sourceFenceSha, integration.commitSha]);
+  gitText(["merge-base", "--is-ancestor", integration.commitSha, handoffHeadSha]);
+  const committedPaths = [...new Set(splitNul(gitText([
+    "diff",
+    "--name-only",
+    "-z",
+    sourceFenceSha,
+    integration.commitSha,
+    "--",
+  ])))].sort();
+  const recordedPaths = [...new Set(integration.paths)].sort();
+  if (
+    committedPaths.length === 0 ||
+    JSON.stringify(committedPaths) !== JSON.stringify(recordedPaths)
+  ) {
+    throw new Error("Delivery continuation paths differ from prior integration evidence.");
+  }
+  const rangeDiffDigest = sha256(gitText([
+    "diff",
+    "--binary",
+    sourceFenceSha,
+    integration.commitSha,
+    "--",
+  ]));
+  return {
+    ...integration,
+    paths: committedPaths,
+    rangeDiffDigest,
+    validationRequired: true,
+    continuationRecordedAt: now().toISOString(),
+  };
 }
 
 function resolveIntegrationEvidence({

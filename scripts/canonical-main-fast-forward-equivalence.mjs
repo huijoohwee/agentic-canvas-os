@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import {
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -16,6 +17,10 @@ import { execFileSync, spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { textCommandOptions } from "./command-text-options.mjs";
+import {
+  parsePorcelainV1,
+  proveIgnoredStateRetention,
+} from "./canonical-main-recovery-evidence.mjs";
 
 const RESULT_SCHEMA = "agentic-canonical-main-fast-forward-equivalence-result/v1";
 const JOURNAL_SCHEMA = "agentic-canonical-main-fast-forward-equivalence/v1";
@@ -80,6 +85,7 @@ try {
 function reconcile({ repoRoot, sessionId, expectedLocalHead, expectedOriginHead, recoveryId, journalPath }) {
   const existing = readJournal(journalPath);
   if (existing) requireJournalIdentity(existing, { repoRoot, sessionId, expectedLocalHead, expectedOriginHead, recoveryId });
+  assertProtectedHeadStable(expectedOriginHead);
   const branch = gitOptional(["symbolic-ref", "--quiet", "--short", "HEAD"]).trim();
   const head = requireSha(gitText(["rev-parse", "HEAD"]).trim(), "Observed HEAD");
   const mainRef = requireSha(gitText(["rev-parse", "refs/heads/main"]).trim(), "Observed main ref");
@@ -92,19 +98,30 @@ function reconcile({ repoRoot, sessionId, expectedLocalHead, expectedOriginHead,
   if (head === expectedOriginHead && isClean() && !existing) {
     throw new Error("Canonical main is already protected but has no equivalence receipt.");
   }
-
-  assertNoConflictsOrUntracked();
-  if (!gitSucceeds(["diff", "--quiet", expectedOriginHead, "--"])) {
-    throw new Error("Canonical working bytes do not exactly match protected origin/main.");
+  if (head === expectedOriginHead && isClean()) {
+    requirePreparedJournal(existing, { expectedLocalHead, expectedOriginHead });
+    requireIgnoredRetention(existing, { expectedLocalHead, expectedOriginHead });
+    const completed = completeJournal(existing, journalPath);
+    return buildResult(completed, journalPath, true);
   }
-  const manifest = createManifest(expectedLocalHead, expectedOriginHead);
-  if (manifest.length === 0) throw new Error("No canonical working changes require protected equivalence reconciliation.");
-  const manifestDigest = digest(manifest);
+
   let journal = existing;
   if (!journal) {
-    if (head !== expectedLocalHead || !gitSucceeds(["diff", "--cached", "--quiet", expectedLocalHead, "--"])) {
+    if (head !== expectedLocalHead) {
       throw new Error("Initial reconciliation requires an unstaged canonical working tree at the expected local head.");
     }
+    const manifest = captureInitialManifest({
+      repoRoot,
+      expectedLocalHead,
+      expectedOriginHead,
+    });
+    if (manifest.length === 0) throw new Error("No canonical working changes require protected equivalence reconciliation.");
+    const ignoredRetention = proveIgnoredStateRetention({
+      localHead: expectedLocalHead,
+      originHead: expectedOriginHead,
+      gitText,
+      gitOptional,
+    });
     journal = withDigest({
       schema: JOURNAL_SCHEMA,
       state: "prepared",
@@ -113,48 +130,117 @@ function reconcile({ repoRoot, sessionId, expectedLocalHead, expectedOriginHead,
       sessionId,
       expectedLocalHead,
       expectedOriginHead,
+      expectedLocalTree: requireSha(gitText(["rev-parse", `${expectedLocalHead}^{tree}`]).trim(), "Expected local tree"),
+      expectedOriginTree: requireSha(gitText(["rev-parse", `${expectedOriginHead}^{tree}`]).trim(), "Expected origin tree"),
+      equivalenceScope: "unstaged-tracked-dirty-paths",
       manifest,
-      manifestDigest,
+      manifestDigest: digest(manifest),
+      protectedAdvancePathCount: splitNul(gitText([
+        "diff",
+        "--name-only",
+        "-z",
+        expectedLocalHead,
+        expectedOriginHead,
+      ])).length,
+      ignoredRetention,
       recoveryHandle: `protected-commit:${expectedOriginHead}`,
       preparedAt: new Date().toISOString(),
       completedAt: null,
     });
     writeJournal(journalPath, journal);
-  } else if (journal.manifestDigest !== manifestDigest) {
-    throw new Error("Canonical working state drifted from the prepared equivalence receipt.");
   }
+  requirePreparedJournal(journal, { expectedLocalHead, expectedOriginHead });
+  requirePreparedWorkingState(journal, {
+    repoRoot,
+    expectedLocalHead,
+    expectedOriginHead,
+    transition: head === expectedOriginHead,
+  });
 
   if (head === expectedLocalHead) {
+    assertProtectedHeadStable(expectedOriginHead);
     gitRun(["update-ref", "refs/heads/main", expectedOriginHead, expectedLocalHead]);
   }
   if (gitText(["rev-parse", "HEAD"]).trim() !== expectedOriginHead) {
     throw new Error("Canonical main ref did not advance to the protected head.");
   }
-  if (!gitSucceeds(["diff", "--quiet", expectedOriginHead, "--"])) {
-    throw new Error("Canonical working bytes drifted before index reconciliation.");
-  }
+  requirePreparedWorkingState(journal, {
+    repoRoot,
+    expectedLocalHead,
+    expectedOriginHead,
+    transition: true,
+  });
+  assertProtectedHeadStable(expectedOriginHead);
   gitRun(["read-tree", "--reset", "-u", expectedOriginHead]);
   if (!isClean() || gitText(["rev-parse", "HEAD"]).trim() !== expectedOriginHead) {
     throw new Error("Canonical main did not finish as a clean protected checkout.");
   }
-  journal = withDigest({
-    ...withoutDigest(journal),
-    state: "completed",
-    completedAt: journal.completedAt || new Date().toISOString(),
+  requireIgnoredRetention(journal, {
+    expectedLocalHead,
+    expectedOriginHead,
   });
-  writeJournal(journalPath, journal);
+  journal = completeJournal(journal, journalPath);
   return buildResult(journal, journalPath, false);
 }
 
-function createManifest(localHead, originHead) {
-  const paths = splitNul(gitText(["diff", "--name-only", "-z", localHead, "--"]));
-  return paths.sort().map(relativePath => {
-    const target = gitText(["ls-tree", "-z", originHead, "--", relativePath]);
-    const match = /^([0-7]{6}) (blob) ([0-9a-f]{40})\t/.exec(target);
-    if (!match) throw new Error(`Protected target does not contain tracked blob ${relativePath}.`);
-    const workingBlob = gitText(["hash-object", "--", relativePath]).trim();
-    if (workingBlob !== match[3]) throw new Error(`Working blob differs from protected target for ${relativePath}.`);
-    return Object.freeze({ path: relativePath, mode: match[1], blob: match[3] });
+function captureInitialManifest({ repoRoot, expectedLocalHead, expectedOriginHead }) {
+  assertNoConflictsOrUntracked();
+  assertIndexMatchesExpectedLocal(expectedLocalHead);
+  const records = parsePorcelainV1(gitText(["status", "--porcelain=v1", "-z", "--untracked-files=all"]));
+  for (const record of records) {
+    if (record.status[0] !== " ") {
+      throw new Error(`Canonical equivalence reconciliation rejects staged state ${record.status} ${record.path}.`);
+    }
+    if (!["M", "T"].includes(record.status[1])) {
+      const kind = record.status[1] === "D" ? "deleted" : "unsupported";
+      throw new Error(`Canonical equivalence reconciliation rejects ${kind} tracked path ${record.path}.`);
+    }
+  }
+  const paths = readDirtyPaths();
+  const statusPaths = records.map(record => record.path).sort();
+  if (canonicalJson(paths) !== canonicalJson(statusPaths)) {
+    throw new Error("Canonical unstaged path inventory disagrees with porcelain status.");
+  }
+  return createManifest({ repoRoot, paths, expectedLocalHead, expectedOriginHead });
+}
+
+function captureTransitionManifest({ repoRoot, expectedLocalHead, expectedOriginHead }) {
+  assertNoConflictsOrUntracked();
+  assertIndexMatchesExpectedLocal(expectedLocalHead);
+  return createManifest({
+    repoRoot,
+    paths: readDirtyPaths(),
+    expectedLocalHead,
+    expectedOriginHead,
+  });
+}
+
+function createManifest({ repoRoot, paths, expectedLocalHead, expectedOriginHead }) {
+  return paths.map(relativePath => {
+    const base = readTreeBlob(expectedLocalHead, relativePath, "Expected local");
+    const target = readTreeBlob(expectedOriginHead, relativePath, "Protected target");
+    const workingMode = readWorkingMode(repoRoot, relativePath);
+    if (workingMode !== target.mode) {
+      throw new Error(
+        `Working mode ${workingMode} differs from protected target mode ${target.mode} for ${relativePath}.`,
+      );
+    }
+    const workingBlob = requireSha(gitText([
+      "hash-object",
+      `--path=${relativePath}`,
+      "--",
+      relativePath,
+    ]).trim(), `Working blob for ${relativePath}`);
+    if (workingBlob !== target.blob) {
+      throw new Error(`Working blob differs from protected target for ${relativePath}.`);
+    }
+    return Object.freeze({
+      path: relativePath,
+      baseMode: base.mode,
+      baseBlob: base.blob,
+      mode: target.mode,
+      blob: target.blob,
+    });
   });
 }
 
@@ -162,11 +248,102 @@ function assertNoConflictsOrUntracked() {
   if (gitText(["diff", "--name-only", "--diff-filter=U"]).trim() || gitText(["ls-files", "-u"]).trim()) {
     throw new Error("Canonical equivalence reconciliation rejects unmerged paths.");
   }
-  for (const entry of splitNul(gitText(["status", "--porcelain=v1", "-z", "--untracked-files=all"]))) {
-    const status = entry.slice(0, 2);
-    if (status === "??") throw new Error(`Canonical equivalence reconciliation rejects untracked path ${entry.slice(3)}.`);
-    if (status[0] !== " ") throw new Error(`Canonical equivalence reconciliation rejects staged state ${entry}.`);
+  const untracked = splitNul(gitText(["ls-files", "--others", "--exclude-standard", "-z"]));
+  if (untracked.length) {
+    throw new Error(`Canonical equivalence reconciliation rejects untracked path ${untracked[0]}.`);
   }
+}
+
+function assertIndexMatchesExpectedLocal(expectedLocalHead) {
+  if (!gitSucceeds(["diff", "--cached", "--quiet", expectedLocalHead, "--"])) {
+    throw new Error("Canonical equivalence reconciliation rejects staged state against the expected local head.");
+  }
+}
+
+function assertProtectedHeadStable(expectedOriginHead) {
+  if (gitText(["rev-parse", "origin/main"]).trim() !== expectedOriginHead) {
+    throw new Error("Fetched origin/main moved from the exact expected protected head.");
+  }
+}
+
+function readDirtyPaths() {
+  return splitNul(gitText(["diff", "--name-only", "-z", "--"])).sort();
+}
+
+function readTreeBlob(treeish, relativePath, label) {
+  const target = gitText(["ls-tree", "-z", treeish, "--", relativePath]);
+  const match = /^([0-7]{6}) (blob) ([0-9a-f]{40})\t/.exec(target);
+  if (!match) throw new Error(`${label} does not contain tracked blob ${relativePath}.`);
+  return Object.freeze({ mode: match[1], blob: match[3] });
+}
+
+function readWorkingMode(repoRoot, relativePath) {
+  let stats;
+  try {
+    stats = lstatSync(path.join(repoRoot, relativePath));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(`Canonical equivalence reconciliation rejects deleted tracked path ${relativePath}.`);
+    }
+    throw error;
+  }
+  if (stats.isSymbolicLink()) return "120000";
+  if (!stats.isFile()) {
+    throw new Error(`Canonical equivalence reconciliation rejects non-file tracked path ${relativePath}.`);
+  }
+  return stats.mode & 0o111 ? "100755" : "100644";
+}
+
+function requirePreparedJournal(journal, { expectedLocalHead, expectedOriginHead }) {
+  if (!journal || !["prepared", "completed"].includes(journal.state)) {
+    throw new Error("Canonical equivalence journal does not contain a replayable prepared state.");
+  }
+  if (journal.equivalenceScope !== "unstaged-tracked-dirty-paths" ||
+      !Array.isArray(journal.manifest) ||
+      journal.manifest.length === 0 ||
+      journal.manifestDigest !== digest(journal.manifest) ||
+      journal.expectedLocalTree !== gitText(["rev-parse", `${expectedLocalHead}^{tree}`]).trim() ||
+      journal.expectedOriginTree !== gitText(["rev-parse", `${expectedOriginHead}^{tree}`]).trim() ||
+      !journal.ignoredRetention) {
+    throw new Error("Canonical equivalence journal lacks valid path-scoped protected evidence.");
+  }
+}
+
+function requirePreparedWorkingState(journal, {
+  repoRoot,
+  expectedLocalHead,
+  expectedOriginHead,
+  transition,
+}) {
+  const manifest = transition
+    ? captureTransitionManifest({ repoRoot, expectedLocalHead, expectedOriginHead })
+    : captureInitialManifest({ repoRoot, expectedLocalHead, expectedOriginHead });
+  if (digest(manifest) !== journal.manifestDigest) {
+    throw new Error("Canonical working state drifted from the prepared equivalence receipt.");
+  }
+  requireIgnoredRetention(journal, { expectedLocalHead, expectedOriginHead });
+}
+
+function requireIgnoredRetention(journal, { expectedLocalHead, expectedOriginHead }) {
+  const observed = proveIgnoredStateRetention({
+    localHead: expectedLocalHead,
+    originHead: expectedOriginHead,
+    gitText,
+    gitOptional,
+  });
+  if (canonicalJson(observed) !== canonicalJson(journal.ignoredRetention)) {
+    throw new Error("Ignored canonical state drifted from the prepared equivalence receipt.");
+  }
+}
+
+function completeJournal(journal, journalPath) {
+  const completed = withDigest({
+    ...withoutDigest(journal),
+    state: "completed",
+    completedAt: journal.completedAt || new Date().toISOString(),
+  });
+  writeJournal(journalPath, completed);
+  return completed;
 }
 
 function requirePrimaryCanonicalWorktree(repoRoot) {
@@ -225,6 +402,7 @@ function buildResult(journal, journalPath, replayed) {
     priorHeadSha: journal.expectedLocalHead,
     manifestDigest: journal.manifestDigest,
     pathCount: journal.manifest.length,
+    protectedAdvancePathCount: journal.protectedAdvancePathCount,
     recoveryHandle: journal.recoveryHandle,
     receiptDigest: journal.receiptDigest,
     receiptPath: journalPath,

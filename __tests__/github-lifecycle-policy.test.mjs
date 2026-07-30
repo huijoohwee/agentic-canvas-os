@@ -29,6 +29,34 @@ test('required CI is merge-queue safe and every workflow pins actions immutably'
   }
 });
 
+
+test('supported GitHub Actions use approved Node 24 runtime pins', async () => {
+  const approvedPins = new Map([
+    ['actions/checkout', '3d3c42e5aac5ba805825da76410c181273ba90b1'],
+    ['actions/setup-node', '820762786026740c76f36085b0efc47a31fe5020'],
+    ['github/codeql-action/init', 'e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81'],
+    ['github/codeql-action/analyze', 'e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81'],
+  ]);
+  const observedActions = new Set();
+
+  for (const name of await readdir(workflowDirectory)) {
+    if (!name.endsWith('.yml') && !name.endsWith('.yaml')) continue;
+    const source = await readWorkflow(name);
+    const matches = source.matchAll(
+      /uses:\s+(actions\/checkout|actions\/setup-node|github\/codeql-action\/(?:init|analyze))@([0-9a-f]{40})/g,
+    );
+    for (const [, action, revision] of matches) {
+      observedActions.add(action);
+      assert.equal(
+        revision,
+        approvedPins.get(action),
+        `${name} must use the approved ${action} revision`,
+      );
+    }
+  }
+
+  assert.deepEqual(observedActions, new Set(approvedPins.keys()));
+});
 test('CI uses Node 22 slim runners without dependency caches', async () => {
   const source = await readWorkflow('ci.yml');
   assert.match(

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 31,
-  "headDigest": "929f91da47def31ad8be1c543097def0d8384ff9324c3214952c897dbdcc212c",
+  "sequence": 32,
+  "headDigest": "90b6c1b7e3aa461faa36defc187e33f2f464b83a8b74cd24ef541ae666ac7f62",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -1313,6 +1313,48 @@
       },
       "claimDigest": "5be5108e9eb60ae39a11d17b940bd1625f238d7cae3fcca6975fa361f6289ee9",
       "digest": "929f91da47def31ad8be1c543097def0d8384ff9324c3214952c897dbdcc212c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 32,
+      "parentDigest": "929f91da47def31ad8be1c543097def0d8384ff9324c3214952c897dbdcc212c",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9fd7842e30b8bf34df9acb30f1a6aad9245addff76da3407060f6605232fde7d",
+      "idempotencyKey": "5e6653a46d39da3d584f2a0c8edff1f2e45588e03766d7693a007d846b0dc0d2",
+      "requestDigest": "3c5d26fb4e423d297f19b265d3273d63948ea1611da9c026baaa0ce36d82e349",
+      "evaluationTime": "2026-07-30T08:02:25.000Z",
+      "claimCore": {
+        "claimId": "9fd7842e30b8bf34df9acb30f1a6aad9245addff76da3407060f6605232fde7d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5d3a8c7a63c370b3c12f5c3f89822e2f1544d31bfb41905031543c6f7a2e1550",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:528f45ea31645e9e0c02eb6c41b873486b182fe3a19599cd55e9d3cb94779b11",
+        "canonicalBaseRevision": "aeb28f0ae85ddb8747712289bfd145821ed2063c",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-lifecycle.test.mjs",
+          "path:docs/AGENTS.md",
+          "path:docs/CANONICAL-LIFECYCLE.md",
+          "path:docs/README.md",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:docs/RUNTIME-PROOF.md"
+        ],
+        "writeSetDigest": "f5f77f1b90ad15ecd05d1ba2b30b0d0162b4ed277f787acdbf726de8d709c49d",
+        "laneRevision": "2d0a86c1a27839c2979050e387990a3c4d77c2f4",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T08:02:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e975fffac2fb8c14debee6f57677a550305efce9a998959bbabf1f058bd93ad6",
+      "digest": "90b6c1b7e3aa461faa36defc187e33f2f464b83a8b74cd24ef541ae666ac7f62"
     }
   ]
 }

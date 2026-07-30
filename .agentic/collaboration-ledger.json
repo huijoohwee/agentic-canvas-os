@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 69,
-  "headDigest": "c8488d23bae66087b689dbc246a6db06d3fb467985cf6fdc8bdd64123c3fb378",
+  "sequence": 70,
+  "headDigest": "b225389202cd58ada760a34aa191bd43e7429d82353ccea76b751e91c20d1ad8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -3308,6 +3308,48 @@
       },
       "claimDigest": "12ab85d9a000984cd7bedca60dbba14445869f3303e20c3a1873a45de1d06834",
       "digest": "c8488d23bae66087b689dbc246a6db06d3fb467985cf6fdc8bdd64123c3fb378"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 70,
+      "parentDigest": "c8488d23bae66087b689dbc246a6db06d3fb467985cf6fdc8bdd64123c3fb378",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "16aa2f789f04e35c0349bf794389bb1ad08ff3b3d40351b9749564eedcfaa6ca",
+      "idempotencyKey": "63229e8ecbda14c50fff201f0bd231e4464c4b103271f31fb5ea651e6267fac7",
+      "requestDigest": "4111c0d194f7d154be842ce91f2a1c55b1d3a217a8f53a8c60e4e3603a0f5457",
+      "evaluationTime": "2026-07-30T17:58:44.000Z",
+      "claimCore": {
+        "claimId": "16aa2f789f04e35c0349bf794389bb1ad08ff3b3d40351b9749564eedcfaa6ca",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5d3a8c7a63c370b3c12f5c3f89822e2f1544d31bfb41905031543c6f7a2e1550",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:528f45ea31645e9e0c02eb6c41b873486b182fe3a19599cd55e9d3cb94779b11",
+        "canonicalBaseRevision": "aeb28f0ae85ddb8747712289bfd145821ed2063c",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-lifecycle.test.mjs",
+          "path:docs/AGENTS.md",
+          "path:docs/CANONICAL-LIFECYCLE.md",
+          "path:docs/README.md",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:docs/RUNTIME-PROOF.md"
+        ],
+        "writeSetDigest": "f5f77f1b90ad15ecd05d1ba2b30b0d0162b4ed277f787acdbf726de8d709c49d",
+        "laneRevision": "6cadcd9d8fcdf552283717cd5fae1599b5744c6e",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "review-ready",
+        "expiresAt": "2026-07-31T05:58:26.000Z",
+        "evidenceDigest": "31bf7b866dbce6a70fc143e49069b52394d177859b565dbe02ce4a1b6e302521",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM74XLqi",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "bb161674c69f79b0344fea07a77f330609fe37e0648b94740d4f7713528b47fa",
+      "digest": "b225389202cd58ada760a34aa191bd43e7429d82353ccea76b751e91c20d1ad8"
     }
   ]
 }

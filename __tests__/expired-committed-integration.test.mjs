@@ -65,7 +65,29 @@ test("integration revalidates delivery-resume evidence from the original source 
   }
 });
 
-function createHarness({ omitManifest = false, sourceStatus = "active" } = {}) {
+test("repeated delivery keeps current lease markers separate from authored integration evidence", () => {
+  const harness = createHarness({
+    sourceStatus: "delivery",
+    repeatedDelivery: true,
+  });
+  try {
+    assert.throws(() => harness.invoke(), /stop after recovered validation/);
+    const state = harness.state();
+    assert.equal(state.lease.integration.validationRequired, false);
+    assert.ok(state.calls.some(call => call.join(" ") ===
+      `git merge-base --is-ancestor ${sourceFenceSha} ${committedHeadSha}`));
+    assert.ok(state.calls.some(call => call.join(" ") ===
+      `git merge-base --is-ancestor ${"3".repeat(40)} ${deliveryHandoffSha}`));
+  } finally {
+    harness.cleanup();
+  }
+});
+
+function createHarness({
+  omitManifest = false,
+  sourceStatus = "active",
+  repeatedDelivery = false,
+} = {}) {
   const delivery = sourceStatus === "delivery";
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-committed-integration-"));
   const canonicalRoot = path.join(repo, "canonical", "agentic-canvas-os");
@@ -108,8 +130,12 @@ function createHarness({ omitManifest = false, sourceStatus = "active" } = {}) {
       sourceDevice: "device",
       sourceScope: "committed-continuation",
       sourceBranch: branch,
-      sourceBaseSha,
-      sourceFenceSha,
+      sourceBaseSha: repeatedDelivery ? "2".repeat(40) : sourceBaseSha,
+      sourceFenceSha: repeatedDelivery ? "3".repeat(40) : sourceFenceSha,
+      ...(repeatedDelivery ? {
+        integrationSourceBaseSha: sourceBaseSha,
+        integrationSourceFenceSha: sourceFenceSha,
+      } : {}),
       sourcePullRequestUrl: "https://github.test/org/repo/pull/71",
       ...(delivery ? { sourceDeliveryHeadSha: deliveryHandoffSha } : {}),
       headSha: delivery ? deliveryHandoffSha : committedHeadSha,

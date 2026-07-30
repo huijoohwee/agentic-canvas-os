@@ -121,10 +121,11 @@ test("resume rejects a non-descendant parked local head before issuing a new cla
   assert.equal(calls.some(call => call.join(" ") === `git push origin ${branch}`), false);
 });
 
-test("same-session delivery accepts exactly one controller-authored protected-main refresh", () => {
+test("same-session delivery accepts one tree-equivalent protected-main refresh", () => {
   const deliveryHeadSha = "4".repeat(40);
   const refreshedMainSha = "5".repeat(40);
   const refreshedHeadSha = "6".repeat(40);
+  const refreshedTreeSha = "7".repeat(40);
   const calls = [];
   const result = resolveSameSessionDeliveryHandoff({
     remoteLease: { deliveryHeadSha },
@@ -132,14 +133,23 @@ test("same-session delivery accepts exactly one controller-authored protected-ma
     remoteRef: `origin/${branch}`,
     gitText: args => {
       calls.push(args);
-      if (args[0] === "rev-list") return `${refreshedHeadSha} ${deliveryHeadSha} ${refreshedMainSha}`;
-      if (args[0] === "merge-base") return "";
+      const key = args.join(" ");
+      if (key === `rev-list --parents -n 1 ${refreshedHeadSha}`) {
+        return `${refreshedHeadSha} ${deliveryHeadSha} ${refreshedMainSha}`;
+      }
+      if (key === `merge-base --is-ancestor ${refreshedMainSha} origin/main`) return "";
+      if (key ===
+        `merge-tree --write-tree --no-messages ${deliveryHeadSha} ${refreshedMainSha}`) {
+        return refreshedTreeSha;
+      }
+      if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return refreshedTreeSha;
       throw new Error(`unexpected git command: ${args.join(" ")}`);
     },
   });
 
   assert.equal(result, refreshedHeadSha);
-  assert.deepEqual(calls[1], ["merge-base", "--is-ancestor", refreshedMainSha, "origin/main"]);
+  assert.ok(calls.some(args => args.join(" ") ===
+    `merge-base --is-ancestor ${refreshedMainSha} origin/main`));
 });
 
 test("same-session delivery rejects authored or multiply merged remote advancement", () => {
@@ -149,9 +159,9 @@ test("same-session delivery rejects authored or multiply merged remote advanceme
       remoteLease: { deliveryHeadSha },
       remoteSha: "6".repeat(40),
       remoteRef: `origin/${branch}`,
-      gitText: () => `${"6".repeat(40)} ${"7".repeat(40)} ${"5".repeat(40)}`,
+      gitText: () => `${"6".repeat(40)} ${"7".repeat(40)}`,
     }),
-    /advanced beyond its exact protected-main refresh/,
+    /advanced beyond an exact protected-main refresh chain/,
   );
 });
 

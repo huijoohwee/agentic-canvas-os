@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { requireCarriedIntegrationSource } from "./integration-continuation-lineage-lib.mjs";
 
 export const PRE_CLAIM_INTEGRATION_CONTINUATION_SCHEMA =
   "agentic-pre-claim-integration-continuation/v1";
@@ -24,7 +25,6 @@ const DELIVERY_MARKER_FIELDS = [
   "autoDelivery",
   "runtimeRequired",
 ];
-
 export function resolveSameSessionDeliveryContinuation({
   branch,
   currentBranch,
@@ -52,7 +52,7 @@ export function resolveSameSessionDeliveryContinuation({
     localLease?.preClaimIntegrationContinuation,
   );
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  if (stored) {
+  if (stored && localLease?.status === "active") {
     if (stored.sourceStatus !== "delivery") {
       throw new Error("Same-session delivery resume found a continuation for another source status.");
     }
@@ -71,6 +71,9 @@ export function resolveSameSessionDeliveryContinuation({
       gitText,
     });
   }
+  if (stored && localLease?.status !== "delivery") {
+    throw new Error("Same-session delivery resume found stale continuation state.");
+  }
 
   requireDeliverySourceLease({
     branch,
@@ -85,9 +88,22 @@ export function resolveSameSessionDeliveryContinuation({
     sessionId,
     headSha,
   });
+  const integrationSource = stored
+    ? requireCarriedIntegrationSource({
+      stored,
+      localLease,
+      remoteLease,
+      handoffHeadSha: deliveryHandoffHead,
+      gitText,
+      normalizeContinuation: normalizePreClaimIntegrationContinuation,
+    })
+    : {
+      baseSha: remoteLease.baseSha,
+      fenceSha: remoteLease.fenceSha,
+    };
   const integration = resolveDeliveryIntegrationEvidence({
     integration: localLease.integration,
-    sourceFenceSha: remoteLease.fenceSha,
+    sourceFenceSha: integrationSource.fenceSha,
     handoffHeadSha: deliveryHandoffHead,
     gitText,
     now,
@@ -110,6 +126,8 @@ export function resolveSameSessionDeliveryContinuation({
       sourceBranch: branch,
       sourceBaseSha: remoteLease.baseSha,
       sourceFenceSha: remoteLease.fenceSha,
+      integrationSourceBaseSha: integrationSource.baseSha,
+      integrationSourceFenceSha: integrationSource.fenceSha,
       sourcePullRequestUrl: ownerUrl,
       sourceDeliveryHeadSha: remoteLease.deliveryHeadSha,
       headSha: deliveryHandoffHead,
@@ -120,7 +138,6 @@ export function resolveSameSessionDeliveryContinuation({
     pendingClaim: false,
   };
 }
-
 export function resolveExpiredCommittedContinuation({
   branch,
   currentBranch,
@@ -251,11 +268,18 @@ export function normalizePreClaimIntegrationContinuation(value) {
   for (const field of [
     "sourceBaseSha",
     "sourceFenceSha",
+    "integrationSourceBaseSha",
+    "integrationSourceFenceSha",
     "headSha",
     "treeSha",
     "integrationCommitSha",
     "integrationTreeSha",
-  ]) requireSha(value[field], `Pre-claim integration continuation ${field}`);
+  ]) {
+    const resolved = value[field] ??
+      (field === "integrationSourceBaseSha" ? value.sourceBaseSha :
+        field === "integrationSourceFenceSha" ? value.sourceFenceSha : null);
+    requireSha(resolved, `Pre-claim integration continuation ${field}`);
+  }
   return {
     schema: value.schema,
     sourceStatus: value.sourceStatus,
@@ -266,6 +290,10 @@ export function normalizePreClaimIntegrationContinuation(value) {
     sourceBranch: value.sourceBranch,
     sourceBaseSha: value.sourceBaseSha,
     sourceFenceSha: value.sourceFenceSha,
+    integrationSourceBaseSha:
+      value.integrationSourceBaseSha ?? value.sourceBaseSha,
+    integrationSourceFenceSha:
+      value.integrationSourceFenceSha ?? value.sourceFenceSha,
     sourcePullRequestUrl: value.sourcePullRequestUrl,
     ...(value.sourceStatus === "delivery"
       ? { sourceDeliveryHeadSha: value.sourceDeliveryHeadSha }
@@ -324,7 +352,7 @@ function resolvePendingContinuation({
   gitText([
     "merge-base",
     "--is-ancestor",
-    stored.sourceFenceSha,
+    stored.integrationSourceFenceSha,
     stored.integrationCommitSha,
   ]);
   gitText([
@@ -333,6 +361,7 @@ function resolvePendingContinuation({
     stored.integrationCommitSha,
     stored.headSha,
   ]);
+  gitText(["merge-base", "--is-ancestor", stored.sourceFenceSha, stored.headSha]);
   if (headSha !== stored.headSha) {
     gitText(["merge-base", "--is-ancestor", stored.headSha, headSha]);
   }

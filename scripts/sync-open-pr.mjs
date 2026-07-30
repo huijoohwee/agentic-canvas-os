@@ -7,6 +7,7 @@ import {
   AUTO_DELIVERY_LABEL,
   isAuthorizedAutoDeliveryPullRequest,
 } from "./auto-delivery-lib.mjs";
+import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
 
 const repo = requiredEnv("GITHUB_REPOSITORY");
 const autoDeliveryOnly = process.argv.includes("--auto-delivery");
@@ -48,6 +49,13 @@ if (autoDeliveryOnly) {
     revokeAutoDelivery(current);
     process.exit(0);
   }
+  verifyCloudDeliveryAuthority({
+    repository: repo,
+    pullRequestNumber: number,
+    branch: headRef,
+    headSha,
+    canonicalBaseSha: current.base?.sha || "",
+  });
   const auto = gh([
     "pr", "merge", String(number), "--repo", repo, "--auto", "--squash", "--match-head-commit", headSha,
   ], { allowFailure: true });

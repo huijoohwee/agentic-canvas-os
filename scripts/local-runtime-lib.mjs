@@ -27,7 +27,7 @@ export const DEFAULT_TIMEOUT_MS = 120_000;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const STORAGE_EXPORT_PATH = "/api/storage/export/kgws%3Acanonical-docs";
 const REQUIRED_CHECKS = Object.freeze({
-  "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration"],
+  "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration"],
   knowgrph: ["Integration Gate"],
 });
 

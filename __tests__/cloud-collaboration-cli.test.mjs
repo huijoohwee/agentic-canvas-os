@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const cli = path.join(repositoryRoot, "scripts", "cloud-collaboration.mjs");
+
+test("CLI rejects unexposed workflow actions before network access", () => {
+  const result = spawnSync(process.execPath, [cli, "dispatch", "--json"], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      GH_TOKEN: "not-used",
+      GITHUB_ACTIONS: "true",
+      AGENTIC_CLOUD_ACTION: "bind",
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.ok, false);
+  assert.match(output.error.message, /not an exposed cloud collaboration action/u);
+  assert.equal(result.stdout.includes("not-used"), false);
+});
+
+test("merge-group verification fails closed without claiming generic readiness", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "cloud-collaboration-cli-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const eventPath = path.join(directory, "event.json");
+  await writeFile(eventPath, JSON.stringify({ merge_group: { head_sha: "a".repeat(40) } }));
+
+  const result = spawnSync(
+    process.execPath,
+    [cli, "verify-event", `--event-path=${eventPath}`, "--json"],
+    {
+      encoding: "utf8",
+      env: { ...process.env, GH_TOKEN: "not-used" },
+    },
+  );
+
+  assert.notEqual(result.status, 0);
+  const output = JSON.parse(result.stdout);
+  assert.match(output.error.message, /exact member claims/u);
+  assert.equal(result.stdout.includes(directory), false);
+});

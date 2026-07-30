@@ -15,7 +15,7 @@ const repositories = [
   {
     id: 'agentic-canvas-os',
     root: agenticRoot,
-    requiredChecks: ['test', 'build', 'docs-contract', 'collaboration-integration'],
+    requiredChecks: ['test', 'build', 'docs-contract', 'collaboration-integration', 'cloud-collaboration'],
     prepare: ['npm', ['ci']],
     verify: ['npm', ['run', 'docs:check']],
   },

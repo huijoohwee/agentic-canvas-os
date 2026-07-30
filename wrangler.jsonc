@@ -6,9 +6,7 @@
   "preview_urls": false,
   "compatibility_date": "2026-07-05",
   "compatibility_flags": ["nodejs_compat"],
-  "limits": {
-    "cpu_ms": 10
-  },
+  // The Free plan enforces its 10 ms CPU ceiling and rejects explicit CPU overrides.
   "ratelimits": [
     {
       "name": "AUTH_SESSION_RATE_LIMITER",
@@ -75,9 +73,6 @@
       "workers_dev": true,
       "preview_urls": false,
       "routes": [],
-      "limits": {
-        "cpu_ms": 10
-      },
       "ratelimits": [
         {
           "name": "AUTH_SESSION_RATE_LIMITER",

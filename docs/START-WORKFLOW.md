@@ -475,6 +475,8 @@ stages those paths explicitly and rejects any residue. A clean worktree must
 already contain an authored commit beyond its fence. Runtime reconciliation
 targets the sibling canonical Knowgrph checkout by default; use
 `--runtime-repository=<path>` only for a nonstandard workspace layout.
+If protected synchronization advances a published pull request, integration accepts at most one exact two-parent refresh whose first parent is the recorded delivery head and whose second parent is contained by current protected `main`.
+It fetches the immutable pull-request head, fast-forwards the clean attached task worktree, and records the refresh proof; authored, non-ancestral, or repeated head movement fails closed.
 `--runtime=none` is an explicit recovery escape hatch: it emits `integrated`,
 not `runtime_ready`, and cannot support a runtime-ready completion claim.
 After canonical convergence (and, by default, runtime proof), the command uses

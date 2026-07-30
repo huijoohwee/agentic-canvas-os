@@ -14,6 +14,8 @@ const LEASE_FIELDS = [
   "pullRequestUrl",
   "autoDelivery",
   "runtimeRequired",
+  "ownedDirtRecovery",
+  "pullRequestProjectionRepair",
   "reviewHeadSha",
   "deliveryHeadSha",
   "parkHeadSha",

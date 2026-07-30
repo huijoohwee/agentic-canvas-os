@@ -303,15 +303,23 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
 
 Heartbeat independently queries the exact ownership PR and requires it to remain draft before renewing the local lease. Manual readiness or any PR identity mismatch fails closed without extending the TTL.
 
-If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session.
+If GitHub's pull-request projection remains at a strict ancestor after the
+active branch and remote fence agree, run the same heartbeat command with
+`--repair-pr-projection`; it binds owned dirt and both PR identities, while
+review and publish independently require the exact pushed head.
 
-Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
+If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree through ordinary start or resume, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session; the explicit same-session owned-dirt recovery below is the only dirty review-ready exception.
+
+Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. If the exact review-owning session authored post-review dirt in that same attached worktree, it may explicitly add `--recover-owned-dirt`; the command requires matching local and remote review-ready evidence, binds a digest of the tracked, staged, unstaged, and untracked state to the successor lease, creates the empty claim with `git commit --allow-empty --only`, and proves the dirt stayed unchanged. This exception never transfers dirty bytes to another session or worktree. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
   "agent/<origin-device>/<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
   --repository="$TASK_WORKTREE"
 ```
+
+Use `--recover-owned-dirt` only for the explicit same-session review-ready
+recovery above. Ordinary resume remains clean-only.
 
 ### 6. Verify
 
@@ -467,6 +475,8 @@ stages those paths explicitly and rejects any residue. A clean worktree must
 already contain an authored commit beyond its fence. Runtime reconciliation
 targets the sibling canonical Knowgrph checkout by default; use
 `--runtime-repository=<path>` only for a nonstandard workspace layout.
+If protected synchronization advances a published pull request, integration accepts at most one exact two-parent refresh whose first parent is the recorded delivery head and whose second parent is contained by current protected `main`.
+It fetches the immutable pull-request head, fast-forwards the clean attached task worktree, and records the refresh proof; authored, non-ancestral, or repeated head movement fails closed.
 `--runtime=none` is an explicit recovery escape hatch: it emits `integrated`,
 not `runtime_ready`, and cannot support a runtime-ready completion claim.
 After canonical convergence (and, by default, runtime proof), the command uses

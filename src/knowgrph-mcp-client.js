@@ -30,6 +30,285 @@ function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+export const KNOWLEDGE_GRAPH_MCP_TOOLS = Object.freeze({
+  ingest: "knowgrph.knowledge_graph.ingest",
+  query: "knowgrph.knowledge_graph.query",
+  explainEdge: "knowgrph.knowledge_graph.explain_edge",
+});
+
+const KNOWLEDGE_GRAPH_INVOCATION_SCHEMA = "knowgrph-knowledge-graph-invocation/v1";
+const AGENTIC_CANVAS_OS_ROUTING_SCHEMA = "agentic-canvas-os-docs-routing/v1";
+const KNOWLEDGE_GRAPH_TOOL_BY_OPERATION = Object.freeze({
+  ingest: KNOWLEDGE_GRAPH_MCP_TOOLS.ingest,
+  query: KNOWLEDGE_GRAPH_MCP_TOOLS.query,
+  explain_edge: KNOWLEDGE_GRAPH_MCP_TOOLS.explainEdge,
+});
+const KNOWLEDGE_GRAPH_QUERY_MODES = new Set([
+  "search",
+  "path",
+  "neighbors",
+  "impact",
+  "summary",
+]);
+const SHA256_DIGEST = /^[0-9a-f]{64}$/u;
+const SOURCE_REVISION = /^[0-9a-f]{40}$/u;
+const INVOCATION_TOKEN_TAIL = "[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?";
+const INVOCATION_TOKEN = Object.freeze({
+  action: new RegExp(`^/${INVOCATION_TOKEN_TAIL}$`, "u"),
+  semantic: new RegExp(`^#${INVOCATION_TOKEN_TAIL}$`, "u"),
+  binding: new RegExp(`^@${INVOCATION_TOKEN_TAIL}$`, "u"),
+});
+const KNOWLEDGE_GRAPH_PROJECTION_MAX_NODES = 2_000;
+const KNOWLEDGE_GRAPH_PROJECTION_MAX_EDGES = 5_000;
+const KNOWLEDGE_GRAPH_PROJECTION_MAX_BYTES = 2 * 1024 * 1024;
+const PRIVATE_PATH_KEYS = /^(?:artifactPath|outputPath|rootPath|storePath|absolutePath|createdPaths|removedPaths)$/iu;
+
+function hasText(value) {
+  return typeof value === "string" && Boolean(value.trim());
+}
+
+function isUniqueTokenArray(value, pattern) {
+  return Array.isArray(value)
+    && value.length >= 1
+    && value.length <= 12
+    && value.every((token) => typeof token === "string" && pattern.test(token))
+    && new Set(value).size === value.length;
+}
+
+function isKnowledgeGraphInvocationProof(operation, value) {
+  if (!isPlainObject(value)) return false;
+  const keys = Object.keys(value).sort();
+  const expectedKeys = [
+    "action",
+    "bindings",
+    "catalogDigest",
+    "routingDigest",
+    "routingSchema",
+    "schema",
+    "semantics",
+    "sourceRevision",
+    "tool",
+  ];
+  return keys.length === expectedKeys.length
+    && keys.every((key, index) => key === expectedKeys[index])
+    && value.schema === KNOWLEDGE_GRAPH_INVOCATION_SCHEMA
+    && value.tool === KNOWLEDGE_GRAPH_TOOL_BY_OPERATION[operation]
+    && INVOCATION_TOKEN.action.test(value.action)
+    && isUniqueTokenArray(value.semantics, INVOCATION_TOKEN.semantic)
+    && isUniqueTokenArray(value.bindings, INVOCATION_TOKEN.binding)
+    && SOURCE_REVISION.test(value.sourceRevision)
+    && SHA256_DIGEST.test(value.catalogDigest)
+    && value.routingSchema === AGENTIC_CANVAS_OS_ROUTING_SCHEMA
+    && SHA256_DIGEST.test(value.routingDigest);
+}
+
+function isCanonicalRepositoryUrl(value) {
+  if (!hasText(value)) return false;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:"
+      || url.hostname !== "github.com"
+      || url.username
+      || url.password
+      || url.port
+      || url.search
+      || url.hash
+      || url.pathname.includes("%")) return false;
+    const parts = url.pathname.split("/").filter(Boolean);
+    const segment = /^[A-Za-z0-9_.-]{1,100}$/u;
+    const owner = parts[0] || "";
+    const repository = String(parts[1] || "").replace(/\.git$/iu, "");
+    const routeValid = parts.length === 2 || (
+      parts[2] === "tree"
+      && parts.length >= 4
+      && parts.slice(3).every((part) => segment.test(part))
+    );
+    return segment.test(owner) && segment.test(repository) && routeValid;
+  } catch {
+    return false;
+  }
+}
+
+function cloneKnowledgeGraphPayload(value, label) {
+  try {
+    const serialized = JSON.stringify(value);
+    if (typeof serialized !== "string") throw new Error("not JSON");
+    const maxBytes = label === "request" ? 1024 * 1024 : 4 * 1024 * 1024;
+    if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("too large");
+    return JSON.parse(serialized);
+  } catch {
+    throw new KnowgrphMcpError(`invalid knowledge graph ${label}`, {
+      code: `mcp_knowledge_graph_${label}_invalid`,
+      data: { fields: [label] },
+    });
+  }
+}
+
+function privatePathFields(value, prefix = "", fields = [], depth = 0) {
+  if (value === null || typeof value !== "object") return fields;
+  if (depth > 24) {
+    fields.push(`${prefix || "result"}.depth`);
+    return fields;
+  }
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      privatePathFields(value[index], `${prefix}[${index}]`, fields, depth + 1);
+    }
+    return fields;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    const field = prefix ? `${prefix}.${key}` : key;
+    if (PRIVATE_PATH_KEYS.test(key)) fields.push(field);
+    privatePathFields(nested, field, fields, depth + 1);
+  }
+  return fields;
+}
+
+function validKnowledgeGraphCounts(value) {
+  return isPlainObject(value)
+    && ["sources", "nodes", "edges"].every((key) => (
+      Number.isInteger(value[key]) && value[key] >= 0
+    ));
+}
+
+function validateKnowledgeGraphProjection(value, counts, fields) {
+  if (!isPlainObject(value)
+    || !hasText(value.token)
+    || value.readOnly !== true
+    || typeof value.complete !== "boolean"
+    || typeof value.truncated !== "boolean"
+    || !Number.isInteger(value.limit)
+    || value.limit < 1
+    || value.limit > 1_000
+    || !isPlainObject(value.graphData)
+    || !Array.isArray(value.graphData.nodes)
+    || !Array.isArray(value.graphData.edges)) {
+    fields.push("projection");
+    return;
+  }
+  if (value.graphData.nodes.length > KNOWLEDGE_GRAPH_PROJECTION_MAX_NODES
+    || value.graphData.nodes.length > counts.nodes) fields.push("projection.graphData.nodes");
+  if (value.graphData.edges.length > KNOWLEDGE_GRAPH_PROJECTION_MAX_EDGES
+    || value.graphData.edges.length > counts.edges) fields.push("projection.graphData.edges");
+  if (new TextEncoder().encode(JSON.stringify(value)).byteLength > KNOWLEDGE_GRAPH_PROJECTION_MAX_BYTES) {
+    fields.push("projection.bytes");
+  }
+}
+
+/**
+ * Validate the stable identity fields at the ACOS-to-Knowgrph boundary.
+ * Knowgrph remains authoritative for optional operation-specific fields.
+ */
+export function validateKnowledgeGraphRequest(operation, input) {
+  const fields = [];
+  if (!isPlainObject(input)) {
+    fields.push("input");
+  } else if (operation === "ingest") {
+    const hasRootPath = hasText(input.rootPath);
+    const hasRepositoryUrl = isCanonicalRepositoryUrl(input.repositoryUrl);
+    if (hasRootPath === hasRepositoryUrl) fields.push("source");
+    if (Object.hasOwn(input, "repositoryUrl") && !hasRepositoryUrl) fields.push("repositoryUrl");
+    if (Object.hasOwn(input, "outputPath")) fields.push("outputPath");
+  } else if (operation === "query") {
+    if (!hasText(input.graphId)) fields.push("graphId");
+    if (!SHA256_DIGEST.test(input.expectedSnapshotDigest)) fields.push("expectedSnapshotDigest");
+    if (!KNOWLEDGE_GRAPH_QUERY_MODES.has(input.mode)) fields.push("mode");
+    if (Object.hasOwn(input, "artifactPath")) fields.push("artifactPath");
+  } else if (operation === "explain_edge") {
+    if (!hasText(input.graphId)) fields.push("graphId");
+    if (!SHA256_DIGEST.test(input.expectedSnapshotDigest)) fields.push("expectedSnapshotDigest");
+    if (!hasText(input.edgeId)) fields.push("edgeId");
+    if (Object.hasOwn(input, "artifactPath")) fields.push("artifactPath");
+  } else {
+    fields.push("operation");
+  }
+  if (isPlainObject(input)
+    && Object.hasOwn(input, "invocation")
+    && !isKnowledgeGraphInvocationProof(operation, input.invocation)) {
+    fields.push("invocation");
+  }
+
+  if (fields.length > 0) {
+    throw new KnowgrphMcpError("invalid knowledge graph request", {
+      code: "mcp_knowledge_graph_request_invalid",
+      data: { operation, fields },
+    });
+  }
+  return input;
+}
+
+/** Reject an ingest response that leaks store paths or omits Canvas handoff identity. */
+export function validateKnowledgeGraphIngestResult(value) {
+  const fields = [];
+  if (!isPlainObject(value)) {
+    fields.push("result");
+  } else {
+    if (value.ok !== true) fields.push("ok");
+    if (value.operation !== "ingest") fields.push("operation");
+    if (!hasText(value.graphId)) fields.push("graphId");
+    if (!SHA256_DIGEST.test(value.snapshotDigest)) fields.push("snapshotDigest");
+    if (typeof value.complete !== "boolean") fields.push("complete");
+    if (!validKnowledgeGraphCounts(value.counts)) fields.push("counts");
+    else validateKnowledgeGraphProjection(value.projection, value.counts, fields);
+    fields.push(...privatePathFields(value));
+  }
+
+  if (fields.length > 0) {
+    throw new KnowgrphMcpError("invalid knowledge graph ingest result", {
+      code: "mcp_knowledge_graph_result_invalid",
+      data: { operation: "ingest", fields },
+    });
+  }
+  return value;
+}
+
+export function validateKnowledgeGraphReadResult(operation, request, value) {
+  const fields = [];
+  if (!isPlainObject(value)) {
+    fields.push("result");
+  } else {
+    if (value.ok !== true) fields.push("ok");
+    if (value.operation !== operation) fields.push("operation");
+    if (value.graphId !== request.graphId) fields.push("graphId");
+    if (value.snapshotDigest !== request.expectedSnapshotDigest) fields.push("snapshotDigest");
+    if (operation === "explain_edge" && value.edge?.id !== request.edgeId) fields.push("edge.id");
+    fields.push(...privatePathFields(value));
+  }
+  if (fields.length > 0) {
+    throw new KnowgrphMcpError("invalid knowledge graph read result", {
+      code: "mcp_knowledge_graph_result_invalid",
+      data: { operation, fields: [...new Set(fields)] },
+    });
+  }
+  return value;
+}
+
+/**
+ * Bind the knowledge-graph API to a host-owned local MCP transport.
+ * `callTool` must never route these filesystem-scoped calls to a remote control plane.
+ */
+export function createKnowgrphKnowledgeGraphClient({ callTool } = {}) {
+  if (typeof callTool !== "function") {
+    throw new KnowgrphMcpError("local Knowgrph MCP transport is required", {
+      code: "mcp_knowledge_graph_local_transport_required",
+    });
+  }
+  const invoke = async (operation, toolName, input, opts) => {
+    const request = cloneKnowledgeGraphPayload(input, "request");
+    validateKnowledgeGraphRequest(operation, request);
+    const result = cloneKnowledgeGraphPayload(await callTool(toolName, request, opts), "result");
+    if (operation === "ingest") return validateKnowledgeGraphIngestResult(result);
+    return validateKnowledgeGraphReadResult(operation, request, result);
+  };
+  return Object.freeze({
+    ingestKnowledgeGraph: (input, opts) => invoke("ingest", KNOWLEDGE_GRAPH_MCP_TOOLS.ingest, input, opts),
+    queryKnowledgeGraph: (input, opts) => invoke("query", KNOWLEDGE_GRAPH_MCP_TOOLS.query, input, opts),
+    explainKnowledgeGraphEdge: (input, opts) => (
+      invoke("explain_edge", KNOWLEDGE_GRAPH_MCP_TOOLS.explainEdge, input, opts)
+    ),
+  });
+}
+
 /** Fail closed when a Skill Evolution MCP reply is incomplete or unsafe. */
 export function validateSkillEvolutionResult(value, { expectedOperation } = {}) {
   const fields = skillEvolutionResultValidationFields(value, { expectedOperation });
@@ -234,6 +513,23 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     return extractToolResult(rpc);
   }
 
+  function localKnowledgeGraphCall(toolName, args, opts) {
+    let parsed;
+    try { parsed = new URL(url); } catch { parsed = null; }
+    const hostname = parsed?.hostname?.toLowerCase() || "";
+    const loopback = hostname === "localhost"
+      || hostname === "::1"
+      || hostname === "[::1]"
+      || /^127(?:\.[0-9]{1,3}){3}$/u.test(hostname);
+    if (!loopback) {
+      throw new KnowgrphMcpError("knowledge graph calls require a local MCP endpoint", {
+        code: "mcp_knowledge_graph_local_transport_required",
+      });
+    }
+    return callTool(toolName, args, opts);
+  }
+  const knowledgeGraph = createKnowgrphKnowledgeGraphClient({ callTool: localKnowledgeGraphCall });
+
   return {
     endpoint: url,
     callTool,
@@ -245,6 +541,7 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     invokeDocsGrammar(input, opts) {
       return callTool("knowgrph.agentic_canvas_os.docs.invoke", input, opts);
     },
+    ...knowledgeGraph,
     /** Call Skill Evolution and reject incomplete or unsafe result snapshots. */
     async evolveSkill(input, opts) {
       const expectedOperation = input?.operation;

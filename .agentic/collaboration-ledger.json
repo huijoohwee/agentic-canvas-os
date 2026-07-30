@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 88,
-  "headDigest": "ab271ef646e1cbde92a0974d7ca239780cfcc6837f8bf0613d77824b8149bd9c",
+  "sequence": 89,
+  "headDigest": "7c9ea9b03e47b8eca0baf04444662284d578b171da05d7b0a282a40c9bb8e730",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -4168,6 +4168,52 @@
       },
       "claimDigest": "3dee3d91270b4e0b929be910c537aa63796765938154ac9ac9d6da92ebf744b7",
       "digest": "ab271ef646e1cbde92a0974d7ca239780cfcc6837f8bf0613d77824b8149bd9c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 89,
+      "parentDigest": "ab271ef646e1cbde92a0974d7ca239780cfcc6837f8bf0613d77824b8149bd9c",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1c63264549126733de7a0af4a267e2ed8bbc550bc5ac39aeeab553f32379fb4a",
+      "idempotencyKey": "01f8c3cdb06bfb82fa56bd828318c7b0f1089752ca98cf022062305d95660cf1",
+      "requestDigest": "25b18c97cbc3ec20206cf2f2638a75f1b3bcd17b1ba59c72e93e58f7727a1b33",
+      "evaluationTime": "2026-07-30T18:46:12.000Z",
+      "claimCore": {
+        "claimId": "1c63264549126733de7a0af4a267e2ed8bbc550bc5ac39aeeab553f32379fb4a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b9c7d0e8e5c79d384146bb3bd0eab006f71d676caefd946936730e82cff11fdf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:40e492b1f8993dc262bff22bff7bfa1c464a32db024a6c15a9c942c17150e51c",
+        "canonicalBaseRevision": "2b3a0296cc1fc58d4c59090535c594ea39b58f63",
+        "declaredWriteScope": [
+          "path:__tests__/url-ingest-contract.test.mjs",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/FACTS.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/SKILLS.md",
+          "path:package.json",
+          "path:scripts/docs-contract.mjs",
+          "path:scripts/url-ingest-contract.mjs"
+        ],
+        "writeSetDigest": "bf629accc932733d65ff182675c9da10e0cf8361322bdb616b11668d527a9930",
+        "laneRevision": "616febd8832c94930e81402df559709a7fea3885",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-30T19:45:58.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM74nLtL",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "2d22b953fb5c8d8ff80d48c7e02c0e23049f99ffbfb33b659c577d9fb50fca08",
+      "digest": "7c9ea9b03e47b8eca0baf04444662284d578b171da05d7b0a282a40c9bb8e730"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 75,
-  "headDigest": "2fa135fcffd6946c242577e5c0502e61300b7624be9b5c9a0040503b5e870c5c",
+  "sequence": 76,
+  "headDigest": "1a8e7d916621a7fa9bb8bd7186a945cfea706e401ee6da59b3f144af44804999",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -3600,6 +3600,57 @@
       },
       "claimDigest": "b52df0df1eee7195fdd8cd7456952293ae9873b9aa2865a83d119aade4a7de35",
       "digest": "2fa135fcffd6946c242577e5c0502e61300b7624be9b5c9a0040503b5e870c5c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 76,
+      "parentDigest": "2fa135fcffd6946c242577e5c0502e61300b7624be9b5c9a0040503b5e870c5c",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1b230995cc140910304d4cd2ba146b7ec9fe286c1596c5018aaed4e6ac1de4ea",
+      "idempotencyKey": "7d203a3824cb749495db493dd2d06033e5b850d81a348b491706ed776d737687",
+      "requestDigest": "63dfdf19fbb52eff556e325cbadb72dc98190bf9f3208155c3f8d10669fed0e0",
+      "evaluationTime": "2026-07-30T18:04:02.000Z",
+      "claimCore": {
+        "claimId": "1b230995cc140910304d4cd2ba146b7ec9fe286c1596c5018aaed4e6ac1de4ea",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:213b22f749ceb6fd3cedf43816a770aa507f22067ccd2ff26d5400eeb10362a4",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2de0a5d1e275a76ae48f19e1965a7450c4e8ad9240e340176bd781766fa4e3e5",
+        "canonicalBaseRevision": "e94363dc1041de6aa8d023daf88ed06f58486ab2",
+        "declaredWriteScope": [
+          "path:__tests__/knowledge-graph-client.test.mjs",
+          "path:__tests__/knowledge-graph-contract.test.mjs",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/FACTS.md",
+          "path:docs/KNOWLEDGE-GRAPH.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MEMORY.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:memory/2026-07.md",
+          "path:package.json",
+          "path:src/knowgrph-mcp-client.js",
+          "path:todo/2026-07.md",
+          "semantic:deterministic-knowledge-graph-invocations"
+        ],
+        "writeSetDigest": "9fc3ce00c53805c5dd4a49f4f4fe87393a15c7de62b0b8ccddb43701853e3740",
+        "laneRevision": "2c9cefd0f37f7178498c1c636ddcbc0677b8a3c2",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "review-ready",
+        "expiresAt": "2026-07-31T18:02:30.000Z",
+        "evidenceDigest": "b554bd2f897e95a5f607b86b877d5d0d8d5c8892d272699668d8e1be2e00b23c",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM70yzl3",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "75143e1a0613b03d281f3ae9e39369e2a25277879d003d1e6eec327de33b60c2",
+      "digest": "1a8e7d916621a7fa9bb8bd7186a945cfea706e401ee6da59b3f144af44804999"
     }
   ]
 }

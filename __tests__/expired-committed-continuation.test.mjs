@@ -124,6 +124,24 @@ test("pending committed continuation accepts a source-recorded nonadjacent repos
   assert.equal(parseWriterLeasePullRequestBody(state.remoteBody).epoch, 12);
 });
 
+test("expired committed continuation recovers after an interrupted publish advanced the exact PR head", () => {
+  const harness = createHarness({ publishedIntegration: true });
+  const result = harness.invoke();
+  const state = harness.state();
+
+  assert.equal(result.status, "active");
+  assert.equal(result.baseSha, committedHead);
+  assert.equal(result.integration.commitSha, committedHead);
+  assert.equal(
+    result.preClaimIntegrationContinuation.sourceFenceSha,
+    sourceFence,
+  );
+  assert.equal(state.head, claimFence);
+  assert.equal(state.remoteHead, claimFence);
+  assert.equal(state.claims, 1);
+  assert.equal(state.commits, 1);
+});
+
 test("pending committed nonadjacent replay rejects mismatched recorded source markers", async t => {
   for (const [name, mutate] of [
     ["epoch", continuation => ({ ...continuation, sourceEpoch: sourceLease.epoch - 1 })],
@@ -158,13 +176,25 @@ function createHarness({
   localLease: initialLocalLease = sourceLease,
   pullRequestHeadSha = null,
   claimEpoch = sourceLease.epoch + 1,
+  publishedIntegration = false,
 } = {}) {
   let failed = false;
   let isDraft = false;
   let head = committedHead;
-  let remoteHead = sourceFence;
+  let remoteHead = publishedIntegration ? committedHead : sourceFence;
   let remoteBody = renderWriterLeasePullRequestBody(sourceLease);
-  let localLease = initialLocalLease;
+  let localLease = publishedIntegration
+    ? {
+      ...initialLocalLease,
+      integration: {
+        schema: "agentic-integration-commit/v1",
+        commitSha: committedHead,
+        treeSha: committedTree,
+        commitMessage: "feat: preserve committed work",
+        paths: [committedPath],
+      },
+    }
+    : initialLocalLease;
   let claims = 0;
   let commits = 0;
   const calls = [];

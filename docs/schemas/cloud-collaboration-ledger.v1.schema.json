@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-canvas-os.dev/schemas/cloud-collaboration-ledger/v1",
+  "title": "Agentic Cloud Collaboration Ledger v1",
+  "description": "A closed, bounded, append-only hash chain for provider-neutral collaboration claims. Schema admission alone grants no repository, integration, release, Production, or deployment authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "ledgerRepositoryId",
+    "sequence",
+    "headDigest",
+    "entries"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentic-cloud-collaboration-ledger/v1"
+    },
+    "ledgerRepositoryId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 512
+    },
+    "headDigest": {
+      "$ref": "#/$defs/nullableSha256"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "sequence": {
+            "const": 0
+          }
+        },
+        "required": [
+          "sequence"
+        ]
+      },
+      "then": {
+        "properties": {
+          "headDigest": {
+            "type": "null"
+          },
+          "entries": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "headDigest": {
+            "$ref": "#/$defs/sha256"
+          },
+          "entries": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "\\S"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nullableSha256": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/sha256"
+        }
+      ]
+    },
+    "instant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "writeScope": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 517,
+        "pattern": "^(?:path:.+|semantic:[a-z0-9][a-z0-9._:/-]*)$"
+      }
+    },
+    "handoff": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "nextActorId",
+            "evidenceDigest",
+            "evaluationTime"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "actor",
+                "open"
+              ]
+            },
+            "nextActorId": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/identifier"
+                }
+              ]
+            },
+            "evidenceDigest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "evaluationTime": {
+              "$ref": "#/$defs/instant"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "actor"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "nextActorId": {
+                    "$ref": "#/$defs/identifier"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "nextActorId": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "release": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "evidenceDigest",
+            "integrationReceiptDigest",
+            "evaluationTime"
+          ],
+          "properties": {
+            "reason": {
+              "enum": [
+                "integrated",
+                "abandoned",
+                "handoff"
+              ]
+            },
+            "evidenceDigest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "integrationReceiptDigest": {
+              "$ref": "#/$defs/nullableSha256"
+            },
+            "evaluationTime": {
+              "$ref": "#/$defs/instant"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "reason": {
+                    "const": "integrated"
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "integrationReceiptDigest": {
+                    "$ref": "#/$defs/sha256"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "claimCore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claimId",
+        "actorId",
+        "deviceId",
+        "sessionId",
+        "repositoryId",
+        "workItemId",
+        "canonicalBaseRevision",
+        "declaredWriteScope",
+        "writeSetDigest",
+        "laneRevision",
+        "leaseEpoch",
+        "transitionCounter",
+        "heartbeatCounter",
+        "state",
+        "expiresAt",
+        "evidenceDigest",
+        "reviewRequestId",
+        "predecessorClaimId",
+        "handoff",
+        "release"
+      ],
+      "properties": {
+        "claimId": {
+          "$ref": "#/$defs/sha256"
+        },
+        "actorId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "deviceId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "repositoryId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "workItemId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "canonicalBaseRevision": {
+          "$ref": "#/$defs/identifier"
+        },
+        "declaredWriteScope": {
+          "$ref": "#/$defs/writeScope"
+        },
+        "writeSetDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "laneRevision": {
+          "$ref": "#/$defs/identifier"
+        },
+        "leaseEpoch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "transitionCounter": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "heartbeatCounter": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "state": {
+          "enum": [
+            "active",
+            "review-ready",
+            "parked",
+            "released"
+          ]
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/instant"
+        },
+        "evidenceDigest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "reviewRequestId": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/identifier"
+            }
+          ]
+        },
+        "predecessorClaimId": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "handoff": {
+          "$ref": "#/$defs/handoff"
+        },
+        "release": {
+          "$ref": "#/$defs/release"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "review-ready"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidenceDigest": {
+                "$ref": "#/$defs/sha256"
+              },
+              "reviewRequestId": {
+                "$ref": "#/$defs/identifier"
+              },
+              "release": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "parked"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "handoff": {
+                "type": "object"
+              },
+              "release": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "released"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "release": {
+                "type": "object"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "release": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "sequence",
+        "parentDigest",
+        "action",
+        "repositoryId",
+        "claimId",
+        "idempotencyKey",
+        "requestDigest",
+        "evaluationTime",
+        "claimCore",
+        "claimDigest",
+        "digest"
+      ],
+      "properties": {
+        "schema": {
+          "const": "agentic-cloud-collaboration-entry/v1"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "parentDigest": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "action": {
+          "enum": [
+            "claim",
+            "bind",
+            "heartbeat",
+            "review-ready",
+            "handoff",
+            "release"
+          ]
+        },
+        "repositoryId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "claimId": {
+          "$ref": "#/$defs/sha256"
+        },
+        "idempotencyKey": {
+          "$ref": "#/$defs/sha256"
+        },
+        "requestDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evaluationTime": {
+          "$ref": "#/$defs/instant"
+        },
+        "claimCore": {
+          "$ref": "#/$defs/claimCore"
+        },
+        "claimDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "sequence": {
+                "const": 1
+              }
+            },
+            "required": [
+              "sequence"
+            ]
+          },
+          "then": {
+            "properties": {
+              "parentDigest": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "parentDigest": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

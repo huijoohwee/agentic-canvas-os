@@ -54,5 +54,6 @@ jobs:
       - name: Enable protected auto-delivery for the exact reviewed head
         env:
           GH_TOKEN: ${{ github.token }}
+          AGENTIC_LEDGER_REPOSITORY: ${{ github.repository }}
           AUTO_DELIVERY_PR_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
         run: node scripts/sync-open-pr.mjs --auto-delivery

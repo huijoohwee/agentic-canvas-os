@@ -422,7 +422,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run turn:end -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
 ```
 
-The command runs the worktree lifecycle audit and fetches both canonical repositories. It requires clean `main == origin/main`, successful protected checks (`test`, `build`, `docs-contract`, and `collaboration-integration` for Agentic Canvas OS; `Integration Gate` for Knowgrph), and repository-owned runtime scripts. It acquires a host-wide lock, rejects unmanaged listeners before mutation, and may stop only a previously recorded process group whose private token, command, working directory, Git common directory, and port ownership still agree.
+The command runs the worktree lifecycle audit and fetches both canonical repositories. It requires clean `main == origin/main`, successful protected checks (`test`, `build`, `docs-contract`, `collaboration-integration`, and `cloud-collaboration` for Agentic Canvas OS; `Integration Gate` for Knowgrph), and repository-owned runtime scripts. It acquires a host-wide lock, rejects unmanaged listeners before mutation, and may stop only a previously recorded process group whose private token, command, working directory, Git common directory, and port ownership still agree.
 
 The supervisor starts only Knowgrph's repository-owned Apex and storage commands on `127.0.0.1:5173` and `127.0.0.1:8787`. State, logs, and a private token live outside both repositories. Success records token hash rather than token value and proves Apex, direct storage export, and the same export through the Vite proxy. A raw `npm run dev`, source-only check, prior-turn proof, or HTTP response without matching process ownership cannot support a runtime-ready claim.
 

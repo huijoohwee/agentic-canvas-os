@@ -157,6 +157,10 @@ test('auto-delivery revokes stale exact-head authorization without label races',
     source,
     /AUTO_DELIVERY_PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \|\| inputs\.pull_request_number \}\}/,
   );
+  assert.match(
+    source,
+    /AGENTIC_LEDGER_REPOSITORY: \$\{\{ github\.repository \}\}/,
+  );
 
   const controller = await readFile(path.join(repositoryRoot, 'scripts', 'sync-open-pr.mjs'), 'utf8');
   assert.ok(
@@ -166,6 +170,45 @@ test('auto-delivery revokes stale exact-head authorization without label races',
   assert.match(controller, /--disable-auto/);
   assert.match(controller, /--remove-label", AUTO_DELIVERY_LABEL/);
   assert.match(controller, /"--match-head-commit", headSha/);
+});
+
+test('cloud collaboration workflow is serialized, least-privilege, and exact-head', async () => {
+  const source = await readWorkflow('cloud-collaboration.yml');
+  assert.match(source, /^\s*pull_request_target:/m);
+  assert.match(source, /^\s*push:\n\s+branches: \[main\]/m);
+  assert.match(source, /^\s*workflow_dispatch:/m);
+  assert.match(source, /group: agentic-cloud-collaboration-ledger/);
+  assert.match(source, /queue: max/);
+  assert.doesNotMatch(source, /cancel-in-progress:\s*true/);
+  assert.doesNotMatch(source, /merge_group:/);
+  assert.match(source, /^\s+name: cloud-collaboration$/m);
+  assert.match(source, /checks: write\n\s+contents: read\n\s+pull-requests: read/);
+  assert.match(source, /contents: write\n\s+pull-requests: read/);
+  assert.doesNotMatch(source, /pull-requests: write|actions: write|id-token: write/);
+  assert.equal((source.match(/^\s+cache: npm$/gm) || []).length, 0);
+  assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 0);
+  assert.match(source, /AGENTIC_DEVICE_ID: github-actions/);
+  assert.match(source, /AGENTIC_SESSION_ID: workflow-run:\$\{\{ github\.run_id \}\}/);
+  assert.doesNotMatch(source, /GITHUB_RUN_ATTEMPT/);
+
+  const controller = await readFile(
+    path.join(repositoryRoot, 'scripts', 'cloud-collaboration-check-run.mjs'),
+    'utf8',
+  );
+  assert.match(controller, /head_sha: subject\.headSha/);
+  assert.match(controller, /status: "in_progress"/);
+  assert.match(controller, /status: "completed"/);
+  assert.match(controller, /GITHUB_EVENT_NAME !== "pull_request_target"/);
+
+  const configuration = await readFile(
+    path.join(repositoryRoot, 'scripts', 'configure-github.mjs'),
+    'utf8',
+  );
+  assert.match(configuration, /checks\.map\(\(context\) => \(\{ context, app_id: actionsAppId \}\)\)/);
+  assert.match(configuration, /include: \[ledgerRef\]/);
+  assert.match(configuration, /\{ type: "deletion" \}/);
+  assert.match(configuration, /\{ type: "non_fast_forward" \}/);
+  assert.doesNotMatch(configuration, /bypass_actors: \[[^\]]+\]/);
 });
 
 test('auto-delivery retains its retry signal when disable cannot be proven', async (t) => {

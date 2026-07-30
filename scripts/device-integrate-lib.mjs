@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
 import {
   appendProtectedMainRefresh,
   protectedMainRefreshHeads,
@@ -34,6 +35,7 @@ export function integrateSession({
   pollSeconds = 5,
   now = () => new Date(),
   sleep = defaultSleep,
+  verifyCloudAuthority = verifyCloudDeliveryAuthority,
   log = console.log,
 }) {
   requireRepositoryRoot({ invocationPath, repo });
@@ -72,10 +74,18 @@ export function integrateSession({
   let completion = lease.completion || null;
   if (!['completing', 'completed'].includes(lease.status)) {
     const allowProtectedMainRefresh = lease.status === "delivery" && lease.sessionId === sessionId;
+    const expectedDeliveryHeadSha = lease.deliveryHeadSha || commitEvidence?.commitSha ||
+      (autoDeliveryReview ? lease.reviewHeadSha : null);
+    verifyCloudAuthority({
+      pullRequestUrl: lease.pullRequestUrl,
+      branch,
+      headSha: expectedDeliveryHeadSha,
+      canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+      cloudAuthority: lease.cloudAuthority || null,
+    });
     const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
-      expectedHeadSha: lease.deliveryHeadSha || commitEvidence?.commitSha ||
-        (autoDeliveryReview ? lease.reviewHeadSha : null),
+      expectedHeadSha: expectedDeliveryHeadSha,
       ghText, waitSeconds, pollSeconds, now, sleep,
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
@@ -90,9 +100,23 @@ export function integrateSession({
             protectedMainRefresh,
             refresh,
           );
+          verifyCloudAuthority({
+            pullRequestUrl: lease.pullRequestUrl,
+            branch,
+            headSha: refresh.refreshedHeadSha,
+            canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+            cloudAuthority: lease.cloudAuthority || null,
+          });
           return refresh.refreshedHeadSha;
         }
         : null,
+    });
+    verifyCloudAuthority({
+      pullRequestUrl: lease.pullRequestUrl,
+      branch,
+      headSha: pullRequest.headRefOid,
+      canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+      cloudAuthority: lease.cloudAuthority || null,
     });
     log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);
     completion = completeTask();

@@ -52,6 +52,8 @@
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
     "repository-packing-contract:check": "node --test __tests__/repository-packing-contract.test.mjs && node ./scripts/repository-packing-contract.mjs",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
+    "collaboration:cloud": "node ./scripts/cloud-collaboration.mjs",
+    "collaboration:cloud:check": "node --test __tests__/cloud-collaboration-*.test.mjs __tests__/github-cloud-collaboration-*.test.mjs",
     "canonical:main:recover": "node ./scripts/canonical-main-recovery.mjs",
     "canonical:main:recover:check": "node --test __tests__/canonical-main-recovery.test.mjs",
     "canonical:main:fast-forward-equivalence": "node ./scripts/canonical-main-fast-forward-equivalence.mjs",

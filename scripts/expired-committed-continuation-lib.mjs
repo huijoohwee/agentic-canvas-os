@@ -178,7 +178,10 @@ export function resolveExpiredCommittedContinuation({
       gitText,
     });
   }
-  if (headSha === remoteSha) return null;
+  const publishedIntegration = headSha === remoteSha
+    && localLease?.integration?.commitSha === headSha
+    && pullRequestHeadSha === headSha;
+  if (headSha === remoteSha && !publishedIntegration) return null;
   if (localLease?.epoch !== remoteLease.epoch) return null;
 
   requireSourceLease({
@@ -191,9 +194,13 @@ export function resolveExpiredCommittedContinuation({
     ownerUrl,
     repo,
     sessionId,
+    publishedIntegration,
   });
-  gitText(["merge-base", "--is-ancestor", remoteSha, headSha]);
-  const sourceTreeSha = gitText(["rev-parse", `${remoteSha}^{tree}`]).trim();
+  const sourceFenceSha = publishedIntegration
+    ? remoteLease.fenceSha
+    : remoteSha;
+  gitText(["merge-base", "--is-ancestor", sourceFenceSha, headSha]);
+  const sourceTreeSha = gitText(["rev-parse", `${sourceFenceSha}^{tree}`]).trim();
   const headTreeSha = gitText(["rev-parse", `${headSha}^{tree}`]).trim();
   requireSha(sourceTreeSha, "Committed continuation source tree");
   requireSha(headTreeSha, "Committed continuation tree");
@@ -201,17 +208,17 @@ export function resolveExpiredCommittedContinuation({
     throw new Error("Committed continuation has no authored tree change beyond the remote fence.");
   }
   const committedPaths = [...new Set(splitNul(gitText([
-    "diff", "--name-only", "-z", remoteSha, headSha, "--",
+    "diff", "--name-only", "-z", sourceFenceSha, headSha, "--",
   ])))].sort();
   if (!committedPaths.length) {
     throw new Error("Committed continuation has no changed paths beyond the remote fence.");
   }
   const rangeDiffDigest = sha256(gitText([
-    "diff", "--binary", remoteSha, headSha, "--",
+    "diff", "--binary", sourceFenceSha, headSha, "--",
   ]));
   const integration = resolveIntegrationEvidence({
     integration: localLease.integration,
-    sourceFenceSha: remoteSha,
+    sourceFenceSha,
     headSha,
     headTreeSha,
     gitText,
@@ -231,7 +238,7 @@ export function resolveExpiredCommittedContinuation({
       sourceScope: remoteLease.scope,
       sourceBranch: branch,
       sourceBaseSha: remoteLease.baseSha,
-      sourceFenceSha: remoteSha,
+      sourceFenceSha,
       sourcePullRequestUrl: ownerUrl,
       headSha,
       treeSha: headTreeSha,
@@ -383,6 +390,7 @@ function requireSourceLease({
   ownerUrl,
   repo,
   sessionId,
+  publishedIntegration = false,
 }) {
   if (!localLease || SOURCE_MARKER_FIELDS.some(field => localLease[field] !== remoteLease[field])) {
     throw new Error("Committed continuation does not match the exact local and remote lease evidence.");
@@ -400,7 +408,9 @@ function requireSourceLease({
   }
   if (
     !SHA_PATTERN.test(String(remoteLease.fenceSha || "")) ||
-    remoteSha !== remoteLease.fenceSha ||
+    remoteSha !== (publishedIntegration
+      ? localLease.integration?.commitSha
+      : remoteLease.fenceSha) ||
     pullRequestHeadSha !== remoteSha
   ) {
     throw new Error("Committed continuation lost its exact remote or pull-request fence.");

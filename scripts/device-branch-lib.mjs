@@ -33,6 +33,7 @@ import {
   resolveExpiredCommittedContinuation,
   resolveSameSessionDeliveryContinuation,
 } from "./expired-committed-continuation-lib.mjs";
+import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
 import {
   protectedMainRefreshHeads,
   verifyProtectedMainRefreshChain,
@@ -625,6 +626,7 @@ export function publish({
   leaseStore,
   sessionId,
   run,
+  verifyCloudAuthority = verifyCloudDeliveryAuthority,
   log = console.log,
 }) {
   requireSession(sessionId);
@@ -662,6 +664,13 @@ export function publish({
   run("gh", ["pr", "edit", url, "--title", title, "--add-label", "automerge"]);
   run("gh", ["pr", "ready", url]);
   requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
+  verifyCloudAuthority({
+    pullRequestUrl: url,
+    branch,
+    headSha: deliveryHeadSha,
+    canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+    cloudAuthority: lease.cloudAuthority || null,
+  });
   run("gh", ["pr", "merge", "--auto", "--squash", url]);
   leaseStore.annotate({ sessionId, branch, values: { deliveryHeadSha } });
   const deliveredLease = leaseStore.release({ sessionId, branch, status: "delivery" });

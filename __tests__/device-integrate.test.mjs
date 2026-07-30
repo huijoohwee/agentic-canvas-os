@@ -237,7 +237,7 @@ test("bounded merge waiting preserves delivery state for replay", () => {
   }
 });
 
-test("delivery accepts one exact protected-main refresh and fast-forwards before completion", () => {
+test("delivery aggregates sequential tree-equivalent refreshes before completion", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
@@ -245,9 +245,16 @@ test("delivery accepts one exact protected-main refresh and fast-forwards before
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
   writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
   writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
-  const refreshedHeadSha = "2".repeat(40);
-  const refreshedMainSha = "3".repeat(40);
+  const firstRefreshedHeadSha = "2".repeat(40);
+  const firstRefreshedMainSha = "3".repeat(40);
+  const firstRefreshedTreeSha = "4".repeat(40);
+  const refreshedHeadSha = "5".repeat(40);
+  const refreshedMainSha = "6".repeat(40);
+  const refreshedTreeSha = "7".repeat(40);
   let head = commitSha;
+  let pullRequestRead = 0;
+  let pullHeadFetch = 0;
+  let clock = 0;
   let lease = createLease({
     repo,
     status: "delivery",
@@ -263,16 +270,40 @@ test("delivery accepts one exact protected-main refresh and fast-forwards before
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
-        if (key === "rev-parse FETCH_HEAD") return refreshedHeadSha;
-        if (key === "rev-list --parents -n 1 FETCH_HEAD") {
-          return `${refreshedHeadSha} ${commitSha} ${refreshedMainSha}`;
+        if (key === "rev-parse FETCH_HEAD") {
+          return pullHeadFetch === 1 ? firstRefreshedHeadSha : refreshedHeadSha;
+        }
+        if (key === `rev-list --parents -n 1 ${firstRefreshedHeadSha}`) {
+          return `${firstRefreshedHeadSha} ${commitSha} ${firstRefreshedMainSha}`;
+        }
+        if (key === `merge-base --is-ancestor ${firstRefreshedMainSha} origin/main`) return "";
+        if (key ===
+          `merge-tree --write-tree --no-messages ${commitSha} ${firstRefreshedMainSha}`) {
+          return firstRefreshedTreeSha;
+        }
+        if (key === `rev-parse ${firstRefreshedHeadSha}^{tree}`) {
+          return firstRefreshedTreeSha;
+        }
+        if (key === `rev-list --parents -n 1 ${refreshedHeadSha}`) {
+          return `${refreshedHeadSha} ${firstRefreshedHeadSha} ${refreshedMainSha}`;
         }
         if (key === `merge-base --is-ancestor ${refreshedMainSha} origin/main`) return "";
+        if (key ===
+          `merge-tree --write-tree --no-messages ${firstRefreshedHeadSha} ${refreshedMainSha}`) {
+          return refreshedTreeSha;
+        }
+        if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return refreshedTreeSha;
         if (key === "rev-parse HEAD") return head;
         if (key === "status --porcelain") return "";
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify({
+      ghText: () => JSON.stringify(pullRequestRead++ === 0 ? {
+        url: pullRequestUrl,
+        state: "OPEN",
+        baseRefName: "main",
+        headRefOid: firstRefreshedHeadSha,
+        mergeCommit: null,
+      } : {
         url: pullRequestUrl,
         state: "MERGED",
         baseRefName: "main",
@@ -285,7 +316,13 @@ test("delivery accepts one exact protected-main refresh and fast-forwards before
       sessionId: "session-a",
       run: (command, args) => {
         commands.push([command, ...args]);
-        if (command === "git" && args.join(" ") === "merge --ff-only FETCH_HEAD") head = refreshedHeadSha;
+        if (command === "git" && args.join(" ") ===
+          "fetch origin refs/pull/42/head") {
+          pullHeadFetch += 1;
+        }
+        if (command === "git" && args.join(" ") === "merge --ff-only FETCH_HEAD") {
+          head = head === commitSha ? firstRefreshedHeadSha : refreshedHeadSha;
+        }
       },
       runText: (command, args) => {
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
@@ -307,18 +344,35 @@ test("delivery accepts one exact protected-main refresh and fast-forwards before
       controllerRoot: repo,
       waitSeconds: 1,
       pollSeconds: 0.1,
+      now: () => new Date(clock),
+      sleep: milliseconds => { clock += milliseconds; },
       log: () => {},
     });
 
     assert.deepEqual(result.protectedMainRefresh, {
-      schema: "agentic-protected-main-refresh/v1",
+      schema: "agentic-protected-main-refresh-chain/v1",
       deliveredHeadSha: commitSha,
       refreshedHeadSha,
-      mainParentSha: refreshedMainSha,
+      refreshCount: 2,
+      refreshes: [
+        {
+          previousHeadSha: commitSha,
+          refreshedHeadSha: firstRefreshedHeadSha,
+          mainParentSha: firstRefreshedMainSha,
+          treeSha: firstRefreshedTreeSha,
+        },
+        {
+          previousHeadSha: firstRefreshedHeadSha,
+          refreshedHeadSha,
+          mainParentSha: refreshedMainSha,
+          treeSha: refreshedTreeSha,
+        },
+      ],
     });
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin main"));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin refs/pull/42/head"));
-    assert.ok(commands.some(call => call.join(" ") === "git merge --ff-only FETCH_HEAD"));
+    assert.equal(commands.filter(call => call.join(" ") ===
+      "git merge --ff-only FETCH_HEAD").length, 2);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -344,8 +398,8 @@ test("delivery rejects authored advancement instead of treating it as a protecte
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === "rev-parse FETCH_HEAD") return refreshedHeadSha;
-        if (key === "rev-list --parents -n 1 FETCH_HEAD") {
-          return `${refreshedHeadSha} ${authoredParentSha} ${mainSha}`;
+        if (key === `rev-list --parents -n 1 ${refreshedHeadSha}`) {
+          return `${refreshedHeadSha} ${authoredParentSha}`;
         }
         throw new Error(`unexpected git command: ${key}`);
       },
@@ -367,7 +421,7 @@ test("delivery rejects authored advancement instead of treating it as a protecte
       waitSeconds: 1,
       pollSeconds: 0.1,
       log: () => {},
-    }), /advanced beyond one exact protected-main refresh/);
+    }), /advanced beyond an exact protected-main refresh chain/);
     assert.equal(completed, false);
   } finally {
     rmSync(repo, { recursive: true, force: true });

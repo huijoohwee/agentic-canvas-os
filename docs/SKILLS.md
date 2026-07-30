@@ -138,7 +138,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 
 | Family | Skill ids | Detail owner |
 |---|---|---|
-| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md` |
+| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md`, `REPOSITORY-RUNTIME-READINESS.md` |
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |

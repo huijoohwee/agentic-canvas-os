@@ -1,14 +1,4 @@
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  renameSync,
-  statSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
@@ -19,7 +9,6 @@ export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_PULL_REQUEST_ACTION = "/change";
 export const DEVICE_BRANCH_PATTERN =
   /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
-const LOCK_STALE_MS = 30 * 1000;
 
 export function parseDeviceBranch(branch) {
   const match = String(branch || "").match(DEVICE_BRANCH_PATTERN);
@@ -88,13 +77,22 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     ownedDirtRecovery = null,
     integration = null,
     preClaimIntegrationContinuation = null,
+    admission = null,
+    cloudAuthority = null,
     previousEpoch = 0,
     ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
+    expiresAtCap = null,
   }) {
     requireIdentity({ sessionId, device, scope, branch, worktreePath, baseSha });
     const normalizedOwnedDirtRecovery = normalizeOwnedDirtRecovery(ownedDirtRecovery);
     const normalizedPreClaimIntegrationContinuation =
       normalizePreClaimIntegrationContinuation(preClaimIntegrationContinuation);
+    const scopedAdmission = normalizeScopedAdmission({
+      admission,
+      cloudAuthority,
+      scope,
+      baseSha,
+    });
     if (normalizedPreClaimIntegrationContinuation && (
       integration?.schema !== "agentic-integration-commit/v1" ||
       integration.commitSha !== normalizedPreClaimIntegrationContinuation.integrationCommitSha ||
@@ -155,9 +153,10 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
           integration,
           preClaimIntegrationContinuation: normalizedPreClaimIntegrationContinuation,
         } : {}),
+        ...(scopedAdmission || {}),
         acquiredAt: timestamp,
         heartbeatAt: timestamp,
-        expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),
+        expiresAt: boundedExpiry({ instant, ttlMs, expiresAtCap }),
       };
       writeRegistry({
         ...registry,
@@ -184,7 +183,12 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return lease;
   }
 
-  function heartbeat({ sessionId, branch, ttlMs = DEFAULT_WRITER_LEASE_TTL_MS }) {
+  function heartbeat({
+    sessionId,
+    branch,
+    ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
+    expiresAtCap = null,
+  }) {
     return withLock(() => {
       const registry = readRegistry();
       const current = verify({ sessionId, branch, allowExpired: true });
@@ -192,7 +196,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       const lease = {
         ...current,
         heartbeatAt: instant.toISOString(),
-        expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),
+        expiresAt: boundedExpiry({ instant, ttlMs, expiresAtCap }),
       };
       writeRegistry({
         ...registry,
@@ -335,16 +339,22 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
 
   function withLock(action) {
     mkdirSync(root, { recursive: true });
-    const descriptor = acquireLock(lockPath);
+    const lock = acquireLock(lockPath);
     try {
       return action();
     } finally {
-      closeSync(descriptor);
-      if (existsSync(lockPath)) unlinkSync(lockPath);
+      closeSync(lock.descriptor);
+      releaseLock(lockPath, lock.token);
     }
   }
 
-  return { annotate, beginCompletion, claim, complete, heartbeat, read, readRegistry, release, rollbackClaim, statePath, verify };
+  function withRegistryLock(action) {
+    if (typeof action !== "function") throw new Error("Writer lease registry lock requires an action.");
+    return withLock(() => action(readRegistry()));
+  }
+
+  return { annotate, beginCompletion, claim, complete, heartbeat, read,
+    readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
 }
 
 export function renderWriterLeasePullRequestBody(lease) {
@@ -400,6 +410,10 @@ function renderWriterLeaseMarker(lease) {
           lease.preClaimIntegrationContinuation,
         ),
     } : {}),
+    ...(lease.admission ? {
+      admission: lease.admission,
+      cloudAuthority: lease.cloudAuthority,
+    } : {}),
     ...(lease.parkHeadSha ? {
       parkHeadSha: lease.parkHeadSha,
       parkBranchHeadSha: lease.parkBranchHeadSha,
@@ -437,6 +451,13 @@ export function parseWriterLeasePullRequestBody(body) {
   ) return null;
   if (value.autoDelivery !== undefined && typeof value.autoDelivery !== "boolean") return null;
   if (value.runtimeRequired !== undefined && typeof value.runtimeRequired !== "boolean") return null;
+  if ((value.admission || value.cloudAuthority) && !normalizeScopedAdmission({
+    admission: value.admission,
+    cloudAuthority: value.cloudAuthority,
+    scope: value.scope,
+    baseSha: value.baseSha,
+    strict: false,
+  })) return null;
   if (value.pullRequestProjectionRepair !== undefined && (
     value.pullRequestProjectionRepair?.schema !== "agentic-pull-request-projection-repair/v1" ||
     !["repairing", "completed"].includes(value.pullRequestProjectionRepair?.status)
@@ -455,20 +476,34 @@ function escapeRegExp(value) {
 }
 
 function acquireLock(lockPath) {
+  const token = `${process.pid}:${Date.now()}:${process.hrtime.bigint()}`;
   try {
-    return openSync(lockPath, "wx", 0o600);
+    return createLock(lockPath, token);
   } catch (error) {
     if (error?.code !== "EEXIST") throw error;
-    const ageMs = Date.now() - statSync(lockPath).mtimeMs;
-    if (ageMs <= LOCK_STALE_MS) throw new Error("Another writer-lease operation is in progress.");
-    const stalePath = `${lockPath}.stale.${process.pid}.${Date.now()}`;
-    renameSync(lockPath, stalePath);
-    const descriptor = openSync(lockPath, "wx", 0o600);
-    unlinkSync(stalePath);
-    return descriptor;
+    throw new Error(
+      "Another writer-lease operation is in progress; an abandoned lock requires explicit owner-led recovery.",
+    );
   }
 }
-
+function createLock(lockPath, token) {
+  const descriptor = openSync(lockPath, "wx", 0o600);
+  writeFileSync(descriptor, JSON.stringify({ pid: process.pid, token }));
+  return { descriptor, token };
+}
+function readLockOwner(lockPath) {
+  try {
+    const value = JSON.parse(readFileSync(lockPath, "utf8"));
+    return Number.isSafeInteger(value.pid) && typeof value.token === "string"
+      ? value : null;
+  } catch {
+    return null;
+  }
+}
+function releaseLock(lockPath, token) {
+  const owner = existsSync(lockPath) ? readLockOwner(lockPath) : null;
+  if (owner?.token === token) unlinkSync(lockPath);
+}
 function isActive(lease, instant) {
   return lease?.status === "active" && Date.parse(lease.expiresAt) > instant.getTime();
 }
@@ -481,6 +516,16 @@ function normalizeTtl(ttlMs) {
   return Math.floor(value);
 }
 
+function boundedExpiry({ instant, ttlMs, expiresAtCap }) {
+  const requested = instant.getTime() + normalizeTtl(ttlMs);
+  if (expiresAtCap === null) return new Date(requested).toISOString();
+  const cap = Date.parse(expiresAtCap);
+  if (!Number.isFinite(cap) || cap - instant.getTime() < 60_000) {
+    throw new Error("Writer lease cloud expiry cap must remain at least 60 seconds in the future.");
+  }
+  return new Date(Math.min(requested, cap)).toISOString();
+}
+
 function requireIdentity(values) {
   for (const [key, value] of Object.entries(values)) {
     if (!String(value || "").trim()) throw new Error(`Writer lease requires ${key}.`);
@@ -490,4 +535,43 @@ function requireIdentity(values) {
   if (identity.device !== values.device || identity.scope !== values.scope) {
     throw new Error("Writer lease device and scope must match its branch identity.");
   }
+}
+
+function normalizeScopedAdmission({ admission, cloudAuthority, scope, baseSha, strict = true }) {
+  if (!admission && !cloudAuthority) return null;
+  const invalid = (
+    admission?.schema !== "agentic-lane-admission-lease/v1"
+    || !["planned", "admitted"].includes(admission.status)
+    || cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
+    || admission.semanticScope !== scope
+    || cloudAuthority.canonicalBaseSha !== baseSha
+    || cloudAuthority.writeSetDigest !== admission.writeSetDigest
+    || !Array.isArray(admission.declaredWriteSet)
+    || admission.declaredWriteSet.length < 2
+    || !admission.declaredWriteSet.includes(`semantic:${scope}`)
+    || JSON.stringify(cloudAuthority.cloudDeclaredWriteScope)
+      !== JSON.stringify(admission.declaredWriteSet)
+    || !/^[0-9a-f]{64}$/.test(String(admission.writeSetDigest || ""))
+    || !/^[0-9a-f]{64}$/.test(String(admission.manifestDigest || ""))
+    || !/^[0-9a-f]{64}$/.test(String(admission.planReceiptDigest || ""))
+    || !/^[0-9a-f]{64}$/.test(String(admission.admissionReceiptDigest || ""))
+    || !/^[0-9a-f]{64}$/.test(String(admission.existingLaneStateDigest || ""))
+    || (
+      admission.status === "admitted"
+      && (
+        !/^[0-9a-f]{64}$/.test(String(admission.admittedReportDigest || ""))
+        || !/^[0-9a-f]{64}$/.test(String(admission.preservationReceiptDigest || ""))
+      )
+    )
+    || !/^[0-9a-f]{64}$/.test(String(cloudAuthority.claimId || ""))
+    || !/^[0-9a-f]{64}$/.test(String(cloudAuthority.claimDigest || ""))
+    || !/^[0-9a-f]{40}$/.test(String(cloudAuthority.ledgerRevision || ""))
+    || !/^[0-9a-f]{64}$/.test(String(cloudAuthority.claimLedgerRevision || ""))
+    || !Number.isInteger(cloudAuthority.leaseEpoch)
+    || cloudAuthority.leaseEpoch < 1
+  ); if (invalid) {
+    if (!strict) return null;
+    throw new Error("Scoped lane admission and cloud authority are missing, inconsistent, or invalid.");
+  }
+  return { admission, cloudAuthority };
 }

@@ -84,6 +84,7 @@ jobs:
           ref: ${{ steps.guideline-source.outputs.revision }}
           path: .agentic-sdlc-source/huijoohwee.github.io
           persist-credentials: false
+          fetch-depth: 0
       - name: Verify repository policy-runtime readiness
         env:
           GITHUB_ROOT: ${{ github.workspace }}/.agentic-sdlc-source

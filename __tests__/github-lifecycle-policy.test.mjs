@@ -61,7 +61,7 @@ test('CI reports policy-runtime readiness through an always-run terminal check',
   assert.match(evaluateJob, /npm run agentic-sdlc:source:check/);
   assert.match(
     evaluateJob,
-    /repository: huijoohwee\/huijoohwee\.github\.io\n\s+ref: \$\{\{ steps\.guideline-source\.outputs\.revision \}\}/,
+    /repository: huijoohwee\/huijoohwee\.github\.io\n\s+ref: \$\{\{ steps\.guideline-source\.outputs\.revision \}\}[\s\S]*?fetch-depth: 0/,
   );
   assert.match(
     evaluateJob,

@@ -393,6 +393,13 @@ function renderWriterLeaseMarker(lease) {
     ...(lease.pullRequestProjectionRepair ? {
       pullRequestProjectionRepair: lease.pullRequestProjectionRepair,
     } : {}),
+    ...(lease.preClaimIntegrationContinuation ? {
+      integration: lease.integration,
+      preClaimIntegrationContinuation:
+        normalizePreClaimIntegrationContinuation(
+          lease.preClaimIntegrationContinuation,
+        ),
+    } : {}),
     ...(lease.parkHeadSha ? {
       parkHeadSha: lease.parkHeadSha,
       parkBranchHeadSha: lease.parkBranchHeadSha,

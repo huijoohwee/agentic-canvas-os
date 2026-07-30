@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
@@ -83,10 +84,12 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     worktreePath,
     baseSha,
     autoDelivery = false,
+    ownedDirtRecovery = null,
     previousEpoch = 0,
     ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
   }) {
     requireIdentity({ sessionId, device, scope, branch, worktreePath, baseSha });
+    const normalizedOwnedDirtRecovery = normalizeOwnedDirtRecovery(ownedDirtRecovery);
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
@@ -135,6 +138,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         pullRequestUrl: null,
         autoDelivery: Boolean(autoDelivery),
         runtimeRequired: Boolean(autoDelivery),
+        ...(normalizedOwnedDirtRecovery ? { ownedDirtRecovery: normalizedOwnedDirtRecovery } : {}),
         acquiredAt: timestamp,
         heartbeatAt: timestamp,
         expiresAt: new Date(instant.getTime() + normalizeTtl(ttlMs)).toISOString(),
@@ -367,6 +371,9 @@ function renderWriterLeaseMarker(lease) {
     expiresAt: lease.expiresAt,
     ...(lease.reviewHeadSha ? { reviewHeadSha: lease.reviewHeadSha } : {}),
     ...(lease.deliveryHeadSha ? { deliveryHeadSha: lease.deliveryHeadSha } : {}),
+    ...(lease.ownedDirtRecovery ? {
+      ownedDirtRecovery: normalizeOwnedDirtRecovery(lease.ownedDirtRecovery),
+    } : {}),
     ...(lease.parkHeadSha ? {
       parkHeadSha: lease.parkHeadSha,
       parkBranchHeadSha: lease.parkBranchHeadSha,
@@ -404,7 +411,13 @@ export function parseWriterLeasePullRequestBody(body) {
   ) return null;
   if (value.autoDelivery !== undefined && typeof value.autoDelivery !== "boolean") return null;
   if (value.runtimeRequired !== undefined && typeof value.runtimeRequired !== "boolean") return null;
-  return value;
+  let ownedDirtRecovery;
+  try {
+    ownedDirtRecovery = normalizeOwnedDirtRecovery(value.ownedDirtRecovery);
+  } catch {
+    return null;
+  }
+  return ownedDirtRecovery ? { ...value, ownedDirtRecovery } : value;
 }
 
 function escapeRegExp(value) {

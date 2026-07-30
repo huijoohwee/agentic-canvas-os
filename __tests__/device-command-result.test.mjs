@@ -66,6 +66,29 @@ test("park results retain deterministic detached-worktree evidence", () => {
   assert.equal(result.lease, null);
 });
 
+test("resume results expose the owned-dirt recovery digest without source bytes", () => {
+  const ownedDirtRecovery = {
+    schema: "agentic-owned-dirt-resume/v1",
+    sourceEpoch: 11,
+    sourceSessionId: "session-a",
+    reviewHeadSha: "c".repeat(40),
+    evidenceDigest: "d".repeat(64),
+    pathCount: 85,
+  };
+  const result = createDeviceCommandResult({
+    action: "resume",
+    repoRoot: "/workspace/task",
+    worktreePath: "/workspace/task",
+    branch: lease.branch,
+    lease: { ...lease, ownedDirtRecovery },
+    result: { branch: lease.branch },
+    pullRequestIsDraft: true,
+  });
+
+  assert.deepEqual(result.lease.ownedDirtRecovery, ownedDirtRecovery);
+  assert.equal(JSON.stringify(result).includes("worktreeObjects"), false);
+});
+
 test("device command failures are typed without exposing a stack", () => {
   const result = createDeviceCommandError({
     action: "heartbeat",

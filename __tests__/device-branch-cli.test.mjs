@@ -64,6 +64,19 @@ test("device CLI emits exactly one JSON object on machine success and failure", 
     assert.equal(error.ok, false);
     assert.equal(error.status, "error");
     assert.match(error.error.message, /positive number/);
+
+    const wrongAction = spawnSync(process.execPath, [
+      script,
+      "park",
+      `--repository=${canonicalRepo}`,
+      "--recover-owned-dirt",
+      "--json",
+    ], { encoding: "utf8" });
+    assert.equal(wrongAction.status, 1);
+    assert.match(
+      JSON.parse(wrongAction.stdout).error.message,
+      /accepted only by device:resume/,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

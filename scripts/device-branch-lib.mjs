@@ -17,6 +17,12 @@ import {
   requireParkedStashObject,
   restoreParkedStashObject,
 } from "./device-park-lib.mjs";
+import {
+  captureOwnedDirtEvidence,
+  requireOwnedDirtInvocation,
+  requireSameOwnedDirtEvidence,
+  resolveOwnedDirtRecovery,
+} from "./owned-dirt-resume-lib.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
 export { park, createParkMessage, formatParkTimestamp } from "./device-park-lib.mjs";
@@ -69,6 +75,7 @@ export function resume({
   leaseStore,
   sessionId,
   leaseTtlMs,
+  recoverOwnedDirt = false,
   run,
   log = console.log,
   now = () => new Date(),
@@ -82,7 +89,23 @@ export function resume({
   const dirty = Boolean(gitText(["status", "--porcelain"]).trim());
   const dirtyRestoreReplay = currentBranch === branchName && localAtInvocation?.status === "active" &&
     localAtInvocation.sessionId === sessionId && ["pending", "restored"].includes(localAtInvocation.parkStashStatus);
-  if (dirty && !dirtyRestoreReplay) requireClean({ gitText });
+  if (recoverOwnedDirt && !dirty) {
+    throw new Error("--recover-owned-dirt requires an existing dirty worktree.");
+  }
+  const ownedDirtEvidence = recoverOwnedDirt
+    ? captureOwnedDirtEvidence({ gitText, gitOptional })
+    : null;
+  if (ownedDirtEvidence) {
+    requireOwnedDirtInvocation({
+      branch: branchName,
+      currentBranch,
+      evidence: ownedDirtEvidence,
+      localLease: localAtInvocation,
+      repo,
+      sessionId,
+    });
+  }
+  if (dirty && !dirtyRestoreReplay && !ownedDirtEvidence) requireClean({ gitText });
   run("git", ["fetch", "origin", "main", branchName]);
 
   const pulls = JSON.parse(ghText([
@@ -106,6 +129,27 @@ export function resume({
   }
   const remoteRef = `origin/${branchName}`;
   const remoteSha = gitText(["rev-parse", remoteRef]).trim();
+  const ownedDirtRecovery = ownedDirtEvidence
+    ? resolveOwnedDirtRecovery({
+      branch: branchName,
+      evidence: ownedDirtEvidence,
+      localHeadSha: gitText(["rev-parse", "HEAD"]).trim(),
+      localLease: localAtInvocation,
+      ownerUrl: owner.url,
+      pullRequestHeadSha: pullRequest.headRefOid,
+      remoteLease,
+      remoteSha,
+      repo,
+      sessionId,
+    })
+    : null;
+  const verifyOwnedDirt = () => {
+    if (!ownedDirtRecovery) return;
+    requireSameOwnedDirtEvidence(
+      ownedDirtRecovery,
+      captureOwnedDirtEvidence({ gitText, gitOptional }),
+    );
+  };
   const integrationContinuation = resolveExpiredIntegrationContinuation({
     branch: branchName,
     currentBranch,
@@ -120,9 +164,12 @@ export function resume({
   });
   const replay = reconcileResumeReplay({
     branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
-    pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
+    pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now, verifyOwnedDirt,
   });
-  if (replay) return replay;
+  if (replay) {
+    verifyOwnedDirt();
+    return replay;
+  }
   const expired = Date.parse(remoteLease.expiresAt) <= now().getTime();
   const sameSessionDelivery = remoteLease.status === "delivery" && remoteLease.sessionId === sessionId;
   const reviewHandoff = remoteLease.status === "review_ready";
@@ -202,11 +249,22 @@ export function resume({
     worktreePath: repo,
     baseSha: claimBaseSha,
     autoDelivery: remoteLease.autoDelivery === true && remoteLease.runtimeRequired === true,
+    ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
     previousEpoch: remoteLease.epoch,
     ttlMs: leaseTtlMs,
   });
-  run("git", ["commit", "--allow-empty", "-m", resumeClaimSubject(identity.scope, claimed.epoch)]);
+  run("git", [
+    "commit",
+    "--allow-empty",
+    ...(ownedDirtRecovery ? ["--only"] : []),
+    "-m",
+    resumeClaimSubject(identity.scope, claimed.epoch),
+  ]);
   const fenceSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (ownedDirtRecovery) {
+    requireResumeClaimCommit({ lease: claimed, headSha: fenceSha, gitText });
+    verifyOwnedDirt();
+  }
   const lease = leaseStore.annotate({
     sessionId,
     branch: branchName,
@@ -228,6 +286,7 @@ export function resume({
   const restoredLease = completeParkedStashRestore({
     branch: branchName, lease, owner, leaseStore, sessionId, gitText, gitOptional, ghText, run,
   });
+  verifyOwnedDirt();
   log(
     `Resumed ${branchName} at epoch ${restoredLease.epoch} with fence ${fenceSha.slice(0, 12)}; prior writers are fenced by the fast-forward remote head.`,
   );
@@ -396,6 +455,7 @@ export function publish({
 function reconcileResumeReplay({
   branch, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
   pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now,
+  verifyOwnedDirt = () => {},
 }) {
   let local = leaseStore.read?.(branch) || null;
   if (!local || local.status !== "active" || local.sessionId !== sessionId || currentBranch !== branch ||
@@ -442,8 +502,15 @@ function reconcileResumeReplay({
       if (local.fenceSha) requireCarriedParkedStash({ local, expected: parkedStashValues });
     }
     if (atHandoffHead) {
-      run("git", ["commit", "--allow-empty", "-m", resumeClaimSubject(identity.scope, local.epoch)]);
+      run("git", [
+        "commit",
+        "--allow-empty",
+        ...(local.ownedDirtRecovery ? ["--only"] : []),
+        "-m",
+        resumeClaimSubject(identity.scope, local.epoch),
+      ]);
       headSha = gitText(["rev-parse", "HEAD"]).trim();
+      verifyOwnedDirt();
     }
     requireResumeClaimCommit({ lease: local, headSha, gitText });
     if (!local.fenceSha && local.pullRequestUrl) {

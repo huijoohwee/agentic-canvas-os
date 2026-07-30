@@ -1,120 +1,139 @@
 ---
-title: "Native Deterministic Knowledge Graph"
+title: "Deterministic Knowledge Graph Invocation Contract"
 graphId: "md:agentic-canvas-os-deterministic-knowledge-graph"
-doc_type: "Runtime Contract"
+doc_type: "Invocation And Client Contract"
 date: "2026-07-30"
 lang: "en-US"
-schema: "deterministic-knowledge-graph-contract/v2"
+schema: "deterministic-knowledge-graph-invocation-contract/v1"
 frontmatter_contract: "required"
-status: "runtime-ready"
-authority: "canonical native parser, graph, query, invocation, and MCP contract"
-runtime_scope: "bounded local ingestion, deterministic graph queries, and source-backed edge explanations"
-runtime_claim: "Agentic Canvas OS owns and executes one local runtime kernel; dictionary lookup remains metadata-only"
+status: "spec-complete"
+authority: "canonical command, semantic, binding, policy, and typed Knowgrph client contract"
+runtime_scope: "Agentic Canvas OS metadata resolution and MCP request forwarding"
+runtime_claim: "contract/client-ready; Knowgrph owns the executable parser, graph, artifact, query, explanation, import, and Canvas runtime"
 runtime_proof: "RUNTIME-PROOF.md"
-publish_policy: "Dev-only until explicit operator approval"
+publish_policy: "Dev-only until exact protected integration and runtime proof"
 invocations:
   - {action: "/knowledge.graph.ingest", semantics: ["#knowledge-graph", "#mcp", "#runtime-ready"], bindings: ["@working-directory", "@knowledge-graph", "@operator", "@runtime-proof"]}
   - {action: "/knowledge.graph.query", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
   - {action: "/knowledge.graph.explain", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
 mcp_dispatch:
-  "/knowledge.graph.ingest": "agentic_canvas_os.knowledge_graph.ingest"
-  "/knowledge.graph.query": "agentic_canvas_os.knowledge_graph.query"
-  "/knowledge.graph.explain": "agentic_canvas_os.knowledge_graph.explain"
+  "/knowledge.graph.ingest": "knowgrph.knowledge_graph.ingest"
+  "/knowledge.graph.query": "knowgrph.knowledge_graph.query"
+  "/knowledge.graph.explain": "knowgrph.knowledge_graph.explain_edge"
 external_dependency: "forbidden"
 ---
 
-# Native Deterministic Knowledge Graph
+# Deterministic Knowledge Graph Invocation Contract
 
 ## Outcome
 
-One explicit local workspace can be compiled into a queryable graph covering parser-supported code, authored documentation, SQL schemas, structured configuration, and text-bearing PDFs. Ingestion, storage, query, and explanation are native repository modules. They do not call a model, fetch a network resource, create embeddings, use a vector store, or require a remote graph service.
+Agentic Canvas OS supplies the canonical `/`, `#`, and `@` vocabulary, policy
+boundaries, and typed MCP client methods for turning an explicitly selected
+codebase plus its docs, SQL schemas, configs, and text-bearing PDFs into a
+queryable knowledge graph. Knowgrph owns the executable parser, graph builder,
+artifact store, queries, edge explanations, Launch import flows, and Canvas
+projection.
 
-Every relationship has a deterministic explanation and the evidence needed to audit it: source path and digest, parser identity and digest, extraction rule, exact source span, and bounded excerpt. Unsupported or malformed input produces a typed diagnostic instead of a guessed relationship.
+The split is deliberate: dictionary resolution returns metadata only. It never
+reads a workspace, parses a file, writes an artifact, or implies operator
+approval. Execution requires an explicit MCP `tools/call` through the existing
+Knowgrph transport.
 
-## One Runtime, Four Invocation Surfaces
+## Canonical Invocation Mapping
 
-| Surface | Invocation | Native dispatch |
+| Agentic Canvas OS invocation | Exact Knowgrph tool |
+|---|---|
+| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | `knowgrph.knowledge_graph.ingest` |
+| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.query` |
+| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.explain_edge` |
+
+`createKnowgrphKnowledgeGraphClient` binds `ingestKnowledgeGraph`,
+`queryKnowledgeGraph`, and `explainKnowledgeGraphEdge` to a host-supplied local
+MCP transport. `createKnowgrphMcpClient` exposes the same typed methods only
+when its Streamable HTTP endpoint is loopback. Both paths snapshot and validate
+the request before any asynchronous boundary, validate response identity and
+projection bounds, reject private store paths recursively, and call only the
+exact tools above.
+
+## Request Contract
+
+| Operation | Required identity | Optional fields owned by Knowgrph |
 |---|---|---|
-| `/` command | `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | `agentic_canvas_os.knowledge_graph.ingest` |
-| `/` command | `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `agentic_canvas_os.knowledge_graph.query` |
-| `/` command | `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `agentic_canvas_os.knowledge_graph.explain` |
-| MCP | `tools/list` then explicit `tools/call` | The same three tools above, backed by the same runtime instance. |
+| Ingest | Exactly one explicit local `rootPath` or canonical credential-free HTTPS `repositoryUrl` | Immutable repository ref, includes, excludes, parser and resource bounds, cache policy, strictness, and an optional source-resolved invocation proof. |
+| Query | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and one supported `mode` | Lexical query, endpoints, direction, edge labels, depth, result limit, and an optional source-resolved invocation proof. |
+| Explain edge | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and non-empty `edgeId` | Optional source-resolved invocation proof. |
 
-`#knowledge-graph` supplies semantic identity and `@knowledge-graph` supplies one exact snapshot binding. The command, semantic, and binding dictionaries remain canonical for `/`, `#`, and `@` resolution. Resolution returns metadata only. It never ingests, queries, explains, mutates an artifact, or grants operator approval; execution requires an explicit native tool call.
+When present, the invocation proof is versioned and bound to the exact Knowgrph
+tool. It carries the resolved action, semantic and binding tokens, the source
+revision, the compatible catalog digest, and the separate routing-schema digest.
+The client validates this proof shape without freezing the token values; the
+source-backed Skills & Commands resolver remains the token authority.
 
-The stdio entry point is `scripts/knowledge-graph-mcp.mjs`. It emits only newline-delimited JSON-RPC on stdout, reports tool failures as structured results, and requires an explicit artifact root. `src/knowledge-graph/mcp-tools.js` exposes exactly three closed-schema public tools. Parser generation is intentionally internal to ingestion and does not add a fourth tool.
+The client validates stable cross-repository identity and safety fields.
+Knowgrph's advertised MCP schemas remain authoritative for optional runtime
+arguments and operation-specific evidence, preventing Agentic Canvas OS from
+becoming a duplicate runtime schema owner.
 
-## Parser Generator
+## Digest Fence
 
-A custom parser grammar is inert canonical data with schema `agentic-parser-grammar/v1`. It names an id, version, supported extensions, optional comment prefixes, and bounded ordered extraction rules. A rule is a literal/token sequence that emits either an entity or an observed reference; captures, nesting, relation type, and source selection are declared as data.
+Successful ingestion exposes an opaque `graphId`, exact `snapshotDigest`,
+explicit `complete` state and counts, and a bounded read-only `projection` for
+Canvas. Artifact filesystem paths stay inside Knowgrph and never cross this
+client contract. Query and explanation must send the graph identity and exact
+digest as `expectedSnapshotDigest`; successful responses must echo both values,
+and edge explanation must echo the requested edge. Missing, malformed,
+replaced, stale, or mismatched identity fails closed instead of selecting
+another snapshot.
 
-Compilation validates a closed grammar, rejects duplicate or unsafe identifiers, canonicalizes it with locale-independent ordering, and returns an immutable `agentic-parser-artifact/v1` value bound to a SHA-256 digest. No source text, function body, dynamic import, evaluation primitive, shell command, or executable generated code enters the artifact.
+The typed client never invents, normalizes, upgrades, or substitutes a digest.
+The artifact and snapshot remain Knowgrph-owned.
 
-At ingest time the runtime accepts at most 32 grammar values or stored artifact references. Artifacts are digest-verified before use. The generated tokenizer preserves exact offsets and line/column positions, recognizes declared comments without escaping quoted strings, and produces deterministic entity/reference IR. Brace scopes are represented explicitly. A source line that cannot match the grammar is a bounded diagnostic, not an inferred node.
+## Source And Import Boundary
 
-Generated parsing has deterministic source-byte, code-unit, physical-line, token, rule-work, match, entity, reference, and diagnostic ceilings. Oversized source identity fails before parsing; an in-range work ceiling returns a frozen partial IR with one typed limit diagnostic before the next fact hash.
+The existing Knowgrph Toolbar > Launch > Import folder flow remains the
+explicit local-corpus acquisition surface. Toolbar > Launch > Import URL opens
+the shared FloatingPanel Skills & Commands catalog for the source-backed
+knowledge-graph ingestion command. The Canvas resolves that command's `/`,
+`#`, and `@` tuple through `knowgrph.agentic_canvas_os.docs.invoke` before the
+local knowledge-graph MCP host receives the repository URL. The Launch surface
+must not own a second catalog or a hardcoded semantic/binding list.
 
-## Built-In Source Adapters
+URL acquisition, when invoked, is a separately bounded network stage that
+resolves an immutable source revision before local parsing. Agentic Canvas OS
+does not clone, crawl, or fetch. A raw local path is never forwarded through
+the generic remote control-plane client.
 
-| Source class | Deterministic output | Typed boundary |
-|---|---|---|
-| Code | Declarations, containment, imports, calls, inheritance, and observed references for registered JavaScript/TypeScript, Python, Go, Rust, JVM, CLR, C-family, Swift, Ruby, PHP, and shell profiles. | Profiles expose only locally recognized syntax. Unsupported constructs remain omissions; no semantic guess is promoted as AST fact. |
-| Markdown and text documents | Nested sections, bounded paragraphs, fenced code blocks, links, autolinks, and relative document targets with exact spans. | Malformed fences and empty documents are diagnostic gaps. Prose inside a code fence does not become a document relationship. |
-| SQL | Tables, columns, constraints, indexes, views, alterations, and foreign-key observations from deterministic DDL tokenization. | Unrecognized statements or incomplete constructs remain typed diagnostics. |
-| JSON and line configs | Object/key hierarchy plus structural dependency, path, and environment observations for JSON, YAML, TOML, INI, environment, and properties formats. | Invalid JSON is omitted as a typed parse gap. Values do not authorize execution. |
-| PDF | Text regions from bounded plain or Flate streams and supported text operands, with byte spans and partial-result diagnostics. | Encrypted, malformed, image-only, over-limit, and unsupported-filter inputs fail closed or return an explicitly partial result. OCR is outside scope. |
+Source admission, parser generation, language adapters, source scopes,
+incremental shards, graph resolution, Canvas projection, and artifact
+persistence remain in Knowgrph. Agentic Canvas OS must not add a second parser,
+snapshot store, graph query engine, standalone MCP server, or package command
+for those concerns.
 
-All adapters emit the same immutable intermediate representation. It contains parser identity, source identity, ordered entities, observed references, diagnostics, and spans. Graph construction never consumes an untyped adapter-specific side channel.
+## Semantic And Evidence Policy
 
-## Workspace Admission
+`#knowledge-graph` means deterministic, source-backed structure. Every edge
+must retain a stable identity, fixed explanation, extraction rule, parser
+identity, source path and digest, exact span, bounded excerpt evidence,
+resolution premises, and ambiguity or confidence state. Unsupported or partial
+sources remain typed omissions; they do not become guessed facts.
 
-Ingestion requires a real explicit directory. It rejects a symlink root, never follows symlinks, verifies resolved parents remain beneath the root, and reads only registered source extensions. Built-in ignored directories include version-control metadata, dependency/vendor trees, generated output, caches, and the graph artifact directory.
+Parsing and querying use no model, embedding, vector store, similarity lookup,
+or remote graph service. Network access is outside parsing and query; it is
+permitted only in an explicitly selected and separately evidenced acquisition
+stage such as Import URL.
 
-Admission is bounded by entry count, admitted file count, per-file bytes, total bytes, directory depth, and elapsed time. Paths are workspace-relative and ordered by UTF-8 byte comparison. Each file is read once between before/after metadata checks; drift aborts the ingest. Binary or invalid UTF-8 sources are diagnosed unless the registered adapter consumes bytes directly.
+## Readiness Boundary
 
-Source files are read-only. Ingestion may write only to the explicit artifact root, which must be a real directory outside any symlink escape and disjoint from the admitted workspace. The runtime never edits code, docs, schemas, configs, PDFs, Git state, package manifests, deployment state, or provider resources.
+This repository is contract/client-ready when the dictionaries, exact tool
+mapping, pre-transport request validation, digest fence, and no-duplicate-runtime
+checks pass. That evidence does not make the combined feature runtime-ready.
 
-## Graph Construction
+Combined runtime readiness requires the exact protected Knowgrph revision to
+prove bounded ingestion, deterministic output, complete import accounting,
+source-scoped resolution, every-edge evidence, local query and explanation,
+Canvas projection, and zero model/embedding/vector behavior. Production and
+Cloudflare remain outside this contract.
 
-The graph has schema `agentic-knowledge-graph/v1`. Stable ids derive from canonical source-backed fields. Nodes represent files, parser-emitted entities, exact resolved targets, explicit external observations, and ambiguity records. Resolution occurs after all source IR is present:
-
-1. exact path candidates are tested for path-like references;
-2. qualified and local symbol indexes are tested for code and schema references;
-3. one candidate creates a resolved edge;
-4. multiple candidates create an ambiguity node and evidence-bearing candidate edges;
-5. no candidate creates an explicit external-observation node.
-
-Every edge passes one evidence factory. Publication rejects an edge without endpoints, kind, deterministic explanation, source digest, parser id and digest, rule id, source span, and excerpt. Explanations are fixed repository-owned templates populated from canonical fields. They are never generated prose. Duplicate canonical edges collapse deterministically.
-
-The snapshot includes ordered sources, parser manifest, diagnostics, nodes, edges, statistics, source-set digest, and zero-call economics. Its graph digest covers canonical content without timestamps or absolute machine paths. Re-ingesting unchanged bytes and parser artifacts yields byte-identical snapshot data and the same digest.
-
-## Storage And Stale Reads
-
-`src/knowledge-graph/snapshot-store.js` writes immutable, content-addressed parser and graph artifacts. A same-digest collision with different bytes is rejected. The current graph pointer is replaced atomically only after the complete snapshot has been synchronized.
-
-Query and explanation require both graph id and expected digest. If the current pointer advances, an older expected digest fails with `snapshot_stale`; the runtime never silently selects another snapshot. Artifact ids and digests are validated before path construction, real paths are contained beneath the configured store, files have size ceilings, and malformed JSON fails closed.
-
-Every loaded snapshot is revalidated after digest verification: source and parser manifests, record ordering, unique ids, endpoint closure, statistics, exact-zero economics, evidence source/parser membership, spans, excerpt digests, candidate ids, and edge identities must all agree before a query can index it.
-
-## Query And Explanation
-
-Query schema `agentic-knowledge-graph-query/v1` supports `summary`, `search`, `node`, `neighbors`, `impact`, `path`, and `match`. Lexical scoring uses normalized exact/prefix/substring terms over canonical node fields. Traversal uses local adjacency maps and bounded breadth-first search with fixed depth and result limits. Edge/node kind filters and tie-breaking are deterministic.
-
-Each result records its operation, exact digest, bounded nodes and edges, and a query plan stating that vector lookup was not used. Path results include the discovered canonical path or an explicit not-found plan. Query never generates a graph language statement or delegates interpretation to another service.
-
-Explanation accepts one exact edge id. It returns the stored edge and evidence without reparsing sources, scanning the workspace, inferring new facts, mutating state, or calling a model. Missing, malformed, or stale identity fails closed.
-
-## Verification Contract
-
-The repository-owned fixtures cover mixed code, docs, SQL, config, generated grammar input, and a text-bearing PDF. Proof requires:
-
-- byte-stable repeat ingestion and a changed digest after source change;
-- exact parser-artifact digest verification and inert persisted artifacts;
-- stable nodes, edges, spans, evidence, and non-empty explanation for every edge;
-- deterministic lexical, neighborhood, impact, path, match, summary, and exact-edge operations;
-- typed symlink, binary, unsupported, malformed, encrypted, image-only, over-limit, and stale-digest behavior;
-- exactly three native MCP tools with closed top-level schemas and one shared runtime;
-- zero model calls, network calls, embeddings, and vector stores;
-- no source mutation, provider mutation, production publish, or deployment.
-
-VCC: run `npm run knowledge-graph:check`, `npm run docs:check`, and `npm run check`. Require zero failures and inspect the saved runtime-proof entry before any readiness promotion.
+VCC: run `npm run knowledge-graph-contract:check` and `npm run docs:check`.
+Require zero failures, no Agentic Canvas OS executable graph runtime, and
+separate exact Knowgrph runtime proof before any combined readiness claim.

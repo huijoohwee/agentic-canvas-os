@@ -377,9 +377,9 @@ semantic:
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` | Read one immutable local ledger receipt and project its end-to-end graph through the existing KGC, GraphData, and Canvas owners without mutation, model use, network use, spend, or deployment. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
-| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Compile one bounded workspace through the native parser and graph runtime after explicit operator selection. |
-| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Query one exact digest through bounded lexical and structural operations without vector lookup. |
-| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Return one stored relationship explanation and its exact source evidence without reparsing. |
+| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Resolve one bounded workspace to the exact Knowgrph ingest tool after explicit operator selection. |
+| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Query one exact Knowgrph artifact digest through bounded lexical and structural operations without vector lookup. |
+| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Return one Knowgrph-stored relationship explanation and its exact source evidence without reparsing. |
 | `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
@@ -453,7 +453,7 @@ semantic:
 
 | Token | Facts source |
 |---|---|
-| `#knowledge-graph` | `FACTS.md` direct-resolution entry for native deterministic source-backed graph semantics. |
+| `#knowledge-graph` | `FACTS.md` direct-resolution entry for deterministic source-backed graph semantics with Knowgrph as executable owner. |
 | `#application-composition` | `FACTS.md` direct-resolution entry for exact component, interface, capability, and dependency planning. |
 | `#agentic-sdlc-observability` | `FACTS.md` direct-resolution entry for immutable-ledger Agentic SDLC graph observation. |
 | `#role-based-agent-team` | `FACTS.md` direct-resolution entry for exact role-based team semantics without authority inference. |

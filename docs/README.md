@@ -93,7 +93,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `RUNTIME-READINESS.md` | Readiness matrix | Tracks spec-complete to runtime-ready gates by capability. |
 | `RUNTIME-PROOF.md` | Runtime proof ledger | Current parse, route, scan, validation, and deploy-boundary proof for this docs control surface. |
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |
-| `KNOWLEDGE-GRAPH.md` | Native deterministic knowledge graph | Parser-generator and source-adapter boundaries, exact invocation-to-MCP mapping, digest-fenced snapshots, source-backed edge explanations, and vector-free queries. |
+| `KNOWLEDGE-GRAPH.md` | Deterministic knowledge graph invocation | Exact invocation-to-Knowgrph mapping, typed client methods, opaque digest-fenced snapshots, source-backed edge requirements, and the no-duplicate-runtime boundary. |
 | `MCP-GATEWAY.md` | MCP federation contract | Discovery-first gateway rules across local, Pages, browser, and control-plane surfaces. |
 | `VALIDATION-RUNBOOK.md` | Focused proof lane | Commands and checks for documentation, local runtime, and deploy guards. |
 | `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one canonical `main` runtime owner, registered task worktrees, branch-bound session leases, scope-aware draft PRs, fencing SHAs, and exact-SHA proof. |

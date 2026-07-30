@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS MCP Gateway"
 graphId: "md:knowgrph-agentic-canvas-os-mcp-gateway"
 doc_type: "MCP Gateway Contract"
-date: "2026-07-29"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-canvas-os-mcp-gateway/v1"
 frontmatter_contract: "required"
@@ -115,7 +115,7 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 
 | Consumer surface | Route owner | Source and boundary |
 |---|---|---|
-| Knowgrph Skills & Commands and shared composer menus | `knowgrph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/knowgrph/control-plane/mcp` owner | Reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |
+| Knowgrph Skills & Commands and shared composer menus | `knowgrph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/knowgrph/control-plane/mcp` owner | Read-only discovery reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`; it never executes `/ingest-url` or another grammar command. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |
 
 ## Tool Gateway Capabilities
 

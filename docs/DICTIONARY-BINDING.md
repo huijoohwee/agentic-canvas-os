@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-07-26"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -283,7 +283,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@git-remote` | Opaque configured remote alias used for browser Git fetch or push. | Authenticated Dev Worker storage relay and its static allowlist. | Browser payloads contain neither credentials nor upstream URLs; the relay revalidates loopback origin, membership, role, size, path, and compare-before-update state. |
 | `@persisted-cache` | Browser-owned binary and metadata cache used by file synchronization. | Knowgrph storage-engine IndexedDB owner. | Chunked values stay within browser limits, credentials are rejected, and degraded persistence blocks mutating controls. |
 | `@file-sync-provider` | Opaque configured provider alias for file or directory pull and push. | Authenticated Dev Worker provider registry. | Alias exposes no provider resource id or credential; unsupported native documents, shortcuts, symlinks, and unverifiable hashes fail explicitly. |
-| `@url:` | Context reference to fetched external content. | Approved URL fetch/extract owner. | Requires egress policy, cache/citation metadata, size bounds, and no credentials in URL or headers. |
+| `@url:` | Operator-provided reference to bounded external content for context expansion or source import. | Approved URL fetch, extract, or Import URL owner. | Requires `@reference-policy`, egress policy, cache/citation metadata, size bounds, and no credentials in the URL or headers. |
 | `@reference-policy` | Workspace, scan, size, platform, URL egress, warning, and refusal rules for context references. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved composer or CLI owner. | Missing policy preserves raw text; unsupported surfaces pass raw `@` references through with typed warning. |
 | `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
 | `@kanban-board` | Durable `kanban.md` task board. | Authored Markdown table source plus existing multi-dimensional table/Kanban utilities. | Board rows are the SSOT for task and handoff state; no browser-only, process-only, or copied board store. |
@@ -359,7 +359,7 @@ binding:
 | Missing, non-Git, unsafe, changed, or escaping `@repository-root` for `/repository.pack` | Return a typed repository-root block before discovery or publication; do not broaden `@working-directory`, follow a symlink, or use a remote fallback. |
 | Missing `@context-policy` for `/context.load` | Block before inclusion; context files cannot self-authorize loading. |
 | Missing `@reference-policy` for `/reference.expand` | Preserve raw message text and return reference-policy-required. |
-| `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before injecting content into `@attached-context`. |
+| `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before context attachment or source import; do not fetch, inject, or persist the content. |
 | Missing `@kanban-board` for `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` | Return missing-board; do not create a second board store. |
 | Missing `@agent-profile` or `@worker-process` for a handoff | Return missing-profile; do not spawn an anonymous worker. |
 | Missing `@work-item` or `@implementation-run` for `/implementation.run` | Return missing-managed-run-context before worktree creation, process launch, model spend, or mutation. |
@@ -478,7 +478,7 @@ binding:
 | `@git:` | `FACTS.md` direct-resolution entry for bounded git history references. |
 | `@local-git-repository`, `@git-remote` | `FACTS.md` direct-resolution entries for the browser Git owner and opaque Worker relay binding. |
 | `@persisted-cache`, `@file-sync-provider` | `FACTS.md` direct-resolution entries for browser cache ownership and opaque provider relay binding. |
-| `@url:` | `FACTS.md` direct-resolution entry for URL context references. |
+| `@url:` | `FACTS.md` direct-resolution entry for bounded URL context or source-import references. |
 | `@reference-policy` | `FACTS.md` direct-resolution entry for reference expansion policy. |
 | `@attached-context` | `FACTS.md` direct-resolution entry for appended expansion packets. |
 | `@kanban-board` | `FACTS.md` direct-resolution entry for durable Kanban board binding. |

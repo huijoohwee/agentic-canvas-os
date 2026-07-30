@@ -369,7 +369,7 @@ semantic:
 
 | Pattern | Meaning |
 |---|---|
-| `/runtime-ready.check #harness #vcc @local-harness` | Prove an AI-capable contract with local checks. |
+| `/runtime-ready.check #runtime-ready #harness #vcc #foss #ttv @repository-root @local-harness @runtime-proof` | Prove an AI-capable contract or one exact local repository layer with bounded model-free checks. |
 | `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Hydrate one private bounded ECS session from validated KGC source. |
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Run ordered transactional systems and surface real or deferred reasoning cost evidence. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Atomically persist only pending validated decision nodes, then close the successful session. |

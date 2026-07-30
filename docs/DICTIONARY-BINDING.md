@@ -385,7 +385,7 @@ binding:
 | Pattern | Meaning |
 |---|---|
 | `/memory.seed #frontmatter @source.frontmatter @source.body` | Build memory from authored source. |
-| `/runtime-ready.check #harness @local-harness @runtime-proof` | Prove runtime status locally. |
+| `/runtime-ready.check #runtime-ready #harness #vcc @repository-root @local-harness @runtime-proof` | Prove one requested local repository layer from exact bounded source and surfaced evidence. |
 | `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Bind validated KGC source to one private bounded ECS session. |
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Resolve and advance the live session without exposing its world object. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Persist the session's pending decisions atomically and dispose it only after a terminal success. |

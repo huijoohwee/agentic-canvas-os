@@ -52,6 +52,8 @@
     "prompt-preset-contract:check": "node --test __tests__/prompt-preset-contract.test.mjs && npm run docs:check",
     "probe-tree-contract:check": "node --test __tests__/probe-tree-contract.test.mjs && npm run docs:check",
     "repository-packing-contract:check": "node --test __tests__/repository-packing-contract.test.mjs && node ./scripts/repository-packing-contract.mjs",
+    "repository-runtime-readiness:check": "node --test __tests__/repository-runtime-readiness.test.mjs",
+    "repository-runtime-readiness:audit": "node ./scripts/repository-runtime-readiness.mjs",
     "collaboration:gate": "node ./scripts/collaboration-gate.mjs",
     "collaboration:cloud": "node ./scripts/cloud-collaboration.mjs",
     "collaboration:cloud:check": "node --test __tests__/cloud-collaboration-*.test.mjs __tests__/github-cloud-collaboration-*.test.mjs",

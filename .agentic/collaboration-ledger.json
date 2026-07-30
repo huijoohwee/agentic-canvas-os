@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 25,
-  "headDigest": "c665d0d7c08c471d87635673d38dfab668ca1d3a07ffd58d9112919e7a0286e0",
+  "sequence": 26,
+  "headDigest": "a00ce79d2fd4fbe9619c761a509265328a9b731b250c3db793e8ead73586bd7e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -1026,6 +1026,53 @@
       },
       "claimDigest": "f87dd2d9459777707bcb844910a5fc9ce5c1308587899b3271ea03f690483b81",
       "digest": "c665d0d7c08c471d87635673d38dfab668ca1d3a07ffd58d9112919e7a0286e0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 26,
+      "parentDigest": "c665d0d7c08c471d87635673d38dfab668ca1d3a07ffd58d9112919e7a0286e0",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "74bbe17c935df24fb7ffaa19713ab7e0a8329a71804b829e08791b370df3a09d",
+      "idempotencyKey": "7aa778eb3b40ab244012e6d7cbf65a74ca08b1e5fc2e8ddd6ec268ac6427461a",
+      "requestDigest": "bd7c70aa88baa823d1d51554f43b3640233dd6205b08dce092120aa292d5e238",
+      "evaluationTime": "2026-07-30T06:21:10.000Z",
+      "claimCore": {
+        "claimId": "74bbe17c935df24fb7ffaa19713ab7e0a8329a71804b829e08791b370df3a09d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:60236857ba17b339b3943d4cd3c14769c15ecf02c99b4c6d5e48f9bba9602009",
+        "sessionId": "session:4574824cb22bf67e3760e89399614b2345f2db4acec3e7b5b3b09d1c1256b030",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:2751624f082617cdd9a1bd87c6baed1d9e2c570d5edb2aa09a71c17895e893db",
+        "canonicalBaseRevision": "e9fbfca5782cf37adbd25907efb550a546f125fd",
+        "declaredWriteScope": [
+          "path:.github/workflows/integration.yml",
+          "path:AGENTS.md",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:docs/conflict-resolution.md",
+          "path:docs/documents/knowgrph-cloud-github-collaboration-runtime-proof.md",
+          "path:schemas/collaboration-runtime-report.v1.schema.json",
+          "path:scripts/__tests__/collaboration-contract.test.mjs",
+          "path:scripts/__tests__/collaboration-runtime-report.test.mjs",
+          "path:scripts/check-collaboration-runtime.mjs",
+          "path:scripts/collaboration-contract.mjs",
+          "path:scripts/github-active-scope-client.mjs"
+        ],
+        "writeSetDigest": "921407643b6189eaa7af05cb3a1810caeb7c7fb6572c5eada2a1d5a86c951daf",
+        "laneRevision": "8df982b5bb9b77f9d12e11067a9c714eb2fdbe36",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T06:06:28.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs74XV7F",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "68de611b8a7a1a742a0fd082494cac6a850dfc00faf2e9f4fa960a4b3af5038a",
+      "digest": "a00ce79d2fd4fbe9619c761a509265328a9b731b250c3db793e8ead73586bd7e"
     }
   ]
 }

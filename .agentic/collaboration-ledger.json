@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 57,
-  "headDigest": "22b3071f8e9df1dbb8bffbfca4ed69b3d746122b96d40880d50f15f25ba8f510",
+  "sequence": 58,
+  "headDigest": "6e88ccd92aca4f05292815c035f801c612f4dc1190272a0e01da0bb675642cb8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -2650,6 +2650,68 @@
       },
       "claimDigest": "b232115a393108c17aea9f32eb5ac75a6f98461fe59f6e7fdb511fa7f5314434",
       "digest": "22b3071f8e9df1dbb8bffbfca4ed69b3d746122b96d40880d50f15f25ba8f510"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 58,
+      "parentDigest": "22b3071f8e9df1dbb8bffbfca4ed69b3d746122b96d40880d50f15f25ba8f510",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "88677d17c49db0a0173c36ec3e997013810083a9262021d64b1e31187793f25a",
+      "idempotencyKey": "67cee3ae6420ffc33b408670933b26969f6bb3bdddf340b00e7cef3c7840cdea",
+      "requestDigest": "4ed937cf713d7b1e452ba377a5f7e49bec702bc90be87eacf5139d6afae8ac96",
+      "evaluationTime": "2026-07-30T17:42:27.000Z",
+      "claimCore": {
+        "claimId": "88677d17c49db0a0173c36ec3e997013810083a9262021d64b1e31187793f25a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:a0ec8df95f0f9fee6885d8f07539e30700062573d2357982b8e34c1294ae96af",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:42312a0b95cb43e4a5d574a5e28db25f15e242a4f30f696f5433fafa869682ce",
+        "canonicalBaseRevision": "aeb28f0ae85ddb8747712289bfd145821ed2063c",
+        "declaredWriteScope": [
+          "path:__tests__/device-review.test.mjs",
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:__tests__/task-worktree-provision.test.mjs",
+          "path:docs/SCOPED-LANE-ADMISSION.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:docs/schemas/scoped-lane-admission-report.v1.schema.json",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/device-park-lib.mjs",
+          "path:scripts/device-start-lib.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-admission-lib.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-admission.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "path:scripts/task-worktree-provision.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:scoped-lane-admission-runtime"
+        ],
+        "writeSetDigest": "8e170bef8a3e7738ad44d8dffaf6f46e1dcb006e3f23d2f549aac207efcbfb91",
+        "laneRevision": "720c936b2a700743590d4671b25d0e97c1d00283",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-07-31T17:36:02.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM74m48o",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "abandoned",
+          "evidenceDigest": "46561f7ee29443e90a71d4d0acbf5cd42fdf03993f26c9f0634fb19c4d38cdb3",
+          "integrationReceiptDigest": null,
+          "evaluationTime": "2026-07-30T17:42:27.000Z"
+        }
+      },
+      "claimDigest": "f78bffbab2cafaf7a57bd904afc1967c640435393e8c1cb160f129825bb59514",
+      "digest": "6e88ccd92aca4f05292815c035f801c612f4dc1190272a0e01da0bb675642cb8"
     }
   ]
 }

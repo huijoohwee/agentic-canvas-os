@@ -162,11 +162,11 @@ agentic_os_memory:
     bindings: ["@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@message-gateway"]
     guards: ["typed state", "explicit nodes and edges", "checkpoint and resume", "human review gate", "sandbox scope", "message gateway", "bounded trace", "no deploy"]
   deterministic_knowledge_graph:
-    source_policy: "Graphify is product inspiration only; forbid copied or adapted code, prose, prompts, APIs, schemas, algorithms, parser tables, fixtures, tests, examples, package conventions, generated layouts, dependencies, CLI execution, and services"
+    source_policy: "native repository implementation only; forbid copied or adapted external code, prose, prompts, APIs, schemas, algorithms, parser tables, fixtures, tests, examples, generated layouts, runtime dependencies, CLI execution, and services"
     commands: ["/knowledge.graph.ingest", "/knowledge.graph.query", "/knowledge.graph.explain"]
     semantics: ["#knowledge-graph"]
     bindings: ["@working-directory", "@knowledge-graph", "@runtime-proof", "@operator"]
-    guards: ["bounded workspace", "local deterministic parsing", "stable snapshot digest", "source evidence for every edge", "stored deterministic explanations", "typed omissions", "no model", "no network", "no embedding", "no vector store", "no Graphify dependency", "metadata lookup is not execution", "no deploy"]
+    guards: ["bounded workspace", "inert parser generation", "local deterministic AST parsing", "stable snapshot digest", "source evidence for every edge", "stored deterministic explanations", "typed omissions", "no model", "no network", "no embedding", "no vector store", "no external parser dependency", "metadata lookup is not execution", "no deploy"]
 socket_types:
   agentic_os_source_signal: {color: "#14b8a6", edgeWidthPx: 2, handleStrokeWidthPx: 2, accepts: [agentic_os_source_signal]}
   agentic_os_route_signal: {color: "#38bdf8", edgeWidthPx: 2, handleStrokeWidthPx: 2, accepts: [agentic_os_route_signal]}

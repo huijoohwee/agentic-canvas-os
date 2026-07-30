@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 18,
-  "headDigest": "ff833e992e69dd587a95b0d58ac54cb0c5081e697def71bcf09c9f8d0840c81f",
+  "sequence": 19,
+  "headDigest": "3501d95f181a260072788050b02843ce9df7bd14d1ace0aa6922fa96b17e71af",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -724,6 +724,46 @@
       },
       "claimDigest": "9b978a6dca78fbe06def3c931024cf49564b1d54ce9c2d6366770cd0d0e21633",
       "digest": "ff833e992e69dd587a95b0d58ac54cb0c5081e697def71bcf09c9f8d0840c81f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 19,
+      "parentDigest": "ff833e992e69dd587a95b0d58ac54cb0c5081e697def71bcf09c9f8d0840c81f",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b4d4cbcc021df235731951ae04bf175097496911248b08e0cff1114acc112ed9",
+      "idempotencyKey": "ab130c05b83de17ad90dccf33ea9c0e1b08c633cba228f94e85d7d36be2a8513",
+      "requestDigest": "998802da3ddf73383d92b21788f0e8fed72104b7fc57560b2bf1c39bac09ce2f",
+      "evaluationTime": "2026-07-30T06:06:52.000Z",
+      "claimCore": {
+        "claimId": "b4d4cbcc021df235731951ae04bf175097496911248b08e0cff1114acc112ed9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:462f3c4e2484aa4a14fda7bfb4417c56b0adeaafc3e0e5fea618dba61eeca223",
+        "sessionId": "session:bab9dca49cde3b53f3623ee9d281a8e549fc433f9b6146c22fe78946b2b5c7d5",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:13170dccbd4af45a5e27c626e8ee483a4533fe87e549205d10d88fce2e50abdd",
+        "canonicalBaseRevision": "44b8e46d8c704b2ff37a1fcefb364a864d2aacf7",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:package.json",
+          "path:schema/AgenticRAG/agenticrag-guidelines-and-surfaces-map.graph.jsonld",
+          "path:scripts/check-agenticrag-guidelines-map.mjs"
+        ],
+        "writeSetDigest": "2fe6e77d250187506a800798e50e3318482c7e8ec38425fadfc9bbb13a05699d",
+        "laneRevision": "34e4a32074ff2a0905194b8570eca6355dab031a",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T06:04:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc74XLTo",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ac763a759585b8533af6e0ecbd22c76bd4dd84811513f569dbedbd879fba72b3",
+      "digest": "3501d95f181a260072788050b02843ce9df7bd14d1ace0aa6922fa96b17e71af"
     }
   ]
 }

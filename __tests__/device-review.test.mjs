@@ -66,7 +66,99 @@ test("review validates, pushes, and marks the matching PR ready without merge", 
   const originalBody = "## Work item\n\nAcceptance stays visible.";
   let remoteBody = originalBody;
   let isDraft = true;
+  let pullRequestHeadSha = lease.fenceSha;
   let saved = lease;
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "",
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
+      : pullRequestJson({ body: remoteBody, isDraft, headRefOid: pullRequestHeadSha }),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: () => saved,
+      verify: () => saved,
+      annotate: ({ values }) => { saved = { ...saved, ...values }; return saved; },
+      release: ({ status }) => { saved = { ...saved, status }; return saved; },
+    },
+    sessionId: "session-a",
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "git" && args[0] === "push") pullRequestHeadSha = headSha;
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") remoteBody = args[args.indexOf("--body") + 1];
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.equal(saved.status, "review_ready");
+  assert.equal(saved.reviewHeadSha, headSha);
+  assert.equal(isDraft, false);
+  assert.ok(calls.some(call => call.join(" ") === "npm run check"));
+  assert.ok(calls.some(call => call[0] === "git" && call[1] === "push"));
+  assert.ok(calls.some(call => call.join(" ") === `gh pr ready ${pullRequestUrl}`));
+  const commandTrace = calls.map(call => call.join(" ")).join("\n");
+  assert.doesNotMatch(commandTrace, /gh pr merge|--auto|automerge|--add-label/);
+  const bodyEdit = calls.find(call => call[0] === "gh" && call.includes("--body"));
+  assert.match(bodyEdit[bodyEdit.indexOf("--body") + 1], /Acceptance stays visible/);
+  assert.ok(bodyEdit.includes("--title"));
+});
+
+test("review waits for the pushed SHA before marking the ownership PR ready", () => {
+  const calls = [];
+  let isDraft = true;
+  let readsAfterPush = 0;
+  let pushed = false;
+  let saved = lease;
+  review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "",
+    ghText: args => {
+      if (args[1] === "list") {
+        return JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }]);
+      }
+      if (pushed) readsAfterPush += 1;
+      return pullRequestJson({
+        body: "## Work item",
+        isDraft,
+        headRefOid: readsAfterPush >= 3 ? headSha : lease.fenceSha,
+      });
+    },
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: () => saved,
+      verify: () => saved,
+      annotate: ({ values }) => { saved = { ...saved, ...values }; return saved; },
+      release: ({ status }) => { saved = { ...saved, status }; return saved; },
+    },
+    sessionId: "session-a",
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "git" && args[0] === "push") pushed = true;
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
+    },
+    wait: milliseconds => calls.push(["wait", String(milliseconds)]),
+    log: () => {},
+  });
+
+  assert.equal(readsAfterPush >= 3, true);
+  assert.equal(isDraft, false);
+  assert.equal(calls.filter(call => call[0] === "wait").length, 2);
+  const readyIndex = calls.findIndex(call => call.join(" ") === `gh pr ready ${pullRequestUrl}`);
+  const lastWaitIndex = calls.findLastIndex(call => call[0] === "wait");
+  assert.ok(readyIndex > lastWaitIndex);
+});
+
+test("an immutable auto-delivery lease wakes the controller without calling merge locally", () => {
+  const calls = [];
+  let remoteBody = "## Work item";
+  let isDraft = true;
+  let saved = { ...lease, autoDelivery: true, runtimeRequired: true };
   const result = review({
     invocationPath: repo,
     repo,
@@ -86,7 +178,9 @@ test("review validates, pushes, and marks the matching PR ready without merge", 
     run: (command, args) => {
       calls.push([command, ...args]);
       if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
-      if (command === "gh" && args[0] === "pr" && args[1] === "edit") remoteBody = args[args.indexOf("--body") + 1];
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit" && args.includes("--body")) {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
     },
     log: () => {},
   });
@@ -94,15 +188,8 @@ test("review validates, pushes, and marks the matching PR ready without merge", 
   assert.equal(result, pullRequestUrl);
   assert.equal(saved.status, "review_ready");
   assert.equal(saved.reviewHeadSha, headSha);
-  assert.equal(isDraft, false);
-  assert.ok(calls.some(call => call.join(" ") === "npm run check"));
-  assert.ok(calls.some(call => call[0] === "git" && call[1] === "push"));
-  assert.ok(calls.some(call => call.join(" ") === `gh pr ready ${pullRequestUrl}`));
-  const commandTrace = calls.map(call => call.join(" ")).join("\n");
-  assert.doesNotMatch(commandTrace, /gh pr merge|--auto|automerge|--add-label/);
-  const bodyEdit = calls.find(call => call[0] === "gh" && call.includes("--body"));
-  assert.match(bodyEdit[bodyEdit.indexOf("--body") + 1], /Acceptance stays visible/);
-  assert.ok(bodyEdit.includes("--title"));
+  assert.ok(calls.some(call => call.join(" ") === `gh pr edit ${pullRequestUrl} --add-label agentic/auto-delivery`));
+  assert.doesNotMatch(calls.map(call => call.join(" ")).join("\n"), /gh pr merge|--auto/);
 });
 
 test("review replays an exact same-session ready handoff without verification or push", () => {
@@ -233,12 +320,13 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
   assert.equal(parkCalls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"), false);
 });
 
-function pullRequestJson({ body, isDraft }) {
+function pullRequestJson({ body, isDraft, headRefOid = headSha }) {
   return JSON.stringify({
     url: pullRequestUrl,
     state: "OPEN",
     isDraft,
     headRefName: branch,
+    headRefOid,
     baseRefName: "main",
     body,
   });

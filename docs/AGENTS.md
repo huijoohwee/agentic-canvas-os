@@ -11,7 +11,7 @@ authority: "durable repository guidance for Agentic Canvas OS docs"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "small always-on instruction layer with delegated workflow and validation detail"
 runtime_proof: "RUNTIME-PROOF.md"
-publish_policy: "protected green main authorizes only the repository-owned automatic release controller"
+publish_policy: "protected green main authorizes Dev integration only; forward Production release requires exact-candidate human authorization"
 source_docs:
   - "FACTS.md"
   - "START-WORKFLOW.md"
@@ -43,7 +43,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 - Treat external projects and documentation as design references only. Do not copy their code, prose, prompts, schemas, tests, fixtures, or dependencies.
 - Keep claims proportional to evidence. A source contract is not live-provider, deployment, or runtime proof.
 - Prefer focused checks for touched behavior. Use the validation owner rather than restating commands here.
-- Prod mirrors and Cloudflare change only through the protected-main automatic release controller; local agents and task worktrees have no deploy authority.
+- Prod mirrors and Cloudflare change only through the repository-owned release controller after exact-candidate human authorization in the protected Production environment; local agents, task worktrees, merges, and `turn:end` have no deploy authority.
 
 ## Owner Routing
 
@@ -59,7 +59,9 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Managed implementation-run invocation and lifecycle | `MANAGED-IMPLEMENTATION-RUNS.md` |
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
 | Session ownership and release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
-| Canonical checkout sync and automatic CI/CD lifecycle | `CANONICAL-LIFECYCLE.md` |
+| Dependency-ordered cross-repository integration | `INTEGRATION-ORDER.md` |
+| Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
+| Canonical checkout sync and human-authorized CI/CD lifecycle | `CANONICAL-LIFECYCLE.md` |
 | Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
 | Planning lifecycle | `TODO.md` and the active monthly shard |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |

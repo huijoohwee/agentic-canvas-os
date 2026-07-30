@@ -96,6 +96,6 @@ All bounds are explicit positive integers at registry construction. Readiness ex
 - Given optional references, when the application authorizes every reference and all handoff targets exist, then preparation returns one complete packet without resolving credentials or executing a capability.
 - Given a missing authorizer, denial, unknown handoff, stale revision, duplicate identity, unknown field, or capacity breach, when preparation or registration runs, then it fails closed with a typed reason.
 - Given text or structured output, when validation runs, then only a bounded string or application-validator-approved JSON result becomes valid.
-- Given default Worker construction, when readiness is read, then the contract and bounds are visible while definition configuration is false and provider execution remains `unverified`.
+- Given default Worker construction without every autonomous runtime gate, when readiness is read, then the contract and bounds are visible while definition configuration is false and provider execution remains `unverified`.
 
 VCC: run `npm run agent-definitions:check` plus the composition, app, and Worker tests; require zero failures, exact source verification, immutable packets, explicit revision fencing, reference-only capabilities, target verification, structured-output validation, bounded counters, no copied artifacts, no paid call, no Prod mirror mutation, and no Cloudflare action.

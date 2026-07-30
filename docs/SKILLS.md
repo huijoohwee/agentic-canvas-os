@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Skills"
 graphId: "md:knowgrph-agentic-canvas-os-skills"
 doc_type: "Skill Contract Catalog"
-date: "2026-07-18"
+date: "2026-07-26"
 lang: "en-US"
 schema: "agentic-canvas-os-skills/v1"
 frontmatter_contract: "required"
@@ -14,6 +14,10 @@ source_docs:
   - "DICTIONARY-SEMANTIC.md"
   - "DICTIONARY-BINDING.md"
   - "HARNESS-CONTRACTS.md"
+  - "AGENT-TEAM.md"
+  - "REPOSITORY-PACKING.md"
+  - "VOICE-STUDIO.md"
+  - "SKILL-EVOLUTION.md"
   - "RUNTIME-READINESS.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
   - "INSTRUCTION-AUDIT.md"
@@ -73,10 +77,12 @@ skill_contracts:
   - "tool.search"
   - "tool.describe"
   - "tool.call"
+  - "voice.studio"
   - "skill.propose"
   - "skill.evolve"
   - "identity.reflect"
   - "orchestration.graph"
+  - "agent.team"
   - "agent.swarm"
   - "agent.toolkit"
   - "state.checkpoint"
@@ -84,11 +90,12 @@ skill_contracts:
   - "stream.trace"
   - "superagent.run"
   - "implementation.run"
+  - "repository.pack"
   - "sme.risk.profile"
   - "crawler.run"
   - "sandbox.policy.author"
   - "sandbox.gateway.troubleshoot"
-skill_variants: ["agent.moa", "agent.investment-research", "agent.sme-care", "agent.video", "agent.crawler", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
+skill_variants: ["agent.moa", "agent.collaboration-manager", "agent.evidence-scout", "agent.risk-reviewer", "agent.investment-research", "agent.sme-care", "agent.video", "agent.crawler", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
 kgCanvasSurfaceMode: "2d"
 kgCanvasRenderMode: "2d"
 kgCanvas2dRenderer: "storyboard"
@@ -131,12 +138,12 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 
 | Family | Skill ids | Detail owner |
 |---|---|---|
-| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md` |
+| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md` |
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
-| Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, and `HARNESS-CONTRACTS.md` |
+| Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
-| Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `implementation.run`, `kanban.collaborate` | `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `MANAGED-IMPLEMENTATION-RUNS.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
-| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
+| Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `implementation.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `MANAGED-IMPLEMENTATION-RUNS.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
+| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
 ## Specialized Contracts
 
@@ -146,13 +153,26 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Instruction task quality | `INSTRUCTION-QUALITY-EVALUATION.md` |
 | Image to Three.js | `IMAGE-TO-THREEJS-SKILL.md` |
 | Image to GLB | `IMAGE-TO-GLB-SKILL.md` |
+| AI Voice Studio | `VOICE-STUDIO.md` |
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
+| Agent Team | `AGENT-TEAM.md` |
 | Agent Swarm | `AGENT-SWARM.md` |
 | Agent Toolkit | `AGENT-TOOLKIT.md` |
+| Skill Evolution | `SKILL-EVOLUTION.md` |
 | Managed implementation runs | `MANAGED-IMPLEMENTATION-RUNS.md` |
+| Repository packing | `REPOSITORY-PACKING.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
-Variants remain metadata aliases over registered owners: `agent.moa`, `agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`, `agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and `agent.orchestrator`. The domain variants resolve through `/investment-research-agent`, `/sme-care-agent`, `/video-agent`, and `/crawler-agent`; a variant does not create a wildcard command or a second execution registry.
+Variants remain metadata aliases over registered owners: `agent.moa`,
+`agent.collaboration-manager`, `agent.evidence-scout`, `agent.risk-reviewer`,
+`agent.investment-research`, `agent.sme-care`, `agent.video`, `agent.crawler`,
+`agent.docs`, `agent.code`, `agent.cost`, `agent.learning`, and
+`agent.orchestrator`. The collaboration variants resolve through the exact
+Knowgrph Agent Definition registry and its `/collaboration-manager-agent`,
+`/evidence-scout-agent`, and `/risk-reviewer-agent` routes. The other domain
+variants resolve through `/investment-research-agent`, `/sme-care-agent`,
+`/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`.
+A variant does not create a wildcard command or a second execution registry.
 
 ## Selection And Mutation
 
@@ -165,6 +185,8 @@ Variants remain metadata aliases over registered owners: `agent.moa`, `agent.inv
 ## Runtime Readiness
 
 A catalog entry is spec-complete when its identity, owner, schemas, bounds, cost posture, fallback, and VCC are source-backed. Runtime-ready status additionally requires focused executable proof from the shared owner. Catalog presence alone never proves provider availability, live execution, artifact persistence, or deployment.
+
+The shared `knowgrph.agentic_canvas_os.docs.invoke` projection binds the three invocation dictionaries into one deterministic SHA-256 catalog digest over token, kind, label, summary, and source path. FloatingPanel Skills & Commands may mix local executable behavior with those rows, but source-backed dictionary metadata wins token collisions; hydration is fresh only after exact `/`, `#`, and `@` counts and browser-recomputed digest parity pass.
 
 `instruction.audit` is model-free. It audits `AGENTS.md` and this catalog for required intent, bounded instruction density, duplicate instructions, route-detail load, and canonical-owner leakage. Its typed report contains zero model tokens and no mutation or deployment authority.
 

@@ -22,3 +22,10 @@ branch="$(git branch --show-current)"
 case "$branch" in
   agent/*) node "$root/scripts/writer-lease-guard.mjs" ;;
 esac
+
+# Prove workspace lane isolation before the commit is recorded. Committing is never
+# destructive, so this checks ownership collisions only and never blocks on another
+# session holding uncommitted work.
+if [ -f "$root/scripts/workspace-guard-hook.mjs" ]; then
+  node "$root/scripts/workspace-guard-hook.mjs" pre-commit
+fi

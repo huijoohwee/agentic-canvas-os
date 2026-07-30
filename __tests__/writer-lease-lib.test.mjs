@@ -11,6 +11,7 @@ import {
   renderWriterLeasePullRequestBody,
   updateWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
+import { OWNED_DIRT_RECOVERY_SCHEMA } from "../scripts/owned-dirt-resume-lib.mjs";
 
 test("device branch identity separates device from semantic scope", () => {
   assert.deepEqual(parseDeviceBranch("agent/mac-a/rich-media"), {
@@ -188,6 +189,8 @@ test("pull request metadata round-trips the current fencing identity", () => {
     branch: lease.branch,
     baseSha: lease.baseSha,
     fenceSha: lease.fenceSha,
+    autoDelivery: false,
+    runtimeRequired: false,
     heartbeatAt: lease.heartbeatAt,
     expiresAt: lease.expiresAt,
   });
@@ -214,6 +217,39 @@ test("writer lease updates replace only the hidden marker and preserve handoff c
   assert.match(updated, /Acceptance and evidence/);
   assert.equal((updated.match(/<!-- agentic-writer-lease\/v2/g) || []).length, 1);
   assert.equal(parseWriterLeasePullRequestBody(updated).epoch, 2);
+});
+
+test("writer lease marker round-trips exact owned-dirt recovery evidence", () => {
+  const recovery = {
+    schema: OWNED_DIRT_RECOVERY_SCHEMA,
+    sourceEpoch: 9,
+    sourceSessionId: "session-a",
+    reviewHeadSha: "c".repeat(40),
+    evidenceDigest: "d".repeat(64),
+    pathCount: 85,
+  };
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 10,
+    sessionId: "session-a",
+    device: "mac-a",
+    scope: "runtime-leases",
+    branch: "agent/mac-a/runtime-leases",
+    baseSha: recovery.reviewHeadSha,
+    fenceSha: "e".repeat(40),
+    ownedDirtRecovery: recovery,
+    heartbeatAt: "2026-07-30T00:00:00.000Z",
+    expiresAt: "2026-07-30T00:30:00.000Z",
+  };
+
+  assert.deepEqual(
+    parseWriterLeasePullRequestBody(renderWriterLeasePullRequestBody(lease)).ownedDirtRecovery,
+    recovery,
+  );
+  const malformed = renderWriterLeasePullRequestBody(lease)
+    .replace(recovery.evidenceDigest, "invalid");
+  assert.equal(parseWriterLeasePullRequestBody(malformed), null);
 });
 
 test("merged completion uses an explicit cleanup intent before the final fence", () => {

@@ -8,6 +8,7 @@ import { requireOwnershipPullRequestDraft } from "./device-pull-request-state.mj
 
 const ZERO_SHA = "0".repeat(40);
 const STASH_LOCK_STALE_MS = 30_000;
+const activeParkStashLocks = new WeakMap();
 
 export function park({
   invocationPath,
@@ -159,7 +160,7 @@ function requireParkedPullRequest(lease, ghText) {
 export function requireParkedStashObject({ lease, gitText, gitOptional }) {
   const stash = requireParkedStashEvidence(lease);
   if (!stash) return null;
-  requireStashObject({
+  requireParkStashObject({
     branch: lease.branch, branchHeadSha: lease.parkBranchHeadSha,
     message: stash.message, ref: stash.ref, sha: stash.sha,
     gitText, gitOptional,
@@ -199,21 +200,53 @@ export function restoreParkedStashObject({ lease, repo, gitText, gitOptional, ru
   return stash;
 }
 
-function captureParkStash({ branch, branchHeadSha, message, ref, repo, gitText, gitOptional, run }) {
+export function captureParkStash({
+  branch,
+  branchHeadSha,
+  message,
+  ref,
+  repo,
+  gitText,
+  gitOptional,
+  run,
+  parkStashLock = null,
+}) {
+  if (parkStashLock) {
+    const commonDir = path.resolve(repo, gitText(["rev-parse", "--git-common-dir"]).trim());
+    if (activeParkStashLocks.get(parkStashLock) !== commonDir) {
+      throw new Error("Park stash capture requires the live lock token for this repository.");
+    }
+    return captureParkStashLocked({ branch, branchHeadSha, message, ref, gitText, gitOptional, run });
+  }
+  if (!gitText(["status", "--porcelain"]).trim() &&
+      !gitOptional(["show-ref", "--hash", "--verify", ref]).trim() &&
+      findStashes({ branch, message, gitText }).length === 0) {
+    return null;
+  }
+  return withParkStashLock({ repo, gitText }, () => captureParkStashLocked({
+    branch,
+    branchHeadSha,
+    message,
+    ref,
+    gitText,
+    gitOptional,
+    run,
+  }));
+}
+
+function captureParkStashLocked({ branch, branchHeadSha, message, ref, gitText, gitOptional, run }) {
   const dirty = Boolean(gitText(["status", "--porcelain"]).trim());
   const referencedSha = gitOptional(["show-ref", "--hash", "--verify", ref]).trim();
   let matches = findStashes({ branch, message, gitText });
   if (referencedSha) {
     if (dirty) throw new Error(`Park stash ${ref} already exists while the worktree has new changes.`);
-    requireStashObject({ branch, branchHeadSha, message, ref, sha: referencedSha, gitText, gitOptional });
+    requireParkStashObject({ branch, branchHeadSha, message, ref, sha: referencedSha, gitText, gitOptional });
     return { ref, sha: referencedSha, message, status: "pending" };
   }
   if (matches.length > 1) throw new Error(`Multiple stash objects match ${message}.`);
   if (dirty && matches.length) throw new Error(`A prior park stash matches ${message} while the worktree has new changes.`);
-  if (dirty) {
-    withParkStashLock({ repo, gitText }, () => run("git", ["stash", "push", "-u", "-m", message]));
-    matches = findStashes({ branch, message, gitText });
-  }
+  if (dirty) run("git", ["stash", "push", "-u", "-m", message]);
+  if (dirty) matches = findStashes({ branch, message, gitText });
   if (!matches.length) return null;
   if (matches.length !== 1) throw new Error(`Park did not produce one exact stash object for ${message}.`);
   const sha = requireSha(matches[0], "Park stash");
@@ -222,8 +255,10 @@ function captureParkStash({ branch, branchHeadSha, message, ref, repo, gitText, 
   } catch (error) {
     if (gitOptional(["show-ref", "--hash", "--verify", ref]).trim() !== sha) throw error;
   }
-  requireStashObject({ branch, branchHeadSha, message, ref, sha, gitText, gitOptional });
-  if (gitText(["status", "--porcelain"]).trim()) throw new Error("Worktree remains dirty after the exact park stash was captured.");
+  requireParkStashObject({ branch, branchHeadSha, message, ref, sha, gitText, gitOptional });
+  if (gitText(["status", "--porcelain"]).trim()) {
+    throw new Error("Worktree remains dirty after the exact park stash was captured.");
+  }
   return { ref, sha, message, status: "pending" };
 }
 
@@ -241,7 +276,7 @@ export function dropParkedStashObject({ lease, repo, gitText, run }) {
     if (targets.length > 1) throw new Error("Exact restored stash appears more than once in the shared reflog.");
     const refSha = readOptional(gitText, ["show-ref", "--hash", "--verify", evidence.ref]);
     if (refSha) {
-      requireStashObject({
+      requireParkStashObject({
         branch: lease.branch, branchHeadSha: lease.parkBranchHeadSha,
         message: evidence.message, ref: evidence.ref, sha: evidence.sha,
         gitText, gitOptional: args => readOptional(gitText, args),
@@ -332,9 +367,12 @@ export function withParkStashLock({ repo, gitText }, action) {
     unlinkSync(stalePath);
   }
   writeSync(descriptor, token);
+  const lockToken = Object.freeze({});
+  activeParkStashLocks.set(lockToken, commonDir);
   try {
-    return action();
+    return action(lockToken);
   } finally {
+    activeParkStashLocks.delete(lockToken);
     closeSync(descriptor);
     if (existsSync(lockPath) && readFileSync(lockPath, "utf8") === token) unlinkSync(lockPath);
   }
@@ -372,13 +410,14 @@ function findStashes({ branch, message, gitText }) {
   });
 }
 
-function requireStashObject({ branch, branchHeadSha, message, ref, sha, gitText, gitOptional }) {
+export function requireParkStashObject({ branch, branchHeadSha, message, ref, sha, gitText, gitOptional }) {
   if (gitOptional(["show-ref", "--hash", "--verify", ref]).trim() !== sha ||
       gitText(["cat-file", "-t", sha]).trim() !== "commit" ||
       gitText(["rev-parse", `${sha}^1`]).trim() !== branchHeadSha ||
       gitText(["log", "-1", "--pretty=%s", sha]).trim() !== `On ${branch}: ${message}`) {
     throw new Error(`Parked stash ${sha} does not match its immutable branch, message, parent, and ref evidence.`);
   }
+  return { ref, sha, message, status: "pending" };
 }
 
 function verifyRestoredStash({ stash, repo, gitText, gitOptional, run }) {

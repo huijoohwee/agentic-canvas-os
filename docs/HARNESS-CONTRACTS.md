@@ -83,7 +83,6 @@ flow:
       target: {key: target, type: string, value: "consumer"}
       type: {key: type, type: string, value: "harness_proof_signal"}
 ---
-
 # Harness Contracts
 
 Every AI-capable Agentic Canvas OS component must be a harness: typed input, typed output, bounded execution, cost logging, and explicit fallback.
@@ -123,6 +122,7 @@ harness:
 |---|---|---|---|---|
 | OS Status | Read process, capability, cost, gate, and breaker views | `{ view, filters }` | Typed read view with zero cost | None; read-only |
 | Capability Discovery | Deduplicate local, browser, Pages, and control-plane catalogs | `{ includeRemote, trustBoundary }` | `Capability_Entry[]`, `sourceCatalogs[]`, `unreachableCatalogs[]` | None; discovery must be zero-token |
+| Repository Packing | Convert one exact local Git worktree into a deterministic content-addressed Markdown artifact | `{ repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes }` | `knowgrph-repository-pack-result/v1` metadata, typed omissions, verified digests, or source-byte-free block | Explicit local artifact request only; secrets, escape, drift, overflow, external dependency, network, model, Prod, and Cloudflare fail before publication |
 | Soul Identity | Load durable agent identity into prompt slot 1 | `{ soulRef, promptSlot, overlayRef }` | Identity packet, typed fallback, scan result, or blocked reason | Mutation only when editing `SOUL.md`; prompt use requires scan |
 | Mixture Of Agents | Run bounded advisory reference fan-out and one aggregator-owned response | `{ prompt, presetRef, contextRef, approvals[] }` | Aggregator response, reference ledger, cost log, or blocked reason | Paid reference calls, paid aggregator calls, tool calls, mutation, deploy |
 | Video Remix Director | Research, storyboard, render, publish, checkout workflow | `{ referenceUrl, brief, budgetUsd, approvals[] }` | Run manifest, evidence pack, storyboard, asset or blocked state | Paid model, render, payment, deploy |
@@ -145,6 +145,7 @@ harness:
 | Agent Swarm | Dynamically decompose one goal and coordinate bounded independent work horizontally | `{ runId, conversationId, agent, goal, input, maxParallel }` | One base-agent synthesis, recoverable ledger, sanitized trace, verified receipts, cost, or typed block | Callers cannot define roles, tasks, workflows, principals, or signals; authorization and exact-agent resolution precede spend and existing tool owners retain side effects |
 | Agent Toolkit | Observe application-authorized digest-bound agent or team candidates, evaluate unique opaque evidence, and compare one bounded trusted cohort | `{ runId, cohortId, target, candidate, adapter, operation, profile }` plus a stable tenant principal | Metadata-only trust-labelled trace, honest cost and metric provenance, deterministic hold/propose result, review-pending proposal, or typed block | Existing runtimes keep execution; caller digests need application verification, remote-unverified evidence is excluded, and raw payloads, nested cost duplication, cross-cohort comparison, or automatic application are forbidden |
 | Agent Runtime Composition | Join exact definition, model selection, lifecycle, output validation, and orchestration interfaces | `{ agent, role, workflow, branch, input }` | Validated final output and fully reported cost, or bounded block | Existing owners remain authoritative; missing or changed evidence fails before public output |
+| Opt-In Autonomous Runtime | Admit one server-configured source definition to the authenticated Worker composition route | `{ runId, conversationId, input }` | Validated text and reported cost, unconfigured refusal, or bounded block | Enablement, spend approval, source digest, model alignment, session auth, and provider-call ceiling are all mandatory; tools and mutations remain on existing reviewed owners |
 | Application Composition | Compile exact component and integration interfaces into one immutable deterministic dependency plan, then sequence ready steps through existing owners | `{ manifest, componentCatalog, integrationProfile, runtimeProof }` plus operator approval only for live or mutating execution | Digest-bound plan, bounded owner results, explicit migration diagnostics, or typed block | No new agent loop, provider registry, tool gateway, integration proxy, automatic upgrade, retry, migration, or deploy |
 | Progressive Agents | Grow from one exact agent run to tool-bearing definitions and explicit specialist workflows | `{ runId, conversationId, agentId, revision, input }` or an exact workflow request | Agent-owned direct output, manager-owned delegation, specialist-owned handoff, or bounded block | Facade delegates to existing owners; tool authorization, execution, provider transport, and answer ownership never move into the facade |
 | Programmatic Tool Calling | Reduce predictable read-only tool stages through provider-hosted JavaScript | `{ runId, input, tools[], capabilities }` | Final output, compact evidence, cost log, or typed blocked result | Hosted execution and caller lineage required; writes, approvals, and semantic judgment stay direct |
@@ -356,6 +357,9 @@ Composition owns only the adapter seams between source-backed Agent Definitions,
 Only a fully reported aggregate cost becomes a downstream cost log. Missing or partial usage remains unreported. Offline proof establishes integrated owner behavior without establishing provider reachability, quality, usage, price, or spend.
 
 The separately approved Node-only live proof injects an OpenAI Responses adapter without changing Worker defaults. It permits exactly one specialist-manager-specialist sequence and at most three provider attempts, uses stored previous-response continuation only for the returning specialist, requires provider-confirmed effective reasoning context and complete usage, and emits no raw response id, output, reasoning, or credential.
+## Opt-In Autonomous Runtime Harness Contract
+
+The Worker may construct one composed OpenAI text agent only when the operator enables the runtime, records explicit spend approval, sets a bounded provider-call ceiling, aligns provider selection with the Responses adapter, and supplies source JSON whose SHA-256 is re-verified at preparation. The authenticated caller supplies only run id, conversation id, and bounded input; principal-scoped hashes isolate continuation while the server owns identity, model, transport, source, signal, and policy. Tools, workflows, schemas, MCP names, credentials, and review claims are rejected. Function Calling and Knowgrph retain tool allowlists, signed review, durable receipts, idempotency, and mutation policy. Missing or conflicting gates return `runtime_unconfigured` before provider execution; live proof, Prod, and Cloudflare remain separate.
 
 ## Progressive Agents Harness Contract
 
@@ -415,7 +419,7 @@ The controller bounds model turns, calls, batch width, program size, result size
 | Platform toolset | Enablement is scoped to one platform surface and does not transfer across CLI, chat, browser, MCP, or control plane. |
 | Web search/extract | Source scope, citations, egress policy, cache behavior, and cost log. |
 | Image generation | Approval gate, prompt bounds, artifact manifest, and cost log. |
-| Text-to-speech | Voice/provider, text bounds, output manifest, duration guard, and cost log. |
+| Voice and speech | `VOICE-STUDIO.md` owns clone, speech-to-text, and text-to-speech detail; shared harnesses require consent or recording rights where applicable, exact source/profile/text provenance, disclosure, approval, duration and size bounds, output manifest, revocation checks, and cost log. |
 | Cloud browser | Isolated session, action schema, screenshot/vision bounds, redaction, trace, and approval. |
 | Tool Search | Session-scoped metadata exposure, exact on-demand definition loading, gateway authorization, and no copied search implementation. |
 
@@ -431,7 +435,7 @@ Learning harnesses are source-backed and proposal-first. External self-improving
 | Session search | `{ query, cursor, topK }` | Cited prior-session matches or empty result. | Search results are not memory until explicitly captured. |
 | Experience capture | `{ sourceRef, proofRef, eventType, lesson }` | Experience record with applicability, expiry risk, cost, and approval state. | Reject missing provenance, secrets, copied code, or deploy artifacts. |
 | Skill proposal | `{ experienceRefs[], targetGap }` | Skill draft with schemas, fallback, bounds, cost fields, and VCCs. | Reject duplicate catalog entries and hardcoded provider assumptions. |
-| Skill evolution | `{ skillId, evalPacket, candidateDiff }` | Proposed diff plus validation and semantic-preservation statement. | Require focused checks and human review; never direct auto-commit. |
+| Skill evolution | Load the canonical request from `SKILL-EVOLUTION.md`. | `knowgrph-skill-evolution-result/v1` full snapshot. | The selected owner exclusively defines operations, schemas, candidate roles, validation isolation, bounds, and review-only behavior; this table defines no alternate input contract. |
 | Identity reflection | `{ proposedFact, evidenceRefs[], sensitivity }` | Stable identity note or rejected inference result. | Store only non-secret, source-backed operator and project facts. |
 
 ## Skill System Harness Contract
@@ -459,10 +463,10 @@ Skills are on-demand procedural knowledge. External systems may inform the patte
 
 | Guardrail | Requirement |
 |---|---|
-| Bounded optimizer | Any evaluation or variant generation names max iteration, timeout, budget, and circuit breaker. |
+| Bounded optimizer | Every evolution run names epochs, batch and mini-batch size, learning-rate schedule, candidates, adapter calls, mutation operations, changed characters, tokens, cost, duration, patience, and circuit breaker. |
 | Semantic preservation | Proposed changes state what behavior must remain unchanged. |
 | Focused tests | Evolution output names focused checks and their result before promotion. |
-| Human review | Proposed diffs stay review-pending until the operator approves persistence. |
+| Human review | Proposed diffs stay review-pending with `applied: false` until the operator separately invokes the managed skill-write owner. |
 | No external copy | Do not import external code, prompt bodies, schemas, test files, fixtures, or prose. |
 | No deploy mutation | Skill evolution cannot write the Prod mirror or deploy Cloudflare. |
 

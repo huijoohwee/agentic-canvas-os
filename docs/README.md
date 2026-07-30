@@ -18,7 +18,7 @@ source_of_truth:
   - "SKILLS.md"
   - "INSTRUCTION-AUDIT.md"
   - "INSTRUCTION-QUALITY-EVALUATION.md"
-publish_policy: "protected green main authorizes only the repository-owned automatic release controller"
+publish_policy: "protected green main authorizes Dev integration only; forward Production requires exact-candidate human authorization"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "documentation control surface for making knowgrph a runtime-ready Agentic Canvas OS"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -59,6 +59,9 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
 | `CANONICAL-LIFECYCLE.md` | Automatic runtime lifecycle | Canonical multi-device synchronization, protected integration, immutable promotion, automatic rollback, and runtime-ready SHA convergence. |
+| `CLOUD-COLLABORATION.md` | Cloud-authoritative collaboration runtime | Protected append-only Git ledger, non-forced compare-and-swap claims, browser dispatch, offline admission boundary, exact-head checks, compact receipts, and zero-infrastructure economics. |
+| `INTEGRATION-ORDER.md` | Dependency-ordered integration contract | Provider-neutral integration units, DAG waves, exact-canonical frontier advancement, no-op and supersession evidence, runtime convergence, and release-frontier sealing. |
+| `UPSTREAM-DEPENDENCY-ADMISSION.md` | Upstream dependency admission runtime | Early source admission, bounded deferral, exact consumer-closure isolation, protected-source-only projection, and disjoint-work continuation. |
 | `INSTRUCTION-AUDIT.md` | Instruction audit runtime | Model-free context budgets, intent preservation, duplication checks, owner-boundary checks, baseline reduction, and zero-cost proof. |
 | `INSTRUCTION-QUALITY-EVALUATION.md` | Instruction task-quality evaluation | Provenance-bound final-answer scenarios, deterministic rubric findings, model-agnostic execution, and human-review promotion boundaries. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
@@ -69,9 +72,12 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `MODELS-AND-PROVIDERS.md` | Model and transport selection runtime | Revision-fenced provider registration, explicit defaults, feature matching, transport strategy, sanitized environment readiness, and live-provider proof boundaries. |
 | `RUNNING-AGENTS.md` | Application-turn lifecycle contract | Bounded loops, exclusive continuation, same-loop streaming, durable paused-turn claims, settlement, cost evidence, and provider-proof boundaries. |
 | `AGENT-ORCHESTRATION.md` | Multi-agent ownership runtime | Revision-fenced manager and specialist topology, delegation, handoff, current-conversation ownership, final-answer ownership, handback, costs, and provider-proof boundaries. |
+| `AGENT-TEAM.md` | Role-based team invocation contract | Exact `/agent.team #role-based-agent-team @agent-team` projection, source and revision fences, typed Knowgrph MCP lifecycle, private delegate results, durable controls, hard budgets, and clean-room boundaries. |
+| `REPOSITORY-PACKING.md` | Local repository packing contract | Exact `/repository.pack #repository-packing @repository-root @runtime-proof` projection, one Knowgrph stdio MCP tool, deterministic content-addressed Markdown, typed omissions, path and size bounds, atomic publication, and clean-room independence. |
 | `AGENT-SWARM.md` | Dynamic horizontal agent runtime | Goal-only task generation, durable atomic worker claims, isolated contexts, recovery, cancellation, receipts, costs, and base-agent synthesis without predefined roles or workflows. |
 | `AGENT-TOOLKIT.md` | Framework-neutral agent intelligence layer | Digest-bound application-authorized instrumentation, metadata-only durable traces, bounded evaluation, trusted-evidence cohort comparison, and review-pending learning proposals without automatic application. |
 | `AGENT-RUNTIME-COMPOSITION.md` | Integrated agent runtime adapter | Source verification, model selection, Running Agents lifecycle, output validation, orchestration interfaces, continuation, costs, and live-proof boundaries. |
+| `AUTONOMOUS-RUNTIME.md` | Opt-in autonomous Worker route | Explicit spend and enablement gates, server-side source hashing, aligned OpenAI model configuration, authenticated composed execution, principal-scoped continuation, and fail-closed defaults. |
 | `LIVE-AGENT-PROVIDER-PROOF.md` | Bounded live agent proof | Explicit OpenAI Responses configuration, three-call ceiling, delegation and handoff ownership, stored continuation, redacted usage, and no-deploy boundaries. |
 | `SANDBOX-AGENTS.md` | Container workspace control plane | Provider-neutral orchestration plus the Node-only Docker adapter, deny-first authorizer, atomic file state, independent local verifier, snapshots, resume, loopback previews, cleanup, and proof boundaries. |
 | `PROGRAMMATIC-TOOL-CALLING.md` | Hosted-program orchestration contract | Provider-neutral capability gates, hosted-sandbox attestation, caller lineage, direct-call boundaries, bounded tool execution, cost evidence, and live-provider proof gates. |

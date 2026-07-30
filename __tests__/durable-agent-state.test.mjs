@@ -23,6 +23,14 @@ class MemoryStorage {
     this.records = new Map();
     this.transactionTail = Promise.resolve();
     this.alarmAt = null;
+    this.operations = {
+      get: 0,
+      put: 0,
+      delete: 0,
+      getAlarm: 0,
+      setAlarm: 0,
+      deleteAlarm: 0,
+    };
   }
 
   async transaction(operation) {
@@ -32,27 +40,40 @@ class MemoryStorage {
   }
 
   async get(key) {
+    this.operations.get += 1;
     return this.records.get(key);
   }
 
   async put(key, value) {
+    this.operations.put += 1;
     this.records.set(key, value);
   }
 
   async delete(key) {
+    this.operations.delete += 1;
     return this.records.delete(key);
   }
 
   async getAlarm() {
+    this.operations.getAlarm += 1;
     return this.alarmAt;
   }
 
   async setAlarm(value) {
+    this.operations.setAlarm += 1;
     this.alarmAt = Number(value);
   }
 
   async deleteAlarm() {
+    this.operations.deleteAlarm += 1;
     this.alarmAt = null;
+  }
+
+  writeCount() {
+    return this.operations.put
+      + this.operations.delete
+      + this.operations.setAlarm
+      + this.operations.deleteAlarm;
   }
 }
 
@@ -98,6 +119,7 @@ test("AgentState alarms recover expired claims and physically remove expired rec
   assert.equal(liveStorage.alarmAt, liveRecord.expiresAt);
   await liveState.claim({ claimId: "expired-claim", claimExpiresAt: expiredClaimAt }, operationNow);
   assert.equal(liveStorage.alarmAt, expiredClaimAt);
+  liveStorage.alarmAt = null; // the Workers runtime consumes the firing alarm
   await liveState.alarm();
   assert.deepEqual(liveStorage.records.get("active"), liveRecord);
   assert.equal(liveStorage.records.has("claim"), false);
@@ -108,10 +130,57 @@ test("AgentState alarms recover expired claims and physically remove expired rec
   const expiredRecord = { id: "expired", expiresAt: operationNow + 1_000 };
   await expiredState.put({ record: expiredRecord }, operationNow);
   assert.equal(expiredStorage.alarmAt, expiredRecord.expiresAt);
+  expiredStorage.alarmAt = null; // the Workers runtime consumes the firing alarm
   await expiredState.alarm();
   assert.equal(expiredStorage.records.has("active"), false);
   assert.equal(expiredStorage.records.has("claim"), false);
   assert.equal(expiredStorage.alarmAt, null);
+});
+
+test("AgentState reads do not rewrite healthy or absent Durable Object state", async () => {
+  const now = Date.now();
+  const liveStorage = new MemoryStorage();
+  const liveState = new AgentState({ storage: liveStorage });
+  const record = { id: "read-only", expiresAt: now + 60_000 };
+
+  await liveState.put({ record }, now);
+  const liveWrites = liveStorage.writeCount();
+  const liveAlarmReads = liveStorage.operations.getAlarm;
+  const liveResponse = await liveState.get({}, now);
+  assert.deepEqual((await liveResponse.json()).record, record);
+  await liveState.get({}, now);
+  assert.equal(liveStorage.writeCount(), liveWrites);
+  assert.equal(liveStorage.operations.getAlarm, liveAlarmReads);
+
+  const emptyStorage = new MemoryStorage();
+  const emptyState = new AgentState({ storage: emptyStorage });
+  const emptyResponse = await emptyState.get({}, now);
+  assert.equal((await emptyResponse.json()).record, null);
+  await emptyState.get({}, now);
+  assert.equal(emptyStorage.writeCount(), 0);
+  assert.equal(emptyStorage.operations.getAlarm, 1);
+});
+
+test("AgentState rejects unbounded record and claim retention", async () => {
+  const now = Date.now();
+  const storage = new MemoryStorage();
+  const state = new AgentState({ storage });
+
+  const recordResponse = await state.put({
+    record: { id: "unbounded", expiresAt: now + 31 * 24 * 60 * 60 * 1000 },
+  }, now);
+  assert.equal(recordResponse.status, 400);
+  assert.equal(storage.writeCount(), 0);
+
+  const validRecord = { id: "bounded", expiresAt: now + 60_000 };
+  assert.equal((await state.put({ record: validRecord }, now)).status, 200);
+  const writesBeforeClaim = storage.writeCount();
+  const claimResponse = await state.claim({
+    claimId: "unbounded-claim",
+    claimExpiresAt: now + 61 * 60 * 1000,
+  }, now);
+  assert.equal(claimResponse.status, 400);
+  assert.equal(storage.writeCount(), writesBeforeClaim);
 });
 
 test("Durable Object paused turns enforce claim, release, replace, and commit", async () => {
@@ -166,8 +235,9 @@ test("Agent Swarm ledgers coordinate atomic claims across isolate adapters", asy
   const replacement = { ...ledger, revision: 2 };
   assert.equal(await winner[0].replace(ledger.runId, winner[1], replacement), true);
   assert.deepEqual(await second.get(ledger.runId), replacement);
-  assert.ok(await first.claim(ledger.runId, "expiring-coordinator", Date.now() + 5));
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  // Leave enough admission headroom for contended CI runners before proving expiry recovery.
+  assert.ok(await first.claim(ledger.runId, "expiring-coordinator", Date.now() + 1_000));
+  await new Promise((resolve) => setTimeout(resolve, 1_100));
   assert.equal(await second.put({ ...ledger, revision: 3 }), false);
   assert.deepEqual(await second.get(ledger.runId), replacement);
   assert.ok(await first.claim(ledger.runId, "conditional-discard", Date.now() + 30_000));
@@ -207,8 +277,9 @@ test("Agent Toolkit records coordinate atomic claims across isolate adapters", a
   const replacement = { ...record, revision: 2 };
   assert.equal(await winner[0].replace(record.recordId, winner[1], replacement), true);
   assert.deepEqual(await second.get(record.recordId), replacement);
-  assert.ok(await first.claim(record.recordId, "expiring-observer", Date.now() + 5));
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  // Leave enough admission headroom for contended CI runners before proving expiry recovery.
+  assert.ok(await first.claim(record.recordId, "expiring-observer", Date.now() + 1_000));
+  await new Promise((resolve) => setTimeout(resolve, 1_100));
   assert.equal(await second.put({ ...record, revision: 3 }), false);
   assert.deepEqual(await second.get(record.recordId), replacement);
   assert.equal(await first.delete(record.recordId), true);

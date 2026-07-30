@@ -2,14 +2,16 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-18"
+date: "2026-07-29"
 lang: "en-US"
-schema: "knowgrph-release-workflow/v1"
+schema: "knowgrph-release-workflow/v3"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "end-to-end Knowgrph release operating model"
-publish_policy: "protected green main automatically invokes the repository-owned release controller"
-runtime_scope: "Dev integration, Prod mirror promotion, Cloudflare deployment, and verification"
+authority: "Knowgrph reference implementation adapter for the provider-neutral lifecycle"
+profile_type: "reference-implementation"
+protocol_contract: "CANONICAL-LIFECYCLE.md"
+publish_policy: "protected green main authorizes Dev integration only; exact-candidate human authorization opens Production"
+runtime_scope: "Dev integration, runtime-ready localhost review and authorization prompting, Prod mirror promotion, Cloudflare deployment, and verification"
 runtime_claim: "bounded release contract; no deployment occurs by reading this document"
 runtime_proof: "RUNTIME-PROOF.md"
 invocation:
@@ -26,6 +28,8 @@ workspace:
 production_routes: ["https://airvio.co", "https://airvio.co/knowgrph"]
 stage_order: ["preflight", "reconcile", "ssot", "memory", "planning", "validate", "integrate", "promote", "deploy", "verify", "report"]
 coordination:
+  actor_identity: "authenticated source-control and Production-authorization principals"
+  collaboration_identity: "actor + device + session + worktree + branch + semantic scope + lease epoch + fence revision"
   branch_pattern: "^agent/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
   device_segment_contract: "lowercase alphanumeric boundaries with interior dot, underscore, or hyphen"
   semantic_scope_segment_contract: "lowercase alphanumeric boundaries with interior hyphen only"
@@ -39,6 +43,7 @@ cost_policy:
   proof_provider_mode: "local-or-mock"
 completion_requires:
   - "unique semantic-scope ownership"
+  - "complete actor, device, session, worktree, branch, scope, lease epoch, and fence identity"
   - "all required gates pass"
   - "visible runtime identity with exact cross-device SHA parity"
   - "one application-root canonical identity owner with a MainPanel Settings KTV projection"
@@ -48,6 +53,9 @@ completion_requires:
   - "append-only monthly planning-shard compliance"
   - "centralized planning task-row compliance"
   - "protected integration"
+  - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Live Verification, and Publication receipts for every claimed stage"
+  - "runtime-ready authorization prompt bound to the exact candidate, source, release run, and supervised localhost review URL"
+  - "one target-and-candidate idempotency key and one target-scoped deployment controller"
   - "Prod mirrors the promoted Dev SHA"
   - "both production routes return verified evidence"
 ---
@@ -56,16 +64,37 @@ completion_requires:
 
 ## Purpose
 
-Protected integration of a green Knowgrph `main` revision automatically requests the complete release workflow. `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` remains the explicit diagnostic or recovery invocation and does not weaken validation, ownership, cost, or stop conditions.
+Protected integration of a green Knowgrph `main` revision closes Dev and creates no Production authority. The repository-owned controller may prepare one immutable candidate, but forward deployment remains stopped until an authenticated human explicitly authorizes that exact candidate digest in the protected Production environment. `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` remains the explicit diagnostic or recovery invocation and does not weaken validation, ownership, cost, or stop conditions.
 
 The three invocation dictionaries in this folder remain the only `/`, `#`, and `@` authority. Knowgrph and its deployed routes consume their MCP projection; production never reads a developer-machine filesystem path.
+
+This document is a reference implementation profile for the provider-neutral
+receipt protocol in `CANONICAL-LIFECYCLE.md`. GitHub, `main`, `turn:end`,
+localhost, the protected `production` environment, Cloudflare, and the
+`huijoohwee` mirror are adapter mappings only. Replacing an adapter must preserve
+the neutral receipt chain, complete dependency closure, authenticated human
+boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
+
+## Provider-Neutral Protocol Mapping
+
+| Neutral receipt or boundary | Knowgrph reference adapter |
+|---|---|
+| Overlap Preservation and Disposition Receipts | Registered worktree/PR ownership for active lanes; locked content-addressed recovery object and durable ref only for required canonical isolation; exact retained-or-restored accounting before convergence |
+| Integration Receipt | Protected GitHub merge SHA, checks, paired immutable manifest, scope PR, actor, lease epoch, and fence SHA |
+| Runtime Review Receipt | `turn:end` emits `agentic-local-review-candidate/v1` from canonical localhost runtime proof |
+| Candidate Manifest | `agentic-production-release-candidate/v1` binds app, Agentic Canvas OS, catalog, policy, target, mirror, artifact, and manifest digests |
+| Authorization prompt | ACOS `agentic-production-authorization-prompt/v1` revalidates runtime readiness and renders candidate, source, run, supervised localhost URL, and exact reply |
+| Authorization Interaction Receipt | `npm run production:authorize` records the authenticated terminal challenge and response for the same candidate and target without browser dependence |
+| Human Authorization Receipt | Protected GitHub `production` environment records reviewer, candidate digest, target, issue time, expiry, and consumption |
+| Live Verification Receipt | Cloudflare deployment identity plus both production-route identity and smoke proof |
+| Publication Receipt | Exact verified `huijoohwee` mirror revision, emitted only after live verification |
 
 ## Inputs and Outputs
 
 | Contract | Required fields |
 |---|---|
-| Input | Operator approval, device identity, semantic scope, task branch, base branch, base SHA, memory base ref, planning base ref, planning shard, planning context, exact app/docs/catalog manifest, Dev repository, Prod mirror, production routes. |
-| Output | Reconciliation ledger, memory and planning compliance, validation ledger, immutable manifest digest, Dev commits and merge SHA, promoted SHA, mirror parity proof, deployment identifiers, production verification, remaining risks. |
+| Input | Exact joined Overlap Preservation, Overlap Disposition, Integration, and Runtime Review Receipts; authenticated human authorization when deploying; actor, device, session, worktree, branch, semantic scope, lease epoch, and fence; base SHA; memory and planning refs; complete app/docs/catalog dependency closure; policy and target digests; artifact and manifest digests; Dev repository; Prod mirror; production routes. |
+| Output | Reconciliation ledger, preservation inventory and dispositions, memory and planning compliance, validation ledger, immutable manifest and candidate digests, Integration Receipt, Runtime Review Receipt, Human Authorization Receipt, deployment identifiers, Live Verification Receipt, Publication Receipt, remaining risks. |
 | Failure | Typed blocking stage, failed check, unchanged downstream stages, zero fabricated completion claims. |
 | Cost | Model, prompt tokens, completion tokens, cache hits, estimated cost, paid-call count, and actual cost when a model-bearing path runs. |
 
@@ -73,11 +102,13 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 
 - Complete `START-WORKFLOW.md` before build work: fetch first, preserve one clean registered `main` worktree, inspect every registered worktree, and activate the task branch only in its leased task worktree; pull only on a clean, exclusively owned branch when updating it intentionally.
 - Require the current worktree-bound session lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope worktrees and pull requests may coexist, but duplicate active scope ownership blocks release.
-- Use one task, semantic scope, registered task worktree, branch, and active writer. Keep normal runtime and synchronization on the registered `main` worktree.
+- Use one task, semantic scope, registered task worktree, branch, and active writer. Parallel users, devices, sessions, and worktrees are valid only for disjoint scopes with distinct remote ownership records and current fences. Keep normal runtime and synchronization on the registered `main` worktree.
 - Create a contract-valid `agent/<device>/<semantic-scope>` from the latest `origin/main`; preserve interior `.`, `_`, and `-` in the device segment, but normalize semantic scope to lowercase alphanumerics and hyphens before any checkout mutation.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
-- Hand off only after the sender stops and pushes an exact commit SHA.
+- Hand off only after the sender stops and pushes an exact commit SHA with its
+  joined scope, actor, lease-epoch, fence, and check evidence. Mutable local
+  state is never a cross-user or cross-device handoff.
 - Use `release:publish:immutable` only for an already-created commit whose writer stopped or for checkout-independent recovery; require the expected remote SHA and retain the generated manifest digest. Manual hook bypass, raw refspec push, branch switching, or a missing manifest is not a release lane.
 - Treat branch names as informational. Cross-device and promoted-runtime parity require visible, identical exact Knowgrph and Agentic Canvas OS SHAs.
 - Require the canonical identity runtime at the application root and the visible gate as a MainPanel Settings body section using shared KTV rows. Settings, Skills & Commands, Chat, FloatingPanel, and invocation catalogs must remain projections or facet publishers, never identity owners.
@@ -86,6 +117,7 @@ The three invocation dictionaries in this folder remain the only `/`, `#`, and `
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
+- Before convergence or canonical review isolation, content-bind every pre-existing non-canonical item and its owner, write set, fence, overlap class, state, preservation mode, and recovery handle. Retain overlapping work; restore only exact disjoint state; never treat preservation as Production authority.
 - Treat `memory/YYYY-MM.md` as append-only evidence: validate its hybrid format and compare historical bytes with the recorded Agentic Canvas OS memory base ref before integration.
 - Treat `todo/YYYY-MM.md` as append-only cross-repository planning evidence: validate the index and shards, compare historical bytes with the recorded Agentic Canvas OS planning base ref, and require the declared strict task row before integration.
 - Require one appended active-shard row matching the declared `planning_context`; reject repository-local todo files before integration.
@@ -130,46 +162,132 @@ Run `npm run collaboration:gate`, then the repository-declared protected-ref, hy
 
 Stop on any required failure. Never promote by skipping tests, editing fixtures to hide defects, or adding downstream aliases.
 
-### 7. Integrate Dev
+### 7. Integrate Dev and Emit the Integration Receipt
+
+For a release containing multiple integration units, first validate the
+provider-neutral plan in `INTEGRATION-ORDER.md`. Integrate dependency waves
+before consumers, permit parallelism only for disjoint write scopes, and fetch
+the protected revision after each frontier advancement. Record
+`already-integrated` only with equivalence evidence and `superseded` only with
+equivalence plus capability-coverage evidence. Recompute the remaining plan
+against the new exact canonical revision and complete runtime convergence for
+every runtime-impact unit before sealing the release frontier. A stale plan,
+duplicate change identity, unresolved dependency, overlapping active scope, or
+unsealed release frontier blocks candidate preparation.
 
 Separate unrelated scopes into branch-exclusive leased task worktrees. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, immutable manifest digest, and handoff evidence. Use the repository-owned checkout-free publication command only for a stopped writer's existing commit or recovery path. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
-After the protected pull request reports `MERGED`, run the completion wrapper
-from the task branch:
+If attributed tracked bytes remain in canonical `main` after their exact task
+change has passed protected integration, use only the
+`canonical:main:fast-forward-equivalence` adapter described in
+`START-WORKFLOW.md`. Its completed content-bound receipt must prove every dirty
+path's mode and blob is identical to the fetched protected descendant while all
+other paths remain clean against the expected local head; unrelated protected
+changes may then materialize during canonical ref/index reconciliation. Any
+untracked, staged, conflicting, deleted, partial, extra, mode-mismatched, or
+drifted state remains blocking.
+
+Before protected convergence, emit the Overlap Preservation Receipt and account
+for every item in the joined Disposition Receipt. After convergence, emit the neutral Integration Receipt with the
+canonical merge commit and tree, full dependency-closure digest, protected
+checks, authenticated pull-request actor, device, session, worktree, branch,
+semantic scope, lease epoch, fence SHA, paired immutable-manifest digest, and
+both preservation receipt digests.
+Candidate preparation must reject a missing, stale, overlapping, or unjoined
+Integration Receipt.
+
+Use the explicit integration wrapper from the leased task worktree when the
+operator intends protected delivery:
 
 ```bash
-npm run device:complete -- --json
+npm run device:integrate -- --session="$AGENTIC_SESSION_ID" --json
 ```
 
-Require its pull-request, merge, and exact `main` SHA evidence, then restart the
-local Dev runtime from that `mainSha` and rerun the original acceptance path.
+For dirty work, also provide the intentional `--commit-message` and exact
+external `agentic-change-manifest/v1` through `--paths-manifest`. Require its
+commit, manifest/diff digest, pull-request, merge, integrated-source SHA, and
+managed-runtime evidence, then rerun the original acceptance path.
 Branch-only, stashed, pushed, open-pull-request, or auto-merge-pending work
 remains incomplete. `device:park` is only a paused or blocked exit. This Dev
 completion gate does not deploy from the checkout. The protected merge event
-opens Prod and Cloudflare stages only inside the repository-owned automatic
-release controller.
+permits immutable candidate preparation only; Prod and Cloudflare remain closed
+until the protected Production environment records exact-candidate human authorization.
 
-### 8. Promote Prod
+### 8. Review and Prepare the Candidate
 
-Use only canonical publish and synchronization scripts. Treat Dev as authored source and Prod as a generated mirror. Synchronize the merged Dev SHA, remove stale hashed artifacts through the canonical process, and run production build, publish-contract, schema, asset-manifest, and mirror-parity checks.
+Use only canonical publish and synchronization scripts. Treat Dev as authored
+source and Prod as a generated mirror. Require `turn:end` to join the exact
+Integration Receipt and emit the Runtime Review Receipt. Build once, then bind
+the complete app, Agentic Canvas OS, catalog, schema, generated mirror, build,
+policy, target, review, and transitive dependency closure into one immutable
+Candidate Manifest. Run publish-contract, schema, asset-manifest, and
+mirror-parity checks without publishing.
 
 When mirror-parity fails because the schema mirror is missing a `knowgrph/docs/documents/*` node, regenerate `huijoohwee.github.io/schema/AgenticRAG/knowgrph-documents-map.graph.jsonld` through `python3 $GITHUB_ROOT/huijoohwee.github.io/schema/AgenticRAG/sync_map.py --mode write`, commit that mirror change in `huijoohwee.github.io`, and rerun release verification. Never hand-edit the generated graph file.
 
-Require zero unexplained Dev/Prod drift. Never manually patch or backfill the mirror.
+Require zero unexplained Dev/Prod drift. Never manually patch or backfill the
+mirror. Any new source commit, direct or transitive dependency movement, policy
+or target change, tree change, artifact change, manifest change, or rebuild
+invalidates the candidate and requires a new runtime review and authorization.
 
-### 9. Deploy Cloudflare
+### 9. Authorize and Deploy Cloudflare
 
-Deploy only the verified promoted SHA with repository-owned Cloudflare configuration. Never expose secrets or hardcode account ids, credentials, routes, local paths, or invocation catalogs. Prevent concurrent deployments to the same environment and capture immutable version evidence.
+Deploy only the already-built candidate whose exact digest and target an
+authenticated human reviewer authorized in the protected GitHub `production`
+environment. Persist a Human Authorization Receipt with reviewer, authority
+adapter, candidate and target digests, issue time, expiry, and single-consumption
+state. Revalidate fetched `origin/main`, canonical localhost `main`, the
+complete reviewed dependency closure, policy, target, artifact,
+immutable-manifest, candidate, and predecessor receipts immediately before
+deployment. Never deploy `latest main`, rebuild after authorization, expose
+secrets, or hardcode account ids, credentials, routes, local paths, or
+invocation catalogs.
 
-The GitHub `production` environment must provide non-empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets before the deploy job starts. Treat an empty-secret failure as missing deployment authority, not as a reason to weaken the workflow or bypass the environment gate.
+Before asking for authorization, call the ACOS prompt contract with the current
+`turn:end` result, local-review receipt, immutable candidate, and release-run
+reference. It must re-prove `runtime-ready`, HTTP 200 canonical probes, exact
+source and Agentic Canvas OS identities, the candidate's local-review digest,
+and a supervised loopback Apex URL. On success, display exactly:
+
+```text
+The release is verified and awaiting fresh human authorization.
+
+Candidate: `{{candidate_digest}}`
+Source: `{{source_revision}}`
+Run: `{{release_run_reference}}`
+localhost: `{{localhost_review_url}}`
+
+Reply exactly:
+
+`authorize {{candidate_digest}}`
+```
+
+The localhost URL is a bound review surface, not Production authority, and may
+not be supplied as free-form confirmation input. A stale process, failed probe,
+non-loopback URL, source or dependency movement, candidate mismatch, or missing
+run reference blocks prompt emission and requires a fresh `turn:end`, candidate,
+and human authorization.
+
+Key the controller by target digest plus candidate digest. Exactly one
+environment-scoped controller may deploy. Coalesce an exact duplicate dispatch
+onto its durable result, reject competing candidates or controllers, and record
+authorization consumption before releasing the fence.
+
+The GitHub `production` environment must require a human reviewer and provide non-empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets before the deploy job starts. Treat absent review or an empty-secret failure as missing deployment authority, not as a reason to weaken the workflow or bypass the environment gate.
 
 On partial success, stop further mutation and report the exact state. Do not loop or stack patches.
 
-### 10. Verify Production
+### 10. Verify Production and Publish
 
 Verify `https://airvio.co` and `https://airvio.co/knowgrph` for HTTP status, route ownership, primary HTML and assets, stale asset references, MCP availability, invocation catalog resolution, runtime health, visible exact Knowgrph and Agentic Canvas OS SHA evidence, catalog/docs revision equality, bounded hydration evidence, local-path leakage, legacy aliases, and required responsive smoke paths.
+
+Emit the Live Verification Receipt only when observed runtime and artifact
+identity match the Human Authorization Receipt. Publish the exact generated
+mirror only afterward and emit the Publication Receipt. Failed or ambiguous
+live proof restores the captured last-known-good deployment and leaves the
+previous mirror revision unchanged.
 
 ### 11. Report
 
@@ -198,6 +316,6 @@ Stop without downstream mutation when any of these is true:
 
 ## Completion VCC
 
-Given a protected green merge to Knowgrph `main`, when every ordered automatic stage succeeds, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact promoted Dev SHA, both production routes return matching live evidence, and the final ledger reports ownership, validation, cost, deployment, rollback target, and residual risk.
+Given a protected green merge to Knowgrph `main`, when `turn:end` records exact localhost evidence, the controller builds one immutable candidate, an authenticated human authorizes its exact digest, and every ordered verification stage succeeds without drift or rebuild, then memory and centralized planning history are proven append-only, the declared planning row is compliant from its recorded base, one application-root runtime owns identity and MainPanel Settings projects it through shared KTV rows, participating runtime identities report identical exact app/docs SHAs, catalog revision equals the docs revision with bounded fresh hydration, Prod represents the exact authorized Dev artifact, both production routes return matching live evidence, and the final ledger reports ownership, authorization, validation, cost, deployment, rollback target, and residual risk.
 
 VCC: verify `npm run collaboration:gate` exits zero with two distinct automated peers, at least two active room peers, one common verification digest, remote document propagation, exact app/docs SHA and `/`, `#`, `@` count parity, and fresh catalog hydration in at most two attempts, the memory and planning structural and base-ref commands exit zero, both planning-row commands report their declared Context and a Directive count at or below 50, all other required checks exit zero, the invocation catalog resolves from this repository, Dev and Prod evidence names one promoted SHA, both production URLs pass canonical probes, and execution stops after the first blocker.

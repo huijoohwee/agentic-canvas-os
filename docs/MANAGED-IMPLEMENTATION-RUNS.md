@@ -2,13 +2,13 @@
 title: "Managed Autonomous Implementation Runs"
 graphId: "md:agentic-canvas-os-managed-implementation-runs"
 doc_type: "Runtime Contract"
-date: "2026-07-22"
+date: "2026-07-29"
 lang: "en-US"
 schema: "managed-implementation-runs/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "invocation grammar and protected repository lifecycle for managed implementation work"
-publish_policy: "Dev delivery-ready run state by default; protected delivery requires an explicit operator action"
+publish_policy: "Dev delivery-ready run state by default; an immutable opt-in may enable protected auto-merge, while runtime-ready completion remains enforced locally"
 runtime_scope: "isolated work-item planning, provisioning, execution handoff, verification, review, and lifecycle evidence"
 runtime_claim: "Agentic Canvas OS owns invocation and fenced Git lifecycle; Knowgrph owns the durable local MCP run supervisor and management projection"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -21,6 +21,7 @@ mcp_tools:
   - "knowgrph.implementation_run.start"
   - "knowgrph.implementation_run.list"
   - "knowgrph.implementation_run.control"
+  - "knowgrph.agentic_sdlc.observe"
 external_pattern_sources:
   - "https://github.com/openai/symphony/blob/1f3219bb1ea5f69a1305dc594e79b0db57c113c5/SPEC.md"
   - "https://openai.com/index/open-source-codex-orchestration-symphony/"
@@ -33,7 +34,7 @@ external_dependency: "forbidden"
 
 One work item becomes one observable, isolated implementation run. A team manages the work item, acceptance state, evidence, and review decision instead of watching an agent conversation or approving every ordinary implementation step.
 
-The managed-run default terminal state is `delivery_ready`: durable run evidence is complete and the ACOS lease/CLI has reached `review_ready`, meaning the matching PR is ready for team review. Neither status means delivered, merged, released, deployed, or accepted. Only an explicit operator-selected delivery path may invoke protected publication, and the repository-owned release controller remains the only production authority.
+The managed-run default terminal state is `delivery_ready`: durable run evidence is complete and the ACOS lease/CLI has reached `review_ready`, meaning the matching PR is ready for team review. Neither status means delivered, merged, released, deployed, or accepted. The default requires an explicit operator-selected delivery path; a durable work-item policy may instead pre-authorize one exact-head protected auto-merge at lease creation for a terminal implementation completion. This policy is never inferred from an ordinary message, chat, session, or thread ending. The repository-owned release controller remains the only production authority.
 
 ## Canonical Invocation
 
@@ -42,6 +43,14 @@ The managed-run default terminal state is `delivery_ready`: durable run evidence
 ```
 
 The exact `/`, `#`, and `@` tokens resolve only from the three dictionaries. Unknown tokens remain unknown and must fail before provisioning, model spend, mutation, or lifecycle claims. A dictionary match supplies invocation metadata; it does not itself grant execution or approval.
+
+The separate read-only observation composition is:
+
+```text
+/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof
+```
+
+It reads an immutable run-ledger receipt and projects source state through existing KGC, GraphData, and Canvas owners. It does not invoke `/implementation.run`, control a run, grade a task, or grant delivery or deployment authority.
 
 ## Ownership
 
@@ -68,8 +77,17 @@ Knowgrph retains caller `semanticScope` as human metadata and derives a distinct
 | `knowgrph.implementation_run.start` | Persist one idempotent run request, provision and claim its fenced task lane through Agentic Canvas OS, then start the configured supervisor. | Mutates only the run ledger, new task worktree, task branch, lease, and ownership PR. |
 | `knowgrph.implementation_run.list` | Return bounded run summaries, blockers, evidence references, and next team action. | Read-only; no polling loop or model call. |
 | `knowgrph.implementation_run.control` | Pause, cancel, retry, request review, or record an operator decision against a current run version. Retry performs fenced ACOS resumption when the prior lane must reactivate. | Explicit control plus state precondition required; delivery remains a separate operator-authorized action. |
+| `knowgrph.agentic_sdlc.observe` | Validate one exact immutable ledger receipt and return a deterministic, bounded end-to-end KGC and GraphData projection for the existing Canvas. | Read-only, local, model-free, network-free, zero-token, zero-cost, and Dev-only; no run, ledger, source, Canvas, review, release, Prod, or Cloudflare mutation. |
 
 The tools are MCP-invocable. The exact invocation tokens also make the capability `/`, `#`, and `@` discoverable through the existing catalog projection; they do not create alternate tool names or a second dispatcher.
+
+## Observation Boundary
+
+The observer request names the exact invocation, `runId`, bounded `view`, `expectedRevision`, and `expectedLedgerDigest`, plus an optional cursor and limit. Its prerequisite is the receipt at `state.result.agenticSdlcLedger` with schema `agentic-sdlc-ledger-receipt/v1`, local artifact reference, digest, byte count, canonical run id, ledger revision, and exact Agentic Canvas OS revision. The receipt and artifact bytes must agree before projection.
+
+The tool returns `knowgrph-agentic-sdlc-observation/v1`. Its `projection` is `agentic-sdlc-canvas-projection/v1`, containing deterministic GraphData plus KGC Markdown rather than a copied run store, graph database, dashboard, or renderer. Run, criterion, VCC, task, transition, dispatch, return, check, evidence, finding, budget, receipt, gate, and checkpoint records retain their source identities and typed relationships. Views and pages are digest-bound, stubs preserve typed missing endpoints, and cache reuse requires the same receipt digest, revision, view, cursor, and limit.
+
+Managed run evidence may project `delivery_ready` only when it is joined to ACOS `review_ready` at the exact review head. That operational state is not the canonical Agentic SDLC success state `verified`; only the named independent Evaluator can produce the latter in a conforming ledger. `deployed` is a third release-lifecycle observation that requires exact existing Human Authorization and Live Verification receipts. The observer never converts among these claims and never supplies missing canonical VCC, grant, budget, role, transition, consumption, receipt, authorization, or deployment evidence.
 
 ## Run State Model
 
@@ -80,7 +98,7 @@ The tools are MCP-invocable. The exact invocation tokens also make the capabilit
 | `claiming` | ACOS provisioning and fenced lease acquisition are in progress. | `running`, `failed`, `blocked`, `canceled` |
 | `running` | Configured runner owns the active attempt in the task worktree. | `verifying`, `paused`, `failed`, `blocked`, `canceled` |
 | `verifying` | Declared checks, allowed-path diff, scan, and evidence capture are bounded. | `delivery_ready`, `running`, `failed`, `blocked`, `canceled` |
-| `delivery_ready` | Branch and proof are pushed and ACOS reports lease status `review_ready`; the matching PR is ready for team review with no merge automation. | `queued` after fenced resume, `canceled`, or an operator-owned delivery decision |
+| `delivery_ready` | Branch and proof are pushed and ACOS reports lease status `review_ready`; the matching PR is ready for team review with no merge automation by default. An immutable `autoDelivery` lease may wake protected auto-merge only for the exact `reviewHeadSha`. | `queued` after fenced resume, `canceled`, or protected delivery |
 | `paused` | Supervisor stopped new work and retained resumable evidence. | `queued`, `canceled` |
 | `blocked` | A typed external or policy prerequisite prevents progress. | `queued` after the prerequisite changes, `canceled` |
 | `failed` | An attempt ended terminally with captured diagnostics. | `queued` within attempt bounds, `canceled` |
@@ -111,13 +129,39 @@ If the combined operation is interrupted after the lease claim, the durable call
 
 `start`, `resume`, `heartbeat`, `review`, `publish`, and `park` accept `--json`. Success emits exactly one stdout object with schema `agentic-device-command-result/v1`: `ok`, `action`, `status`, `repoRoot`, `branch`, `worktreePath`, `provisioned`, `pullRequest: { url, number, isDraft }`, and projected lease/fence evidence. Park also exposes immutable `stashRef`, `stashSha`, and `stashStatus` evidence. Failure exits nonzero with the same schema, `status: error`, and a typed error object. Human and child-process progress never shares machine stdout.
 
-`complete` and `end` retain their existing compatibility result: `completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and `status: ok`.
+`complete` and `end` retain their existing compatibility result: `completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and `status: ok`. The separate operator-selected `integrate` action emits `agentic-device-integration-result/v1`; its default success is `runtime_ready` only after the protected merge, durable completion, canonical source convergence, and managed Knowgrph runtime proof all agree. Managed runs do not invoke it implicitly.
 
 GitHub's observed `isDraft` value is a lifecycle invariant, not a value inferred from the local lease marker. Successful `start`, `resume`, `heartbeat`, and managed `park` operations prove `isDraft: true`; successful `review` and `publish` operations prove `isDraft: false`. A manually readied active PR makes heartbeat fail before lease renewal. Review-ready and same-session delivery resume demote a ready PR with `gh pr ready --undo`, then independently re-query and prove draft state before claiming a new epoch or making another writer mutation.
 
-`review` checks, pushes, updates the PR title from the reviewed commit, preserves authored work-item and evidence text, replaces only hidden lease metadata, records `reviewHeadSha`, and makes the PR ready without an automerge label or merge call. Requested changes use `resume <exact-branch>`; exact reviewed local, remote, PR, and fence evidence is required before a new epoch can reactivate the lane. Review-ready handoff may transfer to a new session. Resume is replay-safe after PR demotion, local claim, empty claim commit, lease annotation, remote push, or PR-body edit: it accepts only the exact same-session successor epoch, worktree, PR, branch, single-parent empty claim subject and base, and exact remote fence, then finishes only the missing steps. Publishing a reviewed head first requires an explicit fenced resume to active ownership; `publish` never consumes `review_ready` directly, retains the protected auto-merge path, and is never the managed-run default.
+An explicit heartbeat `--repair-pr-projection` transition handles the narrower
+case where GitHub keeps an ownership PR at a strict ancestor after the active
+branch, local fence, and remote fence agree. It binds the source PR, stale and
+expected heads, epoch, and any owned-dirt digest in a replayable lease receipt;
+close/reopen is attempted first, and a distinct replacement draft is created
+only while the old projection remains stale. Review and publish fail closed
+unless the resulting PR head exactly equals the local pushed head.
+
+`review` checks, pushes, updates the PR title from the reviewed commit, preserves authored work-item and evidence text, replaces only hidden lease metadata, records `reviewHeadSha`, and makes the PR ready without an automerge label or merge call by default. An immutable `--auto-delivery` start lease additionally records `autoDelivery` and `runtimeRequired`, then adds the `agentic/auto-delivery` workflow wake label only after the implementing agent has classified the run as terminal, confirmed no required work remains, and persisted its exact review marker. Ordinary conversation, questions, status or read-only turns, waits, partial progress, dirty or parked work, and blocked outcomes never trigger that handoff. The trusted repository controller accepts only that same-repository reviewed SHA and enables GitHub protected auto-merge; it does not rewrite the head, resolve conflicts, bypass checks, deploy, or report completion. Requested changes use `resume <exact-branch>`; exact reviewed local, remote, PR, and fence evidence is required before a new epoch can reactivate the lane. Review-ready handoff may transfer to a new session only while clean. The explicit `--recover-owned-dirt` resume exception is restricted to the exact prior review-owning session, attached branch, worktree, PR, reviewed head, remote head, fence, and epoch; it records an exact dirt-evidence digest on the successor lease and uses an empty `--only` claim commit so no authored byte enters the fence. Only that empty claim push uses `--no-verify`, bracketed by exact dirt-evidence checks; it bypasses the checkout-local pre-push hook, not lifecycle review, publish, integration, protected checks, or deployment. A clean expired active lease with committed descendants is recoverable only by the same session when local registry, worktree, branch, PR head, remote marker/fence, and ancestry agree; the successor atomically retains a local-only pre-claim head/tree and range-diff digest plus exact source status, epoch, session, device, scope, branch, base, fence, PR, and integration evidence. If the prior integration annotation is missing, `device:integrate` requires the original source-base path manifest and intentional commit message, revalidates paths and diff, and runs the full check before publish, without demanding a new authored byte beyond the successor claim fence. Resume is replay-safe after PR demotion, local claim, empty claim commit, lease annotation, remote push, or PR-body edit: it accepts only the exact same-session successor epoch, worktree, PR, branch, single-parent empty claim subject and base, and exact remote fence, then finishes only the missing steps. Publishing a reviewed head first requires an explicit fenced resume to active ownership; `publish` never consumes `review_ready` directly, retains the protected auto-merge path, and is never the managed-run default. The automatic path may be completed only by `device:integrate` with canonical runtime reconciliation; it rejects `--runtime=none` and reports success only as `runtime_ready` after merged-SHA, canonical-source, and supervised runtime proof agree.
+
+Runtime handoff is canonical rather than branch-local. `npm run turn:end -- --repository=<canonical-knowgrph-root> --json` first runs the lifecycle audit, then requires both repositories to be clean exact fetched `origin/main` revisions with their required protected checks successful. The Agentic Canvas OS supervisor owns fixed loopback Apex `5173` and storage `8787` through a private token stored outside both repositories, rejects unmanaged listeners, and proves Apex plus direct and proxied storage HTTP readiness. Task branches never serve canonical ports, and the supervisor never merges, deploys, accepts arbitrary commands, or kills an unrelated process.
 
 `park` first proves the matching ownership PR remains draft and verifies the remote fence and local ancestry. Dirty state is stashed with a deterministic lease message, resolved to its exact commit, and pinned under a dedicated immutable `refs/agentic-canvas-os/parked/...` ref; moving selectors such as `stash@{0}` are never durable evidence. Shared stash mutation uses an owned lock that never removes a live or successor owner. Park then writes the projected lease to the PR, re-proves draft state, conditionally releases the unchanged local lease at the same timestamp, and detaches last. If stash capture, PR projection, release, or detachment is interrupted, the same session replays only exact evidence. Resume reclaims and proves draft ownership before applying that exact stash with index state, verifies tracked, staged, untracked, file-mode, and conflict evidence, marks it `restored`, and retains the object/ref proof. A lost apply or PR-edit response is idempotently reconciled without applying a different or moving stash. A later park pins its successor before retiring the prior restored object; completion first records `completing`, preserves the multiset of all unrelated stash entries and immutable refs during exact cleanup, detaches at a pinned canonical commit, and only then records `completed`. Detached retry accepts canonical advancement only after proving the recorded main and merge are ancestors.
+
+Canonical divergence is not a task-lane park. The exceptional
+`canonical:main:recover` command accepts only the primary registered `main`
+worktree, an explicit acknowledgement, one stable session, and exact expected
+local and fetched protected heads. It refuses mutation unless there is genuine
+two-sided divergence and every single-parent local-only commit has both a
+negative `git cherry` result and a stable patch-id match in the remote
+divergence. Under the same shared park lock it pins the old HEAD, records an
+exact tracked, staged, and untracked path manifest, captures that dirty state
+beneath immutable refs and receipt blobs, and performs a replayable
+detached-target and compare-and-swap main-ref transition. Ignored paths remain
+in place only when their path digest is stable, ignore rules do not change, and
+no protected target path collides. The terminal machine result is
+`agentic-canonical-main-recovery-result/v1`; its receipt path, path-manifest
+digest, old-HEAD ref, stash ref/SHA, and prepared, capture, and completion
+receipt refs are preservation evidence only.
 
 ## Runner And Verification Boundary
 
@@ -146,6 +190,8 @@ No Symphony code, prose, prompt, schema, vocabulary set, algorithm, fixture, tes
 | Provisioning is isolated | Focused tests reject unsafe path, collision, symbolic-link ancestor, dirty/divergent main, and post-claim rollback; canonical main remains unchanged. |
 | Machine output is parseable | CLI tests prove exactly one stdout JSON object on success and failure, and every lifecycle action projects authoritative branch/lease state. |
 | Review is not delivery | Focused tests prove review updates title/body evidence while invoking no `pr merge`, `--auto`, automerge label, Prod, or Cloudflare action. |
+| Reviewed runtime is exact | Focused tests reject dirt, active or mismatched leases, local/remote/PR head drift, draft PRs, missing repository Dev ownership, canonical docs drift, and unrelated listener PIDs; live proof requires HTTP 200 at the recorded loopback URL. |
 | Reactivation is fenced | Exact review head, remote branch, PR lease marker, prior epoch, and new fence are proven before another attempt. |
 | Runtime is managed | Knowgrph focused tests prove idempotent plan/start, durable restart recovery, configured argv launch, pause/cancel/retry/review controls, bounded verification, and list projection. |
+| Observation is source-backed and non-mutating | The ACOS catalog test plus Knowgrph observer tests require one exact immutable ledger receipt, deterministic KGC and GraphData output through existing Canvas owners, typed `verified`/`delivery_ready`/`deployed` separation, and exact zero network, model, token, and cost evidence. |
 | Deployment stays closed | A run stops at `delivery_ready` with ACOS lifecycle status `review_ready` unless an explicit operator chooses the separate protected delivery workflow. |

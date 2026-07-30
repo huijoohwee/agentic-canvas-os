@@ -5,9 +5,9 @@ import { parseWorktreeRecords } from "./repository-guards.mjs";
 
 const SAFE_TASK_NAME = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
-export function deriveTaskWorktreeRoot(repoRoot) {
-  const root = path.resolve(repoRoot);
-  return path.join(path.dirname(root), ".worktrees", path.basename(root));
+export function deriveTaskWorktreeRoot(repoRoot, gitCommonDir = path.join(path.resolve(repoRoot), ".git")) {
+  const repositoryOwnerRoot = path.dirname(path.resolve(gitCommonDir));
+  return path.join(path.dirname(repositoryOwnerRoot), ".worktrees", path.basename(repositoryOwnerRoot));
 }
 
 export function provisionTaskWorktree({
@@ -24,8 +24,10 @@ export function provisionTaskWorktree({
   if (path.resolve(invocationPath) !== canonicalRoot) {
     throw new Error(`Provisioning must start at the canonical repository root ${canonicalRoot}.`);
   }
-  const { safeRoot, target } = validateTarget({
+  const gitCommonDir = path.resolve(canonicalRoot, gitText(["rev-parse", "--git-common-dir"]).trim());
+  const { safeRoot, target, workspaceRoot } = validateTarget({
     repoRoot: canonicalRoot,
+    gitCommonDir,
     targetPath,
     pathExists,
     pathStat,
@@ -48,7 +50,7 @@ export function provisionTaskWorktree({
     throw new Error(`Canonical main must equal fetched origin/main ${baseSha}; received ${headSha}.`);
   }
   makeDirectory(safeRoot, { recursive: true, mode: 0o700 });
-  assertNoSymlinkAncestors({ repoRoot: canonicalRoot, target, pathExists, pathStat });
+  assertNoSymlinkAncestors({ workspaceRoot, target, pathExists, pathStat });
   run("git", ["worktree", "add", "--detach", target, baseSha]);
   return { baseSha, canonicalRoot, safeRoot, target };
 }
@@ -70,21 +72,22 @@ export function rollbackUnclaimedProvision({
   return true;
 }
 
-function validateTarget({ repoRoot, targetPath, pathExists, pathStat }) {
+function validateTarget({ repoRoot, gitCommonDir, targetPath, pathExists, pathStat }) {
   if (!targetPath) throw new Error("--worktree=<absolute-new-task-worktree> is required with --provision.");
   if (!path.isAbsolute(targetPath)) throw new Error("Provisioned task worktree path must be absolute.");
   const target = path.resolve(targetPath);
-  const safeRoot = deriveTaskWorktreeRoot(repoRoot);
+  const safeRoot = deriveTaskWorktreeRoot(repoRoot, gitCommonDir);
+  const workspaceRoot = path.dirname(path.dirname(gitCommonDir));
   if (path.dirname(target) !== safeRoot || !SAFE_TASK_NAME.test(path.basename(target))) {
     throw new Error(`Task worktree must be a safe direct child of ${safeRoot}.`);
   }
   if (pathExists(target)) throw new Error(`Task worktree target already exists: ${target}`);
-  assertNoSymlinkAncestors({ repoRoot, target, pathExists, pathStat });
-  return { safeRoot, target };
+  assertNoSymlinkAncestors({ workspaceRoot, target, pathExists, pathStat });
+  return { safeRoot, target, workspaceRoot };
 }
 
-function assertNoSymlinkAncestors({ repoRoot, target, pathExists, pathStat }) {
-  const boundary = path.dirname(path.resolve(repoRoot));
+function assertNoSymlinkAncestors({ repoRoot, workspaceRoot = path.dirname(path.resolve(repoRoot)), target, pathExists, pathStat }) {
+  const boundary = path.resolve(workspaceRoot);
   const relative = path.relative(boundary, path.dirname(target));
   let candidate = boundary;
   for (const segment of ["", ...relative.split(path.sep).filter(Boolean)]) {

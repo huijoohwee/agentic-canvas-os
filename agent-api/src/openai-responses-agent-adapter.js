@@ -168,6 +168,7 @@ export function resolveOpenAiResponsesAgentConfig(env = {}) {
     pricingReady,
     reasoningEffort,
     maxOutputTokens: parsePositiveInteger(env.OPENAI_AGENT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS),
+    maxTurns: parsePositiveInteger(env.OPENAI_AGENT_MAX_TURNS, DEFAULT_MAX_TURNS),
   });
 }
 

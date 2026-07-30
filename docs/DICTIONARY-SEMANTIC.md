@@ -2,7 +2,7 @@
 title: "Agentic OS Semantic Dictionary"
 graphId: "md:agentic-os-dictionary-semantic"
 doc_type: "Invocation Dictionary"
-date: "2026-07-20"
+date: "2026-07-29"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
@@ -17,7 +17,12 @@ source_docs:
   - "RUNTIME-READINESS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENT-TEAM.md"
+  - "AGENTIC-SDLC-RUNTIME.md"
+  - "MANAGED-IMPLEMENTATION-RUNS.md"
+  - "CLOUD-COLLABORATION.md"
+  - "REPOSITORY-PACKING.md"
+  - "VOICE-STUDIO.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
@@ -36,8 +41,8 @@ metadata_consumers:
   - id: "mcp"
     surface: "MCP capability metadata"
     owner: "knowgrph/mcp/local-tool-contract.js"
-    metadata_fields: ["token", "prefix", "meaning", "match_when", "required_proof", "publish_policy", "source_docs"]
-    behavior: "reference and filter metadata only; no standalone MCP tool execution"
+    metadata_fields: ["token", "prefix", "meaning", "match_when", "required_proof", "publish_policy", "source_docs", "catalog_digest"]
+    behavior: "reference and filter metadata plus the deterministic full-catalog digest; no standalone MCP tool execution"
 entry_metadata_contract:
   token: "dictionary_entries item and first Tags table column"
   label: "runtime mirror derives a concise display label from the token"
@@ -45,7 +50,7 @@ entry_metadata_contract:
   group: "Agentic OS semantic dictionary"
   sourcePath: "this dictionary document"
   keywords: "token parts plus Meaning, Match when, and Required proof text"
-  mcp: "MCP consumers may expose semantic filters as metadata for routing and audit, but must not treat a tag as approval or execution"
+  mcp: "MCP consumers expose semantic filters, full-catalog counts, and one deterministic catalog digest for routing and audit, but must not treat a tag as approval or execution"
 dictionary_entries:
   - "#truth"
   - "#soul"
@@ -75,6 +80,9 @@ dictionary_entries:
   - "#agentic-ecs"
   - "#dev-only"
   - "#mcp"
+  - "#repository-packing"
+  - "#git-remote"
+  - "#multi-provider-file-sync"
   - "#canvas"
   - "#canvas-node"
   - "#canvas-edge"
@@ -88,6 +96,7 @@ dictionary_entries:
   - "#character-motion"
   - "#pose"
   - "#gameplay"
+  - "#flight"
   - "#action-path"
   - "#transform"
   - "#world"
@@ -135,9 +144,11 @@ dictionary_entries:
   - "#profile-handoff"
   - "#worker-process"
   - "#multi-agent-collaboration"
+  - "#cloud-collaboration"
   - "#managed-implementation-run"
+  - "#agentic-sdlc-observability"
   - "#application-composition"
-  - "#knowledge-graph"
+  - "#role-based-agent-team"
   - "#tool-gateway"
   - "#tool-routing"
   - "#tool-function"
@@ -148,6 +159,8 @@ dictionary_entries:
   - "#bridge-tool"
   - "#web-search"
   - "#image-generation"
+  - "#voice-clone"
+  - "#speech-to-text"
   - "#text-to-speech"
   - "#cloud-browser"
   - "#skill-evolution"
@@ -163,6 +176,14 @@ dictionary_entries:
   - "#sandboxed-workspace"
   - "#agent-sandbox-policy"
   - "#message-gateway"
+  - "#payment-rail-selection"
+  - "#payment-idempotency"
+  - "#payment-settlement-integrity"
+  - "#offline-intent-queue"
+  - "#payment-data-minimization"
+  - "#payment-readiness"
+  - "#workspace-parallelism"
+  - "#destructive-operation-guard"
 ---
 
 # Semantic Dictionary
@@ -185,7 +206,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 |---|---|---|---|
 | Chat composer | Token, label, summary, group, sourcePath, keywords, prefix role. | `dictionary_entries`; Tags table Meaning, Match when, and Required proof. | Inserts the `#` token and preserves the editable query; unknown tags stay raw text. |
 | Skills & Commands catalog | Token, label, summary, group, sourcePath, keywords, prefix role. | Same source fields as chat composer. | Renders searchable rows and active-card insertion without copying a panel-local semantic list. |
-| MCP | Token, prefix, meaning, match criteria, required proof, publish policy, source docs. | Tags table plus frontmatter policy fields. | Metadata is reference and filter context only; a semantic tag does not authorize tool execution, spend, mutation, or deploy. |
+| MCP | Token, prefix, meaning, match criteria, required proof, publish policy, source docs, full-catalog counts, and catalog digest. | Tags table plus frontmatter policy fields; deterministic digest input is token, kind, label, summary, and source path across all three dictionaries. | Metadata is reference and filter context only; every sigil query returns the same full-catalog digest, and a semantic tag does not authorize tool execution, spend, mutation, or deploy. |
 
 ## Tags
 
@@ -219,10 +240,13 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by Knowgrph. | One of the three ECS MCP commands operates on a KGC-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
+| `#repository-packing` | Deterministic, bounded conversion of one exact local Git worktree into one AI-friendly content-addressed Markdown artifact. | `/repository.pack #repository-packing @repository-root @runtime-proof` requests the local stdio MCP owner. | Canonical Git discovery, typed omissions, source and artifact digests, path containment, atomic publication, independence proof, and zero network, model, token, cost, Prod, and Cloudflare activity are explicit. |
+| `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
+| `#multi-provider-file-sync` | Bidirectional file or directory transfer through a provider-neutral browser contract. | `/file.sync` pulls or pushes a configured provider prefix. | Provider capability, pagination, hash semantics, per-file outcomes, both-sides-changed conflicts, size/time bounds, offline FIFO, and secret-free browser payloads are proven. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
 | `#canvas-node` | Canvas graph node selection, creation, opening, linking, or deletion intent. | A command acts on a node, creates a node, or needs selected-node context. | Node id, type, label, graph point, mutation owner, and selection state are explicit. |
 | `#canvas-edge` | Canvas graph edge selection, creation, endpoint update, or provenance intent. | A command creates, opens, rewires, or serializes an edge. | Source, target, label, selected edge id, and duplicate-edge handling are explicit. |
-| `#canvas-media` | Media metadata, rich media panel, or media-node projection attached to Canvas graph state. | A command updates node media properties or creates media-backed graph state. | Media kind, URL/reference, interactivity, opacity, and shared media owner are present. |
+| `#canvas-media` | Media metadata, rich media panel, media-node projection, or bounded immersive-media presentation on the shared Canvas. | A command updates node media properties, creates media-backed graph state, or invokes `/media.immersive @canvas #canvas-media`. | Media kind, validated URL/reference when supplied, view bounds, interaction state, projection layers, annotations, overlays, capture result, and shared media and renderer owners are explicit. |
 | `#canvas-layout` | Schema-owned Canvas layout force tuning, preset, or reset intent. | A command changes anti-line, post-fit, or layout-force behavior. | Layout values live in graph schema state and focused proof reports the applied or reset values. |
 | `#canvas-selection` | Current Canvas node or edge selection used as the active invocation subject. | A command needs the active node/edge rather than a global panel-local target. | Selection source, selected id, and missing-selection behavior are typed before mutation or chat append. |
 | `#canvas-viewport` | Viewport readout, visible bounds, center point, or active camera state. | A command inspects or changes visible canvas position, dimensions, or center. | Readout is derived from shared viewport utilities and reports missing viewport state as typed empty output. |
@@ -230,8 +254,9 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#camera-shot` | Camera angle, level, shot size, and focal-length framing parameters. | `/camera.frame` changes composition around the selected subject. | Parameters validate against shared Camera framing options and return the exact applied pose. |
 | `#camera-motion` | Camera rig, numbered camera marks, playhead, duration, and playback state. | `/camera.animate`, `/camera.play`, or `/camera.scrub` controls choreography. | Rig and time values update one canonical XR camera track and BottomPanel Timeline transport with bounded runtime proof. |
 | `#character-motion` | Native procedural performance applied to an XR cast track, such as fight, dance, sit, drink, jump, playing cards, or squirt-gun action. | `/animation.control` applies or clears a typed character-motion preset for the selected actor. | Preset id, compatible subject category, deterministic pose sampling, timing, persistence, and package export are proven through the shared XR runtime without external animation assets. |
-| `#pose` | Human-pose intent used to classify Motion Control catalog metadata. | `/motion.control` describes an open, start, or stop operation for `@canvas`. | Dictionary and facts cross-links prove only the source catalog and Knowgrph ownership handoff; the tag does not prove camera access, inference, XR behavior, runtime readiness, or deployment. |
+| `#pose` | Human-pose intent for a bounded Motion Control session on the shared Canvas. | `/motion.control @canvas #pose` requests one browser-local Motion Control inspection or control operation. | Dev-only WebMCP tools `knowgrph.inspect_local_motion_control` and `knowgrph.control_local_motion_control` return typed state or applied or blocked proof; the token itself grants no camera access, inference, renderer, persistence, Prod, or Cloudflare authority. |
 | `#gameplay` | Deterministic Game Mode scope for scored Agentic ECS decisions, local collision and hitscan, player controls, HUD errors, and validated Decision persistence. | `/game.mode @canvas #gameplay` requests one browser-local Game Mode inspection or control operation. | Dev-only WebMCP tools `knowgrph.inspect_local_game_mode` and `knowgrph.control_local_game_mode` reuse Knowgrph's existing Canvas, XR Mode, Motion Control, ECS, and workspace owners; this token adds no model, network, renderer, camera, persistence, Prod, or Cloudflare authority. |
+| `#flight` | Deterministic Flight Sim scope for authored XR terrain, lifecycle, normalized controls, telemetry, training state, and validated Decision persistence. | `/flight.sim @canvas #flight` requests one browser-local Flight Sim inspection or control operation. | Dev-only WebMCP tools `knowgrph.inspect_local_flight_sim` and `knowgrph.control_local_flight_sim` reuse Knowgrph's existing Canvas, XR Mode, ECS, input, and workspace owners; this token adds no model, network, renderer, camera, persistence, Prod, or Cloudflare authority. |
 | `#action-path` | Native meter-based trajectory applied to an XR cast track, such as plane landing, helicopter orbit, car chase, or collapsing debris. | `/animation.control` applies or clears a typed action-path preset for the selected actor. | Bounded marks, altitude, facing, timing, deterministic sampling, persistence, and package export are proven through the shared XR runtime without a second path or timeline owner. |
 | `#transform` | Scene-authored XR subject asset, position, yaw rotation, scale, or color transform. | `/xr.transform` targets exactly one dynamic subject binding. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` validates bounded transform fields and persists through one shared scene owner; this semantic token does not execute or duplicate that runtime. |
 | `#world` | Canonical XR physics-world transport and configuration scope. | `/xr.physics @canvas #world` requests `play`, `pause`, `stop`, `reset`, `step`, or `configure`. | Browser-local WebMCP tool `knowgrph.control_local_xr_scene` owns fixed-step world state and returns applied or blocked proof; the dictionary adds no physics owner. |
@@ -279,7 +304,9 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#profile-handoff` | Explicit row-level transfer between named agent profiles. | One worker pauses, delegates, resumes, or requests review from another profile. | Handoff row names source profile, target profile, context refs, blockers, acceptance, and resume state. |
 | `#worker-process` | Full OS process worker with its own identity and runtime state. | Work should run outside fragile in-process subagent swarms. | Worker profile, command, cwd, proof, and cleanup boundary are explicit. |
 | `#multi-agent-collaboration` | Durable collaboration through shared rows rather than transient subagents. | Several named profiles coordinate through board state. | Every task and handoff is readable/writable as rows, with no hidden process memory as SSOT. |
+| `#cloud-collaboration` | Protected remote claim authority for concurrent browser, cloud-agent, mobile-browser, and intermittently connected local authoring surfaces. | More than one device or session may publish work to shared source-control state. | One append-only remote ledger, normalized disjoint write sets, non-forced compare-and-swap, server-time expiry, idempotent receipts, protected exact-head verification, and no local or queue-derived lock authority are proven. |
 | `#managed-implementation-run` | Durable work-item-oriented autonomous implementation with isolated source mutation and team-visible control. | A project task should proceed through configured execution, bounded verification, pause/cancel/retry/review controls, and evidence without continuous agent supervision. | One versioned run ledger, safe fenced task worktree, configured runner, bounded attempts and time, exact review head, and `delivery_ready` default are proven; ACOS `review_ready` is distinct and automatic merge/deploy remain absent. |
+| `#agentic-sdlc-observability` | Deterministic read-only projection of one immutable Agentic SDLC ledger into end-to-end execution, evidence, budget, gate, checkpoint, and release-receipt graph context. | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` requests a local observation of one exact run and ledger revision. | Exact receipt schema and digest, stable node and edge identities, source-backed GraphData and KGC Markdown, existing Canvas ownership, typed separation of `verified`, `delivery_ready`, and `deployed`, cache identity, zero model/network/token/cost evidence, and a closed Dev-only deploy boundary are explicit. |
 | `#application-composition` | Exact versioned component and interface composition for agent and LLM applications. | An application joins agent, model, tool, workflow, memory, guardrail, or integration components without absorbing their runtimes. | Exact source and component revisions, interface and schema digests, negotiated capabilities, runtime owners, one immutable plan digest, a deterministic dependency DAG, and explicit non-mutating migration diagnostics are present before execution. |
 | `#knowledge-graph` | Local deterministic graph of source-backed codebase entities and relationships with auditable evidence. | A request ingests, queries, traverses, or explains a graph derived from a bounded workspace containing code, docs, SQL, configs, or text-bearing PDFs. | Exact snapshot digest, parser and source digests, stable node and edge identities, deterministic ordering, typed omissions, and non-empty source evidence plus explanation for every edge are present; model, embedding, vector store, external graph service, and Graphify runtime paths are absent. |
 | `#tool-gateway` | Existing-infrastructure routing for tool calls. | A request uses web search, image generation, TTS, cloud browser, or another tool surface. | Tool route resolves to local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owner without adding a proxy. |
@@ -292,12 +319,15 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#bridge-tool` | Small model-visible bridge used for search, describe, or call. | A deferred tool is invoked through a bridge instead of direct schema exposure. | Bridge unwraps to the real tool identity for validation, approval, hooks, audit, cost, and fallback. |
 | `#web-search` | Web search and extraction tool category. | A task needs search, extraction, citations, or source fetch. | Source scope, citations, egress policy, cache behavior, and cost log are present. |
 | `#image-generation` | Image generation tool category. | A task requests generated or edited images. | Approval, model/provider selection, prompt bounds, output manifest, and cost log are present. |
-| `#text-to-speech` | Text-to-speech tool category. | A task requests narration, voice note, or audio output. | Voice/provider, text bounds, output manifest, and cost log are present. |
+| `#voice-clone` | Authorized voice-profile derivation from one immutable source-audio artifact. | `/voice.studio` selects `clone` with `@audio` and `@voice-profile`. | Exact speaker consent, recording rights, permitted use, retention, disclosure, source digest, bounds, approval, cost, and revocation behavior are present before adapter work. |
+| `#speech-to-text` | Authorized transcription of one immutable source-audio artifact into bounded text. | `/voice.studio` selects `dictate` with `@audio` and `@text`. | Recording rights, participant notice, language and segment bounds, source provenance, approval, cost, and uncertainty posture are present before adapter work. |
+| `#text-to-speech` | Text-to-speech tool category, including the `/voice.studio` `create` route. | A task requests narration, voice note, or disclosed audio output from bounded text and, for Voice Studio, one exact active `@voice-profile` revision. | Voice/provider or profile authorization, text bounds, disclosure, output manifest, approval, cost, provenance, and revocation checks are present. |
 | `#cloud-browser` | Cloud browser automation tool category. | A task requires remote browser navigation, click, type, vision, or screenshot actions. | Isolated session, action schema, redaction, approval gate, and trace proof are present. |
-| `#skill-evolution` | Bounded improvement of reusable skill contracts. | A skill is created or improved from experience, tests, traces, or evaluation packets. | Evaluation packet, semantic-preservation note, focused validation, human review, and no direct self-modifying commit. |
+| `#skill-evolution` | Bounded improvement of reusable skill contracts. | Skill text is proposed or optimized through source-fenced epochs, mini-batches, and disjoint held-out validation. | Learning rate limits text mutation rather than model weights; every accepted candidate passes required gates and remains review-pending until separately managed. |
 | `#memory-search` | Scoped retrieval from local memory or past conversation indexes. | An agent needs prior decisions, proof, or preferences before acting. | Ranked sources cite local storage scope and return typed empty results when no match exists. |
 | `#identity-model` | Stable, source-backed operator and project preference model. | A repeated preference or boundary should persist across sessions. | Store only non-secret, operator-relevant, source-backed facts; reject unsupported personal inference. |
 | `#orchestration-graph` | State, node, edge, and compile-check contract for agent workflows. | A workflow needs explicit topology, conditional routing, parallel branches, or bounded loops. | State schema, node ids, edge rules, entry/exit nodes, stop condition, and orphan-node check are present. |
+| `#role-based-agent-team` | Exact source-backed collaboration among named agent-definition revisions and one registered orchestration workflow. | A task needs declared roles, goals, or personas while retaining existing delegate, handoff, guardrail, model, tool, review, and persistence owners. | `/agent.team #role-based-agent-team @agent-team`, four `knowgrph.agent_team.*` lifecycle tools, revision and state fences, hard turn/depth/fanout/retry/time/token/cost bounds, private intermediates, and exact final-answer ownership are proven; role metadata grants no authority. |
 | `#agent-swarm` | Dynamic bounded horizontal work decomposition for one base-agent goal. | Independent work can overlap and does not require predefined specialists or a handcrafted workflow. | Runtime-generated tasks, session-owned durable atomic claims, observed bounded overlap, isolated contexts, recovery, verified receipts, and base-agent synthesis are proven. |
 | `#agent-toolkit` | Cross-cutting observation, bounded evaluation, evidence-backed comparison, and reviewed learning for digest-bound agent-system revisions. | A digest-bound agent or team revision and framework-neutral adapter require metadata-only analysis without changing the execution owner. | Caller-declared digests and application authority, server timing, telemetry trust, bounded unique evidence, metric direction, honest cost, deterministic same-cohort policy, and review-pending learning are explicit. |
 | `#stateful-agent` | Long-running agent with explicit state across turns or sessions. | A run persists working state, memory, checkpoints, or resumable context. | State owner, memory boundary, checkpoint plan, and resume behavior are named. |
@@ -307,6 +337,14 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#sandboxed-workspace` | Isolated or scoped filesystem/execution workspace for agent-created artifacts. | A run reads, writes, edits, executes, or summarizes generated files. | Workspace root, allowed operations, artifact manifest, diff summary, secret scan, cleanup, and approval gates are explicit. |
 | `#agent-sandbox-policy` | Native declarative deny-first policy for agent filesystem, process, network, credential, and audit decisions. | An autonomous or tool-bearing run needs preflight authorization. | Policy source, digest, typed decision, redacted audit result, and OS/kernel enforcement gap are explicit. |
 | `#message-gateway` | Typed handoff channel between user, agent, worker, tool, and review stages. | A workflow fans out, pauses, resumes, or sends tool/status messages across actors. | Message schema, sender, recipient, state transition, replay/idempotency rule, and visibility boundary are present. |
+| `#payment-rail-selection` | Deterministic choice of exactly one settlement rail for one payment intent. | More than one provider-backed settlement path can serve a requested currency or settlement asset. | Selection inputs, the selected rail identifier, and the selection reason are recorded before any provider call, identical inputs return identical output, and no ready rail returns a typed unavailable result. |
+| `#payment-idempotency` | Replay-safe creation of a provider payment object behind a client-generated intent key. | A payment request can be retried after a lost response, a reconnect, or an agent retry. | The key is derived from the client intent key without a personal identifier, a replay yields exactly one provider object, and a changed-parameter replay returns a typed conflict instead of a second object. |
+| `#payment-settlement-integrity` | At-most-once settlement from authenticated events and provider-authoritative state. | An inbound provider callback or a reconciliation pass could unlock paid capability. | Event authenticity is verified before payload read, provider state is the authority, a paid transition requires matching intent identifier, minor-unit amount, and currency, and duplicate delivery produces one side effect. |
+| `#offline-intent-queue` | Locally durable payment intent held while the server-side trust boundary is unreachable. | A payment is confirmed with no network path, or a client reloads before submission. | The queue survives reload with zero egress, carries no credential or account identifier, submits in creation order one intent key at a time, and never asserts payment on its own. |
+| `#payment-data-minimization` | Smallest regulated-data footprint that still supports audit. | Payment data is stored, projected into a receipt, sent to a provider, or exposed to a caller. | No card number, verification value, or full bank account number is stored, no personal identifier enters an idempotency key or provider metadata, no payment record field enters a model prompt, and the public status projection carries only its permitted fields. |
+| `#workspace-parallelism` | Concurrent sessions working across sibling repositories in one workspace root as the intended mode. | More than one session, device, or tool can hold live work in the workspace at the same time. | Lane ownership, branch exclusivity, and scope exclusivity are each proven separately, every at-risk lane is named, and serialization is never used as the safety mechanism. |
+| `#destructive-operation-guard` | Fail-closed review of an operation that can destroy work another session still holds. | A working-tree reset, untracked removal, forced checkout, history rewrite, lane removal, object prune, or fast-forward integration is proposed. | The operation is matched against the explicit forbidden catalog, foreign lane ownership and foreign uncommitted work refuse it, untracked paths refuse it outright, dirty tracked paths require a durable recovery reference, and the strongest outcome is allow-with-recovery. |
+| `#payment-readiness` | Per-rail proof that a settlement rail is configured well enough to accept money. | A rail is about to be enabled, re-enabled, or exposed to a buyer or agent. | Required credential names, server-side presence, absence from visible configuration, pinned provider version, configured integration model, and one terminal sandbox payment are reported read-only, with a non-zero exit on any missing required input. |
 
 ## Semantic Shape
 
@@ -335,13 +373,19 @@ semantic:
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Atomically persist only pending validated decision nodes, then close the successful session. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute the protected release stages and require one promoted SHA plus live verification evidence. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
+| `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` | Read one immutable local ledger receipt and project its end-to-end graph through the existing KGC, GraphData, and Canvas owners without mutation, model use, network use, spend, or deployment. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
-| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Build one digest-bound local snapshot with deterministic parsers and explained source-backed edges. |
-| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Run bounded deterministic lexical and graph traversal without a model, embedding, or vector store. |
-| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Return one stored edge explanation and its exact source evidence without recomputation. |
+| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
 | `/mcp.capabilities #mcp #cost @mcp-gateway` | Discover tools with zero-spend cost reporting. |
+| `/payment.rail.select #payment-rail-selection #no-hardcode @payment-rail @payment-readiness` | Choose exactly one settlement rail deterministically from currency, settlement asset, and readiness. |
+| `/payment.intent.create #payment-idempotency #approval-gate @payment-intent @payment-provider` | Keep payment creation replay-safe and keep agent-originated spend behind the existing approval gate. |
+| `/payment.event.settle #payment-settlement-integrity #truth @payment-event @payment-provider` | Settle only from authenticated events plus provider-authoritative state. |
+| `/payment.receipt.project #payment-data-minimization #vcc @payment-record @payment-intent` | Project terminal records into one byte-stable local document that carries no prohibited identifier. |
+| `/payment.readiness #payment-readiness #dev-only @payment-readiness @payment-rail` | Prove a rail is configured before it is exposed, without mutation or deploy authority. |
+| `/workspace.parallelism.check #workspace-parallelism #truth @workspace-lane @recovery-reference` | Keep concurrent sessions the default while proving no lane holds work a destructive operation could not restore. |
+| `/workspace.operation.review #destructive-operation-guard #approval-gate @workspace-lane @operator` | Gate every catalog operation behind lane ownership, foreign-work checks, and a durable recovery reference. |
 | `/pipeline.trace #token-economics @cost-log` | Review FloatingPanel Chat pipeline and token economics through the cost ledger. |
 | `/workspace.review #frontmatter @source.body` | Review workspace context without turning display labels into standalone prose commands. |
 | `/canvas.render #canvas @runtime-proof` | Project parsed source state through existing Canvas owners. |
@@ -385,8 +429,11 @@ semantic:
 | `/tool.route #web-search @web-search-tool` | Run search or extraction with source scope, citations, egress, and cost proof. |
 | `/tool.route #image-generation @image-tool` | Run image generation only after approval, artifact-boundary, and cost checks. |
 | `/tool.route #text-to-speech @tts-tool` | Run TTS only with voice, text, output, and cost bounds. |
+| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Resolve the `clone` metadata-only route; only `knowgrph.voice.studio` may execute after separate consent and approval checks. |
+| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Resolve the `dictate` metadata-only route; only `knowgrph.voice.studio` may execute after recording-rights and approval checks. |
+| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Resolve the `create` metadata-only route; only `knowgrph.voice.studio` may execute with an active permitted profile and required disclosure. |
 | `/tool.route #cloud-browser @browser-tool` | Run browser automation only with session isolation, redaction, and approval. |
-| `/skill.evolve #skill-evolution @skill-catalog @runtime-proof` | Evaluate and propose a bounded skill improvement without direct self-modifying commit. |
+| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Plan, start, step, inspect, or cancel the bounded `knowgrph.skill.evolve` harness; successful output remains a review-pending proposal. |
 | `/memory.search #memory-search @memory-store` | Retrieve scoped prior context before spending tokens or mutating source. |
 | `/identity.reflect #identity-model @identity-model` | Persist stable operator preferences without secrets or unsupported inference. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Declare and validate state, node, edge, and stop-condition topology. |
@@ -402,7 +449,8 @@ semantic:
 | Token | Facts source |
 |---|---|
 | `#application-composition` | `FACTS.md` direct-resolution entry for exact component, interface, capability, and dependency planning. |
-| `#knowledge-graph` | `FACTS.md` direct-resolution entry for deterministic local graph ingestion, query, and edge explanation. |
+| `#agentic-sdlc-observability` | `FACTS.md` direct-resolution entry for immutable-ledger Agentic SDLC graph observation. |
+| `#role-based-agent-team` | `FACTS.md` direct-resolution entry for exact role-based team semantics without authority inference. |
 | `#truth` | `FACTS.md` direct-resolution entry for shared source-backed facts. |
 | `#soul` | `FACTS.md` direct-resolution entry for durable agent identity. |
 | `#knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for bounded Probe-Tree semantics. |
@@ -427,9 +475,12 @@ semantic:
 | `#toolset` | `FACTS.md` direct-resolution entry for logical tool bundles. |
 | `#platform-toolset` | `FACTS.md` direct-resolution entry for platform-scoped toolset state. |
 | `#tool-search` | `FACTS.md` direct-resolution entry for opt-in deferred tool progressive disclosure. |
+| `#repository-packing` | `FACTS.md` direct-resolution entry for deterministic bounded local repository packing. |
 | `#deferred-tool-schema` | `FACTS.md` direct-resolution entry for on-demand deferred schema loading. |
 | `#bridge-tool` | `FACTS.md` direct-resolution entry for bridge-routed deferred tool calls. |
 | `#mixture-of-agents` | `FACTS.md` direct-resolution entry for bounded MoA routing. |
+| `#git-remote` | `FACTS.md` direct-resolution entry for browser Git with Worker-owned remote transport. |
+| `#multi-provider-file-sync` | `FACTS.md` direct-resolution entry for provider-neutral bidirectional synchronization. |
 
 ## VCCs
 
@@ -439,3 +490,4 @@ semantic:
 | Tags are MECE enough for routing | Each tag row has distinct meaning, match criteria, and proof. |
 | No semantic backfill | Tags do not mark runtime-ready without runtime proof. |
 | No duplicate registry | Body states shared utilities own routing and no new semantic registry is created. |
+| Observation semantics do not promote state | `#agentic-sdlc-observability` preserves the ledger's typed `verified`, `delivery_ready`, and `deployed` evidence and creates no verdict, delivery, authorization, or deployment authority. |

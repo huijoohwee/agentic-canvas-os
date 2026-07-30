@@ -1,3 +1,8 @@
+import {
+  isSkillEvolutionOperation,
+  skillEvolutionResultValidationFields,
+} from "./skill-evolution-result.js";
+
 // Keyless MCP Streamable HTTP client for the agentic-canvas-os product tier.
 //
 // Calls the knowgrph control plane at `airvio.co/knowgrph/control-plane/mcp` over MCP
@@ -23,6 +28,18 @@ export class KnowgrphMcpError extends Error {
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Fail closed when a Skill Evolution MCP reply is incomplete or unsafe. */
+export function validateSkillEvolutionResult(value, { expectedOperation } = {}) {
+  const fields = skillEvolutionResultValidationFields(value, { expectedOperation });
+  if (fields.length > 0) {
+    throw new KnowgrphMcpError("invalid Skill Evolution result", {
+      code: "mcp_skill_evolution_result_invalid",
+      data: { fields },
+    });
+  }
+  return value;
 }
 
 function normalizeExecutionMetadata(value) {
@@ -227,6 +244,18 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     /** Invoke the Agentic Canvas OS command grammar (/, @, #). */
     invokeDocsGrammar(input, opts) {
       return callTool("knowgrph.agentic_canvas_os.docs.invoke", input, opts);
+    },
+    /** Call Skill Evolution and reject incomplete or unsafe result snapshots. */
+    async evolveSkill(input, opts) {
+      const expectedOperation = input?.operation;
+      if (!isSkillEvolutionOperation(expectedOperation)) {
+        throw new KnowgrphMcpError("invalid Skill Evolution request operation", {
+          code: "mcp_skill_evolution_request_invalid",
+          data: { fields: ["operation"] },
+        });
+      }
+      const result = await callTool("knowgrph.skill.evolve", input, opts);
+      return validateSkillEvolutionResult(result, { expectedOperation });
     },
   };
 }

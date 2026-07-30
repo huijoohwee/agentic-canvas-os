@@ -5,7 +5,24 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import {
+  TEXT_COMMAND_MAX_BUFFER_BYTES,
+  textCommandOptions,
+} from "../scripts/command-text-options.mjs";
+
 const script = path.resolve("scripts/device-branch.mjs");
+
+test("text commands retain integration evidence larger than Node's default buffer", () => {
+  const outputBytes = 2 * 1024 * 1024;
+  const output = execFileSync(process.execPath, [
+    "-e",
+    'process.stdout.write("x".repeat(Number(process.argv[1])))',
+    String(outputBytes),
+  ], textCommandOptions());
+
+  assert.equal(output.length, outputBytes);
+  assert.ok(TEXT_COMMAND_MAX_BUFFER_BYTES > outputBytes);
+});
 
 test("device CLI emits exactly one JSON object on machine success and failure", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "agentic-device-cli-"));
@@ -47,6 +64,19 @@ test("device CLI emits exactly one JSON object on machine success and failure", 
     assert.equal(error.ok, false);
     assert.equal(error.status, "error");
     assert.match(error.error.message, /positive number/);
+
+    const wrongAction = spawnSync(process.execPath, [
+      script,
+      "park",
+      `--repository=${canonicalRepo}`,
+      "--recover-owned-dirt",
+      "--json",
+    ], { encoding: "utf8" });
+    assert.equal(wrongAction.status, 1);
+    assert.match(
+      JSON.parse(wrongAction.stdout).error.message,
+      /accepted only by device:resume/,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

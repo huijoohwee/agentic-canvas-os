@@ -73,6 +73,9 @@
     snapshotReady: false,
     rev: 0,
     pending: [],
+    token: "",
+    tokenExpiresAt: 0,
+    tokenRoomId: "",
   };
 
   function createRoomCapability() {
@@ -260,6 +263,11 @@
   }
 
   async function fetchCollabToken(roomId) {
+    if (
+      collab.token
+      && collab.tokenRoomId === roomId
+      && collab.tokenExpiresAt > Date.now() + 30_000
+    ) return collab.token;
     const res = await fetch("/api/auth/session", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -268,7 +276,17 @@
     if (!res.ok) throw new Error(`session request failed (${res.status})`);
     const data = await res.json();
     if (!data || typeof data.token !== "string") throw new Error("no token in response");
-    return data.token;
+    const payload = data.token.split(".")[1] || "";
+    try {
+      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const claims = JSON.parse(window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
+      collab.tokenExpiresAt = Number.isFinite(claims.exp) ? claims.exp * 1000 : 0;
+    } catch {
+      collab.tokenExpiresAt = 0;
+    }
+    collab.token = data.token;
+    collab.tokenRoomId = roomId;
+    return collab.token;
   }
 
   function scheduleReconnect(roomId) {

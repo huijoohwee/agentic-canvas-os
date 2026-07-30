@@ -15,12 +15,18 @@ import {
   sanitizeScope,
   start,
 } from "../scripts/device-branch-lib.mjs";
-import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
+import {
+  parseWriterLeasePullRequestBody,
+  renderWriterLeasePullRequestBody,
+} from "../scripts/writer-lease-lib.mjs";
 
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
-const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({ url, state: "OPEN", isDraft, headRefName: branch, baseRefName: "main", body });
+const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({
+  url, state: "OPEN", isDraft, headRefName: branch,
+  headRefOid: "c".repeat(40), baseRefName: "main", body,
+});
 
 function createGitText(responses) {
   return args => {
@@ -256,10 +262,9 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
   assert.equal(releaseStatus, "delivery");
 });
 
-test("resume fences parked handoffs and same-session delivery revisions with a newer epoch", () => {
+test("resume fences parked and reviewed handoffs with a newer epoch", () => {
   for (const handoff of [
     { status: "parked", priorSessionId: "chat-old", sessionId: "chat-new" },
-    { status: "delivery", priorSessionId: "chat-new", sessionId: "chat-new" },
     { status: "review_ready", priorSessionId: "chat-new", sessionId: "chat-new" },
   ]) {
     const calls = [];
@@ -341,6 +346,158 @@ test("resume fences parked handoffs and same-session delivery revisions with a n
     assert.ok(calls.some(call => call.join(" ") === `git push origin ${branch}`));
     assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "edit"));
   }
+});
+
+test("same-session delivery resume carries its original integration into the successor fence", () => {
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const sourceBaseSha = "a".repeat(40);
+  const sourceFenceSha = "b".repeat(40);
+  const deliveryHeadSha = "c".repeat(40);
+  const deliveryTreeSha = "d".repeat(40);
+  const successorFenceSha = "e".repeat(40);
+  const changedPath = "scripts/delivery-continuation.mjs";
+  const priorLease = {
+    schema: "agentic-writer-lease/v2",
+    status: "delivery",
+    epoch: 4,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "runtime-leases",
+    branch,
+    worktreePath: repo,
+    baseSha: sourceBaseSha,
+    fenceSha: sourceFenceSha,
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    deliveryHeadSha,
+    heartbeatAt: "2026-07-17T10:00:00.000Z",
+    expiresAt: "2026-07-17T10:00:00.000Z",
+    integration: {
+      schema: "agentic-integration-commit/v1",
+      commitSha: deliveryHeadSha,
+      treeSha: deliveryTreeSha,
+      commitMessage: "feat: delivered source",
+      manifestDigest: "1".repeat(64),
+      stagedDiffDigest: "2".repeat(64),
+      paths: [changedPath],
+    },
+  };
+  let localLease = priorLease;
+  let remoteHead = deliveryHeadSha;
+  let head = deliveryHeadSha;
+  let remoteBody = renderWriterLeasePullRequestBody(priorLease);
+  let isDraft = false;
+  let claimInput = null;
+  const gitText = args => {
+    const key = args.join(" ");
+    const values = {
+      "worktree list --porcelain -z": branchWorktree(branch),
+      "diff --name-only --diff-filter=U": "",
+      "ls-files -u": "",
+      "status --porcelain": "",
+      "branch --show-current": branch,
+      [`rev-parse origin/${branch}`]: remoteHead,
+      "rev-parse HEAD": head,
+      [`rev-parse ${deliveryHeadSha}^{tree}`]: deliveryTreeSha,
+      [`merge-base --is-ancestor ${sourceFenceSha} ${deliveryHeadSha}`]: "",
+      [`merge-base --is-ancestor ${deliveryHeadSha} ${deliveryHeadSha}`]: "",
+      [`diff --name-only -z ${sourceFenceSha} ${deliveryHeadSha} --`]:
+        `${changedPath}\0`,
+      [`diff --binary ${sourceFenceSha} ${deliveryHeadSha} --`]:
+        "delivery continuation diff",
+    };
+    if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+    return values[key];
+  };
+
+  const result = resume({
+    branchName: branch,
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: args => {
+      if (args[0] === "config") return "device";
+      if (args[0] === "ls-remote") {
+        return `${remoteHead}\trefs/heads/${branch}`;
+      }
+      return "";
+    },
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{
+        number: 1,
+        headRefName: branch,
+        url: pullRequestUrl,
+        body: remoteBody,
+      }])
+      : JSON.stringify({
+        url: pullRequestUrl,
+        state: "OPEN",
+        isDraft,
+        headRefName: branch,
+        headRefOid: remoteHead,
+        baseRefName: "main",
+        body: remoteBody,
+      }),
+    leaseStore: {
+      read: () => localLease,
+      claim: input => {
+        claimInput = input;
+        localLease = {
+          ...priorLease,
+          status: "active",
+          epoch: 5,
+          baseSha: input.baseSha,
+          fenceSha: null,
+          pullRequestUrl: null,
+          integration: input.integration,
+          preClaimIntegrationContinuation:
+            input.preClaimIntegrationContinuation,
+        };
+        return localLease;
+      },
+      annotate: ({ values }) => (localLease = { ...localLease, ...values }),
+      verify: () => localLease,
+    },
+    sessionId: "chat-a",
+    leaseTtlMs: 1_800_000,
+    run: (command, args) => {
+      if (
+        command === "gh" &&
+        args[0] === "pr" &&
+        args[1] === "ready" &&
+        args[2] === "--undo"
+      ) {
+        isDraft = true;
+      } else if (command === "git" && args[0] === "commit") {
+        head = successorFenceSha;
+      } else if (command === "git" && args[0] === "push") {
+        remoteHead = head;
+      } else if (
+        command === "gh" &&
+        args[0] === "pr" &&
+        args[1] === "edit"
+      ) {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+    now: () => new Date("2026-07-17T10:05:00.000Z"),
+  });
+
+  assert.equal(result.fenceSha, successorFenceSha);
+  assert.equal(claimInput.baseSha, deliveryHeadSha);
+  assert.equal(claimInput.integration.commitSha, deliveryHeadSha);
+  assert.equal(claimInput.integration.validationRequired, true);
+  assert.equal(
+    claimInput.preClaimIntegrationContinuation.sourceStatus,
+    "delivery",
+  );
+  assert.equal(
+    parseWriterLeasePullRequestBody(remoteBody).integration.rangeDiffDigest,
+    claimInput.integration.rangeDiffDigest,
+  );
 });
 
 test("resume rejects a delivery revision claimed by another session", () => {
@@ -471,6 +628,29 @@ test("completeSession detaches the task worktree only after the task pull reques
     status: "ok",
   });
   assert.match(logs[0], /Restart the local runtime from this SHA/);
+});
+
+test("completeSession refuses auto-delivery completion without canonical runtime reconciliation", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": "agent/device/scope",
+  });
+  assert.throws(() => completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => "",
+    leaseStore: createCompletionLeaseStore({
+      status: "review_ready",
+      autoDelivery: true,
+      runtimeRequired: true,
+      reviewHeadSha: "c".repeat(40),
+    }),
+    run: () => {},
+  }), /requires device:integrate/);
 });
 
 test("completeSession fails closed while the pull request is open", () => {

@@ -62,6 +62,8 @@ Composition does not infer either mode from agent metadata. The registered branc
 
 Readiness reports owner names, adapter presence, continuation strategy, bounded counters, and nested Running Agents statistics. It never reports instructions, source content, provider credentials, adapter error bodies, or output payloads.
 
+The default Worker may inject the OpenAI Responses step adapter only through the separately owned opt-in autonomous runtime configuration. That path additionally requires explicit enablement and spend flags, aligned model and adapter settings, a bounded provider-call ceiling, and one server-side source document whose digest is verified before registration and preparation. Without all gates, composition remains unconfigured.
+
 `contractReady: true` means the local composition shape and offline behavior are executable. `configured: true` additionally requires Agent Definitions, Models and Providers, and an injected execution adapter. Provider execution remains `unverified` in default construction. The separately approved Node-only proof in `LIVE-AGENT-PROVIDER-PROOF.md` injects a concrete adapter without changing Worker defaults and accepts only returned, redacted provider evidence.
 
 ## Acceptance Contract

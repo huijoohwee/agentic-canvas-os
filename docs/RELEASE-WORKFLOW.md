@@ -182,10 +182,12 @@ When a direct push to `main` is rejected by protected-branch policy or missing r
 If attributed tracked bytes remain in canonical `main` after their exact task
 change has passed protected integration, use only the
 `canonical:main:fast-forward-equivalence` adapter described in
-`START-WORKFLOW.md`. Its completed content-bound receipt must prove the local
-working set is identical to the fetched protected descendant before canonical
-ref/index reconciliation. Any untracked, staged, conflicting, partial, extra,
-or drifted state remains blocking.
+`START-WORKFLOW.md`. Its completed content-bound receipt must prove every dirty
+path's mode and blob is identical to the fetched protected descendant while all
+other paths remain clean against the expected local head; unrelated protected
+changes may then materialize during canonical ref/index reconciliation. Any
+untracked, staged, conflicting, deleted, partial, extra, mode-mismatched, or
+drifted state remains blocking.
 
 Before protected convergence, emit the Overlap Preservation Receipt and account
 for every item in the joined Disposition Receipt. After convergence, emit the neutral Integration Receipt with the

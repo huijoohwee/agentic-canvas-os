@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { resolveSameSessionDeliveryHandoff, resume } from "../scripts/device-branch-lib.mjs";
+import {
+  resolveSameSessionDeliveryContinuation,
+} from "../scripts/expired-committed-continuation-lib.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const repo = process.cwd();
@@ -149,6 +152,137 @@ test("same-session delivery rejects authored or multiply merged remote advanceme
       gitText: () => `${"6".repeat(40)} ${"7".repeat(40)} ${"5".repeat(40)}`,
     }),
     /advanced beyond its exact protected-main refresh/,
+  );
+});
+
+test("same-session delivery binds prior integration to a revalidated successor receipt", () => {
+  const sourceBaseSha = "1".repeat(40);
+  const sourceFenceSha = "2".repeat(40);
+  const integrationCommitSha = "3".repeat(40);
+  const integrationTreeSha = "4".repeat(40);
+  const deliveryHeadSha = "5".repeat(40);
+  const deliveryTreeSha = "6".repeat(40);
+  const changedPath = "scripts/delivery-continuation.mjs";
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "delivery",
+    epoch: 9,
+    sessionId: "session-a",
+    device: "device",
+    scope: "managed-run",
+    branch,
+    worktreePath: repo,
+    baseSha: sourceBaseSha,
+    fenceSha: sourceFenceSha,
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    deliveryHeadSha,
+    heartbeatAt: "2026-07-30T00:00:00.000Z",
+    expiresAt: "2026-07-30T00:00:00.000Z",
+    integration: {
+      schema: "agentic-integration-commit/v1",
+      commitSha: integrationCommitSha,
+      treeSha: integrationTreeSha,
+      commitMessage: "feat: preserve delivered integration",
+      manifestDigest: "7".repeat(64),
+      stagedDiffDigest: "8".repeat(64),
+      paths: [changedPath],
+    },
+  };
+  const calls = [];
+  const result = resolveSameSessionDeliveryContinuation({
+    branch,
+    currentBranch: branch,
+    identity: { branch, device: "device", scope: "managed-run" },
+    localLease: lease,
+    remoteLease: { ...lease, worktreePath: undefined, integration: undefined },
+    remoteSha: deliveryHeadSha,
+    deliveryHandoffHead: deliveryHeadSha,
+    pullRequestHeadSha: deliveryHeadSha,
+    ownerUrl: pullRequestUrl,
+    repo,
+    sessionId: "session-a",
+    gitText: args => {
+      calls.push(args);
+      const key = args.join(" ");
+      const values = {
+        "rev-parse HEAD": deliveryHeadSha,
+        [`rev-parse ${integrationCommitSha}^{tree}`]: integrationTreeSha,
+        [`merge-base --is-ancestor ${sourceFenceSha} ${integrationCommitSha}`]: "",
+        [`merge-base --is-ancestor ${integrationCommitSha} ${deliveryHeadSha}`]: "",
+        [`diff --name-only -z ${sourceFenceSha} ${integrationCommitSha} --`]:
+          `${changedPath}\0`,
+        [`diff --binary ${sourceFenceSha} ${integrationCommitSha} --`]:
+          "delivery continuation diff",
+        [`rev-parse ${deliveryHeadSha}^{tree}`]: deliveryTreeSha,
+      };
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    },
+    now: () => new Date("2026-07-30T00:05:00.000Z"),
+  });
+
+  assert.equal(result.headSha, deliveryHeadSha);
+  assert.equal(result.integration.commitSha, integrationCommitSha);
+  assert.equal(result.integration.validationRequired, true);
+  assert.match(result.integration.rangeDiffDigest, /^[0-9a-f]{64}$/);
+  assert.equal(
+    result.preClaimIntegrationContinuation.sourceStatus,
+    "delivery",
+  );
+  assert.equal(
+    result.preClaimIntegrationContinuation.sourceDeliveryHeadSha,
+    deliveryHeadSha,
+  );
+  assert.equal(
+    result.preClaimIntegrationContinuation.headSha,
+    deliveryHeadSha,
+  );
+  assert.ok(calls.some(args => args.join(" ") ===
+    `merge-base --is-ancestor ${integrationCommitSha} ${deliveryHeadSha}`));
+});
+
+test("same-session delivery rejects missing or mismatched prior integration evidence", () => {
+  const deliveryHeadSha = "5".repeat(40);
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "delivery",
+    epoch: 9,
+    sessionId: "session-a",
+    device: "device",
+    scope: "managed-run",
+    branch,
+    worktreePath: repo,
+    baseSha: "1".repeat(40),
+    fenceSha: "2".repeat(40),
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    deliveryHeadSha,
+    heartbeatAt: "2026-07-30T00:00:00.000Z",
+    expiresAt: "2026-07-30T00:00:00.000Z",
+  };
+  assert.throws(
+    () => resolveSameSessionDeliveryContinuation({
+      branch,
+      currentBranch: branch,
+      identity: { branch, device: "device", scope: "managed-run" },
+      localLease: lease,
+      remoteLease: { ...lease, worktreePath: undefined },
+      remoteSha: deliveryHeadSha,
+      deliveryHandoffHead: deliveryHeadSha,
+      pullRequestHeadSha: deliveryHeadSha,
+      ownerUrl: pullRequestUrl,
+      repo,
+      sessionId: "session-a",
+      gitText: args => {
+        if (args.join(" ") === "rev-parse HEAD") return deliveryHeadSha;
+        throw new Error(`unexpected git command: ${args.join(" ")}`);
+      },
+      now: () => new Date("2026-07-30T00:05:00.000Z"),
+    }),
+    /requires exact prior integration evidence/,
   );
 });
 

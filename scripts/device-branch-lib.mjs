@@ -31,6 +31,7 @@ import {
 import {
   normalizePreClaimIntegrationContinuation,
   resolveExpiredCommittedContinuation,
+  resolveSameSessionDeliveryContinuation,
 } from "./expired-committed-continuation-lib.mjs";
 
 export { sanitize, sanitizeDevice, sanitizeScope } from "./device-branch-identity.mjs";
@@ -311,7 +312,40 @@ export function resume({
       captureOwnedDirtEvidence({ gitText, gitOptional }),
     );
   };
-  const integrationContinuation = resolveExpiredCommittedContinuation({
+  const sameSessionDelivery = remoteLease.status === "delivery" &&
+    remoteLease.sessionId === sessionId;
+  if (
+    sameSessionDelivery &&
+    !/^[0-9a-f]{40}$/.test(String(remoteLease.deliveryHeadSha || ""))
+  ) {
+    throw new Error("Delivery revision requires an exact deliveryHeadSha.");
+  }
+  const deliveryHandoffHead = sameSessionDelivery
+    ? resolveSameSessionDeliveryHandoff({
+      remoteLease,
+      remoteSha,
+      remoteRef,
+      gitText,
+    })
+    : null;
+  const deliveryContinuation = sameSessionDelivery
+    ? resolveSameSessionDeliveryContinuation({
+      branch: branchName,
+      currentBranch,
+      identity,
+      localLease: localAtInvocation,
+      remoteLease,
+      remoteSha,
+      deliveryHandoffHead,
+      pullRequestHeadSha: pullRequest.headRefOid,
+      ownerUrl: owner.url,
+      repo,
+      sessionId,
+      gitText,
+      now,
+    })
+    : null;
+  const committedContinuation = resolveExpiredCommittedContinuation({
     branch: branchName,
     currentBranch,
     identity,
@@ -325,6 +359,11 @@ export function resume({
     gitText,
     now,
   });
+  if (deliveryContinuation && committedContinuation) {
+    throw new Error("Resume found competing delivery and expired committed continuations.");
+  }
+  const integrationContinuation =
+    deliveryContinuation || committedContinuation;
   const replay = reconcileResumeReplay({
     branch: branchName, identity, currentBranch, repo, sessionId, remoteLease, remoteSha, owner,
     pullRequest, leaseStore, leaseTtlMs, gitText, gitOptional, ghText, run, log, now, verifyOwnedDirt,
@@ -335,13 +374,8 @@ export function resume({
     return replay;
   }
   const expired = Date.parse(remoteLease.expiresAt) <= now().getTime();
-  const sameSessionDelivery = remoteLease.status === "delivery" && remoteLease.sessionId === sessionId;
   const reviewHandoff = remoteLease.status === "review_ready";
   if (reviewHandoff && !/^[0-9a-f]{40}$/.test(String(remoteLease.reviewHeadSha || ""))) throw new Error("Reviewed handoff requires an exact reviewHeadSha.");
-  if (sameSessionDelivery && !/^[0-9a-f]{40}$/.test(String(remoteLease.deliveryHeadSha || ""))) throw new Error("Delivery revision requires an exact deliveryHeadSha.");
-  const deliveryHandoffHead = sameSessionDelivery
-    ? resolveSameSessionDeliveryHandoff({ remoteLease, remoteSha, remoteRef, gitText })
-    : null;
   if (remoteLease.status !== "parked" && !(remoteLease.status === "active" && expired) && !sameSessionDelivery && !reviewHandoff) {
     throw new Error(
       `Semantic scope ${identity.scope} remains ${remoteLease.status} under another session until ${remoteLease.expiresAt}.`,
@@ -612,7 +646,9 @@ function reconcileResumeReplay({
       local.branch !== branch || local.device !== identity.device || local.scope !== identity.scope ||
       !local.worktreePath || path.resolve(local.worktreePath) !== path.resolve(repo)) return null;
   const markerFields = ["schema", "status", "epoch", "sessionId", "device", "scope", "branch", "baseSha", "fenceSha", "heartbeatAt", "expiresAt"];
-  const activeReplay = remoteLease.status === "active" && markerFields.every(field => remoteLease[field] === local[field]);
+  const activeReplay = remoteLease.status === "active" &&
+    markerFields.every(field => remoteLease[field] === local[field]) &&
+    sameRemoteContinuationEvidence(remoteLease, local);
   const pendingStashRestoreReplay = activeReplay && local.parkStashStatus === "pending" &&
     PARK_STASH_FIELDS.every(field => remoteLease[field] === local[field]);
   const expiredActiveHandoff = remoteLease.status === "active" && Date.parse(remoteLease.expiresAt) <= now().getTime();
@@ -666,7 +702,9 @@ function reconcileResumeReplay({
     const pushBase = remoteLease.status === "parked"
       ? remoteLease.parkSourceFenceSha
       : committedPendingHandoff
-        ? integrationContinuation.preClaimIntegrationContinuation.sourceFenceSha
+        ? continuationSourceRemoteHead(
+          integrationContinuation.preClaimIntegrationContinuation,
+        )
         : handoffHead;
     const preClaimHead = committedPendingHandoff ? integrationContinuation.headSha : handoffHead;
     const atHandoffHead = headSha === preClaimHead;
@@ -736,6 +774,25 @@ function reconcileResumeReplay({
   });
   log(`Resume is already active for ${branch} at fence ${local.fenceSha.slice(0, 12)}.`);
   return restored;
+}
+
+function continuationSourceRemoteHead(continuation) {
+  return continuation.sourceStatus === "delivery"
+    ? continuation.headSha
+    : continuation.sourceFenceSha;
+}
+
+function sameRemoteContinuationEvidence(remoteLease, localLease) {
+  const remote = normalizePreClaimIntegrationContinuation(
+    remoteLease.preClaimIntegrationContinuation,
+  );
+  const local = normalizePreClaimIntegrationContinuation(
+    localLease.preClaimIntegrationContinuation,
+  );
+  if (!remote && !local) return true;
+  if (!remote || !local || !samePreClaimContinuation(remote, local)) return false;
+  return JSON.stringify(remoteLease.integration) ===
+    JSON.stringify(localLease.integration);
 }
 
 function sameOwnedDirtRecovery(left, right) {

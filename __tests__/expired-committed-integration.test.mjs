@@ -15,6 +15,8 @@ const sourceBaseSha = "8".repeat(40);
 const sourceFenceSha = "a".repeat(40);
 const committedHeadSha = "b".repeat(40);
 const committedTreeSha = "c".repeat(40);
+const deliveryHandoffSha = "e".repeat(40);
+const deliveryHandoffTreeSha = "f".repeat(40);
 const successorFenceSha = "d".repeat(40);
 const changedPath = "scripts/continuation.mjs";
 const rangeDiff = "committed continuation diff";
@@ -48,7 +50,23 @@ test("integration rejects a recovered commit without its approved manifest", () 
   }
 });
 
-function createHarness({ omitManifest = false } = {}) {
+test("integration revalidates delivery-resume evidence from the original source fence", () => {
+  const harness = createHarness({ sourceStatus: "delivery" });
+  try {
+    assert.throws(() => harness.invoke(), /stop after recovered validation/);
+    const state = harness.state();
+    assert.equal(state.lease.integration.validationRequired, false);
+    assert.ok(state.calls.some(call => call.join(" ") ===
+      `git merge-base --is-ancestor ${committedHeadSha} ${deliveryHandoffSha}`));
+    assert.ok(state.calls.some(call => call.join(" ") === "npm run check"));
+    assert.equal(state.publishCalls, 1);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+function createHarness({ omitManifest = false, sourceStatus = "active" } = {}) {
+  const delivery = sourceStatus === "delivery";
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-committed-integration-"));
   const canonicalRoot = path.join(repo, "canonical", "agentic-canvas-os");
   mkdirSync(canonicalRoot, { recursive: true });
@@ -68,7 +86,7 @@ function createHarness({ omitManifest = false } = {}) {
     scope: "committed-continuation",
     branch,
     worktreePath: repo,
-    baseSha: committedHeadSha,
+    baseSha: delivery ? deliveryHandoffSha : committedHeadSha,
     fenceSha: successorFenceSha,
     pullRequestUrl: "https://github.test/org/repo/pull/71",
     integration: {
@@ -84,7 +102,7 @@ function createHarness({ omitManifest = false } = {}) {
     },
     preClaimIntegrationContinuation: {
       schema: "agentic-pre-claim-integration-continuation/v1",
-      sourceStatus: "active",
+      sourceStatus,
       sourceEpoch: 7,
       sourceSessionId: "session-a",
       sourceDevice: "device",
@@ -93,8 +111,9 @@ function createHarness({ omitManifest = false } = {}) {
       sourceBaseSha,
       sourceFenceSha,
       sourcePullRequestUrl: "https://github.test/org/repo/pull/71",
-      headSha: committedHeadSha,
-      treeSha: committedTreeSha,
+      ...(delivery ? { sourceDeliveryHeadSha: deliveryHandoffSha } : {}),
+      headSha: delivery ? deliveryHandoffSha : committedHeadSha,
+      treeSha: delivery ? deliveryHandoffTreeSha : committedTreeSha,
       integrationCommitSha: committedHeadSha,
       integrationTreeSha: committedTreeSha,
     },
@@ -120,6 +139,10 @@ function createHarness({ omitManifest = false } = {}) {
           [`diff --binary ${sourceFenceSha} ${committedHeadSha} --`]:
             rangeDiff,
           [`rev-parse ${committedHeadSha}^{tree}`]: committedTreeSha,
+          ...(delivery ? {
+            [`rev-parse ${deliveryHandoffSha}^{tree}`]:
+              deliveryHandoffTreeSha,
+          } : {}),
         };
         if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
         return values[key];

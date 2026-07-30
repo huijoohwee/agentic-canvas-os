@@ -270,7 +270,9 @@ function validateRecoveredCommittedContinuation({
     integration?.schema !== "agentic-integration-commit/v1" ||
     continuation.integrationCommitSha !== integration.commitSha ||
     continuation.integrationTreeSha !== integration.treeSha ||
-    continuation.headSha !== integration.commitSha ||
+    (continuation.sourceStatus === "active" &&
+      continuation.headSha !== integration.commitSha) ||
+    !["active", "delivery"].includes(continuation.sourceStatus) ||
     !SHA_PATTERN.test(String(continuation.sourceFenceSha || "")) ||
     !SHA_PATTERN.test(String(continuation.sourceBaseSha || "")) ||
     !/^[0-9a-f]{64}$/.test(String(integration.rangeDiffDigest || "")) ||
@@ -294,7 +296,7 @@ function validateRecoveredCommittedContinuation({
   const committedPaths = splitNul(gitText([
     "diff", "--name-only", "-z",
     continuation.sourceFenceSha,
-    continuation.headSha,
+    integration.commitSha,
     "--",
   ]));
   requireExactPaths({ changed: committedPaths, approved: integration.paths });
@@ -302,7 +304,7 @@ function validateRecoveredCommittedContinuation({
   const rangeDiffDigest = sha256(gitText([
     "diff", "--binary",
     continuation.sourceFenceSha,
-    continuation.headSha,
+    integration.commitSha,
     "--",
   ]));
   if (rangeDiffDigest !== integration.rangeDiffDigest) {
@@ -311,7 +313,11 @@ function validateRecoveredCommittedContinuation({
   if (gitText(["rev-parse", `${integration.commitSha}^{tree}`]).trim() !== integration.treeSha) {
     throw new Error("Recovered committed continuation tree changed from its recorded commit.");
   }
+  if (gitText(["rev-parse", `${continuation.headSha}^{tree}`]).trim() !== continuation.treeSha) {
+    throw new Error("Recovered committed continuation handoff tree changed from its receipt.");
+  }
   run("git", ["merge-base", "--is-ancestor", continuation.sourceFenceSha, integration.commitSha]);
+  run("git", ["merge-base", "--is-ancestor", integration.commitSha, continuation.headSha]);
   run("git", ["merge-base", "--is-ancestor", integration.commitSha, "HEAD"]);
   run("npm", ["run", "check"]);
   if (listChangedPaths(gitText).length) {

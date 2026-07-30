@@ -41,6 +41,32 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   assert.equal(github.mutationCount(), writesBeforeReplay);
 });
 
+test("adapter does not depend on immediate ref visibility after bootstrap", async () => {
+  const github = createFakeGitHub({ hiddenLedgerRefReadsAfterCreate: 1 });
+  const result = await createAdapter(github).execute("claim", claimInput());
+
+  assert.equal(result.ok, true);
+  assert.equal(result.attempts, 1);
+  const ledgerRefReads = github.calls.filter((call) => (
+    call.method === "GET"
+    && call.path.endsWith("/git/ref/heads/agentic/collaboration-ledger")
+  ));
+  assert.equal(ledgerRefReads.length, 1);
+  assert.equal(github.calls.filter((call) => call.method === "POST" && call.path.endsWith("/git/refs")).length, 1);
+  assert.equal(github.calls.filter((call) => call.method === "PATCH" && call.body.force === false).length, 1);
+});
+
+test("adapter retries a transient update-side ref visibility failure", async () => {
+  const github = createFakeGitHub({ conflicts: [404] });
+  const result = await createAdapter(github).execute("claim", claimInput());
+
+  assert.equal(result.ok, true);
+  assert.equal(result.attempts, 2);
+  const updates = github.calls.filter((call) => call.method === "PATCH");
+  assert.equal(updates.length, 2);
+  assert.ok(updates.every((call) => call.body.force === false));
+});
+
 test("adapter retries a same-parent CAS conflict with a frozen server-time intent", async () => {
   const github = createFakeGitHub({ conflicts: [409] });
   const adapter = createAdapter(github);
@@ -174,7 +200,7 @@ function fencedInput(result, overrides) {
   };
 }
 
-function createFakeGitHub({ conflicts = [] } = {}) {
+function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 } = {}) {
   const calls = [];
   const repositories = {
     [ledgerRepository]: repositoryValue(1, "L_ledger", ledgerRepository),
@@ -192,6 +218,7 @@ function createFakeGitHub({ conflicts = [] } = {}) {
   const createdLedgers = [];
   let nextObject = 16;
   let conflictIndex = 0;
+  let hiddenLedgerRefReads = 0;
 
   async function request({ method = "GET", path, body }) {
     calls.push({ method, path, body });
@@ -206,6 +233,10 @@ function createFakeGitHub({ conflicts = [] } = {}) {
     const refMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/git\/ref\/heads\/(.+)$/u);
     if (method === "GET" && refMatch) {
       const sha = refs.get(`${refMatch[1]}:${refMatch[2]}`);
+      if (sha && refMatch[2] === "agentic/collaboration-ledger" && hiddenLedgerRefReads > 0) {
+        hiddenLedgerRefReads -= 1;
+        return response(404, { message: "Not Found" }, date);
+      }
       return sha
         ? response(200, { object: { sha } }, date)
         : response(404, { message: "Not Found" }, date);
@@ -256,6 +287,7 @@ function createFakeGitHub({ conflicts = [] } = {}) {
       const key = `${ledgerRepository}:agentic/collaboration-ledger`;
       if (refs.has(key)) return response(422, { message: "Reference already exists" }, date);
       refs.set(key, body.sha);
+      hiddenLedgerRefReads = hiddenLedgerRefReadsAfterCreate;
       return response(201, { object: { sha: body.sha } }, date);
     }
     if (

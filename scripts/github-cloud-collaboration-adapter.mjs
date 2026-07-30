@@ -181,15 +181,13 @@ async function mutateLedger({
       allowMissing: true,
     });
     if (!snapshot) {
-      await bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerRef, ledgerPath });
-      snapshot = await readLedger({
-        send,
-        ledgerRepository,
-        ledgerIdentity,
-        ledgerRef,
-        ledgerPath,
-        allowMissing: false,
+      snapshot = await bootstrapLedger({
+        send, ledgerRepository, ledgerIdentity, ledgerRef, ledgerPath,
       });
+      if (!snapshot) {
+        lastConflict = "collaboration ledger ref is not yet visible";
+        continue;
+      }
     }
     const evaluationTime = requireServerTime(snapshot.evaluationTime);
     if (!preparedRequest) {
@@ -242,7 +240,7 @@ async function mutateLedger({
       lastConflict = publicTransportError(error);
       continue;
     }
-    if ([409, 422].includes(update.status)) {
+    if ([404, 409, 422].includes(update.status)) {
       lastConflict = `compare-and-swap conflict at ${snapshot.revision}`;
       continue;
     }
@@ -386,12 +384,13 @@ async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerR
   requireStatus(commitResponse, [200], "read ledger bootstrap commit");
   const treeSha = String(commitResponse.value?.tree?.sha || "");
   requireSha(treeSha, "ledger bootstrap tree");
+  const ledger = createEmptyLedger(contractRepository(ledgerIdentity));
   const candidate = await createLedgerCommit({
     send,
     ledgerRepository,
     ledgerPath,
     snapshot: { revision: baseSha, treeSha },
-    ledger: createEmptyLedger(contractRepository(ledgerIdentity)),
+    ledger,
     action: "bootstrap",
   });
   const response = await send({
@@ -399,9 +398,14 @@ async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerR
     path: `/repos/${ledgerRepository}/git/refs`,
     body: { ref: `refs/heads/${ledgerRef}`, sha: candidate.commitSha },
   });
-  if (![201, 422].includes(response.status)) {
-    requireStatus(response, [201], "create collaboration ledger ref");
-  }
+  if (response.status === 422) return null;
+  requireStatus(response, [201], "create collaboration ledger ref");
+  return {
+    ledger,
+    revision: candidate.commitSha,
+    treeSha: candidate.treeSha,
+    evaluationTime: requireServerTime(response.date),
+  };
 }
 
 async function createLedgerCommit({

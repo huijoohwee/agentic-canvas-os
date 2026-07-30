@@ -1,15 +1,61 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import os from "node:os";
 import path from "node:path";
 import { textCommandOptions } from "./command-text-options.mjs";
-import { completeSession, heartbeat, park, publish, resume, review, start } from "./device-branch-lib.mjs";
+import {
+  completeSession,
+  heartbeat,
+  park,
+  publish,
+  resume,
+  review,
+  sanitizeDevice,
+  sanitizeScope,
+  start,
+} from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
 import { integrateSession } from "./device-integrate-lib.mjs";
-import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
-import { provisionTaskWorktree, rollbackUnclaimedProvision } from "./task-worktree-provision.mjs";
-import { createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS } from "./writer-lease-lib.mjs";
+import {
+  readOwnershipPullRequest,
+  requireOwnershipPullRequestDraft,
+} from "./device-pull-request-state.mjs";
+import {
+  inspectTaskWorktreeTarget,
+  provisionTaskWorktree,
+  rollbackUnclaimedProvision,
+} from "./task-worktree-provision.mjs";
+import {
+  createWriterLeaseStore,
+  DEFAULT_WRITER_LEASE_TTL_MS,
+  updateWriterLeasePullRequestBody,
+} from "./writer-lease-lib.mjs";
+import {
+  createAdmissionLeaseProjection,
+  evaluateScopedLaneAdmission,
+  normalizeCloudAuthority,
+  normalizeDeclaredWriteScopeManifest,
+} from "./scoped-lane-admission-lib.mjs";
+import {
+  attachCloudHeartbeatMachineEvidence,
+  bindAdmissionCloudAuthority,
+  heartbeatAdmissionCloudAuthority,
+  reconcileAdmissionCloudAuthority,
+  reviewReadyAdmissionCloudAuthority,
+  verifyAdmissionCloudAuthority,
+  verifyReviewReadyAdmissionCloudAuthority,
+} from "./scoped-lane-cloud-authority.mjs";
+import {
+  assertAdmissionMutationAuthority,
+  assertWorkspaceGuardsReady,
+  attachAdmissionReceipt,
+  collectScopedLaneState,
+  finalizeScopedLaneAdmission,
+  verifyPreservedLaneState,
+} from "./scoped-lane-admission-state.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,11 +73,17 @@ if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
 let repo = null;
 let canonicalRepo = null;
 let provision = null;
-let leaseRevisionBeforeProvision = null;
+let admissionReport = null;
+let admissionProjection = null;
+let admissionManifest = null;
+let verifiedCloudAuthority = null;
+let mutationAuthorityReceipt = null;
 const invocationPath = path.resolve(
   readOption(args, "repository") || process.env.AGENTIC_TARGET_REPOSITORY || process.env.INIT_CWD || process.cwd(),
 );
 const requestedWorktreePath = readOption(args, "worktree");
+const writeScopeManifestPath = readOption(args, "write-scope-manifest");
+const cloudAuthorityPath = readOption(args, "cloud-authority");
 try {
   if (autoDelivery && command !== "start") {
     throw new Error("--auto-delivery is accepted only by device:start; authorization is immutable for the task lease.");
@@ -47,19 +99,99 @@ try {
   process.chdir(invocationPath);
   canonicalRepo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(canonicalRepo);
-  configureHooks();
+  if (command === "start") {
+    assertWorkspaceGuardsReady({
+      repository: canonicalRepo,
+      controllerRoot,
+    });
+  }
   let activeInvocationPath = invocationPath;
   if (provisionRequested) {
     if (command !== "start") throw new Error("--provision is supported only by device:start.");
-    const commonDirectory = path.resolve(canonicalRepo, gitText(["rev-parse", "--git-common-dir"]).trim());
-    leaseRevisionBeforeProvision = createWriterLeaseStore({ gitCommonDir: commonDirectory }).readRegistry().revision;
-    provision = provisionTaskWorktree({
+    if (!writeScopeManifestPath || !cloudAuthorityPath) {
+      throw new Error(
+        "--provision requires --write-scope-manifest and --cloud-authority from the repository cloud claim.",
+      );
+    }
+    run("git", ["fetch", "origin", "main"]);
+    const before = collectScopedLaneState({ repository: canonicalRepo });
+    const targetPlan = inspectTaskWorktreeTarget({
+      invocationPath,
+      repoRoot: canonicalRepo,
+      targetPath: requestedWorktreePath,
+      gitText,
+    });
+    const normalizedScope = sanitizeScope(rawScope);
+    const device = sanitizeDevice(
+      gitOptional(["config", "--get", "agentic.device"])
+      || os.hostname(),
+    );
+    const branch = `agent/${device}/${normalizedScope}`;
+    const manifest = normalizeDeclaredWriteScopeManifest(
+      readJsonFile(writeScopeManifestPath, "declared write-scope manifest"),
+      { expectedScope: normalizedScope },
+    );
+    admissionManifest = manifest;
+    const authority = normalizeCloudAuthority(
+      readJsonFile(cloudAuthorityPath, "cloud authority"),
+      {
+        ledgerRepository: readOption(args, "ledger-repository")
+          || process.env.AGENTIC_LEDGER_REPOSITORY
+          || "huijoohwee/agentic-canvas-os",
+        targetRepository: readOption(args, "target-repository")
+          || ghText(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim(),
+        manifest,
+        canonicalBaseSha: before.canonicalBaseSha,
+      },
+    );
+    const verified = verifyAdmissionCloudAuthority({
+      authority,
+      manifest,
+      canonicalBaseSha: before.canonicalBaseSha,
+    });
+    verifiedCloudAuthority = verified.authority;
+    admissionReport = evaluateScopedLaneAdmission({
+      repository: canonicalRepo,
+      canonicalPath: canonicalRepo,
+      canonicalBaseSha: before.canonicalBaseSha,
+      targetPath: targetPlan.target,
+      branch,
+      semanticScope: normalizedScope,
+      targetSafe: true,
+      manifest,
+      lanes: before.lanes,
+      cloudAuthority: verifiedCloudAuthority,
+      remoteAuthorityRequired: true,
+      remoteAuthorityVerification: verified.verification,
+      mode: "check",
+    });
+    if (admissionReport.authoringAdmission.status !== "planned") {
+      throw new Error("Scoped lane admission blocked before worktree mutation.");
+    }
+    admissionReport = attachAdmissionReceipt({
+      report: admissionReport,
+      targetObservationDigest: targetPlan.targetObservationDigest,
+      remoteAuthorityVerification: verified.verification,
+    });
+    admissionProjection = createAdmissionLeaseProjection(admissionReport);
+    const canonicalCommonDir = path.resolve(
+      canonicalRepo,
+      gitText(["rev-parse", "--git-common-dir"]).trim(),
+    );
+    const admissionLeaseStore = createWriterLeaseStore({
+      gitCommonDir: canonicalCommonDir,
+    });
+    run("git", ["fetch", "origin", "main"]);
+    provision = admissionLeaseStore.withRegistryLock(() => provisionTaskWorktree({
       invocationPath,
       repoRoot: canonicalRepo,
       targetPath: requestedWorktreePath,
       gitText,
       run,
-    });
+      expectedBaseSha: before.canonicalBaseSha,
+      expectedTargetObservationDigest: targetPlan.targetObservationDigest,
+      fetchBase: false,
+    }));
     activeInvocationPath = provision.target;
   } else if (requestedWorktreePath) {
     throw new Error("--worktree requires --provision.");
@@ -83,11 +215,90 @@ try {
     autoDelivery,
     recoverOwnedDirt,
     repairPullRequestProjection,
+    admission: admissionProjection,
+    cloudAuthority: verifiedCloudAuthority,
+    bindCloudAuthority: bindDeviceStartCloudAuthority,
+    heartbeatCloudAuthority: heartbeatAdmissionCloudAuthority,
+    reconcileCloudAuthority: reconcileAdmissionCloudAuthority,
+    verifyActiveCloudAuthority: verifyAdmissionCloudAuthority,
+    reviewReadyCloudAuthority: reviewReadyAdmissionCloudAuthority,
+    verifyReviewReadyCloudAuthority:
+      verifyReviewReadyAdmissionCloudAuthority,
     run,
     log: json ? () => {} : console.log,
     now: () => new Date(),
   };
   const result = execute(command, context);
+  if (provision && admissionReport) {
+    const branch = resolveResultBranch(command, result);
+    let lease = context.leaseStore.verify({ sessionId, branch });
+    const verified = verifyAdmissionCloudAuthority({
+      authority: lease.cloudAuthority,
+      manifest: admissionManifest,
+      canonicalBaseSha: admissionReport.canonicalBaseSha,
+    });
+    const preservationReceipt = verifyPreservedLaneState(
+      admissionReport,
+      collectScopedLaneState({ repository: canonicalRepo }).lanes,
+      {
+        lease: { ...lease, cloudAuthority: verified.authority },
+        candidateCreateRegisterResult:
+          provision.candidateCreateRegisterResult,
+        remoteAuthorityVerification: verified.verification,
+      },
+    );
+    admissionReport = finalizeScopedLaneAdmission({
+      report: admissionReport,
+      lease: { ...lease, cloudAuthority: verified.authority },
+      preservationReceipt,
+      cloudAuthority: verified.authority,
+      remoteAuthorityVerification: verified.verification,
+    });
+    admissionProjection = createAdmissionLeaseProjection(admissionReport);
+    lease = context.leaseStore.annotate({
+      sessionId,
+      branch,
+      values: {
+        admission: admissionProjection,
+        cloudAuthority: verified.authority,
+      },
+    });
+    const pullRequest = requireOwnershipPullRequestDraft({
+      url: lease.pullRequestUrl,
+      branch,
+      ghText,
+      expectedDraft: true,
+    });
+    run("gh", [
+      "pr",
+      "edit",
+      lease.pullRequestUrl,
+      "--body",
+      updateWriterLeasePullRequestBody(pullRequest.body, lease),
+    ]);
+    requireOwnershipPullRequestDraft({
+      url: lease.pullRequestUrl,
+      branch,
+      ghText,
+      expectedDraft: true,
+    });
+    const immediate = verifyAdmissionCloudAuthority({
+      authority: lease.cloudAuthority,
+      manifest: admissionManifest,
+      canonicalBaseSha: admissionReport.canonicalBaseSha,
+    });
+    if (
+      immediate.verification.remoteClaimInventoryDigest
+        !== preservationReceipt.finalRemoteClaimInventoryDigest
+    ) {
+      throw new Error("Peer claim inventory changed after the Preservation Receipt.");
+    }
+    mutationAuthorityReceipt = assertAdmissionMutationAuthority({
+      lease,
+      cloudAuthority: immediate.authority,
+      remoteAuthorityVerification: immediate.verification,
+    });
+  }
   if (json) emitJson(command, context, result, { provisioned: Boolean(provision) });
 } catch (error) {
   const finalError = rollbackProvision(error);
@@ -132,7 +343,7 @@ function emitJson(action, context, result, { provisioned }) {
   const branch = resolveResultBranch(action, result);
   const lease = branch ? context.leaseStore.read(branch) : null;
   const pullRequestIsDraft = lease?.pullRequestUrl ? readMachinePullRequestDraft({ action, branch, lease, ghText: context.ghText }) : null;
-  console.log(JSON.stringify(createDeviceCommandResult({
+  const response = createDeviceCommandResult({
     action,
     repoRoot: context.repo,
     worktreePath: context.repo,
@@ -141,7 +352,16 @@ function emitJson(action, context, result, { provisioned }) {
     result,
     provisioned,
     pullRequestIsDraft,
-  })));
+  });
+  if (action === "start" && provisioned) {
+    if (!admissionReport || !mutationAuthorityReceipt) {
+      throw new Error("Provisioned start did not retain its final admission evidence.");
+    }
+    response.admissionReport = admissionReport;
+    response.mutationAuthorityReceipt = mutationAuthorityReceipt;
+  }
+  if (action === "heartbeat") attachCloudHeartbeatMachineEvidence(response, { lease, result });
+  console.log(JSON.stringify(response));
 }
 
 function readMachinePullRequestDraft({ action, branch, lease, ghText }) {
@@ -170,12 +390,18 @@ function rollbackProvision(originalError) {
   try {
     process.chdir(canonicalRepo);
     const commonDirectory = path.resolve(canonicalRepo, gitText(["rev-parse", "--git-common-dir"]).trim());
-    const revision = createWriterLeaseStore({ gitCommonDir: commonDirectory }).readRegistry().revision;
-    rollbackUnclaimedProvision({
-      provision,
-      registryUnchanged: revision === leaseRevisionBeforeProvision,
-      gitText,
-      run,
+    const leaseStore = createWriterLeaseStore({ gitCommonDir: commonDirectory });
+    leaseStore.withRegistryLock(registry => {
+      const candidateClaimed = Object.values(registry.leases).some(lease => (
+        lease?.worktreePath
+        && path.resolve(lease.worktreePath) === path.resolve(provision.target)
+      ));
+      rollbackUnclaimedProvision({
+        provision,
+        candidateUnclaimed: !candidateClaimed,
+        gitText,
+        run,
+      });
     });
     return originalError;
   } catch (rollbackError) {
@@ -183,8 +409,43 @@ function rollbackProvision(originalError) {
   }
 }
 
-function configureHooks() {
-  run("git", ["config", "core.hooksPath", ".githooks"]);
+function bindDeviceStartCloudAuthority({
+  authority,
+  admission,
+  branch,
+  headSha,
+  pullRequestUrl,
+  device,
+  sessionId: activeSession,
+}) {
+  const url = new URL(pullRequestUrl);
+  const match = url.pathname.match(/\/pull\/([1-9]\d*)\/?$/u);
+  if (url.protocol !== "https:" || !match) {
+    throw new Error("Cloud bind requires an exact HTTPS pull-request URL.");
+  }
+  return bindAdmissionCloudAuthority({
+    authority,
+    manifest: admission,
+    branch,
+    headSha,
+    pullRequestNumber: Number(match[1]),
+    deviceId: device,
+    sessionId: activeSession,
+  });
+}
+
+function readJsonFile(file, label) {
+  const absolutePath = path.resolve(file);
+  let value;
+  try {
+    value = JSON.parse(readFileSync(absolutePath, "utf8"));
+  } catch (error) {
+    throw new Error(`Could not read ${label} at ${absolutePath}: ${error.message}`);
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object.`);
+  }
+  return value;
 }
 
 function gitText(args) {
@@ -217,7 +478,7 @@ function runText(command, args, options = {}) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
   );
   process.exit(2);
 }

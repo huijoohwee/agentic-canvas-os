@@ -141,6 +141,41 @@ report:
 report is the normal signal that a session is mid-edit somewhere, and it is not a
 reason to clean anything.
 
+This v1 `ready` field governs destructive-operation recoverability only. It is
+not additive authoring admission, runtime readiness, lifecycle readiness, or
+cleanup authority. `SCOPED-LANE-ADMISSION.md` owns the separate
+`authoringAdmission: planned|admitted|blocked` decision for adding one
+cloud-authorized disjoint lane while this report remains blocked. Its
+`runtimeReadiness`, `lifecycleReadiness`, and `admissionRuntimeConformance`
+results remain independent and use their own exact vocabularies and receipts.
+
+The scoped runtime preserves this contract's observed lanes byte-for-byte. Each
+accepted peer must join its local projection to exactly one current
+operation-derived remote claim across claim/fence identity, base and lane
+revisions, normalized write set, epoch/counter, state, expiry, and review
+request. Missing, stale, duplicated, fabricated, or legacy local-only authority
+fails closed. Its present Preservation Receipt accepts only unchanged peers:
+full shared coordination-state comparison and typed independent peer-operation
+receipts are not yet supported, so any peer or pre-existing-lane drift blocks
+admission while `admissionRuntimeConformance`, `runtimeReadiness`, and
+`lifecycleReadiness` remain independently `unevaluated`.
+
+Candidate provisioning takes the Git-common-directory registry lock, proves the
+registry gained exactly one clean detached worktree whose HEAD and tree equal
+the admitted base, and binds the before/after inventories into its typed result.
+Successful machine JSON retains both the full final admitted report and the
+fresh mutation-authority receipt. Failure never grants cleanup authority: an
+externally acquired cloud claim remains owner-controlled for an exact retry or
+explicit release/reclaim.
+
+Review reconciles the exact live active or review-ready claim around focused
+checks, then binds and transitions the exact pushed HEAD to verified
+`review_ready` before releasing the local lease. A retry accepts a remotely
+completed bind or transition only when the full claim identity and PR/head
+subject still match. Cloud heartbeat returns its post-local-renewal authority
+receipt. Ordinary local-only resume and park refuse a cloud-admitted lane; its
+owner must complete explicit cloud handoff/reclaim.
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.
@@ -221,6 +256,8 @@ audit is always runnable.
   non-zero; a human or the owning session resolves it.
 - A blocked report grants no permission to delete, move, or overwrite the work that
   caused the block.
+- An admitted source lane grants no destructive-operation authority; this guard
+  still evaluates that operation and every existing lane independently.
 - Discovery skips dotted directories at the workspace root, so backup, worktree, and
   quarantine directories are not treated as lanes.
 - A Dev merge does not authorize Prod mirror or Cloudflare mutation. This contract
@@ -238,6 +275,7 @@ audit is always runnable.
 | Destructive operations never return plain allow | The strongest outcome for a catalog operation is `allow-with-recovery` and it carries the recovery reference. |
 | Audit is read-only | A full workspace audit reports lanes and at-risk work without mutating any repository. |
 | Report readiness is honest | `ready` is true only when no lane holds untracked work or unreferenced modifications. |
+| Scoped readiness stays separate | Workspace `ready` never promotes `authoringAdmission`, `runtimeReadiness`, `lifecycleReadiness`, or `admissionRuntimeConformance`. |
 | Ref transactions are classified | Create, fast-forward update, noop, rewind, and delete are distinguished, and only rewind and delete are gated. |
 | Hooks refuse external commands | A `branch -D` or forced push issued by any tool is refused while the lane holds untracked work or lacks a recovery reference. |
 | The coverage gap is reported, not hidden | The coverage report names every class no hook can reach and marks the wrapper as required. |

@@ -254,7 +254,7 @@ function normalizeRequiredState(value) {
   return String(value).trim().replaceAll("_", "-");
 }
 
-function pseudonymousIdentifier(namespace, value) {
+export function pseudonymousIdentifier(namespace, value) {
   return `${namespace}:${digestValue({ namespace, value })}`;
 }
 

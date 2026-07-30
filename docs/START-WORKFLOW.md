@@ -48,7 +48,7 @@ coordination:
   writer_lease_schema: "agentic-writer-lease/v2"
   writer_lease_registry_schema: "agentic-writer-lease-registry/v2"
   writer_lease_ttl_seconds: 1800
-  writer_lease_registry: "one device-local atomic Git-common-directory registry keyed by branch plus one shared-remote draft ownership pull request per semantic scope"
+  writer_lease_registry: "device-local Git-common-directory projection; the cloud collaboration CAS ledger is cross-device authority and the draft ownership pull request is its review projection"
   fencing_identity: "monotonic lease epoch plus claim commit SHA"
   post_baseline_authored_state: "new or untracked paths remain in their physical owning task worktree and pull request"
   owned_untracked_state: "preserve in place; block only the owning semantic scope; forbid cleanup, stash, masking, or adoption"
@@ -57,7 +57,7 @@ completion_requires:
   - "fetched remote refs"
   - "clean canonical Agentic Canvas OS checkout at fetched origin/main"
   - "clean source checkout"
-  - "unique semantic-scope ownership"
+  - "unique cloud-authoritative semantic scope plus normalized declared write-set ownership"
   - "unexpired session-bound writer lease with matching draft pull request and fencing SHA"
   - "one clean registered main worktree plus zero or more isolated registered task worktrees"
   - "task branch active only in its leased task worktree"
@@ -79,14 +79,13 @@ Fetch before starting every Codex session; keep one clean registered `main` work
 The canonical `main` worktree remains the only Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from canonical ports. The Agentic Canvas OS supervisor may own those ports only after both canonical repositories are clean exact fetched `origin/main` revisions with required protected checks successful. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task-worktree runtime sources are forbidden.
 
 Parallel users, devices, sessions, and chats may mutate different semantic
-scopes concurrently when each owns a different registered task worktree,
-branch, lease, and draft ownership pull request. The Git common directory holds
-one device-local atomic lease registry across linked worktrees; the shared
-remote pull-request set is the cross-user and cross-device scope registry. The
-authenticated pull-request principal supplies Actor ID, while the lease and
-branch carry device, session, worktree, scope, epoch, and fence identity. The
-same worktree, branch, semantic scope, or declared artifact always serializes
-behind the current remote fence.
+scopes only through distinct registered worktrees, branches, local lease
+projections, draft pull requests, and current non-overlapping claims in the
+cloud collaboration CAS ledger. The authenticated principal supplies Actor ID;
+the cloud claim and local projection bind device, session, worktree, scope,
+epochs, declared paths, and fences. A pull request or local lease alone is not
+cross-device authority. The shared remote pull-request set is the cross-user and cross-device scope registry projection, not the CAS authority. See `CLOUD-COLLABORATION.md` and
+`SCOPED-LANE-ADMISSION.md`.
 
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 
@@ -269,30 +268,18 @@ One task worktree, branch, and semantic scope have one writer. A second chat on 
 
 ### 5. Activate
 
-Create a detached linked task worktree at fetched `origin/main`, then create the owned task branch and remote draft ownership record through the repository command. The command atomically claims the branch entry in `.git/agentic-canvas-os/writer-leases.json`, increments the shared registry epoch, creates a no-content claim commit, pushes the task branch, and opens the draft pull request before normal authoring:
+Use `SCOPED-LANE-ADMISSION.md` for every new cross-device lane. Its operation-derived cloud `status` plus `verify` inventory, exact current candidate claim, double-read local inventory, and target-observation digest may produce only `authoringAdmission: planned` before mutation. Every accepted peer must join one local projection to one exact live remote claim across identity, revisions, normalized write set, epoch/counter, state, expiry, and review request; legacy or partial projections fail closed. Combined provisioning locks the local registry, proves exactly one clean detached candidate registration whose HEAD/tree equals the admitted base, then joins accepted Admission and Preservation Receipts plus a final cloud/local authority check to derive `authoringAdmission: admitted`. Its final JSON contains the full admitted report and fresh mutation-authority receipt. `runtimeReadiness`, `lifecycleReadiness`, and `admissionRuntimeConformance` stay independently `unevaluated`; peer drift blocks admission without synthesizing any conformance result.
 
 ```sh
-export AGENTIC_SESSION_ID="<stable-chat-or-task-id>"
-export TASK_WORKTREE="$GITHUB_ROOT/.worktrees/knowgrph/<semantic-scope>"
-git -C "$KNOWGRPH_ROOT" worktree add --detach "$TASK_WORKTREE" origin/main
-npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
+node "$AGENTIC_CANVAS_OS_ROOT/scripts/device-branch.mjs" start \
   "<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
-  --repository="$TASK_WORKTREE"
+  --repository="$KNOWGRPH_ROOT" --provision --worktree="$TASK_WORKTREE" \
+  --write-scope-manifest="<external-manifest.json>" \
+  --cloud-authority="<external-cloud-claim-result.json>" \
+  --target-repository="<owner/repository>" --json
 ```
 
-Machine supervisors may safely provision the new detached worktree and claim it in one command. Canonical `main` must be clean at fetched `origin/main`, and the absent target must be a safe direct child of the derived sibling `.worktrees/<repository-name>` root. When attributed canonical work is retained, use the explicit detached-worktree sequence above; combined provisioning remains blocked:
-
-```sh
-npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:start -- \
-  "<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
-  --repository="$KNOWGRPH_ROOT" --provision --worktree="$TASK_WORKTREE" --json
-```
-
-If this combined call is interrupted after the claim, retry from the recorded
-`$TASK_WORKTREE` without `--provision`. `device:start` reconciles only the exact
-same-session activation base, claim subject, fence, remote head, and single
-matching draft pull request; it does not add another claim commit or pull
-request. A target, branch, lease, PR, or session mismatch fails closed.
+If this combined call is interrupted after the claim, an exact-session retry from the recorded `$TASK_WORKTREE` without `--provision` may reconcile only the activation base, claim subject, fence, remote head, and single draft pull request; it does not reconstruct a missing Preservation Receipt or authorize source edits. Keep a `planned` recovery lane untouched until owner-led lifecycle recovery closes it and a fresh admission completes. The external cloud claim remains its owner's authority: a failed check/start never silently releases or replaces it, so the owner must retry compatibly or explicitly release/reclaim the exact claim through `CLOUD-COLLABORATION.md`. A target, branch, lease, PR, session, ledger, or expiry mismatch fails closed. Before first and every later mutation batch, including heartbeat renewal, revalidate the current cloud claim and local lease/epoch/fence/expiry; local expiry never exceeds cloud expiry.
 
 Heartbeat before the 30-minute default TTL expires:
 
@@ -301,7 +288,13 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
   --session="$AGENTIC_SESSION_ID" --repository="$TASK_WORKTREE"
 ```
 
-Heartbeat independently queries the exact ownership PR and requires it to remain draft before renewing the local lease. Manual readiness or any PR identity mismatch fails closed without extending the TTL.
+Heartbeat renews cloud authority before the local lease, re-verifies the live
+claim after local renewal, returns the joined mutation-authority receipt with
+`--json`, then independently proves the exact ownership PR remains draft.
+Cloud, PR, or identity failure blocks source mutation; cloud or pre-local
+authority failure leaves local expiry unchanged, while a post-local or
+PR-projection failure preserves the already renewed local evidence for explicit
+recovery without granting another edit batch.
 
 If GitHub's pull-request projection remains at a strict ancestor after the
 active branch and remote fence agree, run the same heartbeat command with
@@ -310,7 +303,7 @@ review and publish independently require the exact pushed head.
 
 If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree through ordinary start or resume, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session; the explicit same-session owned-dirt recovery below is the only dirty review-ready exception.
 
-Resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. If the exact review-owning session authored post-review dirt in that same attached worktree, it may explicitly add `--recover-owned-dirt`; the command requires matching local and remote review-ready evidence, binds a digest of the tracked, staged, unstaged, and untracked state to the successor lease, creates the empty claim with `git commit --allow-empty --only`, and proves the dirt stayed unchanged. This exception never transfers dirty bytes to another session or worktree. Its empty claim publication alone rechecks the evidence immediately before and after `git push --no-verify`; that bounded bypass skips only the checkout-local pre-push hook, while review, publish, integration, protected checks, and deployment gates remain mandatory. An expired active lease may retain clean committed local descendants only for the exact same session, worktree, branch, pull request, local/remote lease marker, remote fence, pull-request head, and ancestry. Resume binds the pre-claim head/tree and range-diff digest plus source status, epoch, session, device, scope, branch, base, fence, PR, and integration commit/tree into the successor lease. A same-session delivery retry additionally requires the exact prior local integration receipt, binds its recorded delivery head and the latest observed handoff through a bounded first-parent chain of tree-equivalent protected-main merges, and carries the original authored base/fence separately from the current source lease into the successor marker. `device:integrate` then requires the intentional commit message and original source-base `agentic-change-manifest/v1`, rechecks the original authored path set and range digest, and runs the full repository check before republishing; missing prior delivery integration evidence fails closed, and the new empty fence never substitutes for those gates. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
+Legacy local-only lanes may resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. A lane carrying admission or cloud-authority projection is cloud-admitted: ordinary `device:resume` refuses every local-only successor, including same-session recovery, until the repository's explicit cloud handoff/reclaim protocol advances and re-verifies the claim. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. If the exact review-owning session authored post-review dirt in that same attached worktree, it may explicitly add `--recover-owned-dirt`; the command requires matching local and remote review-ready evidence, binds a digest of the tracked, staged, unstaged, and untracked state to the successor lease, creates the empty claim with `git commit --allow-empty --only`, and proves the dirt stayed unchanged. This exception never transfers dirty bytes to another session or worktree. Its empty claim publication alone rechecks the evidence immediately before and after `git push --no-verify`; that bounded bypass skips only the checkout-local pre-push hook, while review, publish, integration, protected checks, and deployment gates remain mandatory. An expired active lease may retain clean committed local descendants only for the exact same session, worktree, branch, pull request, local/remote lease marker, remote fence, pull-request head, and ancestry. Resume binds the pre-claim head/tree and range-diff digest plus source status, epoch, session, device, scope, branch, base, fence, PR, and integration commit/tree into the successor lease. A same-session delivery retry additionally requires the exact prior local integration receipt, binds its recorded delivery head and the latest observed handoff through a bounded first-parent chain of tree-equivalent protected-main merges, and carries the original authored base/fence separately from the current source lease into the successor marker. `device:integrate` then requires the intentional commit message and original source-base `agentic-change-manifest/v1`, rechecks the original authored path set and range digest, and runs the full repository check before republishing; missing prior delivery integration evidence fails closed, and the new empty fence never substitutes for those gates. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
@@ -405,7 +398,7 @@ Completion and parking are mutually exclusive states. Dirty, stashed,
 branch-only, pushed, open-pull-request, or auto-merge-pending work is not
 complete.
 
-Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, marks the PR ready without an automerge label or merge call by default, and independently proves `isDraft: false`. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. Requested changes must use fenced resume, which restores and proves draft ownership before mutation. `device:publish` remains the explicit protected auto-merge path.
+Managed implementation runs normally stop before completion through `npm run device:review`. For a cloud-admitted lane, that command reconciles the local projection with the exact live active or review-ready claim, runs the focused check, repeats reconciliation immediately before push, pushes and waits for the ownership PR to expose the exact head, rebinds the claim to that pushed HEAD when needed, performs and verifies the cloud `review_ready` transition, then records the reviewed head, marks the PR ready, and releases the local lease to `review_ready`. If a remote bind or transition succeeded before local persistence, retry accepts only the recomputed claim identity, immutable base/write set/epoch, exact PR/head, monotonic counter, state, expiry, fence, and transition digest. It preserves authored PR context and does not add an automerge label or merge by default. Knowgrph projects this ACOS state as managed-run `delivery_ready`; neither status is task completion. Cloud-admitted changes require explicit cloud handoff/reclaim before resumed mutation or local parking; `device:publish` remains the explicit protected auto-merge path.
 
 An operator or durable work-item policy may pre-authorize one terminal-turn protected merge only at `device:start` with `--auto-delivery`. The resulting immutable lease carries `autoDelivery: true` and `runtimeRequired: true`.
 
@@ -496,8 +489,8 @@ Its JSON must name
 `"status":"ok"`. `device:end` enforces the same gate for existing callers; it
 must never park unmerged work and label the result complete.
 
-For work intentionally paused or blocked, run `npm run device:park` and report
-the state explicitly. Parking preserves dirty work under a deterministic message,
+For legacy local-only work intentionally paused or blocked, run `npm run device:park` and report
+the state explicitly. A cloud-admitted lane fails closed before local parking until explicit cloud handoff/reclaim owns the transition. Legacy parking preserves dirty work under a deterministic message,
 exact stash commit, and immutable per-lease `refs/agentic-canvas-os/parked/...`
 ref before detaching at `origin/main`. Resume restores that exact object and
 verifies staged, tracked, untracked, mode, and conflict state. Repeated park
@@ -579,7 +572,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in a 
 
 - A handoff names the exact pushed commit SHA and paired app/docs/catalog manifest digest; the sender stops writing before the receiver starts.
 - A writer handoff also marks the prior lease parked, names its final epoch and fence SHA, and requires the receiver to claim a strictly newer epoch before mutation.
-- Same-device and different-device chats may mutate different scopes concurrently through distinct registered worktrees or clones. The Git-common-directory registry serializes each local worktree and branch; duplicate scope pull requests, expired sessions, and stale fencing ancestry fail closed.
+- Same-device and different-device chats may mutate different scopes concurrently through distinct registered worktrees or clones only while the cloud CAS ledger verifies non-overlapping declared write sets. The Git-common-directory registry is a local projection; duplicate scopes, expired sessions, incomplete remote inventory, and stale fences fail closed.
 - Post-baseline authored or untracked paths remain owned by their physical task worktree and pull request across chat, turn, and session boundaries. An unrelated lane may inspect attribution but must not delete, stash, mask, relocate, commit, park, or claim those paths.
 - A runtime handoff includes the successful `npm run collaboration:gate` summary with two distinct automated peers, exact visible revisions, and the common non-empty verification digest; a branch name, screenshot, clipboard export, or manually assembled JSON never establishes parity.
 - Reconcile upstream changes in the owned task branch before final validation.
@@ -589,7 +582,7 @@ Otherwise fetch, inspect, and activate a new reconciliation or task branch in a 
 
 ## Stop Conditions
 
-Stop before build mutation when a target worktree is unregistered, dirty, prunable, shared by another active session, or not detached at fetched `origin/main` before claim; when a branch is active in another worktree; when fetch fails; when source dirt is unexplained; when the local writer lease is missing, expired, or owned by another session or worktree; when its fencing SHA is not ancestral; when branch ownership is ambiguous; when the semantic scope already has another active pull request; when the base ref is missing; when the branch exists unexpectedly; when the startup SHA cannot be proven; or when any runtime identity, catalog, memory, or planning gate fails.
+Stop before build mutation when scoped admission lacks an actual-path manifest, operation-derived complete live cloud inventory, current exact claim, safe absent target, joined Admission and Preservation Receipt digests, or an immediate cloud/local authority recheck; when canonical `main` is dirty or not exact fetched `origin/main`; when the candidate is dirty before admitted mutation; when a worktree is unregistered, prunable, or shared; when peer dirt is unattributed, ambiguous, overlapping, or drifts without supported typed proof; when source ownership, branch, lease, PR, epoch, fence, ledger, or expiry is ambiguous or stale; when fetch fails; or when runtime identity, catalog, memory, or planning gates fail. An attributed disjoint dirty peer remains preserved in place and does not by itself block candidate admission.
 
 ## Completion VCC
 

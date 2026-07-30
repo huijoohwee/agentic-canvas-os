@@ -51,6 +51,11 @@ export function park({
   if (!lease || !["active", "parked"].includes(lease.status) || lease.sessionId !== sessionId) {
     throw new Error(`No active or replayable parked lease belongs to this session for ${branch}.`);
   }
+  if (lease.admission || lease.cloudAuthority) {
+    throw new Error(
+      "Cloud-admitted device:park requires the cloud handoff/reclaim protocol; refusing any local park mutation.",
+    );
+  }
   if (lease.status === "active") lease = leaseStore.verify({ sessionId, branch, allowExpired: true });
   assertLeaseWorktree(lease, repo);
   requireRemoteFence({ branch, lease, gitOptional });

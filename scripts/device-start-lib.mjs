@@ -25,6 +25,9 @@ export function start({
   sessionId,
   leaseTtlMs,
   autoDelivery = false,
+  admission = null,
+  cloudAuthority = null,
+  bindCloudAuthority = null,
   run,
   log = console.log,
   now = () => new Date(),
@@ -60,7 +63,12 @@ export function start({
     if (Date.parse(lease.expiresAt) <= now().getTime() && lease.pullRequestUrl) {
       throw new Error("Completed start lease expired; use the explicit park/resume handoff instead of renewing it through start.");
     }
-    lease = leaseStore.heartbeat({ sessionId, branch, ttlMs: leaseTtlMs });
+    lease = leaseStore.heartbeat({
+      sessionId,
+      branch,
+      ttlMs: leaseTtlMs,
+      expiresAtCap: lease.cloudAuthority?.expiresAt || null,
+    });
   } else {
     if (currentBranch || !worktree.detached) {
       throw new Error("device:start requires a detached registered task worktree; keep main checked out in its canonical worktree.");
@@ -84,7 +92,10 @@ export function start({
       worktreePath: repo,
       baseSha,
       autoDelivery,
+      admission,
+      cloudAuthority,
       ttlMs: leaseTtlMs,
+      expiresAtCap: cloudAuthority?.expiresAt || null,
     });
     freshClaim = true;
   }
@@ -139,7 +150,44 @@ export function start({
     if (!url) throw new Error(`GitHub did not return a draft pull request URL for ${branch}.`);
     lease = leaseStore.annotate({ sessionId, branch, values: { pullRequestUrl: url } });
   }
-  requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: true });
+  let pullRequest = requireOwnershipPullRequestDraft({
+    url,
+    branch,
+    ghText,
+    expectedDraft: true,
+  });
+  if (lease.cloudAuthority) {
+    if (typeof bindCloudAuthority !== "function") {
+      throw new Error("Cloud-authoritative device:start requires the repository cloud bind adapter.");
+    }
+    const boundAuthority = bindCloudAuthority({
+      authority: lease.cloudAuthority,
+      admission: lease.admission,
+      branch,
+      headSha,
+      pullRequestUrl: url,
+      device,
+      sessionId,
+    });
+    lease = leaseStore.annotate({
+      sessionId,
+      branch,
+      values: { cloudAuthority: boundAuthority },
+    });
+    run("gh", [
+      "pr",
+      "edit",
+      url,
+      "--body",
+      updateWriterLeasePullRequestBody(pullRequest.body, lease),
+    ]);
+    pullRequest = requireOwnershipPullRequestDraft({
+      url,
+      branch,
+      ghText,
+      expectedDraft: true,
+    });
+  }
   log(`Claimed ${branch} in ${url} with fence ${headSha.slice(0, 12)}; heartbeat before ${lease.expiresAt}.`);
   return branch;
 }

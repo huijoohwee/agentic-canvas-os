@@ -294,7 +294,7 @@ test("release lifecycle normalization is deterministic across carrier and key or
   for (const receipt of normalizeCanonicalRun(left).releaseLifecycle.receipts) {
     assert.deepEqual(
       Object.keys(receipt),
-      [...Object.keys(receipt)].sort((a, b) => a.localeCompare(b, "en")),
+      [...Object.keys(receipt)].sort(),
     );
   }
 });

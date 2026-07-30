@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import path from "node:path";
+
+import { compareLexicalText } from "./lexical-compare.mjs";
 
 export const LIFECYCLE_POLICY_SOURCE = Object.freeze({
   repository: "huijoohwee/huijoohwee.github.io",
@@ -17,26 +18,74 @@ export const LIFECYCLE_POLICY_SOURCE = Object.freeze({
   ]),
 });
 
+export const LIFECYCLE_POLICY_RULE_CATALOG = Object.freeze({
+  "agent-roles--independence#6":
+    "A verdict produced by the Implementer about its own task is a `self-graded-verdict` finding at `blocker` severity, regardless of how convincing the output reads",
+  "agent-roles--independence#7":
+    "Name the mechanism that discharges the Evaluator role before execution starts; forbid execution with an unnamed evaluator",
+  "per-task-budgets#1":
+    "State all four bounds before dispatch; a task dispatched with any bound unstated is an `unbounded-task` finding at `blocker` severity",
+  "runtime-readiness-enforcement#2":
+    "Require typed inputs and outputs, bounded orchestration, independent evaluation, named checks with recorded results, cost and fallback evidence, and closed mutation and deployment gates before deriving `runtime-ready`",
+  "runtime-readiness-enforcement#4":
+    "Emit `runtime-readiness-unproven` at `blocker` severity when a required receipt, join, budget, check, evaluator, dependency, or boundary proof is absent or stale",
+  "specification-to-task-bridge#1":
+    "Derive every task from at least one VCC; a task tracing to no VCC is an `ungrounded-task`",
+  "specification-to-task-bridge#2":
+    "Ensure every VCC is covered by at least one task; a VCC with no task is an `unexecuted-condition`",
+  "task-model#7":
+    "Split a task that exceeds its budget rather than raising the budget; a persistent overrun is a decomposition defect, and raising the bound hides it",
+  "task-model#9":
+    "Express dependencies as a directed acyclic graph over Task IDs; a cycle is a `task-cycle` finding at `blocker` severity",
+  "task-model#10":
+    "Derive readiness from the graph: a task is ready when every dependency is in a terminal success state",
+  "task-model#11":
+    "Group ready tasks into waves for concurrent dispatch; forbid two tasks in one wave writing the same artifact, which is a `concurrent-write-conflict`",
+  "tool-permission--blast-radius#2":
+    "Forbid self-escalation: an Implementer that needs a wider class returns `blocked` with the reason, and the Orchestrator re-dispatches with a new grant. Widening a grant mid-task is a `self-escalated-capability` finding at `blocker` severity",
+  "tool-permission--blast-radius#3":
+    "Require an explicit Operator decision per irreversible operation; forbid a standing or session-scoped approval for irreversibility, because a standing approval is indistinguishable from no gate",
+  "tool-permission--blast-radius#4":
+    "Forbid boundary-crossing capability in any task; promotion is the Deploy Boundary's job, and a task that reaches a delivered surface is a `deploy-boundary-breach` under the authoring set's enumeration",
+  "tool-permission--blast-radius#6":
+    "State the declared write scope before dispatch; a write outside it is an `out-of-scope-write` finding",
+  "validation-checklist#6":
+    "**Collaboration identity complete**; concurrent writers have disjoint scopes, distinct lanes, current leases, and exact fence revisions",
+  "verification-strategy#5":
+    "Derive a property from every correctness property stated in the specification; a stated property with no executable test is an `unproven-property` finding",
+  "verification-strategy#11":
+    "Forbid emitting an Evidence Reference for a check that was not run in this task",
+});
+
 export function lifecyclePolicyIdentity() {
   const { repository, revision, digest, guidelineVersion } = LIFECYCLE_POLICY_SOURCE;
   return Object.freeze({ repository, revision, digest, guidelineVersion });
 }
 
+export function lifecyclePolicyRuleText(ruleId) {
+  return LIFECYCLE_POLICY_RULE_CATALOG[String(ruleId)] ?? "";
+}
+
 export function verifyPinnedLifecyclePolicySource(repositoryRoot) {
   const root = path.resolve(String(repositoryRoot || ""));
-  const revision = execFileSync(
-    "git",
-    ["rev-parse", "HEAD"],
-    { cwd: root, encoding: "utf8" },
-  ).trim();
-  if (revision !== LIFECYCLE_POLICY_SOURCE.revision) {
+  try {
+    execFileSync(
+      "git",
+      ["cat-file", "-e", `${LIFECYCLE_POLICY_SOURCE.revision}^{commit}`],
+      { cwd: root, stdio: "ignore" },
+    );
+  } catch {
     throw new Error(
-      `Lifecycle policy source is ${revision || "unknown"}, expected ${LIFECYCLE_POLICY_SOURCE.revision}.`,
+      `Lifecycle policy revision ${LIFECYCLE_POLICY_SOURCE.revision} is unavailable.`,
     );
   }
   const modules = LIFECYCLE_POLICY_SOURCE.modules.map((modulePath) => ({
     id: modulePath,
-    bytes: readFileSync(path.join(root, modulePath)),
+    bytes: execFileSync(
+      "git",
+      ["show", `${LIFECYCLE_POLICY_SOURCE.revision}:${modulePath}`],
+      { cwd: root },
+    ),
   }));
   const digest = computeLifecyclePolicyDigest(modules);
   if (digest !== LIFECYCLE_POLICY_SOURCE.digest) {
@@ -49,7 +98,7 @@ export function verifyPinnedLifecyclePolicySource(repositoryRoot) {
 
 export function computeLifecyclePolicyDigest(modules) {
   const ordered = [...modules].sort((left, right) =>
-    String(left.id).localeCompare(String(right.id), "en"));
+    compareLexicalText(left.id, right.id));
   const hash = createHash("sha256");
   for (const module of ordered) {
     const identity = Buffer.from(String(module.id), "utf8");

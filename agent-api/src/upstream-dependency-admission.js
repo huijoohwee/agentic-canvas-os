@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { compareLexicalText } from "../../scripts/lexical-compare.mjs";
+
 export const UPSTREAM_ADMISSION_SCHEMA = "agentic-upstream-dependency-admission-result/v1";
 
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/;
@@ -461,7 +463,7 @@ function sortedUnique(values) {
 }
 
 function compareText(left, right) {
-  return left.localeCompare(right);
+  return compareLexicalText(left, right);
 }
 
 function digest(value) {

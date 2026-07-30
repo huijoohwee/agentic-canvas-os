@@ -5,16 +5,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  LIFECYCLE_STAGES,
-} from "./lifecycle-conformance-gate.mjs";
+  ADMISSION_ENFORCED_STAGES,
+  ADMISSION_UNEVALUATED_STAGES,
+  evaluateAdmissionEvidence,
+} from "./agentic-sdlc/admission-evaluator.mjs";
 import {
-  lifecyclePolicyIdentity,
-} from "./lifecycle-conformance-policy.mjs";
+  resolveLifecycleConformanceIdentities,
+} from "./lifecycle-conformance-identity.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
-export const LIFECYCLE_CONFORMANCE_ENFORCED_STAGES = Object.freeze([]);
+export const LIFECYCLE_CONFORMANCE_ENFORCED_STAGES =
+  ADMISSION_ENFORCED_STAGES;
 export const LIFECYCLE_CONFORMANCE_UNEVALUATED_STAGES =
-  Object.freeze([...LIFECYCLE_STAGES]);
+  ADMISSION_UNEVALUATED_STAGES;
 
 export function parseLifecycleConformanceArguments(values = []) {
   let evidencePath = "";
@@ -46,34 +49,21 @@ export async function runLifecycleConformance(
   );
   const readText = dependencies.readText ??
     ((locator) => readFile(locator, "utf8"));
+  const resolveIdentities = dependencies.resolveIdentities ??
+    (() => resolveLifecycleConformanceIdentities());
+  const evaluate = dependencies.evaluate ?? evaluateAdmissionEvidence;
+  const write = dependencies.write ??
+    ((value) => process.stdout.write(value));
   const locator = path.resolve(currentDirectory, options.evidencePath);
   const operation = JSON.parse(await readText(locator));
-  assertPinnedPolicy(operation?.policy);
-  throw createEvidenceAdapterUnavailableError(locator);
-}
-
-function assertPinnedPolicy(actual) {
-  const expected = lifecyclePolicyIdentity();
-  for (const field of Object.keys(expected)) {
-    if (actual?.[field] !== expected[field]) {
-      const error = new Error(
-        `Lifecycle policy ${field} does not match the pinned repository-owned policy.`,
-      );
-      error.code = "AGENTIC_SDLC_POLICY_IDENTITY_UNAVAILABLE";
-      throw error;
-    }
-  }
-}
-
-export function createEvidenceAdapterUnavailableError(locator = "") {
-  const error = new Error(
-    "Operation-derived lifecycle evidence adapters, evaluator identity, and schema closure are unavailable; the repository currently proves policy-runtime readiness only.",
-  );
-  error.code = "AGENTIC_SDLC_EVIDENCE_ADAPTER_UNAVAILABLE";
-  error.locator = String(locator);
-  error.enforcedStages = LIFECYCLE_CONFORMANCE_ENFORCED_STAGES;
-  error.unevaluatedStages = LIFECYCLE_CONFORMANCE_UNEVALUATED_STAGES;
-  return error;
+  const identities = await resolveIdentities();
+  const receipt = await evaluate(operation, identities);
+  write(`${JSON.stringify(receipt, null, options.pretty ? 2 : 0)}\n`);
+  return Object.freeze({
+    exitCode: receipt.ready ? 0 : 1,
+    locator,
+    receipt,
+  });
 }
 
 export function formatLifecycleConformanceFailure(error) {
@@ -86,11 +76,23 @@ export function formatLifecycleConformanceFailure(error) {
       : String(error),
     enforcedStages: Array.isArray(error?.enforcedStages)
       ? error.enforcedStages
-      : [],
+      : LIFECYCLE_CONFORMANCE_ENFORCED_STAGES,
     unevaluatedStages: Array.isArray(error?.unevaluatedStages)
       ? error.unevaluatedStages
-      : [],
+      : LIFECYCLE_CONFORMANCE_UNEVALUATED_STAGES,
   });
+}
+
+export function lifecycleConformanceFailureExitCode(error) {
+  return [
+    "AGENTIC_SDLC_POLICY_IDENTITY_UNAVAILABLE",
+    "AGENTIC_SDLC_EVALUATOR_IDENTITY_UNAVAILABLE",
+    "AGENTIC_SDLC_SCHEMA_IDENTITY_UNAVAILABLE",
+    "AGENTIC_SDLC_SOURCE_IDENTITY_UNAVAILABLE",
+    "AGENTIC_SDLC_DEPENDENCY_IDENTITY_UNAVAILABLE",
+  ].includes(error?.code)
+    ? 3
+    : 2;
 }
 
 function requireValue(value, option) {
@@ -105,12 +107,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
     process.exitCode = outcome.exitCode;
   } catch (error) {
     process.stderr.write(`${formatLifecycleConformanceFailure(error)}\n`);
-    process.exitCode =
-      [
-        "AGENTIC_SDLC_POLICY_IDENTITY_UNAVAILABLE",
-        "AGENTIC_SDLC_EVIDENCE_ADAPTER_UNAVAILABLE",
-      ].includes(error?.code)
-        ? 3
-        : 2;
+    process.exitCode = lifecycleConformanceFailureExitCode(error);
   }
 }

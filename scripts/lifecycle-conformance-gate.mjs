@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { compareLexicalText } from "./lexical-compare.mjs";
 export const LIFECYCLE_STAGES = Object.freeze([
   "admission", "review", "integration", "runtime",
   "candidate", "authorization", "deployment", "publication",
@@ -14,7 +15,7 @@ export const LIFECYCLE_FINDING_TYPES = Object.freeze([
   "stale-candidate-frontier", "assumed-operator-decision",
   "unproven-property", "evidence-without-run",
 ]);
-const FINDING_SEVERITY = Object.freeze(Object.fromEntries(
+export const LIFECYCLE_FINDING_SEVERITIES = Object.freeze(Object.fromEntries(
   LIFECYCLE_FINDING_TYPES.map((type) =>
     [type, ["duplicate-change-reintegrated", "unproven-property"].includes(type) ? "major" : "blocker"]),
 ));
@@ -72,7 +73,7 @@ export function verifyLifecycleStageReceipt(receipt) {
   for (const finding of receipt.findings) {
     if (!exact(finding, ["findingType", "severity", "stage", "artifactReference"]) ||
         !LIFECYCLE_FINDING_TYPES.includes(finding.findingType) ||
-        finding.severity !== FINDING_SEVERITY[finding.findingType] ||
+        finding.severity !== LIFECYCLE_FINDING_SEVERITIES[finding.findingType] ||
         finding.stage !== receipt.stage || !text(finding.artifactReference)) return false;
     observedCounts[finding.findingType] += 1;
   }
@@ -88,7 +89,7 @@ function evaluate(input, depth, active) {
   active.add(input);
   try {
     const findings = [];
-    const add = (findingType, artifactReference) => findings.push({ findingType, severity: FINDING_SEVERITY[findingType], stage: input.stage, artifactReference });
+    const add = (findingType, artifactReference) => findings.push({ findingType, severity: LIFECYCLE_FINDING_SEVERITIES[findingType], stage: input.stage, artifactReference });
     if (!exact(input, OPERATION_KEYS) || input.schema !== OPERATION_SCHEMA) add("runtime-readiness-unproven", "operation");
     const policy = normalize(input.policy, POLICY_KEYS);
     const subject = normalizeSubject(input.subject);
@@ -104,7 +105,7 @@ function evaluate(input, depth, active) {
     const evidenceDigest = hash({ schema: OPERATION_SCHEMA, stage: input.stage, policy, subject, checks, predecessorDigest, evidence });
     findings.sort((left, right) =>
       LIFECYCLE_FINDING_TYPES.indexOf(left.findingType) - LIFECYCLE_FINDING_TYPES.indexOf(right.findingType) ||
-      left.artifactReference.localeCompare(right.artifactReference, "en"));
+      compareLexicalText(left.artifactReference, right.artifactReference));
     const findingCounts = Object.fromEntries(LIFECYCLE_FINDING_TYPES.map((type) =>
       [type, findings.filter((finding) => finding.findingType === type).length]));
     const ready = findings.length === 0;

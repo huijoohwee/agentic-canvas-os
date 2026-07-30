@@ -344,11 +344,47 @@ test("owned-dirt recovery requires the PR head to equal the fetched remote branc
   assert.equal(harness.state().claims, 0);
 });
 
+test("owned-dirt replay accepts a source-recorded nonadjacent repository-global epoch", () => {
+  const harness = createOwnedDirtHarness({ failPhase: "claim", claimEpoch: 9 });
+  assert.throws(() => harness.invoke(), /interrupted after claim/);
+
+  const result = harness.invoke();
+  const state = harness.state();
+
+  assert.equal(result.epoch, 9);
+  assert.equal(result.ownedDirtRecovery.sourceEpoch, prior.epoch);
+  assert.equal(state.remoteHead, nextFence);
+  assert.equal(parseWriterLeasePullRequestBody(state.remoteBody).epoch, 9);
+});
+
+test("owned-dirt nonadjacent replay rejects mismatched recorded source markers", async t => {
+  for (const [name, mutate, message] of [
+    ["epoch", recovery => ({ ...recovery, sourceEpoch: prior.epoch - 1 }), /source epoch/],
+    ["session", recovery => ({ ...recovery, sourceSessionId: "session-other" }), /another source session/],
+    ["review head", recovery => ({ ...recovery, reviewHeadSha: "e".repeat(40) }), /source epoch/],
+  ]) {
+    await t.test(name, () => {
+      const harness = createOwnedDirtHarness({ failPhase: "claim", claimEpoch: 9 });
+      assert.throws(() => harness.invoke(), /interrupted after claim/);
+      harness.mutateLocalLease(lease => ({
+        ...lease,
+        ownedDirtRecovery: mutate(lease.ownedDirtRecovery),
+      }));
+
+      assert.throws(() => harness.invoke(), message);
+      const state = harness.state();
+      assert.equal(state.remoteHead, reviewedHead);
+      assert.equal(state.commits, 0);
+    });
+  }
+});
+
 function createOwnedDirtHarness({
   failPhase = null,
   pullRequestHeadSha = null,
   recoverOwnedDirt = true,
   sessionId = "session-a",
+  claimEpoch = prior.epoch + 1,
 } = {}) {
   let failed = false;
   let isDraft = false;
@@ -404,7 +440,8 @@ function createOwnedDirtHarness({
         [`rev-parse origin/${branch}`]: () => remoteHead,
         "rev-parse HEAD": () => head,
         "rev-list --parents -n 1 HEAD": () => `${head} ${reviewedHead}`,
-        "log -1 --pretty=%s": () => "chore(coordination): claim managed-run lease 4",
+        "log -1 --pretty=%s": () =>
+          `chore(coordination): claim managed-run lease ${claimEpoch}`,
         "diff-tree --no-commit-id --name-only -r HEAD": () => "",
       };
       if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
@@ -437,7 +474,7 @@ function createOwnedDirtHarness({
         localLease = {
           ...prior,
           status: "active",
-          epoch: 4,
+          epoch: claimEpoch,
           sessionId,
           baseSha: reviewedHead,
           fenceSha: null,
@@ -483,6 +520,7 @@ function createOwnedDirtHarness({
 
   return {
     invoke: () => resume(context),
+    mutateLocalLease: mutate => { localLease = mutate(localLease); },
     setDirtVersion: value => { dirtVersion = value; },
     state: () => ({ calls, claims, commits, head, isDraft, localLease, remoteBody, remoteHead }),
   };

@@ -12,20 +12,25 @@ import { KNOWLEDGE_GRAPH_MCP_TOOLS } from "../src/knowgrph-mcp-client.js";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const EXPECTED_TOOLS = [
   "knowgrph.knowledge_graph.ingest",
+  "knowgrph.knowledge_graph.parser_generate",
   "knowgrph.knowledge_graph.query",
   "knowgrph.knowledge_graph.explain_edge",
 ];
 const EXPECTED_DISPATCH = [
   ["/knowledge.graph.ingest", EXPECTED_TOOLS[0]],
-  ["/knowledge.graph.query", EXPECTED_TOOLS[1]],
-  ["/knowledge.graph.explain", EXPECTED_TOOLS[2]],
+  ["/knowledge.graph.parser.generate", EXPECTED_TOOLS[1]],
+  ["/knowledge.graph.query", EXPECTED_TOOLS[2]],
+  ["/knowledge.graph.explain", EXPECTED_TOOLS[3]],
 ];
 const EXPECTED_FACTS_RESOLUTION = [
   ["/knowledge.graph.ingest", "DICTIONARY-COMMAND.md#/knowledge.graph.ingest"],
+  ["/knowledge.graph.parser.generate", "DICTIONARY-COMMAND.md#/knowledge.graph.parser.generate"],
   ["/knowledge.graph.query", "DICTIONARY-COMMAND.md#/knowledge.graph.query"],
   ["/knowledge.graph.explain", "DICTIONARY-COMMAND.md#/knowledge.graph.explain"],
   ["#knowledge-graph", "DICTIONARY-SEMANTIC.md##knowledge-graph"],
+  ["#parser-generation", "DICTIONARY-SEMANTIC.md##parser-generation"],
   ["@knowledge-graph", "DICTIONARY-BINDING.md#@knowledge-graph"],
+  ["@parser-specification", "DICTIONARY-BINDING.md#@parser-specification"],
 ];
 const DOC_FILES = [
   "docs/KNOWLEDGE-GRAPH.md",
@@ -33,6 +38,7 @@ const DOC_FILES = [
   "docs/DICTIONARY-SEMANTIC.md",
   "docs/DICTIONARY-BINDING.md",
   "docs/FACTS.md",
+  "docs/SKILLS.md",
   "docs/MCP-GATEWAY.md",
   "docs/RUNTIME-PROOF.md",
   "docs/RUNTIME-READINESS.md",
@@ -45,16 +51,17 @@ const RETIRED_RUNTIME_PATHS = [
   "__tests__/knowledge-graph-parser-generator.test.mjs",
 ];
 
-test("canonical commands map to exactly three Knowgrph-owned MCP tools", () => {
+test("canonical commands map to exactly four Knowgrph-owned MCP tools", () => {
   assert.deepEqual(KNOWLEDGE_GRAPH_MCP_TOOLS, {
     ingest: EXPECTED_TOOLS[0],
-    query: EXPECTED_TOOLS[1],
-    explainEdge: EXPECTED_TOOLS[2],
+    generateParser: EXPECTED_TOOLS[1],
+    query: EXPECTED_TOOLS[2],
+    explainEdge: EXPECTED_TOOLS[3],
   });
 
   const contract = read("docs/KNOWLEDGE-GRAPH.md");
   const dispatch = [...readFrontmatter(contract).matchAll(
-    /^  "(\/knowledge\.graph\.[a-z]+)": "(knowgrph\.knowledge_graph\.[a-z_]+)"$/gmu,
+    /^  "(\/knowledge\.graph(?:\.[a-z]+)+)": "(knowgrph\.knowledge_graph\.[a-z_]+)"$/gmu,
   )].map((match) => [match[1], match[2]]);
   assert.deepEqual(dispatch, EXPECTED_DISPATCH);
 
@@ -82,7 +89,8 @@ test("FACTS resolves every knowledge graph token exactly once", () => {
   )]
     .map((match) => [match[1], match[2]])
     .filter(([token]) => token.includes("knowledge.graph") || token === "#knowledge-graph"
-      || token === "@knowledge-graph");
+      || token === "#parser-generation" || token === "@knowledge-graph"
+      || token === "@parser-specification");
   assert.deepEqual(resolvedTokens, EXPECTED_FACTS_RESOLUTION);
 
   const truthTokens = Object.fromEntries(
@@ -97,12 +105,12 @@ test("FACTS resolves every knowledge graph token exactly once", () => {
     EXPECTED_DISPATCH.map(([command]) => command),
   );
   assert.deepEqual(
-    truthTokens.semantics.filter((token) => token === "#knowledge-graph"),
-    ["#knowledge-graph"],
+    truthTokens.semantics.filter((token) => ["#knowledge-graph", "#parser-generation"].includes(token)),
+    ["#knowledge-graph", "#parser-generation"],
   );
   assert.deepEqual(
-    truthTokens.bindings.filter((token) => token === "@knowledge-graph"),
-    ["@knowledge-graph"],
+    truthTokens.bindings.filter((token) => ["@knowledge-graph", "@parser-specification"].includes(token)),
+    ["@knowledge-graph", "@parser-specification"],
   );
 });
 
@@ -120,7 +128,7 @@ test("Agentic Canvas OS retains contracts and client code, not a second graph ru
   const scripts = JSON.parse(read("package.json")).scripts;
   assert.equal(
     scripts["knowledge-graph-contract:check"],
-    "node --test __tests__/knowledge-graph-client.test.mjs __tests__/knowledge-graph-contract.test.mjs",
+    "node --test __tests__/knowledge-graph-client.test.mjs __tests__/knowledge-graph-parser-client.test.mjs __tests__/knowledge-graph-contract.test.mjs",
   );
   assert.equal(Object.hasOwn(scripts, "knowledge-graph:check"), false);
   assert.equal(Object.hasOwn(scripts, "knowledge-graph:mcp"), false);
@@ -139,10 +147,16 @@ test("knowledge graph documentation remains bounded and contract/client-ready", 
   assert.match(contract, /expectedSnapshotDigest/u);
   assert.match(contract, /FloatingPanel Skills & Commands/iu);
   assert.match(contract, /knowgrph\.agentic_canvas_os\.docs\.invoke/u);
+  assert.match(contract, /\/knowledge\.graph\.parser\.generate/u);
+  assert.match(contract, /parser generation is independently invocable/iu);
   assert.match(contract, /must not own a second catalog or a hardcoded semantic\/binding list/iu);
   assert.doesNotMatch(contract, /Agentic Canvas OS owns and executes/iu);
   assert.doesNotMatch(contract, /scripts\/knowledge-graph-mcp\.mjs/u);
   assert.doesNotMatch(contract, /src\/knowledge-graph\//u);
+
+  const skills = read("docs/SKILLS.md");
+  assert.match(skills, /knowledge\.graph\.parser\.generate/u);
+  assert.match(skills, /KNOWLEDGE-GRAPH\.md/u);
 });
 
 test("knowledge graph contracts retain deterministic, explained, vector-free semantics", () => {

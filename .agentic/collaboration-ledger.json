@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 95,
-  "headDigest": "3bab8d5072296b741e9f6307a0da1be3d72560ca3043678e3449b9d1e622d104",
+  "sequence": 96,
+  "headDigest": "294e85ab74d84d8f1d7b1fddac450c30226cdb1f6e560c0407867822e780d6e4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -4636,6 +4636,50 @@
       },
       "claimDigest": "0eda3277ab0a0b554b230d86ba14f4dd30130aa33ba925c3ec452665bfada7d2",
       "digest": "3bab8d5072296b741e9f6307a0da1be3d72560ca3043678e3449b9d1e622d104"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 96,
+      "parentDigest": "3bab8d5072296b741e9f6307a0da1be3d72560ca3043678e3449b9d1e622d104",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c1ac2b3dce8da156fc45d2b29c3099f99d4079525c76d8ee40b303b78285488a",
+      "idempotencyKey": "8f56acbc104f458a1647e6609d41d94da4bf28157bae7c453428285829199341",
+      "requestDigest": "4bf1e6cd112798a2c0ef51a42d5e21cb6e7aa5bd00f8f73b07018754665d3531",
+      "evaluationTime": "2026-07-31T10:25:39.000Z",
+      "claimCore": {
+        "claimId": "c1ac2b3dce8da156fc45d2b29c3099f99d4079525c76d8ee40b303b78285488a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:fab07f948aa2e448f812f5df58165a12fbca27b8e69fa98302234a12c1b239d6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:76576a376c0e08eac014ffd2bd5a11c82c91b40ebf1b32c843f289172ef69adc",
+        "canonicalBaseRevision": "195bd014f743c22dd59a3c02ebd3f7a860ef43a5",
+        "declaredWriteScope": [
+          "path:__tests__/knowledge-graph-contract.test.mjs",
+          "path:__tests__/knowledge-graph-parser-client.test.mjs",
+          "path:docs/KNOWLEDGE-GRAPH.md",
+          "path:memory/2026-07.md",
+          "path:src/knowgrph-mcp-client.js",
+          "path:src/knowgrph-mcp-contract.js",
+          "path:todo/2026-07.md",
+          "semantic:universal-graph-catalog-v2"
+        ],
+        "writeSetDigest": "5066788defedcd729df2dc34671187c5e5d2438a5e9a6f959bf2f7b2f311c96a",
+        "laneRevision": "b82ab27185e3523f8dd7b68452a66ed33df79fb4",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-07-31T10:55:39.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f251caca51e46448ce26a5ad3fa8e2fc71a197f1d7a472dd7143c2055d4a73cc",
+      "digest": "294e85ab74d84d8f1d7b1fddac450c30226cdb1f6e560c0407867822e780d6e4"
     }
   ]
 }

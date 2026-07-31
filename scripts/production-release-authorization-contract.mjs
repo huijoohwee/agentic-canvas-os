@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 
 import { validateProductionRuntimeReadiness } from "./production-runtime-readiness-contract.mjs";
 
@@ -7,6 +8,7 @@ export const PRODUCTION_RELEASE_CANDIDATE_SCHEMA = "agentic-production-release-c
 export const PRODUCTION_RELEASE_AUTHORIZATION_SCHEMA = "agentic-production-release-authorization/v1";
 export const PRODUCTION_AUTHORIZATION_PROMPT_SCHEMA = "agentic-production-authorization-prompt/v1";
 export const PRODUCTION_AUTHORIZATION_FORMATTER_PATH = "agentic-canvas-os/scripts/production-release-authorization-contract.mjs";
+export const PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH = fileURLToPath(import.meta.url);
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
@@ -145,6 +147,7 @@ export function formatProductionAuthorizationPrompt(value) {
     `Source: \`${value.sourceRevision}\``,
     `Run: \`${value.runRef}\``,
     `localhost: \`${value.localhostReviewUrl}\``,
+    `Local formatter source: \`${PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH}\``,
     "",
     `Template: \`${PRODUCTION_AUTHORIZATION_FORMATTER_PATH}\``,
     "",

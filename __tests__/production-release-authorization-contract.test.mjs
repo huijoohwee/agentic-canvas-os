@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH,
   PRODUCTION_RELEASE_AUTHORIZATION_SCHEMA,
   createProductionAuthorizationPrompt,
   createLocalReviewCandidate,
@@ -153,6 +154,7 @@ test("runtime-ready localhost review emits the exact future human authorization 
       `Source: \`${sourceRevision}\``,
       "Run: `run:30426035584`",
       "localhost: `http://127.0.0.1:5173/`",
+      `Local formatter source: \`${PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH}\``,
       "",
       "Reply exactly:",
       "",

@@ -4,12 +4,14 @@ import {
 } from "./skill-evolution-result.js";
 import {
   createKnowgrphKnowledgeGraphClient,
+  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
   KNOWLEDGE_GRAPH_MCP_TOOLS,
   KnowgrphMcpError,
 } from "./knowgrph-mcp-contract.js";
 
 export {
   createKnowgrphKnowledgeGraphClient,
+  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
   KNOWLEDGE_GRAPH_MCP_TOOLS,
   KnowgrphMcpError,
   validateKnowledgeGraphIngestResult,

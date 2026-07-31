@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
+  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
   KNOWLEDGE_GRAPH_MCP_TOOLS,
   validateKnowledgeGraphParserResult,
   validateKnowledgeGraphRequest,
@@ -59,7 +60,7 @@ const registryResult = (descriptors) => {
   };
 };
 
-test("parser generation validates the source-backed exact tool and versioned grammar", () => {
+test("parser generation validates a built-in profile or source-backed descriptors", () => {
   const invocation = {
     schema: "knowgrph-knowledge-graph-invocation/v1",
     tool: KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser,
@@ -91,13 +92,21 @@ test("parser generation validates the source-backed exact tool and versioned gra
       grammar: DECLARATIVE_GRAMMAR,
     }],
   };
+  const builtIn = {
+    profile: KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
+    invocation,
+  };
   assert.equal(validateKnowledgeGraphRequest("parser_generate", fixed), fixed);
   assert.equal(validateKnowledgeGraphRequest("parser_generate", generated), generated);
+  assert.equal(validateKnowledgeGraphRequest("parser_generate", builtIn), builtIn);
   for (const invalid of [
+    {},
     { ...fixed, descriptors: [] },
     { ...fixed, descriptors: [{ id: "fixture" }] },
     { descriptors: [{ ...generated.descriptors[0], grammar: undefined }] },
     { descriptors: [{ ...fixed.descriptors[0], grammar: DECLARATIVE_GRAMMAR }] },
+    { ...builtIn, profile: "alternate-source" },
+    { ...builtIn, descriptors: fixed.descriptors },
     { ...fixed, outputPath: "/private/parser" },
     { ...fixed, invocation: { ...invocation, tool: KNOWLEDGE_GRAPH_MCP_TOOLS.ingest } },
   ]) {

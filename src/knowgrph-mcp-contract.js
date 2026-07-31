@@ -38,6 +38,8 @@ export const KNOWLEDGE_GRAPH_MCP_TOOLS = Object.freeze({
   explainEdge: "knowgrph.knowledge_graph.explain_edge",
 });
 
+export const KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE = "default-source";
+
 const INVOCATION_SCHEMA = "knowgrph-knowledge-graph-invocation/v1";
 const ROUTING_SCHEMA = "agentic-canvas-os-docs-routing/v1";
 const RESULT_SCHEMAS = Object.freeze({
@@ -135,7 +137,15 @@ export function validateKnowledgeGraphRequest(operation, input) {
     if (Object.hasOwn(input, "repositoryUrl") && !hasRepositoryUrl) fields.push("repositoryUrl");
     if (Object.hasOwn(input, "outputPath")) fields.push("outputPath");
   } else if (operation === "parser_generate") {
-    if (!validParserDescriptors(input.descriptors, { generated: false })) fields.push("descriptors");
+    const hasDescriptors = Object.hasOwn(input, "descriptors");
+    const hasProfile = Object.hasOwn(input, "profile");
+    if (hasDescriptors === hasProfile) {
+      fields.push("parser");
+    } else if (hasDescriptors && !validParserDescriptors(input.descriptors, { generated: false })) {
+      fields.push("descriptors");
+    } else if (hasProfile && input.profile !== KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE) {
+      fields.push("profile");
+    }
     if (Object.hasOwn(input, "outputPath")) fields.push("outputPath");
   } else if (operation === "query") {
     if (!GRAPH_ID.test(input.graphId)) fields.push("graphId");

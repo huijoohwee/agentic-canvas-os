@@ -14,10 +14,12 @@ runtime_proof: "RUNTIME-PROOF.md"
 publish_policy: "Dev-only until exact protected integration and runtime proof"
 invocations:
   - {action: "/knowledge.graph.ingest", semantics: ["#knowledge-graph", "#mcp", "#runtime-ready"], bindings: ["@working-directory", "@knowledge-graph", "@operator", "@runtime-proof"]}
+  - {action: "/knowledge.graph.parser.generate", semantics: ["#knowledge-graph", "#parser-generation", "#mcp"], bindings: ["@parser-specification", "@runtime-proof"]}
   - {action: "/knowledge.graph.query", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
   - {action: "/knowledge.graph.explain", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
 mcp_dispatch:
   "/knowledge.graph.ingest": "knowgrph.knowledge_graph.ingest"
+  "/knowledge.graph.parser.generate": "knowgrph.knowledge_graph.parser_generate"
   "/knowledge.graph.query": "knowgrph.knowledge_graph.query"
   "/knowledge.graph.explain": "knowgrph.knowledge_graph.explain_edge"
 external_dependency: "forbidden"
@@ -44,14 +46,16 @@ Knowgrph transport.
 | Agentic Canvas OS invocation | Exact Knowgrph tool |
 |---|---|
 | `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | `knowgrph.knowledge_graph.ingest` |
+| `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof` | `knowgrph.knowledge_graph.parser_generate` |
 | `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.query` |
 | `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.explain_edge` |
 
 `createKnowgrphKnowledgeGraphClient` binds `ingestKnowledgeGraph`,
-`queryKnowledgeGraph`, and `explainKnowledgeGraphEdge` to a host-supplied local
-MCP transport. `createKnowgrphMcpClient` exposes the same typed methods only
-when its Streamable HTTP endpoint is loopback. Both paths snapshot and validate
-the request before any asynchronous boundary, validate response identity and
+`generateKnowledgeGraphParser`, `queryKnowledgeGraph`, and
+`explainKnowledgeGraphEdge` to a host-supplied local MCP transport.
+`createKnowgrphMcpClient` exposes the same typed methods only when its
+Streamable HTTP endpoint is loopback. Both paths snapshot and validate the
+request before any asynchronous boundary, validate response identity and
 projection bounds, reject private store paths recursively, and call only the
 exact tools above.
 
@@ -60,6 +64,7 @@ exact tools above.
 | Operation | Required identity | Optional fields owned by Knowgrph |
 |---|---|---|
 | Ingest | Exactly one explicit local `rootPath` or canonical credential-free HTTPS `repositoryUrl` | Immutable repository ref, includes, excludes, parser and resource bounds, cache policy, strictness, and an optional source-resolved invocation proof. |
+| Generate parser | One bounded, non-empty `descriptors` array selecting inert source matchers and native adapter identities | Source matchers, declared kinds, adapter fidelity, deterministic priority, and an optional source-resolved invocation proof. |
 | Query | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and one supported `mode` | Lexical query, endpoints, direction, edge labels, depth, result limit, and an optional source-resolved invocation proof. |
 | Explain edge | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and non-empty `edgeId` | Optional source-resolved invocation proof. |
 
@@ -88,6 +93,17 @@ another snapshot.
 The typed client never invents, normalizes, upgrades, or substitutes a digest.
 The artifact and snapshot remain Knowgrph-owned.
 
+Successful parser generation exposes exactly one canonical inert
+`parserRegistry` using the explicit v2 schema and matching
+`parserRegistryDigest`. Knowgrph validates native adapter identity and fidelity,
+rejects ambiguous matchers, and can compile bounded finite declarative grammar
+data for otherwise unregistered syntax into deterministic explained AST
+evidence. The typed client validates the grammar shape and version while
+Knowgrph remains the semantic compiler owner. The result contains no generated
+code, executable payload, private artifact path, adapter implementation, or
+implicit ingest. A later ingest must resubmit that registry with its exact
+expected digest; drift fails closed before discovery.
+
 ## Source And Import Boundary
 
 The existing Knowgrph Toolbar > Launch > Import folder flow remains the
@@ -103,11 +119,16 @@ resolves an immutable source revision before local parsing. Agentic Canvas OS
 does not clone, crawl, or fetch. A raw local path is never forwarded through
 the generic remote control-plane client.
 
-Source admission, parser generation, language adapters, source scopes,
-incremental shards, graph resolution, Canvas projection, and artifact
-persistence remain in Knowgrph. Agentic Canvas OS must not add a second parser,
-snapshot store, graph query engine, standalone MCP server, or package command
-for those concerns.
+Source admission, executable parser generation, language adapters, source
+scopes, incremental shards, graph resolution, Canvas projection, and artifact
+persistence remain in Knowgrph. Agentic Canvas OS exposes only the canonical
+source-backed invocation and typed client contract; it must not add a second
+parser, snapshot store, graph query engine, standalone MCP server, or package
+command for those concerns.
+
+Parser generation is independently invocable through its exact source-backed
+tuple; generation does not ingest a workspace, and ingestion does not silently
+generate, select, or upgrade an undeclared parser.
 
 ## Semantic And Evidence Policy
 
@@ -125,8 +146,9 @@ stage such as Import URL.
 ## Readiness Boundary
 
 This repository is contract/client-ready when the dictionaries, exact tool
-mapping, pre-transport request validation, digest fence, and no-duplicate-runtime
-checks pass. That evidence does not make the combined feature runtime-ready.
+mapping, pre-transport request validation, parser and snapshot digest fences,
+and no-duplicate-runtime checks pass. That evidence does not make the combined
+feature runtime-ready.
 
 Combined runtime readiness requires the exact protected Knowgrph revision to
 prove bounded ingestion, deterministic output, complete import accounting,

@@ -232,16 +232,18 @@ Application composition is a local, provider-neutral compiler and bounded depend
 
 Agentic Canvas OS owns the canonical invocation grammar and typed
 `createKnowgrphMcpClient` methods. Knowgrph owns the executable MCP runtime,
-parser, sharded artifact storage, query, explanation, Launch import, and Canvas
-projection. No artifact filesystem path crosses the client boundary.
+parser generator and adapters, sharded artifact storage, query, explanation,
+Launch import, and Canvas projection. No artifact filesystem path crosses the
+client boundary.
 
 | Exact tool | Behavior | Mutation boundary |
 |---|---|---|
 | `knowgrph.knowledge_graph.ingest` | Compile registered code, documents, SQL, configs, PDFs, and optional inert grammar artifacts into one deterministic explained graph. | Read the explicit workspace; return opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection. |
+| `knowgrph.knowledge_graph.parser_generate` | Compile one inert bounded parser-registry specification, including optional finite declarative grammar data, into one deterministic canonical v2 registry. | Validate adapter fidelity and grammar bounds, reject executable or ambiguous input, and return the inert registry plus its exact digest without code, artifact paths, ingest, model use, or network use. |
 | `knowgrph.knowledge_graph.query` | Run bounded lexical, neighborhood, impact, path, or summary operations against `graphId` plus `expectedSnapshotDigest`. | Read-only; reject a stale digest and perform no vector or remote lookup. |
 | `knowgrph.knowledge_graph.explain_edge` | Return one stored relationship and its exact parser/source evidence from `graphId` plus `expectedSnapshotDigest`. | Read-only; no workspace scan, inference, model, network, or mutation. |
 
-`/knowledge.graph.*`, `#knowledge-graph`, and `@knowledge-graph` resolve through the canonical dictionaries as metadata. Resolution is not execution. An explicit `tools/call` to one of the three names above is required, and parser generation remains an internal Knowgrph ingest step rather than a fourth public tool.
+`/knowledge.graph.*`, `#knowledge-graph`, `#parser-generation`, `@knowledge-graph`, and `@parser-specification` resolve through the canonical dictionaries as metadata. Resolution is not execution. An explicit `tools/call` to one of the four names above is required; parser generation is independently invocable, while its executable compiler, adapters, and artifacts remain solely Knowgrph-owned.
 
 ## Repository Packing Capability
 

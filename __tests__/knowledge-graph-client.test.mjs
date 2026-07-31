@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
@@ -13,6 +14,100 @@ import {
 
 const ENDPOINT = "http://127.0.0.1:31888/mcp";
 const DIGEST = "a".repeat(64);
+const GRAPH_ID = `kg:graph:${"1".repeat(32)}`;
+const OTHER_GRAPH_ID = `kg:graph:${"2".repeat(32)}`;
+const PROJECTION_TOKEN = `kg:projection:${"3".repeat(24)}`;
+const EDGE_ID = `kg:edge:${"4".repeat(28)}`;
+const SOURCE_NODE_ID = "kg:source-file:source";
+const TARGET_NODE_ID = "kg:syntax-node:target";
+const RESULT_SCHEMAS = {
+  ingest: "knowgrph-knowledge-graph-ingest/v1",
+  parser_generate: "knowgrph-knowledge-graph-parser-generate/v1",
+  query: "knowgrph-knowledge-graph-query/v1",
+  explain_edge: "knowgrph-knowledge-graph-explain-edge/v1",
+};
+const stableValue = (value) => (
+  Array.isArray(value)
+    ? value.map(stableValue)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, stableValue(value[key])]))
+      : value
+);
+const parserDigest = (descriptors) => createHash("sha256")
+  .update(`${JSON.stringify(stableValue(descriptors))}\n`)
+  .digest("hex");
+const sourceNode = () => ({
+  id: SOURCE_NODE_ID,
+  label: "source.ts",
+  type: "SourceFile",
+  properties: { "corpus:sourcePath": "source.ts" },
+});
+const targetNode = () => ({
+  id: TARGET_NODE_ID,
+  label: "target",
+  type: "SyntaxNode",
+  properties: { "corpus:sourcePath": "source.ts" },
+});
+const graphEdge = () => ({
+  id: EDGE_ID,
+  source: SOURCE_NODE_ID,
+  target: TARGET_NODE_ID,
+  label: "containsSyntaxNode",
+  properties: { "evidence:sourcePath": "source.ts" },
+});
+const retrieval = (mode = "lexical-graph") => ({ mode, vectorStore: false });
+const cost = () => ({ modelCalls: 0, promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 });
+const completeness = () => ({ complete: true, truncated: false, reason: "complete" });
+const resolution = (id = SOURCE_NODE_ID) => ({ id, basis: "id", candidates: [id] });
+const evidence = () => ({
+  edgeId: EDGE_ID,
+  sourcePath: "source.ts",
+  lineStart: 1,
+  lineEnd: 1,
+  columnStart: 1,
+  columnEnd: 2,
+  excerpt: "x",
+  excerptHash: "5".repeat(64),
+  kind: "extracted",
+  confidence: "high",
+  certainty: "exact",
+  ruleId: "fixture.rule",
+  explanation: "Fixture evidence.",
+  parserId: "fixture-parser",
+  parserVersion: "1.0.0",
+  parserDigest: "6".repeat(64),
+  sourceDigest: "7".repeat(64),
+});
+
+function queryPayload(mode) {
+  const common = { mode, snapshotDigest: DIGEST, retrieval: retrieval(), cost: cost(), completeness: completeness() };
+  if (mode === "summary") {
+    return {
+      ...common,
+      graph: { nodes: 2, edges: 1 },
+      nodeTypes: { SourceFile: 1, SyntaxNode: 1 },
+      edgeLabels: { containsSyntaxNode: 1 },
+      sources: 1,
+      repositories: 1,
+      parserCoverage: { "fixture-parser": 1 },
+      diagnostics: [],
+    };
+  }
+  return {
+    ...common,
+    direction: "outgoing",
+    resolution: resolution(),
+    traversal: {
+      nodeIds: [SOURCE_NODE_ID, TARGET_NODE_ID],
+      edgeIds: [EDGE_ID],
+      nodes: [sourceNode(), targetNode()],
+      edges: [graphEdge()],
+      limitTruncated: false,
+      depthLimited: false,
+    },
+    citations: [evidence()],
+  };
+}
 
 function response(body, sessionId = "") {
   return {
@@ -30,6 +125,17 @@ function response(body, sessionId = "") {
 
 function createRecordingClient() {
   const requests = [];
+  const parserDescriptors = [{
+    id: "fixture",
+    kind: "fixture",
+    adapter: "inventory",
+    fidelity: "inventory-only",
+    extensions: [".fixture"],
+    basenames: [],
+    basenameFamilies: [],
+    priority: 10,
+  }];
+  const registryDigest = parserDigest(parserDescriptors);
   const client = createKnowgrphMcpClient({
     endpoint: ENDPOINT,
     fetchImpl: async (request) => {
@@ -39,34 +145,75 @@ function createRecordingClient() {
       }
       const structuredContent = request.body.params.name === KNOWLEDGE_GRAPH_MCP_TOOLS.ingest
         ? {
+            schema: RESULT_SCHEMAS.ingest,
             ok: true,
             operation: "ingest",
-            graphId: "workspace",
+            graphId: GRAPH_ID,
             snapshotDigest: DIGEST,
+            parserRegistryDigest: "b".repeat(64),
             complete: true,
             counts: { sources: 8, nodes: 24, edges: 31 },
             projection: {
-              token: "projection:workspace",
+              token: PROJECTION_TOKEN,
               readOnly: true,
               complete: true,
               truncated: false,
               limit: 200,
-              graphData: { type: "Graph", nodes: [], edges: [] },
+              graphData: {
+                context: "knowgrph-knowledge-graph-projection",
+                type: "Graph",
+                nodes: [],
+                edges: [],
+              },
+            },
+          }
+        : request.body.params.name === KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser ? {
+            schema: RESULT_SCHEMAS.parser_generate,
+            ok: true,
+            operation: "parser_generate",
+            parserRegistryDigest: registryDigest,
+            parserRegistry: {
+              schema: "knowgrph-knowledge-graph-parser-registry/v2",
+              digest: registryDigest,
+              descriptors: parserDescriptors,
             },
           }
         : request.body.params.name === KNOWLEDGE_GRAPH_MCP_TOOLS.query ? {
+            schema: RESULT_SCHEMAS.query,
             ok: true,
             operation: "query",
-            graphId: "workspace",
-            snapshotDigest: DIGEST,
-            results: { nodes: [], edges: [] },
+            graphId: GRAPH_ID,
+            ...queryPayload(request.body.params.arguments.mode),
           }
         : {
+            schema: RESULT_SCHEMAS.explain_edge,
             ok: true,
             operation: "explain_edge",
-            graphId: "workspace",
+            graphId: GRAPH_ID,
             snapshotDigest: DIGEST,
-            edge: { id: "edge:entry-to-worker" },
+            edge: graphEdge(),
+            source: sourceNode(),
+            target: targetNode(),
+            evidence: {
+              kind: "extracted",
+              ruleId: "fixture.rule",
+              explanation: "Fixture evidence.",
+              parserId: "fixture-parser",
+              parserVersion: "1.0.0",
+              parserDigest: "6".repeat(64),
+              sourcePath: "source.ts",
+              sourceDigest: "7".repeat(64),
+              sourceSpan: { lineStart: 1, lineEnd: 1, columnStart: 1, columnEnd: 2 },
+              excerpt: "x",
+              excerptHash: "5".repeat(64),
+              confidence: "high",
+              certainty: "exact",
+              premiseEdgeIds: [],
+              candidateCount: 1,
+              candidateIds: [],
+            },
+            retrieval: retrieval("direct-edge-id"),
+            cost: cost(),
           };
       return response({
         jsonrpc: "2.0",
@@ -78,9 +225,10 @@ function createRecordingClient() {
   return { client, requests };
 }
 
-test("knowledge graph methods use the three exact Knowgrph tool identities", async () => {
+test("knowledge graph methods use the four exact Knowgrph tool identities", async () => {
   assert.deepEqual(KNOWLEDGE_GRAPH_MCP_TOOLS, {
     ingest: "knowgrph.knowledge_graph.ingest",
+    generateParser: "knowgrph.knowledge_graph.parser_generate",
     query: "knowgrph.knowledge_graph.query",
     explainEdge: "knowgrph.knowledge_graph.explain_edge",
   });
@@ -93,7 +241,7 @@ test("knowledge graph methods use the three exact Knowgrph tool identities", asy
     strict: true,
   };
   const query = {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     expectedSnapshotDigest: DIGEST,
     mode: "neighbors",
     from: "node:entry",
@@ -101,12 +249,22 @@ test("knowledge graph methods use the three exact Knowgrph tool identities", asy
     maxDepth: 2,
   };
   const explain = {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     expectedSnapshotDigest: DIGEST,
-    edgeId: "edge:entry-to-worker",
+    edgeId: EDGE_ID,
+  };
+  const parser = {
+    descriptors: [{
+      id: "fixture",
+      kind: "fixture",
+      adapter: "inventory",
+      fidelity: "inventory-only",
+      extensions: [".fixture"],
+    }],
   };
 
   await client.ingestKnowledgeGraph(ingest);
+  await client.generateKnowledgeGraphParser(parser);
   await client.queryKnowledgeGraph(query);
   await client.explainKnowledgeGraphEdge(explain);
 
@@ -117,22 +275,23 @@ test("knowledge graph methods use the three exact Knowgrph tool identities", asy
     calls.map((call) => call.name),
     [
       KNOWLEDGE_GRAPH_MCP_TOOLS.ingest,
+      KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser,
       KNOWLEDGE_GRAPH_MCP_TOOLS.query,
       KNOWLEDGE_GRAPH_MCP_TOOLS.explainEdge,
     ],
   );
-  assert.deepEqual(calls.map((call) => call.arguments), [ingest, query, explain]);
+  assert.deepEqual(calls.map((call) => call.arguments), [ingest, parser, query, explain]);
 });
 
 test("query and edge explanation require an exact lowercase SHA-256 digest", async () => {
   const { client, requests } = createRecordingClient();
   const query = {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     mode: "summary",
   };
   const explain = {
-    graphId: "workspace",
-    edgeId: "edge:1",
+    graphId: GRAPH_ID,
+    edgeId: EDGE_ID,
   };
 
   for (const invoke of [
@@ -170,7 +329,7 @@ test("knowledge graph request validation keeps server-owned optional fields inta
     invocation,
   };
   const query = {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     expectedSnapshotDigest: DIGEST,
     mode: "search",
     query: "parser",
@@ -216,10 +375,19 @@ test("knowledge graph request validation keeps server-owned optional fields inta
       && error.data.fields.includes("artifactPath"),
   );
   for (const repositoryUrl of [
-    "https://github.com/owner/repository/issues/1",
-    "https://github.com/owner/repository?ref=main",
-    "https://user@github.com/owner/repository",
-    "https://github.com/owner/repository%2Fother",
+    "https://code.example.test/group/project",
+    "https://source.example.test/nested/group/project.git",
+  ]) {
+    assert.equal(validateKnowledgeGraphRequest("ingest", { repositoryUrl }).repositoryUrl, repositoryUrl);
+  }
+  for (const repositoryUrl of [
+    "http://code.example.test/group/project",
+    "https://code.example.test/group/project?ref=main",
+    "https://user@code.example.test/group/project",
+    "https://source.example.test:8443/nested/group/project.git",
+    "https://code.example.test/group/project#readme",
+    "https://code.example.test/",
+    " https://code.example.test/group/project",
   ]) {
     assert.throws(
       () => validateKnowledgeGraphRequest("ingest", { repositoryUrl }),
@@ -241,7 +409,7 @@ test("knowledge graph methods reject missing operation identities before transpo
       mode: "summary",
     }),
     () => client.explainKnowledgeGraphEdge({
-      graphId: "workspace",
+      graphId: GRAPH_ID,
       expectedSnapshotDigest: DIGEST,
     }),
   ]) {
@@ -252,22 +420,47 @@ test("knowledge graph methods reject missing operation identities before transpo
 
 test("ingest exposes canonical graph and Canvas projection identity without artifact paths", () => {
   const result = {
+    schema: RESULT_SCHEMAS.ingest,
     ok: true,
     operation: "ingest",
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     snapshotDigest: DIGEST,
+    parserRegistryDigest: "b".repeat(64),
     complete: false,
     counts: { sources: 100, nodes: 200, edges: 300, omitted: 2 },
     projection: {
-      token: "projection:workspace",
+      token: PROJECTION_TOKEN,
       readOnly: true,
       complete: true,
       truncated: false,
       limit: 200,
-      graphData: { type: "Graph", nodes: [], edges: [] },
+      graphData: {
+        context: "knowgrph-knowledge-graph-projection",
+        type: "Graph",
+        nodes: [],
+        edges: [],
+      },
     },
   };
   assert.equal(validateKnowledgeGraphIngestResult(result), result);
+
+  for (const invalid of [
+    { ...result, schema: "knowgrph-knowledge-graph-ingest/v2" },
+    { ...result, graphId: "workspace" },
+    { ...result, projection: { ...result.projection, token: "projection:workspace" } },
+    {
+      ...result,
+      projection: {
+        ...result.projection,
+        graphData: { ...result.projection.graphData, type: "DirectedGraph" },
+      },
+    },
+  ]) {
+    assert.throws(
+      () => validateKnowledgeGraphIngestResult(invalid),
+      (error) => error.code === "mcp_knowledge_graph_result_invalid",
+    );
+  }
 
   assert.throws(
     () => validateKnowledgeGraphIngestResult({
@@ -299,6 +492,7 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
         ...result.projection,
         graphData: {
           type: "Graph",
+          context: "knowgrph-knowledge-graph-projection",
           nodes: Array.from({ length: 2_001 }, (_, index) => ({ id: `node:${index}` })),
           edges: [],
         },
@@ -341,22 +535,22 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
 
 test("read results must echo the requested graph and snapshot identity", () => {
   const request = {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     expectedSnapshotDigest: DIGEST,
     mode: "summary",
   };
   const result = {
+    schema: RESULT_SCHEMAS.query,
     ok: true,
     operation: "query",
     graphId: request.graphId,
-    snapshotDigest: request.expectedSnapshotDigest,
-    graph: { nodes: 1, edges: 0 },
+    ...queryPayload("summary"),
   };
   assert.equal(validateKnowledgeGraphReadResult("query", request, result), result);
   assert.throws(
     () => validateKnowledgeGraphReadResult("query", request, {
       ...result,
-      graphId: "other",
+      graphId: OTHER_GRAPH_ID,
       snapshotDigest: "b".repeat(64),
       metadata: { artifactPath: "/private/graph.json" },
     }),
@@ -364,6 +558,91 @@ test("read results must echo the requested graph and snapshot identity", () => {
       && error.data.fields.includes("graphId")
       && error.data.fields.includes("snapshotDigest")
       && error.data.fields.includes("metadata.artifactPath"),
+  );
+});
+
+test("read results require versioned operation-specific query and explanation payloads", () => {
+  const summaryRequest = {
+    graphId: GRAPH_ID,
+    expectedSnapshotDigest: DIGEST,
+    mode: "summary",
+  };
+  const validSummary = {
+    schema: RESULT_SCHEMAS.query,
+    ok: true,
+    operation: "query",
+    graphId: GRAPH_ID,
+    ...queryPayload("summary"),
+  };
+  assert.equal(validateKnowledgeGraphReadResult("query", summaryRequest, validSummary), validSummary);
+  for (const invalid of [
+    { ...validSummary, schema: "knowgrph-knowledge-graph-query/v2" },
+    {
+      schema: RESULT_SCHEMAS.query,
+      ok: true,
+      operation: "query",
+      graphId: GRAPH_ID,
+      snapshotDigest: DIGEST,
+    },
+    { ...validSummary, mode: "search" },
+  ]) {
+    assert.throws(
+      () => validateKnowledgeGraphReadResult("query", summaryRequest, invalid),
+      (error) => error.code === "mcp_knowledge_graph_result_invalid"
+        && error.data.fields.some((field) => ["schema", "payload"].includes(field)),
+    );
+  }
+
+  const explainRequest = {
+    graphId: GRAPH_ID,
+    expectedSnapshotDigest: DIGEST,
+    edgeId: EDGE_ID,
+  };
+  assert.throws(
+    () => validateKnowledgeGraphReadResult("explain_edge", explainRequest, {
+      schema: RESULT_SCHEMAS.explain_edge,
+      ok: true,
+      operation: "explain_edge",
+      graphId: GRAPH_ID,
+      snapshotDigest: DIGEST,
+      edge: { id: EDGE_ID },
+    }),
+    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+      && error.data.fields.includes("payload"),
+  );
+});
+
+test("typed knowledge graph failures preserve server code, message, and details", async () => {
+  const failure = {
+    schema: RESULT_SCHEMAS.query,
+    ok: false,
+    operation: "query",
+    error: {
+      code: "stale_snapshot_digest",
+      message: "The snapshot digest is stale.",
+      details: { expectedSnapshotDigest: DIGEST, actualSnapshotDigest: "b".repeat(64) },
+    },
+  };
+  const client = createKnowgrphKnowledgeGraphClient({ callTool: async () => failure });
+  await assert.rejects(
+    () => client.queryKnowledgeGraph({
+      graphId: GRAPH_ID,
+      expectedSnapshotDigest: DIGEST,
+      mode: "summary",
+    }),
+    (error) => error instanceof KnowgrphMcpError
+      && error.code === failure.error.code
+      && error.message === failure.error.message
+      && error.data.actualSnapshotDigest === failure.error.details.actualSnapshotDigest,
+  );
+  assert.throws(
+    () => validateKnowledgeGraphReadResult("query", {
+      graphId: GRAPH_ID,
+      expectedSnapshotDigest: DIGEST,
+      mode: "summary",
+    }, { ...failure, schema: "wrong" }),
+    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+      && error.data.fields.includes("schema"),
   );
 });
 
@@ -376,15 +655,16 @@ test("local client snapshots a request before the asynchronous transport boundar
       await blocked;
       sent = input;
       return {
+        schema: RESULT_SCHEMAS.query,
         ok: true,
         operation: "query",
-        graphId: "workspace",
-        snapshotDigest: DIGEST,
+        graphId: GRAPH_ID,
+        ...queryPayload("summary"),
       };
     },
   });
   const input = {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     expectedSnapshotDigest: DIGEST,
     mode: "summary",
   };
@@ -394,7 +674,7 @@ test("local client snapshots a request before the asynchronous transport boundar
   release();
   await pending;
   assert.deepEqual(sent, {
-    graphId: "workspace",
+    graphId: GRAPH_ID,
     expectedSnapshotDigest: DIGEST,
     mode: "summary",
   });
@@ -411,6 +691,18 @@ test("generic HTTP client refuses filesystem-scoped graph calls on a remote endp
   });
   await assert.rejects(
     () => client.ingestKnowledgeGraph({ rootPath: "/workspace" }),
+    (error) => error.code === "mcp_knowledge_graph_local_transport_required",
+  );
+  await assert.rejects(
+    () => client.generateKnowledgeGraphParser({
+      descriptors: [{
+        id: "fixture",
+        kind: "fixture",
+        adapter: "inventory",
+        fidelity: "inventory-only",
+        extensions: [".fixture"],
+      }],
+    }),
     (error) => error.code === "mcp_knowledge_graph_local_transport_required",
   );
   assert.equal(requests, 0);

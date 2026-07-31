@@ -7,7 +7,10 @@ import {
 import path from "node:path";
 import test from "node:test";
 
-import { KNOWLEDGE_GRAPH_MCP_TOOLS } from "../src/knowgrph-mcp-client.js";
+import {
+  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
+  KNOWLEDGE_GRAPH_MCP_TOOLS,
+} from "../src/knowgrph-mcp-client.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const EXPECTED_TOOLS = [
@@ -148,6 +151,8 @@ test("knowledge graph documentation remains bounded and contract/client-ready", 
   assert.match(contract, /FloatingPanel Skills & Commands/iu);
   assert.match(contract, /knowgrph\.agentic_canvas_os\.docs\.invoke/u);
   assert.match(contract, /\/knowledge\.graph\.parser\.generate/u);
+  assert.match(contract, new RegExp(`profile: "${KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE}"`, "u"));
+  assert.match(contract, /alternative to `descriptors`/u);
   assert.match(contract, /parser generation is independently invocable/iu);
   assert.match(contract, /must not own a second catalog or a hardcoded semantic\/binding list/iu);
   assert.doesNotMatch(contract, /Agentic Canvas OS owns and executes/iu);

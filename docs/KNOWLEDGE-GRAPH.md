@@ -64,7 +64,7 @@ exact tools above.
 | Operation | Required identity | Optional fields owned by Knowgrph |
 |---|---|---|
 | Ingest | Exactly one explicit local `rootPath` or canonical credential-free HTTPS `repositoryUrl` | Immutable repository ref, includes, excludes, parser and resource bounds, cache policy, strictness, and an optional source-resolved invocation proof. |
-| Generate parser | One bounded, non-empty `descriptors` array selecting inert source matchers and native adapter identities | Source matchers, declared kinds, adapter fidelity, deterministic priority, and an optional source-resolved invocation proof. |
+| Generate parser | Exactly one of the `default-source` built-in profile or one bounded, non-empty custom `descriptors` array selecting inert source matchers and native adapter identities | Source matchers, declared kinds, adapter fidelity, deterministic priority, and an optional source-resolved invocation proof. |
 | Query | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and one supported `mode` | Lexical query, endpoints, direction, edge labels, depth, result limit, and an optional source-resolved invocation proof. |
 | Explain edge | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and non-empty `edgeId` | Optional source-resolved invocation proof. |
 
@@ -101,7 +101,9 @@ data for otherwise unregistered syntax into deterministic explained AST
 evidence. The typed client validates the grammar shape and version while
 Knowgrph remains the semantic compiler owner. The result contains no generated
 code, executable payload, private artifact path, adapter implementation, or
-implicit ingest. A later ingest must resubmit that registry with its exact
+implicit ingest. `profile: "default-source"` selects the built-in native source
+registry; it is an alternative to `descriptors`, never a download, executable
+selection, or implicit network request. A later ingest must resubmit that registry with its exact
 expected digest; drift fails closed before discovery.
 
 ## Source And Import Boundary

@@ -165,6 +165,18 @@ test("runtime-ready localhost review emits the exact future human authorization 
   );
 });
 
+test("authorization prompt accepts a redacted runtime ownership token when the reviewed identity still matches", () => {
+  const localReview = createLocalReviewCandidate(runtime, trees);
+  const candidate = createProductionReleaseCandidate(localReview, readiness);
+  const prompt = createProductionAuthorizationPrompt({
+    ...runtime,
+    ownershipTokenDigest: "[redacted]",
+  }, localReview, candidate, {
+    runRef: "run:30426035584",
+  });
+  assert.equal(prompt.candidateDigest, candidate.candidateDigest);
+});
+
 test("authorization prompt fails closed without current runtime readiness or a bound loopback review surface", () => {
   const localReview = createLocalReviewCandidate(runtime, trees);
   const candidate = createProductionReleaseCandidate(localReview, readiness);

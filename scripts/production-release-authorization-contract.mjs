@@ -115,12 +115,8 @@ export function createProductionAuthorizationPrompt(runtime, localReview, candid
   }
   validateLocalReviewCandidate(localReview);
   validateProductionReleaseCandidate(candidate);
-  const reboundLocalReview = createLocalReviewCandidate(runtime, {
-    source: localReview.source,
-    agenticCanvasOs: localReview.agenticCanvasOs,
-  });
-  if (reboundLocalReview.candidateDigest !== localReview.candidateDigest ||
-      candidate.localReviewCandidateDigest !== localReview.candidateDigest ||
+  validatePromptRuntimeIdentity(runtime, localReview);
+  if (candidate.localReviewCandidateDigest !== localReview.candidateDigest ||
       candidate.source.revision !== localReview.source.revision ||
       candidate.agenticCanvasOs.revision !== localReview.agenticCanvasOs.revision) {
     throw new Error("Production authorization prompt drifted from runtime-ready localhost review.");
@@ -249,6 +245,24 @@ function assertDigest(value, label) {
       value.algorithm !== "sha256" ||
       !SHA256_PATTERN.test(String(value.digest || ""))) {
     throw new Error(`${label} must contain an exact SHA-256 digest.`);
+  }
+}
+
+function validatePromptRuntimeIdentity(runtime, localReview) {
+  if (runtime?.status !== "runtime-ready" || runtime.ready !== true) {
+    throw new Error("Production authorization prompt requires runtime-ready localhost review.");
+  }
+  resolveLocalhostReviewUrl(runtime);
+  if (runtime.source?.repository !== localReview.source.repository ||
+      runtime.source?.revision !== localReview.source.revision ||
+      runtime.agenticCanvasOs?.repository !== localReview.agenticCanvasOs.repository ||
+      runtime.agenticCanvasOs?.revision !== localReview.agenticCanvasOs.revision ||
+      runtime.catalogRevision !== localReview.catalogRevision) {
+    throw new Error("Production authorization prompt drifted from runtime-ready localhost review.");
+  }
+  if (Object.values(runtime.probes || {}).some(status => status !== 200) ||
+      Object.keys(runtime.probes || {}).length < 3) {
+    throw new Error("Production authorization prompt requires all localhost probes to return HTTP 200.");
   }
 }
 

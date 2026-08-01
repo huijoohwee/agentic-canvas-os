@@ -183,6 +183,33 @@ The legacy lane remains untouched and retained until its adopted pull request is
 protected-merged and independently verified. Capture and adoption do not merge,
 push, deploy, clean, or grant release authority.
 
+## Already-Integrated Legacy Lane Disposition
+
+When a non-ancestor legacy task branch has only unstaged tracked changes and its
+complete committed branch write set is covered by those same paths, the bounded
+disposition adapter may detach that worktree only after every working path's mode
+and blob exactly equals fetched protected `origin/main`. It rejects staged,
+untracked, deleted, conflicting, non-file, partially covered, remote-drifted, or
+non-equivalent state. The remote task branch must still resolve to the exact
+pre-disposition HEAD, so its commits remain durable even though the worktree moves.
+
+The command writes a digest-bound external receipt in `prepared` state, rechecks
+the complete evidence and both remote refs, detaches at the exact protected tip,
+proves a clean checkout, then records `completed`. It does not delete a branch or
+worktree, close a pull request, edit a lease, merge, deploy, or grant Production
+authority. The explicit acknowledgement applies only to the exact supplied SHAs:
+
+```sh
+npm run workspace:legacy-integrated-disposition -- \
+  --source="[registered legacy worktree]" \
+  --branch="[exact task branch]" \
+  --expected-head="[exact remote task HEAD]" \
+  --protected-tip="[exact fetched origin/main]" \
+  --session="[operator session]" \
+  --receipt="[external receipt path]" \
+  --acknowledge-protected-equivalence --json
+```
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.

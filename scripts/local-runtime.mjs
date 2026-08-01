@@ -35,7 +35,7 @@ try {
             : action === "session-status"
               ? await readSessionRuntimeStatus(options)
               : await stopSessionRuntime(options);
-  if (json) console.log(JSON.stringify(result));
+  if (json) console.log(JSON.stringify(redactJsonResult(result)));
   else printHuman(result);
   if ((action === "status" || action === "turn-end") && !result.ready) process.exitCode = 1;
   if (action === "session-status" && result.status !== "session-dev") process.exitCode = 1;
@@ -46,7 +46,7 @@ try {
     ready: false,
     error: { code: "local_runtime_failed", message: error instanceof Error ? error.message : String(error) },
   };
-  if (json) console.log(JSON.stringify(result));
+  if (json) console.log(JSON.stringify(redactJsonResult(result)));
   else console.error(result.error.message);
   process.exitCode = 1;
 }
@@ -55,6 +55,24 @@ function readOption(values, name) {
   const prefix = `--${name}=`;
   const match = values.find(value => value.startsWith(prefix));
   return match ? match.slice(prefix.length).trim() : "";
+}
+
+function redactJsonResult(result) {
+  if (!result || typeof result !== "object") return result;
+  const clone = JSON.parse(JSON.stringify(result));
+  redactSensitiveFields(clone);
+  return clone;
+}
+
+function redactSensitiveFields(value) {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const entry of value) redactSensitiveFields(entry);
+    return;
+  }
+  if (typeof value.sessionId === "string" && value.sessionId) value.sessionId = "[redacted]";
+  if (typeof value.ownershipTokenDigest === "string" && value.ownershipTokenDigest) value.ownershipTokenDigest = "[redacted]";
+  for (const nested of Object.values(value)) redactSensitiveFields(nested);
 }
 
 function printHuman(result) {

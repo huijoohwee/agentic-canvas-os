@@ -106,6 +106,7 @@ export function adoptLegacyDirtyLane({
   operatorSessionId,
   lease,
   receiptPath,
+  reconciliationPaths = [],
   now = () => new Date(),
 }) {
   const recovery = verifyLegacyRecoveryPackage({ recoveryDirectory });
@@ -119,22 +120,34 @@ export function adoptLegacyDirtyLane({
   requireTargetLease({ target, operatorSessionId, lease, protectedTipSha: recovery.protectedTipSha });
   requireCleanTarget(target);
 
-  const untrackedPaths = recovery.untracked.map((entry) => entry.path);
-  for (const relativePath of untrackedPaths) {
-    if (existsSync(resolveInside(target, relativePath))) {
-      throw new Error(`Adoption target path already exists: ${relativePath}`);
+  const reconciliations = normalizeReconciliationPaths(reconciliationPaths, recovery.tracked);
+  const alreadyIntegrated = [];
+  const untrackedToRestore = [];
+  for (const entry of recovery.untracked) {
+    const targetPath = resolveInside(target, entry.path);
+    if (!existsSync(targetPath)) {
+      untrackedToRestore.push(entry);
+    } else if (recoveryEntryMatchesPath(entry, targetPath)) {
+      alreadyIntegrated.push(entry.path);
+    } else {
+      throw new Error(`Adoption target path differs from the recovery package: ${entry.path}`);
     }
   }
 
   const patchPath = path.join(recovery.recoveryDirectory, "tracked.patch");
   const hasPatch = lstatSync(patchPath).size > 0;
-  if (hasPatch) git(target, ["apply", "--check", "--3way", patchPath]);
-  if (hasPatch) git(target, ["apply", "--3way", "--index", patchPath]);
-  for (const entry of recovery.untracked) restoreEntry({ recovery: recovery.recoveryDirectory, target, entry });
+  const exclusions = reconciliations.map((relativePath) => `--exclude=${relativePath}`);
+  if (hasPatch) git(target, ["apply", "--check", "--3way", ...exclusions, patchPath]);
+  if (hasPatch) git(target, ["apply", "--3way", "--index", ...exclusions, patchPath]);
+  for (const entry of untrackedToRestore) restoreEntry({ recovery: recovery.recoveryDirectory, target, entry });
 
-  const adoptedPaths = [...recovery.tracked, ...recovery.untracked].map((entry) => entry.path).sort();
+  const adoptedPaths = [...recovery.tracked, ...recovery.untracked]
+    .map((entry) => entry.path)
+    .filter((relativePath) => !reconciliations.includes(relativePath))
+    .sort();
   const receipt = Object.freeze({
     schema: LEGACY_ADOPTION_SCHEMA,
+    status: reconciliations.length > 0 ? "reconciliation-required" : "complete",
     adoptedAt: now().toISOString(),
     operatorSessionId,
     sourceWorktree: source,
@@ -147,6 +160,8 @@ export function adoptLegacyDirtyLane({
     stateDigest: recovery.stateDigest,
     writeSetDigest: recovery.writeSetDigest,
     adoptedPaths,
+    alreadyIntegratedPaths: alreadyIntegrated.sort(),
+    reconciliationPaths: reconciliations,
   });
   const output = path.resolve(receiptPath || path.join(recovery.recoveryDirectory, "adoption-receipt.json"));
   writeFileSync(output, `${JSON.stringify(receipt, null, 2)}\n`);
@@ -223,6 +238,26 @@ function restoreEntry({ recovery, target, entry }) {
   }
 }
 
+function recoveryEntryMatchesPath(entry, targetPath) {
+  const stat = lstatSync(targetPath);
+  if (entry.kind === "symlink") {
+    return stat.isSymbolicLink() && readlinkSync(targetPath) === entry.linkTarget;
+  }
+  return entry.kind === "file" && stat.isFile() && sha256(readFileSync(targetPath)) === entry.digest;
+}
+
+function normalizeReconciliationPaths(values, trackedEntries) {
+  if (!Array.isArray(values)) throw new Error("Reconciliation paths must be an array.");
+  const normalized = [...new Set(values.map((value) => requireText(value, "Reconciliation path")))].sort();
+  if (normalized.length !== values.length) throw new Error("Reconciliation paths must be unique.");
+  const tracked = new Set(trackedEntries.map((entry) => entry.path));
+  for (const relativePath of normalized) {
+    requireSafeRelativePath(relativePath);
+    if (!tracked.has(relativePath)) throw new Error(`Reconciliation path is not a tracked legacy change: ${relativePath}`);
+  }
+  return normalized;
+}
+
 function requireRecoverySource(recovery, evidence) {
   if (evidence.branch !== recovery.sourceBranch || evidence.headSha !== recovery.sourceHeadSha ||
       evidence.stateDigest !== recovery.stateDigest || evidence.writeSetDigest !== recovery.writeSetDigest) {
@@ -232,8 +267,10 @@ function requireRecoverySource(recovery, evidence) {
 
 function requireTargetLease({ target, operatorSessionId, lease, protectedTipSha }) {
   const branch = gitText(target, ["branch", "--show-current"]).trim();
+  const headSha = gitText(target, ["rev-parse", "HEAD"]).trim();
   if (!lease || lease.status !== "active" || lease.sessionId !== operatorSessionId ||
-      lease.branch !== branch || realpathSync(lease.worktreePath) !== target || lease.baseSha !== protectedTipSha) {
+      lease.branch !== branch || realpathSync(lease.worktreePath) !== target || lease.baseSha !== protectedTipSha ||
+      lease.fenceSha !== headSha) {
     throw new Error("Adoption requires the exact active target writer lease at the captured protected tip.");
   }
 }

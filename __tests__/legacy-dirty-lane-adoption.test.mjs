@@ -60,6 +60,7 @@ test("adoption requires the exact active lease and imports the captured bytes", 
     branch: "agent/test/target-adoption",
     worktreePath: target,
     baseSha: fixture.baseSha,
+    fenceSha: git(target, ["rev-parse", "HEAD"]).trim(),
   };
 
   const receipt = adoptLegacyDirtyLane({
@@ -91,6 +92,7 @@ test("adoption blocks target collisions before applying the tracked patch", () =
     branch: "agent/test/collision-adoption",
     worktreePath: target,
     baseSha: fixture.baseSha,
+    fenceSha: git(target, ["rev-parse", "HEAD"]).trim(),
   };
   assert.throws(
     () => adoptLegacyDirtyLane({

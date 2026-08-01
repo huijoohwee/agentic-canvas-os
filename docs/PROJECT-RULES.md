@@ -126,5 +126,6 @@ that bind every session and tool.
   delivery, and parked lanes; fail closed on dirt or ambiguity; preserve task
   branches and commits unless branch deletion is separately authorized.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
-- Suggest next steps in `/GitHub/knowgrph/{todo-log.md, docs/}` and
+- Suggest next steps in `/GitHub/agentic-canvas-os/{docs/TODO.md, todo/}`,
+  `/GitHub/knowgrph/docs/`, and
   `/GitHub/huijoohwee.github.io/schema/AgenticRAG` when relevant.

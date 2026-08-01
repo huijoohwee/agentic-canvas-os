@@ -102,7 +102,7 @@ agentic_os_memory:
   planning_history:
     index: "TODO.md"
     shard_pattern: "../todo/YYYY-MM.md"
-    active_shard: "../todo/2026-07.md"
+    active_shard: "../todo/2026-08.md"
     schema: "todo-log/v1"
     scope: "cross-repository"
     guards: ["append-only", "closed-month immutability", "exact-first retrieval", "500000-byte cap", "599-line cap", "no deploy"]

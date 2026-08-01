@@ -183,6 +183,16 @@ The legacy lane remains untouched and retained until its adopted pull request is
 protected-merged and independently verified. Capture and adoption do not merge,
 push, deploy, clean, or grant release authority.
 
+For an unrelated canonical repository whose primary `main` worktree contains
+only untracked retained content, capture has a separate preservation-only profile:
+`--capture-profile=canonical-untracked-retention`. It fetches `origin/main`, then
+requires the registered primary worktree, branch `main`, exact
+`HEAD == origin/main == protected-tip`, zero tracked/index changes, zero conflicts,
+and at least one untracked path. It copies and digest-binds those paths without
+changing the source. The resulting package cannot be adopted; it is only a durable
+recovery handle for an external disjoint-lane reconciliation receipt. This profile
+does not authorize cleanup, staging, committing, branch creation, or publication.
+
 ## Already-Integrated Legacy Lane Disposition
 
 When a non-ancestor legacy task branch has only unstaged tracked changes and its

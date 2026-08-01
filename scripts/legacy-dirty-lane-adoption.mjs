@@ -21,6 +21,7 @@ try {
       recoveryDirectory: option("recovery"),
       protectedTipSha: option("protected-tip"),
       operatorSessionId: option("session"),
+      captureProfile: option("capture-profile") || "task-lane",
     });
   } else if (command === "verify") {
     result = verifyLegacyRecoveryPackage({ recoveryDirectory: option("recovery") });
@@ -71,6 +72,6 @@ function render(result) {
 
 function usage() {
   throw new Error(
-    "Usage: legacy-dirty-lane-adoption.mjs capture --source=<worktree> --recovery=<new-directory> --protected-tip=<sha> --session=<id> [--json] | verify --recovery=<directory> [--json] | adopt --source=<worktree> --recovery=<directory> --target=<leased-worktree> --session=<id> [--reconcile=<comma-separated-tracked-paths>] [--receipt=<path>] [--json]",
+    "Usage: legacy-dirty-lane-adoption.mjs capture --source=<worktree> --recovery=<new-directory> --protected-tip=<sha> --session=<id> [--capture-profile=task-lane|canonical-untracked-retention] [--json] | verify --recovery=<directory> [--json] | adopt --source=<worktree> --recovery=<directory> --target=<leased-worktree> --session=<id> [--reconcile=<comma-separated-tracked-paths>] [--receipt=<path>] [--json]",
   );
 }

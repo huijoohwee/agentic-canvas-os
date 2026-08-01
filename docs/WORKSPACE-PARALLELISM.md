@@ -159,6 +159,27 @@ Receipt verification is read-only. It does not commit, stash, reset, merge, dele
 or transfer lane contents. The owning lane still requires its own protected PR and
 integration path before any of its bytes can reach canonical `main`.
 
+## Legacy Dirty-Lane Adoption
+
+An unleased legacy lane has no normal `device:start` or `device:resume` transition.
+It must not be committed, rebased, copied, or assigned a fabricated lease. The
+repository-owned adoption controller provides a bounded two-phase recovery path:
+
+1. `capture` reads the registered legacy worktree without changing its files,
+   index, branch, refs, or objects. It records the exact source branch and HEAD,
+   protected tip, binary tracked patch, raw copies of every changed and untracked
+   path, file modes and symlink targets, and state, write-set, patch, file, and
+   package digests. A second evidence read must match before capture succeeds.
+2. `adopt` revalidates every package byte and the still-unchanged legacy source. It
+   accepts only a clean registered target whose exact active writer lease belongs
+   to the capturing session and started at the captured protected tip. It rejects
+   untracked-path collisions before running a three-way patch preflight, then
+   imports the captured bytes and emits an external adoption receipt.
+
+The legacy lane remains untouched and retained until its adopted pull request is
+protected-merged and independently verified. Capture and adoption do not merge,
+push, deploy, clean, or grant release authority.
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.
@@ -225,6 +246,9 @@ A bypassed operation still prints what it is destroying before it proceeds.
 | Audit every lane in the workspace | `npm run workspace:parallelism:check` |
 | Machine-readable audit | `npm run workspace:parallelism:check -- --json` |
 | Verify retained disjoint work for a release controller | `npm run workspace:parallelism:check -- --reconciliation-receipt "[immutable receipt path]"` |
+| Capture an unleased dirty legacy lane | `npm run workspace:legacy-adoption -- capture --source="[worktree]" --recovery="[new directory]" --protected-tip="[40-hex main SHA]" --session="[operator session]"` |
+| Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
+| Adopt into an exact active leased lane | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]"` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 

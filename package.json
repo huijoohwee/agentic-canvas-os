@@ -82,6 +82,8 @@
     "device:publish": "node ./scripts/device-branch.mjs publish",
     "device:integrate": "node ./scripts/device-branch.mjs integrate",
     "device:resume": "node ./scripts/device-branch.mjs resume",
+    "workspace:legacy-adoption": "node ./scripts/legacy-dirty-lane-adoption.mjs",
+    "workspace:legacy-adoption:test": "node --test __tests__/legacy-dirty-lane-adoption.test.mjs",
     "workspace:guards:coverage": "node ./scripts/workspace-guard-hook.mjs coverage",
     "workspace:guards:install": "node ./scripts/install-workspace-guards.mjs",
     "workspace:parallelism:check": "node ./scripts/workspace-parallelism-guard.mjs",

@@ -44,6 +44,7 @@ do not have, plus one fail-closed gate.
 | Uncommitted work is never collateral | No session may run a destructive operation while another session holds uncommitted or untracked work in the same repository. |
 | Untracked means unrecoverable | Untracked paths have no object in the store. A destructive operation over them is refused outright, with no override path in this contract. |
 | Recovery references are durable | A recovery reference is a branch, tag, or bundle. A stash is not a recovery reference. |
+| Receipt-bound release admission | A retained dirty lane can coexist with an unrelated release only when a checked reconciliation receipt binds its current state and write-set digests, owner, durable recovery handle, and `disjoint` disposition. |
 | No new manager | The guard reads existing Git state and existing owners; it does not create a second worktree registry, lease store, or repository manager. |
 
 ## Lane Model
@@ -61,6 +62,8 @@ lane:
   dirtyTrackedPaths: 0
   untrackedPaths: 0
   recoveryRef: "[refs/heads/recovery/... , refs/tags/... , bundle path, or null]"
+  stateDigest: "[sha256 of tracked patch plus untracked objects]"
+  writeSetDigest: "[sha256 of the exact changed-path set]"
 ```
 
 Lane isolation is checked as three separate properties so a failure names the exact
@@ -141,6 +144,21 @@ report:
 report is the normal signal that a session is mid-edit somewhere, and it is not a
 reason to clean anything.
 
+## Reconciliation Admission
+
+The normal audit remains fail-closed. A release controller may supply an external,
+immutable `agentic-workspace-reconciliation-receipt/v1` only to prove that every
+currently dirty lane is retained or parked outside the candidate's write scope.
+Each receipt item names the lane key, session, current `stateDigest`,
+`writeSetDigest`, `disjoint` overlap class, `retained` or `parked` disposition, and
+a non-empty durable recovery handle. The receipt also binds the workspace root and
+an exact protected-tip SHA. Any missing item, changed byte digest, duplicate item,
+empty recovery handle, or overlapping classification fails admission.
+
+Receipt verification is read-only. It does not commit, stash, reset, merge, delete,
+or transfer lane contents. The owning lane still requires its own protected PR and
+integration path before any of its bytes can reach canonical `main`.
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.
@@ -206,6 +224,7 @@ A bypassed operation still prints what it is destroying before it proceeds.
 |---|---|
 | Audit every lane in the workspace | `npm run workspace:parallelism:check` |
 | Machine-readable audit | `npm run workspace:parallelism:check -- --json` |
+| Verify retained disjoint work for a release controller | `npm run workspace:parallelism:check -- --reconciliation-receipt "[immutable receipt path]"` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 

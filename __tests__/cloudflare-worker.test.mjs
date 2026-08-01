@@ -199,8 +199,13 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentSwarm.providerExecutionStatus, "unverified");
   assert.equal(body.agentToolkit.contractReady, true);
   assert.equal(body.agentToolkit.configured, true);
+  assert.equal(body.agentToolkit.revisionAuthorizerConfigured, false);
   assert.equal(body.agentToolkit.instrumentation, "server-timed-metadata-only");
-  assert.equal(body.agentToolkit.learning, "review-pending-proposal-only");
+  assert.equal(body.agentToolkit.learning, "review-pending-proposal-only-never-auto-apply");
+  assert.equal(body.agentToolkit.optimization, "deterministic-quality-latency-cost-recommendation");
+  assert.equal(body.agentToolkit.admission.configured, true);
+  assert.equal(body.agentToolkit.observability.configured, false);
+  assert.equal(body.agentToolkit.productionReady, false);
   assert.equal(body.agentToolkit.defaultEgress, false);
   assert.equal(body.agentToolkit.externalRuntimeDependency, false);
   assert.equal(body.agentToolkit.measuredImprovementStatus, "unverified");
@@ -386,6 +391,12 @@ test("Agent Toolkit handlers preserve outcome semantics and mark HTTP telemetry 
     [{ status: "blocked", reasonCode: "evaluator_unconfigured" }, 501],
     [{ status: "blocked", reasonCode: "runtime_unconfigured" }, 501],
     [{ status: "blocked", reasonCode: "cohort_unavailable" }, 503],
+    [{ status: "blocked", reasonCode: "admission_busy" }, 503],
+    [{ status: "blocked", reasonCode: "rate_limited" }, 429],
+    [{ status: "blocked", reasonCode: "run_quota_exceeded" }, 429],
+    [{ status: "blocked", reasonCode: "cohort_quota_exceeded" }, 429],
+    [{ status: "blocked", reasonCode: "principal_quota_exceeded" }, 429],
+    [{ status: "blocked", reasonCode: "admission_required" }, 429],
     [{ status: "insufficient-evidence", reasonCode: "trusted_sample_count" }, 200],
     [{ status: "review_pending" }, 202],
   ];
@@ -429,6 +440,14 @@ test("Agent Toolkit Worker accepts an authenticated metadata-only lifecycle", as
   const completeBody = await json(completed);
   assert.equal(completeBody.status, "completed");
   assert.equal(completeBody.completion.cost.status, "unreported");
+
+  const profiled = await handleCloudflareRequest(request("/api/agent-toolkit/profile", {
+    method: "POST",
+    headers,
+    body: { runId },
+  }), ENV);
+  assert.equal(profiled.status, 200);
+  assert.equal((await json(profiled)).schema, "agent-toolkit-profile/v1");
 
   const terminal = await handleCloudflareRequest(request("/api/agent-toolkit/status", {
     method: "POST",

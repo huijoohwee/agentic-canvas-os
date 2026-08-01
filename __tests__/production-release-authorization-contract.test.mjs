@@ -156,6 +156,8 @@ test("runtime-ready localhost review emits the exact future human authorization 
       "localhost: `http://127.0.0.1:5173/`",
       `Local formatter source: \`${PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH}\``,
       "",
+      "Template: `agentic-canvas-os/scripts/production-release-authorization-contract.mjs`",
+      "",
       "Reply exactly:",
       "",
       `\`authorize ${candidate.candidateDigest}\``,

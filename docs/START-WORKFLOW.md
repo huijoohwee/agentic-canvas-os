@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-07-26"
+date: "2026-07-27"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -401,15 +401,21 @@ Use pull only when all conditions are true:
 
 ## Mandatory Completion Protocol
 
-Completion and parking are mutually exclusive states. Dirty, stashed,
-branch-only, pushed, open-pull-request, or auto-merge-pending work is not
-complete.
+Completion and parking are mutually exclusive states. Dirty, stashed, branch-only, pushed, open-pull-request, or auto-merge-pending work is not complete.
 
 Managed implementation runs normally stop before completion through `npm run device:review`. That command checks and pushes the fenced branch, preserves authored PR context, records the exact reviewed head, marks the PR ready without an automerge label or merge call by default, and independently proves `isDraft: false`. Knowgrph projects this ACOS `review_ready` lease as managed-run state `delivery_ready`; neither status is task completion. Requested changes must use fenced resume, which restores and proves draft ownership before mutation. `device:publish` remains the explicit protected auto-merge path.
 
 An operator or durable work-item policy may pre-authorize one terminal-turn protected merge only at `device:start` with `--auto-delivery`. The resulting immutable lease carries `autoDelivery: true` and `runtimeRequired: true`.
 
-Terminal-turn auto-delivery is an implementation-run completion policy, not an unconditional conversational-turn hook. It is eligible only after the requested implementation is genuinely complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. Ending a message, chat, session, or thread is not sufficient. Questions, status reports, read-only work, waits, partial progress, dirty or parked work, and blocked outcomes do not apply the wake label, enable auto-merge, or claim delivery.
+### Terminal Delivery Authorization Recommendation
+
+Recommend `device:start --auto-delivery` only when the task request explicitly includes protected merge plus downstream promotion or canonical runtime refresh as the intended terminal outcome. Use ordinary `device:start` for implementation-only review handoff, and never authorize auto-delivery for exploratory, diagnostic, status, wait, or read-only work.
+
+The choice is immutable for the lease. Do not infer merge or promotion authority from words such as `finish`, from the end of a response, or from an ordinary implementation request. If the operator later requests delivery of an already-started or review-ready task, use the explicit protected `device:publish` or `device:integrate` path instead of retrofitting `autoDelivery`.
+
+For a task whose immutable lease already carries `autoDelivery: true` and `runtimeRequired: true`, recommend its terminal implementation-turn ending as the delivery checkpoint: run `device:review`, wake the protected controller for the exact reviewed head, wait for protected merge, and continue through canonical runtime reconciliation instead of stopping at `review_ready`. The turn ending consumes prior operator authority; it does not create new authority.
+
+Terminal-turn auto-delivery remains an implementation-run completion policy, not a conversational-turn hook. It applies only after the requested work is complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. An ordinary end of message, chat, session, or thread is insufficient, and questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
 
 At terminal review, ACOS writes the exact `reviewHeadSha` before applying the `agentic/auto-delivery` wake label. The repository-owned `pull_request_target` controller accepts only a same-repository, non-draft PR at that exact SHA with the matching `review_ready` lease; it enables GitHub protected auto-merge and never pushes, rebases, resolves conflicts, bypasses required checks, or deploys. A head change, malformed marker, fork, or conflict label is ineligible and requires a fresh fenced review handoff. Protected merge is not completion: the authorized local `device:integrate` continuation may consume that reviewed lease after `MERGED`, but it requires canonical runtime reconciliation and rejects `--runtime=none`. Only its `agentic-device-integration-result/v1` result with status `runtime_ready` proves completion.
 
@@ -435,16 +441,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:stop -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
 ```
 
-This is the reference adapter for the neutral Runtime Review Receipt, not
-Production authorization or deployment. Task worktrees never become runtime
-sources. `turn:end` persists an `agentic-local-review-candidate/v1` receipt that
-joins the protected Integration Receipt and binds canonical Knowgrph and Agentic
-Canvas OS commits, trees, dependency closure, policy, live probes, and protected
-checks. Candidate preparation may be dispatched idempotently from that joined
-receipt, but no local command, terminal turn, merge event, user, device, or
-agent may synthesize the Human Authorization Receipt. A read-only follow-up
-reruns `runtime:local:status` before claiming readiness; an implementation turn
-reruns `turn:end` idempotently.
+This is the reference adapter for the neutral Runtime Review Receipt, not Production authorization or deployment. Task worktrees never become runtime sources. `turn:end` persists an `agentic-local-review-candidate/v1` receipt that joins the protected Integration Receipt and binds canonical Knowgrph and Agentic Canvas OS commits, trees, dependency closure, policy, live probes, and protected checks. Candidate preparation may be dispatched idempotently from that joined receipt, but no local command, terminal turn, merge event, user, device, or agent may synthesize the Human Authorization Receipt. A read-only follow-up reruns `runtime:local:status` before claiming readiness; an implementation turn reruns `turn:end` idempotently.
 
 For a completed task, use the explicit integration command from the leased task
 worktree. It validates and commits only an exact approved dirty-path set,

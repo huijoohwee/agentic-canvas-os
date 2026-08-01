@@ -18,12 +18,15 @@ import { textCommandOptions } from "./command-text-options.mjs";
 
 export const LEGACY_RECOVERY_SCHEMA = "agentic-legacy-dirty-lane-recovery/v1";
 export const LEGACY_ADOPTION_SCHEMA = "agentic-legacy-dirty-lane-adoption/v1";
+export const LEGACY_TASK_LANE_CAPTURE_PROFILE = "task-lane";
+export const CANONICAL_UNTRACKED_RETENTION_CAPTURE_PROFILE = "canonical-untracked-retention";
 
 export function captureLegacyDirtyLane({
   sourceWorktree,
   recoveryDirectory,
   protectedTipSha,
   operatorSessionId,
+  captureProfile = LEGACY_TASK_LANE_CAPTURE_PROFILE,
   now = () => new Date(),
 }) {
   const source = requireWorktree(sourceWorktree);
@@ -32,13 +35,22 @@ export function captureLegacyDirtyLane({
   requireSha(protectedTipSha, "Protected tip SHA");
   requireText(operatorSessionId, "Operator session id");
   requireCommit(source, protectedTipSha);
+  requireCaptureProfile(captureProfile);
+  if (captureProfile === CANONICAL_UNTRACKED_RETENTION_CAPTURE_PROFILE) {
+    requirePrimaryCanonicalWorktree(source);
+    git(source, ["fetch", "--no-tags", "origin", "main"]);
+  }
 
   const before = captureSourceEvidence(source);
   if (before.trackedPaths.length === 0 && before.untrackedPaths.length === 0) {
     throw new Error("Legacy capture requires a dirty source worktree.");
   }
-  requireAgentBranch(before.branch);
-  git(source, ["merge-base", "--is-ancestor", before.headSha, protectedTipSha]);
+  if (captureProfile === LEGACY_TASK_LANE_CAPTURE_PROFILE) {
+    requireAgentBranch(before.branch);
+    git(source, ["merge-base", "--is-ancestor", before.headSha, protectedTipSha]);
+  } else {
+    requireCanonicalUntrackedRetention({ source, evidence: before, protectedTipSha });
+  }
 
   mkdirSync(path.join(recovery, "files"), { recursive: true });
   const patchBytes = gitBuffer(source, ["diff", "--no-ext-diff", "--binary", "HEAD"]);
@@ -54,6 +66,7 @@ export function captureLegacyDirtyLane({
 
   const core = Object.freeze({
     schema: LEGACY_RECOVERY_SCHEMA,
+    captureProfile,
     sourceWorktree: source,
     sourceBranch: before.branch,
     sourceHeadSha: before.headSha,
@@ -110,6 +123,9 @@ export function adoptLegacyDirtyLane({
   now = () => new Date(),
 }) {
   const recovery = verifyLegacyRecoveryPackage({ recoveryDirectory });
+  if (recovery.captureProfile === CANONICAL_UNTRACKED_RETENTION_CAPTURE_PROFILE) {
+    throw new Error("Canonical untracked retention packages are preservation-only and cannot be adopted.");
+  }
   const source = requireWorktree(sourceWorktree);
   const target = requireWorktree(targetWorktree);
   if (source !== path.resolve(recovery.sourceWorktree)) throw new Error("Recovery source worktree identity changed.");
@@ -303,6 +319,37 @@ function requireCommit(worktree, sha) {
 function requireAgentBranch(branch) {
   if (!/^agent\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(branch)) {
     throw new Error("Legacy source must use the canonical agent/device/scope branch form.");
+  }
+}
+
+function requireCaptureProfile(profile) {
+  if (![LEGACY_TASK_LANE_CAPTURE_PROFILE, CANONICAL_UNTRACKED_RETENTION_CAPTURE_PROFILE].includes(profile)) {
+    throw new Error(`Unsupported legacy capture profile: ${profile}`);
+  }
+}
+
+function requirePrimaryCanonicalWorktree(source) {
+  const gitDirectory = realpathSync(path.resolve(source, gitText(source, ["rev-parse", "--git-dir"]).trim()));
+  const commonDirectory = realpathSync(path.resolve(source, gitText(source, ["rev-parse", "--git-common-dir"]).trim()));
+  if (gitDirectory !== commonDirectory) {
+    throw new Error("Canonical untracked retention requires the primary registered worktree.");
+  }
+}
+
+function requireCanonicalUntrackedRetention({ source, evidence, protectedTipSha }) {
+  if (evidence.branch !== "main") throw new Error("Canonical untracked retention requires branch main.");
+  if (evidence.headSha !== protectedTipSha) {
+    throw new Error("Canonical untracked retention requires HEAD at the exact protected tip.");
+  }
+  const originMain = gitText(source, ["rev-parse", "origin/main"]).trim();
+  if (originMain !== protectedTipSha) {
+    throw new Error("Canonical untracked retention requires fetched origin/main at the exact protected tip.");
+  }
+  if (evidence.trackedPaths.length > 0) {
+    throw new Error("Canonical untracked retention rejects tracked or staged changes.");
+  }
+  if (evidence.untrackedPaths.length === 0) {
+    throw new Error("Canonical untracked retention requires at least one untracked path.");
   }
 }
 

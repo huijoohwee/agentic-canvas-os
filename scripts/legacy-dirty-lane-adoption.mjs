@@ -35,6 +35,7 @@ try {
       targetWorktree: target,
       operatorSessionId: option("session"),
       receiptPath: option("receipt"),
+      reconciliationPaths: listOption("reconcile"),
       lease,
     });
   } else {
@@ -56,15 +57,20 @@ function gitText(worktree, gitArgs) {
   return execFileSync("git", gitArgs, { cwd: worktree, encoding: "utf8" });
 }
 
+function listOption(name) {
+  const value = option(name);
+  return value ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
+}
+
 function render(result) {
   if (result.schema === "agentic-legacy-dirty-lane-adoption/v1") {
-    return `[legacy-adoption] adopted ${result.adoptedPaths.length} paths into ${result.targetBranch}; receipt ${result.receiptPath}`;
+    return `[legacy-adoption] ${result.status} after adopting ${result.adoptedPaths.length} paths into ${result.targetBranch}; receipt ${result.receiptPath}`;
   }
   return `[legacy-adoption] captured ${result.tracked.length} tracked and ${result.untracked.length} untracked paths; package ${result.packageDigest}`;
 }
 
 function usage() {
   throw new Error(
-    "Usage: legacy-dirty-lane-adoption.mjs capture --source=<worktree> --recovery=<new-directory> --protected-tip=<sha> --session=<id> [--json] | verify --recovery=<directory> [--json] | adopt --source=<worktree> --recovery=<directory> --target=<leased-worktree> --session=<id> [--receipt=<path>] [--json]",
+    "Usage: legacy-dirty-lane-adoption.mjs capture --source=<worktree> --recovery=<new-directory> --protected-tip=<sha> --session=<id> [--json] | verify --recovery=<directory> [--json] | adopt --source=<worktree> --recovery=<directory> --target=<leased-worktree> --session=<id> [--reconcile=<comma-separated-tracked-paths>] [--receipt=<path>] [--json]",
   );
 }

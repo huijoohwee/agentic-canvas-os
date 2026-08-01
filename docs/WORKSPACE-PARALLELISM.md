@@ -173,8 +173,11 @@ repository-owned adoption controller provides a bounded two-phase recovery path:
 2. `adopt` revalidates every package byte and the still-unchanged legacy source. It
    accepts only a clean registered target whose exact active writer lease belongs
    to the capturing session and started at the captured protected tip. It rejects
-   untracked-path collisions before running a three-way patch preflight, then
-   imports the captured bytes and emits an external adoption receipt.
+   divergent untracked-path collisions while recording byte-identical upstream
+   paths as already integrated. A caller may declare exact tracked paths for
+   bounded semantic reconciliation; the controller excludes only those paths,
+   three-way applies the remainder, and emits `reconciliation-required` rather
+   than claiming complete adoption.
 
 The legacy lane remains untouched and retained until its adopted pull request is
 protected-merged and independently verified. Capture and adoption do not merge,
@@ -248,7 +251,7 @@ A bypassed operation still prints what it is destroying before it proceeds.
 | Verify retained disjoint work for a release controller | `npm run workspace:parallelism:check -- --reconciliation-receipt "[immutable receipt path]"` |
 | Capture an unleased dirty legacy lane | `npm run workspace:legacy-adoption -- capture --source="[worktree]" --recovery="[new directory]" --protected-tip="[40-hex main SHA]" --session="[operator session]"` |
 | Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
-| Adopt into an exact active leased lane | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]"` |
+| Adopt into an exact active leased lane | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 

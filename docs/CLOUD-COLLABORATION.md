@@ -143,9 +143,11 @@ transition. Manual status and verification run with `contents: read` and
 Neither manual lane receives pull-request write, checks write, Actions write,
 issues write, `id-token`, packages, or deployment permission.
 
-Default-branch pushes run a read-only audit named `cloud-collaboration`.
-`pull_request_target` runs a separate trusted controller for the selected event
-types. That controller checks out only the default branch, invokes
+Default-branch pushes run a trusted `cloud-collaboration` audit that may retire
+the exact merged `review-ready` claim for the pushed protected head while still
+avoiding pull-request, checks, Actions, `id-token`, package, or deployment
+write. `pull_request_target` runs a separate trusted controller for the
+selected event types. That controller checks out only the default branch, invokes
 `verify-event` with the GitHub-owned `GITHUB_EVENT_PATH`, and receives
 `checks: write` solely to create and complete one `cloud-collaboration` Check
 Run on the event's exact same-repository pull-request head SHA. It first creates

@@ -19,8 +19,13 @@ if ! printf '%s\n' "$worktrees" | grep -F -x -- "$root" >/dev/null; then
 fi
 
 branch="$(git branch --show-current)"
+writer_lease_guard="$root/scripts/writer-lease-guard.mjs"
 case "$branch" in
-  agent/*) node "$root/scripts/writer-lease-guard.mjs" ;;
+  agent/*)
+    if [ -f "$writer_lease_guard" ]; then
+      node "$writer_lease_guard"
+    fi
+    ;;
 esac
 
 # Prove workspace lane isolation before the commit is recorded. Committing is never

@@ -94,14 +94,6 @@ peer waits for an exact pushed-SHA handoff; a release or review wait does not
 transfer ownership from an older fence to a newer protected `origin/main`
 revision.
 
-When release preparation or authorization is in progress, the canonical
-registered `main` worktree becomes the release-owner checkout for that attempt.
-It must remain attached to the exact fetched protected `main` revision used to
-seal the candidate until the run reaches a terminal state or is explicitly
-retired as stale. Do not switch that checkout onto a task branch, repurpose it
-for unrelated work, or let automation rewrite its local ref between prompt
-preparation and authorization consumption.
-
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 
 New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` for runtime/parity, but an unrelated scope may activate from a clean detached fetched ref after recording the dirty state as retained overlap; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.
@@ -303,9 +295,18 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:heartbeat -- \
   --session="$AGENTIC_SESSION_ID" --repository="$TASK_WORKTREE"
 ```
 
-Heartbeat renews cloud authority before the local lease, re-verifies the live claim after local renewal, returns the joined mutation-authority receipt with `--json`, then independently proves the exact ownership PR remains draft. Cloud, PR, or identity failure blocks source mutation; cloud or pre-local authority failure leaves local expiry unchanged, while a post-local or PR-projection failure preserves the already renewed local evidence for explicit recovery without granting another edit batch.
+Heartbeat renews cloud authority before the local lease, re-verifies the live
+claim after local renewal, returns the joined mutation-authority receipt with
+`--json`, then independently proves the exact ownership PR remains draft.
+Cloud, PR, or identity failure blocks source mutation; cloud or pre-local
+authority failure leaves local expiry unchanged, while a post-local or
+PR-projection failure preserves the already renewed local evidence for explicit
+recovery without granting another edit batch.
 
-If GitHub's pull-request projection remains at a strict ancestor after the active branch and remote fence agree, run the same heartbeat command with `--repair-pr-projection`; it binds owned dirt and both PR identities, while review and publish independently require the exact pushed head.
+If GitHub's pull-request projection remains at a strict ancestor after the
+active branch and remote fence agree, run the same heartbeat command with
+`--repair-pr-projection`; it binds owned dirt and both PR identities, while
+review and publish independently require the exact pushed head.
 
 If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree through ordinary start or resume, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session; the explicit same-session owned-dirt recovery below is the only dirty review-ready exception.
 
@@ -317,7 +318,8 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
   --repository="$TASK_WORKTREE"
 ```
 
-Use `--recover-owned-dirt` only for the explicit same-session review-ready recovery above. Ordinary resume remains clean-only.
+Use `--recover-owned-dirt` only for the explicit same-session review-ready
+recovery above. Ordinary resume remains clean-only.
 
 ### 6. Verify
 

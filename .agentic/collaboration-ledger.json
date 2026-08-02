@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 139,
-  "headDigest": "04e8ff3cbd066bb0d74888ff4761c0e4a7c98808a2b6345a1ef5cd484ab88863",
+  "sequence": 140,
+  "headDigest": "06b40b7107eb4ab787b419e3a28cf334c7c4c489a57eba7bd6a8f5e031a807be",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -6330,6 +6330,48 @@
       },
       "claimDigest": "ccae8642578161461bf49548b3ffbeecc14cea9be133c4de933ef422daeff7fe",
       "digest": "04e8ff3cbd066bb0d74888ff4761c0e4a7c98808a2b6345a1ef5cd484ab88863"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 140,
+      "parentDigest": "04e8ff3cbd066bb0d74888ff4761c0e4a7c98808a2b6345a1ef5cd484ab88863",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f3512afdaa6a8e5633951e112683fb1d3057c6fe55aa01ac17ceed2493411834",
+      "idempotencyKey": "6706c0e1a17caa1c3b90e59a7db137e49bc97160b95053b4292e0e61c9f427b5",
+      "requestDigest": "6c459a21deab38dfb17fbc9251270c57aa7f775ae7c17bc6b27babd0c56c8e0b",
+      "evaluationTime": "2026-08-02T05:40:28.000Z",
+      "claimCore": {
+        "claimId": "f3512afdaa6a8e5633951e112683fb1d3057c6fe55aa01ac17ceed2493411834",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c7d453d0b92d1e22f74b70fc429bd564083803111cb046d7c464d97ffb102153",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d54c40e7400f28634b0841070eb0eb516c613a53a9a8dffbed7d7afe4afbe7d3",
+        "canonicalBaseRevision": "ef9c0472aafde86ab0f2435a999f23f5daaef170",
+        "declaredWriteScope": [
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/PROMPT-PRESETS.md",
+          "semantic:release-doc-lane-port"
+        ],
+        "writeSetDigest": "71e390626b666a1f28bf8c62daa30481693645f150ece24057c794822cbb61cd",
+        "laneRevision": "ababd4be98ca716fe6ba0994f93df3765926a97c",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-02T06:10:28.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "afaefed5735db5f0d3f2c1be48bfc52fa1878274271bae698975a7f396b7bdd3",
+      "digest": "06b40b7107eb4ab787b419e3a28cf334c7c4c489a57eba7bd6a8f5e031a807be"
     }
   ]
 }

@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-
 import { heartbeat, park, resume, review } from "../scripts/device-branch-lib.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
+import { reconcileCloudAuthorityProjection } from "../scripts/scoped-lane-cloud-reconciliation.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
-
-const repo = process.cwd();
-const branch = "agent/device/managed-run";
-const pullRequestUrl = "https://github.test/org/repo/pull/42";
-const headSha = "c".repeat(40);
+const repo = process.cwd(), branch = "agent/device/managed-run";
+const pullRequestUrl = "https://github.test/org/repo/pull/42", headSha = "c".repeat(40);
 const lease = {
   schema: "agentic-writer-lease/v2",
   status: "active",
@@ -24,7 +24,6 @@ const lease = {
   heartbeatAt: "2026-07-22T00:01:00.000Z",
   expiresAt: "2026-07-22T00:31:00.000Z",
 };
-
 function gitText(args) {
   const values = {
     "worktree list --porcelain -z": `worktree ${repo}\0HEAD ${headSha}\0branch refs/heads/${branch}\0`,
@@ -320,14 +319,281 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
   assert.equal(parkCalls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"), false);
 });
 
+test("cloud-admitted review verifies around check and transitions the pushed head before local release", () => {
+  const events = [];
+  const initial = cloudLease();
+  let reconciliations = 0;
+  const outcome = runCloudReview({
+    initial,
+    events,
+    reconcileCloudAuthority: ({ authority }) => {
+      events.push(`cloud:active:${++reconciliations}`);
+      const recovered = reconciliations === 2
+        ? { ...authority, laneRevision: headSha, transitionCounter: 3,
+          claimDigest: "f".repeat(64), claimLedgerRevision: "0".repeat(64) }
+        : authority;
+      return { authority: recovered, verification: operationVerification(recovered) };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha: pushedHead, pullRequestNumber }) => {
+      events.push(`cloud:transition-and-reverify:${pushedHead}`);
+      assert.equal(pushedHead, headSha);
+      assert.equal(pullRequestNumber, 42);
+      return {
+        authority: {
+          ...authority,
+          state: "review_ready",
+          laneRevision: pushedHead,
+          focusedEvidenceDigest: "9".repeat(64),
+        },
+      };
+    },
+    verifyReviewReadyCloudAuthority: () => {
+      throw new Error("new transition must own its review-ready verification");
+    },
+  });
+
+  assert.equal(reconciliations, 2);
+  assert.ok(events.indexOf("cloud:active:1") < events.indexOf("run:npm run check"));
+  assert.ok(events.indexOf("run:npm run check") < events.indexOf("cloud:active:2"));
+  assert.ok(events.indexOf("cloud:active:2") < events.indexOf(`run:git push --set-upstream origin ${branch}`));
+  const transitioned = `cloud:transition-and-reverify:${headSha}`;
+  assert.ok(events.indexOf(`run:git push --set-upstream origin ${branch}`) < events.indexOf(transitioned));
+  assert.ok(events.indexOf(transitioned) < events.indexOf("lease:release:review_ready"));
+  assert.equal(outcome.saved.cloudAuthority.state, "review_ready");
+  assert.equal(outcome.saved.cloudAuthority.laneRevision, headSha);
+});
+
+test("cloud transition crash reconciles the exact pushed review-ready head before local release", () => {
+  const events = [];
+  const initial = cloudLease();
+  let readyVerifications = 0;
+  runCloudReview({
+    initial,
+    events,
+    reconcileCloudAuthority: () => {
+      const authority = cloudLease({
+        state: "review_ready",
+        laneRevision: headSha,
+      }).cloudAuthority;
+      events.push(`cloud:ready:${++readyVerifications}:${headSha}`);
+      return { authority };
+    },
+    reviewReadyCloudAuthority: () => {
+      throw new Error("review-ready retry must not transition twice");
+    },
+    verifyReviewReadyCloudAuthority: ({ authority, headSha: verifiedHead }) => {
+      events.push(`cloud:ready:${++readyVerifications}:${verifiedHead}`);
+      assert.equal(verifiedHead, headSha);
+      return { authority };
+    },
+  });
+
+  const push = `run:git push --set-upstream origin ${branch}`;
+  const finalVerification = `cloud:ready:3:${headSha}`;
+  assert.equal(readyVerifications, 3);
+  assert.ok(events.indexOf(`cloud:ready:2:${headSha}`) < events.indexOf(push));
+  assert.ok(events.indexOf(push) < events.indexOf(finalVerification));
+  assert.ok(events.indexOf(finalVerification) < events.indexOf("lease:release:review_ready"));
+});
+
+test("cloud-backed resume fails closed before any mutation", () => {
+  const mutations = [];
+  assert.throws(() => resume({
+    branchName: branch,
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "",
+    ghText: () => { mutations.push("gh"); return "[]"; },
+    leaseStore: {
+      read: () => cloudLease({ state: "review_ready", laneRevision: headSha }),
+      claim: () => mutations.push("claim"),
+      annotate: () => mutations.push("annotate"),
+    },
+    sessionId: "session-b",
+    leaseTtlMs: 1_800_000,
+    run: (...args) => mutations.push(args),
+    log: () => {},
+  }), /cloud handoff\/reclaim protocol/);
+  assert.deepEqual(mutations, []);
+});
+
+test("cloud-backed park fails closed before local mutation", () => {
+  const mutations = [];
+  assert.throws(() => park({
+    invocationPath: repo, repo, gitText, gitOptional: () => "",
+    ghText: () => { mutations.push("gh"); return ""; },
+    leaseStore: { read: () => cloudLease() }, sessionId: "session-a", log: () => {},
+    run: (...args) => mutations.push(args),
+  }), /cloud handoff\/reclaim protocol/);
+  assert.deepEqual(mutations, []);
+});
+
+test("cloud heartbeat returns a post-local verification receipt", () => {
+  let saved = cloudLease();
+  let verifications = 0;
+  const result = heartbeat({
+    invocationPath: repo, repo, gitText,
+    gitOptional: () => `${saved.fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson({
+      body: renderWriterLeasePullRequestBody(saved), isDraft: true,
+    }),
+    leaseStore: { verify: () => saved, heartbeat: () => saved,
+      annotate: ({ values }) => (saved = { ...saved, ...values }) },
+    sessionId: "session-a", leaseTtlMs: 1_800_000,
+    heartbeatCloudAuthority: () => ({ authority: saved.cloudAuthority,
+      verification: operationVerification(saved.cloudAuthority) }),
+    verifyActiveCloudAuthority: ({ authority }) => {
+      verifications += 1;
+      return { authority, verification: operationVerification(authority) };
+    },
+    run: () => {}, log: () => {},
+  });
+  assert.equal(verifications, 1);
+  assert.equal(result.mutationAuthorityReceipt.status, "ready");
+});
+
+test("cloud reconciliation accepts only an exact advanced review-ready claim", () => {
+  const initial = cloudLease();
+  const ready = { ...initial.cloudAuthority, state: "review_ready", laneRevision: headSha,
+    transitionCounter: 3, claimDigest: "f".repeat(64),
+    claimLedgerRevision: "0".repeat(64), ledgerRevision: "e".repeat(40) };
+  const result = reconcileCloudAuthorityProjection({
+    authority: initial.cloudAuthority, manifest: initial.admission,
+    branch, headSha, pullRequestNumber: 42,
+    statusResult: { schema: "agentic-cloud-collaboration-result/v1", ok: true,
+      action: "status", status: "ready", ledgerRevision: ready.ledgerRevision,
+      ledgerDigest: "1".repeat(64),
+      claims: [{ ...operationClaim(ready), heartbeatCounter: 0 }] },
+    now: new Date("2026-07-22T00:03:00.000Z"),
+  });
+  assert.equal(result.authority.state, "review_ready");
+  assert.equal(result.authority.laneRevision, headSha);
+});
+
+function cloudLease({ state = "active", laneRevision = lease.fenceSha } = {}) {
+  const declaredWriteSet = ["path:scripts/device-branch-lib.mjs", "semantic:managed-run"];
+  const writeSetDigest = digestValue(declaredWriteSet);
+  const claimId = digestValue({
+    actorId: "github-user:1", canonicalBaseRevision: lease.baseSha,
+    deviceId: pseudonymousIdentifier("device", lease.device),
+    leaseEpoch: 1, repositoryId: "github-repository:1",
+    sessionId: pseudonymousIdentifier("session", lease.sessionId),
+    workItemId: "work-item:1", writeSetDigest,
+  });
+  return {
+    ...lease,
+    admission: {
+      schema: "agentic-lane-admission-lease/v1", status: "admitted",
+      semanticScope: "managed-run", declaredWriteSet, writeSetDigest,
+      manifestDigest: "5".repeat(64),
+      planReceiptDigest: "6".repeat(64),
+      admissionReceiptDigest: "7".repeat(64),
+      existingLaneStateDigest: "8".repeat(64),
+      admittedReportDigest: "9".repeat(64),
+      preservationReceiptDigest: "a".repeat(64),
+    },
+    cloudAuthority: {
+      schema: "agentic-lane-cloud-authority/v1", provider: "github",
+      ledgerRepository: "org/ledger", targetRepository: "org/repo", claimId,
+      claimDigest: "2".repeat(64),
+      ledgerRevision: "d".repeat(40),
+      claimLedgerRevision: "3".repeat(64),
+      canonicalBaseSha: lease.baseSha, laneRevision,
+      cloudDeclaredWriteScope: declaredWriteSet, writeSetDigest,
+      deviceId: lease.device, sessionId: lease.sessionId, reviewRequestId: "42",
+      leaseEpoch: 1, transitionCounter: 2, state,
+      expiresAt: "2026-07-22T01:00:00.000Z",
+      ...(state === "review_ready" ? { focusedEvidenceDigest: "9".repeat(64) } : {}),
+    },
+  };
+}
+
+function operationVerification(authority) {
+  const ledgerDigest = "b".repeat(64);
+  const inventoryDigest = "c".repeat(64);
+  return markOperationDerivedCloudVerification({
+    schema: "agentic-lane-cloud-verification/v1", status: "ready",
+    claimId: authority.claimId, claimDigest: authority.claimDigest,
+    ledgerRevision: authority.ledgerRevision, ledgerDigest,
+    canonicalBaseSha: authority.canonicalBaseSha, laneRevision: authority.laneRevision,
+    writeSetDigest: authority.writeSetDigest, reviewRequestId: authority.reviewRequestId,
+    remoteClaimInventoryDigest: inventoryDigest,
+    inventory: {
+      schema: "agentic-cloud-claim-inventory/v1",
+      inventoryDigest,
+      observedLedgerHeadRevision: authority.ledgerRevision,
+      ledgerDigest,
+      claims: [operationClaim(authority)],
+    },
+    receiptDigest: "e".repeat(64),
+    verifiedAt: "2026-07-22T00:02:00.000Z",
+  });
+}
+
+function operationClaim(authority) {
+  return {
+    claimId: authority.claimId, state: authority.state, actorId: "github-user:1",
+    repositoryId: "github-repository:1", workItemId: "work-item:1",
+    canonicalBaseRevision: authority.canonicalBaseSha, laneRevision: authority.laneRevision,
+    declaredWriteScope: authority.cloudDeclaredWriteScope, writeSetDigest: authority.writeSetDigest,
+    leaseEpoch: authority.leaseEpoch, transitionCounter: authority.transitionCounter,
+    reviewRequestId: authority.reviewRequestId, expiresAt: authority.expiresAt,
+    fenceRevision: authority.claimDigest, transitionDigest: authority.claimLedgerRevision,
+  };
+}
+
+function runCloudReview({
+  initial, events, reconcileCloudAuthority,
+  reviewReadyCloudAuthority, verifyReviewReadyCloudAuthority,
+}) {
+  let saved = initial;
+  let isDraft = true;
+  let remoteHead = initial.fenceSha;
+  let remoteBody = renderWriterLeasePullRequestBody(initial);
+  review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: () => "",
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
+      : pullRequestJson({ body: remoteBody, isDraft, headRefOid: remoteHead }),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: () => saved,
+      verify: () => saved,
+      annotate: ({ values }) => {
+        events.push(`lease:annotate:${values.cloudAuthority?.state || "local"}`);
+        saved = { ...saved, ...values };
+        return saved;
+      },
+      release: ({ status }) => {
+        events.push(`lease:release:${status}`);
+        saved = { ...saved, status };
+        return saved;
+      },
+    },
+    sessionId: "session-a",
+    reconcileCloudAuthority,
+    reviewReadyCloudAuthority,
+    verifyReviewReadyCloudAuthority,
+    run: (command, args) => {
+      events.push(`run:${[command, ...args].join(" ")}`);
+      if (command === "git" && args[0] === "push") remoteHead = headSha;
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+  });
+  return { saved, isDraft };
+}
+
 function pullRequestJson({ body, isDraft, headRefOid = headSha }) {
   return JSON.stringify({
-    url: pullRequestUrl,
-    state: "OPEN",
-    isDraft,
-    headRefName: branch,
-    headRefOid,
-    baseRefName: "main",
-    body,
+    url: pullRequestUrl, state: "OPEN", isDraft,
+    headRefName: branch, headRefOid, baseRefName: "main", body,
   });
 }

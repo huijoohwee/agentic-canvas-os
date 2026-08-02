@@ -111,6 +111,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Complete `START-WORKFLOW.md` before build work: fetch first, preserve one clean registered `main` worktree, inspect every registered worktree, and activate the task branch only in its leased task worktree; pull only on a clean, exclusively owned branch when updating it intentionally.
 - Require the current worktree-bound session lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope worktrees and pull requests may coexist, but duplicate active scope ownership blocks release.
 - Use one task, semantic scope, registered task worktree, branch, and active writer. Parallel users, devices, sessions, and worktrees are valid only for disjoint scopes with distinct remote ownership records and current fences. Keep normal runtime and synchronization on the registered `main` worktree.
+- Use one clean registered canonical `main` worktree as the synchronization and release owner, plus zero or more isolated registered task worktrees for disjoint scopes. Each lane has one active writer, one current fence, and one declared write scope; a waiting release run does not keep ownership after `origin/main` advances past its candidate.
 - Create a contract-valid `agent/<device>/<semantic-scope>` from the latest `origin/main`; preserve interior `.`, `_`, and `-` in the device segment, but normalize semantic scope to lowercase alphanumerics and hyphens before any checkout mutation.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
@@ -256,6 +257,12 @@ retire the stale unapproved run, fast-forward only clean canonical owners, rerun
 their exact protected checks, reseal `turn:end`, and dispatch a fresh candidate.
 Never retarget a waiting run or treat tree-equivalent movement as authorization
 for a different policy revision.
+
+When `main` advances because another pull request merges while a release run is
+waiting, retire that stale run immediately. Fast-forward the clean canonical
+`main` worktree to the new exact `origin/main` SHA, rerun `turn:end`, and seal a
+fresh candidate from that fetched revision. Do not approve, resume, or deploy
+the older candidate after the newer protected revision exists.
 
 ### 9. Authorize and Deploy Cloudflare
 

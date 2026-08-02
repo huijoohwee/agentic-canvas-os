@@ -158,6 +158,10 @@ before deployment. A rebuild from unchanged source is still a new candidate.
 Source advancement while authorization waits requires a new review, candidate,
 and human decision. Expired, malformed, unjoined, machine-generated, replayed,
 consumed, or target-mismatched authorization fails closed.
+A waiting run superseded by a newer protected source revision is retired
+without authorization consumption. The next attempt must refresh the canonical
+review owner to that exact protected revision and emit a new candidate digest
+before another human decision.
 
 ## Production Proof Surfaces
 

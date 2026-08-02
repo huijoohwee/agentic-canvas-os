@@ -87,6 +87,13 @@ epochs, declared paths, and fences. A pull request or local lease alone is not
 cross-device authority. The shared remote pull-request set is the cross-user and cross-device scope registry projection, not the CAS authority. See `CLOUD-COLLABORATION.md` and
 `SCOPED-LANE-ADMISSION.md`.
 
+The coordination model is one clean registered canonical `main` worktree plus
+zero or more isolated registered task worktrees. Each lane has one active
+writer, one current cloud fence, and one declared write scope. A same-scope
+peer waits for an exact pushed-SHA handoff; a release or review wait does not
+transfer ownership from an older fence to a newer protected `origin/main`
+revision.
+
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 
 New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` for runtime/parity, but an unrelated scope may activate from a clean detached fetched ref after recording the dirty state as retained overlap; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.

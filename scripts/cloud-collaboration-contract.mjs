@@ -215,7 +215,12 @@ function requireOwnedClaim(ledger, intent, evaluationTime) {
   const entry = findClaimEntry(ledger, intent.claimId);
   if (!entry) fail("claim_not_found", `claim ${intent.claimId} does not exist`);
   const claim = hydrate(entry, evaluationTime);
-  if (TERMINAL_STATES.has(claim.state)) fail("claim_not_active", `claim is ${claim.state}`);
+  if (TERMINAL_STATES.has(claim.state) && !(
+    claim.state === "expired"
+    && intent.reason === "integrated"
+  )) {
+    fail("claim_not_active", `claim is ${claim.state}`);
+  }
   if (
     claim.actorId !== intent.actorId
     || claim.deviceId !== intent.deviceId
@@ -280,7 +285,9 @@ function claimCoreForAction(action, intent, ledger, evaluationTime) {
     };
   }
   if (intent.reason === "integrated" && previous.state !== "review-ready") {
-    fail("invalid_transition", "integrated release requires review-ready state");
+    if (previous.state !== "expired") {
+      fail("invalid_transition", "integrated release requires review-ready or expired state");
+    }
   }
   if (intent.reason === "handoff") {
     const consumed = consumedPredecessors(currentClaimEntries(ledger));

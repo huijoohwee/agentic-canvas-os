@@ -141,6 +141,50 @@ test("adapter binds and verifies one exact review-ready PR without mutation", as
   assert.equal(github.mutationCount(), writesBeforeVerify);
 });
 
+test("adapter lists internal claims, resolves commit pull requests, and accepts normalized owner ids for release", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const claimed = await adapter.execute("claim", claimInput());
+  const bound = await adapter.execute("bind", fencedInput(claimed, {
+    idempotencyKey: "bind-run-2",
+    expectedTransitionCounter: 1,
+    pullRequestNumber: 17,
+  }));
+  await adapter.execute("review-ready", fencedInput(bound, {
+    idempotencyKey: "review-run-2",
+    expectedTransitionCounter: 2,
+    pullRequestNumber: 17,
+    focusedEvidenceDigest: evidenceDigest,
+  }));
+
+  const claims = await adapter.listClaims({ targetRepository });
+  assert.equal(claims.length, 1);
+  assert.match(claims[0].deviceId, /^device:[0-9a-f]{64}$/u);
+  assert.match(claims[0].sessionId, /^session:[0-9a-f]{64}$/u);
+
+  const pulls = await adapter.pullRequestsForCommit({
+    targetRepository,
+    commitSha: targetMainSha,
+  });
+  assert.equal(pulls.length, 1);
+  assert.equal(pulls[0].number, 17);
+
+  const released = await adapter.execute("release", {
+    targetRepository,
+    pullRequestNumber: 17,
+    claimId: claims[0].claimId,
+    expectedFenceRevision: claims[0].fenceRevision,
+    expectedTransitionCounter: claims[0].transitionCounter,
+    deviceId: claims[0].deviceId,
+    sessionId: claims[0].sessionId,
+    reason: "integrated",
+    evidenceDigest,
+    integrationReceiptDigest: "f".repeat(64),
+    idempotencyKey: "release-run-2",
+  });
+  assert.equal(released.status, "released");
+});
+
 test("adapter rejects pull-request head drift and malformed ledger bytes before mutation", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
@@ -263,6 +307,13 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     if (method === "GET" && path === `/repos/${targetRepository}/pulls/17`) {
       return response(200, pullRequestValue(), date);
     }
+    const commitPullsMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/commits\/([0-9a-f]{40})\/pulls$/u);
+    if (method === "GET" && commitPullsMatch && commitPullsMatch[1] === targetRepository) {
+      if (commitPullsMatch[2] === targetMainSha) {
+        return response(200, [pullRequestValue({ state: "closed" })], date);
+      }
+      return response(200, [], date);
+    }
     if (method === "POST" && path === `/repos/${ledgerRepository}/git/blobs`) {
       const sha = objectSha();
       blobs.set(sha, body.content);
@@ -356,7 +407,7 @@ function repositoryValue(id, nodeId, fullName) {
   };
 }
 
-function pullRequestValue() {
+function pullRequestValue(overrides = {}) {
   return {
     id: 17,
     node_id: "PR_17",
@@ -374,6 +425,7 @@ function pullRequestValue() {
       sha: targetMainSha,
       repo: { full_name: targetRepository },
     },
+    ...overrides,
   };
 }
 

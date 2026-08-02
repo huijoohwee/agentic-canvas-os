@@ -284,6 +284,28 @@ test("bind, heartbeat, review-ready, verify, and integrated release are fenced",
   assert.deepEqual(validateLedger(released.ledger), []);
 });
 
+test("integrated release can retire an expired review-ready claim owned by the same actor", () => {
+  const claimed = mutate(emptyLedger(), "claim", claimRequest());
+  const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-expired-release", {
+    laneRevision: "lane-expired",
+  }));
+  const ready = mutate(bound.ledger, "review-ready", expected(bound.claim, "review-ready-expired", {
+    laneRevision: "lane-expired",
+    reviewRequestId: "review-expired",
+    focusedEvidenceDigest: EVIDENCE,
+  }), { evaluationTime: LATER });
+
+  const released = mutate(ready.ledger, "release", expected(ready.claim, "release-expired-integrated", {
+    reason: "integrated",
+    evidenceDigest: EVIDENCE,
+    integrationReceiptDigest: INTEGRATION,
+  }), {
+    evaluationTime: "2026-07-30T03:00:00.000Z",
+  });
+  assert.equal(released.claim.state, "released");
+  assert.deepEqual(validateLedger(released.ledger), []);
+});
+
 test("handoff preserves immutable work and increments the lease epoch", () => {
   const claimed = mutate(emptyLedger(), "claim", claimRequest());
   const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-for-handoff", {

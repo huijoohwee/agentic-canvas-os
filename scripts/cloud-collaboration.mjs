@@ -6,6 +6,7 @@ import {
   CLOUD_RESULT_SCHEMA,
   createGitHubCloudCollaborationAdapter,
 } from "./github-cloud-collaboration-adapter.mjs";
+import { digestValue } from "./cloud-collaboration-contract.mjs";
 
 const MUTATIONS = new Set([
   "claim",
@@ -70,13 +71,69 @@ async function verifyEvent({ adapter }) {
     });
   }
   if (event.ref === `refs/heads/${event.repository?.default_branch}`) {
+    const targetRepository = requiredText(event.repository?.full_name, "event repository");
+    const integratedRelease = await releaseIntegratedClaimForEvent({
+      adapter,
+      event,
+      targetRepository,
+    });
+    if (integratedRelease) return integratedRelease;
     return adapter.execute("status", {
-      targetRepository: requiredText(event.repository?.full_name, "event repository"),
+      targetRepository,
       actorId: process.env.GITHUB_ACTOR_ID,
       actorLogin: process.env.GITHUB_ACTOR,
     });
   }
   throw new Error("verify-event supports pull_request and protected default-branch push events only.");
+}
+
+async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository }) {
+  const mergeCommitSha = requiredSha(
+    first(event.after, event.head_commit?.id),
+    "event merge commit SHA",
+  );
+  const pulls = await adapter.pullRequestsForCommit({
+    targetRepository,
+    commitSha: mergeCommitSha,
+  });
+  if (pulls.length !== 1 || pulls[0].state !== "closed") return null;
+  const pullRequest = pulls[0];
+  const reviewRequestId = `github-pull-request:${pullRequest.nodeId}`;
+  const claim = (await adapter.listClaims({ targetRepository }))
+    .find((candidate) => candidate.reviewRequestId === reviewRequestId);
+  if (!claim || claim.state !== "review-ready") return null;
+  const evidenceDigest = digestValue({
+    schema: "agentic-cloud-integration-evidence/v1",
+    repository: targetRepository,
+    pullRequestNumber: pullRequest.number,
+    reviewRequestId,
+    laneRevision: claim.laneRevision,
+    mergeCommitSha,
+  });
+  const integrationReceiptDigest = digestValue({
+    schema: "agentic-cloud-integration-receipt/v1",
+    repository: targetRepository,
+    pullRequestNumber: pullRequest.number,
+    reviewRequestId,
+    canonicalBaseRevision: claim.canonicalBaseRevision,
+    laneRevision: claim.laneRevision,
+    mergeCommitSha,
+  });
+  return adapter.execute("release", {
+    targetRepository,
+    pullRequestNumber: pullRequest.number,
+    claimId: claim.claimId,
+    expectedFenceRevision: claim.fenceRevision,
+    expectedTransitionCounter: claim.transitionCounter,
+    deviceId: claim.deviceId,
+    sessionId: claim.sessionId,
+    reason: "integrated",
+    evidenceDigest,
+    integrationReceiptDigest,
+    idempotencyKey: `push-integrated-release:${mergeCommitSha}:${claim.claimId}`,
+    actorId: process.env.GITHUB_ACTOR_ID,
+    actorLogin: process.env.GITHUB_ACTOR,
+  });
 }
 
 function buildRequest(action) {

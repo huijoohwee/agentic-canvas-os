@@ -106,6 +106,11 @@ Auto-delivery is eligible only when the implementation run is terminal: the requ
 
 The terminal review handoff then wakes the repository's trusted auto-delivery workflow. It accepts only the same-repository, non-draft PR whose hidden lease is `review_ready`, binds `reviewHeadSha` exactly to the current PR head, and carries both `autoDelivery` and `runtimeRequired`. The workflow enables GitHub protected auto-merge only; a changed head, a fork, a missing marker, or a conflict label fails closed. It never makes a runtime-ready or completion claim. The matching `device:integrate` run must use canonical runtime reconciliation—`--runtime=none` is rejected for this path—and reports success only as `runtime_ready` after protected merge, canonical convergence, and supervised local runtime proof.
 
+Repository recommendation: end every implementation turn with the lane or
+worktree payload either absorbed into canonical protected `origin/main` and the
+root checkout parked cleanly on `main`, or explicitly preserved through
+`device:park` while canonical `main` remains clean and exact.
+
 End each implementation turn with the canonical local runtime ready:
 
 ```bash

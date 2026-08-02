@@ -102,6 +102,39 @@ export function createGitHubCloudCollaborationAdapter({
         ? publicSnapshot(snapshot)
         : emptyResult("status");
     },
+
+    async listClaims({ targetRepository = null } = {}) {
+      const ledgerIdentity = await resolveRepository(send, ledgerRepository, "ledger repository");
+      const snapshot = await readLedger({
+        send,
+        ledgerRepository,
+        ledgerIdentity,
+        ledgerRef,
+        ledgerPath,
+        allowMissing: true,
+      });
+      if (!snapshot) return [];
+      const repository = targetRepository
+        ? await resolveRepository(send, targetRepository, "target repository")
+        : null;
+      return listCurrentClaims(
+        snapshot.ledger,
+        requireServerTime(snapshot.evaluationTime),
+        repository ? { repositoryId: contractRepository(repository).repositoryId } : {},
+      );
+    },
+
+    async pullRequestsForCommit({ targetRepository, commitSha }) {
+      requireRepositoryName(targetRepository, "targetRepository");
+      requireSha(commitSha, "commitSha");
+      const repository = await resolveRepository(send, targetRepository, "target repository");
+      const response = await send({
+        path: `/repos/${repository.fullName}/commits/${commitSha}/pulls`,
+      });
+      requireStatus(response, [200], "list pull requests for commit");
+      return (Array.isArray(response.value) ? response.value : [])
+        .map((value) => projectPullRequest(value, repository));
+    },
   });
 }
 

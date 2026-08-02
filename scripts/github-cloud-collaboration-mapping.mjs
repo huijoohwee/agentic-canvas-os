@@ -19,8 +19,8 @@ export function contractActor(actor, input) {
   }
   return {
     actorId: `github-user:${actor.id}`,
-    deviceId: pseudonymousIdentifier("device", requiredText(input.deviceId, "deviceId")),
-    sessionId: pseudonymousIdentifier("session", requiredText(input.sessionId, "sessionId")),
+    deviceId: normalizeOwnerIdentifier("device", input.deviceId),
+    sessionId: normalizeOwnerIdentifier("session", input.sessionId),
   };
 }
 
@@ -256,6 +256,15 @@ function normalizeRequiredState(value) {
 
 export function pseudonymousIdentifier(namespace, value) {
   return `${namespace}:${digestValue({ namespace, value })}`;
+}
+
+function normalizeOwnerIdentifier(namespace, value) {
+  const text = requiredText(value, `${namespace}Id`);
+  const prefix = `${namespace}:`;
+  if (text.startsWith(prefix) && SHA256_PATTERN.test(text.slice(prefix.length))) {
+    return text;
+  }
+  return pseudonymousIdentifier(namespace, text);
 }
 
 function boundedInteger(value, label, minimum, maximum = Number.MAX_SAFE_INTEGER) {

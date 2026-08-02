@@ -112,6 +112,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Require the current worktree-bound session lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope worktrees and pull requests may coexist, but duplicate active scope ownership blocks release.
 - Use one task, semantic scope, registered task worktree, branch, and active writer. Parallel users, devices, sessions, and worktrees are valid only for disjoint scopes with distinct remote ownership records and current fences. Keep normal runtime and synchronization on the registered `main` worktree.
 - Use one clean registered canonical `main` worktree as the synchronization and release owner, plus zero or more isolated registered task worktrees for disjoint scopes. Each lane has one active writer, one current fence, and one declared write scope; a waiting release run does not keep ownership after `origin/main` advances past its candidate.
+- From candidate sealing through authorization interaction, keep the canonical release-owner checkout attached to the same exact protected `main` revision used for review. Do not switch that root checkout to another branch, reuse it for unrelated task work, or accept local-ref drift between prompt emission and authorization consumption; any such movement blocks or retires the run until the owner is restored and the candidate is revalidated.
 - Create a contract-valid `agent/<device>/<semantic-scope>` from the latest `origin/main`; preserve interior `.`, `_`, and `-` in the device segment, but normalize semantic scope to lowercase alphanumerics and hyphens before any checkout mutation.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
@@ -301,6 +302,13 @@ not be supplied as free-form confirmation input. A stale process, failed probe,
 non-loopback URL, source or dependency movement, candidate mismatch, or missing
 run reference blocks prompt emission and requires a fresh `turn:end`, candidate,
 and human authorization.
+
+Terminal automation that answers this prompt must use a sequential matcher.
+First capture the printed exact reply line `authorize {{candidate_digest}}`
+from the prompt output, then wait for the live `>` input prompt, and only then
+send that exact captured reply. Precomputed input, partial matches, or sending
+before the live prompt is ready records no valid Authorization Interaction
+Receipt.
 
 Key the controller by target digest plus candidate digest. Exactly one
 environment-scoped controller may deploy. Coalesce an exact duplicate dispatch

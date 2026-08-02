@@ -94,6 +94,14 @@ peer waits for an exact pushed-SHA handoff; a release or review wait does not
 transfer ownership from an older fence to a newer protected `origin/main`
 revision.
 
+When release preparation or authorization is in progress, the canonical
+registered `main` worktree becomes the release-owner checkout for that attempt.
+It must remain attached to the exact fetched protected `main` revision used to
+seal the candidate until the run reaches a terminal state or is explicitly
+retired as stale. Do not switch that checkout onto a task branch, repurpose it
+for unrelated work, or let automation rewrite its local ref between prompt
+preparation and authorization consumption.
+
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 
 New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` for runtime/parity, but an unrelated scope may activate from a clean detached fetched ref after recording the dirty state as retained overlap; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task.

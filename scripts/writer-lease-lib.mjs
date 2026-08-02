@@ -256,6 +256,35 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
+  function recoverFromPullRequestMarker({ branch, worktreePath, pullRequestUrl, pullRequestBody }) {
+    if (!branch) throw new Error("Recovery requires an exact agent branch.");
+    if (!pullRequestUrl) throw new Error("Recovery requires the merged pull request URL.");
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (current) return current;
+      const recovered = parseWriterLeasePullRequestBody(pullRequestBody);
+      if (!recovered || recovered.branch !== branch) {
+        throw new Error(`No recoverable writer lease marker records ${branch}.`);
+      }
+      if (!["active", "delivery", "review_ready", "completing", "completed"].includes(recovered.status)) {
+        throw new Error(`Writer lease marker for ${branch} is ${recovered.status}, not completable.`);
+      }
+      const lease = {
+        ...recovered,
+        schema: WRITER_LEASE_SCHEMA,
+        worktreePath: path.resolve(worktreePath),
+        pullRequestUrl,
+      };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
+      return lease;
+    });
+  }
+
   function complete({ branch, pullRequestUrl, mergeCommitSha, mainSha }) {
     requireSha(mergeCommitSha, "mergeCommitSha");
     requireSha(mainSha, "mainSha");
@@ -354,6 +383,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   }
 
   return { annotate, beginCompletion, claim, complete, heartbeat, read,
+    recoverFromPullRequestMarker,
     readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
 }
 

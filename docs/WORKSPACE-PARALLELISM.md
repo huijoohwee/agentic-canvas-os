@@ -296,6 +296,8 @@ The installer sets `core.hooksPath` in each repository to this repository's
 `.githooks` directory, so there is one hook source of truth and no copied hook
 drift. It writes hook configuration and the shim only; it never touches tracked
 files, refs, or working-tree state in any repository.
+Repository-owned guard scripts remain optional: shared hooks run repo-specific
+checks only when the target repository actually provides them.
 
 To guard external tooling, put the generated shim directory ahead of Git on `PATH`:
 

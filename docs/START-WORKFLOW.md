@@ -493,6 +493,9 @@ cleanup, retires only fully proven restored stash/ref evidence under the shared
 stash-operation lock, and records `completed` only after clean detachment. A
 retry may start detached, proves the recorded merge and prior main SHA remain
 ancestors of the current canonical tip, and finishes only the missing phase.
+If the attached merged branch lost its local lease record, completion may recover
+only the exact writer-lease marker preserved in that merged pull request body; no
+session, branch, base, fence, or head evidence may be synthesized locally.
 Its JSON must name
 `completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and
 `"status":"ok"`. `device:end` enforces the same gate for existing callers; it

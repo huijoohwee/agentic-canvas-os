@@ -40,24 +40,34 @@ function createGitText(responses) {
 
 function createCompletionLeaseStore(overrides = {}) {
   const branch = "agent/device/scope";
-  let lease = {
-    schema: "agentic-writer-lease/v2",
-    status: "delivery",
-    epoch: 4,
-    sessionId: "chat-a",
-    device: "device",
-    scope: "scope",
-    branch,
-    worktreePath: repo,
-    baseSha: "a".repeat(40),
-    fenceSha: "f".repeat(40),
-    pullRequestUrl: "https://github.com/example/repo/pull/42",
-    heartbeatAt: "2026-07-20T10:00:00.000Z",
-    expiresAt: "2026-07-20T10:00:00.000Z",
-    ...overrides,
-  };
+  let lease = null;
+  if (overrides !== null) {
+    lease = {
+      schema: "agentic-writer-lease/v2",
+      status: "delivery",
+      epoch: 4,
+      sessionId: "chat-a",
+      device: "device",
+      scope: "scope",
+      branch,
+      worktreePath: repo,
+      baseSha: "a".repeat(40),
+      fenceSha: "f".repeat(40),
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      heartbeatAt: "2026-07-20T10:00:00.000Z",
+      expiresAt: "2026-07-20T10:00:00.000Z",
+      ...overrides,
+    };
+  }
   return {
     read: requested => requested ? lease : { leases: { [branch]: lease } },
+    recoverFromPullRequestMarker: ({ branch: requestedBranch, worktreePath, pullRequestUrl, pullRequestBody }) => {
+      const recovered = parseWriterLeasePullRequestBody(pullRequestBody);
+      if (!recovered || recovered.branch !== requestedBranch) {
+        throw new Error(`No recoverable writer lease marker records ${requestedBranch}.`);
+      }
+      return (lease = { ...recovered, worktreePath, pullRequestUrl });
+    },
     beginCompletion: ({ pullRequestUrl, mergeCommitSha, mainSha }) => (lease = {
       ...lease, status: "completing", pullRequestUrl, completion: { mergeCommitSha, mainSha },
     }),
@@ -628,6 +638,66 @@ test("completeSession detaches the task worktree only after the task pull reques
     status: "ok",
   });
   assert.match(logs[0], /Restart the local runtime from this SHA/);
+});
+
+test("completeSession recovers a missing local lease from the merged pull request marker", () => {
+  const calls = [];
+  const recoveredLease = {
+    schema: "agentic-writer-lease/v2",
+    status: "review_ready",
+    epoch: 118,
+    sessionId: "20260802-origin-main-park-guidance",
+    device: "katrinas-macbook-pro.local",
+    scope: "origin-main-park-guidance",
+    branch: "agent/device/scope",
+    baseSha: "a".repeat(40),
+    fenceSha: "f".repeat(40),
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-02T10:10:57.816Z",
+    expiresAt: "2026-08-02T10:10:57.816Z",
+    reviewHeadSha: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+  };
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope\n",
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": ["", ""],
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse HEAD": [
+      "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+      "1234567890abcdef1234567890abcdef12345678\n",
+    ],
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  const summary = completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify({
+      state: "MERGED",
+      baseRefName: "main",
+      url: "https://github.com/example/repo/pull/42",
+      mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+      headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+      body: renderWriterLeasePullRequestBody(recoveredLease),
+    }),
+    leaseStore: createCompletionLeaseStore(null),
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  });
+
+  assert.deepEqual(summary, {
+    completedBranch: "agent/device/scope",
+    pullRequestUrl: "https://github.com/example/repo/pull/42",
+    mergeCommitSha: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    status: "ok",
+  });
+  assert.ok(calls.some(call => call.join(" ") === "git switch --detach 1234567890abcdef1234567890abcdef12345678"));
 });
 
 test("completeSession refuses auto-delivery completion without canonical runtime reconciliation", () => {

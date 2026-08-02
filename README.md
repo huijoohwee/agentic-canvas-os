@@ -151,7 +151,9 @@ merge commit is contained by `origin/main`, detaches the clean task worktree at
 that exact revision, and emits the pull request, merge, and main SHAs. Completion
 first records a durable `completing` cleanup intent, retires only the exact
 restored stash/ref, and records `completed` only after clean detachment; retries
-finish any interrupted phase and accept a later descendant `origin/main`. Fast-forward
+finish any interrupted phase and accept a later descendant `origin/main`. If the
+exact merged branch lost its local lease record, completion may recover only the
+writer-lease marker preserved in that merged pull request body. Fast-forward
 the registered main worktree separately with `npm run sync:live` before runtime
 acceptance. `device:end` uses the same fail-closed completion gate; use
 `device:park` for paused or blocked work.

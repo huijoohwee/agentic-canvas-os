@@ -31,9 +31,24 @@ export function completeSession({
   if (!leaseStore) throw new Error("Completion requires the repository writer-lease store.");
 
   const attachedBranch = gitText(["branch", "--show-current"]).trim();
-  const { branch, lease: completionLease } = resolveCompletionLease({
+  const { branch, lease: existingCompletionLease } = resolveCompletionLease({
     attachedBranch, repo, leaseStore,
   });
+  let pullRequest = null;
+  let completionLease = existingCompletionLease;
+  if (!completionLease && attachedBranch) {
+    pullRequest = readPullRequest({ branch, ghText });
+    requireMergedPullRequest(pullRequest);
+    verifyAttachedMergedHead({ attachedBranch, branch, gitText, pullRequest });
+    completionLease = recoverCompletionLease({
+      attachedBranch,
+      branch,
+      repo,
+      pullRequest,
+      completionLease: existingCompletionLease,
+      leaseStore,
+    });
+  }
   if (finalize && completionLease.autoDelivery === true && completionLease.runtimeRequired === true) {
     throw new Error("Auto-delivery completion requires device:integrate so canonical runtime readiness cannot be bypassed.");
   }
@@ -42,19 +57,12 @@ export function completeSession({
   const exactRestoredStash = requireCompletionStash({
     branch, lease: completionLease, parkedStashes, gitText,
   });
-
-  const pullRequest = readPullRequest({ branch, ghText });
-  requireMergedPullRequest(pullRequest);
+  if (!pullRequest) {
+    pullRequest = readPullRequest({ branch, ghText });
+    requireMergedPullRequest(pullRequest);
+    verifyAttachedMergedHead({ attachedBranch, branch, gitText, pullRequest });
+  }
   const mergeCommitSha = pullRequest.mergeCommit?.oid;
-  const taskHeadSha = optionalGitText(gitText, ["rev-parse", `refs/heads/${branch}`]);
-  if (!pullRequest.headRefOid || taskHeadSha !== pullRequest.headRefOid) {
-    throw new Error(
-      `Task branch HEAD ${taskHeadSha.slice(0, 12) || "unknown"} is not the merged pull-request head ${pullRequest.headRefOid?.slice(0, 12) || "unknown"}.`,
-    );
-  }
-  if (attachedBranch && gitText(["rev-parse", "HEAD"]).trim() !== taskHeadSha) {
-    throw new Error("Attached completion worktree is not at the exact merged task head.");
-  }
 
   run("git", ["fetch", "origin", "main"]);
   const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
@@ -126,9 +134,7 @@ function resolveCompletionLease({ attachedBranch, repo, leaseStore }) {
     if (!attachedBranch.startsWith("agent/")) {
       throw new Error(`Refusing unexpected device branch: ${attachedBranch}`);
     }
-    const lease = leaseStore.read?.(attachedBranch) || null;
-    if (!lease) throw new Error(`No writer lease records ${attachedBranch}.`);
-    return { branch: attachedBranch, lease };
+    return { branch: attachedBranch, lease: leaseStore.read?.(attachedBranch) || null };
   }
   const registry = leaseStore.read?.() || null;
   const matches = Object.values(registry?.leases || {}).filter(lease =>
@@ -138,6 +144,34 @@ function resolveCompletionLease({ attachedBranch, repo, leaseStore }) {
     throw new Error("Detached completion replay requires one exact completing lease for this worktree.");
   }
   return { branch: matches[0].branch, lease: matches[0] };
+}
+
+function recoverCompletionLease({ attachedBranch, branch, repo, pullRequest, completionLease, leaseStore }) {
+  if (completionLease || !attachedBranch) {
+    if (!completionLease) throw new Error(`No writer lease records ${branch}.`);
+    return completionLease;
+  }
+  if (typeof leaseStore.recoverFromPullRequestMarker !== "function") {
+    throw new Error(`No writer lease records ${branch}.`);
+  }
+  return leaseStore.recoverFromPullRequestMarker({
+    branch,
+    worktreePath: repo,
+    pullRequestUrl: pullRequest.url,
+    pullRequestBody: pullRequest.body || "",
+  });
+}
+
+function verifyAttachedMergedHead({ attachedBranch, branch, gitText, pullRequest }) {
+  const taskHeadSha = optionalGitText(gitText, ["rev-parse", `refs/heads/${branch}`]);
+  if (!pullRequest.headRefOid || taskHeadSha !== pullRequest.headRefOid) {
+    throw new Error(
+      `Task branch HEAD ${taskHeadSha.slice(0, 12) || "unknown"} is not the merged pull-request head ${pullRequest.headRefOid?.slice(0, 12) || "unknown"}.`,
+    );
+  }
+  if (attachedBranch && gitText(["rev-parse", "HEAD"]).trim() !== taskHeadSha) {
+    throw new Error("Attached completion worktree is not at the exact merged task head.");
+  }
 }
 
 function requireCompletionStash({ branch, lease, parkedStashes, gitText }) {
@@ -221,7 +255,7 @@ function readPullRequest({ branch, ghText }) {
   let pullRequest;
   try {
     pullRequest = JSON.parse(
-      ghText(["pr", "view", branch, "--json", "state,baseRefName,url,mergeCommit,headRefOid"]),
+      ghText(["pr", "view", branch, "--json", "state,baseRefName,url,mergeCommit,headRefOid,body"]),
     );
   } catch (error) {
     throw new Error(`Cannot prove a pull request for ${branch}: ${error.message}`);

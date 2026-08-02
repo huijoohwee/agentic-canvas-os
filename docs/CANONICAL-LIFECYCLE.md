@@ -106,6 +106,14 @@ release-run reference, controlled review-surface locator, and one exact
 candidate-bound response. Prompt presentation creates no authority. Any missing
 field, failed probe, expired review, or identity drift blocks the prompt and
 requires a fresh runtime review before another human decision.
+The local canonical release-owner checkout must remain attached to that same
+exact protected revision from prompt preparation through authorization
+interaction; a branch flip, repurposed checkout, or local-ref drift in that
+owner invalidates the prompt and fails closed.
+Terminal interaction adapters that automate the response must capture the exact
+printed candidate-bound reply first, then wait for the live input prompt, and
+only then send that exact reply. Any reordered or promptless submission fails
+closed and creates no authorization evidence.
 
 ## End-to-End State Machine
 
@@ -152,6 +160,8 @@ these identities changes:
 - review, artifact, immutable-manifest, candidate, or predecessor-receipt digest;
 - interaction challenge, response, actor, or receipt digest; or authorization
   status, expiry, target, decision identity, or consumption state.
+- local canonical release-owner checkout branch, attached protected revision, or
+  authorization-prompt handshake state.
 
 Revalidate the canonical source and complete dependency closure immediately
 before deployment. A rebuild from unchanged source is still a new candidate.

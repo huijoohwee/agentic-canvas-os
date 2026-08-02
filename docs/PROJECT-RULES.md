@@ -2,7 +2,7 @@
 title: "Agentic Canvas OS Project Rules"
 graphId: "md:agentic-canvas-os-project-rules"
 doc_type: "Project Rules"
-date: "2026-07-14"
+date: "2026-08-02"
 lang: "en-US"
 schema: "agentic-canvas-os-project-rules/v1"
 frontmatter_contract: "required"
@@ -105,6 +105,7 @@ that bind every session and tool.
 ## Post-Task
 
 - Update cross-repo and API docs when the change affects them.
+- End every implementation turn in one of two repository-owned states only: completed lane or worktree payload integrated into protected `origin/main` with the canonical checkout parked cleanly there, or incomplete work preserved through `npm run device:park` with canonical `main` still clean and exact.
 - Never report a task complete while its fix is dirty, stashed, branch-only, in
   an open pull request, absent from `origin/main`, or unverified on the local
   runtime started from that exact Dev `main` SHA.

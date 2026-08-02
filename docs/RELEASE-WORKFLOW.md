@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-07-30"
+date: "2026-08-02"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
@@ -124,6 +124,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Require CI to build, upload, download, and revalidate one immutable manifest that binds its exact pull-request head to the exact Agentic Canvas OS checkout and catalog revision. Individually green repositories without this paired artifact do not satisfy integration.
 - Key catalog hydration to the Agentic Canvas OS docs SHA; invalidate revision changes and allow at most two explicit refresh attempts before a visible blocked or stale result.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
+- End each implementation turn by either carrying the completed lane or worktree payload through protected integration into canonical `origin/main` and re-parking the canonical owner there cleanly, or by preserving incomplete work in its owned lane through the repository-owned parking path while canonical `main` stays clean and exact.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
 - Before convergence or canonical review isolation, content-bind every pre-existing non-canonical item and its owner, write set, fence, overlap class, state, preservation mode, and recovery handle. Retain overlapping work; restore only exact disjoint state; never treat preservation as Production authority.
 - Before candidate preparation, emit one keep / port / drop inventory for every pre-existing non-canonical lane or worktree. `keep` preserves unrelated or still-active work unchanged, `port` requires the retained value to pass protected Dev integration before the release frontier closes, and `drop` is cleanup-only after exact no-remaining-value proof plus cleanup authority.

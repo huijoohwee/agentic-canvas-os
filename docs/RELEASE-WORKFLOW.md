@@ -126,6 +126,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Never push directly to `main`; integrate only through the protected Integration Gate.
 - Resolve conflicts at the source owner. Do not stack aliases, backfill generated output, or overwrite unexplained work.
 - Before convergence or canonical review isolation, content-bind every pre-existing non-canonical item and its owner, write set, fence, overlap class, state, preservation mode, and recovery handle. Retain overlapping work; restore only exact disjoint state; never treat preservation as Production authority.
+- Before candidate preparation, emit one keep / port / drop inventory for every pre-existing non-canonical lane or worktree. `keep` preserves unrelated or still-active work unchanged, `port` requires the retained value to pass protected Dev integration before the release frontier closes, and `drop` is cleanup-only after exact no-remaining-value proof plus cleanup authority.
 - Treat `memory/YYYY-MM.md` as append-only evidence: validate its hybrid format and compare historical bytes with the recorded Agentic Canvas OS memory base ref before integration.
 - Treat `todo/YYYY-MM.md` as append-only cross-repository planning evidence: validate the index and shards, compare historical bytes with the recorded Agentic Canvas OS planning base ref, and require the declared strict task row before integration.
 - Require one appended active-shard row matching the declared `planning_context`; reject repository-local todo files before integration.
@@ -134,7 +135,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 
 ### 1. Preflight
 
-Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning shard, planning context, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, immutable manifest digest, and ownership conflicts.
+Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning shard, planning context, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, immutable manifest digest, ownership conflicts, and the exact keep / port / drop classification for every pre-existing non-canonical lane or worktree.
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another worktree or device is writing the same branch or semantic scope.
 
@@ -232,6 +233,11 @@ the complete app, Agentic Canvas OS, catalog, schema, generated mirror, build,
 policy, target, review, and transitive dependency closure into one immutable
 Candidate Manifest. Run publish-contract, schema, asset-manifest, and
 mirror-parity checks without publishing.
+
+Reject candidate sealing when any pre-existing non-canonical lane or worktree
+lacks a keep / port / drop disposition, when a `port` item has not reached
+protected Dev integration, or when a `drop` item still needs value-closure
+proof or cleanup authority.
 
 When mirror-parity fails because the schema mirror is missing a `knowgrph/docs/documents/*` node, regenerate `huijoohwee.github.io/schema/AgenticRAG/knowgrph-documents-map.graph.jsonld` through `python3 $GITHUB_ROOT/huijoohwee.github.io/schema/AgenticRAG/sync_map.py --mode write`, commit that mirror change in `huijoohwee.github.io`, and rerun release verification. Never hand-edit the generated graph file.
 

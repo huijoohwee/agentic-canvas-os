@@ -44,6 +44,7 @@ do not have, plus one fail-closed gate.
 | Uncommitted work is never collateral | No session may run a destructive operation while another session holds uncommitted or untracked work in the same repository. |
 | Untracked means unrecoverable | Untracked paths have no object in the store. A destructive operation over them is refused outright, with no override path in this contract. |
 | Recovery references are durable | A recovery reference is a branch, tag, or bundle. A stash is not a recovery reference. |
+| Receipt-bound release admission | A retained dirty lane can coexist with an unrelated release only when a checked reconciliation receipt binds its current state and write-set digests, owner, durable recovery handle, and `disjoint` disposition. |
 | No new manager | The guard reads existing Git state and existing owners; it does not create a second worktree registry, lease store, or repository manager. |
 
 ## Lane Model
@@ -61,6 +62,8 @@ lane:
   dirtyTrackedPaths: 0
   untrackedPaths: 0
   recoveryRef: "[refs/heads/recovery/... , refs/tags/... , bundle path, or null]"
+  stateDigest: "[sha256 of tracked patch plus untracked objects]"
+  writeSetDigest: "[sha256 of the exact changed-path set]"
 ```
 
 Lane isolation is checked as three separate properties so a failure names the exact
@@ -176,6 +179,82 @@ subject still match. Cloud heartbeat returns its post-local-renewal authority
 receipt. Ordinary local-only resume and park refuse a cloud-admitted lane; its
 owner must complete explicit cloud handoff/reclaim.
 
+## Reconciliation Admission
+
+The normal audit remains fail-closed. A release controller may supply an external,
+immutable `agentic-workspace-reconciliation-receipt/v1` only to prove that every
+currently dirty lane is retained or parked outside the candidate's write scope.
+Each receipt item names the lane key, session, current `stateDigest`,
+`writeSetDigest`, `disjoint` overlap class, `retained` or `parked` disposition, and
+a non-empty durable recovery handle. The receipt also binds the workspace root and
+an exact protected-tip SHA. Any missing item, changed byte digest, duplicate item,
+empty recovery handle, or overlapping classification fails admission.
+
+Receipt verification is read-only. It does not commit, stash, reset, merge, delete,
+or transfer lane contents. The owning lane still requires its own protected PR and
+integration path before any of its bytes can reach canonical `main`.
+
+## Legacy Dirty-Lane Adoption
+
+An unleased legacy lane has no normal `device:start` or `device:resume` transition.
+It must not be committed, rebased, copied, or assigned a fabricated lease. The
+repository-owned adoption controller provides a bounded two-phase recovery path:
+
+1. `capture` reads the registered legacy worktree without changing its files,
+   index, branch, refs, or objects. It records the exact source branch and HEAD,
+   protected tip, binary tracked patch, raw copies of every changed and untracked
+   path, file modes and symlink targets, and state, write-set, patch, file, and
+   package digests. A second evidence read must match before capture succeeds.
+2. `adopt` revalidates every package byte and the still-unchanged legacy source. It
+   accepts only a clean registered target whose exact active writer lease belongs
+   to the capturing session and started at the captured protected tip. It rejects
+   divergent untracked-path collisions while recording byte-identical upstream
+   paths as already integrated. A caller may declare exact tracked paths for
+   bounded semantic reconciliation; the controller excludes only those paths,
+   three-way applies the remainder, and emits `reconciliation-required` rather
+   than claiming complete adoption.
+
+The legacy lane remains untouched and retained until its adopted pull request is
+protected-merged and independently verified. Capture and adoption do not merge,
+push, deploy, clean, or grant release authority.
+
+For an unrelated canonical repository whose primary `main` worktree contains
+only untracked retained content, capture has a separate preservation-only profile:
+`--capture-profile=canonical-untracked-retention`. It fetches `origin/main`, then
+requires the registered primary worktree, branch `main`, exact
+`HEAD == origin/main == protected-tip`, zero tracked/index changes, zero conflicts,
+and at least one untracked path. It copies and digest-binds those paths without
+changing the source. The resulting package cannot be adopted; it is only a durable
+recovery handle for an external disjoint-lane reconciliation receipt. This profile
+does not authorize cleanup, staging, committing, branch creation, or publication.
+
+## Already-Integrated Legacy Lane Disposition
+
+When a non-ancestor legacy task branch has only unstaged tracked changes and its
+complete committed branch write set is covered by those same paths, the bounded
+disposition adapter may detach that worktree only after every working path's mode
+and blob exactly equals fetched protected `origin/main`. It rejects staged,
+untracked, deleted, conflicting, non-file, partially covered, remote-drifted, or
+non-equivalent state. The remote task branch must still resolve to the exact
+pre-disposition HEAD, so its commits remain durable even though the worktree moves.
+
+The command writes a digest-bound external receipt in `prepared` state, rechecks
+the complete evidence and both remote refs, detaches at the exact protected tip,
+proves a clean checkout, then records `completed`. It does not delete a branch or
+worktree, close a pull request, edit a lease, merge, deploy, or grant Production
+authority. The explicit acknowledgement applies only to the exact supplied SHAs:
+
+```sh
+npm run workspace:legacy-integrated-disposition -- \
+  --source="[registered legacy worktree]" \
+  --branch="[exact task branch]" \
+  --expected-head="[exact remote task HEAD]" \
+  --protected-tip="[exact fetched origin/main]" \
+  --session="[operator session]" \
+  --receipt="[external receipt path]" \
+  --acknowledge-protected-equivalence --json
+```
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.
@@ -241,6 +320,10 @@ A bypassed operation still prints what it is destroying before it proceeds.
 |---|---|
 | Audit every lane in the workspace | `npm run workspace:parallelism:check` |
 | Machine-readable audit | `npm run workspace:parallelism:check -- --json` |
+| Verify retained disjoint work for a release controller | `npm run workspace:parallelism:check -- --reconciliation-receipt "[immutable receipt path]"` |
+| Capture an unleased dirty legacy lane | `npm run workspace:legacy-adoption -- capture --source="[worktree]" --recovery="[new directory]" --protected-tip="[40-hex main SHA]" --session="[operator session]"` |
+| Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
+| Adopt into an exact active leased lane | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 

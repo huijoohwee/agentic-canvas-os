@@ -167,6 +167,11 @@ function createWorkerApp(env) {
   const agentToolkitStore = durableStateConfigured
     ? createDurableObjectAgentToolkitStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const agentToolkitTelemetry = env?.AGENT_TOOLKIT_TELEMETRY_ENABLED === "true"
+    ? async (event) => {
+      console.log(JSON.stringify(event));
+    }
+    : undefined;
   if (env && typeof env === "object") {
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
     if (!cacheContext) {
@@ -219,6 +224,7 @@ function createWorkerApp(env) {
     functionExecutionReceiptStore,
     swarmRunStore,
     agentToolkitStore,
+    agentToolkitTelemetry,
     sandboxAgents,
     toolSearch,
     fetchImpl: createWorkerFetch(env),
@@ -343,7 +349,10 @@ async function dispatchCloudflareRequest(request, env = {}) {
   const toolkitAction = url.pathname.startsWith("/api/agent-toolkit/")
     ? url.pathname.slice("/api/agent-toolkit/".length)
     : "";
-  if (["start", "start-span", "finish-span", "complete", "evaluate", "compare", "propose", "status"].includes(toolkitAction)) {
+  if ([
+    "start", "start-span", "finish-span", "complete", "evaluate", "compare",
+    "propose", "status", "profile", "optimize",
+  ].includes(toolkitAction)) {
     if (request.method !== "POST") return json(405, { error: "method not allowed" });
     const body = await readJsonBody(request);
     const handler = {
@@ -355,6 +364,8 @@ async function dispatchCloudflareRequest(request, env = {}) {
       compare: app.agentToolkitCompare,
       propose: app.agentToolkitPropose,
       status: app.agentToolkitStatus,
+      profile: app.agentToolkitProfile,
+      optimize: app.agentToolkitOptimize,
     }[toolkitAction];
     return toResponse(await handler({ headers: headerBag(request), body, signal: request.signal }));
   }

@@ -2,6 +2,7 @@ import path from "node:path";
 
 export const WORKSPACE_LANE_SCHEMA = "agentic-workspace-lane/v1";
 export const WORKSPACE_PARALLELISM_REPORT_SCHEMA = "agentic-workspace-parallelism-report/v1";
+export const WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA = "agentic-workspace-reconciliation-receipt/v1";
 
 /**
  * Operation classes that can destroy work another session is holding.
@@ -76,6 +77,8 @@ function normalizeLane(lane, index) {
     dirtyTrackedPaths: Number(lane?.dirtyTrackedPaths ?? 0),
     untrackedPaths: Number(lane?.untrackedPaths ?? 0),
     recoveryRef: String(lane?.recoveryRef || "").trim() || null,
+    stateDigest: String(lane?.stateDigest || "").trim() || null,
+    writeSetDigest: String(lane?.writeSetDigest || "").trim() || null,
   });
 }
 
@@ -227,6 +230,55 @@ export function buildWorkspaceParallelismReport({ workspaceRoot, lanes, now = ()
     forbiddenOperationClasses: Object.freeze(Object.keys(DESTRUCTIVE_OPERATION_CLASSES)),
     ready: atRisk.length === 0,
   });
+}
+
+/**
+ * A reconciliation receipt makes retained, disjoint work visible to a release
+ * gate without transferring it to the canonical branch.  It is verification
+ * only: this function never stages, stashes, moves, or deletes lane contents.
+ */
+export function assertWorkspaceReconciliationAdmission({ report, receipt, target = null }) {
+  if (report?.schema !== WORKSPACE_PARALLELISM_REPORT_SCHEMA) {
+    throw new Error("Reconciliation admission requires a workspace parallelism report.");
+  }
+  if (receipt?.schema !== WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA) {
+    throw new Error(`Reconciliation receipt schema must be ${WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA}.`);
+  }
+  if (path.normalize(String(receipt.workspaceRoot || "")) !== report.workspaceRoot) {
+    throw new Error("Reconciliation receipt workspace root does not match the inspected workspace.");
+  }
+  if (!/^[0-9a-f]{40,64}$/i.test(String(receipt.protectedTip || ""))) {
+    throw new Error("Reconciliation receipt requires an exact protectedTip SHA.");
+  }
+  if (!Array.isArray(receipt.items)) throw new Error("Reconciliation receipt requires an items array.");
+
+  const targetRepository = String(target?.repository || "").trim();
+  const targetScope = String(target?.scope || "").trim();
+  const receiptByLane = new Map();
+  for (const item of receipt.items) {
+    const lane = String(item?.lane || "").trim();
+    if (!lane || receiptByLane.has(lane)) throw new Error(`Reconciliation receipt has a duplicate or missing lane: ${lane || "<missing>"}.`);
+    receiptByLane.set(lane, item);
+  }
+
+  const retained = [];
+  for (const lane of report.lanes.filter(laneIsDirty)) {
+    const key = laneKey(lane);
+    const item = receiptByLane.get(key);
+    if (!item) throw new Error(`Reconciliation receipt does not account for dirty lane ${key}.`);
+    if (item.session !== lane.session || item.stateDigest !== lane.stateDigest || item.writeSetDigest !== lane.writeSetDigest) {
+      throw new Error(`Reconciliation receipt drifted from inspected lane ${key}.`);
+    }
+    if (!["retained", "parked"].includes(item.disposition) || !String(item.recoveryHandle || "").trim()) {
+      throw new Error(`Reconciliation receipt has no durable disposition for ${key}.`);
+    }
+    const overlapsTarget = targetRepository && targetScope && lane.repository === targetRepository && lane.scope === targetScope;
+    if (overlapsTarget || item.overlapClass !== "disjoint") {
+      throw new Error(`Reconciliation receipt cannot admit overlapping lane ${key}.`);
+    }
+    retained.push(Object.freeze({ lane: key, disposition: item.disposition, recoveryHandle: item.recoveryHandle }));
+  }
+  return Object.freeze({ decision: "admit-retained-disjoint-lanes", protectedTip: receipt.protectedTip, retained: Object.freeze(retained) });
 }
 
 const ZERO_SHA = /^0{40,64}$/;

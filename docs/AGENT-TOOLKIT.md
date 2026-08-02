@@ -6,13 +6,13 @@ date: "2026-07-20"
 lang: "en-US"
 schema: "agent-toolkit-contract/v1"
 frontmatter_contract: "required"
-status: "runtime-ready-offline-dev"
+status: "runtime-ready-production-contract"
 command: "/agent.toolkit"
 semantics: ["#agent-toolkit", "#runtime-ready", "#token-economics"]
 bindings: ["@agent-toolkit-observer", "@runtime-proof", "@operator"]
 external_dependency: false
-telemetry_policy: "bounded metadata only; no prompt, input, output, tool payload, private reasoning, secret, or default network egress"
-learning_policy: "evidence-backed review-pending proposal only; no automatic application, training, registry mutation, promotion, or deployment"
+telemetry_policy: "bounded digest/status/timing metadata through an optional injected exporter; no prompt, input, output, tool payload, private reasoning, secret, or default network egress"
+learning_policy: "deterministic multi-candidate quality/latency/cost recommendation and evidence-backed review-pending proposal only; no automatic application, training, registry mutation, promotion, or deployment"
 improvement_claim: "unverified until exact revision-bound measurements pass an approved cohort policy"
 runtime_owners:
   execution: "existing Running Agents, Function Calling, Agent Orchestration, Agent Swarm, or injected application adapter"
@@ -35,8 +35,8 @@ publish_policy: "Dev-only until explicit operator approval"
 
 # Agent Toolkit
 
-Agent Toolkit is a native observer, evaluator, comparison, and learning-proposal
-layer for exact agent and team revisions. Its adapter contract is
+Agent Toolkit is a native observer, profiler, evaluator, optimizer, and
+learning-proposal layer for exact agent and team revisions. Its adapter contract is
 framework-neutral: an application can wrap a supported runtime without moving
 execution, scheduling, tool policy, or final-answer ownership into the Toolkit.
 Compatibility is proven per adapter; this contract does not claim universal
@@ -87,6 +87,8 @@ finish metadata spans around work that remains owned elsewhere.
 | `compare` / `compare` | Compare exact baseline and candidate identities inside one cohort. | Deterministic policy checks and `propose` or `hold`. |
 | `propose` / `propose` | Persist an evidence-digest-bound proposal. | Immutable `review_pending`, `reviewRequired: true`, `applied: false`. |
 | `status` / `status` | Read one sanitized run owned by the session principal. | Metadata-only run, spans, cost, and evaluation state. |
+| `profile` / `POST /api/agent-toolkit/profile` | Profile one owned run without reading its payload. | Span p50/p95/p99/max latency, status counts, five bounded bottlenecks, aggregate token usage, and cost. |
+| `optimize` / `POST /api/agent-toolkit/optimize` | Rank up to sixteen exact evaluated candidates. | Deterministic quality-first, latency, cost, and digest ordering; recommendation only. |
 
 HTTP accepts no caller-owned signal. `instrument` is a library method rather
 than a remote execution route, so arbitrary framework payloads and callbacks do
@@ -100,9 +102,12 @@ metadata, aggregate cost state, metric provenance, score when reported, and
 opaque evidence ids and digests.
 
 The Toolkit does not store prompts, inputs, outputs, tool arguments or results,
-headers, secrets, private reasoning, exception messages, or provider state. It
-has no exporter and performs no default network egress. Platform logging or an
-external observability backend is not claimed by this application-level ledger.
+headers, secrets, private reasoning, exception messages, or provider state. An
+optional injected exporter receives only schema, action, status, stable reason,
+principal and identity digests, trust label, timestamp, and server duration.
+Exporter failure never changes the operation result. The Worker enables
+structured platform logs explicitly through `AGENT_TOOLKIT_TELEMETRY_ENABLED`;
+the library performs no default network egress and owns no external backend.
 Opaque identifiers use a conservative bounded machine-token grammar, but no
 grammar can determine whether a token is sensitive; the application authorizer
 must reject secret-bearing identifiers before admission.
@@ -143,13 +148,21 @@ passing comparison is still correlation within the declared cohort, not a
 general causal claim. Comparison reads already committed evidence and does not
 require a configured evaluator; only new evaluation work does.
 
+`profile` reports distribution and bottleneck evidence for one exact run.
+`optimize` evaluates already-committed comparisons for a bounded set of exact
+candidates, filters to candidates that pass every quality, latency, and cost
+gate, then orders them by quality improvement, latency ratio, cost ratio, and
+candidate digest. It performs no parameter search, prompt mutation, model call,
+training, or application.
+
 ## Continuous Learning
 
 Continuous learning is the bounded sequence `evidence -> evaluation ->
-comparison -> review-pending proposal`. The proposal binds exact baseline and
-candidate revisions to the comparison digest and is idempotent by operation id.
-An external reviewer may use that record in its own authorized workflow. The
-Toolkit cannot approve or apply it.
+comparison -> optimization recommendation -> review-pending proposal`. The
+recommendation chooses only among exact pre-evaluated candidates. The proposal
+binds exact baseline and candidate revisions to the comparison digest and is
+idempotent by operation id. An external reviewer may use that record in its own
+authorized workflow. The Toolkit cannot approve or apply it.
 
 ## Durability, Bounds, And Recovery
 
@@ -168,9 +181,15 @@ defaults:
 | Spans per run | 128 |
 | Samples per cohort | 64 |
 | Proposals per cohort | 16 |
+| Optimization candidates | 16 |
 | Evaluator attempts | 2 |
 | Adapter or evaluator call timeout | 60 seconds |
 | Serialized record ceiling | 300,000 characters |
+| Requests per principal per 60-second window | 240 |
+| Retained runs per principal | 32 |
+| Retained cohorts per principal | 8 |
+| Principal admission shards | 64 |
+| Retained principals per shard | 64 |
 
 Run and cohort keys are derived from the authenticated principal, so foreign
 principals receive no existence disclosure. The authenticated session must
@@ -180,10 +199,13 @@ stable, tenant-scoped application principal established by the application
 authorizer. Cohort samples are bounded; older entries leave the rolling window
 instead of creating unbounded Durable Object hotspots.
 
-The library bounds each record and cohort but does not implement a global or
-per-principal request quota. Any remotely exposed deployment must add an
-application-owned rate limit and object-cardinality quota before it can claim
-production abuse resistance; this Dev contract makes no such claim.
+One of 64 bounded admission shards reserves each principal before any
+principal-owned object is created. One atomic admission record per admitted
+principal then enforces the request window plus run and cohort cardinality
+before lifecycle state is read or created. These records store only identity
+digests and expiries. With the `AGENT_STATE` Durable Object store, admission is
+horizontally consistent and recovers across isolates; the memory fallback
+remains suitable only for single-process development.
 
 ## Clean-Room Boundary
 
@@ -204,7 +226,9 @@ npm run docs:check
 ```
 
 VCC: two runtime instances share atomic state, only one evaluator reservation
-spends, server-owned timing survives without raw payload retention, digest-bound
-cohorts reject untrusted or insufficient evidence, supported evidence produces
-only a review-pending proposal, readiness stays sanitized, and no external
-package or default egress is added.
+spends, per-principal admission is atomic, server-owned timing survives without
+raw payload retention, profiling and structured telemetry expose metadata only,
+digest-bound cohorts reject untrusted or insufficient evidence, deterministic
+optimization produces only a review-gated recommendation, supported evidence
+produces only a review-pending proposal, readiness stays sanitized, and no
+external package or default egress is added.

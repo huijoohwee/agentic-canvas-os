@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-29"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -15,6 +15,7 @@ source_docs:
   - "AGENTS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
+  - "KNOWLEDGE-GRAPH.md"
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
@@ -99,6 +100,10 @@ dictionary_entries:
   - "/skill.evolve"
   - "/identity.reflect"
   - "/application.compose"
+  - "/knowledge.graph.ingest"
+  - "/knowledge.graph.parser.generate"
+  - "/knowledge.graph.query"
+  - "/knowledge.graph.explain"
   - "/orchestration.graph"
   - "/agent.team"
   - "/agent.swarm"
@@ -256,6 +261,10 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/skill.evolve` | Optimize existing skill text through resumable bounded epochs, batches, and mini-batches. | `@skill-catalog`, `@skill-policy`, `@runtime-proof`, `@operator` | `#skill-evolution`, `#learning-loop`, `#vcc` | A source-revision-fenced `knowgrph.skill.evolve` run applies a text-mutation learning-rate schedule and held-out gates; output is review-pending only, with no skill apply or model-weight change. |
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/application.compose` | Compile or execute one version-locked agent or LLM application from interoperable component and integration interfaces. | `@application-manifest`, `@component-catalog`, `@integration-profile`, `@runtime-proof`, and `@operator` only for live or mutating execution | `#application-composition`, `#runtime-ready`, `#no-hardcode` | Plan returns one immutable digest over exact revisions, schema digests, owners, bounds, and a deterministic dependency DAG; execute delegates bounded ready steps without silent upgrade, retry, migration, or deploy. |
+| `/knowledge.graph.ingest` | Compile one bounded local workspace containing parser-supported code, docs, SQL, configs, and text-bearing PDFs into one digest-fenced explained-edge graph snapshot. | `@working-directory`, `@knowledge-graph`, `@operator`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#runtime-ready` | `knowgrph.knowledge_graph.ingest` returns opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection; Agentic Canvas OS supplies invocation policy and typed forwarding only. |
+| `/knowledge.graph.parser.generate` | Compile one source-backed inert parser-registry specification into a deterministic canonical v2 registry of fixed adapters or bounded declarative grammar data. | exactly `@parser-specification` and `@runtime-proof` | exactly `#knowledge-graph`, `#parser-generation`, and `#mcp` | `knowgrph.knowledge_graph.parser_generate` validates bounded descriptors and finite grammar data, then returns one canonical registry with its exact digest; Agentic Canvas OS adds no parser runtime, generated code, adapter, artifact store, model, network path, or implicit ingest. |
+| `/knowledge.graph.query` | Query one exact local knowledge-graph snapshot with bounded deterministic lexical search, path, neighborhood, impact, or summary operations. | `@knowledge-graph`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#vcc` | `knowgrph.knowledge_graph.query` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `mode`, then returns ordered evidence from that exact snapshot; stale identity and vector lookup fail closed. |
+| `/knowledge.graph.explain` | Explain one exact relationship from one digest-bound local knowledge-graph snapshot. | `@knowledge-graph`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#vcc` | `knowgrph.knowledge_graph.explain_edge` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `edgeId`, then returns stored endpoints, relationship kind, deterministic explanation, source evidence, parser identity, and extraction rule without reparsing or inference. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
 | `/agent.team` | Plan, start, list, or control one exact source-backed role-playing agent team through the Knowgrph local stdio MCP owner. | exactly `@agent-team` | exactly `#role-based-agent-team` | `/agent.team #role-based-agent-team @agent-team` resolves exact Agent Definition and Agent Orchestration revisions, preserves delegate or handoff ownership, enforces bounded durable state and human review, and returns typed proof without broadening Agent Swarm. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
@@ -267,7 +276,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/sandbox.policy.validate` | Compile and audit one source-backed native sandbox policy without executing an operation. | `@sandbox-policy`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#no-hardcode` | Schema, policy digest, fail-closed defaults, domain mutability, and host-enforcement gap are returned. |
 | `/sandbox.policy.authorize` | Return one fail-closed preflight decision for a filesystem, process, network, or credential operation. | `@sandbox-policy`, `@sandbox-workspace`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#vcc` | Decision, reason code, matched rule where applicable, redacted audit metadata, and enforcement status are returned without execution. |
 | `/prd-tad.create` | Produce or refresh a combined PRD/TAD from validated problem and architecture context. | `@operator`, `@source.body` | `#tco`, `#ttv`, `#vcc`, `#foss` | PRD/TAD includes personas, MoSCoW, topology, harness, ADR, and VCC sections. |
-| `/runtime-ready.check` | Verify whether a spec-complete artifact is runnable. | `@local-harness`, `@runtime-proof` | `#harness`, `#vcc`, `#runtime-ready` | Focused checks exit 0 and cost/deploy boundaries are surfaced. |
+| `/runtime-ready.check` | Verify whether a spec-complete artifact or exact local Git worktree is runnable. | `@local-harness`, `@runtime-proof`, and `@repository-root` for repository audits | `#harness`, `#vcc`, `#runtime-ready` | Focused checks or the bounded source-admission evaluator emit layer-specific proof, stable findings, zero-cost evidence, and unchanged deploy boundaries; exit 0 applies only to the requested proven layer. |
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
 | `/session.start` | Start one conflict-safe Codex build lane from current remote state. | `@operator`, `@working-directory`, `@runtime-proof` | `#multi-agent-collaboration`, `#runtime-ready`, `#vcc` | Remote refs are fetched, the clean registered `main` worktree remains the runtime owner, and one detached registered task worktree claims a unique contract-valid `agent/<device>/<semantic-scope>` branch and branch-bound lease; `.local` remains valid only in the device segment, invalid identity fails before checkout mutation, and Prod or Cloudflare remains unchanged. |
@@ -339,7 +348,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/repository.pack` | Pack the eligible text files in one exact local Git worktree into a deterministic content-addressed Markdown artifact. | exactly `@repository-root` and `@runtime-proof` | exactly `#repository-packing` | Knowgrph local stdio MCP returns `knowgrph-repository-pack-result/v1` with a verified repository-relative artifact path, source and artifact digests, typed counts, hard bounds, and exact zero network, model, token, and cost evidence. |
 | `/git.run` | Inspect or mutate the browser-persisted Git repository, and fetch from or push to one configured remote through the Dev Worker relay. | `@local-git-repository`, `@git-remote` | `#git-remote`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns a typed repository result; remote credentials remain Worker-only, rejected authority paths fail atomically, and local stdio returns only a browser-runtime handoff. |
 | `/file.sync` | Pull or push a file or directory between browser persisted cache and one configured cloud-storage provider. | `@persisted-cache`, `@file-sync-provider` | `#multi-provider-file-sync`, `#mcp`, `#runtime-ready`, `#dev-only` | The browser WebMCP owner returns per-file typed outcomes with hash skips, bounded retries, conflict state, and offline FIFO; provider credentials remain Worker-only and local stdio performs no storage or network work. |
-| `/ingest-url` | Ingest an operator-provided URL through the approved URL intake and source-file pipeline. | `@operator`, `@approval-gate`, `@dev-only` | `#no-hardcode`, `#approval-gate`, `#dev-only` | URL is accepted, fetched, or rejected through the shared intake path without writing the URL into source docs. |
+| `/ingest-url` | Import one operator-provided URL through the existing workspace URL intake, Source Files, and Canvas projection owners. | exactly one `@url:` value and `@reference-policy` | exactly `#canvas` | Canonical invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `knowgrph.agentic_canvas_os.docs.invoke` resolves source-backed metadata only, while guarded browser WebMCP tool `knowgrph.control_local_import_url` returns one typed imported, blocked, or failed result without a second importer, embedded URL, credential exposure, Prod mutation, or Cloudflare deployment. |
 | `/computing-flow` | Generate or validate a source-backed KGC computing-flow DAG. | `@operator`, `@source.frontmatter`, `@local-harness`, `@runtime-proof` | `#computing-flow`, `#frontmatter`, `#harness`, `#vcc` | `kgc-computing-flow/v1` frontmatter validates and routes through KGC validation before Canvas projection. |
 | Bare `/moa` | Return usage for the MoA route. | `@agent` | `#mixture-of-agents` | Usage response explains required query or scoped selection; it does not switch model, mutate state, or call a provider. |
 
@@ -393,6 +402,7 @@ command:
 | `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
 | `/sdlc.observe` lacks an exact immutable `agentic-sdlc-ledger-receipt/v1`, expected revision, or expected ledger digest, or the source bytes drift | Return a typed read-only block before projection; do not infer a receipt, repair a ledger, translate `delivery_ready` into `verified`, infer `deployed`, call a model or network, or create a second graph store or renderer. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
+| `/knowledge.graph.parser.generate` receives a missing, mutable, executable, ambiguous, oversized, or unsupported parser specification | Reject before registry compilation or publication; do not infer source matchers, download an adapter, execute caller code, fall back to a model or remote service, or start ingestion. |
 | `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
@@ -403,6 +413,10 @@ command:
 
 | Token | Facts source |
 |---|---|
+| `/knowledge.graph.ingest` | `FACTS.md` direct-resolution entry for bounded native parser generation and graph ingestion. |
+| `/knowledge.graph.parser.generate` | `FACTS.md` direct-resolution entry for deterministic source-backed parser generation. |
+| `/knowledge.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
+| `/knowledge.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
 | `/sdlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only Agentic SDLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable Knowgrph MCP control. |
@@ -414,6 +428,7 @@ command:
 | `/sme-care-agent` | `FACTS.md` direct-resolution entry for source-grounded SME care responses. |
 | `/investment-research-agent` | `FACTS.md` direct-resolution entry for source-grounded investment research responses. |
 | `/crawler-agent` | `FACTS.md` direct-resolution entry for the native website crawl route. |
+| `/ingest-url` | `FACTS.md` direct-resolution entry for the guarded browser-local Import URL route. |
 | `/knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for bounded Widget Card Probe-Tree generation. |
 | `/memory.write` | `FACTS.md` direct-resolution entry for bounded memory writes. |
 | `/user.profile` | `FACTS.md` direct-resolution entry for explicit user profile updates. |

@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-07-26"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -17,6 +17,7 @@ source_docs:
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "APPLICATION-COMPOSITION.md"
+  - "KNOWLEDGE-GRAPH.md"
   - "AGENT-TEAM.md"
   - "CLOUD-COLLABORATION.md"
   - "REPOSITORY-PACKING.md"
@@ -139,6 +140,8 @@ dictionary_entries:
   - "@application-manifest"
   - "@component-catalog"
   - "@integration-profile"
+  - "@knowledge-graph"
+  - "@parser-specification"
   - "@agent-team"
   - "@handoff-row"
   - "@agent-profile"
@@ -283,7 +286,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@git-remote` | Opaque configured remote alias used for browser Git fetch or push. | Authenticated Dev Worker storage relay and its static allowlist. | Browser payloads contain neither credentials nor upstream URLs; the relay revalidates loopback origin, membership, role, size, path, and compare-before-update state. |
 | `@persisted-cache` | Browser-owned binary and metadata cache used by file synchronization. | Knowgrph storage-engine IndexedDB owner. | Chunked values stay within browser limits, credentials are rejected, and degraded persistence blocks mutating controls. |
 | `@file-sync-provider` | Opaque configured provider alias for file or directory pull and push. | Authenticated Dev Worker provider registry. | Alias exposes no provider resource id or credential; unsupported native documents, shortcuts, symlinks, and unverifiable hashes fail explicitly. |
-| `@url:` | Context reference to fetched external content. | Approved URL fetch/extract owner. | Requires egress policy, cache/citation metadata, size bounds, and no credentials in URL or headers. |
+| `@url:` | Operator-provided reference to bounded external content for context expansion or source import. | Approved URL fetch, extract, or Import URL owner. | Requires `@reference-policy`, egress policy, cache/citation metadata, size bounds, and no credentials in the URL or headers. |
 | `@reference-policy` | Workspace, scan, size, platform, URL egress, warning, and refusal rules for context references. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved composer or CLI owner. | Missing policy preserves raw text; unsupported surfaces pass raw `@` references through with typed warning. |
 | `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
 | `@kanban-board` | Durable `kanban.md` task board. | Authored Markdown table source plus existing multi-dimensional table/Kanban utilities. | Board rows are the SSOT for task and handoff state; no browser-only, process-only, or copied board store. |
@@ -293,6 +296,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@application-manifest` | Bounded source-backed application slots, dependency edges, entrypoints, outputs, bounds, and exact revisions and digests. | Authored application source selected by the operator or project owner. | No latest tags, ranges, fallbacks, callbacks, packages, commands, endpoints, headers, environment maps, credentials, or embedded code. |
 | `@component-catalog` | Immutable exact component, source, interface, schema, capability, runtime-owner, risk, and readiness records. | Knowgrph local component catalog owner. | Same-revision drift, missing evidence, disabled records, and implicit fallback or upgrade block planning. |
 | `@integration-profile` | Opaque host-approved integration id, exact profile revision, and exact declared capability revision. | Existing integration registry, gateway, or transport owner. | Executable, arguments, transport, endpoint, headers, secrets, credentials, sessions, and provider payloads remain owner-private. |
+| `@knowledge-graph` | One exact digest-fenced local graph snapshot view plus its source, parser, diagnostic, and artifact manifest. | Knowgrph artifact owner under an explicitly configured local boundary. | The binding is not a database credential, global index, vector store, approval, or executable graph; replacement makes prior expected digests stale, source files stay authored SSOT, and query or explanation cannot select or mutate another snapshot. |
+| `@parser-specification` | One immutable inert parser-registry specification containing bounded source matchers, declared kinds, native adapter identities, fidelity, and deterministic priority. | Operator-selected authored source resolved by the Knowgrph local MCP parser-generator owner. | It contains no executable code, adapter implementation, command, dependency, credential, remote endpoint, model prompt, artifact path, implicit ingest authority, or mutable alias; ambiguous or unsupported adapter declarations fail before compilation. |
 | `@handoff-row` | One validated handoff row in `kanban.md`. | Shared table row parser and named profiles. | Requires from profile, to profile, task id, context refs, blockers, resume state, and acceptance criteria. |
 | `@agent-profile` | Named profile that can own or receive board work. | `SOUL.md`, `USER.md`, profile config, or explicit operator-defined profile source. | Profile identity is explicit and non-secret; it cannot imply deploy, spend, or hidden memory ownership. |
 | `@worker-process` | Full OS process worker for a named profile. | Approved local process launcher or operator-run terminal. | Process has cwd, identity, command, proof, cleanup, and resource bounds; no fragile in-process subagent swarm. |
@@ -359,11 +364,12 @@ binding:
 | Missing, non-Git, unsafe, changed, or escaping `@repository-root` for `/repository.pack` | Return a typed repository-root block before discovery or publication; do not broaden `@working-directory`, follow a symlink, or use a remote fallback. |
 | Missing `@context-policy` for `/context.load` | Block before inclusion; context files cannot self-authorize loading. |
 | Missing `@reference-policy` for `/reference.expand` | Preserve raw message text and return reference-policy-required. |
-| `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before injecting content into `@attached-context`. |
+| `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before context attachment or source import; do not fetch, inject, or persist the content. |
 | Missing `@kanban-board` for `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` | Return missing-board; do not create a second board store. |
 | Missing `@agent-profile` or `@worker-process` for a handoff | Return missing-profile; do not spawn an anonymous worker. |
 | Missing `@work-item` or `@implementation-run` for `/implementation.run` | Return missing-managed-run-context before worktree creation, process launch, model spend, or mutation. |
 | Missing or mutable `@application-manifest`, `@component-catalog`, or `@integration-profile`, or changed source, interface, schema, capability, owner, or plan evidence | Return a typed composition block before execution or spend; never infer, upgrade, install, reconnect, retry, migrate, or deploy. |
+| Missing, mutable, executable, ambiguous, oversized, or unsupported `@parser-specification` | Return a typed parser-generation block before compilation or registry publication; do not infer matchers, download an adapter, execute caller code, or start ingestion. |
 | Missing or unconfigured `@swarm-run` state, exact-agent resolver, planner, worker, synthesizer, receipt verifier, authorizer, or authenticated run principal | Return a typed block before work, disclosure, spend, or cancellation; never accept a caller-supplied substitute. |
 | Missing `@agent-toolkit-observer` authorizer, changed revision digest, or cross-principal access | Block mutation or disclosure; a missing evaluator blocks new evaluation spend but not owner reads or comparison over already committed eligible evidence. |
 | Missing, expired, mismatched, or revoked `@voice-profile`, speaker consent, recording rights, permitted use, or required disclosure for `/voice.studio` | Return a typed authorization block before audio read, adapter selection, provider call, spend, persistence, or generated artifact. |
@@ -382,13 +388,17 @@ binding:
 | Pattern | Meaning |
 |---|---|
 | `/memory.seed #frontmatter @source.frontmatter @source.body` | Build memory from authored source. |
-| `/runtime-ready.check #harness @local-harness @runtime-proof` | Prove runtime status locally. |
+| `/runtime-ready.check #runtime-ready #harness #vcc @repository-root @local-harness @runtime-proof` | Prove one requested local repository layer from exact bounded source and surfaced evidence. |
 | `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Bind validated KGC source to one private bounded ECS session. |
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Resolve and advance the live session without exposing its world object. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Persist the session's pending decisions atomically and dispose it only after a terminal success. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
 | `/implementation.run #managed-implementation-run @work-item @implementation-run @sandbox-workspace` | Execute one bounded work item inside its fenced run workspace and stop `delivery_ready` with ACOS `review_ready`. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Compile exact host-owned interfaces into one immutable plan and delegate bounded ready steps to their existing owners. |
+| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Bind one explicit workspace selection and artifact view to Knowgrph deterministic ingestion. |
+| `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof` | Bind one exact inert specification to Knowgrph parser generation and its digest-fenced result identity. |
+| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Bind a query to one opaque Knowgrph graph id and expected current snapshot digest. |
+| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Bind explanation to one exact Knowgrph-stored edge under one expected snapshot digest. |
 | `/agent.team #role-based-agent-team @agent-team` | Resolve one revision-fenced role-based team and hand typed plan/start/list/control lifecycle ownership to the Knowgrph local stdio MCP runtime without creating a second scheduler or broadening Agent Swarm. |
 | `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
@@ -460,6 +470,7 @@ binding:
 | `@agent-team` | `FACTS.md` direct-resolution entry for one exact source-backed Agent Team binding. |
 | `@component-catalog` | `FACTS.md` direct-resolution entry for immutable local component and interface records. |
 | `@integration-profile` | `FACTS.md` direct-resolution entry for opaque host-owned integration capability bindings. |
+| `@knowledge-graph` | `FACTS.md` direct-resolution entry for one exact digest-fenced local graph snapshot view. |
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
 | `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
 | `@knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
@@ -478,7 +489,7 @@ binding:
 | `@git:` | `FACTS.md` direct-resolution entry for bounded git history references. |
 | `@local-git-repository`, `@git-remote` | `FACTS.md` direct-resolution entries for the browser Git owner and opaque Worker relay binding. |
 | `@persisted-cache`, `@file-sync-provider` | `FACTS.md` direct-resolution entries for browser cache ownership and opaque provider relay binding. |
-| `@url:` | `FACTS.md` direct-resolution entry for URL context references. |
+| `@url:` | `FACTS.md` direct-resolution entry for bounded URL context or source-import references. |
 | `@reference-policy` | `FACTS.md` direct-resolution entry for reference expansion policy. |
 | `@attached-context` | `FACTS.md` direct-resolution entry for appended expansion packets. |
 | `@kanban-board` | `FACTS.md` direct-resolution entry for durable Kanban board binding. |
@@ -488,6 +499,7 @@ binding:
 | `@worker-process` | `FACTS.md` direct-resolution entry for full OS process worker binding. |
 | `@swarm-run` | `FACTS.md` direct-resolution entry for one dynamic swarm run ledger. |
 | `@agent-toolkit-observer` | `FACTS.md` direct-resolution entry for one metadata-only Toolkit observer and evaluator boundary. |
+| `@parser-specification` | `FACTS.md` direct-resolution entry for one immutable inert parser source contract. |
 | `@tool-gateway` | `FACTS.md` direct-resolution entry for existing-infrastructure tool routing. |
 | `@tool-provider` | `FACTS.md` direct-resolution entry for per-tool provider state. |
 | `@tool-function` | `FACTS.md` direct-resolution entry for callable tool functions. |

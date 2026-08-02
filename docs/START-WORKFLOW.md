@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-07-26"
+date: "2026-07-27"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -394,15 +394,21 @@ Use pull only when all conditions are true:
 
 ## Mandatory Completion Protocol
 
-Completion and parking are mutually exclusive states. Dirty, stashed,
-branch-only, pushed, open-pull-request, or auto-merge-pending work is not
-complete.
+Completion and parking are mutually exclusive states. Dirty, stashed, branch-only, pushed, open-pull-request, or auto-merge-pending work is not complete.
 
 Managed implementation runs normally stop before completion through `npm run device:review`. For a cloud-admitted lane, that command reconciles the local projection with the exact live active or review-ready claim, runs the focused check, repeats reconciliation immediately before push, pushes and waits for the ownership PR to expose the exact head, rebinds the claim to that pushed HEAD when needed, performs and verifies the cloud `review_ready` transition, then records the reviewed head, marks the PR ready, and releases the local lease to `review_ready`. If a remote bind or transition succeeded before local persistence, retry accepts only the recomputed claim identity, immutable base/write set/epoch, exact PR/head, monotonic counter, state, expiry, fence, and transition digest. It preserves authored PR context and does not add an automerge label or merge by default. Knowgrph projects this ACOS state as managed-run `delivery_ready`; neither status is task completion. Cloud-admitted changes require explicit cloud handoff/reclaim before resumed mutation or local parking; `device:publish` remains the explicit protected auto-merge path.
 
 An operator or durable work-item policy may pre-authorize one terminal-turn protected merge only at `device:start` with `--auto-delivery`. The resulting immutable lease carries `autoDelivery: true` and `runtimeRequired: true`.
 
-Terminal-turn auto-delivery is an implementation-run completion policy, not an unconditional conversational-turn hook. It is eligible only after the requested implementation is genuinely complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. Ending a message, chat, session, or thread is not sufficient. Questions, status reports, read-only work, waits, partial progress, dirty or parked work, and blocked outcomes do not apply the wake label, enable auto-merge, or claim delivery.
+### Terminal Delivery Authorization Recommendation
+
+Recommend `device:start --auto-delivery` only when the task request explicitly includes protected merge plus downstream promotion or canonical runtime refresh as the intended terminal outcome. Use ordinary `device:start` for implementation-only review handoff, and never authorize auto-delivery for exploratory, diagnostic, status, wait, or read-only work.
+
+The choice is immutable for the lease. Do not infer merge or promotion authority from words such as `finish`, from the end of a response, or from an ordinary implementation request. If the operator later requests delivery of an already-started or review-ready task, use the explicit protected `device:publish` or `device:integrate` path instead of retrofitting `autoDelivery`.
+
+For a task whose immutable lease already carries `autoDelivery: true` and `runtimeRequired: true`, recommend its terminal implementation-turn ending as the delivery checkpoint: run `device:review`, wake the protected controller for the exact reviewed head, wait for protected merge, and continue through canonical runtime reconciliation instead of stopping at `review_ready`. The turn ending consumes prior operator authority; it does not create new authority.
+
+Terminal-turn auto-delivery remains an implementation-run completion policy, not a conversational-turn hook. It applies only after the requested work is complete, no required work remains, the task worktree is clean, and `device:review` has bound the exact reviewed head. An ordinary end of message, chat, session, or thread is insufficient, and questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
 
 At terminal review, ACOS writes the exact `reviewHeadSha` before applying the `agentic/auto-delivery` wake label. The repository-owned `pull_request_target` controller accepts only a same-repository, non-draft PR at that exact SHA with the matching `review_ready` lease; it enables GitHub protected auto-merge and never pushes, rebases, resolves conflicts, bypasses required checks, or deploys. A head change, malformed marker, fork, or conflict label is ineligible and requires a fresh fenced review handoff. Protected merge is not completion: the authorized local `device:integrate` continuation may consume that reviewed lease after `MERGED`, but it requires canonical runtime reconciliation and rejects `--runtime=none`. Only its `agentic-device-integration-result/v1` result with status `runtime_ready` proves completion.
 
@@ -419,6 +425,18 @@ The command runs the worktree lifecycle audit and fetches both canonical reposit
 
 The supervisor starts only Knowgrph's repository-owned Apex and storage commands on `127.0.0.1:5173` and `127.0.0.1:8787`. State, logs, and a private token live outside both repositories. Success records token hash rather than token value and proves Apex, direct storage export, and the same export through the Vite proxy. A raw `npm run dev`, source-only check, prior-turn proof, or HTTP response without matching process ownership cannot support a runtime-ready claim.
 
+Interactive browser work may use a session-owned Vite process when it is launched through Agentic Canvas OS from clean exact canonical Knowgrph `main`:
+
+```sh
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:session:start -- \
+  --session="$AGENTIC_SESSION_ID" \
+  --repository="$GITHUB_ROOT/knowgrph" --json
+```
+
+The session launcher may stop only an already-recorded canonical runtime whose private token and process evidence still agree. It then records a separate private session token plus the exact session id, supervisor and listener PIDs, process group, process start identity, Vite command, working directory, Git common directory, source SHA, and fixed Apex port, and it reports `session-dev`, never `runtime-ready`.
+
+`turn:end` automatically performs the inverse handoff when `--session` or `AGENTIC_SESSION_ID` matches that record. After canonical-source, lifecycle, and protected-check preflight, one host lock covers validation of the session listener, graceful process-group stop, port release, canonical storage and Apex startup, and all three HTTP probes. A wrong or missing session, reused PID, changed start time, command, directory, repository, source SHA, token, or listener blocks before termination, and an unrecorded `npm run dev:apex` process remains unmanaged and is never adopted or killed.
+
 Status re-proves source, protected checks, process ownership, listeners, and HTTP without mutation. Stop accepts only token-owned recorded process groups:
 
 ```sh
@@ -426,25 +444,15 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:status -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:local:stop -- \
   --repository="$GITHUB_ROOT/knowgrph" --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:session:status -- \
+  --session="$AGENTIC_SESSION_ID" --repository="$GITHUB_ROOT/knowgrph" --json
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run runtime:session:stop -- \
+  --session="$AGENTIC_SESSION_ID" --repository="$GITHUB_ROOT/knowgrph" --json
 ```
 
-This is the reference adapter for the neutral Runtime Review Receipt, not
-Production authorization or deployment. Task worktrees never become runtime
-sources. `turn:end` persists an `agentic-local-review-candidate/v1` receipt that
-joins the protected Integration Receipt and binds canonical Knowgrph and Agentic
-Canvas OS commits, trees, dependency closure, policy, live probes, and protected
-checks. Candidate preparation may be dispatched idempotently from that joined
-receipt, but no local command, terminal turn, merge event, user, device, or
-agent may synthesize the Human Authorization Receipt. A read-only follow-up
-reruns `runtime:local:status` before claiming readiness; an implementation turn
-reruns `turn:end` idempotently.
+This is the reference adapter for the neutral Runtime Review Receipt, not Production authorization or deployment. Task worktrees never become runtime sources. `turn:end` persists an `agentic-local-review-candidate/v1` receipt that joins the protected Integration Receipt and binds canonical Knowgrph and Agentic Canvas OS commits, trees, dependency closure, policy, live probes, and protected checks. Candidate preparation may be dispatched idempotently from that joined receipt, but no local command, terminal turn, merge event, user, device, or agent may synthesize the Human Authorization Receipt. A read-only follow-up reruns `runtime:local:status` before claiming readiness, and an implementation turn reruns `turn:end` idempotently.
 
-For a completed task, use the explicit integration command from the leased task
-worktree. It validates and commits only an exact approved dirty-path set,
-preflights and merges the current fetched protected `main`, publishes through
-the protected pull request, waits a bounded time for `MERGED`, completes the
-durable lease, fast-forwards the integrated canonical source, and reconciles the
-managed Knowgrph runtime through the Agentic Canvas OS `turn:end` supervisor:
+For a completed task, use the explicit integration command from the leased task worktree. It validates and commits only an exact approved dirty-path set, preflights and merges the current fetched protected `main`, publishes through the protected pull request, waits a bounded time for `MERGED`, completes the durable lease, fast-forwards the integrated canonical source, and reconciles the managed Knowgrph runtime through the Agentic Canvas OS `turn:end` supervisor:
 
 ```sh
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:integrate -- \
@@ -455,19 +463,13 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:integrate -- \
   --json
 ```
 
-The commit options are required only while the worktree is dirty. The manifest
-is external coordination input, not an authored task file, and has this exact
-shape:
+The commit options are required only while the worktree is dirty. The manifest is external coordination input, not an authored task file, and has this exact shape:
 
 ```json
 {"schema":"agentic-change-manifest/v1","branch":"agent/<device>/<scope>","baseSha":"<lease-base-sha>","paths":["path/owned-by-task"]}
 ```
 
-Changed paths must equal `paths` before and after `npm run check`; the command
-stages those paths explicitly and rejects any residue. A clean worktree must
-already contain an authored commit beyond its fence. Runtime reconciliation
-targets the sibling canonical Knowgrph checkout by default; use
-`--runtime-repository=<path>` only for a nonstandard workspace layout.
+Changed paths must equal `paths` before and after `npm run check`; the command stages those paths explicitly and rejects any residue. A clean worktree must already contain an authored commit beyond its fence. Runtime reconciliation targets the sibling canonical Knowgrph checkout by default; use `--runtime-repository=<path>` only for a nonstandard workspace layout.
 If protected synchronization advances a published pull request, integration accepts a bounded exact first-parent chain from the recorded delivery head. Every refresh must have exactly two parents, use the preceding head as its first parent, use a second parent contained by current protected `main`, and have the same tree as the deterministic merge of those parents.
 It fetches the immutable pull-request head, admits only a clean local HEAD that is an exact chain member, fast-forwards to the observed head, and records either the compatible single-refresh receipt or the ordered refresh-chain proof; authored, non-ancestral, discontinuous, octopus, tree-mismatched, or unbounded movement fails closed.
 `--runtime=none` is an explicit recovery escape hatch: it emits `integrated`,
@@ -499,11 +501,7 @@ worktree stash entries and refs must survive. Parking never satisfies completion
 
 ### Session-End Worktree Lifecycle
 
-Audit the current task worktree at the end of every chat, session, or thread, but
-do not equate conversation end with task completion. First choose exactly one
-durable state: complete through the protected merge protocol, park unfinished
-work, or keep an active leased lane when the same task is intentionally
-continuing.
+Audit the current task worktree at the end of every chat, session, or thread, but do not equate conversation end with task completion. First choose exactly one durable state: complete through the protected merge protocol, park unfinished work, or keep an active leased lane when the same task is intentionally continuing.
 
 For every implementation lane, `turn:end` must finish ready against the canonical protected SHAs or the final response must report the missing integration or runtime proof. Task heads never replace canonical runtime ownership.
 

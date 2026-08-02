@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS MCP Gateway"
 graphId: "md:knowgrph-agentic-canvas-os-mcp-gateway"
 doc_type: "MCP Gateway Contract"
-date: "2026-07-29"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-canvas-os-mcp-gateway/v1"
 frontmatter_contract: "required"
@@ -115,7 +115,7 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 
 | Consumer surface | Route owner | Source and boundary |
 |---|---|---|
-| Knowgrph Skills & Commands and shared composer menus | `knowgrph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/knowgrph/control-plane/mcp` owner | Reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |
+| Knowgrph Skills & Commands and shared composer menus | `knowgrph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/knowgrph/control-plane/mcp` owner | Read-only discovery reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`; it never executes `/ingest-url` or another grammar command. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |
 
 ## Tool Gateway Capabilities
 
@@ -228,6 +228,23 @@ Application composition is a local, provider-neutral compiler and bounded depend
 | `knowgrph.application.plan` | Resolve exact revisions and digests, negotiate capabilities, compile a deterministic dependency DAG, and return an immutable `application-composition-plan/v1` digest. | Read-only; mutable references, drift, incompatibility, cycles, implicit fallback, install, upgrade, migration, connection, or execution fail closed. |
 | `knowgrph.application.execute` | Revalidate one exact plan and sequence only dependency-ready steps through injected existing runtime owners. | Bounded and idempotency-fenced; no new agent loop or integration proxy, silent retry, automatic migration, provider fallback, continuation beyond bounds, deploy, or approval inference. |
 
+## Deterministic Knowledge Graph Capability
+
+Agentic Canvas OS owns the canonical invocation grammar and typed
+`createKnowgrphMcpClient` methods. Knowgrph owns the executable MCP runtime,
+parser generator and adapters, sharded artifact storage, query, explanation,
+Launch import, and Canvas projection. No artifact filesystem path crosses the
+client boundary.
+
+| Exact tool | Behavior | Mutation boundary |
+|---|---|---|
+| `knowgrph.knowledge_graph.ingest` | Compile registered code, documents, SQL, configs, PDFs, and optional inert grammar artifacts into one deterministic explained graph. | Read the explicit workspace; return opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection. |
+| `knowgrph.knowledge_graph.parser_generate` | Compile one inert bounded parser-registry specification, including optional finite declarative grammar data, into one deterministic canonical v2 registry. | Validate adapter fidelity and grammar bounds, reject executable or ambiguous input, and return the inert registry plus its exact digest without code, artifact paths, ingest, model use, or network use. |
+| `knowgrph.knowledge_graph.query` | Run bounded lexical, neighborhood, impact, path, or summary operations against `graphId` plus `expectedSnapshotDigest`. | Read-only; reject a stale digest and perform no vector or remote lookup. |
+| `knowgrph.knowledge_graph.explain_edge` | Return one stored relationship and its exact parser/source evidence from `graphId` plus `expectedSnapshotDigest`. | Read-only; no workspace scan, inference, model, network, or mutation. |
+
+`/knowledge.graph.*`, `#knowledge-graph`, `#parser-generation`, `@knowledge-graph`, and `@parser-specification` resolve through the canonical dictionaries as metadata. Resolution is not execution. An explicit `tools/call` to one of the four names above is required; parser generation is independently invocable, while its executable compiler, adapters, and artifacts remain solely Knowgrph-owned.
+
 ## Repository Packing Capability
 
 Repository packing is one local stdio MCP capability. `/repository.pack #repository-packing @repository-root @runtime-proof` is its exact host alias, not an alternate wire method. Agentic Canvas OS owns invocation and safety truth; Knowgrph owns Git discovery, symlink-safe bounded reads, deterministic rendering, atomic content-addressed publication, and structured proof.
@@ -327,6 +344,7 @@ capability:
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
 | Orchestrate a role-based Agent Team | Local stdio MCP | Plans and supervises one revision-fenced team through existing agent owners, durable checkpoints, explicit review, and exact delegate or handoff answer ownership. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
+| Ingest, query, or explain a codebase knowledge graph | Knowgrph local MCP | Uses one bounded local digest-fenced graph, deterministic source parsers, auditable edge evidence, opaque graph identity, and explicit tool dispatch without models, embeddings, or vectors. |
 | Manage an autonomous implementation run | Local stdio MCP | Uses the durable work-item ledger and ACOS fenced task lifecycle; configured work stops `delivery_ready` with the PR ready for review. |
 | Observe one Agentic SDLC run end to end | Local stdio MCP | Requires one immutable local ledger receipt and deterministically projects bounded KGC and GraphData through the existing Canvas without a model, network, spend, mutation, state promotion, or deployment. |
 | Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `knowgrph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
@@ -356,6 +374,7 @@ capability:
 | Voice Studio ownership is singular | Three exact host metadata routes map to one `knowgrph.voice.studio` wire tool; consent never follows from a binding, and no copied runtime or provider dependency is required. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |
 | Application plans are immutable | Equivalent manifests produce one digest over exact revisions, interface and schema digests, owners, edges, order, and bounds; drift or migration needs a new explicit plan and never mutates execution automatically. |
+| Knowledge graphs are local and auditable | Ingestion is deterministic and workspace-scoped, every published edge has canonical source evidence and a stored explanation, query and explanation are read-only, and no model, embedding, vector store, external parser, or external graph service participates. |
 | Tool secrets stay server-managed | Provider keys and browser sessions never appear in docs, client state, tests, or fixtures. |
 | Soul identity is source-backed | Prompt assembly rejects silent hardcoded defaults and returns typed fallback for missing, empty, unsafe, or unreadable soul source. |
 | MoA fan-out is bounded | MoA capabilities reject missing preset, uncapped references, recursive aggregators, and copied external preset examples. |

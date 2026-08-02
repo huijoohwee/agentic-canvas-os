@@ -6,11 +6,14 @@ import {
   assertNonDestructiveOperation,
   assertRecoveryReference,
   assertWorkspaceLaneIsolation,
+  assertWorkspaceReconciliationAdmission,
   buildWorkspaceParallelismReport,
   classifyGitOperation,
   laneIsDirty,
   laneKey,
+  WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA,
 } from "../scripts/workspace-parallelism-lib.mjs";
+import { resolveWorkspaceRoot as resolveGuardWorkspaceRoot } from "../scripts/workspace-parallelism-guard.mjs";
 
 const cleanLane = {
   repository: "knowgrph",
@@ -244,4 +247,75 @@ test("the workspace report is ready only when every lane is recoverable", () => 
 
 test("the workspace report requires a workspace root", () => {
   assert.throws(() => buildWorkspaceParallelismReport({ workspaceRoot: "", lanes: [cleanLane] }), /requires a workspace root/);
+});
+
+test("task-worktree invocation resolves the registered canonical workspace root", () => {
+  const root = resolveGuardWorkspaceRoot({
+    agenticCanvasOsRoot: "/GitHub/.worktrees/agentic-canvas-os/reconciliation-admission",
+    env: {},
+    spawn: (_command, args) => ({
+      status: 0,
+      stdout: args.join(" ") === "worktree list --porcelain"
+        ? "worktree /GitHub/.worktrees/agentic-canvas-os/reconciliation-admission\nbranch refs/heads/agent/device/reconcile\n\nworktree /GitHub/.worktrees/canonical/agentic-canvas-os\nbranch refs/heads/main\n"
+        : "",
+    }),
+  });
+  assert.equal(root, "/GitHub/.worktrees/canonical");
+});
+
+test("a receipt admits only retained, disjoint lanes whose captured bytes still match", () => {
+  const dirtyLane = {
+    ...foreignDirtyLane,
+    untrackedPaths: 0,
+    stateDigest: "a".repeat(64),
+    writeSetDigest: "b".repeat(64),
+  };
+  const report = buildWorkspaceParallelismReport({ workspaceRoot: "/GitHub", lanes: [cleanLane, dirtyLane] });
+  const receipt = {
+    schema: WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA,
+    workspaceRoot: "/GitHub",
+    protectedTip: "c".repeat(40),
+    items: [{
+      lane: laneKey(dirtyLane),
+      session: "session-b",
+      stateDigest: dirtyLane.stateDigest,
+      writeSetDigest: dirtyLane.writeSetDigest,
+      overlapClass: "disjoint",
+      disposition: "retained",
+      recoveryHandle: "refs/agentic-canvas-os/retained/session-b/geospatial",
+    }],
+  };
+  const result = assertWorkspaceReconciliationAdmission({
+    report,
+    receipt,
+    target: { repository: "knowgrph", scope: "release" },
+  });
+  assert.equal(result.decision, "admit-retained-disjoint-lanes");
+  assert.equal(result.retained.length, 1);
+});
+
+test("reconciliation rejects missing, drifting, or overlapping dirty lane receipts", () => {
+  const dirtyLane = {
+    ...foreignDirtyLane,
+    untrackedPaths: 0,
+    stateDigest: "a".repeat(64),
+    writeSetDigest: "b".repeat(64),
+  };
+  const report = buildWorkspaceParallelismReport({ workspaceRoot: "/GitHub", lanes: [cleanLane, dirtyLane] });
+  const baseReceipt = {
+    schema: WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA,
+    workspaceRoot: "/GitHub",
+    protectedTip: "c".repeat(40),
+    items: [],
+  };
+  assert.throws(() => assertWorkspaceReconciliationAdmission({ report, receipt: baseReceipt }), /does not account/);
+  const item = {
+    lane: laneKey(dirtyLane), session: "session-b", stateDigest: "d".repeat(64),
+    writeSetDigest: dirtyLane.writeSetDigest, overlapClass: "disjoint", disposition: "retained", recoveryHandle: "refs/recovery/x",
+  };
+  assert.throws(() => assertWorkspaceReconciliationAdmission({ report, receipt: { ...baseReceipt, items: [item] } }), /drifted/);
+  assert.throws(() => assertWorkspaceReconciliationAdmission({
+    report,
+    receipt: { ...baseReceipt, items: [{ ...item, stateDigest: dirtyLane.stateDigest, overlapClass: "overlapping" }] },
+  }), /overlapping/);
 });

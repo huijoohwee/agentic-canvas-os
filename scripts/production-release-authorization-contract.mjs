@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 
 import { validateProductionRuntimeReadiness } from "./production-runtime-readiness-contract.mjs";
 
@@ -6,6 +7,8 @@ export const LOCAL_REVIEW_CANDIDATE_SCHEMA = "agentic-local-review-candidate/v1"
 export const PRODUCTION_RELEASE_CANDIDATE_SCHEMA = "agentic-production-release-candidate/v1";
 export const PRODUCTION_RELEASE_AUTHORIZATION_SCHEMA = "agentic-production-release-authorization/v1";
 export const PRODUCTION_AUTHORIZATION_PROMPT_SCHEMA = "agentic-production-authorization-prompt/v1";
+export const PRODUCTION_AUTHORIZATION_FORMATTER_PATH = "agentic-canvas-os/scripts/production-release-authorization-contract.mjs";
+export const PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH = fileURLToPath(import.meta.url);
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
@@ -112,12 +115,8 @@ export function createProductionAuthorizationPrompt(runtime, localReview, candid
   }
   validateLocalReviewCandidate(localReview);
   validateProductionReleaseCandidate(candidate);
-  const reboundLocalReview = createLocalReviewCandidate(runtime, {
-    source: localReview.source,
-    agenticCanvasOs: localReview.agenticCanvasOs,
-  });
-  if (reboundLocalReview.candidateDigest !== localReview.candidateDigest ||
-      candidate.localReviewCandidateDigest !== localReview.candidateDigest ||
+  validatePromptRuntimeIdentity(runtime, localReview);
+  if (candidate.localReviewCandidateDigest !== localReview.candidateDigest ||
       candidate.source.revision !== localReview.source.revision ||
       candidate.agenticCanvasOs.revision !== localReview.agenticCanvasOs.revision) {
     throw new Error("Production authorization prompt drifted from runtime-ready localhost review.");
@@ -144,6 +143,9 @@ export function formatProductionAuthorizationPrompt(value) {
     `Source: \`${value.sourceRevision}\``,
     `Run: \`${value.runRef}\``,
     `localhost: \`${value.localhostReviewUrl}\``,
+    `Local formatter source: \`${PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH}\``,
+    "",
+    `Template: \`${PRODUCTION_AUTHORIZATION_FORMATTER_PATH}\``,
     "",
     "Reply exactly:",
     "",
@@ -243,6 +245,24 @@ function assertDigest(value, label) {
       value.algorithm !== "sha256" ||
       !SHA256_PATTERN.test(String(value.digest || ""))) {
     throw new Error(`${label} must contain an exact SHA-256 digest.`);
+  }
+}
+
+function validatePromptRuntimeIdentity(runtime, localReview) {
+  if (runtime?.status !== "runtime-ready" || runtime.ready !== true) {
+    throw new Error("Production authorization prompt requires runtime-ready localhost review.");
+  }
+  resolveLocalhostReviewUrl(runtime);
+  if (runtime.source?.repository !== localReview.source.repository ||
+      runtime.source?.revision !== localReview.source.revision ||
+      runtime.agenticCanvasOs?.repository !== localReview.agenticCanvasOs.repository ||
+      runtime.agenticCanvasOs?.revision !== localReview.agenticCanvasOs.revision ||
+      runtime.catalogRevision !== localReview.catalogRevision) {
+    throw new Error("Production authorization prompt drifted from runtime-ready localhost review.");
+  }
+  if (Object.values(runtime.probes || {}).some(status => status !== 200) ||
+      Object.keys(runtime.probes || {}).length < 3) {
+    throw new Error("Production authorization prompt requires all localhost probes to return HTTP 200.");
   }
 }
 

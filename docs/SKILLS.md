@@ -2,7 +2,7 @@
 title: "Knowgrph Agentic Canvas OS Skills"
 graphId: "md:knowgrph-agentic-canvas-os-skills"
 doc_type: "Skill Contract Catalog"
-date: "2026-07-26"
+date: "2026-07-31"
 lang: "en-US"
 schema: "agentic-canvas-os-skills/v1"
 frontmatter_contract: "required"
@@ -15,6 +15,7 @@ source_docs:
   - "DICTIONARY-BINDING.md"
   - "HARNESS-CONTRACTS.md"
   - "AGENT-TEAM.md"
+  - "KNOWLEDGE-GRAPH.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "SKILL-EVOLUTION.md"
@@ -90,9 +91,14 @@ skill_contracts:
   - "stream.trace"
   - "superagent.run"
   - "implementation.run"
+  - "knowledge.graph.parser.generate"
+  - "knowledge.graph.ingest"
+  - "knowledge.graph.query"
+  - "knowledge.graph.explain"
   - "repository.pack"
   - "sme.risk.profile"
   - "crawler.run"
+  - "url.ingest"
   - "sandbox.policy.author"
   - "sandbox.gateway.troubleshoot"
 skill_variants: ["agent.moa", "agent.collaboration-manager", "agent.evidence-scout", "agent.risk-reviewer", "agent.investment-research", "agent.sme-care", "agent.video", "agent.crawler", "agent.docs", "agent.code", "agent.cost", "agent.learning", "agent.orchestrator"]
@@ -138,12 +144,13 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 
 | Family | Skill ids | Detail owner |
 |---|---|---|
-| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md` |
+| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md`, `REPOSITORY-RUNTIME-READINESS.md` |
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
 | Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `implementation.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `MANAGED-IMPLEMENTATION-RUNS.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
-| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
+| Knowledge graph | `knowledge.graph.parser.generate`, `knowledge.graph.ingest`, `knowledge.graph.query`, `knowledge.graph.explain` | `KNOWLEDGE-GRAPH.md`, `MCP-GATEWAY.md`, and the Knowgrph executable owner |
+| Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `url.ingest`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
 ## Specialized Contracts
 
@@ -160,6 +167,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Agent Toolkit | `AGENT-TOOLKIT.md` |
 | Skill Evolution | `SKILL-EVOLUTION.md` |
 | Managed implementation runs | `MANAGED-IMPLEMENTATION-RUNS.md` |
+| Deterministic knowledge graph | `KNOWLEDGE-GRAPH.md` |
 | Repository packing | `REPOSITORY-PACKING.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
@@ -173,6 +181,8 @@ Knowgrph Agent Definition registry and its `/collaboration-manager-agent`,
 variants resolve through `/investment-research-agent`, `/sme-care-agent`,
 `/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`.
 A variant does not create a wildcard command or a second execution registry.
+The `url.ingest` skill resolves only through the exact four-token invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `knowgrph.agentic_canvas_os.docs.invoke` supplies read-only discovery metadata and guarded browser WebMCP tool `knowgrph.control_local_import_url` remains the sole Import URL executor.
+The `knowledge.graph.parser.generate` skill resolves only through `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof`; dictionary resolution remains read-only, while the exact local Knowgrph MCP tool owns deterministic compilation and returns digest-fenced identity without generated code or implicit ingest.
 
 ## Selection And Mutation
 

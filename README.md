@@ -88,7 +88,21 @@ For a pre-authorized terminal-turn protected merge, declare the immutable intent
 npm run device:start -- <scope> --auto-delivery --session=<stable-session> --repository=<task-worktree>
 ```
 
-Auto-delivery is eligible only when the implementation run is terminal: the requested work is genuinely complete, no required work remains, and the exact reviewed head satisfies every protected gate. It is not an end-of-message, end-of-chat, end-of-session, or end-of-thread hook. Ordinary conversation, questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
+Recommend `--auto-delivery` when the operator's task request explicitly names
+protected merge and downstream promotion or canonical runtime refresh as the
+intended terminal outcome. Do not recommend it for implementation-only,
+review-only, exploratory, diagnostic, or conversational work. The choice is
+made at task creation and remains immutable for that lease; a later request to
+deliver an existing review-ready task uses its explicit protected delivery
+path rather than rewriting the lease.
+
+For an eligible pre-authorized task, recommend the terminal implementation-turn
+ending as the delivery checkpoint: run the review handoff, wake protected
+auto-merge, and continue through canonical runtime reconciliation instead of
+stopping at `review_ready`. The ending consumes the authority recorded in the
+lease; it does not create authority by itself.
+
+Auto-delivery is eligible only when the implementation run is terminal: the requested work is genuinely complete, no required work remains, and the exact reviewed head satisfies every protected gate. An ordinary end-of-message, end-of-chat, end-of-session, or end-of-thread event is not a delivery hook. Questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
 
 The terminal review handoff then wakes the repository's trusted auto-delivery workflow. It accepts only the same-repository, non-draft PR whose hidden lease is `review_ready`, binds `reviewHeadSha` exactly to the current PR head, and carries both `autoDelivery` and `runtimeRequired`. The workflow enables GitHub protected auto-merge only; a changed head, a fork, a missing marker, or a conflict label fails closed. It never makes a runtime-ready or completion claim. The matching `device:integrate` run must use canonical runtime reconciliation—`--runtime=none` is rejected for this path—and reports success only as `runtime_ready` after protected merge, canonical convergence, and supervised local runtime proof.
 
@@ -101,6 +115,24 @@ npm run turn:end -- --repository=<canonical-knowgrph-root> --json
 This verifies clean protected `main` for both repositories, owns the fixed Apex
 and storage ports through a private supervisor token, rejects unmanaged
 listeners before mutation, and proves direct and proxied HTTP readiness.
+
+For interactive browser work that must hand off automatically at turn end,
+launch Vite through the session owner instead of invoking `dev:apex` directly:
+
+```bash
+npm run runtime:session:start -- \
+  --session="$AGENTIC_SESSION_ID" \
+  --repository=<canonical-knowgrph-root> --json
+```
+
+The launcher records a private token plus the exact session, PID and process
+group, process start time, command, working directory, Git common directory,
+source SHA, and port. The normal `turn:end` command reads `AGENTIC_SESSION_ID`,
+stops only that exact session-owned Vite group, and starts the canonical Apex
+and storage runtime under the same host lock. It returns success only after the
+canonical runtime is `runtime-ready`. Raw or mismatched listeners remain
+untouched and block the handoff. `runtime:session:status` and
+`runtime:session:stop` provide explicit diagnostics and recovery.
 
 Mandatory completion gate:
 

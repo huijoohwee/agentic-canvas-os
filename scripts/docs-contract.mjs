@@ -15,6 +15,7 @@ import {
 } from "./agent-team-contract.mjs";
 import { validateRepositoryPackingContractDocuments } from "./repository-packing-contract.mjs";
 import { validateAlignmentAuditContractDocuments } from "./alignment-audit-contract.mjs";
+import { validateUrlIngestContractDocuments } from "./url-ingest-contract.mjs";
 
 const DOCS_ROOT = path.resolve("docs");
 const REQUIRED_KEYS = [
@@ -81,6 +82,7 @@ failures.push(...validateAgentTeamContractDocuments(documents));
 failures.push(...validateAgentTeamDocumentLineBudgets(documents));
 failures.push(...validateRepositoryPackingContractDocuments(documents));
 failures.push(...validateAlignmentAuditContractDocuments(documents));
+failures.push(...validateUrlIngestContractDocuments(documents));
 
 if (failures.length > 0) fail(failures.join("\n"));
 console.log(`docs contract ok (${files.length} files)`);

@@ -61,6 +61,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Session ownership and reference release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
 | Dependency-ordered cross-repository integration | `INTEGRATION-ORDER.md` |
 | Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
+| Revision-bound source inventory authority and portable readers | `SOURCE-INVENTORY-CONTRACT.md` |
 | Provider-neutral release semantics, receipts, proof surfaces, and cleanup | `CANONICAL-LIFECYCLE.md` |
 | Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
 | Planning lifecycle | `TODO.md` and the active monthly shard |

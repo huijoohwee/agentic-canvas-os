@@ -77,6 +77,7 @@ export function integrateSession({
   let completion = lease.completion || null;
   if (!['completing', 'completed'].includes(lease.status)) {
     let deliveryCloudAuthority = lease.cloudAuthority || null;
+    const deliveryVerifiedBaseSha = deliveryCloudAuthority?.canonicalBaseSha || "";
     if (reviewReadyDelivery) {
       const authorized = authorizeCloudDelivery({
         authority: lease.cloudAuthority,
@@ -88,28 +89,31 @@ export function integrateSession({
         sessionId,
       });
       deliveryCloudAuthority = authorized.authority;
+      const reviewedDeliveryHeadSha = lease.reviewHeadSha;
       verifyCloudAuthority({
         pullRequestUrl: lease.pullRequestUrl,
         branch,
-        headSha: lease.reviewHeadSha,
+        headSha: reviewedDeliveryHeadSha,
         canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
         cloudAuthority: deliveryCloudAuthority,
       });
       run("gh", ["pr", "merge", "--auto", "--squash", lease.pullRequestUrl]);
     }
-    const allowProtectedMainRefresh = lease.status === "delivery" && lease.sessionId === sessionId;
-    const expectedDeliveryHeadSha = lease.deliveryHeadSha || commitEvidence?.commitSha ||
-      (autoDeliveryReview ? lease.reviewHeadSha : null);
+    const allowProtectedMainRefresh = lease.sessionId === sessionId &&
+      (lease.status === "delivery" || reviewReadyDelivery);
+    const deliveryAuthorizedHeadSha = lease.deliveryHeadSha
+      || commitEvidence?.commitSha
+      || (reviewReadyDelivery ? lease.reviewHeadSha : null);
     verifyCloudAuthority({
       pullRequestUrl: lease.pullRequestUrl,
       branch,
-      headSha: expectedDeliveryHeadSha,
-      canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+      headSha: deliveryAuthorizedHeadSha,
+      canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
       cloudAuthority: deliveryCloudAuthority,
     });
     const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
-      expectedHeadSha: expectedDeliveryHeadSha,
+      expectedHeadSha: deliveryAuthorizedHeadSha,
       ghText, waitSeconds, pollSeconds, now, sleep,
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
@@ -127,8 +131,8 @@ export function integrateSession({
           verifyCloudAuthority({
             pullRequestUrl: lease.pullRequestUrl,
             branch,
-            headSha: refresh.refreshedHeadSha,
-            canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+            headSha: deliveryAuthorizedHeadSha,
+            canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
             cloudAuthority: deliveryCloudAuthority,
           });
           return refresh.refreshedHeadSha;
@@ -138,8 +142,8 @@ export function integrateSession({
     verifyCloudAuthority({
       pullRequestUrl: lease.pullRequestUrl,
       branch,
-      headSha: pullRequest.headRefOid,
-      canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
+      headSha: deliveryAuthorizedHeadSha,
+      canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
       cloudAuthority: deliveryCloudAuthority,
     });
     log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);

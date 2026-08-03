@@ -838,6 +838,91 @@ test("completeSession emits machine-readable merge and main evidence", () => {
   );
 });
 
+test("device:end succeeds as a no-op when already on clean canonical main", () => {
+  const logs = [];
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("main"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "main\n",
+    "status --porcelain": "",
+    "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  const summary = completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => "",
+    leaseStore: createCompletionLeaseStore(null),
+    run: () => {
+      throw new Error("device:end clean-main noop must not mutate the repository.");
+    },
+    log: message => logs.push(message),
+    json: true,
+    allowAlreadyOnCleanMain: true,
+  });
+
+  assert.deepEqual(summary, {
+    completedBranch: null,
+    pullRequestUrl: null,
+    mergeCommitSha: null,
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    status: "ok",
+    disposition: "already_on_clean_main",
+  });
+  assert.equal(logs[0], JSON.stringify(summary));
+});
+
+test("device:end fails on main when canonical main is stale", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("main"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "main\n",
+    "status --porcelain": "",
+    "rev-parse HEAD": "1234567890abcdef1234567890abcdef12345678\n",
+    "rev-parse origin/main": "abcdefabcdefabcdefabcdefabcdefabcdefabcd\n",
+  });
+
+  assert.throws(
+    () => completeSession({
+      invocationPath: repo,
+      repo,
+      gitText,
+      ghText: () => "",
+      leaseStore: createCompletionLeaseStore(null),
+      run: () => {},
+      allowAlreadyOnCleanMain: true,
+    }),
+    /requires clean canonical main/,
+  );
+});
+
+test("device:end fails on main while an active lease still owns the worktree", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("main"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "main\n",
+    "status --porcelain": "",
+  });
+
+  assert.throws(
+    () => completeSession({
+      invocationPath: repo,
+      repo,
+      gitText,
+      ghText: () => "",
+      leaseStore: createCompletionLeaseStore({ status: "active" }),
+      run: () => {},
+      allowAlreadyOnCleanMain: true,
+    }),
+    /remains active/,
+  );
+});
+
 test("completeSession pins fetched origin/main when another worktree advances the shared ref", () => {
   const oldMain = "1".repeat(40);
   const newMain = "2".repeat(40);

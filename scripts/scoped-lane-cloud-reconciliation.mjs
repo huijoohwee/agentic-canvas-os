@@ -81,11 +81,11 @@ export function reconcileCloudAuthorityProjection({
     || unchangedTransitionDrift
     || (!priorLaneAllowed && claim.laneRevision !== normalizedHead)
     || Date.parse(claim.expiresAt) <= now.getTime()
-    || (claim.state === "review_ready" && !claim.reviewRequestId)
+    || (["review_ready", "delivery_authorized"].includes(claim.state) && !claim.reviewRequestId)
   ) {
     throw new Error("Live cloud claim drifted from the recoverable admission subject.");
   }
-  const focusedEvidenceDigest = claim.state === "review_ready"
+  const focusedEvidenceDigest = ["review_ready", "delivery_authorized"].includes(claim.state)
     ? digestValue({
       schema: "agentic-focused-review-evidence/v1",
       command: "npm run check",
@@ -320,7 +320,7 @@ function nonnegativeInteger(value, label) {
 
 function requiredState(value) {
   const state = requiredText(value, "claim state").replaceAll("-", "_");
-  if (!["active", "review_ready"].includes(state)) {
+  if (!["active", "review_ready", "delivery_authorized"].includes(state)) {
     throw new Error(`Cloud reconciliation cannot recover claim state ${state}.`);
   }
   return state;
@@ -328,7 +328,7 @@ function requiredState(value) {
 
 function requiredCurrentState(value) {
   const state = requiredText(value, "inventory state").replaceAll("-", "_");
-  if (!["active", "review_ready", "parked"].includes(state)) {
+  if (!["active", "review_ready", "delivery_authorized", "parked"].includes(state)) {
     throw new Error(`Cloud inventory claim state ${state} is not current.`);
   }
   return state;

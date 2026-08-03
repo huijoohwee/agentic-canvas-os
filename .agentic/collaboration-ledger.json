@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 186,
-  "headDigest": "b821e3f09499bed2a9ba9501efdce9779c590ede479af36117284e0426fad160",
+  "sequence": 187,
+  "headDigest": "0b8af72e3e4c53517fab4867d66a8a46d501b68f85b11ed7b86c1973121f5a56",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -8515,6 +8515,75 @@
       },
       "claimDigest": "86b276535b4f08253d61204ed96004e5a682a452aeaeb3b13fc565a3ef3f2e61",
       "digest": "b821e3f09499bed2a9ba9501efdce9779c590ede479af36117284e0426fad160"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 187,
+      "parentDigest": "b821e3f09499bed2a9ba9501efdce9779c590ede479af36117284e0426fad160",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "6eb2b3c83d912456e5760f788929c2fb33b4e07ade232fd591e81bd00d23a19d",
+      "idempotencyKey": "3f846dff147bee0b867d2c11f7fc982613981d02d2516f3a60b79265787046df",
+      "requestDigest": "e62b6dbffe4fec2116880d2fd0a765898d151c5b2e8fdebe23e1c425ad871e80",
+      "evaluationTime": "2026-08-03T01:59:40.000Z",
+      "claimCore": {
+        "claimId": "6eb2b3c83d912456e5760f788929c2fb33b4e07ade232fd591e81bd00d23a19d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ca09edad72d1efe8d117520e177313132070a9146766c76f446f2e8fd198bdf3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4a02447b9ddba71c58701f183f933ae636d194470da9df03ec692efddb5cb5a2",
+        "canonicalBaseRevision": "e8ac8a4fa2c1ffb07d933106c8984cd9debe9da9",
+        "declaredWriteScope": [
+          "path:.github/workflows/cloud-collaboration.yml",
+          "path:__tests__/auto-delivery-lib.test.mjs",
+          "path:__tests__/cloud-collaboration-cli.test.mjs",
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:__tests__/cloud-collaboration-delivery-verifier.test.mjs",
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/device-park-stash.test.mjs",
+          "path:__tests__/device-review.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:__tests__/github-cloud-collaboration-workflow.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:docs/FACTS.md",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/auto-delivery-lib.mjs",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "path:scripts/cloud-collaboration-delivery-verifier.mjs",
+          "path:scripts/cloud-collaboration-primitives.mjs",
+          "path:scripts/cloud-collaboration.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:todo/2026-08.md",
+          "semantic:delivery-authority-v3"
+        ],
+        "writeSetDigest": "847122767cbeb684644b54fcbcf48c55653ba37498a2825ecead2a407ee5156c",
+        "laneRevision": "4f487ebf018f6e0fea26a30bbbf370b74566dc10",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-08-04T01:55:11.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM75yaGJ",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "abandoned",
+          "evidenceDigest": "33f6796f46802997a29c417c8ec36b3ad150bfe89a9d66f60a1d6f6abb51d43f",
+          "integrationReceiptDigest": null,
+          "evaluationTime": "2026-08-03T01:59:40.000Z"
+        }
+      },
+      "claimDigest": "9f81fbcf13adbac212e97c9219f5a0662e2985906320526b69719291c88f5ddd",
+      "digest": "0b8af72e3e4c53517fab4867d66a8a46d501b68f85b11ed7b86c1973121f5a56"
     }
   ]
 }

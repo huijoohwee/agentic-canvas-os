@@ -178,6 +178,11 @@ explicit delivery authorization before it enables protected auto-merge.
 projection by creating the same delivery authorization, verifying it, and only
 then asking the configured provider adapter for protected integration. Any
 source edit requires a separate handoff or fresh active epoch; neither delivery
+authorization nor the exact-head controller may treat authored PR-head drift as
+equivalent. A provider-applied protected `main` refresh is the only accepted
+exception: the verifier must prove the refreshed head is an exact protected-main
+merge chain from the reviewed `delivery-authorized` subject before it reuses the
+preserved reviewed head and canonical base for cloud verification.
 authorization nor protected integration grants deployment authority.
 The exact reviewed head remains the protected delivery head for that
 continuation even when the lane did not opt into auto-delivery at start.

@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { protectedMainRefreshHeads } from "./protected-main-refresh-lib.mjs";
 
 export const CLOUD_DELIVERY_VERIFICATION_SCHEMA =
   "agentic-cloud-delivery-verification/v1";
@@ -23,6 +24,7 @@ export function verifyCloudDeliveryAuthority({
   headSha,
   canonicalBaseSha = "",
   cloudAuthority = null,
+  protectedMainRefresh = null,
   environment = process.env,
   invoke = invokeRepositoryCloudVerifier,
 } = {}) {
@@ -45,6 +47,11 @@ export function verifyCloudDeliveryAuthority({
     canonicalBaseSha,
   });
   requireProjectedSubject(cloudAuthority, subject);
+  const allowProtectedMainRefresh = allowProtectedMainRefreshVerification({
+    subject,
+    cloudAuthority,
+    protectedMainRefresh,
+  });
   const request = {
     targetRepository: subject.repository,
     pullRequestNumber: subject.pullRequestNumber,
@@ -61,6 +68,7 @@ export function verifyCloudDeliveryAuthority({
     ...(authority.expectedLedgerRevision
       ? { expectedLedgerRevision: authority.expectedLedgerRevision }
       : {}),
+    ...(allowProtectedMainRefresh ? { allowProtectedMainRefresh: true } : {}),
   };
   const result = invoke({
     ledgerRepository: authority.ledgerRepository,
@@ -259,6 +267,49 @@ function requireProjectedSubject(cloudAuthority, subject) {
   ) {
     throw new Error("Cloud collaboration projection targets another canonical base.");
   }
+}
+
+function allowProtectedMainRefreshVerification({
+  subject,
+  cloudAuthority,
+  protectedMainRefresh,
+}) {
+  if (!cloudAuthority || cloudAuthority.state !== "delivery_authorized") {
+    return false;
+  }
+  if (cloudAuthority.laneRevision !== subject.headSha) {
+    return false;
+  }
+  if (
+    present(cloudAuthority.canonicalBaseSha)
+    && subject.canonicalBaseSha
+    && cloudAuthority.canonicalBaseSha !== subject.canonicalBaseSha
+  ) {
+    return false;
+  }
+  if (!protectedMainRefresh) {
+    if (!present(cloudAuthority.claimId) || !present(cloudAuthority.reviewRequestId)) {
+      return false;
+    }
+    return true;
+  }
+  const refreshedHeads = protectedMainRefreshHeads(protectedMainRefresh);
+  if (!refreshedHeads.includes(subject.headSha)) {
+    throw new Error(
+      "Protected-main refresh verification requires the delivered head to match the preserved review subject.",
+    );
+  }
+  if (protectedMainRefresh.deliveredHeadSha !== subject.headSha) {
+    throw new Error(
+      "Protected-main refresh verification requires the delivered head to remain the exact preserved subject.",
+    );
+  }
+  if (cloudAuthority.laneRevision !== subject.headSha) {
+    throw new Error(
+      "Protected-main refresh verification requires the cloud authority lane revision to match the preserved subject.",
+    );
+  }
+  return true;
 }
 
 function requireReadyVerification({ result, subject, authority }) {

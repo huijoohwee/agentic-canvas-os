@@ -212,12 +212,14 @@ test("reclaim restores live authority for the exact preserved review lane", asyn
   assert.equal(result.projectionUpdated, true);
   assert.equal(result.predecessorClaimId, PREDECESSOR_CLAIM_ID);
   assert.equal(result.successorClaimId, SUCCESSOR_CLAIM_ID);
+  assert.equal(result.successorLeaseEpoch, 2);
   assert.deepEqual(events, [
     ["claim", "reclaim", PREDECESSOR_CLAIM_ID],
     ["ready", "legacy-session", "legacy-device"],
     ["persist", SUCCESSOR_CLAIM_ID],
   ]);
   assert.equal(result.receipts.length, 3);
+  assert.equal(result.receipts[1].kind, "continuation");
 });
 
 test("reclaim preserves the predecessor base and reviewed head for successor claims", async () => {

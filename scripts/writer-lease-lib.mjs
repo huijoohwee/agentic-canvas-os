@@ -323,7 +323,16 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   function release({ sessionId, branch, status = "released", expectedLease = null, timestamp = null, values = {} }) {
     return withLock(() => {
       const registry = readRegistry();
-      const current = verify({ sessionId, branch, allowExpired: true });
+      const current = registry.leases[branch] || null;
+      if (!current || !["active", "delivery", "review_ready"].includes(current.status)) {
+        throw new Error(`No releasable writer lease owns ${branch}.`);
+      }
+      if (sessionId && current.sessionId !== sessionId) {
+        throw new Error("Writer lease belongs to another session.");
+      }
+      if (branch && current.branch !== branch) {
+        throw new Error(`Writer lease owns ${current.branch}, not ${branch}.`);
+      }
       if (expectedLease && JSON.stringify(current) !== JSON.stringify(expectedLease)) {
         throw new Error(`Writer lease for ${branch} changed before ${status}.`);
       }

@@ -240,7 +240,16 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
       : args.includes("--jq") ? "" : pullJson(pullRequestUrl, branch, "", isDraft),
     ghOptional: () => pullRequestUrl,
     leaseStore: {
-      verify: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
+      verify: () => ({
+        branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo,
+        device: "device",
+        admission: { schema: "agentic-lane-admission-lease/v1", status: "admitted" },
+        cloudAuthority: {
+          schema: "agentic-lane-cloud-authority/v1",
+          state: "active",
+          canonicalBaseSha: "a".repeat(40),
+        },
+      }),
       annotate: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
       release: ({ status }) => {
         releaseStatus = status;
@@ -260,6 +269,13 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
       },
     },
     sessionId: "chat-a",
+    reviewReadyCloudAuthority: ({ authority }) => ({
+      authority: { ...authority, state: "review_ready" },
+    }),
+    authorizeCloudDelivery: ({ authority }) => ({
+      authority: { ...authority, state: "delivery_authorized" },
+    }),
+    verifyCloudAuthority: () => ({ ok: true }),
     run: (command, args) => {
       calls.push([command, ...args]); if (command === "gh" && args[1] === "ready") isDraft = false;
     },

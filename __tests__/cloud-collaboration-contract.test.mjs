@@ -45,6 +45,8 @@ const EXPIRES = "2026-07-30T01:30:00.000Z";
 const EXTENDED = "2026-07-30T02:00:00.000Z";
 const EVIDENCE = digestValue("focused-evidence");
 const INTEGRATION = digestValue("integration-receipt");
+const OPERATOR_DECISION = digestValue("operator-decision");
+const INTEGRATION_INTENT = digestValue("integration-intent");
 
 function emptyLedger() {
   return createEmptyLedger(LEDGER_REPOSITORY);
@@ -219,7 +221,7 @@ test("overlapping claims serialize while disjoint claims can proceed", () => {
   assert.deepEqual(validateLedger(disjoint.ledger), []);
 });
 
-test("bind, heartbeat, review-ready, verify, and integrated release are fenced", () => {
+test("bind, heartbeat, review-ready, delivery authorization, verify, and integrated release are fenced", () => {
   const claimed = mutate(emptyLedger(), "claim", claimRequest());
   const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-lane", {
     laneRevision: "lane-a",
@@ -264,10 +266,20 @@ test("bind, heartbeat, review-ready, verify, and integrated release are fenced",
   assert.equal(verified.verdict, "ready");
   assert.equal(verified.claimDigest, ready.claim.fenceRevision);
   assert.deepEqual(verified.findings, []);
-  assert.deepEqual(Object.values(verified.findingCounts), [0, 0, 0, 0]);
+  assert.deepEqual(Object.values(verified.findingCounts), [0, 0, 0, 0, 0]);
+
+  const authorized = mutate(ready.ledger, "delivery-authorize", expected(ready.claim, "authorize-delivery-1", {
+    laneRevision: "lane-a",
+    reviewRequestId: "review-17",
+    focusedEvidenceDigest: EVIDENCE,
+    operatorDecisionDigest: OPERATOR_DECISION,
+    integrationIntentDigest: INTEGRATION_INTENT,
+  }), { evaluationTime: LATER });
+  assert.equal(authorized.claim.state, "delivery-authorized");
+  assert.equal(authorized.claim.transitionCounter, 5);
 
   throwsCode(
-    () => mutate(ready.ledger, "release", expected(ready.claim, "stale-release", {
+    () => mutate(authorized.ledger, "release", expected(authorized.claim, "stale-release", {
       expectedFenceRevision: claimed.claim.fenceRevision,
       reason: "integrated",
       evidenceDigest: EVIDENCE,
@@ -275,7 +287,7 @@ test("bind, heartbeat, review-ready, verify, and integrated release are fenced",
     }), { evaluationTime: LATER }),
     "stale_collaboration_fence",
   );
-  const released = mutate(ready.ledger, "release", expected(ready.claim, "release-integrated", {
+  const released = mutate(authorized.ledger, "release", expected(authorized.claim, "release-integrated", {
     reason: "integrated",
     evidenceDigest: EVIDENCE,
     integrationReceiptDigest: INTEGRATION,
@@ -284,7 +296,7 @@ test("bind, heartbeat, review-ready, verify, and integrated release are fenced",
   assert.deepEqual(validateLedger(released.ledger), []);
 });
 
-test("integrated release can retire an expired review-ready claim owned by the same actor", () => {
+test("integrated release can retire an expired delivery-authorized claim owned by the same actor", () => {
   const claimed = mutate(emptyLedger(), "claim", claimRequest());
   const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-expired-release", {
     laneRevision: "lane-expired",
@@ -294,8 +306,15 @@ test("integrated release can retire an expired review-ready claim owned by the s
     reviewRequestId: "review-expired",
     focusedEvidenceDigest: EVIDENCE,
   }), { evaluationTime: LATER });
+  const authorized = mutate(ready.ledger, "delivery-authorize", expected(ready.claim, "authorize-expired", {
+    laneRevision: "lane-expired",
+    reviewRequestId: "review-expired",
+    focusedEvidenceDigest: EVIDENCE,
+    operatorDecisionDigest: OPERATOR_DECISION,
+    integrationIntentDigest: INTEGRATION_INTENT,
+  }), { evaluationTime: LATER });
 
-  const released = mutate(ready.ledger, "release", expected(ready.claim, "release-expired-integrated", {
+  const released = mutate(authorized.ledger, "release", expected(authorized.claim, "release-expired-integrated", {
     reason: "integrated",
     evidenceDigest: EVIDENCE,
     integrationReceiptDigest: INTEGRATION,
@@ -304,6 +323,43 @@ test("integrated release can retire an expired review-ready claim owned by the s
   });
   assert.equal(released.claim.state, "released");
   assert.deepEqual(validateLedger(released.ledger), []);
+});
+
+test("delivery authorization is idempotent and rejects reviewed-source drift", () => {
+  const claimed = mutate(emptyLedger(), "claim", claimRequest());
+  const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-delivery-proof", {
+    laneRevision: "lane-reviewed",
+  }));
+  const ready = mutate(bound.ledger, "review-ready", expected(bound.claim, "ready-delivery-proof", {
+    laneRevision: "lane-reviewed",
+    reviewRequestId: "review-proof",
+    focusedEvidenceDigest: EVIDENCE,
+  }));
+  const request = expected(ready.claim, "authorize-delivery-proof", {
+    laneRevision: "lane-reviewed",
+    reviewRequestId: "review-proof",
+    focusedEvidenceDigest: EVIDENCE,
+    operatorDecisionDigest: OPERATOR_DECISION,
+    integrationIntentDigest: INTEGRATION_INTENT,
+  });
+  const authorized = mutate(ready.ledger, "delivery-authorize", request);
+  const replayed = mutate(authorized.ledger, "delivery-authorize", request);
+  assert.equal(replayed.replayed, true);
+  assert.equal(replayed.claim.fenceRevision, authorized.claim.fenceRevision);
+
+  throwsCode(() => mutate(ready.ledger, "delivery-authorize", {
+    ...request,
+    idempotencyKey: "authorize-drifted-lane",
+    laneRevision: "lane-edited-after-review",
+  }), "delivery_authority_unjoined");
+  throwsCode(() => mutate(ready.ledger, "bind", expected(ready.claim, "edit-after-review", {
+    laneRevision: "lane-edited-after-review",
+  })), "invalid_transition");
+  throwsCode(() => mutate(ready.ledger, "release", expected(ready.claim, "integrate-without-authority", {
+    reason: "integrated",
+    evidenceDigest: EVIDENCE,
+    integrationReceiptDigest: INTEGRATION,
+  })), "invalid_transition");
 });
 
 test("handoff preserves immutable work and increments the lease epoch", () => {

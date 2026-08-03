@@ -50,7 +50,7 @@ export function verifyCloudDeliveryAuthority({
     pullRequestNumber: subject.pullRequestNumber,
     branch: subject.branch,
     headSha: subject.headSha,
-    requireStatus: "review_ready",
+    requireStatus: "delivery_authorized",
     ...(subject.canonicalBaseSha
       ? { canonicalBaseSha: subject.canonicalBaseSha }
       : {}),
@@ -281,8 +281,8 @@ function requireReadyVerification({ result, subject, authority }) {
   }
   requireDigest(claim.claimId, "verified claim ID");
   const state = String(claim.status || claim.state || "").replaceAll("-", "_");
-  if (state !== "review_ready") {
-    throw new Error("Cloud collaboration claim is not review-ready.");
+  if (state !== "delivery_authorized") {
+    throw new Error("Cloud collaboration claim is not delivery-authorized.");
   }
   const repository = claim.repository?.fullName
     || claim.repository?.full_name

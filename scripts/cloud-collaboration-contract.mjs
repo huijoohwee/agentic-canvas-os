@@ -37,6 +37,7 @@ const TERMINAL_STATES = new Set(["released", "expired", "revoked"]);
 const FINDING_TYPES = Object.freeze([
   "parallel-scope-collision",
   "stale-collaboration-fence",
+  "delivery-authority-unjoined",
   "evidence-without-run",
   "runtime-readiness-unproven",
 ]);
@@ -99,6 +100,17 @@ function normalizeIntent(action, request, actor, repositoryId) {
       laneRevision: text(request.laneRevision, "laneRevision"),
       reviewRequestId: text(request.reviewRequestId, "reviewRequestId"),
       focusedEvidenceDigest: digest(request.focusedEvidenceDigest, "focusedEvidenceDigest"),
+    };
+  }
+  if (action === "delivery-authorize") {
+    return {
+      ...common,
+      ...expected,
+      laneRevision: text(request.laneRevision, "laneRevision"),
+      reviewRequestId: text(request.reviewRequestId, "reviewRequestId"),
+      focusedEvidenceDigest: digest(request.focusedEvidenceDigest, "focusedEvidenceDigest"),
+      operatorDecisionDigest: digest(request.operatorDecisionDigest, "operatorDecisionDigest"),
+      integrationIntentDigest: digest(request.integrationIntentDigest, "integrationIntentDigest"),
     };
   }
   if (action === "handoff") {
@@ -269,6 +281,28 @@ function claimCoreForAction(action, intent, ledger, evaluationTime) {
       evidenceDigest: intent.focusedEvidenceDigest,
     };
   }
+  if (action === "delivery-authorize") {
+    if (previous.state !== "review-ready") {
+      fail("invalid_transition", "delivery-authorize requires review-ready state");
+    }
+    if (
+      intent.laneRevision !== previous.laneRevision
+      || intent.reviewRequestId !== previous.reviewRequestId
+      || intent.focusedEvidenceDigest !== previous.evidenceDigest
+    ) {
+      fail("delivery_authority_unjoined", "delivery authorization must bind the unchanged reviewed lane and evidence");
+    }
+    return {
+      ...base,
+      state: "delivery-authorized",
+      deliveryAuthorization: {
+        focusedEvidenceDigest: intent.focusedEvidenceDigest,
+        integrationIntentDigest: intent.integrationIntentDigest,
+        operatorDecisionDigest: intent.operatorDecisionDigest,
+        evaluationTime,
+      },
+    };
+  }
   if (action === "handoff") {
     if (!["active", "review-ready"].includes(previous.state)) {
       fail("invalid_transition", "handoff requires active or review-ready state");
@@ -284,9 +318,11 @@ function claimCoreForAction(action, intent, ledger, evaluationTime) {
       },
     };
   }
-  if (intent.reason === "integrated" && previous.state !== "review-ready") {
-    if (previous.state !== "expired") {
-      fail("invalid_transition", "integrated release requires review-ready or expired state");
+  if (intent.reason === "integrated") {
+    const storedState = findClaimEntry(ledger, intent.claimId)?.claimCore?.state;
+    if (previous.state !== "delivery-authorized"
+      && !(previous.state === "expired" && storedState === "delivery-authorized")) {
+      fail("invalid_transition", "integrated release requires delivery-authorized state");
     }
   }
   if (intent.reason === "handoff") {

@@ -18,6 +18,31 @@ Before executing any task, humans and AI tools should read:
 2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md) for session start, registered task worktrees, and ownership rules.
 3. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md) for focused checks and release gates.
 
+## GitHub-Native Collaboration Contract
+
+This repository's upstream collaboration baseline is GitHub-native:
+
+- protected canonical `main`
+- remotely addressable task branches
+- pull-request review and discussion
+- server-enforced required checks
+- merge receipts published by the protected remote
+
+Treat that baseline as the authoritative multi-device concurrent cloud
+collaboration contract. A local commit is private until it is mapped to a
+branch and pull request the remote can evaluate.
+
+The `device:*`, runtime, lease, and parking commands are this repository's
+agentic orchestration layer on top of that baseline. They are additive and
+replaceable. They do not create alternate merge authority, relax branch
+protection, reinterpret failed required checks, or make direct pushes to
+protected `main` the normal path.
+
+When a local tool, an IDE warning, or orchestration metadata disagrees with the
+protected remote state, fail closed in favor of GitHub's branch, pull request,
+and required-check state, then fix the repository-owned rule or adapter at the
+source.
+
 Quick local path:
 
 ```bash

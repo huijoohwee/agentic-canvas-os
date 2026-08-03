@@ -21,6 +21,35 @@ rules. Keep it universal, neutral, provider-agnostic, and modular. Do not move
 these rules into vendor-specific IDE or agent config files when a repository
 document can express the same contract.
 
+## GitHub-Native Collaboration Baseline
+
+- Treat protected remote GitHub state as the authoritative collaboration
+  contract: canonical `main`, remotely addressable task branches, pull-request
+  review, required checks, and merge receipts are the shared multi-device cloud
+  coordination surface.
+- Encode collaboration policy in repository-owned upstream docs, hooks, and
+  automation. Do not rely on downstream IDE-specific patches, local aliases, or
+  agent-private conventions as the primary rule source.
+- A local commit is not shared authority by itself. Cross-device collaboration
+  starts when work is represented by a branch and pull request the protected
+  remote can evaluate.
+- If a local tool or orchestration record disagrees with the protected remote
+  branch, pull request, or required-check state, fail closed in favor of the
+  remote and repair the repository-owned adapter or rule at the source.
+
+## Agentic Orchestration Layer
+
+- Repository-specific orchestration such as `device:start`, `device:review`,
+  `device:park`, `device:integrate`, leases, and runtime receipts is additive
+  only. It may coordinate work, but it never replaces GitHub branch protection
+  or pull-request authority.
+- Keep the orchestration layer universal, neutral, agnostic, and modular:
+  repository-owned, vendor-neutral in rule wording, readable without one IDE or
+  agent product, and decomposable into independently checkable rules.
+- Do not use orchestration metadata to bypass protected-branch policy,
+  reinterpret a failed required check as success, or normalize direct pushes to
+  protected `main` when the upstream contract requires pull requests.
+
 ## Code Hygiene
 
 - Lean MVP, SSOT, MECE, and single responsibility.

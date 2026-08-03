@@ -78,21 +78,11 @@ Fetch before starting every Codex session; keep one clean registered `main` work
 
 The canonical `main` worktree remains the only Dev runtime and synchronization owner. Linked task worktrees are mutation lanes only: each must be registered, detached at fetched `origin/main` before claim, bound to one distinct `agent/<device>/<semantic-scope>` branch, protected by its own unexpired lease, and excluded from canonical ports. The Agentic Canvas OS supervisor may own those ports only after both canonical repositories are clean exact fetched `origin/main` revisions with required protected checks successful. Unregistered copies, the same branch in multiple worktrees, `--ignore-other-worktrees`, and task-worktree runtime sources are forbidden.
 
-Parallel users, devices, sessions, and chats may mutate different semantic
-scopes only through distinct registered worktrees, branches, local lease
-projections, draft pull requests, and current non-overlapping claims in the
-cloud collaboration CAS ledger. The authenticated principal supplies Actor ID;
-the cloud claim and local projection bind device, session, worktree, scope,
-epochs, declared paths, and fences. A pull request or local lease alone is not
-cross-device authority. The shared remote pull-request set is the cross-user and cross-device scope registry projection, not the CAS authority. See `CLOUD-COLLABORATION.md` and
-`SCOPED-LANE-ADMISSION.md`.
+GitHub-native protected `main`, remotely addressable task branches, pull-request review, required checks, and merge receipts are the upstream multi-device coordination contract. Leases, worktree registration, `device:*` flows, and runtime receipts are additive orchestration only; they do not replace branch protection or review authority.
 
-The coordination model is one clean registered canonical `main` worktree plus
-zero or more isolated registered task worktrees. Each lane has one active
-writer, one current cloud fence, and one declared write scope. A same-scope
-peer waits for an exact pushed-SHA handoff; a release or review wait does not
-transfer ownership from an older fence to a newer protected `origin/main`
-revision.
+Parallel users, devices, sessions, and chats may mutate different semantic scopes only through distinct registered worktrees, branches, local lease projections, draft pull requests, and current non-overlapping claims in the cloud collaboration CAS ledger. The authenticated principal supplies Actor ID; the cloud claim and local projection bind device, session, worktree, scope, epochs, declared paths, and fences. A pull request or local lease alone is not cross-device authority. The shared remote pull-request set is the cross-user and cross-device scope registry projection, not the CAS authority. See `CLOUD-COLLABORATION.md` and `SCOPED-LANE-ADMISSION.md`.
+
+The coordination model is one clean registered canonical `main` worktree plus zero or more isolated registered task worktrees. Each lane has one active writer, one current cloud fence, and one declared write scope. A same-scope peer waits for an exact pushed-SHA handoff; a release or review wait does not transfer ownership from an older fence to a newer protected `origin/main` revision.
 
 Capture each registered worktree's status baseline after fetch and ownership inspection, then rescan before mutation, review, integration, and cleanup. A path first observed after that baseline is post-baseline authored state, not disposable residue. Attribute it to its physical worktree, semantic scope, writer session, lease epoch, branch, and pull request; creation time never makes it orphaned.
 

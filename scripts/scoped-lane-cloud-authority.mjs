@@ -101,15 +101,18 @@ export function reconcileAdmissionCloudAuthority({
     authority, manifest, statusResult, branch, headSha, pullRequestNumber,
     allowPriorLaneRevision,
   });
+  const verifiesCurrentPullRequestHead = (
+    reconciled.authority.laneRevision === headSha
+  );
   return verifyCloudAuthorityState({
     authority: reconciled.authority,
     manifest,
     canonicalBaseSha: reconciled.authority.canonicalBaseSha,
     expectedState: reconciled.authority.state,
     expectedLaneRevision: reconciled.authority.laneRevision,
-    branch,
+    branch: verifiesCurrentPullRequestHead ? branch : null,
     focusedEvidenceDigest: reconciled.focusedEvidenceDigest,
-    pullRequestNumber,
+    pullRequestNumber: verifiesCurrentPullRequestHead ? pullRequestNumber : null,
     environment, inspect, invoke: verify,
   });
 }

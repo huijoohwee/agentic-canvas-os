@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 382,
-  "headDigest": "87a262406056d6b9a04fb1f1be42285d38d412674228e22ed70e69fed57fcf1d",
+  "sequence": 383,
+  "headDigest": "10452d82b68709d3ac76b857c72e6e1b69d4dbd25f4458e3b877e7447f6a3341",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -18498,6 +18498,46 @@
       },
       "claimDigest": "7e098209381f3a6c61545a7747afa72e7b593dfc5ad979c77befdbd6abc45cb9",
       "digest": "87a262406056d6b9a04fb1f1be42285d38d412674228e22ed70e69fed57fcf1d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 383,
+      "parentDigest": "87a262406056d6b9a04fb1f1be42285d38d412674228e22ed70e69fed57fcf1d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "29b69d787b372206e2b32e31e409df9c19b2dbc5e84f9cc7e311c33a1ea44685",
+      "idempotencyKey": "1f6b820d663192b9f9aaf12984cb644ec7e67597dbd7a92d34480086f1b6fe69",
+      "requestDigest": "744278f935941ba5dcab98096ab16f97e71e44dd30f571edcdd6d208890e1e7e",
+      "evaluationTime": "2026-08-03T16:28:17.000Z",
+      "claimCore": {
+        "claimId": "29b69d787b372206e2b32e31e409df9c19b2dbc5e84f9cc7e311c33a1ea44685",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:57c8bf79693f8bb1a5249030af2e6c837aa619242eeb33e27613075f42da2359",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9b6783047966e1430dc17279a9fd897c100ca44da1bfb9a4188fc9c9667639c8",
+        "canonicalBaseRevision": "158bd8c565e33f6ec452d0220182be4231ab42a6",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-collaboration-cli.test.mjs",
+          "path:scripts/cloud-collaboration-check-run.mjs",
+          "path:scripts/cloud-collaboration.mjs",
+          "semantic:cloud-collaboration-refresh-controller"
+        ],
+        "writeSetDigest": "d4b5667192619f55fdb7ed30b2d6ed0efa52124bbf216b6258023538d7fddf4e",
+        "laneRevision": "158bd8c565e33f6ec452d0220182be4231ab42a6",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T16:58:17.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a6802927e8da27f0ca54967f68be860ed8f941755788427707e9e6486fefca65",
+      "digest": "10452d82b68709d3ac76b857c72e6e1b69d4dbd25f4458e3b877e7447f6a3341"
     }
   ]
 }

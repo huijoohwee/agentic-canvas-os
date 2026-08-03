@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 169,
-  "headDigest": "74b2b1c07a8d5eb571bbd99fc158c05732dec580702af2ae157ba578ab8a8af0",
+  "sequence": 170,
+  "headDigest": "133e2768fcc2a4849701aa6993d957201ea7a1220c6344a31c263fbf15bcc80f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -7589,6 +7589,71 @@
       },
       "claimDigest": "bc51d497589e7ed6668218ff4152ca1cf9cd350887aaa6901c661cd2a9be7ec5",
       "digest": "74b2b1c07a8d5eb571bbd99fc158c05732dec580702af2ae157ba578ab8a8af0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 170,
+      "parentDigest": "74b2b1c07a8d5eb571bbd99fc158c05732dec580702af2ae157ba578ab8a8af0",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a069b9747087566b8648c7a18daac7b155b0e009c6d7493fdf316a9cb21fa1c5",
+      "idempotencyKey": "88d7b0714b6b33e8d9bb2cc7b47505d4d6bcbe7e99f14221cc2780869165b4ab",
+      "requestDigest": "6002836d0b389ca75d400009ccfec5a6051f5bbbbcd0f4ccf02a19c2f8de5be6",
+      "evaluationTime": "2026-08-03T01:15:14.000Z",
+      "claimCore": {
+        "claimId": "a069b9747087566b8648c7a18daac7b155b0e009c6d7493fdf316a9cb21fa1c5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:a0ec8df95f0f9fee6885d8f07539e30700062573d2357982b8e34c1294ae96af",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:42312a0b95cb43e4a5d574a5e28db25f15e242a4f30f696f5433fafa869682ce",
+        "canonicalBaseRevision": "aeb28f0ae85ddb8747712289bfd145821ed2063c",
+        "declaredWriteScope": [
+          "path:__tests__/device-review.test.mjs",
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:__tests__/task-worktree-provision.test.mjs",
+          "path:docs/SCOPED-LANE-ADMISSION.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:docs/schemas/scoped-lane-admission-report.v1.schema.json",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-branch-ownership-lib.mjs",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/device-park-lib.mjs",
+          "path:scripts/device-resume-lib.mjs",
+          "path:scripts/device-resume-replay-lib.mjs",
+          "path:scripts/device-start-lib.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-admission-lib.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-admission.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "path:scripts/task-worktree-provision.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:scoped-lane-admission-runtime"
+        ],
+        "writeSetDigest": "6a518f84e4f74674c4a7750ed74f95c4d56f2f98272fd805adddf212eddf6a7f",
+        "laneRevision": "03a88f2c9cda58c3a354b799d2db4980d73a3aa6",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-07-31T17:42:49.000Z",
+        "evidenceDigest": "569e80ec7e0d6f8eff0637dbb86ee1f29607ecd9e7f9cc01a91b9a3b2786b0f7",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM74m48o",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "integrated",
+          "evidenceDigest": "b4f6d0316ede230f6c4ce36304be2ce2d71253afd0785b8ced1aa49ad58de869",
+          "integrationReceiptDigest": "99f40ae65829ed788c3c7b226196c21826bed0e840035c5994df1fc38d7fdcf5",
+          "evaluationTime": "2026-08-03T01:15:14.000Z"
+        }
+      },
+      "claimDigest": "7c5916f4f7a83bc77ab38dd3cccbcb05fdf308a78969f8116f91c891c7106ab9",
+      "digest": "133e2768fcc2a4849701aa6993d957201ea7a1220c6344a31c263fbf15bcc80f"
     }
   ]
 }

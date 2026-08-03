@@ -28,7 +28,7 @@ export const LIFECYCLE_POLICY_RULE_CATALOG = Object.freeze({
     "State all four bounds before dispatch; a task dispatched with any bound unstated is an `unbounded-task` finding at `blocker` severity",
   "runtime-readiness-enforcement#2":
     "Require typed inputs and outputs, bounded orchestration, independent evaluation, named checks with recorded results, cost and fallback evidence, and closed mutation and deployment gates before deriving `runtime-ready`",
-  "runtime-readiness-enforcement#4":
+  "runtime-readiness-enforcement#5":
     "Emit `runtime-readiness-unproven` at `blocker` severity when a required receipt, join, budget, check, evaluator, dependency, or boundary proof is absent or stale",
   "specification-to-task-bridge#1":
     "Derive every task from at least one VCC; a task tracing to no VCC is an `ungrounded-task`",

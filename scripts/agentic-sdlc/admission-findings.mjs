@@ -37,7 +37,7 @@ export const ADMISSION_FINDING_TYPES = Object.freeze([
 ]);
 
 const FINDING_RULES = Object.freeze({
-  "runtime-readiness-unproven": "runtime-readiness-enforcement#4",
+  "runtime-readiness-unproven": "runtime-readiness-enforcement#5",
   "unnamed-evaluator": "agent-roles--independence#7",
   "self-graded-verdict": "agent-roles--independence#6",
   "ungrounded-task": "specification-to-task-bridge#1",

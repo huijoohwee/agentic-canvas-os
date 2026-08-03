@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 304,
-  "headDigest": "975303fb4adfae4b72c2f103732ce2762e4ab7ba23e859ad9e26a530e27e7359",
+  "sequence": 305,
+  "headDigest": "f7c09a7c761e5b92e0997fbeb2e65542b770200b0e1cf1d54a3640263bafec0e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -14675,6 +14675,47 @@
       },
       "claimDigest": "1a21e23b753794825f9442526bb8e4209b4e7f1095bb543a6ccd959d179a123a",
       "digest": "975303fb4adfae4b72c2f103732ce2762e4ab7ba23e859ad9e26a530e27e7359"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 305,
+      "parentDigest": "975303fb4adfae4b72c2f103732ce2762e4ab7ba23e859ad9e26a530e27e7359",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f8c9314ca591ca133371562063174728a7c730900d7617c7698dfe60b7f8d124",
+      "idempotencyKey": "b91beba1b262383889f242daa2a14d7ba11a99a4b9e02e62964a947d1116466f",
+      "requestDigest": "de6a552d29ea0dcaf97138639dd680a6bd083b2c91e66411b7e09257d15b9475",
+      "evaluationTime": "2026-08-03T10:38:55.000Z",
+      "claimCore": {
+        "claimId": "f8c9314ca591ca133371562063174728a7c730900d7617c7698dfe60b7f8d124",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b4b53298493c10b1931c27ef8d02fab6cb599d2e44bd97b6dc11a5bd85d41a56",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2a0839c7244a9e99663c1fce9237dbc96aa6656f8d4d4913fa7f9e1111845b42",
+        "canonicalBaseRevision": "2010491b1600d0d0a0975821c115888aaac40b9a",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "semantic:stale-base-review-reclaim"
+        ],
+        "writeSetDigest": "99b60ac5290d35aa3accffe747f6b64376c274879e58118ffac4bcde719a6535",
+        "laneRevision": "2010491b1600d0d0a0975821c115888aaac40b9a",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T11:08:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1788b1b735d5808a9b13f1f8ecd1f71604371030600239b1e33827d9656f30e6",
+      "digest": "f7c09a7c761e5b92e0997fbeb2e65542b770200b0e1cf1d54a3640263bafec0e"
     }
   ]
 }

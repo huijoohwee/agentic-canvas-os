@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 194,
-  "headDigest": "42f82650a5ce4713966bfc85411f5b323c31c462d3a9d5910cfe363830e205a4",
+  "sequence": 195,
+  "headDigest": "109088992dab37c6cd84721bf52ffcc1c6a20c0acb11d17cecc0ef53669e8197",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -8969,6 +8969,49 @@
       },
       "claimDigest": "3407aa477642ef30526c74246e2047735ccbd19e3b66ce6043f18894ca76f67e",
       "digest": "42f82650a5ce4713966bfc85411f5b323c31c462d3a9d5910cfe363830e205a4"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 195,
+      "parentDigest": "42f82650a5ce4713966bfc85411f5b323c31c462d3a9d5910cfe363830e205a4",
+      "action": "heartbeat",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "dcf85cf5a38eb2ce509e94e18459628a9fc43800ce2e7e4144c479d08477eb9a",
+      "idempotencyKey": "039c40e6e5431145a001b6f25661c8e90b989231b1f0aa59d3edd29a526fd88f",
+      "requestDigest": "b56e275f332fc9868597423593c2f77aaba554e223f5bef8e557439a4c0ceaf5",
+      "evaluationTime": "2026-08-03T02:26:55.000Z",
+      "claimCore": {
+        "claimId": "dcf85cf5a38eb2ce509e94e18459628a9fc43800ce2e7e4144c479d08477eb9a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:bf9d7d5eb11c5b4b7f0ea3461a1580ad8243465e2c06d7b35f45d2a3bce7792e",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:f4b2083ff3a30a7453fa40357fd95e71cb88b40012e0adb98272d2b51ffe9267",
+        "canonicalBaseRevision": "4c16d723003554846c1bb3e25f47cd19e2f521c6",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/workspaceImportXrSpatialCaptureIngestion.test.ts",
+          "path:canvas/src/lib/three/ThreeGraph.impl.tsx",
+          "path:canvas/src/lib/three/ThreeGraphSceneAdmission.ts",
+          "path:package.json",
+          "path:scripts/__tests__/xr-mode-source-smoke.test.mjs",
+          "path:scripts/run-xr-mode-source-smoke.mjs",
+          "semantic:xr-runtime-readiness"
+        ],
+        "writeSetDigest": "8148a89b698e672c9d34994810c543c27e8f0f3cc02b82b009793e35a649ac34",
+        "laneRevision": "64dab40ba665ccc67525182c50ee4994eff7d979",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 2,
+        "state": "active",
+        "expiresAt": "2026-08-03T02:56:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs75yxLj",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b5cf8f381531fa84c31ccd1922b730bc423966e0aad9ce86c63dbcbb42d2efe5",
+      "digest": "109088992dab37c6cd84721bf52ffcc1c6a20c0acb11d17cecc0ef53669e8197"
     }
   ]
 }

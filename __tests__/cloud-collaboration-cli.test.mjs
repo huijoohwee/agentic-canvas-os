@@ -21,6 +21,25 @@ test("CLI and browser workflow expose delivery authorization but not internal bi
   assert.doesNotMatch(workflow, /^\s+- bind$/mu);
 });
 
+test("review reconciliation verifies a prior fence independently before exact PR-head bind", async () => {
+  const authoritySource = await readFile(
+    path.join(repositoryRoot, "scripts", "scoped-lane-cloud-authority.mjs"),
+    "utf8",
+  );
+  assert.match(
+    authoritySource,
+    /reconciled\.authority\.laneRevision === headSha/u,
+  );
+  assert.match(
+    authoritySource,
+    /branch: verifiesCurrentPullRequestHead \? branch : null/u,
+  );
+  assert.match(
+    authoritySource,
+    /pullRequestNumber: verifiesCurrentPullRequestHead \? pullRequestNumber : null/u,
+  );
+});
+
 test("CLI rejects unexposed workflow actions before network access", () => {
   const result = spawnSync(process.execPath, [cli, "dispatch", "--json"], {
     encoding: "utf8",

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 200,
-  "headDigest": "8a38c966b703b45b04669b4c3f569e126e7411a798570dfa690d14badf0d3540",
+  "sequence": 201,
+  "headDigest": "51804b45572a9ef39f2238d41aa5e30ff41dfc5e666da0c00aaee2424722c9f1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -9231,6 +9231,75 @@
       },
       "claimDigest": "ad4a2236042b1f919e59d619023ed743a327bd53584884ee56b898245c3e11e4",
       "digest": "8a38c966b703b45b04669b4c3f569e126e7411a798570dfa690d14badf0d3540"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 201,
+      "parentDigest": "8a38c966b703b45b04669b4c3f569e126e7411a798570dfa690d14badf0d3540",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c06b5d9136f33372f68245e0c44fc893cdc8e6db3e1b9e7e24d53cf7c2760fa0",
+      "idempotencyKey": "f781774470bd300211bd9771b2ae7b5692b2add82754b9229d0fc0d86815166b",
+      "requestDigest": "2c0b5a39482a7e78f581aecfa98819f909b25044aa4e8d730314aa5f82202424",
+      "evaluationTime": "2026-08-03T03:00:40.000Z",
+      "claimCore": {
+        "claimId": "c06b5d9136f33372f68245e0c44fc893cdc8e6db3e1b9e7e24d53cf7c2760fa0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f47d5595391f3c8112e6539d0c4f6383c41054ab73974d458bdba8a098ec9959",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e798fea68c58172aa1a89990e31b660beb2a2424b2efd96a8275c4a163bf56d7",
+        "canonicalBaseRevision": "e8ac8a4fa2c1ffb07d933106c8984cd9debe9da9",
+        "declaredWriteScope": [
+          "path:.github/workflows/cloud-collaboration.yml",
+          "path:__tests__/auto-delivery-lib.test.mjs",
+          "path:__tests__/cloud-collaboration-cli.test.mjs",
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:__tests__/cloud-collaboration-delivery-verifier.test.mjs",
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/device-park-stash.test.mjs",
+          "path:__tests__/device-review.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:__tests__/github-cloud-collaboration-workflow.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:docs/FACTS.md",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/auto-delivery-lib.mjs",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "path:scripts/cloud-collaboration-delivery-verifier.mjs",
+          "path:scripts/cloud-collaboration-primitives.mjs",
+          "path:scripts/cloud-collaboration.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:todo/2026-08.md",
+          "semantic:delivery-authority-v4"
+        ],
+        "writeSetDigest": "c5d438809efa64789fbf20250d06e3f77cda48f3ec2c55220db7b76525360911",
+        "laneRevision": "1253f12c2f494f414b04d9d887c6728863a8d825",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-08-04T02:00:21.000Z",
+        "evidenceDigest": "86b45cea9f7f08e6fda0e95912c5d123280b4e8d0e97675b14fcff02719f1267",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM75yfIr",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "integrated",
+          "evidenceDigest": "3b7fa79c6d5915d70baa303f3245441cb10cf28f89051738d8ea8466cf6945c4",
+          "integrationReceiptDigest": "73ddd1edac074aa5b6d4b425d96956b5146c6c3b1b3e0b4fbe2ba233b0d0c018",
+          "evaluationTime": "2026-08-03T03:00:40.000Z"
+        }
+      },
+      "claimDigest": "4ed3ec7a90909afba5bbfc7188c8cb5ceb57683ba828b78ae9172a93c7810ee6",
+      "digest": "51804b45572a9ef39f2238d41aa5e30ff41dfc5e666da0c00aaee2424722c9f1"
     }
   ]
 }

@@ -145,7 +145,10 @@ The manual workflow is available from GitHub's browser UI, including a mobile
 browser. It does not claim a dedicated native GitHub Mobile dispatch feature.
 The model-free CLI exposes `status`, `verify`, `claim`, `heartbeat`,
 `review-ready`, `delivery-authorize`, `handoff`, and `release`; it never exposes
-internal `bind`. The browser form exposes the same delivery-authorization
+internal `bind`. The GitHub adapter reads the ledger through bounded Git tree
+and blob traversal rather than the repository contents endpoint, so append-only
+history can grow beyond the smaller contents payload ceiling while still
+remaining under the repository-owned ledger byte bound. The browser form exposes the same delivery-authorization
 transition with explicit focused-evidence, operator-decision, and protected-
 integration-intent digests, so browser and mobile-browser operators use the
 same upstream contract rather than a device-specific patch.

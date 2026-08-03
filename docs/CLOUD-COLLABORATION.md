@@ -124,6 +124,15 @@ immediately before their irreversible boundary. An interrupted operation
 replays with the same idempotency identity rather than creating a second
 transition.
 
+If the commit push succeeds but `review-ready` fails closed because the cloud
+verifier momentarily resolves a different review-request head, treat that
+mismatch as transient authority observation drift inside this contract. Recovery
+must reverify the exact claim identity, review-request identity, and intended
+reviewed head, then rerun the same bounded verification and compare-and-swap
+transition against the verified head. Local fence rewrites, downstream
+projection patches, synthetic rebases, or alternate transition selection are
+forbidden.
+
 GitHub Actions derives workflow idempotency from trusted `GITHUB_RUN_ID`, never
 `GITHUB_RUN_ATTEMPT`. A rerun therefore replays the same logical transition.
 Local CLI callers must supply their own stable opaque idempotency key; only its

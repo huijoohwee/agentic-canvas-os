@@ -34,6 +34,14 @@ Protected integration proves integration only. Candidate preparation may start
 after verified integration and review, but forward deployment remains closed
 until an authenticated human authorizes the exact candidate and target.
 
+Legacy authority evaluation is a provider-neutral lifecycle boundary for
+pre-existing lanes that must remain preserved or retire without losing their
+evidence. Its only terminal outcomes are `retained-legacy`,
+`retired-preserved`, or `blocked`. Authorization may choose retain or retire
+but never synthesize missing claim, fence, scope, revision, or receipt.
+Deterministic drift and overlap validation remain mandatory, and bounded
+idempotent replay may reuse only the exact prior request digest.
+
 ## Collaboration Identity and Parallelism
 
 Every mutation lane carries this complete identity:
@@ -73,6 +81,8 @@ Actor ID
 
 | Receipt | Required identity | Authority created |
 |---|---|---|
+| `Legacy Lane Preservation Receipt` | Exact legacy claim, claim digest, scope, branch, lane revision, fence revision, optional review request, declared write set, state digest, successor overlap class, capture adapter, time, and receipt digest | The legacy lane remains preserved as `retained-legacy`; no retirement, integration, review, or deployment authority |
+| `Legacy Authority Retirement Receipt` | Legacy Lane Preservation Receipt digest, exact legacy claim, claim digest, scope, branch, lane revision, fence revision, optional review request, state digest, explicit transition-selection digest, replaceable review adapter identity, exact review observation digest, time, and receipt digest | Legacy authority may retire as `retired-preserved` while preserved bytes remain authoritative; no integration, review, or deployment authority |
 | `Overlap Preservation Receipt` | Convergence base, protected tip, capture adapter, and every observed work item's collaboration tuple, write-set digest, state digest, recovery handle, preservation mode, overlap class, time, and receipt digest | Preservation disposition may be evaluated; no integration, review, or deployment authority |
 | `Overlap Disposition Receipt` | Preservation Receipt digest and an exact retained-or-restored observation for every preserved item | Protected convergence may proceed when all work is accounted for |
 | `Integration Receipt` | Preservation and Disposition Receipt digests, canonical source revision and tree, full dependency-closure digest, protected checks, evaluator, collaboration tuple, integration target, and receipt digest | Authoring closes; controlled review may begin |
@@ -98,6 +108,9 @@ transport can present and return the exact candidate challenge but cannot grant
 authority; the authority adapter can accept a human decision only when the
 joined interaction evidence identifies the same human, candidate, and target.
 Transport names and products are profile facts, not universal protocol terms.
+A replaceable review adapter may validate exact legacy review projections, but
+it cannot infer or synthesize a missing legacy claim, fence, scope, revision,
+or preservation receipt.
 
 An authorization prompt is eligible only while the controlled review surface
 still reports runtime-ready for the exact Integration Receipt and Candidate

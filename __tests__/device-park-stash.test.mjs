@@ -104,7 +104,10 @@ test("interleaved worktree stashes retain immutable identity and recover an expi
 
     git(laneA.worktree, ["add", "-A"]);
     git(laneA.worktree, ["commit", "-m", "restore lane a"]);
-    assert.equal(publish(fixture.context(laneA)), laneA.url);
+    assert.throws(
+      () => publish(fixture.context(laneA)),
+      /Publish requires one admitted cloud claim/u,
+    );
     const taskHeadSha = gitText(laneA.worktree, ["rev-parse", "HEAD"]);
     git(fixture.canonical, ["merge", "--no-ff", laneA.branch, "-m", "merge lane a"]);
     const mergeCommitSha = gitText(fixture.canonical, ["rev-parse", "HEAD"]);

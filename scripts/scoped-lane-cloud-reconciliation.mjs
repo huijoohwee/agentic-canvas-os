@@ -86,20 +86,25 @@ export function reconcileCloudAuthorityProjection({
     throw new Error("Live cloud claim drifted from the recoverable admission subject.");
   }
   const focusedEvidenceDigest = ["review_ready", "delivery_authorized"].includes(claim.state)
-    ? digestValue({
-      schema: "agentic-focused-review-evidence/v1",
-      command: "npm run check",
-      branch: requiredText(branch, "branch"),
-      headSha: normalizedHead,
-      pullRequestNumber: positiveInteger(
-        pullRequestNumber,
-        "pullRequestNumber",
-      ),
-      admittedReportDigest: requiredDigest(
-        manifest.admittedReportDigest,
-        "admittedReportDigest",
-      ),
-    })
+    ? pullRequestNumber
+      ? digestValue({
+        schema: "agentic-focused-review-evidence/v1",
+        command: "npm run check",
+        branch: requiredText(branch, "branch"),
+        headSha: normalizedHead,
+        pullRequestNumber: positiveInteger(
+          pullRequestNumber,
+          "pullRequestNumber",
+        ),
+        admittedReportDigest: requiredDigest(
+          manifest.admittedReportDigest,
+          "admittedReportDigest",
+        ),
+      })
+      : requiredDigest(
+        authority.focusedEvidenceDigest,
+        "authority focusedEvidenceDigest",
+      )
     : null;
   const projection = Object.freeze({
     ...authority,

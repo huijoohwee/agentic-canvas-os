@@ -210,7 +210,14 @@ function verifyCloudAuthorityState({
 }
 
 export function bindAdmissionCloudAuthority({
-  authority, manifest, branch, headSha, pullRequestNumber, deviceId, sessionId,
+  authority,
+  manifest,
+  branch,
+  headSha,
+  pullRequestNumber = null,
+  reviewRequestId = null,
+  deviceId,
+  sessionId,
   idempotencyKey = `device-start-bind:${authority?.claimId}`,
   returnVerification = false,
   environment = process.env,
@@ -221,7 +228,6 @@ export function bindAdmissionCloudAuthority({
   requireAuthority(authority);
   const request = {
     targetRepository: authority.targetRepository,
-    pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber"),
     branch: requiredText(branch, "branch"),
     canonicalBaseSha: authority.canonicalBaseSha,
     headSha: requiredSha(headSha, "headSha"),
@@ -231,6 +237,12 @@ export function bindAdmissionCloudAuthority({
     expectedFenceRevision: authority.claimDigest,
     expectedTransitionCounter: authority.transitionCounter,
     idempotencyKey: requiredText(idempotencyKey, "idempotencyKey"),
+    ...(pullRequestNumber
+      ? { pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber") }
+      : {}),
+    ...(reviewRequestId
+      ? { reviewRequestId: requiredText(reviewRequestId, "reviewRequestId") }
+      : {}),
   };
   let result;
   try {
@@ -348,29 +360,52 @@ export function heartbeatAdmissionCloudAuthority({
 }
 
 export function reviewReadyAdmissionCloudAuthority({
-  authority, manifest, branch, headSha, pullRequestNumber, deviceId, sessionId,
+  authority,
+  manifest,
+  branch,
+  headSha,
+  pullRequestNumber = null,
+  reviewRequestId = null,
+  focusedEvidenceDigest = null,
+  deviceId,
+  sessionId,
   environment = process.env,
   invoke = invokeRepositoryCloudAction,
   inspect = invokeRepositoryCloudAction,
   verify = invokeRepositoryCloudVerifier,
 } = {}) {
-  const evidenceDigest = digestValue({
-    schema: "agentic-focused-review-evidence/v1",
-    command: "npm run check",
-    branch: requiredText(branch, "branch"),
-    headSha: requiredSha(headSha, "headSha"),
-    pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber"),
-    admittedReportDigest: requiredDigest(manifest?.admittedReportDigest, "admittedReportDigest"),
-  });
+  const evidenceDigest = focusedEvidenceDigest
+    ? requiredDigest(focusedEvidenceDigest, "focusedEvidenceDigest")
+    : digestValue({
+      schema: "agentic-focused-review-evidence/v1",
+      command: "npm run check",
+      branch: requiredText(branch, "branch"),
+      headSha: requiredSha(headSha, "headSha"),
+      pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber"),
+      admittedReportDigest: requiredDigest(manifest?.admittedReportDigest, "admittedReportDigest"),
+    });
   let current = reconcileAdmissionCloudAuthority({
-    authority, manifest, branch, headSha, pullRequestNumber,
+    authority,
+    manifest,
+    branch,
+    headSha,
+    pullRequestNumber,
     allowPriorLaneRevision: true, environment, inspect, verify,
   });
   if (current.authority.state === "review_ready") return current;
   if (current.authority.laneRevision !== headSha) {
     current = bindAdmissionCloudAuthority({
-      authority: current.authority, manifest, branch, headSha,
-      pullRequestNumber, deviceId, sessionId, environment, invoke, inspect,
+      authority: current.authority,
+      manifest,
+      branch,
+      headSha,
+      pullRequestNumber,
+      reviewRequestId,
+      deviceId,
+      sessionId,
+      environment,
+      invoke,
+      inspect,
       verify, returnVerification: true,
       idempotencyKey: [
         "device-review-bind", current.authority.claimId,
@@ -381,7 +416,6 @@ export function reviewReadyAdmissionCloudAuthority({
   const active = current.authority;
   const request = {
     targetRepository: active.targetRepository,
-    pullRequestNumber,
     branch,
     canonicalBaseSha: active.canonicalBaseSha,
     headSha,
@@ -391,6 +425,12 @@ export function reviewReadyAdmissionCloudAuthority({
     expectedFenceRevision: active.claimDigest,
     expectedTransitionCounter: active.transitionCounter,
     focusedEvidenceDigest: evidenceDigest,
+    ...(pullRequestNumber
+      ? { pullRequestNumber }
+      : {}),
+    ...(reviewRequestId
+      ? { reviewRequestId: requiredText(reviewRequestId, "reviewRequestId") }
+      : {}),
     idempotencyKey: [
       "device-review-ready", active.claimId, active.transitionCounter,
       active.claimDigest, headSha, evidenceDigest,
@@ -437,14 +477,30 @@ export function reviewReadyAdmissionCloudAuthority({
 }
 
 export function authorizeDeliveryAdmissionCloudAuthority({
-  authority, manifest, branch, headSha, pullRequestNumber, deviceId, sessionId,
+  authority,
+  manifest,
+  branch,
+  headSha,
+  pullRequestNumber = null,
+  reviewRequestId = null,
+  allowProtectedMainRefresh = false,
+  deviceId,
+  sessionId,
   environment = process.env,
   invoke = invokeRepositoryCloudAction,
   inspect = invokeRepositoryCloudAction,
   verify = invokeRepositoryCloudVerifier,
 } = {}) {
+  const resolvedReviewRequestId = reviewRequestId || authority?.reviewRequestId || null;
+  const reconciledPullRequestNumber = allowProtectedMainRefresh
+    ? null
+    : pullRequestNumber;
   const current = reconcileAdmissionCloudAuthority({
-    authority, manifest, branch, headSha, pullRequestNumber,
+    authority,
+    manifest,
+    branch,
+    headSha,
+    pullRequestNumber: reconciledPullRequestNumber,
     environment, inspect, verify,
   });
   if (current.authority.state === "delivery_authorized") return current;
@@ -461,7 +517,9 @@ export function authorizeDeliveryAdmissionCloudAuthority({
     action: "delivery-authorize",
     branch: requiredText(branch, "branch"),
     headSha: requiredSha(headSha, "headSha"),
-    pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber"),
+    ...(allowProtectedMainRefresh
+      ? { reviewRequestId: requiredText(resolvedReviewRequestId, "reviewRequestId") }
+      : { pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber") }),
     sessionId: requiredText(sessionId, "sessionId"),
   });
   const integrationIntentDigest = digestValue({
@@ -478,7 +536,6 @@ export function authorizeDeliveryAdmissionCloudAuthority({
     ledgerRepository: reviewed.ledgerRepository,
     request: {
       targetRepository: reviewed.targetRepository,
-      pullRequestNumber,
       branch,
       headSha,
       deviceId: requiredText(deviceId, "deviceId"),
@@ -489,6 +546,9 @@ export function authorizeDeliveryAdmissionCloudAuthority({
       focusedEvidenceDigest,
       operatorDecisionDigest,
       integrationIntentDigest,
+      ...(allowProtectedMainRefresh
+        ? { reviewRequestId: requiredText(resolvedReviewRequestId, "reviewRequestId") }
+        : { pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber") }),
       idempotencyKey: [
         "device-delivery-authorize", reviewed.claimId,
         reviewed.transitionCounter, reviewed.claimDigest, headSha,

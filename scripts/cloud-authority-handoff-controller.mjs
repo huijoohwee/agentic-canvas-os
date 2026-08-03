@@ -10,6 +10,7 @@ import {
   reviewReadyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 import {
   createWriterLeaseStore,
   parseDeviceBranch,
@@ -173,22 +174,35 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       const remoteLease = parseWriterLeasePullRequestBody(pullWithAuthor.body);
       const admission = normalizeManifestFromLease(lease.admission);
       const authority = normalizePreservedAuthority(lease.cloudAuthority, admission);
+      const reviewHeadSha = requiredSha(lease.reviewHeadSha, "lease reviewHeadSha");
+      const localHeadSha = requiredSha(gitText(["rev-parse", "HEAD"]).trim(), "local HEAD");
+      const remoteHeadSha = requiredSha(gitText(["rev-parse", `origin/${branch}`]).trim(), "remote HEAD");
+      const pullRequestHeadSha = requiredSha(pullWithAuthor.headRefOid, "pull request head");
+      const protectedMainRefresh = detectProtectedMainRefresh({
+        reviewedHeadSha: reviewHeadSha,
+        localHeadSha,
+        remoteHeadSha,
+        pullRequestHeadSha,
+        gitText,
+      });
       return Object.freeze({
         repository: repoRoot,
         branch,
-        headSha: requiredSha(gitText(["rev-parse", "HEAD"]).trim(), "local HEAD"),
-        remoteHeadSha: requiredSha(gitText(["rev-parse", `origin/${branch}`]).trim(), "remote HEAD"),
+        headSha: reviewHeadSha,
+        refreshedHeadSha: protectedMainRefresh ? localHeadSha : null,
+        remoteHeadSha,
         clean: gitText(["status", "--porcelain"]).trim() === "",
         baseSha: requiredSha(lease.baseSha, "lease baseSha"),
         lease,
         manifest: admission,
         authority,
+        protectedMainRefresh,
         pullRequest: Object.freeze({
           url: pullWithAuthor.url,
           state: pullWithAuthor.state,
           isDraft: pullWithAuthor.isDraft,
           headRefName: pullWithAuthor.headRefName,
-          headRefOid: requiredSha(pullWithAuthor.headRefOid, "pull request head"),
+          headRefOid: pullRequestHeadSha,
           baseRefName: pullWithAuthor.baseRefName,
           body: pullWithAuthor.body,
           authorLogin: requiredText(pullWithAuthor.author?.login, "pull request author"),
@@ -244,6 +258,22 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
     },
 
     bindAndReviewReady({ request, lane, authority }) {
+      if (lane.protectedMainRefresh) {
+        return reviewReadyAdmissionCloudAuthority({
+          authority,
+          manifest: lane.manifest,
+          branch: lane.branch,
+          headSha: lane.headSha,
+          reviewRequestId: lane.authority.reviewRequestId,
+          focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
+          deviceId: request.successorDeviceId,
+          sessionId: request.successorSessionId,
+          environment,
+          invoke: invokeRepositoryCloudAction,
+          inspect: invokeRepositoryCloudAction,
+          verify: invokeRepositoryCloudVerifier,
+        });
+      }
       return reviewReadyAdmissionCloudAuthority({
         authority,
         manifest: lane.manifest,
@@ -308,11 +338,22 @@ function validateContinuation({ request, lane, actor, status }) {
   }
   if (lane.pullRequest.baseRefName !== "main") findings.push(finding("pull-request-base-drift"));
   const expectedHead = requiredSha(lane.lease.reviewHeadSha, "lease reviewHeadSha");
+  const exactHeadParity = (
+    lane.headSha === expectedHead
+    && lane.remoteHeadSha === expectedHead
+    && lane.pullRequest.headRefOid === expectedHead
+    && lane.authority.laneRevision === expectedHead
+  );
+  const protectedRefreshParity = (
+    lane.headSha === expectedHead
+    && lane.authority.laneRevision === expectedHead
+    && lane.protectedMainRefresh
+    && lane.refreshedHeadSha === lane.remoteHeadSha
+    && lane.refreshedHeadSha === lane.pullRequest.headRefOid
+  );
   if (
-    lane.headSha !== expectedHead
-    || lane.remoteHeadSha !== expectedHead
-    || lane.pullRequest.headRefOid !== expectedHead
-    || lane.authority.laneRevision !== expectedHead
+    !exactHeadParity
+    && !protectedRefreshParity
   ) {
     findings.push(finding("exact-head-drift"));
   }
@@ -394,6 +435,30 @@ function normalizeManifestFromLease(admission) {
     admittedReportDigest: requiredDigest(admission.admittedReportDigest, "admittedReportDigest"),
     manifestDigest: requiredDigest(admission.manifestDigest, "manifestDigest"),
   });
+}
+function detectProtectedMainRefresh({
+  reviewedHeadSha,
+  localHeadSha,
+  remoteHeadSha,
+  pullRequestHeadSha,
+  gitText,
+}) {
+  if (
+    localHeadSha === reviewedHeadSha
+    || localHeadSha !== remoteHeadSha
+    || localHeadSha !== pullRequestHeadSha
+  ) {
+    return null;
+  }
+  try {
+    return verifyProtectedMainRefreshChain({
+      expectedHeadSha: reviewedHeadSha,
+      observedHeadSha: localHeadSha,
+      gitText,
+    });
+  } catch {
+    return null;
+  }
 }
 function normalizePreservedAuthority(authority, manifest) {
   if (!authority || authority.state !== "review_ready") {

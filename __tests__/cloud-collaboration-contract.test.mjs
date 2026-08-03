@@ -501,6 +501,32 @@ test("expired predecessor claims can continue on their preserved base after prot
   assert.equal(successor.claim.predecessorClaimId, claimed.claim.claimId);
 });
 
+test("expired overlaps from an older base do not block fresh current-base authoring", () => {
+  const claimed = mutate(emptyLedger(), "claim", claimRequest({
+    declaredWriteScope: ["scripts/cloud-collaboration.mjs"],
+  }));
+
+  const successor = mutate(claimed.ledger, "claim", claimRequest({
+    workItemId: "work-2",
+    canonicalBaseRevision: "base-b",
+    laneRevision: "base-b",
+    declaredWriteScope: ["scripts/cloud-collaboration.mjs"],
+    deviceId: "device-b",
+    sessionId: "session-b",
+    leaseEpoch: 1,
+    expiresAt: EXTENDED,
+    idempotencyKey: "claim-work-2-base-b",
+  }), {
+    actor: ACTOR_B,
+    repository: { ...TARGET_A, canonicalRevision: "base-b" },
+    evaluationTime: EXPIRES,
+  });
+
+  assert.equal(successor.claim.workItemId, "work-2");
+  assert.equal(successor.claim.canonicalBaseRevision, "base-b");
+  assert.equal(successor.claim.leaseEpoch, 1);
+});
+
 test("chain validation rejects tampering and non-monotonic counters", () => {
   const claimed = mutate(emptyLedger(), "claim", claimRequest());
   const tampered = structuredClone(claimed.ledger);

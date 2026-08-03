@@ -82,6 +82,40 @@ test("device CLI emits exactly one JSON object on machine success and failure", 
   }
 });
 
+test("device:end returns one JSON no-op result on clean main", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "agentic-device-cli-end-"));
+  const remote = path.join(root, "origin.git");
+  const repo = path.join(root, "repo");
+  try {
+    git(root, ["init", "--bare", "--initial-branch=main", remote]);
+    git(root, ["init", "--initial-branch=main", repo]);
+    git(repo, ["config", "user.email", "tests@example.invalid"]);
+    git(repo, ["config", "user.name", "Device CLI End Test"]);
+    writeFileSync(path.join(repo, "README.md"), "fixture\n");
+    git(repo, ["add", "README.md"]);
+    git(repo, ["commit", "-m", "test: seed"]);
+    git(repo, ["remote", "add", "origin", remote]);
+    git(repo, ["push", "--set-upstream", "origin", "main"]);
+    const canonicalRepo = realpathSync(repo);
+
+    const result = spawnSync(process.execPath, [script, "end", `--repository=${canonicalRepo}`, "--json"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${result.stderr}\n${result.stdout}`);
+    assert.equal(result.stdout.trim().split("\n").length, 1);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      completedBranch: null,
+      pullRequestUrl: null,
+      mergeCommitSha: null,
+      mainSha: git(canonicalRepo, ["rev-parse", "HEAD"]).trim(),
+      status: "ok",
+      disposition: "already_on_clean_main",
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 function git(cwd, args) {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }

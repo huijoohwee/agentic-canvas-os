@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 197,
-  "headDigest": "071d70217257785e84454397ea77ba89e91b15746119bea957b1a464a22f1a28",
+  "sequence": 198,
+  "headDigest": "e315cc277d8d55c9db3285ee384b79402f59125596203b17b5859c8eb9d89408",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -9098,6 +9098,49 @@
       },
       "claimDigest": "49cb720b40be63843cfd177562a792baebe68ca55b20f801ef4f4339afae1bc7",
       "digest": "071d70217257785e84454397ea77ba89e91b15746119bea957b1a464a22f1a28"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 198,
+      "parentDigest": "071d70217257785e84454397ea77ba89e91b15746119bea957b1a464a22f1a28",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "dcf85cf5a38eb2ce509e94e18459628a9fc43800ce2e7e4144c479d08477eb9a",
+      "idempotencyKey": "bf3bfa085786e6c12a7103582bea7b1d343f9f1007079593fd8c074483ac18ba",
+      "requestDigest": "c57083e7f4843fdf4cd31606da24819c75f1b4cdf23dce1b8bdc29974b36c0bf",
+      "evaluationTime": "2026-08-03T02:34:47.000Z",
+      "claimCore": {
+        "claimId": "dcf85cf5a38eb2ce509e94e18459628a9fc43800ce2e7e4144c479d08477eb9a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:bf9d7d5eb11c5b4b7f0ea3461a1580ad8243465e2c06d7b35f45d2a3bce7792e",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:f4b2083ff3a30a7453fa40357fd95e71cb88b40012e0adb98272d2b51ffe9267",
+        "canonicalBaseRevision": "4c16d723003554846c1bb3e25f47cd19e2f521c6",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/workspaceImportXrSpatialCaptureIngestion.test.ts",
+          "path:canvas/src/lib/three/ThreeGraph.impl.tsx",
+          "path:canvas/src/lib/three/ThreeGraphSceneAdmission.ts",
+          "path:package.json",
+          "path:scripts/__tests__/xr-mode-source-smoke.test.mjs",
+          "path:scripts/run-xr-mode-source-smoke.mjs",
+          "semantic:xr-runtime-readiness"
+        ],
+        "writeSetDigest": "8148a89b698e672c9d34994810c543c27e8f0f3cc02b82b009793e35a649ac34",
+        "laneRevision": "d66161004ba3e82d6b379cecef0be1e0c2d7c2da",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 3,
+        "state": "review-ready",
+        "expiresAt": "2026-08-03T02:59:48.000Z",
+        "evidenceDigest": "8d8dcccede5d64d46c835ae4bd6da61375738b8a952cc0d826975576b4012f0f",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs75yxLj",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9043f7ca0d3a1ff97831e0c98c3ce0f778d56f33cadb9a930446c092b831b84c",
+      "digest": "e315cc277d8d55c9db3285ee384b79402f59125596203b17b5859c8eb9d89408"
     }
   ]
 }

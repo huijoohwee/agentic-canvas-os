@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 383,
-  "headDigest": "10452d82b68709d3ac76b857c72e6e1b69d4dbd25f4458e3b877e7447f6a3341",
+  "sequence": 384,
+  "headDigest": "beb3165611d2a7bc3e19122aab85742c5749817b227bfbd0c37eb417137dc8bf",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -18538,6 +18538,46 @@
       },
       "claimDigest": "a6802927e8da27f0ca54967f68be860ed8f941755788427707e9e6486fefca65",
       "digest": "10452d82b68709d3ac76b857c72e6e1b69d4dbd25f4458e3b877e7447f6a3341"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 384,
+      "parentDigest": "10452d82b68709d3ac76b857c72e6e1b69d4dbd25f4458e3b877e7447f6a3341",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "29b69d787b372206e2b32e31e409df9c19b2dbc5e84f9cc7e311c33a1ea44685",
+      "idempotencyKey": "d85b76506d94e0239a3c1bbe6240856a323b570983db9f2c263df4f24bc841f8",
+      "requestDigest": "6b84a16b1dcd0ab9d77ba2f5bb4d84c616308be62777d2680c4e86dda6696b26",
+      "evaluationTime": "2026-08-03T16:29:24.000Z",
+      "claimCore": {
+        "claimId": "29b69d787b372206e2b32e31e409df9c19b2dbc5e84f9cc7e311c33a1ea44685",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:57c8bf79693f8bb1a5249030af2e6c837aa619242eeb33e27613075f42da2359",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9b6783047966e1430dc17279a9fd897c100ca44da1bfb9a4188fc9c9667639c8",
+        "canonicalBaseRevision": "158bd8c565e33f6ec452d0220182be4231ab42a6",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-collaboration-cli.test.mjs",
+          "path:scripts/cloud-collaboration-check-run.mjs",
+          "path:scripts/cloud-collaboration.mjs",
+          "semantic:cloud-collaboration-refresh-controller"
+        ],
+        "writeSetDigest": "d4b5667192619f55fdb7ed30b2d6ed0efa52124bbf216b6258023538d7fddf4e",
+        "laneRevision": "3230b969cdedf59b525cc2c52f2ab0e838fcec99",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T16:58:17.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76HJ1p",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e4a7ef20bc9dc11a30ca2cab66319328b30b3895a04c57eab0f3ba9887f79e16",
+      "digest": "beb3165611d2a7bc3e19122aab85742c5749817b227bfbd0c37eb417137dc8bf"
     }
   ]
 }

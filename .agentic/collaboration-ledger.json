@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 318,
-  "headDigest": "67c688237067b887f5995c11201f7a53c3e3d51d96ea5e1324ab509420ed47f2",
+  "sequence": 319,
+  "headDigest": "772018d3bf13b3520c3aa8e884d82f84259c4f9acbdd6d456667ad390cdbefc0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -15687,6 +15687,46 @@
       },
       "claimDigest": "b21b78539c0d731c92cd3cbd7b0c0e11f0673b8ec5c371ed2db5957f0379f066",
       "digest": "67c688237067b887f5995c11201f7a53c3e3d51d96ea5e1324ab509420ed47f2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 319,
+      "parentDigest": "67c688237067b887f5995c11201f7a53c3e3d51d96ea5e1324ab509420ed47f2",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "15989dd938c7e05223ee09bbde0a5053ac8b3c39a7db330f3239b2fde354bbfd",
+      "idempotencyKey": "5b6f9c8ef880ff88820454670e33b93cc2226fca73f82a7bd1c131b79fce95c7",
+      "requestDigest": "94280773cec3ba58a4310ff1558e3dcbc4dec733305e6f36c7128661cd866767",
+      "evaluationTime": "2026-08-03T11:01:01.000Z",
+      "claimCore": {
+        "claimId": "15989dd938c7e05223ee09bbde0a5053ac8b3c39a7db330f3239b2fde354bbfd",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:48aa605201d103cfc0c47ebdf18d8faed8a0b854956635f7981433137305f64c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:86e9003aa0c18cfb0947a9c4f964530e87955d1852e361f3670e503f21cb24ab",
+        "canonicalBaseRevision": "c4bc38cc7a01c9d24e4bb89089aca051cd0a3ae8",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/writer-lease-lib.test.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:review-ready-projection-refresh"
+        ],
+        "writeSetDigest": "df40f2ac3c45b33563056f132d86d3471b56720cb59af3973e4a4d37799c0e70",
+        "laneRevision": "c4bc38cc7a01c9d24e4bb89089aca051cd0a3ae8",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T11:31:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c715860e5111efd6309ee3fc4aca51a563ea11502767b4bf2869608af2a925ed",
+      "digest": "772018d3bf13b3520c3aa8e884d82f84259c4f9acbdd6d456667ad390cdbefc0"
     }
   ]
 }

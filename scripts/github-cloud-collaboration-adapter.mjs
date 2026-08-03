@@ -43,7 +43,7 @@ const MUTATING_ACTIONS = new Set([
   "handoff",
   "release",
 ]);
-const MAX_LEDGER_BYTES = 900_000;
+const MAX_LEDGER_BYTES = 4_000_000;
 
 export function createGitHubCloudCollaborationAdapter({
   ledgerRepository,
@@ -380,17 +380,13 @@ async function readLedger({
   requireStatus(commitResponse, [200], "read collaboration ledger commit");
   const treeSha = String(commitResponse.value?.tree?.sha || "");
   requireSha(treeSha, "ledger tree");
-  const contentResponse = await send({
-    path: `/repos/${ledgerRepository}/contents/${ledgerPath}?ref=${encodeURIComponent(revision)}`,
+  const bytes = await readLedgerBytes({
+    send,
+    ledgerRepository,
+    treeSha,
+    ledgerPath,
+    actionLabel: "read collaboration ledger file",
   });
-  requireStatus(contentResponse, [200], "read collaboration ledger file");
-  if (contentResponse.value?.encoding !== "base64") {
-    throw new Error("Collaboration ledger content must use base64 encoding.");
-  }
-  const bytes = Buffer.from(String(contentResponse.value.content || "").replace(/\s/gu, ""), "base64");
-  if (bytes.length === 0 || bytes.length > MAX_LEDGER_BYTES) {
-    throw new Error(`Collaboration ledger must contain 1 through ${MAX_LEDGER_BYTES} bytes.`);
-  }
   const ledger = JSON.parse(bytes.toString("utf8"));
   requireValidLedger(ledger);
   const expectedLedgerId = contractRepository(ledgerIdentity).repositoryId;
@@ -401,8 +397,73 @@ async function readLedger({
     ledger,
     revision,
     treeSha,
-    evaluationTime: requireServerTime(refResponse.date || commitResponse.date || contentResponse.date),
+    evaluationTime: requireServerTime(refResponse.date || commitResponse.date),
   };
+}
+
+async function readLedgerBytes({
+  send,
+  ledgerRepository,
+  treeSha,
+  ledgerPath,
+  actionLabel,
+}) {
+  const blobSha = await resolveLedgerBlobSha({
+    send,
+    ledgerRepository,
+    treeSha,
+    ledgerPath,
+    actionLabel,
+  });
+  const blobResponse = await send({
+    path: `/repos/${ledgerRepository}/git/blobs/${blobSha}`,
+  });
+  requireStatus(blobResponse, [200], actionLabel);
+  if (blobResponse.value?.encoding !== "base64") {
+    throw new Error("Collaboration ledger content must use base64 encoding.");
+  }
+  const bytes = Buffer.from(String(blobResponse.value?.content || "").replace(/\s/gu, ""), "base64");
+  if (bytes.length === 0 || bytes.length > MAX_LEDGER_BYTES) {
+    throw new Error(`Collaboration ledger must contain 1 through ${MAX_LEDGER_BYTES} bytes.`);
+  }
+  return bytes;
+}
+
+async function resolveLedgerBlobSha({
+  send,
+  ledgerRepository,
+  treeSha,
+  ledgerPath,
+  actionLabel,
+}) {
+  const segments = String(ledgerPath || "").split("/").filter(Boolean);
+  if (segments.length === 0) throw new Error("Collaboration ledger path is required.");
+  let currentTreeSha = treeSha;
+  for (const [index, segment] of segments.entries()) {
+    const treeResponse = await send({
+      path: `/repos/${ledgerRepository}/git/trees/${currentTreeSha}`,
+    });
+    requireStatus(treeResponse, [200], actionLabel);
+    const entry = (Array.isArray(treeResponse.value?.tree) ? treeResponse.value.tree : [])
+      .find((candidate) => candidate.path === segment);
+    if (!entry?.sha) {
+      throw new Error("Collaboration ledger path was not present in the resolved Git tree.");
+    }
+    const isLeaf = index === segments.length - 1;
+    if (isLeaf) {
+      if (entry.type !== "blob") {
+        throw new Error("Collaboration ledger path must resolve to a blob.");
+      }
+      requireSha(entry.sha, "ledger blob");
+      return entry.sha;
+    }
+    if (entry.type !== "tree") {
+      throw new Error("Collaboration ledger path must resolve through Git trees.");
+    }
+    requireSha(entry.sha, "ledger subtree");
+    currentTreeSha = entry.sha;
+  }
+  throw new Error("Collaboration ledger path could not be resolved.");
 }
 
 async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerRef, ledgerPath }) {
@@ -508,11 +569,19 @@ async function verifyProjectedRevision({
     }
   }
   if (!expectedClaimDigest) return;
-  const response = await send({
-    path: `/repos/${ledgerRepository}/contents/${ledgerPath}?ref=${encodeURIComponent(expectedRevision)}`,
+  const commitResponse = await send({
+    path: `/repos/${ledgerRepository}/git/commits/${expectedRevision}`,
   });
-  requireStatus(response, [200], "read projected collaboration ledger");
-  const bytes = Buffer.from(String(response.value?.content || "").replace(/\s/gu, ""), "base64");
+  requireStatus(commitResponse, [200], "read projected collaboration ledger commit");
+  const treeSha = String(commitResponse.value?.tree?.sha || "");
+  requireSha(treeSha, "projected ledger tree");
+  const bytes = await readLedgerBytes({
+    send,
+    ledgerRepository,
+    treeSha,
+    ledgerPath,
+    actionLabel: "read projected collaboration ledger",
+  });
   const ledger = JSON.parse(bytes.toString("utf8"));
   requireValidLedger(ledger);
   if (!ledger.entries.some((entry) => entry.claimDigest === expectedClaimDigest)) {

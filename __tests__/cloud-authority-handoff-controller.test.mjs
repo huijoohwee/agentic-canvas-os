@@ -220,6 +220,43 @@ test("reclaim restores live authority for the exact preserved review lane", asyn
   assert.equal(result.receipts.length, 3);
 });
 
+test("reclaim preserves the predecessor base and reviewed head for successor claims", async () => {
+  let observed = null;
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult(),
+    claimSuccessor: ({ lane }) => {
+      observed = {
+        baseSha: lane.baseSha,
+        headSha: lane.headSha,
+        predecessorClaimId: lane.authority.claimId,
+      };
+      return claimResult();
+    },
+    bindAndReviewReady: () => ({
+      authority: successorAuthority(),
+      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+    }),
+    persistReviewProjection: () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
+  });
+
+  const result = await continueExpiredReviewLaneAuthority({
+    transition: "reclaim",
+    branch: "agent/legacy-device/legacy-authority-evaluator",
+    sessionId: "legacy-session",
+    successorSessionId: "legacy-session",
+    successorDeviceId: "legacy-device",
+  }, { adapter });
+
+  assert.equal(result.outcome, "reclaimed-live");
+  assert.deepEqual(observed, {
+    baseSha: BASE_SHA,
+    headSha: REVIEW_SHA,
+    predecessorClaimId: PREDECESSOR_CLAIM_ID,
+  });
+});
+
 test("retain returns a validated retained-legacy outcome without mutation", async () => {
   const adapter = createCloudAuthorityHandoffControllerAdapter({
     readPreservedReviewLane: () => preservedLane(),

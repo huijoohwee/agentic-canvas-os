@@ -70,6 +70,12 @@ The successor claim must preserve:
 - review request identity
 - monotonic lease epoch
 
+If protected `main` has advanced since the preserved claim expired, reclaim still
+continues on the predecessor's recorded base. The controller must never
+synthesize the newer protected source revision into the successor claim; it
+preserves the original reviewed base and lets the later repository-owned
+integration path handle protected-main refresh.
+
 ### Handoff
 
 `handoff` follows the same compare-and-swap continuation path but may target a

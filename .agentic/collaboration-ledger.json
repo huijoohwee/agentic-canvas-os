@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 239,
-  "headDigest": "6aa63ec1f5f7c6a56f2c7e5239d4848c56cbc0156dd32d9a2d3baa8301e8edfb",
+  "sequence": 240,
+  "headDigest": "92d5da8c9977bc9db675ce95a9ab74fb6e535c8ff3287947b4dac98c1b5ca411",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -10997,6 +10997,51 @@
       },
       "claimDigest": "f95762e6851d4ba138b73983c0612efb2422072c085cf47b7f3d987a2595ac69",
       "digest": "6aa63ec1f5f7c6a56f2c7e5239d4848c56cbc0156dd32d9a2d3baa8301e8edfb"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 240,
+      "parentDigest": "6aa63ec1f5f7c6a56f2c7e5239d4848c56cbc0156dd32d9a2d3baa8301e8edfb",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "72c712eac4e45a935aee4d8e5fb3faea980a8c13422a5944484fa448d4c92058",
+      "idempotencyKey": "5c058da05cbe391678766d5d9993a31e14eb78e7c159aac0792643d975b5918b",
+      "requestDigest": "3ab46491d3122e5951fff1bcaac016b9efab346b6bdec6c3f2d3fc93666ed89b",
+      "evaluationTime": "2026-08-03T08:49:03.000Z",
+      "claimCore": {
+        "claimId": "72c712eac4e45a935aee4d8e5fb3faea980a8c13422a5944484fa448d4c92058",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:be7e21fbfaf1e2a1e24ff06a87a4746615305a3599e1427d368bd54b38c20c8c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:70893d2bec5019e013ab00dcc84954ba4cc45e413e6153978b485aea48f1d032",
+        "canonicalBaseRevision": "783a7e74bbf0553b483ddd30c0e5906b9865a9ca",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "semantic:delivery-authorized-replay-reconciliation"
+        ],
+        "writeSetDigest": "9363c457b1a6e889e8d4e9371a7f4394cd60aabf7f1390a0b61cb12028033266",
+        "laneRevision": "783a7e74bbf0553b483ddd30c0e5906b9865a9ca",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-08-03T09:15:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "abandoned",
+          "evidenceDigest": "8da07bf797cbf2fcaadc42aff65c1d1fa62b1cbbc4d9903ca03eb9971bf6f4a1",
+          "integrationReceiptDigest": null,
+          "evaluationTime": "2026-08-03T08:49:03.000Z"
+        }
+      },
+      "claimDigest": "1375f2a3064806fa5f58f535ee1f7f577d968441a84d3013bb7f1fc09a973332",
+      "digest": "92d5da8c9977bc9db675ce95a9ab74fb6e535c8ff3287947b4dac98c1b5ca411"
     }
   ]
 }

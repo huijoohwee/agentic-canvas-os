@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 314,
-  "headDigest": "0204fe3dab652e8c8dbda0900a5d7d96c45c61aeb7ef76b500fce224f47b180b",
+  "sequence": 315,
+  "headDigest": "9d7fb1d42ff779443f50d031d04fb9f936e004314cf8ce1c2ca68a3618169a4e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -15504,6 +15504,53 @@
       },
       "claimDigest": "0b765684622b0ec3b862cf8b3dd4c37fce76dc3bc2e960d016758c6ac13a09f5",
       "digest": "0204fe3dab652e8c8dbda0900a5d7d96c45c61aeb7ef76b500fce224f47b180b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 315,
+      "parentDigest": "0204fe3dab652e8c8dbda0900a5d7d96c45c61aeb7ef76b500fce224f47b180b",
+      "action": "delivery-authorize",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f8c9314ca591ca133371562063174728a7c730900d7617c7698dfe60b7f8d124",
+      "idempotencyKey": "f6a6125fddaf98ed4d6c44c61d93e15db9e03896678969bb72b5cf1dafe12198",
+      "requestDigest": "6207f3e85cf47e89d46fd60e07f4a274f5cf563f9ebd83c8214857bbf9326568",
+      "evaluationTime": "2026-08-03T10:53:42.000Z",
+      "claimCore": {
+        "claimId": "f8c9314ca591ca133371562063174728a7c730900d7617c7698dfe60b7f8d124",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b4b53298493c10b1931c27ef8d02fab6cb599d2e44bd97b6dc11a5bd85d41a56",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2a0839c7244a9e99663c1fce9237dbc96aa6656f8d4d4913fa7f9e1111845b42",
+        "canonicalBaseRevision": "2010491b1600d0d0a0975821c115888aaac40b9a",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "semantic:stale-base-review-reclaim"
+        ],
+        "writeSetDigest": "99b60ac5290d35aa3accffe747f6b64376c274879e58118ffac4bcde719a6535",
+        "laneRevision": "100b014914614efa72c7df402e0bad5d0684e81f",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "delivery-authorized",
+        "expiresAt": "2026-08-03T11:08:55.000Z",
+        "evidenceDigest": "8223a4a0fd82b2b2aa15ee6b76a51fc0157b511790edf11849dbf7fc2d2dc784",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM759FA5",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null,
+        "deliveryAuthorization": {
+          "focusedEvidenceDigest": "8223a4a0fd82b2b2aa15ee6b76a51fc0157b511790edf11849dbf7fc2d2dc784",
+          "integrationIntentDigest": "6f0be6486d0ca2173c057d236975b026339a1206a7b30993f117fbb410a7e6dc",
+          "operatorDecisionDigest": "88d27e99747d7253df3fd60383d37c91d40e2125dc20eb5e1d0895f45e926531",
+          "evaluationTime": "2026-08-03T10:53:42.000Z"
+        }
+      },
+      "claimDigest": "1fe127a2a6868fbf3742755201692321611b022075af7bca14cd19703d879275",
+      "digest": "9d7fb1d42ff779443f50d031d04fb9f936e004314cf8ce1c2ca68a3618169a4e"
     }
   ]
 }

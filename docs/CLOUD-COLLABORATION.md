@@ -176,6 +176,8 @@ projection by creating the same delivery authorization, verifying it, and only
 then asking the configured provider adapter for protected integration. Any
 source edit requires a separate handoff or fresh active epoch; neither delivery
 authorization nor protected integration grants deployment authority.
+The exact reviewed head remains the protected delivery head for that
+continuation even when the lane did not opt into auto-delivery at start.
 If the cloud `delivery-authorize` transition succeeds before the local review
 projection persists, the bounded repository retry may reconcile the exact same
 claim in `delivery-authorized` state and continue without reopening authoring,

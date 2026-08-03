@@ -446,6 +446,218 @@ test("delivery authorization replay reconciles the exact authorized cloud claim"
   assert.equal(recovered.authority.ledgerRevision, DELIVERY_GIT_REVISION);
 });
 
+test("delivery authorization may reuse the preserved review request identity during protected-main refresh", () => {
+  const manifest = {
+    ...MANIFEST,
+    admittedReportDigest: "b".repeat(64),
+  };
+  const mappedActor = contractActor(RAW_ACTOR, {
+    deviceId: RAW_DEVICE_ID,
+    sessionId: RAW_SESSION_ID,
+  });
+  const repository = contractRepository(RAW_REPOSITORY, BASE_SHA);
+  const claimRequest = prepareMutationRequest({
+    action: "claim",
+    input: {
+      workItemId: "scoped-cloud-authority",
+      canonicalBaseSha: BASE_SHA,
+      headSha: BASE_SHA,
+      declaredWriteSet: DECLARED_WRITE_SET,
+      leaseEpoch: 1,
+      ttlSeconds: 3_600,
+      deviceId: RAW_DEVICE_ID,
+      sessionId: RAW_SESSION_ID,
+      idempotencyKey: "claim-scoped-cloud-authority-refresh-delivery",
+    },
+    actor: RAW_ACTOR,
+    repository: RAW_REPOSITORY,
+    pullRequest: null,
+    evaluationTime: CLAIM_TIME,
+  });
+  const claimed = applyCloudTransition({
+    ledger: createEmptyLedger({ nodeId: "ledger-node-refresh-delivery" }),
+    action: "claim",
+    request: claimRequest,
+    actor: mappedActor,
+    repository,
+    evaluationTime: CLAIM_TIME,
+  });
+  const bound = applyCloudTransition({
+    ledger: claimed.ledger,
+    action: "bind",
+    request: prepareMutationRequest({
+      action: "bind",
+      input: {
+        claimId: claimed.claim.claimId,
+        expectedFenceRevision: claimed.claim.fenceRevision,
+        expectedTransitionCounter: claimed.claim.transitionCounter,
+        laneRevision: FENCE_SHA,
+        reviewRequestId: "github-pull-request:pull-request-node-42",
+        deviceId: RAW_DEVICE_ID,
+        sessionId: RAW_SESSION_ID,
+        idempotencyKey: "bind-scoped-cloud-authority-refresh-delivery",
+      },
+      actor: RAW_ACTOR,
+      repository: RAW_REPOSITORY,
+      pullRequest: PULL_REQUEST,
+      evaluationTime: BIND_TIME,
+    }),
+    actor: mappedActor,
+    repository,
+    evaluationTime: BIND_TIME,
+  });
+  const focusedEvidenceDigest = digestValue({
+    schema: "agentic-focused-review-evidence/v1",
+    command: "npm run check",
+    branch: BRANCH,
+    headSha: FENCE_SHA,
+    pullRequestNumber: PULL_REQUEST.number,
+    admittedReportDigest: manifest.admittedReportDigest,
+  });
+  const ready = applyCloudTransition({
+    ledger: bound.ledger,
+    action: "review-ready",
+    request: prepareMutationRequest({
+      action: "review-ready",
+      input: {
+        claimId: bound.claim.claimId,
+        expectedFenceRevision: bound.claim.fenceRevision,
+        expectedTransitionCounter: bound.claim.transitionCounter,
+        laneRevision: FENCE_SHA,
+        reviewRequestId: "github-pull-request:pull-request-node-42",
+        focusedEvidenceDigest,
+        deviceId: RAW_DEVICE_ID,
+        sessionId: RAW_SESSION_ID,
+        idempotencyKey: "review-ready-scoped-cloud-authority-refresh-delivery",
+      },
+      actor: RAW_ACTOR,
+      repository: RAW_REPOSITORY,
+      pullRequest: PULL_REQUEST,
+      evaluationTime: VERIFY_TIME,
+    }),
+    actor: mappedActor,
+    repository,
+    evaluationTime: VERIFY_TIME,
+  });
+  let observedMutation = null;
+  let authorizedPhase = false;
+  authorizeDeliveryAdmissionCloudAuthority({
+    authority: {
+      schema: "agentic-lane-cloud-authority/v1",
+      provider: "github",
+      ledgerRepository: "org/ledger",
+      targetRepository: RAW_REPOSITORY.fullName,
+      claimId: ready.claim.claimId,
+      claimDigest: ready.claim.fenceRevision,
+      ledgerRevision: READY_GIT_REVISION,
+      claimLedgerRevision: ready.claim.ledgerRevision,
+      canonicalBaseSha: BASE_SHA,
+      laneRevision: FENCE_SHA,
+      cloudDeclaredWriteScope: DECLARED_WRITE_SET,
+      writeSetDigest: MANIFEST.writeSetDigest,
+      deviceId: RAW_DEVICE_ID,
+      sessionId: RAW_SESSION_ID,
+      reviewRequestId: "github-pull-request:pull-request-node-42",
+      leaseEpoch: 1,
+      transitionCounter: ready.claim.transitionCounter,
+      state: "review_ready",
+      expiresAt: ready.claim.expiresAt,
+      focusedEvidenceDigest,
+    },
+    manifest,
+    branch: BRANCH,
+    headSha: FENCE_SHA,
+    reviewRequestId: "github-pull-request:pull-request-node-42",
+    allowProtectedMainRefresh: true,
+    deviceId: RAW_DEVICE_ID,
+    sessionId: RAW_SESSION_ID,
+    inspect: () => ({
+      schema: CLOUD_RESULT_SCHEMA,
+      ok: true,
+      action: "status",
+      status: "ready",
+      ledgerRevision: authorizedPhase ? DELIVERY_GIT_REVISION : READY_GIT_REVISION,
+      ledgerDigest: "c".repeat(64),
+      claims: [projectPublicClaim(
+        authorizedPhase
+          ? {
+            ...ready.claim,
+            state: "delivery_authorized",
+            fenceRevision: "e".repeat(64),
+            ledgerRevision: "2".repeat(64),
+            transitionCounter: 3,
+          }
+          : ready.claim,
+      )],
+    }),
+    verify: ({ request }) => ({
+      schema: CLOUD_RESULT_SCHEMA,
+      ok: true,
+      action: "verify",
+      status: "ready",
+      ledgerRevision: authorizedPhase ? DELIVERY_GIT_REVISION : READY_GIT_REVISION,
+      claimDigest: authorizedPhase ? "e".repeat(64) : ready.claim.fenceRevision,
+      findings: [],
+      receipt: {
+        receiptDigest: "d".repeat(64),
+        ledgerDigest: "c".repeat(64),
+        evaluationTime: VERIFY_TIME,
+      },
+      claim: {
+        claimId: ready.claim.claimId,
+        canonicalBaseRevision: BASE_SHA,
+        state: authorizedPhase ? "delivery-authorized" : "review-ready",
+        laneRevision: FENCE_SHA,
+        declaredWriteScope: DECLARED_WRITE_SET,
+        writeSetDigest: MANIFEST.writeSetDigest,
+        transitionCounter: authorizedPhase ? 3 : ready.claim.transitionCounter,
+        leaseEpoch: 1,
+        reviewRequestId: "github-pull-request:pull-request-node-42",
+        transitionDigest: authorizedPhase ? "2".repeat(64) : ready.claim.ledgerRevision,
+        expiresAt: ready.claim.expiresAt,
+      },
+    }),
+    invoke: ({ action, request }) => {
+      observedMutation = { action, request };
+      authorizedPhase = true;
+      return {
+        schema: CLOUD_RESULT_SCHEMA,
+        ok: true,
+        action: "delivery-authorize",
+        status: "delivery-authorized",
+        ledgerRevision: DELIVERY_GIT_REVISION,
+        claimDigest: "e".repeat(64),
+        findings: [],
+        receipt: {
+          receiptDigest: "f".repeat(64),
+          ledgerDigest: "1".repeat(64),
+          evaluationTime: VERIFY_TIME,
+        },
+        claim: {
+          claimId: ready.claim.claimId,
+          state: "delivery-authorized",
+          canonicalBaseRevision: BASE_SHA,
+          laneRevision: FENCE_SHA,
+          declaredWriteScope: DECLARED_WRITE_SET,
+          writeSetDigest: MANIFEST.writeSetDigest,
+          reviewRequestId: "github-pull-request:pull-request-node-42",
+          leaseEpoch: 1,
+          transitionCounter: 3,
+          expiresAt: "2099-07-31T01:20:00.000Z",
+          transitionDigest: "2".repeat(64),
+        },
+      };
+    },
+  });
+
+  assert.equal(observedMutation.action, "delivery-authorize");
+  assert.equal(observedMutation.request.pullRequestNumber, undefined);
+  assert.equal(
+    observedMutation.request.reviewRequestId,
+    "github-pull-request:pull-request-node-42",
+  );
+});
+
 test("cloud heartbeat machine envelope carries the joined authority evidence", () => {
   const lease = {
     ...heartbeatLease(),

@@ -78,13 +78,46 @@ export function integrateSession({
   if (!['completing', 'completed'].includes(lease.status)) {
     let deliveryCloudAuthority = lease.cloudAuthority || null;
     const deliveryVerifiedBaseSha = deliveryCloudAuthority?.canonicalBaseSha || "";
+    let protectedMainAuthorizationRefresh = null;
+    if (reviewReadyDelivery) {
+      const currentPullRequest = JSON.parse(ghText([
+        "pr", "view", lease.pullRequestUrl, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
+      ]));
+      if (currentPullRequest.url !== lease.pullRequestUrl || currentPullRequest.baseRefName !== "main") {
+        throw new Error(`Pull request identity for ${lease.pullRequestUrl} changed before integration.`);
+      }
+      protectedMainAuthorizationRefresh = (
+        lease.reviewHeadSha
+        && currentPullRequest.headRefOid !== lease.reviewHeadSha
+      )
+        ? reconcileProtectedMainRefresh({
+          url: lease.pullRequestUrl,
+          expectedHeadSha: lease.reviewHeadSha,
+          observedHeadSha: currentPullRequest.headRefOid,
+          gitText,
+          run,
+        })
+        : null;
+      if (protectedMainAuthorizationRefresh) {
+        protectedMainRefresh = appendProtectedMainRefresh(
+          protectedMainRefresh,
+          protectedMainAuthorizationRefresh,
+        );
+      }
+    }
     if (reviewReadyDelivery) {
       const authorized = authorizeCloudDelivery({
         authority: lease.cloudAuthority,
         manifest: lease.admission,
         branch,
         headSha: lease.reviewHeadSha,
-        pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+        pullRequestNumber: protectedMainAuthorizationRefresh
+          ? null
+          : pullRequestNumber(lease.pullRequestUrl),
+        reviewRequestId: protectedMainAuthorizationRefresh
+          ? deliveryCloudAuthority?.reviewRequestId || null
+          : null,
+        allowProtectedMainRefresh: Boolean(protectedMainAuthorizationRefresh),
         deviceId: lease.device,
         sessionId,
       });
@@ -117,17 +150,20 @@ export function integrateSession({
       ghText, waitSeconds, pollSeconds, now, sleep,
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
-          const refresh = reconcileProtectedMainRefresh({
+          const refresh = protectedMainAuthorizationRefresh
+            || reconcileProtectedMainRefresh({
             url: lease.pullRequestUrl,
             expectedHeadSha,
             observedHeadSha,
             gitText,
             run,
           });
-          protectedMainRefresh = appendProtectedMainRefresh(
-            protectedMainRefresh,
-            refresh,
-          );
+          if (!protectedMainAuthorizationRefresh) {
+            protectedMainRefresh = appendProtectedMainRefresh(
+              protectedMainRefresh,
+              refresh,
+            );
+          }
           verifyCloudAuthority({
             pullRequestUrl: lease.pullRequestUrl,
             branch,

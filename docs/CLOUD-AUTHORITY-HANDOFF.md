@@ -34,7 +34,9 @@ The preserved lane must remain exact and source-owned:
 
 - attached `agent/<device>/<semantic-scope>` branch
 - admitted writer lease with preserved review marker
-- exact local `HEAD`, remote branch head, PR head, and `reviewHeadSha` parity
+- exact reviewed-head evidence, plus either:
+  - exact local `HEAD`, remote branch head, PR head, and `reviewHeadSha` parity; or
+  - one bounded protected-`main` refresh chain whose observed local, remote, and PR head all match the same refreshed head while the preserved lease, review marker, and cloud authority stay pinned to the original reviewed head
 - clean worktree
 - immutable branch, scope, base, review request, and declared write set
 - expired preserved cloud authority in `review_ready`
@@ -73,8 +75,11 @@ The successor claim must preserve:
 If protected `main` has advanced since the preserved claim expired, reclaim still
 continues on the predecessor's recorded base. The controller must never
 synthesize the newer protected source revision into the successor claim; it
-preserves the original reviewed base and lets the later repository-owned
-integration path handle protected-main refresh.
+preserves the original reviewed base and reviewed head. When the attached lane
+has only a bounded protected-`main` refresh, reclaim reuses the preserved
+review request identity and focused evidence instead of rebinding the successor
+claim to the refreshed PR head; the later repository-owned integration path
+continues to own the protected-main refresh chain.
 
 ### Handoff
 

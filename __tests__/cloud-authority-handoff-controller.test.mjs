@@ -9,10 +9,12 @@ import {
 
 const BASE_SHA = "a".repeat(40);
 const REVIEW_SHA = "b".repeat(40);
+const REFRESHED_SHA = "0".repeat(40);
+const REFRESH_MAIN_PARENT_SHA = "f".repeat(40);
 const PREDECESSOR_CLAIM_ID = "c".repeat(64);
 const PREDECESSOR_CLAIM_DIGEST = "d".repeat(64);
 const PREDECESSOR_LEDGER_DIGEST = "e".repeat(64);
-const PREDECESSOR_FOCUSED_EVIDENCE = "f".repeat(64);
+const PREDECESSOR_FOCUSED_EVIDENCE = "1".repeat(64);
 const SUCCESSOR_CLAIM_ID = "1".repeat(64);
 const SUCCESSOR_CLAIM_DIGEST = "2".repeat(64);
 const SUCCESSOR_LEDGER_DIGEST = "3".repeat(64);
@@ -285,6 +287,55 @@ test("retain returns a validated retained-legacy outcome without mutation", asyn
 
   assert.equal(result.outcome, "retained-legacy");
   assert.equal(result.receipts.length, 1);
+});
+
+test("reclaim accepts a preserved review lane whose PR head only moved by protected-main refresh", async () => {
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane({
+      refreshedHeadSha: REFRESHED_SHA,
+      remoteHeadSha: REFRESHED_SHA,
+      protectedMainRefresh: {
+        schema: "agentic-protected-main-refresh/v1",
+        deliveredHeadSha: REVIEW_SHA,
+        refreshedHeadSha: REFRESHED_SHA,
+        mainParentSha: REFRESH_MAIN_PARENT_SHA,
+      },
+      pullRequest: {
+        url: "https://github.com/example/repo/pull/238",
+        state: "OPEN",
+        isDraft: false,
+        headRefName: "agent/legacy-device/legacy-authority-evaluator",
+        headRefOid: REFRESHED_SHA,
+        baseRefName: "main",
+        body: "<lease-marker>",
+        authorLogin: "owner",
+      },
+    }),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult(),
+    claimSuccessor: ({ lane }) => {
+      assert.equal(lane.headSha, REVIEW_SHA);
+      assert.equal(lane.refreshedHeadSha, REFRESHED_SHA);
+      assert.equal(lane.protectedMainRefresh?.refreshedHeadSha, REFRESHED_SHA);
+      return claimResult();
+    },
+    bindAndReviewReady: () => ({
+      authority: successorAuthority(),
+      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+    }),
+    persistReviewProjection: () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
+  });
+
+  const result = await continueExpiredReviewLaneAuthority({
+    transition: "reclaim",
+    branch: "agent/legacy-device/legacy-authority-evaluator",
+    sessionId: "legacy-session",
+    successorSessionId: "legacy-session",
+    successorDeviceId: "legacy-device",
+  }, { adapter });
+
+  assert.equal(result.outcome, "reclaimed-live");
+  assert.equal(result.reviewedHeadSha, REVIEW_SHA);
 });
 
 test("handoff creates a live successor without rewriting the local projection", async () => {

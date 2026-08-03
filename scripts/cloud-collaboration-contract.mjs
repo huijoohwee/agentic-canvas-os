@@ -229,7 +229,7 @@ function requireOwnedClaim(ledger, intent, evaluationTime) {
   const claim = hydrate(entry, evaluationTime);
   if (TERMINAL_STATES.has(claim.state) && !(
     claim.state === "expired"
-    && intent.reason === "integrated"
+    && ["abandoned", "integrated"].includes(intent.reason)
   )) {
     fail("claim_not_active", `claim is ${claim.state}`);
   }
@@ -593,8 +593,10 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
     }
     const requiredState = request.requiredState ?? "active";
     const stateReady = requiredState === "active"
-      ? ["active", "review-ready", "parked"].includes(claim.state)
-      : claim.state === requiredState;
+      ? ["active", "review-ready", "delivery-authorized", "parked"].includes(claim.state)
+      : requiredState === "review-ready"
+        ? ["review-ready", "delivery-authorized"].includes(claim.state)
+        : claim.state === requiredState;
     const reviewReady = requiredState !== "review-ready" || (
       claim.reviewRequestId
       && claim.evidenceDigest

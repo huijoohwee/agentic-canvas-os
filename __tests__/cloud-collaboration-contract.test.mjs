@@ -277,6 +277,18 @@ test("bind, heartbeat, review-ready, delivery authorization, verify, and integra
   }), { evaluationTime: LATER });
   assert.equal(authorized.claim.state, "delivery-authorized");
   assert.equal(authorized.claim.transitionCounter, 5);
+  const deliveryVerified = verifyCloudClaim({
+    ledger: authorized.ledger,
+    request: {
+      ...verificationRequest,
+      fenceRevision: authorized.claim.fenceRevision,
+      ledgerRevision: authorized.claim.ledgerRevision,
+    },
+    evaluationTime: LATER,
+  });
+  assert.equal(deliveryVerified.ok, true);
+  assert.equal(deliveryVerified.verdict, "ready");
+  assert.deepEqual(deliveryVerified.findings, []);
 
   throwsCode(
     () => mutate(authorized.ledger, "release", expected(authorized.claim, "stale-release", {
@@ -322,6 +334,35 @@ test("integrated release can retire an expired delivery-authorized claim owned b
     evaluationTime: "2026-07-30T03:00:00.000Z",
   });
   assert.equal(released.claim.state, "released");
+  assert.deepEqual(validateLedger(released.ledger), []);
+});
+
+test("abandoned release can retire an expired claim with exact ownership and fence authority", () => {
+  const claimed = mutate(emptyLedger(), "claim", claimRequest());
+  const evaluationTime = "2026-07-30T03:00:00.000Z";
+
+  throwsCode(
+    () => mutate(claimed.ledger, "release", expected(claimed.claim, "release-expired-stale", {
+      expectedFenceRevision: digestValue("stale-fence"),
+      reason: "abandoned",
+      evidenceDigest: EVIDENCE,
+    }), { evaluationTime }),
+    "stale_collaboration_fence",
+  );
+  throwsCode(
+    () => mutate(claimed.ledger, "release", expected(claimed.claim, "release-expired-owner", {
+      reason: "abandoned",
+      evidenceDigest: EVIDENCE,
+    }), { actor: ACTOR_B, evaluationTime }),
+    "claim_owner_mismatch",
+  );
+
+  const released = mutate(claimed.ledger, "release", expected(claimed.claim, "release-expired-abandoned", {
+    reason: "abandoned",
+    evidenceDigest: EVIDENCE,
+  }), { evaluationTime });
+  assert.equal(released.claim.state, "released");
+  assert.equal(released.claim.release.reason, "abandoned");
   assert.deepEqual(validateLedger(released.ledger), []);
 });
 

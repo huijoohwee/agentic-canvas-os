@@ -162,6 +162,51 @@ test("park release refuses a lease snapshot changed after PR projection", () => 
   }
 });
 
+test("review-ready projection refresh can rebind the same preserved lease", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  const store = createWriterLeaseStore({ gitCommonDir });
+  const branch = "agent/mac-a/runtime-leases";
+  try {
+    store.claim({
+      sessionId: "chat-a",
+      device: "mac-a",
+      scope: "runtime-leases",
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      baseSha: "a".repeat(40),
+    });
+    store.annotate({
+      sessionId: "chat-a",
+      branch,
+      values: { fenceSha: "b".repeat(40), pullRequestUrl: "https://github.com/example/repo/pull/42" },
+    });
+    const ready = store.release({
+      sessionId: "chat-a",
+      branch,
+      status: "review_ready",
+      values: { reviewHeadSha: "c".repeat(40) },
+    });
+
+    const rebound = store.release({
+      sessionId: "chat-a",
+      branch,
+      status: "review_ready",
+      expectedLease: ready,
+      values: {
+        epoch: 2,
+        cloudAuthority: { claimId: "d".repeat(64) },
+      },
+    });
+
+    assert.equal(rebound.status, "review_ready");
+    assert.equal(rebound.epoch, 2);
+    assert.equal(rebound.reviewHeadSha, "c".repeat(40));
+    assert.equal(rebound.cloudAuthority.claimId, "d".repeat(64));
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
 test("pull request metadata round-trips the current fencing identity", () => {
   const lease = {
     schema: "agentic-writer-lease/v2",

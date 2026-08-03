@@ -63,6 +63,26 @@ export function verifyReviewReadyAdmissionCloudAuthority({
   });
 }
 
+export function verifyDeliveryAuthorizedCloudAuthority({
+  authority, manifest,
+  headSha = authority?.laneRevision,
+  branch = null,
+  focusedEvidenceDigest = authority?.focusedEvidenceDigest,
+  environment = process.env,
+  inspect = invokeRepositoryCloudAction,
+  invoke = invokeRepositoryCloudVerifier,
+} = {}) {
+  return verifyCloudAuthorityState({
+    authority, manifest,
+    canonicalBaseSha: authority?.canonicalBaseSha,
+    expectedState: "delivery_authorized",
+    expectedLaneRevision: headSha,
+    branch,
+    focusedEvidenceDigest: requiredDigest(focusedEvidenceDigest, "focusedEvidenceDigest"),
+    environment, inspect, invoke,
+  });
+}
+
 export function reconcileAdmissionCloudAuthority({
   authority, manifest, branch, headSha, pullRequestNumber,
   allowPriorLaneRevision = false,
@@ -413,6 +433,88 @@ export function reviewReadyAdmissionCloudAuthority({
   });
 }
 
+export function authorizeDeliveryAdmissionCloudAuthority({
+  authority, manifest, branch, headSha, pullRequestNumber, deviceId, sessionId,
+  environment = process.env,
+  invoke = invokeRepositoryCloudAction,
+  inspect = invokeRepositoryCloudAction,
+  verify = invokeRepositoryCloudVerifier,
+} = {}) {
+  const current = reconcileAdmissionCloudAuthority({
+    authority, manifest, branch, headSha, pullRequestNumber,
+    environment, inspect, verify,
+  });
+  if (current.authority.state === "delivery_authorized") return current;
+  if (current.authority.state !== "review_ready") {
+    throw new Error("Delivery authorization requires the exact review-ready cloud claim.");
+  }
+  const reviewed = current.authority;
+  const focusedEvidenceDigest = requiredDigest(
+    reviewed.focusedEvidenceDigest,
+    "focusedEvidenceDigest",
+  );
+  const operatorDecisionDigest = digestValue({
+    schema: "agentic-protected-integration-operator-decision/v1",
+    action: "delivery-authorize",
+    branch: requiredText(branch, "branch"),
+    headSha: requiredSha(headSha, "headSha"),
+    pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber"),
+    sessionId: requiredText(sessionId, "sessionId"),
+  });
+  const integrationIntentDigest = digestValue({
+    schema: "agentic-protected-integration-intent/v1",
+    target: "protected-canonical-source",
+    canonicalBaseSha: reviewed.canonicalBaseSha,
+    claimId: reviewed.claimId,
+    reviewRequestId: reviewed.reviewRequestId,
+    laneRevision: reviewed.laneRevision,
+    writeSetDigest: reviewed.writeSetDigest,
+  });
+  const result = invoke({
+    action: "delivery-authorize",
+    ledgerRepository: reviewed.ledgerRepository,
+    request: {
+      targetRepository: reviewed.targetRepository,
+      pullRequestNumber,
+      branch,
+      headSha,
+      deviceId: requiredText(deviceId, "deviceId"),
+      sessionId: requiredText(sessionId, "sessionId"),
+      claimId: reviewed.claimId,
+      expectedFenceRevision: reviewed.claimDigest,
+      expectedTransitionCounter: reviewed.transitionCounter,
+      focusedEvidenceDigest,
+      operatorDecisionDigest,
+      integrationIntentDigest,
+      idempotencyKey: [
+        "device-delivery-authorize", reviewed.claimId,
+        reviewed.transitionCounter, reviewed.claimDigest, headSha,
+        operatorDecisionDigest, integrationIntentDigest,
+      ].join(":"),
+    },
+    environment,
+  });
+  requireReadyResult(result, {
+    authority: reviewed,
+    manifest,
+    canonicalBaseSha: reviewed.canonicalBaseSha,
+    expectedState: "delivery_authorized",
+    expectedLaneRevision: headSha,
+  });
+  const authorized = Object.freeze({
+    ...normalizeBoundAuthority({
+      result, authority: reviewed, manifest, deviceId, sessionId,
+      focusedEvidenceDigest,
+    }),
+    operatorDecisionDigest,
+    integrationIntentDigest,
+  });
+  return verifyDeliveryAuthorizedCloudAuthority({
+    authority: authorized, manifest, headSha, branch,
+    focusedEvidenceDigest, environment, inspect, invoke: verify,
+  });
+}
+
 export function invokeRepositoryCloudAction({
   action,
   ledgerRepository,
@@ -510,7 +612,7 @@ function requireReadyResult(result, {
     !result
     || result.schema !== CLOUD_RESULT_SCHEMA
     || result.ok !== true
-    || !["verify", "bind", "heartbeat", "review-ready"].includes(result.action)
+    || !["verify", "bind", "heartbeat", "review-ready", "delivery-authorize"].includes(result.action)
   ) {
     throw new Error("Cloud collaboration did not return a successful authoritative result.");
   }

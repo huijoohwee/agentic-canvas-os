@@ -14,11 +14,12 @@ export const MUTATING_ACTIONS = new Set([
   "bind",
   "heartbeat",
   "review-ready",
+  "delivery-authorize",
   "handoff",
   "release",
 ]);
 
-const CLAIM_STATES = new Set(["active", "review-ready", "parked", "released"]);
+const CLAIM_STATES = new Set(["active", "review-ready", "delivery-authorized", "parked", "released"]);
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 
 export class CloudCollaborationError extends Error {
@@ -323,6 +324,10 @@ export function validateLedger(ledger) {
       if (entry.action === "review-ready"
         && (!previous || previous.claimCore.state !== "active" || core.state !== "review-ready")) {
         failures.push(`${label} review-ready state is invalid`);
+      }
+      if (entry.action === "delivery-authorize"
+        && (!previous || previous.claimCore.state !== "review-ready" || core.state !== "delivery-authorized")) {
+        failures.push(`${label} delivery-authorize state is invalid`);
       }
       if (entry.action === "handoff" && core.state !== "parked") failures.push(`${label} handoff state is invalid`);
       if (entry.action === "release" && core.state !== "released") failures.push(`${label} release state is invalid`);

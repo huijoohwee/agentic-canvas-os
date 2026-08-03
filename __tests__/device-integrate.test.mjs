@@ -68,6 +68,10 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       }),
       leaseStore,
       sessionId: "session-a",
+      authorizeCloudDelivery: ({ authority }) => ({
+        authority: { ...authority, state: "delivery_authorized" },
+      }),
+      verifyCloudAuthority: () => ({ ok: true }),
       run: (command, args) => {
         commands.push([command, ...args]);
         if (command === "git" && args[0] === "commit") head = commitSha;
@@ -553,6 +557,10 @@ test("authorized auto-delivery completes only through canonical runtime readines
         },
       },
       sessionId: "session-a",
+      authorizeCloudDelivery: ({ authority }) => ({
+        authority: { ...authority, state: "delivery_authorized" },
+      }),
+      verifyCloudAuthority: () => ({ ok: true }),
       run: () => {},
       runText: (command, args) => {
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
@@ -629,7 +637,7 @@ test("authorized auto-delivery rejects integration without canonical runtime pro
 });
 
 function createLease({ repo, ...overrides }) {
-  return {
+  const lease = {
     schema: "agentic-writer-lease/v2",
     status: "active",
     epoch: 1,
@@ -641,6 +649,18 @@ function createLease({ repo, ...overrides }) {
     pullRequestUrl,
     ...overrides,
   };
+  if (lease.status === "review_ready") {
+    lease.admission = lease.admission || {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "admitted",
+    };
+    lease.cloudAuthority = lease.cloudAuthority || {
+      schema: "agentic-lane-cloud-authority/v1",
+      state: "review_ready",
+      canonicalBaseSha: baseSha,
+    };
+  }
+  return lease;
 }
 
 function canonicalWorktree(repo) {

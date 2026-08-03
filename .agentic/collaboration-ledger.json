@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 345,
-  "headDigest": "9a67634f37e0dc54b749ce585d04e335ec57b3534219ecc84544a8f3dfb5f3a8",
+  "sequence": 346,
+  "headDigest": "1f8f70cc25dae1aebd3c488588576578b4bbbea1230b34eeffdfddde33205e01",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -16902,6 +16902,45 @@
       },
       "claimDigest": "5dfdc1abdf50ca5849a652391b26a2e34354f08a7615f627e2cabd3431306a10",
       "digest": "9a67634f37e0dc54b749ce585d04e335ec57b3534219ecc84544a8f3dfb5f3a8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 346,
+      "parentDigest": "9a67634f37e0dc54b749ce585d04e335ec57b3534219ecc84544a8f3dfb5f3a8",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "58501c20204418c75ebba8232ec88130e5739067fae9d3ced6c1e22f05d81364",
+      "idempotencyKey": "6c5ef564a1dacd08447f552d19a98ee39ee4e8aa7c27a2667b00ce658750af32",
+      "requestDigest": "3f68dd9b7e63965c6258c86a321c2a3a566e4d2157f062ec5330687909c1f469",
+      "evaluationTime": "2026-08-03T12:25:26.000Z",
+      "claimCore": {
+        "claimId": "58501c20204418c75ebba8232ec88130e5739067fae9d3ced6c1e22f05d81364",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:ac7d41f598dc9baaf2702e053ec67f3bf5307985255947b4e0f4fadbe0e9c526",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:67370067ed0d8652267a8b0ff6d8fc2472d01c64ca0a7ef83a6ef0e2e4140b4f",
+        "canonicalBaseRevision": "94abfe70fc169d19d2dba63ef32fc06ea1d9d829",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/agentReadyWebMcpHtmlFallback.test.ts",
+          "path:canvas/src/features/agent-ready/browserFunctionSource.mjs",
+          "semantic:production-browser-function-source"
+        ],
+        "writeSetDigest": "99390cdb0082a4b48261565cca40b897c9df0bb8a15fc57fabbade3dcd6a67c3",
+        "laneRevision": "fce32b692440abf627e811cb592f8987b4d9e74d",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "review-ready",
+        "expiresAt": "2026-08-03T14:08:32.000Z",
+        "evidenceDigest": "b2b3c19b2e3ffc744169f6091f7553d715b6f5ea076da10942d15798e2bacf40",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs75_bJu",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c7df226564c235a03a348355e83456a50e5a131791559e2278f06c99e55706dd",
+      "digest": "1f8f70cc25dae1aebd3c488588576578b4bbbea1230b34eeffdfddde33205e01"
     }
   ]
 }

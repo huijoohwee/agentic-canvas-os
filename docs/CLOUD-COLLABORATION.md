@@ -145,9 +145,10 @@ The manual workflow is available from GitHub's browser UI, including a mobile
 browser. It does not claim a dedicated native GitHub Mobile dispatch feature.
 The model-free CLI exposes `status`, `verify`, `claim`, `heartbeat`,
 `review-ready`, `delivery-authorize`, `handoff`, and `release`; it never exposes
-internal `bind`. The current browser form remains limited to its existing action
-set until the separately owned workflow adapter adds delivery-authorization
-inputs; this source change does not claim that rollout.
+internal `bind`. The browser form exposes the same delivery-authorization
+transition with explicit focused-evidence, operator-decision, and protected-
+integration-intent digests, so browser and mobile-browser operators use the
+same upstream contract rather than a device-specific patch.
 
 One global Actions concurrency group uses `queue: max` with no cancellation.
 Every admitted transition remains queued rather than replacing an older pending

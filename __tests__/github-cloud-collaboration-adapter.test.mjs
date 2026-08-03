@@ -10,6 +10,8 @@ const targetRepository = "owner/target";
 const targetMainSha = "3".repeat(40);
 const pullHeadSha = "4".repeat(40);
 const evidenceDigest = "e".repeat(64);
+const operatorDecisionDigest = "d".repeat(64);
+const integrationIntentDigest = "a".repeat(64);
 
 test("adapter bootstraps the ledger, advances only by non-forced CAS, and replays exactly", async () => {
   const github = createFakeGitHub();
@@ -150,15 +152,26 @@ test("adapter lists internal claims, resolves commit pull requests, and accepts 
     expectedTransitionCounter: 1,
     pullRequestNumber: 17,
   }));
-  await adapter.execute("review-ready", fencedInput(bound, {
+  const ready = await adapter.execute("review-ready", fencedInput(bound, {
     idempotencyKey: "review-run-2",
     expectedTransitionCounter: 2,
     pullRequestNumber: 17,
     focusedEvidenceDigest: evidenceDigest,
   }));
+  const authorized = await adapter.execute("delivery-authorize", fencedInput(ready, {
+    idempotencyKey: "delivery-authorize-run-2",
+    expectedTransitionCounter: 3,
+    pullRequestNumber: 17,
+    laneRevision: pullHeadSha,
+    focusedEvidenceDigest: evidenceDigest,
+    operatorDecisionDigest,
+    integrationIntentDigest,
+  }));
+  assert.equal(authorized.status, "delivery-authorized");
 
   const claims = await adapter.listClaims({ targetRepository });
   assert.equal(claims.length, 1);
+  assert.equal(claims[0].state, "delivery-authorized");
   assert.match(claims[0].deviceId, /^device:[0-9a-f]{64}$/u);
   assert.match(claims[0].sessionId, /^session:[0-9a-f]{64}$/u);
 

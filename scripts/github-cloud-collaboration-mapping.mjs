@@ -119,6 +119,22 @@ export function prepareMutationRequest({
       ),
     };
   }
+  if (action === "delivery-authorize") {
+    return {
+      ...expected,
+      laneRevision: requiredText(
+        first(pullRequest?.headSha, input.laneRevision, input.headSha),
+        "laneRevision",
+      ),
+      reviewRequestId: requiredText(
+        first(pullRequest ? reviewRequestIdentity(pullRequest) : null, input.reviewRequestId),
+        "reviewRequestId",
+      ),
+      focusedEvidenceDigest: requiredDigest(input.focusedEvidenceDigest, "focusedEvidenceDigest"),
+      operatorDecisionDigest: requiredDigest(input.operatorDecisionDigest, "operatorDecisionDigest"),
+      integrationIntentDigest: requiredDigest(input.integrationIntentDigest, "integrationIntentDigest"),
+    };
+  }
   if (action === "handoff") {
     const recipientMode = requiredText(
       first(input.recipientMode, input.handoffMode),

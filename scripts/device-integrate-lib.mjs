@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import { authorizeDeliveryAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import {
   appendProtectedMainRefresh,
   protectedMainRefreshHeads,
@@ -36,6 +37,7 @@ export function integrateSession({
   now = () => new Date(),
   sleep = defaultSleep,
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
+  authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
   log = console.log,
 }) {
   requireRepositoryRoot({ invocationPath, repo });
@@ -51,7 +53,8 @@ export function integrateSession({
 
   const canonicalRoot = resolveCanonicalMainWorktree(gitText(["worktree", "list", "--porcelain", "-z"]));
   let commitEvidence = lease.integration || null;
-  const autoDeliveryReview = isAutoDeliveryReviewLease(lease);
+  const reviewReadyDelivery = isReviewReadyDeliveryLease(lease);
+  const autoDeliveryReview = reviewReadyDelivery && lease.autoDelivery === true && lease.runtimeRequired === true;
   if (autoDeliveryReview && runtime !== "canonical") {
     throw new Error("Auto-delivery integration requires canonical runtime readiness; --runtime=none is not permitted.");
   }
@@ -63,7 +66,7 @@ export function integrateSession({
     refreshTaskBranchFromMain({ repo, gitText, run, runText });
     publishTask();
     lease = leaseStore.read(branch);
-  } else if (!['delivery', 'completing', 'completed'].includes(lease.status) && !autoDeliveryReview) {
+  } else if (!['delivery', 'completing', 'completed'].includes(lease.status) && !reviewReadyDelivery) {
     throw new Error(
       `Integration requires an active, delivery, completing, or completed lease; ${branch} is ${lease.status}. ` +
       "Resume review-ready work before protected integration.",
@@ -73,6 +76,27 @@ export function integrateSession({
   let protectedMainRefresh = null;
   let completion = lease.completion || null;
   if (!['completing', 'completed'].includes(lease.status)) {
+    let deliveryCloudAuthority = lease.cloudAuthority || null;
+    if (reviewReadyDelivery) {
+      const authorized = authorizeCloudDelivery({
+        authority: lease.cloudAuthority,
+        manifest: lease.admission,
+        branch,
+        headSha: lease.reviewHeadSha,
+        pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+        deviceId: lease.device,
+        sessionId,
+      });
+      deliveryCloudAuthority = authorized.authority;
+      verifyCloudAuthority({
+        pullRequestUrl: lease.pullRequestUrl,
+        branch,
+        headSha: lease.reviewHeadSha,
+        canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
+        cloudAuthority: deliveryCloudAuthority,
+      });
+      run("gh", ["pr", "merge", "--auto", "--squash", lease.pullRequestUrl]);
+    }
     const allowProtectedMainRefresh = lease.status === "delivery" && lease.sessionId === sessionId;
     const expectedDeliveryHeadSha = lease.deliveryHeadSha || commitEvidence?.commitSha ||
       (autoDeliveryReview ? lease.reviewHeadSha : null);
@@ -81,7 +105,7 @@ export function integrateSession({
       branch,
       headSha: expectedDeliveryHeadSha,
       canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
-      cloudAuthority: lease.cloudAuthority || null,
+      cloudAuthority: deliveryCloudAuthority,
     });
     const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
@@ -105,7 +129,7 @@ export function integrateSession({
             branch,
             headSha: refresh.refreshedHeadSha,
             canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
-            cloudAuthority: lease.cloudAuthority || null,
+            cloudAuthority: deliveryCloudAuthority,
           });
           return refresh.refreshedHeadSha;
         }
@@ -116,7 +140,7 @@ export function integrateSession({
       branch,
       headSha: pullRequest.headRefOid,
       canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
-      cloudAuthority: lease.cloudAuthority || null,
+      cloudAuthority: deliveryCloudAuthority,
     });
     log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);
     completion = completeTask();
@@ -195,11 +219,18 @@ function finalizeIntegrationLease({ leaseStore, branch, completion }) {
   });
 }
 
-function isAutoDeliveryReviewLease(lease) {
+function isReviewReadyDeliveryLease(lease) {
   return lease?.status === "review_ready" &&
-    lease.autoDelivery === true &&
-    lease.runtimeRequired === true &&
+    lease.admission?.schema === "agentic-lane-admission-lease/v1" &&
+    lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1" &&
+    lease.cloudAuthority.state === "review_ready" &&
     SHA_PATTERN.test(String(lease.reviewHeadSha || ""));
+}
+
+function pullRequestNumber(value) {
+  const match = String(value || "").match(/\/pull\/([1-9]\d*)(?:[/?#]|$)/u);
+  if (!match) throw new Error("Delivery authorization requires an exact pull-request URL.");
+  return Number(match[1]);
 }
 
 function refreshTaskBranchFromMain({ repo, gitText, run, runText }) {

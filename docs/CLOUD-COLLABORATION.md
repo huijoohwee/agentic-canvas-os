@@ -83,7 +83,7 @@ Each `claimCore` binds:
 - canonical base and current lane revisions;
 - a normalized, sorted, unique declared write scope and its SHA-256 digest;
 - lease epoch plus transition and heartbeat counters;
-- `active`, `review-ready`, `parked`, or `released` state;
+- `active`, `review-ready`, `delivery-authorized`, `parked`, or `released` state;
 - expiry, evidence digest, review-request identity, and predecessor claim; and
 - an optional `actor` or `open` handoff plus terminal release evidence.
 
@@ -113,16 +113,26 @@ that the exact historical revision contained the expected claim digest.
 | `bind` | Yes | Internal-only binding of the exact lane revision and evidence after branch and review-request creation. It is intentionally absent from the browser form. |
 | `heartbeat` | Yes | Extend only the current actor's exact active claim using server time. |
 | `review-ready` | Yes | Bind the exact reviewed pull-request head and stop ordinary authoring transitions. |
+| `delivery-authorize` | Yes | Bind explicit operator intent, the unchanged reviewed head, review/check evidence, and protected-integration intent without reopening authoring or granting deployment authority. |
 | `handoff` | Yes | Record an exact, fenced successor or parked handoff state without transferring dirty local bytes. |
 | `release` | Yes | Remove the exact terminal claim only after its required lifecycle evidence is complete. |
 
 The normal GitHub device order is cloud claim, local branch and lease, branch
 push and pull request, then cloud bind of the provider-neutral lane revision and
 review-request identity. Heartbeat updates cloud before local projection.
-Review, handoff, integration, and release reverify the current cloud claim
+Review, delivery authorization, handoff, integration, and release reverify the current cloud claim
 immediately before their irreversible boundary. An interrupted operation
 replays with the same idempotency identity rather than creating a second
 transition.
+
+If the commit push succeeds but `review-ready` fails closed because the cloud
+verifier momentarily resolves a different review-request head, treat that
+mismatch as transient authority observation drift inside this contract. Recovery
+must reverify the exact claim identity, review-request identity, and intended
+reviewed head, then rerun the same bounded verification and compare-and-swap
+transition against the verified head. Local fence rewrites, downstream
+projection patches, synthetic rebases, or alternate transition selection are
+forbidden.
 
 GitHub Actions derives workflow idempotency from trusted `GITHUB_RUN_ID`, never
 `GITHUB_RUN_ATTEMPT`. A rerun therefore replays the same logical transition.
@@ -133,8 +143,12 @@ digest may enter the ledger.
 
 The manual workflow is available from GitHub's browser UI, including a mobile
 browser. It does not claim a dedicated native GitHub Mobile dispatch feature.
-The form exposes `status`, `verify`, `claim`, `heartbeat`, `review-ready`,
-`handoff`, and `release`; it never exposes internal `bind`.
+The model-free CLI exposes `status`, `verify`, `claim`, `heartbeat`,
+`review-ready`, `delivery-authorize`, `handoff`, and `release`; it never exposes
+internal `bind`. The browser form exposes the same delivery-authorization
+transition with explicit focused-evidence, operator-decision, and protected-
+integration-intent digests, so browser and mobile-browser operators use the
+same upstream contract rather than a device-specific patch.
 
 One global Actions concurrency group uses `queue: max` with no cancellation.
 Every admitted transition remains queued rather than replacing an older pending
@@ -144,7 +158,7 @@ Neither manual lane receives pull-request write, checks write, Actions write,
 issues write, `id-token`, packages, or deployment permission.
 
 Default-branch pushes run a trusted `cloud-collaboration` audit that may retire
-the exact merged `review-ready` claim for the pushed protected head while still
+the exact merged `delivery-authorized` claim for the pushed protected head while still
 avoiding pull-request, checks, Actions, `id-token`, package, or deployment
 write. `pull_request_target` runs a separate trusted controller for the
 selected event types. That controller checks out only the default branch, invokes
@@ -153,6 +167,15 @@ selected event types. That controller checks out only the default branch, invoke
 Run on the event's exact same-repository pull-request head SHA. It first creates
 an in-progress check, then completes it with success or failure; interruption
 therefore cannot manufacture a successful result.
+
+`review-ready` and `delivery-authorized` are distinct non-authoring
+capabilities. `device:publish` performs exact-head review readiness and then the
+explicit delivery authorization before it enables protected auto-merge.
+`device:integrate` may consume an existing cloud-admitted `review_ready` local
+projection by creating the same delivery authorization, verifying it, and only
+then asking the configured provider adapter for protected integration. Any
+source edit requires a separate handoff or fresh active epoch; neither delivery
+authorization nor protected integration grants deployment authority.
 
 Both lanes:
 

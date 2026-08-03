@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -8,6 +8,37 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(repositoryRoot, "scripts", "cloud-collaboration.mjs");
+
+test("CLI and browser workflow expose delivery authorization but not internal bind", async () => {
+  const workflow = await readFile(
+    path.join(repositoryRoot, ".github", "workflows", "cloud-collaboration.yml"),
+    "utf8",
+  );
+  assert.match(workflow, /^\s+- delivery-authorize$/mu);
+  assert.match(workflow, /inputs\.action == 'delivery-authorize'/u);
+  assert.match(workflow, /AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST/u);
+  assert.match(workflow, /AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST/u);
+  assert.doesNotMatch(workflow, /^\s+- bind$/mu);
+});
+
+test("review reconciliation verifies a prior fence independently before exact PR-head bind", async () => {
+  const authoritySource = await readFile(
+    path.join(repositoryRoot, "scripts", "scoped-lane-cloud-authority.mjs"),
+    "utf8",
+  );
+  assert.match(
+    authoritySource,
+    /reconciled\.authority\.laneRevision === headSha/u,
+  );
+  assert.match(
+    authoritySource,
+    /branch: verifiesCurrentPullRequestHead \? branch : null/u,
+  );
+  assert.match(
+    authoritySource,
+    /pullRequestNumber: verifiesCurrentPullRequestHead \? pullRequestNumber : null/u,
+  );
+});
 
 test("CLI rejects unexposed workflow actions before network access", () => {
   const result = spawnSync(process.execPath, [cli, "dispatch", "--json"], {

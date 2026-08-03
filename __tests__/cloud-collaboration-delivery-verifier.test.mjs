@@ -79,7 +79,7 @@ test("configured delivery sends the exact repository, PR, branch, head, and fenc
       branch,
       headSha,
       canonicalBaseSha: baseSha,
-      requireStatus: "review_ready",
+      requireStatus: "delivery_authorized",
       claimId,
       expectedClaimDigest: claimDigest,
       expectedLedgerRevision: ledgerRevision,
@@ -107,7 +107,7 @@ test("provider-neutral claims may carry their exact GitHub subject beside the cl
       subject: { repository, pullRequestNumber, branch, headSha },
       claim: {
         claimId,
-        state: "review-ready",
+        state: "delivery-authorized",
         laneRevision: headSha,
       },
     }),
@@ -182,6 +182,15 @@ test("device publish verifies cloud authority immediately before enabling auto-m
     baseSha,
     fenceSha,
     pullRequestUrl,
+    admission: {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "admitted",
+    },
+    cloudAuthority: {
+      schema: "agentic-lane-cloud-authority/v1",
+      state: "active",
+      canonicalBaseSha: baseSha,
+    },
   };
   assert.throws(() => publish({
     invocationPath: repositoryRoot,
@@ -221,6 +230,14 @@ test("device publish verifies cloud authority immediately before enabling auto-m
       trace.push(["cloud", "verify", subject.headSha]);
       throw new Error("cloud fence blocked");
     },
+    reviewReadyCloudAuthority: () => {
+      trace.push(["cloud", "review-ready", headSha]);
+      return { authority: { ...lease.cloudAuthority, state: "review_ready" } };
+    },
+    authorizeCloudDelivery: ({ authority }) => {
+      trace.push(["cloud", "delivery-authorize", headSha]);
+      return { authority: { ...authority, state: "delivery_authorized" } };
+    },
     log: () => {},
   }), /cloud fence blocked/u);
 
@@ -229,9 +246,10 @@ test("device publish verifies cloud authority immediately before enabling auto-m
     trace.some((call) => call[0] === "gh" && call[1] === "pr" && call[2] === "merge"),
     false,
   );
-  const readyIndex = trace.findIndex((call) => call[0] === "gh" && call[2] === "ready");
-  const verifyIndex = trace.findIndex((call) => call[0] === "cloud");
-  assert.ok(readyIndex >= 0 && verifyIndex === readyIndex + 1);
+  assert.deepEqual(
+    trace.filter((call) => call[0] === "cloud").map((call) => call[1]),
+    ["review-ready", "delivery-authorize", "verify"],
+  );
 });
 
 test("device integration blocks before accepting a protected merged head", () => {
@@ -329,7 +347,7 @@ function readyResult(overrides = {}) {
     claimDigest: resultClaimDigest,
     claim: {
       claimId,
-      status: "review_ready",
+      status: "delivery_authorized",
       repository: { fullName: overrides.repository || repository },
       pullRequest: {
         number: overrides.pullRequestNumber || pullRequestNumber,

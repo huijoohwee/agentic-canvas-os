@@ -34,7 +34,7 @@ external_dependency: "forbidden"
 
 One work item becomes one observable, isolated implementation run. A team manages the work item, acceptance state, evidence, and review decision instead of watching an agent conversation or approving every ordinary implementation step.
 
-The managed-run default terminal state is `delivery_ready`: durable run evidence is complete and the ACOS lease/CLI has reached `review_ready`, meaning the matching PR is ready for team review. Neither status means delivered, merged, released, deployed, or accepted. The default requires an explicit operator-selected delivery path; a durable work-item policy may instead pre-authorize one exact-head protected auto-merge at lease creation for a terminal implementation completion. This policy is never inferred from an ordinary message, chat, session, or thread ending. The repository-owned release controller remains the only production authority.
+The managed-run default terminal state is `delivery_ready`: durable run evidence is complete and the ACOS lease/CLI has reached `review_ready`, meaning the matching PR is ready for team review. Neither status means delivered, merged, released, deployed, or accepted. Protected integration requires a later `delivery_authorized` cloud receipt that binds the unchanged reviewed head, evidence, scope, claim, epoch, fence, ledger revision, and explicit operator integration intent without reopening authoring. This policy is never inferred from an ordinary message, chat, session, or thread ending. The repository-owned release controller remains the only production authority.
 
 ## Canonical Invocation
 
@@ -56,7 +56,7 @@ It reads an immutable run-ledger receipt and projects source state through exist
 
 | Owner | Responsibilities | Forbidden ownership |
 |---|---|---|
-| Agentic Canvas OS | Canonical invocation, branch grammar, safe task-worktree provisioning, writer lease, fencing epoch and SHA, pull-request identity, heartbeat, park, resume, review-ready handoff, protected publish, and completion proof. | Durable run scheduling, runner process supervision, application UI state, automatic merge by default, or deployment. |
+| Agentic Canvas OS | Canonical invocation, branch grammar, safe task-worktree provisioning, writer lease, fencing epoch and SHA, pull-request identity, heartbeat, park, resume, review-ready handoff, delivery authorization, protected integration, and completion proof. | Durable run scheduling, runner process supervision, application UI state, implicit merge authority, or deployment. |
 | Knowgrph local stdio MCP | Durable run ledger, idempotency, configured runner selection, child-process supervision, event and evidence capture, bounded verification, recovery, and team-facing list/control projection. | A second Git lock, copied invocation registry, arbitrary shell commands, direct main mutation, automatic merge, or deployment. |
 | Configured runner | Work-item implementation inside the leased task worktree and allowed-path boundary. | Canonical main, sibling worktrees, credentials, lifecycle metadata, PR merge, or deployment. |
 | Operator or reviewer | Approval, rejection, requested changes, and explicit selection of protected delivery when appropriate. | Implicit approval inferred from a run reaching `delivery_ready`. |

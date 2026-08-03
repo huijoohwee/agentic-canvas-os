@@ -18,6 +18,7 @@ on:
           - claim
           - heartbeat
           - review-ready
+          - delivery-authorize
           - handoff
           - release
       target_repository:
@@ -92,6 +93,14 @@ on:
         type: string
       focused_evidence_digest:
         description: SHA-256 focused review evidence digest
+        required: false
+        type: string
+      operator_decision_digest:
+        description: SHA-256 explicit operator delivery decision digest
+        required: false
+        type: string
+      integration_intent_digest:
+        description: SHA-256 protected-integration intent digest
         required: false
         type: string
       integration_receipt_digest:
@@ -223,6 +232,7 @@ jobs:
           inputs.action == 'claim' ||
           inputs.action == 'heartbeat' ||
           inputs.action == 'review-ready' ||
+          inputs.action == 'delivery-authorize' ||
           inputs.action == 'handoff' ||
           inputs.action == 'release'
         )
@@ -265,6 +275,8 @@ jobs:
           AGENTIC_CLOUD_PREDECESSOR_CLAIM_ID: ${{ inputs.predecessor_claim_id }}
           AGENTIC_CLOUD_EVIDENCE_DIGEST: ${{ inputs.evidence_digest }}
           AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST: ${{ inputs.focused_evidence_digest }}
+          AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST: ${{ inputs.operator_decision_digest }}
+          AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST: ${{ inputs.integration_intent_digest }}
           AGENTIC_CLOUD_INTEGRATION_RECEIPT_DIGEST: ${{ inputs.integration_receipt_digest }}
           AGENTIC_CLOUD_RELEASE_REASON: ${{ inputs.release_reason }}
           AGENTIC_CLOUD_NEXT_ACTOR_ID: ${{ inputs.next_actor_id }}

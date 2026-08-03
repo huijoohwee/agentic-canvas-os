@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 163,
-  "headDigest": "b36ca0c5d7655552e99e4f3e0f3ee34ccfeb4d03501bb7cc620c668e56bcc61d",
+  "sequence": 164,
+  "headDigest": "4c66d746cfcf65b035ce9855b28a34f0a26e3c8b6c734edb5b3aca15c04538ac",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -7313,6 +7313,52 @@
       },
       "claimDigest": "865faa88aa6d6d840408b006d36f41db6ebbea56fc5511bc23db172ea27ba343",
       "digest": "b36ca0c5d7655552e99e4f3e0f3ee34ccfeb4d03501bb7cc620c668e56bcc61d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 164,
+      "parentDigest": "b36ca0c5d7655552e99e4f3e0f3ee34ccfeb4d03501bb7cc620c668e56bcc61d",
+      "action": "heartbeat",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "1eb971378dca5f44c385ecf50c5ca40c1a9d14eb86b02ea791e7b5a16dc0f95b",
+      "idempotencyKey": "18d132430335db5175cc789fdfc8ce14653d05da5a14a77addf5f5100792a56e",
+      "requestDigest": "a7611f11a11190562d73385d0ecf2513f4a099d718e837b4826e7117b61992b2",
+      "evaluationTime": "2026-08-03T00:15:45.000Z",
+      "claimCore": {
+        "claimId": "1eb971378dca5f44c385ecf50c5ca40c1a9d14eb86b02ea791e7b5a16dc0f95b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:82aa806a23bf86074080775b497e2ee32a5538425be6884b7092cb5eade6cb53",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:c876e84e0a00afdd78c4968a43888c600aeeba6b3c177fd872d2bff99bbcc3ae",
+        "canonicalBaseRevision": "45a413ec2d436996fc4b062997872ceb2cf6539a",
+        "declaredWriteScope": [
+          "path:canvas/scripts/verify_xr_spatial_capture_fallback_browser_smoke.mjs",
+          "path:canvas/src/__tests__/canvasXrSessionPolicy.test.ts",
+          "path:canvas/src/__tests__/xrSpatialCaptureFallbackBrowserSmokeContract.test.ts",
+          "path:canvas/src/__tests__/xrSpatialCaptureFallbackReadiness.test.ts",
+          "path:canvas/src/features/testing/XrSpatialCaptureFallbackSmokePage.tsx",
+          "path:canvas/src/lib/three/ThreeGraphXr.tsx",
+          "path:docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md",
+          "path:docs/documents/knowgrph-xr-mode-prd-tad.md",
+          "path:docs/documents/knowgrph-xr-spatial-capture-fallback-readiness.md",
+          "semantic:xr-capability-harmonization"
+        ],
+        "writeSetDigest": "02892661d9388ccbfc2eb2bcdcc3029650dff79de827da51a8283da23b3eae01",
+        "laneRevision": "e2a4803ce54d78ee81bf580782aee0b00f309936",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 2,
+        "state": "active",
+        "expiresAt": "2026-08-03T02:15:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs75xDTY",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d86338acde4471a34698e4c9abc4554006bbe583f10bb118f853f16c1e9f58ce",
+      "digest": "4c66d746cfcf65b035ce9855b28a34f0a26e3c8b6c734edb5b3aca15c04538ac"
     }
   ]
 }

@@ -509,6 +509,94 @@ test("a protected-main merge preserves the approved authored commit evidence", (
   }
 });
 
+test("review-ready delivery reuses the exact reviewed head for authorization and merge completion", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-review-ready-"));
+  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  mkdirSync(canonicalKnowgrphRoot, { recursive: true });
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  const lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+  });
+  const verifiedHeads = [];
+  const commands = [];
+  let completed = false;
+  try {
+    const result = integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: args => {
+        assert.equal(args.join(" "), `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`);
+        return JSON.stringify({
+          url: pullRequestUrl,
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: commitSha,
+          mergeCommit: { oid: mergeSha },
+        });
+      },
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      authorizeCloudDelivery: ({ authority, headSha }) => {
+        assert.equal(headSha, commitSha);
+        return { authority: { ...authority, state: "delivery_authorized" } };
+      },
+      verifyCloudAuthority: ({ headSha }) => {
+        verifiedHeads.push(headSha);
+        assert.equal(headSha, commitSha);
+        return { ok: true };
+      },
+      run: (command, args) => {
+        commands.push([command, ...args]);
+      },
+      runText: (command, args) => {
+        if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        return "";
+      },
+      publishTask: () => {
+        throw new Error("review-ready delivery should not republish authored work");
+      },
+      completeTask: () => {
+        completed = true;
+        lease.status = "completed";
+        lease.completion = { mergeCommitSha: mergeSha, mainSha };
+        return lease.completion;
+      },
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    });
+
+    assert.equal(result.status, "integrated");
+    assert.equal(completed, true);
+    assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
+    assert.ok(commands.some(call => call.join(" ") === `gh pr merge --auto --squash ${pullRequestUrl}`));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("authorized auto-delivery completes only through canonical runtime readiness", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-auto-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");

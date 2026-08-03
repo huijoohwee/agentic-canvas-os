@@ -98,8 +98,9 @@ export function integrateSession({
       run("gh", ["pr", "merge", "--auto", "--squash", lease.pullRequestUrl]);
     }
     const allowProtectedMainRefresh = lease.status === "delivery" && lease.sessionId === sessionId;
-    const expectedDeliveryHeadSha = lease.deliveryHeadSha || commitEvidence?.commitSha ||
-      (autoDeliveryReview ? lease.reviewHeadSha : null);
+    const expectedDeliveryHeadSha = lease.deliveryHeadSha
+      || commitEvidence?.commitSha
+      || (reviewReadyDelivery ? lease.reviewHeadSha : null);
     verifyCloudAuthority({
       pullRequestUrl: lease.pullRequestUrl,
       branch,

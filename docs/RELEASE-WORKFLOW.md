@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-08-02"
+date: "2026-08-03"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
@@ -114,6 +114,7 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 - Use one clean registered canonical `main` worktree as the synchronization and release owner, plus zero or more isolated registered task worktrees for disjoint scopes. Each lane has one active writer, one current fence, and one declared write scope; a waiting release run does not keep ownership after `origin/main` advances past its candidate.
 - From candidate sealing through authorization interaction, keep the canonical release-owner checkout attached to the same exact protected `main` revision used for review. Do not switch that root checkout to another branch, reuse it for unrelated task work, or accept local-ref drift between prompt emission and authorization consumption; any such movement blocks or retires the run until the owner is restored and the candidate is revalidated.
 - Create a contract-valid `agent/<device>/<semantic-scope>` from the latest `origin/main`; preserve interior `.`, `_`, and `-` in the device segment, but normalize semantic scope to lowercase alphanumerics and hyphens before any checkout mutation.
+- When opening or updating a pull request, instantiate the repository-owned body template rather than freewriting metadata. Refresh the body after every rebase or base refresh so `base_sha` records the current fetched protected-base ancestor, and require `scope` to equal the `<semantic-scope>` segment of `agent/<device>/<semantic-scope>` exactly.
 - Declare `/`, `#`, `@`, base SHA, and ownership before editing.
 - Stop when another open pull request owns the semantic scope or the same branch has another writer.
 - Hand off only after the sender stops and pushes an exact commit SHA with its
@@ -187,7 +188,7 @@ every runtime-impact unit before sealing the release frontier. A stale plan,
 duplicate change identity, unresolved dependency, overlapping active scope, or
 unsealed release frontier blocks candidate preparation.
 
-Separate unrelated scopes into branch-exclusive leased task worktrees. Commit intentionally, push without force, and open or update a pull request containing action, semantic scope, actor, base SHA, validation, cost, immutable manifest digest, and handoff evidence. Use the repository-owned checkout-free publication command only for a stopped writer's existing commit or recovery path. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
+Separate unrelated scopes into branch-exclusive leased task worktrees. Commit intentionally, push without force, and open or update a pull request from the repository-owned body template containing action, semantic scope, actor, the current base SHA, validation, cost, immutable manifest digest, and handoff evidence. The pull-request `scope` field must exactly match the branch semantic-scope segment, and any base drift requires rewriting the body before review or merge. Use the repository-owned checkout-free publication command only for a stopped writer's existing commit or recovery path. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 229,
-  "headDigest": "9d64ab9a25734891d7d6f79ad8a16398b6e9f695cf1c4cce185007828da91de9",
+  "sequence": 230,
+  "headDigest": "8a3bc0e11414ca340a24446fc3382ccef3e0e88210f140e9dd22da747411b8a6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -10583,6 +10583,48 @@
       },
       "claimDigest": "b8195e2b736456d28b3252bae4280429fbddb261b8d04a5e7c6ac71c324b9cfc",
       "digest": "9d64ab9a25734891d7d6f79ad8a16398b6e9f695cf1c4cce185007828da91de9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 230,
+      "parentDigest": "9d64ab9a25734891d7d6f79ad8a16398b6e9f695cf1c4cce185007828da91de9",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d9632f4469db0b9041b19d7954deada9bbdaf8e5611067e129779c3077e8edcd",
+      "idempotencyKey": "1de2447f1fe288a28a578fac58d0a7a36aa57b2aeed74e18351893c3360ea243",
+      "requestDigest": "69a0b748b9b87a56461bd1659280053d11320750c15e22ee30e10c2e5544e94b",
+      "evaluationTime": "2026-08-03T07:07:22.000Z",
+      "claimCore": {
+        "claimId": "d9632f4469db0b9041b19d7954deada9bbdaf8e5611067e129779c3077e8edcd",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ea522d110fafd015eb5d39a7186b3e12050d7f57693e5814f849eeeb49ab529b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c3f77a107297a053b8f31f79af1c5b5b85ee8d2bc42cf437bb4653d3b61afd29",
+        "canonicalBaseRevision": "783a7e74bbf0553b483ddd30c0e5906b9865a9ca",
+        "declaredWriteScope": [
+          "path:__tests__/collaborative-release-lifecycle-contract.test.mjs",
+          "path:__tests__/legacy-authority-evaluator.test.mjs",
+          "path:docs/CANONICAL-LIFECYCLE.md",
+          "path:scripts/collaborative-release-lifecycle-contract.mjs",
+          "path:scripts/legacy-authority-evaluator.mjs",
+          "semantic:legacy-authority-evaluator"
+        ],
+        "writeSetDigest": "fc07000bcc7baedc06eec4b0237a5f72f2721b8ea04856d84dd150aaf780c819",
+        "laneRevision": "783a7e74bbf0553b483ddd30c0e5906b9865a9ca",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T07:37:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ca0b7eba3a77ef194caadaebf06d29035e426d722003bf00f7fa93bab23ce9fe",
+      "digest": "8a3bc0e11414ca340a24446fc3382ccef3e0e88210f140e9dd22da747411b8a6"
     }
   ]
 }

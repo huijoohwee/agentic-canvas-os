@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 264,
-  "headDigest": "dacd8eae79ac68a6d4fef40dc4b8f697520cc6d465b6f45e5881edd6b33990dd",
+  "sequence": 265,
+  "headDigest": "08a4071ddcae4755ecd72e90bcf6cd6429a33e1572937b778e5cd9e02dedad6c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -12039,6 +12039,46 @@
       },
       "claimDigest": "e2b6c3303bc403d0c4556bf2e10903eece7048e37513811e0ceaa99aa75bc32a",
       "digest": "dacd8eae79ac68a6d4fef40dc4b8f697520cc6d465b6f45e5881edd6b33990dd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 265,
+      "parentDigest": "dacd8eae79ac68a6d4fef40dc4b8f697520cc6d465b6f45e5881edd6b33990dd",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cfe0c5f126a17604f4757007d3209f65d461c8feadb799236cbded4d252b0f6a",
+      "idempotencyKey": "92a7eaf2e29af55315c632d3773e69a81d196cd89b8f4dbe368475ad47079fd8",
+      "requestDigest": "09feb8b82e6d5fddf8b73d7dac2caa0b3fe5a1028290275d59ec42b0969f2c46",
+      "evaluationTime": "2026-08-03T09:37:33.000Z",
+      "claimCore": {
+        "claimId": "cfe0c5f126a17604f4757007d3209f65d461c8feadb799236cbded4d252b0f6a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:186e9d4670487d118c9b647a8cb1ca3417d3056fb9d72553a525f66077d461d2",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:382ddc15759d4ac97697b6a86afa07d8dc0c772cfefe67945f261cd7ce07a07d",
+        "canonicalBaseRevision": "8995fbdb9906e56a8f8bc1b4e319d05731ecbb61",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:review-ready-delivery-head-parity"
+        ],
+        "writeSetDigest": "cde093a305fabeb3402e92515c65a2714bee7b2695d82d2389a9fbdfe1fc074e",
+        "laneRevision": "cd8a71ec02db20d41204baf52f6f9d87dfd6cb0f",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "review-ready",
+        "expiresAt": "2026-08-03T09:50:01.000Z",
+        "evidenceDigest": "3f25ec331ef947c4010705f657e5e18d2ec64e3feff26b9bb6fe27d56b3ac8aa",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM757Dxp",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c046b79e00b1c4b1343f22c5147ba5362a5c59762b350495a1872f44ea0058c9",
+      "digest": "08a4071ddcae4755ecd72e90bcf6cd6429a33e1572937b778e5cd9e02dedad6c"
     }
   ]
 }

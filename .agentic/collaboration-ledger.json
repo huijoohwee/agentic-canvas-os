@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 183,
-  "headDigest": "66e984830c5009068bac07da8f7147ea53611cf1993554199e4163d2b6c02153",
+  "sequence": 184,
+  "headDigest": "7fdfc33d36c10ddda379f00c9ac1b5454626bf7927a72d608e267fcf0874539c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -8321,6 +8321,72 @@
       },
       "claimDigest": "890112364d53f422c22f9100cdfea7cbe92e6099c2a8778ab08f191d48ba2832",
       "digest": "66e984830c5009068bac07da8f7147ea53611cf1993554199e4163d2b6c02153"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 184,
+      "parentDigest": "66e984830c5009068bac07da8f7147ea53611cf1993554199e4163d2b6c02153",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "86745a209ccdad07702e13922225755a333b714a1f741f3c9f2ab8a1158f781d",
+      "idempotencyKey": "ebb316f4fdf019843c9d99f8a8e18a324261e31c69c1abb5a68779395b7187a6",
+      "requestDigest": "b09ca496f766f366533dfeba293e743f1c212c720364ffae8786aff84268dcae",
+      "evaluationTime": "2026-08-03T01:54:12.000Z",
+      "claimCore": {
+        "claimId": "86745a209ccdad07702e13922225755a333b714a1f741f3c9f2ab8a1158f781d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:10b2aba9bd655c0341b820fd43b3cc2266bfe272d2fb5f5778bef718465289fc",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:7f46c3df432656898a4c98df800518ef8871f7e8c509def5a8e46ae1a193793e",
+        "canonicalBaseRevision": "e8ac8a4fa2c1ffb07d933106c8984cd9debe9da9",
+        "declaredWriteScope": [
+          "path:.github/workflows/cloud-collaboration.yml",
+          "path:__tests__/auto-delivery-lib.test.mjs",
+          "path:__tests__/cloud-collaboration-cli.test.mjs",
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:__tests__/cloud-collaboration-delivery-verifier.test.mjs",
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:__tests__/github-cloud-collaboration-workflow.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:docs/FACTS.md",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/auto-delivery-lib.mjs",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "path:scripts/cloud-collaboration-delivery-verifier.mjs",
+          "path:scripts/cloud-collaboration-primitives.mjs",
+          "path:scripts/cloud-collaboration.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "semantic:delivery-authority-v2"
+        ],
+        "writeSetDigest": "79b2178f10bc6bff79f46e067929a841aabab9b15f482d1df831580471eb8e77",
+        "laneRevision": "1e7a4c4184a6cb62c8eb90d0cb9ee7c17b4c35f7",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-08-04T01:37:13.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM75yKgM",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "abandoned",
+          "evidenceDigest": "19365644b781c8c80c7686e5e2937341d8b8da178d396c996d461cea8a79edfc",
+          "integrationReceiptDigest": null,
+          "evaluationTime": "2026-08-03T01:54:12.000Z"
+        }
+      },
+      "claimDigest": "9d8636701ec97366781169dda6c795c3e7072ae9ef8a9609cafb31ec0026ea25",
+      "digest": "7fdfc33d36c10ddda379f00c9ac1b5454626bf7927a72d608e267fcf0874539c"
     }
   ]
 }

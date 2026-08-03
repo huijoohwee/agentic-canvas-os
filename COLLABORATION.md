@@ -46,15 +46,18 @@ Commit intentionally, then publish the clean branch:
 npm run device:publish
 ```
 
-`device:start` configures the repository-owned pre-commit hook. Run `npm run git:configure` once in an existing checkout that has not used `device:start` yet. The hook rejects unresolved index entries, unregistered worktrees, branch/lease mismatches, and expired sessions.
+`device:start` configures the repository-owned pre-commit hook. Run `npm run git:configure` once in an existing checkout that has not used `device:start` yet. The hook rejects unresolved index entries, unregistered worktrees, branch/lease mismatches, and expired sessions. It treats ordinary local commits on a valid task branch as normal authoring; protected-branch enforcement belongs to canonical `main` publication and integration, not to every local commit.
 
-Publishing requires a registered task worktree, its branch-bound lease, no unresolved conflict, and no open PR owned by another branch for the same semantic scope. It runs local checks, pushes the branch, updates its scope-owned PR with the `automerge` label, and enables squash auto-merge. Different semantic scopes may keep independent worktrees and pull requests active concurrently.
+If work was started on canonical `main`, preserve those bytes and move them into a task branch or registered task worktree before the next ordinary commit or publication step. Prefer explicit branch/worktree admission over a generic "trying to commit to a protected branch" failure for local authoring.
+
+Publishing requires a registered task worktree, its branch-bound lease, no unresolved conflict, and no open PR or other live publish authority owned by another branch for the same semantic scope or any overlapping publish path. It runs local checks, pushes the branch, updates its scope-owned PR with the `automerge` label, and enables squash auto-merge. Different semantic scopes may keep independent worktrees and pull requests active concurrently only when they cannot publish different revisions for the same path.
 
 ## Conflict policy
 
 - Resolve every merge conflict before committing changes. Unmerged index stages fail both the pre-commit hook and device publication.
 - Use only a path returned by `git worktree list --porcelain -z`; copied-source and unregistered paths are not delivery authorities.
 - Keep one open pull request per semantic scope. Distinct scopes may coexist; duplicate scope owners must serialize through exact-SHA handoff.
+- Keep one current publish authority per path. Distinct semantic scopes still serialize when they can publish different revisions for the same path, whether directly or through generated outputs.
 - Never use `git checkout --ignore-other-worktrees` or activate one branch in multiple worktrees.
 - GitHub updates and merges disjoint changes automatically.
 - Concurrent append-only `memory/YYYY-MM.md` and `todo/YYYY-MM.md` changes preserve the current `main` bytes and append the device suffix.

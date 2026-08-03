@@ -429,6 +429,20 @@ function buildClaimCore(intent, ledger, evaluationTime) {
   };
 }
 
+function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime }) {
+  if (!intent.predecessorClaimId) return false;
+  const predecessor = hydrate(findClaimEntry(ledger, intent.predecessorClaimId), evaluationTime);
+  return Boolean(
+    predecessor
+    && ["parked", "expired"].includes(predecessor.state)
+    && predecessor.repositoryId === intent.repositoryId
+    && predecessor.workItemId === intent.workItemId
+    && predecessor.writeSetDigest === intent.writeSetDigest
+    && predecessor.laneRevision === intent.laneRevision
+    && predecessor.canonicalBaseRevision === intent.canonicalBaseRevision,
+  );
+}
+
 function appendEntry(ledger, action, intent, requestDigest, idempotencyKey, evaluationTime) {
   if (ledger.entries.length >= CLOUD_COLLABORATION_BOUNDS.ledgerEntries) {
     fail("bound_exceeded", `ledger exceeds ${CLOUD_COLLABORATION_BOUNDS.ledgerEntries} entries`);
@@ -513,6 +527,11 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
     repositoryValue.canonicalRevision
     && normalizedAction === "claim"
     && repositoryValue.canonicalRevision !== intent.canonicalBaseRevision
+    && !allowsPredecessorBaseContinuation({
+      ledger,
+      intent,
+      evaluationTime: evaluatedAt,
+    })
   ) {
     fail("stale_canonical_base", "canonicalBaseRevision does not match protected source");
   }

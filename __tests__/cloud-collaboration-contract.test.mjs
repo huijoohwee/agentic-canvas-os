@@ -468,6 +468,39 @@ test("explicit evaluation time expires claims and produces only canonical findin
   assert.equal(successor.claim.leaseEpoch, 2);
 });
 
+test("expired predecessor claims can continue on their preserved base after protected main advances", () => {
+  const claimed = mutate(emptyLedger(), "claim", claimRequest());
+
+  throwsCode(() => mutate(claimed.ledger, "claim", claimRequest({
+    leaseEpoch: 2,
+    deviceId: "device-b",
+    sessionId: "session-b",
+    idempotencyKey: "advanced-main-without-predecessor",
+    expiresAt: EXTENDED,
+  }), {
+    actor: ACTOR_B,
+    repository: { ...TARGET_A, canonicalRevision: "base-b" },
+    evaluationTime: EXPIRES,
+  }), "stale_canonical_base");
+
+  const successor = mutate(claimed.ledger, "claim", claimRequest({
+    leaseEpoch: 2,
+    predecessorClaimId: claimed.claim.claimId,
+    deviceId: "device-b",
+    sessionId: "session-b",
+    idempotencyKey: "advanced-main-with-predecessor",
+    expiresAt: EXTENDED,
+  }), {
+    actor: ACTOR_B,
+    repository: { ...TARGET_A, canonicalRevision: "base-b" },
+    evaluationTime: EXPIRES,
+  });
+
+  assert.equal(successor.claim.canonicalBaseRevision, "base-a");
+  assert.equal(successor.claim.leaseEpoch, 2);
+  assert.equal(successor.claim.predecessorClaimId, claimed.claim.claimId);
+});
+
 test("chain validation rejects tampering and non-monotonic counters", () => {
   const claimed = mutate(emptyLedger(), "claim", claimRequest());
   const tampered = structuredClone(claimed.ledger);

@@ -137,9 +137,14 @@ function failureSummary(result) {
       .filter((code) => /^[a-z0-9._-]{1,80}$/u.test(code))
       .slice(0, 8)
     : [];
+  const message = publicMessage(result?.error?.message || "")
+    .replace(/\s+/gu, " ")
+    .trim();
   const code = String(result?.error?.code || "");
   const suffix = findingCodes.length > 0
     ? ` Findings: ${findingCodes.join(", ")}.`
+    : message
+      ? ` Failure: ${message}.`
     : /^[a-z0-9._-]{1,80}$/u.test(code)
       ? ` Failure: ${code}.`
       : "";

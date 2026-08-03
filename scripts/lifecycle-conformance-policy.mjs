@@ -6,9 +6,9 @@ import { compareLexicalText } from "./lexical-compare.mjs";
 
 export const LIFECYCLE_POLICY_SOURCE = Object.freeze({
   repository: "huijoohwee/huijoohwee.github.io",
-  revision: "44b8e46d8c704b2ff37a1fcefb364a864d2aacf7",
-  digest: "8b4b47e9fd649f9ff380a9159316583dd19051bb9a80a9ec17b4d3ca6348cbbc",
-  guidelineVersion: "1.9.0",
+  revision: "50a6135ee3ba952f3961a5cab6bd23227499d925",
+  digest: "2bd0a430b21d3b15012078836ae975e0cf5d9ff8da53b4b21c070c2dcebe71e9",
+  guidelineVersion: "1.10.0",
   modules: Object.freeze([
     "guidelines/agentic-sdlc-cloud-collaboration.md",
     "guidelines/agentic-sdlc-conformance-runtime.md",

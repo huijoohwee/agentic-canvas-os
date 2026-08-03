@@ -14,11 +14,11 @@ runtime_claim: "Agentic Canvas OS evaluates self-contained canonical ledger conf
 runtime_proof: "RUNTIME-PROOF.md"
 guideline_source:
   repository: "huijoohwee/huijoohwee.github.io"
-  revision: "e313da39b3471a47fa55d16dca195c654113dec8"
+  revision: "50a6135ee3ba952f3961a5cab6bd23227499d925"
   authoring_version: "1.7.0"
   authoring_sha256: "f45d8eb27b7aa9166a4f3e89a66d8cf96720acc06e025655256307e6b2d9c816"
-  execution_version: "1.0.0"
-  execution_sha256: "9a48c9c843cee9e5fb3b2a4e20da00f4b53a90fcf63a0842e5b0a80ad9ae4e80"
+  execution_version: "1.12.2"
+  execution_sha256: "27b04a1941b7ea536a0d7c6aa3d3f88beef6b87348f35ecf578de9e9ba0c9fb6"
 deploy_boundary:
   lane: "authoring"
   state: "closed"
@@ -38,6 +38,12 @@ This runtime ends in the `authoring` lane. A passing result does not merge, mirr
 ## Lifecycle Policy-Runtime Boundary
 
 The separately pinned Agentic SDLC v1.8 lifecycle module defines admission through publication for operational repositories. The protected `agentic-sdlc-policy-runtime` check proves only that this repository resolves the exact guideline source and that its deterministic policy-runtime contracts pass. It does not consume evidence from a managed implementation run or release.
+
+Multi-device concurrent cloud collaboration semantics are owned only by that
+pinned source policy. Repository-local device scripts, browser flows, review
+adapters, and downstream mirrors may implement or project the policy, but they
+must not redefine claim identity, authority order, scope comparison, fence
+meaning, or handoff semantics.
 
 The repository-owned `npm run lifecycle:conformance -- --evidence=<path>` entry point now owns the admission-only adapter. It accepts only the closed `agentic-sdlc-admission-evidence/v1` schema. Before a domain verdict, it resolves an immutable policy, evaluator, and schema closure from the tracked, clean Agentic Canvas OS `HEAD`; the evaluator and schema digests are computed from the exact declared Git-object bytes at that revision. The evidence must separately supply exact source and dependency-closure identity.
 

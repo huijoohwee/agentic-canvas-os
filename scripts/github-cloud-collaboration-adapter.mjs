@@ -39,6 +39,7 @@ const MUTATING_ACTIONS = new Set([
   "bind",
   "heartbeat",
   "review-ready",
+  "delivery-authorize",
   "handoff",
   "release",
 ]);

@@ -153,7 +153,7 @@ test("review waits for the pushed SHA before marking the ownership PR ready", ()
   assert.ok(readyIndex > lastWaitIndex);
 });
 
-test("an immutable auto-delivery lease wakes the controller without calling merge locally", () => {
+test("review readiness leaves immutable auto-delivery dormant until explicit integration", () => {
   const calls = [];
   let remoteBody = "## Work item";
   let isDraft = true;
@@ -187,8 +187,11 @@ test("an immutable auto-delivery lease wakes the controller without calling merg
   assert.equal(result, pullRequestUrl);
   assert.equal(saved.status, "review_ready");
   assert.equal(saved.reviewHeadSha, headSha);
-  assert.ok(calls.some(call => call.join(" ") === `gh pr edit ${pullRequestUrl} --add-label agentic/auto-delivery`));
-  assert.doesNotMatch(calls.map(call => call.join(" ")).join("\n"), /gh pr merge|--auto/);
+  assert.equal(
+    calls.some(call => call.join(" ") === `gh pr edit ${pullRequestUrl} --add-label agentic/auto-delivery`),
+    false,
+  );
+  assert.doesNotMatch(calls.map(call => call.join(" ")).join("\n"), /gh pr merge|--auto|agentic\/auto-delivery/);
 });
 
 test("review replays an exact same-session ready handoff without verification or push", () => {

@@ -25,12 +25,16 @@ export function completeSession({
   log = console.log,
   json = false,
   finalize = true,
+  allowAlreadyOnCleanMain = false,
 }) {
   requireRepositorySafety({ invocationPath, repo, gitText });
   requireClean({ gitText });
   if (!leaseStore) throw new Error("Completion requires the repository writer-lease store.");
 
   const attachedBranch = gitText(["branch", "--show-current"]).trim();
+  if (allowAlreadyOnCleanMain && attachedBranch === "main") {
+    return completeCleanMainNoop({ repo, gitText, leaseStore, log, json });
+  }
   const { branch, lease: existingCompletionLease } = resolveCompletionLease({
     attachedBranch, repo, leaseStore,
   });
@@ -111,6 +115,36 @@ export function completeSession({
     ? `Task integrated through ${summary.pullRequestUrl}; clean main is ${summary.mainSha.slice(0, 12)}. Restart the local runtime from this SHA and rerun the original browser acceptance before claiming completion.`
     : `Protected merge is recorded for ${summary.pullRequestUrl}; canonical runtime proof is pending for ${summary.mainSha.slice(0, 12)}.`,
   );
+  return summary;
+}
+
+function completeCleanMainNoop({ repo, gitText, leaseStore, log, json }) {
+  const registry = leaseStore.read?.() || null;
+  const blockingLease = Object.values(registry?.leases || {}).find((lease) =>
+    lease?.worktreePath
+    && path.resolve(lease.worktreePath) === path.resolve(repo)
+    && ["active", "review_ready", "delivery", "completing"].includes(lease.status),
+  );
+  if (blockingLease) {
+    throw new Error(
+      `device:end cannot report completion from main while ${blockingLease.branch} remains ${blockingLease.status}.`,
+    );
+  }
+  runCanonicalMainSyncCheck({ gitText });
+  const mainSha = gitText(["rev-parse", "HEAD"]).trim();
+  const summary = {
+    completedBranch: null,
+    pullRequestUrl: null,
+    mergeCommitSha: null,
+    mainSha,
+    status: "ok",
+    disposition: "already_on_clean_main",
+  };
+  if (json) {
+    log(JSON.stringify(summary));
+    return summary;
+  }
+  log(`Already on clean canonical main at ${mainSha.slice(0, 12)}; no completion replay was needed.`);
   return summary;
 }
 
@@ -249,6 +283,16 @@ function requireRepositorySafety({ invocationPath, repo, gitText }) {
 
 function requireClean({ gitText, message = "Working tree is not clean. Commit intentionally before switching or publishing." }) {
   if (gitText(["status", "--porcelain"]).trim()) throw new Error(message);
+}
+
+function runCanonicalMainSyncCheck({ gitText }) {
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
+  if (headSha !== canonicalSha) {
+    throw new Error(
+      `device:end requires clean canonical main at ${canonicalSha.slice(0, 12)}; current HEAD is ${headSha.slice(0, 12)}.`,
+    );
+  }
 }
 
 function readPullRequest({ branch, ghText }) {

@@ -332,6 +332,9 @@ function execute(action, context) {
     runText,
   });
   if (action === "park") return park(context);
+  if (action === "end") {
+    return completeSession({ ...context, json: false, allowAlreadyOnCleanMain: true });
+  }
   return completeSession({ ...context, json: false });
 }
 

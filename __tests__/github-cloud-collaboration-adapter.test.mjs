@@ -260,6 +260,61 @@ test("adapter rejects pull-request head drift and malformed ledger bytes before 
   assert.equal(github.mutationCount(), writesBeforeRead);
 });
 
+test("adapter accepts delivery-authorized verification against the preserved reviewed head after a protected-main refresh", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const claimed = await adapter.execute("claim", claimInput());
+  const bound = await adapter.execute("bind", fencedInput(claimed, {
+    idempotencyKey: "bind-run-refresh",
+    expectedTransitionCounter: 1,
+    pullRequestNumber: 17,
+  }));
+  const ready = await adapter.execute("review-ready", fencedInput(bound, {
+    idempotencyKey: "review-run-refresh",
+    expectedTransitionCounter: 2,
+    pullRequestNumber: 17,
+    focusedEvidenceDigest: evidenceDigest,
+  }));
+  const authorized = await adapter.execute("delivery-authorize", fencedInput(ready, {
+    idempotencyKey: "delivery-authorize-run-refresh",
+    expectedTransitionCounter: 3,
+    pullRequestNumber: 17,
+    laneRevision: pullHeadSha,
+    focusedEvidenceDigest: evidenceDigest,
+    operatorDecisionDigest,
+    integrationIntentDigest,
+  }));
+  github.setPullRequestValue({
+    head: {
+      ref: "agent/device/cloud-scope",
+      sha: "5".repeat(40),
+      repo: { full_name: targetRepository },
+    },
+    base: {
+      ref: "main",
+      sha: "6".repeat(40),
+      repo: { full_name: targetRepository },
+    },
+  });
+
+  const verification = await adapter.execute("verify", {
+    targetRepository,
+    pullRequestNumber: 17,
+    branch: "agent/device/cloud-scope",
+    headSha: pullHeadSha,
+    canonicalBaseSha: targetMainSha,
+    requireStatus: "delivery_authorized",
+    claimId: authorized.claim.claimId,
+    expectedClaimDigest: authorized.claimDigest,
+    expectedLedgerRevision: authorized.ledgerRevision,
+    allowProtectedMainRefresh: true,
+  });
+
+  assert.equal(verification.ok, true);
+  assert.equal(verification.claim.state, "delivery-authorized");
+  assert.equal(verification.claim.laneRevision, pullHeadSha);
+});
+
 function createAdapter(github, options = {}) {
   return createGitHubCloudCollaborationAdapter({
     ledgerRepository,
@@ -299,6 +354,7 @@ function fencedInput(result, overrides) {
 
 function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 } = {}) {
   const calls = [];
+  let pullRequest = pullRequestValue();
   const repositories = {
     [ledgerRepository]: repositoryValue(1, "L_ledger", ledgerRepository),
     [targetRepository]: repositoryValue(2, "R_target", targetRepository),
@@ -374,12 +430,12 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
         }, date);
     }
     if (method === "GET" && path === `/repos/${targetRepository}/pulls/17`) {
-      return response(200, pullRequestValue(), date);
+      return response(200, pullRequest, date);
     }
     const commitPullsMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/commits\/([0-9a-f]{40})\/pulls$/u);
     if (method === "GET" && commitPullsMatch && commitPullsMatch[1] === targetRepository) {
       if (commitPullsMatch[2] === targetMainSha) {
-        return response(200, [pullRequestValue({ state: "closed" })], date);
+        return response(200, [{ ...pullRequest, state: "closed" }], date);
       }
       return response(200, [], date);
     }
@@ -473,6 +529,9 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     request,
     mutationCount: () => calls.filter((call) => call.method !== "GET").length,
     createdLedgerValues: () => createdLedgers,
+    setPullRequestValue(overrides = {}) {
+      pullRequest = pullRequestValue(overrides);
+    },
     currentLedgerBytes() {
       const revision = refs.get(`${ledgerRepository}:agentic/collaboration-ledger`);
       const content = ledgerContentForRevision(revision);

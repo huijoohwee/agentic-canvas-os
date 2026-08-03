@@ -40,6 +40,17 @@ test("review reconciliation verifies a prior fence independently before exact PR
   );
 });
 
+test("event verification proves protected-main refresh before it reuses a delivery-authorized reviewed head", async () => {
+  const cloudSource = await readFile(
+    path.join(repositoryRoot, "scripts", "cloud-collaboration.mjs"),
+    "utf8",
+  );
+  assert.match(cloudSource, /allowProtectedMainRefresh:\s*true/u);
+  assert.match(cloudSource, /requireStatus:\s*"delivery_authorized"/u);
+  assert.match(cloudSource, /verifyEventProtectedMainRefresh/u);
+  assert.match(cloudSource, /Observed pull request base does not match the protected-main refresh parent/u);
+});
+
 test("CLI rejects unexposed workflow actions before network access", () => {
   const result = spawnSync(process.execPath, [cli, "dispatch", "--json"], {
     encoding: "utf8",

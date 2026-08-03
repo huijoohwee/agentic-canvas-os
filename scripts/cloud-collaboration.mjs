@@ -131,16 +131,20 @@ function verifyEventProtectedMainRefresh({
   gitText = args => execFileSync("git", args, { encoding: "utf8" }).trim(),
   run = (command, args) => execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }),
 }) {
-  run("git", ["fetch", "origin", "main"]);
-  run("git", ["fetch", "origin", `refs/pull/${pullRequestNumber}/head`]);
-  const fetchedHeadSha = requiredSha(gitText(["rev-parse", "FETCH_HEAD"]), "fetched pull request head SHA");
+  const mainRef = "refs/remotes/origin/main";
+  const pullRef = `refs/remotes/pull/${pullRequestNumber}/head`;
+  fetchProtectedMainRefreshRefs({ pullRequestNumber, run });
+  const fetchedHeadSha = requiredSha(gitText(["rev-parse", pullRef]), "fetched pull request head SHA");
   if (fetchedHeadSha !== observedHeadSha) {
     throw new Error("Fetched pull request head does not match the observed event head.");
   }
-  const refresh = verifyProtectedMainRefreshChain({
+  const refresh = verifyProtectedMainRefreshWithRetry({
     expectedHeadSha,
     observedHeadSha,
     gitText,
+    run,
+    mainRef,
+    pullRequestNumber,
   });
   const latestRefresh = Array.isArray(refresh?.refreshes)
     ? refresh.refreshes.at(-1)
@@ -149,6 +153,60 @@ function verifyEventProtectedMainRefresh({
     throw new Error("Observed pull request base does not match the protected-main refresh parent.");
   }
   return refresh;
+}
+
+function fetchProtectedMainRefreshRefs({ pullRequestNumber, run, unshallow = false }) {
+  const fetchArguments = unshallow
+    ? ["fetch", "--no-tags", "--unshallow", "origin"]
+    : ["fetch", "--no-tags", "origin"];
+  run("git", [
+    ...fetchArguments,
+    "+refs/heads/main:refs/remotes/origin/main",
+    `+refs/pull/${pullRequestNumber}/head:refs/remotes/pull/${pullRequestNumber}/head`,
+  ]);
+}
+
+function verifyProtectedMainRefreshWithRetry({
+  expectedHeadSha,
+  observedHeadSha,
+  gitText,
+  run,
+  mainRef,
+  pullRequestNumber,
+}) {
+  try {
+    return verifyProtectedMainRefreshChain({
+      expectedHeadSha,
+      observedHeadSha,
+      gitText,
+      mainRef,
+    });
+  } catch (error) {
+    if (!shouldRetryProtectedMainRefreshVerification(error, gitText)) throw error;
+    fetchProtectedMainRefreshRefs({ pullRequestNumber, run, unshallow: true });
+    return verifyProtectedMainRefreshChain({
+      expectedHeadSha,
+      observedHeadSha,
+      gitText,
+      mainRef,
+    });
+  }
+}
+
+function shouldRetryProtectedMainRefreshVerification(error, gitText) {
+  const message = String(error instanceof Error ? error.message : error || "");
+  if (!message) return false;
+  const shallowRepository = gitText(["rev-parse", "--is-shallow-repository"]).trim() === "true";
+  if (!shallowRepository) return false;
+  return [
+    "Protected pull-request head advanced beyond an exact protected-main refresh chain.",
+    "Protected-main refresh tree is not equivalent to its exact parent merge.",
+    "needs merge",
+    "Not a valid object name",
+    "unknown revision",
+    "bad object",
+    "no merge base",
+  ].some(fragment => message.includes(fragment));
 }
 
 async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository }) {

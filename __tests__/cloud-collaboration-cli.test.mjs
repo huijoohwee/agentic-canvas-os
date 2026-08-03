@@ -49,6 +49,17 @@ test("event verification proves protected-main refresh before it reuses a delive
   assert.match(cloudSource, /requireStatus:\s*"delivery_authorized"/u);
   assert.match(cloudSource, /verifyEventProtectedMainRefresh/u);
   assert.match(cloudSource, /Observed pull request base does not match the protected-main refresh parent/u);
+  assert.match(cloudSource, /refs\/remotes\/pull\/\$\{pullRequestNumber\}\/head/u);
+  assert.match(cloudSource, /--unshallow/u);
+});
+
+test("check-run failure summary surfaces the verifier message", async () => {
+  const checkRunSource = await readFile(
+    path.join(repositoryRoot, "scripts", "cloud-collaboration-check-run.mjs"),
+    "utf8",
+  );
+  assert.match(checkRunSource, /result\?\.error\?\.message/u);
+  assert.match(checkRunSource, /Failure: \$\{message\}\./u);
 });
 
 test("CLI rejects unexposed workflow actions before network access", () => {

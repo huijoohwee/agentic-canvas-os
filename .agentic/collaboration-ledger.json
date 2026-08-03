@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 293,
-  "headDigest": "0500c7c086a703a191afcb616100b417baa9806d7e63274b4f571e785442c666",
+  "sequence": 294,
+  "headDigest": "fc1ec04b1ae0c8d046154ab4d7f61ad75a8fada03b928e14c8ee72ea85cdb8c1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -14222,6 +14222,46 @@
       },
       "claimDigest": "344c21744479d428e8223cdcc8d53f549223f1ed85eb56bb21b085deac5c3b6a",
       "digest": "0500c7c086a703a191afcb616100b417baa9806d7e63274b4f571e785442c666"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 294,
+      "parentDigest": "0500c7c086a703a191afcb616100b417baa9806d7e63274b4f571e785442c666",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "832e654dda54d0d2e9dbab707a78330060bce43304aa37c0a7ec43ff3eafa436",
+      "idempotencyKey": "1cb31670fb38e1fff91670dc5f8f18df4d9e7c02bdf57ae12f700220eca76710",
+      "requestDigest": "16405a3dbf92f2ca550dd0fdd498007375c63c3598a94aef2b7dcd841ee7b320",
+      "evaluationTime": "2026-08-03T10:20:19.000Z",
+      "claimCore": {
+        "claimId": "832e654dda54d0d2e9dbab707a78330060bce43304aa37c0a7ec43ff3eafa436",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8c433383b9aee667d8097d9e73ef999327ef9d40a5bbb59ef4692e77ab907c51",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c63ddf284cee4e5e723d9907e83f2b118ec2856cfd5233935d060ae6546ed9b1",
+        "canonicalBaseRevision": "b58520b728232d7b150cb104693f089016786599",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-handoff-controller.mjs",
+          "semantic:cloud-authority-handoff-controller"
+        ],
+        "writeSetDigest": "d7a313212c0dcd944b2c022baf2b6b591672c9115c2f22eb3a0b5a3401101d0d",
+        "laneRevision": "b58520b728232d7b150cb104693f089016786599",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T10:50:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "44d959aab2f8dc3864feb7213e26959e196cd4b14a66bcdaa3981799e1062b90",
+      "digest": "fc1ec04b1ae0c8d046154ab4d7f61ad75a8fada03b928e14c8ee72ea85cdb8c1"
     }
   ]
 }

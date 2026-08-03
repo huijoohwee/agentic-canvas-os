@@ -229,7 +229,7 @@ function requireOwnedClaim(ledger, intent, evaluationTime) {
   const claim = hydrate(entry, evaluationTime);
   if (TERMINAL_STATES.has(claim.state) && !(
     claim.state === "expired"
-    && intent.reason === "integrated"
+    && ["abandoned", "integrated"].includes(intent.reason)
   )) {
     fail("claim_not_active", `claim is ${claim.state}`);
   }

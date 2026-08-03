@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 210,
-  "headDigest": "ad0134969af296783e09a7e138a378c7fd19cd17fb428629cd9f43fd3c478bdc",
+  "sequence": 211,
+  "headDigest": "4473375a89d6cbe8aadea68f9179310f0ec7d2d4ffc5eded1fbe564c0fa8a598",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -9670,6 +9670,55 @@
       },
       "claimDigest": "839e6817a491d3901b65d53388cd201f42d7b9914da384af8fb36e4a05901dec",
       "digest": "ad0134969af296783e09a7e138a378c7fd19cd17fb428629cd9f43fd3c478bdc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 211,
+      "parentDigest": "ad0134969af296783e09a7e138a378c7fd19cd17fb428629cd9f43fd3c478bdc",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "72e713ecb547bcbc7915e731fa859a8a7f9be82dd680e87b4a72f58678f5b8cf",
+      "idempotencyKey": "9b35fbc20e3cfef995f7691981a0264f9e017dd54b8cd5b0c44a7e30fbf6a743",
+      "requestDigest": "ad04598473ccea224372f9eb9e1949aa2abf6fdfe22dc76b0780a68883239683",
+      "evaluationTime": "2026-08-03T04:31:41.000Z",
+      "claimCore": {
+        "claimId": "72e713ecb547bcbc7915e731fa859a8a7f9be82dd680e87b4a72f58678f5b8cf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:720ddbea82760f4f4474c687628c11b35fb69601c5fdb37e87a2f22b9d7e7f36",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:943ebb06905f4bf6036e28f151184fc3c2869564ff16510b171c1837c538e03b",
+        "canonicalBaseRevision": "7497dd63b271565ab4f88a8d76615af539ed962a",
+        "declaredWriteScope": [
+          "path:canvas/scripts/run_xr_v2_browser_smoke.mjs",
+          "path:canvas/scripts/verify_xr_v2_browser_smoke.mjs",
+          "path:canvas/src/App.tsx",
+          "path:canvas/src/features/command-menu/XrSimulationWorkbench.tsx",
+          "path:canvas/src/features/testing/XrV2RuntimeSmokePage.tsx",
+          "path:canvas/src/features/xr-v2",
+          "path:docs/TESTING.md",
+          "path:docs/documents/knowgrph-xr-v2-runtime-readiness.md",
+          "path:docs/runtime-api.md",
+          "path:scripts/__tests__/xr-v2-source-smoke.test.mjs",
+          "path:scripts/run-xr-v2-source-smoke.mjs",
+          "path:scripts/xr-v2",
+          "semantic:xr-v2-runtime"
+        ],
+        "writeSetDigest": "99e2a74204a57d63bd0180fa97fea55b203eb2aff73b4f1b1e16ccd49ff9211c",
+        "laneRevision": "a235c71ec3808b7b89059e12a4c89cb5cdc9d059",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-03T04:58:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs750tGF",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e14f149cc4d9c368e85bd26bbc62435a0f67712206f4fd25d2be1e05d58218c5",
+      "digest": "4473375a89d6cbe8aadea68f9179310f0ec7d2d4ffc5eded1fbe564c0fa8a598"
     }
   ]
 }

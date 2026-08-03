@@ -4,6 +4,10 @@ import {
   waitForOwnershipPullRequestHead,
 } from "./device-pull-request-state.mjs";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import {
+  authorizeDeliveryAdmissionCloudAuthority,
+  reviewReadyAdmissionCloudAuthority,
+} from "./scoped-lane-cloud-authority.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import {
   SHA_PATTERN,
@@ -186,8 +190,7 @@ export function review({
   )]);
   requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   if (readyLease.autoDelivery === true && readyLease.runtimeRequired === true) {
-    run("gh", ["pr", "edit", url, "--add-label", "agentic/auto-delivery"]);
-    log(`Marked ${url} ready for review; the authorized auto-delivery controller may enable protected merge for this exact reviewed SHA.`);
+    log(`Marked ${url} ready for review; device:integrate must authorize the exact reviewed SHA before protected merge.`);
   } else {
     log(`Marked ${url} ready for review without enabling merge or deployment.`);
   }
@@ -204,6 +207,8 @@ export function publish({
   sessionId,
   run,
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
+  reviewReadyCloudAuthority = reviewReadyAdmissionCloudAuthority,
+  authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
   log = console.log,
 }) {
   requireSession(sessionId);
@@ -216,6 +221,10 @@ export function publish({
   assertLeaseWorktree(lease, repo);
   if (!lease.pullRequestUrl || !lease.fenceSha) {
     throw new Error("Publish requires the draft ownership pull request and fencing SHA created by device:start.");
+  }
+  const cloud = requireCloudReviewAdmission(lease);
+  if (!cloud) {
+    throw new Error("Publish requires one admitted cloud claim; local-only delivery authority is forbidden.");
   }
   requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
@@ -237,26 +246,50 @@ export function publish({
     }),
     expectedHeadSha: deliveryHeadSha,
   });
+  const pullNumber = pullRequestNumber(url);
+  const reviewed = reviewReadyCloudAuthority({
+    authority: lease.cloudAuthority,
+    manifest: cloud.manifest,
+    branch,
+    headSha: deliveryHeadSha,
+    pullRequestNumber: pullNumber,
+    deviceId: lease.device,
+    sessionId,
+  });
   const title = gitText(["log", "-1", "--pretty=%s"]).trim();
-  run("gh", ["pr", "edit", url, "--title", title, "--add-label", "automerge"]);
+  run("gh", ["pr", "edit", url, "--title", title]);
   run("gh", ["pr", "ready", url]);
   requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
+  const authorized = authorizeCloudDelivery({
+    authority: reviewed.authority,
+    manifest: cloud.manifest,
+    branch,
+    headSha: deliveryHeadSha,
+    pullRequestNumber: pullNumber,
+    deviceId: lease.device,
+    sessionId,
+  });
   verifyCloudAuthority({
     pullRequestUrl: url,
     branch,
     headSha: deliveryHeadSha,
     canonicalBaseSha: lease.cloudAuthority?.canonicalBaseSha || "",
-    cloudAuthority: lease.cloudAuthority || null,
+    cloudAuthority: authorized.authority,
   });
+  run("gh", ["pr", "edit", url, "--add-label", "automerge"]);
   run("gh", ["pr", "merge", "--auto", "--squash", url]);
-  leaseStore.annotate({ sessionId, branch, values: { deliveryHeadSha } });
+  leaseStore.annotate({
+    sessionId,
+    branch,
+    values: { deliveryHeadSha, cloudAuthority: authorized.authority },
+  });
   const deliveredLease = leaseStore.release({ sessionId, branch, status: "delivery" });
   run("gh", ["pr", "edit", url, "--body", updateWriterLeasePullRequestBody(
     readRemotePullRequestBody({ url, ghText }),
     deliveredLease,
   )]);
   const trimmedUrl = url.trim();
-  log(`Published ${trimmedUrl} with protected auto-merge enabled.`);
+  log(`Published ${trimmedUrl} with exact delivery authorization and protected auto-merge enabled.`);
   return trimmedUrl;
 }
 

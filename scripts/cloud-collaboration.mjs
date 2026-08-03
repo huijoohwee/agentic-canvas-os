@@ -13,10 +13,11 @@ const MUTATIONS = new Set([
   "bind",
   "heartbeat",
   "review-ready",
+  "delivery-authorize",
   "handoff",
   "release",
 ]);
-const DISPATCH_ACTIONS = new Set(["status", "verify", "claim", "heartbeat", "review-ready", "handoff", "release"]);
+const DISPATCH_ACTIONS = new Set(["status", "verify", "claim", "heartbeat", "review-ready", "delivery-authorize", "handoff", "release"]);
 const ACTIONS = new Set(["status", "verify", ...MUTATIONS, "verify-event", "dispatch"]);
 const [rawAction, ...argumentsList] = process.argv.slice(2);
 const json = argumentsList.includes("--json");
@@ -101,7 +102,7 @@ async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository
   const reviewRequestId = `github-pull-request:${pullRequest.nodeId}`;
   const claim = (await adapter.listClaims({ targetRepository }))
     .find((candidate) => candidate.reviewRequestId === reviewRequestId);
-  if (!claim || claim.state !== "review-ready") return null;
+  if (!claim || claim.state !== "delivery-authorized") return null;
   const evidenceDigest = digestValue({
     schema: "agentic-cloud-integration-evidence/v1",
     repository: targetRepository,
@@ -224,6 +225,16 @@ function buildRequest(action) {
       option("focused-evidence-digest"),
       process.env.AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST,
       source.focusedEvidenceDigest,
+    ),
+    operatorDecisionDigest: first(
+      option("operator-decision-digest"),
+      process.env.AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST,
+      source.operatorDecisionDigest,
+    ),
+    integrationIntentDigest: first(
+      option("integration-intent-digest"),
+      process.env.AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST,
+      source.integrationIntentDigest,
     ),
     integrationReceiptDigest: first(
       option("integration-receipt-digest"),
@@ -363,6 +374,6 @@ function publicError(error) {
 
 function usage() {
   throw new Error(
-    "Usage: cloud-collaboration.mjs <claim|bind|heartbeat|review-ready|handoff|release|status|verify|verify-event|dispatch> [--request-json=<json>] [--json]",
+    "Usage: cloud-collaboration.mjs <claim|bind|heartbeat|review-ready|delivery-authorize|handoff|release|status|verify|verify-event|dispatch> [--request-json=<json>] [--json]",
   );
 }

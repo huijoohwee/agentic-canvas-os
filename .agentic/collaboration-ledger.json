@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 175,
-  "headDigest": "6e896a36e8bf2dba19fbe0a06d76903481129b0bf356b7767ed2f8cff46080fc",
+  "sequence": 176,
+  "headDigest": "7b794fea3da6507a4fa7f3f1c35457744a5afc11b70b1a3b0d554a66c2179e1e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -7947,6 +7947,54 @@
       },
       "claimDigest": "1c2f07591fb696b2b4efb707532bf4b2adc05eac6f077d00074734207cea4af7",
       "digest": "6e896a36e8bf2dba19fbe0a06d76903481129b0bf356b7767ed2f8cff46080fc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 176,
+      "parentDigest": "6e896a36e8bf2dba19fbe0a06d76903481129b0bf356b7767ed2f8cff46080fc",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "98921958bec39a281f4e84d7ac29e6d558e4ffcbbd693d20f76533f1bb268a4c",
+      "idempotencyKey": "6d358cc972025cbeff8e0878dfe21d4382141240ff788586eff0006a7708029e",
+      "requestDigest": "2d62f807c0ec4b47068e34565ad47a38c3157975b083ffe88e7ce155c47f7574",
+      "evaluationTime": "2026-08-03T01:36:31.000Z",
+      "claimCore": {
+        "claimId": "98921958bec39a281f4e84d7ac29e6d558e4ffcbbd693d20f76533f1bb268a4c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:b08236a189a78a7ae76c84063d999bfa23871ccfb376d4b02c33370e9a25121d",
+        "sessionId": "session:6e71543e0f4f79463fbd1815c01e2183776eaf028b49760591ef5d7b1662ab95",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3abea4cfe71d1554fbdf9b5582e5a2b0e500ccec9262a38fa76ad2f721fcd507",
+        "canonicalBaseRevision": "aeb28f0ae85ddb8747712289bfd145821ed2063c",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:.github/workflows/ci.yml",
+          "path:.github/workflows/cloud-collaboration.yml",
+          "path:.github/workflows/dependency-security.yml",
+          "path:.github/workflows/security.yml",
+          "path:.github/workflows/sync-open-prs.yml",
+          "path:__tests__/github-lifecycle-policy.test.mjs"
+        ],
+        "writeSetDigest": "14d3eb44c4925927a550e02669fd54a24ac88b32424ca02fc7b3813667b6bf8c",
+        "laneRevision": "7924456c39c14f5ab56bb9cf3fd77dfa5c3c01f4",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-07-31T05:59:43.000Z",
+        "evidenceDigest": "6c3655bcdeb75acc21e0bab97c9b98c195f1d0d98dd457a4d56d994c027edb3b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM74XD8U",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "integrated",
+          "evidenceDigest": "d92db8ed7d163e15644b47b4da6266659e9ecb138644a888619c8f42e1b0f1d4",
+          "integrationReceiptDigest": "4d242583281999f241b9e89295ed7aa37a25ed0ffb76845837547c24996b873a",
+          "evaluationTime": "2026-08-03T01:36:31.000Z"
+        }
+      },
+      "claimDigest": "91a97e54f4c8f020339268564ccc87ab08425c7a967684274c902db8c731c1d0",
+      "digest": "7b794fea3da6507a4fa7f3f1c35457744a5afc11b70b1a3b0d554a66c2179e1e"
     }
   ]
 }

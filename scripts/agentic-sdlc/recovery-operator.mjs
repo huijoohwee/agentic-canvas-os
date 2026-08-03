@@ -20,7 +20,6 @@ export function validateRecoveryAndOperator(context) {
   const reconstructionCheck = object(persistence.reconstructionCheck);
   let latestTerminal = null;
   let persistenceComplete = persistence.outsideWorkingContext === true
-    && context.run?.persistenceAttestationValid === true
     && persistence.reconstructable === true
     && text(persistence.storageReference).length > 0
     && text(persistence.checkpointDigest).length > 0

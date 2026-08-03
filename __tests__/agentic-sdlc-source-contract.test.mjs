@@ -85,7 +85,7 @@ test("real source binds all execution findings to artifact-bearing rules", {
     currentDirectory: process.cwd(),
     environment: process.env,
   });
-  assert.equal(result.totals.executionRuleBindings, 21);
+  assert.equal(result.totals.executionRuleBindings, 51);
 });
 
 test("baseline proof fails closed on source drift", async () => {
@@ -192,29 +192,7 @@ test("canonical run schema closes unknown fields and exposes all runtime records
   ]);
   assert.deepEqual(
     schema.$defs.ruleBindings.required.sort(),
-    [
-      "self-graded-verdict",
-      "unnamed-evaluator",
-      "ungrounded-task",
-      "unexecuted-condition",
-      "task-cycle",
-      "concurrent-write-conflict",
-      "state-without-reason",
-      "oversized-task",
-      "unsurfaced-result",
-      "unenumerated-change",
-      "self-escalated-capability",
-      "out-of-scope-write",
-      "ungated-irreversible-operation",
-      "unbounded-task",
-      "budget-raised-under-pressure",
-      "unrecorded-consumption",
-      "fix-without-witness",
-      "unproven-property",
-      "evidence-without-run",
-      "unresumable-run",
-      "assumed-operator-decision",
-    ].sort(),
+    FINDING_TYPES.slice(FINDING_TYPES.indexOf("self-graded-verdict")).sort(),
   );
   assert.deepEqual(schema.$defs.ruleBinding.required, ["ruleId", "ruleText"]);
   for (const field of [
@@ -313,11 +291,13 @@ function makeFixture() {
       execution: Object.fromEntries([
         "run-start",
         "task-derivation",
+        "lane-admission",
         "dispatch",
         "implementation",
         "verification",
         "recovery",
         "escalation",
+        "release-handoff",
       ].map((stage) => [stage, ["agent-roles--independence"]])),
     },
     executionFindingRuleBindings: Object.fromEntries(

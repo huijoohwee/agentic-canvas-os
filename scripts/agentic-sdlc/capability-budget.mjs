@@ -442,7 +442,7 @@ function validateBudget(task, context) {
     ) {
       collector.add("budget-raised-under-pressure", {
         taskId,
-        ruleId: "task-model#5",
+        ruleId: "per-task-budgets#2",
         artifactReference: `budget-exhaustion:${field || "unknown"}`,
         evidenceExcerpt: "Token, iteration, or wall-clock exhaustion must stop the task as failed at its declared bound.",
       });
@@ -561,7 +561,7 @@ function validateBudget(task, context) {
   ) {
     collector.add("budget-raised-under-pressure", {
       taskId,
-      ruleId: "task-model#5",
+      ruleId: "per-task-budgets#2",
       artifactReference: "circuit-breaker",
       evidenceExcerpt: "Two consecutive no-progress iterations must immediately stop the task as failed.",
     });

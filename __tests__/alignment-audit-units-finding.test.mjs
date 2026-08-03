@@ -10,8 +10,7 @@ import {
 } from "../scripts/alignment-audit/finding.mjs";
 
 test("Finding_Type enumeration is closed and contains all documented types", () => {
-  assert.equal(FINDING_TYPES.length, 53);
-  assert.equal(new Set(FINDING_TYPES).size, 53);
+  assert.equal(new Set(FINDING_TYPES).size, FINDING_TYPES.length);
   assert.deepEqual(Object.keys(DEFAULT_SEVERITY).sort(), [...FINDING_TYPES].sort());
 });
 

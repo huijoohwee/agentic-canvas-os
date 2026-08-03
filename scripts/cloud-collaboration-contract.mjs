@@ -396,6 +396,7 @@ function buildClaimCore(intent, ledger, evaluationTime) {
       || !writeSetsOverlap(current.declaredWriteScope, intent.declaredWriteScope)
     ) continue;
     if (current.state === "expired") {
+      if (current.canonicalBaseRevision !== intent.canonicalBaseRevision) continue;
       fail("expired_predecessor_required", "an overlapping expired claim must be named as predecessor");
     }
     fail("parallel_scope_collision", `declared write scope overlaps claim ${current.claimId}`);

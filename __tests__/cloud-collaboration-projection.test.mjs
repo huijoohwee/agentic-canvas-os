@@ -73,6 +73,43 @@ test("public mutation projections expose exactly the four provider-neutral root 
   }
 });
 
+test("cloud collaboration workflow stays within the dispatch input cap", async () => {
+  const workflow = await source(".github/workflows/cloud-collaboration.yml");
+  const dispatch = workflow.match(
+    /^  workflow_dispatch:\s*\n    inputs:\s*\n([\s\S]*?)(?=^permissions:)/mu,
+  );
+  assert.ok(dispatch, "workflow_dispatch inputs must be declared explicitly");
+
+  const declaredInputs = [...dispatch[1].matchAll(/^      ([a-z0-9_]+):\s*$/gmu)]
+    .map((entry) => entry[1]);
+  assert.ok(
+    declaredInputs.length <= 25,
+    `workflow_dispatch declares ${declaredInputs.length} inputs; GitHub permits at most 25`,
+  );
+  assert.equal(new Set(declaredInputs).size, declaredInputs.length);
+  assert.ok(declaredInputs.includes("request_json"));
+
+  const referencedInputs = [...workflow.matchAll(/\binputs\.([a-z0-9_]+)/gu)]
+    .map((entry) => entry[1]);
+  const undeclaredInputs = [...new Set(referencedInputs)]
+    .filter((name) => !declaredInputs.includes(name));
+  assert.deepEqual(undeclaredInputs, []);
+
+  const requestJsonMapping = /AGENTIC_CLOUD_REQUEST_JSON:\s*\$\{\{\s*inputs\.request_json\s*\}\}/u;
+  const dispatchJobs = [
+    ["read", workflow.match(/^  read:\s*\n([\s\S]*?)(?=^  mutate:)/mu)?.[1]],
+    ["mutate", workflow.match(/^  mutate:\s*\n([\s\S]*)$/mu)?.[1]],
+  ];
+  for (const [jobName, job] of dispatchJobs) {
+    assert.ok(job, `${jobName} job must remain declared`);
+    assert.match(
+      job,
+      requestJsonMapping,
+      `${jobName} job must project request_json into the existing CLI pathway`,
+    );
+  }
+});
+
 test("scoped lifecycle helper names are replaceable projections, not semantic aliases", async () => {
   const authority = await source("scripts/scoped-lane-cloud-authority.mjs");
   const projectionCases = [

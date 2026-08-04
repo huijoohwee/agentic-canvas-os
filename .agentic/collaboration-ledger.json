@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 390,
-  "headDigest": "550f7da2664b6879616191dcc766a39638e816eebec6ba13eaee244bf6a9291f",
+  "sequence": 391,
+  "headDigest": "749d90bbe963076c6747d41d7c2e4525b3cbfc0128a5eeb5b25ab4dd6b46bfc5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -18877,6 +18877,67 @@
       },
       "claimDigest": "5fb9e50ad90d858d7631e7a021b8e58841c27b77cf6d2c2c883399f212c45589",
       "digest": "550f7da2664b6879616191dcc766a39638e816eebec6ba13eaee244bf6a9291f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 391,
+      "parentDigest": "550f7da2664b6879616191dcc766a39638e816eebec6ba13eaee244bf6a9291f",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0238295e5c2892ab06a319cb49f9d77f83d8891e9061666db74f93c174a20e8e",
+      "idempotencyKey": "fea038f295d88007e27e43c3cc0b2869592ec40aec60ec3f2834cc009b2ebd38",
+      "requestDigest": "da1761cde30ac93929b45701e6b5eae4508b37b01c72b7bf09c35038e2318cb1",
+      "evaluationTime": "2026-08-04T01:52:57.000Z",
+      "claimCore": {
+        "claimId": "0238295e5c2892ab06a319cb49f9d77f83d8891e9061666db74f93c174a20e8e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:c2fc7661c2591e0f3f0cf76fe9e105b36be5b460d56671f5a02bb23e6f930af6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:5d003b9020d35407e3182a3ed200e3a9ae4fab5686d5dfdfebc7985586126a77",
+        "canonicalBaseRevision": "0bd5b9cd1fe86d27f8b545891a5fb3a86f35c6f7",
+        "declaredWriteScope": [
+          "path:__tests__/agentic-sdlc-runtime-adversarial.test.mjs",
+          "path:__tests__/agentic-sdlc-runtime.test.mjs",
+          "path:__tests__/agentic-sdlc-source-contract.test.mjs",
+          "path:__tests__/agentic-sdlc-task-plan-hardening.test.mjs",
+          "path:__tests__/alignment-audit-guideline-v17-contract.test.mjs",
+          "path:__tests__/alignment-audit-units-finding.test.mjs",
+          "path:__tests__/fixtures/agentic-sdlc-adversarial-run.mjs",
+          "path:__tests__/fixtures/agentic-sdlc-canonical-run.mjs",
+          "path:__tests__/lifecycle-conformance-policy.test.mjs",
+          "path:docs/AGENTIC-SDLC-RUNTIME.md",
+          "path:docs/SCOPED-LANE-ADMISSION.md",
+          "path:docs/schemas/agentic-sdlc-guideline-baseline.v1.json",
+          "path:docs/schemas/agentic-sdlc-run.v1.schema.json",
+          "path:scripts/agentic-sdlc-source.mjs",
+          "path:scripts/agentic-sdlc/admission-findings.mjs",
+          "path:scripts/agentic-sdlc/attestation.mjs",
+          "path:scripts/agentic-sdlc/capability-budget.mjs",
+          "path:scripts/agentic-sdlc/constants.mjs",
+          "path:scripts/agentic-sdlc/finding-rules.mjs",
+          "path:scripts/agentic-sdlc/recovery-operator.mjs",
+          "path:scripts/agentic-sdlc/task-plan.mjs",
+          "path:scripts/agentic-sdlc/verification.mjs",
+          "path:scripts/alignment-audit/finding.mjs",
+          "path:scripts/lifecycle-conformance-policy.mjs",
+          "semantic:pin-source-owned-collaboration-baseline"
+        ],
+        "writeSetDigest": "f36eae6a36cd524a18178312ad342ec11d5f158c688131151355ee47982fb7fe",
+        "laneRevision": "12ee45532b411f90f7dc8744263c1c3584f17aab",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "review-ready",
+        "expiresAt": "2026-08-04T02:22:39.000Z",
+        "evidenceDigest": "7b225643db35c9c58b55a4908968ae122bf986736d68409cdd54bbd2bb1cef0e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM751Dwo",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "79d8876376898d12e4afe9fea8c679846b96d54b03a324f1f2e7328f8f88318b",
+      "digest": "749d90bbe963076c6747d41d7c2e4525b3cbfc0128a5eeb5b25ab4dd6b46bfc5"
     }
   ]
 }

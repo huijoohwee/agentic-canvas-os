@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 416,
-  "headDigest": "2f99af945065b7c106fdb2e8575ac35f8c3a3dd2696539eb990441835d47a412",
+  "sequence": 417,
+  "headDigest": "6edcaf6010ef11475de05701fb096f9304a6c847d102eaa408da4a9dd0fbf6aa",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -20305,6 +20305,52 @@
       },
       "claimDigest": "feb99d06a25a7c52b87bc78f794ad87d69741117218f6a63db32d3255a23c815",
       "digest": "2f99af945065b7c106fdb2e8575ac35f8c3a3dd2696539eb990441835d47a412"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 417,
+      "parentDigest": "2f99af945065b7c106fdb2e8575ac35f8c3a3dd2696539eb990441835d47a412",
+      "action": "bind",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "94044fa315b75fc51f2a8403e1189cb8bcb4b6067d6038486f530ed57e53f327",
+      "idempotencyKey": "38dbee5687abe58adff76f105dd622486bf1034a02dd7da0927f160f9f7b0495",
+      "requestDigest": "8b8ec7ce7a711efe222d3b870aff5646c8d7253f9ae1638170ec79b8635f6af0",
+      "evaluationTime": "2026-08-04T05:52:39.000Z",
+      "claimCore": {
+        "claimId": "94044fa315b75fc51f2a8403e1189cb8bcb4b6067d6038486f530ed57e53f327",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3e4dd9d4890a7af5a3c60e21367fbb7bc9b8c55e399faa67bcd83b4158a6fb44",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:5bb84fb0b87ee3f666334a263bfc289ba7ed38c2669d70d455bc00ee4b384b51",
+        "canonicalBaseRevision": "6f701417f476c797e700cd63a92f5e0d984c18b9",
+        "declaredWriteScope": [
+          "path:docs/documents/git-guidelines.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:package-lock.json",
+          "path:package.json",
+          "path:scripts/__pbt__",
+          "path:scripts/__tests__",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "path:scripts/check-git-guidelines.mjs",
+          "path:scripts/lib/git-guidelines",
+          "semantic:git-guidelines-companion"
+        ],
+        "writeSetDigest": "044ad54719ed8b377e11e03c8a9100679e36de001e38d1b1b548f954ad579c46",
+        "laneRevision": "b4de266f8ed8d750aa634e6821c45f1df58d43b5",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "active",
+        "expiresAt": "2026-08-05T05:49:36.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc76X3Nt",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "26d549946a7fa35da7d521859ef58a96879be10e45b9c2375bec47ad90d40762",
+      "digest": "6edcaf6010ef11475de05701fb096f9304a6c847d102eaa408da4a9dd0fbf6aa"
     }
   ]
 }

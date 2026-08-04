@@ -43,7 +43,9 @@ const MUTATING_ACTIONS = new Set([
   "handoff",
   "release",
 ]);
-const MAX_LEDGER_BYTES = 900_000;
+// Keep the ledger below GitHub's practical contents transport limits while allowing
+// the current protected history to remain readable until a later compaction pass.
+const MAX_LEDGER_BYTES = 1_500_000;
 
 export function createGitHubCloudCollaborationAdapter({
   ledgerRepository,

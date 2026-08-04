@@ -2,28 +2,46 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA,
   CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA,
   continueExpiredReviewLaneAuthority,
   createCloudAuthorityHandoffControllerAdapter,
+  createRepositoryCloudAuthorityHandoffControllerAdapter,
 } from "../scripts/cloud-authority-handoff-controller.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import {
+  updateWriterLeasePullRequestBody,
+  WRITER_LEASE_SCHEMA,
+} from "../scripts/writer-lease-lib.mjs";
 
 const BASE_SHA = "a".repeat(40);
 const REVIEW_SHA = "b".repeat(40);
 const REFRESHED_SHA = "0".repeat(40);
-const REFRESH_MAIN_PARENT_SHA = "f".repeat(40);
 const PREDECESSOR_CLAIM_ID = "c".repeat(64);
 const PREDECESSOR_CLAIM_DIGEST = "d".repeat(64);
 const PREDECESSOR_LEDGER_DIGEST = "e".repeat(64);
-const PREDECESSOR_FOCUSED_EVIDENCE = "1".repeat(64);
-const SUCCESSOR_CLAIM_ID = "1".repeat(64);
-const SUCCESSOR_CLAIM_DIGEST = "2".repeat(64);
-const SUCCESSOR_LEDGER_DIGEST = "3".repeat(64);
-const MANIFEST_DIGEST = "4".repeat(64);
-const WRITE_SET_DIGEST = "5".repeat(64);
-const ADMITTED_REPORT_DIGEST = "6".repeat(64);
-const CLAIM_RECEIPT_DIGEST = "7".repeat(64);
-const REVIEW_RECEIPT_DIGEST = "8".repeat(64);
-const PROJECTION_RECEIPT_DIGEST = "9".repeat(64);
+const FOCUSED_EVIDENCE_DIGEST = "1".repeat(64);
+const RECOVERED_CLAIM_DIGEST = "2".repeat(64);
+const RECOVERED_LEDGER_DIGEST = "3".repeat(64);
+const STATUS_LEDGER_DIGEST = "4".repeat(64);
+const MANIFEST_DIGEST = "5".repeat(64);
+const WRITE_SET_DIGEST = "6".repeat(64);
+const ADMITTED_REPORT_DIGEST = "7".repeat(64);
+const RECOVERY_RECEIPT_DIGEST = "8".repeat(64);
+const VERIFICATION_RECEIPT_DIGEST = "9".repeat(64);
+const PROJECTION_RECEIPT_DIGEST = "f".repeat(64);
+const REVIEW_REQUEST_ID = "github-pull-request:PR_238";
+const LEGACY_DEVICE_ID = `device:${digestValue({ namespace: "device", value: "legacy-device" })}`;
+const LEGACY_SESSION_ID = `session:${digestValue({ namespace: "session", value: "legacy-session" })}`;
+const EXPIRED_AT = "2026-08-03T07:37:22.000Z";
+const RECOVERED_AT = "2026-08-03T08:37:22.000Z";
+const RECOVERED_EXPIRES_AT = "2099-08-03T09:07:22.000Z";
+const PROJECTION_TIMESTAMP = "2026-08-03T08:38:22.000Z";
+const DECLARED_WRITE_SET = [
+  "path:docs/CANONICAL-LIFECYCLE.md",
+  "path:scripts/legacy-authority-evaluator.mjs",
+  "semantic:legacy-authority-evaluator",
+];
 
 function preservedLane(overrides = {}) {
   const lease = {
@@ -37,11 +55,7 @@ function preservedLane(overrides = {}) {
     pullRequestUrl: "https://github.com/example/repo/pull/238",
     admission: {
       status: "admitted",
-      declaredWriteSet: [
-        "path:docs/CANONICAL-LIFECYCLE.md",
-        "path:scripts/legacy-authority-evaluator.mjs",
-        "semantic:legacy-authority-evaluator",
-      ],
+      declaredWriteSet: DECLARED_WRITE_SET,
       writeSetDigest: WRITE_SET_DIGEST,
       admittedReportDigest: ADMITTED_REPORT_DIGEST,
       manifestDigest: MANIFEST_DIGEST,
@@ -57,20 +71,16 @@ function preservedLane(overrides = {}) {
       claimLedgerRevision: PREDECESSOR_LEDGER_DIGEST,
       canonicalBaseSha: BASE_SHA,
       laneRevision: REVIEW_SHA,
-      cloudDeclaredWriteScope: [
-        "path:docs/CANONICAL-LIFECYCLE.md",
-        "path:scripts/legacy-authority-evaluator.mjs",
-        "semantic:legacy-authority-evaluator",
-      ],
+      cloudDeclaredWriteScope: DECLARED_WRITE_SET,
       writeSetDigest: WRITE_SET_DIGEST,
       deviceId: "legacy-device",
       sessionId: "legacy-session",
-      reviewRequestId: "github-pull-request:PR_238",
+      reviewRequestId: REVIEW_REQUEST_ID,
       leaseEpoch: 1,
       transitionCounter: 4,
       state: "review_ready",
-      expiresAt: "2026-08-03T07:37:22.000Z",
-      focusedEvidenceDigest: PREDECESSOR_FOCUSED_EVIDENCE,
+      expiresAt: EXPIRED_AT,
+      focusedEvidenceDigest: FOCUSED_EVIDENCE_DIGEST,
     },
   };
   return {
@@ -82,12 +92,13 @@ function preservedLane(overrides = {}) {
     baseSha: BASE_SHA,
     lease,
     manifest: {
-      declaredWriteSet: lease.admission.declaredWriteSet,
+      declaredWriteSet: DECLARED_WRITE_SET,
       writeSetDigest: WRITE_SET_DIGEST,
       admittedReportDigest: ADMITTED_REPORT_DIGEST,
       manifestDigest: MANIFEST_DIGEST,
     },
     authority: lease.cloudAuthority,
+    protectedMainRefresh: null,
     pullRequest: {
       url: lease.pullRequestUrl,
       state: "OPEN",
@@ -109,91 +120,219 @@ function preservedLane(overrides = {}) {
   };
 }
 
-function successorAuthority(overrides = {}) {
+function predecessorClaim(overrides = {}) {
   return {
-    schema: "agentic-lane-cloud-authority/v1",
-    provider: "github",
-    ledgerRepository: "example/ledger",
-    targetRepository: "example/repo",
-    claimId: SUCCESSOR_CLAIM_ID,
-    claimDigest: SUCCESSOR_CLAIM_DIGEST,
-    ledgerRevision: BASE_SHA,
-    claimLedgerRevision: SUCCESSOR_LEDGER_DIGEST,
-    canonicalBaseSha: BASE_SHA,
+    claimId: PREDECESSOR_CLAIM_ID,
+    state: "dormant-preserved",
+    writeAuthority: false,
+    scopeReserved: true,
+    canonicalBaseRevision: BASE_SHA,
     laneRevision: REVIEW_SHA,
-    cloudDeclaredWriteScope: [
-      "path:docs/CANONICAL-LIFECYCLE.md",
-      "path:scripts/legacy-authority-evaluator.mjs",
-      "semantic:legacy-authority-evaluator",
-    ],
+    declaredWriteScope: DECLARED_WRITE_SET,
     writeSetDigest: WRITE_SET_DIGEST,
-    deviceId: "legacy-device",
-    sessionId: "legacy-session",
-    reviewRequestId: "github-pull-request:PR_238",
-    leaseEpoch: 2,
-    transitionCounter: 3,
-    state: "review_ready",
-    expiresAt: "2026-08-03T09:07:22.000Z",
-    focusedEvidenceDigest: PREDECESSOR_FOCUSED_EVIDENCE,
+    leaseEpoch: 1,
+    transitionCounter: 4,
+    deviceId: LEGACY_DEVICE_ID,
+    sessionId: LEGACY_SESSION_ID,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    expiresAt: EXPIRED_AT,
+    fenceRevision: PREDECESSOR_CLAIM_DIGEST,
+    transitionDigest: PREDECESSOR_LEDGER_DIGEST,
     ...overrides,
   };
 }
 
-function statusResult(claims = []) {
+function statusResult(claims = [predecessorClaim()]) {
   return {
     schema: "agentic-cloud-collaboration-result/v1",
     ok: true,
     action: "status",
     status: "ready",
+    ledgerRevision: BASE_SHA,
+    ledgerDigest: STATUS_LEDGER_DIGEST,
     claims,
   };
 }
 
-function claimResult() {
+function recoveredAuthority(overrides = {}) {
   return {
-    schema: "agentic-cloud-collaboration-result/v1",
-    ok: true,
-    action: "claim",
-    status: "active",
+    schema: "agentic-lane-cloud-authority/v1",
+    provider: "github",
+    ledgerRepository: "example/ledger",
+    targetRepository: "example/repo",
+    claimId: PREDECESSOR_CLAIM_ID,
+    claimDigest: RECOVERED_CLAIM_DIGEST,
     ledgerRevision: BASE_SHA,
-    claimDigest: SUCCESSOR_CLAIM_DIGEST,
-    claim: {
-      claimId: SUCCESSOR_CLAIM_ID,
-      state: "active",
-      canonicalBaseRevision: BASE_SHA,
-      laneRevision: REVIEW_SHA,
-      declaredWriteScope: [
-        "path:docs/CANONICAL-LIFECYCLE.md",
-        "path:scripts/legacy-authority-evaluator.mjs",
-        "semantic:legacy-authority-evaluator",
-      ],
-      writeSetDigest: WRITE_SET_DIGEST,
-      reviewRequestId: "github-pull-request:PR_238",
-      leaseEpoch: 2,
-      transitionCounter: 1,
-      expiresAt: "2026-08-03T09:07:22.000Z",
-      transitionDigest: SUCCESSOR_LEDGER_DIGEST,
-    },
-    receipt: { receiptDigest: CLAIM_RECEIPT_DIGEST, evaluationTime: "2026-08-03T08:30:00.000Z" },
+    claimLedgerRevision: RECOVERED_LEDGER_DIGEST,
+    canonicalBaseSha: BASE_SHA,
+    laneRevision: REVIEW_SHA,
+    cloudDeclaredWriteScope: DECLARED_WRITE_SET,
+    writeSetDigest: WRITE_SET_DIGEST,
+    deviceId: "legacy-device",
+    sessionId: "legacy-session",
+    reviewRequestId: REVIEW_REQUEST_ID,
+    leaseEpoch: 1,
+    transitionCounter: 5,
+    state: "review_ready",
+    expiresAt: RECOVERED_EXPIRES_AT,
+    focusedEvidenceDigest: FOCUSED_EVIDENCE_DIGEST,
+    manifestDigest: MANIFEST_DIGEST,
+    ...overrides,
   };
 }
 
-test("reclaim restores live authority for the exact preserved review lane", async () => {
-  const events = [];
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane(),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: ({ request, lane }) => {
-      events.push(["claim", request.transition, lane.authority.claimId]);
-      return claimResult();
+function recoveryResult(recoveryEvidenceDigest, authority = recoveredAuthority()) {
+  return {
+    authority: {
+      ...authority,
+      recovery: {
+        evidenceDigest: recoveryEvidenceDigest,
+        recoveredAt: RECOVERED_AT,
+      },
     },
-    bindAndReviewReady: ({ request }) => {
-      events.push(["ready", request.successorSessionId, request.successorDeviceId]);
-      return {
-        authority: successorAuthority(),
-        verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-      };
+    recoveryReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    verificationReceiptDigest: VERIFICATION_RECEIPT_DIGEST,
+  };
+}
+
+function publicRecoveryCloudResult(action) {
+  const claim = predecessorClaim({
+    state: "reviewed",
+    transitionCounter: 5,
+    fenceRevision: RECOVERED_CLAIM_DIGEST,
+    transitionDigest: RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    expiresAt: RECOVERED_EXPIRES_AT,
+  });
+  delete claim.deviceId;
+  delete claim.sessionId;
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action,
+    status: "reviewed",
+    ledgerRevision: BASE_SHA,
+    claimDigest: RECOVERED_CLAIM_DIGEST,
+    claim,
+    receipt: {
+      receiptDigest: action === "continue"
+        ? RECOVERY_RECEIPT_DIGEST
+        : VERIFICATION_RECEIPT_DIGEST,
+    },
+  };
+}
+
+function fullRecoveredClaim(recoveryEvidenceDigest) {
+  const claim = publicRecoveryCloudResult("continue").claim;
+  return {
+    ...claim,
+    ledgerRevision: claim.transitionDigest,
+    deviceId: LEGACY_DEVICE_ID,
+    sessionId: LEGACY_SESSION_ID,
+    recovery: {
+      evidenceDigest: recoveryEvidenceDigest,
+      recoveredAt: RECOVERED_AT,
+    },
+  };
+}
+
+function expectedRecoveryEvidenceDigest({
+  transition = "reclaim",
+  successorDeviceId = "legacy-device",
+  successorSessionId = "legacy-session",
+} = {}) {
+  return digestValue({
+    schema: CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA,
+    kind: "preflight",
+    payload: {
+      branch: "agent/legacy-device/legacy-authority-evaluator",
+      transition,
+      targetRepository: "example/repo",
+      baseSha: BASE_SHA,
+      headSha: REVIEW_SHA,
+      reviewRequestId: REVIEW_REQUEST_ID,
+      predecessorClaimId: PREDECESSOR_CLAIM_ID,
+      predecessorLeaseEpoch: 1,
+      successorDeviceId,
+      successorSessionId,
+      actorId: 1,
+      blockingFindingDigest: digestValue([]),
+    },
+  });
+}
+
+function admittedWriterLease(authority = preservedLane().authority) {
+  return {
+    schema: WRITER_LEASE_SCHEMA,
+    status: "review_ready",
+    epoch: 1,
+    sessionId: "legacy-session",
+    device: "legacy-device",
+    scope: "legacy-authority-evaluator",
+    branch: "agent/legacy-device/legacy-authority-evaluator",
+    worktreePath: "/repo",
+    baseSha: BASE_SHA,
+    fenceSha: REVIEW_SHA,
+    pullRequestUrl: "https://github.com/example/repo/pull/238",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: REVIEW_SHA,
+    admission: {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "admitted",
+      semanticScope: "legacy-authority-evaluator",
+      declaredWriteSet: DECLARED_WRITE_SET,
+      writeSetDigest: WRITE_SET_DIGEST,
+      manifestDigest: MANIFEST_DIGEST,
+      planReceiptDigest: "a".repeat(64),
+      admissionReceiptDigest: "b".repeat(64),
+      existingLaneStateDigest: "c".repeat(64),
+      admittedReportDigest: ADMITTED_REPORT_DIGEST,
+      preservationReceiptDigest: "d".repeat(64),
+    },
+    cloudAuthority: authority,
+    acquiredAt: EXPIRED_AT,
+    heartbeatAt: EXPIRED_AT,
+    expiresAt: EXPIRED_AT,
+  };
+}
+
+function adapterFor({
+  lane = preservedLane(),
+  actor = { id: 1, login: "owner" },
+  status = statusResult(),
+  recoverAuthority = ({ recoveryEvidenceDigest }) => recoveryResult(recoveryEvidenceDigest),
+  persistReviewProjection = () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
+} = {}) {
+  return createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => lane,
+    readAuthenticatedOwner: () => actor,
+    readCloudStatus: () => status,
+    recoverAuthority,
+    persistReviewProjection,
+  });
+}
+
+function reclaim(adapter, overrides = {}) {
+  return continueExpiredReviewLaneAuthority({
+    transition: "reclaim",
+    branch: "agent/legacy-device/legacy-authority-evaluator",
+    sessionId: "legacy-session",
+    successorSessionId: "legacy-session",
+    successorDeviceId: "legacy-device",
+    ...overrides,
+  }, { adapter });
+}
+
+test("reclaim atomically recovers the exact dormant reviewed claim", async () => {
+  const events = [];
+  const adapter = adapterFor({
+    recoverAuthority: ({ request, lane, predecessor, status, recoveryEvidenceDigest }) => {
+      events.push(["recover", request.transition, predecessor.claimId]);
+      assert.equal(lane.authority.claimId, predecessor.claimId);
+      assert.equal(status.ledgerDigest, STATUS_LEDGER_DIGEST);
+      assert.match(recoveryEvidenceDigest, /^[0-9a-f]{64}$/u);
+      return recoveryResult(recoveryEvidenceDigest);
     },
     persistReviewProjection: ({ authority }) => {
       events.push(["persist", authority.claimId]);
@@ -201,261 +340,529 @@ test("reclaim restores live authority for the exact preserved review lane", asyn
     },
   });
 
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "reclaim",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
+  const result = await reclaim(adapter);
 
   assert.equal(result.schema, CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA);
   assert.equal(result.outcome, "reclaimed-live");
   assert.equal(result.projectionUpdated, true);
   assert.equal(result.predecessorClaimId, PREDECESSOR_CLAIM_ID);
-  assert.equal(result.successorClaimId, SUCCESSOR_CLAIM_ID);
-  assert.equal(result.successorLeaseEpoch, 2);
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorLeaseEpoch, 1);
+  assert.equal(result.successorTransitionCounter, 5);
   assert.deepEqual(events, [
-    ["claim", "reclaim", PREDECESSOR_CLAIM_ID],
-    ["ready", "legacy-session", "legacy-device"],
-    ["persist", SUCCESSOR_CLAIM_ID],
+    ["recover", "reclaim", PREDECESSOR_CLAIM_ID],
+    ["persist", PREDECESSOR_CLAIM_ID],
   ]);
-  assert.equal(result.receipts.length, 3);
-  assert.equal(result.receipts[1].kind, "continuation");
+  assert.equal(result.receipts[1].payload.recoveryReceiptDigest, RECOVERY_RECEIPT_DIGEST);
+  assert.equal(result.receipts[1].payload.verificationReceiptDigest, VERIFICATION_RECEIPT_DIGEST);
+  assert.equal(result.receipts[1].payload.recoveryEvidenceDigest, expectedRecoveryEvidenceDigest());
 });
 
-test("reclaim preserves the predecessor base and reviewed head for successor claims", async () => {
-  let observed = null;
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane(),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: ({ lane }) => {
-      observed = {
-        baseSha: lane.baseSha,
-        headSha: lane.headSha,
-        predecessorClaimId: lane.authority.claimId,
-      };
-      return claimResult();
+test("reclaim replays local projection after the exact cloud recovery already completed", async () => {
+  let recovered = false;
+  let persisted = false;
+  const replayedClaim = predecessorClaim({
+    state: "reviewed",
+    transitionCounter: 5,
+    fenceRevision: RECOVERED_CLAIM_DIGEST,
+    transitionDigest: RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    expiresAt: RECOVERED_EXPIRES_AT,
+    recovery: {
+      evidenceDigest: expectedRecoveryEvidenceDigest(),
+      recoveredAt: RECOVERED_AT,
     },
-    bindAndReviewReady: () => ({
-      authority: successorAuthority(),
-      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-    }),
-    persistReviewProjection: () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
   });
-
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "reclaim",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
-
-  assert.equal(result.outcome, "reclaimed-live");
-  assert.deepEqual(observed, {
-    baseSha: BASE_SHA,
-    headSha: REVIEW_SHA,
-    predecessorClaimId: PREDECESSOR_CLAIM_ID,
-  });
-});
-
-test("retain returns a validated retained-legacy outcome without mutation", async () => {
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane(),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: () => {
-      throw new Error("retain must not claim");
-    },
-    bindAndReviewReady: () => {
-      throw new Error("retain must not bind");
+  const result = await reclaim(adapterFor({
+    status: statusResult([replayedClaim]),
+    recoverAuthority: ({ predecessor, recoveryEvidenceDigest }) => {
+      recovered = true;
+      assert.equal(predecessor.state, "reviewed");
+      assert.equal(predecessor.transitionCounter, 5);
+      assert.equal(predecessor.recovery.evidenceDigest, recoveryEvidenceDigest);
+      return recoveryResult(recoveryEvidenceDigest);
     },
     persistReviewProjection: () => {
-      throw new Error("retain must not persist");
+      persisted = true;
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  }));
+
+  assert.equal(result.outcome, "reclaimed-live");
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorTransitionCounter, 5);
+  assert.equal(recovered, true);
+  assert.equal(persisted, true);
+});
+
+test("reclaim returns an exact replay after cloud and local projections already completed", async () => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const authority = recoveredAuthority({
+    recovery: {
+      evidenceDigest: recoveryEvidenceDigest,
+      recoveredAt: RECOVERED_AT,
+    },
+  });
+  const original = preservedLane();
+  const lane = preservedLane({
+    lease: { ...original.lease, cloudAuthority: authority },
+    authority,
+    remoteLease: {
+      ...original.remoteLease,
+      cloudAuthority: authority,
+    },
+  });
+  const completedClaim = predecessorClaim({
+    state: "reviewed",
+    transitionCounter: 5,
+    fenceRevision: RECOVERED_CLAIM_DIGEST,
+    transitionDigest: RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    expiresAt: RECOVERED_EXPIRES_AT,
+    recovery: authority.recovery,
+  });
+  let recovered = false;
+  let persisted = false;
+
+  const result = await reclaim(adapterFor({
+    lane,
+    status: statusResult([completedClaim]),
+    recoverAuthority: () => {
+      recovered = true;
+      throw new Error("completed replay must not mutate cloud authority");
+    },
+    persistReviewProjection: () => {
+      persisted = true;
+      throw new Error("completed replay must not rewrite its projection");
+    },
+  }));
+
+  assert.equal(result.outcome, "reclaimed-live-replay");
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorTransitionCounter, 5);
+  assert.equal(result.projectionUpdated, false);
+  assert.equal(result.receipts[0].receiptDigest, recoveryEvidenceDigest);
+  assert.equal(result.receipts[1].kind, "projection-replay");
+  assert.equal(result.receipts[1].payload.recoveryReceiptDigest, RECOVERY_RECEIPT_DIGEST);
+  assert.equal(recovered, false);
+  assert.equal(persisted, false);
+});
+
+test("reclaim rejects recovered authority whose recovery evidence is not the preflight receipt", async () => {
+  await assert.rejects(
+    reclaim(adapterFor({
+      recoverAuthority: () => recoveryResult("0".repeat(64)),
+    })),
+    /outside the exact preserved claim/,
+  );
+});
+
+test("repository replay rejects mismatched cloud recovery evidence before verification", async () => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const replayedClaim = predecessorClaim({
+    state: "reviewed",
+    transitionCounter: 5,
+    fenceRevision: RECOVERED_CLAIM_DIGEST,
+    transitionDigest: RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    expiresAt: RECOVERED_EXPIRES_AT,
+    recovery: {
+      evidenceDigest: "0".repeat(64),
+      recoveredAt: RECOVERED_AT,
+    },
+  });
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    environment: {},
+    leaseStore: { release: () => { throw new Error("unexpected local release"); } },
+  });
+
+  await assert.rejects(
+    adapter.recoverAuthority({
+      request: {
+        transition: "reclaim",
+        ttlSeconds: 1800,
+        successorDeviceId: "legacy-device",
+        successorSessionId: "legacy-session",
+      },
+      lane: preservedLane(),
+      predecessor: replayedClaim,
+      status: statusResult([replayedClaim]),
+      recoveryEvidenceDigest,
+    }),
+    /replayed cloud claim recovery evidence did not match the controller preflight receipt/,
+  );
+});
+
+test("repository recovery joins omitted public fields from the exact post-CAS cloud claim", async () => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const fullClaim = fullRecoveredClaim(recoveryEvidenceDigest);
+  const actions = [];
+  let listCalls = 0;
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    environment: {},
+    leaseStore: {},
+    createCloudAdapter: () => ({
+      listClaims: async request => {
+        listCalls += 1;
+        assert.deepEqual(request, { targetRepository: "example/repo" });
+        return [fullClaim];
+      },
+    }),
+    invokeCloudAction: input => {
+      actions.push(input.action);
+      return publicRecoveryCloudResult("continue");
+    },
+    invokeCloudVerifier: () => {
+      actions.push("verify");
+      return publicRecoveryCloudResult("verify");
     },
   });
 
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "retain",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
+  const result = await adapter.recoverAuthority({
+    request: {
+      transition: "reclaim",
+      ttlSeconds: 1800,
+      successorDeviceId: "legacy-device",
+      successorSessionId: "legacy-session",
+    },
+    lane: preservedLane(),
+    predecessor: predecessorClaim(),
+    status: statusResult(),
+    recoveryEvidenceDigest,
+  });
+
+  assert.deepEqual(actions, ["continue", "verify"]);
+  assert.equal(listCalls, 2);
+  assert.deepEqual(result.authority.recovery, fullClaim.recovery);
+  assert.equal(result.authority.deviceId, "legacy-device");
+  assert.equal(result.authority.sessionId, "legacy-session");
+});
+
+test("repository status joins exact recovery evidence from the owner-enriched cloud claim", async () => {
+  const recovery = {
+    evidenceDigest: expectedRecoveryEvidenceDigest(),
+    recoveredAt: RECOVERED_AT,
+  };
+  const projectedClaim = predecessorClaim({
+    state: "reviewed",
+    transitionCounter: 5,
+    fenceRevision: RECOVERED_CLAIM_DIGEST,
+    transitionDigest: RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    expiresAt: RECOVERED_EXPIRES_AT,
+  });
+  delete projectedClaim.deviceId;
+  delete projectedClaim.sessionId;
+  const status = statusResult([projectedClaim]);
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
     sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
+    leaseStore: {},
+    createCloudAdapter: ({ ledgerRepository }) => {
+      assert.equal(ledgerRepository, "example/ledger");
+      return {
+        execute: async (action, request) => {
+          assert.equal(action, "status");
+          assert.deepEqual(request, { targetRepository: "example/repo" });
+          return status;
+        },
+        listClaims: async request => {
+          assert.deepEqual(request, { targetRepository: "example/repo" });
+          return [{
+            ...projectedClaim,
+            ledgerRevision: RECOVERED_LEDGER_DIGEST,
+            deviceId: LEGACY_DEVICE_ID,
+            sessionId: LEGACY_SESSION_ID,
+            recovery,
+          }];
+        },
+      };
+    },
+  });
+
+  const enriched = await adapter.readCloudStatus({
+    ledgerRepository: "example/ledger",
+    targetRepository: "example/repo",
+  });
+
+  assert.deepEqual(enriched.claims[0].recovery, recovery);
+  assert.equal(enriched.claims[0].deviceId, LEGACY_DEVICE_ID);
+  assert.equal(enriched.claims[0].sessionId, LEGACY_SESSION_ID);
+});
+
+test("projection rejects a stale no-op pull-request marker before local lease release", () => {
+  const sourceLease = admittedWriterLease();
+  const staleBody = updateWriterLeasePullRequestBody("", sourceLease);
+  const lane = preservedLane({
+    lease: sourceLease,
+    authority: sourceLease.cloudAuthority,
+    remoteLease: sourceLease,
+    pullRequest: {
+      ...preservedLane().pullRequest,
+      body: staleBody,
+    },
+  });
+  const authority = recoveryResult(expectedRecoveryEvidenceDigest()).authority;
+  let edited = false;
+  let released = false;
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    environment: {},
+    now: () => new Date(PROJECTION_TIMESTAMP),
+    leaseStore: {
+      release: () => {
+        released = true;
+        return sourceLease;
+      },
+    },
+    run: (command, args) => {
+      assert.equal(command, "gh");
+      assert.deepEqual(args.slice(0, 3), ["pr", "edit", lane.pullRequest.url]);
+      edited = true;
+    },
+    ghText: () => JSON.stringify({
+      url: lane.pullRequest.url,
+      state: "OPEN",
+      isDraft: false,
+      headRefName: lane.branch,
+      headRefOid: REVIEW_SHA,
+      headRepository: { nameWithOwner: "example/repo" },
+      baseRefName: "main",
+      body: staleBody,
+    }),
+  });
+
+  assert.throws(
+    () => adapter.persistReviewProjection({ lane, authority }),
+    /Updated pull request body did not preserve the exact review-ready projection/,
+  );
+  assert.equal(edited, true);
+  assert.equal(released, false);
+});
+
+test("projection refuses a concurrently changed pull-request marker before remote write", () => {
+  const sourceLease = admittedWriterLease();
+  const concurrentLease = {
+    ...sourceLease,
+    heartbeatAt: "2026-08-03T08:37:23.000Z",
+  };
+  const concurrentBody = updateWriterLeasePullRequestBody("", concurrentLease);
+  const lane = preservedLane({
+    lease: sourceLease,
+    authority: sourceLease.cloudAuthority,
+    remoteLease: sourceLease,
+    pullRequest: {
+      ...preservedLane().pullRequest,
+      body: updateWriterLeasePullRequestBody("", sourceLease),
+    },
+  });
+  let edited = false;
+  let released = false;
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    environment: {},
+    now: () => new Date(PROJECTION_TIMESTAMP),
+    leaseStore: {
+      release: () => {
+        released = true;
+        return sourceLease;
+      },
+    },
+    run: () => { edited = true; },
+    ghText: () => JSON.stringify({
+      url: lane.pullRequest.url,
+      state: "OPEN",
+      isDraft: false,
+      headRefName: lane.branch,
+      headRefOid: REVIEW_SHA,
+      headRepository: { nameWithOwner: "example/repo" },
+      baseRefName: "main",
+      body: concurrentBody,
+    }),
+  });
+
+  assert.throws(
+    () => adapter.persistReviewProjection({
+      lane,
+      authority: recoveryResult(expectedRecoveryEvidenceDigest()).authority,
+    }),
+    /owner marker changed after recovery preflight/u,
+  );
+  assert.equal(edited, false);
+  assert.equal(released, false);
+});
+
+test("retain validates the exact dormant predecessor without cloud mutation", async () => {
+  let mutated = false;
+  const result = await reclaim(adapterFor({
+    recoverAuthority: () => {
+      mutated = true;
+      return recoveryResult(expectedRecoveryEvidenceDigest());
+    },
+  }), { transition: "retain" });
 
   assert.equal(result.outcome, "retained-legacy");
   assert.equal(result.receipts.length, 1);
+  assert.equal(mutated, false);
 });
 
-test("reclaim accepts a preserved review lane whose PR head only moved by protected-main refresh", async () => {
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane({
+test("reclaim accepts an exact protected-main refresh while preserving reviewed identity", async () => {
+  const lane = preservedLane({
+    refreshedHeadSha: REFRESHED_SHA,
+    remoteHeadSha: REFRESHED_SHA,
+    protectedMainRefresh: {
+      schema: "agentic-protected-main-refresh/v1",
+      deliveredHeadSha: REVIEW_SHA,
       refreshedHeadSha: REFRESHED_SHA,
-      remoteHeadSha: REFRESHED_SHA,
-      protectedMainRefresh: {
-        schema: "agentic-protected-main-refresh/v1",
-        deliveredHeadSha: REVIEW_SHA,
-        refreshedHeadSha: REFRESHED_SHA,
-        mainParentSha: REFRESH_MAIN_PARENT_SHA,
-      },
-      pullRequest: {
-        url: "https://github.com/example/repo/pull/238",
-        state: "OPEN",
-        isDraft: false,
-        headRefName: "agent/legacy-device/legacy-authority-evaluator",
-        headRefOid: REFRESHED_SHA,
-        baseRefName: "main",
-        body: "<lease-marker>",
-        authorLogin: "owner",
-      },
-    }),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: ({ lane }) => {
-      assert.equal(lane.headSha, REVIEW_SHA);
-      assert.equal(lane.refreshedHeadSha, REFRESHED_SHA);
-      assert.equal(lane.protectedMainRefresh?.refreshedHeadSha, REFRESHED_SHA);
-      return claimResult();
+      mainParentSha: "f".repeat(40),
     },
-    bindAndReviewReady: () => ({
-      authority: successorAuthority(),
-      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-    }),
-    persistReviewProjection: () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
+    pullRequest: {
+      ...preservedLane().pullRequest,
+      headRefOid: REFRESHED_SHA,
+    },
   });
-
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "reclaim",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
+  let observedReviewedHead = null;
+  const result = await reclaim(adapterFor({
+    lane,
+    recoverAuthority: ({ lane: recoveredLane, recoveryEvidenceDigest }) => {
+      observedReviewedHead = recoveredLane.headSha;
+      return recoveryResult(recoveryEvidenceDigest);
+    },
+  }));
 
   assert.equal(result.outcome, "reclaimed-live");
+  assert.equal(observedReviewedHead, REVIEW_SHA);
   assert.equal(result.reviewedHeadSha, REVIEW_SHA);
 });
 
-test("handoff creates a live successor without rewriting the local projection", async () => {
+test("handoff recovers the same claim for a distinct owner without rewriting local projection", async () => {
   let persisted = false;
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane(),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: () => claimResult(),
-    bindAndReviewReady: () => ({
-      authority: successorAuthority({
+  const adapter = adapterFor({
+    recoverAuthority: ({ recoveryEvidenceDigest }) => recoveryResult(
+      recoveryEvidenceDigest,
+      recoveredAuthority({
         deviceId: "new-device",
         sessionId: "new-session",
       }),
-      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-    }),
+    ),
     persistReviewProjection: () => {
       persisted = true;
       return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
     },
   });
-
-  const result = await continueExpiredReviewLaneAuthority({
+  const result = await reclaim(adapter, {
     transition: "handoff",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
     successorSessionId: "new-session",
     successorDeviceId: "new-device",
-  }, { adapter });
-
-  assert.equal(result.outcome, "handed-off-live");
-  assert.equal(result.projectionUpdated, false);
-  assert.equal(persisted, false);
-  assert.equal(result.receipts.length, 2);
-});
-
-test("exact-head drift blocks before any mutation", async () => {
-  let mutated = false;
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane({ remoteHeadSha: "9".repeat(40) }),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: () => {
-      mutated = true;
-      return claimResult();
-    },
-    bindAndReviewReady: () => {
-      mutated = true;
-      return { authority: successorAuthority(), verification: { receiptDigest: REVIEW_RECEIPT_DIGEST } };
-    },
-    persistReviewProjection: () => {
-      mutated = true;
-      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
-    },
   });
 
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "reclaim",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
+  assert.equal(result.outcome, "handed-off-live");
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorLeaseEpoch, 1);
+  assert.equal(result.projectionUpdated, false);
+  assert.equal(persisted, false);
+});
+
+test("exact-head drift blocks before recovery", async () => {
+  let mutated = false;
+  const result = await reclaim(adapterFor({
+    lane: preservedLane({ remoteHeadSha: "9".repeat(40) }),
+    recoverAuthority: () => {
+      mutated = true;
+      return recoveryResult(expectedRecoveryEvidenceDigest());
+    },
+  }));
 
   assert.equal(result.outcome, "blocked");
   assert.equal(result.blockingFindings.some(item => item.type === "exact-head-drift"), true);
   assert.equal(mutated, false);
 });
 
-test("a competing live overlap blocks reclaim", async () => {
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane(),
-    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult([{
-      claimId: "a".repeat(64),
-      declaredWriteScope: [
-        "path:scripts/legacy-authority-evaluator.mjs",
-        "semantic:other",
-      ],
-    }]),
-    claimSuccessor: () => claimResult(),
-    bindAndReviewReady: () => ({
-      authority: successorAuthority(),
-      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-    }),
-    persistReviewProjection: () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
-  });
-
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "reclaim",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
+test("a different overlapping live claim blocks recovery", async () => {
+  const result = await reclaim(adapterFor({
+    status: statusResult([
+      predecessorClaim(),
+      {
+        claimId: "a".repeat(64),
+        declaredWriteScope: ["path:scripts/legacy-authority-evaluator.mjs"],
+        reviewRequestId: "github-pull-request:PR_other",
+      },
+    ]),
+  }));
 
   assert.equal(result.outcome, "blocked");
   assert.equal(result.blockingFindings.some(item => item.type === "competing-live-claim"), true);
 });
 
-test("owner mismatch blocks reclaim", async () => {
-  const adapter = createCloudAuthorityHandoffControllerAdapter({
-    readPreservedReviewLane: () => preservedLane(),
-    readAuthenticatedOwner: () => ({ id: 1, login: "someone-else" }),
-    readCloudStatus: () => statusResult(),
-    claimSuccessor: () => claimResult(),
-    bindAndReviewReady: () => ({
-      authority: successorAuthority(),
-      verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-    }),
-    persistReviewProjection: () => ({ receiptDigest: PROJECTION_RECEIPT_DIGEST }),
-  });
+test("the exact predecessor review identity is allowed but another matching review identity blocks", async () => {
+  const allowed = await reclaim(adapterFor());
+  assert.equal(allowed.outcome, "reclaimed-live");
 
-  const result = await continueExpiredReviewLaneAuthority({
-    transition: "reclaim",
-    branch: "agent/legacy-device/legacy-authority-evaluator",
-    sessionId: "legacy-session",
-    successorSessionId: "legacy-session",
-    successorDeviceId: "legacy-device",
-  }, { adapter });
+  const blocked = await reclaim(adapterFor({
+    status: statusResult([
+      predecessorClaim(),
+      {
+        claimId: "a".repeat(64),
+        declaredWriteScope: ["semantic:disjoint"],
+        reviewRequestId: REVIEW_REQUEST_ID,
+      },
+    ]),
+  }));
+  assert.equal(blocked.outcome, "blocked");
+  assert.equal(blocked.blockingFindings.some(item => item.type === "review-request-already-live"), true);
+});
+
+test("missing, duplicate, live, or drifted predecessor evidence blocks without recovery", async t => {
+  const cases = [
+    ["missing", [], "preserved-claim-not-unique"],
+    ["duplicate", [predecessorClaim(), predecessorClaim()], "preserved-claim-not-unique"],
+    ["live", [predecessorClaim({ state: "current", writeAuthority: true })], "preserved-claim-drift"],
+    ["fence drift", [predecessorClaim({ fenceRevision: "0".repeat(64) })], "preserved-claim-drift"],
+  ];
+  for (const [name, claims, expectedFinding] of cases) {
+    await t.test(name, async () => {
+      let mutated = false;
+      const result = await reclaim(adapterFor({
+        status: statusResult(claims),
+        recoverAuthority: ({ recoveryEvidenceDigest }) => {
+          mutated = true;
+          return recoveryResult(recoveryEvidenceDigest);
+        },
+      }));
+      assert.equal(result.outcome, "blocked");
+      assert.equal(result.blockingFindings.some(item => item.type === expectedFinding), true);
+      assert.equal(mutated, false);
+    });
+  }
+});
+
+test("recovery cannot replace the preserved claim or advance its lease epoch", async () => {
+  for (const authority of [
+    recoveredAuthority({ claimId: "a".repeat(64) }),
+    recoveredAuthority({ leaseEpoch: 2 }),
+  ]) {
+    await assert.rejects(
+      reclaim(adapterFor({
+        recoverAuthority: ({ recoveryEvidenceDigest }) => recoveryResult(
+          recoveryEvidenceDigest,
+          authority,
+        ),
+      })),
+      /outside the exact preserved claim/,
+    );
+  }
+});
+
+test("owner mismatch blocks recovery", async () => {
+  const result = await reclaim(adapterFor({
+    actor: { id: 1, login: "someone-else" },
+  }));
 
   assert.equal(result.outcome, "blocked");
   assert.equal(result.blockingFindings.some(item => item.type === "authenticated-owner-mismatch"), true);

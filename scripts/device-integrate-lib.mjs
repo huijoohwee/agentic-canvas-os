@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import { createDeviceDeliveryEvidence } from "./device-delivery-evidence.mjs";
 import { authorizeDeliveryAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import {
   appendProtectedMainRefresh,
@@ -15,6 +16,14 @@ import {
 export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+const DELIVERY_EVIDENCE_FIELDS = Object.freeze([
+  "dependencyClosureDigest",
+  "namedChecksDigest",
+  "handoffEvidenceDigest",
+  "operatorDecisionDigest",
+  "integrationIntentDigest",
+]);
 
 export function integrateSession({
   invocationPath,
@@ -37,6 +46,7 @@ export function integrateSession({
   now = () => new Date(),
   sleep = defaultSleep,
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
+  buildDeliveryEvidence = createDeviceDeliveryEvidence,
   authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
   log = console.log,
 }) {
@@ -106,8 +116,20 @@ export function integrateSession({
       }
     }
     if (reviewReadyDelivery) {
+      const reviewedCloudAuthority = deliveryCloudAuthority;
+      const deliveryEvidence = requireDeliveryEvidenceDigests(buildDeliveryEvidence({
+        operation: "integrate",
+        branch,
+        headSha: lease.reviewHeadSha,
+        headTreeSha: gitText(["rev-parse", `${lease.reviewHeadSha}^{tree}`]).trim(),
+        pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+        deviceId: lease.device,
+        sessionId,
+        manifest: lease.admission,
+        authority: reviewedCloudAuthority,
+      }));
       const authorized = authorizeCloudDelivery({
-        authority: lease.cloudAuthority,
+        authority: reviewedCloudAuthority,
         manifest: lease.admission,
         branch,
         headSha: lease.reviewHeadSha,
@@ -118,8 +140,19 @@ export function integrateSession({
           ? deliveryCloudAuthority?.reviewRequestId || null
           : null,
         allowProtectedMainRefresh: Boolean(protectedMainAuthorizationRefresh),
+        dependencyClosureDigest: deliveryEvidence.dependencyClosureDigest,
+        namedChecksDigest: deliveryEvidence.namedChecksDigest,
+        handoffEvidenceDigest: deliveryEvidence.handoffEvidenceDigest,
+        operatorDecisionDigest: deliveryEvidence.operatorDecisionDigest,
+        integrationIntentDigest: deliveryEvidence.integrationIntentDigest,
         deviceId: lease.device,
         sessionId,
+      });
+      requireAuthorizedIntegrationEvidence({
+        authority: authorized.authority,
+        reviewedAuthority: reviewedCloudAuthority,
+        headSha: lease.reviewHeadSha,
+        deliveryEvidence,
       });
       deliveryCloudAuthority = authorized.authority;
       const reviewedDeliveryHeadSha = lease.reviewHeadSha;
@@ -243,6 +276,44 @@ export function integrateSession({
       : `Integrated ${branch} at canonical main ${mainSha.slice(0, 12)}; runtime reconciliation was explicitly disabled.`,
   );
   return result;
+}
+
+function requireDeliveryEvidenceDigests(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Integration delivery evidence builder did not return an evidence object.");
+  }
+  return Object.freeze(Object.fromEntries(DELIVERY_EVIDENCE_FIELDS.map(field => {
+    const digest = value[field];
+    if (!DIGEST_PATTERN.test(String(digest || ""))) {
+      throw new Error(`Integration delivery evidence ${field} must be a lowercase SHA-256 digest.`);
+    }
+    return [field, digest];
+  })));
+}
+
+function requireAuthorizedIntegrationEvidence({
+  authority,
+  reviewedAuthority,
+  headSha,
+  deliveryEvidence,
+}) {
+  const integration = authority?.integration;
+  const matches = (
+    authority?.state === "delivery_authorized"
+    && integration
+    && integration.candidateRevision === headSha
+    && integration.reviewRequestId === reviewedAuthority?.reviewRequestId
+    && integration.focusedEvidenceDigest === reviewedAuthority?.focusedEvidenceDigest
+    && DELIVERY_EVIDENCE_FIELDS.every(
+      field => integration[field] === deliveryEvidence[field],
+    )
+    && DIGEST_PATTERN.test(String(authority.integrationReceiptDigest || ""))
+  );
+  if (!matches) {
+    throw new Error(
+      "Integration delivery authorization does not record the exact derived delivery evidence and receipt.",
+    );
+  }
 }
 
 function finalizeIntegrationLease({ leaseStore, branch, completion }) {

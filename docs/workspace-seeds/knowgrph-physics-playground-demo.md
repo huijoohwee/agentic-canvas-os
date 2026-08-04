@@ -10,7 +10,7 @@ kgCanvasRenderMode: "3d"
 kgCanvas3dMode: "xr"
 kgFloatingPanelOpen: true
 kgFloatingPanelView: "motionControl"
-kgBottomPanelOpen: false
+kgBottomPanelOpen: true
 kgBottomPanelTab: "timeline"
 kgDocumentSemanticMode: "document"
 kgFrontmatterModeEnabled: true
@@ -35,6 +35,30 @@ run_ready_demo:
   document_presentation: "workspace-playground"
   auto_start: true
   external_dependencies: []
+xr_authoring_edited_media_delivery:
+  scope: "xr-authoring-edited-media-delivery"
+  status: "runtime-ready"
+  prd: "/docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md"
+  runtime_owner: "canonical Timeline/video-sequence editor and browser-native export owner"
+  feature_integration_revision: "a3ddfef7cc55c38385520173273abd66010e9747"
+  integration_receipt_schema: "agentic-device-integration-result/v1"
+  runtime_readiness_schema: "agentic-local-runtime-readiness/v1"
+  runtime_evidence_digest: "fc13db3e3184f69e42985dbec441bab163f52ba2d7e75b959e17194304f8fb23"
+  verified_at: "2026-08-04T09:29:19.377Z"
+  runtime_steps:
+    - "open the existing Timeline"
+    - "edit through the source-backed owner or typed external-command seam"
+    - "export browser-native edited media"
+    - "decode metadata and bounded playback"
+    - "release object URL and media/session state"
+  external_dependencies: []
+  no_deployment: true
+  deploy_boundary: "Dev-only"
+  blocked_claims:
+    - "live depth model and quality"
+    - "named physical-device XR/camera behavior"
+    - "Production availability"
+    - "deployment authority"
 home_apex:
   source_authority: "/docs/workspace-seeds/knowgrph-physics-playground-demo.md"
   scene_authority: "the authored XR Physics Playground world in this document"
@@ -220,6 +244,25 @@ flow:
         role: "validation"
         state: "runtime-ready"
         output: "Verify deterministic stepping, controller switching, camera follow, keyboard input, and gamepad input."
+    - id: "xr_timeline_editor"
+      type: "XrMediaAuthoring"
+      label: "Native Timeline Edit"
+      pos: {x: 440, y: 300}
+      properties:
+        role: "edited-media authoring"
+        scope: "xr-authoring-edited-media-delivery"
+        state: "runtime-ready"
+        prd: "/docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md"
+        output: "Open the canonical Timeline, edit the source-backed sequence, and export browser-native media."
+    - id: "xr_edited_media_delivery"
+      type: "XrMediaDelivery"
+      label: "Edited-media Runtime Gate"
+      pos: {x: 880, y: 300}
+      properties:
+        role: "edited-media delivery validation"
+        state: "runtime-ready"
+        schema: "agentic-local-runtime-readiness/v1"
+        output: "Decode exported metadata, verify bounded playback, then release object URL and session state."
   connections:
     - from: "xr_demo_entry"
       to: "xr_ball_controller"
@@ -233,6 +276,12 @@ flow:
     - from: "xr_rocket_controller"
       to: "xr_runtime_gate"
       label: "validate"
+    - from: "xr_demo_entry"
+      to: "xr_timeline_editor"
+      label: "open Timeline"
+    - from: "xr_timeline_editor"
+      to: "xr_edited_media_delivery"
+      label: "export and decode"
 ---
 
 # Native XR Physics Playground
@@ -242,6 +291,12 @@ This Source Files document activates a playable XR physics playground inside the
 ## Run
 
 From the repository root, run `npm run dev`. In Knowgrph, open **Explorer → Source Files → docs → workspace-seeds → knowgrph-physics-playground-demo.md**. Applying this document starts the Beach Ball, playground, camera, and bottom vehicle switcher automatically while Explorer remains available.
+
+## Native edited-media runtime demo
+
+Applying this seed also opens the existing bottom-panel **Timeline** for the PRD at `/docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md`. Use the source-backed Timeline owner or its typed external-command seam to open the sequence, edit it, export browser-native edited media, decode the exported metadata for bounded playback, and then release the object URL and media/session state. The scoped `xr-authoring-edited-media-delivery` path has no external runtime dependency.
+
+Protected integration revision `a3ddfef7cc55c38385520173273abd66010e9747` produced an `agentic-device-integration-result/v1` receipt backed by an `agentic-local-runtime-readiness/v1` canonical runtime receipt. This proves only the edited-media delivery slice. Live depth model/quality, named physical-device XR/camera behavior, Production availability, and deployment authority remain blocked; this seed is Dev-only and performs no deployment.
 
 ## Controls
 

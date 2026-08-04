@@ -31,6 +31,35 @@ This contract never cleans, parks, stashes, adopts, edits, or otherwise repairs
 another lane. It does not weaken `worktree:lifecycle:check`; that global owner
 keeps its existing status and cleanup rules.
 
+## Branch Sync Model
+
+`agentic-canvas-os` treats canonical and task branches as different surfaces
+with different authority:
+
+| Surface | Operational meaning |
+|---|---|
+| `origin/main` | The published canonical frontier and remote SSOT for this repository. |
+| local `main` | The local canonical sync lane. Keep it clean, use it to fetch and fast-forward, and restore it to exact parity after temporary-lane work lands. |
+| `agent/...` or other temporary task branch | The normal authoring lane for scoped implementation, verification, review, and recovery. |
+
+The default workflow is:
+
+1. sync local `main` to the exact current `origin/main` revision;
+2. admit one isolated task lane from that clean canonical base;
+3. author, verify, and review from the temporary lane rather than from local
+   `main`;
+4. integrate the verified lane through the protected path that updates
+   `origin/main`;
+5. pull the new canonical frontier back into local `main`; and
+6. delete the temporary lane only after canonical parity and merge proof are
+   both established.
+
+If authoring begins on local `main` by accident, preserve the exact authored
+bytes by moving them into one temporary lane before the next ordinary commit,
+review, or publication step. Local `main` may transiently be ahead, behind, or
+diverged while that rescue occurs, but the cleanup target remains exact parity
+with `origin/main`.
+
 ## Owners
 
 | Concern | Owner |

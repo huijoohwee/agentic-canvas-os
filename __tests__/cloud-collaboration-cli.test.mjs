@@ -18,8 +18,7 @@ test("CLI and workflow expose exactly four provider-neutral root mutations", asy
     assert.match(workflow, new RegExp(`^\\s+- ${operation}$`, "mu"));
     assert.match(workflow, new RegExp(`inputs\\.action == '${operation}'`, "u"));
   }
-  assert.match(workflow, /AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST/u);
-  assert.match(workflow, /AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST/u);
+  assert.match(workflow, /AGENTIC_CLOUD_REQUEST_JSON/u);
   for (const legacy of ["bind", "heartbeat", "review-ready", "delivery-authorize", "handoff", "release"]) {
     assert.doesNotMatch(workflow, new RegExp(`^\\s+- ${legacy}$`, "mu"));
   }

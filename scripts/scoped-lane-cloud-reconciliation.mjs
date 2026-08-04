@@ -81,19 +81,12 @@ export function reconcileCloudAuthorityProjection({
       || claim.reviewRequestId !== authority.reviewRequestId
     )
   );
-  const logicalIdentity = {
-    actorId: claim.actorId,
-    canonicalBaseRevision: claim.canonicalBaseRevision,
-    leaseEpoch: claim.leaseEpoch,
-    repositoryId: claim.repositoryId,
-    workItemId: claim.workItemId,
-    writeSetDigest: claim.writeSetDigest,
-  };
-  const identityDigest = digestValue(claim.claimIdentitySchema.endsWith("/v1") ? {
-    ...logicalIdentity,
-    deviceId: pseudonymousIdentifier("device", requiredText(authority.deviceId, "authority deviceId")),
-    sessionId: pseudonymousIdentifier("session", requiredText(authority.sessionId, "authority sessionId")),
-  } : logicalIdentity);
+  const identityDigest = claimIdentityDigest({
+    claim,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    deviceId: authority.deviceId,
+    sessionId: authority.sessionId,
+  });
   if (
     identityDigest !== claim.claimId
     || claim.canonicalBaseRevision !== authority.canonicalBaseSha
@@ -196,7 +189,10 @@ export function normalizeCurrentClaimInventory({
   );
   const claims = inventoryResult.claims.map(source => {
     const entrySchema = requiredEntrySchema(source.entrySchema);
-    requiredClaimIdentitySchema(source.claimIdentitySchema, entrySchema);
+    const claimIdentitySchema = requiredClaimIdentitySchema(
+      source.claimIdentitySchema,
+      entrySchema,
+    );
     if (entrySchema.endsWith("/v2")) {
       requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
     } else if (source.operationReceiptDigest) {
@@ -245,6 +241,17 @@ export function normalizeCurrentClaimInventory({
       || (!["parked", "waiting-successor"].includes(core.state) && Date.parse(core.expiresAt) <= Date.parse(evaluationTime))
     ) {
       throw new Error(`Cloud inventory claim ${core.claimId} is stale or has an invalid write-set digest.`);
+    }
+    if (
+      core.claimId === authority.claimId
+      && claimIdentityDigest({
+        claim: core,
+        claimIdentitySchema,
+        deviceId: authority.deviceId,
+        sessionId: authority.sessionId,
+      }) !== core.claimId
+    ) {
+      throw new Error("Cloud inventory candidate claim identity does not match its immutable provenance.");
     }
     return Object.freeze({ ...core, recordDigest: digestValue(core) });
   }).sort((left, right) => left.claimId.localeCompare(right.claimId));
@@ -544,4 +551,31 @@ function requiredClaimIdentitySchema(value, entrySchema) {
     throw new Error("Historical cloud entries cannot declare a newer claim identity schema.");
   }
   return schema;
+}
+
+function claimIdentityDigest({
+  claim,
+  claimIdentitySchema,
+  deviceId,
+  sessionId,
+}) {
+  const logicalIdentity = {
+    actorId: claim.actorId,
+    canonicalBaseRevision: claim.canonicalBaseRevision,
+    leaseEpoch: claim.leaseEpoch,
+    repositoryId: claim.repositoryId,
+    workItemId: claim.workItemId,
+    writeSetDigest: claim.writeSetDigest,
+  };
+  return digestValue(claimIdentitySchema.endsWith("/v1") ? {
+    ...logicalIdentity,
+    deviceId: pseudonymousIdentifier(
+      "device",
+      requiredText(deviceId, "authority deviceId"),
+    ),
+    sessionId: pseudonymousIdentifier(
+      "session",
+      requiredText(sessionId, "authority sessionId"),
+    ),
+  } : logicalIdentity);
 }

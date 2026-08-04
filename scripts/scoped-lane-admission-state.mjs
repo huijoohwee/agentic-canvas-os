@@ -3,7 +3,6 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
-import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import {
   LANE_ADMISSION_REPORT_SCHEMA,
@@ -283,18 +282,11 @@ export function assertAdmissionMutationAuthority({
   const cloudExpiry = Date.parse(cloudAuthority?.expiresAt);
   const candidate = remoteAuthorityVerification?.inventory?.claims
     ?.find(claim => claim.claimId === cloudAuthority?.claimId);
-  const identityComplete = candidate && Array.isArray(candidate.declaredWriteScope) && [candidate.actorId, candidate.canonicalBaseRevision, cloudAuthority?.deviceId, candidate.leaseEpoch, candidate.repositoryId, cloudAuthority?.sessionId, candidate.workItemId, candidate.writeSetDigest].every(value => value !== undefined && value !== null);
-  const currentClaimMatches = Boolean(identityComplete && cloudAuthority && (
-    candidate.claimId === digestValue({
-      actorId: candidate.actorId,
-      canonicalBaseRevision: candidate.canonicalBaseRevision,
-      deviceId: pseudonymousIdentifier("device", cloudAuthority.deviceId),
-      leaseEpoch: candidate.leaseEpoch,
-      repositoryId: candidate.repositoryId,
-      sessionId: pseudonymousIdentifier("session", cloudAuthority.sessionId),
-      workItemId: candidate.workItemId,
-      writeSetDigest: candidate.writeSetDigest,
-    })
+  const currentClaimMatches = Boolean(
+    candidate
+    && cloudAuthority
+    && Array.isArray(candidate.declaredWriteScope)
+    && candidate.claimId === cloudAuthority.claimId
     && candidate.state === "active"
     && cloudAuthority.state === candidate.state
     && candidate.expiresAt === cloudAuthority.expiresAt
@@ -312,7 +304,7 @@ export function assertAdmissionMutationAuthority({
     && candidate.canonicalBaseRevision === lease?.baseSha
     && candidate.laneRevision === cloudAuthority.laneRevision
     && candidate.laneRevision === lease?.fenceSha
-  ));
+  );
   if (
     lease?.schema !== "agentic-writer-lease/v2"
     || lease.status !== "active"

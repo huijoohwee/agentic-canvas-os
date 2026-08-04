@@ -93,33 +93,10 @@ on:
         description: SHA-256 focused review evidence digest
         required: false
         type: string
-      dependency_closure_digest:
-        description: SHA-256 dependency-closure evidence digest
+      request_json:
+        description: Additional operation request fields as a JSON object
         required: false
-        type: string
-      named_checks_digest:
-        description: SHA-256 named-check evidence digest
-        required: false
-        type: string
-      handoff_evidence_digest:
-        description: SHA-256 preserved handoff evidence digest
-        required: false
-        type: string
-      recovery_evidence_digest:
-        description: SHA-256 dormant-recovery evidence digest
-        required: false
-        type: string
-      operator_decision_digest:
-        description: SHA-256 explicit operator delivery decision digest
-        required: false
-        type: string
-      integration_intent_digest:
-        description: SHA-256 protected-integration intent digest
-        required: false
-        type: string
-      integration_receipt_digest:
-        description: SHA-256 integration receipt digest
-        required: false
+        default: "{}"
         type: string
       retire_reason:
         description: Retirement reason (integrated, abandoned, handoff, or superseded)
@@ -240,11 +217,7 @@ jobs:
           AGENTIC_CLOUD_LEASE_EPOCH: ${{ inputs.lease_epoch }}
           AGENTIC_CLOUD_PREDECESSOR_CLAIM_ID: ${{ inputs.predecessor_claim_id }}
           AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST: ${{ inputs.focused_evidence_digest }}
-          AGENTIC_CLOUD_DEPENDENCY_CLOSURE_DIGEST: ${{ inputs.dependency_closure_digest }}
-          AGENTIC_CLOUD_NAMED_CHECKS_DIGEST: ${{ inputs.named_checks_digest }}
-          AGENTIC_CLOUD_HANDOFF_EVIDENCE_DIGEST: ${{ inputs.handoff_evidence_digest }}
-          AGENTIC_CLOUD_RECOVERY_EVIDENCE_DIGEST: ${{ inputs.recovery_evidence_digest }}
-          AGENTIC_CLOUD_INTEGRATION_RECEIPT_DIGEST: ${{ inputs.integration_receipt_digest }}
+          AGENTIC_CLOUD_REQUEST_JSON: ${{ inputs.request_json }}
           AGENTIC_CLOUD_RETIRE_REASON: ${{ inputs.retire_reason }}
           AGENTIC_CLOUD_REQUIRED_STATE: ${{ inputs.required_state }}
         run: node scripts/cloud-collaboration.mjs dispatch --json
@@ -300,13 +273,7 @@ jobs:
           AGENTIC_CLOUD_LEASE_EPOCH: ${{ inputs.lease_epoch }}
           AGENTIC_CLOUD_PREDECESSOR_CLAIM_ID: ${{ inputs.predecessor_claim_id }}
           AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST: ${{ inputs.focused_evidence_digest }}
-          AGENTIC_CLOUD_DEPENDENCY_CLOSURE_DIGEST: ${{ inputs.dependency_closure_digest }}
-          AGENTIC_CLOUD_NAMED_CHECKS_DIGEST: ${{ inputs.named_checks_digest }}
-          AGENTIC_CLOUD_HANDOFF_EVIDENCE_DIGEST: ${{ inputs.handoff_evidence_digest }}
-          AGENTIC_CLOUD_RECOVERY_EVIDENCE_DIGEST: ${{ inputs.recovery_evidence_digest }}
-          AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST: ${{ inputs.operator_decision_digest }}
-          AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST: ${{ inputs.integration_intent_digest }}
-          AGENTIC_CLOUD_INTEGRATION_RECEIPT_DIGEST: ${{ inputs.integration_receipt_digest }}
+          AGENTIC_CLOUD_REQUEST_JSON: ${{ inputs.request_json }}
           AGENTIC_CLOUD_RETIRE_REASON: ${{ inputs.retire_reason }}
           AGENTIC_CLOUD_CANDIDATE_REVISION: ${{ inputs.candidate_revision }}
           AGENTIC_CLOUD_FINAL_REVISION: ${{ inputs.final_revision }}

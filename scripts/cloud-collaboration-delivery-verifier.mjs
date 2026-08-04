@@ -57,7 +57,7 @@ export function verifyCloudDeliveryAuthority({
     pullRequestNumber: subject.pullRequestNumber,
     branch: subject.branch,
     headSha: subject.headSha,
-    requireStatus: "delivery_authorized",
+    requireStatus: "integrated-preserved",
     ...(subject.canonicalBaseSha
       ? { canonicalBaseSha: subject.canonicalBaseSha }
       : {}),
@@ -332,8 +332,8 @@ function requireReadyVerification({ result, subject, authority }) {
   }
   requireDigest(claim.claimId, "verified claim ID");
   const state = String(claim.status || claim.state || "").replaceAll("-", "_");
-  if (state !== "delivery_authorized") {
-    throw new Error("Cloud collaboration claim is not delivery-authorized.");
+  if (state !== "integrated_preserved") {
+    throw new Error("Cloud collaboration claim is not integrated-preserved.");
   }
   const repository = claim.repository?.fullName
     || claim.repository?.full_name

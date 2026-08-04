@@ -1,48 +1,22 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
-import {
-  LANE_CLOUD_AUTHORITY_SCHEMA,
-  markOperationDerivedCloudVerification,
-  normalizeCloudAuthority,
-} from "./scoped-lane-admission-lib.mjs";
-import {
-  normalizeCurrentClaimInventory,
-  reconcileCloudAuthorityProjection,
+import { markOperationDerivedCloudVerification } from "./scoped-lane-admission-lib.mjs";
+import { normalizeBoundAuthority, normalizeCurrentClaimInventory, positiveInteger,
+  projectRootState, reconcileCloudAuthorityProjection, requireAuthority, requiredDigest,
+  requiredInstant, requiredSha, requiredText, requireReadyResult, rootStateForProjection,
 } from "./scoped-lane-cloud-reconciliation.mjs";
-const CLOUD_SCRIPT = fileURLToPath(
-  new URL("./cloud-collaboration.mjs", import.meta.url),
-);
-const CLOUD_RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
-const SHA_PATTERN = /^[0-9a-f]{40}$/u;
-const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
-
-export function attachCloudHeartbeatMachineEvidence(response, { lease, result } = {}) {
-  if (!result?.mutationAuthorityReceipt) return response;
-  if (!lease?.admission || !lease.cloudAuthority) {
-    throw new Error("Cloud heartbeat lost its joined admission projection.");
-  }
-  response.admission = lease.admission;
-  response.cloudAuthority = lease.cloudAuthority;
-  response.mutationAuthorityReceipt = result.mutationAuthorityReceipt;
-  return response;
-}
-
-export function verifyAdmissionCloudAuthority({
-  authority,
-  manifest,
-  canonicalBaseSha,
-  environment = process.env,
-  inspect = invokeRepositoryCloudAction,
-  invoke = invokeRepositoryCloudVerifier,
-} = {}) {
+const CLOUD_SCRIPT = fileURLToPath(new URL("./cloud-collaboration.mjs", import.meta.url));
+export { attachCloudHeartbeatMachineEvidence, cloudAuthorityFromResult } from "./scoped-lane-cloud-reconciliation.mjs";
+export function verifyAdmissionCloudAuthority({ authority, manifest, canonicalBaseSha,
+  environment = process.env, inspect = invokeRepositoryCloudAction,
+  invoke = invokeRepositoryCloudVerifier } = {}) {
   return verifyCloudAuthorityState({
     authority, manifest, canonicalBaseSha, environment, inspect, invoke,
     expectedState: "active",
   });
 }
-
 export function verifyReviewReadyAdmissionCloudAuthority({
   authority, manifest,
   headSha = authority?.laneRevision,
@@ -62,7 +36,6 @@ export function verifyReviewReadyAdmissionCloudAuthority({
     environment, inspect, invoke,
   });
 }
-
 export function verifyDeliveryAuthorizedCloudAuthority({
   authority, manifest,
   headSha = authority?.laneRevision,
@@ -82,7 +55,6 @@ export function verifyDeliveryAuthorizedCloudAuthority({
     environment, inspect, invoke,
   });
 }
-
 export function reconcileAdmissionCloudAuthority({
   authority, manifest, branch, headSha, pullRequestNumber,
   allowPriorLaneRevision = false,
@@ -116,7 +88,6 @@ export function reconcileAdmissionCloudAuthority({
     environment, inspect, invoke: verify,
   });
 }
-
 function verifyCloudAuthorityState({
   authority, manifest, canonicalBaseSha, expectedState,
   expectedLaneRevision = authority?.laneRevision,
@@ -143,7 +114,7 @@ function verifyCloudAuthorityState({
       leaseEpoch: authority.leaseEpoch,
       expectedFenceRevision: authority.claimDigest,
       expectedLedgerRevision: authority.ledgerRevision,
-      requiredState: expectedState,
+      requiredState: rootStateForProjection(expectedState),
       ...(authority.reviewRequestId
         ? { reviewRequestId: authority.reviewRequestId }
         : {}),
@@ -208,7 +179,6 @@ function verifyCloudAuthorityState({
     verification: markOperationDerivedCloudVerification(verification),
   };
 }
-
 export function bindAdmissionCloudAuthority({
   authority,
   manifest,
@@ -247,9 +217,9 @@ export function bindAdmissionCloudAuthority({
   let result;
   try {
     result = invoke({
-      action: "bind",
+      action: "continue",
       ledgerRepository: authority.ledgerRepository,
-      request,
+      request: { ...request, mode: "projection" },
       environment,
     });
   } catch (originalError) {
@@ -294,7 +264,6 @@ export function bindAdmissionCloudAuthority({
   });
   return returnVerification ? verified : verified.authority;
 }
-
 export function heartbeatAdmissionCloudAuthority({
   authority,
   deviceId,
@@ -307,7 +276,7 @@ export function heartbeatAdmissionCloudAuthority({
 } = {}) {
   requireAuthority(authority);
   const result = invoke({
-    action: "heartbeat",
+    action: "continue",
     ledgerRepository: authority.ledgerRepository,
     request: {
       targetRepository: authority.targetRepository,
@@ -316,6 +285,7 @@ export function heartbeatAdmissionCloudAuthority({
       claimId: authority.claimId,
       expectedFenceRevision: authority.claimDigest,
       expectedTransitionCounter: authority.transitionCounter,
+      mode: "renewal",
       ttlSeconds: positiveInteger(ttlSeconds, "ttlSeconds"),
       idempotencyKey: [
         "device-heartbeat",
@@ -358,7 +328,6 @@ export function heartbeatAdmissionCloudAuthority({
     invoke: verify,
   });
 }
-
 export function reviewReadyAdmissionCloudAuthority({
   authority,
   manifest,
@@ -439,9 +408,9 @@ export function reviewReadyAdmissionCloudAuthority({
   let result;
   try {
     result = invoke({
-      action: "review-ready",
+      action: "continue",
       ledgerRepository: active.ledgerRepository,
-      request,
+      request: { ...request, mode: "review" },
       environment,
     });
   } catch (originalError) {
@@ -475,7 +444,6 @@ export function reviewReadyAdmissionCloudAuthority({
     environment, inspect, invoke: verify,
   });
 }
-
 export function authorizeDeliveryAdmissionCloudAuthority({
   authority,
   manifest,
@@ -484,6 +452,11 @@ export function authorizeDeliveryAdmissionCloudAuthority({
   pullRequestNumber = null,
   reviewRequestId = null,
   allowProtectedMainRefresh = false,
+  dependencyClosureDigest,
+  namedChecksDigest,
+  handoffEvidenceDigest,
+  operatorDecisionDigest,
+  integrationIntentDigest,
   deviceId,
   sessionId,
   environment = process.env,
@@ -491,6 +464,13 @@ export function authorizeDeliveryAdmissionCloudAuthority({
   inspect = invokeRepositoryCloudAction,
   verify = invokeRepositoryCloudVerifier,
 } = {}) {
+  const expectedIntegration = Object.freeze({
+    dependencyClosureDigest: requiredDigest(dependencyClosureDigest, "dependencyClosureDigest"),
+    namedChecksDigest: requiredDigest(namedChecksDigest, "namedChecksDigest"),
+    handoffEvidenceDigest: requiredDigest(handoffEvidenceDigest, "handoffEvidenceDigest"),
+    operatorDecisionDigest: requiredDigest(operatorDecisionDigest, "operatorDecisionDigest"),
+    integrationIntentDigest: requiredDigest(integrationIntentDigest, "integrationIntentDigest"),
+  });
   const resolvedReviewRequestId = reviewRequestId || authority?.reviewRequestId || null;
   const reconciledPullRequestNumber = allowProtectedMainRefresh
     ? null
@@ -503,7 +483,19 @@ export function authorizeDeliveryAdmissionCloudAuthority({
     pullRequestNumber: reconciledPullRequestNumber,
     environment, inspect, verify,
   });
-  if (current.authority.state === "delivery_authorized") return current;
+  if (current.authority.state === "delivery_authorized") {
+    const recorded = current.authority.integration;
+    const evidenceMatches = recorded
+      && recorded.candidateRevision === headSha
+      && recorded.reviewRequestId === resolvedReviewRequestId
+      && recorded.focusedEvidenceDigest === current.authority.focusedEvidenceDigest
+      && Object.entries(expectedIntegration).every(([key, value]) => recorded[key] === value);
+    if (!evidenceMatches || !current.authority.integrationReceiptDigest
+      || (authority.integrationReceiptDigest && authority.integrationReceiptDigest !== current.authority.integrationReceiptDigest)) {
+      throw new Error("Existing delivery authorization does not join the exact integration evidence and receipt.");
+    }
+    return current;
+  }
   if (current.authority.state !== "review_ready") {
     throw new Error("Delivery authorization requires the exact review-ready cloud claim.");
   }
@@ -512,27 +504,10 @@ export function authorizeDeliveryAdmissionCloudAuthority({
     reviewed.focusedEvidenceDigest,
     "focusedEvidenceDigest",
   );
-  const operatorDecisionDigest = digestValue({
-    schema: "agentic-protected-integration-operator-decision/v1",
-    action: "delivery-authorize",
-    branch: requiredText(branch, "branch"),
-    headSha: requiredSha(headSha, "headSha"),
-    ...(allowProtectedMainRefresh
-      ? { reviewRequestId: requiredText(resolvedReviewRequestId, "reviewRequestId") }
-      : { pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber") }),
-    sessionId: requiredText(sessionId, "sessionId"),
-  });
-  const integrationIntentDigest = digestValue({
-    schema: "agentic-protected-integration-intent/v1",
-    target: "protected-canonical-source",
-    canonicalBaseSha: reviewed.canonicalBaseSha,
-    claimId: reviewed.claimId,
-    reviewRequestId: reviewed.reviewRequestId,
-    laneRevision: reviewed.laneRevision,
-    writeSetDigest: reviewed.writeSetDigest,
-  });
+  const explicitOperatorDecision = expectedIntegration.operatorDecisionDigest;
+  const explicitIntegrationIntent = expectedIntegration.integrationIntentDigest;
   const result = invoke({
-    action: "delivery-authorize",
+    action: "integrate",
     ledgerRepository: reviewed.ledgerRepository,
     request: {
       targetRepository: reviewed.targetRepository,
@@ -544,15 +519,18 @@ export function authorizeDeliveryAdmissionCloudAuthority({
       expectedFenceRevision: reviewed.claimDigest,
       expectedTransitionCounter: reviewed.transitionCounter,
       focusedEvidenceDigest,
-      operatorDecisionDigest,
-      integrationIntentDigest,
+      dependencyClosureDigest: expectedIntegration.dependencyClosureDigest,
+      namedChecksDigest: expectedIntegration.namedChecksDigest,
+      handoffEvidenceDigest: expectedIntegration.handoffEvidenceDigest,
+      operatorDecisionDigest: explicitOperatorDecision,
+      integrationIntentDigest: explicitIntegrationIntent,
       ...(allowProtectedMainRefresh
         ? { reviewRequestId: requiredText(resolvedReviewRequestId, "reviewRequestId") }
         : { pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber") }),
       idempotencyKey: [
         "device-delivery-authorize", reviewed.claimId,
         reviewed.transitionCounter, reviewed.claimDigest, headSha,
-        operatorDecisionDigest, integrationIntentDigest,
+        ...Object.values(expectedIntegration),
       ].join(":"),
     },
     environment,
@@ -569,15 +547,14 @@ export function authorizeDeliveryAdmissionCloudAuthority({
       result, authority: reviewed, manifest, deviceId, sessionId,
       focusedEvidenceDigest,
     }),
-    operatorDecisionDigest,
-    integrationIntentDigest,
+    operatorDecisionDigest: explicitOperatorDecision,
+    integrationIntentDigest: explicitIntegrationIntent,
   });
   return verifyDeliveryAuthorizedCloudAuthority({
     authority: authorized, manifest, headSha, branch,
     focusedEvidenceDigest, environment, inspect, invoke: verify,
   });
 }
-
 export function invokeRepositoryCloudAction({
   action,
   ledgerRepository,
@@ -607,103 +584,6 @@ export function invokeRepositoryCloudAction({
   }
   return output;
 }
-
-export function cloudAuthorityFromResult(source, options) {
-  return normalizeCloudAuthority(source, options);
-}
-
-function normalizeBoundAuthority({
-  result, authority, manifest,
-  deviceId = authority.deviceId,
-  sessionId = authority.sessionId,
-  focusedEvidenceDigest = authority.focusedEvidenceDigest || null,
-}) {
-  return Object.freeze({
-    schema: LANE_CLOUD_AUTHORITY_SCHEMA,
-    provider: "github",
-    ledgerRepository: authority.ledgerRepository,
-    targetRepository: authority.targetRepository,
-    claimId: requiredDigest(result.claim.claimId, "claimId"),
-    claimDigest: requiredDigest(result.claimDigest, "claimDigest"),
-    ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
-    claimLedgerRevision: requiredDigest(
-      result.claim.transitionDigest,
-      "claimLedgerRevision",
-    ),
-    canonicalBaseSha: requiredSha(
-      result.claim.canonicalBaseRevision,
-      "canonicalBaseRevision",
-    ),
-    laneRevision: requiredSha(result.claim.laneRevision, "laneRevision"),
-    cloudDeclaredWriteScope: normalizeWriteSet(
-      result.claim.declaredWriteScope,
-    ),
-    writeSetDigest: requiredDigest(
-      result.claim.writeSetDigest,
-      "writeSetDigest",
-    ),
-    deviceId: requiredText(deviceId, "deviceId"),
-    sessionId: requiredText(sessionId, "sessionId"),
-    reviewRequestId: result.claim.reviewRequestId
-      ? requiredText(result.claim.reviewRequestId, "reviewRequestId")
-      : null,
-    leaseEpoch: positiveInteger(result.claim.leaseEpoch, "leaseEpoch"),
-    transitionCounter: positiveInteger(
-      result.claim.transitionCounter,
-      "transitionCounter",
-    ),
-    state: String(result.claim.state || "").replaceAll("-", "_"),
-    expiresAt: requiredInstant(result.claim.expiresAt, "expiresAt"),
-    ...(focusedEvidenceDigest ? {
-      focusedEvidenceDigest: requiredDigest(
-        focusedEvidenceDigest,
-        "focusedEvidenceDigest",
-      ),
-    } : {}),
-    manifestDigest: manifest.manifestDigest || digestValue({
-      declaredWriteSet: manifest.declaredWriteSet,
-      writeSetDigest: manifest.writeSetDigest,
-    }),
-  });
-}
-
-function requireReadyResult(result, {
-  authority, manifest, canonicalBaseSha, expectedState,
-  expectedLaneRevision = authority.laneRevision,
-}) {
-  if (
-    !result
-    || result.schema !== CLOUD_RESULT_SCHEMA
-    || result.ok !== true
-    || !["verify", "bind", "heartbeat", "review-ready", "delivery-authorize"].includes(result.action)
-  ) {
-    throw new Error("Cloud collaboration did not return a successful authoritative result.");
-  }
-  const claim = result.claim;
-  if (
-    claim?.claimId !== authority.claimId
-    || claim.canonicalBaseRevision !== canonicalBaseSha
-    || claim.laneRevision !== expectedLaneRevision
-    || String(claim.state || "").replaceAll("-", "_") !== expectedState
-    || claim.writeSetDigest !== manifest.writeSetDigest
-    || JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
-      !== JSON.stringify(manifest.declaredWriteSet)
-    || !Array.isArray(result.findings || [])
-    || (result.findings || []).length > 0
-  ) {
-    throw new Error("Cloud collaboration result drifted from the scoped admission subject.");
-  }
-  requiredSha(result.ledgerRevision, "ledgerRevision");
-  requiredDigest(result.claimDigest, "claimDigest");
-  if (Date.parse(claim.expiresAt) <= Date.now()) {
-    throw new Error(`Cloud collaboration claim expired at ${claim.expiresAt}.`);
-  }
-}
-
-function requireAuthority(value) {
-  if (!value || value.schema !== LANE_CLOUD_AUTHORITY_SCHEMA)
-    throw new Error("A normalized lane cloud authority projection is required.");
-}
 function parseResult(stdout) {
   const line = String(stdout || "").trim().split(/\r?\n/u).reverse()
     .find(candidate => candidate.trim().startsWith("{"));
@@ -715,31 +595,4 @@ function publicMessage(value) {
     .replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]")
     .replace(/\/(?:Users|home)\/[^\s"']+/gu, "[local-path]")
     .slice(0, 500);
-}
-function requiredText(value, label) {
-  const normalized = String(value || "").trim();
-  if (!normalized) throw new Error(`${label} is required.`);
-  return normalized;
-}
-function requiredSha(value, label) {
-  const normalized = requiredText(value, label);
-  if (!SHA_PATTERN.test(normalized)) throw new Error(`${label} must be a Git SHA.`);
-  return normalized;
-}
-function requiredDigest(value, label) {
-  const normalized = requiredText(value, label);
-  if (!DIGEST_PATTERN.test(normalized)) throw new Error(`${label} must be a SHA-256 digest.`);
-  return normalized;
-}
-function requiredInstant(value, label) {
-  const normalized = requiredText(value, label);
-  const milliseconds = Date.parse(normalized);
-  if (!Number.isFinite(milliseconds)) throw new Error(`${label} must be an ISO instant.`);
-  return new Date(milliseconds).toISOString();
-}
-function positiveInteger(value, label) {
-  const normalized = Number(value);
-  if (!Number.isInteger(normalized) || normalized <= 0)
-    throw new Error(`${label} must be a positive integer.`);
-  return normalized;
 }

@@ -16,11 +16,9 @@ on:
           - status
           - verify
           - claim
-          - heartbeat
-          - review-ready
-          - delivery-authorize
-          - handoff
-          - release
+          - continue
+          - integrate
+          - retire
       target_repository:
         description: Target owner/repository (required except for all-claim status)
         required: false
@@ -59,8 +57,8 @@ on:
         required: false
         default: 1800
         type: number
-      handoff_mode:
-        description: Handoff recipient mode (actor or open)
+      continue_mode:
+        description: Continuation mode (projection, renewal, review, preserve, recovery, or promote)
         required: false
         type: string
       claim_id:
@@ -75,6 +73,10 @@ on:
         description: Expected ancestor ledger commit SHA
         required: false
         type: string
+      expected_ledger_digest:
+        description: Exact monotonic ledger digest for compare-and-swap
+        required: false
+        type: string
       expected_transition_counter:
         description: Expected current transition counter
         required: false
@@ -87,12 +89,24 @@ on:
         description: Exact predecessor claim for takeover or handoff
         required: false
         type: string
-      evidence_digest:
-        description: SHA-256 lifecycle evidence digest
-        required: false
-        type: string
       focused_evidence_digest:
         description: SHA-256 focused review evidence digest
+        required: false
+        type: string
+      dependency_closure_digest:
+        description: SHA-256 dependency-closure evidence digest
+        required: false
+        type: string
+      named_checks_digest:
+        description: SHA-256 named-check evidence digest
+        required: false
+        type: string
+      handoff_evidence_digest:
+        description: SHA-256 preserved handoff evidence digest
+        required: false
+        type: string
+      recovery_evidence_digest:
+        description: SHA-256 dormant-recovery evidence digest
         required: false
         type: string
       operator_decision_digest:
@@ -107,12 +121,20 @@ on:
         description: SHA-256 integration receipt digest
         required: false
         type: string
-      release_reason:
-        description: Release reason (integrated, abandoned, or handoff)
+      retire_reason:
+        description: Retirement reason (integrated, abandoned, handoff, or superseded)
         required: false
         type: string
-      next_actor_id:
-        description: Exact next actor ID for actor handoff
+      candidate_revision:
+        description: Exact immutable candidate revision
+        required: false
+        type: string
+      final_revision:
+        description: Exact preserved final revision
+        required: false
+        type: string
+      bytes_digest:
+        description: SHA-256 preserved bytes digest
         required: false
         type: string
       required_state:
@@ -156,6 +178,7 @@ jobs:
     runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:
+      actions: read
       contents: write
       pull-requests: read
     steps:
@@ -208,18 +231,21 @@ jobs:
           AGENTIC_CLOUD_PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
           AGENTIC_CLOUD_WRITE_SCOPES_JSON: ${{ inputs.write_scopes_json }}
           AGENTIC_CLOUD_TTL_SECONDS: ${{ inputs.ttl_seconds }}
-          AGENTIC_CLOUD_HANDOFF_MODE: ${{ inputs.handoff_mode }}
+          AGENTIC_CLOUD_CONTINUE_MODE: ${{ inputs.continue_mode }}
           AGENTIC_CLOUD_CLAIM_ID: ${{ inputs.claim_id }}
           AGENTIC_CLOUD_EXPECTED_CLAIM_DIGEST: ${{ inputs.expected_claim_digest }}
           AGENTIC_CLOUD_EXPECTED_LEDGER_REVISION: ${{ inputs.expected_ledger_revision }}
+          AGENTIC_CLOUD_EXPECTED_LEDGER_DIGEST: ${{ inputs.expected_ledger_digest }}
           AGENTIC_CLOUD_EXPECTED_TRANSITION_COUNTER: ${{ inputs.expected_transition_counter }}
           AGENTIC_CLOUD_LEASE_EPOCH: ${{ inputs.lease_epoch }}
           AGENTIC_CLOUD_PREDECESSOR_CLAIM_ID: ${{ inputs.predecessor_claim_id }}
-          AGENTIC_CLOUD_EVIDENCE_DIGEST: ${{ inputs.evidence_digest }}
           AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST: ${{ inputs.focused_evidence_digest }}
+          AGENTIC_CLOUD_DEPENDENCY_CLOSURE_DIGEST: ${{ inputs.dependency_closure_digest }}
+          AGENTIC_CLOUD_NAMED_CHECKS_DIGEST: ${{ inputs.named_checks_digest }}
+          AGENTIC_CLOUD_HANDOFF_EVIDENCE_DIGEST: ${{ inputs.handoff_evidence_digest }}
+          AGENTIC_CLOUD_RECOVERY_EVIDENCE_DIGEST: ${{ inputs.recovery_evidence_digest }}
           AGENTIC_CLOUD_INTEGRATION_RECEIPT_DIGEST: ${{ inputs.integration_receipt_digest }}
-          AGENTIC_CLOUD_RELEASE_REASON: ${{ inputs.release_reason }}
-          AGENTIC_CLOUD_NEXT_ACTOR_ID: ${{ inputs.next_actor_id }}
+          AGENTIC_CLOUD_RETIRE_REASON: ${{ inputs.retire_reason }}
           AGENTIC_CLOUD_REQUIRED_STATE: ${{ inputs.required_state }}
         run: node scripts/cloud-collaboration.mjs dispatch --json
 
@@ -230,16 +256,15 @@ jobs:
         github.event_name == 'workflow_dispatch' &&
         (
           inputs.action == 'claim' ||
-          inputs.action == 'heartbeat' ||
-          inputs.action == 'review-ready' ||
-          inputs.action == 'delivery-authorize' ||
-          inputs.action == 'handoff' ||
-          inputs.action == 'release'
+          inputs.action == 'continue' ||
+          inputs.action == 'integrate' ||
+          inputs.action == 'retire'
         )
       }}
     runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:
+      actions: read
       contents: write
       pull-requests: read
     steps:
@@ -266,19 +291,25 @@ jobs:
           AGENTIC_CLOUD_PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
           AGENTIC_CLOUD_WRITE_SCOPES_JSON: ${{ inputs.write_scopes_json }}
           AGENTIC_CLOUD_TTL_SECONDS: ${{ inputs.ttl_seconds }}
-          AGENTIC_CLOUD_HANDOFF_MODE: ${{ inputs.handoff_mode }}
+          AGENTIC_CLOUD_CONTINUE_MODE: ${{ inputs.continue_mode }}
           AGENTIC_CLOUD_CLAIM_ID: ${{ inputs.claim_id }}
           AGENTIC_CLOUD_EXPECTED_CLAIM_DIGEST: ${{ inputs.expected_claim_digest }}
           AGENTIC_CLOUD_EXPECTED_LEDGER_REVISION: ${{ inputs.expected_ledger_revision }}
+          AGENTIC_CLOUD_EXPECTED_LEDGER_DIGEST: ${{ inputs.expected_ledger_digest }}
           AGENTIC_CLOUD_EXPECTED_TRANSITION_COUNTER: ${{ inputs.expected_transition_counter }}
           AGENTIC_CLOUD_LEASE_EPOCH: ${{ inputs.lease_epoch }}
           AGENTIC_CLOUD_PREDECESSOR_CLAIM_ID: ${{ inputs.predecessor_claim_id }}
-          AGENTIC_CLOUD_EVIDENCE_DIGEST: ${{ inputs.evidence_digest }}
           AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST: ${{ inputs.focused_evidence_digest }}
+          AGENTIC_CLOUD_DEPENDENCY_CLOSURE_DIGEST: ${{ inputs.dependency_closure_digest }}
+          AGENTIC_CLOUD_NAMED_CHECKS_DIGEST: ${{ inputs.named_checks_digest }}
+          AGENTIC_CLOUD_HANDOFF_EVIDENCE_DIGEST: ${{ inputs.handoff_evidence_digest }}
+          AGENTIC_CLOUD_RECOVERY_EVIDENCE_DIGEST: ${{ inputs.recovery_evidence_digest }}
           AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST: ${{ inputs.operator_decision_digest }}
           AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST: ${{ inputs.integration_intent_digest }}
           AGENTIC_CLOUD_INTEGRATION_RECEIPT_DIGEST: ${{ inputs.integration_receipt_digest }}
-          AGENTIC_CLOUD_RELEASE_REASON: ${{ inputs.release_reason }}
-          AGENTIC_CLOUD_NEXT_ACTOR_ID: ${{ inputs.next_actor_id }}
+          AGENTIC_CLOUD_RETIRE_REASON: ${{ inputs.retire_reason }}
+          AGENTIC_CLOUD_CANDIDATE_REVISION: ${{ inputs.candidate_revision }}
+          AGENTIC_CLOUD_FINAL_REVISION: ${{ inputs.final_revision }}
+          AGENTIC_CLOUD_BYTES_DIGEST: ${{ inputs.bytes_digest }}
           AGENTIC_CLOUD_REQUIRED_STATE: ${{ inputs.required_state }}
         run: node scripts/cloud-collaboration.mjs dispatch --json

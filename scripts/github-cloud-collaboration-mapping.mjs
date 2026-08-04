@@ -1,4 +1,6 @@
-import { digestValue } from "./cloud-collaboration-contract.mjs";
+import { digestValue, listCurrentClaims } from "./cloud-collaboration-contract.mjs";
+
+export const CLOUD_RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const MAX_TTL_SECONDS = 86_400;
@@ -31,6 +33,7 @@ export function prepareMutationRequest({
   repository,
   pullRequest,
   evaluationTime,
+  fixedExpiresAt = null,
 }) {
   assertPullRequestProjection(input, pullRequest);
   const owner = contractActor(actor, input);
@@ -66,7 +69,8 @@ export function prepareMutationRequest({
       laneRevision: requiredText(laneRevision, "laneRevision"),
       leaseEpoch: boundedInteger(first(input.leaseEpoch, 1), "leaseEpoch", 1),
       predecessorClaimId: optionalDigest(input.predecessorClaimId, "predecessorClaimId"),
-      expiresAt: expiryFromServer(evaluationTime, input.ttlSeconds),
+      expiresAt: fixedExpiresAt || expiryFromServer(evaluationTime, input.ttlSeconds),
+      expectedLedgerDigest: input.expectedLedgerDigest ?? null,
       ...(input.claimId ? { claimId: requiredDigest(input.claimId, "claimId") } : {}),
     };
   }
@@ -83,77 +87,60 @@ export function prepareMutationRequest({
       "expectedTransitionCounter",
       1,
     ),
+    expectedLedgerDigest: requiredDigest(input.expectedLedgerDigest, "expectedLedgerDigest"),
   };
-  if (action === "bind") {
+  if (action === "continue") {
+    const mode = requiredText(input.mode, "mode");
     return {
       ...expected,
-      laneRevision: requiredText(
-        first(pullRequest?.headSha, input.laneRevision, input.headSha),
-        "laneRevision",
-      ),
-      reviewRequestId: optionalText(
-        first(pullRequest ? reviewRequestIdentity(pullRequest) : null, input.reviewRequestId),
-      ),
+      mode,
+      laneRevision: optionalText(first(pullRequest?.headSha, input.laneRevision, input.headSha)),
+      reviewRequestId: optionalText(first(
+        pullRequest ? reviewRequestIdentity(pullRequest) : null,
+        input.reviewRequestId,
+      )),
+      expiresAt: ["renewal", "recovery", "promote"].includes(mode)
+        ? fixedExpiresAt || expiryFromServer(evaluationTime, input.ttlSeconds)
+        : null,
+      focusedEvidenceDigest: optionalDigest(input.focusedEvidenceDigest, "focusedEvidenceDigest"),
+      handoffEvidenceDigest: optionalDigest(input.handoffEvidenceDigest, "handoffEvidenceDigest"),
+      recoveryEvidenceDigest: optionalDigest(input.recoveryEvidenceDigest, "recoveryEvidenceDigest"),
     };
   }
-  if (action === "heartbeat") {
+  if (action === "integrate") {
     return {
       ...expected,
-      expiresAt: expiryFromServer(evaluationTime, input.ttlSeconds),
-    };
-  }
-  if (action === "review-ready") {
-    return {
-      ...expected,
-      laneRevision: requiredText(
-        first(pullRequest?.headSha, input.laneRevision, input.headSha),
-        "laneRevision",
-      ),
-      reviewRequestId: requiredText(
-        first(pullRequest ? reviewRequestIdentity(pullRequest) : null, input.reviewRequestId),
-        "reviewRequestId",
-      ),
-      focusedEvidenceDigest: requiredDigest(
-        input.focusedEvidenceDigest,
-        "focusedEvidenceDigest",
-      ),
-    };
-  }
-  if (action === "delivery-authorize") {
-    return {
-      ...expected,
-      laneRevision: requiredText(
-        first(pullRequest?.headSha, input.laneRevision, input.headSha),
-        "laneRevision",
+      candidateRevision: requiredText(
+        first(pullRequest?.headSha, input.candidateRevision, input.laneRevision, input.headSha),
+        "candidateRevision",
       ),
       reviewRequestId: requiredText(
         first(pullRequest ? reviewRequestIdentity(pullRequest) : null, input.reviewRequestId),
         "reviewRequestId",
       ),
       focusedEvidenceDigest: requiredDigest(input.focusedEvidenceDigest, "focusedEvidenceDigest"),
+      dependencyClosureDigest: requiredDigest(input.dependencyClosureDigest, "dependencyClosureDigest"),
+      namedChecksDigest: requiredDigest(input.namedChecksDigest, "namedChecksDigest"),
+      handoffEvidenceDigest: requiredDigest(input.handoffEvidenceDigest, "handoffEvidenceDigest"),
       operatorDecisionDigest: requiredDigest(input.operatorDecisionDigest, "operatorDecisionDigest"),
       integrationIntentDigest: requiredDigest(input.integrationIntentDigest, "integrationIntentDigest"),
     };
   }
-  if (action === "handoff") {
-    const recipientMode = requiredText(
-      first(input.recipientMode, input.handoffMode),
-      "recipientMode",
-    );
+  if (action === "retire") {
     return {
       ...expected,
-      recipientMode,
-      nextActorId: recipientMode === "actor"
-        ? normalizeNextActor(input.nextActorId)
-        : null,
-      evidenceDigest: requiredDigest(input.evidenceDigest, "evidenceDigest"),
-    };
-  }
-  if (action === "release") {
-    return {
-      ...expected,
-      reason: requiredText(first(input.reason, input.releaseReason), "reason"),
-      evidenceDigest: requiredDigest(input.evidenceDigest, "evidenceDigest"),
+      reason: requiredText(input.reason, "reason"),
+      finalRevision: requiredText(
+        first(input.finalRevision, pullRequest?.headSha, input.laneRevision, input.headSha),
+        "finalRevision",
+      ),
+      reviewRequestId: optionalText(first(
+        pullRequest ? reviewRequestIdentity(pullRequest) : null,
+        input.reviewRequestId,
+      )),
+      bytesDigest: requiredDigest(input.bytesDigest, "bytesDigest"),
+      namedChecksDigest: requiredDigest(input.namedChecksDigest, "namedChecksDigest"),
+      handoffEvidenceDigest: requiredDigest(input.handoffEvidenceDigest, "handoffEvidenceDigest"),
       integrationReceiptDigest: optionalDigest(
         input.integrationReceiptDigest,
         "integrationReceiptDigest",
@@ -212,7 +199,10 @@ export function selectVerificationClaim(claims, request) {
 export function projectPublicClaim(claim) {
   return {
     claimId: claim.claimId,
+    entrySchema: claim.entrySchema,
     state: claim.state,
+    writeAuthority: claim.writeAuthority,
+    scopeReserved: claim.scopeReserved,
     actorId: claim.actorId,
     repositoryId: claim.repositoryId,
     workItemId: claim.workItemId,
@@ -224,9 +214,101 @@ export function projectPublicClaim(claim) {
     transitionCounter: claim.transitionCounter,
     heartbeatCounter: claim.heartbeatCounter,
     reviewRequestId: claim.reviewRequestId,
+    predecessorClaimId: claim.predecessorClaimId,
     expiresAt: claim.expiresAt,
     fenceRevision: claim.fenceRevision,
     transitionDigest: claim.ledgerRevision,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    integration: claim.integration ?? null,
+  };
+}
+
+export function createPublicResult({ action, transition, ledgerRevision, evaluationTime, attempts }) {
+  const claim = transition.claim || null;
+  const receipt = {
+    schema: "agentic-cloud-collaboration-github-receipt/v1",
+    action,
+    ledgerRevision,
+    ledgerDigest: transition.ledger.headDigest,
+    claimId: claim?.claimId || null,
+    claimDigest: transition.claimDigest || null,
+    contractReceiptDigest: transition.receipt?.receiptDigest || null,
+    sequence: transition.ledger.sequence,
+    evaluationTime,
+  };
+  return {
+    schema: CLOUD_RESULT_SCHEMA,
+    ok: true,
+    action,
+    status: claim?.state || "retired",
+    replayed: Boolean(transition.replayed),
+    attempts,
+    ledgerRevision,
+    claim: claim ? projectPublicClaim(claim) : null,
+    claimDigest: transition.claimDigest || null,
+    operationReceipt: transition.receipt || null,
+    receipt: { ...receipt, receiptDigest: digestValue(receipt) },
+  };
+}
+
+export function verificationResult({ verification, snapshot, evaluationTime, context }) {
+  const claimDigest = verification.claimDigest || verification.claim?.fenceRevision || null;
+  const receipt = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: verification.ok,
+    ledgerRevision: snapshot.revision,
+    ledgerDigest: snapshot.ledger.headDigest,
+    claimId: verification.claimId,
+    claimDigest,
+    contractReceiptDigest: verification.receiptDigest,
+    evaluationTime,
+    findings: verification.findings,
+  };
+  return {
+    schema: CLOUD_RESULT_SCHEMA,
+    ok: verification.ok,
+    action: "verify",
+    status: verification.ok ? "ready" : "blocked",
+    ledgerRevision: snapshot.revision,
+    claimDigest,
+    claim: verification.claim ? projectPublicClaim(verification.claim) : null,
+    ...(context.pullRequest ? {
+      subject: {
+        repository: context.repository.fullName,
+        pullRequestNumber: context.pullRequest.number,
+        branch: context.pullRequest.branch,
+        headSha: context.pullRequest.headSha,
+        canonicalBaseSha: context.pullRequest.baseSha,
+      },
+    } : {}),
+    findings: verification.findings,
+    receipt: { ...receipt, receiptDigest: digestValue(receipt) },
+  };
+}
+
+export function publicSnapshot(snapshot) {
+  const claims = listCurrentClaims(snapshot.ledger, snapshot.evaluationTime).map(projectPublicClaim);
+  return {
+    schema: CLOUD_RESULT_SCHEMA,
+    ok: true,
+    action: "status",
+    status: "ready",
+    ledgerRevision: snapshot.revision,
+    ledgerDigest: snapshot.ledger.headDigest,
+    sequence: snapshot.ledger.sequence,
+    claims,
+  };
+}
+
+export function emptyResult(action) {
+  return {
+    schema: CLOUD_RESULT_SCHEMA,
+    ok: action === "status",
+    action,
+    status: action === "status" ? "empty" : "blocked",
+    ledgerRevision: null,
+    claims: [],
   };
 }
 
@@ -254,9 +336,9 @@ function assertPullRequestProjection(input, pullRequest) {
   const allowProtectedMainRefresh = input.allowProtectedMainRefresh === true;
   const requiredState = normalizeRequiredState(first(input.requiredState, input.requireStatus));
   if (allowProtectedMainRefresh) {
-    if (requiredState !== "delivery-authorized") {
+    if (requiredState !== "integrated-preserved") {
       throw new Error(
-        "Protected-main refresh projection is limited to delivery-authorized verification.",
+        "Protected-main refresh projection is limited to integrated-preserved verification.",
       );
     }
     if (!first(input.claimId, input.reviewRequestId)) {
@@ -285,11 +367,6 @@ function assertPullRequestProjection(input, pullRequest) {
 
 function reviewRequestIdentity(pullRequest) {
   return `github-pull-request:${pullRequest.nodeId}`;
-}
-
-function normalizeNextActor(value) {
-  const text = requiredText(value, "nextActorId");
-  return text.startsWith("github-user:") ? text : `github-user:${text}`;
 }
 
 function normalizeRequiredState(value) {

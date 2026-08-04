@@ -79,7 +79,7 @@ test("configured delivery sends the exact repository, PR, branch, head, and fenc
       branch,
       headSha,
       canonicalBaseSha: baseSha,
-      requireStatus: "delivery_authorized",
+      requireStatus: "integrated-preserved",
       claimId,
       expectedClaimDigest: claimDigest,
       expectedLedgerRevision: ledgerRevision,
@@ -168,7 +168,7 @@ test("provider-neutral claims may carry their exact GitHub subject beside the cl
       subject: { repository, pullRequestNumber, branch, headSha },
       claim: {
         claimId,
-        state: "delivery-authorized",
+        state: "integrated-preserved",
         laneRevision: headSha,
       },
     }),
@@ -408,7 +408,7 @@ function readyResult(overrides = {}) {
     claimDigest: resultClaimDigest,
     claim: {
       claimId,
-      status: "delivery_authorized",
+      status: "integrated_preserved",
       repository: { fullName: overrides.repository || repository },
       pullRequest: {
         number: overrides.pullRequestNumber || pullRequestNumber,

@@ -303,14 +303,22 @@ test("documentation binds runtime readiness to immutable protected source proven
   assert.match(documentation, /\nstatus: "runtime-ready"\n/);
   assert.match(documentation, /\nruntime_readiness_policy: "fail-closed"\n/);
   assert.match(documentation, /\nruntime_readiness_finding: "runtime-readiness-unproven"\n/);
-  assert.match(documentation, /\nguideline_source_version: "1\.6\.0"\n/);
+  assert.match(documentation, /\nguideline_source_version: "1\.14\.0"\n/);
   assert.match(
     documentation,
-    /\nguideline_source_revision: "bc78529f6ab4ec29beb26f0b67d015aed24d08c1"\n/,
+    /\nguideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"\n/,
   );
   assert.match(
     documentation,
-    /\nguideline_source_digest: "d200775cf96c7cb6e7ae973dde8b03baca81ba7acaafadf365fa6ab2daa07195"\n/,
+    /\nguideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"\n/,
+  );
+  assert.match(
+    documentation,
+    /\nguideline_source_digest: "ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd"\n/,
+  );
+  assert.match(
+    documentation,
+    /\ngit_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5"\n/,
   );
   assert.doesNotMatch(documentation, /guideline_candidate_revision/);
   assert.match(

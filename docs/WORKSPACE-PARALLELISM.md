@@ -2,7 +2,7 @@
 title: "Agentic Canvas OS Workspace Parallelism Contract"
 graphId: "md:agentic-canvas-os-workspace-parallelism"
 doc_type: "Workspace Parallelism Contract"
-date: "2026-07-28"
+date: "2026-08-04"
 lang: "en-US"
 schema: "agentic-canvas-os-workspace-parallelism/v1"
 frontmatter_contract: "required"
@@ -12,6 +12,10 @@ publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloud
 runtime_scope: "workspace root containing multiple sibling repositories and their registered worktrees"
 runtime_claim: "lane isolation plus a fail-closed destructive-operation gate over existing Git worktree, lease, and lifecycle owners; no new repository manager"
 runtime_proof: "RUNTIME-PROOF.md"
+guideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"
+guideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"
+guideline_source_digest: "ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd"
+git_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5"
 owner_scripts:
   - "scripts/workspace-parallelism-lib.mjs"
   - "scripts/workspace-parallelism-guard.mjs"
@@ -39,7 +43,8 @@ do not have, plus one fail-closed gate.
 | Parallelism is the default | Concurrent sessions across distinct lanes are permitted and expected; serialization is never the safety mechanism. |
 | One lane, one session | A lane is one `repository` plus one `worktree` path. Exactly one session owns it at a time. |
 | One branch, one worktree | A branch is checked out in at most one worktree inside a repository. |
-| One scope, one session | Two sessions never claim the same semantic scope inside one repository. |
+| One current writer per overlap | Two claims whose normalized declared write sets overlap never hold current write authority at the same time. |
+| Unlimited disjoint concurrency | There is no global policy cap on pairwise-disjoint current authorities; input-size bounds are resource controls only. |
 | Destructive operations fail closed | Every operation in the forbidden catalog is denied unless the acting session owns a clean lane with a durable recovery reference. |
 | Uncommitted work is never collateral | No session may run a destructive operation while another session holds uncommitted or untracked work in the same repository. |
 | Untracked means unrecoverable | Untracked paths have no object in the store. A destructive operation over them is refused outright, with no override path in this contract. |
@@ -59,6 +64,10 @@ lane:
   branch: "[refs/heads/... or null when detached]"
   session: "[session identity that owns this lane]"
   scope: "[semantic scope claimed inside the repository]"
+  claim: "[authenticated cloud claim identity]"
+  authorityEpoch: 0
+  fence: "[current cloud fence]"
+  authorityState: "[current, waiting-successor, reviewed, integrated-preserved, dormant-preserved, or retired]"
   dirtyTrackedPaths: 0
   untrackedPaths: 0
   recoveryRef: "[refs/heads/recovery/... , refs/tags/... , bundle path, or null]"
@@ -73,7 +82,55 @@ collision:
 |---|---|---|
 | Session ownership | One worktree path carries two session owners. | Both session ids and the worktree |
 | Branch exclusivity | One branch is live in two worktrees of one repository. | Both worktree paths and the branch |
-| Scope exclusivity | One semantic scope inside one repository carries two session owners. | Both session ids and the scope |
+| Write-authority exclusivity | Overlapping normalized write sets in one repository carry two current writers. | Both claim ids, both write-set digests, and the overlap |
+
+## Cloud Authority And Successors
+
+The provider-neutral mutation surface is exactly `claim(scope)`,
+`continue(claim)`, `integrate(candidate)`, and `retire(claim)`. Local worktrees,
+writer leases, branches, pull requests, review labels, device/session metadata,
+and provider identifiers are replaceable projections of those roots. A local
+lease or clean worktree cannot create, renew, transfer, or retire cloud
+authority.
+
+Disjoint claims may be current concurrently without a global cardinality cap.
+An overlapping newcomer is recorded as a non-writing waiting successor. Only
+one current claim may write an overlapping declared set, and successor promotion
+rechecks the live ledger through monotonic compare-and-swap. Expiry derives
+`dormant-preserved`: write authority ends while the overlap reservation and all
+authored bytes remain preserved. Recovery authenticates the same actor and
+claim against live state and does not depend on an expired local lease, device,
+session, or worktree.
+
+Review identity and revision are immutable. Typed claim, continuation,
+integration, and retirement receipts bind every transition. Missing
+authentication, stale expected-ledger digest, competing overlap, changed review
+evidence, or absent predecessor receipt fails closed.
+
+## Cross-Repository Coordination Units
+
+A cross-repository task is a dependency-ordered DAG of immutable
+per-repository units, not a shared lane. Each unit retains its own repository,
+authenticated repository authority identity, branch, registered worktree,
+semantic scope, normalized write set and digest, claim, authority epoch, fence,
+pull request, source revision and digest, named checks, and handoff evidence.
+Units have distinct claims, branches, worktrees, and leases even when they share
+a task identity.
+
+Projection admission joins the unit's `repositoryId` exactly to the authenticated
+cloud claim, its `semanticScope` exactly to the local lane scope, and its
+`writeSetDigest` exactly to both the local lane and cloud claim. Distinct-looking
+or one-to-one invented identities do not satisfy any join.
+
+The pinned JH source unit at revision
+`8a2e5e0711f7193535b9aac2aee285e0ee705111` and tree
+`63c13dcfb3ce01aa60213f4f6fa214bfa0e76778` precedes this ACOS projection unit.
+Its guideline digest is
+`ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd`
+and its companion digest is
+`c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5`.
+The dependency is `JH guideline/checker -> ACOS coordination/runtime/registration`;
+it orders integration evidence without sharing authority.
 
 ## Forbidden Operation Catalog
 
@@ -169,15 +226,16 @@ the admitted base, and binds the before/after inventories into its typed result.
 Successful machine JSON retains both the full final admitted report and the
 fresh mutation-authority receipt. Failure never grants cleanup authority: an
 externally acquired cloud claim remains owner-controlled for an exact retry or
-explicit release/reclaim.
+an authenticated `continue(claim)` or `retire(claim)` operation.
 
-Review reconciles the exact live active or review-ready claim around focused
-checks, then binds and transitions the exact pushed HEAD to verified
-`review_ready` before releasing the local lease. A retry accepts a remotely
-completed bind or transition only when the full claim identity and PR/head
-subject still match. Cloud heartbeat returns its post-local-renewal authority
-receipt. Ordinary local-only resume and park refuse a cloud-admitted lane; its
-owner must complete explicit cloud handoff/reclaim.
+Review is a `continue(claim)` projection that binds the exact pushed head,
+review identity, and focused evidence before the local lease is released.
+Heartbeat is a continuation renewal. Protected integration projects
+`integrate(candidate)` only with exact dependency, named-check, handoff, review,
+and operator evidence. A retry accepts an already completed operation only when
+the claim, receipt, and review subject are byte-for-byte identical. Ordinary
+local-only resume and park refuse a cloud-admitted lane; its authenticated owner
+must continue or retire the exact claim through the cloud authority.
 
 ## Reconciliation Admission
 

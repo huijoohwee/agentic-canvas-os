@@ -1,68 +1,23 @@
-import {
-  applyCloudTransition,
-  createEmptyLedger,
-  digestValue,
-  listCurrentClaims,
-  validateLedger,
-  verifyCloudClaim,
-} from "./cloud-collaboration-contract.mjs";
-import {
-  contractActor,
-  contractRepository,
-  prepareMutationRequest,
-  prepareReadRequest,
-  projectPublicClaim,
-  selectVerificationClaim,
-} from "./github-cloud-collaboration-mapping.mjs";
-import {
-  createGitHubRequest,
-  positiveInteger,
-  projectActor,
-  projectPullRequest,
-  projectRepository,
-  publicTransportError,
-  requireRepositoryName,
-  requireServerTime,
-  requireSha,
-  requireStatus,
-  resolveGitHubToken,
-} from "./github-cloud-collaboration-api.mjs";
-
+import { applyCloudTransition, createEmptyLedger, digestValue, listCurrentClaims, validateLedger, verifyCloudClaim } from "./cloud-collaboration-contract.mjs";
+import { CLOUD_RESULT_SCHEMA, contractActor, contractRepository, createPublicResult, emptyResult, prepareMutationRequest, prepareReadRequest, projectPublicClaim, publicSnapshot, selectVerificationClaim, verificationResult } from "./github-cloud-collaboration-mapping.mjs";
+import { createGitHubRequest, positiveInteger, projectActor, projectPullRequest, projectRepository, publicTransportError, requireRepositoryName, requireServerTime, requireSha, requireStatus, resolveGitHubToken } from "./github-cloud-collaboration-api.mjs";
 export { createGitHubRequest } from "./github-cloud-collaboration-api.mjs";
-
 export const DEFAULT_LEDGER_REF = "agentic/collaboration-ledger";
 export const DEFAULT_LEDGER_PATH = ".agentic/collaboration-ledger.json";
-export const CLOUD_RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
-
-const MUTATING_ACTIONS = new Set([
-  "claim",
-  "bind",
-  "heartbeat",
-  "review-ready",
-  "delivery-authorize",
-  "handoff",
-  "release",
-]);
-const MAX_LEDGER_BYTES = 4_000_000;
-
-export function createGitHubCloudCollaborationAdapter({
-  ledgerRepository,
-  token = "",
-  request = null,
-  ledgerRef = DEFAULT_LEDGER_REF,
-  ledgerPath = DEFAULT_LEDGER_PATH,
-  maxAttempts = 4,
-} = {}) {
+export { CLOUD_RESULT_SCHEMA } from "./github-cloud-collaboration-mapping.mjs";
+const MUTATING_ACTIONS = new Set(["claim", "continue", "integrate", "retire"]);
+export function createGitHubCloudCollaborationAdapter({ ledgerRepository, token = "", request = null,
+  ledgerRef = DEFAULT_LEDGER_REF, ledgerPath = DEFAULT_LEDGER_PATH, maxAttempts = 4,
+  workflowContext = null } = {}) {
   requireRepositoryName(ledgerRepository, "ledgerRepository");
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 8) {
     throw new Error("maxAttempts must be an integer from 1 through 8.");
   }
   const send = request || createGitHubRequest({ token: token || resolveGitHubToken() });
-
   return Object.freeze({
     async execute(action, input = {}) {
       const ledgerIdentity = await resolveRepository(send, ledgerRepository, "ledger repository");
-      const context = await resolveRequestContext({ action, input, send });
+      const context = await resolveRequestContext({ action, input, send, workflowContext });
       if (["status", "verify"].includes(action)) {
         return readOnlyResult({
           action,
@@ -88,7 +43,6 @@ export function createGitHubCloudCollaborationAdapter({
         maxAttempts,
       });
     },
-
     async inspect() {
       const ledgerIdentity = await resolveRepository(send, ledgerRepository, "ledger repository");
       const snapshot = await readLedger({
@@ -103,7 +57,6 @@ export function createGitHubCloudCollaborationAdapter({
         ? publicSnapshot(snapshot)
         : emptyResult("status");
     },
-
     async listClaims({ targetRepository = null } = {}) {
       const ledgerIdentity = await resolveRepository(send, ledgerRepository, "ledger repository");
       const snapshot = await readLedger({
@@ -124,7 +77,6 @@ export function createGitHubCloudCollaborationAdapter({
         repository ? { repositoryId: contractRepository(repository).repositoryId } : {},
       );
     },
-
     async pullRequestsForCommit({ targetRepository, commitSha }) {
       requireRepositoryName(targetRepository, "targetRepository");
       requireSha(commitSha, "commitSha");
@@ -138,11 +90,10 @@ export function createGitHubCloudCollaborationAdapter({
     },
   });
 }
-
-async function resolveRequestContext({ action, input, send }) {
+async function resolveRequestContext({ action, input, send, workflowContext }) {
   const normalized = { ...input };
   const actor = MUTATING_ACTIONS.has(action)
-    ? await resolveActor({ input: normalized, send })
+    ? await resolveActor({ input: normalized, send, workflowContext })
     : null;
   if (action === "status" && !normalized.targetRepository) {
     return { actor, repository: null, pullRequest: null, canonicalRevision: null, input: normalized };
@@ -150,6 +101,12 @@ async function resolveRequestContext({ action, input, send }) {
   requireRepositoryName(normalized.targetRepository, "targetRepository");
   const repository = await resolveRepository(send, normalized.targetRepository, "target repository");
   normalized.targetRepository = repository.fullName;
+  if (MUTATING_ACTIONS.has(action)) {
+    if (normalized.pullRequestNumber !== undefined && normalized.pullRequestNumber !== null) {
+      normalized.pullRequestNumber = positiveInteger(normalized.pullRequestNumber, "pullRequestNumber");
+    }
+    return { actor, repository, pullRequest: null, canonicalRevision: null, input: normalized };
+  }
   let pullRequest = null;
   if (normalized.pullRequestNumber !== undefined && normalized.pullRequestNumber !== null) {
     const number = positiveInteger(normalized.pullRequestNumber, "pullRequestNumber");
@@ -158,18 +115,8 @@ async function resolveRequestContext({ action, input, send }) {
     pullRequest = projectPullRequest(response.value, repository);
     normalized.pullRequestNumber = number;
   }
-  let canonicalRevision = null;
-  if (action === "claim") {
-    const response = await send({
-      path: `/repos/${repository.fullName}/git/ref/heads/${repository.defaultBranch}`,
-    });
-    requireStatus(response, [200], "read protected source revision");
-    canonicalRevision = String(response.value?.object?.sha || "");
-    requireSha(canonicalRevision, "protected source revision");
-  }
-  return { actor, repository, pullRequest, canonicalRevision, input: normalized };
+  return { actor, repository, pullRequest, canonicalRevision: null, input: normalized };
 }
-
 async function resolveRepository(send, fullName, label) {
   const response = await send({ path: `/repos/${fullName}` });
   requireStatus(response, [200], `resolve ${label}`);
@@ -179,20 +126,56 @@ async function resolveRepository(send, fullName, label) {
   }
   return repository;
 }
-
-async function resolveActor({ input, send }) {
-  if (
-    process.env.GITHUB_ACTIONS === "true"
-    && Number.isInteger(Number(input.actorId))
-    && String(input.actorLogin || "").trim()
-  ) {
-    return { id: Number(input.actorId), login: String(input.actorLogin).trim() };
+async function resolveActor({ input, send, workflowContext }) {
+  const userResponse = await send({ path: "/user" });
+  if (userResponse.status === 200) {
+    const authenticated = projectActor(userResponse.value);
+    if ((input.actorId !== undefined && Number(input.actorId) !== authenticated.id)
+      || (input.actorLogin && String(input.actorLogin).trim() !== authenticated.login)) {
+      throw new Error("Actor metadata does not match the authenticated GitHub token identity.");
+    }
+    return authenticated;
   }
-  const response = await send({ path: "/user" });
-  requireStatus(response, [200], "resolve authenticated actor");
-  return projectActor(response.value);
+  if (userResponse.status !== 403) requireStatus(userResponse, [200], "resolve authenticated actor");
+  if (workflowContext?.trustedSource !== "github-actions") {
+    throw new Error("GitHub App actor fallback requires trusted GitHub Actions runtime context.");
+  }
+  {
+    requireRepositoryName(workflowContext.repository, "workflowRepository");
+    const runId = positiveInteger(workflowContext.runId, "workflowRunId");
+    const response = await send({ path: `/repos/${workflowContext.repository}/actions/runs/${runId}` });
+    requireStatus(response, [200], "resolve authenticated workflow actor");
+    const authenticated = projectActor(response.value?.actor);
+    const workflowRepository = projectRepository(response.value?.repository);
+    requireSha(workflowContext.revision, "workflowRevision");
+    if (workflowRepository.fullName !== workflowContext.repository
+      || workflowRepository.id !== Number(workflowContext.repositoryId)
+      || response.value?.head_sha !== workflowContext.revision
+      || response.value?.status !== "in_progress"
+      || Number(response.value?.run_attempt) !== Number(workflowContext.runAttempt)
+      || (input.actorId !== undefined && Number(input.actorId) !== authenticated.id)
+      || (input.actorLogin && String(input.actorLogin).trim() !== authenticated.login)) {
+      throw new Error("Workflow actor metadata does not match the authenticated GitHub run identity.");
+    }
+    return authenticated;
+  }
 }
-
+async function resolveMutationSubject({ action, context, send }) {
+  let pullRequest = null;
+  if (context.input.pullRequestNumber) {
+    const response = await send({ path: `/repos/${context.repository.fullName}/pulls/${context.input.pullRequestNumber}` });
+    requireStatus(response, [200], "resolve pull request");
+    pullRequest = projectPullRequest(response.value, context.repository);
+  }
+  let canonicalRevision = null;
+  if (action === "claim") {
+    const response = await send({ path: `/repos/${context.repository.fullName}/git/ref/heads/${context.repository.defaultBranch}` });
+    requireStatus(response, [200], "read protected source revision");
+    canonicalRevision = String(response.value?.object?.sha || "");
+    requireSha(canonicalRevision, "protected source revision");
+  }
+  return { pullRequest, canonicalRevision };
+}
 async function mutateLedger({
   action,
   context,
@@ -203,8 +186,10 @@ async function mutateLedger({
   ledgerPath,
   maxAttempts,
 }) {
-  let preparedRequest = null;
   let lastConflict = null;
+  let semanticRequest = null;
+  let subjectDigest = null;
+  let committedReplay = false;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let snapshot = await readLedger({
       send,
@@ -223,20 +208,33 @@ async function mutateLedger({
         continue;
       }
     }
-    const evaluationTime = requireServerTime(snapshot.evaluationTime);
-    if (!preparedRequest) {
-      preparedRequest = prepareMutationRequest({
-        action,
-        input: context.input,
-        actor: context.actor,
-        repository: context.repository,
-        pullRequest: context.pullRequest,
-        evaluationTime,
-      });
+    const snapshotTime = requireServerTime(snapshot.evaluationTime);
+    const subject = await resolveMutationSubject({ action, context, send });
+    const nextSubjectDigest = digestValue(subject);
+    subjectDigest ??= nextSubjectDigest;
+    if (subjectDigest !== nextSubjectDigest) {
+      throw new Error("Mutation subject changed during collaboration compare-and-swap.");
     }
+    const prior = findIdempotentEntry(snapshot.ledger, context.input.idempotencyKey);
+    committedReplay ||= Boolean(prior?.action === action);
+    const fixedExpiresAt = semanticRequest?.expiresAt
+      || (committedReplay && mutationUsesExpiry(action, context.input) ? prior.claimCore.expiresAt : null);
+    semanticRequest ??= {
+      ...prepareMutationRequest({
+        action, input: { ...context.input, expectedLedgerDigest: snapshot.ledger.headDigest },
+        actor: context.actor, repository: context.repository, pullRequest: subject.pullRequest,
+        evaluationTime: snapshotTime, fixedExpiresAt,
+      }),
+    };
+    if (!committedReplay && semanticRequest.expiresAt
+      && Date.parse(semanticRequest.expiresAt) <= Date.parse(snapshotTime)) {
+      throw new Error("Frozen collaboration expiry elapsed before compare-and-swap completed.");
+    }
+    const evaluationTime = snapshotTime;
+    const preparedRequest = { ...semanticRequest, expectedLedgerDigest: snapshot.ledger.headDigest };
     const repository = contractRepository(
       context.repository,
-      action === "claim" ? context.canonicalRevision : null,
+      action === "claim" ? subject.canonicalRevision : null,
     );
     const transition = applyCloudTransition({
       ledger: snapshot.ledger,
@@ -291,7 +289,14 @@ async function mutateLedger({
     `Cloud collaboration compare-and-swap exhausted ${maxAttempts} attempts${lastConflict ? `: ${lastConflict}` : "."}`,
   );
 }
-
+function mutationUsesExpiry(action, input) {
+  return action === "claim" || (action === "continue" && ["renewal", "recovery", "promote"].includes(input.mode));
+}
+function findIdempotentEntry(ledger, rawKey) {
+  if (typeof rawKey !== "string" || !rawKey.normalize("NFC").trim()) return null;
+  const key = digestValue(rawKey.normalize("NFC").trim());
+  return ledger.entries.find((entry) => entry.idempotencyKey === key) || null;
+}
 async function readOnlyResult({
   action,
   context,
@@ -358,7 +363,6 @@ async function readOnlyResult({
     context,
   });
 }
-
 async function readLedger({
   send,
   ledgerRepository,
@@ -400,7 +404,6 @@ async function readLedger({
     evaluationTime: requireServerTime(refResponse.date || commitResponse.date),
   };
 }
-
 async function readLedgerBytes({
   send,
   ledgerRepository,
@@ -423,12 +426,9 @@ async function readLedgerBytes({
     throw new Error("Collaboration ledger content must use base64 encoding.");
   }
   const bytes = Buffer.from(String(blobResponse.value?.content || "").replace(/\s/gu, ""), "base64");
-  if (bytes.length === 0 || bytes.length > MAX_LEDGER_BYTES) {
-    throw new Error(`Collaboration ledger must contain 1 through ${MAX_LEDGER_BYTES} bytes.`);
-  }
+  if (bytes.length === 0) throw new Error("Collaboration ledger must not be empty.");
   return bytes;
 }
-
 async function resolveLedgerBlobSha({
   send,
   ledgerRepository,
@@ -465,7 +465,6 @@ async function resolveLedgerBlobSha({
   }
   throw new Error("Collaboration ledger path could not be resolved.");
 }
-
 async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerRef, ledgerPath }) {
   const baseResponse = await send({
     path: `/repos/${ledgerRepository}/git/ref/heads/${ledgerIdentity.defaultBranch}`,
@@ -502,7 +501,6 @@ async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerR
     evaluationTime: requireServerTime(response.date),
   };
 }
-
 async function createLedgerCommit({
   send,
   ledgerRepository,
@@ -513,9 +511,6 @@ async function createLedgerCommit({
 }) {
   requireValidLedger(ledger);
   const content = `${JSON.stringify(ledger, null, 2)}\n`;
-  if (Buffer.byteLength(content) > MAX_LEDGER_BYTES) {
-    throw new Error(`Collaboration ledger exceeds the ${MAX_LEDGER_BYTES}-byte transport bound.`);
-  }
   const blobResponse = await send({
     method: "POST",
     path: `/repos/${ledgerRepository}/git/blobs`,
@@ -549,7 +544,6 @@ async function createLedgerCommit({
   requireSha(commitSha, "candidate ledger commit");
   return { commitSha, treeSha };
 }
-
 async function verifyProjectedRevision({
   send,
   ledgerRepository,
@@ -588,102 +582,6 @@ async function verifyProjectedRevision({
     throw new Error("Projected ledger revision did not contain the expected claim digest.");
   }
 }
-
-function createPublicResult({ action, transition, ledgerRevision, evaluationTime, attempts }) {
-  const claim = transition.claim || null;
-  const receipt = {
-    schema: "agentic-cloud-collaboration-github-receipt/v1",
-    action,
-    ledgerRevision,
-    ledgerDigest: transition.ledger.headDigest,
-    claimId: claim?.claimId || null,
-    claimDigest: transition.claimDigest || null,
-    contractReceiptDigest: transition.receipt?.receiptDigest || null,
-    sequence: transition.ledger.sequence,
-    evaluationTime,
-  };
-  return {
-    schema: CLOUD_RESULT_SCHEMA,
-    ok: true,
-    action,
-    status: claim?.state || "released",
-    replayed: Boolean(transition.replayed),
-    attempts,
-    ledgerRevision,
-    claim: claim ? projectPublicClaim(claim) : null,
-    claimDigest: transition.claimDigest || null,
-    receipt: { ...receipt, receiptDigest: digestValue(receipt) },
-  };
-}
-
-function verificationResult({
-  verification,
-  snapshot,
-  evaluationTime,
-  context,
-}) {
-  const claimDigest = verification.claimDigest || verification.claim?.fenceRevision || null;
-  const receipt = {
-    schema: "agentic-cloud-collaboration-github-verification/v1",
-    ok: verification.ok,
-    ledgerRevision: snapshot.revision,
-    ledgerDigest: snapshot.ledger.headDigest,
-    claimId: verification.claimId,
-    claimDigest,
-    contractReceiptDigest: verification.receiptDigest,
-    evaluationTime,
-    findings: verification.findings,
-  };
-  return {
-    schema: CLOUD_RESULT_SCHEMA,
-    ok: verification.ok,
-    action: "verify",
-    status: verification.ok ? "ready" : "blocked",
-    ledgerRevision: snapshot.revision,
-    claimDigest,
-    claim: verification.claim ? projectPublicClaim(verification.claim) : null,
-    ...(context.pullRequest ? {
-      subject: {
-        repository: context.repository.fullName,
-        pullRequestNumber: context.pullRequest.number,
-        branch: context.pullRequest.branch,
-        headSha: context.pullRequest.headSha,
-        canonicalBaseSha: context.pullRequest.baseSha,
-      },
-    } : {}),
-    findings: verification.findings,
-    receipt: { ...receipt, receiptDigest: digestValue(receipt) },
-  };
-}
-
-function publicSnapshot(snapshot) {
-  const claims = listCurrentClaims(
-    snapshot.ledger,
-    snapshot.evaluationTime,
-  ).map(projectPublicClaim);
-  return {
-    schema: CLOUD_RESULT_SCHEMA,
-    ok: true,
-    action: "status",
-    status: "ready",
-    ledgerRevision: snapshot.revision,
-    ledgerDigest: snapshot.ledger.headDigest,
-    sequence: snapshot.ledger.sequence,
-    claims,
-  };
-}
-
-function emptyResult(action) {
-  return {
-    schema: CLOUD_RESULT_SCHEMA,
-    ok: action === "status",
-    action,
-    status: action === "status" ? "empty" : "blocked",
-    ledgerRevision: null,
-    claims: [],
-  };
-}
-
 function requireValidLedger(ledger) {
   const findings = validateLedger(ledger);
   if (findings.length > 0) {

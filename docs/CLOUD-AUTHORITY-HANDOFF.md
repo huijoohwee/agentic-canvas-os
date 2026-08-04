@@ -21,6 +21,45 @@ rewriting branch history, or synthesizing missing evidence.
 The controller is provider-neutral at the core and keeps provider-specific
 cloud and review APIs behind a replaceable adapter boundary.
 
+For an older clean committed lane that has no claim, lease, remote branch, or
+review marker, use the separate legacy bootstrap boundary described below.
+
+## Legacy Clean Committed Lane Bootstrap
+
+`scripts/legacy-clean-committed-lane-bootstrap.mjs` wraps an exact existing
+commit in attributable coordination projections without changing its commit,
+tree, branch attachment, worktree, or authored files. The CLI accepts a
+content-bound JSON request and a caller-selected adapter module:
+
+```sh
+npm run workspace:legacy-clean-bootstrap -- \
+  --request="<absolute-request-json>" \
+  --adapter="<absolute-adapter-module>"
+```
+
+The adapter module must export `createLegacyBootstrapAdapter()` and implement
+the cloud claim, local lease, exact branch publication, draft ownership
+request, cloud binding, owner receipt, inspection, verification, and atomic
+checkpoint boundaries. Provider resource identifiers stay opaque to the core.
+
+The request pins the target and ledger repository identities, session, device,
+semantic scope, registered worktree path, attached agent branch, base commit,
+head commit, tree, exact committed changed paths, and normalized declared write
+scope. Bootstrap fails before effects when any pinned value drifts, the lane is
+dirty or unregistered, ancestry is invalid, a scope owner exists, a live claim
+overlaps, or an existing projection lacks the same bootstrap identity.
+
+Each external operation returns a complete content-addressed projection. The
+controller inspects the immutable lane again after every operation and writes a
+checkpoint before advancing. An interrupted replay reuses only projections
+carrying the same identity and exact receipt; missing, changed, or unattributed
+state blocks. A completed replay returns the original receipt digest. The core
+has no commit, reset, checkout, worktree removal, merge, deployment, or branch
+deletion operation.
+
+The focused proof uses only an in-memory adapter and synthetic paths. It does
+not bootstrap or otherwise operate on any preserved real-world legacy lane.
+
 ## Supported Outcomes
 
 - `retained-legacy`

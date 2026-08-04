@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 import {
@@ -7,6 +8,7 @@ import {
   createGitHubCloudCollaborationAdapter,
 } from "./github-cloud-collaboration-adapter.mjs";
 import { digestValue } from "./cloud-collaboration-contract.mjs";
+import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 
 const MUTATIONS = new Set([
   "claim",
@@ -60,8 +62,41 @@ async function verifyEvent({ adapter }) {
   }
   if (event.pull_request) {
     const pullRequest = event.pull_request;
+    const targetRepository = requiredText(event.repository?.full_name, "event repository");
+    const reviewRequestId = `github-pull-request:${requiredText(pullRequest.node_id, "event pull request node id")}`;
+    const currentClaims = await adapter.execute("status", {
+      targetRepository,
+    });
+    const deliveryClaim = currentClaims.claims?.find((claim) => (
+      claim.reviewRequestId === reviewRequestId
+      && claim.state === "delivery-authorized"
+    )) || null;
+    if (
+      deliveryClaim
+      && deliveryClaim.laneRevision !== requiredSha(pullRequest.head?.sha, "event head SHA")
+    ) {
+      verifyEventProtectedMainRefresh({
+        pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
+        expectedHeadSha: requiredSha(deliveryClaim.laneRevision, "delivery-authorized lane revision"),
+        observedHeadSha: requiredSha(pullRequest.head?.sha, "event head SHA"),
+        observedBaseSha: requiredSha(pullRequest.base?.sha, "event base SHA"),
+      });
+      return adapter.execute("verify", {
+        targetRepository,
+        pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
+        branch: requiredText(pullRequest.head?.ref, "event head branch"),
+        canonicalBaseSha: requiredSha(deliveryClaim.canonicalBaseRevision, "delivery-authorized canonical base"),
+        headSha: requiredSha(deliveryClaim.laneRevision, "delivery-authorized lane revision"),
+        requireStatus: "delivery_authorized",
+        claimId: requiredText(deliveryClaim.claimId, "delivery-authorized claim id"),
+        reviewRequestId,
+        allowProtectedMainRefresh: true,
+        actorId: process.env.GITHUB_ACTOR_ID,
+        actorLogin: process.env.GITHUB_ACTOR,
+      });
+    }
     return adapter.execute("verify", {
-      targetRepository: requiredText(event.repository?.full_name, "event repository"),
+      targetRepository,
       pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
       branch: requiredText(pullRequest.head?.ref, "event head branch"),
       canonicalBaseSha: requiredSha(pullRequest.base?.sha, "event base SHA"),
@@ -86,6 +121,92 @@ async function verifyEvent({ adapter }) {
     });
   }
   throw new Error("verify-event supports pull_request and protected default-branch push events only.");
+}
+
+function verifyEventProtectedMainRefresh({
+  pullRequestNumber,
+  expectedHeadSha,
+  observedHeadSha,
+  observedBaseSha,
+  gitText = args => execFileSync("git", args, { encoding: "utf8" }).trim(),
+  run = (command, args) => execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }),
+}) {
+  const mainRef = "refs/remotes/origin/main";
+  const pullRef = `refs/remotes/pull/${pullRequestNumber}/head`;
+  fetchProtectedMainRefreshRefs({ pullRequestNumber, run });
+  const fetchedHeadSha = requiredSha(gitText(["rev-parse", pullRef]), "fetched pull request head SHA");
+  if (fetchedHeadSha !== observedHeadSha) {
+    throw new Error("Fetched pull request head does not match the observed event head.");
+  }
+  const refresh = verifyProtectedMainRefreshWithRetry({
+    expectedHeadSha,
+    observedHeadSha,
+    gitText,
+    run,
+    mainRef,
+    pullRequestNumber,
+  });
+  const latestRefresh = Array.isArray(refresh?.refreshes)
+    ? refresh.refreshes.at(-1)
+    : refresh;
+  if (latestRefresh?.mainParentSha !== observedBaseSha) {
+    throw new Error("Observed pull request base does not match the protected-main refresh parent.");
+  }
+  return refresh;
+}
+
+function fetchProtectedMainRefreshRefs({ pullRequestNumber, run, unshallow = false }) {
+  const fetchArguments = unshallow
+    ? ["fetch", "--no-tags", "--unshallow", "origin"]
+    : ["fetch", "--no-tags", "origin"];
+  run("git", [
+    ...fetchArguments,
+    "+refs/heads/main:refs/remotes/origin/main",
+    `+refs/pull/${pullRequestNumber}/head:refs/remotes/pull/${pullRequestNumber}/head`,
+  ]);
+}
+
+function verifyProtectedMainRefreshWithRetry({
+  expectedHeadSha,
+  observedHeadSha,
+  gitText,
+  run,
+  mainRef,
+  pullRequestNumber,
+}) {
+  try {
+    return verifyProtectedMainRefreshChain({
+      expectedHeadSha,
+      observedHeadSha,
+      gitText,
+      mainRef,
+    });
+  } catch (error) {
+    if (!shouldRetryProtectedMainRefreshVerification(error, gitText)) throw error;
+    fetchProtectedMainRefreshRefs({ pullRequestNumber, run, unshallow: true });
+    return verifyProtectedMainRefreshChain({
+      expectedHeadSha,
+      observedHeadSha,
+      gitText,
+      mainRef,
+    });
+  }
+}
+
+function shouldRetryProtectedMainRefreshVerification(error, gitText) {
+  const message = String(error instanceof Error ? error.message : error || "");
+  if (!message) return false;
+  const shallowRepository = gitText(["rev-parse", "--is-shallow-repository"]).trim() === "true";
+  if (!shallowRepository) return false;
+  return [
+    "Protected pull-request head advanced beyond an exact protected-main refresh chain.",
+    "Protected-main refresh tree is not equivalent to its exact parent merge.",
+    "needs merge",
+    "Not a valid object name",
+    "unknown revision",
+    "bad object",
+    "no merge base",
+  ].some(fragment => message.includes(fragment));
 }
 
 async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository }) {

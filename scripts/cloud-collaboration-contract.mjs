@@ -229,7 +229,7 @@ function requireOwnedClaim(ledger, intent, evaluationTime) {
   const claim = hydrate(entry, evaluationTime);
   if (TERMINAL_STATES.has(claim.state) && !(
     claim.state === "expired"
-    && intent.reason === "integrated"
+    && ["abandoned", "integrated"].includes(intent.reason)
   )) {
     fail("claim_not_active", `claim is ${claim.state}`);
   }
@@ -396,6 +396,7 @@ function buildClaimCore(intent, ledger, evaluationTime) {
       || !writeSetsOverlap(current.declaredWriteScope, intent.declaredWriteScope)
     ) continue;
     if (current.state === "expired") {
+      if (current.canonicalBaseRevision !== intent.canonicalBaseRevision) continue;
       fail("expired_predecessor_required", "an overlapping expired claim must be named as predecessor");
     }
     fail("parallel_scope_collision", `declared write scope overlaps claim ${current.claimId}`);
@@ -427,6 +428,20 @@ function buildClaimCore(intent, ledger, evaluationTime) {
     handoff: null,
     release: null,
   };
+}
+
+function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime }) {
+  if (!intent.predecessorClaimId) return false;
+  const predecessor = hydrate(findClaimEntry(ledger, intent.predecessorClaimId), evaluationTime);
+  return Boolean(
+    predecessor
+    && ["parked", "expired"].includes(predecessor.state)
+    && predecessor.repositoryId === intent.repositoryId
+    && predecessor.workItemId === intent.workItemId
+    && predecessor.writeSetDigest === intent.writeSetDigest
+    && predecessor.laneRevision === intent.laneRevision
+    && predecessor.canonicalBaseRevision === intent.canonicalBaseRevision,
+  );
 }
 
 function appendEntry(ledger, action, intent, requestDigest, idempotencyKey, evaluationTime) {
@@ -513,6 +528,11 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
     repositoryValue.canonicalRevision
     && normalizedAction === "claim"
     && repositoryValue.canonicalRevision !== intent.canonicalBaseRevision
+    && !allowsPredecessorBaseContinuation({
+      ledger,
+      intent,
+      evaluationTime: evaluatedAt,
+    })
   ) {
     fail("stale_canonical_base", "canonicalBaseRevision does not match protected source");
   }
@@ -593,8 +613,10 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
     }
     const requiredState = request.requiredState ?? "active";
     const stateReady = requiredState === "active"
-      ? ["active", "review-ready", "parked"].includes(claim.state)
-      : claim.state === requiredState;
+      ? ["active", "review-ready", "delivery-authorized", "parked"].includes(claim.state)
+      : requiredState === "review-ready"
+        ? ["review-ready", "delivery-authorized"].includes(claim.state)
+        : claim.state === requiredState;
     const reviewReady = requiredState !== "review-ready" || (
       claim.reviewRequestId
       && claim.evidenceDigest

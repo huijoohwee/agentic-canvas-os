@@ -33,6 +33,18 @@ document can express the same contract.
 - A local commit is not shared authority by itself. Cross-device collaboration
   starts when work is represented by a branch and pull request the protected
   remote can evaluate.
+- Protected `main` is a remote publication and integration boundary, not a
+  blanket prohibition on normal local commits in an owned task lane. Local
+  authoring remains allowed on admitted task branches; the protected-branch
+  contract applies when publishing, reviewing, and merging.
+- Treat any live overlapping protected-remote cloud claim as an upstream
+  blocker. Resolve it only through repository-owned remote handoff, release, or
+  reclaim, and never infer release from local lease expiry, pull-request state,
+  mergeability, or protected-branch advancement.
+- Treat "multiple independent writers can publish different revisions for the
+  same path" as a failing upstream boundary. Protected remote policy must leave
+  one current publish authority per path, even when the competing lanes use
+  different semantic-scope labels or branch names.
 - If a local tool or orchestration record disagrees with the protected remote
   branch, pull request, or required-check state, fail closed in favor of the
   remote and repair the repository-owned adapter or rule at the source.
@@ -43,6 +55,18 @@ document can express the same contract.
   `device:park`, `device:integrate`, leases, and runtime receipts is additive
   only. It may coordinate work, but it never replaces GitHub branch protection
   or pull-request authority.
+- Orchestration must not downgrade or hide overlapping remote ownership. If the
+  cloud contract reports an overlapping live claim, local automation stops and
+  surfaces the upstream conflict instead of patching around it in one device,
+  IDE, or session.
+- Orchestration must normalize declared scope ownership to actual publish paths.
+  It may not treat two lanes as independent when they can still publish
+  different revisions for the same path.
+- Local hooks and orchestration should distinguish commit-time authoring from
+  protected publication. If work appears on canonical `main`, preserve the
+  bytes and route them into a task lane; do not emit a generic "trying to
+  commit to a protected branch" denial for ordinary local commits on valid task
+  branches.
 - Keep the orchestration layer universal, neutral, agnostic, and modular:
   repository-owned, vendor-neutral in rule wording, readable without one IDE or
   agent product, and decomposable into independently checkable rules.

@@ -145,7 +145,10 @@ The manual workflow is available from GitHub's browser UI, including a mobile
 browser. It does not claim a dedicated native GitHub Mobile dispatch feature.
 The model-free CLI exposes `status`, `verify`, `claim`, `heartbeat`,
 `review-ready`, `delivery-authorize`, `handoff`, and `release`; it never exposes
-internal `bind`. The browser form exposes the same delivery-authorization
+internal `bind`. The GitHub adapter reads the ledger through bounded Git tree
+and blob traversal rather than the repository contents endpoint, so append-only
+history can grow beyond the smaller contents payload ceiling while still
+remaining under the repository-owned ledger byte bound. The browser form exposes the same delivery-authorization
 transition with explicit focused-evidence, operator-decision, and protected-
 integration-intent digests, so browser and mobile-browser operators use the
 same upstream contract rather than a device-specific patch.
@@ -175,7 +178,18 @@ explicit delivery authorization before it enables protected auto-merge.
 projection by creating the same delivery authorization, verifying it, and only
 then asking the configured provider adapter for protected integration. Any
 source edit requires a separate handoff or fresh active epoch; neither delivery
+authorization nor the exact-head controller may treat authored PR-head drift as
+equivalent. A provider-applied protected `main` refresh is the only accepted
+exception: the verifier must prove the refreshed head is an exact protected-main
+merge chain from the reviewed `delivery-authorized` subject before it reuses the
+preserved reviewed head and canonical base for cloud verification.
 authorization nor protected integration grants deployment authority.
+The exact reviewed head remains the protected delivery head for that
+continuation even when the lane did not opt into auto-delivery at start.
+If the cloud `delivery-authorize` transition succeeds before the local review
+projection persists, the bounded repository retry may reconcile the exact same
+claim in `delivery-authorized` state and continue without reopening authoring,
+changing the reviewed head, or synthesizing a successor claim.
 
 Both lanes:
 

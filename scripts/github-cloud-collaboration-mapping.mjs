@@ -165,14 +165,21 @@ export function prepareMutationRequest({
 
 export function prepareReadRequest({ input, repository, pullRequest }) {
   assertPullRequestProjection(input, pullRequest);
+  const allowProtectedMainRefresh = input.allowProtectedMainRefresh === true;
+  const resolvedCanonicalBaseRevision = allowProtectedMainRefresh
+    ? first(input.canonicalBaseRevision, input.canonicalBaseSha, pullRequest?.baseSha)
+    : first(pullRequest?.baseSha, input.canonicalBaseRevision, input.canonicalBaseSha);
+  const resolvedLaneRevision = allowProtectedMainRefresh
+    ? first(input.laneRevision, input.headSha, pullRequest?.headSha)
+    : first(pullRequest?.headSha, input.laneRevision, input.headSha);
   const request = {
     repositoryId: repository ? contractRepository(repository).repositoryId : undefined,
     claimId: input.claimId,
     workItemId: input.workItemId
       ? pseudonymousIdentifier("work-item", input.workItemId)
       : undefined,
-    canonicalBaseRevision: first(pullRequest?.baseSha, input.canonicalBaseRevision, input.canonicalBaseSha),
-    laneRevision: first(pullRequest?.headSha, input.laneRevision, input.headSha),
+    canonicalBaseRevision: resolvedCanonicalBaseRevision,
+    laneRevision: resolvedLaneRevision,
     reviewRequestId: first(
       pullRequest ? reviewRequestIdentity(pullRequest) : null,
       input.reviewRequestId,
@@ -244,10 +251,30 @@ function expiryFromServer(evaluationTime, rawTtlSeconds) {
 
 function assertPullRequestProjection(input, pullRequest) {
   if (!pullRequest) return;
+  const allowProtectedMainRefresh = input.allowProtectedMainRefresh === true;
+  const requiredState = normalizeRequiredState(first(input.requiredState, input.requireStatus));
+  if (allowProtectedMainRefresh) {
+    if (requiredState !== "delivery-authorized") {
+      throw new Error(
+        "Protected-main refresh projection is limited to delivery-authorized verification.",
+      );
+    }
+    if (!first(input.claimId, input.reviewRequestId)) {
+      throw new Error(
+        "Protected-main refresh projection requires an exact claim or review request identity.",
+      );
+    }
+  }
   const comparisons = [
     ["branch", input.branch, pullRequest.branch],
-    ["head revision", first(input.laneRevision, input.headSha), pullRequest.headSha],
-    ["canonical base", first(input.canonicalBaseRevision, input.canonicalBaseSha), pullRequest.baseSha],
+    ...(
+      allowProtectedMainRefresh
+        ? []
+        : [
+          ["head revision", first(input.laneRevision, input.headSha), pullRequest.headSha],
+          ["canonical base", first(input.canonicalBaseRevision, input.canonicalBaseSha), pullRequest.baseSha],
+        ]
+    ),
   ];
   for (const [label, expected, observed] of comparisons) {
     if (expected !== undefined && expected !== null && String(expected) !== observed) {

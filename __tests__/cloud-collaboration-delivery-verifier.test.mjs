@@ -90,6 +90,67 @@ test("configured delivery sends the exact repository, PR, branch, head, and fenc
   assert.equal(result.ledgerRevision, ledgerRevision);
 });
 
+test("configured delivery marks protected-main refresh verification only for the preserved reviewed subject", () => {
+  let observed = null;
+  verifyCloudDeliveryAuthority({
+    pullRequestUrl,
+    branch,
+    headSha,
+    canonicalBaseSha: baseSha,
+    protectedMainRefresh: {
+      schema: "agentic-protected-main-refresh/v1",
+      deliveredHeadSha: headSha,
+      refreshedHeadSha: "e".repeat(40),
+      mainParentSha: "f".repeat(40),
+    },
+    cloudAuthority: {
+      ledgerRepository,
+      targetRepository: repository,
+      claimId,
+      claimDigest,
+      ledgerRevision,
+      canonicalBaseSha: baseSha,
+      laneRevision: headSha,
+      state: "delivery_authorized",
+    },
+    environment: {},
+    invoke: (input) => {
+      observed = input;
+      return readyResult();
+    },
+  });
+
+  assert.equal(observed.request.allowProtectedMainRefresh, true);
+});
+
+test("delivery-authorized cloud projections reuse the preserved reviewed subject for refreshed verification", () => {
+  let observed = null;
+  verifyCloudDeliveryAuthority({
+    pullRequestUrl,
+    branch,
+    headSha,
+    canonicalBaseSha: baseSha,
+    cloudAuthority: {
+      ledgerRepository,
+      targetRepository: repository,
+      claimId,
+      claimDigest,
+      ledgerRevision,
+      canonicalBaseSha: baseSha,
+      laneRevision: headSha,
+      reviewRequestId: "github-pull-request:PR_17",
+      state: "delivery_authorized",
+    },
+    environment: {},
+    invoke: (input) => {
+      observed = input;
+      return readyResult();
+    },
+  });
+
+  assert.equal(observed.request.allowProtectedMainRefresh, true);
+});
+
 test("provider-neutral claims may carry their exact GitHub subject beside the claim", () => {
   const result = verifyCloudDeliveryAuthority({
     repository,

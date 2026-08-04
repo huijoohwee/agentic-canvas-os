@@ -143,6 +143,45 @@ test("adapter binds and verifies one exact review-ready PR without mutation", as
   assert.equal(github.mutationCount(), writesBeforeVerify);
 });
 
+test("adapter reads large ledgers through Git trees and blobs instead of contents transport", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+
+  for (let i = 0; i < 48; i += 1) {
+    const suffix = `${i}`.padStart(2, "0");
+    const declaredWriteScope = Array.from({ length: 128 }, (_, index) => (
+      `path:docs/collaboration/${suffix}/${`${index}`.padStart(3, "0")}-${"segment-".repeat(8)}proof.md`
+    ));
+    const claimed = await adapter.execute("claim", claimInput({
+      workItemId: `cloud-collaboration-${suffix}`,
+      scopeId: `cloud-collaboration-${suffix}`,
+      branch: `agent/device/cloud-scope-${suffix}`,
+      declaredWriteScope,
+      idempotencyKey: `claim-run-${suffix}`,
+    }));
+    await adapter.execute("release", fencedInput(claimed, {
+      expectedTransitionCounter: claimed.claim.transitionCounter,
+      reason: "abandoned",
+      evidenceDigest,
+      idempotencyKey: `release-run-${suffix}`,
+    }));
+  }
+
+  assert.ok(github.currentLedgerBytes() > 900_000);
+  const status = await adapter.execute("status", { targetRepository });
+  assert.equal(status.status, "ready");
+  assert.equal(
+    github.calls.some((call) => call.path.includes("/contents/.agentic/collaboration-ledger.json")),
+    false,
+  );
+  assert.ok(
+    github.calls.some((call) => call.path.includes(`/repos/${ledgerRepository}/git/trees/`)),
+  );
+  assert.ok(
+    github.calls.some((call) => call.path.includes(`/repos/${ledgerRepository}/git/blobs/`)),
+  );
+});
+
 test("adapter lists internal claims, resolves commit pull requests, and accepts normalized owner ids for release", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
@@ -221,6 +260,61 @@ test("adapter rejects pull-request head drift and malformed ledger bytes before 
   assert.equal(github.mutationCount(), writesBeforeRead);
 });
 
+test("adapter accepts delivery-authorized verification against the preserved reviewed head after a protected-main refresh", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const claimed = await adapter.execute("claim", claimInput());
+  const bound = await adapter.execute("bind", fencedInput(claimed, {
+    idempotencyKey: "bind-run-refresh",
+    expectedTransitionCounter: 1,
+    pullRequestNumber: 17,
+  }));
+  const ready = await adapter.execute("review-ready", fencedInput(bound, {
+    idempotencyKey: "review-run-refresh",
+    expectedTransitionCounter: 2,
+    pullRequestNumber: 17,
+    focusedEvidenceDigest: evidenceDigest,
+  }));
+  const authorized = await adapter.execute("delivery-authorize", fencedInput(ready, {
+    idempotencyKey: "delivery-authorize-run-refresh",
+    expectedTransitionCounter: 3,
+    pullRequestNumber: 17,
+    laneRevision: pullHeadSha,
+    focusedEvidenceDigest: evidenceDigest,
+    operatorDecisionDigest,
+    integrationIntentDigest,
+  }));
+  github.setPullRequestValue({
+    head: {
+      ref: "agent/device/cloud-scope",
+      sha: "5".repeat(40),
+      repo: { full_name: targetRepository },
+    },
+    base: {
+      ref: "main",
+      sha: "6".repeat(40),
+      repo: { full_name: targetRepository },
+    },
+  });
+
+  const verification = await adapter.execute("verify", {
+    targetRepository,
+    pullRequestNumber: 17,
+    branch: "agent/device/cloud-scope",
+    headSha: pullHeadSha,
+    canonicalBaseSha: targetMainSha,
+    requireStatus: "delivery_authorized",
+    claimId: authorized.claim.claimId,
+    expectedClaimDigest: authorized.claimDigest,
+    expectedLedgerRevision: authorized.ledgerRevision,
+    allowProtectedMainRefresh: true,
+  });
+
+  assert.equal(verification.ok, true);
+  assert.equal(verification.claim.state, "delivery-authorized");
+  assert.equal(verification.claim.laneRevision, pullHeadSha);
+});
+
 function createAdapter(github, options = {}) {
   return createGitHubCloudCollaborationAdapter({
     ledgerRepository,
@@ -229,7 +323,7 @@ function createAdapter(github, options = {}) {
   });
 }
 
-function claimInput() {
+function claimInput(overrides = {}) {
   return {
     targetRepository,
     workItemId: "cloud collaboration implementation",
@@ -243,6 +337,7 @@ function claimInput() {
     ttlSeconds: 1_800,
     leaseEpoch: 1,
     idempotencyKey: "claim-run-1",
+    ...overrides,
   };
 }
 
@@ -259,6 +354,7 @@ function fencedInput(result, overrides) {
 
 function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 } = {}) {
   const calls = [];
+  let pullRequest = pullRequestValue();
   const repositories = {
     [ledgerRepository]: repositoryValue(1, "L_ledger", ledgerRepository),
     [targetRepository]: repositoryValue(2, "R_target", targetRepository),
@@ -270,7 +366,7 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
   const commits = new Map([
     ["1".repeat(40), { tree: "2".repeat(40), parents: [] }],
   ]);
-  const trees = new Map([["2".repeat(40), { content: null }]]);
+  const trees = new Map([["2".repeat(40), { entries: [] }]]);
   const blobs = new Map();
   const createdLedgers = [];
   let nextObject = 16;
@@ -308,8 +404,7 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     const contentMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/contents\/[^?]+\?ref=(.+)$/u);
     if (method === "GET" && contentMatch) {
       const revision = decodeURIComponent(contentMatch[2]);
-      const commit = commits.get(revision);
-      const content = commit ? trees.get(commit.tree)?.content : null;
+      const content = ledgerContentForRevision(revision);
       return content === null || content === undefined
         ? response(404, { message: "Not Found" }, date)
         : response(200, {
@@ -317,13 +412,30 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
           content: Buffer.from(content).toString("base64"),
         }, date);
     }
+    const treeMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/git\/trees\/([0-9a-f]{40})$/u);
+    if (method === "GET" && treeMatch) {
+      const tree = trees.get(treeMatch[2]);
+      return tree
+        ? response(200, { tree: tree.entries.map((entry) => ({ ...entry })) }, date)
+        : response(404, { message: "Not Found" }, date);
+    }
+    const blobMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/git\/blobs\/([0-9a-f]{40})$/u);
+    if (method === "GET" && blobMatch) {
+      const content = blobs.get(blobMatch[2]);
+      return content === undefined
+        ? response(404, { message: "Not Found" }, date)
+        : response(200, {
+          encoding: "base64",
+          content: Buffer.from(content).toString("base64"),
+        }, date);
+    }
     if (method === "GET" && path === `/repos/${targetRepository}/pulls/17`) {
-      return response(200, pullRequestValue(), date);
+      return response(200, pullRequest, date);
     }
     const commitPullsMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/commits\/([0-9a-f]{40})\/pulls$/u);
     if (method === "GET" && commitPullsMatch && commitPullsMatch[1] === targetRepository) {
       if (commitPullsMatch[2] === targetMainSha) {
-        return response(200, [pullRequestValue({ state: "closed" })], date);
+        return response(200, [{ ...pullRequest, state: "closed" }], date);
       }
       return response(200, [], date);
     }
@@ -339,7 +451,23 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     }
     if (method === "POST" && path === `/repos/${ledgerRepository}/git/trees`) {
       const sha = objectSha();
-      trees.set(sha, { content: blobs.get(body.tree[0].sha) });
+      const treeEntry = body.tree[0];
+      const segments = String(treeEntry.path || "").split("/").filter(Boolean);
+      const rootEntries = [];
+      let blobSha = treeEntry.sha;
+      for (let index = segments.length - 1; index >= 0; index -= 1) {
+        const segment = segments[index];
+        if (index === segments.length - 1) {
+          rootEntries.unshift({ path: segment, mode: "100644", type: "blob", sha: blobSha });
+          continue;
+        }
+        const subtreeSha = objectSha();
+        trees.set(subtreeSha, { entries: [...rootEntries] });
+        blobSha = subtreeSha;
+        rootEntries.length = 0;
+        rootEntries.push({ path: segment, mode: "040000", type: "tree", sha: subtreeSha });
+      }
+      trees.set(sha, { entries: [...rootEntries] });
       return response(201, { sha }, date);
     }
     if (method === "POST" && path === `/repos/${ledgerRepository}/git/commits`) {
@@ -401,14 +529,41 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     request,
     mutationCount: () => calls.filter((call) => call.method !== "GET").length,
     createdLedgerValues: () => createdLedgers,
+    setPullRequestValue(overrides = {}) {
+      pullRequest = pullRequestValue(overrides);
+    },
+    currentLedgerBytes() {
+      const revision = refs.get(`${ledgerRepository}:agentic/collaboration-ledger`);
+      const content = ledgerContentForRevision(revision);
+      return content ? Buffer.byteLength(content) : 0;
+    },
     tamperLedger() {
       const revision = refs.get(`${ledgerRepository}:agentic/collaboration-ledger`);
-      const tree = trees.get(commits.get(revision).tree);
-      const value = JSON.parse(tree.content);
+      const content = ledgerContentForRevision(revision);
+      const value = JSON.parse(content);
       value.sequence += 1;
-      tree.content = `${JSON.stringify(value)}\n`;
+      replaceLedgerContent(revision, `${JSON.stringify(value)}\n`);
     },
   };
+
+  function ledgerContentForRevision(revision) {
+    const commit = commits.get(revision);
+    const rootTree = commit ? trees.get(commit.tree) : null;
+    const directory = rootTree?.entries.find((entry) => entry.path === ".agentic");
+    const directoryTree = directory ? trees.get(directory.sha) : null;
+    const file = directoryTree?.entries.find((entry) => entry.path === "collaboration-ledger.json");
+    return file ? blobs.get(file.sha) : null;
+  }
+
+  function replaceLedgerContent(revision, content) {
+    const commit = commits.get(revision);
+    const rootTree = commit ? trees.get(commit.tree) : null;
+    const directory = rootTree?.entries.find((entry) => entry.path === ".agentic");
+    const directoryTree = directory ? trees.get(directory.sha) : null;
+    const file = directoryTree?.entries.find((entry) => entry.path === "collaboration-ledger.json");
+    if (!file) return;
+    blobs.set(file.sha, content);
+  }
 }
 
 function repositoryValue(id, nodeId, fullName) {

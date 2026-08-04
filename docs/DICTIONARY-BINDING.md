@@ -81,6 +81,7 @@ dictionary_entries:
   - "@video"
   - "@mcp-gateway"
   - "@canvas"
+  - "@canvas-view"
   - "@scene"
   - "@camera"
   - "@selected-actor"
@@ -236,7 +237,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@voice-profile` | Bind one exact revision of a consented voice-profile manifest for profile creation or disclosed synthesis. | Knowgrph's voice-studio runtime resolves opaque profile identity, source digests, speaker authorization, permitted uses, retention, disclosure, and revocation state through existing media and policy owners. | It contains no voice embedding, raw audio, credential, mutable provider alias, or implicit consent; a missing, expired, mismatched, or revoked profile blocks adapter work, spend, persistence, and output. |
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
-| `@canvas` | Source-backed Canvas projection. | Existing Source Files, frontmatter, KGC, table, or Storyboard owner. | No dashboard-only graph store or renderer fork. |
+| `@canvas` | Source-backed Canvas projection and active browser-local Canvas control surface. | Existing Source Files, frontmatter, KGC, table, Storyboard, Main Toolbar, Launch, Canvas View, and Interaction owners. | No dashboard-only graph store or renderer fork. Semantic row-value and toolbar-action invocations bind to existing owners and add no panel-local state, credential, collaboration grant, or deployment authority. |
+| `@canvas-view` | Active browser-local Canvas View Mode control surface and its canonical option-id inventory. | Existing Canvas View toolbar options, shared selection action, semantic row affordances, and browser-local WebMCP bridge. | Carries no renderer, storage, collaboration, credential, or deployment authority; an unavailable or disabled option fails visibly before mutation. |
 | `@scene` | Current canonical XR scene and immersive placement scope. | Browser-local Knowgrph scene, hit-test, and shared Canvas projection owners. | Carries no camera or sensor grant and creates no duplicate renderer, persistence owner, approval, credential, Prod, or Cloudflare authority. |
 | `@camera` | First-class shared Camera framing and XR motion runtime. | Application-root Camera runtime, shared framing utilities, and canonical BottomPanel Timeline transport. | Does not create a panel-local Camera store, timeline, selection owner, credential, or deployment grant. |
 | `@selected-actor` | Actor selected for framing, cast marks, or camera choreography. | Shared Canvas graph selection and XR cast runtime. | Missing actor selection fails closed; the binding never keeps a FloatingPanel-only selection copy. |

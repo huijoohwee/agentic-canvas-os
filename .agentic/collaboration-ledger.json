@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 659,
-  "headDigest": "1cc25e853b7550c59168fddf97b0b11efb73cb93658b7c5b974667ed16da90ff",
+  "sequence": 660,
+  "headDigest": "baf67a14bb451e0adb528ae3046d9d0e2593bbd34c452bf06936fb1e12e9464b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -32117,6 +32117,48 @@
       },
       "claimDigest": "18623f99ed63907c1838d021f5db2fd086b3ff84a71f05e6c4d3137989bfd7d3",
       "digest": "1cc25e853b7550c59168fddf97b0b11efb73cb93658b7c5b974667ed16da90ff"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 660,
+      "parentDigest": "1cc25e853b7550c59168fddf97b0b11efb73cb93658b7c5b974667ed16da90ff",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b82c990be26fd7d657a9ba2e2d16e4d7be6295cd55658cd79a4ce90afba79640",
+      "idempotencyKey": "d5a667749dae330541c12f949a357f033eef8770e1f44c9391cc75081a418f71",
+      "requestDigest": "715a39f8e1e6711f455fa19e20638d14d17e6ebdc7f74739bdbb24fac5b60776",
+      "evaluationTime": "2026-08-04T23:31:52.000Z",
+      "claimCore": {
+        "claimId": "b82c990be26fd7d657a9ba2e2d16e4d7be6295cd55658cd79a4ce90afba79640",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:83350eba87018573135f404e7f128fa3df66261c0696409316e80313fdabd989",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:8d99eb7780146d8bd9664ccec495371f5d551821407fb66d5c015cfad5baf20c",
+        "canonicalBaseRevision": "9907e55bf6ef259fad1645956e7dc456a6b63c10",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:docs/documents/git-guidelines.md",
+          "path:scripts/__tests__",
+          "path:scripts/lib/git-guidelines/content-contracts.mjs",
+          "semantic:git-guidelines-protected-squash-repair"
+        ],
+        "writeSetDigest": "20f3fa9f606f757c785afa60f24408541d23ac0fb16948e959d783d0c4a67b91",
+        "laneRevision": "64cebf3773d60f4fae142e0f6ee4e6813c8267a8",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-05T22:59:23.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc76zK8b",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "db5299340f318a0effa82fd9b0a514243c67b5fca7befef347ab5837e02cdc55",
+      "digest": "baf67a14bb451e0adb528ae3046d9d0e2593bbd34c452bf06936fb1e12e9464b"
     }
   ]
 }

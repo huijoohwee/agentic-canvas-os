@@ -10,6 +10,7 @@ export const LANE_CLOUD_AUTHORITY_SCHEMA = "agentic-lane-cloud-authority/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const operationDerivedCloudVerifications = new WeakSet();
+const operationDerivedDeliveryPeerHeads = new WeakMap();
 const ADMITTED_LANE_STATES = new Set(["active", "delivery", "review_ready", "parked"]);
 
 export function normalizeDeclaredWriteScopeManifest(source, { expectedScope = "" } = {}) {
@@ -359,6 +360,57 @@ export function markOperationDerivedCloudVerification(verification) {
 export function isOperationDerivedCloudVerification(verification) {
   return operationDerivedCloudVerifications.has(verification);
 }
+export function attachOperationDerivedDeliveryPeerHead(lane, source) {
+  requireObject(lane, "Lane");
+  requireObject(source, "Delivery peer head observation");
+  const observation = {
+    schema: requiredText(source.schema, "delivery peer head schema"),
+    status: requiredText(source.status, "delivery peer head status"),
+    reviewedHeadSha: requiredSha(
+      source.reviewedHeadSha,
+      "delivery peer reviewed head",
+    ),
+    observedHeadSha: requiredSha(
+      source.observedHeadSha,
+      "delivery peer observed head",
+    ),
+    protectedMainRefresh: source.protectedMainRefresh || null,
+  };
+  if (observation.schema !== "agentic-delivery-peer-head-observation/v1") {
+    throw new Error("Delivery peer head observation schema is unsupported.");
+  }
+  if (!["reviewed-head", "protected-main-refresh"].includes(observation.status)) {
+    throw new Error("Delivery peer head observation status is unsupported.");
+  }
+  if (
+    (observation.status === "reviewed-head" && (
+      observation.reviewedHeadSha !== observation.observedHeadSha
+      || observation.protectedMainRefresh !== null
+    ))
+    || (observation.status === "protected-main-refresh" && (
+      observation.reviewedHeadSha === observation.observedHeadSha
+      || !isBoundedProtectedMainRefresh(
+        observation.protectedMainRefresh,
+        observation.reviewedHeadSha,
+        observation.observedHeadSha,
+      )
+    ))
+  ) {
+    throw new Error("Delivery peer head observation does not bind one exact reviewed or protected-refresh head.");
+  }
+  const evidenceDigest = requiredDigest(
+    source.evidenceDigest,
+    "delivery peer head evidenceDigest",
+  );
+  if (evidenceDigest !== digestValue(observation)) {
+    throw new Error("Delivery peer head observation digest does not bind its complete evidence.");
+  }
+  operationDerivedDeliveryPeerHeads.set(
+    lane,
+    Object.freeze({ ...observation, evidenceDigest }),
+  );
+  return lane;
+}
 function classifyExistingLane({
   lane,
   branch,
@@ -407,13 +459,19 @@ function hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims
   if (path.resolve(lease.worktreePath || "") !== lane.path) return false;
   const checkedOut = lane.branch?.replace(/^refs\/heads\//u, "") || null;
   if (checkedOut && checkedOut !== lease.branch) return false;
+  if (hasDeliveryAuthorizedSuccessorOwner({
+    lane,
+    lease,
+    evaluatedAt,
+    currentRemoteClaims,
+  })) return true;
   const identity = parseDeviceBranch(lease.branch);
   const localExpiry = Date.parse(lease.expiresAt);
   const cloud = lease.cloudAuthority;
   const cloudExpiry = Date.parse(cloud?.expiresAt);
   const expectedCloudState = {
     active: "active",
-    delivery: "review_ready",
+    delivery: "delivery_authorized",
     review_ready: "review_ready",
     parked: "parked",
   }[lease.status];
@@ -488,6 +546,121 @@ function hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims
     return false;
   }
 }
+function hasDeliveryAuthorizedSuccessorOwner({
+  lane,
+  lease,
+  evaluatedAt,
+  currentRemoteClaims,
+}) {
+  const observation = operationDerivedDeliveryPeerHeads.get(lane);
+  const cloud = lease?.cloudAuthority;
+  const identity = parseDeviceBranch(lease?.branch || "");
+  if (
+    !observation
+    || lane.dirty
+    || lease.status !== "review_ready"
+    || !identity
+    || identity.device !== lease.device
+    || identity.scope !== lease.scope
+    || !Number.isInteger(lease.epoch)
+    || lease.epoch < 1
+    || !SHA_PATTERN.test(String(lease.baseSha || ""))
+    || !SHA_PATTERN.test(String(lease.fenceSha || ""))
+    || !SHA_PATTERN.test(String(lease.reviewHeadSha || ""))
+    || !lease.pullRequestUrl
+    || lease.admission?.schema !== LANE_ADMISSION_LEASE_SCHEMA
+    || lease.admission.status !== "admitted"
+    || lease.admission.semanticScope !== lease.scope
+    || !Array.isArray(lease.admission.declaredWriteSet)
+    || !DIGEST_PATTERN.test(String(lease.admission.writeSetDigest || ""))
+    || !DIGEST_PATTERN.test(String(lease.admission.admissionReceiptDigest || ""))
+    || !DIGEST_PATTERN.test(String(lease.admission.preservationReceiptDigest || ""))
+    || cloud?.schema !== LANE_CLOUD_AUTHORITY_SCHEMA
+    || cloud.state !== "review_ready"
+    || cloud.deviceId !== lease.device
+    || cloud.sessionId !== lease.sessionId
+    || cloud.canonicalBaseSha !== lease.baseSha
+    || cloud.laneRevision !== lease.reviewHeadSha
+    || cloud.writeSetDigest !== lease.admission.writeSetDigest
+    || !cloud.reviewRequestId
+    || !DIGEST_PATTERN.test(String(cloud.focusedEvidenceDigest || ""))
+    || !DIGEST_PATTERN.test(String(cloud.claimDigest || ""))
+    || !DIGEST_PATTERN.test(String(cloud.claimLedgerRevision || ""))
+    || !Number.isInteger(cloud.transitionCounter)
+    || cloud.transitionCounter < 1
+    || Date.parse(cloud.expiresAt) <= evaluatedAt.getTime()
+    || observation.reviewedHeadSha !== lease.reviewHeadSha
+    || observation.observedHeadSha !== lane.head
+  ) return false;
+  try {
+    const declaredWriteSet = normalizeWriteSet(
+      lease.admission.declaredWriteSet,
+    );
+    const cloudWriteSet = normalizeWriteSet(cloud.cloudDeclaredWriteScope);
+    const matches = currentRemoteClaims.filter(
+      claim => claim.claimId === cloud.claimId,
+    );
+    if (matches.length !== 1) return false;
+    const remote = matches[0];
+    return (
+      remote.claimId === digestValue({
+        actorId: remote.actorId,
+        canonicalBaseRevision: remote.canonicalBaseRevision,
+        deviceId: pseudonymousIdentifier("device", cloud.deviceId),
+        leaseEpoch: remote.leaseEpoch,
+        repositoryId: remote.repositoryId,
+        sessionId: pseudonymousIdentifier("session", cloud.sessionId),
+        workItemId: remote.workItemId,
+        writeSetDigest: remote.writeSetDigest,
+      })
+      && digestValue(declaredWriteSet) === lease.admission.writeSetDigest
+      && JSON.stringify(cloudWriteSet) === JSON.stringify(declaredWriteSet)
+      && JSON.stringify(remote.declaredWriteScope) === JSON.stringify(declaredWriteSet)
+      && remote.writeSetDigest === lease.admission.writeSetDigest
+      && remote.canonicalBaseRevision === cloud.canonicalBaseSha
+      && remote.laneRevision === cloud.laneRevision
+      && remote.laneRevision === lease.reviewHeadSha
+      && remote.leaseEpoch === cloud.leaseEpoch
+      && remote.transitionCounter === cloud.transitionCounter + 1
+      && remote.state === "delivery_authorized"
+      && remote.expiresAt === cloud.expiresAt
+      && remote.reviewRequestId === cloud.reviewRequestId
+      && remote.fenceRevision !== cloud.claimDigest
+      && remote.transitionDigest !== cloud.claimLedgerRevision
+    );
+  } catch {
+    return false;
+  }
+}
+function isBoundedProtectedMainRefresh(receipt, reviewedHeadSha, observedHeadSha) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return false;
+  if (
+    receipt.deliveredHeadSha !== reviewedHeadSha
+    || receipt.refreshedHeadSha !== observedHeadSha
+  ) return false;
+  if (receipt.schema === "agentic-protected-main-refresh/v1") {
+    return SHA_PATTERN.test(String(receipt.mainParentSha || ""));
+  }
+  if (
+    receipt.schema !== "agentic-protected-main-refresh-chain/v1"
+    || !Number.isInteger(receipt.refreshCount)
+    || receipt.refreshCount < 2
+    || !Array.isArray(receipt.refreshes)
+    || receipt.refreshes.length !== receipt.refreshCount
+  ) return false;
+  let previous = reviewedHeadSha;
+  for (const refresh of receipt.refreshes) {
+    if (
+      !refresh
+      || refresh.previousHeadSha !== previous
+      || !SHA_PATTERN.test(String(refresh.refreshedHeadSha || ""))
+      || !SHA_PATTERN.test(String(refresh.mainParentSha || ""))
+      || !SHA_PATTERN.test(String(refresh.treeSha || ""))
+    ) return false;
+    previous = refresh.refreshedHeadSha;
+  }
+  return previous === observedHeadSha;
+}
 function hasReadyRemoteAuthority({
   cloudAuthority,
   remoteAuthorityVerification,
@@ -536,6 +709,10 @@ function normalizeLane(lane) {
     lease: lane.lease || null,
     stateDigest: requiredDigest(lane.stateDigest, "lane.stateDigest"),
   };
+  const deliveryPeerHead = operationDerivedDeliveryPeerHeads.get(lane);
+  if (deliveryPeerHead) {
+    operationDerivedDeliveryPeerHeads.set(normalized, deliveryPeerHead);
+  }
   return Object.freeze(normalized);
 }
 function finding(type, blockScope, evidence) {

@@ -353,6 +353,7 @@ function expiredCloudLease() {
       leaseEpoch: 1,
       transitionCounter: 2,
       state: "active",
+      manifestDigest: "1".repeat(64),
       expiresAt: "2026-08-04T13:00:00.000Z",
     },
     acquiredAt: "2026-08-04T10:00:00.000Z",

@@ -79,15 +79,20 @@ export function recoverExpiredCommittedHeartbeat({
     now,
   });
 
-  const renewed = heartbeatCloudAuthority({
+  const heartbeat = heartbeatCloudAuthority({
     authority: before.lease.cloudAuthority,
     deviceId: before.lease.device,
     sessionId,
     ttlSeconds: Math.floor(leaseTtlMs / 1000),
   });
+  const renewedAuthority = reconcileHeartbeatManifestProjection({
+    source: before.lease.cloudAuthority,
+    renewed: heartbeat?.authority,
+    admittedManifestDigest: before.lease.admission.manifestDigest,
+  });
   assertSameCloudSubject({
     source: before.lease.cloudAuthority,
-    renewed: renewed?.authority,
+    renewed: renewedAuthority,
     lease: before.lease,
     now: now(),
   });
@@ -111,29 +116,29 @@ export function recoverExpiredCommittedHeartbeat({
   const recoveredAt = now().toISOString();
   const projectedLease = projectExpiredCommittedHeartbeatLease({
     sourceLease: before.lease,
-    renewedCloudAuthority: renewed.authority,
+    renewedCloudAuthority: renewedAuthority,
     recoveryEvidence: before.recoveryEvidence,
     ttlMs: leaseTtlMs,
     recoveredAt,
   });
   assertMutationAuthority({
     lease: projectedLease,
-    cloudAuthority: renewed.authority,
-    remoteAuthorityVerification: renewed.verification,
+    cloudAuthority: renewedAuthority,
+    remoteAuthorityVerification: heartbeat.verification,
   });
   const lease = leaseStore.recoverExpiredCommittedHeartbeat({
     sessionId,
     branch,
     expectedLease: before.lease,
-    renewedCloudAuthority: renewed.authority,
+    renewedCloudAuthority: renewedAuthority,
     recoveryEvidence: before.recoveryEvidence,
     ttlMs: leaseTtlMs,
     recoveredAt,
   });
   const mutationAuthorityReceipt = assertMutationAuthority({
     lease,
-    cloudAuthority: renewed.authority,
-    remoteAuthorityVerification: renewed.verification,
+    cloudAuthority: renewedAuthority,
+    remoteAuthorityVerification: heartbeat.verification,
   });
   assertRecoveredLocalState({
     snapshot: before,
@@ -189,6 +194,27 @@ export function recoverExpiredCommittedHeartbeat({
     headSha: before.headSha,
     mutationAuthorityReceipt,
     replayed: false,
+  });
+}
+
+export function reconcileHeartbeatManifestProjection({
+  source,
+  renewed,
+  admittedManifestDigest,
+}) {
+  if (renewed?.manifestDigest === source?.manifestDigest) {
+    return renewed;
+  }
+  const transportManifestDigest = digestValue({
+    declaredWriteSet: renewed?.cloudDeclaredWriteScope,
+    writeSetDigest: renewed?.writeSetDigest,
+  });
+  if (renewed?.manifestDigest !== transportManifestDigest) {
+    return renewed;
+  }
+  return Object.freeze({
+    ...renewed,
+    manifestDigest: admittedManifestDigest,
   });
 }
 
@@ -254,7 +280,7 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
       "Expired committed recovery replay branch identity drifted from its lease.",
     );
   }
-  requireActiveCloudAdmission({ lease, instant });
+  requireCloudAdmission({ lease, instant });
   requireClean({ gitText });
   const remoteHeadSha = remoteBranchHead({ branch, gitOptional });
   const projection = readPullRequestProjection({ lease, branch, ghText });
@@ -441,7 +467,7 @@ export function captureExpiredCommittedHeartbeatSnapshot({
   if (Date.parse(lease.expiresAt) > instant.getTime()) {
     throw new Error("Expired committed recovery requires an expired local writer lease.");
   }
-  requireActiveCloudAdmission({ lease, instant });
+  requireCloudAdmission({ lease, instant, requireLive: false });
   if (gitText(["status", "--porcelain=v1", "-z", "--untracked-files=all"])) {
     throw new Error("Expired committed recovery requires a clean worktree.");
   }
@@ -610,11 +636,17 @@ export function requireChangedPathsWithinScope({
   }
 }
 
-function requireActiveCloudAdmission({ lease, instant }) {
+function requireCloudAdmission({ lease, instant, requireLive = true }) {
   const authority = lease.cloudAuthority;
   const declaredWriteSet = normalizeWriteSet(
     lease.admission?.declaredWriteSet || [],
   );
+  const cloudExpiry = Date.parse(authority?.expiresAt);
+  if (authority?.manifestDigest !== lease.admission?.manifestDigest) {
+    throw new Error(
+      "Expired committed recovery source cloud manifest differs from its admitted manifest.",
+    );
+  }
   if (
     lease.admission?.schema !== "agentic-lane-admission-lease/v1" ||
     lease.admission.status !== "admitted" ||
@@ -625,14 +657,14 @@ function requireActiveCloudAdmission({ lease, instant }) {
     authority.canonicalBaseSha !== lease.baseSha ||
     authority.laneRevision !== lease.fenceSha ||
     authority.writeSetDigest !== lease.admission.writeSetDigest ||
-    !Number.isFinite(Date.parse(authority.expiresAt)) ||
-    Date.parse(authority.expiresAt) <= instant.getTime() ||
+    !Number.isFinite(cloudExpiry) ||
+    (requireLive && cloudExpiry <= instant.getTime()) ||
     digestValue(declaredWriteSet) !== lease.admission.writeSetDigest ||
     JSON.stringify(authority.cloudDeclaredWriteScope) !==
       JSON.stringify(declaredWriteSet)
   ) {
     throw new Error(
-      "Expired committed recovery requires its exact live admitted cloud claim.",
+      `Expired committed recovery requires its exact ${requireLive ? "live " : ""}admitted cloud claim.`,
     );
   }
 }
@@ -717,7 +749,7 @@ function assertSameCloudSubject({ source, renewed, lease, now }) {
       JSON.stringify(source.cloudDeclaredWriteScope) ||
     renewed.state !== "active" ||
     renewed.laneRevision !== lease.fenceSha ||
-    renewed.transitionCounter <= source.transitionCounter ||
+    renewed.transitionCounter !== source.transitionCounter + 1 ||
     Date.parse(renewed.expiresAt) <= now.getTime()
   ) {
     throw new Error("Cloud heartbeat changed the expired lease claim subject.");

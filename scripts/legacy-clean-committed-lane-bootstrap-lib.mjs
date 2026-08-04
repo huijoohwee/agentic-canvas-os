@@ -125,7 +125,12 @@ function normalizeRequest(value) {
   if (branchIdentity.device !== deviceId || branchIdentity.scope !== semanticScope) {
     blocked("identity_mismatch", "Branch, device, and semantic scope must identify one lane.");
   }
-  const declaredWriteScope = normalizeWriteSet(value.declaredWriteScope);
+  let declaredWriteScope;
+  try {
+    declaredWriteScope = normalizeWriteSet(value.declaredWriteScope);
+  } catch (error) {
+    blocked("invalid_write_scope", error.message);
+  }
   const expectedChangedPaths = normalizePaths(value.expectedChangedPaths, "expectedChangedPaths");
   for (const changedPath of expectedChangedPaths) {
     if (!declaredWriteScope.some(scope => coversPath(scope, changedPath))) {
@@ -199,7 +204,12 @@ function createIdentity(request, observation) {
     deviceId: request.deviceId,
     semanticScope: request.semanticScope,
     branch: request.branch,
-    worktreePath: request.worktreePath,
+    worktreeRegistrationDigest: digestValue({
+      schema: "agentic-local-worktree-registration/v1",
+      targetRepository: request.targetRepository,
+      branch: request.branch,
+      worktreePath: request.worktreePath,
+    }),
     baseSha: observation.baseSha,
     headSha: observation.headSha,
     treeSha: observation.treeSha,
@@ -265,7 +275,8 @@ function normalizePhaseOutput(value, name, identityDigest) {
   if (!receiptDigest.match(/^[0-9a-f]{64}$/u)) {
     blocked("phase_receipt_invalid", `${name} must return a SHA-256 receipt digest.`);
   }
-  const { receiptDigest: ignoredReceiptDigest, ...unsigned } = value;
+  const unsigned = { ...value };
+  delete unsigned.receiptDigest;
   if (receiptDigest !== digestValue(unsigned)) {
     blocked("phase_receipt_invalid", `${name} receipt does not bind its complete projection.`);
   }

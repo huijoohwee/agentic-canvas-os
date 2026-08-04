@@ -57,6 +57,10 @@ state blocks. A completed replay returns the original receipt digest. The core
 has no commit, reset, checkout, worktree removal, merge, deployment, or branch
 deletion operation.
 
+The absolute worktree path remains a local validation input. Portable receipts
+contain only its content-addressed registration digest and never expose the
+machine-local path.
+
 The focused proof uses only an in-memory adapter and synthetic paths. It does
 not bootstrap or otherwise operate on any preserved real-world legacy lane.
 

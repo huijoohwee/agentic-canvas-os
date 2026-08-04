@@ -49,6 +49,8 @@ test("bootstraps exact committed bytes once and replays the receipt", async () =
   assert.equal(replay.receiptDigest, first.receiptDigest);
   assert.equal(first.preservedHeadSha, headSha);
   assert.equal(first.preservedTreeSha, treeSha);
+  assert.equal(JSON.stringify(first).includes(worktreePath), false);
+  assert.match(first.identity.worktreeRegistrationDigest, /^[0-9a-f]{64}$/u);
   assert.deepEqual(replayState.calls, firstState.calls);
   assert.equal(replayState.headSha, headSha);
   assert.equal(replayState.treeSha, treeSha);
@@ -121,6 +123,14 @@ test("requires a complete provider-neutral adapter contract", async () => {
   );
 });
 
+test("normalizes invalid provider-neutral write scope into a typed block", async () => {
+  const harness = createHarness();
+  await assertBlocked(bootstrapLegacyCleanCommittedLane({
+    ...request,
+    declaredWriteScope: ["../outside"],
+  }, { adapter: harness.adapter }), "invalid_write_scope");
+});
+
 const phaseMethods = Object.freeze({
   cloudClaim: "claimCloudAuthority",
   localLease: "claimLocalLease",
@@ -178,6 +188,7 @@ function createHarness({ interruptAfterEffect = null, initialProjection = null }
     };
   }
   return {
+    adapter,
     run: () => bootstrapLegacyCleanCommittedLane(request, {
       adapter,
       now: () => new Date("2026-08-04T00:00:00.000Z"),

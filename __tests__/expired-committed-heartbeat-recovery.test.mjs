@@ -4,11 +4,17 @@ import assert from "node:assert/strict";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   captureExpiredCommittedHeartbeatSnapshot,
+  recoverExpiredCommittedHeartbeat,
   requireChangedPathsWithinScope,
 } from "../scripts/expired-committed-heartbeat-recovery-lib.mjs";
-import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
+import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
+import {
+  parseWriterLeasePullRequestBody,
+  projectExpiredCommittedHeartbeatLease,
+  renderWriterLeasePullRequestBody,
+} from "../scripts/writer-lease-lib.mjs";
 
-const repo = "/worktrees/recovery";
+const repo = process.cwd();
 const branch = "agent/device/expired-heartbeat";
 const pullRequestUrl = "https://github.com/org/repo/pull/81";
 const baseSha = "a".repeat(40);
@@ -104,6 +110,253 @@ test("declared path containment is directional", () => {
   }), /outside declared write scope/);
 });
 
+test("recovery replays an advanced heartbeat after source expiry and restores its admitted manifest", () => {
+  const source = liveManifestLease({
+    cloudExpiresAt: "2026-08-04T11:30:00.000Z",
+  });
+  const transportManifestDigest = digestValue({
+    declaredWriteSet: source.cloudAuthority.cloudDeclaredWriteScope,
+    writeSetDigest: source.cloudAuthority.writeSetDigest,
+  });
+  assert.notEqual(transportManifestDigest, source.cloudAuthority.manifestDigest);
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: transportManifestDigest,
+    useProductionAuthority: true,
+  });
+
+  const result = recoverExpiredCommittedHeartbeat(harness.input);
+
+  assert.equal(
+    result.lease.cloudAuthority.manifestDigest,
+    source.cloudAuthority.manifestDigest,
+  );
+  assert.equal(
+    parseWriterLeasePullRequestBody(harness.remoteBody()).cloudAuthority
+      .manifestDigest,
+    source.cloudAuthority.manifestDigest,
+  );
+  assert.equal(harness.localWrites(), 1);
+  assert.equal(harness.markerWrites(), 1);
+});
+
+test("recovery rejects arbitrary renewed manifest drift before local CAS or marker mutation", () => {
+  const source = liveManifestLease();
+  const transportManifestDigest = digestValue({
+    declaredWriteSet: source.cloudAuthority.cloudDeclaredWriteScope,
+    writeSetDigest: source.cloudAuthority.writeSetDigest,
+  });
+  const arbitraryManifestDigest = "0".repeat(64);
+  assert.notEqual(arbitraryManifestDigest, source.cloudAuthority.manifestDigest);
+  assert.notEqual(arbitraryManifestDigest, transportManifestDigest);
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: arbitraryManifestDigest,
+  });
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /Cloud heartbeat changed the expired lease claim subject/,
+  );
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+test("recovery rejects source manifest drift before cloud, local CAS, or marker mutation", () => {
+  const admitted = liveManifestLease();
+  const source = {
+    ...admitted,
+    cloudAuthority: {
+      ...admitted.cloudAuthority,
+      manifestDigest: "0".repeat(64),
+    },
+  };
+  const transportManifestDigest = digestValue({
+    declaredWriteSet: source.cloudAuthority.cloudDeclaredWriteScope,
+    writeSetDigest: source.cloudAuthority.writeSetDigest,
+  });
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: transportManifestDigest,
+  });
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /source cloud manifest differs from its admitted manifest/,
+  );
+  assert.equal(harness.cloudCalls(), 0);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+test("recovery rejects a missing source manifest before cloud, local CAS, or marker mutation", () => {
+  const admitted = liveManifestLease();
+  const { manifestDigest: _missing, ...cloudAuthority } =
+    admitted.cloudAuthority;
+  const source = { ...admitted, cloudAuthority };
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: digestValue({
+      declaredWriteSet: cloudAuthority.cloudDeclaredWriteScope,
+      writeSetDigest: cloudAuthority.writeSetDigest,
+    }),
+  });
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /source cloud manifest differs from its admitted manifest/,
+  );
+  assert.equal(harness.cloudCalls(), 0);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+test("expired-source replay requires the next exact cloud transition", () => {
+  const source = liveManifestLease({
+    cloudExpiresAt: "2026-08-04T11:30:00.000Z",
+  });
+  const transportManifestDigest = digestValue({
+    declaredWriteSet: source.cloudAuthority.cloudDeclaredWriteScope,
+    writeSetDigest: source.cloudAuthority.writeSetDigest,
+  });
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: transportManifestDigest,
+    transitionIncrement: 2,
+  });
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /Cloud heartbeat changed the expired lease claim subject/,
+  );
+  assert.equal(harness.cloudCalls(), 1);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+function liveManifestLease({ cloudExpiresAt = null } = {}) {
+  const lease = expiredCloudLease();
+  return {
+    ...lease,
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      manifestDigest: lease.admission.manifestDigest,
+      ...(cloudExpiresAt ? { expiresAt: cloudExpiresAt } : {}),
+    },
+  };
+}
+
+function recoveryHarness({
+  source,
+  renewedManifestDigest,
+  transitionIncrement = 1,
+  useProductionAuthority = false,
+}) {
+  const renewedCloudAuthority = {
+    ...source.cloudAuthority,
+    manifestDigest: renewedManifestDigest,
+    transitionCounter:
+      source.cloudAuthority.transitionCounter + transitionIncrement,
+    ledgerRevision: "e".repeat(40),
+    claimLedgerRevision: "f".repeat(64),
+    expiresAt: "2026-08-04T13:30:00.000Z",
+  };
+  let saved = source;
+  let remoteBody = renderWriterLeasePullRequestBody(source);
+  let cloudCalls = 0;
+  let localWrites = 0;
+  let markerWrites = 0;
+  const verification = operationVerification(renewedCloudAuthority);
+  return {
+    input: {
+      invocationPath: repo,
+      repo,
+      gitText: recoveryGitText(),
+      gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+      ghText: () => pullRequestBodyJson(remoteBody),
+      leaseStore: {
+        read: () => saved,
+        recoverExpiredCommittedHeartbeat: input => {
+          localWrites += 1;
+          saved = projectExpiredCommittedHeartbeatLease({
+            sourceLease: input.expectedLease,
+            renewedCloudAuthority: input.renewedCloudAuthority,
+            recoveryEvidence: input.recoveryEvidence,
+            ttlMs: input.ttlMs,
+            recoveredAt: input.recoveredAt,
+          });
+          return saved;
+        },
+      },
+      sessionId: source.sessionId,
+      leaseTtlMs: 1_800_000,
+      heartbeatCloudAuthority: () => {
+        cloudCalls += 1;
+        return { authority: renewedCloudAuthority, verification };
+      },
+      ...(!useProductionAuthority ? {
+        assertMutationAuthority: ({ lease, cloudAuthority }) => {
+          assert.equal(lease.cloudAuthority, cloudAuthority);
+          return { status: "ready" };
+        },
+      } : {}),
+      run: (_command, args) => {
+        markerWrites += 1;
+        remoteBody = args[args.indexOf("--body") + 1];
+      },
+      log: () => {},
+      now: () => new Date("2026-08-04T12:00:00.000Z"),
+    },
+    cloudCalls: () => cloudCalls,
+    localWrites: () => localWrites,
+    markerWrites: () => markerWrites,
+    remoteBody: () => remoteBody,
+  };
+}
+
+function operationVerification(authority) {
+  const ledgerDigest = "b".repeat(64);
+  const inventoryDigest = "c".repeat(64);
+  return markOperationDerivedCloudVerification({
+    schema: "agentic-lane-cloud-verification/v1",
+    status: "ready",
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    ledgerRevision: authority.ledgerRevision,
+    ledgerDigest,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    laneRevision: authority.laneRevision,
+    writeSetDigest: authority.writeSetDigest,
+    reviewRequestId: authority.reviewRequestId,
+    remoteClaimInventoryDigest: inventoryDigest,
+    inventory: {
+      schema: "agentic-cloud-claim-inventory/v1",
+      inventoryDigest,
+      observedLedgerHeadRevision: authority.ledgerRevision,
+      ledgerDigest,
+      claims: [{
+        claimId: authority.claimId,
+        state: authority.state,
+        actorId: "github-user:1",
+        repositoryId: "github-repository:1",
+        workItemId: "work-item:1",
+        canonicalBaseRevision: authority.canonicalBaseSha,
+        laneRevision: authority.laneRevision,
+        declaredWriteScope: authority.cloudDeclaredWriteScope,
+        writeSetDigest: authority.writeSetDigest,
+        leaseEpoch: authority.leaseEpoch,
+        transitionCounter: authority.transitionCounter,
+        reviewRequestId: authority.reviewRequestId,
+        expiresAt: authority.expiresAt,
+        fenceRevision: authority.claimDigest,
+        transitionDigest: authority.claimLedgerRevision,
+      }],
+    },
+    receiptDigest: "e".repeat(64),
+    verifiedAt: "2026-08-04T12:00:01.000Z",
+  });
+}
+
 function expiredCloudLease() {
   const declaredWriteSet = [
     "path:docs/runtime.md",
@@ -157,6 +410,7 @@ function expiredCloudLease() {
       leaseEpoch: 1,
       transitionCounter: 2,
       state: "active",
+      manifestDigest: "1".repeat(64),
       expiresAt: "2026-08-04T13:00:00.000Z",
     },
     acquiredAt: "2026-08-04T10:00:00.000Z",
@@ -173,6 +427,13 @@ function recoveryGitText({
 } = {}) {
   return args => {
     const key = args.join(" ");
+    if (key === "worktree list --porcelain -z") {
+      return `worktree ${repo}\0HEAD ${headSha}\0branch refs/heads/${branch}\0`;
+    }
+    if (key === "diff --name-only --diff-filter=U") return "";
+    if (key === "ls-files -u") return "";
+    if (key === "status --porcelain") return "";
+    if (key === "branch --show-current") return branch;
     if (key === "status --porcelain=v1 -z --untracked-files=all") return dirt;
     if (key === "rev-parse HEAD") return headSha;
     if (key === `rev-parse ${headSha}^{tree}`) return treeSha;
@@ -194,6 +455,10 @@ function recoveryGitText({
 }
 
 function pullRequestJson(markerLease) {
+  return pullRequestBodyJson(renderWriterLeasePullRequestBody(markerLease));
+}
+
+function pullRequestBodyJson(body) {
   return JSON.stringify({
     url: pullRequestUrl,
     state: "OPEN",
@@ -202,6 +467,6 @@ function pullRequestJson(markerLease) {
     headRefOid: fenceSha,
     headRepository: { nameWithOwner: "org/repo" },
     baseRefName: "main",
-    body: renderWriterLeasePullRequestBody(markerLease),
+    body,
   });
 }

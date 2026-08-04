@@ -341,6 +341,7 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     leaseEpoch: 1,
     transitionCounter: 2,
     state: "active",
+    manifestDigest: "1".repeat(64),
     expiresAt: "2026-08-04T12:00:00.000Z",
   };
   try {
@@ -390,6 +391,18 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
       renewedCloudAuthority: {
         ...renewedCloudAuthority,
         transitionCounter: cloudAuthority.transitionCounter,
+      },
+      recoveryEvidence: evidence,
+      ttlMs: 1_800_000,
+      recoveredAt: "2026-08-04T10:02:00.000Z",
+    }), /changed the expired lease claim subject/);
+    assert.throws(() => store.recoverExpiredCommittedHeartbeat({
+      sessionId: "session-a",
+      branch,
+      expectedLease: source,
+      renewedCloudAuthority: {
+        ...renewedCloudAuthority,
+        transitionCounter: cloudAuthority.transitionCounter + 2,
       },
       recoveryEvidence: evidence,
       ttlMs: 1_800_000,

@@ -764,7 +764,7 @@ function requireSameRecoveryCloudSubject({ source, renewed, lease, instant }) {
     renewed.laneRevision !== lease.fenceSha ||
     renewed.deviceId !== lease.device ||
     renewed.sessionId !== lease.sessionId ||
-    renewed.transitionCounter <= source.transitionCounter ||
+    renewed.transitionCounter !== source.transitionCounter + 1 ||
     Date.parse(renewed.expiresAt) <= instant.getTime()
   ) {
     throw new Error("Cloud heartbeat changed the expired lease claim subject.");

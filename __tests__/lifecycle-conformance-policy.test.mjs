@@ -15,7 +15,7 @@ import {
 test("lifecycle policy identity is an immutable protected-source projection", () => {
   assert.match(LIFECYCLE_POLICY_SOURCE.revision, /^[0-9a-f]{40}$/u);
   assert.match(LIFECYCLE_POLICY_SOURCE.digest, /^[0-9a-f]{64}$/u);
-  assert.equal(LIFECYCLE_POLICY_SOURCE.guidelineVersion, "1.9.0");
+  assert.equal(LIFECYCLE_POLICY_SOURCE.guidelineVersion, "1.10.0");
   assert.deepEqual(
     Object.keys(lifecyclePolicyIdentity()).sort(),
     ["digest", "guidelineVersion", "repository", "revision"],
@@ -52,7 +52,7 @@ test("available pinned policy Git objects match the recorded byte digest", {
   );
 });
 
-test("admission finding anchors match the pinned v1.9 rule ordinals", {
+test("admission finding anchors match the pinned v1.10 rule ordinals", {
   skip: !process.env.GITHUB_ROOT,
 }, () => {
   const sourceRoot = path.join(

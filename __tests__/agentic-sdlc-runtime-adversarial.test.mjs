@@ -189,7 +189,7 @@ test("global transition sequencing detects premature dependency readiness", () =
   assertRejected(run);
 });
 
-test("execution results report zero counts for the complete 53-type union", () => {
+test("execution results report zero counts for the complete finding union", () => {
   const result = validateExecutionRun(canonicalRun());
   assert.equal(
     result.runtimeReady,
@@ -200,6 +200,6 @@ test("execution results report zero counts for the complete 53-type union", () =
     }),
   );
   assert.deepEqual(Object.keys(result.findingCounts), FINDING_TYPES);
-  assert.equal(FINDING_TYPES.length, 53);
+  assert.equal(FINDING_TYPES.length, 83);
   assert.ok(Object.values(result.findingCounts).every((count) => count === 0));
 });

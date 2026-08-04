@@ -31,12 +31,28 @@ const AUTHORING_FINDINGS = [
 const EXECUTION_FINDINGS = [
   "self-graded-verdict", "unnamed-evaluator", "ungrounded-task",
   "unexecuted-condition", "task-cycle", "concurrent-write-conflict",
+  "parallel-scope-collision", "stale-collaboration-fence",
+  "canonical-base-drift", "scope-admission-collision",
+  "unattributed-lane-ambiguity", "admission-snapshot-stale",
+  "unsafe-candidate-target", "local-only-cross-device-lease",
+  "collateral-lane-mutation", "admission-runtime-conflation",
+  "candidate-lane-orphaned",
   "state-without-reason", "oversized-task", "unsurfaced-result",
   "unenumerated-change", "self-escalated-capability", "out-of-scope-write",
   "ungated-irreversible-operation", "unbounded-task",
   "budget-raised-under-pressure", "unrecorded-consumption",
   "fix-without-witness", "unproven-property", "evidence-without-run",
   "unresumable-run", "assumed-operator-decision",
+  "unreviewed-release-candidate", "dependency-closure-drift",
+  "authorization-evidence-unjoined", "authorization-interaction-unjoined",
+  "duplicate-release-controller", "production-authorization-drift",
+  "post-authorization-rebuild", "state-reconciliation-unverified",
+  "immutable-origin-unverified", "public-route-unverified",
+  "client-cache-convergence-unverified",
+  "publication-before-live-verification", "cleanup-ownership-unproven",
+  "integration-order-cycle", "integration-before-dependency",
+  "canonical-frontier-unverified", "duplicate-change-reintegrated",
+  "stale-candidate-frontier", "runtime-readiness-unproven",
 ];
 
 const frontmatter = [
@@ -197,7 +213,7 @@ test("bold phase gates coexist with structured gate declarations", () => {
 
 test("finding vocabulary is the exact authoring and execution union", () => {
   assert.deepEqual(FINDING_TYPES, [...AUTHORING_FINDINGS, ...EXECUTION_FINDINGS]);
-  assert.equal(new Set(FINDING_TYPES).size, 53);
+  assert.equal(new Set(FINDING_TYPES).size, 83);
   assert.deepEqual(Object.keys(DEFAULT_SEVERITY), FINDING_TYPES);
   assert.equal(DEFAULT_SEVERITY["missing-frontmatter-key"], "minor");
   assert.equal(DEFAULT_SEVERITY["missing-lane"], "blocker");

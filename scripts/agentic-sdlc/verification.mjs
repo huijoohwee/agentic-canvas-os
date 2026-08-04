@@ -139,7 +139,7 @@ export function validateTaskReturns(context) {
     ) {
       context.collector.add("unsurfaced-result", {
         taskId,
-        ruleId: "task-model#6",
+        ruleId: "task-model#12",
         artifactReference: "documentation-artifact",
         evidenceExcerpt: "Documentation work must predeclare and return the exact nonempty artifact set proven by its named check.",
       });
@@ -350,7 +350,7 @@ function validateBudgetConsumption(task, collector) {
   if (exceeded.length > 0) {
     collector.add("budget-raised-under-pressure", {
       taskId: text(task?.id),
-      ruleId: "task-model#5",
+      ruleId: "per-task-budgets#2",
       artifactReference: exceeded.join(","),
       evidenceExcerpt: "Task consumption exceeded an immutable declared bound.",
     });

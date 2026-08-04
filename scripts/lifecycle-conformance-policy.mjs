@@ -6,9 +6,9 @@ import { compareLexicalText } from "./lexical-compare.mjs";
 
 export const LIFECYCLE_POLICY_SOURCE = Object.freeze({
   repository: "huijoohwee/huijoohwee.github.io",
-  revision: "44b8e46d8c704b2ff37a1fcefb364a864d2aacf7",
-  digest: "8b4b47e9fd649f9ff380a9159316583dd19051bb9a80a9ec17b4d3ca6348cbbc",
-  guidelineVersion: "1.9.0",
+  revision: "50a6135ee3ba952f3961a5cab6bd23227499d925",
+  digest: "2bd0a430b21d3b15012078836ae975e0cf5d9ff8da53b4b21c070c2dcebe71e9",
+  guidelineVersion: "1.10.0",
   modules: Object.freeze([
     "guidelines/agentic-sdlc-cloud-collaboration.md",
     "guidelines/agentic-sdlc-conformance-runtime.md",
@@ -28,19 +28,19 @@ export const LIFECYCLE_POLICY_RULE_CATALOG = Object.freeze({
     "State all four bounds before dispatch; a task dispatched with any bound unstated is an `unbounded-task` finding at `blocker` severity",
   "runtime-readiness-enforcement#2":
     "Require typed inputs and outputs, bounded orchestration, independent evaluation, named checks with recorded results, cost and fallback evidence, and closed mutation and deployment gates before deriving `runtime-ready`",
-  "runtime-readiness-enforcement#4":
+  "runtime-readiness-enforcement#5":
     "Emit `runtime-readiness-unproven` at `blocker` severity when a required receipt, join, budget, check, evaluator, dependency, or boundary proof is absent or stale",
   "specification-to-task-bridge#1":
     "Derive every task from at least one VCC; a task tracing to no VCC is an `ungrounded-task`",
   "specification-to-task-bridge#2":
     "Ensure every VCC is covered by at least one task; a VCC with no task is an `unexecuted-condition`",
-  "task-model#7":
-    "Split a task that exceeds its budget rather than raising the budget; a persistent overrun is a decomposition defect, and raising the bound hides it",
-  "task-model#9":
-    "Express dependencies as a directed acyclic graph over Task IDs; a cycle is a `task-cycle` finding at `blocker` severity",
-  "task-model#10":
-    "Derive readiness from the graph: a task is ready when every dependency is in a terminal success state",
   "task-model#11":
+    "Split a task that exceeds its budget rather than raising the budget; a persistent overrun is a decomposition defect, and raising the bound hides it",
+  "task-model#13":
+    "Express dependencies as a directed acyclic graph over Task IDs; a cycle is a `task-cycle` finding at `blocker` severity",
+  "task-model#14":
+    "Derive readiness from the graph: a task is ready when every dependency is in a terminal success state",
+  "task-model#15":
     "Group ready tasks into waves for concurrent dispatch; forbid two tasks in one wave writing the same artifact, which is a `concurrent-write-conflict`",
   "tool-permission--blast-radius#2":
     "Forbid self-escalation: an Implementer that needs a wider class returns `blocked` with the reason, and the Orchestrator re-dispatches with a new grant. Widening a grant mid-task is a `self-escalated-capability` finding at `blocker` severity",
@@ -51,7 +51,7 @@ export const LIFECYCLE_POLICY_RULE_CATALOG = Object.freeze({
   "tool-permission--blast-radius#6":
     "State the declared write scope before dispatch; a write outside it is an `out-of-scope-write` finding",
   "validation-checklist#6":
-    "**Collaboration identity complete**; concurrent writers have disjoint scopes, distinct lanes, current leases, and exact fence revisions",
+    "**Collaboration identity complete when concurrent mutation applies**; authoritative future write scopes, distinct lanes, and exact fences are present without path inference; current local leases are required only for local mutation-capable projections",
   "verification-strategy#5":
     "Derive a property from every correctness property stated in the specification; a stated property with no executable test is an `unproven-property` finding",
   "verification-strategy#11":

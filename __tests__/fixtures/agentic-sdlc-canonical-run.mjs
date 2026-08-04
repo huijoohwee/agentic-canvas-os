@@ -348,7 +348,7 @@ export function canonicalRun() {
       attestation: {
         authorityId: "acos-dev-persistence-v1",
         algorithm: "ed25519",
-        signature: "51FKXYL5msrLjbst+jD42ozy+uLIban2ccNQVIBFePJnTodjuNlUHKXrHGqHmmNFLJ9sJSLB/pQWyz3Ktq60DA==",
+        signature: "YYMyZt0Ikgr8ASCiPLepQZ2W4j+cJSSddJxirGT0D4u4FdcNWFD9qjY30UVe4seQ05UQHgI8gpWh/c1P1ckMDA==",
       },
       persistedTransitionRefs: ["1:4"],
       persistedComponents: [

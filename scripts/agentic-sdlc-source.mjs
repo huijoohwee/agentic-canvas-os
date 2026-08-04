@@ -310,11 +310,13 @@ export function verifyGuidelineLoadProfiles(profiles, model) {
     execution: [
       "run-start",
       "task-derivation",
+      "lane-admission",
       "dispatch",
       "implementation",
       "verification",
       "recovery",
       "escalation",
+      "release-handoff",
     ],
   };
   let count = 0;
@@ -391,11 +393,6 @@ function resolveLocator(value, environment) {
 }
 
 async function gitRevision(repositoryLocator, revision) {
-  await execFileAsync(
-    "git",
-    ["-C", repositoryLocator, "merge-base", "--is-ancestor", revision, "HEAD"],
-    { encoding: "utf8" },
-  );
   const { stdout } = await execFileAsync(
     "git",
     ["-C", repositoryLocator, "rev-parse", "--verify", `${revision}^{commit}`],

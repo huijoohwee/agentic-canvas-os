@@ -37,16 +37,16 @@ export const ADMISSION_FINDING_TYPES = Object.freeze([
 ]);
 
 const FINDING_RULES = Object.freeze({
-  "runtime-readiness-unproven": "runtime-readiness-enforcement#4",
+  "runtime-readiness-unproven": "runtime-readiness-enforcement#5",
   "unnamed-evaluator": "agent-roles--independence#7",
   "self-graded-verdict": "agent-roles--independence#6",
   "ungrounded-task": "specification-to-task-bridge#1",
   "unexecuted-condition": "specification-to-task-bridge#2",
-  "task-cycle": "task-model#9",
-  "concurrent-write-conflict": "task-model#11",
+  "task-cycle": "task-model#13",
+  "concurrent-write-conflict": "task-model#15",
   "parallel-scope-collision": "validation-checklist#6",
   "stale-collaboration-fence": "validation-checklist#6",
-  "oversized-task": "task-model#7",
+  "oversized-task": "task-model#11",
   "self-escalated-capability": "tool-permission--blast-radius#2",
   "out-of-scope-write": "tool-permission--blast-radius#6",
   "ungated-irreversible-operation": "tool-permission--blast-radius#3",

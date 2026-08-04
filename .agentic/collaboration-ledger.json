@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 571,
-  "headDigest": "a1786e4f8d2b31bdc1fb9f88bd5ec0eb5cf8e7f360814f432395b425dabd9bf9",
+  "sequence": 572,
+  "headDigest": "badc3b556f42c82a19237d06decab798eceb90b39b446761d947ed6bae6e04ae",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -27770,6 +27770,57 @@
       },
       "claimDigest": "cfd0a484aec43de40f0dfa70d43bd877bda642297cb1b7c2ddd87753f01cb15b",
       "digest": "a1786e4f8d2b31bdc1fb9f88bd5ec0eb5cf8e7f360814f432395b425dabd9bf9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 572,
+      "parentDigest": "a1786e4f8d2b31bdc1fb9f88bd5ec0eb5cf8e7f360814f432395b425dabd9bf9",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b4d4cbcc021df235731951ae04bf175097496911248b08e0cff1114acc112ed9",
+      "idempotencyKey": "755f018b5ac024ed3c0a459d31afd27803073e8e5f9fcda74601c3df85e13217",
+      "requestDigest": "5cea6a251ea342945cf97b01b1b24b997fc987e66d9780f9bbf71bb24b04c1bb",
+      "evaluationTime": "2026-08-04T13:35:51.000Z",
+      "claimCore": {
+        "claimId": "b4d4cbcc021df235731951ae04bf175097496911248b08e0cff1114acc112ed9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:462f3c4e2484aa4a14fda7bfb4417c56b0adeaafc3e0e5fea618dba61eeca223",
+        "sessionId": "session:bab9dca49cde3b53f3623ee9d281a8e549fc433f9b6146c22fe78946b2b5c7d5",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:13170dccbd4af45a5e27c626e8ee483a4533fe87e549205d10d88fce2e50abdd",
+        "canonicalBaseRevision": "44b8e46d8c704b2ff37a1fcefb364a864d2aacf7",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:package.json",
+          "path:schema/AgenticRAG/agenticrag-guidelines-and-surfaces-map.graph.jsonld",
+          "path:scripts/check-agenticrag-guidelines-map.mjs"
+        ],
+        "writeSetDigest": "2fe6e77d250187506a800798e50e3318482c7e8ec38425fadfc9bbb13a05699d",
+        "laneRevision": "34e4a32074ff2a0905194b8570eca6355dab031a",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-07-31T06:04:55.000Z",
+        "evidenceDigest": "2d67c7726b76780e0edbdff7b12711b950238d4345a5224709aa3a6486e14be8",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc74XLTo",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null,
+        "eligibleSince": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "34e4a32074ff2a0905194b8570eca6355dab031a",
+          "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc74XLTo",
+          "bytesDigest": "5f2d5203297df86bae53830d36d35da990aac255b52318b91f8600e347892b4d",
+          "namedChecksDigest": "828d7291e3250efe088ca111d11605b4f71e2a4bdcb3ebe4db769c5f847d87ca",
+          "handoffEvidenceDigest": "38aa71ec0cb9faedc0516f12931f4b49cb1ba984e8df2e1cc6a297c4af1356fc",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-04T13:35:51.000Z"
+        }
+      },
+      "claimDigest": "5ffeffc957ca6038e8064fb61779acec735327274893f022bcc721b64da1f924",
+      "digest": "badc3b556f42c82a19237d06decab798eceb90b39b446761d947ed6bae6e04ae"
     }
   ]
 }

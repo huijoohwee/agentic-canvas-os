@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 486,
-  "headDigest": "3ffaae8b0f46ac5b349b4cd6269e2a555024e14b0a4bba088c0a2ff203b5d6f6",
+  "sequence": 487,
+  "headDigest": "163729dc40b2a3504b1ac3b61123ec3bbbeef9dd035cee485ff841c08a26b267",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -23509,6 +23509,83 @@
       },
       "claimDigest": "bce5ab0740bef3f978bd7609632c624f61a677bd880f53b4b7a24fa9d5501f7b",
       "digest": "3ffaae8b0f46ac5b349b4cd6269e2a555024e14b0a4bba088c0a2ff203b5d6f6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 487,
+      "parentDigest": "3ffaae8b0f46ac5b349b4cd6269e2a555024e14b0a4bba088c0a2ff203b5d6f6",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "0032e0bfc447a47c7f140c30efbe3a6bf09fdb320dae4cd4d2433ca79b2240d7",
+      "idempotencyKey": "4558039ff5a012070386d0683601c090d99905fb7d6b813bc7bcd86c00caf137",
+      "requestDigest": "039030b5cfd13205822f43d263c773af6707e023a0506273f33b2961df969745",
+      "evaluationTime": "2026-08-04T09:46:58.000Z",
+      "claimCore": {
+        "claimId": "0032e0bfc447a47c7f140c30efbe3a6bf09fdb320dae4cd4d2433ca79b2240d7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:09dc433f726e7bae6e89a728d05da49d02a669c2fdf8f16dc3a5a3c0a43b5bb2",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:6ede6c8f62793a7d4de66a2366444161daa108b01299b7edbc5cc737a37041e6",
+        "canonicalBaseRevision": "5679d4101f5470fb85816b6df4f2ec0af6ca4eb7",
+        "declaredWriteScope": [
+          "path:.github/workflows/integration.yml",
+          "path:canvas/package.json",
+          "path:canvas/scripts/run_video_editor_browser_smoke.mjs",
+          "path:canvas/scripts/run_xr_v2_browser_smoke.mjs",
+          "path:canvas/scripts/verify_video_editor_browser_smoke.mjs",
+          "path:canvas/scripts/verify_xr_v2_browser_smoke.mjs",
+          "path:canvas/src/App.tsx",
+          "path:canvas/src/__tests__/videoEditorIndependence.test.ts",
+          "path:canvas/src/__tests__/videoEditorRuntimeReady.test.ts",
+          "path:canvas/src/__tests__/xrV2Runtime.test.ts",
+          "path:canvas/src/__tests__/xrV2RuntimeAdapters.test.ts",
+          "path:canvas/src/components/timeline",
+          "path:canvas/src/features/gitgraph",
+          "path:canvas/src/features/testing",
+          "path:canvas/src/features/xr-v2",
+          "path:canvas/src/tests/run.ts",
+          "path:docs/TESTING.md",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:docs/documents/knowgrph-2d-renderer-enhancement-design.md",
+          "path:docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md",
+          "path:docs/documents/knowgrph-xr-v2-runtime-readiness.md",
+          "path:docs/runtime-api.md",
+          "path:package.json",
+          "path:scripts/__tests__/video-editor-source-smoke.test.mjs",
+          "path:scripts/__tests__/xr-v2-source-smoke.test.mjs",
+          "path:scripts/run-video-editor-source-smoke.mjs",
+          "path:scripts/run-xr-v2-source-smoke.mjs",
+          "path:scripts/video-editor",
+          "path:scripts/xr-v2",
+          "semantic:xr-video-editor-runtime-ready"
+        ],
+        "writeSetDigest": "748a6bf3cae16afb4cbcc403864bf508f848f6ef67827fd0c7bd31ed772c713a",
+        "laneRevision": "fcd69c6b2d42a00779f55be8c1d57a0ab468339b",
+        "leaseEpoch": 3,
+        "transitionCounter": 10,
+        "heartbeatCounter": 4,
+        "state": "released",
+        "expiresAt": "2026-08-04T10:17:16.000Z",
+        "evidenceDigest": "e3dc00dcfd4a4352cfc7a428c2da7c5d07d2254c05fa0b7d0dff2ea85395bd49",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs76Tv5s",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "integrated",
+          "evidenceDigest": "50c0a4159a312c89cfa2cca83dc85f5a30ea83f0677fa903d74583b1c493e983",
+          "integrationReceiptDigest": "610051846ce5176b17ef8e9595395a4355337e6a77c34f2f4fd74964a34d2549",
+          "evaluationTime": "2026-08-04T09:46:58.000Z"
+        },
+        "deliveryAuthorization": {
+          "focusedEvidenceDigest": "e3dc00dcfd4a4352cfc7a428c2da7c5d07d2254c05fa0b7d0dff2ea85395bd49",
+          "integrationIntentDigest": "17216434db384614fbfe910b058367278d67c1a4a77c2214ada066c3afca2589",
+          "operatorDecisionDigest": "4333666fb59c098968c1d7eaa612f2fba5a7fcb1a5eff07579367f1683ced6cf",
+          "evaluationTime": "2026-08-04T04:45:06.000Z"
+        }
+      },
+      "claimDigest": "1087307f9408937deb60142b330ba20b65c9503a8591891342caf8586c8fa6eb",
+      "digest": "163729dc40b2a3504b1ac3b61123ec3bbbeef9dd035cee485ff841c08a26b267"
     }
   ]
 }

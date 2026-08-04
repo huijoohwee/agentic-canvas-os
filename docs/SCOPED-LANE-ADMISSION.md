@@ -65,7 +65,7 @@ with `origin/main`.
 | Concern | Owner |
 |---|---|
 | Pure normalization, classification, findings, and report digest | `scoped-lane-admission-lib.mjs` |
-| Double-read Git worktree, index, working-byte, and lease snapshot | `scoped-lane-admission-state.mjs` |
+| Double-read Git worktree, index, working-byte, lease, and bounded protected-main refresh snapshot | `scoped-lane-admission-state.mjs` |
 | Live verification, crash reconciliation, and transitions through the existing cloud CAS ledger | `scoped-lane-cloud-authority.mjs`, `scoped-lane-cloud-reconciliation.mjs`, and `CLOUD-COLLABORATION.md` |
 | Direct read-only plan/check command | `scoped-lane-admission.mjs` |
 | Candidate creation and exact-base rollback | `task-worktree-provision.mjs` |
@@ -121,6 +121,19 @@ partially matching peer authority is ambiguous. A legacy active lease without
 that exact current join remains fail-closed until its owner performs the
 repository cloud handoff/reclaim or closes the lane; a pull request, local
 lease, or inferred scope cannot upgrade it.
+
+A clean frozen `review_ready` peer may remain `disjoint-attributed` after its
+owner performs the exact live `delivery_authorized` successor transition. That
+narrow join requires the same claim identity, base, reviewed revision, write
+set, cloud epoch, review request, and expiry; exactly one incremented transition
+counter; changed fence and transition digests; and an operation-derived Git
+observation proving that the checked-out head is either the reviewed head or a
+bounded exact protected-main refresh of it. The observation is retained as
+private process provenance and bound into the lane-state digest, so serialized
+lane input cannot forge it and double-read evidence drift blocks admission.
+This classification only permits preservation of an unrelated lane. It grants
+no authority to author, resume, review, merge, release, reconcile, run, or
+deploy the peer.
 
 ## Read-Only Commands
 
@@ -357,6 +370,12 @@ Focused proof must show:
   mutation receipt, and caps local expiry at cloud expiry;
 - review re-verifies after checks, transitions the exact pushed HEAD to
   cloud `review_ready`, and releases the local lease only after that proof;
+- a clean frozen `review_ready` peer remains attributable across only the exact
+  live counter-plus-one `delivery_authorized` successor when operation-derived
+  Git evidence proves the reviewed head or its bounded protected-main refresh;
+  forged input, dirty state, malformed refresh ancestry, torn evidence, or any
+  claim/base/scope/epoch/review/expiry drift remains ambiguous, and attribution
+  creates no peer mutation or lifecycle authority;
 - cloud-admitted local-only resume and park fail closed pending explicit cloud
   handoff/reclaim, while external claim retry or release remains owner-led;
 - configured absolute hook SSOT and sentinel configuration remain unchanged;

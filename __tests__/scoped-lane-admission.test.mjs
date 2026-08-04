@@ -167,6 +167,113 @@ function peerFixture(authority) {
     laneBranch: "refs/heads/agent/peer/peer-docs", head: fenceSha, dirty: true, lease });
   return { peerPath, peer, lease, lane };
 }
+function deliveryPeerFixture(authority, {
+  refreshed = true,
+  dirty = false,
+  invalidRefresh = false,
+  driftRefreshEvidence = false,
+} = {}) {
+  const peerPath = "/workspace/.worktrees/repository/peer-delivery";
+  const peerWriteSet = [
+    "path:docs/peer-delivery",
+    "semantic:peer-delivery",
+  ];
+  const reviewedHeadSha = "d".repeat(40);
+  const observedHeadSha = refreshed ? "e".repeat(40) : reviewedHeadSha;
+  const mainParentSha = "f".repeat(40);
+  const alternateMainParentSha = "0".repeat(40);
+  const peerTreeSha = "1".repeat(40);
+  const reviewedPeer = publicClaim({
+    declaredWriteSet: peerWriteSet,
+    writeSetDigest: digestValue(peerWriteSet),
+  }, {
+    state: "review_ready",
+    deviceId: "peer",
+    sessionId: "peer-session",
+    laneRevision: reviewedHeadSha,
+    fenceRevision: "c".repeat(64),
+    transitionDigest: "d".repeat(64),
+    transitionCounter: 7,
+    reviewRequestId: "github-pull-request:PR_peer",
+  });
+  const localAuthority = {
+    ...authorityForPublicClaim(authority, reviewedPeer),
+    focusedEvidenceDigest: "e".repeat(64),
+    reviewRequestId: reviewedPeer.reviewRequestId,
+  };
+  const lease = ownedLease({
+    scope: "peer-delivery",
+    lanePath: peerPath,
+    writeSet: peerWriteSet,
+    authority: localAuthority,
+  });
+  lease.status = "review_ready";
+  lease.reviewHeadSha = reviewedHeadSha;
+  lease.cloudAuthority = {
+    ...lease.cloudAuthority,
+    ...localAuthority,
+    canonicalBaseSha: canonicalSha,
+    laneRevision: reviewedHeadSha,
+    cloudDeclaredWriteScope: peerWriteSet,
+    writeSetDigest: digestValue(peerWriteSet),
+    deviceId: "peer",
+    sessionId: "peer-session",
+  };
+  const deliveryPeer = {
+    ...reviewedPeer,
+    state: "delivery_authorized",
+    transitionCounter: reviewedPeer.transitionCounter + 1,
+    fenceRevision: "f".repeat(64),
+    transitionDigest: "0".repeat(64),
+  };
+  let refreshReads = 0;
+  const git = (cwd, args) => {
+    const key = args.join(" ");
+    if (key === "worktree list --porcelain -z") {
+      return [
+        `worktree ${repository}\0HEAD ${canonicalSha}\0branch refs/heads/main\0`,
+        `worktree ${peerPath}\0HEAD ${observedHeadSha}\0branch refs/heads/agent/peer/peer-delivery\0`,
+      ].join("");
+    }
+    if (key === "rev-parse origin/main") return canonicalSha;
+    if (key === "rev-parse HEAD^{tree}") {
+      return cwd === peerPath ? peerTreeSha : canonicalSha;
+    }
+    if (key === "status --porcelain=v1 -z --untracked-files=all") {
+      return cwd === peerPath && dirty ? " M tracked\0" : "";
+    }
+    if (key === "ls-files --stage -z") return "";
+    if (key === "ls-files --modified --deleted --others --exclude-standard -z") {
+      return "";
+    }
+    if (key === `rev-list --parents -n 1 ${observedHeadSha}`) {
+      if (invalidRefresh) return `${observedHeadSha} ${reviewedHeadSha}`;
+      refreshReads += 1;
+      const observedMainParent = driftRefreshEvidence && refreshReads > 1
+        ? alternateMainParentSha
+        : mainParentSha;
+      return `${observedHeadSha} ${reviewedHeadSha} ${observedMainParent}`;
+    }
+    if (key.startsWith("merge-base --is-ancestor ")) return "";
+    if (key.startsWith("merge-tree --write-tree --no-messages ")) {
+      return peerTreeSha;
+    }
+    if (key === `rev-parse ${observedHeadSha}^{tree}`) return peerTreeSha;
+    throw new Error(`unexpected git command: ${cwd} :: ${key}`);
+  };
+  const collect = () => collectScopedLaneState({
+    repository,
+    git,
+    readLeases: () => [lease],
+  });
+  return {
+    peerPath,
+    reviewedPeer,
+    deliveryPeer,
+    lease,
+    collect,
+  };
+}
 function evaluate({ manifest, lanes, authority, verification, ...overrides }) {
   return evaluateScopedLaneAdmission({
     repository, canonicalPath,
@@ -304,6 +411,109 @@ test("peer attribution requires an exact current operation-derived remote join",
     assert.equal(report.authoringAdmission.status, "blocked", label);
     assert.equal(report.admissionRuntimeConformance.status, "unevaluated", label);
   }
+});
+test("delivery-authorized peers remain attributable at the reviewed head or an exact protected-main refresh", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  for (const refreshed of [false, true]) {
+    const fixture = deliveryPeerFixture(authority, { refreshed });
+    const verified = verifiedBundle(authority, manifest, [
+      publicClaim(manifest),
+      fixture.deliveryPeer,
+    ]);
+    const report = evaluate({
+      manifest,
+      authority,
+      verification: verified.verification,
+      lanes: fixture.collect().lanes,
+    });
+    const observed = report.lanes.find(
+      lane => lane.path === fixture.peerPath,
+    );
+    assert.equal(observed.classification, "disjoint-attributed");
+    assert.equal(report.authoringAdmission.status, "planned");
+    assert.equal(
+      Object.keys(observed).some(key => key.includes("deliveryPeerHead")),
+      false,
+    );
+  }
+});
+test("delivery-authorized peer attribution rejects forged, dirty, malformed, or drifted evidence", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const fixture = deliveryPeerFixture(authority);
+  const collectedLane = fixture.collect().lanes.find(
+    lane => lane.path === fixture.peerPath,
+  );
+  const forgedLane = laneState({
+    lanePath: fixture.peerPath,
+    laneBranch: "refs/heads/agent/peer/peer-delivery",
+    head: collectedLane.head,
+    lease: fixture.lease,
+  });
+  for (const [label, lane] of [
+    ["caller-forged", forgedLane],
+    ["dirty", deliveryPeerFixture(authority, { dirty: true }).collect().lanes.find(
+      candidate => candidate.path === fixture.peerPath,
+    )],
+    ["malformed-refresh", deliveryPeerFixture(authority, {
+      invalidRefresh: true,
+    }).collect().lanes.find(candidate => candidate.path === fixture.peerPath)],
+  ]) {
+    const verified = verifiedBundle(authority, manifest, [
+      publicClaim(manifest),
+      fixture.deliveryPeer,
+    ]);
+    const report = evaluate({
+      manifest,
+      authority,
+      verification: verified.verification,
+      lanes: [canonicalLane(), lane],
+    });
+    assert.equal(
+      report.lanes.find(candidate => candidate.path === fixture.peerPath)
+        .classification,
+      "ambiguous",
+      label,
+    );
+    assert.equal(report.authoringAdmission.status, "blocked", label);
+  }
+  const remoteVariants = [
+    ["counter-gap", { transitionCounter: 9 }],
+    ["wrong-state", { state: "review_ready" }],
+    ["base-drift", { canonicalBaseRevision: "b".repeat(40) }],
+    ["lane-drift", { laneRevision: "b".repeat(40) }],
+    ["epoch-drift", { leaseEpoch: 2 }],
+    ["expiry-drift", { expiresAt: "2099-08-01T00:00:00.000Z" }],
+    ["review-drift", { reviewRequestId: "github-pull-request:PR_other" }],
+    ["unchanged-fence", { fenceRevision: fixture.reviewedPeer.fenceRevision }],
+    ["unchanged-transition", {
+      transitionDigest: fixture.reviewedPeer.transitionDigest,
+    }],
+  ];
+  for (const [label, drift] of remoteVariants) {
+    const verified = verifiedBundle(authority, manifest, [
+      publicClaim(manifest),
+      { ...fixture.deliveryPeer, ...drift },
+    ]);
+    const report = evaluate({
+      manifest,
+      authority,
+      verification: verified.verification,
+      lanes: [canonicalLane(), collectedLane],
+    });
+    assert.equal(
+      report.lanes.find(lane => lane.path === fixture.peerPath).classification,
+      "ambiguous",
+      label,
+    );
+  }
+  assert.throws(
+    () => deliveryPeerFixture(authority, {
+      driftRefreshEvidence: true,
+    }).collect(),
+    /changed during admission inspection/,
+  );
 });
 test("semantic equality, parent-child overlap, and ambiguous legacy lanes block", () => {
   const manifest = manifestFor(["scripts/scoped-runtime/child"]);

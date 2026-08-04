@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 533,
-  "headDigest": "7be1d92038aae2515fd8de11f4bd15a6086c76f44fc5e1f39d9b3a387fd25777",
+  "sequence": 534,
+  "headDigest": "0dee2937ef6864bf3178b26467bdcb8e72630adf96e1baf573b087421eafaa21",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -25935,6 +25935,62 @@
       },
       "claimDigest": "48bb673be4cb34024acd62274693aa008c997449abe2c858e799b9d3ed3951e9",
       "digest": "7be1d92038aae2515fd8de11f4bd15a6086c76f44fc5e1f39d9b3a387fd25777"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 534,
+      "parentDigest": "7be1d92038aae2515fd8de11f4bd15a6086c76f44fc5e1f39d9b3a387fd25777",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9b3269ae368e7059c2e5ce7ebd7a34fa60729f428628bf101dfead5d0f52d199",
+      "idempotencyKey": "581a27517ab25c98bac6cdd764a5d3c92b7d37223f29cecc0dfe10cdf6459735",
+      "requestDigest": "c0c2553402ba5558acaf81c6b51e153067462c806cda48794b6075a795b05b34",
+      "evaluationTime": "2026-08-04T11:32:00.000Z",
+      "claimCore": {
+        "claimId": "9b3269ae368e7059c2e5ce7ebd7a34fa60729f428628bf101dfead5d0f52d199",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:90ded5f8eab56f4ea6b033aba29836adecfa3cd41f745d36694add19366447c0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9ade3d218e17d87ab749b17587641549eb2fe48d5db015768ead440c41f851cb",
+        "canonicalBaseRevision": "c292cc67b98277fc40a4680d182385395818597e",
+        "declaredWriteScope": [
+          "path:.github/workflows/cloud-collaboration.yml",
+          "path:__tests__/cloud-collaboration-cli.test.mjs",
+          "path:__tests__/cloud-collaboration-projection.test.mjs",
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "semantic:cloud-workflow-dispatch-input-cap-repair"
+        ],
+        "writeSetDigest": "691b35adcdbf687f1e5930330e75060d80d5e73716d412a0f8076475b15c73a8",
+        "laneRevision": "22d1862ced279ec306f607fd611f5160460b57dc",
+        "leaseEpoch": 2,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-04T13:30:38.000Z",
+        "evidenceDigest": "5553fac13de9988aa337da72ac3c33427fcf08f3ade1b21fb74b803066df1e9e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76f6-z",
+        "predecessorClaimId": "414ddfabf12ed568747fd0ed0993c3676b9d5ec385626bca2cd8744bba0b3caf",
+        "eligibleSince": "2026-08-04T11:29:39.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-04T11:30:38.000Z",
+        "integration": {
+          "candidateRevision": "22d1862ced279ec306f607fd611f5160460b57dc",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76f6-z",
+          "focusedEvidenceDigest": "5553fac13de9988aa337da72ac3c33427fcf08f3ade1b21fb74b803066df1e9e",
+          "dependencyClosureDigest": "18a2fb1ee6d24f3f6f94b15b1fdbf950fa243a528d960eea683771b3163ccacb",
+          "namedChecksDigest": "bba70cf9aeafef097b178e6f83c527f540e5fd6fb7cf64ce8ed3391e95e573c3",
+          "handoffEvidenceDigest": "c0de0241803c429ffb5ee7826d1e49f29fe7267e3a94029673eb581a8f95aebd",
+          "operatorDecisionDigest": "903e80fb68382fc99d1fa0755bbde58d40faa511f9e2df5622ffbc78592cb119",
+          "integrationIntentDigest": "2ae57317324270cbee187cb6d8d6fad117dd428829d0284e9efc79c9ce01fb37",
+          "integratedAt": "2026-08-04T11:32:00.000Z"
+        }
+      },
+      "claimDigest": "29dedb156c6bab3f4cf04fb9fada453de91d1941dfa8ad7d1832797dde23d400",
+      "digest": "0dee2937ef6864bf3178b26467bdcb8e72630adf96e1baf573b087421eafaa21"
     }
   ]
 }

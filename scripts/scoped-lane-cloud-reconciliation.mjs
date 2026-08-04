@@ -145,7 +145,9 @@ export function reconcileCloudAuthorityProjection({
     transitionCounter: claim.transitionCounter,
     state: claim.state,
     expiresAt: claim.expiresAt,
-    operationReceiptDigest: claim.operationReceiptDigest,
+    ...(claim.operationReceiptDigest ? {
+      operationReceiptDigest: claim.operationReceiptDigest,
+    } : {}),
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration,
     ...(focusedEvidenceDigest ? { focusedEvidenceDigest } : {}),
@@ -193,9 +195,14 @@ export function normalizeCurrentClaimInventory({
     "inventory evaluation time",
   );
   const claims = inventoryResult.claims.map(source => {
+    const entrySchema = requiredEntrySchema(source.entrySchema);
+    if (entrySchema.endsWith("/v2")) {
+      requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
+    } else if (source.operationReceiptDigest) {
+      requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
+    }
     const core = {
       claimId: requiredDigest(source.claimId, "inventory claimId"),
-      entrySchema: requiredEntrySchema(source.entrySchema),
       state: requiredCurrentState(source.state),
       actorId: requiredText(source.actorId, "inventory actorId"),
       repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
@@ -331,9 +338,15 @@ export function requireReadyResult(result, {
 }
 
 function normalizeClaim(source) {
+  const entrySchema = requiredEntrySchema(source.entrySchema);
+  const operationReceiptDigest = source.operationReceiptDigest
+    ? requiredDigest(source.operationReceiptDigest, "operationReceiptDigest")
+    : entrySchema.endsWith("/v1")
+      ? null
+      : requiredDigest(source.operationReceiptDigest, "operationReceiptDigest");
   const claim = {
     claimId: requiredDigest(source.claimId, "claimId"),
-    entrySchema: requiredEntrySchema(source.entrySchema),
+    entrySchema,
     state: requiredState(source.state),
     actorId: requiredText(source.actorId, "actorId"),
     repositoryId: requiredText(source.repositoryId, "repositoryId"),
@@ -359,7 +372,7 @@ function normalizeClaim(source) {
       source.transitionDigest,
       "transitionDigest",
     ),
-    operationReceiptDigest: requiredDigest(source.operationReceiptDigest, "operationReceiptDigest"),
+    operationReceiptDigest,
     integrationReceiptDigest: source.integrationReceiptDigest
       ? requiredDigest(source.integrationReceiptDigest, "integrationReceiptDigest")
       : null,

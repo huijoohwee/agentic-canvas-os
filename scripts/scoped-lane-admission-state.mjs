@@ -7,8 +7,13 @@ import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import {
   LANE_ADMISSION_REPORT_SCHEMA,
+  bindOperationDerivedDeliveryPeerLaneStates,
   isOperationDerivedCloudVerification,
 } from "./scoped-lane-admission-lib.mjs";
+import {
+  isOperationDerivedDeliveryPeerVerification,
+  verifyDeliveryAuthorizedPeerAuthorities,
+} from "./scoped-lane-delivery-peer-authority.mjs";
 import {
   assertPreservationReceiptIntegrity,
   verifyCandidateProvisionEvidence,
@@ -128,13 +133,38 @@ export function verifyPreservedLaneState(beforeReport, afterLanes, {
     remoteAuthorityVerification,
     allowPlanned: true,
   });
-  const after = new Map(afterLanes.map(lane => [path.resolve(lane.path), lane]));
+  const deliveryPeerVerification = verifyDeliveryAuthorizedPeerAuthorities({
+    lanes: afterLanes,
+    remoteAuthorityVerification,
+    evaluatedAt: remoteAuthorityVerification.verifiedAt,
+  });
+  if (!isOperationDerivedDeliveryPeerVerification(deliveryPeerVerification)) {
+    throw new Error("Preservation requires fresh operation-derived delivery peer authority.");
+  }
+  const authorityBoundAfterLanes = bindOperationDerivedDeliveryPeerLaneStates(
+    afterLanes,
+    deliveryPeerVerification,
+  );
+  const after = new Map(authorityBoundAfterLanes.map(
+    lane => [path.resolve(lane.path), lane],
+  ));
   const changed = beforeReport.lanes
     .filter(lane => after.get(lane.path)?.stateDigest !== lane.stateDigest)
     .map(lane => lane.path)
     .sort();
   if (changed.length > 0) {
     throw new Error(`Existing lane state changed during admission: ${changed.join(", ")}`);
+  }
+  const finalExistingLaneStateDigest = digestValue(
+    beforeReport.lanes
+      .map(lane => ({
+        path: lane.path,
+        stateDigest: after.get(lane.path)?.stateDigest || null,
+      }))
+      .sort((left, right) => left.path.localeCompare(right.path)),
+  );
+  if (finalExistingLaneStateDigest !== beforeReport.existingLaneStateDigest) {
+    throw new Error("Existing lane authority digest changed during admission.");
   }
   const candidate = after.get(beforeReport.candidate.targetPath);
   const extraPaths = [...after.keys()]

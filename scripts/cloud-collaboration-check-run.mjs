@@ -3,6 +3,11 @@
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
+import {
+  protectedRefreshUnshallowArguments,
+  runVerificationWithShallowRecovery,
+} from "./cloud-collaboration-check-run-retry.mjs";
+
 const API_VERSION = "2026-03-10";
 const CHECK_NAME = "cloud-collaboration";
 const EVENT_LIMIT_BYTES = 2 * 1024 * 1024;
@@ -15,7 +20,7 @@ try {
   const subject = requirePullRequestSubject(event);
   const token = required(process.env.GH_TOKEN || process.env.GITHUB_TOKEN, "GitHub token");
   const check = await createCheckRun({ token, subject });
-  const verification = runVerification();
+  const verification = runVerification(subject);
   const conclusion = verification.ok ? "success" : "failure";
   await completeCheckRun({
     token,
@@ -88,7 +93,25 @@ function requirePullRequestSubject(event) {
   return { repository, headSha, pullRequestNumber: number };
 }
 
-function runVerification() {
+function runVerification(subject) {
+  const { child, result } = runVerificationWithShallowRecovery({
+    verify: spawnVerification,
+    isShallowRepository,
+    unshallowRepository: () => unshallowRepository(subject.pullRequestNumber),
+  });
+  const ok = child.status === 0 && result?.ok === true;
+  return {
+    ok,
+    output: {
+      title: ok ? "Cloud collaboration verified" : "Cloud collaboration blocked",
+      summary: ok
+        ? "The exact pull-request head has a current, unexpired, non-overlapping cloud claim."
+        : failureSummary(result),
+    },
+  };
+}
+
+function spawnVerification() {
   const child = spawnSync(
     process.execPath,
     [
@@ -107,16 +130,27 @@ function runVerification() {
     },
   );
   const result = parseVerificationResult(child.stdout);
-  const ok = child.status === 0 && result?.ok === true;
-  return {
-    ok,
-    output: {
-      title: ok ? "Cloud collaboration verified" : "Cloud collaboration blocked",
-      summary: ok
-        ? "The exact pull-request head has a current, unexpired, non-overlapping cloud claim."
-        : failureSummary(result),
-    },
-  };
+  return { child, result };
+}
+
+function isShallowRepository() {
+  const child = spawnSync("git", ["rev-parse", "--is-shallow-repository"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    maxBuffer: 64 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return child.status === 0 && String(child.stdout || "").trim() === "true";
+}
+
+function unshallowRepository(pullRequestNumber) {
+  const child = spawnSync("git", protectedRefreshUnshallowArguments(pullRequestNumber), {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return child.status === 0;
 }
 
 function parseVerificationResult(stdout) {

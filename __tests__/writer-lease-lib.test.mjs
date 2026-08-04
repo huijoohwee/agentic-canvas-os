@@ -6,11 +6,13 @@ import path from "node:path";
 
 import {
   createWriterLeaseStore,
+  EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
   updateWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { OWNED_DIRT_RECOVERY_SCHEMA } from "../scripts/owned-dirt-resume-lib.mjs";
 
 test("device branch identity separates device from semantic scope", () => {
@@ -297,6 +299,155 @@ test("writer lease marker round-trips exact owned-dirt recovery evidence", () =>
   assert.equal(parseWriterLeasePullRequestBody(malformed), null);
 });
 
+test("expired committed heartbeat atomically preserves epoch and replaces only cloud and lease timing", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-expired-heartbeat-"));
+  let instant = new Date("2026-08-04T10:00:00.000Z");
+  const store = createWriterLeaseStore({ gitCommonDir, now: () => instant });
+  const branch = "agent/mac-a/expired-heartbeat";
+  const baseSha = "a".repeat(40);
+  const fenceSha = "b".repeat(40);
+  const headSha = "c".repeat(40);
+  const declaredWriteSet = ["path:scripts/recovery.mjs", "semantic:expired-heartbeat"];
+  const writeSetDigest = digestValue(declaredWriteSet);
+  const admission = {
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: "expired-heartbeat",
+    declaredWriteSet,
+    writeSetDigest,
+    manifestDigest: "1".repeat(64),
+    planReceiptDigest: "2".repeat(64),
+    admissionReceiptDigest: "3".repeat(64),
+    existingLaneStateDigest: "4".repeat(64),
+    admittedReportDigest: "5".repeat(64),
+    preservationReceiptDigest: "6".repeat(64),
+  };
+  const cloudAuthority = {
+    schema: "agentic-lane-cloud-authority/v1",
+    provider: "github",
+    ledgerRepository: "org/ledger",
+    targetRepository: "org/repo",
+    claimId: "7".repeat(64),
+    claimDigest: "8".repeat(64),
+    ledgerRevision: "9".repeat(40),
+    claimLedgerRevision: "a".repeat(64),
+    canonicalBaseSha: baseSha,
+    laneRevision: fenceSha,
+    cloudDeclaredWriteScope: declaredWriteSet,
+    writeSetDigest,
+    deviceId: "mac-a",
+    sessionId: "session-a",
+    reviewRequestId: "github-pull-request:81",
+    leaseEpoch: 1,
+    transitionCounter: 2,
+    state: "active",
+    expiresAt: "2026-08-04T12:00:00.000Z",
+  };
+  try {
+    store.claim({
+      sessionId: "session-a",
+      device: "mac-a",
+      scope: "expired-heartbeat",
+      branch,
+      worktreePath: "/worktrees/expired-heartbeat",
+      baseSha,
+      admission,
+      cloudAuthority,
+      ttlMs: 60_000,
+    });
+    const source = store.annotate({
+      sessionId: "session-a",
+      branch,
+      values: {
+        fenceSha,
+        pullRequestUrl: "https://github.com/org/repo/pull/81",
+      },
+    });
+    const renewedCloudAuthority = {
+      ...cloudAuthority,
+      transitionCounter: cloudAuthority.transitionCounter + 1,
+      ledgerRevision: "d".repeat(40),
+      claimLedgerRevision: "e".repeat(64),
+      expiresAt: "2026-08-04T13:00:00.000Z",
+    };
+    const evidence = recoveryEvidence({ source, headSha });
+
+    assert.throws(() => store.recoverExpiredCommittedHeartbeat({
+      sessionId: "session-a",
+      branch,
+      expectedLease: source,
+      renewedCloudAuthority,
+      recoveryEvidence: evidence,
+      ttlMs: 1_800_000,
+      recoveredAt: "2026-08-04T10:02:00.000Z",
+    }), /requires an expired/);
+
+    instant = new Date("2026-08-04T10:02:00.000Z");
+    assert.throws(() => store.recoverExpiredCommittedHeartbeat({
+      sessionId: "session-a",
+      branch,
+      expectedLease: source,
+      renewedCloudAuthority: {
+        ...renewedCloudAuthority,
+        transitionCounter: cloudAuthority.transitionCounter,
+      },
+      recoveryEvidence: evidence,
+      ttlMs: 1_800_000,
+      recoveredAt: "2026-08-04T10:02:00.000Z",
+    }), /changed the expired lease claim subject/);
+    assert.throws(() => store.recoverExpiredCommittedHeartbeat({
+      sessionId: "session-a",
+      branch,
+      expectedLease: { ...source, epoch: source.epoch + 1 },
+      renewedCloudAuthority,
+      recoveryEvidence: evidence,
+      ttlMs: 1_800_000,
+      recoveredAt: "2026-08-04T10:02:00.000Z",
+    }), /changed before expired committed recovery/);
+
+    const revisionBefore = store.readRegistry().revision;
+    const recovered = store.recoverExpiredCommittedHeartbeat({
+      sessionId: "session-a",
+      branch,
+      expectedLease: source,
+      renewedCloudAuthority,
+      recoveryEvidence: evidence,
+      ttlMs: 1_800_000,
+      recoveredAt: "2026-08-04T10:02:00.000Z",
+    });
+    assert.equal(store.readRegistry().revision, revisionBefore + 1);
+    assert.equal(recovered.epoch, source.epoch);
+    assert.equal(recovered.fenceSha, source.fenceSha);
+    assert.equal(recovered.pullRequestUrl, source.pullRequestUrl);
+    assert.equal(recovered.cloudAuthority.claimId, source.cloudAuthority.claimId);
+    assert.equal(recovered.cloudAuthority.ledgerRevision, renewedCloudAuthority.ledgerRevision);
+    assert.equal(recovered.heartbeatAt, "2026-08-04T10:02:00.000Z");
+    assert.equal(recovered.expiresAt, "2026-08-04T10:32:00.000Z");
+    assert.equal(
+      recovered.expiredCommittedHeartbeatRecovery.schema,
+      EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    );
+    assert.deepEqual(
+      parseWriterLeasePullRequestBody(
+        renderWriterLeasePullRequestBody(recovered),
+      ).expiredCommittedHeartbeatRecovery,
+      recovered.expiredCommittedHeartbeatRecovery,
+    );
+    const markerBody = renderWriterLeasePullRequestBody(recovered);
+    assert.doesNotMatch(markerBody, /worktreePathDigest|sourceLeaseDigest|changedPaths"|snapshotDigest/);
+    assert.match(markerBody, /changedPathCount|changedPathsDigest/);
+    assert.equal(
+      parseWriterLeasePullRequestBody(markerBody.replace(
+        '"recoveredAt":',
+        `"worktreePathDigest":"${"0".repeat(64)}","recoveredAt":`,
+      )),
+      null,
+    );
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
 test("merged completion uses an explicit cleanup intent before the final fence", () => {
   const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
   const store = createWriterLeaseStore({ gitCommonDir });
@@ -347,3 +498,28 @@ test("merged completion uses an explicit cleanup intent before the final fence",
     rmSync(gitCommonDir, { recursive: true, force: true });
   }
 });
+
+function recoveryEvidence({ source, headSha }) {
+  return {
+    sourceEpoch: source.epoch,
+    sourceSessionId: source.sessionId,
+    sourceDevice: source.device,
+    sourceScope: source.scope,
+    sourceBranch: source.branch,
+    sourceBaseSha: source.baseSha,
+    sourceFenceSha: source.fenceSha,
+    sourcePullRequestUrl: source.pullRequestUrl,
+    sourceClaimId: source.cloudAuthority.claimId,
+    sourceClaimDigest: source.cloudAuthority.claimDigest,
+    sourceLedgerRevision: source.cloudAuthority.ledgerRevision,
+    sourceClaimLedgerRevision: source.cloudAuthority.claimLedgerRevision,
+    sourceCloudTransitionCounter: source.cloudAuthority.transitionCounter,
+    headSha,
+    treeSha: "f".repeat(40),
+    changedPathCount: 1,
+    changedPathsDigest: digestValue(["scripts/recovery.mjs"]),
+    sourceMarkerDigest: "2".repeat(64),
+    pullRequestBodyDigest: "3".repeat(64),
+    rangeDiffDigest: "4".repeat(64),
+  };
+}

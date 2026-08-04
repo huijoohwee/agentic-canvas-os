@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 517,
-  "headDigest": "cf5e4e1641869fe61906535caee20aaacf053123c129ae14e20638f339b23366",
+  "sequence": 518,
+  "headDigest": "7f8ce0d14506228a81f4d93f1f54ee38baeba2552569b170dac249f09515bcb7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -25190,6 +25190,48 @@
       },
       "claimDigest": "11cc952a039ba8ffce855f5ac29b6be8198907f6646cd72aa57b1467ad4976f5",
       "digest": "cf5e4e1641869fe61906535caee20aaacf053123c129ae14e20638f339b23366"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 518,
+      "parentDigest": "cf5e4e1641869fe61906535caee20aaacf053123c129ae14e20638f339b23366",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4f892c2b349b4069a541b504ab4eb04165dfd78669f36ee9949a2ea13461ac89",
+      "idempotencyKey": "bc780a25402bf0e5b1ae755102a9676852e695cb0011536d6a2bf37fb61cacd6",
+      "requestDigest": "e7710f7a3fb2e4adc96174095720071f677a4816fb418fe1ab7ce093c0a3ef62",
+      "evaluationTime": "2026-08-04T11:06:54.000Z",
+      "claimCore": {
+        "claimId": "4f892c2b349b4069a541b504ab4eb04165dfd78669f36ee9949a2ea13461ac89",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:90ded5f8eab56f4ea6b033aba29836adecfa3cd41f745d36694add19366447c0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:db2e3efc148c7116354da40ea68dc9d34ecfd0b3cd1c9ef14581b6d3530df5d6",
+        "canonicalBaseRevision": "c292cc67b98277fc40a4680d182385395818597e",
+        "declaredWriteScope": [
+          "path:.github/workflows/cloud-collaboration.yml",
+          "path:__tests__/cloud-collaboration-projection.test.mjs",
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "semantic:cloud-workflow-dispatch-input-cap-repair"
+        ],
+        "writeSetDigest": "9e809920515020de4c446e4ea390b05c7dc93e7078639130a580809ec426dd68",
+        "laneRevision": "42383c4961af3b513c04cc34d9722c69d0781ee3",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-04T12:06:36.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76f6-z",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "fac266c64290f3174dfc9e263255f9fba5a27819a307f8a324c1a94c7565181e",
+      "digest": "7f8ce0d14506228a81f4d93f1f54ee38baeba2552569b170dac249f09515bcb7"
     }
   ]
 }

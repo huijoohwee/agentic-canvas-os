@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 535,
-  "headDigest": "e06f94246acaaccd02eb2f208a0b960967495f6986a5db4f4bf52be3b599e611",
+  "sequence": 536,
+  "headDigest": "5abc824e6f2b6e7d2bc0614d06d555c61df8a89937c6ae7f2221b37ab44ea6f1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -26057,6 +26057,48 @@
       },
       "claimDigest": "46cd6941960318bf0adf7956625640d5e276d33857679324b2e7e703e8edd99f",
       "digest": "e06f94246acaaccd02eb2f208a0b960967495f6986a5db4f4bf52be3b599e611"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 536,
+      "parentDigest": "e06f94246acaaccd02eb2f208a0b960967495f6986a5db4f4bf52be3b599e611",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cd93e6e41417065138943ef34c9643ece362b7a05ca28aa1ed0e939a21b05500",
+      "idempotencyKey": "517f173cd2bdeaaa714e84ebb734c807695df6964430888129b4927283c85c1c",
+      "requestDigest": "15448b8fc4227418c8fcb0d2a7c898436c40fec8f404f9097f260a4554fdfed5",
+      "evaluationTime": "2026-08-04T11:40:54.000Z",
+      "claimCore": {
+        "claimId": "cd93e6e41417065138943ef34c9643ece362b7a05ca28aa1ed0e939a21b05500",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:5a87cd3d3ab336029916b47e48748567dc301609d364a7b4e3dcad510befa3e3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:08bd9dd7f2fa3ad66971fc9e67f3e6f7d365ce52700d9620ac9743a606cfa14e",
+        "canonicalBaseRevision": "f0986134d159d6ce77c2043369ce6351a4a4ec66",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-collaboration-github-api.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "path:scripts/github-cloud-collaboration-api.mjs",
+          "semantic:cloud-workflow-actor-fallback-repair"
+        ],
+        "writeSetDigest": "3501b03c21df30fd3886f325868ee3ea80a31971a9e611592a396117113b0b64",
+        "laneRevision": "f0986134d159d6ce77c2043369ce6351a4a4ec66",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-04T12:40:54.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a8b43d87c34a96be1d741957c03c68b090fdbc222a37a25b0ae25139803f4fe4",
+      "digest": "5abc824e6f2b6e7d2bc0614d06d555c61df8a89937c6ae7f2221b37ab44ea6f1"
     }
   ]
 }

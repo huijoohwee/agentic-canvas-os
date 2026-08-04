@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 557,
-  "headDigest": "b8eba7a3562d2d9a6f4080b2c6a1c6846ab0269d9c1b311d7c7b5fc22cbac5db",
+  "sequence": 558,
+  "headDigest": "b311461698a5664135e8b864747b9fb95e07a41498dd399245adc4a679d3b7e7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -27119,6 +27119,47 @@
       },
       "claimDigest": "fe2bf61e64be54da21ba8a2223e393ca26d79b899c5c2d45c6479d3de211c2fb",
       "digest": "b8eba7a3562d2d9a6f4080b2c6a1c6846ab0269d9c1b311d7c7b5fc22cbac5db"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 558,
+      "parentDigest": "b8eba7a3562d2d9a6f4080b2c6a1c6846ab0269d9c1b311d7c7b5fc22cbac5db",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "392762f651c3159a83ec8460eb28fe9dc0358d8b21443a8e34996130d2cd22eb",
+      "idempotencyKey": "288de7fb62c4b236ea720e16c6b7983f0ea34c77dbb7ba862b40547f414003a7",
+      "requestDigest": "a0757163225a11a8fcf1084717c130205f653eea87bda6520494c1804274ff49",
+      "evaluationTime": "2026-08-04T12:41:16.000Z",
+      "claimCore": {
+        "claimId": "392762f651c3159a83ec8460eb28fe9dc0358d8b21443a8e34996130d2cd22eb",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:df31a90625e4086f0924bc3160d8db0d70196f3a94e603a8befad61005521fca",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b9d823ff5e66786d8a77f979a4d2fd14e0b81a188e1b4f0f9b537dd74a4b6df2",
+        "canonicalBaseRevision": "6a71cf7b6d7f740e76daedb00f4faa8967ad7625",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "semantic:claim-identity-admission-projections"
+        ],
+        "writeSetDigest": "f415e087d58a29ae5df2e6412f7f119f724e4b54057aa4749dcf6644b9f4f91c",
+        "laneRevision": "6a71cf7b6d7f740e76daedb00f4faa8967ad7625",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-04T13:41:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "62547486d60cccc65796c34f6370c1d2f08bf96d028ba82b0cd76c249d586c39",
+      "digest": "b311461698a5664135e8b864747b9fb95e07a41498dd399245adc4a679d3b7e7"
     }
   ]
 }

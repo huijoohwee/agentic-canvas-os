@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   DESTRUCTIVE_OPERATION_CLASSES,
+  assertCrossRepositoryWorkspaceProjection,
   assertNonDestructiveOperation,
   assertRecoveryReference,
   assertWorkspaceLaneIsolation,
@@ -14,6 +15,8 @@ import {
   WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA,
 } from "../scripts/workspace-parallelism-lib.mjs";
 import { resolveWorkspaceRoot as resolveGuardWorkspaceRoot } from "../scripts/workspace-parallelism-guard.mjs";
+import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
+import { createCrossRepositoryCoordinationTask } from "../scripts/integration-order-contract.mjs";
 
 const cleanLane = {
   repository: "knowgrph",
@@ -36,6 +39,79 @@ const foreignDirtyLane = {
   untrackedPaths: 2,
   recoveryRef: null,
 };
+
+const coordinationScope = "workspace-coordination-test";
+
+function coordinationFixture(specs = [
+  { repository: "example/source", path: "docs/source.md" },
+  { repository: "example/projection", path: "docs/projection.md" },
+]) {
+  const units = specs.map((spec, index) => {
+    const unitId = `unit-${index}`;
+    const declaredWriteScope = normalizeWriteSet([`path:${spec.path}`]);
+    const claimId = digestValue({ unitId, kind: "claim" });
+    const fence = digestValue({ unitId, kind: "fence" });
+    const branch = `agent/device/${unitId}`;
+    const worktree = `/GitHub/.worktrees/${spec.repository.replace("/", "-")}/${unitId}`;
+    return {
+      unitId,
+      repository: spec.repository,
+      repositoryId: spec.repositoryId || digestValue({ repository: spec.repository }),
+      branch,
+      worktree,
+      semanticScope: coordinationScope,
+      declaredWriteScope,
+      writeSetDigest: digestValue(declaredWriteScope),
+      claimId,
+      authorityEpoch: 1,
+      fence,
+      pullRequest: `https://example.invalid/${spec.repository}/pull/${index + 1}`,
+      sourceRevision: String(index + 1).padStart(40, "0"),
+      sourceDigest: digestValue({ unitId, kind: "source" }),
+      namedChecks: [`${unitId}:focused`],
+      handoffEvidenceDigest: digestValue({ unitId, kind: "handoff" }),
+    };
+  });
+  const task = createCrossRepositoryCoordinationTask({
+    taskId: "workspace-coordination",
+    semanticScope: coordinationScope,
+    sourceGuideline: {
+      repository: "example/source",
+      revision: units[0].sourceRevision,
+      tree: "f".repeat(40),
+      guidelineDigest: "a".repeat(64),
+      companionDigest: "b".repeat(64),
+    },
+    units,
+    dependencyEdges: [{ from: units[0].unitId, to: units[1].unitId }],
+  });
+  const lanes = units.map((unit, index) => ({
+    repository: unit.repository,
+    worktree: unit.worktree,
+    branch: `refs/heads/${unit.branch}`,
+    session: `session-${index}`,
+    scope: coordinationScope,
+    writeSetDigest: unit.writeSetDigest,
+    dirtyTrackedPaths: 0,
+    untrackedPaths: 0,
+  }));
+  const claims = units.map((unit, index) => {
+    const state = specs[index].state || "current";
+    return {
+      claimId: unit.claimId,
+      repositoryId: unit.repositoryId,
+      state,
+      writeAuthority: state === "current",
+      declaredWriteScope: unit.declaredWriteScope,
+      writeSetDigest: unit.writeSetDigest,
+      leaseEpoch: unit.authorityEpoch,
+      fenceRevision: unit.fence,
+      provider: "replaceable-test-projection",
+      localLease: { epoch: 999 },
+    };
+  });
+  return { task, lanes, claims };
+}
 
 test("destructive git operations are classified by the explicit catalog", () => {
   const cases = [
@@ -117,6 +193,103 @@ test("two sessions cannot claim one semantic scope in one repository", () => {
     ]),
     /Scope payments in knowgrph is claimed by sessions/,
   );
+});
+
+test("cross-repository task units bind to exact local and cloud authority projections", () => {
+  const fixture = coordinationFixture();
+  const projection = assertCrossRepositoryWorkspaceProjection(fixture);
+  assert.equal(projection.schema, "agentic-workspace-coordination-projection/v1");
+  assert.equal(projection.taskDigest, fixture.task.taskDigest);
+  assert.deepEqual(projection.dependencyWaves, [["unit-0"], ["unit-1"]]);
+  assert.equal(projection.currentWriteAuthorities, 2);
+  assert.equal(projection.waitingSuccessors, 0);
+  assert.equal(projection.projections[0].branch, "agent/device/unit-0");
+  assert.equal(projection.projections[0].repositoryId, fixture.task.units[0].repositoryId);
+  assert.equal(projection.projections[0].semanticScope, coordinationScope);
+  assert.equal(projection.projections[0].writeSetDigest, fixture.task.units[0].writeSetDigest);
+  assert.equal("provider" in projection.projections[0], false);
+  assert.equal("localLease" in projection.projections[0], false);
+});
+
+test("cross-repository task projections fail closed on local identity or authority drift", () => {
+  const fixture = coordinationFixture();
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    lanes: fixture.lanes.map((lane, index) => index === 0 ? { ...lane, repository: "example/wrong" } : lane),
+  }), /repository does not match/u);
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    lanes: fixture.lanes.map((lane, index) => index === 0 ? { ...lane, branch: "refs\/heads\/agent\/wrong" } : lane),
+  }), /branch does not match/u);
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    claims: fixture.claims.map((claim, index) => index === 0 ? { ...claim, fenceRevision: "c".repeat(64) } : claim),
+  }), /authority epoch or fence has drifted/u);
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    claims: fixture.claims.map((claim, index) => index === 1
+      ? { ...claim, repositoryId: digestValue({ repository: "wrong-but-unique" }) }
+      : claim),
+  }), /repository authority does not match/u);
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    lanes: fixture.lanes.map((lane, index) => index === 0 ? { ...lane, scope: "wrong-scope" } : lane),
+  }), /semantic scope does not match/u);
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    lanes: fixture.lanes.map((lane, index) => index === 0
+      ? { ...lane, writeSetDigest: digestValue({ writeSet: "wrong" }) }
+      : lane),
+  }), /write-set digest does not match/u);
+  const staleTask = JSON.parse(JSON.stringify(fixture.task));
+  staleTask.units[0].branch = "agent/device/drifted";
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({ ...fixture, task: staleTask }), /digest has drifted/u);
+});
+
+test("an overlapping successor waits without acquiring write authority", () => {
+  const fixture = coordinationFixture([
+    { repository: "example/source", path: "docs/shared" },
+    { repository: "example/projection", path: "docs/projection.md" },
+    { repository: "example/source", path: "docs/shared/child.md", state: "waiting-successor" },
+  ]);
+  const projection = assertCrossRepositoryWorkspaceProjection(fixture);
+  assert.equal(projection.currentWriteAuthorities, 2);
+  assert.equal(projection.waitingSuccessors, 1);
+  assert.equal(projection.projections.find((unit) => unit.unitId === "unit-2").writeAuthority, false);
+  assert.throws(() => assertCrossRepositoryWorkspaceProjection({
+    ...fixture,
+    claims: fixture.claims.map((claim, index) => index === 2 ? { ...claim, writeAuthority: true } : claim),
+  }), /write authority does not match state waiting-successor/u);
+});
+
+test("overlapping current claims fail while disjoint current claims have no global cap", () => {
+  const overlapping = coordinationFixture([
+    { repository: "example/source", path: "docs/shared" },
+    { repository: "example/projection", path: "docs/projection.md" },
+    { repository: "example/source", path: "docs/shared/child.md" },
+  ]);
+  assert.throws(
+    () => assertCrossRepositoryWorkspaceProjection(overlapping),
+    /competing overlapping scope reservations/u,
+  );
+
+  const dormantConflict = coordinationFixture([
+    { repository: "example/source", path: "docs/shared", state: "dormant-preserved" },
+    { repository: "example/projection", path: "docs/projection.md" },
+    { repository: "example/source", path: "docs/shared/child.md" },
+  ]);
+  assert.throws(
+    () => assertCrossRepositoryWorkspaceProjection(dormantConflict),
+    /competing overlapping scope reservations/u,
+  );
+
+  const disjoint = coordinationFixture(Array.from({ length: 24 }, (_value, index) => ({
+    repository: index % 2 === 0 ? "example/source" : "example/projection",
+    path: `units/${index}.md`,
+  })));
+  const projection = assertCrossRepositoryWorkspaceProjection(disjoint);
+  assert.equal(projection.currentWriteAuthorities, 24);
+  assert.equal(projection.projections.length, 24);
 });
 
 test("lane declarations require repository, worktree, and session", () => {

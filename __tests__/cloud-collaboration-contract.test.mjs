@@ -1,11 +1,10 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import {
   CLOUD_COLLABORATION_BOUNDS,
-  CloudCollaborationError,
-  LEDGER_SCHEMA,
-  RECEIPT_SCHEMA,
+  ENTRY_SCHEMA,
+  LEGACY_ENTRY_SCHEMA,
   applyCloudTransition,
   canonicalJson,
   createEmptyLedger,
@@ -13,531 +12,580 @@ import {
   listCurrentClaims,
   normalizeWriteSet,
   validateLedger,
-  verifyCloudClaim,
   writeSetsOverlap,
 } from "../scripts/cloud-collaboration-contract.mjs";
 
-const LEDGER_REPOSITORY = {
-  id: 1,
-  nodeId: "ledger-node",
-  fullName: "example/ledger",
-  defaultBranch: "main",
-};
-const TARGET_A = {
-  id: 2,
-  nodeId: "target-a-node",
-  fullName: "example/target-a",
-  defaultBranch: "main",
-  canonicalRevision: "base-a",
-};
-const TARGET_B = {
-  id: 3,
-  nodeId: "target-b-node",
-  fullName: "example/target-b",
-  defaultBranch: "main",
-  canonicalRevision: "base-a",
-};
-const ACTOR_A = { id: 11, login: "actor-a" };
-const ACTOR_B = { id: 12, login: "actor-b" };
-const START = "2026-07-30T01:00:00.000Z";
-const LATER = "2026-07-30T01:05:00.000Z";
-const EXPIRES = "2026-07-30T01:30:00.000Z";
-const EXTENDED = "2026-07-30T02:00:00.000Z";
-const EVIDENCE = digestValue("focused-evidence");
-const INTEGRATION = digestValue("integration-receipt");
-const OPERATOR_DECISION = digestValue("operator-decision");
-const INTEGRATION_INTENT = digestValue("integration-intent");
+const T0 = "2026-08-04T00:00:00.000Z";
+const T1 = "2026-08-04T00:10:00.000Z";
+const T2 = "2026-08-04T00:20:00.000Z";
+const T3 = "2026-08-04T00:30:00.000Z";
+const T4 = "2026-08-04T00:40:00.000Z";
+const T5 = "2026-08-04T00:50:00.000Z";
+const T6 = "2026-08-04T01:00:00.000Z";
 
-function emptyLedger() {
-  return createEmptyLedger(LEDGER_REPOSITORY);
+const repository = Object.freeze({
+  repositoryId: "repository:acos",
+  canonicalRevision: revision("canonical"),
+});
+const owner = actor("owner", "device-a", "session-a");
+
+function actor(actorId, deviceId, sessionId) {
+  return { actorId: `actor:${actorId}`, deviceId, sessionId };
 }
 
-function claimRequest(overrides = {}) {
-  return {
-    workItemId: "work-1",
-    canonicalBaseRevision: "base-a",
-    declaredWriteScope: ["src/feature"],
-    leaseEpoch: 1,
-    expiresAt: EXPIRES,
-    deviceId: "device-a",
-    sessionId: "session-a",
-    idempotencyKey: "claim-work-1-epoch-1",
-    ...overrides,
-  };
+function revision(label) {
+  return digestValue({ label }).slice(0, 40);
 }
 
-function mutate(ledger, action, request, {
-  actor = ACTOR_A,
-  repository = TARGET_A,
-  evaluationTime = START,
+function evidence(label) {
+  return digestValue({ evidence: label });
+}
+
+function claim(ledger, {
+  identity = owner,
+  targetRepository = repository,
+  workItemId = "work:item",
+  scope = ["path:docs/a.md"],
+  leaseEpoch = 1,
+  predecessorClaimId = null,
+  time = T0,
+  expiresAt = T4,
+  laneRevision = targetRepository.canonicalRevision,
+  idempotencyKey = `claim:${workItemId}:${leaseEpoch}`,
+  expectedLedgerDigest = ledger.headDigest,
 } = {}) {
-  return applyCloudTransition({ ledger, action, request, actor, repository, evaluationTime });
+  return applyCloudTransition({
+    ledger,
+    action: "claim",
+    actor: identity,
+    repository: targetRepository,
+    evaluationTime: time,
+    request: {
+      workItemId,
+      canonicalBaseRevision: targetRepository.canonicalRevision,
+      declaredWriteScope: scope,
+      laneRevision,
+      leaseEpoch,
+      ...(predecessorClaimId ? { predecessorClaimId } : {}),
+      expiresAt,
+      expectedLedgerDigest,
+      idempotencyKey,
+    },
+  });
 }
 
-function expected(claim, idempotencyKey, overrides = {}) {
-  return {
-    claimId: claim.claimId,
-    expectedFenceRevision: claim.fenceRevision,
-    expectedTransitionCounter: claim.transitionCounter,
-    deviceId: claim.deviceId,
-    sessionId: claim.sessionId,
-    idempotencyKey,
-    ...overrides,
-  };
+function continueClaim(ledger, current, {
+  identity = owner,
+  mode,
+  time = T1,
+  idempotencyKey = `continue:${mode}:${current.claimId}:${current.transitionCounter}`,
+  ...request
+}) {
+  return applyCloudTransition({
+    ledger,
+    action: "continue",
+    actor: identity,
+    repository,
+    evaluationTime: time,
+    request: {
+      claimId: current.claimId,
+      expectedFenceRevision: current.fenceRevision,
+      expectedTransitionCounter: current.transitionCounter,
+      expectedLedgerDigest: ledger.headDigest,
+      mode,
+      idempotencyKey,
+      ...request,
+    },
+  });
+}
+
+function retire(ledger, current, {
+  identity = owner,
+  reason = "abandoned",
+  integrationReceiptDigest,
+  time = T5,
+} = {}) {
+  return applyCloudTransition({
+    ledger,
+    action: "retire",
+    actor: identity,
+    repository,
+    evaluationTime: time,
+    request: {
+      claimId: current.claimId,
+      expectedFenceRevision: current.fenceRevision,
+      expectedTransitionCounter: current.transitionCounter,
+      expectedLedgerDigest: ledger.headDigest,
+      reason,
+      finalRevision: current.laneRevision,
+      reviewRequestId: current.reviewRequestId,
+      bytesDigest: evidence("bytes"),
+      namedChecksDigest: evidence("checks"),
+      handoffEvidenceDigest: evidence("handoff"),
+      ...(integrationReceiptDigest ? { integrationReceiptDigest } : {}),
+      idempotencyKey: `retire:${reason}:${current.claimId}`,
+    },
+  });
 }
 
 function throwsCode(callback, code) {
   assert.throws(callback, (error) => {
-    assert.equal(error instanceof CloudCollaborationError, true);
     assert.equal(error.code, code);
     return true;
   });
 }
 
-test("canonical JSON, digests, and write scopes are deterministic", () => {
-  assert.equal(canonicalJson({ z: 1, a: { y: true, x: null } }), '{"a":{"x":null,"y":true},"z":1}');
-  assert.equal(digestValue({ b: 2, a: 1 }), digestValue({ a: 1, b: 2 }));
-  assert.deepEqual(normalizeWriteSet([
-    "src\\feature\\file.js",
-    "path:src/feature/./file.js",
-    "semantic:Generated_Output",
-  ]), ["path:src/feature/file.js", "semantic:generated_output"]);
-  assert.equal(writeSetsOverlap(["src"], ["src/feature/file.js"]), true);
-  assert.equal(writeSetsOverlap(["src/a"], ["src/b"]), false);
-  assert.equal(writeSetsOverlap(["semantic:bundle"], ["semantic:BUNDLE"]), true);
-  assert.equal(writeSetsOverlap(["path:."], ["docs/file.md"]), true);
-  throwsCode(() => normalizeWriteSet(["../outside"]), "invalid_write_scope");
-  throwsCode(() => normalizeWriteSet(["src/**"]), "invalid_write_scope");
-  throwsCode(
-    () => normalizeWriteSet(Array.from({ length: 129 }, (_, index) => `file-${index}`)),
-    "bound_exceeded",
-  );
-});
+function replaceLast(ledger, change) {
+  const entries = [...ledger.entries], previous = entries.at(-1);
+  const core = structuredClone(previous.claimCore);
+  change(core);
+  const { digest: ignored, ...priorDraft } = previous;
+  const draft = { ...priorDraft, claimCore: core, claimDigest: digestValue(core) };
+  const entry = { ...draft, digest: digestValue(draft) };
+  entries[entries.length - 1] = entry;
+  return { ...ledger, headDigest: entry.digest, entries };
+}
 
-test("an empty ledger is bounded, provider-neutral, and valid", () => {
-  assert.deepEqual(emptyLedger(), {
-    schema: LEDGER_SCHEMA,
-    ledgerRepositoryId: "ledger-node",
-    sequence: 0,
-    headDigest: null,
-    entries: [],
-  });
-  assert.deepEqual(validateLedger(emptyLedger()), []);
-  assert.deepEqual(CLOUD_COLLABORATION_BOUNDS, {
-    ledgerEntries: 512,
-    activeClaims: 128,
-    writeScopeItems: 128,
-    textCharacters: 512,
-  });
-});
-
-test("claim is immutable, hash-chained, replay-safe, and conflict-safe", () => {
-  const ledger = emptyLedger();
-  const request = claimRequest();
-  const snapshot = structuredClone(request);
-  const first = mutate(ledger, "claim", request);
-
-  assert.deepEqual(request, snapshot);
-  assert.notEqual(first.ledger, ledger);
-  assert.equal(ledger.sequence, 0);
-  assert.equal(first.ledger.sequence, 1);
-  assert.equal(first.ledger.headDigest, first.ledger.entries[0].digest);
-  assert.equal(first.ledger.entries[0].repositoryId, "target-a-node");
-  assert.equal(first.ledger.entries[0].idempotencyKey, digestValue(request.idempotencyKey));
-  assert.equal(first.ledger.entries[0].idempotencyKey.includes(request.idempotencyKey), false);
-  assert.equal(first.claim.repositoryId, "target-a-node");
-  assert.equal(first.claim.state, "active");
-  assert.equal(first.claim.transitionCounter, 1);
-  assert.equal(first.claim.heartbeatCounter, 0);
-  assert.equal(first.receipt.schema, RECEIPT_SCHEMA);
-  assert.deepEqual(validateLedger(first.ledger), []);
-
-  const replay = mutate(first.ledger, "claim", request, { evaluationTime: LATER });
-  assert.equal(replay.replayed, true);
-  assert.equal(replay.ledger, first.ledger);
-  assert.deepEqual(replay.receipt, first.receipt);
-
-  throwsCode(
-    () => mutate(first.ledger, "claim", { ...request, expiresAt: EXTENDED }),
-    "idempotency_conflict",
-  );
-});
-
-test("one ledger arbitrates multiple target repositories without cross-repository collisions", () => {
-  const first = mutate(emptyLedger(), "claim", claimRequest());
-  const second = mutate(
-    first.ledger,
-    "claim",
-    claimRequest({
-      workItemId: "work-b",
-      deviceId: "device-b",
-      sessionId: "session-b",
-      idempotencyKey: "target-b-claim",
-    }),
-    { actor: ACTOR_B, repository: TARGET_B },
-  );
-  assert.deepEqual(second.ledger.entries.map((entry) => entry.repositoryId), [
-    "target-a-node",
-    "target-b-node",
-  ]);
-  assert.equal(second.ledger.ledgerRepositoryId, "ledger-node");
-  assert.deepEqual(
-    listCurrentClaims(second.ledger, START, { repositoryId: "target-a-node" }).map((claim) => claim.claimId),
-    [first.claim.claimId],
-  );
-  const status = applyCloudTransition({
-    ledger: second.ledger,
-    action: "status",
-    request: {},
-    evaluationTime: START,
-  });
-  assert.equal(status.claim, null);
-  assert.equal(status.claims.length, 2);
-});
-
-test("overlapping claims serialize while disjoint claims can proceed", () => {
-  const winner = mutate(emptyLedger(), "claim", claimRequest());
-  const competing = claimRequest({
-    workItemId: "work-2",
-    declaredWriteScope: ["src/feature/file.js"],
-    deviceId: "device-b",
-    sessionId: "session-b",
-    idempotencyKey: "claim-work-2",
-  });
-  const sameParentCandidate = mutate(emptyLedger(), "claim", competing, { actor: ACTOR_B });
-  assert.notEqual(sameParentCandidate.ledger.headDigest, winner.ledger.headDigest);
-  throwsCode(
-    () => mutate(winner.ledger, "claim", competing, { actor: ACTOR_B }),
-    "parallel_scope_collision",
-  );
-
-  const disjoint = mutate(
-    winner.ledger,
-    "claim",
-    { ...competing, declaredWriteScope: ["docs/feature.md"], idempotencyKey: "claim-work-2-docs" },
-    { actor: ACTOR_B },
-  );
-  assert.equal(disjoint.ledger.sequence, 2);
-  assert.deepEqual(validateLedger(disjoint.ledger), []);
-});
-
-test("bind, heartbeat, review-ready, delivery authorization, verify, and integrated release are fenced", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-lane", {
-    laneRevision: "lane-a",
-  }));
-  assert.equal(bound.claim.laneRevision, "lane-a");
-  assert.equal(bound.claim.transitionCounter, 2);
-
-  const heartbeat = mutate(bound.ledger, "heartbeat", expected(bound.claim, "heartbeat-1", {
-    expiresAt: EXTENDED,
-  }), { evaluationTime: LATER });
-  assert.equal(heartbeat.claim.heartbeatCounter, 1);
-  assert.equal(heartbeat.claim.transitionCounter, 3);
-
-  const ready = mutate(heartbeat.ledger, "review-ready", expected(heartbeat.claim, "review-ready-1", {
-    laneRevision: "lane-a",
-    reviewRequestId: "review-17",
-    focusedEvidenceDigest: EVIDENCE,
-  }), { evaluationTime: LATER });
-  assert.equal(ready.claim.state, "review-ready");
-  assert.equal(ready.claim.transitionCounter, 4);
-
-  const verificationRequest = {
-    claimId: ready.claim.claimId,
-    repositoryId: "target-a-node",
-    workItemId: "work-1",
-    canonicalBaseRevision: "base-a",
-    laneRevision: "lane-a",
-    writeSetDigest: ready.claim.writeSetDigest,
-    leaseEpoch: 1,
-    fenceRevision: ready.claim.fenceRevision,
-    ledgerRevision: ready.claim.ledgerRevision,
-    requiredState: "review-ready",
-    reviewRequestId: "review-17",
-    focusedEvidenceDigest: EVIDENCE,
+function appendForged(ledger, claimId, { action = "continue", time, label, change }) {
+  const previous = ledger.entries.findLast((entry) => entry.claimId === claimId);
+  const core = structuredClone(previous.claimCore);
+  core.transitionCounter += 1;
+  change(core);
+  const draft = {
+    schema: ENTRY_SCHEMA, sequence: ledger.sequence + 1, parentDigest: ledger.headDigest,
+    action, repositoryId: core.repositoryId, claimId, idempotencyKey: evidence(`forged-id:${label}`),
+    requestDigest: evidence(`forged-request:${label}`), evaluationTime: time,
+    claimCore: core, claimDigest: digestValue(core),
   };
-  const verified = verifyCloudClaim({
-    ledger: ready.ledger,
-    request: verificationRequest,
-    evaluationTime: LATER,
-  });
-  assert.equal(verified.ok, true);
-  assert.equal(verified.verdict, "ready");
-  assert.equal(verified.claimDigest, ready.claim.fenceRevision);
-  assert.deepEqual(verified.findings, []);
-  assert.deepEqual(Object.values(verified.findingCounts), [0, 0, 0, 0, 0]);
+  const entry = { ...draft, digest: digestValue(draft) };
+  return { ...ledger, sequence: entry.sequence, headDigest: entry.digest, entries: [...ledger.entries, entry] };
+}
 
-  const authorized = mutate(ready.ledger, "delivery-authorize", expected(ready.claim, "authorize-delivery-1", {
-    laneRevision: "lane-a",
-    reviewRequestId: "review-17",
-    focusedEvidenceDigest: EVIDENCE,
-    operatorDecisionDigest: OPERATOR_DECISION,
-    integrationIntentDigest: INTEGRATION_INTENT,
-  }), { evaluationTime: LATER });
-  assert.equal(authorized.claim.state, "delivery-authorized");
-  assert.equal(authorized.claim.transitionCounter, 5);
-  const deliveryVerified = verifyCloudClaim({
-    ledger: authorized.ledger,
+test("canonical scope logic is deterministic and bounded per claim", () => {
+  assert.equal(canonicalJson({ z: 1, a: -0 }), '{"a":0,"z":1}');
+  assert.deepEqual(normalizeWriteSet(["docs/a.md", "path:docs/a.md"]), ["path:docs/a.md"]);
+  assert.equal(writeSetsOverlap(["path:docs"], ["path:docs/a.md"]), true);
+  assert.deepEqual(CLOUD_COLLABORATION_BOUNDS, { writeScopeItems: 128, textCharacters: 512 });
+  throwsCode(() => normalizeWriteSet(Array.from({ length: 129 }, (_, index) => `path:${index}`)), "bound_exceeded");
+});
+
+test("public mutations are exactly claim, continue, integrate, and retire", () => {
+  const initial = createEmptyLedger("ledger:repository");
+  const claimed = claim(initial);
+  assert.equal(claimed.ledger.entries[0].schema, ENTRY_SCHEMA);
+  assert.equal(claimed.claim.state, "current");
+  assert.equal(claimed.claim.writeAuthority, true);
+  assert.equal(claimed.receipt.schema, "agentic-collaboration-claim-receipt/v1");
+  for (const action of ["bind", "heartbeat", "review-ready", "delivery-authorize", "handoff", "release"]) {
+    throwsCode(() => applyCloudTransition({
+      ledger: claimed.ledger,
+      action,
+      actor: owner,
+      repository,
+      evaluationTime: T1,
+      request: {},
+    }), "invalid_action");
+  }
+});
+
+test("claim is CAS-fenced, device-neutral, replay-safe, and actor-authenticated", () => {
+  const initial = createEmptyLedger("ledger:repository");
+  const options = { idempotencyKey: "claim:stable" };
+  const first = claim(initial, options);
+  const otherProjection = claim(initial, {
+    ...options,
+    identity: actor("owner", "device-b", "session-b"),
+  });
+  assert.equal(first.claim.claimId, otherProjection.claim.claimId);
+  const replay = claim(first.ledger, {
+    ...options,
+    idempotencyKey: "claim:stable",
+  });
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.claimDigest, first.claimDigest);
+  throwsCode(() => claim(first.ledger, {
+    workItemId: "work:other",
+    idempotencyKey: "claim:stale-cas",
+    expectedLedgerDigest: evidence("stale"),
+  }), "stale_ledger_digest");
+  const request = {
+    claimId: first.claim.claimId,
+    expectedFenceRevision: first.claim.fenceRevision,
+    expectedTransitionCounter: first.claim.transitionCounter,
+    expectedLedgerDigest: first.ledger.headDigest,
+    mode: "renewal",
+    expiresAt: T5,
+    idempotencyKey: "continue:wrong-actor",
+  };
+  throwsCode(() => applyCloudTransition({
+    ledger: first.ledger,
+    action: "continue",
+    actor: actor("intruder", "device-a", "session-a"),
+    repository,
+    evaluationTime: T1,
+    request,
+  }), "claim_owner_mismatch");
+  throwsCode(() => applyCloudTransition({
+    ledger: first.ledger,
+    action: "continue",
+    actor: owner,
+    repository,
+    evaluationTime: T1,
+    request: { ...request, expectedLedgerDigest: evidence("stale") },
+  }), "stale_ledger_digest");
+});
+
+test("unlimited disjoint authorities have no policy cardinality cap", () => {
+  let ledger = createEmptyLedger("ledger:repository");
+  for (let index = 0; index < 140; index += 1) {
+    ledger = claim(ledger, {
+      workItemId: `work:${index}`,
+      scope: [`path:shards/${index}.md`],
+      idempotencyKey: `claim:shard:${index}`,
+    }).ledger;
+  }
+  const claims = listCurrentClaims(ledger, T1);
+  assert.equal(claims.length, 140);
+  assert.equal(claims.every((item) => item.state === "current"), true);
+  assert.deepEqual(validateLedger(ledger), []);
+});
+
+test("overlapping claims wait and only the deterministic successor can promote", () => {
+  const first = claim(createEmptyLedger("ledger:repository"), { workItemId: "work:a" });
+  const second = claim(first.ledger, { workItemId: "work:b", time: T1, idempotencyKey: "claim:b" });
+  const third = claim(second.ledger, { workItemId: "work:c", time: T2, idempotencyKey: "claim:c" });
+  assert.equal(second.claim.state, "waiting-successor");
+  assert.equal(third.claim.state, "waiting-successor");
+  const retired = retire(third.ledger, first.claim, { time: T3 });
+  throwsCode(() => continueClaim(retired.ledger, third.claim, {
+    mode: "promote",
+    time: T4,
+    expiresAt: T6,
+  }), "successor_not_selected");
+  const promoted = continueClaim(retired.ledger, second.claim, {
+    mode: "promote",
+    time: T4,
+    expiresAt: T6,
+  });
+  assert.equal(promoted.claim.state, "current");
+  throwsCode(() => continueClaim(promoted.ledger, third.claim, {
+    mode: "promote",
+    time: T5,
+    expiresAt: "2026-08-04T02:00:00.000Z",
+  }), "overlap_still_reserved");
+});
+
+test("a named predecessor must resolve to the exact preserved matching authority", () => {
+  const initial = createEmptyLedger("ledger:repository");
+  throwsCode(() => claim(initial, {
+    predecessorClaimId: evidence("invented-predecessor"),
+    idempotencyKey: "claim:invented-predecessor",
+  }), "predecessor_identity_mismatch");
+  const first = claim(initial);
+  const retired = retire(first.ledger, first.claim, { time: T1 });
+  const successor = claim(retired.ledger, {
+    leaseEpoch: 2,
+    predecessorClaimId: first.claim.claimId,
+    time: T2,
+    expiresAt: T6,
+    idempotencyKey: "claim:retired-predecessor",
+  });
+  assert.equal(successor.claim.state, "current");
+  assert.equal(successor.claim.predecessorClaimId, first.claim.claimId);
+});
+
+test("expiry is dormant-preserved and recovery ignores the expired device lease", () => {
+  const first = claim(createEmptyLedger("ledger:repository"), { expiresAt: T1 });
+  const dormant = listCurrentClaims(first.ledger, T2)[0];
+  assert.equal(dormant.state, "dormant-preserved");
+  assert.equal(dormant.writeAuthority, false);
+  assert.equal(dormant.scopeReserved, true);
+  const waiting = claim(first.ledger, { workItemId: "work:successor", time: T2, expiresAt: T6 });
+  assert.equal(waiting.claim.state, "waiting-successor");
+  const recovered = continueClaim(waiting.ledger, dormant, {
+    identity: actor("owner", "device-recovered", "session-recovered"),
+    mode: "recovery",
+    time: T3,
+    expiresAt: T6,
+    recoveryEvidenceDigest: evidence("recovery"),
+  });
+  assert.equal(recovered.claim.state, "current");
+  assert.equal(recovered.claim.deviceId, "device-recovered");
+});
+
+test("review identity is immutable; integrate preserves; retire joins the typed receipt", () => {
+  const first = claim(createEmptyLedger("ledger:repository"));
+  const projected = continueClaim(first.ledger, first.claim, {
+    mode: "projection",
+    laneRevision: revision("candidate"),
+    reviewRequestId: "review:1",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review",
+    time: T2,
+    laneRevision: projected.claim.laneRevision,
+    reviewRequestId: "review:1",
+    focusedEvidenceDigest: evidence("focused"),
+  });
+  assert.equal(reviewed.claim.state, "reviewed");
+  assert.equal(reviewed.claim.writeAuthority, false);
+  throwsCode(() => continueClaim(reviewed.ledger, reviewed.claim, {
+    mode: "review",
+    time: T3,
+    laneRevision: reviewed.claim.laneRevision,
+    reviewRequestId: "review:2",
+    focusedEvidenceDigest: evidence("other"),
+  }), "stale_review_identity");
+  const integrated = applyCloudTransition({
+    ledger: reviewed.ledger,
+    action: "integrate",
+    actor: owner,
+    repository,
+    evaluationTime: T3,
     request: {
-      ...verificationRequest,
-      fenceRevision: authorized.claim.fenceRevision,
-      ledgerRevision: authorized.claim.ledgerRevision,
+      claimId: reviewed.claim.claimId,
+      expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      expectedLedgerDigest: reviewed.ledger.headDigest,
+      candidateRevision: reviewed.claim.laneRevision,
+      reviewRequestId: reviewed.claim.reviewRequestId,
+      focusedEvidenceDigest: reviewed.claim.evidenceDigest,
+      dependencyClosureDigest: evidence("dependencies"),
+      namedChecksDigest: evidence("named-checks"),
+      handoffEvidenceDigest: evidence("handoff"),
+      operatorDecisionDigest: evidence("operator"),
+      integrationIntentDigest: evidence("intent"),
+      idempotencyKey: "integrate:review-1",
     },
-    evaluationTime: LATER,
   });
-  assert.equal(deliveryVerified.ok, true);
-  assert.equal(deliveryVerified.verdict, "ready");
-  assert.deepEqual(deliveryVerified.findings, []);
-
-  throwsCode(
-    () => mutate(authorized.ledger, "release", expected(authorized.claim, "stale-release", {
-      expectedFenceRevision: claimed.claim.fenceRevision,
-      reason: "integrated",
-      evidenceDigest: EVIDENCE,
-      integrationReceiptDigest: INTEGRATION,
-    }), { evaluationTime: LATER }),
-    "stale_collaboration_fence",
-  );
-  const released = mutate(authorized.ledger, "release", expected(authorized.claim, "release-integrated", {
+  assert.equal(integrated.claim.state, "integrated-preserved");
+  assert.equal(integrated.receipt.schema, "agentic-collaboration-integration-receipt/v1");
+  throwsCode(() => retire(integrated.ledger, integrated.claim, {
     reason: "integrated",
-    evidenceDigest: EVIDENCE,
-    integrationReceiptDigest: INTEGRATION,
-  }), { evaluationTime: LATER });
-  assert.equal(released.claim.state, "released");
-  assert.deepEqual(validateLedger(released.ledger), []);
-});
-
-test("integrated release can retire an expired delivery-authorized claim owned by the same actor", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-expired-release", {
-    laneRevision: "lane-expired",
-  }));
-  const ready = mutate(bound.ledger, "review-ready", expected(bound.claim, "review-ready-expired", {
-    laneRevision: "lane-expired",
-    reviewRequestId: "review-expired",
-    focusedEvidenceDigest: EVIDENCE,
-  }), { evaluationTime: LATER });
-  const authorized = mutate(ready.ledger, "delivery-authorize", expected(ready.claim, "authorize-expired", {
-    laneRevision: "lane-expired",
-    reviewRequestId: "review-expired",
-    focusedEvidenceDigest: EVIDENCE,
-    operatorDecisionDigest: OPERATOR_DECISION,
-    integrationIntentDigest: INTEGRATION_INTENT,
-  }), { evaluationTime: LATER });
-
-  const released = mutate(authorized.ledger, "release", expected(authorized.claim, "release-expired-integrated", {
+    integrationReceiptDigest: evidence("not-the-receipt"),
+  }), "integration_receipt_mismatch");
+  const retired = retire(integrated.ledger, integrated.claim, {
     reason: "integrated",
-    evidenceDigest: EVIDENCE,
-    integrationReceiptDigest: INTEGRATION,
-  }), {
-    evaluationTime: "2026-07-30T03:00:00.000Z",
+    integrationReceiptDigest: integrated.receipt.receiptDigest,
   });
-  assert.equal(released.claim.state, "released");
-  assert.deepEqual(validateLedger(released.ledger), []);
+  assert.equal(retired.claim.state, "retired");
+  assert.equal(retired.receipt.schema, "agentic-collaboration-retirement-receipt/v1");
 });
 
-test("abandoned release can retire an expired claim with exact ownership and fence authority", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const evaluationTime = "2026-07-30T03:00:00.000Z";
+test("ledger validation rejects hash-consistent forged authority semantics", () => {
+  const first = claim(createEmptyLedger("ledger:repository"), { expiresAt: T6 });
+  const waiting = claim(first.ledger, { workItemId: "work:waiting", time: T1, expiresAt: T6 });
+  const admission = replaceLast(waiting.ledger, (core) => { core.state = "current"; core.eligibleSince = null; });
+  assert.match(validateLedger(admission).join("; "), /claim queue admission|overlapping scope/);
 
-  throwsCode(
-    () => mutate(claimed.ledger, "release", expected(claimed.claim, "release-expired-stale", {
-      expectedFenceRevision: digestValue("stale-fence"),
-      reason: "abandoned",
-      evidenceDigest: EVIDENCE,
-    }), { evaluationTime }),
-    "stale_collaboration_fence",
-  );
-  throwsCode(
-    () => mutate(claimed.ledger, "release", expected(claimed.claim, "release-expired-owner", {
-      reason: "abandoned",
-      evidenceDigest: EVIDENCE,
-    }), { actor: ACTOR_B, evaluationTime }),
-    "claim_owner_mismatch",
-  );
+  const third = claim(waiting.ledger, { workItemId: "work:third", time: T2, expiresAt: T6 });
+  const predecessorRetired = retire(third.ledger, first.claim, { time: T3 });
+  const priority = appendForged(predecessorRetired.ledger, third.claim.claimId, {
+    time: T4, label: "priority", change(core) { core.state = "current"; core.expiresAt = T6; core.promotedAt = T4; },
+  });
+  assert.match(validateLedger(priority).join("; "), /successor promotion/);
 
-  const released = mutate(claimed.ledger, "release", expected(claimed.claim, "release-expired-abandoned", {
-    reason: "abandoned",
-    evidenceDigest: EVIDENCE,
-  }), { evaluationTime });
-  assert.equal(released.claim.state, "released");
-  assert.equal(released.claim.release.reason, "abandoned");
-  assert.deepEqual(validateLedger(released.ledger), []);
+  const projected = continueClaim(first.ledger, first.claim, {
+    mode: "projection", time: T1, laneRevision: revision("reviewed"), reviewRequestId: "review:forged",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review", time: T2, laneRevision: projected.claim.laneRevision,
+    reviewRequestId: projected.claim.reviewRequestId, focusedEvidenceDigest: evidence("reviewed"),
+  });
+  const identity = appendForged(reviewed.ledger, reviewed.claim.claimId, {
+    time: T3, label: "review-identity", change(core) {
+      core.laneRevision = revision("rewritten"); core.reviewRequestId = "review:rewritten"; core.evidenceDigest = evidence("rewritten");
+    },
+  });
+  assert.match(validateLedger(identity).join("; "), /reviewed continuation/);
+  const integration = appendForged(reviewed.ledger, reviewed.claim.claimId, {
+    action: "integrate", time: T3, label: "integration", change(core) { core.state = "integrated-preserved"; },
+  });
+  assert.match(validateLedger(integration).join("; "), /typed integration evidence/);
+
+  const preservation = appendForged(first.ledger, first.claim.claimId, {
+    time: T1, label: "preservation", change(core) { core.state = "dormant-preserved"; },
+  });
+  assert.match(validateLedger(preservation).join("; "), /preservation evidence/);
+  const expired = claim(createEmptyLedger("ledger:repository"), { expiresAt: T1 });
+  const recovery = appendForged(expired.ledger, expired.claim.claimId, {
+    time: T2, label: "recovery", change(core) { core.state = "current"; core.expiresAt = T6; },
+  });
+  assert.match(validateLedger(recovery).join("; "), /dormant recovery/);
+  const retirement = appendForged(first.ledger, first.claim.claimId, {
+    action: "retire", time: T1, label: "retirement", change(core) { core.state = "retired"; },
+  });
+  assert.match(validateLedger(retirement).join("; "), /typed retirement evidence/);
+
+  const backwardsBase = claim(createEmptyLedger("ledger:repository"), { time: T2, expiresAt: T6 });
+  const backwards = appendForged(backwardsBase.ledger, backwardsBase.claim.claimId, {
+    time: T1, label: "time", change() {},
+  });
+  assert.match(validateLedger(backwards).join("; "), /evaluationTime is not monotonic/);
+  const staleState = replaceLast(first.ledger, (core) => { core.state = "integrating"; });
+  assert.match(validateLedger(staleState).join("; "), /claimCore.state is invalid/);
 });
 
-test("delivery authorization is idempotent and rejects reviewed-source drift", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-delivery-proof", {
-    laneRevision: "lane-reviewed",
-  }));
-  const ready = mutate(bound.ledger, "review-ready", expected(bound.claim, "ready-delivery-proof", {
-    laneRevision: "lane-reviewed",
-    reviewRequestId: "review-proof",
-    focusedEvidenceDigest: EVIDENCE,
-  }));
-  const request = expected(ready.claim, "authorize-delivery-proof", {
-    laneRevision: "lane-reviewed",
-    reviewRequestId: "review-proof",
-    focusedEvidenceDigest: EVIDENCE,
-    operatorDecisionDigest: OPERATOR_DECISION,
-    integrationIntentDigest: INTEGRATION_INTENT,
+test("historical v1 bytes validate unchanged and continue one-way into v2", () => {
+  const legacy = legacyLedger();
+  const bytes = canonicalJson(legacy);
+  assert.deepEqual(validateLedger(legacy), []);
+  assert.equal(canonicalJson(legacy), bytes);
+  const previous = legacy.entries.at(-1);
+  const continued = applyCloudTransition({
+    ledger: legacy,
+    action: "continue",
+    actor: owner,
+    repository: { repositoryId: repository.repositoryId },
+    evaluationTime: T2,
+    request: {
+      claimId: previous.claimId,
+      expectedFenceRevision: previous.claimDigest,
+      expectedTransitionCounter: 2,
+      expectedLedgerDigest: legacy.headDigest,
+      mode: "renewal",
+      expiresAt: T6,
+      idempotencyKey: "legacy-to-v2",
+    },
   });
-  const authorized = mutate(ready.ledger, "delivery-authorize", request);
-  const replayed = mutate(authorized.ledger, "delivery-authorize", request);
-  assert.equal(replayed.replayed, true);
-  assert.equal(replayed.claim.fenceRevision, authorized.claim.fenceRevision);
+  assert.equal(continued.ledger.entries.at(-1).schema, ENTRY_SCHEMA);
+  assert.equal(continued.claim.claimIdentitySchema, LEGACY_ENTRY_SCHEMA);
+  assert.equal(continued.claim.state, "current");
+  assert.deepEqual(validateLedger(continued.ledger), []);
 
-  throwsCode(() => mutate(ready.ledger, "delivery-authorize", {
-    ...request,
-    idempotencyKey: "authorize-drifted-lane",
-    laneRevision: "lane-edited-after-review",
-  }), "delivery_authority_unjoined");
-  throwsCode(() => mutate(ready.ledger, "bind", expected(ready.claim, "edit-after-review", {
-    laneRevision: "lane-edited-after-review",
-  })), "invalid_transition");
-  throwsCode(() => mutate(ready.ledger, "release", expected(ready.claim, "integrate-without-authority", {
-    reason: "integrated",
-    evidenceDigest: EVIDENCE,
-    integrationReceiptDigest: INTEGRATION,
-  })), "invalid_transition");
+  const reviewedLegacy = legacyReviewedLedger();
+  const reviewedEntry = reviewedLegacy.entries.at(-1);
+  const integrated = applyCloudTransition({
+    ledger: reviewedLegacy,
+    action: "integrate",
+    actor: owner,
+    repository: { repositoryId: repository.repositoryId },
+    evaluationTime: T3,
+    request: {
+      claimId: reviewedEntry.claimId,
+      expectedFenceRevision: reviewedEntry.claimDigest,
+      expectedTransitionCounter: 3,
+      expectedLedgerDigest: reviewedLegacy.headDigest,
+      candidateRevision: reviewedEntry.claimCore.laneRevision,
+      reviewRequestId: reviewedEntry.claimCore.reviewRequestId,
+      focusedEvidenceDigest: reviewedEntry.claimCore.evidenceDigest,
+      dependencyClosureDigest: evidence("legacy-dependencies"),
+      namedChecksDigest: evidence("legacy-checks"),
+      handoffEvidenceDigest: evidence("legacy-handoff"),
+      operatorDecisionDigest: evidence("legacy-operator"),
+      integrationIntentDigest: evidence("legacy-integration"),
+      idempotencyKey: "legacy-review-to-v2",
+    },
+  });
+  assert.equal(integrated.claim.state, "integrated-preserved");
+  assert.deepEqual(validateLedger(integrated.ledger), []);
+
+  const overlap = legacyOverlapLedger();
+  const target = listCurrentClaims(overlap, T3).find((claim) => claim.workItemId === "legacy:work");
+  const projected = continueClaim(overlap, target, { mode: "projection", time: T3,
+    laneRevision: revision("legacy-migration"), reviewRequestId: "review:legacy-migration" });
+  const renewed = continueClaim(projected.ledger, projected.claim, { mode: "renewal", time: T3, expiresAt: T6 });
+  assert.deepEqual(validateLedger(renewed.ledger), []);
 });
 
-test("handoff preserves immutable work and increments the lease epoch", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const bound = mutate(claimed.ledger, "bind", expected(claimed.claim, "bind-for-handoff", {
-    laneRevision: "lane-handoff",
-  }));
-  const handed = mutate(bound.ledger, "handoff", expected(bound.claim, "handoff-to-b", {
-    recipientMode: "actor",
-    nextActorId: "12",
-    evidenceDigest: EVIDENCE,
-  }), { evaluationTime: LATER });
-  assert.equal(handed.claim.state, "parked");
+function legacyOverlapLedger() {
+  const ledger = legacyLedger(), core = { ...ledger.entries[0].claimCore,
+    workItemId: "legacy:peer", transitionCounter: 1, heartbeatCounter: 0, state: "active", expiresAt: T2 };
+  core.claimId = digestValue({ actorId: core.actorId, canonicalBaseRevision: core.canonicalBaseRevision,
+    deviceId: core.deviceId, leaseEpoch: core.leaseEpoch, repositoryId: core.repositoryId,
+    sessionId: core.sessionId, workItemId: core.workItemId, writeSetDigest: core.writeSetDigest });
+  const claimed = legacyEntry({ action: "claim", core, sequence: 3, parentDigest: ledger.headDigest, time: T1 });
+  const reviewedCore = { ...core, transitionCounter: 2, state: "review-ready",
+    evidenceDigest: evidence("legacy-peer"), reviewRequestId: "review:legacy-peer" };
+  const reviewed = legacyEntry({ action: "review-ready", core: reviewedCore, sequence: 4, parentDigest: claimed.digest, time: T2 });
+  return { ...ledger, sequence: 4, headDigest: reviewed.digest, entries: [...ledger.entries, claimed, reviewed] };
+}
 
-  const successorRequest = claimRequest({
-    laneRevision: "lane-handoff",
-    leaseEpoch: 2,
-    predecessorClaimId: handed.claim.claimId,
-    deviceId: "device-b",
-    sessionId: "session-b",
-    idempotencyKey: "claim-successor",
+function legacyReviewedLedger() {
+  const ledger = legacyLedger();
+  const previous = ledger.entries.at(-1);
+  const core = {
+    ...previous.claimCore,
+    transitionCounter: 3,
+    state: "review-ready",
+    evidenceDigest: evidence("legacy-review"),
+    reviewRequestId: "review:legacy",
+  };
+  const entry = legacyEntry({
+    action: "review-ready",
+    core,
+    sequence: 3,
+    parentDigest: previous.digest,
+    time: T2,
   });
-  throwsCode(
-    () => mutate(handed.ledger, "claim", successorRequest, { actor: { id: 13, login: "actor-c" } }),
-    "handoff_recipient_mismatch",
-  );
-  const successor = mutate(handed.ledger, "claim", successorRequest, { actor: ACTOR_B });
-  assert.equal(successor.claim.leaseEpoch, 2);
-  assert.equal(successor.claim.predecessorClaimId, handed.claim.claimId);
-  assert.deepEqual(listCurrentClaims(successor.ledger, LATER), [successor.claim]);
+  return { ...ledger, sequence: 3, headDigest: entry.digest, entries: [...ledger.entries, entry] };
+}
 
-  const released = mutate(successor.ledger, "release", expected(handed.claim, "release-handoff", {
-    reason: "handoff",
-    evidenceDigest: EVIDENCE,
-  }), { evaluationTime: LATER });
-  assert.equal(released.claim.state, "released");
-  assert.deepEqual(listCurrentClaims(released.ledger, LATER), [successor.claim]);
-});
-
-test("explicit evaluation time expires claims and produces only canonical findings", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const atExpiry = applyCloudTransition({
-    ledger: claimed.ledger,
-    action: "status",
-    request: { claimId: claimed.claim.claimId },
-    evaluationTime: EXPIRES,
-  });
-  assert.equal(atExpiry.claim.state, "expired");
-  const verification = verifyCloudClaim({
-    ledger: claimed.ledger,
-    request: { claimId: claimed.claim.claimId, fenceRevision: claimed.claim.fenceRevision },
-    evaluationTime: EXPIRES,
-  });
-  assert.equal(verification.ok, false);
-  assert.deepEqual(verification.findings.map((item) => item.type), ["stale-collaboration-fence"]);
-
-  const successor = mutate(claimed.ledger, "claim", claimRequest({
-    leaseEpoch: 2,
-    predecessorClaimId: claimed.claim.claimId,
-    deviceId: "device-b",
-    sessionId: "session-b",
-    idempotencyKey: "expired-successor",
-    expiresAt: EXTENDED,
-  }), { actor: ACTOR_B, evaluationTime: EXPIRES });
-  assert.equal(successor.claim.leaseEpoch, 2);
-});
-
-test("expired predecessor claims can continue on their preserved base after protected main advances", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-
-  throwsCode(() => mutate(claimed.ledger, "claim", claimRequest({
-    leaseEpoch: 2,
-    deviceId: "device-b",
-    sessionId: "session-b",
-    idempotencyKey: "advanced-main-without-predecessor",
-    expiresAt: EXTENDED,
-  }), {
-    actor: ACTOR_B,
-    repository: { ...TARGET_A, canonicalRevision: "base-b" },
-    evaluationTime: EXPIRES,
-  }), "stale_canonical_base");
-
-  const successor = mutate(claimed.ledger, "claim", claimRequest({
-    leaseEpoch: 2,
-    predecessorClaimId: claimed.claim.claimId,
-    deviceId: "device-b",
-    sessionId: "session-b",
-    idempotencyKey: "advanced-main-with-predecessor",
-    expiresAt: EXTENDED,
-  }), {
-    actor: ACTOR_B,
-    repository: { ...TARGET_A, canonicalRevision: "base-b" },
-    evaluationTime: EXPIRES,
-  });
-
-  assert.equal(successor.claim.canonicalBaseRevision, "base-a");
-  assert.equal(successor.claim.leaseEpoch, 2);
-  assert.equal(successor.claim.predecessorClaimId, claimed.claim.claimId);
-});
-
-test("expired overlaps from an older base do not block fresh current-base authoring", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest({
-    declaredWriteScope: ["scripts/cloud-collaboration.mjs"],
-  }));
-
-  const successor = mutate(claimed.ledger, "claim", claimRequest({
-    workItemId: "work-2",
-    canonicalBaseRevision: "base-b",
-    laneRevision: "base-b",
-    declaredWriteScope: ["scripts/cloud-collaboration.mjs"],
-    deviceId: "device-b",
-    sessionId: "session-b",
+function legacyLedger() {
+  const declaredWriteScope = normalizeWriteSet(["path:legacy.md"]);
+  const writeSetDigest = digestValue(declaredWriteScope);
+  const claimId = digestValue({
+    actorId: owner.actorId,
+    canonicalBaseRevision: repository.canonicalRevision,
+    deviceId: owner.deviceId,
     leaseEpoch: 1,
-    expiresAt: EXTENDED,
-    idempotencyKey: "claim-work-2-base-b",
-  }), {
-    actor: ACTOR_B,
-    repository: { ...TARGET_A, canonicalRevision: "base-b" },
-    evaluationTime: EXPIRES,
+    repositoryId: repository.repositoryId,
+    sessionId: owner.sessionId,
+    workItemId: "legacy:work",
+    writeSetDigest,
   });
+  const initialCore = {
+    claimId,
+    actorId: owner.actorId,
+    deviceId: owner.deviceId,
+    sessionId: owner.sessionId,
+    repositoryId: repository.repositoryId,
+    workItemId: "legacy:work",
+    canonicalBaseRevision: repository.canonicalRevision,
+    declaredWriteScope,
+    writeSetDigest,
+    laneRevision: repository.canonicalRevision,
+    leaseEpoch: 1,
+    transitionCounter: 1,
+    heartbeatCounter: 0,
+    state: "active",
+    expiresAt: T3,
+    evidenceDigest: null,
+    reviewRequestId: null,
+    predecessorClaimId: null,
+    handoff: null,
+    release: null,
+  };
+  const first = legacyEntry({ action: "claim", core: initialCore, sequence: 1, parentDigest: null, time: T0 });
+  const renewedCore = {
+    ...initialCore,
+    transitionCounter: 2,
+    heartbeatCounter: 1,
+    expiresAt: T4,
+  };
+  const second = legacyEntry({ action: "heartbeat", core: renewedCore, sequence: 2, parentDigest: first.digest, time: T1 });
+  return {
+    schema: "agentic-cloud-collaboration-ledger/v1",
+    ledgerRepositoryId: "ledger:repository",
+    sequence: 2,
+    headDigest: second.digest,
+    entries: [first, second],
+  };
+}
 
-  assert.equal(successor.claim.workItemId, "work-2");
-  assert.equal(successor.claim.canonicalBaseRevision, "base-b");
-  assert.equal(successor.claim.leaseEpoch, 1);
-});
-
-test("chain validation rejects tampering and non-monotonic counters", () => {
-  const claimed = mutate(emptyLedger(), "claim", claimRequest());
-  const tampered = structuredClone(claimed.ledger);
-  tampered.entries[0].claimCore.laneRevision = "forged-lane";
-  assert.equal(validateLedger(tampered).some((failure) => failure.includes("claimDigest")), true);
-
-  const forgedCounter = structuredClone(claimed.ledger);
-  forgedCounter.entries[0].claimCore.transitionCounter = 2;
-  forgedCounter.entries[0].claimDigest = digestValue(forgedCounter.entries[0].claimCore);
-  const { digest: ignored, ...entryDraft } = forgedCounter.entries[0];
-  forgedCounter.entries[0].digest = digestValue(entryDraft);
-  forgedCounter.headDigest = forgedCounter.entries[0].digest;
-  assert.equal(validateLedger(forgedCounter).some((failure) => failure.includes("counter 1")), true);
-});
+function legacyEntry({ action, core, sequence, parentDigest, time }) {
+  const draft = {
+    schema: LEGACY_ENTRY_SCHEMA,
+    sequence,
+    parentDigest,
+    action,
+    repositoryId: core.repositoryId,
+    claimId: core.claimId,
+    idempotencyKey: evidence(`legacy-idempotency:${sequence}`),
+    requestDigest: evidence(`legacy-request:${sequence}`),
+    evaluationTime: time,
+    claimCore: core,
+    claimDigest: digestValue(core),
+  };
+  return { ...draft, digest: digestValue(draft) };
+}

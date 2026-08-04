@@ -24,6 +24,7 @@ source_docs:
   - "CLOUD-COLLABORATION.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
+  - "docs/documents/git-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
@@ -83,6 +84,7 @@ dictionary_entries:
   - "#mcp"
   - "#repository-packing"
   - "#git-remote"
+  - "#git-collaboration"
   - "#multi-provider-file-sync"
   - "#canvas"
   - "#canvas-node"
@@ -248,6 +250,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
 | `#repository-packing` | Deterministic, bounded conversion of one exact local Git worktree into one AI-friendly content-addressed Markdown artifact. | `/repository.pack #repository-packing @repository-root @runtime-proof` requests the local stdio MCP owner. | Canonical Git discovery, typed omissions, source and artifact digests, path containment, atomic publication, independence proof, and zero network, model, token, cost, Prod, and Cloudflare activity are explicit. |
 | `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
+| `#git-collaboration` | Git collaboration rules. | A task enters any git stage from session start through cleanup. | `docs/documents/git-guidelines.md` resolves and the focused checker reports registration parity. |
 | `#multi-provider-file-sync` | Bidirectional file or directory transfer through a provider-neutral browser contract. | `/file.sync` pulls or pushes a configured provider prefix. | Provider capability, pagination, hash semantics, per-file outcomes, both-sides-changed conflicts, size/time bounds, offline FIFO, and secret-free browser payloads are proven. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
 | `#canvas-node` | Canvas graph node selection, creation, opening, linking, or deletion intent. | A command acts on a node, creates a node, or needs selected-node context. | Node id, type, label, graph point, mutation owner, and selection state are explicit. |

@@ -1,40 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
-import {
-  createGitHubCloudCollaborationAdapter,
-} from "../scripts/github-cloud-collaboration-adapter.mjs";
-
+import { createGitHubCloudCollaborationAdapter } from "../scripts/github-cloud-collaboration-adapter.mjs";
 const ledgerRepository = "owner/ledger";
 const targetRepository = "owner/target";
 const targetMainSha = "3".repeat(40);
 const pullHeadSha = "4".repeat(40);
-const evidenceDigest = "e".repeat(64);
-const operatorDecisionDigest = "d".repeat(64);
+const evidenceDigest = "e".repeat(64), operatorDecisionDigest = "d".repeat(64);
 const integrationIntentDigest = "a".repeat(64);
-
+const workflowContext = { trustedSource: "github-actions", runId: 17, runAttempt: 1,
+  repository: targetRepository, repositoryId: 2, revision: targetMainSha };
 test("adapter bootstraps the ledger, advances only by non-forced CAS, and replays exactly", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const input = claimInput();
-
   const first = await adapter.execute("claim", input);
   assert.equal(first.ok, true);
-  assert.equal(first.status, "active");
+  assert.equal(first.status, "current");
+  assert.equal(first.claim.claimIdentitySchema, "agentic-cloud-collaboration-entry/v2");
   assert.equal(first.replayed, false);
   assert.match(first.ledgerRevision, /^[0-9a-f]{40}$/u);
   assert.match(first.claimDigest, /^[0-9a-f]{64}$/u);
   assert.equal(JSON.stringify(first).includes(input.deviceId), false);
   assert.equal(JSON.stringify(first).includes(input.sessionId), false);
   assert.equal(JSON.stringify(first).includes(input.workItemId), false);
-
   const updateCalls = github.calls.filter((call) => (
     call.method === "PATCH"
     && call.path.includes("/git/refs/heads/agentic/collaboration-ledger")
   ));
   assert.equal(updateCalls.length, 1);
   assert.deepEqual(updateCalls[0].body.force, false);
-
   const writesBeforeReplay = github.mutationCount();
   const replay = await adapter.execute("claim", input);
   assert.equal(replay.replayed, true);
@@ -42,11 +36,24 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   assert.equal(replay.ledgerRevision, first.ledgerRevision);
   assert.equal(github.mutationCount(), writesBeforeReplay);
 });
-
+test("adapter rejects actor metadata that does not match the authenticated token", async () => {
+  const github = createFakeGitHub();
+  await assert.rejects(createAdapter(github).execute("claim", claimInput({ actorId: 999, actorLogin: "impersonated" })), /authenticated GitHub token identity/u);
+  assert.equal(github.mutationCount(), 0);
+});
+test("workflow actor is joined to the authenticated in-progress run", async () => {
+  const github = createFakeGitHub({ userStatus: 403 });
+  assert.equal((await createAdapter(github, { workflowContext }).execute("claim", claimInput({ actorId: 7, actorLogin: "operator" }))).ok, true);
+  await assert.rejects(createAdapter(createFakeGitHub({ userStatus: 403 }), { workflowContext }).execute("claim", claimInput({ actorId: 999 })), /authenticated GitHub run identity/u);
+});
+test("workflow fallback is unavailable to untrusted or non-installation callers", async () => {
+  await assert.rejects(createAdapter(createFakeGitHub({ userStatus: 403 })).execute("claim", claimInput()), /trusted GitHub Actions runtime context/u);
+  await assert.rejects(createAdapter(createFakeGitHub({ userStatus: 401 }), { workflowContext }).execute("claim", claimInput()), /could not resolve authenticated actor/u);
+  await assert.rejects(createAdapter(createFakeGitHub(), { workflowContext }).execute("claim", claimInput({ actorId: 999 })), /authenticated GitHub token identity/u);
+});
 test("adapter does not depend on immediate ref visibility after bootstrap", async () => {
   const github = createFakeGitHub({ hiddenLedgerRefReadsAfterCreate: 1 });
   const result = await createAdapter(github).execute("claim", claimInput());
-
   assert.equal(result.ok, true);
   assert.equal(result.attempts, 1);
   const ledgerRefReads = github.calls.filter((call) => (
@@ -57,23 +64,19 @@ test("adapter does not depend on immediate ref visibility after bootstrap", asyn
   assert.equal(github.calls.filter((call) => call.method === "POST" && call.path.endsWith("/git/refs")).length, 1);
   assert.equal(github.calls.filter((call) => call.method === "PATCH" && call.body.force === false).length, 1);
 });
-
 test("adapter retries a transient update-side ref visibility failure", async () => {
   const github = createFakeGitHub({ conflicts: [404] });
   const result = await createAdapter(github).execute("claim", claimInput());
-
   assert.equal(result.ok, true);
   assert.equal(result.attempts, 2);
   const updates = github.calls.filter((call) => call.method === "PATCH");
   assert.equal(updates.length, 2);
   assert.ok(updates.every((call) => call.body.force === false));
 });
-
 test("adapter retries a same-parent CAS conflict with a frozen server-time intent", async () => {
-  const github = createFakeGitHub({ conflicts: [409] });
+  const github = createFakeGitHub({ conflicts: [409], advanceSeconds: 1 });
   const adapter = createAdapter(github);
   const result = await adapter.execute("claim", claimInput());
-
   assert.equal(result.ok, true);
   assert.equal(result.attempts, 2);
   const updates = github.calls.filter((call) => call.method === "PATCH");
@@ -81,12 +84,38 @@ test("adapter retries a same-parent CAS conflict with a frozen server-time inten
   assert.ok(updates.every((call) => call.body.force === false));
   const candidateLedgers = github.createdLedgerValues();
   assert.equal(candidateLedgers.at(-1).entries[0].claimCore.expiresAt, candidateLedgers.at(-2).entries[0].claimCore.expiresAt);
+  assert.notEqual(candidateLedgers.at(-1).entries[0].evaluationTime, candidateLedgers.at(-2).entries[0].evaluationTime);
 });
-
+test("adapter replays relative-TTL intent across fresh process instances", async () => {
+  const github = createFakeGitHub({ advanceSeconds: 1 });
+  const input = claimInput({ idempotencyKey: "cross-process-replay" });
+  const first = await createAdapter(github).execute("claim", input);
+  const writes = github.mutationCount();
+  const replay = await createAdapter(github).execute("claim", input);
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.claimDigest, first.claimDigest);
+  assert.equal(github.mutationCount(), writes);
+});
+test("adapter aborts when protected source or pull-request identity drifts during CAS", async () => {
+  await assert.rejects(
+    createAdapter(createFakeGitHub({ conflicts: [409], advanceMainOnConflict: true })).execute("claim", claimInput()),
+    /Mutation subject changed/u,
+  );
+  await assert.rejects(
+    createAdapter(createFakeGitHub({ conflicts: [409], advancePullOnConflict: true })).execute("claim", claimInput({ pullRequestNumber: 17, laneRevision: pullHeadSha })),
+    /Mutation subject changed/u,
+  );
+});
+test("adapter replays a committed update after its response is lost", async () => {
+  const github = createFakeGitHub({ advanceSeconds: 1, lostPatchResponses: 1 });
+  const result = await createAdapter(github).execute("claim", claimInput());
+  assert.equal(result.attempts, 2);
+  assert.equal(result.replayed, true);
+  assert.equal(github.calls.filter((call) => call.method === "PATCH").length, 1);
+});
 test("adapter exhausts bounded CAS conflicts without force or target mutation", async () => {
   const github = createFakeGitHub({ conflicts: [409, 422, 409] });
   const adapter = createAdapter(github, { maxAttempts: 3 });
-
   await assert.rejects(
     adapter.execute("claim", claimInput()),
     /compare-and-swap exhausted 3 attempts/u,
@@ -99,24 +128,18 @@ test("adapter exhausts bounded CAS conflicts without force or target mutation", 
     false,
   );
 });
-
-test("adapter binds and verifies one exact review-ready PR without mutation", async () => {
+test("adapter continues and verifies one exact reviewed PR without mutation", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const claimed = await adapter.execute("claim", claimInput());
-  const bound = await adapter.execute("bind", fencedInput(claimed, {
-    idempotencyKey: "bind-run-1",
-    expectedTransitionCounter: 1,
-    pullRequestNumber: 17,
+  const bound = await adapter.execute("continue", fencedInput(claimed, {
+    mode: "projection", idempotencyKey: "projection-run-1", expectedTransitionCounter: 1, pullRequestNumber: 17,
   }));
-  const ready = await adapter.execute("review-ready", fencedInput(bound, {
-    idempotencyKey: "review-run-1",
-    expectedTransitionCounter: 2,
-    pullRequestNumber: 17,
-    focusedEvidenceDigest: evidenceDigest,
+  const ready = await adapter.execute("continue", fencedInput(bound, {
+    mode: "review", idempotencyKey: "review-run-1", expectedTransitionCounter: 2,
+    pullRequestNumber: 17, focusedEvidenceDigest: evidenceDigest,
   }));
-  assert.equal(ready.status, "review-ready");
-
+  assert.equal(ready.status, "reviewed");
   const writesBeforeVerify = github.mutationCount();
   const verification = await adapter.execute("verify", {
     targetRepository,
@@ -124,49 +147,39 @@ test("adapter binds and verifies one exact review-ready PR without mutation", as
     branch: "agent/device/cloud-scope",
     headSha: pullHeadSha,
     canonicalBaseSha: targetMainSha,
-    requiredState: "review-ready",
+    requiredState: "reviewed",
     expectedClaimDigest: ready.claimDigest,
     expectedLedgerRevision: ready.ledgerRevision,
   });
-
   assert.equal(verification.ok, true);
   assert.equal(verification.status, "ready");
-  assert.equal(verification.claim.state, "review-ready");
+  assert.equal(verification.claim.state, "reviewed");
   assert.equal(verification.claim.laneRevision, pullHeadSha);
   assert.deepEqual(verification.subject, {
-    repository: targetRepository,
-    pullRequestNumber: 17,
-    branch: "agent/device/cloud-scope",
-    headSha: pullHeadSha,
-    canonicalBaseSha: targetMainSha,
+    repository: targetRepository, pullRequestNumber: 17, branch: "agent/device/cloud-scope",
+    headSha: pullHeadSha, canonicalBaseSha: targetMainSha,
   });
   assert.equal(github.mutationCount(), writesBeforeVerify);
 });
-
 test("adapter reads large ledgers through Git trees and blobs instead of contents transport", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
-
   for (let i = 0; i < 48; i += 1) {
     const suffix = `${i}`.padStart(2, "0");
     const declaredWriteScope = Array.from({ length: 128 }, (_, index) => (
       `path:docs/collaboration/${suffix}/${`${index}`.padStart(3, "0")}-${"segment-".repeat(8)}proof.md`
     ));
     const claimed = await adapter.execute("claim", claimInput({
-      workItemId: `cloud-collaboration-${suffix}`,
-      scopeId: `cloud-collaboration-${suffix}`,
-      branch: `agent/device/cloud-scope-${suffix}`,
-      declaredWriteScope,
-      idempotencyKey: `claim-run-${suffix}`,
+      workItemId: `cloud-collaboration-${suffix}`, scopeId: `cloud-collaboration-${suffix}`,
+      branch: `agent/device/cloud-scope-${suffix}`, declaredWriteScope, idempotencyKey: `claim-run-${suffix}`,
     }));
-    await adapter.execute("release", fencedInput(claimed, {
-      expectedTransitionCounter: claimed.claim.transitionCounter,
-      reason: "abandoned",
-      evidenceDigest,
-      idempotencyKey: `release-run-${suffix}`,
+    await adapter.execute("retire", fencedInput(claimed, {
+      expectedTransitionCounter: claimed.claim.transitionCounter, reason: "abandoned",
+      finalRevision: claimed.claim.laneRevision, bytesDigest: evidenceDigest,
+      namedChecksDigest: evidenceDigest, handoffEvidenceDigest: evidenceDigest,
+      idempotencyKey: `retire-run-${suffix}`,
     }));
   }
-
   assert.ok(github.currentLedgerBytes() > 900_000);
   const status = await adapter.execute("status", { targetRepository });
   assert.equal(status.status, "ready");
@@ -181,47 +194,58 @@ test("adapter reads large ledgers through Git trees and blobs instead of content
     github.calls.some((call) => call.path.includes(`/repos/${ledgerRepository}/git/blobs/`)),
   );
 });
-
-test("adapter lists internal claims, resolves commit pull requests, and accepts normalized owner ids for release", async () => {
+test("adapter lists claims, resolves pull requests, integrates, and retires by exact receipt", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const claimed = await adapter.execute("claim", claimInput());
-  const bound = await adapter.execute("bind", fencedInput(claimed, {
-    idempotencyKey: "bind-run-2",
+  const bound = await adapter.execute("continue", fencedInput(claimed, {
+    mode: "projection",
+    idempotencyKey: "projection-run-2",
     expectedTransitionCounter: 1,
     pullRequestNumber: 17,
   }));
-  const ready = await adapter.execute("review-ready", fencedInput(bound, {
+  const ready = await adapter.execute("continue", fencedInput(bound, {
+    mode: "review",
     idempotencyKey: "review-run-2",
     expectedTransitionCounter: 2,
     pullRequestNumber: 17,
     focusedEvidenceDigest: evidenceDigest,
   }));
-  const authorized = await adapter.execute("delivery-authorize", fencedInput(ready, {
-    idempotencyKey: "delivery-authorize-run-2",
+  const authorized = await adapter.execute("integrate", fencedInput(ready, {
+    idempotencyKey: "integrate-run-2",
     expectedTransitionCounter: 3,
     pullRequestNumber: 17,
     laneRevision: pullHeadSha,
     focusedEvidenceDigest: evidenceDigest,
+    dependencyClosureDigest: evidenceDigest,
+    namedChecksDigest: evidenceDigest,
+    handoffEvidenceDigest: evidenceDigest,
     operatorDecisionDigest,
     integrationIntentDigest,
   }));
-  assert.equal(authorized.status, "delivery-authorized");
-
+  assert.equal(authorized.status, "integrated-preserved");
+  assert.equal(authorized.operationReceipt.schema, "agentic-collaboration-integration-receipt/v1");
+  assert.equal(authorized.operationReceipt.operation, "integrate");
+  assert.equal(authorized.operationReceipt.receiptDigest, authorized.claim.operationReceiptDigest);
+  const renewed = await adapter.execute("continue", fencedInput(authorized, {
+    mode: "renewal", idempotencyKey: "renew-integrated-run-2", expectedTransitionCounter: 4,
+    ttlSeconds: 3_600,
+  }));
+  assert.equal(renewed.status, "integrated-preserved");
+  assert.equal(renewed.claim.integrationReceiptDigest, authorized.operationReceipt.receiptDigest);
+  assert.notEqual(renewed.claim.operationReceiptDigest, renewed.claim.integrationReceiptDigest);
   const claims = await adapter.listClaims({ targetRepository });
   assert.equal(claims.length, 1);
-  assert.equal(claims[0].state, "delivery-authorized");
+  assert.equal(claims[0].state, "integrated-preserved");
   assert.match(claims[0].deviceId, /^device:[0-9a-f]{64}$/u);
   assert.match(claims[0].sessionId, /^session:[0-9a-f]{64}$/u);
-
   const pulls = await adapter.pullRequestsForCommit({
     targetRepository,
     commitSha: targetMainSha,
   });
   assert.equal(pulls.length, 1);
   assert.equal(pulls[0].number, 17);
-
-  const released = await adapter.execute("release", {
+  const released = await adapter.execute("retire", {
     targetRepository,
     pullRequestNumber: 17,
     claimId: claims[0].claimId,
@@ -230,13 +254,17 @@ test("adapter lists internal claims, resolves commit pull requests, and accepts 
     deviceId: claims[0].deviceId,
     sessionId: claims[0].sessionId,
     reason: "integrated",
-    evidenceDigest,
-    integrationReceiptDigest: "f".repeat(64),
-    idempotencyKey: "release-run-2",
+    finalRevision: claims[0].laneRevision,
+    reviewRequestId: claims[0].reviewRequestId,
+    bytesDigest: evidenceDigest,
+    namedChecksDigest: evidenceDigest,
+    handoffEvidenceDigest: evidenceDigest,
+    integrationReceiptDigest: claims[0].integrationReceiptDigest,
+    idempotencyKey: "retire-run-2",
   });
-  assert.equal(released.status, "released");
+  assert.equal(released.status, "retired");
+  assert.equal(released.operationReceipt.schema, "agentic-collaboration-retirement-receipt/v1");
 });
-
 test("adapter rejects pull-request head drift and malformed ledger bytes before mutation", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
@@ -250,7 +278,6 @@ test("adapter rejects pull-request head drift and malformed ledger bytes before 
     }),
     /head revision does not match/u,
   );
-
   github.tamperLedger();
   const writesBeforeRead = github.mutationCount();
   await assert.rejects(
@@ -259,28 +286,32 @@ test("adapter rejects pull-request head drift and malformed ledger bytes before 
   );
   assert.equal(github.mutationCount(), writesBeforeRead);
 });
-
-test("adapter accepts delivery-authorized verification against the preserved reviewed head after a protected-main refresh", async () => {
+test("adapter verifies an integrated-preserved candidate after protected-main refresh", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const claimed = await adapter.execute("claim", claimInput());
-  const bound = await adapter.execute("bind", fencedInput(claimed, {
-    idempotencyKey: "bind-run-refresh",
+  const bound = await adapter.execute("continue", fencedInput(claimed, {
+    mode: "projection",
+    idempotencyKey: "projection-run-refresh",
     expectedTransitionCounter: 1,
     pullRequestNumber: 17,
   }));
-  const ready = await adapter.execute("review-ready", fencedInput(bound, {
+  const ready = await adapter.execute("continue", fencedInput(bound, {
+    mode: "review",
     idempotencyKey: "review-run-refresh",
     expectedTransitionCounter: 2,
     pullRequestNumber: 17,
     focusedEvidenceDigest: evidenceDigest,
   }));
-  const authorized = await adapter.execute("delivery-authorize", fencedInput(ready, {
-    idempotencyKey: "delivery-authorize-run-refresh",
+  const authorized = await adapter.execute("integrate", fencedInput(ready, {
+    idempotencyKey: "integrate-run-refresh",
     expectedTransitionCounter: 3,
     pullRequestNumber: 17,
     laneRevision: pullHeadSha,
     focusedEvidenceDigest: evidenceDigest,
+    dependencyClosureDigest: evidenceDigest,
+    namedChecksDigest: evidenceDigest,
+    handoffEvidenceDigest: evidenceDigest,
     operatorDecisionDigest,
     integrationIntentDigest,
   }));
@@ -296,63 +327,45 @@ test("adapter accepts delivery-authorized verification against the preserved rev
       repo: { full_name: targetRepository },
     },
   });
-
   const verification = await adapter.execute("verify", {
     targetRepository,
     pullRequestNumber: 17,
     branch: "agent/device/cloud-scope",
     headSha: pullHeadSha,
     canonicalBaseSha: targetMainSha,
-    requireStatus: "delivery_authorized",
+    requireStatus: "integrated-preserved",
     claimId: authorized.claim.claimId,
     expectedClaimDigest: authorized.claimDigest,
     expectedLedgerRevision: authorized.ledgerRevision,
     allowProtectedMainRefresh: true,
   });
-
   assert.equal(verification.ok, true);
-  assert.equal(verification.claim.state, "delivery-authorized");
+  assert.equal(verification.claim.state, "integrated-preserved");
   assert.equal(verification.claim.laneRevision, pullHeadSha);
 });
-
 function createAdapter(github, options = {}) {
-  return createGitHubCloudCollaborationAdapter({
-    ledgerRepository,
-    request: github.request,
-    ...options,
-  });
+  return createGitHubCloudCollaborationAdapter({ ledgerRepository, request: github.request, ...options });
 }
-
 function claimInput(overrides = {}) {
   return {
-    targetRepository,
-    workItemId: "cloud collaboration implementation",
-    scopeId: "cloud-collaboration",
-    branch: "agent/device/cloud-scope",
-    canonicalBaseRevision: targetMainSha,
-    laneRevision: targetMainSha,
+    targetRepository, workItemId: "cloud collaboration implementation", scopeId: "cloud-collaboration",
+    branch: "agent/device/cloud-scope", canonicalBaseRevision: targetMainSha, laneRevision: targetMainSha,
     declaredWriteScope: ["scripts/cloud/", "docs/cloud.md"],
-    deviceId: "personal-device-name",
-    sessionId: "private-chat-session",
-    ttlSeconds: 1_800,
-    leaseEpoch: 1,
-    idempotencyKey: "claim-run-1",
-    ...overrides,
+    deviceId: "personal-device-name", sessionId: "private-chat-session",
+    ttlSeconds: 1_800, leaseEpoch: 1, idempotencyKey: "claim-run-1", ...overrides,
   };
 }
-
 function fencedInput(result, overrides) {
   return {
-    targetRepository,
-    claimId: result.claim.claimId,
-    expectedFenceRevision: result.claimDigest,
-    deviceId: "personal-device-name",
-    sessionId: "private-chat-session",
-    ...overrides,
+    targetRepository, claimId: result.claim.claimId, expectedFenceRevision: result.claimDigest,
+    deviceId: "personal-device-name", sessionId: "private-chat-session", ...overrides,
   };
 }
-
-function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 } = {}) {
+function createFakeGitHub({
+  conflicts = [], hiddenLedgerRefReadsAfterCreate = 0, advanceSeconds = 0,
+  lostPatchResponses = 0, userStatus = 200,
+  advanceMainOnConflict = false, advancePullOnConflict = false,
+} = {}) {
   const calls = [];
   let pullRequest = pullRequestValue();
   const repositories = {
@@ -372,16 +385,21 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
   let nextObject = 16;
   let conflictIndex = 0;
   let hiddenLedgerRefReads = 0;
-
+  let lostResponses = 0;
   async function request({ method = "GET", path, body }) {
     calls.push({ method, path, body });
-    const date = "Thu, 30 Jul 2026 05:00:00 GMT";
+    const date = new Date(Date.parse("Thu, 30 Jul 2026 05:00:00 GMT") + calls.length * advanceSeconds * 1_000).toUTCString();
     const repositoryMatch = path.match(/^\/repos\/([^/]+\/[^/]+)$/u);
     if (method === "GET" && repositoryMatch) {
       return response(200, repositories[repositoryMatch[1]], date);
     }
     if (method === "GET" && path === "/user") {
-      return response(200, { id: 7, login: "operator" }, date);
+      return userStatus === 200
+        ? response(200, { id: 7, login: "operator" }, date)
+        : response(userStatus, { message: "Resource not accessible by integration" }, date);
+    }
+    if (method === "GET" && path === `/repos/${targetRepository}/actions/runs/17`) {
+      return response(200, { actor: { id: 7, login: "operator" }, repository: repositories[targetRepository], head_sha: targetMainSha, status: "in_progress", run_attempt: 1 }, date);
     }
     const refMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/git\/ref\/heads\/(.+)$/u);
     if (method === "GET" && refMatch) {
@@ -489,6 +507,10 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
       if (conflictIndex < conflicts.length) {
         const status = conflicts[conflictIndex];
         conflictIndex += 1;
+        if (advanceMainOnConflict) refs.set(`${targetRepository}:main`, "5".repeat(40));
+        if (advancePullOnConflict) pullRequest = pullRequestValue({
+          head: { ref: "agent/device/cloud-scope", sha: "5".repeat(40), repo: { full_name: targetRepository } },
+        });
         return response(status, { message: "Update is not a fast forward" }, date);
       }
       const key = `${ledgerRepository}:agentic/collaboration-ledger`;
@@ -498,6 +520,10 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
         return response(422, { message: "Update is not a fast forward" }, date);
       }
       refs.set(key, body.sha);
+      if (lostResponses < lostPatchResponses) {
+        lostResponses += 1;
+        throw new Error("simulated lost update response");
+      }
       return response(200, { object: { sha: body.sha } }, date);
     }
     const compareMatch = path.match(/^\/repos\/[^/]+\/[^/]+\/compare\/([0-9a-f]{40})\.\.\.([0-9a-f]{40})$/u);
@@ -508,13 +534,11 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     }
     return response(404, { message: `Unhandled fake route: ${method} ${path}` }, date);
   }
-
   function objectSha() {
     const sha = nextObject.toString(16).padStart(40, "0");
     nextObject += 1;
     return sha;
   }
-
   function isAncestor(ancestor, descendant) {
     let current = descendant;
     while (current) {
@@ -523,7 +547,6 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     }
     return false;
   }
-
   return {
     calls,
     request,
@@ -545,7 +568,6 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
       replaceLedgerContent(revision, `${JSON.stringify(value)}\n`);
     },
   };
-
   function ledgerContentForRevision(revision) {
     const commit = commits.get(revision);
     const rootTree = commit ? trees.get(commit.tree) : null;
@@ -554,7 +576,6 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     const file = directoryTree?.entries.find((entry) => entry.path === "collaboration-ledger.json");
     return file ? blobs.get(file.sha) : null;
   }
-
   function replaceLedgerContent(revision, content) {
     const commit = commits.get(revision);
     const rootTree = commit ? trees.get(commit.tree) : null;
@@ -565,38 +586,15 @@ function createFakeGitHub({ conflicts = [], hiddenLedgerRefReadsAfterCreate = 0 
     blobs.set(file.sha, content);
   }
 }
-
 function repositoryValue(id, nodeId, fullName) {
-  return {
-    id,
-    node_id: nodeId,
-    full_name: fullName,
-    default_branch: "main",
-  };
+  return { id, node_id: nodeId, full_name: fullName, default_branch: "main" };
 }
-
 function pullRequestValue(overrides = {}) {
   return {
-    id: 17,
-    node_id: "PR_17",
-    number: 17,
-    html_url: `https://github.test/${targetRepository}/pull/17`,
-    state: "open",
-    draft: false,
-    head: {
-      ref: "agent/device/cloud-scope",
-      sha: pullHeadSha,
-      repo: { full_name: targetRepository },
-    },
-    base: {
-      ref: "main",
-      sha: targetMainSha,
-      repo: { full_name: targetRepository },
-    },
-    ...overrides,
+    id: 17, node_id: "PR_17", number: 17,
+    html_url: `https://github.test/${targetRepository}/pull/17`, state: "open", draft: false,
+    head: { ref: "agent/device/cloud-scope", sha: pullHeadSha, repo: { full_name: targetRepository } },
+    base: { ref: "main", sha: targetMainSha, repo: { full_name: targetRepository } }, ...overrides,
   };
 }
-
-function response(status, value, date) {
-  return { status, value, date };
-}
+function response(status, value, date) { return { status, value, date }; }

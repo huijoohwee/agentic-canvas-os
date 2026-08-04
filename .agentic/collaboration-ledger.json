@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 625,
-  "headDigest": "df71adb3469c7beacfec3e327719673c919a972e2d712896bc94e7c79c0b952c",
+  "sequence": 626,
+  "headDigest": "a64884f2ba71e3c221a434c409d83af7f45c4b9433d6a591d86d4786fc479bdb",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -30410,6 +30410,56 @@
       },
       "claimDigest": "0f4feceda795f4554e6fb25201e97d7260a647d94ab707d9f5e4444561ff6fc7",
       "digest": "df71adb3469c7beacfec3e327719673c919a972e2d712896bc94e7c79c0b952c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 626,
+      "parentDigest": "df71adb3469c7beacfec3e327719673c919a972e2d712896bc94e7c79c0b952c",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "49ce84e6909140d6139bbe83869a8943d28521328e6757ed1a9e61ff82f1c250",
+      "idempotencyKey": "dee397fd60173ba09e58a608382ac4e03a503b44ce26192b607f440a4f3db5fe",
+      "requestDigest": "eb7cc92cd4a93c92c6e2ec5a0a99d8f538985c64369acd05bad16ef5abf815e9",
+      "evaluationTime": "2026-08-04T17:39:54.000Z",
+      "claimCore": {
+        "claimId": "49ce84e6909140d6139bbe83869a8943d28521328e6757ed1a9e61ff82f1c250",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:e88a52031b78eb05b07571346198476798861bfdd2a9c490278b5eec1144323c",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:c5ed31e38f5432a73440f519408125511e785d1fc7ef0c8c04410a00d0fccde8",
+        "canonicalBaseRevision": "4396cf9ec60e142de136981a8a777f4a9b6b82f3",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/xrSpatialCaptureFallbackReadiness.test.ts",
+          "path:canvas/src/__tests__/xrSpatialCaptureFallbackRuntimeReady.test.ts",
+          "semantic:xr-fallback-contract-reconciliation"
+        ],
+        "writeSetDigest": "f1dc16f45451a292afc74c21fbac6e879a0fc22f58e52e323f33b9ad6533cb93",
+        "laneRevision": "4396cf9ec60e142de136981a8a777f4a9b6b82f3",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-04T18:07:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "4396cf9ec60e142de136981a8a777f4a9b6b82f3",
+          "reviewRequestId": null,
+          "bytesDigest": "e7179adc3fcabcff40ab4ea0f899c84429849d5116318091c22952b82e2395ea",
+          "namedChecksDigest": "48a1fa25d087e9be93c27a4fe113902169840846981b36d24fdd5fdac124eb89",
+          "handoffEvidenceDigest": "12fe87da4a60e70c2373c290585d5749dc72237d77895b23c2528377663f39fa",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-04T17:39:54.000Z"
+        }
+      },
+      "claimDigest": "eefeb3c40f5584fbd849b02c55f597aa5a38c4e9d1fcfa1d39a9b80b6a7e40ca",
+      "digest": "a64884f2ba71e3c221a434c409d83af7f45c4b9433d6a591d86d4786fc479bdb"
     }
   ]
 }

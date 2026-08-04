@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 439,
-  "headDigest": "51ad39eb91ec99118af29610ac5ae1d12b1c78f78fdf629f34f05af6bf7c2b70",
+  "sequence": 440,
+  "headDigest": "dde1c13c8cebc0d2a760f20ecae9a20f636ef5d3d5eeeb352e1540b09d59854a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -21422,6 +21422,54 @@
       },
       "claimDigest": "aea223be43b1e9cbd5ae5865c47e295db123465b187e116e29c2666b5002738a",
       "digest": "51ad39eb91ec99118af29610ac5ae1d12b1c78f78fdf629f34f05af6bf7c2b70"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 440,
+      "parentDigest": "51ad39eb91ec99118af29610ac5ae1d12b1c78f78fdf629f34f05af6bf7c2b70",
+      "action": "delivery-authorize",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0bd2d28fc7336f7f24368de4300f5925c8d44cdf7a4db5b208383120f825674b",
+      "idempotencyKey": "5feccde6f81faaf5c59eaf0923fc968748785c3911e83597dbd742ce716c848d",
+      "requestDigest": "3e8c64f64e0af7d2ba04fec65c13be8d2928d0e7f1e8663f659d609cc754c68f",
+      "evaluationTime": "2026-08-04T07:24:15.000Z",
+      "claimCore": {
+        "claimId": "0bd2d28fc7336f7f24368de4300f5925c8d44cdf7a4db5b208383120f825674b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:7a79e2a248ce63e81e63d4a4498c02aca4b95877af366d877aa26344b19b0b21",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:be3a07bbd54cde005d21af9c7a1680b7180fea0ca6f2442f6b62fe9b8aa2e44a",
+        "canonicalBaseRevision": "f29c48dd4622b8ba4042e9bf9949da83fbe329b0",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:docs/SCOPED-LANE-ADMISSION.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/scoped-lane-admission-lib.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "semantic:delivery-authorized-peer-admission-recovery"
+        ],
+        "writeSetDigest": "c131be45b53a60e588343c32205d79d4ab7ecde1b20211c714644fb04f848d46",
+        "laneRevision": "b9c82bffb02c88d82d6fe975bc7e66c14fd98316",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "delivery-authorized",
+        "expiresAt": "2026-08-04T11:20:23.000Z",
+        "evidenceDigest": "43589f2612d65a8f6f2de651817aff77aed0f7acf9f00ab6117eeabcc65d4b23",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76Zwm8",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null,
+        "deliveryAuthorization": {
+          "focusedEvidenceDigest": "43589f2612d65a8f6f2de651817aff77aed0f7acf9f00ab6117eeabcc65d4b23",
+          "integrationIntentDigest": "137ea1165c78a025036e8757d7eeb7638d1c8ab8f463550d843c5eb2b674eb20",
+          "operatorDecisionDigest": "04fa26ce6a75f40a2c84c5d66affa0ca692712282a73e02564a813745ede9588",
+          "evaluationTime": "2026-08-04T07:24:15.000Z"
+        }
+      },
+      "claimDigest": "ad8327197136ba9d476df15f1e4bcc34b3375e97e37a3541e1f987017acf776c",
+      "digest": "dde1c13c8cebc0d2a760f20ecae9a20f636ef5d3d5eeeb352e1540b09d59854a"
     }
   ]
 }

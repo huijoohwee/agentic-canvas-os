@@ -1,8 +1,28 @@
 import path from "node:path";
 
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import {
+  createCrossRepositoryCoordinationTask,
+  deriveCrossRepositoryWaves,
+} from "./integration-order-contract.mjs";
+
 export const WORKSPACE_LANE_SCHEMA = "agentic-workspace-lane/v1";
 export const WORKSPACE_PARALLELISM_REPORT_SCHEMA = "agentic-workspace-parallelism-report/v1";
 export const WORKSPACE_RECONCILIATION_RECEIPT_SCHEMA = "agentic-workspace-reconciliation-receipt/v1";
+export const WORKSPACE_COORDINATION_PROJECTION_SCHEMA = "agentic-workspace-coordination-projection/v1";
+
+const CURRENT_CLAIM_STATES = new Set([
+  "current",
+  "waiting-successor",
+  "reviewed",
+  "integrated-preserved",
+  "dormant-preserved",
+  "retired",
+]);
+const SCOPE_RESERVATION_STATES = new Set([
+  "current", "reviewed", "integrated-preserved", "dormant-preserved",
+]);
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 
 /**
  * Operation classes that can destroy work another session is holding.
@@ -99,9 +119,23 @@ export function assertWorkspaceLaneIsolation(lanes) {
   const normalized = (Array.isArray(lanes) ? lanes : []).map(normalizeLane);
   if (normalized.length === 0) throw new Error("Workspace parallelism requires at least one declared lane.");
 
+  assertPhysicalLaneIsolation(normalized);
+  const laneByScope = new Map();
+  for (const lane of normalized) {
+    if (!lane.scope) continue;
+    const scopeKey = `${lane.repository}::${lane.scope}`;
+    const scopeOwner = laneByScope.get(scopeKey);
+    if (scopeOwner && scopeOwner !== lane.session) {
+      throw new Error(`Scope ${lane.scope} in ${lane.repository} is claimed by sessions ${scopeOwner} and ${lane.session}; parallel work requires distinct semantic scopes.`);
+    }
+    laneByScope.set(scopeKey, lane.session);
+  }
+  return Object.freeze(normalized);
+}
+
+function assertPhysicalLaneIsolation(normalized) {
   const sessionByLane = new Map();
   const laneByBranch = new Map();
-  const laneByScope = new Map();
 
   for (const lane of normalized) {
     const key = laneKey(lane);
@@ -119,18 +153,153 @@ export function assertWorkspaceLaneIsolation(lanes) {
       }
       laneByBranch.set(branchKey, lane.worktree);
     }
+  }
+}
 
-    if (lane.scope) {
-      const scopeKey = `${lane.repository}::${lane.scope}`;
-      const scopeOwner = laneByScope.get(scopeKey);
-      if (scopeOwner && scopeOwner !== lane.session) {
-        throw new Error(`Scope ${lane.scope} in ${lane.repository} is claimed by sessions ${scopeOwner} and ${lane.session}; parallel work requires distinct semantic scopes.`);
+/**
+ * Bind cloud-authoritative coordination units to their replaceable local lane
+ * projections. The immutable task owner validates identity and dependency order;
+ * this layer proves that no local projection invents a second overlapping writer.
+ */
+export function assertCrossRepositoryWorkspaceProjection({ task, lanes, claims }) {
+  const canonicalTask = rebuildCoordinationTask(task);
+  const normalizedLanes = (Array.isArray(lanes) ? lanes : []).map(normalizeLane);
+  if (normalizedLanes.length === 0) throw new Error("Coordination projection requires declared workspace lanes.");
+  assertPhysicalLaneIsolation(normalizedLanes);
+
+  const normalizedClaims = normalizeCoordinationClaims(claims);
+  const claimById = new Map(normalizedClaims.map((claim) => [claim.claimId, claim]));
+  const projections = canonicalTask.units.map((unit) => {
+    const worktree = path.normalize(unit.worktree);
+    const lane = normalizedLanes.find((candidate) => candidate.worktree === worktree);
+    if (!lane) throw new Error(`Coordination unit ${unit.unitId} has no local worktree projection at ${worktree}.`);
+    if (lane.repository !== unit.repository) {
+      throw new Error(`Coordination unit ${unit.unitId} repository does not match its local worktree projection.`);
+    }
+    if (canonicalBranch(lane.branch) !== canonicalBranch(unit.branch)) {
+      throw new Error(`Coordination unit ${unit.unitId} branch does not match its local worktree projection.`);
+    }
+    if (lane.scope !== unit.semanticScope) {
+      throw new Error(`Coordination unit ${unit.unitId} semantic scope does not match its local worktree projection.`);
+    }
+    if (lane.writeSetDigest !== unit.writeSetDigest) {
+      throw new Error(`Coordination unit ${unit.unitId} write-set digest does not match its local worktree projection.`);
+    }
+    const claim = claimById.get(unit.claimId);
+    if (!claim) throw new Error(`Coordination unit ${unit.unitId} has no authoritative claim snapshot.`);
+    if (claim.repositoryId !== unit.repositoryId) {
+      throw new Error(`Coordination unit ${unit.unitId} repository authority does not match its authenticated claim.`);
+    }
+    if (claim.writeSetDigest !== unit.writeSetDigest
+      || JSON.stringify(claim.declaredWriteScope) !== JSON.stringify(unit.declaredWriteScope)) {
+      throw new Error(`Coordination unit ${unit.unitId} claim write scope does not match the immutable unit.`);
+    }
+    if (claim.leaseEpoch !== unit.authorityEpoch || claim.fenceRevision !== unit.fence) {
+      throw new Error(`Coordination unit ${unit.unitId} authority epoch or fence has drifted.`);
+    }
+    return Object.freeze({
+      unitId: unit.unitId,
+      repository: unit.repository,
+      repositoryId: unit.repositoryId,
+      branch: unit.branch,
+      worktree,
+      semanticScope: unit.semanticScope,
+      writeSetDigest: unit.writeSetDigest,
+      claimId: unit.claimId,
+      authorityEpoch: unit.authorityEpoch,
+      fence: unit.fence,
+      claimState: claim.state,
+      writeAuthority: claim.writeAuthority,
+      session: lane.session,
+    });
+  });
+
+  assertNoCompetingScopeReservations(normalizedClaims);
+  return Object.freeze({
+    schema: WORKSPACE_COORDINATION_PROJECTION_SCHEMA,
+    taskId: canonicalTask.taskId,
+    taskDigest: canonicalTask.taskDigest,
+    dependencyWaves: deriveCrossRepositoryWaves(canonicalTask),
+    projections: Object.freeze(projections),
+    currentWriteAuthorities: normalizedClaims.filter((claim) => claim.writeAuthority).length,
+    waitingSuccessors: normalizedClaims.filter((claim) => claim.state === "waiting-successor").length,
+  });
+}
+
+function rebuildCoordinationTask(task) {
+  if (!task || typeof task !== "object" || Array.isArray(task)) {
+    throw new Error("Coordination projection requires an immutable cross-repository task.");
+  }
+  const { schema, taskDigest, ...input } = task;
+  const canonical = createCrossRepositoryCoordinationTask(input);
+  if (schema !== canonical.schema || taskDigest !== canonical.taskDigest) {
+    throw new Error("Coordination task identity or digest has drifted.");
+  }
+  return canonical;
+}
+
+function normalizeCoordinationClaims(claims) {
+  if (!Array.isArray(claims) || claims.length === 0) {
+    throw new Error("Coordination projection requires authoritative claim snapshots.");
+  }
+  const normalized = claims.map((claim, index) => {
+    const claimId = requiredDigest(claim?.claimId, `Claim ${index} claimId`);
+    const repositoryId = String(claim?.repositoryId || "").trim();
+    if (!repositoryId) throw new Error(`Claim ${index} is missing repositoryId.`);
+    const state = String(claim?.state || "").trim();
+    if (!CURRENT_CLAIM_STATES.has(state)) throw new Error(`Claim ${index} has an invalid current state.`);
+    if (typeof claim?.writeAuthority !== "boolean" || claim.writeAuthority !== (state === "current")) {
+      throw new Error(`Claim ${claimId} write authority does not match state ${state}.`);
+    }
+    const declaredWriteScope = normalizeWriteSet(claim?.declaredWriteScope);
+    const writeSetDigest = requiredDigest(claim?.writeSetDigest, `Claim ${claimId} writeSetDigest`);
+    if (digestValue(declaredWriteScope) !== writeSetDigest) {
+      throw new Error(`Claim ${claimId} writeSetDigest is stale.`);
+    }
+    if (!Number.isSafeInteger(claim?.leaseEpoch) || claim.leaseEpoch < 1) {
+      throw new Error(`Claim ${claimId} leaseEpoch must be a positive integer.`);
+    }
+    return Object.freeze({
+      claimId,
+      repositoryId,
+      state,
+      writeAuthority: claim.writeAuthority,
+      declaredWriteScope,
+      writeSetDigest,
+      leaseEpoch: claim.leaseEpoch,
+      fenceRevision: requiredDigest(claim?.fenceRevision, `Claim ${claimId} fenceRevision`),
+    });
+  });
+  if (new Set(normalized.map((claim) => claim.claimId)).size !== normalized.length) {
+    throw new Error("Coordination claim snapshots must have distinct claimId values.");
+  }
+  return normalized;
+}
+
+function assertNoCompetingScopeReservations(claims) {
+  const reservations = claims.filter((claim) => SCOPE_RESERVATION_STATES.has(claim.state));
+  for (let index = 0; index < reservations.length; index += 1) {
+    for (let peerIndex = index + 1; peerIndex < reservations.length; peerIndex += 1) {
+      const left = reservations[index];
+      const right = reservations[peerIndex];
+      if (left.repositoryId === right.repositoryId
+        && writeSetsOverlap(left.declaredWriteScope, right.declaredWriteScope)) {
+        throw new Error(`Claims ${left.claimId} and ${right.claimId} are competing overlapping scope reservations.`);
       }
-      laneByScope.set(scopeKey, lane.session);
     }
   }
+}
 
-  return Object.freeze(normalized);
+function canonicalBranch(value) {
+  const branch = String(value || "").trim();
+  if (!branch) return null;
+  return branch.startsWith("refs/heads/") ? branch : `refs/heads/${branch}`;
+}
+
+function requiredDigest(value, label) {
+  const normalized = String(value || "").trim();
+  if (!DIGEST_PATTERN.test(normalized)) throw new Error(`${label} must be a lowercase SHA-256 digest.`);
+  return normalized;
 }
 
 /**

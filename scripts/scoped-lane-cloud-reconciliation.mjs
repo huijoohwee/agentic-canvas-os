@@ -3,11 +3,37 @@ import {
   normalizeWriteSet,
 } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
-import { LANE_CLOUD_AUTHORITY_SCHEMA } from "./scoped-lane-admission-lib.mjs";
+import {
+  LANE_CLOUD_AUTHORITY_SCHEMA,
+  normalizeCloudAuthority,
+} from "./scoped-lane-admission-lib.mjs";
 
 const RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+
+export function attachCloudHeartbeatMachineEvidence(response, { lease, result } = {}) {
+  if (!result?.mutationAuthorityReceipt) return response;
+  if (!lease?.admission || !lease.cloudAuthority) {
+    throw new Error("Cloud heartbeat lost its joined admission projection.");
+  }
+  response.admission = lease.admission;
+  response.cloudAuthority = lease.cloudAuthority;
+  response.mutationAuthorityReceipt = result.mutationAuthorityReceipt;
+  return response;
+}
+
+export function cloudAuthorityFromResult(source, options) {
+  const direct = source?.schema === RESULT_SCHEMA;
+  const result = direct ? source : source?.result;
+  const projectedResult = result ? {
+    ...result,
+    claim: result.claim ? { ...result.claim, state: projectRootState(result.claim.state) } : result.claim,
+  } : result;
+  return normalizeCloudAuthority(direct
+    ? projectedResult
+    : { ...source, result: projectedResult }, options);
+}
 
 export function reconcileCloudAuthorityProjection({
   authority,
@@ -27,9 +53,8 @@ export function reconcileCloudAuthorityProjection({
     || statusResult.action !== "status"
     || statusResult.status !== "ready"
     || !Array.isArray(statusResult.claims)
-    || statusResult.claims.length > 128
   ) {
-    throw new Error("Cloud reconciliation requires a complete bounded status result.");
+    throw new Error("Cloud reconciliation requires a complete status result.");
   }
   const matches = statusResult.claims.filter(
     claim => claim?.claimId === authority.claimId,
@@ -56,19 +81,11 @@ export function reconcileCloudAuthorityProjection({
       || claim.reviewRequestId !== authority.reviewRequestId
     )
   );
-  const identityDigest = digestValue({
-    actorId: claim.actorId,
-    canonicalBaseRevision: claim.canonicalBaseRevision,
-    deviceId: pseudonymousIdentifier(
-      "device", requiredText(authority.deviceId, "authority deviceId"),
-    ),
-    leaseEpoch: claim.leaseEpoch,
-    repositoryId: claim.repositoryId,
-    sessionId: pseudonymousIdentifier(
-      "session", requiredText(authority.sessionId, "authority sessionId"),
-    ),
-    workItemId: claim.workItemId,
-    writeSetDigest: claim.writeSetDigest,
+  const identityDigest = claimIdentityDigest({
+    claim,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    deviceId: authority.deviceId,
+    sessionId: authority.sessionId,
   });
   if (
     identityDigest !== claim.claimId
@@ -121,6 +138,11 @@ export function reconcileCloudAuthorityProjection({
     transitionCounter: claim.transitionCounter,
     state: claim.state,
     expiresAt: claim.expiresAt,
+    ...(claim.operationReceiptDigest ? {
+      operationReceiptDigest: claim.operationReceiptDigest,
+    } : {}),
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    integration: claim.integration,
     ...(focusedEvidenceDigest ? { focusedEvidenceDigest } : {}),
   });
   return Object.freeze({
@@ -144,9 +166,8 @@ export function normalizeCurrentClaimInventory({
     || inventoryResult.action !== "status"
     || inventoryResult.status !== "ready"
     || !Array.isArray(inventoryResult.claims)
-    || inventoryResult.claims.length > 128
   ) {
-    throw new Error("Cloud status did not return a complete bounded current-claim inventory.");
+    throw new Error("Cloud status did not return a complete current-claim inventory.");
   }
   const ledgerRevision = requiredSha(
     inventoryResult.ledgerRevision,
@@ -167,6 +188,16 @@ export function normalizeCurrentClaimInventory({
     "inventory evaluation time",
   );
   const claims = inventoryResult.claims.map(source => {
+    const entrySchema = requiredEntrySchema(source.entrySchema);
+    const claimIdentitySchema = requiredClaimIdentitySchema(
+      source.claimIdentitySchema,
+      entrySchema,
+    );
+    if (entrySchema.endsWith("/v2")) {
+      requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
+    } else if (source.operationReceiptDigest) {
+      requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
+    }
     const core = {
       claimId: requiredDigest(source.claimId, "inventory claimId"),
       state: requiredCurrentState(source.state),
@@ -207,9 +238,20 @@ export function normalizeCurrentClaimInventory({
     };
     if (
       digestValue(core.declaredWriteScope) !== core.writeSetDigest
-      || Date.parse(core.expiresAt) <= Date.parse(evaluationTime)
+      || (!["parked", "waiting-successor"].includes(core.state) && Date.parse(core.expiresAt) <= Date.parse(evaluationTime))
     ) {
       throw new Error(`Cloud inventory claim ${core.claimId} is stale or has an invalid write-set digest.`);
+    }
+    if (
+      core.claimId === authority.claimId
+      && claimIdentityDigest({
+        claim: core,
+        claimIdentitySchema,
+        deviceId: authority.deviceId,
+        sessionId: authority.sessionId,
+      }) !== core.claimId
+    ) {
+      throw new Error("Cloud inventory candidate claim identity does not match its immutable provenance.");
     }
     return Object.freeze({ ...core, recordDigest: digestValue(core) });
   }).sort((left, right) => left.claimId.localeCompare(right.claimId));
@@ -234,9 +276,90 @@ export function normalizeCurrentClaimInventory({
   return Object.freeze({ ...inventory, inventoryDigest: digestValue(inventory) });
 }
 
+export function normalizeBoundAuthority({
+  result, authority, manifest,
+  deviceId = authority.deviceId,
+  sessionId = authority.sessionId,
+  focusedEvidenceDigest = authority.focusedEvidenceDigest || null,
+}) {
+  return Object.freeze({
+    schema: LANE_CLOUD_AUTHORITY_SCHEMA,
+    provider: "github",
+    ledgerRepository: authority.ledgerRepository,
+    targetRepository: authority.targetRepository,
+    claimId: requiredDigest(result.claim.claimId, "claimId"),
+    claimDigest: requiredDigest(result.claimDigest, "claimDigest"),
+    ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
+    claimLedgerRevision: requiredDigest(result.claim.transitionDigest, "claimLedgerRevision"),
+    canonicalBaseSha: requiredSha(result.claim.canonicalBaseRevision, "canonicalBaseRevision"),
+    laneRevision: requiredSha(result.claim.laneRevision, "laneRevision"),
+    cloudDeclaredWriteScope: normalizeWriteSet(result.claim.declaredWriteScope),
+    writeSetDigest: requiredDigest(result.claim.writeSetDigest, "writeSetDigest"),
+    deviceId: requiredText(deviceId, "deviceId"),
+    sessionId: requiredText(sessionId, "sessionId"),
+    reviewRequestId: result.claim.reviewRequestId
+      ? requiredText(result.claim.reviewRequestId, "reviewRequestId")
+      : null,
+    leaseEpoch: positiveInteger(result.claim.leaseEpoch, "leaseEpoch"),
+    transitionCounter: positiveInteger(result.claim.transitionCounter, "transitionCounter"),
+    state: projectRootState(result.claim.state),
+    expiresAt: requiredInstant(result.claim.expiresAt, "expiresAt"),
+    operationReceiptDigest: requiredDigest(result.claim.operationReceiptDigest, "operationReceiptDigest"),
+    integrationReceiptDigest: result.claim.integrationReceiptDigest
+      ? requiredDigest(result.claim.integrationReceiptDigest, "integrationReceiptDigest")
+      : null,
+    integration: normalizeIntegrationEvidence(result.claim.integration),
+    ...(focusedEvidenceDigest ? {
+      focusedEvidenceDigest: requiredDigest(focusedEvidenceDigest, "focusedEvidenceDigest"),
+    } : {}),
+    manifestDigest: manifest.manifestDigest || digestValue({
+      declaredWriteSet: manifest.declaredWriteSet,
+      writeSetDigest: manifest.writeSetDigest,
+    }),
+  });
+}
+
+export function requireReadyResult(result, {
+  authority, manifest, canonicalBaseSha, expectedState,
+  expectedLaneRevision = authority.laneRevision,
+}) {
+  if (!result || result.schema !== RESULT_SCHEMA || result.ok !== true
+    || !["verify", "continue", "integrate"].includes(result.action)) {
+    throw new Error("Cloud collaboration did not return a successful authoritative result.");
+  }
+  const claim = result.claim;
+  if (claim?.claimId !== authority.claimId
+    || claim.canonicalBaseRevision !== canonicalBaseSha
+    || claim.laneRevision !== expectedLaneRevision
+    || projectRootState(claim.state) !== expectedState
+    || claim.writeSetDigest !== manifest.writeSetDigest
+    || JSON.stringify(normalizeWriteSet(claim.declaredWriteScope)) !== JSON.stringify(manifest.declaredWriteSet)
+    || !Array.isArray(result.findings || [])
+    || (result.findings || []).length > 0) {
+    throw new Error("Cloud collaboration result drifted from the scoped admission subject.");
+  }
+  requiredSha(result.ledgerRevision, "ledgerRevision");
+  requiredDigest(result.claimDigest, "claimDigest");
+  if (Date.parse(claim.expiresAt) <= Date.now()) {
+    throw new Error(`Cloud collaboration claim expired at ${claim.expiresAt}.`);
+  }
+}
+
 function normalizeClaim(source) {
+  const entrySchema = requiredEntrySchema(source.entrySchema);
+  const claimIdentitySchema = requiredClaimIdentitySchema(
+    source.claimIdentitySchema,
+    entrySchema,
+  );
+  const operationReceiptDigest = source.operationReceiptDigest
+    ? requiredDigest(source.operationReceiptDigest, "operationReceiptDigest")
+    : entrySchema.endsWith("/v1")
+      ? null
+      : requiredDigest(source.operationReceiptDigest, "operationReceiptDigest");
   const claim = {
     claimId: requiredDigest(source.claimId, "claimId"),
+    entrySchema,
+    claimIdentitySchema,
     state: requiredState(source.state),
     actorId: requiredText(source.actorId, "actorId"),
     repositoryId: requiredText(source.repositoryId, "repositoryId"),
@@ -262,11 +385,35 @@ function normalizeClaim(source) {
       source.transitionDigest,
       "transitionDigest",
     ),
+    operationReceiptDigest,
+    integrationReceiptDigest: source.integrationReceiptDigest
+      ? requiredDigest(source.integrationReceiptDigest, "integrationReceiptDigest")
+      : null,
+    integration: normalizeIntegrationEvidence(source.integration),
   };
   return Object.freeze(claim);
 }
 
-function requireAuthority(value) {
+function normalizeIntegrationEvidence(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = {
+    candidateRevision: requiredSha(value.candidateRevision, "integration candidateRevision"),
+    reviewRequestId: requiredText(value.reviewRequestId, "integration reviewRequestId"),
+    focusedEvidenceDigest: requiredDigest(value.focusedEvidenceDigest, "integration focusedEvidenceDigest"),
+    dependencyClosureDigest: requiredDigest(value.dependencyClosureDigest, "integration dependencyClosureDigest"),
+    namedChecksDigest: requiredDigest(value.namedChecksDigest, "integration namedChecksDigest"),
+    handoffEvidenceDigest: requiredDigest(value.handoffEvidenceDigest, "integration handoffEvidenceDigest"),
+    operatorDecisionDigest: requiredDigest(value.operatorDecisionDigest, "integration operatorDecisionDigest"),
+    integrationIntentDigest: requiredDigest(value.integrationIntentDigest, "integration integrationIntentDigest"),
+    integratedAt: requiredInstant(value.integratedAt, "integration integratedAt"),
+  };
+  if (Object.keys(value).length !== Object.keys(normalized).length) {
+    throw new Error("Integration evidence contains unsupported fields.");
+  }
+  return Object.freeze(normalized);
+}
+
+export function requireAuthority(value) {
   if (!value || value.schema !== LANE_CLOUD_AUTHORITY_SCHEMA) {
     throw new Error("A normalized lane cloud authority projection is required.");
   }
@@ -282,32 +429,32 @@ function requireManifest(value) {
   }
 }
 
-function requiredText(value, label) {
+export function requiredText(value, label) {
   const normalized = String(value || "").trim();
   if (!normalized) throw new Error(`${label} is required.`);
   return normalized;
 }
 
-function requiredSha(value, label) {
+export function requiredSha(value, label) {
   const normalized = requiredText(value, label);
   if (!SHA_PATTERN.test(normalized)) throw new Error(`${label} must be a Git SHA.`);
   return normalized;
 }
 
-function requiredDigest(value, label) {
+export function requiredDigest(value, label) {
   const normalized = requiredText(value, label);
   if (!DIGEST_PATTERN.test(normalized)) throw new Error(`${label} must be a SHA-256 digest.`);
   return normalized;
 }
 
-function requiredInstant(value, label) {
+export function requiredInstant(value, label) {
   const normalized = requiredText(value, label);
   const milliseconds = Date.parse(normalized);
   if (!Number.isFinite(milliseconds)) throw new Error(`${label} must be an ISO instant.`);
   return new Date(milliseconds).toISOString();
 }
 
-function positiveInteger(value, label) {
+export function positiveInteger(value, label) {
   const normalized = Number(value);
   if (!Number.isInteger(normalized) || normalized <= 0) {
     throw new Error(`${label} must be a positive integer.`);
@@ -323,18 +470,112 @@ function nonnegativeInteger(value, label) {
   return normalized;
 }
 
+export function projectRootState(value) {
+  const state = String(value || "").replaceAll("-", "_");
+  return ({
+    current: "active", active: "active",
+    waiting_successor: "waiting-successor",
+    reviewed: "review_ready", review_ready: "review_ready",
+    integrated_preserved: "delivery_authorized", delivery_authorized: "delivery_authorized",
+    dormant_preserved: "parked", parked: "parked",
+    retired: "released", released: "released",
+  })[state] || state;
+}
+
+export function rootStateForProjection(value) {
+  return ({
+    active: "current",
+    waiting_successor: "waiting-successor",
+    review_ready: "reviewed",
+    delivery_authorized: "integrated-preserved",
+    parked: "dormant-preserved",
+    released: "retired",
+  })[String(value || "").replaceAll("-", "_")] || value;
+}
+
 function requiredState(value) {
   const state = requiredText(value, "claim state").replaceAll("-", "_");
-  if (!["active", "review_ready", "delivery_authorized"].includes(state)) {
+  const projected = {
+    active: "active",
+    current: "active",
+    review_ready: "review_ready",
+    reviewed: "review_ready",
+    delivery_authorized: "delivery_authorized",
+    integrated_preserved: "delivery_authorized",
+    parked: "parked",
+    dormant_preserved: "parked",
+  }[state];
+  if (!projected || projected === "parked") {
     throw new Error(`Cloud reconciliation cannot recover claim state ${state}.`);
   }
-  return state;
+  return projected;
 }
 
 function requiredCurrentState(value) {
   const state = requiredText(value, "inventory state").replaceAll("-", "_");
-  if (!["active", "review_ready", "delivery_authorized", "parked"].includes(state)) {
+  const projected = {
+    active: "active",
+    current: "active",
+    waiting_successor: "waiting-successor",
+    review_ready: "review_ready",
+    reviewed: "review_ready",
+    delivery_authorized: "delivery_authorized",
+    integrated_preserved: "delivery_authorized",
+    parked: "parked",
+    dormant_preserved: "parked",
+  }[state];
+  if (!projected) {
     throw new Error(`Cloud inventory claim state ${state} is not current.`);
   }
-  return state;
+  return projected;
+}
+
+function requiredEntrySchema(value) {
+  if (value === undefined || value === null || value === "") {
+    return "agentic-cloud-collaboration-entry/v1";
+  }
+  const schema = requiredText(value, "entry schema");
+  if (!["agentic-cloud-collaboration-entry/v1", "agentic-cloud-collaboration-entry/v2"].includes(schema)) {
+    throw new Error(`Cloud inventory entry schema ${schema} is unsupported.`);
+  }
+  return schema;
+}
+
+function requiredClaimIdentitySchema(value, entrySchema) {
+  if (value === undefined || value === null || value === "") {
+    if (entrySchema.endsWith("/v1")) return entrySchema;
+    throw new Error("Current cloud entries require immutable claim identity provenance.");
+  }
+  const schema = requiredEntrySchema(value);
+  if (entrySchema.endsWith("/v1") && schema !== entrySchema) {
+    throw new Error("Historical cloud entries cannot declare a newer claim identity schema.");
+  }
+  return schema;
+}
+
+function claimIdentityDigest({
+  claim,
+  claimIdentitySchema,
+  deviceId,
+  sessionId,
+}) {
+  const logicalIdentity = {
+    actorId: claim.actorId,
+    canonicalBaseRevision: claim.canonicalBaseRevision,
+    leaseEpoch: claim.leaseEpoch,
+    repositoryId: claim.repositoryId,
+    workItemId: claim.workItemId,
+    writeSetDigest: claim.writeSetDigest,
+  };
+  return digestValue(claimIdentitySchema.endsWith("/v1") ? {
+    ...logicalIdentity,
+    deviceId: pseudonymousIdentifier(
+      "device",
+      requiredText(deviceId, "authority deviceId"),
+    ),
+    sessionId: pseudonymousIdentifier(
+      "session",
+      requiredText(sessionId, "authority sessionId"),
+    ),
+  } : logicalIdentity);
 }

@@ -40,20 +40,29 @@ export function createGitHubRequest({
   };
 }
 
-export function projectRepository(value) {
+export function projectRepositoryIdentity(value) {
   const repository = {
     id: Number(value?.id),
     nodeId: String(value?.node_id || ""),
     fullName: String(value?.full_name || ""),
-    defaultBranch: String(value?.default_branch || ""),
   };
   if (
     !Number.isInteger(repository.id) ||
     repository.id <= 0 ||
     !repository.nodeId ||
-    !repository.fullName ||
-    !repository.defaultBranch
+    !repository.fullName
   ) {
+    throw new Error("GitHub returned an incomplete repository identity.");
+  }
+  return repository;
+}
+
+export function projectRepository(value) {
+  const repository = {
+    ...projectRepositoryIdentity(value),
+    defaultBranch: String(value?.default_branch || ""),
+  };
+  if (!repository.defaultBranch) {
     throw new Error("GitHub returned an incomplete repository identity.");
   }
   return repository;

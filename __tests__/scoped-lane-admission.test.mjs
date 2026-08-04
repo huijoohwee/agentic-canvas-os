@@ -15,6 +15,8 @@ import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
 const canonicalSha = "a".repeat(40), fenceSha = "b".repeat(40);
 const claimDigest = "2".repeat(64), claimLedgerRevision = "3".repeat(64), ledgerRevision = "c".repeat(40);
 const ledgerDigest = "4".repeat(64), future = "2099-07-31T00:00:00.000Z", evaluationTime = "2026-07-30T00:00:00.000Z";
+const entrySchemaV1 = "agentic-cloud-collaboration-entry/v1";
+const entrySchemaV2 = "agentic-cloud-collaboration-entry/v2";
 const repository = "/workspace/repository", canonicalPath = repository;
 const targetPath = "/workspace/.worktrees/repository/scoped-runtime", branch = "agent/device/scoped-runtime";
 function manifestFor(paths = ["scripts/scoped-runtime"]) {
@@ -43,13 +45,21 @@ function publicClaim(manifest, overrides = {}) {
     transitionDigest: claimLedgerRevision,
     ...overrideFields,
   };
-  const claimId = suppliedClaimId || digestValue({
+  const claimIdentitySchema = claim.claimIdentitySchema
+    || claim.entrySchema
+    || entrySchemaV1;
+  const logicalIdentity = {
     actorId: claim.actorId, canonicalBaseRevision: claim.canonicalBaseRevision,
-    deviceId: pseudonymousIdentifier("device", claim.deviceId),
     leaseEpoch: claim.leaseEpoch, repositoryId: claim.repositoryId,
-    sessionId: pseudonymousIdentifier("session", claim.sessionId),
     workItemId: claim.workItemId, writeSetDigest: claim.writeSetDigest,
-  });
+  };
+  const claimId = suppliedClaimId || digestValue(
+    claimIdentitySchema.endsWith("/v1") ? {
+      ...logicalIdentity,
+      deviceId: pseudonymousIdentifier("device", claim.deviceId),
+      sessionId: pseudonymousIdentifier("session", claim.sessionId),
+    } : logicalIdentity,
+  );
   return { claimId, ...claim };
 }
 function cloudResult(manifest, overrides = {}) {
@@ -76,7 +86,7 @@ function authorityFor(manifest, overrides = {}) {
     ...overrides,
   });
 }
-function verifiedBundle(authority, manifest, claims = null) {
+function verifiedBundle(authority, manifest, claims = null, candidateOverrides = {}) {
   const candidate = publicClaim(manifest, {
     claimId: authority.claimId,
     laneRevision: authority.laneRevision,
@@ -86,6 +96,7 @@ function verifiedBundle(authority, manifest, claims = null) {
     expiresAt: authority.expiresAt,
     fenceRevision: authority.claimDigest,
     transitionDigest: authority.claimLedgerRevision,
+    ...candidateOverrides,
   });
   const inventoryClaims = claims || [candidate];
   return verifyAdmissionCloudAuthority({
@@ -864,6 +875,122 @@ test("canonical drift and caller-supplied verification fail closed", () => {
   assert.deepEqual(
     report.authoringAdmission.findings.map(item => item.type).sort(),
     ["canonical-base-drift", "cloud-authority-unproven"],
+  );
+});
+test("native-v2 candidate identity is admitted while provenance and local-device drift fail closed", () => {
+  const manifest = manifestFor();
+  const nativeV2Provenance = {
+    entrySchema: entrySchemaV2,
+    claimIdentitySchema: entrySchemaV2,
+    operationReceiptDigest: "6".repeat(64),
+  };
+  const nativeClaim = publicClaim(manifest, nativeV2Provenance);
+  const fresh = authorityForPublicClaim(authorityFor(manifest), nativeClaim);
+  const freshVerified = verifiedBundle(
+    fresh,
+    manifest,
+    null,
+    nativeV2Provenance,
+  );
+  let report = evaluate({
+    manifest,
+    authority: fresh,
+    verification: freshVerified.verification,
+    lanes: [canonicalLane()],
+  });
+  report = attachAdmissionReceipt({
+    report,
+    targetObservationDigest: "d".repeat(64),
+    remoteAuthorityVerification: freshVerified.verification,
+  });
+  const bound = {
+    ...fresh,
+    claimDigest: "e".repeat(64),
+    claimLedgerRevision: "f".repeat(64),
+    laneRevision: fenceSha,
+    deviceId: "device",
+    sessionId: "session",
+    reviewRequestId: "github-pull-request:PR_native_v2",
+    transitionCounter: 2,
+  };
+  const boundVerified = verifiedBundle(
+    bound,
+    manifest,
+    null,
+    nativeV2Provenance,
+  );
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 126,
+    sessionId: "session",
+    device: "device",
+    scope: "scoped-runtime",
+    branch,
+    worktreePath: targetPath,
+    baseSha: canonicalSha,
+    fenceSha,
+    pullRequestUrl: "https://github.test/owner/repository/pull/268",
+    expiresAt: future,
+    admission: createAdmissionLeaseProjection(report),
+    cloudAuthority: bound,
+  };
+  const receipt = assertAdmissionMutationAuthority({
+    lease,
+    cloudAuthority: bound,
+    remoteAuthorityVerification: boundVerified.verification,
+    allowPlanned: true,
+  });
+  assert.equal(receipt.status, "ready");
+
+  for (const drift of [
+    { deviceId: "other-device" },
+    { sessionId: "other-session" },
+  ]) {
+    const driftedAuthority = { ...bound, ...drift };
+    assert.throws(() => assertAdmissionMutationAuthority({
+      lease: { ...lease, cloudAuthority: driftedAuthority },
+      cloudAuthority: driftedAuthority,
+      remoteAuthorityVerification: boundVerified.verification,
+      allowPlanned: true,
+    }), /current joined cloud and local lease authority/u);
+  }
+
+  const legacyClaimId = publicClaim(manifest).claimId;
+  const mismatchedClaim = publicClaim(manifest, {
+    ...nativeV2Provenance,
+    claimId: legacyClaimId,
+  });
+  const mismatchedAuthority = authorityForPublicClaim(
+    authorityFor(manifest),
+    mismatchedClaim,
+  );
+  assert.throws(() => verifiedBundle(
+    mismatchedAuthority,
+    manifest,
+    null,
+    nativeV2Provenance,
+  ), /candidate claim identity does not match its immutable provenance/u);
+
+  const missingProvenance = {
+    entrySchema: entrySchemaV2,
+    operationReceiptDigest: "6".repeat(64),
+  };
+  const provenanceFreeClaim = publicClaim(manifest, missingProvenance);
+  const provenanceFreeAuthority = authorityForPublicClaim(
+    authorityFor(manifest),
+    provenanceFreeClaim,
+  );
+  assert.throws(() => verifiedBundle(
+    provenanceFreeAuthority,
+    manifest,
+    null,
+    missingProvenance,
+  ), /immutable claim identity provenance/u);
+
+  assert.equal(
+    verifiedBundle(authorityFor(manifest), manifest).verification.status,
+    "ready",
   );
 });
 test("joined receipts finalize admitted while peer drift blocks", () => {

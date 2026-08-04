@@ -9,16 +9,19 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(repositoryRoot, "scripts", "cloud-collaboration.mjs");
 
-test("CLI and browser workflow expose delivery authorization but not internal bind", async () => {
+test("CLI and workflow expose exactly four provider-neutral root mutations", async () => {
   const workflow = await readFile(
     path.join(repositoryRoot, ".github", "workflows", "cloud-collaboration.yml"),
     "utf8",
   );
-  assert.match(workflow, /^\s+- delivery-authorize$/mu);
-  assert.match(workflow, /inputs\.action == 'delivery-authorize'/u);
-  assert.match(workflow, /AGENTIC_CLOUD_OPERATOR_DECISION_DIGEST/u);
-  assert.match(workflow, /AGENTIC_CLOUD_INTEGRATION_INTENT_DIGEST/u);
-  assert.doesNotMatch(workflow, /^\s+- bind$/mu);
+  for (const operation of ["claim", "continue", "integrate", "retire"]) {
+    assert.match(workflow, new RegExp(`^\\s+- ${operation}$`, "mu"));
+    assert.match(workflow, new RegExp(`inputs\\.action == '${operation}'`, "u"));
+  }
+  assert.match(workflow, /AGENTIC_CLOUD_REQUEST_JSON/u);
+  for (const legacy of ["bind", "heartbeat", "review-ready", "delivery-authorize", "handoff", "release"]) {
+    assert.doesNotMatch(workflow, new RegExp(`^\\s+- ${legacy}$`, "mu"));
+  }
 });
 
 test("review reconciliation verifies a prior fence independently before exact PR-head bind", async () => {
@@ -40,13 +43,13 @@ test("review reconciliation verifies a prior fence independently before exact PR
   );
 });
 
-test("event verification proves protected-main refresh before it reuses a delivery-authorized reviewed head", async () => {
+test("event verification proves protected-main refresh for an integrated-preserved candidate", async () => {
   const cloudSource = await readFile(
     path.join(repositoryRoot, "scripts", "cloud-collaboration.mjs"),
     "utf8",
   );
   assert.match(cloudSource, /allowProtectedMainRefresh:\s*true/u);
-  assert.match(cloudSource, /requireStatus:\s*"delivery_authorized"/u);
+  assert.match(cloudSource, /requireStatus:\s*"integrated-preserved"/u);
   assert.match(cloudSource, /verifyEventProtectedMainRefresh/u);
   assert.match(cloudSource, /Observed pull request base does not match the protected-main refresh parent/u);
   assert.match(cloudSource, /refs\/remotes\/pull\/\$\{pullRequestNumber\}\/head/u);
@@ -69,7 +72,7 @@ test("CLI rejects unexposed workflow actions before network access", () => {
       ...process.env,
       GH_TOKEN: "not-used",
       GITHUB_ACTIONS: "true",
-      AGENTIC_CLOUD_ACTION: "bind",
+      AGENTIC_CLOUD_ACTION: "heartbeat",
     },
   });
 

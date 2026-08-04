@@ -12,14 +12,11 @@ import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mj
 
 const MUTATIONS = new Set([
   "claim",
-  "bind",
-  "heartbeat",
-  "review-ready",
-  "delivery-authorize",
-  "handoff",
-  "release",
+  "continue",
+  "integrate",
+  "retire",
 ]);
-const DISPATCH_ACTIONS = new Set(["status", "verify", "claim", "heartbeat", "review-ready", "delivery-authorize", "handoff", "release"]);
+const DISPATCH_ACTIONS = new Set(["status", "verify", ...MUTATIONS]);
 const ACTIONS = new Set(["status", "verify", ...MUTATIONS, "verify-event", "dispatch"]);
 const [rawAction, ...argumentsList] = process.argv.slice(2);
 const json = argumentsList.includes("--json");
@@ -31,7 +28,10 @@ try {
     process.env.AGENTIC_LEDGER_REPOSITORY ||
     process.env.GITHUB_REPOSITORY ||
     "huijoohwee/agentic-canvas-os";
-  const adapter = createGitHubCloudCollaborationAdapter({ ledgerRepository });
+  const adapter = createGitHubCloudCollaborationAdapter({
+    ledgerRepository,
+    workflowContext: trustedWorkflowContext(),
+  });
   const result = action === "verify-event"
     ? await verifyEvent({ adapter })
     : await adapter.execute(action, buildRequest(action));
@@ -67,17 +67,18 @@ async function verifyEvent({ adapter }) {
     const currentClaims = await adapter.execute("status", {
       targetRepository,
     });
-    const deliveryClaim = currentClaims.claims?.find((claim) => (
+    const reviewedClaim = currentClaims.claims?.find((claim) => (
       claim.reviewRequestId === reviewRequestId
-      && claim.state === "delivery-authorized"
+      && ["reviewed", "integrated-preserved"].includes(claim.state)
     )) || null;
     if (
-      deliveryClaim
-      && deliveryClaim.laneRevision !== requiredSha(pullRequest.head?.sha, "event head SHA")
+      reviewedClaim
+      && reviewedClaim.state === "integrated-preserved"
+      && reviewedClaim.laneRevision !== requiredSha(pullRequest.head?.sha, "event head SHA")
     ) {
       verifyEventProtectedMainRefresh({
         pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
-        expectedHeadSha: requiredSha(deliveryClaim.laneRevision, "delivery-authorized lane revision"),
+        expectedHeadSha: requiredSha(reviewedClaim.laneRevision, "integrated candidate revision"),
         observedHeadSha: requiredSha(pullRequest.head?.sha, "event head SHA"),
         observedBaseSha: requiredSha(pullRequest.base?.sha, "event base SHA"),
       });
@@ -85,10 +86,10 @@ async function verifyEvent({ adapter }) {
         targetRepository,
         pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
         branch: requiredText(pullRequest.head?.ref, "event head branch"),
-        canonicalBaseSha: requiredSha(deliveryClaim.canonicalBaseRevision, "delivery-authorized canonical base"),
-        headSha: requiredSha(deliveryClaim.laneRevision, "delivery-authorized lane revision"),
-        requireStatus: "delivery_authorized",
-        claimId: requiredText(deliveryClaim.claimId, "delivery-authorized claim id"),
+        canonicalBaseSha: requiredSha(reviewedClaim.canonicalBaseRevision, "integrated candidate base"),
+        headSha: requiredSha(reviewedClaim.laneRevision, "integrated candidate revision"),
+        requireStatus: "integrated-preserved",
+        claimId: requiredText(reviewedClaim.claimId, "integrated claim id"),
         reviewRequestId,
         allowProtectedMainRefresh: true,
         actorId: process.env.GITHUB_ACTOR_ID,
@@ -101,19 +102,19 @@ async function verifyEvent({ adapter }) {
       branch: requiredText(pullRequest.head?.ref, "event head branch"),
       canonicalBaseSha: requiredSha(pullRequest.base?.sha, "event base SHA"),
       headSha: requiredSha(pullRequest.head?.sha, "event head SHA"),
-      requireStatus: "review_ready",
+      requireStatus: reviewedClaim?.state || "reviewed",
       actorId: process.env.GITHUB_ACTOR_ID,
       actorLogin: process.env.GITHUB_ACTOR,
     });
   }
   if (event.ref === `refs/heads/${event.repository?.default_branch}`) {
     const targetRepository = requiredText(event.repository?.full_name, "event repository");
-    const integratedRelease = await releaseIntegratedClaimForEvent({
+    const integratedRetirement = await retireIntegratedClaimForEvent({
       adapter,
       event,
       targetRepository,
     });
-    if (integratedRelease) return integratedRelease;
+    if (integratedRetirement) return integratedRetirement;
     return adapter.execute("status", {
       targetRepository,
       actorId: process.env.GITHUB_ACTOR_ID,
@@ -209,7 +210,7 @@ function shouldRetryProtectedMainRefreshVerification(error, gitText) {
   ].some(fragment => message.includes(fragment));
 }
 
-async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository }) {
+async function retireIntegratedClaimForEvent({ adapter, event, targetRepository }) {
   const mergeCommitSha = requiredSha(
     first(event.after, event.head_commit?.id),
     "event merge commit SHA",
@@ -223,8 +224,8 @@ async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository
   const reviewRequestId = `github-pull-request:${pullRequest.nodeId}`;
   const claim = (await adapter.listClaims({ targetRepository }))
     .find((candidate) => candidate.reviewRequestId === reviewRequestId);
-  if (!claim || claim.state !== "delivery-authorized") return null;
-  const evidenceDigest = digestValue({
+  if (!claim || claim.state !== "integrated-preserved") return null;
+  const bytesDigest = digestValue({
     schema: "agentic-cloud-integration-evidence/v1",
     repository: targetRepository,
     pullRequestNumber: pullRequest.number,
@@ -232,16 +233,7 @@ async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository
     laneRevision: claim.laneRevision,
     mergeCommitSha,
   });
-  const integrationReceiptDigest = digestValue({
-    schema: "agentic-cloud-integration-receipt/v1",
-    repository: targetRepository,
-    pullRequestNumber: pullRequest.number,
-    reviewRequestId,
-    canonicalBaseRevision: claim.canonicalBaseRevision,
-    laneRevision: claim.laneRevision,
-    mergeCommitSha,
-  });
-  return adapter.execute("release", {
+  return adapter.execute("retire", {
     targetRepository,
     pullRequestNumber: pullRequest.number,
     claimId: claim.claimId,
@@ -250,9 +242,13 @@ async function releaseIntegratedClaimForEvent({ adapter, event, targetRepository
     deviceId: claim.deviceId,
     sessionId: claim.sessionId,
     reason: "integrated",
-    evidenceDigest,
-    integrationReceiptDigest,
-    idempotencyKey: `push-integrated-release:${mergeCommitSha}:${claim.claimId}`,
+    finalRevision: claim.laneRevision,
+    reviewRequestId,
+    bytesDigest,
+    namedChecksDigest: claim.integration?.namedChecksDigest,
+    handoffEvidenceDigest: claim.integration?.handoffEvidenceDigest,
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    idempotencyKey: `push-integrated-retire:${mergeCommitSha}:${claim.claimId}`,
     actorId: process.env.GITHUB_ACTOR_ID,
     actorLogin: process.env.GITHUB_ACTOR,
   });
@@ -304,12 +300,7 @@ function buildRequest(action) {
       process.env.AGENTIC_CLOUD_TTL_SECONDS,
       source.ttlSeconds,
     ),
-    recipientMode: first(
-      option("handoff-mode"),
-      process.env.AGENTIC_CLOUD_HANDOFF_MODE,
-      source.recipientMode,
-      source.handoffMode,
-    ),
+    mode: first(option("mode"), process.env.AGENTIC_CLOUD_CONTINUE_MODE, source.mode),
     claimId: first(option("claim-id"), process.env.AGENTIC_CLOUD_CLAIM_ID, source.claimId),
     expectedFenceRevision: first(
       option("expected-claim-digest"),
@@ -321,6 +312,11 @@ function buildRequest(action) {
       option("expected-ledger-revision"),
       process.env.AGENTIC_CLOUD_EXPECTED_LEDGER_REVISION,
       source.expectedLedgerRevision,
+    ),
+    expectedLedgerDigest: first(
+      option("expected-ledger-digest"),
+      process.env.AGENTIC_CLOUD_EXPECTED_LEDGER_DIGEST,
+      source.expectedLedgerDigest,
     ),
     expectedTransitionCounter: first(
       option("expected-transition-counter"),
@@ -337,15 +333,30 @@ function buildRequest(action) {
       process.env.AGENTIC_CLOUD_PREDECESSOR_CLAIM_ID,
       source.predecessorClaimId,
     ),
-    evidenceDigest: first(
-      option("evidence-digest"),
-      process.env.AGENTIC_CLOUD_EVIDENCE_DIGEST,
-      source.evidenceDigest,
-    ),
     focusedEvidenceDigest: first(
       option("focused-evidence-digest"),
       process.env.AGENTIC_CLOUD_FOCUSED_EVIDENCE_DIGEST,
       source.focusedEvidenceDigest,
+    ),
+    dependencyClosureDigest: first(
+      option("dependency-closure-digest"),
+      process.env.AGENTIC_CLOUD_DEPENDENCY_CLOSURE_DIGEST,
+      source.dependencyClosureDigest,
+    ),
+    namedChecksDigest: first(
+      option("named-checks-digest"),
+      process.env.AGENTIC_CLOUD_NAMED_CHECKS_DIGEST,
+      source.namedChecksDigest,
+    ),
+    handoffEvidenceDigest: first(
+      option("handoff-evidence-digest"),
+      process.env.AGENTIC_CLOUD_HANDOFF_EVIDENCE_DIGEST,
+      source.handoffEvidenceDigest,
+    ),
+    recoveryEvidenceDigest: first(
+      option("recovery-evidence-digest"),
+      process.env.AGENTIC_CLOUD_RECOVERY_EVIDENCE_DIGEST,
+      source.recoveryEvidenceDigest,
     ),
     operatorDecisionDigest: first(
       option("operator-decision-digest"),
@@ -362,16 +373,15 @@ function buildRequest(action) {
       process.env.AGENTIC_CLOUD_INTEGRATION_RECEIPT_DIGEST,
       source.integrationReceiptDigest,
     ),
-    reason: first(
-      option("release-reason"),
-      process.env.AGENTIC_CLOUD_RELEASE_REASON,
-      source.reason,
-      source.releaseReason,
+    reason: first(option("reason"), process.env.AGENTIC_CLOUD_RETIRE_REASON, source.reason),
+    candidateRevision: first(
+      option("candidate-revision"), process.env.AGENTIC_CLOUD_CANDIDATE_REVISION, source.candidateRevision,
     ),
-    nextActorId: first(
-      option("next-actor-id"),
-      process.env.AGENTIC_CLOUD_NEXT_ACTOR_ID,
-      source.nextActorId,
+    finalRevision: first(
+      option("final-revision"), process.env.AGENTIC_CLOUD_FINAL_REVISION, source.finalRevision,
+    ),
+    bytesDigest: first(
+      option("bytes-digest"), process.env.AGENTIC_CLOUD_BYTES_DIGEST, source.bytesDigest,
     ),
     requiredState: first(
       option("required-state"),
@@ -409,6 +419,18 @@ function buildRequest(action) {
     throw new Error(`${action} requires --idempotency-key or GITHUB_RUN_ID.`);
   }
   return request;
+}
+
+function trustedWorkflowContext() {
+  if (process.env.GITHUB_ACTIONS !== "true") return null;
+  return {
+    trustedSource: "github-actions",
+    runId: process.env.GITHUB_RUN_ID,
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+    repository: process.env.GITHUB_REPOSITORY,
+    repositoryId: process.env.GITHUB_REPOSITORY_ID,
+    revision: process.env.GITHUB_SHA,
+  };
 }
 
 function resolveAction(action) {
@@ -495,6 +517,6 @@ function publicError(error) {
 
 function usage() {
   throw new Error(
-    "Usage: cloud-collaboration.mjs <claim|bind|heartbeat|review-ready|delivery-authorize|handoff|release|status|verify|verify-event|dispatch> [--request-json=<json>] [--json]",
+    "Usage: cloud-collaboration.mjs <claim|continue|integrate|retire|status|verify|verify-event|dispatch> [--request-json=<json>] [--json]",
   );
 }

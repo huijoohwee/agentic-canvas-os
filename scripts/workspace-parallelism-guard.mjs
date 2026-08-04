@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildWorkspaceParallelismReport,
   classifyGitOperation,
+  assertCrossRepositoryWorkspaceProjection,
   assertNonDestructiveOperation,
   assertWorkspaceReconciliationAdmission,
 } from "./workspace-parallelism-lib.mjs";
@@ -65,6 +66,19 @@ function splitNullSeparated(value) {
   return String(value || "").split("\0").filter(Boolean).sort();
 }
 
+function readRepositoryIdentity(repository, spawn) {
+  const remote = (git(repository, ["remote", "get-url", "origin"], spawn) || "").trim();
+  if (!remote) return path.basename(repository);
+  let remotePath = remote;
+  try {
+    remotePath = new URL(remote).pathname;
+  } catch {
+    const separator = remote.indexOf(":");
+    if (separator >= 0) remotePath = remote.slice(separator + 1);
+  }
+  return remotePath.replace(/^\/+|\/+$/gu, "").replace(/\.git$/u, "");
+}
+
 function captureLaneEvidence({ worktree, spawn }) {
   const trackedPatch = git(worktree, ["diff", "--no-ext-diff", "--binary", "HEAD"], spawn) || "";
   const trackedPaths = splitNullSeparated(git(worktree, ["diff", "--name-only", "-z", "HEAD"], spawn));
@@ -83,6 +97,7 @@ function captureLaneEvidence({ worktree, spawn }) {
 export function readRepositoryLanes({ repository, session, spawn = spawnSync }) {
   const worktreeList = git(repository, ["worktree", "list", "--porcelain"], spawn);
   if (worktreeList === null) return [];
+  const repositoryIdentity = readRepositoryIdentity(repository, spawn);
 
   const lanes = [];
   let current = null;
@@ -103,7 +118,7 @@ export function readRepositoryLanes({ repository, session, spawn = spawnSync }) 
     const head = (git(lane.worktree, ["rev-parse", "--abbrev-ref", "HEAD"], spawn) || "").trim();
     const evidence = captureLaneEvidence({ worktree: lane.worktree, spawn });
     return {
-      repository: path.basename(repository),
+      repository: repositoryIdentity,
       worktree: lane.worktree,
       branch: lane.branch || (head && head !== "HEAD" ? `refs/heads/${head}` : null),
       session: `${session}:${path.basename(repository)}:${path.basename(lane.worktree)}`,
@@ -130,6 +145,13 @@ export function runWorkspaceParallelismGuard({
   const operation = operationIndex >= 0 ? argv[operationIndex + 1] : null;
   const receiptIndex = argv.findIndex((token) => token === "--reconciliation-receipt");
   const receiptPath = receiptIndex >= 0 ? argv[receiptIndex + 1] : null;
+  const taskIndex = argv.findIndex((token) => token === "--coordination-task");
+  const taskPath = taskIndex >= 0 ? argv[taskIndex + 1] : null;
+  const claimsIndex = argv.findIndex((token) => token === "--coordination-claims");
+  const claimsPath = claimsIndex >= 0 ? argv[claimsIndex + 1] : null;
+  if (Boolean(taskPath) !== Boolean(claimsPath)) {
+    throw new Error("--coordination-task and --coordination-claims must be supplied together.");
+  }
 
   const repositories = discoverRepositories({ workspaceRoot });
   const lanes = repositories.flatMap((repository) => readRepositoryLanes({ repository, session, spawn }));
@@ -154,7 +176,18 @@ export function runWorkspaceParallelismGuard({
   const reconciliationAdmission = receipt
     ? assertWorkspaceReconciliationAdmission({ report, receipt })
     : null;
-  const admittedReport = reconciliationAdmission ? { ...report, reconciliationAdmission } : report;
+  const coordinationProjection = taskPath
+    ? assertCrossRepositoryWorkspaceProjection({
+      task: JSON.parse(readFileSync(path.resolve(taskPath), "utf8")),
+      claims: JSON.parse(readFileSync(path.resolve(claimsPath), "utf8")),
+      lanes,
+    })
+    : null;
+  const admittedReport = {
+    ...report,
+    ...(reconciliationAdmission ? { reconciliationAdmission } : {}),
+    ...(coordinationProjection ? { coordinationProjection } : {}),
+  };
   write(`${json ? JSON.stringify(admittedReport, null, 2) : renderReport(admittedReport)}\n`);
   if (!report.ready && !reconciliationAdmission) {
     throw new Error(`${report.unrecoverableLanes.length} lane(s) hold work that a destructive operation would not be able to restore.`);
@@ -175,6 +208,9 @@ function renderReport(report) {
   }
   if (report.reconciliationAdmission) {
     lines.push(`[workspace-parallelism] ${report.reconciliationAdmission.decision} retained=${report.reconciliationAdmission.retained.length}`);
+  }
+  if (report.coordinationProjection) {
+    lines.push(`[workspace-parallelism] coordination ${report.coordinationProjection.taskId} writers=${report.coordinationProjection.currentWriteAuthorities} waiting=${report.coordinationProjection.waitingSuccessors}`);
   }
   lines.push(`[workspace-parallelism] ${report.ready ? "ok" : "blocked"}`);
   return lines.join("\n");

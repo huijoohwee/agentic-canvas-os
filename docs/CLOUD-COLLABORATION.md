@@ -91,7 +91,9 @@ a replay key for different intent fails closed. The protected source ref and
 exact pull-request subject are also re-resolved before every mutation attempt;
 drift aborts the operation instead of authorizing a stale candidate.
 Historical v1 entries remain immutable evidence; all newly authored entries use
-the current four-operation schema.
+the current four-operation schema. Current claim projections derive and expose
+the immutable schema of the original claim identity, so a v1 lineage continued
+under v2 cannot be mistaken for a newly issued v2 identity.
 
 The ledger stores no credentials, tokens, source bytes, diffs, prompts, raw
 local paths, or low-entropy secret digests. Provider identity is authenticated

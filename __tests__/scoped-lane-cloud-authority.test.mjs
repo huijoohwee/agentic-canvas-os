@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
   attachCloudHeartbeatMachineEvidence,
   authorizeDeliveryAdmissionCloudAuthority,
@@ -10,7 +11,10 @@ import {
   heartbeatAdmissionCloudAuthority,
   reviewReadyAdmissionCloudAuthority,
 } from "../scripts/scoped-lane-cloud-authority.mjs";
-import { normalizeCurrentClaimInventory } from "../scripts/scoped-lane-cloud-reconciliation.mjs";
+import {
+  normalizeCurrentClaimInventory,
+  reconcileCloudAuthorityProjection,
+} from "../scripts/scoped-lane-cloud-reconciliation.mjs";
 
 const BASE_SHA = "1".repeat(40);
 const HEAD_SHA = "2".repeat(40);
@@ -39,6 +43,16 @@ const CLAIM_ID = digestValue({
   workItemId: WORK_ITEM_ID,
   writeSetDigest: WRITE_SET_DIGEST,
 });
+const LEGACY_CLAIM_ID = digestValue({
+  actorId: ACTOR_ID,
+  canonicalBaseRevision: BASE_SHA,
+  deviceId: pseudonymousIdentifier("device", DEVICE_ID),
+  leaseEpoch: 1,
+  repositoryId: REPOSITORY_ID,
+  sessionId: pseudonymousIdentifier("session", SESSION_ID),
+  workItemId: WORK_ITEM_ID,
+  writeSetDigest: WRITE_SET_DIGEST,
+});
 const MANIFEST = Object.freeze({
   schema: "agentic-declared-write-scope/v1",
   semanticScope: "git-guidelines-companion",
@@ -60,6 +74,8 @@ function focusedEvidenceDigest() {
 }
 
 function rootClaim({
+  claimId = CLAIM_ID,
+  claimIdentitySchema = "agentic-cloud-collaboration-entry/v2",
   state = "current",
   laneRevision = HEAD_SHA,
   transitionCounter = 2,
@@ -70,8 +86,9 @@ function rootClaim({
   integrationReceiptDigest = null,
 } = {}) {
   return {
-    claimId: CLAIM_ID,
+    claimId,
     entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema,
     state,
     writeAuthority: state === "current",
     scopeReserved: state !== "waiting-successor",
@@ -97,6 +114,7 @@ function rootClaim({
 }
 
 function localAuthority({
+  claimId = CLAIM_ID,
   state = "active",
   laneRevision = BASE_SHA,
   transitionCounter = 1,
@@ -111,7 +129,7 @@ function localAuthority({
     provider: "github",
     ledgerRepository: "owner/ledger",
     targetRepository: "owner/target",
-    claimId: CLAIM_ID,
+    claimId,
     claimDigest,
     ledgerRevision,
     claimLedgerRevision,
@@ -228,6 +246,43 @@ test("claim projection accepts v2 logical identity without device/session in cla
   });
   assert.equal(authority.state, "active");
   assert.equal(authority.claimId, CLAIM_ID);
+});
+
+test("review reconciliation preserves exact v1 claim identity after a v2 continuation", () => {
+  const claim = rootClaim({
+    claimId: LEGACY_CLAIM_ID,
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v1",
+    transitionCounter: 17,
+  });
+  const authority = localAuthority({
+    claimId: LEGACY_CLAIM_ID,
+    transitionCounter: 13,
+  });
+  const reconciled = reconcileCloudAuthorityProjection({
+    authority,
+    manifest: MANIFEST,
+    statusResult: statusResult(claim),
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    allowPriorLaneRevision: true,
+    now: new Date(EVALUATED_AT),
+  });
+  assert.equal(reconciled.authority.claimId, LEGACY_CLAIM_ID);
+  assert.equal(reconciled.authority.transitionCounter, 17);
+  assert.throws(() => reconcileCloudAuthorityProjection({
+    authority,
+    manifest: MANIFEST,
+    statusResult: statusResult({
+      ...claim,
+      claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    }),
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    allowPriorLaneRevision: true,
+    now: new Date(EVALUATED_AT),
+  }), /recoverable admission subject/u);
 });
 
 test("current-claim inventory preserves an expired non-writing waiting successor", () => {

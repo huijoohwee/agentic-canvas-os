@@ -82,6 +82,11 @@ function buildReceipt(entry) {
 function hydrateWithLedger(ledger, entry, evaluationTime) {
   const claim = hydrate(entry, evaluationTime);
   if (!claim) return null;
+  const identityEntry = ledger.entries.find((candidate) => (
+    candidate.claimId === claim.claimId && candidate.action === "claim"
+  ));
+  if (!identityEntry) fail("invalid_ledger", "claim identity origin is missing");
+  claim.claimIdentitySchema = identityEntry.schema;
   const integrationEntry = claim?.integration && ledger.entries.findLast((candidate) => (
     candidate.schema === ENTRY_SCHEMA && candidate.claimId === claim.claimId && candidate.action === "integrate"
   ));

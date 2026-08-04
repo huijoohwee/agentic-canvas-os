@@ -89,7 +89,7 @@ export function reconcileCloudAuthorityProjection({
     workItemId: claim.workItemId,
     writeSetDigest: claim.writeSetDigest,
   };
-  const identityDigest = digestValue(claim.entrySchema.endsWith("/v1") ? {
+  const identityDigest = digestValue(claim.claimIdentitySchema.endsWith("/v1") ? {
     ...logicalIdentity,
     deviceId: pseudonymousIdentifier("device", requiredText(authority.deviceId, "authority deviceId")),
     sessionId: pseudonymousIdentifier("session", requiredText(authority.sessionId, "authority sessionId")),
@@ -196,6 +196,7 @@ export function normalizeCurrentClaimInventory({
   );
   const claims = inventoryResult.claims.map(source => {
     const entrySchema = requiredEntrySchema(source.entrySchema);
+    requiredClaimIdentitySchema(source.claimIdentitySchema, entrySchema);
     if (entrySchema.endsWith("/v2")) {
       requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
     } else if (source.operationReceiptDigest) {
@@ -339,6 +340,10 @@ export function requireReadyResult(result, {
 
 function normalizeClaim(source) {
   const entrySchema = requiredEntrySchema(source.entrySchema);
+  const claimIdentitySchema = requiredClaimIdentitySchema(
+    source.claimIdentitySchema,
+    entrySchema,
+  );
   const operationReceiptDigest = source.operationReceiptDigest
     ? requiredDigest(source.operationReceiptDigest, "operationReceiptDigest")
     : entrySchema.endsWith("/v1")
@@ -347,6 +352,7 @@ function normalizeClaim(source) {
   const claim = {
     claimId: requiredDigest(source.claimId, "claimId"),
     entrySchema,
+    claimIdentitySchema,
     state: requiredState(source.state),
     actorId: requiredText(source.actorId, "actorId"),
     repositoryId: requiredText(source.repositoryId, "repositoryId"),
@@ -524,6 +530,18 @@ function requiredEntrySchema(value) {
   const schema = requiredText(value, "entry schema");
   if (!["agentic-cloud-collaboration-entry/v1", "agentic-cloud-collaboration-entry/v2"].includes(schema)) {
     throw new Error(`Cloud inventory entry schema ${schema} is unsupported.`);
+  }
+  return schema;
+}
+
+function requiredClaimIdentitySchema(value, entrySchema) {
+  if (value === undefined || value === null || value === "") {
+    if (entrySchema.endsWith("/v1")) return entrySchema;
+    throw new Error("Current cloud entries require immutable claim identity provenance.");
+  }
+  const schema = requiredEntrySchema(value);
+  if (entrySchema.endsWith("/v1") && schema !== entrySchema) {
+    throw new Error("Historical cloud entries cannot declare a newer claim identity schema.");
   }
   return schema;
 }

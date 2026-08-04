@@ -16,6 +16,7 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   const first = await adapter.execute("claim", input);
   assert.equal(first.ok, true);
   assert.equal(first.status, "current");
+  assert.equal(first.claim.claimIdentitySchema, "agentic-cloud-collaboration-entry/v2");
   assert.equal(first.replayed, false);
   assert.match(first.ledgerRevision, /^[0-9a-f]{40}$/u);
   assert.match(first.claimDigest, /^[0-9a-f]{64}$/u);

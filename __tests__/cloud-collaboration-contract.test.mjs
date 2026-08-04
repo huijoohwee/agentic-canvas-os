@@ -449,6 +449,7 @@ test("historical v1 bytes validate unchanged and continue one-way into v2", () =
     },
   });
   assert.equal(continued.ledger.entries.at(-1).schema, ENTRY_SCHEMA);
+  assert.equal(continued.claim.claimIdentitySchema, LEGACY_ENTRY_SCHEMA);
   assert.equal(continued.claim.state, "current");
   assert.deepEqual(validateLedger(continued.ledger), []);
 

@@ -200,6 +200,7 @@ export function projectPublicClaim(claim) {
   return {
     claimId: claim.claimId,
     entrySchema: claim.entrySchema,
+    claimIdentitySchema: claim.claimIdentitySchema,
     state: claim.state,
     writeAuthority: claim.writeAuthority,
     scopeReserved: claim.scopeReserved,

@@ -1,6 +1,11 @@
 import path from "node:path";
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
+import {
+  DELIVERY_PEER_VERIFICATION_SCHEMA,
+  isOperationDerivedDeliveryPeerVerification,
+  verifyDeliveryAuthorizedPeerAuthorities,
+} from "./scoped-lane-delivery-peer-authority.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 export const DECLARED_WRITE_SCOPE_SCHEMA = "agentic-declared-write-scope/v1";
 export const LANE_ADMISSION_REPORT_SCHEMA = "agentic-lane-admission-report/v1";
@@ -10,7 +15,6 @@ export const LANE_CLOUD_AUTHORITY_SCHEMA = "agentic-lane-cloud-authority/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const operationDerivedCloudVerifications = new WeakSet();
-const operationDerivedDeliveryPeerHeads = new WeakMap();
 const ADMITTED_LANE_STATES = new Set(["active", "delivery", "review_ready", "parked"]);
 
 export function normalizeDeclaredWriteScopeManifest(source, { expectedScope = "" } = {}) {
@@ -186,7 +190,23 @@ export function evaluateScopedLaneAdmission({
   const currentRemoteClaims = authorityReady
     ? remoteAuthorityVerification.inventory.claims
     : null;
-  const classifiedLanes = normalizedLanes.map(lane => {
+  const deliveryPeerVerification = authorityReady
+    ? verifyDeliveryAuthorizedPeerAuthorities({
+      lanes: normalizedLanes,
+      remoteAuthorityVerification,
+      evaluatedAt: evaluationTime.toISOString(),
+    })
+    : null;
+  const deliveryPeerAuthorities = deliveryPeerVerification
+    ? requireDeliveryPeerAuthorityMap(deliveryPeerVerification, normalizedLanes)
+    : new Map();
+  const authorityBoundLanes = deliveryPeerVerification
+    ? bindOperationDerivedDeliveryPeerLaneStates(
+      normalizedLanes,
+      deliveryPeerVerification,
+    )
+    : normalizedLanes;
+  const classifiedLanes = authorityBoundLanes.map(lane => {
     if (lane.path === normalizedCanonicalPath && lane.branch === "refs/heads/main") {
       return { ...lane, classification: "canonical", overlapReasons: [] };
     }
@@ -197,6 +217,7 @@ export function evaluateScopedLaneAdmission({
       declaredWriteSet: manifest.declaredWriteSet,
       evaluatedAt: evaluationTime,
       currentRemoteClaims,
+      deliveryPeerAuthorities,
     });
   });
   for (const lane of classifiedLanes) {
@@ -261,7 +282,7 @@ export function evaluateScopedLaneAdmission({
   }
   const authoringStatus = findings.length > 0 ? "blocked" : "planned";
   const existingLaneStateDigest = digestValue(
-    normalizedLanes.map(lane => ({
+    authorityBoundLanes.map(lane => ({
       path: lane.path,
       stateDigest: lane.stateDigest,
     })),
@@ -360,56 +381,20 @@ export function markOperationDerivedCloudVerification(verification) {
 export function isOperationDerivedCloudVerification(verification) {
   return operationDerivedCloudVerifications.has(verification);
 }
-export function attachOperationDerivedDeliveryPeerHead(lane, source) {
-  requireObject(lane, "Lane");
-  requireObject(source, "Delivery peer head observation");
-  const observation = {
-    schema: requiredText(source.schema, "delivery peer head schema"),
-    status: requiredText(source.status, "delivery peer head status"),
-    reviewedHeadSha: requiredSha(
-      source.reviewedHeadSha,
-      "delivery peer reviewed head",
-    ),
-    observedHeadSha: requiredSha(
-      source.observedHeadSha,
-      "delivery peer observed head",
-    ),
-    protectedMainRefresh: source.protectedMainRefresh || null,
-  };
-  if (observation.schema !== "agentic-delivery-peer-head-observation/v1") {
-    throw new Error("Delivery peer head observation schema is unsupported.");
-  }
-  if (!["reviewed-head", "protected-main-refresh"].includes(observation.status)) {
-    throw new Error("Delivery peer head observation status is unsupported.");
-  }
-  if (
-    (observation.status === "reviewed-head" && (
-      observation.reviewedHeadSha !== observation.observedHeadSha
-      || observation.protectedMainRefresh !== null
-    ))
-    || (observation.status === "protected-main-refresh" && (
-      observation.reviewedHeadSha === observation.observedHeadSha
-      || !isBoundedProtectedMainRefresh(
-        observation.protectedMainRefresh,
-        observation.reviewedHeadSha,
-        observation.observedHeadSha,
-      )
-    ))
-  ) {
-    throw new Error("Delivery peer head observation does not bind one exact reviewed or protected-refresh head.");
-  }
-  const evidenceDigest = requiredDigest(
-    source.evidenceDigest,
-    "delivery peer head evidenceDigest",
-  );
-  if (evidenceDigest !== digestValue(observation)) {
-    throw new Error("Delivery peer head observation digest does not bind its complete evidence.");
-  }
-  operationDerivedDeliveryPeerHeads.set(
-    lane,
-    Object.freeze({ ...observation, evidenceDigest }),
-  );
-  return lane;
+export function bindOperationDerivedDeliveryPeerLaneStates(lanes, verification) {
+  const authorities = requireDeliveryPeerAuthorityMap(verification, lanes);
+  return lanes.map(lane => {
+    const authority = authorities.get(path.resolve(lane.path));
+    if (!authority) return lane;
+    return Object.freeze({
+      ...lane,
+      stateDigest: digestValue({
+        schema: "agentic-delivery-peer-bound-lane-state/v1",
+        laneStateDigest: requiredDigest(lane.stateDigest, "lane.stateDigest"),
+        authorityDigest: authority.authorityDigest,
+      }),
+    });
+  });
 }
 function classifyExistingLane({
   lane,
@@ -418,6 +403,7 @@ function classifyExistingLane({
   declaredWriteSet,
   evaluatedAt,
   currentRemoteClaims,
+  deliveryPeerAuthorities,
 }) {
   const reasons = [];
   if (lane.invalid || lane.leaseAmbiguous) reasons.push("structural-ambiguity");
@@ -427,7 +413,13 @@ function classifyExistingLane({
     : null;
   if (identity?.scope === semanticScope) reasons.push("same-semantic-scope");
   const lease = lane.lease;
-  if (!hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims)) {
+  if (!hasAuthoritativeLaneOwner(
+    lane,
+    lease,
+    evaluatedAt,
+    currentRemoteClaims,
+    deliveryPeerAuthorities,
+  )) {
     reasons.push("missing-authoritative-owner");
   }
   const authoritativeScope = lease?.admission?.declaredWriteSet;
@@ -450,7 +442,13 @@ function classifyExistingLane({
   return { ...lane, classification: "disjoint-attributed", overlapReasons: [] };
 }
 
-function hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims) {
+function hasAuthoritativeLaneOwner(
+  lane,
+  lease,
+  evaluatedAt,
+  currentRemoteClaims,
+  deliveryPeerAuthorities,
+) {
   if (
     !lease
     || !ADMITTED_LANE_STATES.has(lease.status)
@@ -464,6 +462,7 @@ function hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims
     lease,
     evaluatedAt,
     currentRemoteClaims,
+    deliveryPeerAuthorities,
   })) return true;
   const identity = parseDeviceBranch(lease.branch);
   const localExpiry = Date.parse(lease.expiresAt);
@@ -551,12 +550,13 @@ function hasDeliveryAuthorizedSuccessorOwner({
   lease,
   evaluatedAt,
   currentRemoteClaims,
+  deliveryPeerAuthorities,
 }) {
-  const observation = operationDerivedDeliveryPeerHeads.get(lane);
+  const proof = deliveryPeerAuthorities?.get(lane.path);
   const cloud = lease?.cloudAuthority;
   const identity = parseDeviceBranch(lease?.branch || "");
   if (
-    !observation
+    !proof
     || lane.dirty
     || lease.status !== "review_ready"
     || !identity
@@ -588,9 +588,23 @@ function hasDeliveryAuthorizedSuccessorOwner({
     || !DIGEST_PATTERN.test(String(cloud.claimLedgerRevision || ""))
     || !Number.isInteger(cloud.transitionCounter)
     || cloud.transitionCounter < 1
-    || Date.parse(cloud.expiresAt) <= evaluatedAt.getTime()
-    || observation.reviewedHeadSha !== lease.reviewHeadSha
-    || observation.observedHeadSha !== lane.head
+    || proof.claimId !== cloud.claimId
+    || proof.reviewedHeadSha !== lease.reviewHeadSha
+    || proof.observedHeadSha !== lane.head
+    || proof.predecessorLedgerRevision !== cloud.ledgerRevision
+    || proof.predecessorClaimDigest !== cloud.claimDigest
+    || proof.predecessorTransitionDigest !== cloud.claimLedgerRevision
+    || proof.predecessorCounter !== cloud.transitionCounter
+    || proof.deliveryAuthorizationCounter !== cloud.transitionCounter + 1
+    || proof.provider?.repository !== cloud.targetRepository
+    || !Number.isSafeInteger(proof.provider.pullRequestNumber)
+    || proof.provider.pullRequestNumber < 1
+    || proof.provider.reviewRequestId !== cloud.reviewRequestId
+    || proof.provider.url !== lease.pullRequestUrl
+    || proof.provider.branch !== lease.branch
+    || proof.provider.headSha !== lane.head
+    || proof.provider.state !== "OPEN"
+    || proof.provider.draft !== false
   ) return false;
   try {
     const declaredWriteSet = normalizeWriteSet(
@@ -621,9 +635,15 @@ function hasDeliveryAuthorizedSuccessorOwner({
       && remote.laneRevision === cloud.laneRevision
       && remote.laneRevision === lease.reviewHeadSha
       && remote.leaseEpoch === cloud.leaseEpoch
-      && remote.transitionCounter === cloud.transitionCounter + 1
+      && remote.transitionCounter === proof.currentCounter
+      && remote.transitionCounter
+        === proof.deliveryAuthorizationCounter + proof.heartbeatSuffixCount
       && remote.state === "delivery_authorized"
-      && remote.expiresAt === cloud.expiresAt
+      && remote.recordDigest === proof.currentRecordDigest
+      && remote.fenceRevision === proof.currentClaimDigest
+      && remote.transitionDigest === proof.currentTransitionDigest
+      && remote.expiresAt === proof.currentExpiresAt
+      && Date.parse(remote.expiresAt) > evaluatedAt.getTime()
       && remote.reviewRequestId === cloud.reviewRequestId
       && remote.fenceRevision !== cloud.claimDigest
       && remote.transitionDigest !== cloud.claimLedgerRevision
@@ -632,34 +652,53 @@ function hasDeliveryAuthorizedSuccessorOwner({
     return false;
   }
 }
-function isBoundedProtectedMainRefresh(receipt, reviewedHeadSha, observedHeadSha) {
-  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return false;
+
+function requireDeliveryPeerAuthorityMap(verification, lanes) {
   if (
-    receipt.deliveredHeadSha !== reviewedHeadSha
-    || receipt.refreshedHeadSha !== observedHeadSha
-  ) return false;
-  if (receipt.schema === "agentic-protected-main-refresh/v1") {
-    return SHA_PATTERN.test(String(receipt.mainParentSha || ""));
+    !isOperationDerivedDeliveryPeerVerification(verification)
+    || verification.schema !== DELIVERY_PEER_VERIFICATION_SCHEMA
+    || verification.status !== "ready"
+    || !Array.isArray(verification.peers)
+    || !DIGEST_PATTERN.test(String(verification.peerSetDigest || ""))
+    || !DIGEST_PATTERN.test(String(verification.operationReceiptDigest || ""))
+  ) {
+    throw new Error("Delivery peer lane binding requires an operation-derived authority proof.");
   }
-  if (
-    receipt.schema !== "agentic-protected-main-refresh-chain/v1"
-    || !Number.isInteger(receipt.refreshCount)
-    || receipt.refreshCount < 2
-    || !Array.isArray(receipt.refreshes)
-    || receipt.refreshes.length !== receipt.refreshCount
-  ) return false;
-  let previous = reviewedHeadSha;
-  for (const refresh of receipt.refreshes) {
+  const lanePaths = new Set(lanes.map(lane => path.resolve(lane.path)));
+  const authorities = new Map();
+  for (const proof of verification.peers) {
+    const proofPath = path.resolve(requiredText(proof.path, "delivery peer path"));
+    const {
+      currentLedgerRevision: _currentLedgerRevision,
+      currentLedgerDigest: _currentLedgerDigest,
+      authorityDigest,
+      ...authorityCore
+    } = proof;
     if (
-      !refresh
-      || refresh.previousHeadSha !== previous
-      || !SHA_PATTERN.test(String(refresh.refreshedHeadSha || ""))
-      || !SHA_PATTERN.test(String(refresh.mainParentSha || ""))
-      || !SHA_PATTERN.test(String(refresh.treeSha || ""))
-    ) return false;
-    previous = refresh.refreshedHeadSha;
+      !lanePaths.has(proofPath)
+      || authorities.has(proofPath)
+      || !DIGEST_PATTERN.test(String(authorityDigest || ""))
+      || digestValue(authorityCore) !== authorityDigest
+    ) {
+      throw new Error("Delivery peer authority proof does not bind one exact lane.");
+    }
+    authorities.set(proofPath, proof);
   }
-  return previous === observedHeadSha;
+  const peerSet = [...authorities.values()]
+    .map(proof => ({
+      path: proof.path,
+      claimId: proof.claimId,
+      authorityDigest: proof.authorityDigest,
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const { operationReceiptDigest, ...operationCore } = verification;
+  if (
+    digestValue(peerSet) !== verification.peerSetDigest
+    || digestValue(operationCore) !== operationReceiptDigest
+  ) {
+    throw new Error("Delivery peer authority proof receipt is invalid.");
+  }
+  return authorities;
 }
 function hasReadyRemoteAuthority({
   cloudAuthority,
@@ -709,10 +748,6 @@ function normalizeLane(lane) {
     lease: lane.lease || null,
     stateDigest: requiredDigest(lane.stateDigest, "lane.stateDigest"),
   };
-  const deliveryPeerHead = operationDerivedDeliveryPeerHeads.get(lane);
-  if (deliveryPeerHead) {
-    operationDerivedDeliveryPeerHeads.set(normalized, deliveryPeerHead);
-  }
   return Object.freeze(normalized);
 }
 function finding(type, blockScope, evidence) {

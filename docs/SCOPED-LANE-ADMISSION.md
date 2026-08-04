@@ -108,7 +108,7 @@ paths overlap even when their semantic labels differ.
 | Class | Meaning | Admission effect |
 |---|---|---|
 | `canonical` | The one registered `main` worktree is clean at fetched `origin/main`. | Required. |
-| `disjoint-attributed` | The lane has an exact branch/path/session/PR/fence owner, an unexpired local projection, and an exact live join to one current non-overlapping remote claim. | Preserve and allow. |
+| `disjoint-attributed` | The lane has an exact branch/path/session/PR/fence owner and either an exact current non-overlapping remote claim or an exact reviewed predecessor whose live successor is independently proved. | Preserve and allow. |
 | `overlapping` | Same branch, same semantic scope, or an overlapping declared path. | Block the candidate. |
 | `ambiguous` | Prunable/locked/bare state, mismatched lease identity, missing authoritative write set, expired authority, unattributed dirt, or a legacy local-only projection. | Block without adopting or modifying it. |
 
@@ -124,16 +124,21 @@ lease, or inferred scope cannot upgrade it.
 
 A clean frozen `review_ready` peer may remain `disjoint-attributed` after its
 owner performs the exact live `delivery_authorized` successor transition. That
-narrow join requires the same claim identity, base, reviewed revision, write
-set, cloud epoch, review request, and expiry; exactly one incremented transition
-counter; changed fence and transition digests; and an operation-derived Git
-observation proving that the checked-out head is either the reviewed head or a
-bounded exact protected-main refresh of it. The observation is retained as
-private process provenance and bound into the lane-state digest, so serialized
-lane input cannot forge it and double-read evidence drift blocks admission.
-This classification only permits preservation of an unrelated lane. It grants
-no authority to author, resume, review, merge, release, reconcile, run, or
-deploy the peer.
+narrow join reads the historical ledger at the local projection's exact
+revision, proves that its final entry is the same `review_ready` claim, then
+requires the first same-claim successor to be `delivery-authorize` at counter
+plus one followed by zero or more `delivery_authorized` heartbeats only. The
+latest claim record, fence, transition digest, counter, and extended expiry must
+match the current operation-derived inventory. The peer PR must still be open,
+non-draft, same-repository, and exact at the local head, reviewed branch, review
+identity, and current protected base. Local Git must prove either the reviewed
+head or its bounded exact protected-main refresh. The complete proof is
+double-captured, deeply immutable, and bound into the lane-state digest; its
+stable peer digest excludes unrelated global-ledger appends, while any peer
+heartbeat, claim, provider, Git, or ancestry drift blocks the final preservation
+rerun. This classification only permits preservation of an unrelated lane. It
+grants no authority to author, resume, review, merge, release, reconcile, run,
+or deploy the peer.
 
 ## Read-Only Commands
 
@@ -371,11 +376,13 @@ Focused proof must show:
 - review re-verifies after checks, transitions the exact pushed HEAD to
   cloud `review_ready`, and releases the local lease only after that proof;
 - a clean frozen `review_ready` peer remains attributable across only the exact
-  live counter-plus-one `delivery_authorized` successor when operation-derived
-  Git evidence proves the reviewed head or its bounded protected-main refresh;
-  forged input, dirty state, malformed refresh ancestry, torn evidence, or any
-  claim/base/scope/epoch/review/expiry drift remains ambiguous, and attribution
-  creates no peer mutation or lifecycle authority;
+  historical counter-plus-one `delivery_authorized` successor plus a
+  heartbeat-only suffix when operation-derived ledger, provider, cloud, and Git
+  evidence proves the reviewed head or its bounded protected-main refresh;
+  forged input, dirty state, malformed refresh ancestry, torn evidence, closed
+  or drifted provider state, or any claim/base/scope/epoch/review/current-expiry
+  drift remains ambiguous, and attribution creates no peer mutation or
+  lifecycle authority;
 - cloud-admitted local-only resume and park fail closed pending explicit cloud
   handoff/reclaim, while external claim retry or release remains owner-led;
 - configured absolute hook SSOT and sentinel configuration remain unchanged;

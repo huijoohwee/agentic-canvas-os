@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 404,
-  "headDigest": "c5bb59b46f6caeac0601710597eae66e6494a98545cea536352219d04d1ef9c1",
+  "sequence": 405,
+  "headDigest": "e1d7382c3ada924093f52d0fbbeb11876ed127be2d1232a159daab396dba5fb2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -19714,6 +19714,49 @@
       },
       "claimDigest": "7f7b42d08362164ef94e14c9d3391389fdb86f525cadb8800624211533957cfb",
       "digest": "c5bb59b46f6caeac0601710597eae66e6494a98545cea536352219d04d1ef9c1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 405,
+      "parentDigest": "c5bb59b46f6caeac0601710597eae66e6494a98545cea536352219d04d1ef9c1",
+      "action": "review-ready",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "294018da86ca2ef3825c56d6de325c550991d2735b96c5f749806bd1db589d4a",
+      "idempotencyKey": "3fe6528a85a6028673411340e55bfa337762fa33e7e078da721bb96e2f395f04",
+      "requestDigest": "e4526822abc4463a93beb1da6905e15fe464b7fda8e5710ed732d56c086561a0",
+      "evaluationTime": "2026-08-04T03:57:54.000Z",
+      "claimCore": {
+        "claimId": "294018da86ca2ef3825c56d6de325c550991d2735b96c5f749806bd1db589d4a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f1d4107a40c10ecafb9cb3ef2369915495f49ffe04714625b6f42e614f3ccf09",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e85af8564af2475a12cd55381abcf2d3707d0ad353d1ac98cc70dbe0f7a77fcc",
+        "canonicalBaseRevision": "bebda7bfdf3c9b8b2d8f98a2784a57487520abd6",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-clean-committed-lane-bootstrap.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:package.json",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-lib.mjs",
+          "path:scripts/legacy-clean-committed-lane-bootstrap.mjs",
+          "semantic:legacy-clean-committed-lane-bootstrap"
+        ],
+        "writeSetDigest": "f524d7eb260cda29b0227b1cd1196b2c5005ff368d0830ca1d90281e74d3188f",
+        "laneRevision": "c5d261350db6b69dd6be1fe3ccc6ef40e3cc93c6",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 1,
+        "state": "review-ready",
+        "expiresAt": "2026-08-04T04:19:04.000Z",
+        "evidenceDigest": "f07d9a4b954a584bd5a49fae5c9b2f85be1371cba903e430e8a01d2ddc52f6ed",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76VcSP",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c369c6384d7043fb006d3fcca4539072705cb5a95eb771863ea9f07675ff4f8a",
+      "digest": "e1d7382c3ada924093f52d0fbbeb11876ed127be2d1232a159daab396dba5fb2"
     }
   ]
 }

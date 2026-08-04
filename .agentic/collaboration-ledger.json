@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 624,
-  "headDigest": "f1d0ab951925360d1c0349a491ab6042ba7354893d171f808bc4c2c2fe037e86",
+  "sequence": 625,
+  "headDigest": "df71adb3469c7beacfec3e327719673c919a972e2d712896bc94e7c79c0b952c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -30370,6 +30370,46 @@
       },
       "claimDigest": "ec318a5228042b30f921658e4f535280cb476bdc5d0a06678520e2d767a30db6",
       "digest": "f1d0ab951925360d1c0349a491ab6042ba7354893d171f808bc4c2c2fe037e86"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 625,
+      "parentDigest": "f1d0ab951925360d1c0349a491ab6042ba7354893d171f808bc4c2c2fe037e86",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "49ce84e6909140d6139bbe83869a8943d28521328e6757ed1a9e61ff82f1c250",
+      "idempotencyKey": "619374a6dfec81bf86c406de41022b5a472667f2120131c2dcd9b4eb34107e6d",
+      "requestDigest": "07fd7d913a34d2874821a3d8accb12a20efa6650d9c0122b981d062c8b5427d6",
+      "evaluationTime": "2026-08-04T17:37:07.000Z",
+      "claimCore": {
+        "claimId": "49ce84e6909140d6139bbe83869a8943d28521328e6757ed1a9e61ff82f1c250",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:e88a52031b78eb05b07571346198476798861bfdd2a9c490278b5eec1144323c",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:c5ed31e38f5432a73440f519408125511e785d1fc7ef0c8c04410a00d0fccde8",
+        "canonicalBaseRevision": "4396cf9ec60e142de136981a8a777f4a9b6b82f3",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/xrSpatialCaptureFallbackReadiness.test.ts",
+          "path:canvas/src/__tests__/xrSpatialCaptureFallbackRuntimeReady.test.ts",
+          "semantic:xr-fallback-contract-reconciliation"
+        ],
+        "writeSetDigest": "f1dc16f45451a292afc74c21fbac6e879a0fc22f58e52e323f33b9ad6533cb93",
+        "laneRevision": "4396cf9ec60e142de136981a8a777f4a9b6b82f3",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-04T18:07:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0f4feceda795f4554e6fb25201e97d7260a647d94ab707d9f5e4444561ff6fc7",
+      "digest": "df71adb3469c7beacfec3e327719673c919a972e2d712896bc94e7c79c0b952c"
     }
   ]
 }

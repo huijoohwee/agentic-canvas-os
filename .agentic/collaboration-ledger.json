@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 394,
-  "headDigest": "7887f72edc11c067ace90a1538a6c6e83b5cb9ad5b435f072571b4a0f794bacc",
+  "sequence": 395,
+  "headDigest": "10e312ad3be93a9db2d17ef30ee0683c9778667ad43e6a0e42478d33f4cc37e9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -19141,6 +19141,77 @@
       },
       "claimDigest": "82f3f966101a687cfc3a552d60579e8dc2451bf7f332d1fbf81d854a884eaa58",
       "digest": "7887f72edc11c067ace90a1538a6c6e83b5cb9ad5b435f072571b4a0f794bacc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v1",
+      "sequence": 395,
+      "parentDigest": "7887f72edc11c067ace90a1538a6c6e83b5cb9ad5b435f072571b4a0f794bacc",
+      "action": "release",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "904967ff0af87d8ff460b074348769b792d2e4bfbf93efd98dd28588a9e131c3",
+      "idempotencyKey": "9d9ad44f04291922e7573531d6ff5ef27b3a8a54b4de83b9d30b2c9b8f1719e4",
+      "requestDigest": "df989668a0769d0d8ff4e6f7b61ec4bbcbd1701aff30c4a5a7a95087bb1ef83e",
+      "evaluationTime": "2026-08-04T02:03:39.000Z",
+      "claimCore": {
+        "claimId": "904967ff0af87d8ff460b074348769b792d2e4bfbf93efd98dd28588a9e131c3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8d29e5bd25a843abce30bf0fd7c82e724ebcd2b246ffaf83166231d22b45b867",
+        "sessionId": "session:09dc433f726e7bae6e89a728d05da49d02a669c2fdf8f16dc3a5a3c0a43b5bb2",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:6ede6c8f62793a7d4de66a2366444161daa108b01299b7edbc5cc737a37041e6",
+        "canonicalBaseRevision": "5679d4101f5470fb85816b6df4f2ec0af6ca4eb7",
+        "declaredWriteScope": [
+          "path:.github/workflows/integration.yml",
+          "path:canvas/package.json",
+          "path:canvas/scripts/run_video_editor_browser_smoke.mjs",
+          "path:canvas/scripts/run_xr_v2_browser_smoke.mjs",
+          "path:canvas/scripts/verify_video_editor_browser_smoke.mjs",
+          "path:canvas/scripts/verify_xr_v2_browser_smoke.mjs",
+          "path:canvas/src/App.tsx",
+          "path:canvas/src/__tests__/videoEditorIndependence.test.ts",
+          "path:canvas/src/__tests__/videoEditorRuntimeReady.test.ts",
+          "path:canvas/src/__tests__/xrV2Runtime.test.ts",
+          "path:canvas/src/__tests__/xrV2RuntimeAdapters.test.ts",
+          "path:canvas/src/components/timeline",
+          "path:canvas/src/features/gitgraph",
+          "path:canvas/src/features/testing",
+          "path:canvas/src/features/xr-v2",
+          "path:canvas/src/tests/run.ts",
+          "path:docs/TESTING.md",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:docs/documents/knowgrph-2d-renderer-enhancement-design.md",
+          "path:docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md",
+          "path:docs/documents/knowgrph-xr-v2-runtime-readiness.md",
+          "path:docs/runtime-api.md",
+          "path:package.json",
+          "path:scripts/__tests__/video-editor-source-smoke.test.mjs",
+          "path:scripts/__tests__/xr-v2-source-smoke.test.mjs",
+          "path:scripts/run-video-editor-source-smoke.mjs",
+          "path:scripts/run-xr-v2-source-smoke.mjs",
+          "path:scripts/video-editor",
+          "path:scripts/xr-v2",
+          "semantic:xr-video-editor-runtime-ready"
+        ],
+        "writeSetDigest": "748a6bf3cae16afb4cbcc403864bf508f848f6ef67827fd0c7bd31ed772c713a",
+        "laneRevision": "5679d4101f5470fb85816b6df4f2ec0af6ca4eb7",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "released",
+        "expiresAt": "2026-08-04T05:01:15.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": {
+          "reason": "abandoned",
+          "evidenceDigest": "f2e6c2daa4d8ac406b5601b9e7d45cadb2b2a2ec1563ebbe477e2a506a3870a3",
+          "integrationReceiptDigest": null,
+          "evaluationTime": "2026-08-04T02:03:39.000Z"
+        }
+      },
+      "claimDigest": "3d997909f4df7a819526fab4f2cfd2550e64033e890dd8a39dc3fcff1efa6d2e",
+      "digest": "10e312ad3be93a9db2d17ef30ee0683c9778667ad43e6a0e42478d33f4cc37e9"
     }
   ]
 }

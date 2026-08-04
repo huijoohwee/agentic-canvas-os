@@ -1,6 +1,6 @@
 import { applyCloudTransition, createEmptyLedger, digestValue, listCurrentClaims, validateLedger, verifyCloudClaim } from "./cloud-collaboration-contract.mjs";
 import { CLOUD_RESULT_SCHEMA, contractActor, contractRepository, createPublicResult, emptyResult, prepareMutationRequest, prepareReadRequest, projectPublicClaim, publicSnapshot, selectVerificationClaim, verificationResult } from "./github-cloud-collaboration-mapping.mjs";
-import { createGitHubRequest, positiveInteger, projectActor, projectPullRequest, projectRepository, publicTransportError, requireRepositoryName, requireServerTime, requireSha, requireStatus, resolveGitHubToken } from "./github-cloud-collaboration-api.mjs";
+import { createGitHubRequest, positiveInteger, projectActor, projectPullRequest, projectRepository, projectRepositoryIdentity, publicTransportError, requireRepositoryName, requireServerTime, requireSha, requireStatus, resolveGitHubToken } from "./github-cloud-collaboration-api.mjs";
 export { createGitHubRequest } from "./github-cloud-collaboration-api.mjs";
 export const DEFAULT_LEDGER_REF = "agentic/collaboration-ledger";
 export const DEFAULT_LEDGER_PATH = ".agentic/collaboration-ledger.json";
@@ -146,7 +146,7 @@ async function resolveActor({ input, send, workflowContext }) {
     const response = await send({ path: `/repos/${workflowContext.repository}/actions/runs/${runId}` });
     requireStatus(response, [200], "resolve authenticated workflow actor");
     const authenticated = projectActor(response.value?.actor);
-    const workflowRepository = projectRepository(response.value?.repository);
+    const workflowRepository = projectRepositoryIdentity(response.value?.repository);
     requireSha(workflowContext.revision, "workflowRevision");
     if (workflowRepository.fullName !== workflowContext.repository
       || workflowRepository.id !== Number(workflowContext.repositoryId)

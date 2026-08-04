@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 595,
-  "headDigest": "577acf4f1ef31aa2c30311b3879ecca93b3e21dde2f20f568f877193bbe2d6df",
+  "sequence": 596,
+  "headDigest": "aaa904f586b75a9606cdf4f87605488e8410cfefb8b422e8f69c07a8443f7425",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -28831,6 +28831,51 @@
       },
       "claimDigest": "bb9e87a198849e5f73f5277f714262792b554a2492093d4bd649d9ff91b64579",
       "digest": "577acf4f1ef31aa2c30311b3879ecca93b3e21dde2f20f568f877193bbe2d6df"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 596,
+      "parentDigest": "577acf4f1ef31aa2c30311b3879ecca93b3e21dde2f20f568f877193bbe2d6df",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "453b80f1e2d086ad8902fbcd7085999e2608d896c893ff14b43242658ae83856",
+      "idempotencyKey": "ed037264d92ea90ab726675d6c6dbd98f97506b1bbafe8676222b488edadd9f5",
+      "requestDigest": "55d7f7e78a34f4949d1b1f90eb9c1e68dcdec7096f5ae0ef569c81a328cfdfb3",
+      "evaluationTime": "2026-08-04T14:41:27.000Z",
+      "claimCore": {
+        "claimId": "453b80f1e2d086ad8902fbcd7085999e2608d896c893ff14b43242658ae83856",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:61b8e819949088a10fabcf5115c5163e90f50b66445c332aeebb2da91a9b2449",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:3d4e1bbf247fbb85eca45cde261e7422f36956b96af3501edf2d1a1c8eee99af",
+        "canonicalBaseRevision": "a3ddfef7cc55c38385520173273abd66010e9747",
+        "declaredWriteScope": [
+          "path:canvas/package.json",
+          "path:docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md",
+          "path:docs/documents/knowgrph-xr-v2-runtime-readiness.md",
+          "path:docs/runtime-readiness-contract.md",
+          "path:docs/workspace-seeds/knowgrph-physics-playground-demo.md",
+          "path:scripts/__tests__/workspace-seed-authority.test.mjs",
+          "path:scripts/workspace-seed-authority.mjs",
+          "semantic:xr-runtime-readiness-reconciliation"
+        ],
+        "writeSetDigest": "a2ff9af558ceea80d1fa1da8342f3b21dc66cf1f63691641390a782390de005f",
+        "laneRevision": "e58a176a61a25929d117e1394299bd7be0a0c460",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 4,
+        "state": "current",
+        "expiresAt": "2026-08-04T15:09:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs76dygc",
+        "predecessorClaimId": null,
+        "handoff": null,
+        "release": null,
+        "eligibleSince": null
+      },
+      "claimDigest": "8964614a3215a26e34c90139b178d595bef5dc47a862a2f4fd6e3f6e39cd8af9",
+      "digest": "aaa904f586b75a9606cdf4f87605488e8410cfefb8b422e8f69c07a8443f7425"
     }
   ]
 }

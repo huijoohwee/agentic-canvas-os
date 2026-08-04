@@ -46,6 +46,16 @@ test("workflow actor is joined to the authenticated in-progress run", async () =
   assert.equal((await createAdapter(github, { workflowContext }).execute("claim", claimInput({ actorId: 7, actorLogin: "operator" }))).ok, true);
   await assert.rejects(createAdapter(createFakeGitHub({ userStatus: 403 }), { workflowContext }).execute("claim", claimInput({ actorId: 999 })), /authenticated GitHub run identity/u);
 });
+test("workflow actor fallback rejects repository identity drift before mutation", async () => {
+  const github = createFakeGitHub({ userStatus: 403 });
+  await assert.rejects(
+    createAdapter(github, {
+      workflowContext: { ...workflowContext, repositoryId: 999 },
+    }).execute("claim", claimInput({ actorId: 7, actorLogin: "operator" })),
+    /authenticated GitHub run identity/u,
+  );
+  assert.equal(github.mutationCount(), 0);
+});
 test("workflow fallback is unavailable to untrusted or non-installation callers", async () => {
   await assert.rejects(createAdapter(createFakeGitHub({ userStatus: 403 })).execute("claim", claimInput()), /trusted GitHub Actions runtime context/u);
   await assert.rejects(createAdapter(createFakeGitHub({ userStatus: 401 }), { workflowContext }).execute("claim", claimInput()), /could not resolve authenticated actor/u);
@@ -399,7 +409,7 @@ function createFakeGitHub({
         : response(userStatus, { message: "Resource not accessible by integration" }, date);
     }
     if (method === "GET" && path === `/repos/${targetRepository}/actions/runs/17`) {
-      return response(200, { actor: { id: 7, login: "operator" }, repository: repositories[targetRepository], head_sha: targetMainSha, status: "in_progress", run_attempt: 1 }, date);
+      return response(200, { actor: { id: 7, login: "operator" }, repository: repositoryIdentityValue(2, "R_target", targetRepository), head_sha: targetMainSha, status: "in_progress", run_attempt: 1 }, date);
     }
     const refMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/git\/ref\/heads\/(.+)$/u);
     if (method === "GET" && refMatch) {
@@ -586,8 +596,11 @@ function createFakeGitHub({
     blobs.set(file.sha, content);
   }
 }
+function repositoryIdentityValue(id, nodeId, fullName) {
+  return { id, node_id: nodeId, full_name: fullName };
+}
 function repositoryValue(id, nodeId, fullName) {
-  return { id, node_id: nodeId, full_name: fullName, default_branch: "main" };
+  return { ...repositoryIdentityValue(id, nodeId, fullName), default_branch: "main" };
 }
 function pullRequestValue(overrides = {}) {
   return {

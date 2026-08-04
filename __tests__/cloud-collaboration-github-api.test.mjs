@@ -5,6 +5,7 @@ import {
   createGitHubRequest,
   projectPullRequest,
   projectRepository,
+  projectRepositoryIdentity,
   requireServerTime,
 } from "../scripts/github-cloud-collaboration-api.mjs";
 
@@ -32,6 +33,28 @@ test("GitHub request pins API headers and never returns its token", async () => 
   assert.equal(observed.options.headers["X-GitHub-Api-Version"], "2026-03-10");
   assert.deepEqual(JSON.parse(observed.options.body), { sha: "a".repeat(40), force: false });
   assert.equal(JSON.stringify(result).includes("test-token-value"), false);
+});
+
+test("Actions repository identity is accepted without weakening full repository projection", () => {
+  const simpleRepository = {
+    id: 7,
+    node_id: "R_7",
+    full_name: "owner/repo",
+  };
+
+  assert.deepEqual(projectRepositoryIdentity(simpleRepository), {
+    id: 7,
+    nodeId: "R_7",
+    fullName: "owner/repo",
+  });
+  assert.throws(
+    () => projectRepository(simpleRepository),
+    /incomplete repository identity/u,
+  );
+  assert.throws(
+    () => projectRepositoryIdentity({ ...simpleRepository, node_id: "" }),
+    /incomplete repository identity/u,
+  );
 });
 
 test("repository and pull-request projection bind immutable same-repository identity", () => {

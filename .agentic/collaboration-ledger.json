@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 783,
-  "headDigest": "113eaff53e763df40300cd756db226eb4124b307556a2a8ea165f8432c69f346",
+  "sequence": 784,
+  "headDigest": "6c705f528def9cfeb284065dcee5f2b6ddfd0fc9e691e8826dde8b62bbba04a3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -38531,6 +38531,51 @@
       },
       "claimDigest": "60feb8d64cf1eb02c56f1da250ce1605c0edfa49c6f666ac7f6dd65dd1db5d6c",
       "digest": "113eaff53e763df40300cd756db226eb4124b307556a2a8ea165f8432c69f346"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 784,
+      "parentDigest": "113eaff53e763df40300cd756db226eb4124b307556a2a8ea165f8432c69f346",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "2249d2123b6325fcef689c43fc1b6c389ba6d82b40f759719cf55dace4232f76",
+      "idempotencyKey": "2fad3a7e4589fc3b2075fcafe28e53a723b9de6e65f494df20072607ef091d23",
+      "requestDigest": "de9883e610cf55c4ab4e57e90677055a2b8f949e3e0d270d5380a14ab80c4f37",
+      "evaluationTime": "2026-08-05T19:16:57.000Z",
+      "claimCore": {
+        "claimId": "2249d2123b6325fcef689c43fc1b6c389ba6d82b40f759719cf55dace4232f76",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3aadca1e5219c1f3a8896db6d39b9078b7b99959d3bfc69d36b910a7cd56b353",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:f0eae51674cdb68c154e7e53ef282d61a78d62845ae1420df2464e26737085d4",
+        "canonicalBaseRevision": "ae7888d2002803fe55f9e14adacde5b0a70b459d",
+        "declaredWriteScope": [
+          "path:docs/documents/knowledge-base-ssot-storage-projection.md",
+          "path:docs/reference.md",
+          "path:guidelines/knowledge-base-ssot-storage-guidelines.md",
+          "semantic:knowledge-base-ssot-storage-projection"
+        ],
+        "writeSetDigest": "0c2ba3a0bde8a97cd1bd70cf95fb4526d01158e4c592932b1bddb1abdb27c27a",
+        "laneRevision": "e259ff69a244e2cf916e17d80d3eaceff9a801c6",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-05T19:46:57.000Z",
+        "evidenceDigest": "4b6aa88348922cd186281d75340b8fd3e8e873dc92d4d26cfcfb961a86c895b4",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc77JO9u",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "b285ef39b26ec59464f16c44a77b0e73fe519eee8332a8e7fc732bd79e2f99c8",
+          "recoveredAt": "2026-08-05T19:16:57.000Z"
+        }
+      },
+      "claimDigest": "e7b3ceee7c59ad94da3d21cebedefa301a392f9194d494a36ce07d076e620c21",
+      "digest": "6c705f528def9cfeb284065dcee5f2b6ddfd0fc9e691e8826dde8b62bbba04a3"
     }
   ]
 }

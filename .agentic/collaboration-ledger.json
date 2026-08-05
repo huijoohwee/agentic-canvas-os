@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 776,
-  "headDigest": "837930c2ec5d640f4323c36fee64227f51282172aad11d1338041fb6b8d3d935",
+  "sequence": 777,
+  "headDigest": "98192244eec4284370ac1d9f8866d6de1c3b2957d0c174017ccd19ea68356146",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -38121,6 +38121,58 @@
       },
       "claimDigest": "a109f7da7c3c338d7c4255774425c53587c1bd2eba2561a4dfa8dd70b0174b67",
       "digest": "837930c2ec5d640f4323c36fee64227f51282172aad11d1338041fb6b8d3d935"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 777,
+      "parentDigest": "837930c2ec5d640f4323c36fee64227f51282172aad11d1338041fb6b8d3d935",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "9b1185954bb4935546e1dab29a5694dc143f620153132fb2f9939a1458a3bc24",
+      "idempotencyKey": "184e99ac1f665f45b9cd6f3b7d4f859e0d67adf17ea7c61b9a6088659a01cc63",
+      "requestDigest": "6af7b3850e5386c40e1af42a40868dfd81086f66185cd4c641faeb3725c5292d",
+      "evaluationTime": "2026-08-05T16:24:15.000Z",
+      "claimCore": {
+        "claimId": "9b1185954bb4935546e1dab29a5694dc143f620153132fb2f9939a1458a3bc24",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:46d290411d49de97c4d96f0853f4d9699784308c8560e62f994edeb604dcdf18",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:d556753a8af2ca9a3c4939aec50225a7b2de709510e45fa239c9d8934a1b6c87",
+        "canonicalBaseRevision": "ae7888d2002803fe55f9e14adacde5b0a70b459d",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-companion-ci-authority-cloud-authority.json",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-companion-ci-authority-write-scope.json",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-protected-squash-repair-v3-cloud-authority.json",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-protected-squash-repair-v3-write-scope.json",
+          "path:scripts/__tests__/git-guidelines-artifact-contract.test.mjs",
+          "path:scripts/__tests__/git-guidelines-input-resolver.test.mjs",
+          "path:scripts/__tests__/git-guidelines-review-authority.test.mjs",
+          "path:scripts/__tests__/git-guidelines-runtime-contract.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "path:scripts/lib/git-guidelines/content.mjs",
+          "path:scripts/lib/git-guidelines/input-artifacts.mjs",
+          "path:scripts/lib/git-guidelines/review-authority.mjs",
+          "path:scripts/materialize-git-guidelines-review-authority.mjs",
+          "semantic:git-guidelines-ci-authority-materialization"
+        ],
+        "writeSetDigest": "2348ebec4fca001ae9854e18d0d9bb70a91666aed08f5607c23fb3cba3f6ac1c",
+        "laneRevision": "2ba8727bce02b33cc48a3b6c89e38a0c53163f4e",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-05T20:13:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc77KSUX",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7c6f8db4b8c0c9e26b3e3ce99f4172adb1ec74f85a560e34d2330e7b8d33afe2",
+      "digest": "98192244eec4284370ac1d9f8866d6de1c3b2957d0c174017ccd19ea68356146"
     }
   ]
 }

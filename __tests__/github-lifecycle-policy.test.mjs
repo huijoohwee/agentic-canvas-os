@@ -199,6 +199,10 @@ test('auto-delivery revokes stale exact-head authorization without label races',
   assert.match(controller, /--disable-auto/);
   assert.match(controller, /--remove-label", AUTO_DELIVERY_LABEL/);
   assert.match(controller, /"--match-head-commit", headSha/);
+  assert.match(
+    controller,
+    /"--subject", squashSubject, "--match-head-commit", headSha/,
+  );
 });
 
 test('cloud collaboration workflow is serialized, least-privilege, and exact-head', async () => {

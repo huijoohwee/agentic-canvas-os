@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 750,
-  "headDigest": "15e6ae40236a78f3c9e9fd1813c2cab647150f9c71b68b70bab96d9728166df8",
+  "sequence": 751,
+  "headDigest": "e348f5c0dcead611c5ed844e5f94e53517bd20097b33c718e6194691f21a7baf",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -36816,6 +36816,50 @@
       },
       "claimDigest": "ce262f331db45687212baacf259262b9cb6cf1562cb2029765bbd1bfb11b34a7",
       "digest": "15e6ae40236a78f3c9e9fd1813c2cab647150f9c71b68b70bab96d9728166df8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 751,
+      "parentDigest": "15e6ae40236a78f3c9e9fd1813c2cab647150f9c71b68b70bab96d9728166df8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "4b29c44d70f5e01d37e752152a9e7b04309f45465c11b4cbb70ad8b7358b104d",
+      "idempotencyKey": "b0fbd4e3c8111bd70ff3b8e98b98b8a4ac452a87ab428ee4d20c5222985ce85b",
+      "requestDigest": "8b3ad18c047e38cb576ad4282363c5b1ad91691caa955b7e0e5d1afc94eafba7",
+      "evaluationTime": "2026-08-05T14:19:34.000Z",
+      "claimCore": {
+        "claimId": "4b29c44d70f5e01d37e752152a9e7b04309f45465c11b4cbb70ad8b7358b104d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:940a448d508274daeefa684e6b6af993eddc47bdaac20c8b11851c9de7422b5a",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:ef43c0bfa643db62b009747388329e02d767a9165f9e192271c059f9d23dc2cd",
+        "canonicalBaseRevision": "3ca1436ce99ba170998ad5880c32d4410230ed32",
+        "declaredWriteScope": [
+          "path:docs/documents/knowgrph-architecture-decisions.md",
+          "path:docs/documents/knowgrph-crawler-prd-tad.md",
+          "path:docs/documents/knowgrph-database.md",
+          "path:docs/documents/knowgrph-site-selection-widget.md",
+          "path:docs/documents/knowgrph-storage-sync-document.companion.md",
+          "path:docs/documents/knowgrph-storage-sync-document.md",
+          "semantic:knowledge-ssot-storage-contract"
+        ],
+        "writeSetDigest": "5033829405bbad4fe1779d43d456a485c03f6588031fa17fce56720642c24bf0",
+        "laneRevision": "777af59ebe8e3dfce01131fa4d198ec360981f7a",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 2,
+        "state": "current",
+        "expiresAt": "2026-08-05T14:45:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77G4sw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "296e63e1d76c88780a885ee00d024aa37cb7ff3db07dbf9d91dcafc8340e1458",
+      "digest": "e348f5c0dcead611c5ed844e5f94e53517bd20097b33c718e6194691f21a7baf"
     }
   ]
 }

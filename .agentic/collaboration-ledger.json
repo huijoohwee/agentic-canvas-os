@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 709,
-  "headDigest": "7d209cfcece587910b056836255b18c7ee6e36ce34158b697bc443301a48c1e6",
+  "sequence": 710,
+  "headDigest": "db7f774c367e3ac3a7d8c6b929326b03f3cf3347114ea07564cf05db46e45dbf",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -34518,6 +34518,70 @@
       },
       "claimDigest": "dae1b9d68e782bef2a55f8aadb925e82da39e3d94f6dafcc05a79a0c23cc473f",
       "digest": "7d209cfcece587910b056836255b18c7ee6e36ce34158b697bc443301a48c1e6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 710,
+      "parentDigest": "7d209cfcece587910b056836255b18c7ee6e36ce34158b697bc443301a48c1e6",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "5eb5514f338e04a2067f14d0652cb6601d52c1b97b2d92d3f7ac9bba8c4b4748",
+      "idempotencyKey": "b0d318014b86e63c0480dc6d7e3120085e1524c94cc9c5479116934c1e3b498f",
+      "requestDigest": "5a745c38793786fdca593b97453979da24bc0d803d5f8d6f4ae8405b6824eb79",
+      "evaluationTime": "2026-08-05T03:03:28.000Z",
+      "claimCore": {
+        "claimId": "5eb5514f338e04a2067f14d0652cb6601d52c1b97b2d92d3f7ac9bba8c4b4748",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:cba0d5f1e876463578aed880a3585155088a11dcdc4c31dffe78f75366f2377c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b3e8d7832ff225328da69f5aaffcbfc266ac0428e1d862cd7f3580deca085be6",
+        "canonicalBaseRevision": "6379a678389b39a59ea06ab3edb98305eed1b8e8",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-admission-schema.test.mjs",
+          "path:__tests__/scoped-lane-admission.test.mjs",
+          "path:__tests__/scoped-lane-bootstrap-admission.test.mjs",
+          "path:__tests__/scoped-lane-claim-identity.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:__tests__/task-worktree-provision.test.mjs",
+          "path:docs/schemas/scoped-lane-admission-report.v1.schema.json",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/scoped-lane-admission-lib.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-admission.mjs",
+          "path:scripts/scoped-lane-bootstrap-authorization.mjs",
+          "path:scripts/scoped-lane-claim-provenance.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "path:scripts/task-worktree-provision.mjs",
+          "semantic:reviewed-claim-admission-bootstrap-v2"
+        ],
+        "writeSetDigest": "2cd47776501a55c15ff5905c4236ec77a9f57a74aa6772361e93cffa7066b1f0",
+        "laneRevision": "799b2544680bd60d70e3f0a3c7f84325b27c64a6",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-06T02:47:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM762-W7",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "799b2544680bd60d70e3f0a3c7f84325b27c64a6",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM762-W7",
+          "bytesDigest": "50facce5fbbab45d70e66a68c75bd05f4826e7a6a87e5df32f4d68548dab2926",
+          "namedChecksDigest": "7fd71621681c31105718d0785cccbc360ae4409e70a67727605a60e418273ebd",
+          "handoffEvidenceDigest": "993bc1ea2db68733c314b3b5912a943911c38ca55a5f21d9443e4a5b8a09606f",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-05T03:03:28.000Z"
+        }
+      },
+      "claimDigest": "1fdb8827b5dac8d7367d91967c41e7a808bf10c987e3b1ea46c227c3d53f4647",
+      "digest": "db7f774c367e3ac3a7d8c6b929326b03f3cf3347114ea07564cf05db46e45dbf"
     }
   ]
 }

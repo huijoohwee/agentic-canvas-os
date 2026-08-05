@@ -2,11 +2,14 @@ import {
   digestValue,
   normalizeWriteSet,
 } from "./cloud-collaboration-primitives.mjs";
-import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
   LANE_CLOUD_AUTHORITY_SCHEMA,
   normalizeCloudAuthority,
 } from "./scoped-lane-admission-lib.mjs";
+import {
+  claimProvenanceMatches,
+  normalizeClaimProvenance,
+} from "./scoped-lane-claim-provenance.mjs";
 
 const RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -81,14 +84,8 @@ export function reconcileCloudAuthorityProjection({
       || claim.reviewRequestId !== authority.reviewRequestId
     )
   );
-  const identityDigest = claimIdentityDigest({
-    claim,
-    claimIdentitySchema: claim.claimIdentitySchema,
-    deviceId: authority.deviceId,
-    sessionId: authority.sessionId,
-  });
   if (
-    identityDigest !== claim.claimId
+    !claimProvenanceMatches(claim, authority)
     || claim.canonicalBaseRevision !== authority.canonicalBaseSha
     || claim.writeSetDigest !== manifest.writeSetDigest
     || claim.writeSetDigest !== digestValue(claim.declaredWriteScope)
@@ -130,7 +127,12 @@ export function reconcileCloudAuthorityProjection({
       statusResult.ledgerRevision,
       "status ledgerRevision",
     ),
+    ledgerDigest: requiredDigest(statusResult.ledgerDigest, "status ledgerDigest"),
     claimLedgerRevision: claim.transitionDigest,
+    entrySchema: claim.entrySchema,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    mutationAuthorityEligible: claim.mutationAuthorityEligible,
     laneRevision: claim.laneRevision,
     cloudDeclaredWriteScope: claim.declaredWriteScope,
     writeSetDigest: claim.writeSetDigest,
@@ -138,9 +140,6 @@ export function reconcileCloudAuthorityProjection({
     transitionCounter: claim.transitionCounter,
     state: claim.state,
     expiresAt: claim.expiresAt,
-    ...(claim.operationReceiptDigest ? {
-      operationReceiptDigest: claim.operationReceiptDigest,
-    } : {}),
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration,
     ...(focusedEvidenceDigest ? { focusedEvidenceDigest } : {}),
@@ -188,18 +187,10 @@ export function normalizeCurrentClaimInventory({
     "inventory evaluation time",
   );
   const claims = inventoryResult.claims.map(source => {
-    const entrySchema = requiredEntrySchema(source.entrySchema);
-    const claimIdentitySchema = requiredClaimIdentitySchema(
-      source.claimIdentitySchema,
-      entrySchema,
-    );
-    if (entrySchema.endsWith("/v2")) {
-      requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
-    } else if (source.operationReceiptDigest) {
-      requiredDigest(source.operationReceiptDigest, "inventory operationReceiptDigest");
-    }
+    const provenance = normalizeClaimProvenance(source, "inventory claim");
     const core = {
       claimId: requiredDigest(source.claimId, "inventory claimId"),
+      ...provenance,
       state: requiredCurrentState(source.state),
       actorId: requiredText(source.actorId, "inventory actorId"),
       repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
@@ -242,17 +233,6 @@ export function normalizeCurrentClaimInventory({
     ) {
       throw new Error(`Cloud inventory claim ${core.claimId} is stale or has an invalid write-set digest.`);
     }
-    if (
-      core.claimId === authority.claimId
-      && claimIdentityDigest({
-        claim: core,
-        claimIdentitySchema,
-        deviceId: authority.deviceId,
-        sessionId: authority.sessionId,
-      }) !== core.claimId
-    ) {
-      throw new Error("Cloud inventory candidate claim identity does not match its immutable provenance.");
-    }
     return Object.freeze({ ...core, recordDigest: digestValue(core) });
   }).sort((left, right) => left.claimId.localeCompare(right.claimId));
   if (new Set(claims.map(claim => claim.claimId)).size !== claims.length) {
@@ -290,7 +270,9 @@ export function normalizeBoundAuthority({
     claimId: requiredDigest(result.claim.claimId, "claimId"),
     claimDigest: requiredDigest(result.claimDigest, "claimDigest"),
     ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
+    ledgerDigest: requiredDigest(result.ledgerDigest, "ledgerDigest"),
     claimLedgerRevision: requiredDigest(result.claim.transitionDigest, "claimLedgerRevision"),
+    ...normalizeClaimProvenance(result.claim),
     canonicalBaseSha: requiredSha(result.claim.canonicalBaseRevision, "canonicalBaseRevision"),
     laneRevision: requiredSha(result.claim.laneRevision, "laneRevision"),
     cloudDeclaredWriteScope: normalizeWriteSet(result.claim.declaredWriteScope),
@@ -346,20 +328,9 @@ export function requireReadyResult(result, {
 }
 
 function normalizeClaim(source) {
-  const entrySchema = requiredEntrySchema(source.entrySchema);
-  const claimIdentitySchema = requiredClaimIdentitySchema(
-    source.claimIdentitySchema,
-    entrySchema,
-  );
-  const operationReceiptDigest = source.operationReceiptDigest
-    ? requiredDigest(source.operationReceiptDigest, "operationReceiptDigest")
-    : entrySchema.endsWith("/v1")
-      ? null
-      : requiredDigest(source.operationReceiptDigest, "operationReceiptDigest");
   const claim = {
     claimId: requiredDigest(source.claimId, "claimId"),
-    entrySchema,
-    claimIdentitySchema,
+    ...normalizeClaimProvenance(source),
     state: requiredState(source.state),
     actorId: requiredText(source.actorId, "actorId"),
     repositoryId: requiredText(source.repositoryId, "repositoryId"),
@@ -385,7 +356,6 @@ function normalizeClaim(source) {
       source.transitionDigest,
       "transitionDigest",
     ),
-    operationReceiptDigest,
     integrationReceiptDigest: source.integrationReceiptDigest
       ? requiredDigest(source.integrationReceiptDigest, "integrationReceiptDigest")
       : null,
@@ -528,54 +498,4 @@ function requiredCurrentState(value) {
     throw new Error(`Cloud inventory claim state ${state} is not current.`);
   }
   return projected;
-}
-
-function requiredEntrySchema(value) {
-  if (value === undefined || value === null || value === "") {
-    return "agentic-cloud-collaboration-entry/v1";
-  }
-  const schema = requiredText(value, "entry schema");
-  if (!["agentic-cloud-collaboration-entry/v1", "agentic-cloud-collaboration-entry/v2"].includes(schema)) {
-    throw new Error(`Cloud inventory entry schema ${schema} is unsupported.`);
-  }
-  return schema;
-}
-
-function requiredClaimIdentitySchema(value, entrySchema) {
-  if (value === undefined || value === null || value === "") {
-    if (entrySchema.endsWith("/v1")) return entrySchema;
-    throw new Error("Current cloud entries require immutable claim identity provenance.");
-  }
-  const schema = requiredEntrySchema(value);
-  if (entrySchema.endsWith("/v1") && schema !== entrySchema) {
-    throw new Error("Historical cloud entries cannot declare a newer claim identity schema.");
-  }
-  return schema;
-}
-
-function claimIdentityDigest({
-  claim,
-  claimIdentitySchema,
-  deviceId,
-  sessionId,
-}) {
-  const logicalIdentity = {
-    actorId: claim.actorId,
-    canonicalBaseRevision: claim.canonicalBaseRevision,
-    leaseEpoch: claim.leaseEpoch,
-    repositoryId: claim.repositoryId,
-    workItemId: claim.workItemId,
-    writeSetDigest: claim.writeSetDigest,
-  };
-  return digestValue(claimIdentitySchema.endsWith("/v1") ? {
-    ...logicalIdentity,
-    deviceId: pseudonymousIdentifier(
-      "device",
-      requiredText(deviceId, "authority deviceId"),
-    ),
-    sessionId: pseudonymousIdentifier(
-      "session",
-      requiredText(sessionId, "authority sessionId"),
-    ),
-  } : logicalIdentity);
 }

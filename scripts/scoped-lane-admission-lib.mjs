@@ -1,16 +1,28 @@
 import path from "node:path";
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
-import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
   DELIVERY_PEER_VERIFICATION_SCHEMA,
   isOperationDerivedDeliveryPeerVerification,
   verifyDeliveryAuthorizedPeerAuthorities,
 } from "./scoped-lane-delivery-peer-authority.mjs";
+import {
+  claimProvenanceMatches,
+  normalizeClaimProvenance,
+} from "./scoped-lane-claim-provenance.mjs";
+import {
+  assertRootSourceBootstrapCurrent,
+  normalizeRootSourceBootstrapAuthorization,
+  ROOT_SOURCE_BOOTSTRAP_AUTHORIZATION_SCHEMA,
+} from "./scoped-lane-bootstrap-authorization.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 export const DECLARED_WRITE_SCOPE_SCHEMA = "agentic-declared-write-scope/v1";
 export const LANE_ADMISSION_REPORT_SCHEMA = "agentic-lane-admission-report/v1";
 export const LANE_ADMISSION_LEASE_SCHEMA = "agentic-lane-admission-lease/v1";
 export const LANE_CLOUD_AUTHORITY_SCHEMA = "agentic-lane-cloud-authority/v1";
+export {
+  assertRootSourceBootstrapCurrent,
+  ROOT_SOURCE_BOOTSTRAP_AUTHORIZATION_SCHEMA,
+};
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
@@ -65,7 +77,7 @@ export function normalizeCloudAuthority(source, {
   if (
     result.schema !== "agentic-cloud-collaboration-result/v1"
     || result.ok !== true
-    || !["claim", "verify", "bind"].includes(result.action)
+    || !["claim", "continue", "verify", "bind"].includes(result.action)
   ) {
     throw new Error("Cloud authority must contain a successful repository cloud-collaboration result.");
   }
@@ -79,7 +91,12 @@ export function normalizeCloudAuthority(source, {
     claimId: requiredDigest(claim.claimId, "claimId"),
     claimDigest: requiredDigest(result.claimDigest || claim.fenceRevision, "claimDigest"),
     ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
+    ledgerDigest: requiredDigest(
+      result.ledgerDigest || result.receipt?.ledgerDigest,
+      "ledgerDigest",
+    ),
     claimLedgerRevision: requiredDigest(claim.transitionDigest, "claimLedgerRevision"),
+    ...normalizeClaimProvenance(claim),
     canonicalBaseSha: requiredSha(claim.canonicalBaseRevision, "canonicalBaseRevision"),
     laneRevision: requiredSha(claim.laneRevision, "laneRevision"),
     cloudDeclaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
@@ -89,7 +106,7 @@ export function normalizeCloudAuthority(source, {
     reviewRequestId: claim.reviewRequestId ? requiredText(claim.reviewRequestId, "reviewRequestId") : null,
     leaseEpoch: positiveInteger(claim.leaseEpoch, "leaseEpoch"),
     transitionCounter: positiveInteger(claim.transitionCounter, "transitionCounter"),
-    state: String(claim.state || claim.status || "").replaceAll("-", "_"),
+    state: projectAdmissionState(claim.state || claim.status),
     expiresAt: requiredInstant(claim.expiresAt, "expiresAt"),
   };
   if (normalized.state !== "active") {
@@ -119,6 +136,7 @@ export function evaluateScopedLaneAdmission({
   repository,
   canonicalPath,
   canonicalBaseSha,
+  canonicalSourceDisposition = "exact",
   targetPath,
   branch,
   semanticScope,
@@ -128,6 +146,8 @@ export function evaluateScopedLaneAdmission({
   cloudAuthority = null,
   remoteAuthorityRequired = false,
   remoteAuthorityVerification = null,
+  rootSourceBootstrapAuthorization = null,
+  inspectRootSourceMaintenance = undefined,
   mode = remoteAuthorityRequired ? "check" : "plan",
   evaluatedAt = new Date().toISOString(),
 }) {
@@ -153,11 +173,15 @@ export function evaluateScopedLaneAdmission({
     }));
   } else {
     const canonical = canonicalLanes[0];
-    if (canonical.head !== canonicalBaseSha || canonical.dirty) {
+    const canonicalSourceReady = canonical.head === canonicalBaseSha
+      ? canonicalSourceDisposition === "exact"
+      : canonicalSourceDisposition === "preserved-behind";
+    if (!canonicalSourceReady || canonical.dirty) {
       findings.push(finding("canonical-base-drift", "global", {
         expectedHead: canonicalBaseSha,
         observedHead: canonical.head,
         dirty: canonical.dirty,
+        sourceDisposition: canonicalSourceDisposition,
       }));
     }
     if (canonical.invalid) {
@@ -190,6 +214,24 @@ export function evaluateScopedLaneAdmission({
   const currentRemoteClaims = authorityReady
     ? remoteAuthorityVerification.inventory.claims
     : null;
+  const rootSourceBootstrap = normalizeRootSourceBootstrapAuthorization({
+    source: rootSourceBootstrapAuthorization,
+    lanes: normalizedLanes,
+    canonicalPath: normalizedCanonicalPath,
+    canonicalBaseSha,
+    targetPath: normalizedTargetPath,
+    branch,
+    semanticScope,
+    manifest,
+    cloudAuthority,
+    remoteAuthorityVerification,
+    currentRemoteClaims,
+    evaluatedAt: evaluationTime,
+    inspectMaintenanceSource: inspectRootSourceMaintenance,
+  });
+  const rootSourceAuthorizations = new Map(
+    rootSourceBootstrap?.preservedLanes.map(lane => [lane.path, lane]) || [],
+  );
   const deliveryPeerVerification = authorityReady
     ? verifyDeliveryAuthorizedPeerAuthorities({
       lanes: normalizedLanes,
@@ -209,6 +251,25 @@ export function evaluateScopedLaneAdmission({
   const classifiedLanes = authorityBoundLanes.map(lane => {
     if (lane.path === normalizedCanonicalPath && lane.branch === "refs/heads/main") {
       return { ...lane, classification: "canonical", overlapReasons: [] };
+    }
+    if (lane.path === rootSourceBootstrap?.maintenanceSourcePath) {
+      return {
+        ...lane,
+        classification: "disjoint-attributed",
+        overlapReasons: [
+          `root-source-bootstrap-maintenance:${rootSourceBootstrap.authorizationDigest}`,
+        ],
+      };
+    }
+    const bootstrapLane = rootSourceAuthorizations.get(lane.path);
+    if (bootstrapLane) {
+      return {
+        ...lane,
+        classification: "disjoint-attributed",
+        overlapReasons: [
+          `root-source-bootstrap-preserved:${rootSourceBootstrap.authorizationDigest}`,
+        ],
+      };
     }
     return classifyExistingLane({
       lane,
@@ -245,6 +306,13 @@ export function evaluateScopedLaneAdmission({
         claim.declaredWriteScope,
         manifest.declaredWriteSet,
       );
+      if (claim.state === "waiting-successor") {
+        return {
+          ...claim,
+          classification: "waiting-successor",
+          overlapReasons: overlap ? ["waiting-behind-current-authority"] : [],
+        };
+      }
       return {
         ...claim,
         classification: overlap ? "overlapping" : "disjoint-attributed",
@@ -307,6 +375,7 @@ export function evaluateScopedLaneAdmission({
       remoteAuthorityVerification?.remoteClaimInventoryDigest || null,
     remoteClaims,
     cloudAuthority,
+    rootSourceBootstrapAuthorization: rootSourceBootstrap,
     authoringAdmission: {
       status: authoringStatus,
       findings,
@@ -419,7 +488,7 @@ function classifyExistingLane({
     evaluatedAt,
     currentRemoteClaims,
     deliveryPeerAuthorities,
-  )) {
+  ) && !hasCloudPreservedLaneProjection(lane, lease, currentRemoteClaims)) {
     reasons.push("missing-authoritative-owner");
   }
   const authoritativeScope = lease?.admission?.declaredWriteSet;
@@ -440,6 +509,50 @@ function classifyExistingLane({
   if (collision) return { ...lane, classification: "overlapping", overlapReasons: reasons };
   if (reasons.length > 0) return { ...lane, classification: "ambiguous", overlapReasons: reasons };
   return { ...lane, classification: "disjoint-attributed", overlapReasons: [] };
+}
+
+function hasCloudPreservedLaneProjection(lane, lease, currentRemoteClaims) {
+  if (
+    !lease
+    || !ADMITTED_LANE_STATES.has(lease.status)
+    || !Array.isArray(currentRemoteClaims)
+    || path.resolve(lease.worktreePath || "") !== lane.path
+    || lease.admission?.schema !== LANE_ADMISSION_LEASE_SCHEMA
+    || lease.admission.status !== "admitted"
+    || !Array.isArray(lease.admission.declaredWriteSet)
+    || !DIGEST_PATTERN.test(String(lease.admission.writeSetDigest || ""))
+    || lease.cloudAuthority?.schema !== LANE_CLOUD_AUTHORITY_SCHEMA
+    || !DIGEST_PATTERN.test(String(lease.cloudAuthority.claimId || ""))
+  ) return false;
+  const checkedOut = lane.branch?.replace(/^refs\/heads\//u, "") || null;
+  if (!checkedOut || checkedOut !== lease.branch) return false;
+  try {
+    const declaredWriteSet = normalizeWriteSet(
+      lease.admission.declaredWriteSet,
+    );
+    const projectedWriteSet = normalizeWriteSet(
+      lease.cloudAuthority.cloudDeclaredWriteScope,
+    );
+    const matches = currentRemoteClaims.filter(
+      claim => claim.claimId === lease.cloudAuthority.claimId,
+    );
+    if (matches.length !== 1) return false;
+    const remote = matches[0];
+    return (
+      remote.state === "parked"
+      && digestValue(declaredWriteSet) === lease.admission.writeSetDigest
+      && JSON.stringify(projectedWriteSet) === JSON.stringify(declaredWriteSet)
+      && JSON.stringify(remote.declaredWriteScope) === JSON.stringify(declaredWriteSet)
+      && remote.writeSetDigest === lease.admission.writeSetDigest
+      && remote.canonicalBaseRevision === lease.baseSha
+      && remote.canonicalBaseRevision === lease.cloudAuthority.canonicalBaseSha
+      && remote.laneRevision === lane.head
+      && remote.laneRevision === lease.cloudAuthority.laneRevision
+      && remote.leaseEpoch === lease.cloudAuthority.leaseEpoch
+    );
+  } catch {
+    return false;
+  }
 }
 
 function hasAuthoritativeLaneOwner(
@@ -519,13 +632,7 @@ function hasAuthoritativeLaneOwner(
     if (matches.length !== 1) return false;
     const remote = matches[0];
     return (
-      remote.claimId === digestValue({
-        actorId: remote.actorId, canonicalBaseRevision: remote.canonicalBaseRevision,
-        deviceId: pseudonymousIdentifier("device", cloud.deviceId), leaseEpoch: remote.leaseEpoch,
-        repositoryId: remote.repositoryId,
-        sessionId: pseudonymousIdentifier("session", cloud.sessionId),
-        workItemId: remote.workItemId, writeSetDigest: remote.writeSetDigest,
-      })
+      remoteClaimOwnsReplaceableProjection(remote, cloud)
       && digestValue(declaredWriteSet) === lease.admission.writeSetDigest
       && JSON.stringify(cloudWriteSet) === JSON.stringify(declaredWriteSet)
       && JSON.stringify(remote.declaredWriteScope) === JSON.stringify(declaredWriteSet)
@@ -541,6 +648,29 @@ function hasAuthoritativeLaneOwner(
       && remote.expiresAt === cloud.expiresAt
       && remote.reviewRequestId === cloud.reviewRequestId
     );
+  } catch {
+    return false;
+  }
+}
+
+function remoteClaimOwnsReplaceableProjection(remoteClaim, localProjection) {
+  const carriesSchemaProjection = [
+    localProjection?.entrySchema,
+    localProjection?.claimIdentitySchema,
+    localProjection?.mutationAuthorityEligible,
+  ].some(value => value !== undefined);
+  if (carriesSchemaProjection) {
+    return claimProvenanceMatches(remoteClaim, localProjection);
+  }
+  try {
+    const remote = normalizeClaimProvenance(remoteClaim, "remote claim");
+    return remote.mutationAuthorityEligible
+      && requiredDigest(remoteClaim?.claimId, "remote claimId")
+        === requiredDigest(localProjection?.claimId, "local projection claimId")
+      && remote.operationReceiptDigest === requiredDigest(
+        localProjection?.operationReceiptDigest,
+        "local projection operationReceiptDigest",
+      );
   } catch {
     return false;
   }
@@ -617,16 +747,7 @@ function hasDeliveryAuthorizedSuccessorOwner({
     if (matches.length !== 1) return false;
     const remote = matches[0];
     return (
-      remote.claimId === digestValue({
-        actorId: remote.actorId,
-        canonicalBaseRevision: remote.canonicalBaseRevision,
-        deviceId: pseudonymousIdentifier("device", cloud.deviceId),
-        leaseEpoch: remote.leaseEpoch,
-        repositoryId: remote.repositoryId,
-        sessionId: pseudonymousIdentifier("session", cloud.sessionId),
-        workItemId: remote.workItemId,
-        writeSetDigest: remote.writeSetDigest,
-      })
+      claimProvenanceMatches(remote, cloud, { requireCurrentEntry: false })
       && digestValue(declaredWriteSet) === lease.admission.writeSetDigest
       && JSON.stringify(cloudWriteSet) === JSON.stringify(declaredWriteSet)
       && JSON.stringify(remote.declaredWriteScope) === JSON.stringify(declaredWriteSet)
@@ -724,12 +845,13 @@ function hasReadyRemoteAuthority({
     remoteAuthorityVerification.claimId === cloudAuthority.claimId
     && remoteAuthorityVerification.claimDigest === cloudAuthority.claimDigest
     && remoteAuthorityVerification.ledgerRevision === cloudAuthority.ledgerRevision
+    && remoteAuthorityVerification.ledgerDigest === cloudAuthority.ledgerDigest
     && remoteAuthorityVerification.canonicalBaseSha === canonicalBaseSha
     && remoteAuthorityVerification.writeSetDigest === manifest.writeSetDigest
     && remoteAuthorityVerification.laneRevision === cloudAuthority.laneRevision
     && remoteAuthorityVerification.reviewRequestId === cloudAuthority.reviewRequestId
     && remoteAuthorityVerification.inventory.claims.some(claim => (
-      claim.claimId === cloudAuthority.claimId
+      claimProvenanceMatches(claim, cloudAuthority)
       && claim.fenceRevision === cloudAuthority.claimDigest
       && claim.transitionDigest === cloudAuthority.claimLedgerRevision
     ))
@@ -799,6 +921,11 @@ function requiredInstant(value, label) {
   const milliseconds = Date.parse(normalized);
   if (!Number.isFinite(milliseconds)) throw new Error(`${label} must be an ISO-8601 instant.`);
   return new Date(milliseconds).toISOString();
+}
+
+function projectAdmissionState(value) {
+  const state = String(value || "").trim().replaceAll("-", "_");
+  return ({ current: "active", active: "active" })[state] || state;
 }
 
 function positiveInteger(value, label) {

@@ -18,6 +18,7 @@ import {
 import {
   normalizePreClaimIntegrationContinuation,
 } from "./expired-committed-continuation-lib.mjs";
+import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
 
 export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
@@ -173,7 +174,14 @@ export function integrateSession({
         canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
         cloudAuthority: deliveryCloudAuthority,
       });
-      run("gh", ["pr", "merge", "--auto", "--squash", lease.pullRequestUrl]);
+      const squashSubject = requireProtectedSquashSubject(
+        gitText(["log", "-1", "--pretty=%s", lease.reviewHeadSha]).trim(),
+        { label: "Reviewed commit subject" },
+      );
+      run("gh", [
+        "pr", "merge", "--auto", "--squash", "--subject", squashSubject,
+        lease.pullRequestUrl,
+      ]);
     }
     const allowProtectedMainRefresh = lease.sessionId === sessionId &&
       (lease.status === "delivery" || reviewReadyDelivery);

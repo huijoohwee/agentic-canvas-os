@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 830,
-  "headDigest": "fe8f8f762b30da66c2de6433c65fbdc4e8bfd15b1b026953a1d70605a30a71d3",
+  "sequence": 831,
+  "headDigest": "023a34338164c47b90bd6306a00962bd17630cc47a5114a97c9a76753876cfc4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -40913,6 +40913,47 @@
       },
       "claimDigest": "fd0d77944144a766786d54dd013328a3e76176da8e30f632e8438ccbce7455e0",
       "digest": "fe8f8f762b30da66c2de6433c65fbdc4e8bfd15b1b026953a1d70605a30a71d3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 831,
+      "parentDigest": "fe8f8f762b30da66c2de6433c65fbdc4e8bfd15b1b026953a1d70605a30a71d3",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "3370026fbeb5ed1c05cf7428127b3fed4fc8f3f257a473331ce33f52f16d41a0",
+      "idempotencyKey": "10e1caf7d516609e1695d5ce444682c1414c87b5f4591292f57f78fc59034d7f",
+      "requestDigest": "794650e40c3a2d2bbedd0cf09cf895dcd833bbc2739f1bafafae7584611c926d",
+      "evaluationTime": "2026-08-05T21:15:44.000Z",
+      "claimCore": {
+        "claimId": "3370026fbeb5ed1c05cf7428127b3fed4fc8f3f257a473331ce33f52f16d41a0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:1db14fd3fcc7237368ccd1289805d5eb7b55f4481f5ebaf1089b096d3c584fa7",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:f804c922fecf399b411913d88dac6877c7dc18b6f5c392e783c1907635f0fb85",
+        "canonicalBaseRevision": "fcb81849c7a60c7d0d867c380dfd41faac4f0548",
+        "declaredWriteScope": [
+          "path:docs/documents/knowledge-base-ssot-storage-projection.md",
+          "path:docs/reference.md",
+          "path:guidelines/knowledge-base-ssot-storage-guidelines.md",
+          "semantic:knowledge-base-ssot-storage-projection-v3"
+        ],
+        "writeSetDigest": "7e133a53115e3fb004366af24ca426c7cb8faa16c58876d03d54168c60ecc926",
+        "laneRevision": "fcb81849c7a60c7d0d867c380dfd41faac4f0548",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T03:15:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "08be20bf78d74c249674d531f6653f6348a394670c03c3ffb2e61037fae77c3b",
+      "digest": "023a34338164c47b90bd6306a00962bd17630cc47a5114a97c9a76753876cfc4"
     }
   ]
 }

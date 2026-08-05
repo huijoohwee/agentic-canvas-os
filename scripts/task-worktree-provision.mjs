@@ -49,9 +49,6 @@ export function provisionTaskWorktree({
   if (before.some(record => path.resolve(record.path) === target)) {
     throw new Error(`Task worktree target is already registered: ${target}`);
   }
-  if (gitText(["status", "--porcelain"]).trim()) {
-    throw new Error("Canonical main must be clean before task-worktree provisioning.");
-  }
   if (fetchBase) run("git", ["fetch", "origin", "main"]);
   const baseSha = gitText(["rev-parse", "origin/main"]).trim();
   if (expectedBaseSha && baseSha !== expectedBaseSha) {
@@ -60,14 +57,18 @@ export function provisionTaskWorktree({
     );
   }
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  if (headSha !== baseSha) {
-    throw new Error(`Canonical main must equal fetched origin/main ${baseSha}; received ${headSha}.`);
-  }
+  const canonicalSourceDisposition = requireCanonicalTaskSource({
+    gitText,
+    status: gitText(["status", "--porcelain"]).trim(),
+    headSha,
+    baseSha,
+  });
   const targetObservation = observeTarget({
     target,
     safeRoot,
     baseSha,
     headSha,
+    canonicalSourceDisposition,
     registry: beforeRegistry,
   });
   if (
@@ -188,21 +189,151 @@ export function inspectTaskWorktreeTarget({
   }
   const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
   const canonicalHeadSha = gitText(["rev-parse", "HEAD"]).trim();
-  if (gitText(["status", "--porcelain"]).trim() || canonicalHeadSha !== canonicalBaseSha) {
-    throw new Error("Admission planning requires clean canonical main at fetched origin/main.");
-  }
+  const canonicalSourceDisposition = requireCanonicalTaskSource({
+    gitText,
+    status: gitText(["status", "--porcelain"]).trim(),
+    headSha: canonicalHeadSha,
+    baseSha: canonicalBaseSha,
+  });
   return {
     ...target,
     canonicalBaseSha,
     canonicalHeadSha,
+    canonicalSourceDisposition,
     ...observeTarget({
       target: target.target,
       safeRoot: target.safeRoot,
       baseSha: canonicalBaseSha,
       headSha: canonicalHeadSha,
+      canonicalSourceDisposition,
       registry,
     }),
   };
+}
+
+export function recoverCandidateCreateRegisterResult({
+  repoRoot,
+  targetPath,
+  expectedBaseSha,
+  expectedBranch,
+  expectedFenceSha,
+  expectedScope,
+  expectedLeaseEpoch,
+  gitText,
+}) {
+  const canonicalRoot = path.resolve(repoRoot);
+  const target = path.resolve(targetPath);
+  const baseSha = requiredSha(expectedBaseSha, "recovery base SHA");
+  const fenceSha = requiredSha(expectedFenceSha, "recovery fence SHA");
+  const branch = String(expectedBranch || "").trim();
+  const scope = String(expectedScope || "").trim();
+  if (!branch || !scope || !Number.isInteger(expectedLeaseEpoch) || expectedLeaseEpoch < 1) {
+    throw new Error("Recovery requires the exact branch, semantic scope, and local lease epoch.");
+  }
+  const gitCommonDir = path.resolve(
+    canonicalRoot,
+    gitText(["rev-parse", "--git-common-dir"]).trim(),
+  );
+  const safeRoot = deriveTaskWorktreeRoot(canonicalRoot, gitCommonDir);
+  if (path.dirname(target) !== safeRoot) {
+    throw new Error("Recovery target is outside the repository-owned task worktree root.");
+  }
+  const currentRegistry = gitText(["worktree", "list", "--porcelain", "-z"]);
+  const currentRecords = splitWorktreeRegistryRecords(currentRegistry);
+  const candidateRecords = currentRecords.filter(
+    record => worktreeRecordPath(record) === target,
+  );
+  if (candidateRecords.length !== 1) {
+    throw new Error("Recovery requires one exact registered candidate worktree.");
+  }
+  const parsedCandidate = parseWorktreeRecords(`${candidateRecords[0]}\0\0`)[0];
+  const baseTreeSha = gitText(["rev-parse", `${baseSha}^{tree}`]).trim();
+  const targetHeadSha = gitText(["-C", target, "rev-parse", "HEAD"]).trim();
+  const targetTreeSha = gitText(["-C", target, "rev-parse", "HEAD^{tree}"]).trim();
+  const targetBranch = gitText(["-C", target, "branch", "--show-current"]).trim();
+  const targetStatus = gitText([
+    "-C", target, "status", "--porcelain=v1", "-z", "--untracked-files=all",
+  ]);
+  const parentSha = gitText(["-C", target, "rev-parse", "HEAD^"]).trim();
+  const commitSubject = gitText(["-C", target, "log", "-1", "--format=%s"]).trim();
+  const commitCount = Number(gitText([
+    "-C", target, "rev-list", "--count", `${baseSha}..${fenceSha}`,
+  ]).trim());
+  const remoteFence = gitText([
+    "ls-remote", "origin", `refs/heads/${branch}`,
+  ]).trim().split(/\s+/u)[0] || "";
+  if (
+    parsedCandidate?.head !== fenceSha
+    || parsedCandidate.branch !== `refs/heads/${branch}`
+    || targetHeadSha !== fenceSha
+    || targetTreeSha !== baseTreeSha
+    || targetBranch !== branch
+    || targetStatus
+    || parentSha !== baseSha
+    || commitCount !== 1
+    || commitSubject !== `chore(coordination): claim ${scope} lease ${expectedLeaseEpoch}`
+    || remoteFence !== fenceSha
+  ) {
+    throw new Error(
+      "Recovery candidate is not the exact clean, pushed, fence-only continuation of its admitted base.",
+    );
+  }
+  const detachedRecord = [
+    `worktree ${target}`,
+    `HEAD ${baseSha}`,
+    "detached",
+  ].join("\0");
+  const initialAfterRecords = currentRecords.map(
+    record => worktreeRecordPath(record) === target ? detachedRecord : record,
+  );
+  const initialBeforeRecords = currentRecords.filter(
+    record => worktreeRecordPath(record) !== target,
+  );
+  const beforeRegistry = renderWorktreeRegistry(initialBeforeRecords);
+  const afterRegistry = renderWorktreeRegistry(initialAfterRecords);
+  const canonicalHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  const canonicalSourceDisposition = requireCanonicalTaskSource({
+    gitText,
+    status: gitText(["status", "--porcelain"]).trim(),
+    headSha: canonicalHeadSha,
+    baseSha,
+  });
+  const targetObservation = observeTarget({
+    target,
+    safeRoot,
+    baseSha,
+    headSha: canonicalHeadSha,
+    canonicalSourceDisposition,
+    registry: beforeRegistry,
+  });
+  const detachedCandidate = {
+    path: target,
+    head: baseSha,
+    detached: true,
+  };
+  const beforeRegistrationInventoryDigest = digestValue(beforeRegistry);
+  const afterRegistrationInventoryDigest = digestValue(afterRegistry);
+  const operation = {
+    schema: "agentic-candidate-create-register-result/v1",
+    status: "created",
+    operationId: digestValue({
+      target,
+      baseSha,
+      baseTreeSha,
+      expectedTargetObservationDigest: targetObservation.targetObservationDigest,
+      beforeRegistrationInventoryDigest,
+      afterRegistrationInventoryDigest,
+    }),
+    targetPath: target,
+    baseSha,
+    baseTreeSha,
+    candidateRegistrationDigest: digestValue(detachedCandidate),
+    expectedTargetObservationDigest: targetObservation.targetObservationDigest,
+    beforeRegistrationInventoryDigest,
+    afterRegistrationInventoryDigest,
+    mutationSet: ["candidate-registration"],
+  };
+  return Object.freeze({ ...operation, resultDigest: digestValue(operation) });
 }
 
 export function rollbackUnclaimedProvision({
@@ -412,13 +543,21 @@ function assertCandidateOperation({ report, lease, result }) {
   }
 }
 
-function observeTarget({ target, safeRoot, baseSha, headSha, registry }) {
+function observeTarget({
+  target,
+  safeRoot,
+  baseSha,
+  headSha,
+  canonicalSourceDisposition,
+  registry,
+}) {
   const observation = {
     schema: "agentic-task-worktree-target-observation/v1",
     targetPath: target,
     safeRoot,
     canonicalBaseSha: baseSha,
     canonicalHeadSha: headSha,
+    canonicalSourceDisposition,
     registrationInventoryDigest: digestValue(registry),
     occupied: false,
   };
@@ -426,6 +565,21 @@ function observeTarget({ target, safeRoot, baseSha, headSha, registry }) {
     targetObservation: observation,
     targetObservationDigest: digestValue(observation),
   };
+}
+
+function requireCanonicalTaskSource({ gitText, status, headSha, baseSha }) {
+  if (status) {
+    throw new Error("Canonical main must be clean before task-worktree provisioning.");
+  }
+  if (headSha === baseSha) return "exact";
+  try {
+    gitText(["merge-base", "--is-ancestor", headSha, baseSha]);
+  } catch {
+    throw new Error(
+      `Canonical main ${headSha} must be an ancestor of fetched origin/main ${baseSha}.`,
+    );
+  }
+  return "preserved-behind";
 }
 
 function assertCandidateRegistration({ before, after, target, baseSha }) {
@@ -458,6 +612,31 @@ function assertCandidateRegistration({ before, after, target, baseSha }) {
     );
   }
   return candidate;
+}
+
+function splitWorktreeRegistryRecords(registry) {
+  const withoutTerminator = registry.endsWith("\0\0")
+    ? registry.slice(0, -2)
+    : registry;
+  return withoutTerminator ? withoutTerminator.split("\0\0") : [];
+}
+
+function renderWorktreeRegistry(records) {
+  return records.length > 0 ? `${records.join("\0\0")}\0\0` : "";
+}
+
+function worktreeRecordPath(record) {
+  const firstField = String(record || "").split("\0", 1)[0];
+  if (!firstField.startsWith("worktree ")) return "";
+  return path.resolve(firstField.slice("worktree ".length));
+}
+
+function requiredSha(value, label) {
+  const normalized = String(value || "").trim();
+  if (!SHA_PATTERN.test(normalized)) {
+    throw new Error(`${label} must be a lowercase 40-character SHA.`);
+  }
+  return normalized;
 }
 
 function assertNoSymlinkAncestors({ repoRoot, workspaceRoot = path.dirname(path.resolve(repoRoot)), target, pathExists, pathStat }) {

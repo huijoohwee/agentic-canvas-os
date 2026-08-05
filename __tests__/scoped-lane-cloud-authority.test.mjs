@@ -115,12 +115,14 @@ function rootClaim({
 
 function localAuthority({
   claimId = CLAIM_ID,
+  claimIdentitySchema = "agentic-cloud-collaboration-entry/v2",
   state = "active",
   laneRevision = BASE_SHA,
   transitionCounter = 1,
   claimDigest = "e".repeat(64),
   claimLedgerRevision = "f".repeat(64),
   ledgerRevision = LEDGER_SHA,
+  ledgerDigest = "2".repeat(64),
   reviewRequestId = null,
   focusedEvidence = null,
 } = {}) {
@@ -132,7 +134,11 @@ function localAuthority({
     claimId,
     claimDigest,
     ledgerRevision,
+    ledgerDigest,
     claimLedgerRevision,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema,
+    operationReceiptDigest: "d".repeat(64),
     canonicalBaseSha: BASE_SHA,
     laneRevision,
     cloudDeclaredWriteScope: DECLARED_WRITE_SET,
@@ -158,7 +164,10 @@ function mutationResult(action, claim, ledgerRevision = NEXT_LEDGER_SHA) {
     ledgerRevision,
     claim,
     claimDigest: claim.fenceRevision,
-    receipt: { receiptDigest: "1".repeat(64) },
+    receipt: {
+      receiptDigest: "1".repeat(64),
+      ledgerDigest: "2".repeat(64),
+    },
   };
 }
 
@@ -256,6 +265,7 @@ test("review reconciliation preserves exact v1 claim identity after a v2 continu
   });
   const authority = localAuthority({
     claimId: LEGACY_CLAIM_ID,
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v1",
     transitionCounter: 13,
   });
   const reconciled = reconcileCloudAuthorityProjection({

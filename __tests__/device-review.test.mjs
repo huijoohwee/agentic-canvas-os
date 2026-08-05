@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { heartbeat, park, resume, review } from "../scripts/device-branch-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 import { reconcileCloudAuthorityProjection } from "../scripts/scoped-lane-cloud-reconciliation.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
@@ -479,9 +478,7 @@ function cloudLease({ state = "active", laneRevision = lease.fenceSha } = {}) {
   const writeSetDigest = digestValue(declaredWriteSet);
   const claimId = digestValue({
     actorId: "github-user:1", canonicalBaseRevision: lease.baseSha,
-    deviceId: pseudonymousIdentifier("device", lease.device),
     leaseEpoch: 1, repositoryId: "github-repository:1",
-    sessionId: pseudonymousIdentifier("session", lease.sessionId),
     workItemId: "work-item:1", writeSetDigest,
   });
   return {
@@ -501,7 +498,12 @@ function cloudLease({ state = "active", laneRevision = lease.fenceSha } = {}) {
       ledgerRepository: "org/ledger", targetRepository: "org/repo", claimId,
       claimDigest: "2".repeat(64),
       ledgerRevision: "d".repeat(40),
+      ledgerDigest: "b".repeat(64),
       claimLedgerRevision: "3".repeat(64),
+      entrySchema: "agentic-cloud-collaboration-entry/v2",
+      claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+      operationReceiptDigest: "4".repeat(64),
+      mutationAuthorityEligible: true,
       canonicalBaseSha: lease.baseSha, laneRevision,
       cloudDeclaredWriteScope: declaredWriteSet, writeSetDigest,
       deviceId: lease.device, sessionId: lease.sessionId, reviewRequestId: "42",
@@ -537,6 +539,10 @@ function operationVerification(authority) {
 function operationClaim(authority) {
   return {
     claimId: authority.claimId, state: authority.state, actorId: "github-user:1",
+    entrySchema: authority.entrySchema,
+    claimIdentitySchema: authority.claimIdentitySchema,
+    operationReceiptDigest: authority.operationReceiptDigest,
+    mutationAuthorityEligible: authority.mutationAuthorityEligible,
     repositoryId: "github-repository:1", workItemId: "work-item:1",
     canonicalBaseRevision: authority.canonicalBaseSha, laneRevision: authority.laneRevision,
     declaredWriteScope: authority.cloudDeclaredWriteScope, writeSetDigest: authority.writeSetDigest,

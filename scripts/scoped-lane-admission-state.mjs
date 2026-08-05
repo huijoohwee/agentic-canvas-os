@@ -2,13 +2,17 @@ import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import {
+  digestValue,
+  writeSetsOverlap,
+} from "./cloud-collaboration-primitives.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import {
   LANE_ADMISSION_REPORT_SCHEMA,
   bindOperationDerivedDeliveryPeerLaneStates,
   isOperationDerivedCloudVerification,
 } from "./scoped-lane-admission-lib.mjs";
+import { claimProvenanceMatches } from "./scoped-lane-claim-provenance.mjs";
 import {
   isOperationDerivedDeliveryPeerVerification,
   verifyDeliveryAuthorizedPeerAuthorities,
@@ -48,12 +52,14 @@ export function collectScopedLaneState({
     first.registryDigest !== second.registryDigest
     || first.worktreeRegistryDigest !== second.worktreeRegistryDigest
     || first.laneStateDigest !== second.laneStateDigest
+    || first.canonicalSourceDisposition !== second.canonicalSourceDisposition
   ) {
     throw new Error("Registered worktree, lease, index, or working bytes changed during admission inspection.");
   }
   return {
     repository: root,
     canonicalBaseSha: second.canonicalBaseSha,
+    canonicalSourceDisposition: second.canonicalSourceDisposition,
     lanes: second.lanes,
     laneStateDigest: second.laneStateDigest,
     registryDigest: second.registryDigest,
@@ -282,11 +288,13 @@ export function assertAdmissionMutationAuthority({
   const cloudExpiry = Date.parse(cloudAuthority?.expiresAt);
   const candidate = remoteAuthorityVerification?.inventory?.claims
     ?.find(claim => claim.claimId === cloudAuthority?.claimId);
-  const currentClaimMatches = Boolean(
-    candidate
-    && cloudAuthority
-    && Array.isArray(candidate.declaredWriteScope)
-    && candidate.claimId === cloudAuthority.claimId
+  const identityComplete = candidate && Array.isArray(candidate.declaredWriteScope)
+    && [candidate.actorId, candidate.canonicalBaseRevision, candidate.entrySchema,
+      candidate.claimIdentitySchema, candidate.operationReceiptDigest,
+      candidate.leaseEpoch, candidate.repositoryId, candidate.workItemId,
+      candidate.writeSetDigest].every(value => value !== undefined && value !== null);
+  const currentClaimMatches = Boolean(identityComplete && cloudAuthority && (
+    claimProvenanceMatches(candidate, cloudAuthority)
     && candidate.state === "active"
     && cloudAuthority.state === candidate.state
     && candidate.expiresAt === cloudAuthority.expiresAt
@@ -304,7 +312,20 @@ export function assertAdmissionMutationAuthority({
     && candidate.canonicalBaseRevision === lease?.baseSha
     && candidate.laneRevision === cloudAuthority.laneRevision
     && candidate.laneRevision === lease?.fenceSha
-  );
+  ));
+  const noCompetingOverlap = candidate
+    ? remoteAuthorityVerification.inventory.claims.every(claim => (
+      claim.claimId === candidate.claimId
+      || claim.state === "waiting-successor"
+      || !writeSetsOverlap(
+        claim.declaredWriteScope,
+        candidate.declaredWriteScope,
+      )
+    ))
+    : true;
+  if (!noCompetingOverlap) {
+    throw new Error("Scoped authoring found competing overlapping cloud authority.");
+  }
   if (
     lease?.schema !== "agentic-writer-lease/v2"
     || lease.status !== "active"
@@ -320,6 +341,7 @@ export function assertAdmissionMutationAuthority({
     || remoteAuthorityVerification.claimId !== cloudAuthority?.claimId
     || remoteAuthorityVerification.claimDigest !== cloudAuthority.claimDigest
     || remoteAuthorityVerification.ledgerRevision !== cloudAuthority.ledgerRevision
+    || remoteAuthorityVerification.ledgerDigest !== cloudAuthority.ledgerDigest
     || remoteAuthorityVerification.canonicalBaseSha !== cloudAuthority.canonicalBaseSha
     || remoteAuthorityVerification.laneRevision !== lease.fenceSha
     || remoteAuthorityVerification.writeSetDigest
@@ -442,13 +464,38 @@ function captureScopedLaneState({
       .map(lane => ({ path: lane.path, stateDigest: lane.stateDigest }))
       .sort((left, right) => left.path.localeCompare(right.path)),
   );
+  const canonicalSourceDisposition = classifyCanonicalTaskSource({
+    root,
+    canonicalBaseSha,
+    lanes,
+    git,
+  });
   return {
     canonicalBaseSha,
+    canonicalSourceDisposition,
     lanes,
     laneStateDigest,
     registryDigest: leaseSnapshot.registryDigest,
     worktreeRegistryDigest: digestValue(worktreeRegistry),
   };
+}
+
+function classifyCanonicalTaskSource({ root, canonicalBaseSha, lanes, git }) {
+  const canonical = lanes.filter(lane => lane.branch === "refs/heads/main");
+  if (canonical.length !== 1) return "ambiguous";
+  if (canonical[0].dirty || canonical[0].invalid) return "unsafe";
+  if (canonical[0].head === canonicalBaseSha) return "exact";
+  try {
+    git(root, [
+      "merge-base",
+      "--is-ancestor",
+      canonical[0].head,
+      canonicalBaseSha,
+    ]);
+    return "preserved-behind";
+  } catch {
+    return "unsafe";
+  }
 }
 
 export function assertWorkspaceGuardsReady({

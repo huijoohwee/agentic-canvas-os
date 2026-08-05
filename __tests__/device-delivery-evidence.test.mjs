@@ -359,7 +359,12 @@ test("real delivery authorization compacts its replay key before cloud transport
     ...structuredClone(AUTHORITY),
     claimId,
     claimDigest: reviewedClaim.fenceRevision,
+    ledgerDigest: "7".repeat(64),
     claimLedgerRevision: reviewedClaim.transitionDigest,
+    entrySchema: reviewedClaim.entrySchema,
+    claimIdentitySchema: reviewedClaim.claimIdentitySchema,
+    operationReceiptDigest: reviewedClaim.operationReceiptDigest,
+    mutationAuthorityEligible: true,
     expiresAt,
   };
   const ledgerRevision = "6".repeat(40);
@@ -417,6 +422,7 @@ test("real delivery authorization compacts its replay key before cloud transport
       action: "integrate",
       status: currentClaim.state,
       ledgerRevision,
+      ledgerDigest,
       claimDigest: currentClaim.fenceRevision,
       claim: currentClaim,
       findings: [],

@@ -55,20 +55,29 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
     status,
     completedProjectionClaim,
   });
-  let preflightReceipt = buildReceipt("preflight", {
-    branch: lane.branch,
-    transition: request.transition,
-    targetRepository: lane.authority.targetRepository,
-    baseSha: lane.baseSha,
-    headSha: lane.headSha,
-    reviewRequestId: lane.authority.reviewRequestId,
-    predecessorClaimId: lane.authority.claimId,
-    predecessorLeaseEpoch: lane.authority.leaseEpoch,
-    successorDeviceId: request.successorDeviceId,
-    successorSessionId: request.successorSessionId,
-    actorId: positiveInteger(actor.id, "authenticated actor id"),
-    blockingFindingDigest: digestValue(findings),
-  });
+  let preflightReceipt = buildPreflightReceipt({ request, lane, actor, findings });
+  const dormantReplayedRecovery = findings.length === 0
+    ? findDormantReplayedRecovery({ request, lane, status })
+    : null;
+  if (
+    dormantReplayedRecovery
+    && (
+      !isExactRecoveryEvidence(
+        dormantReplayedRecovery.recovery,
+        preflightReceipt.receiptDigest,
+      )
+      || !isExactRecoveryEvidence(
+        lane.authority.recovery,
+        preflightReceipt.receiptDigest,
+      )
+    )
+  ) {
+    findings = [
+      ...findings,
+      finding("unprojected-recovery-evidence-drift"),
+    ].sort(compareFindings);
+    preflightReceipt = buildPreflightReceipt({ request, lane, actor, findings });
+  }
   if (
     completedProjectionClaim
     && completedProjectionClaim.recovery?.evidenceDigest !== preflightReceipt.receiptDigest
@@ -77,20 +86,7 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
       ...findings,
       finding("completed-projection-recovery-evidence-drift"),
     ].sort(compareFindings);
-    preflightReceipt = buildReceipt("preflight", {
-      branch: lane.branch,
-      transition: request.transition,
-      targetRepository: lane.authority.targetRepository,
-      baseSha: lane.baseSha,
-      headSha: lane.headSha,
-      reviewRequestId: lane.authority.reviewRequestId,
-      predecessorClaimId: lane.authority.claimId,
-      predecessorLeaseEpoch: lane.authority.leaseEpoch,
-      successorDeviceId: request.successorDeviceId,
-      successorSessionId: request.successorSessionId,
-      actorId: positiveInteger(actor.id, "authenticated actor id"),
-      blockingFindingDigest: digestValue(findings),
-    });
+    preflightReceipt = buildPreflightReceipt({ request, lane, actor, findings });
   }
   if (findings.length > 0) {
     return finalizeResult({
@@ -313,7 +309,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
     },
 
     async recoverAuthority({ request, lane, predecessor, status, recoveryEvidenceDigest }) {
-      const expectedTransitionCounter = lane.authority.transitionCounter + 1;
+      const expectedTransitionCounter = recoveredTransitionCounter(predecessor);
       const exactRecoveryEvidenceDigest = requiredDigest(
         recoveryEvidenceDigest,
         "recovery evidence digest",
@@ -322,8 +318,21 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         ledgerRepository: lane.authority.ledgerRepository,
       });
       let recoveredClaimDigest = predecessor.fenceRevision;
+      let recoveredTransitionDigest = predecessor.transitionDigest;
       let recoveryReceiptDigest = predecessor.operationReceiptDigest || null;
       if (predecessor.state === "dormant-preserved") {
+        if (
+          predecessor.transitionCounter !== lane.authority.transitionCounter
+          && (
+            !isDormantReplayedRecovery({ request, lane, predecessor })
+            || !isExactRecoveryEvidence(predecessor.recovery, exactRecoveryEvidenceDigest)
+            || !isExactRecoveryEvidence(lane.authority.recovery, exactRecoveryEvidenceDigest)
+          )
+        ) {
+          throw new Error(
+            "Dormant replay recovery did not match the exact unprojected controller continuation.",
+          );
+        }
         const continuedResult = invokeCloudAction({
           action: "continue",
           ledgerRepository: lane.authority.ledgerRepository,
@@ -368,6 +377,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
           recoveryEvidenceDigest: exactRecoveryEvidenceDigest,
         });
         recoveredClaimDigest = continued.claimDigest;
+        recoveredTransitionDigest = continued.claim?.transitionDigest;
         recoveryReceiptDigest = continued.claim?.operationReceiptDigest;
       } else {
         requireExactRecoveryEvidence({
@@ -405,6 +415,9 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         expectedAction: "verify",
         expectedTransitionCounter,
         recoveryEvidenceDigest: exactRecoveryEvidenceDigest,
+        expectedClaimDigest: recoveredClaimDigest,
+        expectedTransitionDigest: recoveredTransitionDigest,
+        expectedOperationReceiptDigest: recoveryReceiptDigest,
       });
       return Object.freeze({
         authority: projectRecoveredAuthority({
@@ -620,25 +633,7 @@ function validateContinuation({ request, lane, actor, status, completedProjectio
     }));
   } else {
     const predecessor = predecessors[0];
-    let declaredWriteScope = null;
-    try {
-      declaredWriteScope = normalizeWriteSet(predecessor.declaredWriteScope);
-    } catch {
-      declaredWriteScope = null;
-    }
-    const sharedIdentity = (
-      predecessor.writeAuthority === false
-      && predecessor.scopeReserved === true
-      && predecessor.canonicalBaseRevision === lane.authority.canonicalBaseSha
-      && predecessor.canonicalBaseRevision === lane.baseSha
-      && predecessor.laneRevision === lane.authority.laneRevision
-      && predecessor.laneRevision === lane.headSha
-      && predecessor.writeSetDigest === lane.authority.writeSetDigest
-      && predecessor.writeSetDigest === lane.manifest.writeSetDigest
-      && JSON.stringify(declaredWriteScope) === JSON.stringify(lane.manifest.declaredWriteSet)
-      && predecessor.leaseEpoch === lane.authority.leaseEpoch
-      && predecessor.reviewRequestId === lane.authority.reviewRequestId
-    );
+    const sharedIdentity = hasSharedRecoveryIdentity({ lane, predecessor });
     const dormantPredecessor = (
       sharedIdentity
       && predecessor.state === "dormant-preserved"
@@ -648,6 +643,10 @@ function validateContinuation({ request, lane, actor, status, completedProjectio
       && predecessor.expiresAt === lane.authority.expiresAt
       && predecessor.deviceId === ownerIdentifier("device", lane.authority.deviceId)
       && predecessor.sessionId === ownerIdentifier("session", lane.authority.sessionId)
+    );
+    const dormantReplayedRecovery = (
+      sharedIdentity
+      && isDormantReplayedRecovery({ request, lane, predecessor })
     );
     const replayedRecovery = (
       request.transition !== "retain"
@@ -663,7 +662,12 @@ function validateContinuation({ request, lane, actor, status, completedProjectio
       && predecessor.deviceId === ownerIdentifier("device", request.successorDeviceId)
       && predecessor.sessionId === ownerIdentifier("session", request.successorSessionId)
     );
-    if (!dormantPredecessor && !replayedRecovery && predecessor !== completedProjectionClaim) {
+    if (
+      !dormantPredecessor
+      && !dormantReplayedRecovery
+      && !replayedRecovery
+      && predecessor !== completedProjectionClaim
+    ) {
       findings.push(finding("preserved-claim-drift"));
     }
   }
@@ -686,6 +690,61 @@ function validateContinuation({ request, lane, actor, status, completedProjectio
     findings.push(finding("review-request-already-live"));
   }
   return findings.sort(compareFindings);
+}
+function findDormantReplayedRecovery({ request, lane, status }) {
+  if (!Array.isArray(status?.claims)) return null;
+  const matches = status.claims.filter(claim => claim.claimId === lane.authority.claimId);
+  if (matches.length !== 1) return null;
+  const predecessor = matches[0];
+  return (
+    hasSharedRecoveryIdentity({ lane, predecessor })
+    && isDormantReplayedRecovery({ request, lane, predecessor })
+  ) ? predecessor : null;
+}
+function hasSharedRecoveryIdentity({ lane, predecessor }) {
+  let declaredWriteScope = null;
+  try {
+    declaredWriteScope = normalizeWriteSet(predecessor.declaredWriteScope);
+  } catch {
+    return false;
+  }
+  return (
+    predecessor.writeAuthority === false
+    && predecessor.scopeReserved === true
+    && predecessor.canonicalBaseRevision === lane.authority.canonicalBaseSha
+    && predecessor.canonicalBaseRevision === lane.baseSha
+    && predecessor.laneRevision === lane.authority.laneRevision
+    && predecessor.laneRevision === lane.headSha
+    && predecessor.writeSetDigest === lane.authority.writeSetDigest
+    && predecessor.writeSetDigest === lane.manifest.writeSetDigest
+    && JSON.stringify(declaredWriteScope) === JSON.stringify(lane.manifest.declaredWriteSet)
+    && predecessor.leaseEpoch === lane.authority.leaseEpoch
+    && predecessor.reviewRequestId === lane.authority.reviewRequestId
+  );
+}
+function isDormantReplayedRecovery({ request, lane, predecessor }) {
+  const localExpiresAt = canonicalTimestampMilliseconds(lane.authority.expiresAt);
+  const replayRecoveredAt = canonicalTimestampMilliseconds(predecessor.recovery?.recoveredAt);
+  const replayExpiresAt = canonicalTimestampMilliseconds(predecessor.expiresAt);
+  return (
+    request.transition !== "retain"
+    && predecessor.state === "dormant-preserved"
+    && predecessor.transitionCounter === lane.authority.transitionCounter + 1
+    && DIGEST_PATTERN.test(String(predecessor.fenceRevision || ""))
+    && predecessor.fenceRevision !== lane.authority.claimDigest
+    && DIGEST_PATTERN.test(String(predecessor.transitionDigest || ""))
+    && predecessor.transitionDigest !== lane.authority.claimLedgerRevision
+    && DIGEST_PATTERN.test(String(predecessor.operationReceiptDigest || ""))
+    && predecessor.deviceId === ownerIdentifier("device", request.successorDeviceId)
+    && predecessor.sessionId === ownerIdentifier("session", request.successorSessionId)
+    && localExpiresAt !== null
+    && replayRecoveredAt !== null
+    && replayExpiresAt !== null
+    && replayExpiresAt > localExpiresAt
+    && replayRecoveredAt >= localExpiresAt
+    && replayRecoveredAt < replayExpiresAt
+    && replayExpiresAt <= Date.now()
+  );
 }
 function normalizeRequest(input = {}) {
   const transition = requiredTransition(input.transition || input.action || "reclaim");
@@ -803,6 +862,9 @@ function validateRecoveredCloudResult({
   expectedAction,
   expectedTransitionCounter,
   recoveryEvidenceDigest,
+  expectedClaimDigest = null,
+  expectedTransitionDigest = null,
+  expectedOperationReceiptDigest = null,
 }) {
   if (
     !result
@@ -835,10 +897,28 @@ function validateRecoveredCloudResult({
     || claim?.sessionId !== ownerIdentifier("session", request.successorSessionId)
     || claim?.fenceRevision !== result.claimDigest
     || result.claimDigest === lane.authority.claimDigest
+    || (
+      predecessor.state === "dormant-preserved"
+      && result.claimDigest === predecessor.fenceRevision
+    )
     || !DIGEST_PATTERN.test(String(claim?.transitionDigest || ""))
+    || (
+      predecessor.state === "dormant-preserved"
+      && claim?.transitionDigest === predecessor.transitionDigest
+    )
     || !DIGEST_PATTERN.test(String(claim?.operationReceiptDigest || ""))
+    || (expectedClaimDigest && result.claimDigest !== expectedClaimDigest)
+    || (expectedTransitionDigest && claim?.transitionDigest !== expectedTransitionDigest)
+    || (
+      expectedOperationReceiptDigest
+      && claim?.operationReceiptDigest !== expectedOperationReceiptDigest
+    )
     || !SHA_PATTERN.test(String(result.ledgerRevision || ""))
     || !isExactRecoveryEvidence(claim?.recovery, recoveryEvidenceDigest)
+    || (
+      predecessor.state === "dormant-preserved"
+      && Date.parse(claim?.recovery?.recoveredAt) < Date.parse(predecessor.expiresAt)
+    )
     || Date.parse(claim?.expiresAt) <= Date.now()
   ) {
     throw new Error("Recovered cloud authority drifted from the exact preserved reviewed claim.");
@@ -893,6 +973,11 @@ function requireRecoveredAuthority({
   recoveryEvidenceDigest,
 }) {
   const authority = recovered?.authority;
+  const expectedTransitionCounter = recoveredTransitionCounter(predecessor);
+  const predecessorWasDormant = predecessor.state === "dormant-preserved";
+  const authorityRecoveredAt = canonicalTimestampMilliseconds(authority?.recovery?.recoveredAt);
+  const authorityExpiresAt = canonicalTimestampMilliseconds(authority?.expiresAt);
+  const predecessorExpiresAt = canonicalTimestampMilliseconds(predecessor.expiresAt);
   let declaredWriteScope = null;
   try {
     declaredWriteScope = normalizeWriteSet(authority?.cloudDeclaredWriteScope);
@@ -906,6 +991,8 @@ function requireRecoveredAuthority({
     || authority.targetRepository !== lane.authority.targetRepository
     || authority.claimId !== predecessor.claimId
     || authority.claimDigest === lane.authority.claimDigest
+    || (predecessorWasDormant && authority.claimDigest === predecessor.fenceRevision)
+    || (!predecessorWasDormant && authority.claimDigest !== predecessor.fenceRevision)
     || !DIGEST_PATTERN.test(String(authority.claimDigest || ""))
     || !SHA_PATTERN.test(String(authority.ledgerRevision || ""))
     || !DIGEST_PATTERN.test(String(authority.claimLedgerRevision || ""))
@@ -917,16 +1004,43 @@ function requireRecoveredAuthority({
     || authority.sessionId !== request.successorSessionId
     || authority.reviewRequestId !== lane.authority.reviewRequestId
     || authority.leaseEpoch !== lane.authority.leaseEpoch
-    || authority.transitionCounter !== lane.authority.transitionCounter + 1
+    || authority.transitionCounter !== expectedTransitionCounter
+    || (
+      predecessorWasDormant
+      && authority.claimLedgerRevision === predecessor.transitionDigest
+    )
+    || (
+      !predecessorWasDormant
+      && authority.claimLedgerRevision !== predecessor.transitionDigest
+    )
     || authority.state !== "review_ready"
     || authority.focusedEvidenceDigest !== lane.authority.focusedEvidenceDigest
     || authority.manifestDigest !== lane.manifest.manifestDigest
     || !isExactRecoveryEvidence(authority.recovery, recoveryEvidenceDigest)
-    || Date.parse(authority.expiresAt) <= Date.now()
+    || authorityRecoveredAt === null
+    || authorityExpiresAt === null
+    || authorityExpiresAt <= authorityRecoveredAt
+    || (
+      predecessorWasDormant
+      && (
+        predecessorExpiresAt === null
+        || authorityRecoveredAt < predecessorExpiresAt
+      )
+    )
+    || authorityExpiresAt <= Date.now()
   ) {
     throw new Error("Controller adapter returned a recovery outside the exact preserved claim.");
   }
   return authority;
+}
+function recoveredTransitionCounter(predecessor) {
+  if (predecessor.state === "dormant-preserved") {
+    return positiveInteger(predecessor.transitionCounter, "predecessor transitionCounter") + 1;
+  }
+  if (predecessor.state === "reviewed") {
+    return positiveInteger(predecessor.transitionCounter, "predecessor transitionCounter");
+  }
+  throw new Error(`Unsupported recovery predecessor state ${predecessor.state}.`);
 }
 function requireExactRecoveryEvidence({ recovery, recoveryEvidenceDigest, label }) {
   if (!isExactRecoveryEvidence(recovery, recoveryEvidenceDigest)) {
@@ -946,6 +1060,14 @@ function isExactRecoveryEvidence(recovery, recoveryEvidenceDigest) {
     && Number.isFinite(recoveredAtMilliseconds)
     && new Date(recoveredAtMilliseconds).toISOString() === recoveredAt
   );
+}
+function canonicalTimestampMilliseconds(value) {
+  const timestamp = String(value || "");
+  const milliseconds = Date.parse(timestamp);
+  return (
+    Number.isFinite(milliseconds)
+    && new Date(milliseconds).toISOString() === timestamp
+  ) ? milliseconds : null;
 }
 function finalizeResult({
   request,
@@ -979,6 +1101,22 @@ function finalizeResult({
   return Object.freeze({
     ...result,
     resultDigest: digestValue(result),
+  });
+}
+function buildPreflightReceipt({ request, lane, actor, findings }) {
+  return buildReceipt("preflight", {
+    branch: lane.branch,
+    transition: request.transition,
+    targetRepository: lane.authority.targetRepository,
+    baseSha: lane.baseSha,
+    headSha: lane.headSha,
+    reviewRequestId: lane.authority.reviewRequestId,
+    predecessorClaimId: lane.authority.claimId,
+    predecessorLeaseEpoch: lane.authority.leaseEpoch,
+    successorDeviceId: request.successorDeviceId,
+    successorSessionId: request.successorSessionId,
+    actorId: positiveInteger(actor.id, "authenticated actor id"),
+    blockingFindingDigest: digestValue(findings),
   });
 }
 function buildReceipt(kind, payload) {

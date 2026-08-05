@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 781,
-  "headDigest": "41dd04fb6409f23d1cee3888359887a479bee1b2244b49829edfee7042e7b0f0",
+  "sequence": 782,
+  "headDigest": "a76ca20a6d64d5d1e64d7a8ac36a3fa2614d418d7bf022e3f683784cf9768fbb",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -38389,6 +38389,69 @@
       },
       "claimDigest": "7c91acbece92321815a9d00bdac0b0825aab3180fbb388c7356c48cf3559e0f7",
       "digest": "41dd04fb6409f23d1cee3888359887a479bee1b2244b49829edfee7042e7b0f0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 782,
+      "parentDigest": "41dd04fb6409f23d1cee3888359887a479bee1b2244b49829edfee7042e7b0f0",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "9b1185954bb4935546e1dab29a5694dc143f620153132fb2f9939a1458a3bc24",
+      "idempotencyKey": "51c6082e941980e9fa771c5910865e772eb1a0b42b30ed972c77083f0d850cf2",
+      "requestDigest": "593c208860960383ef696907e791863c5eb9165d6d5e52b17a4d1c4f2d435417",
+      "evaluationTime": "2026-08-05T19:10:24.000Z",
+      "claimCore": {
+        "claimId": "9b1185954bb4935546e1dab29a5694dc143f620153132fb2f9939a1458a3bc24",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:46d290411d49de97c4d96f0853f4d9699784308c8560e62f994edeb604dcdf18",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:d556753a8af2ca9a3c4939aec50225a7b2de709510e45fa239c9d8934a1b6c87",
+        "canonicalBaseRevision": "ae7888d2002803fe55f9e14adacde5b0a70b459d",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-companion-ci-authority-cloud-authority.json",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-companion-ci-authority-write-scope.json",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-protected-squash-repair-v3-cloud-authority.json",
+          "path:scripts/__tests__/fixtures/coordination/git-guidelines-protected-squash-repair-v3-write-scope.json",
+          "path:scripts/__tests__/git-guidelines-artifact-contract.test.mjs",
+          "path:scripts/__tests__/git-guidelines-input-resolver.test.mjs",
+          "path:scripts/__tests__/git-guidelines-review-authority.test.mjs",
+          "path:scripts/__tests__/git-guidelines-runtime-contract.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "path:scripts/lib/git-guidelines/content.mjs",
+          "path:scripts/lib/git-guidelines/input-artifacts.mjs",
+          "path:scripts/lib/git-guidelines/review-authority.mjs",
+          "path:scripts/materialize-git-guidelines-review-authority.mjs",
+          "semantic:git-guidelines-ci-authority-materialization"
+        ],
+        "writeSetDigest": "2348ebec4fca001ae9854e18d0d9bb70a91666aed08f5607c23fb3cba3f6ac1c",
+        "laneRevision": "2ba8727bce02b33cc48a3b6c89e38a0c53163f4e",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-05T20:13:07.000Z",
+        "evidenceDigest": "b2feb612203371702f65145f57a89d276634215b8e1d0f95256c090dc67a6a26",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc77KSUX",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "2ba8727bce02b33cc48a3b6c89e38a0c53163f4e",
+          "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc77KSUX",
+          "focusedEvidenceDigest": "b2feb612203371702f65145f57a89d276634215b8e1d0f95256c090dc67a6a26",
+          "dependencyClosureDigest": "dd6007a7c6f7f53732a54f92df5608494b07eb95024224abb76f72a0656e540c",
+          "namedChecksDigest": "22c1bd3467af2efafb6a05d7da03889cfbda1154cd3e1a7109bb50cfdf3001b5",
+          "handoffEvidenceDigest": "b4a15afb7dd8671bfd0bd80b8be7f221c8ffb692fdd8a2f68d51f4517f3b3b38",
+          "operatorDecisionDigest": "c03c4e921b59efde20501df9a52a6b758e07b011df90a26f40bf8c4fc6527efc",
+          "integrationIntentDigest": "5ae5f30ae73f4f772a814b2df84f51e1cbb38618a95544087bafb62ac6859641",
+          "integratedAt": "2026-08-05T19:10:24.000Z"
+        }
+      },
+      "claimDigest": "fb0828cbfeaf925931117dd723639e87d7acfad39a52b4c809c97f1355a3f216",
+      "digest": "a76ca20a6d64d5d1e64d7a8ac36a3fa2614d418d7bf022e3f683784cf9768fbb"
     }
   ]
 }

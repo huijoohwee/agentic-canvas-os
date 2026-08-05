@@ -197,6 +197,8 @@ function recoveryResult(recoveryEvidenceDigest, authority = recoveredAuthority()
 
 function publicRecoveryCloudResult(action) {
   const claim = predecessorClaim({
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
     state: "reviewed",
     transitionCounter: 5,
     fenceRevision: RECOVERED_CLAIM_DIGEST,
@@ -212,6 +214,7 @@ function publicRecoveryCloudResult(action) {
     action,
     status: "reviewed",
     ledgerRevision: BASE_SHA,
+    ledgerDigest: STATUS_LEDGER_DIGEST,
     claimDigest: RECOVERED_CLAIM_DIGEST,
     claim,
     receipt: {

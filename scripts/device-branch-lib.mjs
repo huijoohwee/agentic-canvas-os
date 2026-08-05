@@ -20,6 +20,7 @@ import {
   reviewReadyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
+import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
 import {
   SHA_PATTERN,
   assertLeaseWorktree,
@@ -193,7 +194,10 @@ export function review({
   if (pullRequest.isDraft) run("gh", ["pr", "ready", url]);
   const readyPullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   requirePullRequestHead({ pullRequest: readyPullRequest, expectedHeadSha: reviewHeadSha });
-  const title = gitText(["log", "-1", "--pretty=%s"]).trim();
+  const title = requireProtectedSquashSubject(
+    gitText(["log", "-1", "--pretty=%s"]).trim(),
+    { label: "Reviewed commit subject" },
+  );
   const readyLease = leaseStore.release({ sessionId, branch, status: "review_ready" });
   run("gh", ["pr", "edit", url, "--title", title, "--body", updateWriterLeasePullRequestBody(
     readyPullRequest.body,
@@ -268,6 +272,7 @@ export function publish({
   }
   const url = resolvedUrl.trim();
   const deliveryHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  let squashSubject = null;
   const deliveryPullRequest = requirePublishPullRequest({
     url,
     branch,
@@ -326,8 +331,11 @@ export function publish({
     });
   }
   if (replayCheckpoint?.phase !== "delivery_authorized") {
-    const title = gitText(["log", "-1", "--pretty=%s"]).trim();
-    run("gh", ["pr", "edit", url, "--title", title, "--body", updateWriterLeasePullRequestBody(
+    squashSubject = requireProtectedSquashSubject(
+      gitText(["log", "-1", "--pretty=%s"]).trim(),
+      { label: "Delivery commit subject" },
+    );
+    run("gh", ["pr", "edit", url, "--title", squashSubject, "--body", updateWriterLeasePullRequestBody(
       readRemotePullRequestBody({ url, ghText }),
       lease,
     )]);
@@ -378,8 +386,14 @@ export function publish({
     run,
   });
   if (authorizedPullRequest.state === "OPEN") {
+    squashSubject ||= requireProtectedSquashSubject(
+      gitText(["log", "-1", "--pretty=%s"]).trim(),
+      { label: "Delivery commit subject" },
+    );
     run("gh", ["pr", "edit", url, "--add-label", "automerge"]);
-    run("gh", ["pr", "merge", "--auto", "--squash", url]);
+    run("gh", [
+      "pr", "merge", "--auto", "--squash", "--subject", squashSubject, url,
+    ]);
   } else if (authorizedPullRequest.state !== "MERGED") {
     throw new Error(`Ownership pull request ${url} is neither open nor merged.`);
   }

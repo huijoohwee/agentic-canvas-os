@@ -853,7 +853,10 @@ function projectRecoveredAuthority({ result, lane, request, recoveryEvidenceDige
     claimId: requiredDigest(result.claim?.claimId, "claimId"),
     claimDigest: requiredDigest(result.claimDigest, "claimDigest"),
     ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
-    ledgerDigest: requiredDigest(result.ledgerDigest, "ledgerDigest"),
+    ledgerDigest: requiredDigest(
+      result.receipt?.ledgerDigest ?? result.ledgerDigest,
+      "ledgerDigest",
+    ),
     claimLedgerRevision: requiredDigest(result.claim?.transitionDigest, "claimLedgerRevision"),
     entrySchema: requiredText(result.claim?.entrySchema, "entrySchema"),
     claimIdentitySchema: requiredText(result.claim?.claimIdentitySchema, "claimIdentitySchema"),

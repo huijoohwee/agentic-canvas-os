@@ -4,7 +4,9 @@ import path from "node:path";
 
 import {
   deriveTaskWorktreeRoot,
+  inspectTaskWorktreeTarget,
   provisionTaskWorktree,
+  recoverCandidateCreateRegisterResult,
   rollbackUnclaimedProvision,
 } from "../scripts/task-worktree-provision.mjs";
 
@@ -77,6 +79,60 @@ test("provision creates a detached task worktree from the one exact fetched main
     ["git", "fetch", "origin", "main"],
     ["git", "worktree", "add", "--detach", target, sha],
   ]);
+});
+
+test("clean canonical main behind origin is preserved while the candidate starts at origin", () => {
+  const behindSha = "b".repeat(40);
+  const treeSha = "c".repeat(40);
+  const behindRecord = `worktree ${repoRoot}\0HEAD ${behindSha}\0branch refs/heads/main\0`;
+  const registeredCandidate =
+    `${behindRecord}\0worktree ${target}\0HEAD ${sha}\0detached\0`;
+  let created = false;
+  const gitText = gitTextFor({
+    "worktree list --porcelain -z": behindRecord,
+    "rev-parse HEAD": behindSha,
+    [`merge-base --is-ancestor ${behindSha} ${sha}`]: "",
+  });
+  const targetPlan = inspectTaskWorktreeTarget({
+    invocationPath: repoRoot,
+    repoRoot,
+    targetPath: target,
+    gitText,
+    pathExists: () => false,
+    pathStat: () => ({ isSymbolicLink: () => false }),
+  });
+  assert.equal(targetPlan.canonicalSourceDisposition, "preserved-behind");
+
+  const result = provisionTaskWorktree({
+    invocationPath: repoRoot,
+    repoRoot,
+    targetPath: target,
+    expectedBaseSha: sha,
+    expectedTargetObservationDigest: targetPlan.targetObservationDigest,
+    fetchBase: false,
+    gitText: args => {
+      const key = args.join(" ");
+      if (key === "worktree list --porcelain -z") {
+        return created ? registeredCandidate : behindRecord;
+      }
+      if (key === `rev-parse ${sha}^{tree}`) return treeSha;
+      if (key === `-C ${target} rev-parse HEAD`) return sha;
+      if (key === `-C ${target} rev-parse HEAD^{tree}`) return treeSha;
+      if (key === `-C ${target} status --porcelain=v1 -z --untracked-files=all`) return "";
+      if (key === `-C ${target} rev-parse --show-toplevel`) return target;
+      return gitText(args);
+    },
+    run: (command, args) => {
+      if (command === "git" && args[0] === "worktree" && args[1] === "add") {
+        created = true;
+      }
+    },
+    makeDirectory: () => {},
+    pathExists: candidate => candidate === path.dirname(safeRoot),
+    pathStat: () => ({ isSymbolicLink: () => false }),
+  });
+  assert.equal(result.baseSha, sha);
+  assert.equal(created, true);
 });
 
 test("provision rejects an unrelated concurrent worktree registration after add", () => {
@@ -218,7 +274,7 @@ test("provision rejects dirty or divergent canonical main without creating a wor
       makeDirectory: () => {},
       pathExists: () => false,
       pathStat: () => ({ isSymbolicLink: () => false }),
-    }), /clean|must equal/);
+    }), /clean|must be an ancestor/);
     assert.equal(calls.some(call => call.includes("worktree")), false);
   }
 });
@@ -248,6 +304,67 @@ test("rollback removes only the clean detached exact-base worktree before any le
     run: () => { throw new Error("must not run"); },
     pathExists: () => true,
   }), false);
+});
+
+test("interrupted admission recovery reconstructs only the exact clean pushed fence candidate", () => {
+  const fenceSha = "b".repeat(40);
+  const treeSha = "c".repeat(40);
+  const branch = "agent/device-a/work-item-42";
+  const epoch = 7;
+  const registry = [
+    canonicalRecord,
+    `worktree ${target}\0HEAD ${fenceSha}\0branch refs/heads/${branch}\0`,
+  ].join("\0");
+  const responses = {
+    "rev-parse --git-common-dir": gitCommonDir,
+    "worktree list --porcelain -z": registry,
+    [`rev-parse ${sha}^{tree}`]: treeSha,
+    [`-C ${target} rev-parse HEAD`]: fenceSha,
+    [`-C ${target} rev-parse HEAD^{tree}`]: treeSha,
+    [`-C ${target} branch --show-current`]: branch,
+    [`-C ${target} status --porcelain=v1 -z --untracked-files=all`]: "",
+    [`-C ${target} rev-parse HEAD^`]: sha,
+    [`-C ${target} log -1 --format=%s`]:
+      `chore(coordination): claim work-item-42 lease ${epoch}`,
+    [`-C ${target} rev-list --count ${sha}..${fenceSha}`]: "1",
+    [`ls-remote origin refs/heads/${branch}`]:
+      `${fenceSha}\trefs/heads/${branch}`,
+    "rev-parse HEAD": sha,
+    "status --porcelain": "",
+  };
+  const gitText = args => {
+    const key = args.join(" ");
+    if (!(key in responses)) throw new Error(`unexpected git command: ${key}`);
+    return responses[key];
+  };
+  const recovered = recoverCandidateCreateRegisterResult({
+    repoRoot,
+    targetPath: target,
+    expectedBaseSha: sha,
+    expectedBranch: branch,
+    expectedFenceSha: fenceSha,
+    expectedScope: "work-item-42",
+    expectedLeaseEpoch: epoch,
+    gitText,
+  });
+  assert.equal(recovered.status, "created");
+  assert.equal(recovered.targetPath, target);
+  assert.equal(recovered.baseSha, sha);
+  assert.deepEqual(recovered.mutationSet, ["candidate-registration"]);
+  assert.match(recovered.resultDigest, /^[0-9a-f]{64}$/u);
+
+  responses[`-C ${target} status --porcelain=v1 -z --untracked-files=all`] =
+    "?? authored.mjs\0";
+  assert.throws(() => recoverCandidateCreateRegisterResult({
+    repoRoot,
+    targetPath: target,
+    expectedBaseSha: sha,
+    expectedBranch: branch,
+    expectedFenceSha: fenceSha,
+    expectedScope: "work-item-42",
+    expectedLeaseEpoch: epoch,
+    gitText,
+  }), /exact clean, pushed, fence-only continuation/);
 });
 
 test("provision rejects any symbolic-link ancestor inside the derived workspace root", () => {

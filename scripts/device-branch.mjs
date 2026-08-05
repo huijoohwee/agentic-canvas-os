@@ -34,6 +34,7 @@ import {
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import {
+  assertRootSourceBootstrapCurrent,
   createAdmissionLeaseProjection,
   evaluateScopedLaneAdmission,
   normalizeCloudAuthority,
@@ -58,7 +59,7 @@ import {
 } from "./scoped-lane-admission-state.mjs";
 
 const [command, ...args] = process.argv.slice(2);
-const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptControllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 if (!command || !["start", "resume", "heartbeat", "review", "publish", "integrate", "park", "complete", "end"].includes(command)) usage();
 
 const json = args.includes("--json");
@@ -84,6 +85,7 @@ const invocationPath = path.resolve(
 const requestedWorktreePath = readOption(args, "worktree");
 const writeScopeManifestPath = readOption(args, "write-scope-manifest");
 const cloudAuthorityPath = readOption(args, "cloud-authority");
+const rootSourceBootstrapInput = readOption(args, "root-source-bootstrap");
 try {
   if (autoDelivery && command !== "start") {
     throw new Error("--auto-delivery is accepted only by device:start; authorization is immutable for the task lease.");
@@ -94,15 +96,19 @@ try {
   if (repairPullRequestProjection && command !== "heartbeat") {
     throw new Error("--repair-pr-projection is accepted only by device:heartbeat.");
   }
+  if (rootSourceBootstrapInput && (command !== "start" || !provisionRequested)) {
+    throw new Error("--root-source-bootstrap is accepted only by provisioned device:start.");
+  }
   const ttlSeconds = Number(readOption(args, "ttl-seconds") || DEFAULT_WRITER_LEASE_TTL_MS / 1000);
   if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) throw new Error("--ttl-seconds must be a positive number.");
   process.chdir(invocationPath);
   canonicalRepo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(canonicalRepo);
   if (command === "start") {
+    bindControllerHooksEnvironment(scriptControllerRoot);
     assertWorkspaceGuardsReady({
       repository: canonicalRepo,
-      controllerRoot,
+      controllerRoot: scriptControllerRoot,
     });
   }
   let activeInvocationPath = invocationPath;
@@ -132,6 +138,12 @@ try {
       { expectedScope: normalizedScope },
     );
     admissionManifest = manifest;
+    const rootSourceBootstrapAuthorization = rootSourceBootstrapInput
+      ? parseJsonObject(
+        rootSourceBootstrapInput,
+        "root-source bootstrap authorization",
+      )
+      : null;
     const authority = normalizeCloudAuthority(
       readJsonFile(cloudAuthorityPath, "cloud authority"),
       {
@@ -154,6 +166,7 @@ try {
       repository: canonicalRepo,
       canonicalPath: canonicalRepo,
       canonicalBaseSha: before.canonicalBaseSha,
+      canonicalSourceDisposition: before.canonicalSourceDisposition,
       targetPath: targetPlan.target,
       branch,
       semanticScope: normalizedScope,
@@ -163,6 +176,7 @@ try {
       cloudAuthority: verifiedCloudAuthority,
       remoteAuthorityRequired: true,
       remoteAuthorityVerification: verified.verification,
+      rootSourceBootstrapAuthorization,
       mode: "check",
     });
     if (admissionReport.authoringAdmission.status !== "planned") {
@@ -237,6 +251,10 @@ try {
       manifest: admissionManifest,
       canonicalBaseSha: admissionReport.canonicalBaseSha,
     });
+    assertRootSourceBootstrapCurrent({
+      report: admissionReport,
+      remoteAuthorityVerification: verified.verification,
+    });
     const preservationReceipt = verifyPreservedLaneState(
       admissionReport,
       collectScopedLaneState({ repository: canonicalRepo }).lanes,
@@ -287,12 +305,6 @@ try {
       manifest: admissionManifest,
       canonicalBaseSha: admissionReport.canonicalBaseSha,
     });
-    if (
-      immediate.verification.remoteClaimInventoryDigest
-        !== preservationReceipt.finalRemoteClaimInventoryDigest
-    ) {
-      throw new Error("Peer claim inventory changed after the Preservation Receipt.");
-    }
     mutationAuthorityReceipt = assertAdmissionMutationAuthority({
       lease,
       cloudAuthority: immediate.authority,
@@ -326,7 +338,7 @@ function execute(action, context) {
     runtimeRepository: readOption(args, "runtime-repository"),
     waitSeconds: Number(readOption(args, "wait-seconds") || 900),
     pollSeconds: Number(readOption(args, "poll-seconds") || 5),
-    controllerRoot,
+    controllerRoot: scriptControllerRoot,
     publishTask: () => publish(context),
     completeTask: () => completeSession({ ...context, json: false, finalize: false }),
     runText,
@@ -336,6 +348,23 @@ function execute(action, context) {
     return completeSession({ ...context, json: false, allowAlreadyOnCleanMain: true });
   }
   return completeSession({ ...context, json: false });
+}
+
+function bindControllerHooksEnvironment(controllerRoot) {
+  const configuredCount = Number(process.env.GIT_CONFIG_COUNT || 0);
+  const count = Number.isInteger(configuredCount) && configuredCount >= 0
+    ? configuredCount
+    : 0;
+  const hooksPath = path.resolve(controllerRoot, ".githooks");
+  for (let index = 0; index < count; index += 1) {
+    if (process.env[`GIT_CONFIG_KEY_${index}`] === "core.hooksPath") {
+      process.env[`GIT_CONFIG_VALUE_${index}`] = hooksPath;
+      return;
+    }
+  }
+  process.env[`GIT_CONFIG_KEY_${count}`] = "core.hooksPath";
+  process.env[`GIT_CONFIG_VALUE_${count}`] = hooksPath;
+  process.env.GIT_CONFIG_COUNT = String(count + 1);
 }
 
 function emitJson(action, context, result, { provisioned }) {
@@ -451,6 +480,19 @@ function readJsonFile(file, label) {
   return value;
 }
 
+function parseJsonObject(source, label) {
+  let value;
+  try {
+    value = JSON.parse(source);
+  } catch (error) {
+    throw new Error(`Could not parse ${label}: ${error.message}`);
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object.`);
+  }
+  return value;
+}
+
 function gitText(args) {
   return execFileSync("git", args, textCommandOptions());
 }
@@ -481,7 +523,7 @@ function runText(command, args, options = {}) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
   );
   process.exit(2);
 }

@@ -142,6 +142,7 @@ function verifyCloudAuthorityState({
     ...authority,
     claimDigest: result.claimDigest,
     ledgerRevision: result.ledgerRevision,
+    ledgerDigest: inventory.ledgerDigest,
     claimLedgerRevision: requiredDigest(
       result.claim.transitionDigest,
       "claim ledger revision",
@@ -248,7 +249,7 @@ export function bindAdmissionCloudAuthority({
     expectedLaneRevision: headSha,
   });
   const bound = normalizeBoundAuthority({
-    result,
+    result: projectOperationLedgerDigest(result),
     authority,
     manifest,
     deviceId,
@@ -307,7 +308,7 @@ export function heartbeatAdmissionCloudAuthority({
     expectedLaneRevision: authority.laneRevision,
   });
   const renewed = normalizeBoundAuthority({
-    result,
+    result: projectOperationLedgerDigest(result),
     authority,
     manifest: {
       declaredWriteSet: authority.cloudDeclaredWriteScope,
@@ -435,7 +436,7 @@ export function reviewReadyAdmissionCloudAuthority({
     expectedState: "review_ready", expectedLaneRevision: headSha,
   });
   const ready = normalizeBoundAuthority({
-    result, authority: active, manifest, deviceId, sessionId,
+    result: projectOperationLedgerDigest(result), authority: active, manifest, deviceId, sessionId,
     focusedEvidenceDigest: evidenceDigest,
   });
   return verifyReviewReadyAdmissionCloudAuthority({
@@ -544,7 +545,7 @@ export function authorizeDeliveryAdmissionCloudAuthority({
   });
   const authorized = Object.freeze({
     ...normalizeBoundAuthority({
-      result, authority: reviewed, manifest, deviceId, sessionId,
+      result: projectOperationLedgerDigest(result), authority: reviewed, manifest, deviceId, sessionId,
       focusedEvidenceDigest,
     }),
     operatorDecisionDigest: explicitOperatorDecision,
@@ -554,6 +555,14 @@ export function authorizeDeliveryAdmissionCloudAuthority({
     authority: authorized, manifest, headSha, branch,
     focusedEvidenceDigest, environment, inspect, invoke: verify,
   });
+}
+
+function projectOperationLedgerDigest(result) {
+  if (result?.ledgerDigest) return result;
+  return {
+    ...result,
+    ledgerDigest: result?.receipt?.ledgerDigest,
+  };
 }
 export function invokeRepositoryCloudAction({
   action,

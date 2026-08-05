@@ -15,8 +15,6 @@ import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
 const canonicalSha = "a".repeat(40), fenceSha = "b".repeat(40);
 const claimDigest = "2".repeat(64), claimLedgerRevision = "3".repeat(64), ledgerRevision = "c".repeat(40);
 const ledgerDigest = "4".repeat(64), future = "2099-07-31T00:00:00.000Z", evaluationTime = "2026-07-30T00:00:00.000Z";
-const entrySchemaV1 = "agentic-cloud-collaboration-entry/v1";
-const entrySchemaV2 = "agentic-cloud-collaboration-entry/v2";
 const repository = "/workspace/repository", canonicalPath = repository;
 const targetPath = "/workspace/.worktrees/repository/scoped-runtime", branch = "agent/device/scoped-runtime";
 function manifestFor(paths = ["scripts/scoped-runtime"]) {
@@ -26,6 +24,9 @@ function manifestFor(paths = ["scripts/scoped-runtime"]) {
 function publicClaim(manifest, overrides = {}) {
   const { claimId: suppliedClaimId, ...overrideFields } = overrides;
   const claim = {
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    operationReceiptDigest: "1".repeat(64),
     state: "active",
     actorId: "github-user:1",
     deviceId: "device",
@@ -45,21 +46,11 @@ function publicClaim(manifest, overrides = {}) {
     transitionDigest: claimLedgerRevision,
     ...overrideFields,
   };
-  const claimIdentitySchema = claim.claimIdentitySchema
-    || claim.entrySchema
-    || entrySchemaV1;
-  const logicalIdentity = {
+  const claimId = suppliedClaimId || digestValue({
     actorId: claim.actorId, canonicalBaseRevision: claim.canonicalBaseRevision,
     leaseEpoch: claim.leaseEpoch, repositoryId: claim.repositoryId,
     workItemId: claim.workItemId, writeSetDigest: claim.writeSetDigest,
-  };
-  const claimId = suppliedClaimId || digestValue(
-    claimIdentitySchema.endsWith("/v1") ? {
-      ...logicalIdentity,
-      deviceId: pseudonymousIdentifier("device", claim.deviceId),
-      sessionId: pseudonymousIdentifier("session", claim.sessionId),
-    } : logicalIdentity,
-  );
+  });
   return { claimId, ...claim };
 }
 function cloudResult(manifest, overrides = {}) {
@@ -70,6 +61,7 @@ function cloudResult(manifest, overrides = {}) {
     action: overrides.action || "claim",
     status: "active",
     ledgerRevision: overrides.ledgerRevision || ledgerRevision,
+    ledgerDigest: overrides.ledgerDigest || ledgerDigest,
     claimDigest: claim.fenceRevision,
     claim,
     findings: [],
@@ -86,7 +78,7 @@ function authorityFor(manifest, overrides = {}) {
     ...overrides,
   });
 }
-function verifiedBundle(authority, manifest, claims = null, candidateOverrides = {}) {
+function verifiedBundle(authority, manifest, claims = null) {
   const candidate = publicClaim(manifest, {
     claimId: authority.claimId,
     laneRevision: authority.laneRevision,
@@ -96,7 +88,6 @@ function verifiedBundle(authority, manifest, claims = null, candidateOverrides =
     expiresAt: authority.expiresAt,
     fenceRevision: authority.claimDigest,
     transitionDigest: authority.claimLedgerRevision,
-    ...candidateOverrides,
   });
   const inventoryClaims = claims || [candidate];
   return verifyAdmissionCloudAuthority({
@@ -153,7 +144,13 @@ function authorityForPublicClaim(authority, claim) {
   return {
     ...authority,
     claimId: claim.claimId, claimDigest: claim.fenceRevision,
+    ledgerDigest,
     claimLedgerRevision: claim.transitionDigest,
+    entrySchema: claim.entrySchema,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    mutationAuthorityEligible:
+      claim.entrySchema === "agentic-cloud-collaboration-entry/v2",
     canonicalBaseSha: claim.canonicalBaseRevision,
     laneRevision: claim.laneRevision,
     cloudDeclaredWriteScope: claim.declaredWriteScope,
@@ -374,6 +371,10 @@ function deliveryPublicClaim(entry) {
   const core = entry.claimCore;
   const claim = {
     claimId: core.claimId,
+    entrySchema: "agentic-cloud-collaboration-entry/v1",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v1",
+    operationReceiptDigest: null,
+    mutationAuthorityEligible: false,
     state: core.state.replaceAll("-", "_"),
     actorId: core.actorId,
     repositoryId: core.repositoryId,
@@ -607,6 +608,43 @@ test("disjoint attributed dirty lane preserves independent local and cloud epoch
   assert.equal(lease.epoch, 126);
   assert.equal(lease.cloudAuthority.leaseEpoch, 1);
 });
+test("reviewed cloud authority outlives its expired replaceable local lease projection", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const { peerPath, peer, lease } = peerFixture(authority);
+  const reviewedPeer = { ...peer, state: "reviewed" };
+  lease.status = "review_ready";
+  lease.reviewHeadSha = fenceSha;
+  lease.expiresAt = "2026-07-30T00:00:00.000Z";
+  lease.cloudAuthority = {
+    ...lease.cloudAuthority,
+    state: "review_ready",
+  };
+  delete lease.cloudAuthority.entrySchema;
+  delete lease.cloudAuthority.claimIdentitySchema;
+  delete lease.cloudAuthority.mutationAuthorityEligible;
+  const lane = laneState({
+    lanePath: peerPath,
+    laneBranch: "refs/heads/agent/peer/peer-docs",
+    head: fenceSha,
+    lease,
+  });
+  const verified = verifiedBundle(authority, manifest, [
+    publicClaim(manifest),
+    reviewedPeer,
+  ]);
+  const report = evaluate({
+    manifest,
+    authority,
+    verification: verified.verification,
+    lanes: [canonicalLane(), lane],
+  });
+  assert.equal(
+    report.lanes.find(item => item.path === peerPath).classification,
+    "disjoint-attributed",
+  );
+  assert.equal(report.authoringAdmission.status, "planned");
+});
 test("peer attribution requires an exact current operation-derived remote join", () => {
   const manifest = manifestFor();
   const authority = authorityFor(manifest);
@@ -646,6 +684,48 @@ test("peer attribution requires an exact current operation-derived remote join",
     assert.equal(report.admissionRuntimeConformance.status, "unevaluated", label);
   }
 });
+test("raw v1 current peers remain historical-only and block new admission", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const { peerPath, peer, lease } = peerFixture(authority);
+  const historicalPeer = {
+    ...peer,
+    entrySchema: "agentic-cloud-collaboration-entry/v1",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v1",
+    operationReceiptDigest: null,
+  };
+  const historicalLease = {
+    ...lease,
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      entrySchema: historicalPeer.entrySchema,
+      claimIdentitySchema: historicalPeer.claimIdentitySchema,
+      operationReceiptDigest: null,
+      mutationAuthorityEligible: false,
+    },
+  };
+  const historicalLane = laneState({
+    lanePath: peerPath,
+    laneBranch: "refs/heads/agent/peer/peer-docs",
+    head: fenceSha,
+    dirty: true,
+    lease: historicalLease,
+  });
+  const verified = verifiedBundle(authority, manifest, [
+    publicClaim(manifest),
+    historicalPeer,
+  ]);
+  const report = evaluate({
+    manifest,
+    authority,
+    verification: verified.verification,
+    lanes: [canonicalLane(), historicalLane],
+  });
+  const observed = report.lanes.find(lane => lane.path === peerPath);
+  assert.equal(observed.classification, "ambiguous");
+  assert.deepEqual(observed.overlapReasons, ["missing-authoritative-owner"]);
+  assert.equal(report.authoringAdmission.status, "blocked");
+});
 test("delivery-authorized peers use canonical proof at reviewed and protected-refresh heads", async t => {
   for (const options of [
     { refreshed: false, heartbeatCount: 0 },
@@ -660,7 +740,7 @@ test("delivery-authorized peers use canonical proof at reviewed and protected-re
       installDeliveryPeerProcessMocks(t, fixture);
       const report = evaluate({
         manifest,
-        authority,
+        authority: verified.authority,
         verification: verified.verification,
         lanes: [canonicalLane(), fixture.lane],
       });
@@ -708,7 +788,7 @@ test("delivery-authorized peer proof rejects predecessor, provider, current, hea
       installDeliveryPeerProcessMocks(t, fixture);
       const report = evaluate({
         manifest,
-        authority,
+        authority: verified.authority,
         verification: verified.verification,
         lanes: [canonicalLane(), fixture.lane],
       });
@@ -729,7 +809,7 @@ test("preservation reruns delivery-peer proof and rejects authority drift", t =>
   installDeliveryPeerProcessMocks(t, fixture);
   let report = evaluate({
     manifest,
-    authority,
+    authority: verified.authority,
     verification: verified.verification,
     lanes: [canonicalLane(), fixture.lane],
   });
@@ -739,7 +819,7 @@ test("preservation reruns delivery-peer proof and rejects authority drift", t =>
     remoteAuthorityVerification: verified.verification,
   });
   const bound = {
-    ...authority,
+    ...verified.authority,
     claimDigest: "e".repeat(64),
     claimLedgerRevision: "f".repeat(64),
     laneRevision: fenceSha,
@@ -763,7 +843,7 @@ test("preservation reruns delivery-peer proof and rejects authority drift", t =>
     pullRequestUrl: "https://github.test/owner/repository/pull/42",
     expiresAt: future,
     admission: createAdmissionLeaseProjection(report),
-    cloudAuthority: bound,
+    cloudAuthority: boundVerified.authority,
   };
   const baseTreeSha = "6".repeat(40);
   const candidate = laneState({
@@ -877,121 +957,53 @@ test("canonical drift and caller-supplied verification fail closed", () => {
     ["canonical-base-drift", "cloud-authority-unproven"],
   );
 });
-test("native-v2 candidate identity is admitted while provenance and local-device drift fail closed", () => {
+test("clean canonical main behind origin is preserved for exact-base task admission", () => {
   const manifest = manifestFor();
-  const nativeV2Provenance = {
-    entrySchema: entrySchemaV2,
-    claimIdentitySchema: entrySchemaV2,
-    operationReceiptDigest: "6".repeat(64),
-  };
-  const nativeClaim = publicClaim(manifest, nativeV2Provenance);
-  const fresh = authorityForPublicClaim(authorityFor(manifest), nativeClaim);
-  const freshVerified = verifiedBundle(
-    fresh,
+  const authority = authorityFor(manifest);
+  const verified = verifiedBundle(authority, manifest);
+  const report = evaluate({
     manifest,
-    null,
-    nativeV2Provenance,
-  );
-  let report = evaluate({
-    manifest,
-    authority: fresh,
-    verification: freshVerified.verification,
-    lanes: [canonicalLane()],
+    authority,
+    verification: verified.verification,
+    canonicalSourceDisposition: "preserved-behind",
+    lanes: [laneState({
+      lanePath: canonicalPath,
+      laneBranch: "refs/heads/main",
+      head: "d".repeat(40),
+    })],
   });
-  report = attachAdmissionReceipt({
-    report,
-    targetObservationDigest: "d".repeat(64),
-    remoteAuthorityVerification: freshVerified.verification,
-  });
-  const bound = {
-    ...fresh,
-    claimDigest: "e".repeat(64),
-    claimLedgerRevision: "f".repeat(64),
-    laneRevision: fenceSha,
-    deviceId: "device",
-    sessionId: "session",
-    reviewRequestId: "github-pull-request:PR_native_v2",
-    transitionCounter: 2,
-  };
-  const boundVerified = verifiedBundle(
-    bound,
-    manifest,
-    null,
-    nativeV2Provenance,
-  );
-  const lease = {
-    schema: "agentic-writer-lease/v2",
-    status: "active",
-    epoch: 126,
-    sessionId: "session",
-    device: "device",
-    scope: "scoped-runtime",
-    branch,
-    worktreePath: targetPath,
-    baseSha: canonicalSha,
-    fenceSha,
-    pullRequestUrl: "https://github.test/owner/repository/pull/268",
-    expiresAt: future,
-    admission: createAdmissionLeaseProjection(report),
-    cloudAuthority: bound,
-  };
-  const receipt = assertAdmissionMutationAuthority({
-    lease,
-    cloudAuthority: bound,
-    remoteAuthorityVerification: boundVerified.verification,
-    allowPlanned: true,
-  });
-  assert.equal(receipt.status, "ready");
-
-  for (const drift of [
-    { deviceId: "other-device" },
-    { sessionId: "other-session" },
+  assert.equal(report.authoringAdmission.status, "planned");
+  assert.deepEqual(report.authoringAdmission.findings, []);
+  assert.equal(report.lanes[0].classification, "canonical");
+});
+test("dirty or divergent canonical main still blocks task admission", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const verified = verifiedBundle(authority, manifest);
+  for (const [canonicalSourceDisposition, dirty] of [
+    ["unsafe", false],
+    ["preserved-behind", true],
   ]) {
-    const driftedAuthority = { ...bound, ...drift };
-    assert.throws(() => assertAdmissionMutationAuthority({
-      lease: { ...lease, cloudAuthority: driftedAuthority },
-      cloudAuthority: driftedAuthority,
-      remoteAuthorityVerification: boundVerified.verification,
-      allowPlanned: true,
-    }), /current joined cloud and local lease authority/u);
+    const report = evaluate({
+      manifest,
+      authority,
+      verification: verified.verification,
+      canonicalSourceDisposition,
+      lanes: [laneState({
+        lanePath: canonicalPath,
+        laneBranch: "refs/heads/main",
+        head: "d".repeat(40),
+        dirty,
+      })],
+    });
+    assert.equal(report.authoringAdmission.status, "blocked");
+    assert.equal(
+      report.authoringAdmission.findings.some(
+        finding => finding.type === "canonical-base-drift",
+      ),
+      true,
+    );
   }
-
-  const legacyClaimId = publicClaim(manifest).claimId;
-  const mismatchedClaim = publicClaim(manifest, {
-    ...nativeV2Provenance,
-    claimId: legacyClaimId,
-  });
-  const mismatchedAuthority = authorityForPublicClaim(
-    authorityFor(manifest),
-    mismatchedClaim,
-  );
-  assert.throws(() => verifiedBundle(
-    mismatchedAuthority,
-    manifest,
-    null,
-    nativeV2Provenance,
-  ), /candidate claim identity does not match its immutable provenance/u);
-
-  const missingProvenance = {
-    entrySchema: entrySchemaV2,
-    operationReceiptDigest: "6".repeat(64),
-  };
-  const provenanceFreeClaim = publicClaim(manifest, missingProvenance);
-  const provenanceFreeAuthority = authorityForPublicClaim(
-    authorityFor(manifest),
-    provenanceFreeClaim,
-  );
-  assert.throws(() => verifiedBundle(
-    provenanceFreeAuthority,
-    manifest,
-    null,
-    missingProvenance,
-  ), /immutable claim identity provenance/u);
-
-  assert.equal(
-    verifiedBundle(authorityFor(manifest), manifest).verification.status,
-    "ready",
-  );
 });
 test("joined receipts finalize admitted while peer drift blocks", () => {
   const manifest = manifestFor();
@@ -1036,6 +1048,52 @@ test("joined receipts finalize admitted while peer drift blocks", () => {
     admission: plannedAdmission,
     cloudAuthority: bound,
   };
+  const currentCandidate = publicClaim(manifest, {
+    claimId: bound.claimId,
+    laneRevision: bound.laneRevision,
+    leaseEpoch: bound.leaseEpoch,
+    transitionCounter: bound.transitionCounter,
+    reviewRequestId: bound.reviewRequestId,
+    expiresAt: bound.expiresAt,
+    fenceRevision: bound.claimDigest,
+    transitionDigest: bound.claimLedgerRevision,
+  });
+  const disjointScope = ["path:docs/disjoint", "semantic:disjoint"];
+  const disjointPeer = publicClaim({
+    declaredWriteSet: disjointScope,
+    writeSetDigest: digestValue(disjointScope),
+  }, {
+    claimId: "7".repeat(64),
+    declaredWriteScope: disjointScope,
+    writeSetDigest: digestValue(disjointScope),
+    fenceRevision: "8".repeat(64),
+    transitionDigest: "9".repeat(64),
+  });
+  const disjointVerified = verifiedBundle(bound, manifest, [
+    currentCandidate,
+    disjointPeer,
+  ]);
+  assert.doesNotThrow(() => assertAdmissionMutationAuthority({
+    lease,
+    cloudAuthority: bound,
+    remoteAuthorityVerification: disjointVerified.verification,
+    allowPlanned: true,
+  }));
+  const overlappingPeer = {
+    ...disjointPeer,
+    declaredWriteScope: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+  };
+  const overlappingVerified = verifiedBundle(bound, manifest, [
+    currentCandidate,
+    overlappingPeer,
+  ]);
+  assert.throws(() => assertAdmissionMutationAuthority({
+    lease,
+    cloudAuthority: bound,
+    remoteAuthorityVerification: overlappingVerified.verification,
+    allowPlanned: true,
+  }), /competing overlapping cloud authority/u);
   for (const drift of [
     { state: "review_ready" }, { expiresAt: "2099-08-01T00:00:00.000Z" },
     { leaseEpoch: 2 }, { transitionCounter: 3 }, { reviewRequestId: "other" },
@@ -1133,7 +1191,7 @@ test("joined receipts finalize admitted while peer drift blocks", () => {
       candidateCreateRegisterResult: operation,
       remoteAuthorityVerification: drifted.verification,
     },
-  ), /peer-operation receipt/);
+  ), /competing overlapping cloud authority/);
 });
 test("lane collection rejects torn snapshots and guard check never rewrites hooks", () => {
   let reads = 0;
@@ -1181,6 +1239,27 @@ test("lane collection rejects torn snapshots and guard check never rewrites hook
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+test("lane collection proves a clean canonical ancestor as preserved-behind", () => {
+  const behindSha = "d".repeat(40);
+  const git = (_cwd, args) => {
+    const key = args.join(" ");
+    if (key === "worktree list --porcelain -z") {
+      return `worktree ${repository}\0HEAD ${behindSha}\0branch refs/heads/main\0`;
+    }
+    if (key === "rev-parse origin/main") return canonicalSha;
+    if (key === "rev-parse HEAD^{tree}") return behindSha;
+    if (key === `merge-base --is-ancestor ${behindSha} ${canonicalSha}`) return "";
+    if (key.includes("status --porcelain")) return "";
+    if (key.startsWith("ls-files")) return "";
+    throw new Error(`unexpected git command: ${key}`);
+  };
+  const snapshot = collectScopedLaneState({
+    repository,
+    git,
+    readLeases: () => [],
+  });
+  assert.equal(snapshot.canonicalSourceDisposition, "preserved-behind");
 });
 test("writer heartbeat expiry is cloud-capped with independent local epoch", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "lease-cap-"));

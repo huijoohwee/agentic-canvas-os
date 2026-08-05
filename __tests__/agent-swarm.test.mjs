@@ -483,11 +483,11 @@ test("requires matching execution receipts for idempotent effects", async () => 
   const oneDeadline = createHarness({
     tasks: [task("one-deadline")],
     maxAttempts: 1,
-    taskTimeoutMs: 100,
-    taskLeaseMs: 150,
-    storeClaimTtlMs: 10,
+    taskTimeoutMs: 1_000,
+    taskLeaseMs: 1_500,
+    storeClaimTtlMs: 100,
     executeTask: async (call) => {
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       return {
         status: "completed",
         output: "changed-once",
@@ -499,7 +499,7 @@ test("requires matching execution receipts for idempotent effects", async () => 
     verifyReceipt: async ({ receipt, signal }) => {
       verifierStarted = true;
       await new Promise((resolve, reject) => {
-        const timer = setTimeout(resolve, 60);
+        const timer = setTimeout(resolve, 2_000);
         signal.addEventListener("abort", () => {
           clearTimeout(timer);
           reject(new Error("verification deadline reached"));

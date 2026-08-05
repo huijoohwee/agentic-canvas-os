@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 765,
-  "headDigest": "1b3901a038856b8e5455b2b30f810bc58334afcb3e11d822064e6738f2571960",
+  "sequence": 766,
+  "headDigest": "757c471011b80db201c87f5ed500b841a512eaa6f0b20b4fbbef54dc693842b8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -37591,6 +37591,52 @@
       },
       "claimDigest": "9d53269e32bb7e4b3597b0e079de85fd544232c759f3db278eaea8698aed1c21",
       "digest": "1b3901a038856b8e5455b2b30f810bc58334afcb3e11d822064e6738f2571960"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 766,
+      "parentDigest": "1b3901a038856b8e5455b2b30f810bc58334afcb3e11d822064e6738f2571960",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "7df65e5bcc9f29abaf8711d573dc8b5a0f80c3d3bf06553d7d6d567f717e9591",
+      "idempotencyKey": "6af45878974068714141602ad5d56787054bc688023392e0a5b0fb4f246589d9",
+      "requestDigest": "d6b1deaae98444deeec4816b0764abf9775f1409344d63a54a21f52a61329f7e",
+      "evaluationTime": "2026-08-05T15:45:33.000Z",
+      "claimCore": {
+        "claimId": "7df65e5bcc9f29abaf8711d573dc8b5a0f80c3d3bf06553d7d6d567f717e9591",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:39180aba2f6c8ed076ac3243fb62d077e3b21b45b9ce81f04c60bd5de50efccc",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:fd1f5cd71023d442e926d4724a15f3a2be698005fef843940bf6a71b8bc9a938",
+        "canonicalBaseRevision": "ae7888d2002803fe55f9e14adacde5b0a70b459d",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:scripts/__tests__/git-guidelines-current-lane-authority.test.mjs",
+          "path:scripts/__tests__/git-guidelines-input-resolver.test.mjs",
+          "path:scripts/__tests__/git-guidelines-runtime-contract.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "path:scripts/lib/git-guidelines/content.mjs",
+          "path:scripts/lib/git-guidelines/input-artifacts.mjs",
+          "path:scripts/materialize-git-guidelines-current-lane-authority.mjs",
+          "semantic:git-guidelines-current-lane-authority-materialization"
+        ],
+        "writeSetDigest": "471484c88f814871bbd3307d152a70a21392360f26f52313fc3a2fab218d8949",
+        "laneRevision": "ae7888d2002803fe55f9e14adacde5b0a70b459d",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-05T19:45:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e961fb7d74f7489eaa86a06f8ac6243f93cf422cbc0dd036c1d0ac235f248d14",
+      "digest": "757c471011b80db201c87f5ed500b841a512eaa6f0b20b4fbbef54dc693842b8"
     }
   ]
 }

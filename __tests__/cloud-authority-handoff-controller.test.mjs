@@ -30,11 +30,18 @@ const ADMITTED_REPORT_DIGEST = "7".repeat(64);
 const RECOVERY_RECEIPT_DIGEST = "8".repeat(64);
 const VERIFICATION_RECEIPT_DIGEST = "9".repeat(64);
 const PROJECTION_RECEIPT_DIGEST = "f".repeat(64);
+const SECOND_RECOVERED_CLAIM_DIGEST = "a".repeat(64);
+const SECOND_RECOVERED_LEDGER_DIGEST = "b".repeat(64);
+const SECOND_RECOVERY_RECEIPT_DIGEST = "c".repeat(64);
+const SECOND_VERIFICATION_RECEIPT_DIGEST = "0".repeat(64);
 const REVIEW_REQUEST_ID = "github-pull-request:PR_238";
 const LEGACY_DEVICE_ID = `device:${digestValue({ namespace: "device", value: "legacy-device" })}`;
 const LEGACY_SESSION_ID = `session:${digestValue({ namespace: "session", value: "legacy-session" })}`;
 const EXPIRED_AT = "2026-08-03T07:37:22.000Z";
+const LOCAL_RECOVERED_AT = "2026-08-03T07:07:22.000Z";
 const RECOVERED_AT = "2026-08-03T08:37:22.000Z";
+const REPLAY_EXPIRED_AT = "2026-08-03T09:07:22.000Z";
+const SECOND_RECOVERED_AT = "2026-08-03T09:07:22.000Z";
 const RECOVERED_EXPIRES_AT = "2099-08-03T09:07:22.000Z";
 const PROJECTION_TIMESTAMP = "2026-08-03T08:38:22.000Z";
 const DECLARED_WRITE_SET = [
@@ -42,6 +49,10 @@ const DECLARED_WRITE_SET = [
   "path:scripts/legacy-authority-evaluator.mjs",
   "semantic:legacy-authority-evaluator",
 ];
+
+function ownerIdentifierForTest(namespace, value) {
+  return `${namespace}:${digestValue({ namespace, value })}`;
+}
 
 function preservedLane(overrides = {}) {
   const lease = {
@@ -181,17 +192,96 @@ function recoveredAuthority(overrides = {}) {
   };
 }
 
-function recoveryResult(recoveryEvidenceDigest, authority = recoveredAuthority()) {
+function recoveryResult(
+  recoveryEvidenceDigest,
+  authority = recoveredAuthority(),
+  recoveredAt = RECOVERED_AT,
+) {
   return {
     authority: {
       ...authority,
       recovery: {
         evidenceDigest: recoveryEvidenceDigest,
-        recoveredAt: RECOVERED_AT,
+        recoveredAt,
       },
     },
     recoveryReceiptDigest: RECOVERY_RECEIPT_DIGEST,
     verificationReceiptDigest: VERIFICATION_RECEIPT_DIGEST,
+  };
+}
+
+function laneWithRecoveryEvidence(recoveryEvidenceDigest) {
+  const original = preservedLane();
+  const authority = {
+    ...original.authority,
+    recovery: {
+      evidenceDigest: recoveryEvidenceDigest,
+      recoveredAt: LOCAL_RECOVERED_AT,
+    },
+  };
+  return preservedLane({
+    lease: { ...original.lease, cloudAuthority: authority },
+    authority,
+  });
+}
+
+function dormantReplayedRecovery(recoveryEvidenceDigest, overrides = {}) {
+  return predecessorClaim({
+    state: "dormant-preserved",
+    transitionCounter: 5,
+    fenceRevision: RECOVERED_CLAIM_DIGEST,
+    transitionDigest: RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    expiresAt: REPLAY_EXPIRED_AT,
+    recovery: {
+      evidenceDigest: recoveryEvidenceDigest,
+      recoveredAt: RECOVERED_AT,
+    },
+    ...overrides,
+  });
+}
+
+function publicSecondRecoveryCloudResult(action) {
+  const claim = predecessorClaim({
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    state: "reviewed",
+    transitionCounter: 6,
+    fenceRevision: SECOND_RECOVERED_CLAIM_DIGEST,
+    transitionDigest: SECOND_RECOVERED_LEDGER_DIGEST,
+    operationReceiptDigest: SECOND_RECOVERY_RECEIPT_DIGEST,
+    expiresAt: RECOVERED_EXPIRES_AT,
+  });
+  delete claim.deviceId;
+  delete claim.sessionId;
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action,
+    status: "reviewed",
+    ledgerRevision: BASE_SHA,
+    claimDigest: SECOND_RECOVERED_CLAIM_DIGEST,
+    claim,
+    receipt: {
+      ledgerDigest: SECOND_RECOVERED_LEDGER_DIGEST,
+      receiptDigest: action === "continue"
+        ? SECOND_RECOVERY_RECEIPT_DIGEST
+        : SECOND_VERIFICATION_RECEIPT_DIGEST,
+    },
+  };
+}
+
+function fullSecondRecoveredClaim(recoveryEvidenceDigest) {
+  const claim = publicSecondRecoveryCloudResult("continue").claim;
+  return {
+    ...claim,
+    ledgerRevision: claim.transitionDigest,
+    deviceId: LEGACY_DEVICE_ID,
+    sessionId: LEGACY_SESSION_ID,
+    recovery: {
+      evidenceDigest: recoveryEvidenceDigest,
+      recoveredAt: SECOND_RECOVERED_AT,
+    },
   };
 }
 
@@ -398,6 +488,222 @@ test("reclaim replays local projection after the exact cloud recovery already co
   assert.equal(persisted, true);
 });
 
+test("reclaim recovers an exact expired replay whose local projection never completed", async () => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const lane = laneWithRecoveryEvidence(recoveryEvidenceDigest);
+  const predecessor = dormantReplayedRecovery(recoveryEvidenceDigest);
+  let recovered = false;
+  let persisted = false;
+  const result = await reclaim(adapterFor({
+    lane,
+    status: statusResult([predecessor]),
+    recoverAuthority: ({ predecessor: observed, recoveryEvidenceDigest: observedEvidence }) => {
+      recovered = true;
+      assert.equal(observed.transitionCounter, 5);
+      assert.equal(observed.fenceRevision, RECOVERED_CLAIM_DIGEST);
+      assert.equal(observedEvidence, recoveryEvidenceDigest);
+      return recoveryResult(
+        recoveryEvidenceDigest,
+        recoveredAuthority({
+          claimDigest: SECOND_RECOVERED_CLAIM_DIGEST,
+          claimLedgerRevision: SECOND_RECOVERED_LEDGER_DIGEST,
+          transitionCounter: 6,
+        }),
+        SECOND_RECOVERED_AT,
+      );
+    },
+    persistReviewProjection: ({ authority }) => {
+      persisted = true;
+      assert.equal(authority.transitionCounter, 6);
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  }));
+
+  assert.equal(result.outcome, "reclaimed-live");
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorTransitionCounter, 6);
+  assert.equal(result.receipts[1].payload.successorTransitionCounter, 6);
+  assert.equal(recovered, true);
+  assert.equal(persisted, true);
+});
+
+test("expired replay recovery rejects stale, skipped, or predecessor-reused successors", async () => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const lane = laneWithRecoveryEvidence(recoveryEvidenceDigest);
+  const predecessor = dormantReplayedRecovery(recoveryEvidenceDigest);
+  const candidates = [
+    recoveredAuthority({
+      claimDigest: SECOND_RECOVERED_CLAIM_DIGEST,
+      claimLedgerRevision: SECOND_RECOVERED_LEDGER_DIGEST,
+      transitionCounter: 5,
+    }),
+    recoveredAuthority({
+      claimDigest: SECOND_RECOVERED_CLAIM_DIGEST,
+      claimLedgerRevision: SECOND_RECOVERED_LEDGER_DIGEST,
+      transitionCounter: 7,
+    }),
+    recoveredAuthority({
+      claimDigest: RECOVERED_CLAIM_DIGEST,
+      claimLedgerRevision: SECOND_RECOVERED_LEDGER_DIGEST,
+      transitionCounter: 6,
+    }),
+    recoveredAuthority({
+      claimDigest: SECOND_RECOVERED_CLAIM_DIGEST,
+      claimLedgerRevision: RECOVERED_LEDGER_DIGEST,
+      transitionCounter: 6,
+    }),
+  ];
+
+  for (const authority of candidates) {
+    await assert.rejects(
+      reclaim(adapterFor({
+        lane,
+        status: statusResult([predecessor]),
+        recoverAuthority: () => recoveryResult(
+          recoveryEvidenceDigest,
+          authority,
+          SECOND_RECOVERED_AT,
+        ),
+      })),
+      /outside the exact preserved claim/,
+    );
+  }
+
+  await assert.rejects(
+    reclaim(adapterFor({
+      lane,
+      status: statusResult([predecessor]),
+      recoverAuthority: () => recoveryResult(
+        recoveryEvidenceDigest,
+        recoveredAuthority({
+          claimDigest: SECOND_RECOVERED_CLAIM_DIGEST,
+          claimLedgerRevision: SECOND_RECOVERED_LEDGER_DIGEST,
+          transitionCounter: 6,
+        }),
+        RECOVERED_AT,
+      ),
+    })),
+    /outside the exact preserved claim/,
+  );
+});
+
+test("expired replay recovery evidence and structural drift block before mutation", async t => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const lane = laneWithRecoveryEvidence(recoveryEvidenceDigest);
+  const cases = [
+    [
+      "wrong recovery evidence",
+      dormantReplayedRecovery("0".repeat(64)),
+      "unprojected-recovery-evidence-drift",
+    ],
+    [
+      "skipped transition counter",
+      dormantReplayedRecovery(recoveryEvidenceDigest, { transitionCounter: 6 }),
+      "preserved-claim-drift",
+    ],
+    [
+      "reused predecessor fence",
+      dormantReplayedRecovery(recoveryEvidenceDigest, {
+        fenceRevision: PREDECESSOR_CLAIM_DIGEST,
+      }),
+      "preserved-claim-drift",
+    ],
+    [
+      "reused predecessor transition",
+      dormantReplayedRecovery(recoveryEvidenceDigest, {
+        transitionDigest: PREDECESSOR_LEDGER_DIGEST,
+      }),
+      "preserved-claim-drift",
+    ],
+    [
+      "missing operation receipt",
+      dormantReplayedRecovery(recoveryEvidenceDigest, {
+        operationReceiptDigest: null,
+      }),
+      "preserved-claim-drift",
+    ],
+    [
+      "wrong successor owner",
+      dormantReplayedRecovery(recoveryEvidenceDigest, {
+        sessionId: ownerIdentifierForTest("session", "other-session"),
+      }),
+      "preserved-claim-drift",
+    ],
+    [
+      "non-advancing expiry",
+      dormantReplayedRecovery(recoveryEvidenceDigest, { expiresAt: EXPIRED_AT }),
+      "preserved-claim-drift",
+    ],
+    [
+      "recovery timestamp before local expiry",
+      dormantReplayedRecovery(recoveryEvidenceDigest, {
+        recovery: {
+          evidenceDigest: recoveryEvidenceDigest,
+          recoveredAt: LOCAL_RECOVERED_AT,
+        },
+      }),
+      "preserved-claim-drift",
+    ],
+  ];
+
+  for (const [name, predecessor, expectedFinding] of cases) {
+    await t.test(name, async () => {
+      let mutated = false;
+      let persisted = false;
+      const result = await reclaim(adapterFor({
+        lane,
+        status: statusResult([predecessor]),
+        recoverAuthority: () => {
+          mutated = true;
+          throw new Error("drifted replay must not mutate cloud authority");
+        },
+        persistReviewProjection: () => {
+          persisted = true;
+          throw new Error("drifted replay must not update local projection");
+        },
+      }));
+      assert.equal(result.outcome, "blocked");
+      assert.equal(
+        result.blockingFindings.some(finding => finding.type === expectedFinding),
+        true,
+      );
+      assert.equal(mutated, false);
+      assert.equal(persisted, false);
+    });
+  }
+
+  const retained = await reclaim(adapterFor({
+    lane,
+    status: statusResult([dormantReplayedRecovery(recoveryEvidenceDigest)]),
+    recoverAuthority: () => {
+      throw new Error("retain must not mutate an expired replay");
+    },
+  }), { transition: "retain" });
+  assert.equal(retained.outcome, "blocked");
+  assert.equal(
+    retained.blockingFindings.some(finding => finding.type === "preserved-claim-drift"),
+    true,
+  );
+
+  let mutated = false;
+  const localEvidenceDrift = await reclaim(adapterFor({
+    lane: laneWithRecoveryEvidence("0".repeat(64)),
+    status: statusResult([dormantReplayedRecovery(recoveryEvidenceDigest)]),
+    recoverAuthority: () => {
+      mutated = true;
+      throw new Error("local evidence drift must block before recovery");
+    },
+  }));
+  assert.equal(localEvidenceDrift.outcome, "blocked");
+  assert.equal(
+    localEvidenceDrift.blockingFindings.some(
+      finding => finding.type === "unprojected-recovery-evidence-drift",
+    ),
+    true,
+  );
+  assert.equal(mutated, false);
+});
+
 test("reclaim returns an exact replay after cloud and local projections already completed", async () => {
   const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
   const authority = recoveredAuthority({
@@ -545,6 +851,59 @@ test("repository recovery joins omitted public fields from the exact post-CAS cl
   assert.equal(result.authority.deviceId, "legacy-device");
   assert.equal(result.authority.sessionId, "legacy-session");
   assert.equal(result.authority.ledgerDigest, RECOVERED_LEDGER_DIGEST);
+});
+
+test("repository recovery advances an expired unprojected replay from its immediate predecessor", async () => {
+  const recoveryEvidenceDigest = expectedRecoveryEvidenceDigest();
+  const lane = laneWithRecoveryEvidence(recoveryEvidenceDigest);
+  const predecessor = dormantReplayedRecovery(recoveryEvidenceDigest);
+  const fullClaim = fullSecondRecoveredClaim(recoveryEvidenceDigest);
+  const actions = [];
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    environment: {},
+    leaseStore: {},
+    createCloudAdapter: () => ({
+      listClaims: async request => {
+        assert.deepEqual(request, { targetRepository: "example/repo" });
+        return [fullClaim];
+      },
+    }),
+    invokeCloudAction: input => {
+      actions.push(input.action);
+      assert.equal(input.request.expectedClaimDigest, RECOVERED_CLAIM_DIGEST);
+      assert.equal(input.request.expectedTransitionCounter, 5);
+      assert.equal(input.request.expectedLedgerDigest, STATUS_LEDGER_DIGEST);
+      assert.equal(input.request.recoveryEvidenceDigest, recoveryEvidenceDigest);
+      assert.match(input.request.idempotencyKey, new RegExp(RECOVERED_CLAIM_DIGEST, "u"));
+      return publicSecondRecoveryCloudResult("continue");
+    },
+    invokeCloudVerifier: input => {
+      actions.push("verify");
+      assert.equal(input.request.expectedClaimDigest, SECOND_RECOVERED_CLAIM_DIGEST);
+      return publicSecondRecoveryCloudResult("verify");
+    },
+  });
+
+  const result = await adapter.recoverAuthority({
+    request: {
+      transition: "reclaim",
+      ttlSeconds: 1800,
+      successorDeviceId: "legacy-device",
+      successorSessionId: "legacy-session",
+    },
+    lane,
+    predecessor,
+    status: statusResult([predecessor]),
+    recoveryEvidenceDigest,
+  });
+
+  assert.deepEqual(actions, ["continue", "verify"]);
+  assert.equal(result.authority.transitionCounter, 6);
+  assert.equal(result.authority.claimDigest, SECOND_RECOVERED_CLAIM_DIGEST);
+  assert.equal(result.authority.claimLedgerRevision, SECOND_RECOVERED_LEDGER_DIGEST);
+  assert.equal(result.recoveryReceiptDigest, SECOND_RECOVERY_RECEIPT_DIGEST);
 });
 
 test("repository status joins exact recovery evidence from the owner-enriched cloud claim", async () => {

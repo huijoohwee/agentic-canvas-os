@@ -214,10 +214,10 @@ function publicRecoveryCloudResult(action) {
     action,
     status: "reviewed",
     ledgerRevision: BASE_SHA,
-    ledgerDigest: STATUS_LEDGER_DIGEST,
     claimDigest: RECOVERED_CLAIM_DIGEST,
     claim,
     receipt: {
+      ledgerDigest: RECOVERED_LEDGER_DIGEST,
       receiptDigest: action === "continue"
         ? RECOVERY_RECEIPT_DIGEST
         : VERIFICATION_RECEIPT_DIGEST,
@@ -544,6 +544,7 @@ test("repository recovery joins omitted public fields from the exact post-CAS cl
   assert.deepEqual(result.authority.recovery, fullClaim.recovery);
   assert.equal(result.authority.deviceId, "legacy-device");
   assert.equal(result.authority.sessionId, "legacy-session");
+  assert.equal(result.authority.ledgerDigest, RECOVERED_LEDGER_DIGEST);
 });
 
 test("repository status joins exact recovery evidence from the owner-enriched cloud claim", async () => {

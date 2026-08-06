@@ -1,0 +1,424 @@
+import { createHash } from "node:crypto";
+
+import {
+  digestValue,
+  normalizeWriteSet,
+} from "./cloud-collaboration-primitives.mjs";
+import { assertLeaseWorktree } from "./device-branch-ownership-lib.mjs";
+import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
+import {
+  captureProtectedMainPathEquivalence,
+  RECOVERY_PATH_EVIDENCE_MAX_BYTES,
+  RECOVERY_PATH_EVIDENCE_MAX_PATHS,
+} from "./protected-main-path-equivalence-lib.mjs";
+import {
+  parseDeviceBranch,
+  parseWriterLeasePullRequestBody,
+  projectWriterLeasePullRequestMarker,
+} from "./writer-lease-lib.mjs";
+
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
+export function captureCommittedDescendantEvidence({
+  lease,
+  gitText,
+  bindProtectedMain = true,
+}) {
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (!SHA_PATTERN.test(headSha) || headSha === lease.fenceSha) {
+    throw new Error(
+      "Expired committed recovery requires a strict committed descendant of the fence.",
+    );
+  }
+  const fenceParents = gitText([
+    "rev-list",
+    "--parents",
+    "-n",
+    "1",
+    lease.fenceSha,
+  ]).trim().split(/\s+/);
+  if (
+    fenceParents.length !== 2 ||
+    fenceParents[0] !== lease.fenceSha ||
+    fenceParents[1] !== lease.baseSha
+  ) {
+    throw new Error(
+      "Expired committed recovery requires the exact single-parent fence over its source base.",
+    );
+  }
+  gitText(["merge-base", "--is-ancestor", lease.fenceSha, headSha]);
+  const treeSha = gitText(["rev-parse", `${headSha}^{tree}`]).trim();
+  if (!SHA_PATTERN.test(treeSha)) {
+    throw new Error("Expired committed recovery could not resolve the descendant tree.");
+  }
+  const changedPaths = uniqueSorted(splitNul(gitText([
+    "diff",
+    "--name-only",
+    "-z",
+    "--no-renames",
+    lease.fenceSha,
+    headSha,
+    "--",
+  ])));
+  if (!changedPaths.length) {
+    throw new Error("Expired committed recovery found no committed path changes.");
+  }
+  requireBoundedChangedPaths(changedPaths);
+  const partition = partitionChangedPathsByScope({
+    changedPaths,
+    declaredWriteSet: lease.admission.declaredWriteSet,
+  });
+  if (!bindProtectedMain && partition.protectedEquivalentPaths.length) {
+    throw new Error(
+      `Expired committed recovery path is outside declared write scope: ${partition.protectedEquivalentPaths[0]}`,
+    );
+  }
+  const protectedMainEquivalence = bindProtectedMain
+    ? captureProtectedMainPathEquivalence({
+      baseSha: lease.baseSha,
+      headSha,
+      exemptPaths: partition.protectedEquivalentPaths,
+      gitText,
+    })
+    : null;
+  const rangeDiffDigest = sha256(gitText([
+    "diff",
+    "--binary",
+    "--no-renames",
+    lease.fenceSha,
+    headSha,
+    "--",
+  ]));
+  return Object.freeze({
+    headSha,
+    treeSha,
+    changedPaths: Object.freeze(changedPaths),
+    declaredChangedPaths: Object.freeze(partition.declaredChangedPaths),
+    protectedEquivalentPaths: Object.freeze(
+      partition.protectedEquivalentPaths,
+    ),
+    ...(protectedMainEquivalence ? {
+      protectedMainEquivalence,
+      protectedMainEquivalenceDigest: digestValue(
+        protectedMainEquivalence,
+      ),
+    } : {}),
+    rangeDiffDigest,
+  });
+}
+
+export function captureExpiredCommittedHeartbeatSnapshot({
+  repo,
+  branch,
+  gitText,
+  gitOptional,
+  ghText,
+  leaseStore,
+  sessionId,
+  now = () => new Date(),
+}) {
+  const instant = now();
+  const lease = leaseStore.read(branch);
+  if (
+    !lease ||
+    lease.status !== "active" ||
+    lease.sessionId !== sessionId ||
+    lease.branch !== branch
+  ) {
+    throw new Error("Expired committed recovery requires its exact active session lease.");
+  }
+  assertLeaseWorktree(lease, repo);
+  const identity = parseDeviceBranch(branch);
+  if (
+    !identity ||
+    identity.device !== lease.device ||
+    identity.scope !== lease.scope
+  ) {
+    throw new Error("Expired committed recovery branch identity drifted from its lease.");
+  }
+  if (Date.parse(lease.expiresAt) > instant.getTime()) {
+    throw new Error("Expired committed recovery requires an expired local writer lease.");
+  }
+  requireCloudAdmission({ lease, instant, requireLive: false });
+  if (gitText(["status", "--porcelain=v1", "-z", "--untracked-files=all"])) {
+    throw new Error("Expired committed recovery requires a clean worktree.");
+  }
+
+  const projection = readExactPullRequestProjection({ lease, branch, ghText });
+  const remoteHeadSha = remoteBranchHead({ branch, gitOptional });
+  if (
+    remoteHeadSha !== lease.fenceSha ||
+    projection.pullRequest.headRefOid !== lease.fenceSha
+  ) {
+    throw new Error(
+      "Expired committed recovery requires the exact remote and pull-request fence.",
+    );
+  }
+  const descendant = captureCommittedDescendantEvidence({
+    lease,
+    gitText,
+    bindProtectedMain: true,
+  });
+  const {
+    headSha,
+    treeSha,
+    changedPaths,
+    declaredChangedPaths,
+    protectedEquivalentPaths,
+    protectedMainEquivalence,
+    protectedMainEquivalenceDigest,
+    rangeDiffDigest,
+  } = descendant;
+  const snapshot = {
+    schema: "agentic-expired-committed-heartbeat-snapshot/v2",
+    branch,
+    sourceLeaseDigest: digestValue(lease),
+    sourceMarkerDigest: projection.markerDigest,
+    pullRequestBodyDigest: projection.bodyDigest,
+    remoteHeadSha,
+    pullRequestHeadSha: projection.pullRequest.headRefOid,
+    headSha,
+    treeSha,
+    changedPaths,
+    declaredChangedPaths,
+    protectedEquivalentPaths,
+    protectedMainEquivalence,
+    protectedMainEquivalenceDigest,
+    rangeDiffDigest,
+  };
+  return Object.freeze({
+    ...snapshot,
+    snapshotDigest: digestValue(snapshot),
+    lease,
+    recoveryEvidence: Object.freeze({
+      sourceEpoch: lease.epoch,
+      sourceSessionId: lease.sessionId,
+      sourceDevice: lease.device,
+      sourceScope: lease.scope,
+      sourceBranch: lease.branch,
+      sourceBaseSha: lease.baseSha,
+      sourceFenceSha: lease.fenceSha,
+      sourcePullRequestUrl: lease.pullRequestUrl,
+      sourceClaimId: lease.cloudAuthority.claimId,
+      sourceClaimDigest: lease.cloudAuthority.claimDigest,
+      sourceLedgerRevision: lease.cloudAuthority.ledgerRevision,
+      sourceClaimLedgerRevision: lease.cloudAuthority.claimLedgerRevision,
+      sourceCloudTransitionCounter:
+        lease.cloudAuthority.transitionCounter,
+      headSha,
+      treeSha,
+      changedPathCount: changedPaths.length,
+      changedPathsDigest: digestValue(changedPaths),
+      declaredChangedPathCount: declaredChangedPaths.length,
+      declaredChangedPathsDigest: digestValue(declaredChangedPaths),
+      protectedEquivalentPathCount: protectedEquivalentPaths.length,
+      protectedEquivalentPathsDigest: digestValue(
+        protectedEquivalentPaths,
+      ),
+      protectedMainEquivalence,
+      protectedMainEquivalenceDigest,
+      sourceMarkerDigest: projection.markerDigest,
+      pullRequestBodyDigest: projection.bodyDigest,
+      rangeDiffDigest,
+    }),
+  });
+}
+
+export function requireCloudAdmission({
+  lease,
+  instant,
+  requireLive = true,
+}) {
+  const authority = lease.cloudAuthority;
+  const declaredWriteSet = normalizeWriteSet(
+    lease.admission?.declaredWriteSet || [],
+  );
+  const cloudExpiry = Date.parse(authority?.expiresAt);
+  if (authority?.manifestDigest !== lease.admission?.manifestDigest) {
+    throw new Error(
+      "Expired committed recovery source cloud manifest differs from its admitted manifest.",
+    );
+  }
+  if (
+    lease.admission?.schema !== "agentic-lane-admission-lease/v1" ||
+    lease.admission.status !== "admitted" ||
+    authority?.schema !== "agentic-lane-cloud-authority/v1" ||
+    authority.state !== "active" ||
+    authority.deviceId !== lease.device ||
+    authority.sessionId !== lease.sessionId ||
+    authority.canonicalBaseSha !== lease.baseSha ||
+    authority.laneRevision !== lease.fenceSha ||
+    authority.writeSetDigest !== lease.admission.writeSetDigest ||
+    !Number.isFinite(cloudExpiry) ||
+    (requireLive && cloudExpiry <= instant.getTime()) ||
+    digestValue(declaredWriteSet) !== lease.admission.writeSetDigest ||
+    JSON.stringify(authority.cloudDeclaredWriteScope) !==
+      JSON.stringify(declaredWriteSet)
+  ) {
+    throw new Error(
+      `Expired committed recovery requires its exact ${requireLive ? "live " : ""}admitted cloud claim.`,
+    );
+  }
+}
+
+export function readExactPullRequestProjection({
+  lease,
+  branch,
+  ghText,
+  expectedBody = null,
+}) {
+  const projection = readPullRequestProjection({
+    lease,
+    branch,
+    ghText,
+    expectedBody,
+  });
+  const expectedMarker = projectWriterLeasePullRequestMarker(lease);
+  if (projection.markerDigest !== digestValue(expectedMarker)) {
+    throw new Error(
+      "Expired committed recovery pull-request marker differs from the local lease.",
+    );
+  }
+  return projection;
+}
+
+export function readPullRequestProjection({
+  lease,
+  branch,
+  ghText,
+  expectedBody = null,
+}) {
+  const pullRequest = readOwnershipPullRequest({
+    url: lease.pullRequestUrl,
+    branch,
+    ghText,
+  });
+  const expectedRepository = repositoryFromPullRequestUrl(lease.pullRequestUrl);
+  if (
+    pullRequest.isDraft !== true ||
+    pullRequest.headRefOid !== lease.fenceSha ||
+    pullRequest.headRepository?.nameWithOwner !== expectedRepository ||
+    (expectedBody !== null && pullRequest.body !== expectedBody)
+  ) {
+    throw new Error(
+      "Expired committed recovery requires the exact open draft ownership pull request.",
+    );
+  }
+  const marker = parseWriterLeasePullRequestBody(pullRequest.body);
+  if (!marker) {
+    throw new Error(
+      "Expired committed recovery pull request has no valid lease marker.",
+    );
+  }
+  return Object.freeze({
+    pullRequest,
+    markerDigest: digestValue(marker),
+    bodyDigest: sha256(pullRequest.body),
+  });
+}
+
+export function remoteBranchHead({ branch, gitOptional }) {
+  const line = gitOptional([
+    "ls-remote",
+    "--heads",
+    "origin",
+    `refs/heads/${branch}`,
+  ]);
+  const sha = line.split(/\s+/)[0] || "";
+  if (!SHA_PATTERN.test(sha)) {
+    throw new Error("Expired committed recovery could not resolve its remote branch.");
+  }
+  return sha;
+}
+
+export function partitionChangedPathsByScope({
+  changedPaths,
+  declaredWriteSet,
+}) {
+  const declaredPaths = normalizeWriteSet(declaredWriteSet)
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
+  if (!declaredPaths.length) {
+    throw new Error("Expired committed recovery has no declared path authority.");
+  }
+  const declaredChangedPaths = [];
+  const protectedEquivalentPaths = [];
+  for (const changedPath of changedPaths) {
+    const normalized = normalizeRecoveryPath(changedPath);
+    const authorized = declaredPaths.some(declared => (
+      declared === "." ||
+      normalized === declared ||
+      normalized.startsWith(`${declared}/`)
+    ));
+    (authorized ? declaredChangedPaths : protectedEquivalentPaths)
+      .push(changedPath);
+  }
+  return Object.freeze({
+    declaredChangedPaths: uniqueSorted(declaredChangedPaths),
+    protectedEquivalentPaths: uniqueSorted(protectedEquivalentPaths),
+  });
+}
+
+export function requireChangedPathsWithinScope({
+  changedPaths,
+  declaredWriteSet,
+}) {
+  const partition = partitionChangedPathsByScope({
+    changedPaths,
+    declaredWriteSet,
+  });
+  if (partition.protectedEquivalentPaths.length) {
+    throw new Error(
+      `Expired committed recovery path is outside declared write scope: ${partition.protectedEquivalentPaths[0]}`,
+    );
+  }
+}
+
+function requireBoundedChangedPaths(changedPaths) {
+  const encodedBytes = Buffer.byteLength(changedPaths.join("\0"), "utf8");
+  if (
+    changedPaths.length > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+    encodedBytes > RECOVERY_PATH_EVIDENCE_MAX_BYTES
+  ) {
+    throw new Error(
+      `Expired committed recovery changed-path evidence exceeds ${RECOVERY_PATH_EVIDENCE_MAX_PATHS} paths or ${RECOVERY_PATH_EVIDENCE_MAX_BYTES} bytes.`,
+    );
+  }
+}
+
+function normalizeRecoveryPath(changedPath) {
+  if (
+    typeof changedPath !== "string" ||
+    !changedPath ||
+    changedPath.includes("\0") ||
+    changedPath.includes("\\") ||
+    changedPath.startsWith("/")
+  ) {
+    throw new Error(
+      `Expired committed recovery path is unsafe: ${changedPath}`,
+    );
+  }
+  return normalizeWriteSet([`path:${changedPath}`])[0]
+    .slice("path:".length);
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort();
+}
+
+function splitNul(value) {
+  return String(value || "").split("\0").filter(Boolean);
+}
+
+function repositoryFromPullRequestUrl(url) {
+  const match = String(url || "").match(
+    /^https:\/\/github\.com\/([^/]+\/[^/]+)\/pull\/[1-9]\d*(?:[/?#]|$)/,
+  );
+  if (!match) {
+    throw new Error("Expired committed recovery requires an exact GitHub pull-request URL.");
+  }
+  return match[1];
+}
+
+function sha256(value) {
+  return createHash("sha256").update(String(value || "")).digest("hex");
+}

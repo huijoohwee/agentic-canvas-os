@@ -1,19 +1,27 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
+import {
+  normalizeProtectedMainPathEquivalenceEvidence,
+  RECOVERY_PATH_EVIDENCE_MAX_PATHS,
+} from "./protected-main-path-equivalence-lib.mjs";
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
-export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+export const LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
   "agentic-expired-committed-heartbeat-recovery/v1";
+export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+  "agentic-expired-committed-heartbeat-recovery/v2";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_PULL_REQUEST_ACTION = "/change";
 export const DEVICE_BRANCH_PATTERN =
   /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/;
-const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
+const EMPTY_PATHS_DIGEST = digestValue([]);
+const LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   "changedPathCount",
   "changedPathsDigest",
   "headSha",
@@ -42,6 +50,15 @@ const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   "status",
   "treeSha",
 ]);
+const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
+  ...LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
+  "declaredChangedPathCount",
+  "declaredChangedPathsDigest",
+  "protectedEquivalentPathCount",
+  "protectedEquivalentPathsDigest",
+  "protectedMainEquivalence",
+  "protectedMainEquivalenceDigest",
+].sort());
 
 export function parseDeviceBranch(branch) {
   const match = String(branch || "").match(DEVICE_BRANCH_PATTERN);
@@ -727,10 +744,30 @@ export function parseWriterLeasePullRequestBody(body) {
 
 export function normalizeExpiredCommittedHeartbeatRecovery(value) {
   if (value === undefined || value === null) return null;
+  const legacy = value?.schema ===
+    LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const current = value?.schema ===
+    EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const expectedKeys = legacy
+    ? LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+    : current
+      ? EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+      : null;
+  let protectedMainEquivalence = null;
+  if (current) {
+    try {
+      protectedMainEquivalence =
+        normalizeProtectedMainPathEquivalenceEvidence(
+          value.protectedMainEquivalence,
+        );
+    } catch {
+      protectedMainEquivalence = null;
+    }
+  }
   const invalid = (
+    !expectedKeys ||
     JSON.stringify(Object.keys(value).sort()) !==
-      JSON.stringify(EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS) ||
-    value?.schema !== EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA ||
+      JSON.stringify(expectedKeys) ||
     value.status !== "recovered" ||
     !Number.isInteger(value.sourceEpoch) ||
     value.sourceEpoch < 1 ||
@@ -761,12 +798,49 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     !Number.isInteger(value.changedPathCount) ||
     value.changedPathCount < 1 ||
     !DIGEST_PATTERN.test(String(value.changedPathsDigest || "")) ||
-    !Number.isFinite(Date.parse(value.recoveredAt))
+    !Number.isFinite(Date.parse(value.recoveredAt)) ||
+    (current && (
+      !Number.isSafeInteger(value.changedPathCount) ||
+      value.changedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !Number.isSafeInteger(value.declaredChangedPathCount) ||
+      value.declaredChangedPathCount < 0 ||
+      value.declaredChangedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(String(value.declaredChangedPathsDigest || "")) ||
+      !Number.isSafeInteger(value.protectedEquivalentPathCount) ||
+      value.protectedEquivalentPathCount < 0 ||
+      value.protectedEquivalentPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      value.declaredChangedPathCount + value.protectedEquivalentPathCount !==
+        value.changedPathCount ||
+      !DIGEST_PATTERN.test(
+        String(value.protectedEquivalentPathsDigest || ""),
+      ) ||
+      !DIGEST_PATTERN.test(
+        String(value.protectedMainEquivalenceDigest || ""),
+      ) ||
+      !protectedMainEquivalence ||
+      protectedMainEquivalence.baseSha !== value.sourceBaseSha ||
+      protectedMainEquivalence.headSha !== value.headSha ||
+      protectedMainEquivalence.headTreeSha !== value.treeSha ||
+      protectedMainEquivalence.exemptPathCount !==
+        value.protectedEquivalentPathCount ||
+      protectedMainEquivalence.exemptPathsDigest !==
+        value.protectedEquivalentPathsDigest ||
+      (value.protectedEquivalentPathCount === 0 && (
+        value.protectedEquivalentPathsDigest !== EMPTY_PATHS_DIGEST ||
+        value.changedPathsDigest !== value.declaredChangedPathsDigest
+      )) ||
+      (value.declaredChangedPathCount === 0 && (
+        value.declaredChangedPathsDigest !== EMPTY_PATHS_DIGEST ||
+        value.changedPathsDigest !== value.protectedEquivalentPathsDigest
+      )) ||
+      digestValue(protectedMainEquivalence) !==
+        value.protectedMainEquivalenceDigest
+    ))
   );
   if (invalid) {
     throw new Error("Expired committed heartbeat recovery evidence is malformed.");
   }
-  return {
+  return Object.freeze({
     schema: value.schema,
     status: value.status,
     sourceEpoch: value.sourceEpoch,
@@ -790,11 +864,20 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     treeSha: value.treeSha,
     changedPathCount: value.changedPathCount,
     changedPathsDigest: value.changedPathsDigest,
+    ...(current ? {
+      declaredChangedPathCount: value.declaredChangedPathCount,
+      declaredChangedPathsDigest: value.declaredChangedPathsDigest,
+      protectedEquivalentPathCount: value.protectedEquivalentPathCount,
+      protectedEquivalentPathsDigest: value.protectedEquivalentPathsDigest,
+      protectedMainEquivalence,
+      protectedMainEquivalenceDigest:
+        value.protectedMainEquivalenceDigest,
+    } : {}),
     sourceMarkerDigest: value.sourceMarkerDigest,
     pullRequestBodyDigest: value.pullRequestBodyDigest,
     rangeDiffDigest: value.rangeDiffDigest,
     recoveredAt: new Date(value.recoveredAt).toISOString(),
-  };
+  });
 }
 
 function requireSameRecoveryCloudSubject({ source, renewed, lease, instant }) {

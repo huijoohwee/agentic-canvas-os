@@ -44,16 +44,8 @@ export function completeSession({
     pullRequest = readPullRequest({ branch, ghText });
     requireMergedPullRequest(pullRequest);
     verifyAttachedMergedHead({ attachedBranch, branch, gitText, pullRequest });
-    completionLease = recoverCompletionLease({
-      attachedBranch,
-      branch,
-      repo,
-      pullRequest,
-      completionLease: existingCompletionLease,
-      leaseStore,
-    });
   }
-  if (finalize && completionLease.autoDelivery === true && completionLease.runtimeRequired === true) {
+  if (finalize && completionLease?.autoDelivery === true && completionLease?.runtimeRequired === true) {
     throw new Error("Auto-delivery completion requires device:integrate so canonical runtime readiness cannot be bypassed.");
   }
   const parkedStashes = readStashEntries(gitText(["stash", "list", "--format=%H%x00%gd%x00%gs"]))
@@ -67,10 +59,24 @@ export function completeSession({
     verifyAttachedMergedHead({ attachedBranch, branch, gitText, pullRequest });
   }
   const mergeCommitSha = pullRequest.mergeCommit?.oid;
+  const taskHeadSha = optionalGitText(gitText, ["rev-parse", `refs/heads/${branch}`]);
 
   run("git", ["fetch", "origin", "main"]);
   const canonicalSha = gitText(["rev-parse", "origin/main"]).trim();
   run("git", ["merge-base", "--is-ancestor", mergeCommitSha, canonicalSha]);
+  if (!completionLease) {
+    completionLease = recoverCompletionLease({
+      attachedBranch,
+      branch,
+      repo,
+      pullRequest,
+      completionLease: existingCompletionLease,
+      leaseStore,
+      mergeCommitSha,
+      mainSha: canonicalSha,
+      headSha: taskHeadSha,
+    });
+  }
   let durableLease = completionLease;
   if (["completing", "completed"].includes(completionLease?.status)) {
     requireCompletionEvidence({
@@ -180,19 +186,45 @@ function resolveCompletionLease({ attachedBranch, repo, leaseStore }) {
   return { branch: matches[0].branch, lease: matches[0] };
 }
 
-function recoverCompletionLease({ attachedBranch, branch, repo, pullRequest, completionLease, leaseStore }) {
+function recoverCompletionLease({
+  attachedBranch,
+  branch,
+  repo,
+  pullRequest,
+  completionLease,
+  leaseStore,
+  mergeCommitSha,
+  mainSha,
+  headSha,
+}) {
   if (completionLease || !attachedBranch) {
     if (!completionLease) throw new Error(`No writer lease records ${branch}.`);
     return completionLease;
   }
-  if (typeof leaseStore.recoverFromPullRequestMarker !== "function") {
+  if (typeof leaseStore.recoverFromPullRequestMarker === "function") {
+    try {
+      return leaseStore.recoverFromPullRequestMarker({
+        branch,
+        worktreePath: repo,
+        pullRequestUrl: pullRequest.url,
+        pullRequestBody: pullRequest.body || "",
+      });
+    } catch (error) {
+      if (!String(error?.message || "").startsWith("No recoverable writer lease marker records ")) {
+        throw error;
+      }
+    }
+  }
+  if (typeof leaseStore.recoverMergedPullRequestCompletion !== "function") {
     throw new Error(`No writer lease records ${branch}.`);
   }
-  return leaseStore.recoverFromPullRequestMarker({
+  return leaseStore.recoverMergedPullRequestCompletion({
     branch,
     worktreePath: repo,
     pullRequestUrl: pullRequest.url,
-    pullRequestBody: pullRequest.body || "",
+    mergeCommitSha,
+    mainSha,
+    headSha,
   });
 }
 

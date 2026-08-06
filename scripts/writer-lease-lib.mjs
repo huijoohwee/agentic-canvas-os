@@ -348,8 +348,12 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
       if (current) return current;
+      const hasMarker = String(pullRequestBody || "").includes(WRITER_LEASE_SCHEMA);
       const recovered = parseWriterLeasePullRequestBody(pullRequestBody);
       if (!recovered || recovered.branch !== branch) {
+        if (hasMarker) {
+          throw new Error(`Writer lease marker for ${branch} is present but invalid.`);
+        }
         throw new Error(`No recoverable writer lease marker records ${branch}.`);
       }
       if (!["active", "delivery", "review_ready", "completing", "completed"].includes(recovered.status)) {
@@ -360,6 +364,62 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         schema: WRITER_LEASE_SCHEMA,
         worktreePath: path.resolve(worktreePath),
         pullRequestUrl,
+      };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
+      return lease;
+    });
+  }
+
+  function recoverMergedPullRequestCompletion({
+    branch,
+    worktreePath,
+    pullRequestUrl,
+    mergeCommitSha,
+    mainSha,
+    headSha,
+  }) {
+    if (!branch) throw new Error("Merged pull request recovery requires an exact agent branch.");
+    if (!pullRequestUrl) throw new Error("Merged pull request recovery requires the merged pull request URL.");
+    requireSha(mergeCommitSha, "mergeCommitSha");
+    requireSha(mainSha, "mainSha");
+    requireSha(headSha, "headSha");
+    const identity = parseDeviceBranch(branch);
+    if (!identity) {
+      throw new Error(`Merged pull request recovery requires an agent/<device>/<scope> branch; received ${branch}.`);
+    }
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (current) return current;
+      const timestamp = now().toISOString();
+      const maximumEpoch = Object.values(registry.leases)
+        .reduce((highest, lease) => Math.max(highest, Number(lease?.epoch || 0)), 0);
+      const lease = {
+        schema: WRITER_LEASE_SCHEMA,
+        status: "completed",
+        epoch: maximumEpoch + 1,
+        sessionId: `recovered-merged-pr:${branch}`,
+        device: identity.device,
+        scope: identity.scope,
+        branch,
+        worktreePath: path.resolve(worktreePath),
+        baseSha: mainSha,
+        fenceSha: headSha,
+        pullRequestUrl,
+        autoDelivery: false,
+        runtimeRequired: false,
+        reviewHeadSha: headSha,
+        acquiredAt: timestamp,
+        heartbeatAt: timestamp,
+        expiresAt: timestamp,
+        completion: {
+          mergeCommitSha,
+          mainSha,
+        },
       };
       writeRegistry({
         ...registry,
@@ -478,6 +538,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
 
   return { annotate, beginCompletion, claim, complete, heartbeat, read,
     recoverExpiredCommittedHeartbeat,
+    recoverMergedPullRequestCompletion,
     recoverFromPullRequestMarker,
     readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
 }

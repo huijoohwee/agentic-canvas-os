@@ -23,9 +23,16 @@ import {
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
-const pullJson = (url, branch, body = "", isDraft = true, state = "OPEN") => JSON.stringify({
+const pullJson = (
+  url,
+  branch,
+  body = "",
+  isDraft = true,
+  state = "OPEN",
+  baseRefOid = "a".repeat(40),
+) => JSON.stringify({
   url, state, isDraft, headRefName: branch,
-  headRefOid: "c".repeat(40), baseRefName: "main", body,
+  headRefOid: "c".repeat(40), baseRefName: "main", baseRefOid, body,
 });
 const publishDeclaredWriteSet = [
   "path:scripts/device-branch-lib.mjs",
@@ -254,6 +261,341 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
     run: () => {},
   }), /session is stale/);
   assert.equal(renewed, false);
+});
+
+test("review upgrades a resumed legacy root-source ready lane using authored paths from main diff", () => {
+  const branch = "agent/device/merged-no-lease-completion";
+  const pullRequestUrl = "https://github.test/pull/288";
+  const reviewHeadSha = "c".repeat(40);
+  const canonicalBaseSha = "a".repeat(40);
+  const livePullRequestBaseSha = "d".repeat(40);
+  let pullRequestBody = renderWriterLeasePullRequestBody({
+    schema: "agentic-writer-lease/v2",
+    status: "review_ready",
+    epoch: 172,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "merged-no-lease-completion",
+    branch,
+    baseSha: reviewHeadSha,
+    fenceSha: "b".repeat(40),
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T05:38:23.089Z",
+    expiresAt: "2026-08-06T05:38:23.089Z",
+    reviewHeadSha,
+  });
+  let annotatedLease = null;
+  let claimedManifest = null;
+  let claimedCanonicalBaseSha = null;
+  let verifiedHead = null;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "rev-parse HEAD": reviewHeadSha,
+    "rev-parse origin/main": canonicalBaseSha,
+    [`diff --name-only ${reviewHeadSha}..${reviewHeadSha} --`]: "",
+    [`diff --name-only origin/main...${reviewHeadSha} --`]:
+      "__tests__/writer-lease-lib.test.mjs\nscripts/device-complete-lib.mjs\nscripts/writer-lease-lib.mjs\n",
+    [`merge-base --is-ancestor ${"b".repeat(40)} HEAD`]: "",
+    "log -1 --pretty=%s": "fix: recover merged worktrees without lease markers\n",
+  });
+  const baseLease = {
+    schema: "agentic-writer-lease/v2",
+    status: "review_ready",
+    epoch: 172,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "merged-no-lease-completion",
+    branch,
+    worktreePath: repo,
+    baseSha: reviewHeadSha,
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T05:38:23.089Z",
+    expiresAt: "2026-08-06T05:38:23.089Z",
+    reviewHeadSha,
+  };
+  const leaseStore = {
+    read: requested => requested === branch ? (annotatedLease || baseLease) : null,
+    annotate: ({ values }) => (annotatedLease = { ...(annotatedLease || baseLease), ...values }),
+  };
+
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: args => {
+      const key = args.join(" ");
+      if (key === "config --get remote.origin.url") {
+        return "https://github.com/huijoohwee/agentic-canvas-os.git";
+      }
+      if (key === `ls-remote --heads origin refs/heads/${branch}`) {
+        return `${reviewHeadSha}\trefs/heads/${branch}`;
+      }
+      return "";
+    },
+    ghText: args => {
+      if (args[1] === "list") {
+        return JSON.stringify([{ number: 288, headRefName: branch, url: pullRequestUrl }]);
+      }
+      if (args[1] === "view" && args.includes("--jq")) {
+        return pullRequestBody;
+      }
+        return pullJson(pullRequestUrl, branch, pullRequestBody, false, "OPEN", livePullRequestBaseSha);
+    },
+    ghOptional: () => pullRequestUrl,
+    leaseStore,
+    sessionId: "chat-a",
+    claimLegacyReviewCloudAuthority: input => {
+      claimedManifest = input.manifest;
+        claimedCanonicalBaseSha = input.canonicalBaseSha;
+      return {
+        authority: {
+          schema: "agentic-lane-cloud-authority/v1",
+          provider: "github",
+          ledgerRepository: "huijoohwee/agentic-canvas-os",
+          targetRepository: "huijoohwee/agentic-canvas-os",
+          claimId: "1".repeat(64),
+          claimDigest: "2".repeat(64),
+          ledgerRevision: "3".repeat(40),
+          claimLedgerRevision: "4".repeat(64),
+          operationReceiptDigest: "5".repeat(64),
+          mutationAuthorityEligible: true,
+            canonicalBaseSha: input.canonicalBaseSha,
+          laneRevision: reviewHeadSha,
+          cloudDeclaredWriteScope: input.manifest.declaredWriteSet,
+          writeSetDigest: input.manifest.writeSetDigest,
+          deviceId: "device",
+          sessionId: "chat-a",
+          reviewRequestId: null,
+          leaseEpoch: 1,
+          transitionCounter: 1,
+          state: "active",
+          expiresAt: "2099-08-06T05:38:23.089Z",
+          manifestDigest: input.manifest.manifestDigest,
+        },
+        verification: {
+          receiptDigest: "6".repeat(64),
+        },
+      };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha }) => ({
+      authority: {
+        ...authority,
+        laneRevision: headSha,
+        state: "review_ready",
+        reviewRequestId: "github-pull-request:PR_288",
+      },
+    }),
+    verifyReviewReadyCloudAuthority: ({ authority, headSha }) => {
+      verifiedHead = headSha;
+      return { authority };
+    },
+    run: (command, args) => {
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && args[1] === "pr" && args[2] === "edit" && bodyIndex >= 0) {
+        pullRequestBody = args[bodyIndex + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.deepEqual(claimedManifest.paths, [
+    "__tests__/writer-lease-lib.test.mjs",
+    "scripts/device-complete-lib.mjs",
+    "scripts/writer-lease-lib.mjs",
+  ]);
+  assert.equal(claimedCanonicalBaseSha, livePullRequestBaseSha);
+  assert.equal(verifiedHead, reviewHeadSha);
+  assert.equal(annotatedLease.admission.status, "admitted");
+  assert.equal(annotatedLease.cloudAuthority.state, "review_ready");
+});
+
+test("review refreshes a stale legacy cloud base from the live pull request", () => {
+  const branch = "agent/device/merged-no-lease-completion";
+  const pullRequestUrl = "https://github.test/pull/288";
+  const staleCanonicalBaseSha = "a".repeat(40);
+  const livePullRequestBaseSha = "d".repeat(40);
+  const fenceSha = "b".repeat(40);
+  const reviewHeadSha = "c".repeat(40);
+  let isDraft = true;
+  let pullRequestBody = renderWriterLeasePullRequestBody({
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 173,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "merged-no-lease-completion",
+    branch,
+    baseSha: "9".repeat(40),
+    fenceSha,
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T05:47:42.108Z",
+    expiresAt: "2099-08-06T06:17:42.108Z",
+  });
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 173,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "merged-no-lease-completion",
+    branch,
+    worktreePath: repo,
+    baseSha: "9".repeat(40),
+    fenceSha,
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T05:47:42.108Z",
+    expiresAt: "2099-08-06T06:17:42.108Z",
+    admission: {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "admitted",
+      semanticScope: "merged-no-lease-completion",
+      declaredWriteSet: [
+        "path:scripts/device-branch-lib.mjs",
+        "semantic:merged-no-lease-completion",
+      ],
+      writeSetDigest: "1".repeat(64),
+      manifestDigest: "2".repeat(64),
+      planReceiptDigest: "3".repeat(64),
+      admissionReceiptDigest: "4".repeat(64),
+      existingLaneStateDigest: "5".repeat(64),
+      admittedReportDigest: "6".repeat(64),
+      preservationReceiptDigest: "7".repeat(64),
+    },
+    cloudAuthority: {
+      schema: "agentic-lane-cloud-authority/v1",
+      provider: "github",
+      ledgerRepository: "huijoohwee/agentic-canvas-os",
+      targetRepository: "huijoohwee/agentic-canvas-os",
+      claimId: "8".repeat(64),
+      claimDigest: "9".repeat(64),
+      ledgerRevision: "e".repeat(40),
+      claimLedgerRevision: "f".repeat(64),
+      operationReceiptDigest: "0".repeat(64),
+      mutationAuthorityEligible: true,
+      canonicalBaseSha: staleCanonicalBaseSha,
+      laneRevision: fenceSha,
+      cloudDeclaredWriteScope: [
+        "path:scripts/device-branch-lib.mjs",
+        "semantic:merged-no-lease-completion",
+      ],
+      writeSetDigest: "1".repeat(64),
+      deviceId: "device",
+      sessionId: "chat-a",
+      reviewRequestId: null,
+      leaseEpoch: 173,
+      transitionCounter: 1,
+      state: "active",
+      expiresAt: "2099-08-06T06:17:42.108Z",
+      manifestDigest: "2".repeat(64),
+    },
+  };
+  let refreshedCanonicalBaseSha = null;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "rev-parse HEAD": reviewHeadSha,
+    "rev-parse origin/main": staleCanonicalBaseSha,
+    [`diff --name-only ${"9".repeat(40)}..${reviewHeadSha} --`]:
+      "scripts/device-branch-lib.mjs\n__tests__/device-branch-lib.test.mjs\n",
+    [`merge-base --is-ancestor ${fenceSha} HEAD`]: "",
+    "log -1 --pretty=%s": "fix: bind legacy review admission to live PR base\n",
+  });
+
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: args => {
+      const key = args.join(" ");
+      if (key === "config --get remote.origin.url") {
+        return "https://github.com/huijoohwee/agentic-canvas-os.git";
+      }
+      return "";
+    },
+    ghText: args => {
+      if (args[1] === "list") {
+        return JSON.stringify([{ number: 288, headRefName: branch, url: pullRequestUrl }]);
+      }
+      if (args[1] === "view" && args.includes("--jq")) {
+        return pullRequestBody;
+      }
+      return pullJson(pullRequestUrl, branch, pullRequestBody, isDraft, "OPEN", livePullRequestBaseSha);
+    },
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: requested => requested === branch ? lease : null,
+      verify: () => lease,
+      annotate: ({ values }) => (lease = { ...lease, ...values }),
+      release: ({ status }) => (lease = { ...lease, status }),
+    },
+    sessionId: "chat-a",
+    reconcileCloudAuthority: ({ authority }) => ({
+      authority,
+      verification: { receiptDigest: "a".repeat(64) },
+    }),
+    claimLegacyReviewCloudAuthority: input => {
+      refreshedCanonicalBaseSha = input.canonicalBaseSha;
+      return {
+        authority: {
+          ...lease.cloudAuthority,
+          claimId: "b".repeat(64),
+          claimDigest: "c".repeat(64),
+          ledgerRevision: "d".repeat(40),
+          claimLedgerRevision: "e".repeat(64),
+          operationReceiptDigest: "f".repeat(64),
+          canonicalBaseSha: input.canonicalBaseSha,
+          laneRevision: fenceSha,
+          cloudDeclaredWriteScope: input.manifest.declaredWriteSet,
+          writeSetDigest: input.manifest.writeSetDigest,
+          manifestDigest: input.manifest.manifestDigest,
+        },
+        verification: {
+          receiptDigest: "1".repeat(64),
+        },
+      };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha }) => ({
+      authority: {
+        ...authority,
+        canonicalBaseSha: livePullRequestBaseSha,
+        laneRevision: headSha,
+        state: "review_ready",
+        reviewRequestId: "github-pull-request:PR_288",
+      },
+    }),
+    verifyReviewReadyCloudAuthority: ({ authority }) => ({ authority }),
+    run: (command, args) => {
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") {
+        isDraft = false;
+      }
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && args[1] === "pr" && args[2] === "edit" && bodyIndex >= 0) {
+        pullRequestBody = args[bodyIndex + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.equal(refreshedCanonicalBaseSha, livePullRequestBaseSha);
+  assert.equal(lease.cloudAuthority.canonicalBaseSha, livePullRequestBaseSha);
+  assert.equal(lease.cloudAuthority.state, "review_ready");
 });
 
 test("publish verifies the session lease and fencing ancestor before delivery", () => {
@@ -1370,6 +1712,127 @@ test("completeSession recovers a missing local lease from the merged pull reques
     status: "ok",
   });
   assert.ok(calls.some(call => call.join(" ") === "git switch --detach 1234567890abcdef1234567890abcdef12345678"));
+});
+
+test("completeSession recovers a missing local lease from merged branch evidence when the PR has no marker", () => {
+  const calls = [];
+  let recovered = null;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope\n",
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": ["", ""],
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse HEAD": [
+      "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+      "1234567890abcdef1234567890abcdef12345678\n",
+    ],
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  const summary = completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify({
+      state: "MERGED",
+      baseRefName: "main",
+      url: "https://github.com/example/repo/pull/42",
+      mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+      headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+      body: "",
+    }),
+    leaseStore: {
+      read: () => null,
+      recoverFromPullRequestMarker: () => {
+        throw new Error("No recoverable writer lease marker records agent/device/scope.");
+      },
+      recoverMergedPullRequestCompletion: (values) => {
+        recovered = values;
+        return {
+          schema: "agentic-writer-lease/v2",
+          status: "completed",
+          epoch: 19,
+          sessionId: "recovered-merged-pr:agent/device/scope",
+          device: "device",
+          scope: "scope",
+          branch: values.branch,
+          worktreePath: values.worktreePath,
+          baseSha: values.mainSha,
+          fenceSha: values.headSha,
+          pullRequestUrl: values.pullRequestUrl,
+          autoDelivery: false,
+          runtimeRequired: false,
+          reviewHeadSha: values.headSha,
+          heartbeatAt: "2026-08-06T00:00:00.000Z",
+          expiresAt: "2026-08-06T00:00:00.000Z",
+          completion: {
+            mergeCommitSha: values.mergeCommitSha,
+            mainSha: values.mainSha,
+          },
+        };
+      },
+      complete: () => {
+        throw new Error("Completed recovery must not request a second completion fence.");
+      },
+    },
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  });
+
+  assert.deepEqual(recovered, {
+    branch: "agent/device/scope",
+    worktreePath: repo,
+    pullRequestUrl: "https://github.com/example/repo/pull/42",
+    mergeCommitSha: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    headSha: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+  });
+  assert.deepEqual(summary, {
+    completedBranch: "agent/device/scope",
+    pullRequestUrl: "https://github.com/example/repo/pull/42",
+    mergeCommitSha: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    status: "ok",
+  });
+  assert.ok(calls.some(call => call.join(" ") === "git switch --detach 1234567890abcdef1234567890abcdef12345678"));
+});
+
+test("completeSession fails closed when a merged PR carries an invalid writer lease marker", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope\n",
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": "",
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse HEAD": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  assert.throws(() => completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify({
+      state: "MERGED",
+      baseRefName: "main",
+      url: "https://github.com/example/repo/pull/42",
+      mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+      headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+      body: "<!-- agentic-writer-lease/v2 {\"schema\":\"agentic-writer-lease/v2\",\"branch\":\"agent/device/scope\"} -->",
+    }),
+    leaseStore: {
+      read: () => null,
+      recoverFromPullRequestMarker: ({ branch }) => {
+        throw new Error(`Writer lease marker for ${branch} is present but invalid.`);
+      },
+    },
+    run: () => {},
+  }), /present but invalid/);
 });
 
 test("completeSession refuses auto-delivery completion without canonical runtime reconciliation", () => {

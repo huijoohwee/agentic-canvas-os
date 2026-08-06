@@ -79,6 +79,7 @@ export function review({
         repo,
         gitText,
         gitOptional,
+          ghText,
         leaseStore,
         sessionId,
         claimLegacyReviewCloudAuthority,
@@ -123,6 +124,7 @@ export function review({
       repo,
       gitText,
       gitOptional,
+        ghText,
       leaseStore,
       sessionId,
       claimLegacyReviewCloudAuthority,
@@ -133,6 +135,24 @@ export function review({
       log(`Upgraded legacy root-source lane ${branch} into cloud-authoritative review.`);
     }
   }
+    if (cloud) {
+      const refreshed = maybeRefreshLegacyRootSourceReviewAdmission({
+        lease,
+        branch,
+        repo,
+        gitText,
+        gitOptional,
+        ghText,
+        leaseStore,
+        sessionId,
+        claimLegacyReviewCloudAuthority,
+      });
+      if (refreshed) {
+        lease = refreshed.lease;
+        cloud = refreshed.cloud;
+        log(`Refreshed legacy root-source review admission for live PR base ${cloud.authority.canonicalBaseSha}.`);
+      }
+    }
   let cloudReady = null;
   if (cloud) {
     requireCloudReviewAdapter(
@@ -669,12 +689,43 @@ function requireTaskBranch(branch, action) {
   return branch;
 }
 
+function requireCloudReviewAdmission(lease) {
+  if (!lease?.admission && !lease?.cloudAuthority) return null;
+  if (
+    lease.admission?.schema !== "agentic-lane-admission-lease/v1"
+    || lease.admission.status !== "admitted"
+    || lease.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
+    || !["active", "review_ready"].includes(lease.cloudAuthority.state)
+  ) {
+    throw new Error(
+      "Cloud-authoritative review requires one admitted local projection and its active or review-ready cloud claim.",
+    );
+  }
+  return { manifest: lease.admission, authority: lease.cloudAuthority };
+}
+
+function requireCloudPublishAdmission(lease) {
+  if (!lease?.admission && !lease?.cloudAuthority) return null;
+  if (
+    lease.admission?.schema !== "agentic-lane-admission-lease/v1"
+    || lease.admission.status !== "admitted"
+    || lease.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
+    || !["active", "review_ready", "delivery_authorized"].includes(lease.cloudAuthority.state)
+  ) {
+    throw new Error(
+      "Cloud-authoritative publish requires one admitted local projection and its active, review-ready, or delivery-authorized cloud claim.",
+    );
+  }
+  return { manifest: lease.admission, authority: lease.cloudAuthority };
+}
+
 function maybeBootstrapLegacyRootSourceReviewAdmission({
   lease,
   branch,
   repo,
   gitText,
   gitOptional,
+  ghText,
   leaseStore,
   sessionId,
   claimLegacyReviewCloudAuthority,
@@ -687,7 +738,12 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     throw new Error("Root-source legacy review admission requires a resolvable origin repository.");
   }
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
   const manifest = deriveLegacyReviewAdmissionManifest({
     lease,
     gitText,
@@ -700,6 +756,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     canonicalBaseSha,
     branch,
     headSha: lease.fenceSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
     deviceId: lease.device,
     sessionId,
   });
@@ -733,6 +790,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
   repo,
   gitText,
   gitOptional,
+  ghText,
   leaseStore,
   sessionId,
   claimLegacyReviewCloudAuthority,
@@ -753,7 +811,12 @@ function maybeUpgradeLegacyRootSourceReadyReview({
   if (!targetRepository) {
     throw new Error("Root-source ready review upgrade requires a resolvable origin repository.");
   }
-  const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
   const manifest = deriveLegacyReviewAdmissionManifest({
     lease,
     gitText,
@@ -766,6 +829,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
     canonicalBaseSha,
     branch,
     headSha: lease.reviewHeadSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
     deviceId: lease.device,
     sessionId,
   });
@@ -802,49 +866,94 @@ function maybeUpgradeLegacyRootSourceReadyReview({
   };
 }
 
-function requireCloudReviewAdmission(lease) {
-  if (!lease?.admission && !lease?.cloudAuthority) return null;
-  if (
-    lease.admission?.schema !== "agentic-lane-admission-lease/v1"
-    || lease.admission.status !== "admitted"
-    || lease.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
-    || !["active", "review_ready"].includes(lease.cloudAuthority.state)
-  ) {
-    throw new Error(
-      "Cloud-authoritative review requires one admitted local projection and its active or review-ready cloud claim.",
-    );
+function maybeRefreshLegacyRootSourceReviewAdmission({
+  lease,
+  branch,
+  repo,
+  gitText,
+  gitOptional,
+  ghText,
+  leaseStore,
+  sessionId,
+  claimLegacyReviewCloudAuthority,
+}) {
+  if (typeof claimLegacyReviewCloudAuthority !== "function") return null;
+  if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return null;
+  if (lease?.admission?.status !== "admitted") return null;
+  if (lease?.cloudAuthority?.state !== "active") return null;
+  if (lease.cloudAuthority.reviewRequestId) return null;
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
+  if (lease.cloudAuthority.canonicalBaseSha === canonicalBaseSha) return null;
+  const targetRepository = resolveOriginRepositoryFullName(gitOptional);
+  if (!targetRepository) {
+    throw new Error("Root-source legacy review refresh requires a resolvable origin repository.");
   }
-  return { manifest: lease.admission, authority: lease.cloudAuthority };
-}
-
-function requireCloudPublishAdmission(lease) {
-  if (!lease?.admission && !lease?.cloudAuthority) return null;
-  if (
-    lease.admission?.schema !== "agentic-lane-admission-lease/v1"
-    || lease.admission.status !== "admitted"
-    || lease.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
-    || !["active", "review_ready", "delivery_authorized"].includes(lease.cloudAuthority.state)
-  ) {
-    throw new Error(
-      "Cloud-authoritative publish requires one admitted local projection and its active, review-ready, or delivery-authorized cloud claim.",
-    );
-  }
-  return { manifest: lease.admission, authority: lease.cloudAuthority };
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const manifest = deriveLegacyReviewAdmissionManifest({
+    lease,
+    gitText,
+    headSha,
+  });
+  const refreshed = claimLegacyReviewCloudAuthority({
+    ledgerRepository: targetRepository,
+    targetRepository,
+    manifest,
+    canonicalBaseSha,
+    branch,
+    headSha: lease.fenceSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+    deviceId: lease.device,
+    sessionId,
+  });
+  const admission = createLegacyReviewAdmissionProjection({
+    lease,
+    manifest,
+    authority: refreshed.authority,
+    verification: refreshed.verification,
+    headSha,
+  });
+  const annotated = leaseStore.annotate({
+    sessionId,
+    branch,
+    values: {
+      admission,
+      cloudAuthority: refreshed.authority,
+    },
+  });
+  return {
+    lease: annotated,
+    cloud: {
+      manifest: admission,
+      authority: refreshed.authority,
+    },
+  };
 }
 
 function deriveLegacyReviewAdmissionManifest({ lease, gitText, headSha }) {
-  const diffBase = `${lease.baseSha}..${headSha}`;
-  const paths = String(gitText(["diff", "--name-only", diffBase, "--"]))
+  const baseRange = `${lease.baseSha}..${headSha}`;
+  const fallbackRange = `origin/main...${headSha}`;
+  const readPaths = range => String(gitText(["diff", "--name-only", range, "--"]))
     .split(/\r?\n/u)
     .map(value => value.trim())
     .filter(Boolean);
-  if (paths.length === 0) {
+  const paths = readPaths(baseRange);
+  const authoredPaths = (
+    paths.length === 0
+    && SHA_PATTERN.test(String(lease.reviewHeadSha || ""))
+    && headSha === lease.reviewHeadSha
+  ) ? readPaths(fallbackRange) : paths;
+  if (authoredPaths.length === 0) {
     throw new Error("Root-source legacy review admission requires at least one authored path.");
   }
   return normalizeDeclaredWriteScopeManifest({
     schema: "agentic-declared-write-scope/v1",
     semanticScope: lease.scope,
-    paths,
+    paths: authoredPaths,
   }, {
     expectedScope: lease.scope,
   });
@@ -940,11 +1049,13 @@ function acceptReviewCloudReconciliation({
     );
   }
   if (laneRevision === lease.fenceSha) {
-    assertAdmissionMutationAuthority({
-      lease: { ...lease, cloudAuthority: reconciled.authority },
-      cloudAuthority: reconciled.authority,
-      remoteAuthorityVerification: reconciled.verification,
-    });
+      if (reconciled.authority.reviewRequestId) {
+        assertAdmissionMutationAuthority({
+          lease: { ...lease, cloudAuthority: reconciled.authority },
+          cloudAuthority: reconciled.authority,
+          remoteAuthorityVerification: reconciled.verification,
+        });
+      }
   }
   return {
     lease: leaseStore.annotate({
@@ -1015,6 +1126,20 @@ function resolveOriginRepositoryName(gitOptional) {
   return resolveOriginRepositoryIdentity(gitOptional)?.repo || null;
 }
 
+function resolveLegacyReviewCanonicalBaseSha({ lease, branch, gitText, ghText }) {
+  if (lease?.pullRequestUrl && typeof ghText === "function") {
+    try {
+      return readOwnershipPullRequest({
+        url: lease.pullRequestUrl,
+        branch,
+        ghText,
+      }).baseRefOid;
+    } catch {
+      // Fall back to the local fetched base when the ownership PR is not yet readable.
+    }
+  }
+  return gitText(["rev-parse", "origin/main"]).trim();
+}
 function resolveOriginRepositoryFullName(gitOptional) {
   const identity = resolveOriginRepositoryIdentity(gitOptional);
   return identity ? `${identity.owner}/${identity.repo}` : null;

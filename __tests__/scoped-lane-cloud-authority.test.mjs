@@ -486,6 +486,38 @@ test("legacy review bootstrap claims at base and binds the exact reviewed head",
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });
 
+test("legacy review bootstrap retries claim with the required lease epoch", () => {
+  const harness = projectionHarness(rootClaim({
+    laneRevision: BASE_SHA,
+    transitionCounter: 1,
+  }));
+  let firstAttempt = true;
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    inspect: harness.inspect,
+    verify: harness.verify,
+    invoke: (input) => {
+      if (input.action === "claim" && firstAttempt) {
+        firstAttempt = false;
+        throw new Error("Cloud collaboration claim failed: leaseEpoch must be 2");
+      }
+      return harness.invoke(input);
+    },
+  });
+  const claimCalls = harness.calls.filter(call => call.action === "claim");
+  assert.equal(claimCalls.length, 1);
+  assert.equal(claimCalls[0].request.leaseEpoch, 2);
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
 test("legacy review bootstrap supersedes a preserved predecessor before promoting its waiting successor", () => {
   const harness = waitingSuccessorHarness();
   const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({

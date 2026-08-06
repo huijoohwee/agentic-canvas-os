@@ -297,32 +297,45 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   );
   const resolvedHeadSha = requiredSha(headSha, "headSha");
   const resolvedBranch = requiredText(branch, "branch");
-  const claimResult = invoke({
-    action: "claim",
-    ledgerRepository: resolvedLedgerRepository,
-    request: {
-      targetRepository: resolvedTargetRepository,
-      branch: resolvedBranch,
-      workItemId: requiredText(workItemId, "workItemId"),
-      canonicalBaseSha: resolvedCanonicalBaseSha,
-      headSha: resolvedCanonicalBaseSha,
-      declaredWriteScope: manifest?.declaredWriteSet,
-      leaseEpoch: positiveInteger(leaseEpoch, "leaseEpoch"),
-      deviceId: requiredText(deviceId, "deviceId"),
-      sessionId: requiredText(sessionId, "sessionId"),
-      ttlSeconds: positiveInteger(ttlSeconds, "ttlSeconds"),
-      idempotencyKey: [
-        "legacy-review-claim",
-        resolvedTargetRepository,
-        resolvedBranch,
-        resolvedCanonicalBaseSha,
-        resolvedHeadSha,
-        manifest?.writeSetDigest,
-        leaseEpoch,
-      ].join(":"),
-    },
-    environment,
+  const requestForLeaseEpoch = claimLeaseEpoch => ({
+    targetRepository: resolvedTargetRepository,
+    branch: resolvedBranch,
+    workItemId: requiredText(workItemId, "workItemId"),
+    canonicalBaseSha: resolvedCanonicalBaseSha,
+    headSha: resolvedCanonicalBaseSha,
+    declaredWriteScope: manifest?.declaredWriteSet,
+    leaseEpoch: positiveInteger(claimLeaseEpoch, "leaseEpoch"),
+    deviceId: requiredText(deviceId, "deviceId"),
+    sessionId: requiredText(sessionId, "sessionId"),
+    ttlSeconds: positiveInteger(ttlSeconds, "ttlSeconds"),
+    idempotencyKey: [
+      "legacy-review-claim",
+      resolvedTargetRepository,
+      resolvedBranch,
+      resolvedCanonicalBaseSha,
+      resolvedHeadSha,
+      manifest?.writeSetDigest,
+      claimLeaseEpoch,
+    ].join(":"),
   });
+  let claimResult;
+  try {
+    claimResult = invoke({
+      action: "claim",
+      ledgerRepository: resolvedLedgerRepository,
+      request: requestForLeaseEpoch(leaseEpoch),
+      environment,
+    });
+  } catch (error) {
+    const requiredLeaseEpoch = parseRequiredLeaseEpoch(error);
+    if (!requiredLeaseEpoch || requiredLeaseEpoch === leaseEpoch) throw error;
+    claimResult = invoke({
+      action: "claim",
+      ledgerRepository: resolvedLedgerRepository,
+      request: requestForLeaseEpoch(requiredLeaseEpoch),
+      environment,
+    });
+  }
   const claimedState = projectRootState(
     claimResult?.claim?.state || claimResult?.status || null,
   );
@@ -383,6 +396,13 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       resolvedHeadSha,
     ].join(":"),
   });
+}
+function parseRequiredLeaseEpoch(error) {
+  const message = String(error?.message || "");
+  const match = message.match(/leaseEpoch must be (\d+)/u);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isInteger(value) && value > 0 ? value : null;
 }
 function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   claimResult,

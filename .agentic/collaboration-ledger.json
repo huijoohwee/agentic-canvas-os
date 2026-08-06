@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 921,
-  "headDigest": "7acad15736b889489f04dd85452b7a67b018ba0da4851ce69ce450a0a176f047",
+  "sequence": 922,
+  "headDigest": "9520eb4a2b1aa0f323d02c2fc20942a8ddcea5cd30355ab10fc5629f2ef1e9a6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -46915,6 +46915,47 @@
       },
       "claimDigest": "658716eea50a4b507891570acde8c4f263de796476b02b01ad217bb73b8e96ec",
       "digest": "7acad15736b889489f04dd85452b7a67b018ba0da4851ce69ce450a0a176f047"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 922,
+      "parentDigest": "7acad15736b889489f04dd85452b7a67b018ba0da4851ce69ce450a0a176f047",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c7022128a00f06f15be75b56a17b7e3249c204518b31103f05fc064825957e92",
+      "idempotencyKey": "b74e7dd7dcbeec9c1197733d20d888713833f3c0179fb08b6373c82d333b91a8",
+      "requestDigest": "6136c518792d551c0344822577c10b97fc0a7388cba0077f0e7e755c3c17f89d",
+      "evaluationTime": "2026-08-06T05:48:06.000Z",
+      "claimCore": {
+        "claimId": "c7022128a00f06f15be75b56a17b7e3249c204518b31103f05fc064825957e92",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:595210e9e3177ea1b4a306462d6b6c889527a708f5491034a8c7ad1201c8ac3e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:11ce0f45da66911b944ac448d05e412cd1a80d3b8ed73b1adfca7d8e61de8666",
+        "canonicalBaseRevision": "f9fa625e6b79e10fbeea36591133d7dd270ff57b",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "semantic:merged-no-lease-completion"
+        ],
+        "writeSetDigest": "5e2dcec3d2a9961c121cc26cc268c54be5f6b5a440117d602dd5057effb68b45",
+        "laneRevision": "f9fa625e6b79e10fbeea36591133d7dd270ff57b",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T06:18:06.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9eccdb2c70b791935b9146e7475a6bd04137abd5535f29afdac4e108a4da742c",
+      "digest": "9520eb4a2b1aa0f323d02c2fc20942a8ddcea5cd30355ab10fc5629f2ef1e9a6"
     }
   ]
 }

@@ -1372,6 +1372,127 @@ test("completeSession recovers a missing local lease from the merged pull reques
   assert.ok(calls.some(call => call.join(" ") === "git switch --detach 1234567890abcdef1234567890abcdef12345678"));
 });
 
+test("completeSession recovers a missing local lease from merged branch evidence when the PR has no marker", () => {
+  const calls = [];
+  let recovered = null;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope\n",
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": ["", ""],
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse HEAD": [
+      "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+      "1234567890abcdef1234567890abcdef12345678\n",
+    ],
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  const summary = completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify({
+      state: "MERGED",
+      baseRefName: "main",
+      url: "https://github.com/example/repo/pull/42",
+      mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+      headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+      body: "",
+    }),
+    leaseStore: {
+      read: () => null,
+      recoverFromPullRequestMarker: () => {
+        throw new Error("No recoverable writer lease marker records agent/device/scope.");
+      },
+      recoverMergedPullRequestCompletion: (values) => {
+        recovered = values;
+        return {
+          schema: "agentic-writer-lease/v2",
+          status: "completed",
+          epoch: 19,
+          sessionId: "recovered-merged-pr:agent/device/scope",
+          device: "device",
+          scope: "scope",
+          branch: values.branch,
+          worktreePath: values.worktreePath,
+          baseSha: values.mainSha,
+          fenceSha: values.headSha,
+          pullRequestUrl: values.pullRequestUrl,
+          autoDelivery: false,
+          runtimeRequired: false,
+          reviewHeadSha: values.headSha,
+          heartbeatAt: "2026-08-06T00:00:00.000Z",
+          expiresAt: "2026-08-06T00:00:00.000Z",
+          completion: {
+            mergeCommitSha: values.mergeCommitSha,
+            mainSha: values.mainSha,
+          },
+        };
+      },
+      complete: () => {
+        throw new Error("Completed recovery must not request a second completion fence.");
+      },
+    },
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  });
+
+  assert.deepEqual(recovered, {
+    branch: "agent/device/scope",
+    worktreePath: repo,
+    pullRequestUrl: "https://github.com/example/repo/pull/42",
+    mergeCommitSha: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    headSha: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+  });
+  assert.deepEqual(summary, {
+    completedBranch: "agent/device/scope",
+    pullRequestUrl: "https://github.com/example/repo/pull/42",
+    mergeCommitSha: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    mainSha: "1234567890abcdef1234567890abcdef12345678",
+    status: "ok",
+  });
+  assert.ok(calls.some(call => call.join(" ") === "git switch --detach 1234567890abcdef1234567890abcdef12345678"));
+});
+
+test("completeSession fails closed when a merged PR carries an invalid writer lease marker", () => {
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree("agent/device/scope"),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": "agent/device/scope\n",
+    "stash list --format=%H%x00%gd%x00%gs": "",
+    "status --porcelain": "",
+    "rev-parse refs/heads/agent/device/scope": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse HEAD": "fedcbafedcbafedcbafedcbafedcbafedcbafedc\n",
+    "rev-parse origin/main": "1234567890abcdef1234567890abcdef12345678\n",
+  });
+
+  assert.throws(() => completeSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => JSON.stringify({
+      state: "MERGED",
+      baseRefName: "main",
+      url: "https://github.com/example/repo/pull/42",
+      mergeCommit: { oid: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+      headRefOid: "fedcbafedcbafedcbafedcbafedcbafedcbafedc",
+      body: "<!-- agentic-writer-lease/v2 {\"schema\":\"agentic-writer-lease/v2\",\"branch\":\"agent/device/scope\"} -->",
+    }),
+    leaseStore: {
+      read: () => null,
+      recoverFromPullRequestMarker: ({ branch }) => {
+        throw new Error(`Writer lease marker for ${branch} is present but invalid.`);
+      },
+    },
+    run: () => {},
+  }), /present but invalid/);
+});
+
 test("completeSession refuses auto-delivery completion without canonical runtime reconciliation", () => {
   const gitText = createGitText({
     "worktree list --porcelain -z": branchWorktree("agent/device/scope"),

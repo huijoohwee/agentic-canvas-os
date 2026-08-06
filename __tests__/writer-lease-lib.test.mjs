@@ -512,6 +512,68 @@ test("merged completion uses an explicit cleanup intent before the final fence",
   }
 });
 
+test("merged pull request recovery can synthesize a completed lease when no marker remains", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  const store = createWriterLeaseStore({ gitCommonDir });
+  const branch = "agent/mac-a/runtime-leases";
+  try {
+    const recovered = store.recoverMergedPullRequestCompletion({
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+      headSha: "e".repeat(40),
+    });
+    assert.equal(recovered.status, "completed");
+    assert.equal(recovered.branch, branch);
+    assert.equal(recovered.device, "mac-a");
+    assert.equal(recovered.scope, "runtime-leases");
+    assert.equal(recovered.pullRequestUrl, "https://github.com/example/repo/pull/42");
+    assert.equal(recovered.baseSha, "d".repeat(40));
+    assert.equal(recovered.fenceSha, "e".repeat(40));
+    assert.equal(recovered.reviewHeadSha, "e".repeat(40));
+    assert.match(recovered.sessionId, /^recovered-merged-pr:/);
+    assert.deepEqual(recovered.completion, {
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+    });
+    assert.deepEqual(store.read(branch), recovered);
+    assert.deepEqual(store.recoverMergedPullRequestCompletion({
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      mergeCommitSha: "c".repeat(40),
+      mainSha: "d".repeat(40),
+      headSha: "e".repeat(40),
+    }), recovered);
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
+test("writer lease marker recovery distinguishes invalid markers from absent markers", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  const store = createWriterLeaseStore({ gitCommonDir });
+  const branch = "agent/mac-a/runtime-leases";
+  try {
+    assert.throws(() => store.recoverFromPullRequestMarker({
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      pullRequestBody: "<!-- agentic-writer-lease/v2 {\"schema\":\"agentic-writer-lease/v2\",\"branch\":\"agent/mac-a/runtime-leases\"} -->",
+    }), /present but invalid/);
+    assert.throws(() => store.recoverFromPullRequestMarker({
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      pullRequestUrl: "https://github.com/example/repo/pull/42",
+      pullRequestBody: "",
+    }), /No recoverable writer lease marker records/);
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
 function recoveryEvidence({ source, headSha }) {
   return {
     sourceEpoch: source.epoch,

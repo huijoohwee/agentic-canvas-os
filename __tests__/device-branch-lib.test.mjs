@@ -23,9 +23,16 @@ import {
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
-const pullJson = (url, branch, body = "", isDraft = true, state = "OPEN") => JSON.stringify({
+const pullJson = (
+  url,
+  branch,
+  body = "",
+  isDraft = true,
+  state = "OPEN",
+  baseRefOid = "a".repeat(40),
+) => JSON.stringify({
   url, state, isDraft, headRefName: branch,
-  headRefOid: "c".repeat(40), baseRefName: "main", body,
+  headRefOid: "c".repeat(40), baseRefName: "main", baseRefOid, body,
 });
 const publishDeclaredWriteSet = [
   "path:scripts/device-branch-lib.mjs",
@@ -261,6 +268,7 @@ test("review upgrades a resumed legacy root-source ready lane using authored pat
   const pullRequestUrl = "https://github.test/pull/288";
   const reviewHeadSha = "c".repeat(40);
   const canonicalBaseSha = "a".repeat(40);
+  const livePullRequestBaseSha = "d".repeat(40);
   let pullRequestBody = renderWriterLeasePullRequestBody({
     schema: "agentic-writer-lease/v2",
     status: "review_ready",
@@ -279,6 +287,7 @@ test("review upgrades a resumed legacy root-source ready lane using authored pat
   });
   let annotatedLease = null;
   let claimedManifest = null;
+  let claimedCanonicalBaseSha = null;
   let verifiedHead = null;
   const gitText = createGitText({
     "worktree list --porcelain -z": branchWorktree(branch),
@@ -338,13 +347,14 @@ test("review upgrades a resumed legacy root-source ready lane using authored pat
       if (args[1] === "view" && args.includes("--jq")) {
         return pullRequestBody;
       }
-      return pullJson(pullRequestUrl, branch, pullRequestBody, false);
+        return pullJson(pullRequestUrl, branch, pullRequestBody, false, "OPEN", livePullRequestBaseSha);
     },
     ghOptional: () => pullRequestUrl,
     leaseStore,
     sessionId: "chat-a",
     claimLegacyReviewCloudAuthority: input => {
       claimedManifest = input.manifest;
+        claimedCanonicalBaseSha = input.canonicalBaseSha;
       return {
         authority: {
           schema: "agentic-lane-cloud-authority/v1",
@@ -357,7 +367,7 @@ test("review upgrades a resumed legacy root-source ready lane using authored pat
           claimLedgerRevision: "4".repeat(64),
           operationReceiptDigest: "5".repeat(64),
           mutationAuthorityEligible: true,
-          canonicalBaseSha,
+            canonicalBaseSha: input.canonicalBaseSha,
           laneRevision: reviewHeadSha,
           cloudDeclaredWriteScope: input.manifest.declaredWriteSet,
           writeSetDigest: input.manifest.writeSetDigest,
@@ -402,6 +412,7 @@ test("review upgrades a resumed legacy root-source ready lane using authored pat
     "scripts/device-complete-lib.mjs",
     "scripts/writer-lease-lib.mjs",
   ]);
+  assert.equal(claimedCanonicalBaseSha, livePullRequestBaseSha);
   assert.equal(verifiedHead, reviewHeadSha);
   assert.equal(annotatedLease.admission.status, "admitted");
   assert.equal(annotatedLease.cloudAuthority.state, "review_ready");

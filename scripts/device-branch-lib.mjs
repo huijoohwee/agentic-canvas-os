@@ -79,6 +79,7 @@ export function review({
         repo,
         gitText,
         gitOptional,
+          ghText,
         leaseStore,
         sessionId,
         claimLegacyReviewCloudAuthority,
@@ -119,6 +120,7 @@ export function review({
       repo,
       gitText,
       gitOptional,
+        ghText,
       leaseStore,
       sessionId,
       claimLegacyReviewCloudAuthority,
@@ -701,6 +703,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
   repo,
   gitText,
   gitOptional,
+  ghText,
   leaseStore,
   sessionId,
   claimLegacyReviewCloudAuthority,
@@ -713,7 +716,12 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     throw new Error("Root-source legacy review admission requires a resolvable origin repository.");
   }
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
   const manifest = deriveLegacyReviewAdmissionManifest({
     lease,
     gitText,
@@ -760,6 +768,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
   repo,
   gitText,
   gitOptional,
+  ghText,
   leaseStore,
   sessionId,
   claimLegacyReviewCloudAuthority,
@@ -780,7 +789,12 @@ function maybeUpgradeLegacyRootSourceReadyReview({
   if (!targetRepository) {
     throw new Error("Root-source ready review upgrade requires a resolvable origin repository.");
   }
-  const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
   const manifest = deriveLegacyReviewAdmissionManifest({
     lease,
     gitText,
@@ -1015,6 +1029,21 @@ function readRemotePullRequestBody({ url, ghText }) {
 
 function resolveOriginRepositoryName(gitOptional) {
   return resolveOriginRepositoryIdentity(gitOptional)?.repo || null;
+}
+
+function resolveLegacyReviewCanonicalBaseSha({ lease, branch, gitText, ghText }) {
+  if (lease?.pullRequestUrl && typeof ghText === "function") {
+    try {
+      return readOwnershipPullRequest({
+        url: lease.pullRequestUrl,
+        branch,
+        ghText,
+      }).baseRefOid;
+    } catch {
+      // Fall back to the local fetched base when the ownership PR is not yet readable.
+    }
+  }
+  return gitText(["rev-parse", "origin/main"]).trim();
 }
 
 function resolveOriginRepositoryFullName(gitOptional) {

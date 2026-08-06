@@ -414,13 +414,19 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   const predecessor = statusResult?.claims?.find(
     claim => claim?.claimId === predecessorClaimId,
   );
-  if (predecessor && projectRootState(predecessor.state) !== "parked") {
+  const predecessorState = predecessor
+    ? projectRootState(predecessor.state)
+    : null;
+  if (
+    predecessor
+    && !["parked", "active"].includes(predecessorState)
+  ) {
     throw new Error(
-      `Legacy review waiting successor requires a dormant-preserved predecessor; received ${predecessor.state || "missing"}.`,
+      `Legacy review waiting successor requires a dormant-preserved or current predecessor; received ${predecessor.state || "missing"}.`,
     );
   }
   if (predecessor && predecessor.actorId !== waitingClaim.actorId) {
-    throw new Error("Legacy review waiting successor cannot supersede another actor's preserved claim.");
+    throw new Error("Legacy review waiting successor cannot supersede another actor's predecessor claim.");
   }
   const expectedWriteSet = normalizeWriteSet(manifest?.declaredWriteSet);
   const successionEvidence = {

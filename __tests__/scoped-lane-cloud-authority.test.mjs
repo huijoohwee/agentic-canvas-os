@@ -241,10 +241,12 @@ function projectionHarness(initialClaim) {
   };
 }
 
-function waitingSuccessorHarness() {
+function waitingSuccessorHarness({
+  predecessorState = "dormant-preserved",
+} = {}) {
   let predecessor = rootClaim({
     claimId: "6".repeat(64),
-    state: "dormant-preserved",
+    state: predecessorState,
     laneRevision: "5".repeat(40),
     transitionCounter: 4,
     fenceRevision: "7".repeat(64),
@@ -304,16 +306,6 @@ function waitingSuccessorHarness() {
         current = waiting;
         return mutationResult("claim", waiting, NEXT_LEDGER_SHA);
       }
-      if (action === "retire") {
-        predecessor = {
-          ...predecessor,
-          state: "retired",
-          transitionCounter: predecessor.transitionCounter + 1,
-          fenceRevision: digestValue({ action, request }),
-          transitionDigest: digestValue({ retire: calls.length }),
-        };
-        return mutationResult("retire", predecessor, NEXT_LEDGER_SHA);
-      }
       if (action === "retire" && request.claimId === staleWaiting.claimId) {
         staleWaiting = {
           ...staleWaiting,
@@ -323,6 +315,16 @@ function waitingSuccessorHarness() {
           transitionDigest: digestValue({ retireQueued: calls.length }),
         };
         return mutationResult("retire", staleWaiting, NEXT_LEDGER_SHA);
+      }
+      if (action === "retire") {
+        predecessor = {
+          ...predecessor,
+          state: "retired",
+          transitionCounter: predecessor.transitionCounter + 1,
+          fenceRevision: digestValue({ action, request }),
+          transitionDigest: digestValue({ retire: calls.length }),
+        };
+        return mutationResult("retire", predecessor, NEXT_LEDGER_SHA);
       }
       if (action === "continue" && request.mode === "promote") {
         current = rootClaim({
@@ -512,6 +514,39 @@ test("legacy review bootstrap supersedes a preserved predecessor before promotin
   );
   assert.equal(harness.calls[1].request.reason, "superseded");
   assert.equal(harness.calls[2].request.reason, "superseded");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap supersedes a current predecessor before promoting its waiting successor", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "current",
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["claim", null],
+      ["retire", null],
+      ["retire", null],
+      ["continue", "promote"],
+      ["continue", "projection"],
+    ],
+  );
+  assert.equal(harness.calls[1].request.reason, "superseded");
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });

@@ -940,11 +940,13 @@ function acceptReviewCloudReconciliation({
     );
   }
   if (laneRevision === lease.fenceSha) {
-    assertAdmissionMutationAuthority({
-      lease: { ...lease, cloudAuthority: reconciled.authority },
-      cloudAuthority: reconciled.authority,
-      remoteAuthorityVerification: reconciled.verification,
-    });
+    if (reconciled.authority.reviewRequestId) {
+      assertAdmissionMutationAuthority({
+        lease: { ...lease, cloudAuthority: reconciled.authority },
+        cloudAuthority: reconciled.authority,
+        remoteAuthorityVerification: reconciled.verification,
+      });
+    }
   }
   return {
     lease: leaseStore.annotate({

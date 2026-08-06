@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1010,
-  "headDigest": "0c7a088c5fdfcc8dad0b59f8ba9bf9cf1c8baf577c0c9ac3fa5e0f277e586ce9",
+  "sequence": 1011,
+  "headDigest": "33b0be77e02d0a50021d48fc0006ba27f019694f8d1b5bb98f72bd4a46a3a734",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -51120,6 +51120,66 @@
       },
       "claimDigest": "8990a9301ae808e2f4ed2e063d9ed8db61ee7e4c02e1e706001331a8cb49eba8",
       "digest": "0c7a088c5fdfcc8dad0b59f8ba9bf9cf1c8baf577c0c9ac3fa5e0f277e586ce9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1011,
+      "parentDigest": "0c7a088c5fdfcc8dad0b59f8ba9bf9cf1c8baf577c0c9ac3fa5e0f277e586ce9",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "ea4d3954da2751418465b1f1882c56ba1c52f97ae74e969c43616333a25ed973",
+      "idempotencyKey": "275af4c577d48357ae2964b373da27bc24741b0da45b05064bbd514b8f777a7e",
+      "requestDigest": "000cdcc6cc68324b6e6c9fb256b713364b6c448a122791a58dbbbeadff65661c",
+      "evaluationTime": "2026-08-06T10:45:32.000Z",
+      "claimCore": {
+        "claimId": "ea4d3954da2751418465b1f1882c56ba1c52f97ae74e969c43616333a25ed973",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:e6f1ac627fecc6df10f96254813fd639e00db482e7e1360d83b9fc5cd27a224e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c6597d6865c50af8093c4631550424a0e9345586317ccf61c72546639af6f69f",
+        "canonicalBaseRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/device-branch-cli.test.mjs",
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:__tests__/scoped-lane-authority-state.test.mjs",
+          "path:docs/schemas/scoped-lane-admission-report.v1.schema.json",
+          "path:scripts/cloud-authority-handoff-controller.mjs",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "path:scripts/scoped-lane-admission-lib.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-authority-state.mjs",
+          "path:scripts/scoped-lane-bootstrap-authorization.mjs",
+          "semantic:bootstrap-deadlock-root-source-rehost-core-20260806d"
+        ],
+        "writeSetDigest": "d9b05d1283003a5a6b66bffb766995bae499fe2e842daa155df20d25daf9c41d",
+        "laneRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-06T11:12:04.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+          "reviewRequestId": null,
+          "bytesDigest": "1e0bcf0cc18e81c078c09d0930919f014be0bc6b5080c271d2646660702ecf45",
+          "namedChecksDigest": "93008e15e55897968de5d663e69d5818b3ffb5a6587df53c6558f6610e7c82b8",
+          "handoffEvidenceDigest": "4be02701cfde4be6850f720273e272435d80ab8c005613f80ac03434c4cb4a17",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-06T10:45:32.000Z"
+        }
+      },
+      "claimDigest": "2f7461194d080f736c0fc15b91118fdc87aa17c98863fa5b57c1c6e2376ec521",
+      "digest": "33b0be77e02d0a50021d48fc0006ba27f019694f8d1b5bb98f72bd4a46a3a734"
     }
   ]
 }

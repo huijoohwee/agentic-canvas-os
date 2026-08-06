@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 892,
-  "headDigest": "0f5c405bc4ef4bdc2adc155c1f74b199cb82c3b2fde43a5c82eddfb28e9d20b8",
+  "sequence": 893,
+  "headDigest": "f6406c858424a6865155e7ce33d99b6260076699d573b5af85c9eee5a71ce3c5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -45082,6 +45082,71 @@
       },
       "claimDigest": "83ea261edf267f2eaa6593db30c63820d054c306eb5d6e8c1615851ceb40bf46",
       "digest": "0f5c405bc4ef4bdc2adc155c1f74b199cb82c3b2fde43a5c82eddfb28e9d20b8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 893,
+      "parentDigest": "0f5c405bc4ef4bdc2adc155c1f74b199cb82c3b2fde43a5c82eddfb28e9d20b8",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "4b29c44d70f5e01d37e752152a9e7b04309f45465c11b4cbb70ad8b7358b104d",
+      "idempotencyKey": "bdf19f47082ef2031e8ae42ea18f599c481f7135941ceb236064bf6a4c1d66df",
+      "requestDigest": "aa9c442a150f74419efce840f7e54155de0f8b48e5a3877b4b28066e83a590d9",
+      "evaluationTime": "2026-08-06T03:40:57.000Z",
+      "claimCore": {
+        "claimId": "4b29c44d70f5e01d37e752152a9e7b04309f45465c11b4cbb70ad8b7358b104d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:940a448d508274daeefa684e6b6af993eddc47bdaac20c8b11851c9de7422b5a",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:ef43c0bfa643db62b009747388329e02d767a9165f9e192271c059f9d23dc2cd",
+        "canonicalBaseRevision": "3ca1436ce99ba170998ad5880c32d4410230ed32",
+        "declaredWriteScope": [
+          "path:docs/documents/knowgrph-architecture-decisions.md",
+          "path:docs/documents/knowgrph-crawler-prd-tad.md",
+          "path:docs/documents/knowgrph-database.md",
+          "path:docs/documents/knowgrph-site-selection-widget.md",
+          "path:docs/documents/knowgrph-storage-sync-document.companion.md",
+          "path:docs/documents/knowgrph-storage-sync-document.md",
+          "semantic:knowledge-ssot-storage-contract"
+        ],
+        "writeSetDigest": "5033829405bbad4fe1779d43d456a485c03f6588031fa17fce56720642c24bf0",
+        "laneRevision": "777af59ebe8e3dfce01131fa4d198ec360981f7a",
+        "leaseEpoch": 1,
+        "transitionCounter": 8,
+        "heartbeatCounter": 2,
+        "state": "retired",
+        "expiresAt": "2026-08-05T14:45:53.000Z",
+        "evidenceDigest": "281f9b0c1d3735a9088c0a9dcfd6d659e594bf874b66351146ef561661544f33",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77G4sw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "777af59ebe8e3dfce01131fa4d198ec360981f7a",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77G4sw",
+          "focusedEvidenceDigest": "281f9b0c1d3735a9088c0a9dcfd6d659e594bf874b66351146ef561661544f33",
+          "dependencyClosureDigest": "31a956dba0b8aebc91cf7ef0c4a90e45842e6f36c39c0f2898b87104f44cc395",
+          "namedChecksDigest": "cda183a082079c6143840c2a707085e4e0a8c57199b89415a643e4d96bd7d8bc",
+          "handoffEvidenceDigest": "f7cf1a26bdf923910571dd1febcc488ef3cf837462eb0d0cc7e4b9e955f4c298",
+          "operatorDecisionDigest": "e05577bef26639e4578facd7d7cd3c4102a2833c9974bc65b287df4dd5668177",
+          "integrationIntentDigest": "70a3219fb1b3b0ddabacbd4284a6559e5ce6e904fef350d1acc2c2e29f05d200",
+          "integratedAt": "2026-08-05T14:38:37.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "777af59ebe8e3dfce01131fa4d198ec360981f7a",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77G4sw",
+          "bytesDigest": "b21af5ccec0f30746581041d8d3b3c986a0f26a912a244eed61eeed33a98deb3",
+          "namedChecksDigest": "cda183a082079c6143840c2a707085e4e0a8c57199b89415a643e4d96bd7d8bc",
+          "handoffEvidenceDigest": "f7cf1a26bdf923910571dd1febcc488ef3cf837462eb0d0cc7e4b9e955f4c298",
+          "integrationReceiptDigest": "e26c58d51a60f71e499a060386505f1edc745e3d4992484192a4e37049eb419c",
+          "retiredAt": "2026-08-06T03:40:57.000Z"
+        }
+      },
+      "claimDigest": "c19da31986a408a790c1300daed64aea5e264f4fbdfc1f9d3b4daceb737bfe85",
+      "digest": "f6406c858424a6865155e7ce33d99b6260076699d573b5af85c9eee5a71ce3c5"
     }
   ]
 }

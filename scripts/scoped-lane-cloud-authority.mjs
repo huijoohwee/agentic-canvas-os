@@ -4,7 +4,7 @@ import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
 import { markOperationDerivedCloudVerification } from "./scoped-lane-admission-lib.mjs";
 import { normalizeBoundAuthority, normalizeCurrentClaimInventory, positiveInteger,
-  projectRootState, reconcileCloudAuthorityProjection, requireAuthority, requiredDigest,
+  cloudAuthorityFromResult, projectRootState, reconcileCloudAuthorityProjection, requireAuthority, requiredDigest,
   requiredInstant, requiredSha, requiredText, requireReadyResult, rootStateForProjection,
 } from "./scoped-lane-cloud-reconciliation.mjs";
 const CLOUD_SCRIPT = fileURLToPath(new URL("./cloud-collaboration.mjs", import.meta.url));

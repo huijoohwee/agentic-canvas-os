@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
 import { markOperationDerivedCloudVerification } from "./scoped-lane-admission-lib.mjs";
 import { normalizeBoundAuthority, normalizeCurrentClaimInventory, positiveInteger,
@@ -427,6 +427,7 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   if (predecessor.actorId !== waitingClaim.actorId) {
     throw new Error("Legacy review waiting successor cannot supersede another actor's preserved claim.");
   }
+  const expectedWriteSet = normalizeWriteSet(manifest?.declaredWriteSet);
   const successionEvidence = {
     schema: "agentic-legacy-review-successor-promotion/v1",
     branch: requiredText(branch, "branch"),
@@ -479,6 +480,40 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     },
     environment,
   });
+  const refreshStatusResult = inspect({
+    action: "status",
+    ledgerRepository,
+    request: { targetRepository },
+    environment,
+  });
+  const competingWaitingSuccessors = Array.isArray(refreshStatusResult?.claims)
+    ? refreshStatusResult.claims.filter((claim) => (
+      claim?.claimId !== waitingClaimId
+      && claim?.predecessorClaimId === predecessorClaimId
+      && claim?.actorId === waitingClaim.actorId
+      && claim?.workItemId === waitingClaim.workItemId
+      && projectRootState(claim?.state) === "waiting-successor"
+      && (
+        claim?.writeSetDigest !== manifest?.writeSetDigest
+        || JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope || []))
+          !== JSON.stringify(expectedWriteSet)
+      )
+    ))
+    : [];
+  for (const competing of competingWaitingSuccessors) {
+    retireLegacyReviewQueuedSuccessor({
+      claim: competing,
+      targetRepository,
+      ledgerRepository,
+      deviceId,
+      sessionId,
+      branch,
+      predecessorClaimId,
+      waitingClaimId,
+      environment,
+      invoke,
+    });
+  }
   const promotedResult = invoke({
     action: "continue",
     ledgerRepository,
@@ -524,6 +559,75 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     inspect,
     invoke: verify,
   }).authority;
+}
+function retireLegacyReviewQueuedSuccessor({
+  claim,
+  targetRepository,
+  ledgerRepository,
+  deviceId,
+  sessionId,
+  branch,
+  predecessorClaimId,
+  waitingClaimId,
+  environment,
+  invoke,
+}) {
+  const claimId = requiredDigest(claim?.claimId, "queued successor claimId");
+  const supersessionEvidence = {
+    schema: "agentic-legacy-review-queued-successor-retirement/v1",
+    branch: requiredText(branch, "branch"),
+    predecessorClaimId: requiredDigest(
+      predecessorClaimId,
+      "predecessorClaimId",
+    ),
+    survivingSuccessorClaimId: requiredDigest(
+      waitingClaimId,
+      "waitingClaimId",
+    ),
+    retiredSuccessorClaimId: claimId,
+  };
+  invoke({
+    action: "retire",
+    ledgerRepository,
+    request: {
+      targetRepository,
+      claimId,
+      expectedFenceRevision: requiredDigest(
+        claim?.fenceRevision,
+        "queued successor fenceRevision",
+      ),
+      expectedTransitionCounter: positiveInteger(
+        claim?.transitionCounter,
+        "queued successor transitionCounter",
+      ),
+      reason: "superseded",
+      finalRevision: requiredSha(
+        claim?.laneRevision,
+        "queued successor laneRevision",
+      ),
+      reviewRequestId: claim?.reviewRequestId || null,
+      bytesDigest: digestValue({
+        ...supersessionEvidence,
+        operation: "retire-bytes",
+      }),
+      namedChecksDigest: digestValue({
+        ...supersessionEvidence,
+        operation: "retire-checks",
+      }),
+      handoffEvidenceDigest: digestValue({
+        ...supersessionEvidence,
+        operation: "retire-handoff",
+      }),
+      deviceId: requiredText(deviceId, "deviceId"),
+      sessionId: requiredText(sessionId, "sessionId"),
+      idempotencyKey: [
+        "legacy-review-retire-queued-successor",
+        claimId,
+        requiredDigest(claim?.fenceRevision, "queued successor fenceRevision"),
+      ].join(":"),
+    },
+    environment,
+  });
 }
 export function heartbeatAdmissionCloudAuthority({
   authority,

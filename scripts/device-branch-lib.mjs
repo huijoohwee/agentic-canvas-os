@@ -961,7 +961,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     manifest,
     canonicalBaseSha,
     branch,
-    headSha: lease.fenceSha,
+    headSha,
     pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
     deviceId: lease.device,
     sessionId,

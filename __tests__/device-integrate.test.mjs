@@ -22,6 +22,10 @@ const mainSha = "f".repeat(40);
 const knowgrphSha = "1".repeat(40);
 const pullRequestUrl = "https://github.test/example/repo/pull/42";
 const protectedSquashSubject = "fix: bind exact protected squash subjects";
+const oversizedReviewedMergeSubject =
+  "Merge remote-tracking branch 'origin/main' into agent/huis-macbook-pro-3/lark-readonly-knowledge-ingestion";
+const oversizedRefreshedMergeSubject =
+  "Merge branch 'main' into agent/huis-macbook-pro-3/lark-readonly-knowledge-ingestion";
 const deliveryEvidence = Object.freeze({
   dependencyClosureDigest: "1".repeat(64),
   namedChecksDigest: "2".repeat(64),
@@ -614,6 +618,8 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
   const commands = [];
   let cloudMutation = null;
   let completed = false;
+  let commitSubjectRead = false;
+  let pullRequestRead = 0;
   try {
     const result = integrateSession({
       invocationPath: repo,
@@ -623,11 +629,21 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
-        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
+        if (key === `log -1 --pretty=%s ${commitSha}`) {
+          commitSubjectRead = true;
+          return oversizedReviewedMergeSubject;
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: args => {
-        assert.equal(args.join(" "), `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`);
+        pullRequestRead += 1;
+        assert.equal(
+          args.join(" "),
+          `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`,
+        );
         return JSON.stringify({
           url: pullRequestUrl,
           state: "MERGED",
@@ -702,6 +718,8 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
 
     assert.equal(result.status, "integrated");
     assert.equal(completed, true);
+    assert.equal(commitSubjectRead, false);
+    assert.equal(pullRequestRead, 2);
     assert.match(cloudMutation.request.idempotencyKey, /^device-cloud-mutation:[0-9a-f]{64}$/u);
     assert.ok(
       cloudMutation.request.idempotencyKey.length
@@ -710,6 +728,139 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
     assert.ok(commands.some(call => call.join(" ") ===
       `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("review-ready delivery rejects local base drift before subject selection or authorization", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-base-drift-"));
+  const lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+  });
+  lease.cloudAuthority = {
+    ...lease.cloudAuthority,
+    canonicalBaseSha: "0".repeat(40),
+  };
+  const commands = [];
+  let subjectRead = false;
+  let evidenceBuilt = false;
+  let authorized = false;
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key.startsWith("log ")) subjectRead = true;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "OPEN",
+        baseRefName: "main",
+        headRefOid: commitSha,
+        mergeCommit: null,
+      }),
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      buildDeliveryEvidence: () => {
+        evidenceBuilt = true;
+        return deliveryEvidence;
+      },
+      authorizeCloudDelivery: ({ authority, headSha }) => {
+        authorized = true;
+        return { authority: deliveryAuthorizedAuthority(authority, headSha) };
+      },
+      verifyCloudAuthority: () => ({ ok: true }),
+      run: (command, args) => commands.push([command, ...args]),
+      runText: () => "",
+      publishTask: () => {},
+      completeTask: () => {},
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    }), /Reviewed lease base .* does not match cloud-authoritative base/u);
+    assert.equal(subjectRead, false);
+    assert.equal(evidenceBuilt, false);
+    assert.equal(authorized, false);
+    assert.equal(commands.some(call => call.join(" ").includes("gh pr merge")), false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("review-ready delivery rejects an invalid reviewed authored subject before authorization", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-invalid-subject-"));
+  const lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+  });
+  const commands = [];
+  let evidenceBuilt = false;
+  let authorized = false;
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return "x".repeat(73);
+        }
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: args => {
+        assert.equal(
+          args.join(" "),
+          `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`,
+        );
+        return JSON.stringify({
+          url: pullRequestUrl,
+          state: "OPEN",
+          baseRefName: "main",
+          headRefOid: commitSha,
+          mergeCommit: null,
+        });
+      },
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      buildDeliveryEvidence: () => {
+        evidenceBuilt = true;
+        return deliveryEvidence;
+      },
+      authorizeCloudDelivery: ({ authority, headSha }) => {
+        authorized = true;
+        return { authority: deliveryAuthorizedAuthority(authority, headSha) };
+      },
+      verifyCloudAuthority: () => ({ ok: true }),
+      run: (command, args) => commands.push([command, ...args]),
+      runText: () => "",
+      publishTask: () => {},
+      completeTask: () => {},
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    }), /Reviewed authored commit subject exceeds 72 characters \(73\)/u);
+    assert.equal(evidenceBuilt, false);
+    assert.equal(authorized, false);
+    assert.equal(commands.some(call => call.join(" ").includes("gh pr merge")), false);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -756,7 +907,9 @@ test("review-ready delivery reclaims a dormant preserved review authority before
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
-        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({
@@ -856,7 +1009,9 @@ test("review-ready delivery rejects evidence failure before authorization or pro
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
-        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({
@@ -915,6 +1070,9 @@ test("review-ready delivery rejects authorization that changes one derived evide
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({
@@ -967,6 +1125,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
   const refreshedTreeSha = "4".repeat(40);
   let head = commitSha;
   let pullRequestRead = 0;
+  const commitSubjectReads = [];
   const verifiedHeads = [];
   const commands = [];
   const lease = createLease({
@@ -995,13 +1154,26 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
         }
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
         if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return refreshedTreeSha;
-        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
+        if (key === `log -1 --pretty=%s ${commitSha}`) {
+          commitSubjectReads.push(commitSha);
+          return oversizedReviewedMergeSubject;
+        }
+        if (key === `log -1 --pretty=%s ${refreshedHeadSha}`) {
+          commitSubjectReads.push(refreshedHeadSha);
+          return oversizedRefreshedMergeSubject;
+        }
         if (key === "rev-parse HEAD") return head;
         if (key === "status --porcelain") return "";
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: args => {
-        assert.equal(args.join(" "), `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`);
+        assert.equal(
+          args.join(" "),
+          `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`,
+        );
         return JSON.stringify(pullRequestRead++ === 0 ? {
           url: pullRequestUrl,
           state: "OPEN",
@@ -1063,6 +1235,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
 
     assert.equal(result.status, "integrated");
     assert.equal(completed, true);
+    assert.deepEqual(commitSubjectReads, []);
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha, commitSha]);
     assert.deepEqual(result.protectedMainRefresh, {
       schema: "agentic-protected-main-refresh/v1",
@@ -1106,7 +1279,9 @@ test("authorized auto-delivery completes only through canonical runtime readines
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
-        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({

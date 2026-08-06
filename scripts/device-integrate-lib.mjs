@@ -98,6 +98,7 @@ export function integrateSession({
     let deliveryCloudAuthority = lease.cloudAuthority || null;
     const deliveryVerifiedBaseSha = deliveryCloudAuthority?.canonicalBaseSha || "";
     let protectedMainAuthorizationRefresh = null;
+    let squashSubject = null;
     if (reviewReadyDelivery) {
       const currentPullRequest = JSON.parse(ghText([
         "pr", "view", lease.pullRequestUrl, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
@@ -105,6 +106,18 @@ export function integrateSession({
       if (currentPullRequest.url !== lease.pullRequestUrl || currentPullRequest.baseRefName !== "main") {
         throw new Error(`Pull request identity for ${lease.pullRequestUrl} changed before integration.`);
       }
+      if (lease.baseSha !== deliveryVerifiedBaseSha) {
+        throw new Error(
+          `Reviewed lease base ${lease.baseSha || "unknown"} does not match cloud-authoritative base ${deliveryVerifiedBaseSha || "unknown"}.`,
+        );
+      }
+      squashSubject = requireProtectedSquashSubject(
+        gitText([
+          "log", "--first-parent", "--no-merges", "-1", "--format=%s",
+          `${deliveryVerifiedBaseSha}..${lease.reviewHeadSha}`,
+        ]).replace(/\r?\n$/u, ""),
+        { label: "Reviewed authored commit subject" },
+      );
       protectedMainAuthorizationRefresh = (
         lease.reviewHeadSha
         && currentPullRequest.headRefOid !== lease.reviewHeadSha
@@ -196,10 +209,6 @@ export function integrateSession({
         canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
         cloudAuthority: deliveryCloudAuthority,
       });
-      const squashSubject = requireProtectedSquashSubject(
-        gitText(["log", "-1", "--pretty=%s", lease.reviewHeadSha]).trim(),
-        { label: "Reviewed commit subject" },
-      );
       run("gh", [
         "pr", "merge", "--auto", "--squash", "--subject", squashSubject,
         lease.pullRequestUrl,

@@ -244,6 +244,7 @@ function projectionHarness(initialClaim) {
 function waitingSuccessorHarness({
   predecessorState = "dormant-preserved",
   duplicateWaitingScope = false,
+  chainedWaitingPredecessor = false,
 } = {}) {
   let predecessor = rootClaim({
     claimId: "6".repeat(64),
@@ -296,7 +297,13 @@ function waitingSuccessorHarness({
       current.state === "waiting-successor"
         ? {
           ...statusResult(predecessor, NEXT_LEDGER_SHA),
-          claims: [predecessor, staleWaiting, waiting],
+          claims: chainedWaitingPredecessor
+            ? [predecessor, staleWaiting, waiting].map((claim, index) => (
+              index === 0
+                ? { ...claim, state: "waiting-successor" }
+                : claim
+            ))
+            : [predecessor, staleWaiting, waiting],
         }
         : statusResult(current, NEXT_LEDGER_SHA)
     ),
@@ -613,6 +620,30 @@ test("legacy review bootstrap retires duplicate queued successors before promoti
       ["continue", "projection"],
     ],
   );
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap collapses waiting-successor predecessor chains before promotion", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "current",
+    duplicateWaitingScope: true,
+    chainedWaitingPredecessor: true,
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });

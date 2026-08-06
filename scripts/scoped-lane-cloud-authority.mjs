@@ -439,10 +439,10 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     : null;
   if (
     predecessor
-    && !["parked", "active"].includes(predecessorState)
+    && !["parked", "active", "waiting-successor"].includes(predecessorState)
   ) {
     throw new Error(
-      `Legacy review waiting successor requires a dormant-preserved or current predecessor; received ${predecessor.state || "missing"}.`,
+      `Legacy review waiting successor requires a dormant-preserved, current, or waiting predecessor; received ${predecessor.state || "missing"}.`,
     );
   }
   if (predecessor && predecessor.actorId !== waitingClaim.actorId) {
@@ -512,7 +512,6 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   const competingWaitingSuccessors = Array.isArray(refreshStatusResult?.claims)
     ? refreshStatusResult.claims.filter((claim) => (
       claim?.claimId !== waitingClaimId
-      && claim?.predecessorClaimId === predecessorClaimId
       && claim?.actorId === waitingClaim.actorId
       && claim?.workItemId === waitingClaim.workItemId
       && projectRootState(claim?.state) === "waiting-successor"

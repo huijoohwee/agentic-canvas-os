@@ -4,6 +4,8 @@ import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+import { auditLaneLifecycleRisks } from "./doctor-lib.mjs";
+import { buildLifecycleReport } from "./worktree-lifecycle-lib.mjs";
 
 const checks = [
   {
@@ -39,6 +41,24 @@ const checks = [
     }
   },
   {
+    label: "Lane lifecycle risks",
+    run: async () => {
+      try {
+        const audit = auditLaneLifecycleRisks({
+          report: buildLifecycleReport({ repository: process.cwd() }),
+        });
+        return {
+          ok: audit.ok,
+          level: audit.level,
+          detail: audit.detail,
+          findings: audit.findings,
+        };
+      } catch (error) {
+        return fail(error instanceof Error ? error.message : String(error));
+      }
+    }
+  },
+  {
     label: "Local secrets configured for wrangler dev",
     run: async () => {
       const requiredSecrets = await readRequiredSecrets();
@@ -66,6 +86,10 @@ async function main() {
     const result = await check.run();
     const prefix = result.level || (result.ok ? "PASS" : "FAIL");
     console.log(`${prefix}  ${check.label}${result.detail ? ` (${result.detail})` : ""}`);
+    for (const finding of result.findings || []) {
+      console.log(`      - ${finding.code}: ${finding.summary}`);
+      if (finding.action) console.log(`        action: ${finding.action}`);
+    }
     if (!result.ok) {
       hasFailure = true;
     }
@@ -74,9 +98,10 @@ async function main() {
   console.log("");
   console.log("Next steps:");
   console.log("1. Read docs/START-WORKFLOW.md before changing workflow or control-surface files.");
-  console.log("2. Run npm run check for focused validation.");
-  console.log("3. Run npm run dev to start the local Cloudflare Worker.");
-  console.log("4. Verify runtime readiness with curl http://127.0.0.1:8787/api/ready.");
+  console.log("2. Run npm run doctor regularly to catch expiring or drifted lanes before recovery closes.");
+  console.log("3. Run npm run check for focused validation.");
+  console.log("4. Run npm run dev to start the local Cloudflare Worker.");
+  console.log("5. Verify runtime readiness with curl http://127.0.0.1:8787/api/ready.");
 
   if (hasFailure) {
     process.exitCode = 1;

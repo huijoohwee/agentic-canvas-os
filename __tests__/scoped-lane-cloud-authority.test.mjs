@@ -7,6 +7,7 @@ import {
   attachCloudHeartbeatMachineEvidence,
   authorizeDeliveryAdmissionCloudAuthority,
   bindAdmissionCloudAuthority,
+  claimLegacyReviewAdmissionCloudAuthority,
   cloudAuthorityFromResult,
   heartbeatAdmissionCloudAuthority,
   reviewReadyAdmissionCloudAuthority,
@@ -346,6 +347,32 @@ test("bind and heartbeat helpers are explicit continue projections", () => {
   assert.equal(heartbeatHarness.calls[0].action, "continue");
   assert.equal(heartbeatHarness.calls[0].request.mode, "renewal");
   assert.equal(renewed.authority.state, "active");
+});
+
+test("legacy review bootstrap claims at base and binds the exact reviewed head", () => {
+  const harness = projectionHarness(rootClaim({
+    laneRevision: BASE_SHA,
+    transitionCounter: 1,
+  }));
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.equal(harness.calls[0].action, "claim");
+  assert.equal(harness.calls[0].request.headSha, BASE_SHA);
+  assert.equal(harness.calls[1].action, "continue");
+  assert.equal(harness.calls[1].request.mode, "projection");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });
 
 test("review helper records continue(review) without changing candidate identity", () => {

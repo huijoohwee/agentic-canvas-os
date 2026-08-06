@@ -55,6 +55,17 @@ document can express the same contract.
   `device:park`, `device:integrate`, leases, and runtime receipts is additive
   only. It may coordinate work, but it never replaces GitHub branch protection
   or pull-request authority.
+- In the root-source `agentic-canvas-os` repository, fresh `device:start`
+  claims must originate from the provisioned scoped-lane admission path with
+  current cloud authority. Do not allow new local-only task lanes there; fail
+  closed before lease mutation and route startup through the repository-owned
+  admission flow instead. A pre-existing local-only root-source lane may enter
+  cloud authority only through the repository-owned `device:review`
+  re-admission path that derives its exact committed write scope.
+- Repository-owned diagnostics must surface expiring lane authority, branch or
+  projection drift, and incomplete pull-request projection repair before those
+  lanes become unrecoverable residue. Prefer a shared ACOS doctor/audit command
+  over ad hoc local inspection.
 - Orchestration must not downgrade or hide overlapping remote ownership. If the
   cloud contract reports an overlapping live claim, local automation stops and
   surfaces the upstream conflict instead of patching around it in one device,

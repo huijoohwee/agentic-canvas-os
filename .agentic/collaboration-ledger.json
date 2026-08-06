@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 991,
-  "headDigest": "ba88d7804f66fbc023070a34eaf6d146bc47b5304458d7f29070a73224fd2ff7",
+  "sequence": 992,
+  "headDigest": "3659f984146cd7851996ffe963f8c36c817a7d508ddbc744a7c057a579d9d603",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -50194,6 +50194,47 @@
       },
       "claimDigest": "24dbda83ecd71ea8c7bbdfca8467d30a4adc0912a18ea7ef45374338a4f95fe9",
       "digest": "ba88d7804f66fbc023070a34eaf6d146bc47b5304458d7f29070a73224fd2ff7"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 992,
+      "parentDigest": "ba88d7804f66fbc023070a34eaf6d146bc47b5304458d7f29070a73224fd2ff7",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "99b1daec01a88f30011c84d004b58741431e6a2f8f752334a7000021105b8f30",
+      "idempotencyKey": "4f74f7023942ef149b482b30c9e4572b88166bd970faae93906ec3621abb479f",
+      "requestDigest": "84f414e93feae78365a39dadc6ff63231dfec8d8f12c5d20f746bea4607dc7f5",
+      "evaluationTime": "2026-08-06T10:21:51.000Z",
+      "claimCore": {
+        "claimId": "99b1daec01a88f30011c84d004b58741431e6a2f8f752334a7000021105b8f30",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:dc2312d37d7cbd9c88620bd7b64be46af35c453e6f7ec5927ded839f2ef2476e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3f46a39c8d1f3a935fac2f6989d71ea4f80f893fad67d4b7562409ceab5b933e",
+        "canonicalBaseRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:device-branch-planned-review-recovery-20260806"
+        ],
+        "writeSetDigest": "63275c1de3de1a74aab9025c7ba6c6bc4eb053c8b1c4e76692240cd3648b7146",
+        "laneRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-06T10:51:51.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "0de2dac0aaa11e66a2e4961e1dbb7bbf82c2ff5d4fee97ce3b972f4ed5940436",
+        "eligibleSince": "2026-08-06T10:21:51.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "91f429e330f30ebb0b9fb723f85e82f24a53195b3c06b6f24cf60a2a9cf21fc8",
+      "digest": "3659f984146cd7851996ffe963f8c36c817a7d508ddbc744a7c057a579d9d603"
     }
   ]
 }

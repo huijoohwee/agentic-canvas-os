@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 937,
-  "headDigest": "be9d19bb3c325310e2f06de01ed5a8a1f23d6b74839ae43f9520a78bb3a9636e",
+  "sequence": 938,
+  "headDigest": "545445c98ce9ec3c13f3e5518c8f0253ac12d88ea7989786b4a9976cf31022a7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -47663,6 +47663,47 @@
       },
       "claimDigest": "fe82038454a4aaecf3f19fe2aae4a6d2c172ba2f388d483467175d106a543d67",
       "digest": "be9d19bb3c325310e2f06de01ed5a8a1f23d6b74839ae43f9520a78bb3a9636e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 938,
+      "parentDigest": "be9d19bb3c325310e2f06de01ed5a8a1f23d6b74839ae43f9520a78bb3a9636e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0e047bd90c79535ecc96e269152114ec2361e00ef1dc57913c0cfef21443c062",
+      "idempotencyKey": "dad6518acd6bb04e817602d2f92270c4864ae88470002d13ab9d30388a4a43cf",
+      "requestDigest": "a386cbc8de6dea67737bfdad3646151f7d360bf06cf3cfe88522d8bc8b095461",
+      "evaluationTime": "2026-08-06T07:39:53.000Z",
+      "claimCore": {
+        "claimId": "0e047bd90c79535ecc96e269152114ec2361e00ef1dc57913c0cfef21443c062",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:fb6cd13b345456b4fa352c28b199a600febfae9c69a0b7f9269dde7dcdba6c71",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9261cb5544f77bf293225504b0b9fc7c2385ddfc8ffd0252f0e1769a3629b7cf",
+        "canonicalBaseRevision": "f9fa625e6b79e10fbeea36591133d7dd270ff57b",
+        "declaredWriteScope": [
+          "path:package.json",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "path:scripts/legacy-clean-committed-lane-refresh.mjs",
+          "semantic:legacy-clean-committed-lane-bootstrap-refresh"
+        ],
+        "writeSetDigest": "1df3730c7d038b42b7b64916c42df4b624eabda7f86a84f97b244bafe5261bd0",
+        "laneRevision": "f9fa625e6b79e10fbeea36591133d7dd270ff57b",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T08:09:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f6e790605e7604c829aa951726066425b71e5e6643b38d449544b255d1579543",
+      "digest": "545445c98ce9ec3c13f3e5518c8f0253ac12d88ea7989786b4a9976cf31022a7"
     }
   ]
 }

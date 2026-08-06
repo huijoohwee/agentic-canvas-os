@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   APEX_PORT,
+  classifyCanonicalRuntimeResidue,
   LOCAL_RUNTIME_SCHEMA,
   SESSION_RUNTIME_SCHEMA,
   STORAGE_PORT,
@@ -51,6 +52,39 @@ function validCandidate(overrides = {}) {
 
 test("canonical runtime accepts only clean protected exact-main sources", () => {
   assert.equal(validateCanonicalRuntimeCandidate(validCandidate()).knowgrph.headSha, applicationSha);
+});
+
+test("canonical runtime residue tolerates foreign parallel docs but blocks runtime authority drift", () => {
+  const foreign = classifyCanonicalRuntimeResidue({
+    repositoryId: "knowgrph",
+    statusPorcelain: "?? docs/documents/knowgrph-storage-sync-prd-tad-adr.md\n",
+  });
+  assert.equal(foreign.clean, false);
+  assert.equal(foreign.runtimeSafe, true);
+  assert.equal(foreign.blocking.length, 0);
+  assert.deepEqual(
+    foreign.foreign.map(entry => ({ path: entry.path, reason: entry.reason })),
+    [{
+      path: "docs/documents/knowgrph-storage-sync-prd-tad-adr.md",
+      reason: "foreign-parallel-residue",
+    }],
+  );
+
+  const blocking = classifyCanonicalRuntimeResidue({
+    repositoryId: "knowgrph",
+    statusPorcelain: [
+      "?? src/runtime-drift.ts",
+      " M docs/documents/knowgrph-storage-sync-document.md",
+    ].join("\n"),
+  });
+  assert.equal(blocking.runtimeSafe, false);
+  assert.deepEqual(
+    blocking.blocking.map(entry => ({ path: entry.path, reason: entry.reason })),
+    [
+      { path: "src/runtime-drift.ts", reason: "untracked-runtime-authority" },
+      { path: "docs/documents/knowgrph-storage-sync-document.md", reason: "tracked-residue" },
+    ],
+  );
 });
 
 test("canonical runtime follows the single registered main worktree from a feature checkout", () => {
@@ -100,7 +134,15 @@ test("canonical runtime retains a valid attention lifecycle report without hidin
 
 for (const [name, candidate, expected] of [
   ["task branch", validCandidate({ knowgrph: { ...validCandidate().knowgrph, branch: "agent/device/task" } }), /must be on main/],
-  ["dirty docs", validCandidate({ agenticCanvasOs: repository("agentic-canvas-os", docsSha, { clean: false }) }), /must be clean/],
+  ["dirty docs", validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", docsSha, {
+      clean: false,
+      residue: classifyCanonicalRuntimeResidue({
+        repositoryId: "agentic-canvas-os",
+        statusPorcelain: " M docs/START-WORKFLOW.md\n",
+      }),
+    }),
+  }), /runtime-blocking residue/],
   ["stale application", validCandidate({ knowgrph: { ...validCandidate().knowgrph, remoteSha: "c".repeat(40) } }), /must equal fetched origin\/main/],
   ["missing protected checks", validCandidate({ knowgrph: { ...validCandidate().knowgrph, protectedChecksVerified: false } }), /protected checks/],
   ["missing storage owner", validCandidate({ knowgrph: { ...validCandidate().knowgrph, hasStorageWorkerScript: false } }), /storage:worker:dev/],
@@ -109,6 +151,20 @@ for (const [name, candidate, expected] of [
     assert.throws(() => validateCanonicalRuntimeCandidate(candidate), expected);
   });
 }
+
+test("canonical runtime accepts non-blocking foreign residue in canonical knowgrph", () => {
+  const candidate = validCandidate({
+    knowgrph: {
+      ...validCandidate().knowgrph,
+      clean: false,
+      residue: classifyCanonicalRuntimeResidue({
+        repositoryId: "knowgrph",
+        statusPorcelain: "?? docs/documents/knowgrph-storage-sync-prd-tad-adr.md\n",
+      }),
+    },
+  });
+  assert.equal(validateCanonicalRuntimeCandidate(candidate).knowgrph.headSha, applicationSha);
+});
 
 test("service ownership binds listener group repository command and token", () => {
   const token = "runtime-owner-token";

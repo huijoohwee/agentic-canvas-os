@@ -714,9 +714,17 @@ function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runti
     throw new Error(`Canonical source ${canonicalRoot} did not converge to integrated main ${mainSha}.`);
   }
 
-  const repositories = resolveRuntimeRepositories({ canonicalRoot, runtimeRepository });
+  const { integratedRepository, ...repositories } = resolveRuntimeRepositories({
+    canonicalRoot,
+    runtimeRepository,
+    readOriginRemote: () => runText(
+      "git",
+      ["remote", "get-url", "origin"],
+      { cwd: canonicalRoot },
+    ),
+  });
   return {
-    integratedSource: { repository: path.basename(canonicalRoot), root: canonicalRoot, mainSha },
+    integratedSource: { repository: integratedRepository, root: canonicalRoot, mainSha },
     repositories,
   };
 }
@@ -763,11 +771,15 @@ function cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree,
   return result;
 }
 
-function resolveRuntimeRepositories({ canonicalRoot, runtimeRepository }) {
-  const integratedRepository = path.basename(canonicalRoot);
-  if (!["agentic-canvas-os", "knowgrph"].includes(integratedRepository)) {
-    throw new Error(`Unsupported canonical integration repository: ${canonicalRoot}`);
-  }
+export function resolveRuntimeRepositories({
+  canonicalRoot,
+  runtimeRepository,
+  readOriginRemote = () => "",
+}) {
+  const integratedRepository = resolveCanonicalRepositoryIdentity({
+    canonicalRoot,
+    readOriginRemote,
+  });
   const workspaceRoot = path.dirname(canonicalRoot);
   const knowgrphRoot = runtimeRepository
     ? path.resolve(runtimeRepository)
@@ -784,7 +796,40 @@ function resolveRuntimeRepositories({ canonicalRoot, runtimeRepository }) {
       throw new Error(`${label} canonical repository is unavailable at ${candidate}.`);
     }
   }
-  return { agenticCanvasOsRoot, knowgrphRoot };
+  return { integratedRepository, agenticCanvasOsRoot, knowgrphRoot };
+}
+
+function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote }) {
+  const allowed = new Set(["agentic-canvas-os", "knowgrph"]);
+  let packageName = "";
+  try {
+    packageName = String(
+      JSON.parse(readFileSync(path.join(canonicalRoot, "package.json"), "utf8"))?.name || "",
+    ).trim();
+  } catch {
+    packageName = "";
+  }
+  if (allowed.has(packageName)) return packageName;
+
+  let remoteName = "";
+  try {
+    remoteName = repositoryNameFromRemote(readOriginRemote());
+  } catch {
+    remoteName = "";
+  }
+  if (allowed.has(remoteName)) return remoteName;
+
+  const observed = [
+    packageName ? `package ${JSON.stringify(packageName)}` : null,
+    remoteName ? `origin ${JSON.stringify(remoteName)}` : null,
+  ].filter(Boolean).join(" and ") || "no supported package or origin metadata";
+  throw new Error(`Unsupported canonical integration repository identity: ${observed}.`);
+}
+
+function repositoryNameFromRemote(value) {
+  const normalized = String(value || "").trim().replace(/\/+$/u, "").replace(/\.git$/u, "");
+  const separator = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf(":"));
+  return separator >= 0 ? normalized.slice(separator + 1) : normalized;
 }
 
 function readChangeManifest({

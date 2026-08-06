@@ -77,6 +77,19 @@ test("device CLI emits exactly one JSON object on machine success and failure", 
       JSON.parse(wrongAction.stdout).error.message,
       /accepted only by device:resume/,
     );
+
+    const wrongController = spawnSync(process.execPath, [
+      script,
+      "park",
+      `--repository=${canonicalRepo}`,
+      `--workspace-guard-controller=${canonicalRepo}`,
+      "--json",
+    ], { encoding: "utf8" });
+    assert.equal(wrongController.status, 1);
+    assert.match(
+      JSON.parse(wrongController.stdout).error.message,
+      /clean protected main checkout of this controller repository/,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

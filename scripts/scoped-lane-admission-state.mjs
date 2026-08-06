@@ -11,6 +11,7 @@ import {
   LANE_ADMISSION_REPORT_SCHEMA,
   bindOperationDerivedDeliveryPeerLaneStates,
   isOperationDerivedCloudVerification,
+  projectAdmissionRemoteClaim,
 } from "./scoped-lane-admission-lib.mjs";
 import { claimProvenanceMatches } from "./scoped-lane-claim-provenance.mjs";
 import {
@@ -150,6 +151,9 @@ export function verifyPreservedLaneState(beforeReport, afterLanes, {
     afterLanes,
     deliveryPeerVerification,
   );
+  const rawAfter = new Map(afterLanes.map(
+    lane => [path.resolve(lane.path), lane],
+  ));
   const after = new Map(authorityBoundAfterLanes.map(
     lane => [path.resolve(lane.path), lane],
   ));
@@ -164,7 +168,16 @@ export function verifyPreservedLaneState(beforeReport, afterLanes, {
     beforeReport.lanes
       .map(lane => ({
         path: lane.path,
-        stateDigest: after.get(lane.path)?.stateDigest || null,
+        stateDigest: rawAfter.get(lane.path)?.stateDigest || null,
+        authorityState: lane.authorityState === "delivery-authorized"
+          ? after.get(lane.path)?.authorityState || null
+          : after.get(lane.path)?.authorityState
+            ?? lane.authorityState
+            ?? null,
+        dormantPreservationReceiptDigest:
+          after.get(lane.path)?.dormantPreservationReceiptDigest
+          ?? lane.dormantPreservationReceiptDigest
+          ?? null,
       }))
       .sort((left, right) => left.path.localeCompare(right.path)),
   );
@@ -258,13 +271,14 @@ export function finalizeScopedLaneAdmission({
     cloudAuthority,
     remoteClaimInventoryDigest:
       remoteAuthorityVerification.remoteClaimInventoryDigest,
-    remoteClaims: remoteAuthorityVerification.inventory.claims.map(claim => ({
-      ...claim,
+    remoteClaims: remoteAuthorityVerification.inventory.claims.map(claim => (
+      projectAdmissionRemoteClaim(claim, {
       classification: claim.claimId === cloudAuthority.claimId
         ? "candidate"
         : "disjoint-attributed",
       overlapReasons: [],
-    })),
+      })
+    )),
     preservationReceipt,
     mutationAuthorityReceipt: authorityReceipt,
     authoringAdmission: {
@@ -288,29 +302,39 @@ export function assertAdmissionMutationAuthority({
   const cloudExpiry = Date.parse(cloudAuthority?.expiresAt);
   const candidate = remoteAuthorityVerification?.inventory?.claims
     ?.find(claim => claim.claimId === cloudAuthority?.claimId);
+  const localAuthority = candidate && cloudAuthority ? {
+    ...cloudAuthority,
+    entrySchema: cloudAuthority.entrySchema ?? candidate.entrySchema,
+    claimIdentitySchema:
+      cloudAuthority.claimIdentitySchema ?? candidate.claimIdentitySchema,
+    operationReceiptDigest:
+      cloudAuthority.operationReceiptDigest ?? candidate.operationReceiptDigest,
+    ledgerDigest:
+      cloudAuthority.ledgerDigest ?? remoteAuthorityVerification?.ledgerDigest,
+  } : cloudAuthority;
   const identityComplete = candidate && Array.isArray(candidate.declaredWriteScope)
     && [candidate.actorId, candidate.canonicalBaseRevision, candidate.entrySchema,
       candidate.claimIdentitySchema, candidate.operationReceiptDigest,
       candidate.leaseEpoch, candidate.repositoryId, candidate.workItemId,
       candidate.writeSetDigest].every(value => value !== undefined && value !== null);
   const currentClaimMatches = Boolean(identityComplete && cloudAuthority && (
-    claimProvenanceMatches(candidate, cloudAuthority)
+    claimProvenanceMatches(candidate, localAuthority)
     && candidate.state === "active"
-    && cloudAuthority.state === candidate.state
-    && candidate.expiresAt === cloudAuthority.expiresAt
-    && candidate.leaseEpoch === cloudAuthority.leaseEpoch
-    && candidate.transitionCounter === cloudAuthority.transitionCounter
-    && candidate.reviewRequestId === cloudAuthority.reviewRequestId
-    && candidate.writeSetDigest === cloudAuthority.writeSetDigest
+    && localAuthority.state === candidate.state
+    && candidate.expiresAt === localAuthority.expiresAt
+    && candidate.leaseEpoch === localAuthority.leaseEpoch
+    && candidate.transitionCounter === localAuthority.transitionCounter
+    && candidate.reviewRequestId === localAuthority.reviewRequestId
+    && candidate.writeSetDigest === localAuthority.writeSetDigest
     && candidate.writeSetDigest === lease?.admission?.writeSetDigest
     && digestValue(candidate.declaredWriteScope) === candidate.writeSetDigest
     && JSON.stringify(candidate.declaredWriteScope)
-      === JSON.stringify(cloudAuthority.cloudDeclaredWriteScope)
+      === JSON.stringify(localAuthority.cloudDeclaredWriteScope)
     && JSON.stringify(candidate.declaredWriteScope)
       === JSON.stringify(lease?.admission?.declaredWriteSet)
-    && candidate.canonicalBaseRevision === cloudAuthority.canonicalBaseSha
+    && candidate.canonicalBaseRevision === localAuthority.canonicalBaseSha
     && candidate.canonicalBaseRevision === lease?.baseSha
-    && candidate.laneRevision === cloudAuthority.laneRevision
+    && candidate.laneRevision === localAuthority.laneRevision
     && candidate.laneRevision === lease?.fenceSha
   ));
   const noCompetingOverlap = candidate
@@ -341,21 +365,20 @@ export function assertAdmissionMutationAuthority({
     || remoteAuthorityVerification.claimId !== cloudAuthority?.claimId
     || remoteAuthorityVerification.claimDigest !== cloudAuthority.claimDigest
     || remoteAuthorityVerification.ledgerRevision !== cloudAuthority.ledgerRevision
-    || remoteAuthorityVerification.ledgerDigest !== cloudAuthority.ledgerDigest
-    || remoteAuthorityVerification.canonicalBaseSha !== cloudAuthority.canonicalBaseSha
+    || remoteAuthorityVerification.ledgerDigest !== localAuthority?.ledgerDigest
+    || remoteAuthorityVerification.canonicalBaseSha !== localAuthority.canonicalBaseSha
     || remoteAuthorityVerification.laneRevision !== lease.fenceSha
     || remoteAuthorityVerification.writeSetDigest
       !== lease.admission.writeSetDigest
-    || remoteAuthorityVerification.reviewRequestId
-      !== cloudAuthority.reviewRequestId
+    || remoteAuthorityVerification.reviewRequestId !== localAuthority.reviewRequestId
     || digestValue(lease.cloudAuthority) !== digestValue(cloudAuthority)
     || !currentClaimMatches
-    || candidate.fenceRevision !== cloudAuthority.claimDigest
-    || candidate.transitionDigest !== cloudAuthority.claimLedgerRevision
-    || cloudAuthority.laneRevision !== lease.fenceSha
-    || cloudAuthority.deviceId !== lease.device
-    || cloudAuthority.sessionId !== lease.sessionId
-    || !cloudAuthority.reviewRequestId
+    || candidate.fenceRevision !== localAuthority.claimDigest
+    || candidate.transitionDigest !== localAuthority.claimLedgerRevision
+    || localAuthority.laneRevision !== lease.fenceSha
+    || localAuthority.deviceId !== lease.device
+    || localAuthority.sessionId !== lease.sessionId
+    || !localAuthority.reviewRequestId
     || !Number.isFinite(evaluationTime)
     || !Number.isFinite(localExpiry)
     || !Number.isFinite(cloudExpiry)
@@ -632,7 +655,7 @@ function within(root, candidate) {
   return relative && !relative.startsWith(`..${path.sep}`) && relative !== "..";
 }
 
-function assertPeersUnchanged(report, verification) {
+export function assertPeersUnchanged(report, verification) {
   const candidateId = report.cloudAuthority.claimId;
   const before = report.remoteClaims
     .filter(claim => claim.claimId !== candidateId)

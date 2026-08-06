@@ -443,6 +443,31 @@ test("pull-request drift during size preflight fails before local CAS or marker"
   assert.equal(harness.markerWrites(), 0);
 });
 
+test("renewed authority expiring during preflight fails before local CAS or marker", () => {
+  const source = liveManifestLease();
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest,
+  });
+  let reads = 0;
+  harness.input.now = () => {
+    reads += 1;
+    return new Date(
+      reads <= 3
+        ? "2026-08-04T12:00:00.000Z"
+        : "2026-08-04T13:31:00.000Z",
+    );
+  };
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /Cloud heartbeat changed the expired lease claim subject/,
+  );
+  assert.equal(harness.cloudCalls(), 1);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
 test("non-equivalent out-of-scope bytes fail before cloud, local CAS, or marker", () => {
   const source = liveManifestLease();
   const harness = recoveryHarness({

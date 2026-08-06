@@ -132,19 +132,6 @@ export function recoverExpiredCommittedHeartbeat({
     );
   }
 
-  const recoveredAt = now().toISOString();
-  const projectedLease = projectExpiredCommittedHeartbeatLease({
-    sourceLease: before.lease,
-    renewedCloudAuthority: renewedAuthority,
-    recoveryEvidence: before.recoveryEvidence,
-    ttlMs: leaseTtlMs,
-    recoveredAt,
-  });
-  assertMutationAuthority({
-    lease: projectedLease,
-    cloudAuthority: renewedAuthority,
-    remoteAuthorityVerification: heartbeat.verification,
-  });
   const preflightProjection = readExactPullRequestProjection({
     lease: before.lease,
     branch,
@@ -159,12 +146,6 @@ export function recoverExpiredCommittedHeartbeat({
       "Ownership pull-request marker drifted before recovered marker size preflight.",
     );
   }
-  assertPullRequestBodyWithinGitHubLimit(
-    updateWriterLeasePullRequestBody(
-      preflightProjection.pullRequest.body,
-      projectedLease,
-    ),
-  );
   const afterPreflight = captureExpiredCommittedHeartbeatSnapshot({
     repo,
     branch,
@@ -180,6 +161,26 @@ export function recoverExpiredCommittedHeartbeat({
       "Expired committed recovery state drifted after recovered marker size preflight and before local CAS.",
     );
   }
+  const recoveredAt = now().toISOString();
+  const projectedLease = projectExpiredCommittedHeartbeatLease({
+    sourceLease: before.lease,
+    renewedCloudAuthority: renewedAuthority,
+    recoveryEvidence: before.recoveryEvidence,
+    ttlMs: leaseTtlMs,
+    recoveredAt,
+  });
+  assertMutationAuthority({
+    lease: projectedLease,
+    cloudAuthority: renewedAuthority,
+    remoteAuthorityVerification: heartbeat.verification,
+    evaluatedAt: recoveredAt,
+  });
+  assertPullRequestBodyWithinGitHubLimit(
+    updateWriterLeasePullRequestBody(
+      preflightProjection.pullRequest.body,
+      projectedLease,
+    ),
+  );
   const lease = leaseStore.recoverExpiredCommittedHeartbeat({
     sessionId,
     branch,
@@ -193,6 +194,7 @@ export function recoverExpiredCommittedHeartbeat({
     lease,
     cloudAuthority: renewedAuthority,
     remoteAuthorityVerification: heartbeat.verification,
+    evaluatedAt: recoveredAt,
   });
   assertRecoveredLocalState({
     snapshot: before,

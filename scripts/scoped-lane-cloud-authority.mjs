@@ -265,6 +265,103 @@ export function bindAdmissionCloudAuthority({
   });
   return returnVerification ? verified : verified.authority;
 }
+export function claimLegacyReviewAdmissionCloudAuthority({
+  ledgerRepository,
+  targetRepository,
+  manifest,
+  canonicalBaseSha,
+  branch,
+  headSha,
+  deviceId,
+  sessionId,
+  workItemId = branch,
+  leaseEpoch = 1,
+  ttlSeconds = 1_800,
+  environment = process.env,
+  invoke = invokeRepositoryCloudAction,
+  inspect = invokeRepositoryCloudAction,
+  verify = invokeRepositoryCloudVerifier,
+} = {}) {
+  const resolvedLedgerRepository = requiredText(
+    ledgerRepository,
+    "ledgerRepository",
+  );
+  const resolvedTargetRepository = requiredText(
+    targetRepository || ledgerRepository,
+    "targetRepository",
+  );
+  const resolvedCanonicalBaseSha = requiredSha(
+    canonicalBaseSha,
+    "canonicalBaseSha",
+  );
+  const resolvedHeadSha = requiredSha(headSha, "headSha");
+  const resolvedBranch = requiredText(branch, "branch");
+  const claimResult = invoke({
+    action: "claim",
+    ledgerRepository: resolvedLedgerRepository,
+    request: {
+      targetRepository: resolvedTargetRepository,
+      branch: resolvedBranch,
+      workItemId: requiredText(workItemId, "workItemId"),
+      canonicalBaseSha: resolvedCanonicalBaseSha,
+      headSha: resolvedCanonicalBaseSha,
+      declaredWriteScope: manifest?.declaredWriteSet,
+      leaseEpoch: positiveInteger(leaseEpoch, "leaseEpoch"),
+      deviceId: requiredText(deviceId, "deviceId"),
+      sessionId: requiredText(sessionId, "sessionId"),
+      ttlSeconds: positiveInteger(ttlSeconds, "ttlSeconds"),
+      idempotencyKey: [
+        "legacy-review-claim",
+        resolvedTargetRepository,
+        resolvedBranch,
+        resolvedCanonicalBaseSha,
+        manifest?.writeSetDigest,
+        leaseEpoch,
+      ].join(":"),
+    },
+    environment,
+  });
+  const claimed = cloudAuthorityFromResult({
+    ledgerRepository: resolvedLedgerRepository,
+    targetRepository: resolvedTargetRepository,
+    deviceId,
+    sessionId,
+    result: claimResult,
+  }, {
+    manifest,
+    canonicalBaseSha: resolvedCanonicalBaseSha,
+  });
+  if (resolvedHeadSha === resolvedCanonicalBaseSha) {
+    return verifyAdmissionCloudAuthority({
+      authority: claimed,
+      manifest,
+      canonicalBaseSha: resolvedCanonicalBaseSha,
+      environment,
+      inspect,
+      invoke: verify,
+    });
+  }
+  return bindAdmissionCloudAuthority({
+    authority: claimed,
+    manifest,
+    branch: resolvedBranch,
+    headSha: resolvedHeadSha,
+    deviceId,
+    sessionId,
+    environment,
+    invoke,
+    inspect,
+    verify,
+    returnVerification: true,
+    idempotencyKey: [
+      "legacy-review-bind",
+      claimed.claimId,
+      claimed.transitionCounter,
+      claimed.claimDigest,
+      resolvedHeadSha,
+    ].join(":"),
+  });
+}
 export function heartbeatAdmissionCloudAuthority({
   authority,
   deviceId,

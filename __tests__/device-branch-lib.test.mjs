@@ -256,6 +256,157 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
   assert.equal(renewed, false);
 });
 
+test("review upgrades a resumed legacy root-source ready lane using authored paths from main diff", () => {
+  const branch = "agent/device/merged-no-lease-completion";
+  const pullRequestUrl = "https://github.test/pull/288";
+  const reviewHeadSha = "c".repeat(40);
+  const canonicalBaseSha = "a".repeat(40);
+  let pullRequestBody = renderWriterLeasePullRequestBody({
+    schema: "agentic-writer-lease/v2",
+    status: "review_ready",
+    epoch: 172,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "merged-no-lease-completion",
+    branch,
+    baseSha: reviewHeadSha,
+    fenceSha: "b".repeat(40),
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T05:38:23.089Z",
+    expiresAt: "2026-08-06T05:38:23.089Z",
+    reviewHeadSha,
+  });
+  let annotatedLease = null;
+  let claimedManifest = null;
+  let verifiedHead = null;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "rev-parse HEAD": reviewHeadSha,
+    "rev-parse origin/main": canonicalBaseSha,
+    [`diff --name-only ${reviewHeadSha}..${reviewHeadSha} --`]: "",
+    [`diff --name-only origin/main...${reviewHeadSha} --`]:
+      "__tests__/writer-lease-lib.test.mjs\nscripts/device-complete-lib.mjs\nscripts/writer-lease-lib.mjs\n",
+    [`merge-base --is-ancestor ${"b".repeat(40)} HEAD`]: "",
+    "log -1 --pretty=%s": "fix: recover merged worktrees without lease markers\n",
+  });
+  const baseLease = {
+    schema: "agentic-writer-lease/v2",
+    status: "review_ready",
+    epoch: 172,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "merged-no-lease-completion",
+    branch,
+    worktreePath: repo,
+    baseSha: reviewHeadSha,
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T05:38:23.089Z",
+    expiresAt: "2026-08-06T05:38:23.089Z",
+    reviewHeadSha,
+  };
+  const leaseStore = {
+    read: requested => requested === branch ? (annotatedLease || baseLease) : null,
+    annotate: ({ values }) => (annotatedLease = { ...(annotatedLease || baseLease), ...values }),
+  };
+
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: args => {
+      const key = args.join(" ");
+      if (key === "config --get remote.origin.url") {
+        return "https://github.com/huijoohwee/agentic-canvas-os.git";
+      }
+      if (key === `ls-remote --heads origin refs/heads/${branch}`) {
+        return `${reviewHeadSha}\trefs/heads/${branch}`;
+      }
+      return "";
+    },
+    ghText: args => {
+      if (args[1] === "list") {
+        return JSON.stringify([{ number: 288, headRefName: branch, url: pullRequestUrl }]);
+      }
+      if (args[1] === "view" && args.includes("--jq")) {
+        return pullRequestBody;
+      }
+      return pullJson(pullRequestUrl, branch, pullRequestBody, false);
+    },
+    ghOptional: () => pullRequestUrl,
+    leaseStore,
+    sessionId: "chat-a",
+    claimLegacyReviewCloudAuthority: input => {
+      claimedManifest = input.manifest;
+      return {
+        authority: {
+          schema: "agentic-lane-cloud-authority/v1",
+          provider: "github",
+          ledgerRepository: "huijoohwee/agentic-canvas-os",
+          targetRepository: "huijoohwee/agentic-canvas-os",
+          claimId: "1".repeat(64),
+          claimDigest: "2".repeat(64),
+          ledgerRevision: "3".repeat(40),
+          claimLedgerRevision: "4".repeat(64),
+          operationReceiptDigest: "5".repeat(64),
+          mutationAuthorityEligible: true,
+          canonicalBaseSha,
+          laneRevision: reviewHeadSha,
+          cloudDeclaredWriteScope: input.manifest.declaredWriteSet,
+          writeSetDigest: input.manifest.writeSetDigest,
+          deviceId: "device",
+          sessionId: "chat-a",
+          reviewRequestId: null,
+          leaseEpoch: 1,
+          transitionCounter: 1,
+          state: "active",
+          expiresAt: "2099-08-06T05:38:23.089Z",
+          manifestDigest: input.manifest.manifestDigest,
+        },
+        verification: {
+          receiptDigest: "6".repeat(64),
+        },
+      };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha }) => ({
+      authority: {
+        ...authority,
+        laneRevision: headSha,
+        state: "review_ready",
+        reviewRequestId: "github-pull-request:PR_288",
+      },
+    }),
+    verifyReviewReadyCloudAuthority: ({ authority, headSha }) => {
+      verifiedHead = headSha;
+      return { authority };
+    },
+    run: (command, args) => {
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && args[1] === "pr" && args[2] === "edit" && bodyIndex >= 0) {
+        pullRequestBody = args[bodyIndex + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.deepEqual(claimedManifest.paths, [
+    "__tests__/writer-lease-lib.test.mjs",
+    "scripts/device-complete-lib.mjs",
+    "scripts/writer-lease-lib.mjs",
+  ]);
+  assert.equal(verifiedHead, reviewHeadSha);
+  assert.equal(annotatedLease.admission.status, "admitted");
+  assert.equal(annotatedLease.cloudAuthority.state, "review_ready");
+});
+
 test("publish verifies the session lease and fencing ancestor before delivery", () => {
   const calls = [];
   const evidence = {

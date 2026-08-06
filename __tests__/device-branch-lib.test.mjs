@@ -19,6 +19,8 @@ import {
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
@@ -267,6 +269,11 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
   const branch = "agent/device/runtime-leases";
   const pullRequestUrl = "https://github.test/pull/42";
   const headSha = "c".repeat(40);
+  const declaredWriteSet = [
+    "path:scripts/device-branch-lib.mjs",
+    "semantic:runtime-leases",
+  ];
+  const writeSetDigest = digestValue(declaredWriteSet);
   let isDraft = true;
   let body = "";
   let annotateCount = 0;
@@ -302,11 +309,8 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
       schema: "agentic-lane-admission-lease/v1",
       status: "planned",
       semanticScope: "runtime-leases",
-      declaredWriteSet: [
-        "path:scripts/device-branch-lib.mjs",
-        "semantic:runtime-leases",
-      ],
-      writeSetDigest: "1".repeat(64),
+      declaredWriteSet,
+      writeSetDigest,
       manifestDigest: "2".repeat(64),
       planReceiptDigest: "3".repeat(64),
       admissionReceiptDigest: "4".repeat(64),
@@ -322,15 +326,14 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
       ledgerRevision: "8".repeat(40),
       ledgerDigest: "9".repeat(64),
       claimLedgerRevision: "a".repeat(64),
+      entrySchema: "agentic-cloud-collaboration-entry/v2",
+      claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
       operationReceiptDigest: "b".repeat(64),
       mutationAuthorityEligible: true,
       canonicalBaseSha: "a".repeat(40),
       laneRevision: headSha,
-      cloudDeclaredWriteScope: [
-        "path:scripts/device-branch-lib.mjs",
-        "semantic:runtime-leases",
-      ],
-      writeSetDigest: "1".repeat(64),
+      cloudDeclaredWriteScope: declaredWriteSet,
+      writeSetDigest,
       deviceId: "device",
       sessionId: "chat-a",
       reviewRequestId: "github-pull-request:PR_42",
@@ -400,10 +403,48 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
         reviewRequestId: "github-pull-request:PR_42",
         state: "active",
       },
-      verification: {
+      verification: markOperationDerivedCloudVerification({
+        schema: "agentic-lane-cloud-verification/v1",
+        status: "ready",
+        claimId: authority.claimId,
+        claimDigest: authority.claimDigest,
+        ledgerRevision: authority.ledgerRevision,
+        ledgerDigest: authority.ledgerDigest,
+        canonicalBaseSha: authority.canonicalBaseSha,
+        laneRevision: headSha,
+        writeSetDigest: authority.writeSetDigest,
+        reviewRequestId: "github-pull-request:PR_42",
+        remoteClaimInventoryDigest: "1".repeat(64),
+        inventory: {
+          schema: "agentic-cloud-claim-inventory/v1",
+          inventoryDigest: "1".repeat(64),
+          observedLedgerHeadRevision: authority.ledgerRevision,
+          ledgerDigest: authority.ledgerDigest,
+          claims: [{
+            claimId: authority.claimId,
+            state: "active",
+            actorId: "github-user:1",
+            entrySchema: authority.entrySchema,
+            claimIdentitySchema: authority.claimIdentitySchema,
+            operationReceiptDigest: authority.operationReceiptDigest,
+            mutationAuthorityEligible: authority.mutationAuthorityEligible,
+            repositoryId: "github-repository:1",
+            workItemId: "work-item:1",
+            canonicalBaseRevision: authority.canonicalBaseSha,
+            laneRevision: headSha,
+            declaredWriteScope: declaredWriteSet,
+            writeSetDigest,
+            leaseEpoch: authority.leaseEpoch,
+            transitionCounter: authority.transitionCounter,
+            reviewRequestId: "github-pull-request:PR_42",
+            expiresAt: authority.expiresAt,
+            fenceRevision: authority.claimDigest,
+            transitionDigest: authority.claimLedgerRevision,
+          }],
+        },
         verifiedAt: "2026-08-06T08:45:01.000Z",
         receiptDigest: "1".repeat(64),
-      },
+      }),
     }),
     reviewReadyCloudAuthority: ({ authority }) => ({
       authority: {

@@ -820,11 +820,23 @@ function maybeAdoptLegacyRootSourceCurrentCloudAdmission({
   const expectedWriteScope = JSON.stringify(
     normalizeWriteSet(manifest.declaredWriteSet),
   );
-  const status = inspectCloudStatus({
-    action: "status",
-    ledgerRepository: targetRepository,
-    request: { targetRepository },
-  });
+  let status = null;
+  try {
+    status = inspectCloudStatus({
+      action: "status",
+      ledgerRepository: targetRepository,
+      request: { targetRepository },
+    });
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (
+      message.includes("GitHub authentication is required through GH_TOKEN, GITHUB_TOKEN, or gh auth.")
+      || message.includes("Cloud collaboration status failed:")
+    ) {
+      return null;
+    }
+    throw error;
+  }
   const matches = (status.claims || []).filter(claim => (
     ["active", "current"].includes(String(claim?.state || ""))
     && claim?.canonicalBaseRevision === canonicalBaseSha

@@ -61,7 +61,9 @@ export function resume({
   requireRepositorySafety({ invocationPath, repo, gitText });
   const currentBranch = gitText(["branch", "--show-current"]).trim();
   const localAtInvocation = leaseStore.read?.(branchName) || null;
-  requireLegacyResumeAuthority(localAtInvocation);
+  if (!recoverOwnedDirt) {
+    requireLegacyResumeAuthority(localAtInvocation);
+  }
   const dirty = Boolean(gitText(["status", "--porcelain"]).trim());
   const dirtyRestoreReplay = currentBranch === branchName && localAtInvocation?.status === "active" &&
     localAtInvocation.sessionId === sessionId && ["pending", "restored"].includes(localAtInvocation.parkStashStatus);
@@ -103,7 +105,9 @@ export function resume({
   if (!remoteLease || remoteLease.branch !== branchName) {
     throw new Error(`Pull request ${owner.url} has no matching writer-lease metadata.`);
   }
-  requireLegacyResumeAuthority(remoteLease);
+  if (!recoverOwnedDirt) {
+    requireLegacyResumeAuthority(remoteLease);
+  }
   const remoteRef = `origin/${branchName}`;
   const remoteSha = gitText(["rev-parse", remoteRef]).trim();
   const ownedDirtRecovery = ownedDirtEvidence

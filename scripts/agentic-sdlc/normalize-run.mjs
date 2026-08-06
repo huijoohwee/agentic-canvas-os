@@ -27,6 +27,11 @@ const RELEASE_LIFECYCLE_RECEIPT_ORDER = new Map([
   ["agentic-human-authorization-receipt/v2\u0000consumed", 7],
   ["agentic-live-verification-receipt/v1\u0000verified", 8],
   ["agentic-publication-receipt/v1\u0000published", 9],
+  ["agentic-deployment-receipt/v1\u0000deployed", 10],
+  ["agentic-state-reconciliation-receipt/v1\u0000reconciled", 11],
+  ["agentic-live-verification-receipt/v2\u0000verified", 12],
+  ["agentic-publication-receipt/v2\u0000published", 13],
+  ["agentic-rollback-receipt/v1\u0000rolled-back", 14],
 ]);
 
 export function normalizeValidationRequest(input, explicitRuleBindings) {
@@ -260,12 +265,19 @@ export function normalizeCanonicalRun(artifactInput) {
 }
 
 function normalizeReleaseLifecycle(input) {
-  const receipts = array(object(input).receipts)
+  const lifecycle = object(input);
+  const receipts = array(lifecycle.receipts)
     .map((receipt) => stableValue(receipt))
     .sort((left, right) =>
       releaseLifecycleReceiptRank(left) - releaseLifecycleReceiptRank(right)
       || stableJson(left).localeCompare(stableJson(right), "en"));
-  return { receipts };
+  return {
+    ...(text(lifecycle.schema) ? { schema: text(lifecycle.schema) } : {}),
+    ...(text(lifecycle.completion)
+      ? { completion: text(lifecycle.completion) }
+      : {}),
+    receipts,
+  };
 }
 
 function releaseLifecycleReceiptRank(receipt) {

@@ -296,6 +296,20 @@ but neither receipt can satisfy a v2 validator, the v2 publication constructor,
 or a production carrier discriminator, so they create no production-stage
 authority.
 
+The canonical run persists authoritative terminal evidence only in the closed
+`agentic-collaborative-release-lifecycle/v2` carrier. Its `completion` is
+exactly `in-progress`, `production-complete`, or `rolled-back`; production
+completion requires the joined Deployment, State Reconciliation, Live
+Verification v2, and Publication v2 receipts, while rollback requires its
+joined Deployment and Rollback receipts and forbids publication. The original
+carrier at `collaborative-release-lifecycle/v1` remains observation-only and
+cannot accept any v2 terminal receipt. Before v2 admits either terminal state,
+it recomputes and causally joins every receipt from overlap preservation through
+the consumed human authorization, including all validity windows. Interaction
+and the human decision must both occur before runtime review expiry. A rollback
+must name the exact failed stage, contain exactly the successful State and Live
+Verification prefix implied by that stage, and follow its latest predecessor.
+
 Each device fetches `origin` independently. The registered `main` checkout is
 the automation-owned synchronization and runtime lane; task worktrees are
 mutation lanes only. `npm run sync:workspace` validates changed revisions in

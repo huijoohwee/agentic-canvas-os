@@ -516,11 +516,6 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
       && claim?.actorId === waitingClaim.actorId
       && claim?.workItemId === waitingClaim.workItemId
       && projectRootState(claim?.state) === "waiting-successor"
-      && (
-        claim?.writeSetDigest !== manifest?.writeSetDigest
-        || JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope || []))
-          !== JSON.stringify(expectedWriteSet)
-      )
     ))
     : [];
   for (const competing of competingWaitingSuccessors) {

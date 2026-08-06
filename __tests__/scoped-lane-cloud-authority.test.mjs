@@ -243,6 +243,7 @@ function projectionHarness(initialClaim) {
 
 function waitingSuccessorHarness({
   predecessorState = "dormant-preserved",
+  duplicateWaitingScope = false,
 } = {}) {
   let predecessor = rootClaim({
     claimId: "6".repeat(64),
@@ -266,6 +267,10 @@ function waitingSuccessorHarness({
     scopeReserved: false,
     predecessorClaimId: predecessor.claimId,
   };
+  const duplicateScope = normalizeWriteSet([
+    "path:scripts/older-legacy-refresh.mjs",
+    "semantic:git-guidelines-companion",
+  ]);
   let staleWaiting = {
     ...rootClaim({
       claimId: "c".repeat(64),
@@ -278,14 +283,10 @@ function waitingSuccessorHarness({
     writeAuthority: false,
     scopeReserved: false,
     predecessorClaimId: predecessor.claimId,
-    declaredWriteScope: normalizeWriteSet([
-      "path:scripts/older-legacy-refresh.mjs",
-      "semantic:git-guidelines-companion",
-    ]),
-    writeSetDigest: digestValue(normalizeWriteSet([
-      "path:scripts/older-legacy-refresh.mjs",
-      "semantic:git-guidelines-companion",
-    ])),
+    declaredWriteScope: duplicateWaitingScope ? waiting.declaredWriteScope : duplicateScope,
+    writeSetDigest: duplicateWaitingScope
+      ? waiting.writeSetDigest
+      : digestValue(duplicateScope),
   };
   let current = waiting;
   const calls = [];
@@ -579,6 +580,39 @@ test("legacy review bootstrap supersedes a current predecessor before promoting 
     ],
   );
   assert.equal(harness.calls[1].request.reason, "superseded");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap retires duplicate queued successors before promotion", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "current",
+    duplicateWaitingScope: true,
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["claim", null],
+      ["retire", null],
+      ["retire", null],
+      ["continue", "promote"],
+      ["continue", "projection"],
+    ],
+  );
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });

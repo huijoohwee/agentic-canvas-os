@@ -269,6 +269,8 @@ One task worktree, branch, and semantic scope have one writer. A second chat on 
 
 Use `SCOPED-LANE-ADMISSION.md` for every new cross-device lane. Its operation-derived cloud `status` plus `verify` inventory, exact current candidate claim, double-read local inventory, and target-observation digest may produce only `authoringAdmission: planned` before mutation. Every accepted peer must join one local projection to one exact live remote claim across identity, revisions, normalized write set, epoch/counter, state, expiry, and review request; legacy or partial projections fail closed. Combined provisioning locks the local registry, proves exactly one clean detached candidate registration whose HEAD/tree equals the admitted base, then joins accepted Admission and Preservation Receipts plus a final cloud/local authority check to derive `authoringAdmission: admitted`. Its final JSON contains the full admitted report and fresh mutation-authority receipt. `runtimeReadiness`, `lifecycleReadiness`, and `admissionRuntimeConformance` stay independently `unevaluated`; peer drift blocks admission without synthesizing any conformance result. A clean frozen peer whose local projection remains `review_ready` may be preserved as disjoint only when an operation-derived proof joins that exact historical ledger entry to a counter-plus-one `delivery-authorize` transition, a heartbeat-only live suffix, the current claim record, the exact open non-draft provider PR, and the reviewed head or its bounded protected-main refresh. The proof is bound into the lane-state digest and rerun after candidate registration. This narrow attribution is admission evidence for an unrelated candidate; it cannot mutate, reopen, author, resume, review, merge, release, reconcile, run, or deploy the peer.
 
+In the root-source `agentic-canvas-os` repository, fresh task activation now fails closed unless `device:start` is invoked through this combined provisioned path with both scoped-lane admission and cloud authority. Local-only fresh claims remain allowed only in downstream repositories that do not own the root collaboration ledger.
+
 ```sh
 node "$AGENTIC_CANVAS_OS_ROOT/scripts/device-branch.mjs" start \
   "<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
@@ -292,8 +294,7 @@ claim after local renewal, returns the joined mutation-authority receipt with
 `--json`, then independently proves the exact ownership PR remains draft.
 Cloud, PR, or identity failure blocks source mutation; cloud or pre-local
 authority failure leaves local expiry unchanged, while a post-local or
-PR-projection failure preserves the already renewed local evidence for explicit
-recovery without granting another edit batch.
+PR-projection failure preserves the already renewed local evidence for explicit recovery without granting another edit batch. Run `npm run doctor` from the repository root before and during longer sessions to catch near-expiry authority, branch or lane-revision drift, and in-progress pull-request projection repair before a lane decays into stale residue.
 
 If GitHub's pull-request projection remains at a strict ancestor after the
 active branch and remote fence agree, run the same heartbeat command with

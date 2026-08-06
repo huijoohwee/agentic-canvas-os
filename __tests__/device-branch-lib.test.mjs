@@ -346,6 +346,7 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
   const result = review({
     invocationPath: repo,
     repo,
+    sessionId: "chat-a",
     gitText,
     gitOptional: args => {
       const key = args.join(" ");

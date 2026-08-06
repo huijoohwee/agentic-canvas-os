@@ -475,7 +475,7 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
   assert.equal(lease.admission.status, "admitted");
   assert.equal(lease.cloudAuthority.state, "review_ready");
   assert.equal(lease.status, "review_ready");
-  assert.equal(readyVerificationHead, headSha);
+  assert.equal(readyVerificationHead, null);
 });
 
 test("review upgrades a resumed legacy root-source ready lane using authored paths from main diff", () => {

@@ -11,6 +11,11 @@ import {
   normalizeCloudAuthority,
   normalizeDeclaredWriteScopeManifest,
 } from "../scripts/scoped-lane-admission-lib.mjs";
+import {
+  buildRootSourceBootstrapOperatorDecision,
+  createRootSourceBootstrapAuthorization,
+  ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES,
+} from "../scripts/scoped-lane-bootstrap-authorization.mjs";
 
 const BASE = "1".repeat(40);
 const CANDIDATE_ID = "2".repeat(64);
@@ -54,31 +59,11 @@ function buildMaintenanceProof(overrides = {}) {
 }
 
 function buildOperatorDecision(overrides = {}) {
-  const core = {
-    schema: "agentic-root-source-bootstrap-operator-decision/v1",
-    operation: "root-source-bootstrap-exception",
-    authorizationToken: "AUTHORIZE ROOT-SOURCE BOOTSTRAP EXCEPTION",
-    explicit: true,
-    approved: true,
+  const base = buildRootSourceBootstrapOperatorDecision({
     actorId: ACTOR_ID,
     candidateClaimId: CANDIDATE_ID,
-    maintenanceWorktreeCount: 1,
-    maintenanceIsolation: "required",
-    allowedMaintenanceChanges: [
-      "focused-tests",
-      "reclaim-admission-owners",
-    ],
-    preservationPolicy: "all-existing-lanes-and-bytes",
-    requiredSuccessor: "normal-cloud-authoritative-admitted-lane",
-    forbiddenOperations: [
-      "cleanup",
-      "deployment",
-      "manual-ledger-edit",
-      "manual-registry-edit",
-      "merge",
-    ],
-    ...overrides,
-  };
+  });
+  const { decisionDigest: _decisionDigest, ...core } = { ...base, ...overrides };
   return { ...core, decisionDigest: digestValue(core) };
 }
 
@@ -280,6 +265,115 @@ test("candidate-bound cross-repository bootstrap preserves exact lanes and dorma
   assert.equal(
     report.lanes.find(item => item.path === RETIRED).dirty,
     true,
+  );
+});
+
+test("bootstrap authorization builder auto-discovers eligible preserved lanes", () => {
+  const input = fixture();
+  const built = createRootSourceBootstrapAuthorization({
+    lanes: input.lanes,
+    canonicalPath: ROOT,
+    canonicalBaseSha: BASE,
+    targetPath: TARGET,
+    branch: "agent/operator/core",
+    semanticScope: "core",
+    manifest: input.manifest,
+    cloudAuthority: input.cloudAuthority,
+    remoteAuthorityVerification: input.verification,
+    maintenanceSourcePath: MAINTENANCE,
+    maintenanceManifestPath: "/workspace/maintenance-write-scope.json",
+    maintenanceManifestDigest: "2".repeat(64),
+    inspectMaintenanceSource: () => input.maintenanceProof,
+    evaluatedAt: new Date(EVALUATED_AT),
+  });
+  assert.equal(built.schema, "agentic-root-source-bootstrap-preservation-authorization/v1");
+  assert.deepEqual(
+    built.preservedLanes.map(lane => lane.path),
+    [DIRTY_BOOTSTRAP, RETIRED],
+  );
+  assert.equal(built.operatorDecision.actorId, ACTOR_ID);
+  assert.equal(built.operatorDecision.candidateClaimId, CANDIDATE_ID);
+});
+
+test("bootstrap authorization builder supports the expanded preserved lane bound", () => {
+  const input = fixture();
+  const extraLanes = Array.from({ length: ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES - 2 }, (_, index) => {
+    const lanePath = path.resolve(`/workspace/.worktrees/agentic-canvas-os/extra-${index}`);
+    return lane(lanePath, {
+      branch: `refs/heads/agent/operator/extra-${index}`,
+      head: `${(index + 2).toString(16)}`.repeat(40).slice(0, 40),
+      dirty: true,
+    });
+  });
+  input.lanes.push(...extraLanes);
+  const built = createRootSourceBootstrapAuthorization({
+    lanes: input.lanes,
+    canonicalPath: ROOT,
+    canonicalBaseSha: BASE,
+    targetPath: TARGET,
+    branch: "agent/operator/core",
+    semanticScope: "core",
+    manifest: input.manifest,
+    cloudAuthority: input.cloudAuthority,
+    remoteAuthorityVerification: input.verification,
+    maintenanceSourcePath: MAINTENANCE,
+    maintenanceManifestPath: "/workspace/maintenance-write-scope.json",
+    maintenanceManifestDigest: "2".repeat(64),
+    inspectMaintenanceSource: () => input.maintenanceProof,
+    evaluatedAt: new Date(EVALUATED_AT),
+  });
+  assert.equal(
+    built.preservedLanes.length,
+    ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES,
+  );
+});
+
+test("explicit preserve lanes extend auto-discovered preserved lanes", () => {
+  const input = fixture();
+  const explicitPath = path.resolve("/workspace/.worktrees/agentic-canvas-os/explicit-clean");
+  input.lanes.push(lane(explicitPath, {
+    branch: "refs/heads/agent/operator/explicit-clean",
+    head: "7".repeat(40),
+    dirty: false,
+    lease: {
+      schema: "agentic-writer-lease/v2",
+      status: "review_ready",
+      epoch: 9,
+      sessionId: "explicit-clean-session",
+      device: "operator",
+      scope: "explicit-clean",
+      branch: "agent/operator/explicit-clean",
+      worktreePath: explicitPath,
+      baseSha: BASE,
+      fenceSha: "8".repeat(40),
+      pullRequestUrl: "https://github.test/owner/repository/pull/123",
+      expiresAt: AUTHORIZATION_EXPIRES_AT,
+      reviewHeadSha: "7".repeat(40),
+    },
+  }));
+  const built = createRootSourceBootstrapAuthorization({
+    lanes: input.lanes,
+    canonicalPath: ROOT,
+    canonicalBaseSha: BASE,
+    targetPath: TARGET,
+    branch: "agent/operator/core",
+    semanticScope: "core",
+    manifest: input.manifest,
+    cloudAuthority: input.cloudAuthority,
+    remoteAuthorityVerification: input.verification,
+    maintenanceSourcePath: MAINTENANCE,
+    maintenanceManifestPath: "/workspace/maintenance-write-scope.json",
+    maintenanceManifestDigest: "2".repeat(64),
+    preservedLanes: [{
+      path: explicitPath,
+      stateDigest: input.lanes.find(item => item.path === explicitPath).stateDigest,
+    }],
+    inspectMaintenanceSource: () => input.maintenanceProof,
+    evaluatedAt: new Date(EVALUATED_AT),
+  });
+  assert.deepEqual(
+    built.preservedLanes.map(lane => lane.path).sort(),
+    [DIRTY_BOOTSTRAP, RETIRED, explicitPath].sort(),
   );
 });
 

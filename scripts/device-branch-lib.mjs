@@ -93,6 +93,10 @@ export function review({
     }
     if (existingCloud) {
       requireCloudReviewAdapter(
+        reviewReadyCloudAuthority,
+        "review-ready transition",
+      );
+      requireCloudReviewAdapter(
         verifyReviewReadyCloudAuthority,
         "review-ready verifier",
       );
@@ -1034,19 +1038,24 @@ function acceptReviewCloudReconciliation({
     return { lease, cloudReady: reconciled };
   }
   const laneRevision = reconciled.authority?.laneRevision;
-  if (laneRevision !== lease.fenceSha && laneRevision !== expectedHeadSha) {
+  const priorProjectedLaneRevision = lease.cloudAuthority?.laneRevision || null;
+  if (
+    laneRevision !== lease.fenceSha
+    && laneRevision !== expectedHeadSha
+    && laneRevision !== priorProjectedLaneRevision
+  ) {
     throw new Error(
       "Active cloud review reconciliation is neither the authoring fence nor the exact review HEAD.",
     );
   }
   if (laneRevision === lease.fenceSha) {
-    if (reconciled.authority.reviewRequestId) {
-      assertAdmissionMutationAuthority({
-        lease: { ...lease, cloudAuthority: reconciled.authority },
-        cloudAuthority: reconciled.authority,
-        remoteAuthorityVerification: reconciled.verification,
-      });
-    }
+      if (reconciled.authority.reviewRequestId) {
+        assertAdmissionMutationAuthority({
+          lease: { ...lease, cloudAuthority: reconciled.authority },
+          cloudAuthority: reconciled.authority,
+          remoteAuthorityVerification: reconciled.verification,
+        });
+      }
   }
   return {
     lease: leaseStore.annotate({
@@ -1131,7 +1140,6 @@ function resolveLegacyReviewCanonicalBaseSha({ lease, branch, gitText, ghText })
   }
   return gitText(["rev-parse", "origin/main"]).trim();
 }
-
 function resolveOriginRepositoryFullName(gitOptional) {
   const identity = resolveOriginRepositoryIdentity(gitOptional);
   return identity ? `${identity.owner}/${identity.repo}` : null;

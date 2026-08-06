@@ -816,6 +816,7 @@ function maybeAdoptLegacyRootSourceCurrentCloudAdmission({
     lease,
     gitText,
     headSha,
+    canonicalBaseSha,
   });
   const expectedWriteScope = JSON.stringify(
     normalizeWriteSet(manifest.declaredWriteSet),
@@ -954,6 +955,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     lease,
     gitText,
     headSha,
+    canonicalBaseSha,
   });
   const bootstrapped = claimLegacyReviewCloudAuthority({
     ledgerRepository: targetRepository,
@@ -1124,6 +1126,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
     lease,
     gitText,
     headSha: lease.reviewHeadSha,
+    canonicalBaseSha,
   });
   const bootstrapped = claimLegacyReviewCloudAuthority({
     ledgerRepository: targetRepository,
@@ -1201,6 +1204,7 @@ function maybeRefreshLegacyRootSourceReviewAdmission({
     lease,
     gitText,
     headSha,
+    canonicalBaseSha,
   });
   const refreshed = claimLegacyReviewCloudAuthority({
     ledgerRepository: targetRepository,
@@ -1237,13 +1241,27 @@ function maybeRefreshLegacyRootSourceReviewAdmission({
   };
 }
 
-function deriveLegacyReviewAdmissionManifest({ lease, gitText, headSha }) {
-  const baseRange = `${lease.baseSha}..${headSha}`;
+function deriveLegacyReviewAdmissionManifest({
+  lease,
+  gitText,
+  headSha,
+  canonicalBaseSha = null,
+}) {
+  const comparisonBaseSha = SHA_PATTERN.test(String(canonicalBaseSha || ""))
+    ? canonicalBaseSha
+    : lease.baseSha;
+  const baseRange = `${comparisonBaseSha}..${headSha}`;
   const fallbackRange = `origin/main...${headSha}`;
-  const readPaths = range => String(gitText(["diff", "--name-only", range, "--"]))
-    .split(/\r?\n/u)
-    .map(value => value.trim())
-    .filter(Boolean);
+  const readPaths = range => {
+    try {
+      return String(gitText(["diff", "--name-only", range, "--"]))
+        .split(/\r?\n/u)
+        .map(value => value.trim())
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
   const paths = readPaths(baseRange);
   const authoredPaths = (
     paths.length === 0

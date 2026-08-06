@@ -942,6 +942,8 @@ test("review refreshes a stale legacy cloud base from the live pull request", ()
     "rev-parse origin/main": staleCanonicalBaseSha,
     [`diff --name-only ${"9".repeat(40)}..${reviewHeadSha} --`]:
       "scripts/device-branch-lib.mjs\n__tests__/device-branch-lib.test.mjs\n",
+    [`diff --name-only ${livePullRequestBaseSha}..${reviewHeadSha} --`]:
+      "scripts/device-branch-lib.mjs\n__tests__/device-branch-lib.test.mjs\n",
     [`merge-base --is-ancestor ${fenceSha} HEAD`]: "",
     "log -1 --pretty=%s": "fix: bind legacy review admission to live PR base\n",
   });

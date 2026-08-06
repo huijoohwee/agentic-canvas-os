@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1164,
-  "headDigest": "9463d4557e44c9f9dbdd2e39a8c399419138df0bb043407a0ee71c9eee62369c",
+  "sequence": 1165,
+  "headDigest": "1baa2cc8438193b574815d395f6d114e973703f0a8c1b9b590239a945ad0954d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -58552,6 +58552,55 @@
       },
       "claimDigest": "a81b938ca6c5acb45e21343b3f48e77c9431d9bb2e7ce11b6f9e91dfceec3057",
       "digest": "9463d4557e44c9f9dbdd2e39a8c399419138df0bb043407a0ee71c9eee62369c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1165,
+      "parentDigest": "9463d4557e44c9f9dbdd2e39a8c399419138df0bb043407a0ee71c9eee62369c",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b7d3b9a202930158c3a0083b322c5fb6532e5bae28418825216281eae077c2a2",
+      "idempotencyKey": "f3692e1a25978cc80b76ee2a50dfd595237668701ec2f5f23b5f4ff5a458888a",
+      "requestDigest": "6b19513f6039edcd73a1d147cf0a13bbbe9a7f6aa59dfb555670a81153192c2f",
+      "evaluationTime": "2026-08-06T16:48:07.000Z",
+      "claimCore": {
+        "claimId": "b7d3b9a202930158c3a0083b322c5fb6532e5bae28418825216281eae077c2a2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:7dd23c8695d445f2634bfd3690dc29bf71254ed32f5c47563022172eb0f4ff0c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:866ecd3b6e2418273d6779604b5aade47151ef53490dce207c3df7a576943f0b",
+        "canonicalBaseRevision": "c4ec0a32b663fb79ccb69dc463255286681103c0",
+        "declaredWriteScope": [
+          "path:__tests__/agentic-sdlc-release-lifecycle-schema.test.mjs",
+          "path:__tests__/collaborative-release-lifecycle-contract.test.mjs",
+          "path:docs/CANONICAL-LIFECYCLE.md",
+          "path:docs/schemas/agentic-sdlc-run.v1.schema.json",
+          "path:docs/schemas/collaborative-release-lifecycle.v2.schema.json",
+          "path:scripts/agentic-sdlc/index.mjs",
+          "path:scripts/agentic-sdlc/normalize-run.mjs",
+          "path:scripts/agentic-sdlc/schema-validation.mjs",
+          "path:scripts/collaborative-release-lifecycle-contract.mjs",
+          "path:scripts/collaborative-release-terminal-receipts.mjs",
+          "semantic:release-lifecycle-terminal-carrier-v2"
+        ],
+        "writeSetDigest": "63430091d943b908a404a5c1132b4d9ce464005156c805d4385e43aca39b7795",
+        "laneRevision": "b71255f06bd63b4e12c855b65f43c71447b9d548",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-07T16:48:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM77rvdz",
+        "predecessorClaimId": "0238295e5c2892ab06a319cb49f9d77f83d8891e9061666db74f93c174a20e8e",
+        "eligibleSince": "2026-08-06T16:14:09.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-06T16:16:56.000Z"
+      },
+      "claimDigest": "1b798886908c2933194a0138696e8e69be629b3199b876e45f6a686a25db81f4",
+      "digest": "1baa2cc8438193b574815d395f6d114e973703f0a8c1b9b590239a945ad0954d"
     }
   ]
 }

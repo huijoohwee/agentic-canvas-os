@@ -11,6 +11,7 @@ import {
   cloudAuthorityFromResult,
   continueClaimedReviewSuccessorCloudAuthority,
   heartbeatAdmissionCloudAuthority,
+  recoverIntegratedPreservedCloudAuthority,
   reviewReadyAdmissionCloudAuthority,
 } from "../scripts/scoped-lane-cloud-authority.mjs";
 import {
@@ -409,6 +410,167 @@ function claimedSuccessorAuthority(claimResult) {
     leaseEpoch: claim.leaseEpoch,
     operationReceiptDigest: claim.operationReceiptDigest,
   });
+}
+
+function integratedReplayEvidence() {
+  return {
+    candidateRevision: HEAD_SHA,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    dependencyClosureDigest: "4".repeat(64),
+    namedChecksDigest: "5".repeat(64),
+    handoffEvidenceDigest: "6".repeat(64),
+    operatorDecisionDigest: "7".repeat(64),
+    integrationIntentDigest: "8".repeat(64),
+    integratedAt: EVALUATED_AT,
+  };
+}
+
+function integratedReplayHarness({
+  integratedState = "dormant-preserved",
+  withQueuedSuccessor = true,
+  loseRetirementResponse = false,
+  loseRecoveryResponse = false,
+  integratedOverrides = {},
+  ledgerRevision = NEXT_LEDGER_SHA,
+  ledgerDigest = "2".repeat(64),
+  verificationTime = EVALUATED_AT,
+  finalInventoryClaims = [],
+} = {}) {
+  let integrated = {
+    ...rootClaim({
+      state: integratedState,
+      laneRevision: HEAD_SHA,
+      transitionCounter: 4,
+      fenceRevision: "4".repeat(64),
+      transitionDigest: "5".repeat(64),
+      reviewRequestId: REVIEW_REQUEST_ID,
+      operationReceiptDigest: "6".repeat(64),
+      integration: integratedReplayEvidence(),
+      integrationReceiptDigest: "7".repeat(64),
+    }),
+    ...integratedOverrides,
+  };
+  let queued = withQueuedSuccessor
+    ? {
+      ...rootClaim({
+        claimId: "9".repeat(64),
+        state: "waiting-successor",
+        laneRevision: HEAD_SHA,
+        transitionCounter: 1,
+        fenceRevision: "a".repeat(64),
+        transitionDigest: "b".repeat(64),
+        reviewRequestId: null,
+        leaseEpoch: 2,
+        predecessorClaimId: integrated.claimId,
+        operationReceiptDigest: "c".repeat(64),
+      }),
+      writeAuthority: false,
+      scopeReserved: false,
+    }
+    : null;
+  const events = [];
+  const calls = [];
+  let inspectCount = 0;
+  const status = (additionalClaims = []) => ({
+    ...statusResult(integrated, ledgerRevision),
+    ledgerDigest,
+    claims: [integrated, ...(queued ? [queued] : []), ...additionalClaims],
+  });
+  return {
+    events,
+    calls,
+    get integratedClaim() {
+      return integrated;
+    },
+    get queuedSuccessor() {
+      return queued;
+    },
+    inspect: () => {
+      inspectCount += 1;
+      return status(inspectCount > 1 ? finalInventoryClaims : []);
+    },
+    invoke: ({ action, request }) => {
+      events.push([action, request.mode || null, request.claimId]);
+      calls.push({ action, request });
+      if (action === "retire" && queued && request.claimId === queued.claimId) {
+        const retired = { ...queued, state: "retired" };
+        queued = null;
+        const result = mutationResult("retire", retired, NEXT_LEDGER_SHA);
+        if (loseRetirementResponse) {
+          loseRetirementResponse = false;
+          throw new Error("simulated response loss after queued retirement commit");
+        }
+        return result;
+      }
+      if (action === "continue" && request.mode === "recovery"
+        && request.claimId === integrated.claimId) {
+        integrated = {
+          ...integrated,
+          state: "integrated-preserved",
+          transitionCounter: integrated.transitionCounter + 1,
+          fenceRevision: digestValue({ request, field: "fence" }),
+          transitionDigest: digestValue({ request, field: "transition" }),
+          operationReceiptDigest: digestValue({ request, field: "operation" }),
+          expiresAt: EXPIRES_AT,
+        };
+        const result = mutationResult("continue", integrated, NEXT_LEDGER_SHA);
+        if (loseRecoveryResponse) {
+          loseRecoveryResponse = false;
+          throw new Error("simulated response loss after recovery commit");
+        }
+        return result;
+      }
+      throw new Error(`Unexpected action ${action}:${request.mode || "none"}`);
+    },
+    verify: () => {
+      events.push(["verify", null, integrated.claimId]);
+      const result = verificationResult(integrated, ledgerRevision);
+      return {
+        ...result,
+        receipt: {
+          ...result.receipt,
+          ledgerDigest,
+          evaluationTime: verificationTime,
+        },
+      };
+    },
+  };
+}
+
+function integratedReplayAuthority() {
+  return localAuthority({
+    state: "review_ready",
+    laneRevision: HEAD_SHA,
+    transitionCounter: 3,
+    claimDigest: "3".repeat(64),
+    claimLedgerRevision: "4".repeat(64),
+    ledgerRevision: LEDGER_SHA,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    focusedEvidence: focusedEvidenceDigest(),
+  });
+}
+
+function disjointReviewClaim(reviewRequestId) {
+  const declaredWriteScope = normalizeWriteSet([
+    "path:scripts/disjoint-review-owner.mjs",
+    "semantic:disjoint-review-owner",
+  ]);
+  return {
+    ...rootClaim({
+      claimId: "d".repeat(64),
+      state: "reviewed",
+      laneRevision: HEAD_SHA,
+      transitionCounter: 3,
+      fenceRevision: "e".repeat(64),
+      transitionDigest: "f".repeat(64),
+      reviewRequestId,
+      operationReceiptDigest: "a".repeat(64),
+    }),
+    workItemId: "work-item:disjoint-review-owner",
+    declaredWriteScope,
+    writeSetDigest: digestValue(declaredWriteScope),
+  };
 }
 
 test("claim projection accepts v2 logical identity without device/session in claimId", () => {
@@ -824,6 +986,390 @@ test("claimed review successor rejects a claim that is not pinned to the exact r
     /exact claimed successor identity/u,
   );
   assert.deepEqual(harness.calls, []);
+});
+
+test("integrated replay retires only the exact waiter, recovers the same claim, then verifies delivery", () => {
+  const harness = integratedReplayHarness();
+  const originalClaimId = harness.integratedClaim.claimId;
+  const result = recoverIntegratedPreservedCloudAuthority({
+    authority: integratedReplayAuthority(),
+    integratedClaim: harness.integratedClaim,
+    queuedSuccessor: harness.queuedSuccessor,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.deepEqual(
+    harness.events.map(([action, mode]) => [action, mode]),
+    [
+      ["retire", null],
+      ["continue", "recovery"],
+      ["verify", null],
+    ],
+  );
+  assert.equal(harness.events[0][2], "9".repeat(64));
+  assert.equal(harness.events[1][2], originalClaimId);
+  assert.equal(result.authority.claimId, originalClaimId);
+  assert.equal(result.authority.state, "delivery_authorized");
+  assert.equal(result.authority.integrationReceiptDigest, "7".repeat(64));
+  assert.match(result.convergenceEvidenceDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(
+    result.convergenceEvidence.currentQueuedDerivativeDisposition,
+    "absent-from-verified-inventory",
+  );
+  assert.deepEqual(result.convergenceEvidence.overlappingCurrentClaimIds, []);
+  assert.equal(result.convergenceEvidence.lifecycleAttribution, "not-reconstructed");
+  assert.equal(result.convergenceEvidence.observation, "current-state-only");
+  assert.equal("queuedRetirementReceiptDigest" in result, false);
+  assert.equal("recoveryReceiptDigest" in result, false);
+  const retireCall = harness.calls.find(call => call.action === "retire");
+  assert.equal(retireCall.request.claimId, "9".repeat(64));
+  assert.equal(retireCall.request.expectedFenceRevision, "a".repeat(64));
+  assert.equal(retireCall.request.expectedTransitionCounter, 1);
+  assert.equal(retireCall.request.reason, "superseded");
+  assert.equal(
+    retireCall.request.idempotencyKey,
+    [
+      "integrated-replay-retire-queued-successor",
+      "9".repeat(64),
+      1,
+      "a".repeat(64),
+    ].join(":"),
+  );
+  const recoveryCall = harness.calls.find(
+    call => call.action === "continue" && call.request.mode === "recovery",
+  );
+  assert.equal(recoveryCall.request.claimId, originalClaimId);
+  assert.equal(recoveryCall.request.expectedFenceRevision, "4".repeat(64));
+  assert.equal(recoveryCall.request.expectedTransitionCounter, 4);
+  assert.match(recoveryCall.request.recoveryEvidenceDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(
+    recoveryCall.request.idempotencyKey,
+    [
+      "integrated-preserved-recovery",
+      originalClaimId,
+      4,
+      "4".repeat(64),
+      recoveryCall.request.recoveryEvidenceDigest,
+    ].join(":"),
+  );
+});
+
+test("already-live integrated replay performs no recovery mutation", () => {
+  const harness = integratedReplayHarness({
+    integratedState: "integrated-preserved",
+    withQueuedSuccessor: false,
+  });
+  const result = recoverIntegratedPreservedCloudAuthority({
+    authority: integratedReplayAuthority(),
+    integratedClaim: harness.integratedClaim,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.deepEqual(harness.events, [["verify", null, CLAIM_ID]]);
+  assert.equal(result.authority.claimId, CLAIM_ID);
+  assert.match(result.convergenceEvidenceDigest, /^[0-9a-f]{64}$/u);
+  assert.equal("recoveryReceiptDigest" in result, false);
+  assert.equal("queuedRetirementReceiptDigest" in result, false);
+});
+
+test("integrated replay convergence binds claim-local fence, transition, expiry, and operation evidence", () => {
+  const run = integratedOverrides => {
+    const harness = integratedReplayHarness({
+      integratedState: "integrated-preserved",
+      withQueuedSuccessor: false,
+      integratedOverrides,
+    });
+    return recoverIntegratedPreservedCloudAuthority({
+      authority: integratedReplayAuthority(),
+      integratedClaim: harness.integratedClaim,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    });
+  };
+  const baseline = run({});
+  const variants = [
+    { fenceRevision: "8".repeat(64) },
+    { transitionDigest: "9".repeat(64) },
+    { transitionCounter: 5 },
+    { operationReceiptDigest: "a".repeat(64) },
+    { expiresAt: "2099-08-06T08:00:00.000Z" },
+  ];
+  for (const variant of variants) {
+    assert.notEqual(
+      run(variant).convergenceEvidenceDigest,
+      baseline.convergenceEvidenceDigest,
+    );
+  }
+});
+
+test("integrated replay convergence excludes unrelated ledger head and verification time", () => {
+  const run = options => {
+    const harness = integratedReplayHarness({
+      integratedState: "integrated-preserved",
+      withQueuedSuccessor: false,
+      ...options,
+    });
+    return recoverIntegratedPreservedCloudAuthority({
+      authority: integratedReplayAuthority(),
+      integratedClaim: harness.integratedClaim,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    });
+  };
+  const baseline = run({});
+  const unrelatedLedgerDrift = run({
+    ledgerRevision: "9".repeat(40),
+    ledgerDigest: "a".repeat(64),
+    verificationTime: "2026-08-04T09:00:00.000Z",
+  });
+
+  assert.equal(
+    unrelatedLedgerDrift.convergenceEvidenceDigest,
+    baseline.convergenceEvidenceDigest,
+  );
+  assert.notEqual(
+    unrelatedLedgerDrift.authority.ledgerRevision,
+    baseline.authority.ledgerRevision,
+  );
+  assert.notEqual(
+    unrelatedLedgerDrift.verification.verifiedAt,
+    baseline.verification.verifiedAt,
+  );
+});
+
+test("integrated replay final convergence rejects a disjoint duplicate review injected after preflight", () => {
+  const harness = integratedReplayHarness({
+    integratedState: "integrated-preserved",
+    withQueuedSuccessor: false,
+    finalInventoryClaims: [disjointReviewClaim(REVIEW_REQUEST_ID)],
+  });
+
+  assert.throws(
+    () => recoverIntegratedPreservedCloudAuthority({
+      authority: integratedReplayAuthority(),
+      integratedClaim: harness.integratedClaim,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    }),
+    /duplicate-review authority/u,
+  );
+  assert.deepEqual(harness.events, [["verify", null, CLAIM_ID]]);
+});
+
+test("integrated replay final convergence rejects an overlapping different-review claim", () => {
+  const overlapping = {
+    ...disjointReviewClaim("github-pull-request:PR_overlap"),
+    declaredWriteScope: DECLARED_WRITE_SET,
+    writeSetDigest: WRITE_SET_DIGEST,
+  };
+  const harness = integratedReplayHarness({
+    integratedState: "integrated-preserved",
+    withQueuedSuccessor: false,
+    finalInventoryClaims: [overlapping],
+  });
+
+  assert.throws(
+    () => recoverIntegratedPreservedCloudAuthority({
+      authority: integratedReplayAuthority(),
+      integratedClaim: harness.integratedClaim,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    }),
+    /overlapping/u,
+  );
+});
+
+test("integrated replay final convergence preserves a disjoint different-review authority", () => {
+  const harness = integratedReplayHarness({
+    integratedState: "integrated-preserved",
+    withQueuedSuccessor: false,
+    finalInventoryClaims: [disjointReviewClaim("github-pull-request:PR_disjoint")],
+  });
+  const result = recoverIntegratedPreservedCloudAuthority({
+    authority: integratedReplayAuthority(),
+    integratedClaim: harness.integratedClaim,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.equal(result.authority.claimId, CLAIM_ID);
+  assert.deepEqual(result.convergenceEvidence.overlappingCurrentClaimIds, []);
+});
+
+test("integrated replay convergence survives response loss after exact waiter retirement", () => {
+  const harness = integratedReplayHarness({ loseRetirementResponse: true });
+  const authority = integratedReplayAuthority();
+  const observedIntegrated = harness.integratedClaim;
+  const observedQueued = harness.queuedSuccessor;
+  assert.throws(
+    () => recoverIntegratedPreservedCloudAuthority({
+      authority,
+      integratedClaim: observedIntegrated,
+      queuedSuccessor: observedQueued,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    }),
+    /simulated response loss after queued retirement commit/u,
+  );
+
+  const firstCompletion = recoverIntegratedPreservedCloudAuthority({
+    authority,
+    integratedClaim: harness.integratedClaim,
+    queuedSuccessor: null,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  const postLossReplay = recoverIntegratedPreservedCloudAuthority({
+    authority,
+    integratedClaim: harness.integratedClaim,
+    queuedSuccessor: null,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.equal(harness.events.filter(([action]) => action === "retire").length, 1);
+  assert.equal(harness.events.filter(([action, mode]) => action === "continue" && mode === "recovery").length, 1);
+  assert.equal(firstCompletion.convergenceEvidenceDigest, postLossReplay.convergenceEvidenceDigest);
+  assert.equal(
+    firstCompletion.authority.operationReceiptDigest,
+    postLossReplay.authority.operationReceiptDigest,
+  );
+  assert.equal("queuedRetirementReceiptDigest" in firstCompletion, false);
+  assert.equal("recoveryReceiptDigest" in firstCompletion, false);
+});
+
+test("integrated replay convergence survives response loss after same-claim recovery", () => {
+  const harness = integratedReplayHarness({
+    withQueuedSuccessor: false,
+    loseRecoveryResponse: true,
+  });
+  const authority = integratedReplayAuthority();
+  assert.throws(
+    () => recoverIntegratedPreservedCloudAuthority({
+      authority,
+      integratedClaim: harness.integratedClaim,
+      queuedSuccessor: null,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    }),
+    /simulated response loss after recovery commit/u,
+  );
+
+  const firstCompletion = recoverIntegratedPreservedCloudAuthority({
+    authority,
+    integratedClaim: harness.integratedClaim,
+    queuedSuccessor: null,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  const postLossReplay = recoverIntegratedPreservedCloudAuthority({
+    authority,
+    integratedClaim: harness.integratedClaim,
+    queuedSuccessor: null,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.equal(harness.events.filter(([action, mode]) => action === "continue" && mode === "recovery").length, 1);
+  assert.equal(firstCompletion.convergenceEvidenceDigest, postLossReplay.convergenceEvidenceDigest);
+  assert.equal(
+    firstCompletion.authority.operationReceiptDigest,
+    postLossReplay.authority.operationReceiptDigest,
+  );
+  assert.equal("recoveryReceiptDigest" in firstCompletion, false);
 });
 
 test("review helper records continue(review) without changing candidate identity", () => {

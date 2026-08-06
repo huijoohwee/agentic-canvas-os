@@ -414,17 +414,12 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   const predecessor = statusResult?.claims?.find(
     claim => claim?.claimId === predecessorClaimId,
   );
-  if (!predecessor) {
-    throw new Error(
-      "Legacy review waiting successor could not find its preserved predecessor claim.",
-    );
-  }
-  if (projectRootState(predecessor.state) !== "parked") {
+  if (predecessor && projectRootState(predecessor.state) !== "parked") {
     throw new Error(
       `Legacy review waiting successor requires a dormant-preserved predecessor; received ${predecessor.state || "missing"}.`,
     );
   }
-  if (predecessor.actorId !== waitingClaim.actorId) {
+  if (predecessor && predecessor.actorId !== waitingClaim.actorId) {
     throw new Error("Legacy review waiting successor cannot supersede another actor's preserved claim.");
   }
   const expectedWriteSet = normalizeWriteSet(manifest?.declaredWriteSet);
@@ -437,49 +432,51 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
     writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
   };
-  invoke({
-    action: "retire",
-    ledgerRepository,
-    request: {
-      targetRepository,
-      claimId: predecessorClaimId,
-      expectedFenceRevision: requiredDigest(
-        predecessor.fenceRevision,
-        "predecessor fenceRevision",
-      ),
-      expectedTransitionCounter: positiveInteger(
-        predecessor.transitionCounter,
-        "predecessor transitionCounter",
-      ),
-      reason: "superseded",
-      finalRevision: requiredSha(
-        predecessor.laneRevision,
-        "predecessor laneRevision",
-      ),
-      reviewRequestId: predecessor.reviewRequestId || null,
-      bytesDigest: digestValue({
-        ...successionEvidence,
-        operation: "retire-bytes",
-      }),
-      namedChecksDigest: digestValue({
-        ...successionEvidence,
-        operation: "retire-checks",
-      }),
-      handoffEvidenceDigest: digestValue({
-        ...successionEvidence,
-        operation: "retire-handoff",
-      }),
-      deviceId: requiredText(deviceId, "deviceId"),
-      sessionId: requiredText(sessionId, "sessionId"),
-      idempotencyKey: [
-        "legacy-review-supersede",
-        predecessorClaimId,
-        waitingClaimId,
-        requiredDigest(waitingClaim.fenceRevision, "waiting fenceRevision"),
-      ].join(":"),
-    },
-    environment,
-  });
+  if (predecessor) {
+    invoke({
+      action: "retire",
+      ledgerRepository,
+      request: {
+        targetRepository,
+        claimId: predecessorClaimId,
+        expectedFenceRevision: requiredDigest(
+          predecessor.fenceRevision,
+          "predecessor fenceRevision",
+        ),
+        expectedTransitionCounter: positiveInteger(
+          predecessor.transitionCounter,
+          "predecessor transitionCounter",
+        ),
+        reason: "superseded",
+        finalRevision: requiredSha(
+          predecessor.laneRevision,
+          "predecessor laneRevision",
+        ),
+        reviewRequestId: predecessor.reviewRequestId || null,
+        bytesDigest: digestValue({
+          ...successionEvidence,
+          operation: "retire-bytes",
+        }),
+        namedChecksDigest: digestValue({
+          ...successionEvidence,
+          operation: "retire-checks",
+        }),
+        handoffEvidenceDigest: digestValue({
+          ...successionEvidence,
+          operation: "retire-handoff",
+        }),
+        deviceId: requiredText(deviceId, "deviceId"),
+        sessionId: requiredText(sessionId, "sessionId"),
+        idempotencyKey: [
+          "legacy-review-supersede",
+          predecessorClaimId,
+          waitingClaimId,
+          requiredDigest(waitingClaim.fenceRevision, "waiting fenceRevision"),
+        ].join(":"),
+      },
+      environment,
+    });
+  }
   const refreshStatusResult = inspect({
     action: "status",
     ledgerRepository,

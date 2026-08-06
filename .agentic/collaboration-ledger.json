@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 895,
-  "headDigest": "25b014c88df3c1163c619ab00de3eda782934215dd93ffee974508616b6e1ac5",
+  "sequence": 896,
+  "headDigest": "7f55e452af6d34c6f8a8575a292876c75827572fcf5b8412a56da8d77fab879e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -45289,6 +45289,49 @@
       },
       "claimDigest": "f2bb201f160b49ee9201ed322e9f76b29ee59eb520208eb989453de78bc28206",
       "digest": "25b014c88df3c1163c619ab00de3eda782934215dd93ffee974508616b6e1ac5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 896,
+      "parentDigest": "25b014c88df3c1163c619ab00de3eda782934215dd93ffee974508616b6e1ac5",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "fd07e80d0cc2e1489a4f9f64012f1e92dcd654066f67c8f4fdf8b0612e1df04d",
+      "idempotencyKey": "ba67bd88873ae1d1f19df98a4ddef0c389f9c189c77eead9243d3e27bb0c5a9a",
+      "requestDigest": "6906a34e5f1c28ec6d96fce6a528ee20a7c18e6499458be41cb5b334ca30e39a",
+      "evaluationTime": "2026-08-06T03:53:53.000Z",
+      "claimCore": {
+        "claimId": "fd07e80d0cc2e1489a4f9f64012f1e92dcd654066f67c8f4fdf8b0612e1df04d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:4d8f5315064183c5e80973150f69781d27f09441b8c97ac47c76ad3b3f3f47a7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c4fd66844807aa8fbf65e0765d218b7fe498c9e7c8a9d9f963676428c8a1005b",
+        "canonicalBaseRevision": "5777d689fc2b7d2bd73a8b126e2b1a5804d91322",
+        "declaredWriteScope": [
+          "path:__tests__/local-runtime.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/PROJECT-RULES.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/local-runtime-lib.mjs",
+          "semantic:runtime-residue-classifier"
+        ],
+        "writeSetDigest": "c7cd7d885a455cff5b7c7dd69db103b5f919cc3bb81ed700a56f26a2d35b2702",
+        "laneRevision": "5777d689fc2b7d2bd73a8b126e2b1a5804d91322",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T04:23:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0353475528727180da705d4ea02b99d7b045ccb1d860c0412204b0d17546cf0f",
+      "digest": "7f55e452af6d34c6f8a8575a292876c75827572fcf5b8412a56da8d77fab879e"
     }
   ]
 }

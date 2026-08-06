@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1007,
-  "headDigest": "b738135ca3052baad522a3cc9d32a7e4d36280056a34cd338604b942894ad058",
+  "sequence": 1008,
+  "headDigest": "739e3e6fb9c1167d1af9c9c7241d9e85dfa2028ab6f38677f76d96937b39c99b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -50947,6 +50947,68 @@
       },
       "claimDigest": "3b0676ad398931d937d578aed3d191eb263cf8814fa7b86037c608b6a6657917",
       "digest": "b738135ca3052baad522a3cc9d32a7e4d36280056a34cd338604b942894ad058"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1008,
+      "parentDigest": "b738135ca3052baad522a3cc9d32a7e4d36280056a34cd338604b942894ad058",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "45f99f0a74978b00bf55b1f94deff44f86a36498303de267d4a2071f66390dfc",
+      "idempotencyKey": "ee5b4d11275b2a43ca68fb785f4bd124b26a6e8593e8f8e432a2363a5ac2c4d8",
+      "requestDigest": "f267b5a47e37dd2f8a6918bca2fbe1811bf4d4936697ab6815e5efccb0e0acf6",
+      "evaluationTime": "2026-08-06T10:41:26.000Z",
+      "claimCore": {
+        "claimId": "45f99f0a74978b00bf55b1f94deff44f86a36498303de267d4a2071f66390dfc",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2eb9741d93c2dd64d0fc000d4737cc9ac163c9ad0ccff6bb4760e3299f4e98af",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a9179b4a2e59c8f804ca6e1a811dc27f833aba395b3dd124ab551429f7f6b50a",
+        "canonicalBaseRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/device-branch-cli.test.mjs",
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:__tests__/scoped-lane-authority-state.test.mjs",
+          "path:__tests__/writer-lease-lib.test.mjs",
+          "path:docs/schemas/scoped-lane-admission-report.v1.schema.json",
+          "path:scripts/cloud-authority-handoff-controller.mjs",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "path:scripts/scoped-lane-admission-lib.mjs",
+          "path:scripts/scoped-lane-admission-state.mjs",
+          "path:scripts/scoped-lane-authority-state.mjs",
+          "path:scripts/scoped-lane-bootstrap-authorization.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:bootstrap-deadlock-root-source-rehost-disjoint-20260806c"
+        ],
+        "writeSetDigest": "221a31b6845c3d3df5f94199a86a18e676711ac82b144b04c6526c0f827be57c",
+        "laneRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-06T11:03:32.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "99b1daec01a88f30011c84d004b58741431e6a2f8f752334a7000021105b8f30",
+        "eligibleSince": "2026-08-06T10:33:32.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+          "reviewRequestId": null,
+          "bytesDigest": "814b24300f4888a4d8b606886f3b99146650449bce618a4a44ce5fe3939afaea",
+          "namedChecksDigest": "4797628ca9342dac0e0862345dd78fd4430edb9d39c8ee0510dc105a47d9c5ff",
+          "handoffEvidenceDigest": "f63151cb1be1e3cc038886d44825d73db204326815b5b5fe4c68d2ef4b7d4c68",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-06T10:41:26.000Z"
+        }
+      },
+      "claimDigest": "715518e2cac7be8f917dd820eb142f101c9d7e89a2002a1cd0fdfae06fd4d158",
+      "digest": "739e3e6fb9c1167d1af9c9c7241d9e85dfa2028ab6f38677f76d96937b39c99b"
     }
   ]
 }

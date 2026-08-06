@@ -27,7 +27,7 @@ export function normalizeClaimProvenance(source, label = "claim") {
 export function claimProvenanceMatches(
   remoteClaim,
   localAuthority,
-  { requireCurrentEntry = true } = {},
+  { requireCurrentEntry = true, ignoreOperationReceiptDigest = false } = {},
 ) {
   try {
     const remote = normalizeClaimProvenance(remoteClaim, "remote claim");
@@ -38,7 +38,10 @@ export function claimProvenanceMatches(
         === requiredDigest(localAuthority?.claimId, "local claimId")
       && remote.entrySchema === local.entrySchema
       && remote.claimIdentitySchema === local.claimIdentitySchema
-      && remote.operationReceiptDigest === local.operationReceiptDigest;
+      && (
+        ignoreOperationReceiptDigest
+        || remote.operationReceiptDigest === local.operationReceiptDigest
+      );
   } catch {
     return false;
   }

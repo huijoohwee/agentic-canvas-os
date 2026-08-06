@@ -85,7 +85,9 @@ export function reconcileCloudAuthorityProjection({
     )
   );
   if (
-    !claimProvenanceMatches(claim, authority)
+    !claimProvenanceMatches(claim, authority, {
+      ignoreOperationReceiptDigest: true,
+    })
     || claim.canonicalBaseRevision !== authority.canonicalBaseSha
     || claim.writeSetDigest !== manifest.writeSetDigest
     || claim.writeSetDigest !== digestValue(claim.declaredWriteScope)

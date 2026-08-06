@@ -489,7 +489,7 @@ test("review upgrades a legacy root-source lane into cloud-authoritative review"
   assert.equal(saved.admission.status, "admitted");
   assert.equal(saved.admission.semanticScope, lease.scope);
   assert.match(saved.admission.manifestDigest, /^[0-9a-f]{64}$/u);
-  assert.ok(events.indexOf(`bootstrap:${headSha}:${saved.admission.writeSetDigest}`) < events.indexOf("run:npm run check"));
+  assert.ok(events.indexOf(`bootstrap:${lease.fenceSha}:${saved.admission.writeSetDigest}`) < events.indexOf("run:npm run check"));
   assert.ok(events.some(event => event === `transition:${headSha}`));
 });
 

@@ -699,7 +699,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     manifest,
     canonicalBaseSha,
     branch,
-    headSha,
+    headSha: lease.fenceSha,
     deviceId: lease.device,
     sessionId,
   });

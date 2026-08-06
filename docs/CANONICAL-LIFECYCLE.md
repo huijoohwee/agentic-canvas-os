@@ -273,6 +273,29 @@ follows. These names are implementation facts, not universal lifecycle terms.
 | Publication adapter | Generated `huijoohwee` mirror, published only after live verification |
 | Production targets | `https://airvio.co` and `https://airvio.co/knowgrph` |
 
+The executable terminal chain is owned by
+`scripts/collaborative-release-terminal-receipts.mjs` and re-exported through
+`scripts/collaborative-release-lifecycle-contract.mjs`. It enforces these exact
+content-addressed schemas:
+
+| Receipt | Executable schema and enforced join |
+|---|---|
+| Deployment | `agentic-deployment-receipt/v1`; consumed authorization, candidate, target, release key, controller, artifact, and rollback target must agree |
+| State reconciliation | `agentic-state-reconciliation-receipt/v1`; the deployment/controller join, bounded operation count, direct-authoritative readback, exact document/chunk/graph counts, and path-hash/content parity are mandatory |
+| Live verification | `agentic-live-verification-receipt/v2`; deployment and state-reconciliation predecessors, controller, candidate, target, artifact, rollback target, independent proof-surface digests, and marker-byte parity must agree |
+| Publication | `agentic-publication-receipt/v2`; only a validated live-verification v2 predecessor can create the production publication envelope |
+| Rollback | `agentic-rollback-receipt/v1`; the deployment predecessor and exact last-known-good target must agree, restoration probes are required, the mirror remains unchanged, and only a terminal restored result closes recovery |
+
+Unknown fields, malformed digests, stale predecessor identities, indirect
+readback, unbounded state operations, count drift, parity failure, partial
+rollback, or mirror advancement fail before a terminal receipt is emitted.
+The explicitly named legacy observation adapters retain the earlier
+`agentic-live-verification-receipt/v1` and `agentic-publication-receipt/v1`
+envelopes for closed compatibility. Their historical aliases remain callable,
+but neither receipt can satisfy a v2 validator, the v2 publication constructor,
+or a production carrier discriminator, so they create no production-stage
+authority.
+
 Each device fetches `origin` independently. The registered `main` checkout is
 the automation-owned synchronization and runtime lane; task worktrees are
 mutation lanes only. `npm run sync:workspace` validates changed revisions in

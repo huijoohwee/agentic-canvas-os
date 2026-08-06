@@ -7,6 +7,7 @@ import {
   createCloudAuthorityHandoffControllerAdapter,
   createRepositoryCloudAuthorityHandoffControllerAdapter,
 } from "../scripts/cloud-authority-handoff-controller.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 
 const BASE_SHA = "a".repeat(40);
 const REVIEW_SHA = "b".repeat(40);
@@ -25,6 +26,9 @@ const ADMITTED_REPORT_DIGEST = "6".repeat(64);
 const CLAIM_RECEIPT_DIGEST = "7".repeat(64);
 const REVIEW_RECEIPT_DIGEST = "8".repeat(64);
 const PROJECTION_RECEIPT_DIGEST = "9".repeat(64);
+const INTEGRATION_RECEIPT_DIGEST = "a".repeat(64);
+const RECOVERY_RECEIPT_DIGEST = "b".repeat(64);
+const CONVERGENCE_EVIDENCE_DIGEST = "f".repeat(64);
 
 function preservedLane(overrides = {}) {
   const lease = {
@@ -150,32 +154,125 @@ function statusResult(claims = []) {
   };
 }
 
-function claimResult() {
+function resumableSuccessorClaim(overrides = {}) {
+  return {
+    claimId: SUCCESSOR_CLAIM_ID,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    state: "waiting-successor",
+    actorId: "github-user:1",
+    repositoryId: "github-repository:example",
+    workItemId: pseudonymousIdentifier("work-item", "legacy-authority-evaluator"),
+    canonicalBaseRevision: BASE_SHA,
+    laneRevision: REVIEW_SHA,
+    declaredWriteScope: preservedLane().manifest.declaredWriteSet,
+    writeSetDigest: WRITE_SET_DIGEST,
+    leaseEpoch: 2,
+    transitionCounter: 1,
+    heartbeatCounter: 0,
+    reviewRequestId: null,
+    predecessorClaimId: PREDECESSOR_CLAIM_ID,
+    expiresAt: "2026-08-03T09:07:22.000Z",
+    fenceRevision: SUCCESSOR_CLAIM_DIGEST,
+    transitionDigest: SUCCESSOR_LEDGER_DIGEST,
+    operationReceiptDigest: CLAIM_RECEIPT_DIGEST,
+    integrationReceiptDigest: null,
+    integration: null,
+    ...overrides,
+  };
+}
+
+function integratedReplayEvidence() {
+  return {
+    candidateRevision: REVIEW_SHA,
+    reviewRequestId: "github-pull-request:PR_238",
+    focusedEvidenceDigest: PREDECESSOR_FOCUSED_EVIDENCE,
+    dependencyClosureDigest: "a".repeat(64),
+    namedChecksDigest: "b".repeat(64),
+    handoffEvidenceDigest: "c".repeat(64),
+    operatorDecisionDigest: "d".repeat(64),
+    integrationIntentDigest: "e".repeat(64),
+    integratedAt: "2026-08-03T08:00:00.000Z",
+  };
+}
+
+function integratedReplayClaim(overrides = {}) {
+  return {
+    claimId: PREDECESSOR_CLAIM_ID,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    state: "dormant-preserved",
+    actorId: "github-user:1",
+    repositoryId: "github-repository:example",
+    workItemId: pseudonymousIdentifier("work-item", "legacy-authority-evaluator"),
+    canonicalBaseRevision: BASE_SHA,
+    laneRevision: REVIEW_SHA,
+    declaredWriteScope: preservedLane().manifest.declaredWriteSet,
+    writeSetDigest: WRITE_SET_DIGEST,
+    leaseEpoch: 1,
+    transitionCounter: 5,
+    heartbeatCounter: 0,
+    reviewRequestId: "github-pull-request:PR_238",
+    predecessorClaimId: null,
+    expiresAt: "2026-08-03T09:07:22.000Z",
+    fenceRevision: "f".repeat(64),
+    transitionDigest: "0".repeat(64),
+    operationReceiptDigest: "1".repeat(64),
+    integrationReceiptDigest: INTEGRATION_RECEIPT_DIGEST,
+    integration: integratedReplayEvidence(),
+    ...overrides,
+  };
+}
+
+function integratedReplayAuthority(overrides = {}) {
+  const claim = integratedReplayClaim({
+    state: "integrated-preserved",
+    transitionCounter: 6,
+    expiresAt: "2099-08-03T09:07:22.000Z",
+  });
+  return {
+    ...preservedLane().authority,
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    ledgerRevision: BASE_SHA,
+    ledgerDigest: PREDECESSOR_LEDGER_DIGEST,
+    cloudDeclaredWriteScope: claim.declaredWriteScope,
+    transitionCounter: claim.transitionCounter,
+    state: "delivery_authorized",
+    expiresAt: claim.expiresAt,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    integration: claim.integration,
+    ...overrides,
+  };
+}
+
+function claimResult({ replayed = false, claimOverrides = {} } = {}) {
+  const claim = resumableSuccessorClaim({ state: "active", ...claimOverrides });
   return {
     schema: "agentic-cloud-collaboration-result/v1",
     ok: true,
     action: "claim",
-    status: "active",
+    status: claim.state,
+    replayed,
     ledgerRevision: BASE_SHA,
     claimDigest: SUCCESSOR_CLAIM_DIGEST,
-    claim: {
-      claimId: SUCCESSOR_CLAIM_ID,
-      state: "active",
-      canonicalBaseRevision: BASE_SHA,
-      laneRevision: REVIEW_SHA,
-      declaredWriteScope: [
-        "path:docs/CANONICAL-LIFECYCLE.md",
-        "path:scripts/legacy-authority-evaluator.mjs",
-        "semantic:legacy-authority-evaluator",
-      ],
-      writeSetDigest: WRITE_SET_DIGEST,
-      reviewRequestId: "github-pull-request:PR_238",
-      leaseEpoch: 2,
-      transitionCounter: 1,
-      expiresAt: "2026-08-03T09:07:22.000Z",
-      transitionDigest: SUCCESSOR_LEDGER_DIGEST,
+    claim,
+    receipt: {
+      receiptDigest: CLAIM_RECEIPT_DIGEST,
+      ledgerDigest: PREDECESSOR_LEDGER_DIGEST,
+      evaluationTime: "2026-08-03T08:30:00.000Z",
     },
-    receipt: { receiptDigest: CLAIM_RECEIPT_DIGEST, evaluationTime: "2026-08-03T08:30:00.000Z" },
+  };
+}
+
+function reclaimRequest() {
+  return {
+    transition: "reclaim",
+    branch: "agent/legacy-device/legacy-authority-evaluator",
+    sessionId: "legacy-session",
+    successorSessionId: "legacy-session",
+    successorDeviceId: "legacy-device",
   };
 }
 
@@ -544,6 +641,388 @@ test("another live claim using the same review request blocks before mutation", 
     true,
   );
   assert.equal(mutated, false);
+});
+
+test("reclaim reuses the exact waiting successor after a crash before local projection", async () => {
+  const predecessor = {
+    claimId: PREDECESSOR_CLAIM_ID,
+    reviewRequestId: "github-pull-request:PR_238",
+    declaredWriteScope: preservedLane().manifest.declaredWriteSet,
+  };
+  const waiting = resumableSuccessorClaim();
+  let claims = [predecessor];
+  let claimAttempts = 0;
+  let projections = 0;
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult(claims),
+    claimSuccessor: () => {
+      claimAttempts += 1;
+      claims = [predecessor, waiting];
+      return claimResult({
+        replayed: claimAttempts > 1,
+        claimOverrides: { state: "waiting-successor" },
+      });
+    },
+    bindAndReviewReady: ({ claimResult: replay, resumableSuccessor }) => {
+      if (claimAttempts === 1) throw new Error("simulated crash after cloud claim");
+      assert.equal(replay.replayed, true);
+      assert.equal(resumableSuccessor?.claimId, SUCCESSOR_CLAIM_ID);
+      return {
+        authority: successorAuthority(),
+        verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+      };
+    },
+    persistReviewProjection: () => {
+      projections += 1;
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  });
+
+  await assert.rejects(
+    continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter }),
+    /simulated crash after cloud claim/u,
+  );
+  const recovered = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+
+  assert.equal(recovered.outcome, "reclaimed-live");
+  assert.equal(recovered.successorClaimId, SUCCESSOR_CLAIM_ID);
+  assert.equal(claimAttempts, 2);
+  assert.equal(projections, 1);
+  assert.equal(recovered.receipts[0].payload.resumableSuccessorClaimId, SUCCESSOR_CLAIM_ID);
+});
+
+test("reclaim recovers an exact integrated-preserved claim without claiming or rewriting review projection", async () => {
+  const integrated = integratedReplayClaim();
+  const waiting = resumableSuccessorClaim();
+  const forbidden = [];
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult([integrated, waiting]),
+    claimSuccessor: () => {
+      forbidden.push("claim");
+      throw new Error("integrated replay must not claim");
+    },
+    bindAndReviewReady: () => {
+      forbidden.push("review");
+      throw new Error("integrated replay must not review");
+    },
+    persistReviewProjection: () => {
+      forbidden.push("persist");
+      throw new Error("integrated replay must not persist");
+    },
+    recoverIntegratedAuthority: ({ integratedReplay }) => {
+      assert.equal(integratedReplay.claim.claimId, PREDECESSOR_CLAIM_ID);
+      assert.equal(integratedReplay.queuedClaim.claimId, SUCCESSOR_CLAIM_ID);
+      return {
+        authority: integratedReplayAuthority(),
+        verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+        convergenceEvidenceDigest: CONVERGENCE_EVIDENCE_DIGEST,
+      };
+    },
+  });
+
+  const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+
+  assert.equal(result.outcome, "reclaimed-live-replay");
+  assert.equal(result.predecessorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.projectionUpdated, false);
+  assert.deepEqual(forbidden, []);
+  assert.equal(result.receipts[1].kind, "integrated-authority-converged");
+  assert.equal(
+    result.receipts[1].payload.convergenceEvidenceDigest,
+    CONVERGENCE_EVIDENCE_DIGEST,
+  );
+  assert.equal("queuedRetirementReceiptDigest" in result.receipts[1].payload, false);
+  assert.equal("verificationReceiptDigest" in result.receipts[1].payload, false);
+});
+
+test("integrated replay controller identity is stable after lifecycle response loss", async () => {
+  const recoveredClaim = integratedReplayClaim({
+    state: "integrated-preserved",
+    transitionCounter: 6,
+    expiresAt: "2099-08-03T09:07:22.000Z",
+    fenceRevision: integratedReplayAuthority().claimDigest,
+    transitionDigest: integratedReplayAuthority().claimLedgerRevision,
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+  });
+  let claims = [integratedReplayClaim(), resumableSuccessorClaim()];
+  let verificationReceiptDigest = "1".repeat(64);
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult(claims),
+    claimSuccessor: () => {
+      throw new Error("integrated replay must not claim");
+    },
+    bindAndReviewReady: () => {
+      throw new Error("integrated replay must not review");
+    },
+    persistReviewProjection: () => {
+      throw new Error("integrated replay must not persist");
+    },
+    recoverIntegratedAuthority: () => {
+      claims = [recoveredClaim];
+      const result = {
+        authority: integratedReplayAuthority(),
+        verification: { receiptDigest: verificationReceiptDigest },
+        convergenceEvidenceDigest: CONVERGENCE_EVIDENCE_DIGEST,
+      };
+      verificationReceiptDigest = "2".repeat(64);
+      return result;
+    },
+  });
+
+  const firstCompletion = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+  const postLossReplay = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+
+  assert.equal(firstCompletion.resultDigest, postLossReplay.resultDigest);
+  assert.deepEqual(firstCompletion.receipts, postLossReplay.receipts);
+  assert.equal(
+    firstCompletion.receipts[1].payload.currentOperationReceiptDigest,
+    RECOVERY_RECEIPT_DIGEST,
+  );
+  assert.equal("queuedSuccessorClaimId" in firstCompletion.receipts[1].payload, false);
+  assert.equal("queuedRetirementReceiptDigest" in firstCompletion.receipts[1].payload, false);
+  assert.equal("verificationReceiptDigest" in firstCompletion.receipts[1].payload, false);
+});
+
+test("integrated-preserved replay derivative drift blocks before every mutation route", async () => {
+  const driftCases = [
+    { state: "active" },
+    { actorId: "github-user:2" },
+    { laneRevision: "9".repeat(40) },
+    { leaseEpoch: 3 },
+    { reviewRequestId: "github-pull-request:PR_other" },
+    { integration: integratedReplayEvidence() },
+  ];
+  for (const drift of driftCases) {
+    let mutated = false;
+    const adapter = createCloudAuthorityHandoffControllerAdapter({
+      readPreservedReviewLane: () => preservedLane(),
+      readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+      readCloudStatus: () => statusResult([
+        integratedReplayClaim(),
+        resumableSuccessorClaim(drift),
+      ]),
+      claimSuccessor: () => {
+        mutated = true;
+        return claimResult();
+      },
+      bindAndReviewReady: () => {
+        mutated = true;
+        return { authority: successorAuthority(), verification: { receiptDigest: REVIEW_RECEIPT_DIGEST } };
+      },
+      persistReviewProjection: () => {
+        mutated = true;
+        return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+      },
+      recoverIntegratedAuthority: () => {
+        mutated = true;
+        return {
+          authority: integratedReplayAuthority(),
+          verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+        };
+      },
+    });
+
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(
+      result.blockingFindings.some(item => item.type === "integrated-replay-drift"),
+      true,
+    );
+    assert.equal(mutated, false);
+  }
+});
+
+test("integrated-preserved replay evidence drift blocks before every mutation route", async () => {
+  const driftCases = [
+    { laneRevision: "9".repeat(40) },
+    { leaseEpoch: 2 },
+    { reviewRequestId: "github-pull-request:PR_other" },
+    { integrationReceiptDigest: null },
+    {
+      integration: {
+        ...integratedReplayEvidence(),
+        candidateRevision: "8".repeat(40),
+      },
+    },
+    {
+      integration: {
+        ...integratedReplayEvidence(),
+        operatorDecisionDigest: null,
+      },
+    },
+  ];
+  for (const drift of driftCases) {
+    let mutated = false;
+    const adapter = createCloudAuthorityHandoffControllerAdapter({
+      readPreservedReviewLane: () => preservedLane(),
+      readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+      readCloudStatus: () => statusResult([integratedReplayClaim(drift)]),
+      claimSuccessor: () => {
+        mutated = true;
+        return claimResult();
+      },
+      bindAndReviewReady: () => {
+        mutated = true;
+        return { authority: successorAuthority(), verification: { receiptDigest: REVIEW_RECEIPT_DIGEST } };
+      },
+      persistReviewProjection: () => {
+        mutated = true;
+        return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+      },
+      recoverIntegratedAuthority: () => {
+        mutated = true;
+        return {
+          authority: integratedReplayAuthority(),
+          verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+        };
+      },
+    });
+
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(
+      result.blockingFindings.some(item => item.type === "integrated-replay-drift"),
+      true,
+    );
+    assert.equal(mutated, false);
+  }
+});
+
+test("a drifted waiting successor remains a competing claim", async () => {
+  const driftCases = [
+    { laneRevision: "9".repeat(40) },
+    { predecessorClaimId: "8".repeat(64) },
+    { workItemId: pseudonymousIdentifier("work-item", "different-scope") },
+    { leaseEpoch: 3 },
+    { writeSetDigest: "7".repeat(64) },
+  ];
+  for (const drift of driftCases) {
+    let mutated = false;
+    const adapter = createCloudAuthorityHandoffControllerAdapter({
+      readPreservedReviewLane: () => preservedLane(),
+      readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+      readCloudStatus: () => statusResult([resumableSuccessorClaim(drift)]),
+      claimSuccessor: () => {
+        mutated = true;
+        return claimResult();
+      },
+      bindAndReviewReady: () => {
+        mutated = true;
+        return { authority: successorAuthority(), verification: { receiptDigest: REVIEW_RECEIPT_DIGEST } };
+      },
+      persistReviewProjection: () => {
+        mutated = true;
+        return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+      },
+    });
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(result.blockingFindings.some(item => item.type === "competing-live-claim"), true);
+    assert.equal(mutated, false);
+  }
+});
+
+test("ambiguous exact successors block before mutation", async () => {
+  let mutated = false;
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult([
+      resumableSuccessorClaim(),
+      resumableSuccessorClaim({ claimId: "a".repeat(64) }),
+    ]),
+    claimSuccessor: () => {
+      mutated = true;
+      return claimResult();
+    },
+    bindAndReviewReady: () => {
+      mutated = true;
+      return { authority: successorAuthority(), verification: { receiptDigest: REVIEW_RECEIPT_DIGEST } };
+    },
+    persistReviewProjection: () => {
+      mutated = true;
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  });
+
+  const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+
+  assert.equal(result.outcome, "blocked");
+  assert.equal(
+    result.blockingFindings.some(item => item.type === "ambiguous-successor-continuation"),
+    true,
+  );
+  assert.equal(mutated, false);
+});
+
+test("resumable successor replay rejects a different claim identity", async () => {
+  let routed = false;
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult([resumableSuccessorClaim()]),
+    claimSuccessor: () => claimResult({
+      replayed: true,
+      claimOverrides: { claimId: "a".repeat(64), state: "waiting-successor" },
+    }),
+    bindAndReviewReady: () => {
+      routed = true;
+      return { authority: successorAuthority(), verification: { receiptDigest: REVIEW_RECEIPT_DIGEST } };
+    },
+    persistReviewProjection: () => {
+      routed = true;
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  });
+
+  await assert.rejects(
+    continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter }),
+    /did not preserve the exact resumable successor identity/u,
+  );
+  assert.equal(routed, false);
+});
+
+test("a reviewed successor replay routes only the missing local projection", async () => {
+  let observedState = null;
+  let projections = 0;
+  const reviewed = resumableSuccessorClaim({
+    state: "reviewed",
+    transitionCounter: 3,
+    reviewRequestId: "github-pull-request:PR_238",
+  });
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult([reviewed]),
+    claimSuccessor: () => claimResult({
+      replayed: true,
+      claimOverrides: { state: "waiting-successor" },
+    }),
+    bindAndReviewReady: ({ resumableSuccessor }) => {
+      observedState = resumableSuccessor?.state || null;
+      return {
+        authority: successorAuthority(),
+        verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+      };
+    },
+    persistReviewProjection: () => {
+      projections += 1;
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  });
+
+  const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
+
+  assert.equal(result.outcome, "reclaimed-live");
+  assert.equal(observedState, "reviewed");
+  assert.equal(projections, 1);
 });
 
 test("owner mismatch blocks reclaim", async () => {

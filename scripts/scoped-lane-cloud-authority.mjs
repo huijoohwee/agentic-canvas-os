@@ -316,6 +316,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
         resolvedTargetRepository,
         resolvedBranch,
         resolvedCanonicalBaseSha,
+        resolvedHeadSha,
         manifest?.writeSetDigest,
         leaseEpoch,
       ].join(":"),

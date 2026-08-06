@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 962,
-  "headDigest": "82d0a5a83bdf7c7095a080ae27efd43045dc264507d91927cf36b9afdc0e460b",
+  "sequence": 963,
+  "headDigest": "6e73b9ad72a2f47b62e3f64dced56d58a51b888b0aec43f71b1795fed4a9c568",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -48749,6 +48749,47 @@
       },
       "claimDigest": "c3fe8eccdd1dafe83f31dfe16d135e5b135129c0cfedddd3d3ca47cb88464066",
       "digest": "82d0a5a83bdf7c7095a080ae27efd43045dc264507d91927cf36b9afdc0e460b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 963,
+      "parentDigest": "82d0a5a83bdf7c7095a080ae27efd43045dc264507d91927cf36b9afdc0e460b",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "3696f1d081edd27f457d0499c5a1825d95fc4b19279cb2458fb8c2829ef9ec20",
+      "idempotencyKey": "6d2aae780e8d946dbf325afec0637ff6a6210510a603e25b8c26299191727e1c",
+      "requestDigest": "e41005a46b775950cab689d7fdec92668822a0638da247b5b09524130468b65d",
+      "evaluationTime": "2026-08-06T09:04:51.000Z",
+      "claimCore": {
+        "claimId": "3696f1d081edd27f457d0499c5a1825d95fc4b19279cb2458fb8c2829ef9ec20",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:5d91012e61a4a4419036222dbdc7091ab0cd5707cb1765e1e3be613e81a128c3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b87542a773cce503fe41be7d3492b1307c04245de990459c3c5689905f5f9abf",
+        "canonicalBaseRevision": "622f31c6cc4079e8f07b318063bea53a51d29976",
+        "declaredWriteScope": [
+          "path:__tests__/planned-admission-owner-recovery.test.mjs",
+          "path:__tests__/scoped-lane-bootstrap-admission.test.mjs",
+          "path:scripts/scoped-lane-bootstrap-authorization.mjs",
+          "semantic:planned-admission-owner-preservation"
+        ],
+        "writeSetDigest": "ba4941f97bb84ddfebb3d5dc6497329c38d9c4c7b8cb523f655564eb6cf82801",
+        "laneRevision": "a8652d1813c7f630c061a5eebe6c471e6f071ed3",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T09:03:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM77gAW8",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "43c83000a075ff733d0613431693d51b466e69065d5f7934ba868c8b4e5b1e87",
+      "digest": "6e73b9ad72a2f47b62e3f64dced56d58a51b888b0aec43f71b1795fed4a9c568"
     }
   ]
 }

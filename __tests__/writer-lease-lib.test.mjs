@@ -164,6 +164,40 @@ test("park release refuses a lease snapshot changed after PR projection", () => 
   }
 });
 
+test("annotate can refresh an expired active lease only when explicitly allowed", () => {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
+  let instant = new Date("2026-07-22T00:00:00.000Z");
+  const store = createWriterLeaseStore({ gitCommonDir, now: () => instant });
+  const branch = "agent/mac-a/runtime-leases";
+  try {
+    store.claim({
+      sessionId: "chat-a",
+      device: "mac-a",
+      scope: "runtime-leases",
+      branch,
+      worktreePath: "/worktrees/runtime-leases",
+      baseSha: "a".repeat(40),
+      ttlMs: 60_000,
+    });
+    instant = new Date("2026-07-22T00:02:00.000Z");
+    assert.throws(() => store.annotate({
+      sessionId: "chat-a",
+      branch,
+      values: { fenceSha: "b".repeat(40) },
+    }), /renew or hand off before mutation/);
+    const annotated = store.annotate({
+      sessionId: "chat-a",
+      branch,
+      allowExpired: true,
+      values: { fenceSha: "b".repeat(40) },
+    });
+    assert.equal(annotated.fenceSha, "b".repeat(40));
+    assert.equal(annotated.expiresAt, "2026-07-22T00:01:00.000Z");
+  } finally {
+    rmSync(gitCommonDir, { recursive: true, force: true });
+  }
+});
+
 test("review-ready projection refresh can rebind the same preserved lease", () => {
   const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-writer-lease-"));
   const store = createWriterLeaseStore({ gitCommonDir });

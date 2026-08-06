@@ -377,6 +377,31 @@ test("explicit preserve lanes extend auto-discovered preserved lanes", () => {
   );
 });
 
+test("candidate-bound bootstrap preserves a dirty planned owner after its cloud claim retires", () => {
+  const input = fixture();
+  const retiredLane = input.lanes.find(item => item.path === RETIRED);
+  retiredLane.lease.admission.status = "planned";
+  retiredLane.stateDigest = digestValue({
+    lanePath: retiredLane.path,
+    head: retiredLane.head,
+    branch: retiredLane.branch,
+    dirty: retiredLane.dirty,
+    lease: retiredLane.lease,
+  });
+  input.authorization.preservedLanes = input.authorization.preservedLanes.map(item => (
+    item.path === RETIRED
+      ? { ...item, stateDigest: retiredLane.stateDigest }
+      : item
+  ));
+
+  const report = evaluate(input);
+  assert.equal(report.authoringAdmission.status, "planned");
+  assert.equal(
+    report.lanes.find(item => item.path === RETIRED).classification,
+    "disjoint-attributed",
+  );
+});
+
 test("dirty admitted owners still block while their cloud claim remains current", () => {
   const input = fixture();
   const retiredLane = input.lanes.find(item => item.path === RETIRED);

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   captureExpiredCommittedHeartbeatSnapshot,
+  GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
   recoverExpiredCommittedHeartbeat,
   requireChangedPathsWithinScope,
 } from "../scripts/expired-committed-heartbeat-recovery-lib.mjs";
@@ -22,6 +23,7 @@ const fenceSha = "b".repeat(40);
 const headSha = "c".repeat(40);
 const treeSha = "d".repeat(40);
 const pushedRemoteHeadSha = "e".repeat(40);
+const sourceRemoteTreeSha = "7".repeat(40);
 const protectedMainSha = "1".repeat(40);
 const protectedMainTreeSha = "2".repeat(40);
 
@@ -81,8 +83,15 @@ test("captures mixed authored and protected-main-equivalent descendant paths", (
     digestValue(snapshot.protectedMainEquivalence));
 });
 
-test("captures an exact pushed remote/PR prefix while proving the full fence-to-HEAD range", () => {
-  const lease = expiredCloudLease();
+test("captures an XR-shaped pushed prefix while proving the full fence-to-HEAD range", () => {
+  const lease = leaseWithDeclaredWriteSet(expiredCloudLease(), [
+    "path:docs/workspace-seeds",
+    "semantic:expired-heartbeat",
+  ]);
+  const authoredPath =
+    "docs/workspace-seeds/knowgrph-physics-playground-demo.md";
+  const protectedPath =
+    "docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md";
   const protectedBlobSha = "3".repeat(40);
   const protectedEntry = { mode: "100644", blobSha: protectedBlobSha };
   const snapshot = captureExpiredCommittedHeartbeatSnapshot({
@@ -90,9 +99,14 @@ test("captures an exact pushed remote/PR prefix while proving the full fence-to-
     branch,
     gitText: recoveryGitText({
       sourceRemoteHeadSha: pushedRemoteHeadSha,
-      paths: ["scripts/recovery/check.mjs", "docs/protected.md"],
-      headEntries: { "docs/protected.md": protectedEntry },
-      protectedEntries: { "docs/protected.md": protectedEntry },
+      sourceRemotePaths: [
+        authoredPath,
+        protectedPath,
+      ],
+      paths: [authoredPath, protectedPath],
+      sourceRemoteEntries: { [protectedPath]: protectedEntry },
+      headEntries: { [protectedPath]: protectedEntry },
+      protectedEntries: { [protectedPath]: protectedEntry },
     }),
     gitOptional: () =>
       `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
@@ -111,15 +125,66 @@ test("captures an exact pushed remote/PR prefix while proving the full fence-to-
     pushedRemoteHeadSha,
   );
   assert.deepEqual(snapshot.changedPaths, [
-    "docs/protected.md",
-    "scripts/recovery/check.mjs",
+    protectedPath,
+    authoredPath,
   ]);
   assert.deepEqual(snapshot.declaredChangedPaths, [
-    "scripts/recovery/check.mjs",
+    authoredPath,
   ]);
   assert.deepEqual(snapshot.protectedEquivalentPaths, [
-    "docs/protected.md",
+    protectedPath,
   ]);
+  assert.equal(snapshot.sourceRemotePrefix.treeSha, sourceRemoteTreeSha);
+  assert.deepEqual(snapshot.sourceRemotePrefix.changedPaths, [
+    protectedPath,
+    authoredPath,
+  ]);
+  assert.deepEqual(snapshot.sourceRemotePrefix.declaredChangedPaths, [
+    authoredPath,
+  ]);
+  assert.deepEqual(snapshot.sourceRemotePrefix.protectedEquivalentPaths, [
+    protectedPath,
+  ]);
+  assert.equal(
+    snapshot.recoveryEvidence.sourceRemoteProtectedMainEquivalenceDigest,
+    digestValue(snapshot.sourceRemotePrefix.protectedMainEquivalence),
+  );
+});
+
+test("published prefix rejects an unauthorized path hidden by a local revert", () => {
+  const lease = expiredCloudLease();
+  const remoteOnlyPath = "docs/hidden-remote-change.md";
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      sourceRemotePaths: [
+        "scripts/recovery/check.mjs",
+        remoteOnlyPath,
+      ],
+      sourceRemoteEntries: {
+        [remoteOnlyPath]: {
+          mode: "100644",
+          blobSha: "8".repeat(40),
+        },
+      },
+      protectedEntries: {
+        [remoteOnlyPath]: {
+          mode: "100644",
+          blobSha: "9".repeat(40),
+        },
+      },
+      paths: ["scripts/recovery/check.mjs"],
+    }),
+    gitOptional: () => `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  }), /differs from fetched protected main/);
 });
 
 test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", () => {
@@ -337,6 +402,47 @@ test("expired-source replay requires the next exact cloud transition", () => {
   assert.equal(harness.markerWrites(), 0);
 });
 
+test("oversized recovered marker fails before local CAS or marker publication", () => {
+  const source = liveManifestLease();
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest,
+    sourceBodyPrefix: `${"x".repeat(GITHUB_PULL_REQUEST_BODY_MAX_BYTES)}\n`,
+  });
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /exceeds the 65536-byte GitHub limit before local CAS/,
+  );
+  assert.equal(harness.cloudCalls(), 1);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+test("pull-request drift during size preflight fails before local CAS or marker", () => {
+  const source = liveManifestLease();
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest,
+  });
+  let reads = 0;
+  harness.input.ghText = () => {
+    reads += 1;
+    const body = reads < 4
+      ? harness.remoteBody()
+      : `drifted during size preflight\n${harness.remoteBody()}`;
+    return pullRequestBodyJson(body);
+  };
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /state drifted after recovered marker size preflight and before local CAS/,
+  );
+  assert.equal(harness.cloudCalls(), 1);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
 test("non-equivalent out-of-scope bytes fail before cloud, local CAS, or marker", () => {
   const source = liveManifestLease();
   const harness = recoveryHarness({
@@ -367,7 +473,7 @@ test("protected-main ref drift after cloud renewal fails before local CAS or mar
     const key = args.join(" ");
     if (key === "rev-parse refs/remotes/origin/main") {
       protectedRefReads += 1;
-      return protectedRefReads <= 2 ? protectedMainSha : nextProtectedMainSha;
+      return protectedRefReads <= 4 ? protectedMainSha : nextProtectedMainSha;
     }
     if (key === `merge-base --is-ancestor ${baseSha} ${nextProtectedMainSha}`) return "";
     if (key === `rev-parse ${nextProtectedMainSha}^{tree}`) return nextProtectedMainTreeSha;
@@ -376,7 +482,36 @@ test("protected-main ref drift after cloud renewal fails before local CAS or mar
   const harness = recoveryHarness({ source, recoveryGit,
     renewedManifestDigest: source.cloudAuthority.manifestDigest });
   assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
-    /state drifted after cloud renewal/);
+    /state drifted after cloud renewal|protected-main subject drifted/);
+  assert.equal(harness.cloudCalls(), 1);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+test("published-prefix tree TOCTOU fails after cloud and before local CAS", () => {
+  const source = liveManifestLease();
+  const stableGit = recoveryGitText();
+  const driftedRemoteTreeSha = "8".repeat(40);
+  let remoteTreeReads = 0;
+  const recoveryGit = args => {
+    if (args.join(" ") === `rev-parse ${fenceSha}^{tree}`) {
+      remoteTreeReads += 1;
+      return remoteTreeReads <= 3
+        ? sourceRemoteTreeSha
+        : driftedRemoteTreeSha;
+    }
+    return stableGit(args);
+  };
+  const harness = recoveryHarness({
+    source,
+    recoveryGit,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest,
+  });
+
+  assert.throws(
+    () => recoverExpiredCommittedHeartbeat(harness.input),
+    /state drifted after cloud renewal/,
+  );
   assert.equal(harness.cloudCalls(), 1);
   assert.equal(harness.localWrites(), 0);
   assert.equal(harness.markerWrites(), 0);
@@ -427,7 +562,7 @@ test("remote, pull-request, and local HEAD TOCTOU fail after cloud and before lo
       const key = args.join(" ");
       if (key === "rev-parse HEAD") {
         headReads += 1;
-        return headReads <= 3 ? headSha : driftedHeadSha;
+        return headReads <= 5 ? headSha : driftedHeadSha;
       }
       if (key ===
         `merge-base --is-ancestor ${fenceSha} ${driftedHeadSha}`) return "";
@@ -447,7 +582,7 @@ test("remote, pull-request, and local HEAD TOCTOU fail after cloud and before lo
     const harness = recoveryHarness({ source, recoveryGit,
       renewedManifestDigest: source.cloudAuthority.manifestDigest });
     assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
-      /state drifted after cloud renewal/);
+      /state drifted after cloud renewal|descendant HEAD drifted/);
     assert.equal(harness.cloudCalls(), 1);
     assert.equal(harness.localWrites(), 0);
     assert.equal(harness.markerWrites(), 0);
@@ -466,12 +601,31 @@ function liveManifestLease({ cloudExpiresAt = null } = {}) {
   };
 }
 
+function leaseWithDeclaredWriteSet(lease, declaredWriteSet) {
+  const normalized = [...declaredWriteSet].sort();
+  const writeSetDigest = digestValue(normalized);
+  return {
+    ...lease,
+    admission: {
+      ...lease.admission,
+      declaredWriteSet: normalized,
+      writeSetDigest,
+    },
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      cloudDeclaredWriteScope: normalized,
+      writeSetDigest,
+    },
+  };
+}
+
 function recoveryHarness({
   source,
   renewedManifestDigest,
   transitionIncrement = 1,
   useProductionAuthority = false,
   recoveryGit = recoveryGitText(),
+  sourceBodyPrefix = "",
 }) {
   const renewedCloudAuthority = {
     ...source.cloudAuthority,
@@ -483,7 +637,7 @@ function recoveryHarness({
     expiresAt: "2026-08-04T13:30:00.000Z",
   };
   let saved = source;
-  let remoteBody = renderWriterLeasePullRequestBody(source);
+  let remoteBody = `${sourceBodyPrefix}${renderWriterLeasePullRequestBody(source)}`;
   let cloudCalls = 0;
   let localWrites = 0;
   let markerWrites = 0;
@@ -665,6 +819,9 @@ function recoveryGitText({
   baseAncestryError = false,
   fenceParentSha = baseSha,
   sourceRemoteHeadSha = fenceSha,
+  remoteTreeSha = sourceRemoteTreeSha,
+  sourceRemotePaths = [],
+  sourceRemoteEntries = {},
   remoteFenceAncestryError = false,
   remoteHeadAncestryError = false,
   headEntries = {},
@@ -682,6 +839,9 @@ function recoveryGitText({
     if (key === "status --porcelain=v1 -z --untracked-files=all") return dirt;
     if (key === "rev-parse HEAD") return headSha;
     if (key === `rev-parse ${headSha}^{tree}`) return treeSha;
+    if (key === `rev-parse ${sourceRemoteHeadSha}^{tree}`) {
+      return remoteTreeSha;
+    }
     if (key === `rev-list --parents -n 1 ${fenceSha}`) {
       return `${fenceSha} ${fenceParentSha}`;
     }
@@ -722,6 +882,8 @@ function recoveryGitText({
       const relativePath = args[4];
       const entry = treeish === headSha
         ? headEntries[relativePath]
+        : treeish === sourceRemoteHeadSha
+          ? sourceRemoteEntries[relativePath]
         : treeish === protectedMainSha
           ? protectedEntries[relativePath]
           : null;
@@ -732,8 +894,20 @@ function recoveryGitText({
     if (key === `diff --name-only -z --no-renames ${fenceSha} ${headSha} --`) {
       return `${paths.join("\0")}\0`;
     }
+    if (key ===
+      `diff --name-only -z --no-renames ${fenceSha} ${sourceRemoteHeadSha} --`
+    ) {
+      return sourceRemotePaths.length
+        ? `${sourceRemotePaths.join("\0")}\0`
+        : "";
+    }
     if (key === `diff --binary --no-renames ${fenceSha} ${headSha} --`) {
       return "binary committed range";
+    }
+    if (key ===
+      `diff --binary --no-renames ${fenceSha} ${sourceRemoteHeadSha} --`
+    ) {
+      return sourceRemotePaths.length ? "binary published prefix" : "";
     }
     throw new Error(`unexpected git command: ${key}`);
   };

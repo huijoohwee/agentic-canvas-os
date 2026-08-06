@@ -64,7 +64,17 @@ const PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS =
   ].sort());
 const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   ...PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
+  "sourceRemoteChangedPathCount",
+  "sourceRemoteChangedPathsDigest",
+  "sourceRemoteDeclaredChangedPathCount",
+  "sourceRemoteDeclaredChangedPathsDigest",
   "sourceRemoteHeadSha",
+  "sourceRemoteProtectedEquivalentPathCount",
+  "sourceRemoteProtectedEquivalentPathsDigest",
+  "sourceRemoteProtectedMainEquivalence",
+  "sourceRemoteProtectedMainEquivalenceDigest",
+  "sourceRemoteRangeDiffDigest",
+  "sourceRemoteTreeSha",
 ].sort());
 
 export function parseDeviceBranch(branch) {
@@ -766,6 +776,7 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         ? EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
         : null;
   let protectedMainEquivalence = null;
+  let sourceRemoteProtectedMainEquivalence = null;
   if (bindsProtectedMain) {
     try {
       protectedMainEquivalence =
@@ -774,6 +785,16 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         );
     } catch {
       protectedMainEquivalence = null;
+    }
+  }
+  if (current) {
+    try {
+      sourceRemoteProtectedMainEquivalence =
+        normalizeProtectedMainPathEquivalenceEvidence(
+          value.sourceRemoteProtectedMainEquivalence,
+        );
+    } catch {
+      sourceRemoteProtectedMainEquivalence = null;
     }
   }
   const invalid = (
@@ -792,6 +813,71 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     !SHA_PATTERN.test(String(value.sourceFenceSha || "")) ||
     (current && !SHA_PATTERN.test(
       String(value.sourceRemoteHeadSha || ""),
+    )) ||
+    (current && (
+      !SHA_PATTERN.test(String(value.sourceRemoteTreeSha || "")) ||
+      !Number.isSafeInteger(value.sourceRemoteChangedPathCount) ||
+      value.sourceRemoteChangedPathCount < 0 ||
+      value.sourceRemoteChangedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteChangedPathsDigest || ""),
+      ) ||
+      !Number.isSafeInteger(value.sourceRemoteDeclaredChangedPathCount) ||
+      value.sourceRemoteDeclaredChangedPathCount < 0 ||
+      value.sourceRemoteDeclaredChangedPathCount >
+        RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteDeclaredChangedPathsDigest || ""),
+      ) ||
+      !Number.isSafeInteger(
+        value.sourceRemoteProtectedEquivalentPathCount,
+      ) ||
+      value.sourceRemoteProtectedEquivalentPathCount < 0 ||
+      value.sourceRemoteProtectedEquivalentPathCount >
+        RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      value.sourceRemoteDeclaredChangedPathCount +
+        value.sourceRemoteProtectedEquivalentPathCount !==
+        value.sourceRemoteChangedPathCount ||
+      !DIGEST_PATTERN.test(String(
+        value.sourceRemoteProtectedEquivalentPathsDigest || "",
+      )) ||
+      !DIGEST_PATTERN.test(String(
+        value.sourceRemoteProtectedMainEquivalenceDigest || "",
+      )) ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteRangeDiffDigest || ""),
+      ) ||
+      !sourceRemoteProtectedMainEquivalence ||
+      sourceRemoteProtectedMainEquivalence.baseSha !==
+        value.sourceBaseSha ||
+      sourceRemoteProtectedMainEquivalence.headSha !==
+        value.sourceRemoteHeadSha ||
+      sourceRemoteProtectedMainEquivalence.headTreeSha !==
+        value.sourceRemoteTreeSha ||
+      sourceRemoteProtectedMainEquivalence.exemptPathCount !==
+        value.sourceRemoteProtectedEquivalentPathCount ||
+      sourceRemoteProtectedMainEquivalence.exemptPathsDigest !==
+        value.sourceRemoteProtectedEquivalentPathsDigest ||
+      sourceRemoteProtectedMainEquivalence.protectedMainRef !==
+        protectedMainEquivalence?.protectedMainRef ||
+      sourceRemoteProtectedMainEquivalence.protectedMainSha !==
+        protectedMainEquivalence?.protectedMainSha ||
+      sourceRemoteProtectedMainEquivalence.protectedMainTreeSha !==
+        protectedMainEquivalence?.protectedMainTreeSha ||
+      (value.sourceRemoteProtectedEquivalentPathCount === 0 && (
+        value.sourceRemoteProtectedEquivalentPathsDigest !==
+          EMPTY_PATHS_DIGEST ||
+        value.sourceRemoteChangedPathsDigest !==
+          value.sourceRemoteDeclaredChangedPathsDigest
+      )) ||
+      (value.sourceRemoteDeclaredChangedPathCount === 0 && (
+        value.sourceRemoteDeclaredChangedPathsDigest !==
+          EMPTY_PATHS_DIGEST ||
+        value.sourceRemoteChangedPathsDigest !==
+          value.sourceRemoteProtectedEquivalentPathsDigest
+      )) ||
+      digestValue(sourceRemoteProtectedMainEquivalence) !==
+        value.sourceRemoteProtectedMainEquivalenceDigest
     )) ||
     !SHA_PATTERN.test(String(value.headSha || "")) ||
     value.headSha === value.sourceFenceSha ||
@@ -865,7 +951,25 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     sourceBranch: value.sourceBranch,
     sourceBaseSha: value.sourceBaseSha,
     sourceFenceSha: value.sourceFenceSha,
-    ...(current ? { sourceRemoteHeadSha: value.sourceRemoteHeadSha } : {}),
+    ...(current ? {
+      sourceRemoteHeadSha: value.sourceRemoteHeadSha,
+      sourceRemoteTreeSha: value.sourceRemoteTreeSha,
+      sourceRemoteChangedPathCount: value.sourceRemoteChangedPathCount,
+      sourceRemoteChangedPathsDigest:
+        value.sourceRemoteChangedPathsDigest,
+      sourceRemoteDeclaredChangedPathCount:
+        value.sourceRemoteDeclaredChangedPathCount,
+      sourceRemoteDeclaredChangedPathsDigest:
+        value.sourceRemoteDeclaredChangedPathsDigest,
+      sourceRemoteProtectedEquivalentPathCount:
+        value.sourceRemoteProtectedEquivalentPathCount,
+      sourceRemoteProtectedEquivalentPathsDigest:
+        value.sourceRemoteProtectedEquivalentPathsDigest,
+      sourceRemoteProtectedMainEquivalence,
+      sourceRemoteProtectedMainEquivalenceDigest:
+        value.sourceRemoteProtectedMainEquivalenceDigest,
+      sourceRemoteRangeDiffDigest: value.sourceRemoteRangeDiffDigest,
+    } : {}),
     sourcePullRequestUrl: value.sourcePullRequestUrl,
     sourceClaimId: value.sourceClaimId,
     sourceClaimDigest: value.sourceClaimDigest,

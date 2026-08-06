@@ -22,6 +22,7 @@ export function captureCommittedDescendantEvidence({
   lease,
   gitText,
   bindProtectedMain = true,
+  bindPublishedPrefix = true,
   sourceRemoteHeadSha = lease.fenceSha,
 }) {
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
@@ -53,6 +54,15 @@ export function captureCommittedDescendantEvidence({
     headSha,
     gitText,
   });
+  const sourceRemotePrefix = bindPublishedPrefix
+    ? captureSourceRemotePrefixEvidence({
+      lease,
+      sourceRemoteHeadSha,
+      worktreeHeadSha: headSha,
+      gitText,
+      bindProtectedMain,
+    })
+    : null;
   const treeSha = gitText(["rev-parse", `${headSha}^{tree}`]).trim();
   if (!SHA_PATTERN.test(treeSha)) {
     throw new Error("Expired committed recovery could not resolve the descendant tree.");
@@ -87,6 +97,29 @@ export function captureCommittedDescendantEvidence({
       gitText,
     })
     : null;
+  if (
+    protectedMainEquivalence &&
+    protectedMainEquivalence.headTreeSha !== treeSha
+  ) {
+    throw new Error(
+      "Expired committed recovery descendant tree drifted during evidence capture.",
+    );
+  }
+  if (
+    sourceRemotePrefix?.protectedMainEquivalence &&
+    (
+      sourceRemotePrefix.protectedMainEquivalence.protectedMainRef !==
+        protectedMainEquivalence?.protectedMainRef ||
+      sourceRemotePrefix.protectedMainEquivalence.protectedMainSha !==
+        protectedMainEquivalence?.protectedMainSha ||
+      sourceRemotePrefix.protectedMainEquivalence.protectedMainTreeSha !==
+        protectedMainEquivalence?.protectedMainTreeSha
+    )
+  ) {
+    throw new Error(
+      "Expired committed recovery protected-main subject drifted between published-prefix and full-range capture.",
+    );
+  }
   const rangeDiffDigest = sha256(gitText([
     "diff",
     "--binary",
@@ -97,6 +130,7 @@ export function captureCommittedDescendantEvidence({
   ]));
   return Object.freeze({
     sourceRemoteHeadSha,
+    ...(sourceRemotePrefix ? { sourceRemotePrefix } : {}),
     headSha,
     treeSha,
     changedPaths: Object.freeze(changedPaths),
@@ -165,6 +199,7 @@ export function captureExpiredCommittedHeartbeatSnapshot({
     sourceRemoteHeadSha: remoteHeadSha,
   });
   const {
+    sourceRemotePrefix,
     headSha,
     treeSha,
     changedPaths,
@@ -182,6 +217,7 @@ export function captureExpiredCommittedHeartbeatSnapshot({
     pullRequestBodyDigest: projection.bodyDigest,
     remoteHeadSha,
     pullRequestHeadSha: projection.pullRequest.headRefOid,
+    sourceRemotePrefix,
     headSha,
     treeSha,
     changedPaths,
@@ -204,6 +240,27 @@ export function captureExpiredCommittedHeartbeatSnapshot({
       sourceBaseSha: lease.baseSha,
       sourceFenceSha: lease.fenceSha,
       sourceRemoteHeadSha: remoteHeadSha,
+      sourceRemoteTreeSha: sourceRemotePrefix.treeSha,
+      sourceRemoteChangedPathCount:
+        sourceRemotePrefix.changedPaths.length,
+      sourceRemoteChangedPathsDigest: digestValue(
+        sourceRemotePrefix.changedPaths,
+      ),
+      sourceRemoteDeclaredChangedPathCount:
+        sourceRemotePrefix.declaredChangedPaths.length,
+      sourceRemoteDeclaredChangedPathsDigest: digestValue(
+        sourceRemotePrefix.declaredChangedPaths,
+      ),
+      sourceRemoteProtectedEquivalentPathCount:
+        sourceRemotePrefix.protectedEquivalentPaths.length,
+      sourceRemoteProtectedEquivalentPathsDigest: digestValue(
+        sourceRemotePrefix.protectedEquivalentPaths,
+      ),
+      sourceRemoteProtectedMainEquivalence:
+        sourceRemotePrefix.protectedMainEquivalence,
+      sourceRemoteProtectedMainEquivalenceDigest:
+        sourceRemotePrefix.protectedMainEquivalenceDigest,
+      sourceRemoteRangeDiffDigest: sourceRemotePrefix.rangeDiffDigest,
       sourcePullRequestUrl: lease.pullRequestUrl,
       sourceClaimId: lease.cloudAuthority.claimId,
       sourceClaimDigest: lease.cloudAuthority.claimDigest,
@@ -227,6 +284,94 @@ export function captureExpiredCommittedHeartbeatSnapshot({
       pullRequestBodyDigest: projection.bodyDigest,
       rangeDiffDigest,
     }),
+  });
+}
+
+export function captureSourceRemotePrefixEvidence({
+  lease,
+  sourceRemoteHeadSha,
+  worktreeHeadSha,
+  gitText,
+  bindProtectedMain = true,
+}) {
+  if (!SHA_PATTERN.test(String(sourceRemoteHeadSha || ""))) {
+    throw new Error(
+      "Expired committed recovery source remote head is not an exact Git SHA.",
+    );
+  }
+  if (!SHA_PATTERN.test(String(worktreeHeadSha || ""))) {
+    throw new Error(
+      "Expired committed recovery worktree head is not an exact Git SHA.",
+    );
+  }
+  const treeSha = gitText([
+    "rev-parse",
+    `${sourceRemoteHeadSha}^{tree}`,
+  ]).trim();
+  if (!SHA_PATTERN.test(treeSha)) {
+    throw new Error(
+      "Expired committed recovery could not resolve the source remote tree.",
+    );
+  }
+  const changedPaths = uniqueSorted(splitNul(gitText([
+    "diff",
+    "--name-only",
+    "-z",
+    "--no-renames",
+    lease.fenceSha,
+    sourceRemoteHeadSha,
+    "--",
+  ])));
+  requireBoundedChangedPaths(changedPaths);
+  const partition = partitionChangedPathsByScope({
+    changedPaths,
+    declaredWriteSet: lease.admission.declaredWriteSet,
+  });
+  if (!bindProtectedMain && partition.protectedEquivalentPaths.length) {
+    throw new Error(
+      `Expired committed recovery published-prefix path is outside declared write scope: ${partition.protectedEquivalentPaths[0]}`,
+    );
+  }
+  const protectedMainEquivalence = bindProtectedMain
+    ? captureProtectedMainPathEquivalence({
+      baseSha: lease.baseSha,
+      headSha: sourceRemoteHeadSha,
+      exemptPaths: partition.protectedEquivalentPaths,
+      gitText,
+      worktreeHeadSha,
+    })
+    : null;
+  if (
+    protectedMainEquivalence &&
+    protectedMainEquivalence.headTreeSha !== treeSha
+  ) {
+    throw new Error(
+      "Expired committed recovery source remote tree drifted during published-prefix capture.",
+    );
+  }
+  const rangeDiffDigest = sha256(gitText([
+    "diff",
+    "--binary",
+    "--no-renames",
+    lease.fenceSha,
+    sourceRemoteHeadSha,
+    "--",
+  ]));
+  return Object.freeze({
+    headSha: sourceRemoteHeadSha,
+    treeSha,
+    changedPaths: Object.freeze(changedPaths),
+    declaredChangedPaths: Object.freeze(partition.declaredChangedPaths),
+    protectedEquivalentPaths: Object.freeze(
+      partition.protectedEquivalentPaths,
+    ),
+    ...(protectedMainEquivalence ? {
+      protectedMainEquivalence,
+      protectedMainEquivalenceDigest: digestValue(
+        protectedMainEquivalence,
+      ),
+    } : {}),
+    rangeDiffDigest,
   });
 }
 

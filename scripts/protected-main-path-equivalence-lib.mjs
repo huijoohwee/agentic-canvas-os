@@ -42,12 +42,14 @@ export function captureProtectedMainPathEquivalence({
   headSha,
   exemptPaths,
   gitText,
+  worktreeHeadSha = headSha,
 }) {
   requireSha(baseSha, "Protected-main equivalence source base");
   requireSha(headSha, "Protected-main equivalence descendant head");
+  requireSha(worktreeHeadSha, "Protected-main equivalence worktree head");
   const paths = normalizeExemptPaths(exemptPaths);
   const observedHeadSha = gitText(["rev-parse", "HEAD"]).trim();
-  if (observedHeadSha !== headSha) {
+  if (observedHeadSha !== worktreeHeadSha) {
     throw new Error(
       "Protected-main equivalence descendant HEAD drifted during evidence capture.",
     );
@@ -108,7 +110,7 @@ export function captureProtectedMainPathEquivalence({
     `${protectedMainSha}^{tree}`,
   ]).trim();
   if (
-    finalHeadSha !== headSha ||
+    finalHeadSha !== worktreeHeadSha ||
     finalHeadTreeSha !== headTreeSha ||
     finalProtectedMainSha !== protectedMainSha ||
     finalProtectedMainTreeSha !== protectedMainTreeSha
@@ -137,6 +139,7 @@ export function assertProtectedMainPathEquivalence({
   headSha,
   exemptPaths,
   gitText,
+  worktreeHeadSha = headSha,
 }) {
   const expected = normalizeProtectedMainPathEquivalenceEvidence(evidence);
   const observed = captureProtectedMainPathEquivalence({
@@ -144,6 +147,7 @@ export function assertProtectedMainPathEquivalence({
     headSha,
     exemptPaths,
     gitText,
+    worktreeHeadSha,
   });
   if (digestValue(observed) !== digestValue(expected)) {
     throw new Error(

@@ -22,6 +22,7 @@ const fenceSha = "b".repeat(40);
 const headSha = "c".repeat(40);
 const treeSha = "d".repeat(40);
 const pushedRemoteHeadSha = "6".repeat(40);
+const sourceRemoteTreeSha = "7".repeat(40);
 const protectedMainSha = "1".repeat(40);
 const protectedMainTreeSha = "2".repeat(40);
 const LEGACY_V1_PULL_REQUEST_BODY = String.raw`---
@@ -117,6 +118,12 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
   assert.equal("changedPaths" in result.recovery, false);
   assert.equal("worktreePathDigest" in result.recovery, false);
   assert.equal("sourceLeaseDigest" in result.recovery, false);
+  assert.equal(result.recovery.sourceRemoteTreeSha, sourceRemoteTreeSha);
+  assert.equal(result.recovery.sourceRemoteChangedPathCount, 0);
+  assert.equal(
+    result.recovery.sourceRemoteChangedPathsDigest,
+    digestValue([]),
+  );
   const recoveryPaths = ["docs/runtime.md", "scripts/recovery/check.mjs"];
   const protectedEntries = recoveryPaths.map((entryPath, index) => ({
     path: entryPath, headMode: "100644", protectedMode: "100644",
@@ -136,6 +143,17 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
     protectedMainEquivalence,
     protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
   };
+  const mismatchedPrefixEquivalence = {
+    ...result.recovery.sourceRemoteProtectedMainEquivalence,
+    protectedMainSha: "9".repeat(40),
+    protectedMainTreeSha: "a".repeat(40),
+  };
+  const mismatchedProtectedMainSubjects = {
+    ...result.recovery,
+    sourceRemoteProtectedMainEquivalence: mismatchedPrefixEquivalence,
+    sourceRemoteProtectedMainEquivalenceDigest:
+      digestValue(mismatchedPrefixEquivalence),
+  };
   const marker = parseWriterLeasePullRequestBody(remoteBody);
   const replaceRecovery = recovery => remoteBody.replace(
     /<!--\s*agentic-writer-lease\/v2\s+\{.*\}\s*-->/s,
@@ -148,6 +166,9 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
   ).expiredCommittedHeartbeatRecovery, allProtectedRecovery);
   for (const malformed of [
     { ...result.recovery, changedPathsDigest: "0".repeat(64) },
+    { ...result.recovery, sourceRemoteTreeSha: "0".repeat(40) },
+    { ...result.recovery, sourceRemoteChangedPathCount: 1 },
+    mismatchedProtectedMainSubjects,
     { ...result.recovery, changedPathCount: 129, declaredChangedPathCount: 129 },
     { ...allProtectedRecovery, declaredChangedPathsDigest: "0".repeat(64) },
     { ...allProtectedRecovery, changedPathsDigest: "0".repeat(64) },
@@ -177,6 +198,7 @@ test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
     repo,
     gitText: recoveryGitText({
       sourceRemoteHeadSha: pushedRemoteHeadSha,
+      sourceRemotePaths: ["scripts/recovery/check.mjs"],
     }),
     gitOptional: () =>
       `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
@@ -227,6 +249,12 @@ test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
     recovered.recovery.sourceRemoteHeadSha,
     pushedRemoteHeadSha,
   );
+  assert.equal(recovered.recovery.sourceRemoteTreeSha, sourceRemoteTreeSha);
+  assert.equal(recovered.recovery.sourceRemoteChangedPathCount, 1);
+  assert.equal(
+    recovered.recovery.sourceRemoteDeclaredChangedPathCount,
+    1,
+  );
   assert.equal(recovered.lease.fenceSha, fenceSha);
   assert.equal(recovered.lease.cloudAuthority.laneRevision, fenceSha);
   assert.equal(markerWrites, 1);
@@ -241,6 +269,25 @@ test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
   assert.equal(replay.replayed, true);
   assert.equal(fetches, 2);
   assert.equal(markerWrites, 1);
+
+  const exactRecoveredLease = saved;
+  const exactRecoveredBody = remoteBody;
+  saved = {
+    ...saved,
+    expiredCommittedHeartbeatRecovery: {
+      ...saved.expiredCommittedHeartbeatRecovery,
+      sourceRemoteRangeDiffDigest: "0".repeat(64),
+    },
+  };
+  remoteBody = renderWriterLeasePullRequestBody(saved);
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...common,
+    heartbeatCloudAuthority: () => {
+      throw new Error("v3 replay must not renew cloud authority again");
+    },
+  }), /replay evidence changed from its exact recovered subject/);
+  saved = exactRecoveredLease;
+  remoteBody = exactRecoveredBody;
 
   const driftedRemoteHeadSha = "0".repeat(40);
   assert.throws(() => recoverExpiredCommittedHeartbeat({
@@ -529,6 +576,22 @@ test("v2 replay stays exact-fence and cannot adopt a pushed prefix", () => {
   recoverExpiredCommittedHeartbeat(base);
   const {
     sourceRemoteHeadSha: _sourceRemoteHeadSha,
+    sourceRemoteTreeSha: _sourceRemoteTreeSha,
+    sourceRemoteChangedPathCount: _sourceRemoteChangedPathCount,
+    sourceRemoteChangedPathsDigest: _sourceRemoteChangedPathsDigest,
+    sourceRemoteDeclaredChangedPathCount:
+      _sourceRemoteDeclaredChangedPathCount,
+    sourceRemoteDeclaredChangedPathsDigest:
+      _sourceRemoteDeclaredChangedPathsDigest,
+    sourceRemoteProtectedEquivalentPathCount:
+      _sourceRemoteProtectedEquivalentPathCount,
+    sourceRemoteProtectedEquivalentPathsDigest:
+      _sourceRemoteProtectedEquivalentPathsDigest,
+    sourceRemoteProtectedMainEquivalence:
+      _sourceRemoteProtectedMainEquivalence,
+    sourceRemoteProtectedMainEquivalenceDigest:
+      _sourceRemoteProtectedMainEquivalenceDigest,
+    sourceRemoteRangeDiffDigest: _sourceRemoteRangeDiffDigest,
     ...v2Evidence
   } = saved.expiredCommittedHeartbeatRecovery;
   saved = {
@@ -723,6 +786,8 @@ function renewedAuthorityFor(source) {
 function recoveryGitText({
   paths = ["docs/runtime.md", "scripts/recovery/check.mjs"],
   sourceRemoteHeadSha = fenceSha,
+  remoteTreeSha = sourceRemoteTreeSha,
+  sourceRemotePaths = [],
 } = {}) {
   return args => {
     const key = args.join(" ");
@@ -735,6 +800,7 @@ function recoveryGitText({
       "branch --show-current": branch,
       "rev-parse HEAD": headSha,
       [`rev-parse ${headSha}^{tree}`]: treeSha,
+      [`rev-parse ${sourceRemoteHeadSha}^{tree}`]: remoteTreeSha,
       "rev-parse refs/remotes/origin/main": protectedMainSha,
       [`rev-parse ${protectedMainSha}^{tree}`]: protectedMainTreeSha,
       [`rev-list --parents -n 1 ${fenceSha}`]: `${fenceSha} ${baseSha}`,
@@ -744,6 +810,10 @@ function recoveryGitText({
         `${paths.join("\0")}\0`,
       [`diff --binary --no-renames ${fenceSha} ${headSha} --`]:
         "binary committed range",
+      [`diff --name-only -z --no-renames ${fenceSha} ${sourceRemoteHeadSha} --`]:
+        sourceRemotePaths.length ? `${sourceRemotePaths.join("\0")}\0` : "",
+      [`diff --binary --no-renames ${fenceSha} ${sourceRemoteHeadSha} --`]:
+        sourceRemotePaths.length ? "binary published prefix" : "",
     };
     if (sourceRemoteHeadSha !== fenceSha) {
       values[

@@ -13,6 +13,7 @@ import {
 import {
   captureCommittedDescendantEvidence,
   captureExpiredCommittedHeartbeatSnapshot,
+  captureSourceRemotePrefixEvidence,
   readExactPullRequestProjection,
   readPullRequestProjection,
   remoteBranchHead,
@@ -35,6 +36,7 @@ import {
 
 export const EXPIRED_COMMITTED_HEARTBEAT_RESULT_SCHEMA =
   "agentic-expired-committed-heartbeat-result/v1";
+export const GITHUB_PULL_REQUEST_BODY_MAX_BYTES = 65_536;
 
 export {
   captureExpiredCommittedHeartbeatSnapshot,
@@ -143,6 +145,41 @@ export function recoverExpiredCommittedHeartbeat({
     cloudAuthority: renewedAuthority,
     remoteAuthorityVerification: heartbeat.verification,
   });
+  const preflightProjection = readExactPullRequestProjection({
+    lease: before.lease,
+    branch,
+    ghText,
+    expectedHeadSha: before.remoteHeadSha,
+  });
+  if (
+    preflightProjection.bodyDigest !== before.pullRequestBodyDigest ||
+    preflightProjection.markerDigest !== before.sourceMarkerDigest
+  ) {
+    throw new Error(
+      "Ownership pull-request marker drifted before recovered marker size preflight.",
+    );
+  }
+  assertPullRequestBodyWithinGitHubLimit(
+    updateWriterLeasePullRequestBody(
+      preflightProjection.pullRequest.body,
+      projectedLease,
+    ),
+  );
+  const afterPreflight = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText,
+    gitOptional,
+    ghText,
+    leaseStore,
+    sessionId,
+    now,
+  });
+  if (afterPreflight.snapshotDigest !== before.snapshotDigest) {
+    throw new Error(
+      "Expired committed recovery state drifted after recovered marker size preflight and before local CAS.",
+    );
+  }
   const lease = leaseStore.recoverExpiredCommittedHeartbeat({
     sessionId,
     branch,
@@ -192,6 +229,7 @@ export function recoverExpiredCommittedHeartbeat({
     sourceProjection.pullRequest.body,
     lease,
   );
+  assertPullRequestBodyWithinGitHubLimit(renewedBody);
   run("gh", [
     "pr",
     "edit",
@@ -230,6 +268,16 @@ export function recoverExpiredCommittedHeartbeat({
     mutationAuthorityReceipt,
     replayed: false,
   });
+}
+
+export function assertPullRequestBodyWithinGitHubLimit(body) {
+  const byteLength = Buffer.byteLength(String(body || ""), "utf8");
+  if (byteLength > GITHUB_PULL_REQUEST_BODY_MAX_BYTES) {
+    throw new Error(
+      `Expired committed recovery pull-request body requires ${byteLength} bytes and exceeds the ${GITHUB_PULL_REQUEST_BODY_MAX_BYTES}-byte GitHub limit before local CAS.`,
+    );
+  }
+  return byteLength;
 }
 
 export function reconcileHeartbeatManifestProjection({
@@ -339,6 +387,8 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
     bindProtectedMain:
       recovery.schema !==
       LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    bindPublishedPrefix:
+      recovery.schema === EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
     sourceRemoteHeadSha: expectedRemoteHeadSha,
   });
   requireRecoveredEvidenceMatchesCurrent({ lease, recovery, descendant });
@@ -473,8 +523,32 @@ function requireRecoveredEvidenceMatchesCurrent({
     )
   );
   const pushedPrefixDrift = (
-    recovery.schema === EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA &&
-    recovery.sourceRemoteHeadSha !== descendant.sourceRemoteHeadSha
+    recovery.schema === EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA && (
+      recovery.sourceRemoteHeadSha !== descendant.sourceRemoteHeadSha ||
+      recovery.sourceRemoteTreeSha !==
+        descendant.sourceRemotePrefix?.treeSha ||
+      recovery.sourceRemoteChangedPathCount !==
+        descendant.sourceRemotePrefix?.changedPaths.length ||
+      recovery.sourceRemoteChangedPathsDigest !== digestValue(
+        descendant.sourceRemotePrefix?.changedPaths,
+      ) ||
+      recovery.sourceRemoteDeclaredChangedPathCount !==
+        descendant.sourceRemotePrefix?.declaredChangedPaths.length ||
+      recovery.sourceRemoteDeclaredChangedPathsDigest !== digestValue(
+        descendant.sourceRemotePrefix?.declaredChangedPaths,
+      ) ||
+      recovery.sourceRemoteProtectedEquivalentPathCount !==
+        descendant.sourceRemotePrefix?.protectedEquivalentPaths.length ||
+      recovery.sourceRemoteProtectedEquivalentPathsDigest !== digestValue(
+        descendant.sourceRemotePrefix?.protectedEquivalentPaths,
+      ) ||
+      recovery.sourceRemoteProtectedMainEquivalenceDigest !==
+        descendant.sourceRemotePrefix?.protectedMainEquivalenceDigest ||
+      digestValue(recovery.sourceRemoteProtectedMainEquivalence) !==
+        descendant.sourceRemotePrefix?.protectedMainEquivalenceDigest ||
+      recovery.sourceRemoteRangeDiffDigest !==
+        descendant.sourceRemotePrefix?.rangeDiffDigest
+    )
   );
   const unsupportedProtectedSchema = (
     recovery.schema !== LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA &&
@@ -525,6 +599,22 @@ function assertRecoveredLocalState({
         snapshot.protectedMainEquivalence.entries.map(entry => entry.path),
       gitText,
     });
+  }
+  if (snapshot.sourceRemotePrefix) {
+    const observedPrefix = captureSourceRemotePrefixEvidence({
+      lease,
+      sourceRemoteHeadSha: snapshot.remoteHeadSha,
+      worktreeHeadSha: snapshot.headSha,
+      gitText,
+      bindProtectedMain: true,
+    });
+    if (digestValue(observedPrefix) !== digestValue(
+      snapshot.sourceRemotePrefix,
+    )) {
+      throw new Error(
+        "Recovered published remote prefix drifted before PR projection.",
+      );
+    }
   }
 }
 

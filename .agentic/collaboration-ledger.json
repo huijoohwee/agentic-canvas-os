@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 929,
-  "headDigest": "9ee6cf79ae95dcd346c8310d4e37745155a309d810acd569d9a0423ed2d9f263",
+  "sequence": 930,
+  "headDigest": "024e61437ffb096f2ad0577e11420d0dab6a7fea6b25a7cef4fca93344d38903",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -47290,6 +47290,80 @@
       },
       "claimDigest": "9b4fc4e7e42299d86a5c7bc7be7e21d95e8a8a9ee0b9ab3654e9ac80cf3ba043",
       "digest": "9ee6cf79ae95dcd346c8310d4e37745155a309d810acd569d9a0423ed2d9f263"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 930,
+      "parentDigest": "9ee6cf79ae95dcd346c8310d4e37745155a309d810acd569d9a0423ed2d9f263",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "f3922afabe92c0cf8716277073d1798b4b9c9d06a9d3f7258dc63b66cbd1b5a1",
+      "idempotencyKey": "98cb70cce4e347d388b0d2f995996cbe7b4878e50113f3b1d29b792e7434298d",
+      "requestDigest": "288de322a1f706c544041f831f7ee1cbe1de6d0b61e47a6d2c0330f374be7115",
+      "evaluationTime": "2026-08-06T06:53:56.000Z",
+      "claimCore": {
+        "claimId": "f3922afabe92c0cf8716277073d1798b4b9c9d06a9d3f7258dc63b66cbd1b5a1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:6995c2096e652f4e4cbbadb57d798ef93dd3bf5a8a7711d6a34b09e20914e8f0",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:1e3f9dfa742c4bef7256f7c66ac7e7675f569569c6fc794b2758a085434df33c",
+        "canonicalBaseRevision": "7edadd10f497e4e714a86100cac737121dbb4b9d",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/canvasLarkAppHandoffRuntime.test.tsx",
+          "path:canvas/src/__tests__/feishuBaseSourceImport.test.ts",
+          "path:canvas/src/__tests__/knowledgeSourceReadClient.test.ts",
+          "path:canvas/src/__tests__/larkAppCanvasHandoff.test.ts",
+          "path:canvas/src/features/canvas/CanvasQueryBootstrapRuntime.tsx",
+          "path:canvas/src/features/canvas/larkAppCanvasHandoff.ts",
+          "path:canvas/src/features/source-files/feishuBaseSourceImportCommand.ts",
+          "path:canvas/src/features/source-files/knowledge-source",
+          "path:canvas/src/features/source-files/sourceFilesParseRuntime.ts",
+          "path:canvas/src/lib/routing/queryParams.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageRoutePaths.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageSyncContract.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageWorkerEnvContract.ts",
+          "path:canvas/src/tests/registry/postParserCases8.ts",
+          "path:cloudflare/workers/knowgrph-storage/.dev.vars.example",
+          "path:cloudflare/workers/knowgrph-storage/index.ts",
+          "path:cloudflare/workers/knowgrph-storage/knowledge-source",
+          "path:docs/documents/knowgrph-mcp/knowgrph-feishu-base-mcp-prd-tad.companion.md",
+          "path:docs/documents/knowgrph-mcp/knowgrph-feishu-base-mcp-prd-tad.md",
+          "path:docs/documents/knowgrph-mcp/knowgrph-lark-app-mcp-prd-tad.companion.md",
+          "path:docs/documents/knowgrph-mcp/knowgrph-lark-app-mcp-prd-tad.md",
+          "semantic:lark-readonly-knowledge-ingestion"
+        ],
+        "writeSetDigest": "907929b06dba3cd7b3f98c5b1bf2ac426c7e4eec244e31642d4a2fa560c71a7e",
+        "laneRevision": "4cf3ba6b678b9edd70b985fea8f744953207b23e",
+        "leaseEpoch": 1,
+        "transitionCounter": 14,
+        "heartbeatCounter": 7,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-06T07:12:01.000Z",
+        "evidenceDigest": "78b1a295f2c6a8fe5ca5a06a3a942e8fd5f763e6d3253ecf8b38d896f3ba34d3",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77Vu4L",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "9b79e0293a925e3a81ce1f792d66d6c37b378dcf5677d42afb78323d3742b9cc",
+          "recoveredAt": "2026-08-06T06:42:01.000Z"
+        },
+        "integration": {
+          "candidateRevision": "4cf3ba6b678b9edd70b985fea8f744953207b23e",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77Vu4L",
+          "focusedEvidenceDigest": "78b1a295f2c6a8fe5ca5a06a3a942e8fd5f763e6d3253ecf8b38d896f3ba34d3",
+          "dependencyClosureDigest": "3fa6cf6e615a7031c2de8531aa1e732b63ea7e9faf03cbd1a332270d0754e748",
+          "namedChecksDigest": "d3528c9c9c78febee3fb8a8c5af8147e2e27cd91517f7261fe12e950e4a38662",
+          "handoffEvidenceDigest": "b7cb4bc98ab8d4680b19e3ee81ed6637b35be297d3371a3e733b6d18b7e71142",
+          "operatorDecisionDigest": "652a6dbf83d11cf418a174ed8601d6e3a78fe7250c374cbb4a760ee6a77be72c",
+          "integrationIntentDigest": "f2fab30be83ec76982b7e6f4adb4c2bd9db63fd13c27fcabc52624a96627fa12",
+          "integratedAt": "2026-08-06T06:53:56.000Z"
+        }
+      },
+      "claimDigest": "a0ac573c1abaa86dd28da192be3814fe2c623b0461cbeb32f469ff69e43f1ad9",
+      "digest": "024e61437ffb096f2ad0577e11420d0dab6a7fea6b25a7cef4fca93344d38903"
     }
   ]
 }

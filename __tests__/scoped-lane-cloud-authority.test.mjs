@@ -9,6 +9,7 @@ import {
   bindAdmissionCloudAuthority,
   claimLegacyReviewAdmissionCloudAuthority,
   cloudAuthorityFromResult,
+  continueClaimedReviewSuccessorCloudAuthority,
   heartbeatAdmissionCloudAuthority,
   reviewReadyAdmissionCloudAuthority,
 } from "../scripts/scoped-lane-cloud-authority.mjs";
@@ -83,6 +84,9 @@ function rootClaim({
   fenceRevision = "b".repeat(64),
   transitionDigest = "c".repeat(64),
   reviewRequestId = null,
+  leaseEpoch = 1,
+  predecessorClaimId = null,
+  operationReceiptDigest = "d".repeat(64),
   integration = null,
   integrationReceiptDigest = null,
 } = {}) {
@@ -100,15 +104,15 @@ function rootClaim({
     laneRevision,
     declaredWriteScope: DECLARED_WRITE_SET,
     writeSetDigest: WRITE_SET_DIGEST,
-    leaseEpoch: 1,
+    leaseEpoch,
     transitionCounter,
     heartbeatCounter: 0,
     reviewRequestId,
-    predecessorClaimId: null,
+    predecessorClaimId,
     expiresAt: EXPIRES_AT,
     fenceRevision,
     transitionDigest,
-    operationReceiptDigest: "d".repeat(64),
+    operationReceiptDigest,
     integrationReceiptDigest,
     integration,
   };
@@ -126,6 +130,8 @@ function localAuthority({
   ledgerDigest = "2".repeat(64),
   reviewRequestId = null,
   focusedEvidence = null,
+  leaseEpoch = 1,
+  operationReceiptDigest = "d".repeat(64),
 } = {}) {
   return Object.freeze({
     schema: "agentic-lane-cloud-authority/v1",
@@ -139,7 +145,7 @@ function localAuthority({
     claimLedgerRevision,
     entrySchema: "agentic-cloud-collaboration-entry/v2",
     claimIdentitySchema,
-    operationReceiptDigest: "d".repeat(64),
+    operationReceiptDigest,
     canonicalBaseSha: BASE_SHA,
     laneRevision,
     cloudDeclaredWriteScope: DECLARED_WRITE_SET,
@@ -147,7 +153,7 @@ function localAuthority({
     deviceId: DEVICE_ID,
     sessionId: SESSION_ID,
     reviewRequestId,
-    leaseEpoch: 1,
+    leaseEpoch,
     transitionCounter,
     state,
     expiresAt: EXPIRES_AT,
@@ -245,6 +251,8 @@ function waitingSuccessorHarness({
   predecessorState = "dormant-preserved",
   duplicateWaitingScope = false,
   chainedWaitingPredecessor = false,
+  successorLaneRevision = BASE_SHA,
+  currentState = "waiting-successor",
 } = {}) {
   let predecessor = rootClaim({
     claimId: "6".repeat(64),
@@ -258,15 +266,16 @@ function waitingSuccessorHarness({
   let waiting = {
     ...rootClaim({
       claimId: "9".repeat(64),
-      laneRevision: BASE_SHA,
+      laneRevision: successorLaneRevision,
       transitionCounter: 1,
       fenceRevision: "a".repeat(64),
       transitionDigest: "b".repeat(64),
+      leaseEpoch: 2,
+      predecessorClaimId: predecessor.claimId,
     }),
     state: "waiting-successor",
     writeAuthority: false,
     scopeReserved: false,
-    predecessorClaimId: predecessor.claimId,
   };
   const duplicateScope = normalizeWriteSet([
     "path:scripts/older-legacy-refresh.mjs",
@@ -275,24 +284,41 @@ function waitingSuccessorHarness({
   let staleWaiting = {
     ...rootClaim({
       claimId: "c".repeat(64),
-      laneRevision: BASE_SHA,
+      laneRevision: successorLaneRevision,
       transitionCounter: 1,
       fenceRevision: "d".repeat(64),
       transitionDigest: "e".repeat(64),
+      leaseEpoch: 2,
+      predecessorClaimId: predecessor.claimId,
     }),
     state: "waiting-successor",
     writeAuthority: false,
     scopeReserved: false,
-    predecessorClaimId: predecessor.claimId,
     declaredWriteScope: duplicateWaitingScope ? waiting.declaredWriteScope : duplicateScope,
     writeSetDigest: duplicateWaitingScope
       ? waiting.writeSetDigest
       : digestValue(duplicateScope),
   };
-  let current = waiting;
+  let current = currentState === "waiting-successor"
+    ? waiting
+    : {
+      ...waiting,
+      state: currentState,
+      writeAuthority: currentState === "current",
+      scopeReserved: true,
+      transitionCounter: currentState === "reviewed" ? 3 : 2,
+      fenceRevision: digestValue({ currentState, field: "fence" }),
+      transitionDigest: digestValue({ currentState, field: "transition" }),
+      operationReceiptDigest: digestValue({ currentState, field: "receipt" }),
+      reviewRequestId: currentState === "reviewed" ? REVIEW_REQUEST_ID : null,
+    };
   const calls = [];
   return {
     calls,
+    claimResult: mutationResult("claim", waiting, LEDGER_SHA),
+    get observedClaim() {
+      return current;
+    },
     inspect: () => (
       current.state === "waiting-successor"
         ? {
@@ -335,29 +361,54 @@ function waitingSuccessorHarness({
         return mutationResult("retire", predecessor, NEXT_LEDGER_SHA);
       }
       if (action === "continue" && request.mode === "promote") {
-        current = rootClaim({
-          claimId: waiting.claimId,
-          laneRevision: BASE_SHA,
+        current = {
+          ...waiting,
+          state: "current",
+          writeAuthority: true,
+          scopeReserved: true,
           transitionCounter: waiting.transitionCounter + 1,
           fenceRevision: digestValue({ action, request }),
           transitionDigest: digestValue({ promote: calls.length }),
-        });
+          operationReceiptDigest: digestValue({ promoteReceipt: calls.length }),
+        };
         return mutationResult("continue", current, NEXT_LEDGER_SHA);
       }
       if (action === "continue" && request.mode === "projection") {
-        current = rootClaim({
-          claimId: current.claimId,
+        current = {
+          ...current,
+          state: "current",
+          writeAuthority: true,
+          scopeReserved: true,
           laneRevision: request.headSha,
           transitionCounter: current.transitionCounter + 1,
           fenceRevision: digestValue({ action, request }),
           transitionDigest: digestValue({ projection: calls.length }),
+          operationReceiptDigest: digestValue({ projectionReceipt: calls.length }),
           reviewRequestId: request.reviewRequestId || current.reviewRequestId,
-        });
+        };
         return mutationResult("continue", current, NEXT_LEDGER_SHA);
       }
       throw new Error(`Unexpected action ${action}:${request.mode || "none"}`);
     },
   };
+}
+
+function claimedSuccessorAuthority(claimResult) {
+  const claim = claimResult.claim;
+  return localAuthority({
+    claimId: claim.claimId,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    state: "waiting-successor",
+    laneRevision: claim.laneRevision,
+    transitionCounter: claim.transitionCounter,
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    ledgerRevision: claimResult.ledgerRevision,
+    reviewRequestId: claim.reviewRequestId,
+    focusedEvidence: focusedEvidenceDigest(),
+    leaseEpoch: claim.leaseEpoch,
+    operationReceiptDigest: claim.operationReceiptDigest,
+  });
 }
 
 test("claim projection accepts v2 logical identity without device/session in claimId", () => {
@@ -547,13 +598,11 @@ test("legacy review bootstrap supersedes a preserved predecessor before promotin
     [
       ["claim", null],
       ["retire", null],
-      ["retire", null],
       ["continue", "promote"],
       ["continue", "projection"],
     ],
   );
   assert.equal(harness.calls[1].request.reason, "superseded");
-  assert.equal(harness.calls[2].request.reason, "superseded");
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });
@@ -580,7 +629,6 @@ test("legacy review bootstrap supersedes a current predecessor before promoting 
     harness.calls.map(call => [call.action, call.request.mode || null]),
     [
       ["claim", null],
-      ["retire", null],
       ["retire", null],
       ["continue", "promote"],
       ["continue", "projection"],
@@ -624,6 +672,29 @@ test("legacy review bootstrap retires duplicate queued successors before promoti
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });
 
+test("legacy review bootstrap preserves a disjoint queued successor", () => {
+  const harness = waitingSuccessorHarness({ predecessorState: "current" });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.equal(
+    harness.calls.filter(call => call.action === "retire").length,
+    1,
+  );
+  assert.equal(bootstrapped.authority.state, "active");
+});
+
 test("legacy review bootstrap collapses waiting-successor predecessor chains before promotion", () => {
   const harness = waitingSuccessorHarness({
     predecessorState: "current",
@@ -646,6 +717,113 @@ test("legacy review bootstrap collapses waiting-successor predecessor chains bef
   });
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("claimed review successor retires its predecessor before promoting the exact head-pinned waiter", () => {
+  const harness = waitingSuccessorHarness({ successorLaneRevision: HEAD_SHA });
+  const continued = continueClaimedReviewSuccessorCloudAuthority({
+    authority: claimedSuccessorAuthority(harness.claimResult),
+    claimResult: harness.claimResult,
+    observedClaim: harness.observedClaim,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["retire", null],
+      ["continue", "promote"],
+    ],
+  );
+  assert.equal(harness.calls.some(call => call.action === "claim"), false);
+  assert.equal(continued.authority.state, "active");
+  assert.equal(continued.authority.laneRevision, HEAD_SHA);
+  assert.equal(continued.authority.claimId, harness.claimResult.claim.claimId);
+});
+
+test("claimed review successor reconciles an already-current crash state without mutations", () => {
+  const harness = waitingSuccessorHarness({
+    successorLaneRevision: HEAD_SHA,
+    currentState: "current",
+  });
+  const continued = continueClaimedReviewSuccessorCloudAuthority({
+    authority: claimedSuccessorAuthority(harness.claimResult),
+    claimResult: harness.claimResult,
+    observedClaim: harness.observedClaim,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(harness.calls, []);
+  assert.equal(continued.authority.state, "active");
+  assert.equal(continued.authority.laneRevision, HEAD_SHA);
+});
+
+test("claimed review successor reconciles an already-reviewed crash state without mutations", () => {
+  const harness = waitingSuccessorHarness({
+    successorLaneRevision: HEAD_SHA,
+    currentState: "reviewed",
+  });
+  const continued = continueClaimedReviewSuccessorCloudAuthority({
+    authority: claimedSuccessorAuthority(harness.claimResult),
+    claimResult: harness.claimResult,
+    observedClaim: harness.observedClaim,
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(harness.calls, []);
+  assert.equal(continued.authority.state, "review_ready");
+  assert.equal(continued.authority.laneRevision, HEAD_SHA);
+  assert.equal(continued.authority.reviewRequestId, REVIEW_REQUEST_ID);
+});
+
+test("claimed review successor rejects a claim that is not pinned to the exact reviewed head", () => {
+  const harness = waitingSuccessorHarness();
+  assert.throws(
+    () => continueClaimedReviewSuccessorCloudAuthority({
+      authority: claimedSuccessorAuthority(harness.claimResult),
+      claimResult: harness.claimResult,
+      observedClaim: harness.observedClaim,
+      manifest: MANIFEST,
+      branch: BRANCH,
+      headSha: HEAD_SHA,
+      reviewRequestId: REVIEW_REQUEST_ID,
+      focusedEvidenceDigest: focusedEvidenceDigest(),
+      deviceId: DEVICE_ID,
+      sessionId: SESSION_ID,
+      invoke: harness.invoke,
+      inspect: harness.inspect,
+      verify: harness.verify,
+    }),
+    /exact claimed successor identity/u,
+  );
+  assert.deepEqual(harness.calls, []);
 });
 
 test("review helper records continue(review) without changing candidate identity", () => {

@@ -265,6 +265,107 @@ export function bindAdmissionCloudAuthority({
   });
   return returnVerification ? verified : verified.authority;
 }
+export function continueClaimedReviewSuccessorCloudAuthority({
+  authority,
+  claimResult,
+  observedClaim = claimResult?.claim,
+  manifest,
+  branch,
+  headSha,
+  pullRequestNumber = null,
+  reviewRequestId = null,
+  focusedEvidenceDigest = authority?.focusedEvidenceDigest || null,
+  ttlSeconds = 1_800,
+  deviceId = authority?.deviceId,
+  sessionId = authority?.sessionId,
+  environment = process.env,
+  invoke = invokeRepositoryCloudAction,
+  inspect = invokeRepositoryCloudAction,
+  verify = invokeRepositoryCloudVerifier,
+} = {}) {
+  requireAuthority(authority);
+  const resolvedBranch = requiredText(branch, "branch");
+  const resolvedHeadSha = requiredSha(headSha, "headSha");
+  const initialClaim = requireClaimResultSuccessor({
+    authority,
+    claimResult,
+    manifest,
+    headSha: resolvedHeadSha,
+  });
+  const observed = requireExactSuccessorIdentity({
+    claim: observedClaim,
+    reference: initialClaim,
+    manifest,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    headSha: resolvedHeadSha,
+    label: "observed successor",
+  });
+  requireSuccessorProgression(initialClaim, observed, "observed successor");
+
+  const statusResult = inspect({
+    action: "status",
+    ledgerRepository: authority.ledgerRepository,
+    request: { targetRepository: authority.targetRepository },
+    environment,
+  });
+  const liveClaim = requireLiveSuccessor({
+    statusResult,
+    authority,
+    reference: initialClaim,
+    manifest,
+    headSha: resolvedHeadSha,
+  });
+  requireSuccessorProgression(observed, liveClaim, "live successor");
+  requireExpectedReviewIdentity(liveClaim, reviewRequestId);
+
+  const resolvedFocusedEvidenceDigest = focusedEvidenceDigest
+    ? requiredDigest(focusedEvidenceDigest, "focusedEvidenceDigest")
+    : null;
+  if (
+    authority.focusedEvidenceDigest
+    && resolvedFocusedEvidenceDigest
+    && authority.focusedEvidenceDigest !== resolvedFocusedEvidenceDigest
+  ) {
+    throw new Error("Claimed review successor focused evidence drifted from its authority projection.");
+  }
+  const recoverableAuthority = resolvedFocusedEvidenceDigest
+    ? Object.freeze({ ...authority, focusedEvidenceDigest: resolvedFocusedEvidenceDigest })
+    : authority;
+  if (projectRootState(liveClaim.state) === "waiting-successor") {
+    return supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
+      authority: recoverableAuthority,
+      claimResult: {
+        ...claimResult,
+        claim: liveClaim,
+        claimDigest: liveClaim.fenceRevision,
+        ledgerRevision: statusResult.ledgerRevision,
+        ledgerDigest: statusResult.ledgerDigest,
+      },
+      ledgerRepository: authority.ledgerRepository,
+      targetRepository: authority.targetRepository,
+      manifest,
+      canonicalBaseSha: authority.canonicalBaseSha,
+      branch: resolvedBranch,
+      deviceId,
+      sessionId,
+      ttlSeconds,
+      environment,
+      inspect,
+      invoke,
+      verify,
+    });
+  }
+  return reconcileAdmissionCloudAuthority({
+    authority: recoverableAuthority,
+    manifest,
+    branch: resolvedBranch,
+    headSha: resolvedHeadSha,
+    pullRequestNumber,
+    environment,
+    inspect,
+    verify,
+  });
+}
 export function claimLegacyReviewAdmissionCloudAuthority({
   ledgerRepository,
   targetRepository,
@@ -339,7 +440,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   const claimedState = projectRootState(
     claimResult?.claim?.state || claimResult?.status || null,
   );
-  const claimed = claimedState === "waiting-successor"
+  const claimedContinuation = claimedState === "waiting-successor"
     ? supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
       claimResult,
       ledgerRepository: resolvedLedgerRepository,
@@ -355,7 +456,8 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       invoke,
       verify,
     })
-    : cloudAuthorityFromResult({
+    : null;
+  const claimed = claimedContinuation?.authority || cloudAuthorityFromResult({
       ledgerRepository: resolvedLedgerRepository,
       targetRepository: resolvedTargetRepository,
       deviceId,
@@ -366,7 +468,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       canonicalBaseSha: resolvedCanonicalBaseSha,
     });
   if (resolvedHeadSha === resolvedCanonicalBaseSha) {
-    return verifyAdmissionCloudAuthority({
+    return claimedContinuation || verifyAdmissionCloudAuthority({
       authority: claimed,
       manifest,
       canonicalBaseSha: resolvedCanonicalBaseSha,
@@ -404,7 +506,246 @@ function parseRequiredLeaseEpoch(error) {
   const value = Number(match[1]);
   return Number.isInteger(value) && value > 0 ? value : null;
 }
+function requireClaimResultSuccessor({
+  authority,
+  claimResult,
+  manifest,
+  headSha,
+}) {
+  if (
+    claimResult?.schema !== "agentic-cloud-collaboration-result/v1"
+    || claimResult.ok !== true
+    || claimResult.action !== "claim"
+  ) {
+    throw new Error("Claimed review successor continuation requires its successful claim result.");
+  }
+  const claim = requireExactSuccessorIdentity({
+    claim: claimResult.claim,
+    manifest,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    headSha,
+    label: "claimed successor",
+  });
+  const authorityWriteSet = normalizeWriteSet(authority.cloudDeclaredWriteScope);
+  const authorityState = projectRootState(authority.state);
+  if (
+    authority.claimId !== claim.claimId
+    || authority.claimDigest !== (claimResult.claimDigest || claim.fenceRevision)
+    || authority.ledgerRevision !== claimResult.ledgerRevision
+    || authority.claimLedgerRevision !== claim.transitionDigest
+    || authority.entrySchema !== claim.entrySchema
+    || authority.claimIdentitySchema !== claim.claimIdentitySchema
+    || authority.operationReceiptDigest !== claim.operationReceiptDigest
+    || authority.canonicalBaseSha !== claim.canonicalBaseRevision
+    || authority.laneRevision !== claim.laneRevision
+    || authority.writeSetDigest !== claim.writeSetDigest
+    || JSON.stringify(authorityWriteSet) !== JSON.stringify(claim.declaredWriteScope)
+    || authority.leaseEpoch !== claim.leaseEpoch
+    || authority.transitionCounter !== claim.transitionCounter
+    || authorityState !== projectRootState(claim.state)
+    || authority.expiresAt !== claim.expiresAt
+    || (authority.reviewRequestId || null) !== claim.reviewRequestId
+    || authority.manifestDigest !== requiredDigest(manifest?.manifestDigest, "manifestDigest")
+  ) {
+    throw new Error("Claimed review successor authority drifted from its claim result.");
+  }
+  return claim;
+}
+function requireLiveSuccessor({
+  statusResult,
+  authority,
+  reference,
+  manifest,
+  headSha,
+}) {
+  requireCompleteStatusResult(statusResult);
+  const matches = statusResult.claims.filter(
+    claim => claim?.claimId === authority.claimId,
+  );
+  if (matches.length !== 1) {
+    throw new Error("Claimed review successor continuation requires exactly one live successor claim.");
+  }
+  return requireExactSuccessorIdentity({
+    claim: matches[0],
+    reference,
+    manifest,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    headSha,
+    label: "live successor",
+  });
+}
+function requireExactSuccessorIdentity({
+  claim,
+  reference = null,
+  manifest,
+  canonicalBaseSha,
+  headSha,
+  label,
+}) {
+  const declaredWriteScope = normalizeWriteSet(claim?.declaredWriteScope);
+  const state = projectRootState(requiredText(claim?.state, `${label} state`));
+  if (!["waiting-successor", "active", "review_ready"].includes(state)) {
+    throw new Error(`${label} state ${claim?.state || "missing"} is not resumable.`);
+  }
+  const entrySchema = requiredText(claim?.entrySchema, `${label} entrySchema`);
+  const operationReceiptDigest = claim?.operationReceiptDigest
+    ? requiredDigest(claim.operationReceiptDigest, `${label} operationReceiptDigest`)
+    : null;
+  if (entrySchema === "agentic-cloud-collaboration-entry/v2" && !operationReceiptDigest) {
+    throw new Error(`${label} current entry requires an operation receipt digest.`);
+  }
+  const normalized = Object.freeze({
+    ...claim,
+    claimId: requiredDigest(claim?.claimId, `${label} claimId`),
+    entrySchema,
+    claimIdentitySchema: requiredText(
+      claim?.claimIdentitySchema,
+      `${label} claimIdentitySchema`,
+    ),
+    actorId: requiredText(claim?.actorId, `${label} actorId`),
+    repositoryId: requiredText(claim?.repositoryId, `${label} repositoryId`),
+    workItemId: requiredText(claim?.workItemId, `${label} workItemId`),
+    predecessorClaimId: requiredDigest(
+      claim?.predecessorClaimId,
+      `${label} predecessorClaimId`,
+    ),
+    canonicalBaseRevision: requiredSha(
+      claim?.canonicalBaseRevision,
+      `${label} canonicalBaseRevision`,
+    ),
+    laneRevision: requiredSha(claim?.laneRevision, `${label} laneRevision`),
+    declaredWriteScope,
+    writeSetDigest: requiredDigest(claim?.writeSetDigest, `${label} writeSetDigest`),
+    leaseEpoch: positiveInteger(claim?.leaseEpoch, `${label} leaseEpoch`),
+    transitionCounter: positiveInteger(
+      claim?.transitionCounter,
+      `${label} transitionCounter`,
+    ),
+    reviewRequestId: claim?.reviewRequestId
+      ? requiredText(claim.reviewRequestId, `${label} reviewRequestId`)
+      : null,
+    expiresAt: requiredInstant(claim?.expiresAt, `${label} expiresAt`),
+    fenceRevision: requiredDigest(claim?.fenceRevision, `${label} fenceRevision`),
+    transitionDigest: requiredDigest(
+      claim?.transitionDigest,
+      `${label} transitionDigest`,
+    ),
+    operationReceiptDigest,
+  });
+  const expectedWriteSet = normalizeWriteSet(manifest?.declaredWriteSet);
+  if (
+    normalized.canonicalBaseRevision !== requiredSha(canonicalBaseSha, "canonicalBaseSha")
+    || normalized.laneRevision !== requiredSha(headSha, "headSha")
+    || normalized.writeSetDigest !== requiredDigest(manifest?.writeSetDigest, "writeSetDigest")
+    || normalized.writeSetDigest !== digestValue(normalized.declaredWriteScope)
+    || JSON.stringify(normalized.declaredWriteScope) !== JSON.stringify(expectedWriteSet)
+    || (reference && successorIdentityDigest(normalized) !== successorIdentityDigest(reference))
+  ) {
+    throw new Error(`${label} drifted from the exact claimed successor identity.`);
+  }
+  return normalized;
+}
+function successorIdentityDigest(claim) {
+  return digestValue({
+    claimId: claim.claimId,
+    entrySchema: claim.entrySchema,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    actorId: claim.actorId,
+    repositoryId: claim.repositoryId,
+    workItemId: claim.workItemId,
+    predecessorClaimId: claim.predecessorClaimId,
+    canonicalBaseRevision: claim.canonicalBaseRevision,
+    laneRevision: claim.laneRevision,
+    declaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
+    writeSetDigest: claim.writeSetDigest,
+    leaseEpoch: claim.leaseEpoch,
+  });
+}
+function requireSuccessorProgression(earlier, later, label) {
+  const earlierState = projectRootState(earlier.state);
+  const laterState = projectRootState(later.state);
+  const stateRank = new Map([
+    ["waiting-successor", 0],
+    ["active", 1],
+    ["review_ready", 2],
+  ]);
+  const sameTransitionDrift = (
+    later.transitionCounter === earlier.transitionCounter
+    && (
+      laterState !== earlierState
+      || later.fenceRevision !== earlier.fenceRevision
+      || later.transitionDigest !== earlier.transitionDigest
+      || later.operationReceiptDigest !== earlier.operationReceiptDigest
+      || later.reviewRequestId !== earlier.reviewRequestId
+      || later.expiresAt !== earlier.expiresAt
+    )
+  );
+  if (
+    later.transitionCounter < earlier.transitionCounter
+    || stateRank.get(laterState) < stateRank.get(earlierState)
+    || sameTransitionDrift
+  ) {
+    throw new Error(`${label} does not continue the claimed successor monotonically.`);
+  }
+}
+function requireExpectedReviewIdentity(claim, reviewRequestId) {
+  const expected = reviewRequestId
+    ? requiredText(reviewRequestId, "reviewRequestId")
+    : null;
+  const actual = claim.reviewRequestId || null;
+  if (
+    (actual && actual !== expected)
+    || (projectRootState(claim.state) === "review_ready" && !actual)
+  ) {
+    throw new Error("Claimed review successor drifted from the expected review identity.");
+  }
+}
+function requireCompleteStatusResult(statusResult) {
+  if (
+    statusResult?.schema !== "agentic-cloud-collaboration-result/v1"
+    || statusResult.ok !== true
+    || statusResult.action !== "status"
+    || statusResult.status !== "ready"
+    || !Array.isArray(statusResult.claims)
+  ) {
+    throw new Error("Claimed review successor continuation requires a complete cloud status result.");
+  }
+  requiredSha(statusResult.ledgerRevision, "status ledgerRevision");
+  requiredDigest(statusResult.ledgerDigest, "status ledgerDigest");
+}
+function requireUnchangedWaitingSuccessor({
+  statusResult,
+  waitingClaim,
+  manifest,
+  canonicalBaseSha,
+}) {
+  requireCompleteStatusResult(statusResult);
+  const matches = statusResult.claims.filter(
+    claim => claim?.claimId === waitingClaim.claimId,
+  );
+  if (matches.length !== 1) {
+    throw new Error("Waiting successor promotion requires exactly one live successor claim.");
+  }
+  const current = requireExactSuccessorIdentity({
+    claim: matches[0],
+    reference: waitingClaim,
+    manifest,
+    canonicalBaseSha,
+    headSha: waitingClaim.laneRevision,
+    label: "waiting successor",
+  });
+  if (
+    projectRootState(current.state) !== "waiting-successor"
+    || current.transitionCounter !== waitingClaim.transitionCounter
+    || current.fenceRevision !== waitingClaim.fenceRevision
+    || current.transitionDigest !== waitingClaim.transitionDigest
+    || current.operationReceiptDigest !== waitingClaim.operationReceiptDigest
+  ) {
+    throw new Error("Waiting successor changed before exact promotion.");
+  }
+}
 function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
+  authority = null,
   claimResult,
   ledgerRepository,
   targetRepository,
@@ -431,6 +772,12 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     request: { targetRepository },
     environment,
   });
+  requireUnchangedWaitingSuccessor({
+    statusResult,
+    waitingClaim,
+    manifest,
+    canonicalBaseSha,
+  });
   const predecessor = statusResult?.claims?.find(
     claim => claim?.claimId === predecessorClaimId,
   );
@@ -448,7 +795,6 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   if (predecessor && predecessor.actorId !== waitingClaim.actorId) {
     throw new Error("Legacy review waiting successor cannot supersede another actor's predecessor claim.");
   }
-  const expectedWriteSet = normalizeWriteSet(manifest?.declaredWriteSet);
   const successionEvidence = {
     schema: "agentic-legacy-review-successor-promotion/v1",
     branch: requiredText(branch, "branch"),
@@ -509,11 +855,24 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     request: { targetRepository },
     environment,
   });
+  requireUnchangedWaitingSuccessor({
+    statusResult: refreshStatusResult,
+    waitingClaim,
+    manifest,
+    canonicalBaseSha,
+  });
   const competingWaitingSuccessors = Array.isArray(refreshStatusResult?.claims)
     ? refreshStatusResult.claims.filter((claim) => (
       claim?.claimId !== waitingClaimId
       && claim?.actorId === waitingClaim.actorId
       && claim?.workItemId === waitingClaim.workItemId
+      && claim?.predecessorClaimId === waitingClaim.predecessorClaimId
+      && claim?.canonicalBaseRevision === waitingClaim.canonicalBaseRevision
+      && claim?.laneRevision === waitingClaim.laneRevision
+      && claim?.writeSetDigest === waitingClaim.writeSetDigest
+      && claim?.leaseEpoch === waitingClaim.leaseEpoch
+      && JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope))
+        === JSON.stringify(normalizeWriteSet(waitingClaim.declaredWriteScope))
       && projectRootState(claim?.state) === "waiting-successor"
     ))
     : [];
@@ -558,16 +917,25 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     },
     environment,
   });
-  const promoted = cloudAuthorityFromResult({
-    ledgerRepository,
-    targetRepository,
-    deviceId,
-    sessionId,
-    result: promotedResult,
-  }, {
-    manifest,
-    canonicalBaseSha,
-  });
+  const promoted = authority
+    ? normalizeBoundAuthority({
+      result: projectOperationLedgerDigest(promotedResult),
+      authority,
+      manifest,
+      deviceId,
+      sessionId,
+      focusedEvidenceDigest: authority.focusedEvidenceDigest || null,
+    })
+    : cloudAuthorityFromResult({
+      ledgerRepository,
+      targetRepository,
+      deviceId,
+      sessionId,
+      result: promotedResult,
+    }, {
+      manifest,
+      canonicalBaseSha,
+    });
   return verifyAdmissionCloudAuthority({
     authority: promoted,
     manifest,
@@ -575,7 +943,7 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     environment,
     inspect,
     invoke: verify,
-  }).authority;
+  });
 }
 function retireLegacyReviewQueuedSuccessor({
   claim,

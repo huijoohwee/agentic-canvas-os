@@ -5,12 +5,15 @@ import path from "node:path";
 
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
+  continueClaimedReviewSuccessorCloudAuthority,
   invokeRepositoryCloudAction,
   reviewReadyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
+import { normalizeBoundAuthority } from "./scoped-lane-cloud-reconciliation.mjs";
 import {
   createWriterLeaseStore,
   parseDeviceBranch,
@@ -48,7 +51,8 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
     ledgerRepository: lane.authority.ledgerRepository,
     targetRepository: lane.authority.targetRepository,
   });
-  const findings = validateContinuation({ request, lane, actor, status });
+  const successor = classifyResumableSuccessor({ request, lane, actor, status });
+  const findings = validateContinuation({ request, lane, actor, status, successor });
   const preflightReceipt = buildReceipt("preflight", {
     branch: lane.branch,
     transition: request.transition,
@@ -60,6 +64,7 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
     predecessorLeaseEpoch: lane.authority.leaseEpoch,
     successorDeviceId: request.successorDeviceId,
     successorSessionId: request.successorSessionId,
+    resumableSuccessorClaimId: successor.claim?.claimId || null,
     actorLogin: actor.login,
     blockingFindingDigest: digestValue(findings),
   });
@@ -84,6 +89,7 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
   }
 
   const claimResult = await adapter.claimSuccessor({ request, lane });
+  assertResumableSuccessorReplay({ claimResult, resumableSuccessor: successor.claim, lane });
   const claimAuthority = projectSuccessorClaimAuthority({
     result: claimResult,
     lane,
@@ -94,6 +100,8 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
     request,
     lane,
     authority: claimAuthority,
+    claimResult,
+    resumableSuccessor: successor.claim,
   });
   const projectLocal = (
     request.transition === "reclaim"
@@ -257,10 +265,32 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       });
     },
 
-    bindAndReviewReady({ request, lane, authority }) {
+    bindAndReviewReady({ request, lane, authority, claimResult, resumableSuccessor }) {
+      const pullRequestNumberValue = lane.protectedMainRefresh
+        ? null
+        : pullRequestNumber(lane.pullRequest.url);
+      const continued = continueClaimedReviewSuccessorCloudAuthority({
+        authority,
+        claimResult,
+        observedClaim: resumableSuccessor || claimResult.claim,
+        manifest: lane.manifest,
+        branch: lane.branch,
+        headSha: lane.headSha,
+        pullRequestNumber: pullRequestNumberValue,
+        reviewRequestId: lane.authority.reviewRequestId,
+        focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
+        ttlSeconds: request.ttlSeconds,
+        deviceId: request.successorDeviceId,
+        sessionId: request.successorSessionId,
+        environment,
+        invoke: invokeRepositoryCloudAction,
+        inspect: invokeRepositoryCloudAction,
+        verify: invokeRepositoryCloudVerifier,
+      });
+      const currentAuthority = continued.authority;
       if (lane.protectedMainRefresh) {
         return reviewReadyAdmissionCloudAuthority({
-          authority,
+          authority: currentAuthority,
           manifest: lane.manifest,
           branch: lane.branch,
           headSha: lane.headSha,
@@ -275,7 +305,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         });
       }
       return reviewReadyAdmissionCloudAuthority({
-        authority,
+        authority: currentAuthority,
         manifest: lane.manifest,
         branch: lane.branch,
         headSha: lane.headSha,
@@ -333,7 +363,93 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
     },
   });
 }
-function validateContinuation({ request, lane, actor, status }) {
+function classifyResumableSuccessor({ request, lane, actor, status }) {
+  if (
+    request.transition === "retain"
+    || status?.schema !== "agentic-cloud-collaboration-result/v1"
+    || status.ok !== true
+    || status.action !== "status"
+    || status.status !== "ready"
+    || !Array.isArray(status.claims)
+  ) {
+    return Object.freeze({ claim: null, ambiguousClaimIds: Object.freeze([]) });
+  }
+  const actorId = Number.isSafeInteger(Number(actor.id)) && Number(actor.id) > 0
+    ? `github-user:${Number(actor.id)}`
+    : null;
+  const expectedWorkItemId = pseudonymousIdentifier("work-item", lane.lease.scope);
+  const expectedWriteSet = normalizeWriteSet(lane.manifest.declaredWriteSet);
+  const matches = status.claims.filter(claim => {
+    try {
+      const state = resumableSuccessorState(claim.state);
+      const reviewRequestId = claim.reviewRequestId || null;
+      const reviewIdentityMatches = state === "review_ready"
+        ? reviewRequestId === lane.authority.reviewRequestId
+        : reviewRequestId === null || reviewRequestId === lane.authority.reviewRequestId;
+      return Boolean(
+        actorId
+        && DIGEST_PATTERN.test(String(claim.claimId || ""))
+        && claim.claimId !== lane.authority.claimId
+        && claim.actorId === actorId
+        && claim.workItemId === expectedWorkItemId
+        && claim.predecessorClaimId === lane.authority.claimId
+        && claim.canonicalBaseRevision === lane.baseSha
+        && claim.laneRevision === lane.headSha
+        && claim.writeSetDigest === lane.manifest.writeSetDigest
+        && JSON.stringify(normalizeWriteSet(claim.declaredWriteScope)) === JSON.stringify(expectedWriteSet)
+        && claim.leaseEpoch === lane.authority.leaseEpoch + 1
+        && state
+        && reviewIdentityMatches
+      );
+    } catch {
+      return false;
+    }
+  }).sort((left, right) => left.claimId.localeCompare(right.claimId));
+  if (matches.length === 1) {
+    return Object.freeze({ claim: matches[0], ambiguousClaimIds: Object.freeze([]) });
+  }
+  return Object.freeze({
+    claim: null,
+    ambiguousClaimIds: Object.freeze(matches.map(claim => claim.claimId)),
+  });
+}
+function resumableSuccessorState(value) {
+  const state = String(value || "").trim().replaceAll("_", "-");
+  if (state === "waiting-successor") return "waiting_successor";
+  if (["current", "active"].includes(state)) return "active";
+  if (["reviewed", "review-ready"].includes(state)) return "review_ready";
+  return null;
+}
+function assertResumableSuccessorReplay({ claimResult, resumableSuccessor, lane }) {
+  if (!resumableSuccessor) return;
+  const claim = claimResult?.claim;
+  let writeSetMatches = false;
+  try {
+    writeSetMatches = JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope))
+      === JSON.stringify(normalizeWriteSet(resumableSuccessor.declaredWriteScope));
+  } catch {
+    writeSetMatches = false;
+  }
+  if (
+    claimResult?.schema !== "agentic-cloud-collaboration-result/v1"
+    || claimResult.ok !== true
+    || claimResult.action !== "claim"
+    || claimResult.replayed !== true
+    || claim?.claimId !== resumableSuccessor.claimId
+    || claim?.actorId !== resumableSuccessor.actorId
+    || claim?.repositoryId !== resumableSuccessor.repositoryId
+    || claim?.workItemId !== resumableSuccessor.workItemId
+    || claim?.predecessorClaimId !== lane.authority.claimId
+    || claim?.canonicalBaseRevision !== lane.baseSha
+    || claim?.laneRevision !== lane.headSha
+    || claim?.writeSetDigest !== lane.manifest.writeSetDigest
+    || claim?.leaseEpoch !== lane.authority.leaseEpoch + 1
+    || !writeSetMatches
+  ) {
+    throw new Error("Cloud claim replay did not preserve the exact resumable successor identity.");
+  }
+}
+function validateContinuation({ request, lane, actor, status, successor }) {
   const findings = [];
   const identity = parseDeviceBranch(lane.branch);
   if (!identity) findings.push(finding("invalid-branch-identity"));
@@ -390,8 +506,17 @@ function validateContinuation({ request, lane, actor, status }) {
     findings.push(finding("cloud-status-unavailable"));
     return findings.sort(compareFindings);
   }
+  if (successor.ambiguousClaimIds.length > 0) {
+    findings.push(finding("ambiguous-successor-continuation", {
+      competingClaimIds: successor.ambiguousClaimIds,
+    }));
+  }
+  const excludedClaimIds = new Set([
+    lane.authority.claimId,
+    ...(successor.claim ? [successor.claim.claimId] : []),
+  ]);
   const otherClaims = status.claims.filter(
-    claim => claim.claimId !== lane.authority.claimId,
+    claim => !excludedClaimIds.has(claim.claimId),
   );
   const overlaps = otherClaims.filter(claim => {
     try {
@@ -505,27 +630,25 @@ function projectSuccessorClaimAuthority({
   ) {
     throw new Error("Successor continuation requires a successful cloud claim result.");
   }
-  return Object.freeze({
-    schema: "agentic-lane-cloud-authority/v1",
-    provider: "github",
-    ledgerRepository: lane.authority.ledgerRepository,
-    targetRepository: lane.authority.targetRepository,
-    claimId: requiredDigest(result.claim?.claimId, "claimId"),
-    claimDigest: requiredDigest(result.claimDigest, "claimDigest"),
-    ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
-    claimLedgerRevision: requiredDigest(result.claim?.transitionDigest, "claimLedgerRevision"),
-    canonicalBaseSha: requiredSha(result.claim?.canonicalBaseRevision, "canonicalBaseRevision"),
-    laneRevision: requiredSha(result.claim?.laneRevision, "laneRevision"),
-    cloudDeclaredWriteScope: normalizeWriteSet(result.claim?.declaredWriteScope),
-    writeSetDigest: requiredDigest(result.claim?.writeSetDigest, "writeSetDigest"),
-    deviceId: requiredText(successorDeviceId, "successorDeviceId"),
-    sessionId: requiredText(successorSessionId, "successorSessionId"),
-    reviewRequestId: result.claim?.reviewRequestId ? requiredText(result.claim.reviewRequestId, "reviewRequestId") : null,
-    leaseEpoch: positiveInteger(result.claim?.leaseEpoch, "leaseEpoch"),
-    transitionCounter: positiveInteger(result.claim?.transitionCounter, "transitionCounter"),
-    state: requiredText(result.claim?.state, "claim state").replaceAll("-", "_"),
-    expiresAt: requiredText(result.claim?.expiresAt, "claim expiresAt"),
-    manifestDigest: lane.manifest.manifestDigest,
+  return normalizeBoundAuthority({
+    result: {
+      ...result,
+      ledgerDigest: requiredDigest(
+        result.ledgerDigest || result.receipt?.ledgerDigest,
+        "claim ledger digest",
+      ),
+    },
+    authority: {
+      ledgerRepository: lane.authority.ledgerRepository,
+      targetRepository: lane.authority.targetRepository,
+      deviceId: requiredText(successorDeviceId, "successorDeviceId"),
+      sessionId: requiredText(successorSessionId, "successorSessionId"),
+      focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
+    },
+    manifest: lane.manifest,
+    deviceId: successorDeviceId,
+    sessionId: successorSessionId,
+    focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
   });
 }
 function finalizeResult({

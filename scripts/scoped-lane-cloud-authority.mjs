@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
 import { markOperationDerivedCloudVerification } from "./scoped-lane-admission-lib.mjs";
 import { normalizeBoundAuthority, normalizeCurrentClaimInventory, positiveInteger,
@@ -364,6 +364,220 @@ export function continueClaimedReviewSuccessorCloudAuthority({
     environment,
     inspect,
     verify,
+  });
+}
+export function recoverIntegratedPreservedCloudAuthority({
+  authority,
+  integratedClaim,
+  queuedSuccessor = null,
+  manifest,
+  branch,
+  headSha,
+  focusedEvidenceDigest = authority?.focusedEvidenceDigest,
+  ttlSeconds = 1_800,
+  deviceId = authority?.deviceId,
+  sessionId = authority?.sessionId,
+  environment = process.env,
+  invoke = invokeRepositoryCloudAction,
+  inspect = invokeRepositoryCloudAction,
+  verify = invokeRepositoryCloudVerifier,
+} = {}) {
+  requireAuthority(authority);
+  const resolvedBranch = requiredText(branch, "branch");
+  const resolvedHeadSha = requiredSha(headSha, "headSha");
+  const resolvedFocusedEvidenceDigest = requiredDigest(
+    focusedEvidenceDigest,
+    "focusedEvidenceDigest",
+  );
+  const initialStatus = inspect({
+    action: "status",
+    ledgerRepository: authority.ledgerRepository,
+    request: { targetRepository: authority.targetRepository },
+    environment,
+  });
+  let currentClaim = requireIntegratedReplayInventory({
+    statusResult: initialStatus,
+    authority,
+    integratedClaim,
+    queuedSuccessor,
+    manifest,
+    headSha: resolvedHeadSha,
+    focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+  });
+  let currentStatus = initialStatus;
+  if (queuedSuccessor) {
+    retireIntegratedReplayQueuedSuccessor({
+      claim: queuedSuccessor,
+      integratedClaim: currentClaim,
+      targetRepository: authority.targetRepository,
+      ledgerRepository: authority.ledgerRepository,
+      deviceId,
+      sessionId,
+      branch: resolvedBranch,
+      manifest,
+      environment,
+      invoke,
+    });
+    currentStatus = inspect({
+      action: "status",
+      ledgerRepository: authority.ledgerRepository,
+      request: { targetRepository: authority.targetRepository },
+      environment,
+    });
+    currentClaim = requireIntegratedReplayInventory({
+      statusResult: currentStatus,
+      authority,
+      integratedClaim: currentClaim,
+      queuedSuccessor: null,
+      manifest,
+      headSha: resolvedHeadSha,
+      focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    });
+  }
+
+  let projectedAuthority;
+  if (projectRootState(currentClaim.state) === "parked") {
+    const recoveryEvidenceDigest = digestValue({
+      schema: "agentic-integrated-preserved-recovery-evidence/v1",
+      branch: resolvedBranch,
+      claimId: currentClaim.claimId,
+      candidateRevision: currentClaim.integration.candidateRevision,
+      reviewRequestId: currentClaim.integration.reviewRequestId,
+      integrationReceiptDigest: currentClaim.integrationReceiptDigest,
+      operationReceiptDigest: currentClaim.operationReceiptDigest,
+      manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
+      writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
+    });
+    const recoveredResult = invoke({
+      action: "continue",
+      ledgerRepository: authority.ledgerRepository,
+      request: {
+        targetRepository: authority.targetRepository,
+        claimId: currentClaim.claimId,
+        expectedFenceRevision: requiredDigest(
+          currentClaim.fenceRevision,
+          "integrated claim fenceRevision",
+        ),
+        expectedTransitionCounter: positiveInteger(
+          currentClaim.transitionCounter,
+          "integrated claim transitionCounter",
+        ),
+        mode: "recovery",
+        ttlSeconds: positiveInteger(ttlSeconds, "ttlSeconds"),
+        recoveryEvidenceDigest,
+        deviceId: requiredText(deviceId, "deviceId"),
+        sessionId: requiredText(sessionId, "sessionId"),
+        idempotencyKey: [
+          "integrated-preserved-recovery",
+          currentClaim.claimId,
+          currentClaim.transitionCounter,
+          currentClaim.fenceRevision,
+          recoveryEvidenceDigest,
+        ].join(":"),
+      },
+      environment,
+    });
+    requireReadyResult(recoveredResult, {
+      authority,
+      manifest,
+      canonicalBaseSha: authority.canonicalBaseSha,
+      expectedState: "delivery_authorized",
+      expectedLaneRevision: resolvedHeadSha,
+    });
+    requireRecoveredIntegratedReplayClaim({
+      claim: recoveredResult.claim,
+      reference: currentClaim,
+      authority,
+      manifest,
+      headSha: resolvedHeadSha,
+      focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    });
+    requiredDigest(
+      recoveredResult.receipt?.receiptDigest,
+      "integrated recovery receipt digest",
+    );
+    currentClaim = recoveredResult.claim;
+    projectedAuthority = normalizeBoundAuthority({
+      result: projectOperationLedgerDigest(recoveredResult),
+      authority,
+      manifest,
+      deviceId,
+      sessionId,
+      focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    });
+  } else {
+    projectedAuthority = normalizeBoundAuthority({
+      result: {
+        ...currentStatus,
+        action: "continue",
+        claim: currentClaim,
+        claimDigest: currentClaim.fenceRevision,
+      },
+      authority,
+      manifest,
+      deviceId,
+      sessionId,
+      focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    });
+  }
+
+  const verified = verifyDeliveryAuthorizedCloudAuthority({
+    authority: projectedAuthority,
+    manifest,
+    headSha: resolvedHeadSha,
+    branch: resolvedBranch,
+    focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    environment,
+    inspect,
+    invoke: verify,
+  });
+  requireRecoveredIntegratedReplayAuthority({
+    recoveredAuthority: verified.authority,
+    reference: currentClaim,
+    authority,
+    manifest,
+    headSha: resolvedHeadSha,
+    focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+  });
+  const overlappingCurrentClaimIds = requireIntegratedReplayConvergence({
+    inventory: verified.verification.inventory,
+    authority: verified.authority,
+    reference: currentClaim,
+    manifest,
+  });
+  const convergenceEvidence = Object.freeze({
+    schema: "agentic-integrated-replay-convergence-evidence/v1",
+    claimId: verified.authority.claimId,
+    claimDigest: verified.authority.claimDigest,
+    fenceRevision: verified.authority.claimDigest,
+    claimLedgerRevision: verified.authority.claimLedgerRevision,
+    transitionDigest: verified.authority.claimLedgerRevision,
+    transitionCounter: verified.authority.transitionCounter,
+    state: verified.authority.state,
+    expiresAt: verified.authority.expiresAt,
+    branch: resolvedBranch,
+    canonicalBaseSha: verified.authority.canonicalBaseSha,
+    candidateRevision: verified.authority.laneRevision,
+    manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
+    writeSetDigest: verified.authority.writeSetDigest,
+    leaseEpoch: verified.authority.leaseEpoch,
+    reviewRequestId: verified.authority.reviewRequestId,
+    focusedEvidenceDigest: verified.authority.focusedEvidenceDigest,
+    currentOperationReceiptDigest: requiredDigest(
+      verified.authority.operationReceiptDigest,
+      "current operation receipt digest",
+    ),
+    integrationReceiptDigest: verified.authority.integrationReceiptDigest,
+    integrationEvidenceDigest: digestValue(verified.authority.integration),
+    currentQueuedDerivativeDisposition: "absent-from-verified-inventory",
+    overlappingCurrentClaimIds,
+    lifecycleAttribution: "not-reconstructed",
+    observation: "current-state-only",
+  });
+  return Object.freeze({
+    ...verified,
+    convergenceEvidence,
+    convergenceEvidenceDigest: digestValue(convergenceEvidence),
   });
 }
 export function claimLegacyReviewAdmissionCloudAuthority({
@@ -743,6 +957,425 @@ function requireUnchangedWaitingSuccessor({
   ) {
     throw new Error("Waiting successor changed before exact promotion.");
   }
+}
+function requireIntegratedReplayInventory({
+  statusResult,
+  authority,
+  integratedClaim,
+  queuedSuccessor,
+  manifest,
+  headSha,
+  focusedEvidenceDigest,
+}) {
+  if (
+    statusResult?.schema !== "agentic-cloud-collaboration-result/v1"
+    || statusResult.ok !== true
+    || statusResult.action !== "status"
+    || statusResult.status !== "ready"
+    || !Array.isArray(statusResult.claims)
+  ) {
+    throw new Error("Integrated-preserved replay requires a complete cloud status inventory.");
+  }
+  requiredSha(statusResult.ledgerRevision, "integrated replay ledgerRevision");
+  requiredDigest(statusResult.ledgerDigest, "integrated replay ledgerDigest");
+  const matches = statusResult.claims.filter(
+    claim => claim?.claimId === authority.claimId,
+  );
+  if (matches.length !== 1) {
+    throw new Error("Integrated-preserved replay requires exactly one same-claim authority.");
+  }
+  const current = requireIntegratedReplayClaim({
+    claim: matches[0],
+    authority,
+    manifest,
+    headSha,
+    focusedEvidenceDigest,
+  });
+  requireSameIntegratedClaimSnapshot(current, integratedClaim);
+
+  const derivatives = statusResult.claims.filter(
+    claim => claim?.predecessorClaimId === current.claimId,
+  );
+  if (queuedSuccessor) {
+    if (derivatives.length !== 1
+      || derivatives[0]?.claimId !== queuedSuccessor.claimId) {
+      throw new Error("Integrated-preserved replay queued successor inventory drifted.");
+    }
+    requireIntegratedReplayQueuedSuccessor({
+      claim: derivatives[0],
+      reference: queuedSuccessor,
+      integratedClaim: current,
+      manifest,
+      headSha,
+    });
+  } else if (derivatives.length > 0) {
+    throw new Error("Integrated-preserved replay found an unexpected queued derivative.");
+  }
+
+  const allowedClaimIds = new Set([
+    current.claimId,
+    ...(queuedSuccessor ? [queuedSuccessor.claimId] : []),
+  ]);
+  const competing = statusResult.claims.filter(claim => {
+    if (allowedClaimIds.has(claim?.claimId)) return false;
+    if (claim?.reviewRequestId === current.reviewRequestId) return true;
+    try {
+      return writeSetsOverlap(claim?.declaredWriteScope, manifest.declaredWriteSet);
+    } catch {
+      return true;
+    }
+  });
+  if (competing.length > 0) {
+    throw new Error("Integrated-preserved replay found competing cloud authority.");
+  }
+  return current;
+}
+function requireIntegratedReplayClaim({
+  claim,
+  authority,
+  manifest,
+  headSha,
+  focusedEvidenceDigest,
+}) {
+  const normalizedWriteSet = normalizeWriteSet(claim?.declaredWriteScope);
+  const integration = requireIntegratedReplayEvidence(claim?.integration, {
+    headSha,
+    reviewRequestId: authority.reviewRequestId,
+    focusedEvidenceDigest,
+  });
+  const claimId = requiredDigest(claim?.claimId, "integrated replay claimId");
+  requiredText(claim?.actorId, "integrated replay actorId");
+  requiredText(claim?.repositoryId, "integrated replay repositoryId");
+  requiredText(claim?.workItemId, "integrated replay workItemId");
+  requiredText(claim?.entrySchema, "integrated replay entrySchema");
+  requiredText(claim?.claimIdentitySchema, "integrated replay claimIdentitySchema");
+  const canonicalBaseRevision = requiredSha(
+    claim?.canonicalBaseRevision,
+    "integrated replay canonicalBaseRevision",
+  );
+  const laneRevision = requiredSha(claim?.laneRevision, "integrated replay laneRevision");
+  const writeSetDigest = requiredDigest(claim?.writeSetDigest, "integrated replay writeSetDigest");
+  const leaseEpoch = positiveInteger(claim?.leaseEpoch, "integrated replay leaseEpoch");
+  const transitionCounter = positiveInteger(
+    claim?.transitionCounter,
+    "integrated replay transitionCounter",
+  );
+  const reviewRequestId = requiredText(
+    claim?.reviewRequestId,
+    "integrated replay reviewRequestId",
+  );
+  requiredDigest(claim?.integrationReceiptDigest, "integrationReceiptDigest");
+  requiredDigest(claim?.fenceRevision, "integrated replay fenceRevision");
+  requiredDigest(claim?.transitionDigest, "integrated replay transitionDigest");
+  requiredDigest(claim?.operationReceiptDigest, "integrated replay operationReceiptDigest");
+  requiredInstant(claim?.expiresAt, "integrated replay expiresAt");
+  if (
+    claimId !== authority.claimId
+    || !["delivery_authorized", "parked"].includes(projectRootState(claim?.state))
+    || canonicalBaseRevision !== authority.canonicalBaseSha
+    || laneRevision !== headSha
+    || writeSetDigest !== manifest.writeSetDigest
+    || claim.writeSetDigest !== digestValue(normalizedWriteSet)
+    || JSON.stringify(normalizedWriteSet)
+      !== JSON.stringify(normalizeWriteSet(manifest.declaredWriteSet))
+    || leaseEpoch !== authority.leaseEpoch
+    || transitionCounter < authority.transitionCounter
+    || reviewRequestId !== authority.reviewRequestId
+  ) {
+    throw new Error("Integrated-preserved replay claim drifted from the reviewed authority.");
+  }
+  return Object.freeze({ ...claim, declaredWriteScope: normalizedWriteSet, integration });
+}
+function requireIntegratedReplayEvidence(value, {
+  headSha,
+  reviewRequestId,
+  focusedEvidenceDigest,
+}) {
+  const normalized = Object.freeze({
+    candidateRevision: requiredSha(value?.candidateRevision, "integration candidateRevision"),
+    reviewRequestId: requiredText(value?.reviewRequestId, "integration reviewRequestId"),
+    focusedEvidenceDigest: requiredDigest(value?.focusedEvidenceDigest, "integration focusedEvidenceDigest"),
+    dependencyClosureDigest: requiredDigest(value?.dependencyClosureDigest, "integration dependencyClosureDigest"),
+    namedChecksDigest: requiredDigest(value?.namedChecksDigest, "integration namedChecksDigest"),
+    handoffEvidenceDigest: requiredDigest(value?.handoffEvidenceDigest, "integration handoffEvidenceDigest"),
+    operatorDecisionDigest: requiredDigest(value?.operatorDecisionDigest, "integration operatorDecisionDigest"),
+    integrationIntentDigest: requiredDigest(value?.integrationIntentDigest, "integration integrationIntentDigest"),
+    integratedAt: requiredInstant(value?.integratedAt, "integration integratedAt"),
+  });
+  if (
+    !value
+    || Object.keys(value).length !== Object.keys(normalized).length
+    || normalized.candidateRevision !== headSha
+    || normalized.reviewRequestId !== reviewRequestId
+    || normalized.focusedEvidenceDigest !== focusedEvidenceDigest
+  ) {
+    throw new Error("Integrated-preserved replay did not preserve exact integration evidence.");
+  }
+  return normalized;
+}
+function requireSameIntegratedClaimSnapshot(claim, reference) {
+  const snapshotKeys = [
+    "claimId",
+    "entrySchema",
+    "claimIdentitySchema",
+    "state",
+    "actorId",
+    "repositoryId",
+    "workItemId",
+    "canonicalBaseRevision",
+    "laneRevision",
+    "writeSetDigest",
+    "leaseEpoch",
+    "transitionCounter",
+    "reviewRequestId",
+    "predecessorClaimId",
+    "expiresAt",
+    "fenceRevision",
+    "transitionDigest",
+    "operationReceiptDigest",
+    "integrationReceiptDigest",
+  ];
+  const exact = reference
+    && snapshotKeys.every(key => claim?.[key] === reference?.[key])
+    && JSON.stringify(claim.declaredWriteScope)
+      === JSON.stringify(normalizeWriteSet(reference.declaredWriteScope))
+    && digestValue(claim.integration) === digestValue(reference.integration);
+  if (!exact) {
+    throw new Error("Integrated-preserved replay claim changed after controller preflight.");
+  }
+}
+function requireIntegratedReplayQueuedSuccessor({
+  claim,
+  reference,
+  integratedClaim,
+  manifest,
+  headSha,
+}) {
+  const normalizedWriteSet = normalizeWriteSet(claim?.declaredWriteScope);
+  const snapshotKeys = [
+    "claimId",
+    "entrySchema",
+    "claimIdentitySchema",
+    "state",
+    "actorId",
+    "repositoryId",
+    "workItemId",
+    "canonicalBaseRevision",
+    "laneRevision",
+    "writeSetDigest",
+    "leaseEpoch",
+    "transitionCounter",
+    "reviewRequestId",
+    "predecessorClaimId",
+    "expiresAt",
+    "fenceRevision",
+    "transitionDigest",
+    "operationReceiptDigest",
+    "integrationReceiptDigest",
+  ];
+  if (
+    requiredDigest(claim?.claimId, "queued successor claimId") === integratedClaim.claimId
+    || projectRootState(claim?.state) !== "waiting-successor"
+    || claim.actorId !== integratedClaim.actorId
+    || claim.repositoryId !== integratedClaim.repositoryId
+    || claim.workItemId !== integratedClaim.workItemId
+    || claim.predecessorClaimId !== integratedClaim.claimId
+    || claim.canonicalBaseRevision !== integratedClaim.canonicalBaseRevision
+    || claim.laneRevision !== headSha
+    || claim.writeSetDigest !== manifest.writeSetDigest
+    || claim.writeSetDigest !== digestValue(normalizedWriteSet)
+    || JSON.stringify(normalizedWriteSet)
+      !== JSON.stringify(normalizeWriteSet(manifest.declaredWriteSet))
+    || claim.leaseEpoch !== integratedClaim.leaseEpoch + 1
+    || claim.reviewRequestId !== null
+    || claim.integration !== null
+    || claim.integrationReceiptDigest !== null
+    || !snapshotKeys.every(key => claim?.[key] === reference?.[key])
+    || JSON.stringify(normalizedWriteSet)
+      !== JSON.stringify(normalizeWriteSet(reference?.declaredWriteScope))
+  ) {
+    throw new Error("Integrated-preserved replay queued successor drifted from its exact derivative.");
+  }
+}
+function requireRecoveredIntegratedReplayClaim({
+  claim,
+  reference,
+  authority,
+  manifest,
+  headSha,
+  focusedEvidenceDigest,
+}) {
+  const recovered = requireIntegratedReplayClaim({
+    claim,
+    authority,
+    manifest,
+    headSha,
+    focusedEvidenceDigest,
+  });
+  const sameSubject = [
+    "claimId",
+    "entrySchema",
+    "claimIdentitySchema",
+    "actorId",
+    "repositoryId",
+    "workItemId",
+    "canonicalBaseRevision",
+    "laneRevision",
+    "writeSetDigest",
+    "leaseEpoch",
+    "reviewRequestId",
+    "predecessorClaimId",
+    "integrationReceiptDigest",
+  ].every(key => recovered[key] === reference[key]);
+  if (
+    !sameSubject
+    || projectRootState(recovered.state) !== "delivery_authorized"
+    || recovered.transitionCounter <= reference.transitionCounter
+    || JSON.stringify(recovered.declaredWriteScope) !== JSON.stringify(reference.declaredWriteScope)
+    || digestValue(recovered.integration) !== digestValue(reference.integration)
+  ) {
+    throw new Error("Recovered integrated-preserved claim changed its reviewed integration identity.");
+  }
+}
+function requireRecoveredIntegratedReplayAuthority({
+  recoveredAuthority,
+  reference,
+  authority,
+  manifest,
+  headSha,
+  focusedEvidenceDigest,
+}) {
+  if (
+    recoveredAuthority?.schema !== "agentic-lane-cloud-authority/v1"
+    || recoveredAuthority.claimId !== authority.claimId
+    || recoveredAuthority.canonicalBaseSha !== authority.canonicalBaseSha
+    || recoveredAuthority.laneRevision !== headSha
+    || recoveredAuthority.writeSetDigest !== manifest.writeSetDigest
+    || JSON.stringify(normalizeWriteSet(recoveredAuthority.cloudDeclaredWriteScope))
+      !== JSON.stringify(normalizeWriteSet(manifest.declaredWriteSet))
+    || recoveredAuthority.leaseEpoch !== authority.leaseEpoch
+    || recoveredAuthority.reviewRequestId !== authority.reviewRequestId
+    || recoveredAuthority.state !== "delivery_authorized"
+    || recoveredAuthority.focusedEvidenceDigest !== focusedEvidenceDigest
+    || recoveredAuthority.operationReceiptDigest !== reference.operationReceiptDigest
+    || recoveredAuthority.integrationReceiptDigest !== reference.integrationReceiptDigest
+    || digestValue(recoveredAuthority.integration) !== digestValue(reference.integration)
+  ) {
+    throw new Error("Verified integrated-preserved authority changed its reviewed integration identity.");
+  }
+}
+function requireIntegratedReplayConvergence({
+  inventory,
+  authority,
+  reference,
+  manifest,
+}) {
+  if (!inventory || !Array.isArray(inventory.claims)) {
+    throw new Error("Integrated-preserved replay requires a verified current-claim inventory.");
+  }
+  const candidates = inventory.claims.filter(
+    claim => claim.claimId === authority.claimId,
+  );
+  if (
+    candidates.length !== 1
+    || candidates[0].state !== "delivery_authorized"
+    || candidates[0].actorId !== reference.actorId
+    || candidates[0].repositoryId !== reference.repositoryId
+    || candidates[0].workItemId !== reference.workItemId
+    || candidates[0].canonicalBaseRevision !== authority.canonicalBaseSha
+    || candidates[0].laneRevision !== authority.laneRevision
+    || candidates[0].writeSetDigest !== manifest.writeSetDigest
+    || candidates[0].leaseEpoch !== authority.leaseEpoch
+    || candidates[0].transitionCounter !== authority.transitionCounter
+    || candidates[0].operationReceiptDigest !== authority.operationReceiptDigest
+  ) {
+    throw new Error("Integrated-preserved replay final inventory drifted from the verified authority.");
+  }
+  const overlapping = inventory.claims.filter(claim => {
+    if (claim.claimId === authority.claimId) return false;
+    if (claim.reviewRequestId === authority.reviewRequestId) return true;
+    try {
+      return writeSetsOverlap(claim.declaredWriteScope, manifest.declaredWriteSet);
+    } catch {
+      return true;
+    }
+  });
+  if (overlapping.length > 0) {
+    throw new Error(
+      "Integrated-preserved replay retained a current queued, overlapping, or duplicate-review authority.",
+    );
+  }
+  return Object.freeze([]);
+}
+function retireIntegratedReplayQueuedSuccessor({
+  claim,
+  integratedClaim,
+  targetRepository,
+  ledgerRepository,
+  deviceId,
+  sessionId,
+  branch,
+  manifest,
+  environment,
+  invoke,
+}) {
+  const retirementEvidence = {
+    schema: "agentic-integrated-replay-queued-successor-retirement/v1",
+    branch: requiredText(branch, "branch"),
+    integratedClaimId: requiredDigest(integratedClaim?.claimId, "integrated claimId"),
+    queuedSuccessorClaimId: requiredDigest(claim?.claimId, "queued successor claimId"),
+    candidateRevision: requiredSha(integratedClaim?.laneRevision, "candidateRevision"),
+    integrationReceiptDigest: requiredDigest(
+      integratedClaim?.integrationReceiptDigest,
+      "integrationReceiptDigest",
+    ),
+    manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
+    writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
+  };
+  const result = invoke({
+    action: "retire",
+    ledgerRepository,
+    request: {
+      targetRepository,
+      claimId: claim.claimId,
+      expectedFenceRevision: requiredDigest(
+        claim.fenceRevision,
+        "queued successor fenceRevision",
+      ),
+      expectedTransitionCounter: positiveInteger(
+        claim.transitionCounter,
+        "queued successor transitionCounter",
+      ),
+      reason: "superseded",
+      finalRevision: requiredSha(claim.laneRevision, "queued successor laneRevision"),
+      reviewRequestId: null,
+      bytesDigest: digestValue({ ...retirementEvidence, operation: "retire-bytes" }),
+      namedChecksDigest: digestValue({ ...retirementEvidence, operation: "retire-checks" }),
+      handoffEvidenceDigest: digestValue({ ...retirementEvidence, operation: "retire-handoff" }),
+      deviceId: requiredText(deviceId, "deviceId"),
+      sessionId: requiredText(sessionId, "sessionId"),
+      idempotencyKey: [
+        "integrated-replay-retire-queued-successor",
+        claim.claimId,
+        claim.transitionCounter,
+        claim.fenceRevision,
+      ].join(":"),
+    },
+    environment,
+  });
+  if (
+    result?.schema !== "agentic-cloud-collaboration-result/v1"
+    || result.ok !== true
+    || result.action !== "retire"
+    || result.claim?.claimId !== claim.claimId
+    || projectRootState(result.claim?.state) !== "released"
+  ) {
+    throw new Error("Integrated-preserved replay did not retire the exact queued successor.");
+  }
+  return requiredDigest(
+    result.receipt?.receiptDigest,
+    "queued successor retirement receipt digest",
+  );
 }
 function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
   authority = null,

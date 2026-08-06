@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1076,
-  "headDigest": "4cabc0072605f6ceb6bcbd820efe3308f8f18c47b20e5f07997e8b4660457937",
+  "sequence": 1077,
+  "headDigest": "cf23f639a704838d3304f2f9e03c4e361700de669805050ffd5f5c34c28daf41",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -54410,6 +54410,47 @@
       },
       "claimDigest": "26518e6b8fd5ad15bceeb11ebe214c90cf7aa8af0cb59535bb583207975f7a7d",
       "digest": "4cabc0072605f6ceb6bcbd820efe3308f8f18c47b20e5f07997e8b4660457937"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1077,
+      "parentDigest": "4cabc0072605f6ceb6bcbd820efe3308f8f18c47b20e5f07997e8b4660457937",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "8ea437a70d8a7283910de78a18b32a840bbb0c050ff26ceca390d9f36229c4a8",
+      "idempotencyKey": "ed32f3c82956edd7a35863c29365e39f99adf380192ee08ff3ef476612747d33",
+      "requestDigest": "b4af0b5b1f8374062fab498860ff17f1df9f8e5ec684049d8920f0cb5af7aba5",
+      "evaluationTime": "2026-08-06T12:47:12.000Z",
+      "claimCore": {
+        "claimId": "8ea437a70d8a7283910de78a18b32a840bbb0c050ff26ceca390d9f36229c4a8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:7c0baba2b9d31851d091e184144354b718aa2db655567dab3e1f7d6cc7c975de",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:11ea3205eed38ccd6da690c9a5d770d5aad218b012a553d78ecd0446263be0e8",
+        "canonicalBaseRevision": "8e99cb178041f1988897b692a5ea315008badf25",
+        "declaredWriteScope": [
+          "path:docs/collaboration-runtime-contract.md",
+          "path:scripts/__tests__/collaboration-contract.test.mjs",
+          "path:scripts/collaboration-contract.mjs",
+          "semantic:ci-command-expansion"
+        ],
+        "writeSetDigest": "68a728bc336a2283f7b3d17c5ac9a6aaf1b9f2ddeaa7f2530a200b738ab74ada",
+        "laneRevision": "8e99cb178041f1988897b692a5ea315008badf25",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T14:47:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "6d6e8c82e36593eb68e8c09a528bb29a784e18cd956d88d0c718ba1414966d11",
+      "digest": "cf23f639a704838d3304f2f9e03c4e361700de669805050ffd5f5c34c28daf41"
     }
   ]
 }

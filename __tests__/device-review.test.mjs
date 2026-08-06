@@ -235,6 +235,7 @@ test("review replays and upgrades a ready legacy root-source lane into cloud aut
         "status --porcelain": "",
         "branch --show-current": branch,
         "rev-parse HEAD": headSha,
+        "rev-parse origin/main": lease.baseSha,
         "log -1 --pretty=%s": "feat: managed autonomous run",
         [`diff --name-only ${lease.baseSha}..${headSha} --`]: "scripts/device-branch-lib.mjs\n",
       };
@@ -412,6 +413,7 @@ test("review upgrades a legacy root-source lane into cloud-authoritative review"
         "status --porcelain": "",
         "branch --show-current": branch,
         "rev-parse HEAD": headSha,
+        "rev-parse origin/main": lease.baseSha,
         "log -1 --pretty=%s": "feat: managed autonomous run",
         [`diff --name-only ${lease.baseSha}..${headSha} --`]: "scripts/device-branch-lib.mjs\n",
       };

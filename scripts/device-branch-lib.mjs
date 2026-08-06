@@ -687,6 +687,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     throw new Error("Root-source legacy review admission requires a resolvable origin repository.");
   }
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
   const manifest = deriveLegacyReviewAdmissionManifest({
     lease,
     gitText,
@@ -696,7 +697,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     ledgerRepository: targetRepository,
     targetRepository,
     manifest,
-    canonicalBaseSha: lease.baseSha,
+    canonicalBaseSha,
     branch,
     headSha,
     deviceId: lease.device,
@@ -752,6 +753,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
   if (!targetRepository) {
     throw new Error("Root-source ready review upgrade requires a resolvable origin repository.");
   }
+  const canonicalBaseSha = gitText(["rev-parse", "origin/main"]).trim();
   const manifest = deriveLegacyReviewAdmissionManifest({
     lease,
     gitText,
@@ -761,7 +763,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
     ledgerRepository: targetRepository,
     targetRepository,
     manifest,
-    canonicalBaseSha: lease.baseSha,
+    canonicalBaseSha,
     branch,
     headSha: lease.reviewHeadSha,
     deviceId: lease.device,

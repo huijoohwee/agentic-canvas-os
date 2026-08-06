@@ -263,6 +263,179 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
   assert.equal(renewed, false);
 });
 
+test("review recovers an expired planned cloud-bound lane into review-ready authority", () => {
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/42";
+  const headSha = "c".repeat(40);
+  let isDraft = true;
+  let body = "";
+  let annotateCount = 0;
+  let firstAnnotateUsedAllowExpired = false;
+  let readyVerificationHead = null;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "rev-parse HEAD": headSha,
+    [`merge-base --is-ancestor ${headSha} HEAD`]: "",
+    "log -1 --pretty=%s": "fix: recover planned review authority\n",
+  });
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 7,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "runtime-leases",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: headSha,
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T08:22:43.384Z",
+    expiresAt: "2026-08-06T08:40:33.000Z",
+    admission: {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "planned",
+      semanticScope: "runtime-leases",
+      declaredWriteSet: [
+        "path:scripts/device-branch-lib.mjs",
+        "semantic:runtime-leases",
+      ],
+      writeSetDigest: "1".repeat(64),
+      manifestDigest: "2".repeat(64),
+      planReceiptDigest: "3".repeat(64),
+      admissionReceiptDigest: "4".repeat(64),
+      existingLaneStateDigest: "5".repeat(64),
+    },
+    cloudAuthority: {
+      schema: "agentic-lane-cloud-authority/v1",
+      provider: "github",
+      ledgerRepository: "example/ledger",
+      targetRepository: "example/repo",
+      claimId: "6".repeat(64),
+      claimDigest: "7".repeat(64),
+      ledgerRevision: "8".repeat(40),
+      ledgerDigest: "9".repeat(64),
+      claimLedgerRevision: "a".repeat(64),
+      operationReceiptDigest: "b".repeat(64),
+      mutationAuthorityEligible: true,
+      canonicalBaseSha: "a".repeat(40),
+      laneRevision: headSha,
+      cloudDeclaredWriteScope: [
+        "path:scripts/device-branch-lib.mjs",
+        "semantic:runtime-leases",
+      ],
+      writeSetDigest: "1".repeat(64),
+      deviceId: "device",
+      sessionId: "chat-a",
+      reviewRequestId: "github-pull-request:PR_42",
+      leaseEpoch: 1,
+      transitionCounter: 4,
+      state: "active",
+      expiresAt: "2026-08-06T09:05:47.000Z",
+      manifestDigest: "2".repeat(64),
+    },
+  };
+  body = renderWriterLeasePullRequestBody(lease);
+
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: args => {
+      const key = args.join(" ");
+      if (key === `ls-remote --heads origin refs/heads/${branch}`) {
+        return `${headSha}\trefs/heads/${branch}`;
+      }
+      return "";
+    },
+    ghText: args => {
+      if (args[1] === "list") {
+        return JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }]);
+      }
+      return pullJson(pullRequestUrl, branch, body, isDraft);
+    },
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: requested => requested === branch ? lease : null,
+      verify: () => {
+        throw new Error("Writer lease expired at 2026-08-06T08:40:33.000Z; renew or hand off before mutation.");
+      },
+      annotate: ({ allowExpired = false, values }) => {
+        annotateCount += 1;
+        if (annotateCount === 1) firstAnnotateUsedAllowExpired = allowExpired;
+        lease = { ...lease, ...values };
+        return lease;
+      },
+      release: ({ status }) => {
+        lease = { ...lease, status };
+        return lease;
+      },
+    },
+    heartbeatCloudAuthority: ({ authority }) => ({
+      authority: {
+        ...authority,
+        claimDigest: "c".repeat(64),
+        ledgerRevision: "d".repeat(40),
+        ledgerDigest: "e".repeat(64),
+        claimLedgerRevision: "f".repeat(64),
+        transitionCounter: 5,
+        expiresAt: "2099-08-06T09:05:47.000Z",
+      },
+      verification: {
+        verifiedAt: "2026-08-06T08:45:00.000Z",
+        receiptDigest: "0".repeat(64),
+      },
+    }),
+    reconcileCloudAuthority: ({ authority }) => ({
+      authority: {
+        ...authority,
+        laneRevision: headSha,
+        reviewRequestId: "github-pull-request:PR_42",
+        state: "active",
+      },
+      verification: {
+        verifiedAt: "2026-08-06T08:45:01.000Z",
+        receiptDigest: "1".repeat(64),
+      },
+    }),
+    reviewReadyCloudAuthority: ({ authority }) => ({
+      authority: {
+        ...authority,
+        laneRevision: headSha,
+        state: "review_ready",
+        reviewRequestId: "github-pull-request:PR_42",
+      },
+    }),
+    verifyReviewReadyCloudAuthority: ({ authority, headSha: verifiedHead }) => {
+      readyVerificationHead = verifiedHead;
+      return { authority };
+    },
+    run: (command, args) => {
+      if (command === "gh" && args[1] === "pr" && args[2] === "ready") {
+        isDraft = false;
+      }
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && bodyIndex >= 0) {
+        body = args[bodyIndex + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.equal(firstAnnotateUsedAllowExpired, true);
+  assert.equal(lease.admission.status, "admitted");
+  assert.equal(lease.cloudAuthority.state, "review_ready");
+  assert.equal(lease.status, "review_ready");
+  assert.equal(readyVerificationHead, headSha);
+});
+
 test("review upgrades a resumed legacy root-source ready lane using authored paths from main diff", () => {
   const branch = "agent/device/merged-no-lease-completion";
   const pullRequestUrl = "https://github.test/pull/288";

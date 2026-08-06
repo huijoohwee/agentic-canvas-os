@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 917,
-  "headDigest": "7642c11134fe7eeff3594428c8cc17a662818beace1470937bee0dc2b686ed32",
+  "sequence": 918,
+  "headDigest": "e35eb2e0139a2a9ae0b8471a40a7e80c8791d56dbb360de998a6587abcb356df",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -46605,6 +46605,65 @@
       },
       "claimDigest": "63fed58a85f62b50aaf0db024dec5acc772e7e8d265eda30bb2e184a5b72d143",
       "digest": "7642c11134fe7eeff3594428c8cc17a662818beace1470937bee0dc2b686ed32"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 918,
+      "parentDigest": "7642c11134fe7eeff3594428c8cc17a662818beace1470937bee0dc2b686ed32",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b0724abf241bc870ee6a6d065a7ae9ce885998a1774a577f1532dc897912948e",
+      "idempotencyKey": "e05e723bbe5dfb622e9b0cf0217bab28d9711247791b30738dfdbba9b5ac4960",
+      "requestDigest": "a6bb8b811b99034a8c9a85087e038ebb92c28d5c6e18c511ac46c9fc44bfb7ff",
+      "evaluationTime": "2026-08-06T05:15:13.000Z",
+      "claimCore": {
+        "claimId": "b0724abf241bc870ee6a6d065a7ae9ce885998a1774a577f1532dc897912948e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f1d4107a40c10ecafb9cb3ef2369915495f49ffe04714625b6f42e614f3ccf09",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e85af8564af2475a12cd55381abcf2d3707d0ad353d1ac98cc70dbe0f7a77fcc",
+        "canonicalBaseRevision": "bebda7bfdf3c9b8b2d8f98a2784a57487520abd6",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-clean-committed-lane-bootstrap.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:package.json",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-lib.mjs",
+          "path:scripts/legacy-clean-committed-lane-bootstrap.mjs",
+          "semantic:legacy-clean-committed-lane-bootstrap"
+        ],
+        "writeSetDigest": "f524d7eb260cda29b0227b1cd1196b2c5005ff368d0830ca1d90281e74d3188f",
+        "laneRevision": "c5d261350db6b69dd6be1fe3ccc6ef40e3cc93c6",
+        "leaseEpoch": 3,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-06T05:44:22.000Z",
+        "evidenceDigest": "f07d9a4b954a584bd5a49fae5c9b2f85be1371cba903e430e8a01d2ddc52f6ed",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76VcSP",
+        "predecessorClaimId": "28c6eff78449c560918403e47a4738c7f647b13d136a70ce6b8206b485bf2391",
+        "handoff": null,
+        "release": null,
+        "eligibleSince": null,
+        "recovery": {
+          "evidenceDigest": "2aafe50acf9635ba57a5dad3051884fa4f8dda3fd0cac91bfb67046f0a93962e",
+          "recoveredAt": "2026-08-06T05:14:22.000Z"
+        },
+        "integration": {
+          "candidateRevision": "c5d261350db6b69dd6be1fe3ccc6ef40e3cc93c6",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM76VcSP",
+          "focusedEvidenceDigest": "f07d9a4b954a584bd5a49fae5c9b2f85be1371cba903e430e8a01d2ddc52f6ed",
+          "dependencyClosureDigest": "e392ca1206400c436d303cab9ddc559d3170774d9690f41b0eb4acb966453f16",
+          "namedChecksDigest": "a69a0b671cf52c335f9cc64ca3a96f53ba5f9bc8451365df1e1af1bd368a7ca8",
+          "handoffEvidenceDigest": "9e1c4c62f724addbd08be34dac50aa76f5a7d9f9d95146e80a57e76cd5ea0755",
+          "operatorDecisionDigest": "320a8d204c8f5b5bdcb8d07b4df511bdb7e79a33d368c6a16c4af7242d062e03",
+          "integrationIntentDigest": "8cf2c3b4bc9ea98d35403be4a8667f0f09192ba7f7ef71e21079416a60d14c79",
+          "integratedAt": "2026-08-06T05:15:13.000Z"
+        }
+      },
+      "claimDigest": "f4be8583cd793027c1ef2086bdb51d834d805f4094be2e40c5bfc0df85388731",
+      "digest": "e35eb2e0139a2a9ae0b8471a40a7e80c8791d56dbb360de998a6587abcb356df"
     }
   ]
 }

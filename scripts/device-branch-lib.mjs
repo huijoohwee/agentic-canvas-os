@@ -13,13 +13,14 @@ import {
   compactDeviceCloudMutationIdempotencyKey,
   createDeviceDeliveryEvidence,
 } from "./device-delivery-evidence.mjs";
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
   claimLegacyReviewAdmissionCloudAuthority,
   heartbeatAdmissionCloudAuthority,
   invokeRepositoryCloudAction,
   reviewReadyAdmissionCloudAuthority,
+  verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
@@ -58,6 +59,8 @@ export function review({
   run,
   wait,
   heartbeatCloudAuthority = heartbeatAdmissionCloudAuthority,
+  inspectCloudStatus = invokeRepositoryCloudAction,
+  verifyActiveCloudAuthority = verifyAdmissionCloudAuthority,
   reconcileCloudAuthority = null,
   reviewReadyCloudAuthority = null,
   verifyReviewReadyCloudAuthority = null,
@@ -118,12 +121,20 @@ export function review({
     lease = leaseStore.verify({ sessionId, branch });
   } catch (error) {
     const recoverableLease = leaseStore.read?.(branch) || null;
-    if (!isExpiredPlannedReviewRecoveryLease({
-      error,
-      lease: recoverableLease,
-      sessionId,
-      branch,
-    })) {
+    if (
+      !isExpiredPlannedReviewRecoveryLease({
+        error,
+        lease: recoverableLease,
+        sessionId,
+        branch,
+      })
+      && !isExpiredCurrentCloudAdoptionLease({
+        error,
+        lease: recoverableLease,
+        sessionId,
+        branch,
+      })
+    ) {
       throw error;
     }
     lease = recoverableLease;
@@ -151,6 +162,25 @@ export function review({
       lease = recovered.lease;
       cloud = recovered.cloud;
       log(`Recovered planned cloud admission for ${branch} into exact review authority.`);
+    }
+  }
+  if (!cloud) {
+    const adopted = maybeAdoptLegacyRootSourceCurrentCloudAdmission({
+      lease,
+      branch,
+      gitText,
+      gitOptional,
+      ghText,
+      leaseStore,
+      sessionId,
+      heartbeatCloudAuthority,
+      inspectCloudStatus,
+      verifyActiveCloudAuthority,
+    });
+    if (adopted) {
+      lease = adopted.lease;
+      cloud = adopted.cloud;
+      log(`Adopted exact current cloud admission for ${branch}.`);
     }
   }
   if (!cloud) {
@@ -755,6 +785,134 @@ function requireCloudPublishAdmission(lease) {
   return { manifest: lease.admission, authority: lease.cloudAuthority };
 }
 
+function maybeAdoptLegacyRootSourceCurrentCloudAdmission({
+  lease,
+  branch,
+  gitText,
+  gitOptional,
+  ghText,
+  leaseStore,
+  sessionId,
+  heartbeatCloudAuthority,
+  inspectCloudStatus,
+  verifyActiveCloudAuthority,
+}) {
+  if (lease?.admission || lease?.cloudAuthority) return null;
+  if (typeof verifyActiveCloudAuthority !== "function") return null;
+  if (typeof inspectCloudStatus !== "function") return null;
+  if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return null;
+  const targetRepository = resolveOriginRepositoryFullName(gitOptional);
+  if (!targetRepository) {
+    throw new Error("Legacy root-source cloud admission adoption requires a resolvable origin repository.");
+  }
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
+  const manifest = deriveLegacyReviewAdmissionManifest({
+    lease,
+    gitText,
+    headSha,
+  });
+  const expectedWriteScope = JSON.stringify(
+    normalizeWriteSet(manifest.declaredWriteSet),
+  );
+  const status = inspectCloudStatus({
+    action: "status",
+    ledgerRepository: targetRepository,
+    request: { targetRepository },
+  });
+  const matches = (status.claims || []).filter(claim => (
+    ["active", "current"].includes(String(claim?.state || ""))
+    && claim?.canonicalBaseRevision === canonicalBaseSha
+    && claim?.laneRevision === canonicalBaseSha
+    && claim?.writeSetDigest === manifest.writeSetDigest
+    && JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope || [])) === expectedWriteScope
+    && !claim?.reviewRequestId
+  ));
+  if (matches.length === 0) return null;
+  if (matches.length > 1) {
+    throw new Error("Legacy root-source cloud admission adoption found multiple current candidates.");
+  }
+  const claim = matches[0];
+  let authority = Object.freeze({
+    schema: "agentic-lane-cloud-authority/v1",
+    provider: "github",
+    ledgerRepository: targetRepository,
+    targetRepository,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    ledgerRevision: status.ledgerRevision,
+    ledgerDigest: status.ledgerDigest,
+    claimLedgerRevision: claim.transitionDigest,
+    entrySchema: claim.entrySchema,
+    claimIdentitySchema: claim.claimIdentitySchema,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    mutationAuthorityEligible: true,
+    canonicalBaseSha: claim.canonicalBaseRevision,
+    laneRevision: claim.laneRevision,
+    cloudDeclaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
+    writeSetDigest: claim.writeSetDigest,
+    deviceId: lease.device,
+    sessionId,
+    reviewRequestId: null,
+    leaseEpoch: claim.leaseEpoch,
+    transitionCounter: claim.transitionCounter,
+    state: "active",
+    expiresAt: claim.expiresAt,
+    manifestDigest: manifest.manifestDigest,
+  });
+  let verifiedAt = lease.heartbeatAt;
+  if (hasExpired(authority.expiresAt) || hasExpired(lease.expiresAt)) {
+    requireCloudReviewAdapter(
+      heartbeatCloudAuthority,
+      "legacy current-claim adoption heartbeat",
+    );
+    const renewed = heartbeatCloudAuthority({
+      authority,
+      deviceId: lease.device,
+      sessionId,
+      ttlSeconds: 1_800,
+    });
+    authority = renewed.authority;
+    verifiedAt = renewed.verification?.verifiedAt || verifiedAt;
+  }
+  const verified = verifyActiveCloudAuthority({
+    authority,
+    manifest,
+    canonicalBaseSha,
+  });
+  const admission = createLegacyReviewAdmissionProjection({
+    lease,
+    manifest,
+    authority: verified.authority,
+    verification: verified.verification,
+    headSha,
+  });
+  verifiedAt = verified.verification?.verifiedAt || verifiedAt;
+  const annotated = leaseStore.annotate({
+    sessionId,
+    branch,
+    allowExpired: hasExpired(lease.expiresAt),
+    values: {
+      admission,
+      cloudAuthority: verified.authority,
+      heartbeatAt: verifiedAt,
+      expiresAt: verified.authority.expiresAt,
+    },
+  });
+  return {
+    lease: annotated,
+    cloud: {
+      manifest: admission,
+      authority: verified.authority,
+    },
+  };
+}
+
 function maybeBootstrapLegacyRootSourceReviewAdmission({
   lease,
   branch,
@@ -1312,6 +1470,21 @@ function isExpiredPlannedReviewRecoveryLease({
     && lease.branch === branch
     && lease.admission?.status === "planned"
     && lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1";
+}
+
+function isExpiredCurrentCloudAdoptionLease({
+  error,
+  lease,
+  sessionId,
+  branch,
+}) {
+  return String(error?.message || "").startsWith("Writer lease expired at ")
+    && lease?.schema === "agentic-writer-lease/v2"
+    && lease.status === "active"
+    && lease.sessionId === sessionId
+    && lease.branch === branch
+    && !lease.admission
+    && !lease.cloudAuthority;
 }
 
 function requireReviewReplay({ branch, lease, gitText, gitOptional, ghText, ghOptional, run }) {

@@ -478,6 +478,220 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
   assert.equal(readyVerificationHead, null);
 });
 
+test("review adopts an exact current root-source cloud claim before bootstrapping a duplicate", () => {
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/42";
+  const canonicalBaseSha = "a".repeat(40);
+  const headSha = "c".repeat(40);
+  const declaredPaths = [
+    "__tests__/device-branch-lib.test.mjs",
+    "scripts/device-branch-lib.mjs",
+  ];
+  const declaredWriteSet = [
+    "path:__tests__/device-branch-lib.test.mjs",
+    "path:scripts/device-branch-lib.mjs",
+    "semantic:runtime-leases",
+  ];
+  const writeSetDigest = digestValue(declaredWriteSet);
+  let isDraft = true;
+  let body = "";
+  let inspectCount = 0;
+  let firstAnnotateUsedAllowExpired = false;
+  let annotateCount = 0;
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "rev-parse HEAD": headSha,
+    "rev-parse origin/main": canonicalBaseSha,
+    [`diff --name-only ${canonicalBaseSha}..${headSha} --`]:
+      `${declaredPaths.join("\n")}\n`,
+    [`merge-base --is-ancestor ${headSha} HEAD`]: "",
+    "log -1 --pretty=%s": "fix: recover planned review authority\n",
+  });
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 7,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "runtime-leases",
+    branch,
+    worktreePath: repo,
+    baseSha: canonicalBaseSha,
+    fenceSha: headSha,
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-06T08:22:43.384Z",
+    expiresAt: "2026-08-06T08:40:33.000Z",
+  };
+  body = renderWriterLeasePullRequestBody(lease);
+
+  const result = review({
+    invocationPath: repo,
+    repo,
+    sessionId: "chat-a",
+    gitText,
+    gitOptional: args => {
+      const key = args.join(" ");
+      if (key === "config --get remote.origin.url") {
+        return "https://github.com/huijoohwee/agentic-canvas-os.git";
+      }
+      if (key === `ls-remote --heads origin refs/heads/${branch}`) {
+        return `${headSha}\trefs/heads/${branch}`;
+      }
+      return "";
+    },
+    ghText: args => {
+      if (args[1] === "list") {
+        return JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }]);
+      }
+      if (args[1] === "view" && args.includes("--jq")) {
+        return body;
+      }
+      return pullJson(pullRequestUrl, branch, body, isDraft, "OPEN", canonicalBaseSha);
+    },
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: requested => requested === branch ? lease : null,
+      verify: () => {
+        throw new Error("Writer lease expired at 2026-08-06T08:40:33.000Z; renew or hand off before mutation.");
+      },
+      annotate: ({ allowExpired = false, values }) => {
+        annotateCount += 1;
+        if (annotateCount === 1) firstAnnotateUsedAllowExpired = allowExpired;
+        lease = { ...lease, ...values };
+        return lease;
+      },
+      release: ({ status }) => {
+        lease = { ...lease, status };
+        return lease;
+      },
+    },
+    inspectCloudStatus: ({ action, ledgerRepository, request }) => {
+      inspectCount += 1;
+      assert.equal(action, "status");
+      assert.equal(ledgerRepository, "huijoohwee/agentic-canvas-os");
+      assert.deepEqual(request, { targetRepository: "huijoohwee/agentic-canvas-os" });
+      return {
+        schema: "agentic-cloud-collaboration-result/v1",
+        ok: true,
+        action: "status",
+        status: "ready",
+        ledgerRevision: "d".repeat(40),
+        ledgerDigest: "e".repeat(64),
+        claims: [{
+          claimId: "6".repeat(64),
+          entrySchema: "agentic-cloud-collaboration-entry/v2",
+          claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+          state: "current",
+          actorId: "github-user:1",
+          repositoryId: "github-repository:1",
+          workItemId: "work-item:1",
+          canonicalBaseRevision: canonicalBaseSha,
+          laneRevision: canonicalBaseSha,
+          declaredWriteScope: declaredWriteSet,
+          writeSetDigest,
+          leaseEpoch: 1,
+          transitionCounter: 2,
+          reviewRequestId: null,
+          expiresAt: "2099-08-06T09:05:47.000Z",
+          fenceRevision: "7".repeat(64),
+          transitionDigest: "8".repeat(64),
+          operationReceiptDigest: "9".repeat(64),
+          integrationReceiptDigest: null,
+          integration: null,
+        }],
+      };
+    },
+    heartbeatCloudAuthority: ({ authority }) => ({
+      authority: {
+        ...authority,
+        claimDigest: "a".repeat(64),
+        ledgerRevision: "b".repeat(40),
+        ledgerDigest: "c".repeat(64),
+        claimLedgerRevision: "d".repeat(64),
+        transitionCounter: authority.transitionCounter + 1,
+        expiresAt: "2099-08-06T09:45:00.000Z",
+      },
+      verification: {
+        verifiedAt: "2026-08-06T08:44:30.000Z",
+        receiptDigest: "e".repeat(64),
+      },
+    }),
+    verifyActiveCloudAuthority: ({ authority, manifest, canonicalBaseSha: verifiedBaseSha }) => {
+      assert.equal(authority.claimId, "6".repeat(64));
+      assert.equal(authority.laneRevision, canonicalBaseSha);
+      assert.equal(manifest.writeSetDigest, writeSetDigest);
+      assert.equal(verifiedBaseSha, canonicalBaseSha);
+      return {
+        authority,
+        verification: {
+          receiptDigest: "1".repeat(64),
+          verifiedAt: "2026-08-06T08:45:00.000Z",
+        },
+      };
+    },
+    reconcileCloudAuthority: ({ authority }) => ({
+      authority,
+      verification: markOperationDerivedCloudVerification({
+        schema: "agentic-lane-cloud-verification/v1",
+        status: "ready",
+        claimId: authority.claimId,
+        claimDigest: authority.claimDigest,
+        ledgerRevision: authority.ledgerRevision,
+        ledgerDigest: authority.ledgerDigest,
+        canonicalBaseSha: authority.canonicalBaseSha,
+        laneRevision: authority.laneRevision,
+        writeSetDigest: authority.writeSetDigest,
+        reviewRequestId: authority.reviewRequestId,
+        remoteClaimInventoryDigest: "2".repeat(64),
+        inventory: {
+          schema: "agentic-cloud-claim-inventory/v1",
+          inventoryDigest: "2".repeat(64),
+          observedLedgerHeadRevision: authority.ledgerRevision,
+          ledgerDigest: authority.ledgerDigest,
+          claims: [],
+        },
+        verifiedAt: "2026-08-06T08:45:01.000Z",
+        receiptDigest: "3".repeat(64),
+      }),
+    }),
+    reviewReadyCloudAuthority: ({ authority }) => ({
+      authority: {
+        ...authority,
+        laneRevision: headSha,
+        state: "review_ready",
+        reviewRequestId: "github-pull-request:PR_42",
+      },
+    }),
+    verifyReviewReadyCloudAuthority: ({ authority }) => ({ authority }),
+    claimLegacyReviewCloudAuthority: () => {
+      throw new Error("review should adopt the exact current claim before bootstrapping");
+    },
+    run: (command, args) => {
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") {
+        isDraft = false;
+      }
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && bodyIndex >= 0) {
+        body = args[bodyIndex + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.equal(inspectCount, 1);
+  assert.equal(firstAnnotateUsedAllowExpired, true);
+  assert.equal(lease.admission.status, "admitted");
+  assert.equal(lease.cloudAuthority.state, "review_ready");
+  assert.equal(lease.status, "review_ready");
+});
+
 test("review upgrades a resumed legacy root-source ready lane using authored paths from main diff", () => {
   const branch = "agent/device/merged-no-lease-completion";
   const pullRequestUrl = "https://github.test/pull/288";

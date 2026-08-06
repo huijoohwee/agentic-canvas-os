@@ -17,6 +17,7 @@ import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
   claimLegacyReviewAdmissionCloudAuthority,
+  heartbeatAdmissionCloudAuthority,
   invokeRepositoryCloudAction,
   reviewReadyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
@@ -56,6 +57,7 @@ export function review({
   sessionId,
   run,
   wait,
+  heartbeatCloudAuthority = heartbeatAdmissionCloudAuthority,
   reconcileCloudAuthority = null,
   reviewReadyCloudAuthority = null,
   verifyReviewReadyCloudAuthority = null,
@@ -116,7 +118,27 @@ export function review({
   if (!lease.pullRequestUrl || !lease.fenceSha) {
     throw new Error("Review requires the draft ownership pull request and fencing SHA created by device:start.");
   }
-  let cloud = requireCloudReviewAdmission(lease);
+  let cloud = lease?.admission?.status === "planned"
+    ? null
+    : requireCloudReviewAdmission(lease);
+  if (!cloud) {
+    const recovered = maybeRecoverPlannedReviewAdmission({
+      lease,
+      branch,
+      gitText,
+      gitOptional,
+      ghText,
+      leaseStore,
+      sessionId,
+      heartbeatCloudAuthority,
+      reconcileCloudAuthority,
+    });
+    if (recovered) {
+      lease = recovered.lease;
+      cloud = recovered.cloud;
+      log(`Recovered planned cloud admission for ${branch} into exact review authority.`);
+    }
+  }
   if (!cloud) {
     const bootstrapped = maybeBootstrapLegacyRootSourceReviewAdmission({
       lease,
@@ -784,6 +806,102 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
   };
 }
 
+function maybeRecoverPlannedReviewAdmission({
+  lease,
+  branch,
+  gitText,
+  gitOptional,
+  ghText,
+  leaseStore,
+  sessionId,
+  heartbeatCloudAuthority,
+  reconcileCloudAuthority,
+}) {
+  if (lease?.admission?.status !== "planned") return null;
+  if (lease?.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1") return null;
+  requireCloudReviewAdapter(
+    reconcileCloudAuthority,
+    "planned-admission recovery reconciler",
+  );
+  const manifest = createPlannedAdmissionManifest(lease);
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (headSha !== lease.fenceSha) {
+    throw new Error(
+      "Planned review recovery requires the exact active local HEAD to match the writer fence.",
+    );
+  }
+  requireExactRemoteHead({
+    branch,
+    expectedHeadSha: headSha,
+    gitOptional,
+  });
+  const pullRequest = requireOwnershipPullRequestDraft({
+    url: lease.pullRequestUrl,
+    branch,
+    ghText,
+    expectedDraft: true,
+  });
+  requirePullRequestHead({ pullRequest, expectedHeadSha: headSha });
+  let authority = lease.cloudAuthority;
+  let verifiedAt = new Date().toISOString();
+  if (hasExpired(authority.expiresAt) || hasExpired(lease.expiresAt)) {
+    requireCloudReviewAdapter(
+      heartbeatCloudAuthority,
+      "planned-admission recovery heartbeat",
+    );
+    const renewed = heartbeatCloudAuthority({
+      authority,
+      deviceId: lease.device,
+      sessionId,
+      ttlSeconds: 1_800,
+    });
+    authority = renewed.authority;
+    verifiedAt = renewed.verification?.verifiedAt || verifiedAt;
+  }
+  const reconciled = reconcileCloudAuthority({
+    authority,
+    manifest,
+    branch,
+    headSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+    allowPriorLaneRevision: true,
+  });
+  if (
+    reconciled.authority?.state !== "active"
+    || reconciled.authority.laneRevision !== headSha
+    || reconciled.authority.deviceId !== lease.device
+    || reconciled.authority.sessionId !== sessionId
+    || !reconciled.authority.reviewRequestId
+  ) {
+    throw new Error(
+      "Planned review recovery requires the exact current active cloud claim bound to this session, head, and pull request.",
+    );
+  }
+  verifiedAt = reconciled.verification?.verifiedAt || verifiedAt;
+  const admission = createRecoveredPlannedAdmissionProjection({
+    lease,
+    authority: reconciled.authority,
+    verification: reconciled.verification,
+    headSha,
+  });
+  return {
+    lease: leaseStore.annotate({
+      sessionId,
+      branch,
+      values: {
+        admission,
+        cloudAuthority: reconciled.authority,
+        heartbeatAt: verifiedAt,
+        expiresAt: reconciled.authority.expiresAt,
+      },
+    }),
+    cloud: {
+      manifest: admission,
+      authority: reconciled.authority,
+    },
+  };
+}
+
 function maybeUpgradeLegacyRootSourceReadyReview({
   lease,
   branch,
@@ -1020,6 +1138,81 @@ function createLegacyReviewAdmissionProjection({
   });
 }
 
+function createPlannedAdmissionManifest(lease) {
+  const planned = lease?.admission;
+  if (
+    planned?.schema !== "agentic-lane-admission-lease/v1"
+    || !["planned", "admitted"].includes(planned.status)
+  ) {
+    throw new Error("Planned review recovery requires an admission-backed manifest.");
+  }
+  return Object.freeze({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: planned.semanticScope,
+    declaredWriteSet: planned.declaredWriteSet,
+    writeSetDigest: planned.writeSetDigest,
+    manifestDigest: planned.manifestDigest,
+    admittedReportDigest: planned.admittedReportDigest || null,
+  });
+}
+
+function createRecoveredPlannedAdmissionProjection({
+  lease,
+  authority,
+  verification,
+  headSha,
+}) {
+  const planned = lease?.admission;
+  if (
+    planned?.schema !== "agentic-lane-admission-lease/v1"
+    || planned.status !== "planned"
+  ) {
+    throw new Error("Planned review recovery requires the exact planned admission projection.");
+  }
+  const preservationReceiptDigest = digestValue({
+    schema: "agentic-planned-review-recovery-preservation/v1",
+    branch: lease.branch,
+    worktreePath: lease.worktreePath,
+    baseSha: lease.baseSha,
+    headSha,
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    previousAdmissionReceiptDigest: planned.admissionReceiptDigest,
+    verificationReceiptDigest: verification.receiptDigest,
+  });
+  const admittedReportDigest = digestValue({
+    schema: "agentic-planned-review-recovery-admission/v1",
+    branch: lease.branch,
+    semanticScope: planned.semanticScope,
+    manifestDigest: planned.manifestDigest,
+    writeSetDigest: planned.writeSetDigest,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    laneRevision: authority.laneRevision,
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    verificationReceiptDigest: verification.receiptDigest,
+    preservationReceiptDigest,
+  });
+  return Object.freeze({
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: planned.semanticScope,
+    declaredWriteSet: planned.declaredWriteSet,
+    writeSetDigest: planned.writeSetDigest,
+    manifestDigest: planned.manifestDigest,
+    planReceiptDigest: planned.planReceiptDigest,
+    admissionReceiptDigest: verification.receiptDigest,
+    existingLaneStateDigest: planned.existingLaneStateDigest,
+    admittedReportDigest,
+    preservationReceiptDigest,
+  });
+}
+
+function hasExpired(value) {
+  const instant = Date.parse(String(value || ""));
+  return !Number.isFinite(instant) || instant <= Date.now();
+}
+
 function requireCloudReviewAdapter(adapter, label) {
   if (typeof adapter !== "function") {
     throw new Error(`Cloud-authoritative review requires its repository ${label}.`);
@@ -1079,6 +1272,16 @@ function requireLeasePullRequest({ lease, ghOptional }) {
     throw new Error(`Active pull request does not match the writer lease ${lease.pullRequestUrl}.`);
   }
   return url.trim();
+}
+
+function requireExactRemoteHead({ branch, expectedHeadSha, gitOptional }) {
+  const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
+  const remoteSha = remoteLine.split(/\s+/u)[0] || "";
+  if (!SHA_PATTERN.test(String(expectedHeadSha || "")) || remoteSha !== expectedHeadSha) {
+    throw new Error(
+      `Remote head for ${branch} is ${remoteSha || "missing"}, not ${expectedHeadSha || "unknown"}.`,
+    );
+  }
 }
 
 function requireReviewReplay({ branch, lease, gitText, gitOptional, ghText, ghOptional, run }) {

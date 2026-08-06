@@ -20,6 +20,7 @@ const mergeSha = "e".repeat(40);
 const mainSha = "f".repeat(40);
 const knowgrphSha = "1".repeat(40);
 const pullRequestUrl = "https://github.test/example/repo/pull/42";
+const protectedSquashSubject = "fix: bind exact protected squash subjects";
 const deliveryEvidence = Object.freeze({
   dependencyClosureDigest: "1".repeat(64),
   namedChecksDigest: "2".repeat(64),
@@ -562,6 +563,7 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: args => {
@@ -646,7 +648,8 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         <= CLOUD_COLLABORATION_BOUNDS.textCharacters,
     );
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
-    assert.ok(commands.some(call => call.join(" ") === `gh pr merge --auto --squash ${pullRequestUrl}`));
+    assert.ok(commands.some(call => call.join(" ") ===
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -673,6 +676,7 @@ test("review-ready delivery rejects evidence failure before authorization or pro
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({
@@ -811,6 +815,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
         }
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
         if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return refreshedTreeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         if (key === "rev-parse HEAD") return head;
         if (key === "status --porcelain") return "";
         throw new Error(`unexpected git command: ${key}`);
@@ -885,7 +890,8 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       refreshedHeadSha,
       mainParentSha: refreshedMainSha,
     });
-    assert.ok(commands.some(call => call.join(" ") === `gh pr merge --auto --squash ${pullRequestUrl}`));
+    assert.ok(commands.some(call => call.join(" ") ===
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin refs/pull/42/head"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --ff-only FETCH_HEAD"));
   } finally {
@@ -920,6 +926,7 @@ test("authorized auto-delivery completes only through canonical runtime readines
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({

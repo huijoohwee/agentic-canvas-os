@@ -8,6 +8,7 @@ import {
   isAuthorizedAutoDeliveryPullRequest,
 } from "./auto-delivery-lib.mjs";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
 
 const repo = requiredEnv("GITHUB_REPOSITORY");
 const autoDeliveryOnly = process.argv.includes("--auto-delivery");
@@ -42,6 +43,9 @@ const current = awaitMergeability(pull.number);
 const number = current.number;
 const headSha = current.head.sha;
 const headRef = current.head.ref;
+const squashSubject = requireProtectedSquashSubject(current.title, {
+  label: `PR #${number} protected squash subject`,
+});
 console.log(`Synchronizing PR #${number} (${headRef}@${headSha.slice(0, 12)}; state=${current.mergeable_state}).`);
 
 if (autoDeliveryOnly) {
@@ -57,7 +61,8 @@ if (autoDeliveryOnly) {
     canonicalBaseSha: current.base?.sha || "",
   });
   const auto = gh([
-    "pr", "merge", String(number), "--repo", repo, "--auto", "--squash", "--match-head-commit", headSha,
+    "pr", "merge", String(number), "--repo", repo, "--auto", "--squash",
+    "--subject", squashSubject, "--match-head-commit", headSha,
   ], { allowFailure: true });
   if (auto.status !== 0 && !/already.*auto-merge|auto-merge.*enabled/i.test(`${auto.stdout}\n${auto.stderr}`)) {
     throw new Error(`Could not enable protected auto-delivery for PR #${number}: ${auto.stderr || auto.stdout}`);
@@ -113,7 +118,10 @@ function revokeAutoDelivery(pullRequest) {
 }
 
 gh(["pr", "edit", String(number), "--remove-label", "automerge/conflict"], { allowFailure: true });
-const auto = gh(["pr", "merge", String(number), "--repo", repo, "--auto", "--squash"], { allowFailure: true });
+const auto = gh([
+  "pr", "merge", String(number), "--repo", repo, "--auto", "--squash",
+  "--subject", squashSubject,
+], { allowFailure: true });
 if (auto.status !== 0 && !/already.*auto-merge|auto-merge.*enabled/i.test(`${auto.stdout}\n${auto.stderr}`)) {
   throw new Error(`Could not enable auto-merge for PR #${number}: ${auto.stderr || auto.stdout}`);
 }

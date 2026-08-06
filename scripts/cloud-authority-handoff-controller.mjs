@@ -5,7 +5,11 @@ import path from "node:path";
 
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
-import { createGitHubCloudCollaborationAdapter } from "./github-cloud-collaboration-adapter.mjs";
+import {
+  DEFAULT_LEDGER_PATH,
+  createGitHubCloudCollaborationAdapter,
+} from "./github-cloud-collaboration-adapter.mjs";
+import { validateLedger } from "./cloud-collaboration-contract.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
@@ -24,6 +28,33 @@ export const CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA = "agentic-cloud-authority-h
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const TRANSITIONS = new Set(["retain", "reclaim", "handoff"]);
+const RECOVERY_JOIN_RETRY_DELAYS_MS = Object.freeze([250, 500, 1_000, 2_000]);
+const PUBLIC_CLAIM_JOIN_FIELDS = Object.freeze([
+  "claimId",
+  "entrySchema",
+  "claimIdentitySchema",
+  "state",
+  "writeAuthority",
+  "scopeReserved",
+  "actorId",
+  "repositoryId",
+  "workItemId",
+  "canonicalBaseRevision",
+  "laneRevision",
+  "declaredWriteScope",
+  "writeSetDigest",
+  "leaseEpoch",
+  "transitionCounter",
+  "heartbeatCounter",
+  "reviewRequestId",
+  "predecessorClaimId",
+  "expiresAt",
+  "fenceRevision",
+  "transitionDigest",
+  "operationReceiptDigest",
+  "integrationReceiptDigest",
+  "integration",
+]);
 export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
   const adapter = Object.freeze({
     readPreservedReviewLane: methods.readPreservedReviewLane,
@@ -46,6 +77,12 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
   const status = await adapter.readCloudStatus({
     ledgerRepository: lane.authority.ledgerRepository,
     targetRepository: lane.authority.targetRepository,
+    recoveryAnchor: Object.freeze({
+      claimId: lane.authority.claimId,
+      claimDigest: lane.authority.claimDigest,
+      claimLedgerRevision: lane.authority.claimLedgerRevision,
+      transitionCounter: lane.authority.transitionCounter,
+    }),
   });
   const completedProjectionClaim = findCompletedProjectionClaim({ request, lane, status });
   let findings = validateContinuation({
@@ -55,20 +92,39 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
     status,
     completedProjectionClaim,
   });
-  let preflightReceipt = buildReceipt("preflight", {
-    branch: lane.branch,
-    transition: request.transition,
-    targetRepository: lane.authority.targetRepository,
-    baseSha: lane.baseSha,
-    headSha: lane.headSha,
-    reviewRequestId: lane.authority.reviewRequestId,
-    predecessorClaimId: lane.authority.claimId,
-    predecessorLeaseEpoch: lane.authority.leaseEpoch,
-    successorDeviceId: request.successorDeviceId,
-    successorSessionId: request.successorSessionId,
-    actorId: positiveInteger(actor.id, "authenticated actor id"),
-    blockingFindingDigest: digestValue(findings),
-  });
+  let preflightReceipt = buildPreflightReceipt({ request, lane, actor, findings });
+  const unprojectedRecoveryClaim = findings.length === 0
+    ? findUnprojectedRecoveryClaim({ request, lane, status })
+    : null;
+  if (
+    unprojectedRecoveryClaim
+    && (
+      !isExactRecoveryEvidence(
+        unprojectedRecoveryClaim.recovery,
+        preflightReceipt.receiptDigest,
+      )
+      || (
+        requiresLocalRecoveryEvidence({ lane, predecessor: unprojectedRecoveryClaim })
+        && !isExactRecoveryEvidence(
+          lane.authority.recovery,
+          preflightReceipt.receiptDigest,
+        )
+      )
+      || !hasExactRecoveryLineage({
+        status,
+        lane,
+        predecessor: unprojectedRecoveryClaim,
+        request,
+        recoveryEvidenceDigest: preflightReceipt.receiptDigest,
+      })
+    )
+  ) {
+    findings = [
+      ...findings,
+      finding("unprojected-recovery-evidence-drift"),
+    ].sort(compareFindings);
+    preflightReceipt = buildPreflightReceipt({ request, lane, actor, findings });
+  }
   if (
     completedProjectionClaim
     && completedProjectionClaim.recovery?.evidenceDigest !== preflightReceipt.receiptDigest
@@ -77,20 +133,7 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
       ...findings,
       finding("completed-projection-recovery-evidence-drift"),
     ].sort(compareFindings);
-    preflightReceipt = buildReceipt("preflight", {
-      branch: lane.branch,
-      transition: request.transition,
-      targetRepository: lane.authority.targetRepository,
-      baseSha: lane.baseSha,
-      headSha: lane.headSha,
-      reviewRequestId: lane.authority.reviewRequestId,
-      predecessorClaimId: lane.authority.claimId,
-      predecessorLeaseEpoch: lane.authority.leaseEpoch,
-      successorDeviceId: request.successorDeviceId,
-      successorSessionId: request.successorSessionId,
-      actorId: positiveInteger(actor.id, "authenticated actor id"),
-      blockingFindingDigest: digestValue(findings),
-    });
+    preflightReceipt = buildPreflightReceipt({ request, lane, actor, findings });
   }
   if (findings.length > 0) {
     return finalizeResult({
@@ -207,8 +250,13 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
   invokeCloudAction = invokeRepositoryCloudAction,
   invokeCloudVerifier = invokeRepositoryCloudVerifier,
   gitText = args => execFileSync("git", args, { cwd: repository, encoding: "utf8" }),
-  ghText = args => execFileSync("gh", args, { cwd: repository, encoding: "utf8" }),
+  ghText = args => execFileSync("gh", args, {
+    cwd: repository,
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+  }),
   run = (command, args) => execFileSync(command, args, { cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }),
+  waitForCloudVisibility = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
   leaseStore = createWriterLeaseStore({
     gitCommonDir: path.resolve(repository, gitText(["rev-parse", "--git-common-dir"]).trim()),
   }),
@@ -284,7 +332,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       });
     },
 
-    async readCloudStatus({ ledgerRepository, targetRepository }) {
+    async readCloudStatus({ ledgerRepository, targetRepository, recoveryAnchor = null }) {
       const cloud = createCloudAdapter({ ledgerRepository });
       const status = await cloud.execute("status", { targetRepository });
       const claims = await cloud.listClaims({ targetRepository });
@@ -309,11 +357,29 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
           } : {}),
         });
       });
-      return Object.freeze({ ...status, claims: enrichedClaims });
+      const anchoredClaims = recoveryAnchor
+        ? enrichedClaims.filter(claim => claim.claimId === recoveryAnchor.claimId)
+        : [];
+      const recoveryLineage = (
+        anchoredClaims.length === 1
+        && anchoredClaims[0].transitionCounter > recoveryAnchor.transitionCounter + 1
+      ) ? readGitHubRecoveryLineage({
+          ghText,
+          ledgerRepository,
+          ledgerRevision: status.ledgerRevision,
+          ledgerDigest: status.ledgerDigest,
+          claimId: recoveryAnchor.claimId,
+        })
+        : null;
+      return Object.freeze({
+        ...status,
+        claims: enrichedClaims,
+        ...(recoveryLineage ? { recoveryLineage } : {}),
+      });
     },
 
     async recoverAuthority({ request, lane, predecessor, status, recoveryEvidenceDigest }) {
-      const expectedTransitionCounter = lane.authority.transitionCounter + 1;
+      const expectedTransitionCounter = recoveredTransitionCounter(predecessor);
       const exactRecoveryEvidenceDigest = requiredDigest(
         recoveryEvidenceDigest,
         "recovery evidence digest",
@@ -322,8 +388,49 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         ledgerRepository: lane.authority.ledgerRepository,
       });
       let recoveredClaimDigest = predecessor.fenceRevision;
+      let recoveredTransitionDigest = predecessor.transitionDigest;
       let recoveryReceiptDigest = predecessor.operationReceiptDigest || null;
+      let recoveredLedgerRevision = requiredSha(
+        status.ledgerRevision,
+        "status ledger revision",
+      );
+      const unprojectedRecovery = (
+        predecessor.transitionCounter !== lane.authority.transitionCounter
+      );
+      if (
+        unprojectedRecovery
+        && (
+          !hasSharedRecoveryIdentity({ lane, predecessor })
+          || !isUnprojectedRecoveryClaim({ request, lane, predecessor })
+          || !hasExactRecoveryLineage({
+            status,
+            lane,
+            predecessor,
+            request,
+            recoveryEvidenceDigest: exactRecoveryEvidenceDigest,
+          })
+          || (
+            requiresLocalRecoveryEvidence({ lane, predecessor })
+            && !isExactRecoveryEvidence(
+              lane.authority.recovery,
+              exactRecoveryEvidenceDigest,
+            )
+          )
+        )
+      ) {
+        throw new Error(
+          "Unprojected cloud recovery did not match the exact controller continuation lineage.",
+        );
+      }
       if (predecessor.state === "dormant-preserved") {
+        if (
+          unprojectedRecovery
+          && !isExactRecoveryEvidence(predecessor.recovery, exactRecoveryEvidenceDigest)
+        ) {
+          throw new Error(
+            "Dormant replay recovery did not match the exact unprojected controller continuation.",
+          );
+        }
         const continuedResult = invokeCloudAction({
           action: "continue",
           ledgerRepository: lane.authority.ledgerRepository,
@@ -357,6 +464,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
           result: continuedResult,
           cloud,
           targetRepository: lane.authority.targetRepository,
+          waitForCloudVisibility,
         });
         validateRecoveredCloudResult({
           result: continued,
@@ -368,7 +476,12 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
           recoveryEvidenceDigest: exactRecoveryEvidenceDigest,
         });
         recoveredClaimDigest = continued.claimDigest;
+        recoveredTransitionDigest = continued.claim?.transitionDigest;
         recoveryReceiptDigest = continued.claim?.operationReceiptDigest;
+        recoveredLedgerRevision = requiredSha(
+          continued.ledgerRevision,
+          "continued ledger revision",
+        );
       } else {
         requireExactRecoveryEvidence({
           recovery: predecessor.recovery,
@@ -387,6 +500,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
           writeSetDigest: lane.manifest.writeSetDigest,
           leaseEpoch: predecessor.leaseEpoch,
           expectedClaimDigest: recoveredClaimDigest,
+          expectedLedgerRevision: recoveredLedgerRevision,
           focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
           requireStatus: "reviewed",
         },
@@ -396,6 +510,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         result: verificationResult,
         cloud,
         targetRepository: lane.authority.targetRepository,
+        waitForCloudVisibility,
       });
       validateRecoveredCloudResult({
         result: verification,
@@ -405,6 +520,9 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         expectedAction: "verify",
         expectedTransitionCounter,
         recoveryEvidenceDigest: exactRecoveryEvidenceDigest,
+        expectedClaimDigest: recoveredClaimDigest,
+        expectedTransitionDigest: recoveredTransitionDigest,
+        expectedOperationReceiptDigest: recoveryReceiptDigest,
       });
       return Object.freeze({
         authority: projectRecoveredAuthority({
@@ -620,50 +738,28 @@ function validateContinuation({ request, lane, actor, status, completedProjectio
     }));
   } else {
     const predecessor = predecessors[0];
-    let declaredWriteScope = null;
-    try {
-      declaredWriteScope = normalizeWriteSet(predecessor.declaredWriteScope);
-    } catch {
-      declaredWriteScope = null;
-    }
-    const sharedIdentity = (
-      predecessor.writeAuthority === false
-      && predecessor.scopeReserved === true
-      && predecessor.canonicalBaseRevision === lane.authority.canonicalBaseSha
-      && predecessor.canonicalBaseRevision === lane.baseSha
-      && predecessor.laneRevision === lane.authority.laneRevision
-      && predecessor.laneRevision === lane.headSha
-      && predecessor.writeSetDigest === lane.authority.writeSetDigest
-      && predecessor.writeSetDigest === lane.manifest.writeSetDigest
-      && JSON.stringify(declaredWriteScope) === JSON.stringify(lane.manifest.declaredWriteSet)
-      && predecessor.leaseEpoch === lane.authority.leaseEpoch
-      && predecessor.reviewRequestId === lane.authority.reviewRequestId
-    );
+    const sharedIdentity = hasSharedRecoveryIdentity({ lane, predecessor });
     const dormantPredecessor = (
       sharedIdentity
       && predecessor.state === "dormant-preserved"
       && predecessor.transitionCounter === lane.authority.transitionCounter
+      && predecessor.transitionCounter < Number.MAX_SAFE_INTEGER
       && predecessor.fenceRevision === lane.authority.claimDigest
       && predecessor.transitionDigest === lane.authority.claimLedgerRevision
       && predecessor.expiresAt === lane.authority.expiresAt
       && predecessor.deviceId === ownerIdentifier("device", lane.authority.deviceId)
       && predecessor.sessionId === ownerIdentifier("session", lane.authority.sessionId)
     );
-    const replayedRecovery = (
-      request.transition !== "retain"
-      && sharedIdentity
-      && predecessor.state === "reviewed"
-      && predecessor.transitionCounter === lane.authority.transitionCounter + 1
-      && DIGEST_PATTERN.test(String(predecessor.fenceRevision || ""))
-      && predecessor.fenceRevision !== lane.authority.claimDigest
-      && DIGEST_PATTERN.test(String(predecessor.transitionDigest || ""))
-      && predecessor.transitionDigest !== lane.authority.claimLedgerRevision
-      && DIGEST_PATTERN.test(String(predecessor.operationReceiptDigest || ""))
-      && Date.parse(predecessor.expiresAt) > Date.now()
-      && predecessor.deviceId === ownerIdentifier("device", request.successorDeviceId)
-      && predecessor.sessionId === ownerIdentifier("session", request.successorSessionId)
+    const unprojectedRecoveryClaim = (
+      sharedIdentity
+      && isUnprojectedRecoveryClaim({ request, lane, predecessor })
+      && hasExactRecoveryLineage({ status, lane, predecessor, request })
     );
-    if (!dormantPredecessor && !replayedRecovery && predecessor !== completedProjectionClaim) {
+    if (
+      !dormantPredecessor
+      && !unprojectedRecoveryClaim
+      && predecessor !== completedProjectionClaim
+    ) {
       findings.push(finding("preserved-claim-drift"));
     }
   }
@@ -686,6 +782,228 @@ function validateContinuation({ request, lane, actor, status, completedProjectio
     findings.push(finding("review-request-already-live"));
   }
   return findings.sort(compareFindings);
+}
+function findUnprojectedRecoveryClaim({ request, lane, status }) {
+  if (!Array.isArray(status?.claims)) return null;
+  const matches = status.claims.filter(claim => claim.claimId === lane.authority.claimId);
+  if (matches.length !== 1) return null;
+  const predecessor = matches[0];
+  return (
+    hasSharedRecoveryIdentity({ lane, predecessor })
+    && isUnprojectedRecoveryClaim({ request, lane, predecessor })
+    && hasExactRecoveryLineage({ status, lane, predecessor, request })
+  ) ? predecessor : null;
+}
+function hasSharedRecoveryIdentity({ lane, predecessor }) {
+  let declaredWriteScope = null;
+  try {
+    declaredWriteScope = normalizeWriteSet(predecessor.declaredWriteScope);
+  } catch {
+    return false;
+  }
+  return (
+    predecessor.writeAuthority === false
+    && predecessor.scopeReserved === true
+    && predecessor.canonicalBaseRevision === lane.authority.canonicalBaseSha
+    && predecessor.canonicalBaseRevision === lane.baseSha
+    && predecessor.laneRevision === lane.authority.laneRevision
+    && predecessor.laneRevision === lane.headSha
+    && predecessor.writeSetDigest === lane.authority.writeSetDigest
+    && predecessor.writeSetDigest === lane.manifest.writeSetDigest
+    && JSON.stringify(declaredWriteScope) === JSON.stringify(lane.manifest.declaredWriteSet)
+    && predecessor.leaseEpoch === lane.authority.leaseEpoch
+    && predecessor.reviewRequestId === lane.authority.reviewRequestId
+  );
+}
+function isUnprojectedRecoveryClaim({ request, lane, predecessor }) {
+  const localExpiresAt = canonicalTimestampMilliseconds(lane.authority.expiresAt);
+  const replayRecoveredAt = canonicalTimestampMilliseconds(predecessor.recovery?.recoveredAt);
+  const replayExpiresAt = canonicalTimestampMilliseconds(predecessor.expiresAt);
+  const replayStateAndClockAgree = (
+    (predecessor.state === "reviewed" && replayExpiresAt > Date.now())
+    || (predecessor.state === "dormant-preserved" && replayExpiresAt <= Date.now())
+  );
+  return (
+    request.transition !== "retain"
+    && ["reviewed", "dormant-preserved"].includes(predecessor.state)
+    && Number.isSafeInteger(predecessor.transitionCounter)
+    && predecessor.transitionCounter > lane.authority.transitionCounter
+    && !(
+      predecessor.state === "dormant-preserved"
+      && predecessor.transitionCounter === Number.MAX_SAFE_INTEGER
+    )
+    && DIGEST_PATTERN.test(String(predecessor.fenceRevision || ""))
+    && predecessor.fenceRevision !== lane.authority.claimDigest
+    && DIGEST_PATTERN.test(String(predecessor.transitionDigest || ""))
+    && predecessor.transitionDigest !== lane.authority.claimLedgerRevision
+    && DIGEST_PATTERN.test(String(predecessor.operationReceiptDigest || ""))
+    && predecessor.deviceId === ownerIdentifier("device", request.successorDeviceId)
+    && predecessor.sessionId === ownerIdentifier("session", request.successorSessionId)
+    && localExpiresAt !== null
+    && replayRecoveredAt !== null
+    && replayExpiresAt !== null
+    && replayExpiresAt > localExpiresAt
+    && replayRecoveredAt >= localExpiresAt
+    && replayRecoveredAt < replayExpiresAt
+    && replayStateAndClockAgree
+  );
+}
+function requiresLocalRecoveryEvidence({ lane, predecessor }) {
+  return (
+    predecessor.state === "dormant-preserved"
+    || predecessor.transitionCounter > lane.authority.transitionCounter + 1
+  );
+}
+function readGitHubRecoveryLineage({
+  ghText,
+  ledgerRepository,
+  ledgerRevision,
+  ledgerDigest,
+  claimId,
+}) {
+  const revision = requiredSha(ledgerRevision, "status ledger revision");
+  const expectedLedgerDigest = requiredDigest(ledgerDigest, "status ledger digest");
+  const exactClaimId = requiredDigest(claimId, "recovery lineage claimId");
+  const ledgerPath = DEFAULT_LEDGER_PATH
+    .split("/")
+    .map(segment => encodeURIComponent(segment))
+    .join("/");
+  const endpoint = [
+    `repos/${ledgerRepository}/contents/${ledgerPath}`,
+    `ref=${encodeURIComponent(revision)}`,
+  ].join("?");
+  let ledger;
+  try {
+    ledger = JSON.parse(ghText([
+      "api",
+      endpoint,
+      "-H",
+      "Accept: application/vnd.github.raw+json",
+    ]));
+  } catch (error) {
+    throw new Error(`Could not read exact cloud recovery lineage: ${publicMessage(error)}`);
+  }
+  const findings = validateLedger(ledger);
+  if (findings.length > 0 || ledger.headDigest !== expectedLedgerDigest) {
+    throw new Error("Exact cloud recovery lineage did not match the validated status ledger.");
+  }
+  return Object.freeze(ledger.entries
+    .filter(entry => entry.claimId === exactClaimId)
+    .map(entry => Object.freeze({
+      sequence: entry.sequence,
+      action: entry.action,
+      evaluationTime: entry.evaluationTime,
+      claimId: entry.claimId,
+      claimDigest: entry.claimDigest,
+      digest: entry.digest,
+      claimCore: Object.freeze({
+        claimId: entry.claimCore.claimId,
+        actorId: entry.claimCore.actorId,
+        deviceId: entry.claimCore.deviceId,
+        sessionId: entry.claimCore.sessionId,
+        repositoryId: entry.claimCore.repositoryId,
+        workItemId: entry.claimCore.workItemId,
+        canonicalBaseRevision: entry.claimCore.canonicalBaseRevision,
+        laneRevision: entry.claimCore.laneRevision,
+        declaredWriteScope: Object.freeze([...entry.claimCore.declaredWriteScope]),
+        writeSetDigest: entry.claimCore.writeSetDigest,
+        leaseEpoch: entry.claimCore.leaseEpoch,
+        transitionCounter: entry.claimCore.transitionCounter,
+        state: entry.claimCore.state,
+        expiresAt: entry.claimCore.expiresAt,
+        evidenceDigest: entry.claimCore.evidenceDigest,
+        reviewRequestId: entry.claimCore.reviewRequestId,
+        recovery: entry.claimCore.recovery
+          ? Object.freeze({ ...entry.claimCore.recovery })
+          : null,
+      }),
+    })));
+}
+function hasExactRecoveryLineage({
+  status,
+  lane,
+  predecessor,
+  request,
+  recoveryEvidenceDigest = null,
+}) {
+  const localCounter = lane.authority.transitionCounter;
+  const remoteCounter = predecessor.transitionCounter;
+  if (!Number.isSafeInteger(remoteCounter) || remoteCounter <= localCounter) return false;
+  const gap = remoteCounter - localCounter;
+  if (gap === 1) return true;
+  if (!Array.isArray(status?.recoveryLineage)) return false;
+  const entries = status.recoveryLineage.filter(
+    entry => entry?.claimId === predecessor.claimId,
+  );
+  const anchorMatches = entries.filter(entry => (
+    entry.claimDigest === lane.authority.claimDigest
+    && entry.digest === lane.authority.claimLedgerRevision
+    && entry.claimCore?.transitionCounter === localCounter
+  ));
+  const currentMatches = entries.filter(entry => (
+    entry.claimDigest === predecessor.fenceRevision
+    && entry.digest === predecessor.transitionDigest
+    && entry.claimCore?.transitionCounter === remoteCounter
+  ));
+  if (anchorMatches.length !== 1 || currentMatches.length !== 1) return false;
+  const anchorIndex = entries.indexOf(anchorMatches[0]);
+  const currentIndex = entries.indexOf(currentMatches[0]);
+  if (anchorIndex < 0 || currentIndex !== entries.length - 1 || currentIndex <= anchorIndex) {
+    return false;
+  }
+  const unseen = entries.slice(anchorIndex + 1);
+  if (unseen.length !== gap) return false;
+  const exactRecoveryEvidenceDigest = recoveryEvidenceDigest
+    || predecessor.recovery?.evidenceDigest;
+  let precedingExpiry = canonicalTimestampMilliseconds(lane.authority.expiresAt);
+  if (precedingExpiry === null) return false;
+  for (const [offset, entry] of unseen.entries()) {
+    const core = entry.claimCore;
+    let declaredWriteScope = null;
+    try {
+      declaredWriteScope = normalizeWriteSet(core?.declaredWriteScope);
+    } catch {
+      return false;
+    }
+    const recoveredAt = canonicalTimestampMilliseconds(core?.recovery?.recoveredAt);
+    const expiresAt = canonicalTimestampMilliseconds(core?.expiresAt);
+    if (
+      entry.action !== "continue"
+      || entry.claimId !== predecessor.claimId
+      || !DIGEST_PATTERN.test(String(entry.claimDigest || ""))
+      || !DIGEST_PATTERN.test(String(entry.digest || ""))
+      || core?.claimId !== predecessor.claimId
+      || core?.transitionCounter !== localCounter + offset + 1
+      || core?.actorId !== predecessor.actorId
+      || core?.repositoryId !== predecessor.repositoryId
+      || core?.workItemId !== predecessor.workItemId
+      || core?.canonicalBaseRevision !== lane.baseSha
+      || core?.laneRevision !== lane.headSha
+      || core?.writeSetDigest !== lane.manifest.writeSetDigest
+      || JSON.stringify(declaredWriteScope) !== JSON.stringify(lane.manifest.declaredWriteSet)
+      || core?.leaseEpoch !== lane.authority.leaseEpoch
+      || core?.reviewRequestId !== lane.authority.reviewRequestId
+      || core?.evidenceDigest !== lane.authority.focusedEvidenceDigest
+      || core?.state !== "reviewed"
+      || core?.deviceId !== ownerIdentifier("device", request.successorDeviceId)
+      || core?.sessionId !== ownerIdentifier("session", request.successorSessionId)
+      || !isExactRecoveryEvidence(core?.recovery, exactRecoveryEvidenceDigest)
+      || core.recovery.recoveredAt !== entry.evaluationTime
+      || recoveredAt === null
+      || expiresAt === null
+      || recoveredAt < precedingExpiry
+      || expiresAt <= recoveredAt
+    ) {
+      return false;
+    }
+    precedingExpiry = expiresAt;
+  }
+  const current = unseen.at(-1);
+  return (
+    current.claimDigest === predecessor.fenceRevision
+    && current.digest === predecessor.transitionDigest
+    && current.claimCore.expiresAt === predecessor.expiresAt
+  );
 }
 function normalizeRequest(input = {}) {
   const transition = requiredTransition(input.transition || input.action || "reclaim");
@@ -768,32 +1086,72 @@ function normalizePreservedAuthority(authority, manifest) {
     cloudDeclaredWriteScope: normalizeWriteSet(authority.cloudDeclaredWriteScope),
   });
 }
-async function joinExactRecoveryClaim({ result, cloud, targetRepository }) {
+async function joinExactRecoveryClaim({
+  result,
+  cloud,
+  targetRepository,
+  waitForCloudVisibility,
+}) {
   const publicClaim = result?.claim;
-  const claims = await cloud.listClaims({ targetRepository });
-  const matches = claims.filter(candidate => (
-    candidate.claimId === publicClaim?.claimId
-    && candidate.fenceRevision === result?.claimDigest
-    && candidate.ledgerRevision === publicClaim?.transitionDigest
-  ));
-  if (matches.length !== 1) {
-    throw new Error(
-      "Cloud recovery result changed while joining its exact owner and recovery evidence.",
-    );
+  const expectedCounter = publicClaim?.transitionCounter;
+  for (let attempt = 0; attempt <= RECOVERY_JOIN_RETRY_DELAYS_MS.length; attempt += 1) {
+    const claims = await cloud.listClaims({ targetRepository });
+    const sameClaim = claims.filter(candidate => candidate.claimId === publicClaim?.claimId);
+    const matches = sameClaim.filter(candidate => (
+      candidate.fenceRevision === result?.claimDigest
+      && candidate.ledgerRevision === publicClaim?.transitionDigest
+    ));
+    if (matches.length === 1 && sameClaim.length === 1) {
+      const claim = matches[0];
+      if (!matchesExactPublicClaimProjection(publicClaim, claim)) {
+        throw new Error(
+          "Cloud recovery result changed while joining its exact claim projection.",
+        );
+      }
+      return Object.freeze({
+        ...result,
+        claim: Object.freeze({
+          ...publicClaim,
+          deviceId: requiredText(claim.deviceId, "recovered cloud claim deviceId"),
+          sessionId: requiredText(claim.sessionId, "recovered cloud claim sessionId"),
+          recovery: Object.freeze({
+            evidenceDigest: claim.recovery?.evidenceDigest,
+            recoveredAt: claim.recovery?.recoveredAt,
+          }),
+        }),
+      });
+    }
+    if (
+      !Number.isSafeInteger(expectedCounter)
+      || matches.length > 1
+      || sameClaim.length > 1
+      || (
+        sameClaim.length === 1
+        && (
+          !Number.isSafeInteger(sameClaim[0].transitionCounter)
+          || sameClaim[0].transitionCounter >= expectedCounter
+        )
+      )
+      || attempt === RECOVERY_JOIN_RETRY_DELAYS_MS.length
+    ) {
+      throw new Error(
+        "Cloud recovery result changed while joining its exact owner and recovery evidence.",
+      );
+    }
+    await waitForCloudVisibility(RECOVERY_JOIN_RETRY_DELAYS_MS[attempt]);
   }
-  const claim = matches[0];
-  return Object.freeze({
-    ...result,
-    claim: Object.freeze({
-      ...publicClaim,
-      deviceId: requiredText(claim.deviceId, "recovered cloud claim deviceId"),
-      sessionId: requiredText(claim.sessionId, "recovered cloud claim sessionId"),
-      recovery: Object.freeze({
-        evidenceDigest: claim.recovery?.evidenceDigest,
-        recoveredAt: claim.recovery?.recoveredAt,
-      }),
-    }),
-  });
+  throw new Error("Cloud recovery result could not be joined within its bounded visibility window.");
+}
+function matchesExactPublicClaimProjection(publicClaim, claim) {
+  if (!publicClaim || !claim) return false;
+  const ownerProjection = {
+    ...claim,
+    transitionDigest: claim.ledgerRevision,
+  };
+  return PUBLIC_CLAIM_JOIN_FIELDS.every(field => (
+    digestValue({ value: publicClaim[field] ?? null })
+    === digestValue({ value: ownerProjection[field] ?? null })
+  ));
 }
 function validateRecoveredCloudResult({
   result,
@@ -803,12 +1161,17 @@ function validateRecoveredCloudResult({
   expectedAction,
   expectedTransitionCounter,
   recoveryEvidenceDigest,
+  expectedClaimDigest = null,
+  expectedTransitionDigest = null,
+  expectedOperationReceiptDigest = null,
 }) {
+  const expectedStatus = expectedAction === "verify" ? "ready" : "reviewed";
   if (
     !result
     || result.schema !== "agentic-cloud-collaboration-result/v1"
     || result.ok !== true
     || result.action !== expectedAction
+    || result.status !== expectedStatus
   ) {
     throw new Error(`Cloud authority recovery requires a successful ${expectedAction} result.`);
   }
@@ -835,10 +1198,37 @@ function validateRecoveredCloudResult({
     || claim?.sessionId !== ownerIdentifier("session", request.successorSessionId)
     || claim?.fenceRevision !== result.claimDigest
     || result.claimDigest === lane.authority.claimDigest
+    || (
+      predecessor.state === "dormant-preserved"
+      && result.claimDigest === predecessor.fenceRevision
+    )
     || !DIGEST_PATTERN.test(String(claim?.transitionDigest || ""))
+    || (
+      predecessor.state === "dormant-preserved"
+      && claim?.transitionDigest === predecessor.transitionDigest
+    )
     || !DIGEST_PATTERN.test(String(claim?.operationReceiptDigest || ""))
+    || !DIGEST_PATTERN.test(String(result.receipt?.ledgerDigest || ""))
+    || !DIGEST_PATTERN.test(String(result.receipt?.receiptDigest || ""))
+    || (expectedClaimDigest && result.claimDigest !== expectedClaimDigest)
+    || (expectedTransitionDigest && claim?.transitionDigest !== expectedTransitionDigest)
+    || (
+      expectedOperationReceiptDigest
+      && claim?.operationReceiptDigest !== expectedOperationReceiptDigest
+    )
     || !SHA_PATTERN.test(String(result.ledgerRevision || ""))
     || !isExactRecoveryEvidence(claim?.recovery, recoveryEvidenceDigest)
+    || (
+      predecessor.state === "reviewed"
+      && (
+        claim?.recovery?.evidenceDigest !== predecessor.recovery?.evidenceDigest
+        || claim?.recovery?.recoveredAt !== predecessor.recovery?.recoveredAt
+      )
+    )
+    || (
+      predecessor.state === "dormant-preserved"
+      && Date.parse(claim?.recovery?.recoveredAt) < Date.parse(predecessor.expiresAt)
+    )
     || Date.parse(claim?.expiresAt) <= Date.now()
   ) {
     throw new Error("Recovered cloud authority drifted from the exact preserved reviewed claim.");
@@ -853,7 +1243,18 @@ function projectRecoveredAuthority({ result, lane, request, recoveryEvidenceDige
     claimId: requiredDigest(result.claim?.claimId, "claimId"),
     claimDigest: requiredDigest(result.claimDigest, "claimDigest"),
     ledgerRevision: requiredSha(result.ledgerRevision, "ledgerRevision"),
+    ledgerDigest: requiredDigest(
+      result.receipt?.ledgerDigest ?? result.ledgerDigest,
+      "ledgerDigest",
+    ),
     claimLedgerRevision: requiredDigest(result.claim?.transitionDigest, "claimLedgerRevision"),
+    entrySchema: requiredText(result.claim?.entrySchema, "entrySchema"),
+    claimIdentitySchema: requiredText(result.claim?.claimIdentitySchema, "claimIdentitySchema"),
+    operationReceiptDigest: requiredDigest(
+      result.claim?.operationReceiptDigest,
+      "operationReceiptDigest",
+    ),
+    mutationAuthorityEligible: true,
     canonicalBaseSha: requiredSha(result.claim?.canonicalBaseRevision, "canonicalBaseRevision"),
     laneRevision: requiredSha(result.claim?.laneRevision, "laneRevision"),
     cloudDeclaredWriteScope: normalizeWriteSet(result.claim?.declaredWriteScope),
@@ -882,6 +1283,12 @@ function requireRecoveredAuthority({
   recoveryEvidenceDigest,
 }) {
   const authority = recovered?.authority;
+  const expectedTransitionCounter = recoveredTransitionCounter(predecessor);
+  const predecessorWasDormant = predecessor.state === "dormant-preserved";
+  const authorityRecoveredAt = canonicalTimestampMilliseconds(authority?.recovery?.recoveredAt);
+  const authorityExpiresAt = canonicalTimestampMilliseconds(authority?.expiresAt);
+  const predecessorExpiresAt = canonicalTimestampMilliseconds(predecessor.expiresAt);
+  const recoveryReceiptDigest = String(recovered?.recoveryReceiptDigest || "");
   let declaredWriteScope = null;
   try {
     declaredWriteScope = normalizeWriteSet(authority?.cloudDeclaredWriteScope);
@@ -895,9 +1302,18 @@ function requireRecoveredAuthority({
     || authority.targetRepository !== lane.authority.targetRepository
     || authority.claimId !== predecessor.claimId
     || authority.claimDigest === lane.authority.claimDigest
+    || (predecessorWasDormant && authority.claimDigest === predecessor.fenceRevision)
+    || (!predecessorWasDormant && authority.claimDigest !== predecessor.fenceRevision)
     || !DIGEST_PATTERN.test(String(authority.claimDigest || ""))
     || !SHA_PATTERN.test(String(authority.ledgerRevision || ""))
     || !DIGEST_PATTERN.test(String(authority.claimLedgerRevision || ""))
+    || !DIGEST_PATTERN.test(String(authority.operationReceiptDigest || ""))
+    || !DIGEST_PATTERN.test(recoveryReceiptDigest)
+    || authority.operationReceiptDigest !== recoveryReceiptDigest
+    || (
+      !predecessorWasDormant
+      && recoveryReceiptDigest !== predecessor.operationReceiptDigest
+    )
     || authority.canonicalBaseSha !== lane.baseSha
     || authority.laneRevision !== lane.headSha
     || authority.writeSetDigest !== lane.manifest.writeSetDigest
@@ -906,16 +1322,57 @@ function requireRecoveredAuthority({
     || authority.sessionId !== request.successorSessionId
     || authority.reviewRequestId !== lane.authority.reviewRequestId
     || authority.leaseEpoch !== lane.authority.leaseEpoch
-    || authority.transitionCounter !== lane.authority.transitionCounter + 1
+    || authority.transitionCounter !== expectedTransitionCounter
+    || (
+      predecessorWasDormant
+      && authority.claimLedgerRevision === predecessor.transitionDigest
+    )
+    || (
+      !predecessorWasDormant
+      && authority.claimLedgerRevision !== predecessor.transitionDigest
+    )
+    || (
+      !predecessorWasDormant
+      && (
+        authority.expiresAt !== predecessor.expiresAt
+        || authority.recovery?.recoveredAt !== predecessor.recovery?.recoveredAt
+      )
+    )
     || authority.state !== "review_ready"
     || authority.focusedEvidenceDigest !== lane.authority.focusedEvidenceDigest
     || authority.manifestDigest !== lane.manifest.manifestDigest
     || !isExactRecoveryEvidence(authority.recovery, recoveryEvidenceDigest)
-    || Date.parse(authority.expiresAt) <= Date.now()
+    || authorityRecoveredAt === null
+    || authorityExpiresAt === null
+    || authorityExpiresAt <= authorityRecoveredAt
+    || (
+      predecessorWasDormant
+      && (
+        predecessorExpiresAt === null
+        || authorityRecoveredAt < predecessorExpiresAt
+      )
+    )
+    || authorityExpiresAt <= Date.now()
   ) {
     throw new Error("Controller adapter returned a recovery outside the exact preserved claim.");
   }
   return authority;
+}
+function recoveredTransitionCounter(predecessor) {
+  if (predecessor.state === "dormant-preserved") {
+    const counter = positiveInteger(
+      predecessor.transitionCounter,
+      "predecessor transitionCounter",
+    );
+    if (counter === Number.MAX_SAFE_INTEGER) {
+      throw new Error("Dormant recovery transition counter cannot advance safely.");
+    }
+    return counter + 1;
+  }
+  if (predecessor.state === "reviewed") {
+    return positiveInteger(predecessor.transitionCounter, "predecessor transitionCounter");
+  }
+  throw new Error(`Unsupported recovery predecessor state ${predecessor.state}.`);
 }
 function requireExactRecoveryEvidence({ recovery, recoveryEvidenceDigest, label }) {
   if (!isExactRecoveryEvidence(recovery, recoveryEvidenceDigest)) {
@@ -935,6 +1392,14 @@ function isExactRecoveryEvidence(recovery, recoveryEvidenceDigest) {
     && Number.isFinite(recoveredAtMilliseconds)
     && new Date(recoveredAtMilliseconds).toISOString() === recoveredAt
   );
+}
+function canonicalTimestampMilliseconds(value) {
+  const timestamp = String(value || "");
+  const milliseconds = Date.parse(timestamp);
+  return (
+    Number.isFinite(milliseconds)
+    && new Date(milliseconds).toISOString() === timestamp
+  ) ? milliseconds : null;
 }
 function finalizeResult({
   request,
@@ -968,6 +1433,22 @@ function finalizeResult({
   return Object.freeze({
     ...result,
     resultDigest: digestValue(result),
+  });
+}
+function buildPreflightReceipt({ request, lane, actor, findings }) {
+  return buildReceipt("preflight", {
+    branch: lane.branch,
+    transition: request.transition,
+    targetRepository: lane.authority.targetRepository,
+    baseSha: lane.baseSha,
+    headSha: lane.headSha,
+    reviewRequestId: lane.authority.reviewRequestId,
+    predecessorClaimId: lane.authority.claimId,
+    predecessorLeaseEpoch: lane.authority.leaseEpoch,
+    successorDeviceId: request.successorDeviceId,
+    successorSessionId: request.successorSessionId,
+    actorId: positiveInteger(actor.id, "authenticated actor id"),
+    blockingFindingDigest: digestValue(findings),
   });
 }
 function buildReceipt(kind, payload) {

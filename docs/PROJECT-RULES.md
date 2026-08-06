@@ -180,9 +180,11 @@ that bind every session and tool.
   acceptance path.
 - Before the final response of every implementation turn, run `npm run turn:end
   -- --repository=<canonical-knowgrph-root> --json`. Runtime-ready may be
-  claimed only when its JSON proves clean exact protected `main` SHAs, the
-  private-token-owned Apex and storage listeners, and all HTTP probes. The
-  command must fail closed without stopping an unrelated listener.
+  claimed only when its JSON proves exact protected `main` SHAs, no
+  runtime-blocking residue in canonical checkouts, the private-token-owned Apex
+  and storage listeners, and all HTTP probes. Foreign parallel residue may be
+  tolerated only when it is explicitly classified as non-blocking. The command
+  must fail closed without stopping an unrelated listener.
 - Use `npm run device:park` only for work explicitly reported as paused or
   blocked. Parking preserves work but never satisfies completion.
 - Audit the task worktree at every chat, session, or thread end. Remove it only

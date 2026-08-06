@@ -18,6 +18,10 @@ import {
   normalizeCloudAuthority,
   normalizeDeclaredWriteScopeManifest,
 } from "./scoped-lane-admission-lib.mjs";
+import {
+  createRootSourceBootstrapAuthorization,
+  writeRootSourceBootstrapMaintenanceManifest,
+} from "./scoped-lane-bootstrap-authorization.mjs";
 import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import {
   assertAdmissionMutationAuthority,
@@ -36,7 +40,7 @@ const [rawMode, ...argumentsList] = process.argv.slice(2);
 const json = argumentsList.includes("--json");
 
 try {
-  if (!["plan", "check", "recover"].includes(rawMode)) usage();
+  if (!["plan", "check", "recover", "bootstrap"].includes(rawMode)) usage();
   const repository = path.resolve(
     option("repository") || process.env.AGENTIC_TARGET_REPOSITORY || process.cwd(),
   );
@@ -76,6 +80,66 @@ try {
     || os.hostname(),
   );
   const branch = `agent/${device}/${scope}`;
+  if (rawMode === "bootstrap") {
+    const authorityPath = path.resolve(requiredOption("cloud-authority"));
+    const source = readJson(authorityPath, "cloud authority");
+    const cloudAuthority = normalizeCloudAuthority(source, {
+      ledgerRepository: option("ledger-repository")
+        || process.env.AGENTIC_LEDGER_REPOSITORY
+        || "huijoohwee/agentic-canvas-os",
+      targetRepository: option("target-repository")
+        || gitHubRepository(canonicalPath),
+      manifest,
+      canonicalBaseSha: snapshot.canonicalBaseSha,
+    });
+    const verified = verifyAdmissionCloudAuthority({
+      authority: cloudAuthority,
+      manifest,
+      canonicalBaseSha: snapshot.canonicalBaseSha,
+    });
+    const target = withWorkingDirectory(canonicalPath, () => (
+      inspectTaskWorktreeTarget({
+        invocationPath: canonicalPath,
+        repoRoot: canonicalPath,
+        targetPath,
+        gitText,
+      })
+    ));
+    const maintenanceSourcePath = path.resolve(requiredOption("maintenance-source"));
+    const maintenanceManifestOutput = path.resolve(requiredOption("maintenance-manifest-output"));
+    const maintenanceManifest = writeRootSourceBootstrapMaintenanceManifest({
+      lanePath: maintenanceSourcePath,
+      outputPath: maintenanceManifestOutput,
+    });
+    const preserved = option("preserve")
+      ? option("preserve").split(",").map(item => path.resolve(item)).filter(Boolean)
+      : null;
+    const authorization = createRootSourceBootstrapAuthorization({
+      lanes: snapshot.lanes,
+      canonicalPath,
+      canonicalBaseSha: snapshot.canonicalBaseSha,
+      targetPath: target.target,
+      branch,
+      semanticScope: scope,
+      manifest,
+      cloudAuthority: verified.authority,
+      remoteAuthorityVerification: verified.verification,
+      maintenanceSourcePath,
+      maintenanceManifestPath: maintenanceManifest.path,
+      maintenanceManifestDigest: maintenanceManifest.manifestDigest,
+      ...(preserved ? {
+        preservedLanes: snapshot.lanes
+          .filter(lane => preserved.includes(path.resolve(lane.path)))
+          .map(lane => ({ path: path.resolve(lane.path), stateDigest: lane.stateDigest })),
+      } : {}),
+    });
+    process.stdout.write(`${JSON.stringify({
+      authorization,
+      maintenanceManifestPath: maintenanceManifest.path,
+      maintenanceManifestDigest: maintenanceManifest.manifestDigest,
+    }, null, json ? 0 : 2)}\n`);
+    process.exit(0);
+  }
   if (rawMode === "recover") {
     const report = withWorkingDirectory(canonicalPath, () => recoverAdmission({
       repository,
@@ -541,6 +605,6 @@ function publicMessage(error) {
 
 function usage() {
   throw new Error(
-    "Usage: scoped-lane-admission.mjs <plan|check|recover> --scope=<semantic-scope> --repository=<canonical-root> --worktree=<path> --write-scope-manifest=<json> [--cloud-authority=<json> --ledger-repository=<owner/repo> --target-repository=<owner/repo> --root-source-bootstrap=<json>|--root-source-bootstrap-file=<json>] [--session=<id>] [--json]",
+    "Usage: scoped-lane-admission.mjs <plan|check|recover|bootstrap> --scope=<semantic-scope> --repository=<canonical-root> --worktree=<path> --write-scope-manifest=<json> [--cloud-authority=<json> --ledger-repository=<owner/repo> --target-repository=<owner/repo> --root-source-bootstrap=<json>|--root-source-bootstrap-file=<json> --maintenance-source=<path> --maintenance-manifest-output=<json> [--preserve=<comma-separated-worktree-paths>]] [--session=<id>] [--json]",
   );
 }

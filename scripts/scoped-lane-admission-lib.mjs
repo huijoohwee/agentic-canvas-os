@@ -275,6 +275,7 @@ export function evaluateScopedLaneAdmission({
       lane,
       branch,
       semanticScope,
+      canonicalBaseSha,
       declaredWriteSet: manifest.declaredWriteSet,
       evaluatedAt: evaluationTime,
       currentRemoteClaims,
@@ -469,6 +470,7 @@ function classifyExistingLane({
   lane,
   branch,
   semanticScope,
+  canonicalBaseSha,
   declaredWriteSet,
   evaluatedAt,
   currentRemoteClaims,
@@ -476,19 +478,31 @@ function classifyExistingLane({
 }) {
   const reasons = [];
   if (lane.invalid || lane.leaseAmbiguous) reasons.push("structural-ambiguity");
+  const lease = lane.lease;
+  const integratedCompletion = hasIntegratedCompletionOwner(
+    lane,
+    lease,
+    canonicalBaseSha,
+  );
+  if (integratedCompletion) {
+    if (reasons.length > 0) {
+      return { ...lane, classification: "ambiguous", overlapReasons: reasons };
+    }
+    return { ...lane, classification: "disjoint-attributed", overlapReasons: [] };
+  }
   if (lane.branch === `refs/heads/${branch}`) reasons.push("same-branch");
   const identity = lane.branch
     ? parseDeviceBranch(lane.branch.replace(/^refs\/heads\//u, ""))
     : null;
   if (identity?.scope === semanticScope) reasons.push("same-semantic-scope");
-  const lease = lane.lease;
   if (!hasAuthoritativeLaneOwner(
     lane,
     lease,
     evaluatedAt,
     currentRemoteClaims,
     deliveryPeerAuthorities,
-  ) && !hasCloudPreservedLaneProjection(lane, lease, currentRemoteClaims)) {
+  ) && !hasCloudPreservedLaneProjection(lane, lease, currentRemoteClaims)
+  ) {
     reasons.push("missing-authoritative-owner");
   }
   const authoritativeScope = lease?.admission?.declaredWriteSet;
@@ -509,6 +523,26 @@ function classifyExistingLane({
   if (collision) return { ...lane, classification: "overlapping", overlapReasons: reasons };
   if (reasons.length > 0) return { ...lane, classification: "ambiguous", overlapReasons: reasons };
   return { ...lane, classification: "disjoint-attributed", overlapReasons: [] };
+}
+
+function hasIntegratedCompletionOwner(lane, lease, canonicalBaseSha) {
+  if (
+    !lease
+    || !["completing", "completed"].includes(lease.status)
+    || path.resolve(lease.worktreePath || "") !== lane.path
+    || lane.dirty
+    || lane.invalid
+    || !lease.pullRequestUrl
+    || !SHA_PATTERN.test(String(lease.completion?.mergeCommitSha || ""))
+    || !SHA_PATTERN.test(String(lease.completion?.mainSha || ""))
+    || !SHA_PATTERN.test(String(canonicalBaseSha || ""))
+  ) return false;
+  const branchName = lane.branch?.replace(/^refs\/heads\//u, "") || null;
+  if (branchName && branchName !== lease.branch) return false;
+  return (
+    lane.head === lease.completion.mainSha
+    && lease.completion.mainSha === canonicalBaseSha
+  );
 }
 
 function hasCloudPreservedLaneProjection(lane, lease, currentRemoteClaims) {

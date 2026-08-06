@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 976,
-  "headDigest": "57708d90184a94d957dac42b218d2c6fa5428b8643f16435a7f4fc54fd26e9a1",
+  "sequence": 977,
+  "headDigest": "26bdd296ec83da46d7efbf98a21dd6326bf54615e128aea9fddfffc42f8cf0f8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -49414,6 +49414,54 @@
       },
       "claimDigest": "2f9bcdcfc46053d1b044f35c143e591b0f27c68b8257cb7fd246578d53469bdd",
       "digest": "57708d90184a94d957dac42b218d2c6fa5428b8643f16435a7f4fc54fd26e9a1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 977,
+      "parentDigest": "57708d90184a94d957dac42b218d2c6fa5428b8643f16435a7f4fc54fd26e9a1",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "a3c26f63382c800c0986bb5f2c9a5dcfd823e61dbb84ac2409daa16bdec37fc8",
+      "idempotencyKey": "b17fe227bce80790f7fd97c33c3e3b9bb2ea2723c8bf012281edfcd1a55e2452",
+      "requestDigest": "0f693d2b5711ec0ac73cf82c49eaea4fcd3e45f2722810ae97d8f267ececbd96",
+      "evaluationTime": "2026-08-06T09:32:54.000Z",
+      "claimCore": {
+        "claimId": "a3c26f63382c800c0986bb5f2c9a5dcfd823e61dbb84ac2409daa16bdec37fc8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c6ba6c747fb85887a6deb1429940df9c6c22f9b1fb1e170179d498d305c3ed18",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:af26f9913d9e81c0b1d64b1b7941bea55aeb3d76dd2388f514796a9da368db2b",
+        "canonicalBaseRevision": "192d7f3cc7fcca02db0edb8ca7b89c3f176ce570",
+        "declaredWriteScope": [
+          "path:canvas/scripts/__tests__/local-vite-browser-smoke-runtime.test.mjs",
+          "path:canvas/scripts/lib/local-chromium-executable.mjs",
+          "path:canvas/scripts/verify_xr_v2_browser_smoke.mjs",
+          "path:canvas/src/App.tsx",
+          "path:canvas/src/__tests__/workspaceSeedCompletenessHardening.test.ts",
+          "path:canvas/src/__tests__/xrPhysicsWorkspaceBootstrap.test.ts",
+          "path:docs/runtime-api.md",
+          "path:docs/runtime-readiness-contract.md",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/check-game-fps-readiness.mjs",
+          "semantic:xr-v2-runtime-readiness-support"
+        ],
+        "writeSetDigest": "74af552b2943387bc14f740d81a919d8dda46fb91544d00188a6f6aa371d50a9",
+        "laneRevision": "192d7f3cc7fcca02db0edb8ca7b89c3f176ce570",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T09:32:54.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c8d6ed8c2e2c38af2aa7b9fac2edd51aae2d6ff97d164a357bfe8b22c704bdc4",
+      "digest": "26bdd296ec83da46d7efbf98a21dd6326bf54615e128aea9fddfffc42f8cf0f8"
     }
   ]
 }

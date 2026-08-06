@@ -131,6 +131,24 @@ export function review({
       log(`Upgraded legacy root-source lane ${branch} into cloud-authoritative review.`);
     }
   }
+    if (cloud) {
+      const refreshed = maybeRefreshLegacyRootSourceReviewAdmission({
+        lease,
+        branch,
+        repo,
+        gitText,
+        gitOptional,
+        ghText,
+        leaseStore,
+        sessionId,
+        claimLegacyReviewCloudAuthority,
+      });
+      if (refreshed) {
+        lease = refreshed.lease;
+        cloud = refreshed.cloud;
+        log(`Refreshed legacy root-source review admission for live PR base ${cloud.authority.canonicalBaseSha}.`);
+      }
+    }
   let cloudReady = null;
   if (cloud) {
     requireCloudReviewAdapter(
@@ -840,6 +858,74 @@ function maybeUpgradeLegacyRootSourceReadyReview({
     cloud: {
       manifest: admission,
       authority: ready.authority,
+    },
+  };
+}
+
+function maybeRefreshLegacyRootSourceReviewAdmission({
+  lease,
+  branch,
+  repo,
+  gitText,
+  gitOptional,
+  ghText,
+  leaseStore,
+  sessionId,
+  claimLegacyReviewCloudAuthority,
+}) {
+  if (typeof claimLegacyReviewCloudAuthority !== "function") return null;
+  if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return null;
+  if (lease?.admission?.status !== "admitted") return null;
+  if (lease?.cloudAuthority?.state !== "active") return null;
+  if (lease.cloudAuthority.reviewRequestId) return null;
+  const canonicalBaseSha = resolveLegacyReviewCanonicalBaseSha({
+    lease,
+    branch,
+    gitText,
+    ghText,
+  });
+  if (lease.cloudAuthority.canonicalBaseSha === canonicalBaseSha) return null;
+  const targetRepository = resolveOriginRepositoryFullName(gitOptional);
+  if (!targetRepository) {
+    throw new Error("Root-source legacy review refresh requires a resolvable origin repository.");
+  }
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const manifest = deriveLegacyReviewAdmissionManifest({
+    lease,
+    gitText,
+    headSha,
+  });
+  const refreshed = claimLegacyReviewCloudAuthority({
+    ledgerRepository: targetRepository,
+    targetRepository,
+    manifest,
+    canonicalBaseSha,
+    branch,
+    headSha: lease.fenceSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+    deviceId: lease.device,
+    sessionId,
+  });
+  const admission = createLegacyReviewAdmissionProjection({
+    lease,
+    manifest,
+    authority: refreshed.authority,
+    verification: refreshed.verification,
+    headSha,
+  });
+  const annotated = leaseStore.annotate({
+    sessionId,
+    branch,
+    values: {
+      admission,
+      cloudAuthority: refreshed.authority,
+    },
+  });
+  return {
+    lease: annotated,
+    cloud: {
+      manifest: admission,
+      authority: refreshed.authority,
     },
   };
 }

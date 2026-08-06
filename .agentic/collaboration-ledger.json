@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1185,
-  "headDigest": "bdcae9f4541f7ddb75d907bad6fc18d950c560481418663f6ba7e26128ab8010",
+  "sequence": 1186,
+  "headDigest": "e0b4b40752a76f4ff993a098b48abf4bd97c1dae4a9fc2ea25aced34c764882a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -59626,6 +59626,51 @@
       },
       "claimDigest": "f951ee470e252512fe8fd971c6c3b23b6c07cfaf5b5b749dd469745e444d1660",
       "digest": "bdcae9f4541f7ddb75d907bad6fc18d950c560481418663f6ba7e26128ab8010"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1186,
+      "parentDigest": "bdcae9f4541f7ddb75d907bad6fc18d950c560481418663f6ba7e26128ab8010",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "56027f16660edeaa160f050a772e5618aa6dae11a188426295a01b1fb5be0a4c",
+      "idempotencyKey": "13208cf191b3b13c6b028a283bc65daee0a15e7532cc9af9fc1be608e83372f6",
+      "requestDigest": "a87bfdffd3c7429220bd8c89d319edabb186334fd0e5c4629acccf3f4562a4ce",
+      "evaluationTime": "2026-08-06T23:46:07.000Z",
+      "claimCore": {
+        "claimId": "56027f16660edeaa160f050a772e5618aa6dae11a188426295a01b1fb5be0a4c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:e85cdaf48be3eace76f510a650151378d9acad956b90e4673df0dcdd26349adf",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:592c9663bf77bc302c5b9fae270b4b8657be756d1c4f9c248336194d28f734f9",
+        "canonicalBaseRevision": "ee41edcf87e9d1946cd12c898b9b20627bc1f086",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/fetchRemoteTextInterop.test.ts",
+          "path:canvas/src/__tests__/workspaceImportUrlContentFormat.test.ts",
+          "path:canvas/src/features/markdown-workspace/workspaceImport/urlContent.ts",
+          "path:canvas/src/features/markdown-workspace/workspaceImport/urlContentFormat.ts",
+          "path:canvas/src/tests/registry/postParserCases4.ts",
+          "path:docs/documents/knowgrph-csv-json-prd-tad.md",
+          "path:grph-shared/src/net/fetchRemoteText.ts",
+          "semantic:import-url-content-classification-successor"
+        ],
+        "writeSetDigest": "ee0a988a629a2bdbe6598e92b5fa510876e9bb559c30124d8fa1d176dc2e8d55",
+        "laneRevision": "ee41edcf87e9d1946cd12c898b9b20627bc1f086",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T00:16:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5e8725f5e2c2a04ba951124fcd2022c58c0039b47822c8d0a45076a9908abd6c",
+      "digest": "e0b4b40752a76f4ff993a098b48abf4bd97c1dae4a9fc2ea25aced34c764882a"
     }
   ]
 }

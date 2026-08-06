@@ -16,10 +16,12 @@ import {
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
+  claimLegacyReviewAdmissionCloudAuthority,
   invokeRepositoryCloudAction,
   reviewReadyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
+import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
 import {
   SHA_PATTERN,
@@ -57,6 +59,7 @@ export function review({
   reconcileCloudAuthority = null,
   reviewReadyCloudAuthority = null,
   verifyReviewReadyCloudAuthority = null,
+  claimLegacyReviewCloudAuthority = claimLegacyReviewAdmissionCloudAuthority,
   log = console.log,
 }) {
   requireSession(sessionId);
@@ -67,8 +70,31 @@ export function review({
   if (existing?.status === "review_ready") {
     if (existing.sessionId !== sessionId) throw new Error("Review-ready lease belongs to another session.");
     assertLeaseWorktree(existing, repo);
-    const existingCloud = requireCloudReviewAdmission(existing);
+    let replayLease = existing;
+    let existingCloud = requireCloudReviewAdmission(existing);
+    if (!existingCloud) {
+      const upgraded = maybeUpgradeLegacyRootSourceReadyReview({
+        lease: existing,
+        branch,
+        repo,
+        gitText,
+        gitOptional,
+        leaseStore,
+        sessionId,
+        claimLegacyReviewCloudAuthority,
+        reviewReadyCloudAuthority,
+      });
+      if (upgraded) {
+        replayLease = upgraded.lease;
+        existingCloud = upgraded.cloud;
+        log(`Upgraded ready legacy root-source lane ${branch} into cloud-authoritative review.`);
+      }
+    }
     if (existingCloud) {
+      requireCloudReviewAdapter(
+        reviewReadyCloudAuthority,
+        "review-ready transition",
+      );
       requireCloudReviewAdapter(
         verifyReviewReadyCloudAuthority,
         "review-ready verifier",
@@ -76,20 +102,37 @@ export function review({
       verifyReviewReadyCloudAuthority({
         authority: existingCloud.authority,
         manifest: existingCloud.manifest,
-        headSha: existing.reviewHeadSha,
+        headSha: replayLease.reviewHeadSha,
         branch,
       });
     }
-    requireReviewReplay({ branch, lease: existing, gitText, gitOptional, ghText, ghOptional, run });
-    log(`Review is already ready at ${existing.pullRequestUrl}.`);
-    return existing.pullRequestUrl;
+    requireReviewReplay({ branch, lease: replayLease, gitText, gitOptional, ghText, ghOptional, run });
+    log(`Review is already ready at ${replayLease.pullRequestUrl}.`);
+    return replayLease.pullRequestUrl;
   }
   let lease = leaseStore.verify({ sessionId, branch });
   assertLeaseWorktree(lease, repo);
   if (!lease.pullRequestUrl || !lease.fenceSha) {
     throw new Error("Review requires the draft ownership pull request and fencing SHA created by device:start.");
   }
-  const cloud = requireCloudReviewAdmission(lease);
+  let cloud = requireCloudReviewAdmission(lease);
+  if (!cloud) {
+    const bootstrapped = maybeBootstrapLegacyRootSourceReviewAdmission({
+      lease,
+      branch,
+      repo,
+      gitText,
+      gitOptional,
+      leaseStore,
+      sessionId,
+      claimLegacyReviewCloudAuthority,
+    });
+    if (bootstrapped) {
+      lease = bootstrapped.lease;
+      cloud = bootstrapped.cloud;
+      log(`Upgraded legacy root-source lane ${branch} into cloud-authoritative review.`);
+    }
+  }
   let cloudReady = null;
   if (cloud) {
     requireCloudReviewAdapter(
@@ -626,6 +669,137 @@ function requireTaskBranch(branch, action) {
   return branch;
 }
 
+function maybeBootstrapLegacyRootSourceReviewAdmission({
+  lease,
+  branch,
+  repo,
+  gitText,
+  gitOptional,
+  leaseStore,
+  sessionId,
+  claimLegacyReviewCloudAuthority,
+}) {
+  if (lease?.admission || lease?.cloudAuthority) return null;
+  if (typeof claimLegacyReviewCloudAuthority !== "function") return null;
+  if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return null;
+  const targetRepository = resolveOriginRepositoryFullName(gitOptional);
+  if (!targetRepository) {
+    throw new Error("Root-source legacy review admission requires a resolvable origin repository.");
+  }
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const manifest = deriveLegacyReviewAdmissionManifest({
+    lease,
+    gitText,
+    headSha,
+  });
+  const bootstrapped = claimLegacyReviewCloudAuthority({
+    ledgerRepository: targetRepository,
+    targetRepository,
+    manifest,
+    canonicalBaseSha: lease.baseSha,
+    branch,
+    headSha,
+    deviceId: lease.device,
+    sessionId,
+  });
+  const admission = createLegacyReviewAdmissionProjection({
+    lease,
+    manifest,
+    authority: bootstrapped.authority,
+    verification: bootstrapped.verification,
+    headSha,
+  });
+  const annotated = leaseStore.annotate({
+    sessionId,
+    branch,
+    values: {
+      admission,
+      cloudAuthority: bootstrapped.authority,
+    },
+  });
+  return {
+    lease: annotated,
+    cloud: {
+      manifest: admission,
+      authority: bootstrapped.authority,
+    },
+  };
+}
+
+function maybeUpgradeLegacyRootSourceReadyReview({
+  lease,
+  branch,
+  repo,
+  gitText,
+  gitOptional,
+  leaseStore,
+  sessionId,
+  claimLegacyReviewCloudAuthority,
+  reviewReadyCloudAuthority,
+}) {
+  if (lease?.admission || lease?.cloudAuthority) return null;
+  if (typeof claimLegacyReviewCloudAuthority !== "function") return null;
+  if (typeof reviewReadyCloudAuthority !== "function") return null;
+  if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return null;
+  if (!SHA_PATTERN.test(String(lease.reviewHeadSha || ""))) {
+    throw new Error("Ready legacy root-source review upgrade requires an exact reviewed head.");
+  }
+  const localHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+  if (localHeadSha !== lease.reviewHeadSha) {
+    throw new Error("Ready legacy root-source review upgrade requires the exact reviewed local HEAD.");
+  }
+  const targetRepository = resolveOriginRepositoryFullName(gitOptional);
+  if (!targetRepository) {
+    throw new Error("Root-source ready review upgrade requires a resolvable origin repository.");
+  }
+  const manifest = deriveLegacyReviewAdmissionManifest({
+    lease,
+    gitText,
+    headSha: lease.reviewHeadSha,
+  });
+  const bootstrapped = claimLegacyReviewCloudAuthority({
+    ledgerRepository: targetRepository,
+    targetRepository,
+    manifest,
+    canonicalBaseSha: lease.baseSha,
+    branch,
+    headSha: lease.reviewHeadSha,
+    deviceId: lease.device,
+    sessionId,
+  });
+  const admission = createLegacyReviewAdmissionProjection({
+    lease,
+    manifest,
+    authority: bootstrapped.authority,
+    verification: bootstrapped.verification,
+    headSha: lease.reviewHeadSha,
+  });
+  const ready = reviewReadyCloudAuthority({
+    authority: bootstrapped.authority,
+    manifest: admission,
+    branch,
+    headSha: lease.reviewHeadSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+    deviceId: lease.device,
+    sessionId,
+  });
+  const annotated = leaseStore.annotate({
+    sessionId,
+    branch,
+    values: {
+      admission,
+      cloudAuthority: ready.authority,
+    },
+  });
+  return {
+    lease: annotated,
+    cloud: {
+      manifest: admission,
+      authority: ready.authority,
+    },
+  };
+}
+
 function requireCloudReviewAdmission(lease) {
   if (!lease?.admission && !lease?.cloudAuthority) return null;
   if (
@@ -654,6 +828,85 @@ function requireCloudPublishAdmission(lease) {
     );
   }
   return { manifest: lease.admission, authority: lease.cloudAuthority };
+}
+
+function deriveLegacyReviewAdmissionManifest({ lease, gitText, headSha }) {
+  const diffBase = `${lease.baseSha}..${headSha}`;
+  const paths = String(gitText(["diff", "--name-only", diffBase, "--"]))
+    .split(/\r?\n/u)
+    .map(value => value.trim())
+    .filter(Boolean);
+  if (paths.length === 0) {
+    throw new Error("Root-source legacy review admission requires at least one authored path.");
+  }
+  return normalizeDeclaredWriteScopeManifest({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: lease.scope,
+    paths,
+  }, {
+    expectedScope: lease.scope,
+  });
+}
+
+function createLegacyReviewAdmissionProjection({
+  lease,
+  manifest,
+  authority,
+  verification,
+  headSha,
+}) {
+  const existingLaneStateDigest = digestValue({
+    schema: "agentic-root-source-legacy-review-state/v1",
+    branch: lease.branch,
+    worktreePath: lease.worktreePath,
+    baseSha: lease.baseSha,
+    fenceSha: lease.fenceSha,
+    headSha,
+    epoch: lease.epoch,
+    pullRequestUrl: lease.pullRequestUrl,
+  });
+  const planReceiptDigest = digestValue({
+    schema: "agentic-root-source-legacy-review-plan/v1",
+    branch: lease.branch,
+    semanticScope: manifest.semanticScope,
+    manifestDigest: manifest.manifestDigest,
+    writeSetDigest: manifest.writeSetDigest,
+    existingLaneStateDigest,
+  });
+  const preservationReceiptDigest = digestValue({
+    schema: "agentic-root-source-legacy-review-preservation/v1",
+    branch: lease.branch,
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    manifestDigest: manifest.manifestDigest,
+    existingLaneStateDigest,
+  });
+  const admittedReportDigest = digestValue({
+    schema: "agentic-root-source-legacy-review-admission/v1",
+    branch: lease.branch,
+    semanticScope: manifest.semanticScope,
+    manifestDigest: manifest.manifestDigest,
+    writeSetDigest: manifest.writeSetDigest,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    laneRevision: authority.laneRevision,
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    verificationReceiptDigest: verification.receiptDigest,
+    preservationReceiptDigest,
+  });
+  return Object.freeze({
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: manifest.semanticScope,
+    declaredWriteSet: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+    manifestDigest: manifest.manifestDigest,
+    planReceiptDigest,
+    admissionReceiptDigest: verification.receiptDigest,
+    existingLaneStateDigest,
+    admittedReportDigest,
+    preservationReceiptDigest,
+  });
 }
 
 function requireCloudReviewAdapter(adapter, label) {
@@ -749,6 +1002,35 @@ function requirePullRequestHead({ pullRequest, expectedHeadSha }) {
 
 function readRemotePullRequestBody({ url, ghText }) {
   return ghText(["pr", "view", url, "--json", "body", "--jq", ".body"]);
+}
+
+function resolveOriginRepositoryName(gitOptional) {
+  return resolveOriginRepositoryIdentity(gitOptional)?.repo || null;
+}
+
+function resolveOriginRepositoryFullName(gitOptional) {
+  const identity = resolveOriginRepositoryIdentity(gitOptional);
+  return identity ? `${identity.owner}/${identity.repo}` : null;
+}
+
+function resolveOriginRepositoryIdentity(gitOptional) {
+  const remoteOrigin = [
+    gitOptional(["config", "--get", "remote.origin.url"]),
+    gitOptional(["remote", "get-url", "origin"]),
+  ]
+    .map(value => String(value || "").trim())
+    .find(Boolean);
+  if (!remoteOrigin) return null;
+  const normalized = remoteOrigin
+    .replace(/^[a-z]+:\/\/[^/]+\//iu, "")
+    .replace(/^[^@]+@[^:]+:/u, "")
+    .replace(/\.git$/u, "");
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.length < 2) return null;
+  return Object.freeze({
+    owner: segments.at(-2),
+    repo: segments.at(-1),
+  });
 }
 
 function persistPublishLeaseProjection({ url, branch, lease, ghText, run }) {

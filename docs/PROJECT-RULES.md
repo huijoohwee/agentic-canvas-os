@@ -59,7 +59,9 @@ document can express the same contract.
   claims must originate from the provisioned scoped-lane admission path with
   current cloud authority. Do not allow new local-only task lanes there; fail
   closed before lease mutation and route startup through the repository-owned
-  admission flow instead.
+  admission flow instead. A pre-existing local-only root-source lane may enter
+  cloud authority only through the repository-owned `device:review`
+  re-admission path that derives its exact committed write scope.
 - Repository-owned diagnostics must surface expiring lane authority, branch or
   projection drift, and incomplete pull-request projection repair before those
   lanes become unrecoverable residue. Prefer a shared ACOS doctor/audit command

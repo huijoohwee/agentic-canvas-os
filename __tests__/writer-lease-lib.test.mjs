@@ -7,6 +7,7 @@ import path from "node:path";
 import {
   createWriterLeaseStore,
   EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+  PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
@@ -441,6 +442,34 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     assert.deepEqual(parseWriterLeasePullRequestBody(
       renderWriterLeasePullRequestBody(recovered),
     ).expiredCommittedHeartbeatRecovery, recovered.expiredCommittedHeartbeatRecovery);
+    const {
+      sourceRemoteHeadSha: _sourceRemoteHeadSha,
+      ...prePushedPrefixRecovery
+    } = recovered.expiredCommittedHeartbeatRecovery;
+    const v2Recovery = {
+      ...prePushedPrefixRecovery,
+      schema:
+        PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    };
+    const v2Lease = {
+      ...recovered,
+      expiredCommittedHeartbeatRecovery: v2Recovery,
+    };
+    assert.deepEqual(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(v2Lease),
+    ).expiredCommittedHeartbeatRecovery, v2Recovery);
+    assert.equal(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(v2Lease).replace(
+        '"sourcePullRequestUrl":',
+        `"sourceRemoteHeadSha":"${source.fenceSha}","sourcePullRequestUrl":`,
+      ),
+    ), null);
+    assert.equal(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(recovered).replace(
+        `"sourceRemoteHeadSha":"${source.fenceSha}",`,
+        "",
+      ),
+    ), null);
     const markerBody = renderWriterLeasePullRequestBody(recovered);
     assert.doesNotMatch(markerBody, /worktreePathDigest|sourceLeaseDigest|changedPaths"|snapshotDigest/);
     assert.match(markerBody, /changedPathCount|changedPathsDigest/);
@@ -581,7 +610,8 @@ function recoveryEvidence({ source, headSha }) {
     sourceEpoch: source.epoch, sourceSessionId: source.sessionId,
     sourceDevice: source.device, sourceScope: source.scope,
     sourceBranch: source.branch, sourceBaseSha: source.baseSha,
-    sourceFenceSha: source.fenceSha, sourcePullRequestUrl: source.pullRequestUrl,
+    sourceFenceSha: source.fenceSha, sourceRemoteHeadSha: source.fenceSha,
+    sourcePullRequestUrl: source.pullRequestUrl,
     sourceClaimId: source.cloudAuthority.claimId, sourceClaimDigest: source.cloudAuthority.claimDigest,
     sourceLedgerRevision: source.cloudAuthority.ledgerRevision,
     sourceClaimLedgerRevision: source.cloudAuthority.claimLedgerRevision,

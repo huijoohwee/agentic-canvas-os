@@ -8,6 +8,7 @@ import {
   CHANGE_MANIFEST_SCHEMA,
   DEVICE_INTEGRATION_RESULT_SCHEMA,
   integrateSession,
+  resolveRuntimeRepositories,
 } from "../scripts/device-integrate-lib.mjs";
 import { CLOUD_COLLABORATION_BOUNDS } from "../scripts/cloud-collaboration-primitives.mjs";
 
@@ -31,6 +32,62 @@ const deliveryEvidence = Object.freeze({
 const reviewRequestId = "github-pull-request:PR_42";
 const focusedEvidenceDigest = "6".repeat(64);
 
+test("runtime repository identity is independent from the isolated canonical directory name", () => {
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-runtime-identity-"));
+  const isolatedCanonicalRoot = path.join(workspace, "isolated-acos-canonical");
+  const knowgrphRoot = path.join(workspace, "knowgrph-runtime");
+  mkdirSync(isolatedCanonicalRoot, { recursive: true });
+  mkdirSync(knowgrphRoot, { recursive: true });
+  writeFileSync(
+    path.join(isolatedCanonicalRoot, "package.json"),
+    JSON.stringify({ name: "agentic-canvas-os" }),
+  );
+  writeFileSync(path.join(knowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
+
+  try {
+    assert.deepEqual(resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      runtimeRepository: knowgrphRoot,
+    }), {
+      integratedRepository: "agentic-canvas-os",
+      agenticCanvasOsRoot: isolatedCanonicalRoot,
+      knowgrphRoot,
+    });
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("runtime repository identity falls back to origin metadata and rejects unsupported identities", () => {
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-runtime-origin-"));
+  const isolatedCanonicalRoot = path.join(workspace, "isolated-knowgrph-canonical");
+  const agenticCanvasOsRoot = path.join(workspace, "agentic-canvas-os");
+  mkdirSync(isolatedCanonicalRoot, { recursive: true });
+  mkdirSync(agenticCanvasOsRoot, { recursive: true });
+  writeFileSync(path.join(isolatedCanonicalRoot, "package.json"), JSON.stringify({ private: true }));
+  writeFileSync(
+    path.join(agenticCanvasOsRoot, "package.json"),
+    JSON.stringify({ name: "agentic-canvas-os" }),
+  );
+
+  try {
+    assert.deepEqual(resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      readOriginRemote: () => "git@github.com:huijoohwee/knowgrph.git",
+    }), {
+      integratedRepository: "knowgrph",
+      agenticCanvasOsRoot,
+      knowgrphRoot: isolatedCanonicalRoot,
+    });
+    assert.throws(() => resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      readOriginRemote: () => "https://github.com/example/unsupported-runtime.git",
+    }), /Unsupported canonical integration repository identity/u);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 function deliveryAuthorizedAuthority(authority, headSha = commitSha, overrides = {}) {
   return {
     ...authority,
@@ -50,12 +107,12 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-"));
   const manifestPath = path.join(os.tmpdir(), `agentic-manifest-${process.pid}.json`);
   const paths = ["package.json", "scripts/runtime.mjs"];
-  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalAgenticRoot = path.join(repo, "canonical", "isolated-acos-canonical");
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   writeFileSync(manifestPath, JSON.stringify({ schema: CHANGE_MANIFEST_SCHEMA, branch, baseSha, paths }));
   let head = fenceSha;
   let lease = createLease({ repo, status: "active" });
@@ -64,7 +121,9 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
   const gitText = args => {
     const key = args.join(" ");
     if (key === "branch --show-current") return `${branch}\n`;
-    if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+    if (key === "worktree list --porcelain -z") {
+      return canonicalWorktree(repo, "isolated-acos-canonical");
+    }
     if (key === "diff --name-only -z HEAD --") return `${paths.join("\0")}\0`;
     if (key === "ls-files --others --exclude-standard -z") return "";
     if (key === "diff --name-only -z") return "";
@@ -150,6 +209,7 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin main"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --no-edit origin/main"));
     assert.equal(result.runtime.integratedSource.mainSha, mainSha);
+    assert.equal(result.runtime.integratedSource.repository, "agentic-canvas-os");
     assert.equal(result.runtime.readiness.source.revision, knowgrphSha);
     assert.deepEqual(runtimeCommands[0], {
       command: "git",
@@ -273,8 +333,8 @@ test("delivery aggregates sequential tree-equivalent refreshes before completion
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   const firstRefreshedHeadSha = "2".repeat(40);
   const firstRefreshedMainSha = "3".repeat(40);
   const firstRefreshedTreeSha = "4".repeat(40);
@@ -464,8 +524,8 @@ test("a protected-main merge preserves the approved authored commit evidence", (
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   const refreshedHeadSha = "2".repeat(40);
   const integration = {
     schema: "agentic-integration-commit/v1",
@@ -541,8 +601,8 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   const lease = createLease({
     repo,
     status: "review_ready",
@@ -661,8 +721,8 @@ test("review-ready delivery reclaims a dormant preserved review authority before
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   let lease = createLease({
     repo,
     status: "review_ready",
@@ -900,8 +960,8 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   const refreshedHeadSha = "2".repeat(40);
   const refreshedMainSha = "3".repeat(40);
   const refreshedTreeSha = "4".repeat(40);
@@ -1025,8 +1085,8 @@ test("authorized auto-delivery completes only through canonical runtime readines
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
   mkdirSync(canonicalKnowgrphRoot, { recursive: true });
-  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
-  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   let lease = createLease({
     repo,
     status: "review_ready",
@@ -1184,7 +1244,7 @@ function deliveryDigests(value) {
   return Object.fromEntries(Object.keys(deliveryEvidence).map(key => [key, value[key]]));
 }
 
-function canonicalWorktree(repo) {
-  return `worktree ${path.join(repo, "canonical", "agentic-canvas-os")}\0HEAD ${baseSha}\0branch refs/heads/main\0\0` +
+function canonicalWorktree(repo, canonicalDirectory = "agentic-canvas-os") {
+  return `worktree ${path.join(repo, "canonical", canonicalDirectory)}\0HEAD ${baseSha}\0branch refs/heads/main\0\0` +
     `worktree ${repo}\0HEAD ${fenceSha}\0branch refs/heads/${branch}\0\0`;
 }

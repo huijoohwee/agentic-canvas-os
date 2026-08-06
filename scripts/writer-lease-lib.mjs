@@ -292,10 +292,10 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
-  function annotate({ sessionId, branch, values }) {
+  function annotate({ sessionId, branch, allowExpired = false, values }) {
     return withLock(() => {
       const registry = readRegistry();
-      const current = verify({ sessionId, branch });
+      const current = verify({ sessionId, branch, allowExpired });
       const lease = { ...current, ...values, schema: WRITER_LEASE_SCHEMA };
       writeRegistry({
         ...registry,

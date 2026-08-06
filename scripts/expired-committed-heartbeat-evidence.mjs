@@ -8,6 +8,7 @@ import { assertLeaseWorktree } from "./device-branch-ownership-lib.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import {
   captureProtectedMainPathEquivalence,
+  captureProtectedMainSharedAncestorPathEquivalence,
   RECOVERY_PATH_EVIDENCE_MAX_BYTES,
   RECOVERY_PATH_EVIDENCE_MAX_PATHS,
 } from "./protected-main-path-equivalence-lib.mjs";
@@ -22,6 +23,8 @@ export function captureCommittedDescendantEvidence({
   lease,
   gitText,
   bindProtectedMain = true,
+  bindPublishedPrefix = true,
+  sourceRemoteHeadSha = lease.fenceSha,
 }) {
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
   if (!SHA_PATTERN.test(headSha) || headSha === lease.fenceSha) {
@@ -46,6 +49,21 @@ export function captureCommittedDescendantEvidence({
     );
   }
   gitText(["merge-base", "--is-ancestor", lease.fenceSha, headSha]);
+  requireSourceRemotePrefix({
+    sourceFenceSha: lease.fenceSha,
+    sourceRemoteHeadSha,
+    headSha,
+    gitText,
+  });
+  const sourceRemotePrefix = bindPublishedPrefix
+    ? captureSourceRemotePrefixEvidence({
+      lease,
+      sourceRemoteHeadSha,
+      worktreeHeadSha: headSha,
+      gitText,
+      bindProtectedMain,
+    })
+    : null;
   const treeSha = gitText(["rev-parse", `${headSha}^{tree}`]).trim();
   if (!SHA_PATTERN.test(treeSha)) {
     throw new Error("Expired committed recovery could not resolve the descendant tree.");
@@ -80,6 +98,29 @@ export function captureCommittedDescendantEvidence({
       gitText,
     })
     : null;
+  if (
+    protectedMainEquivalence &&
+    protectedMainEquivalence.headTreeSha !== treeSha
+  ) {
+    throw new Error(
+      "Expired committed recovery descendant tree drifted during evidence capture.",
+    );
+  }
+  if (
+    sourceRemotePrefix?.sharedAncestorEquivalence &&
+    (
+      sourceRemotePrefix.sharedAncestorEquivalence.protectedMainRef !==
+        protectedMainEquivalence?.protectedMainRef ||
+      sourceRemotePrefix.sharedAncestorEquivalence.protectedMainSha !==
+        protectedMainEquivalence?.protectedMainSha ||
+      sourceRemotePrefix.sharedAncestorEquivalence.protectedMainTreeSha !==
+        protectedMainEquivalence?.protectedMainTreeSha
+    )
+  ) {
+    throw new Error(
+      "Expired committed recovery protected-main anchor drifted between published-prefix and full-range capture.",
+    );
+  }
   const rangeDiffDigest = sha256(gitText([
     "diff",
     "--binary",
@@ -89,6 +130,8 @@ export function captureCommittedDescendantEvidence({
     "--",
   ]));
   return Object.freeze({
+    sourceRemoteHeadSha,
+    ...(sourceRemotePrefix ? { sourceRemotePrefix } : {}),
     headSha,
     treeSha,
     changedPaths: Object.freeze(changedPaths),
@@ -143,22 +186,21 @@ export function captureExpiredCommittedHeartbeatSnapshot({
     throw new Error("Expired committed recovery requires a clean worktree.");
   }
 
-  const projection = readExactPullRequestProjection({ lease, branch, ghText });
   const remoteHeadSha = remoteBranchHead({ branch, gitOptional });
-  if (
-    remoteHeadSha !== lease.fenceSha ||
-    projection.pullRequest.headRefOid !== lease.fenceSha
-  ) {
-    throw new Error(
-      "Expired committed recovery requires the exact remote and pull-request fence.",
-    );
-  }
+  const projection = readExactPullRequestProjection({
+    lease,
+    branch,
+    ghText,
+    expectedHeadSha: remoteHeadSha,
+  });
   const descendant = captureCommittedDescendantEvidence({
     lease,
     gitText,
     bindProtectedMain: true,
+    sourceRemoteHeadSha: remoteHeadSha,
   });
   const {
+    sourceRemotePrefix,
     headSha,
     treeSha,
     changedPaths,
@@ -169,13 +211,14 @@ export function captureExpiredCommittedHeartbeatSnapshot({
     rangeDiffDigest,
   } = descendant;
   const snapshot = {
-    schema: "agentic-expired-committed-heartbeat-snapshot/v2",
+    schema: "agentic-expired-committed-heartbeat-snapshot/v3",
     branch,
     sourceLeaseDigest: digestValue(lease),
     sourceMarkerDigest: projection.markerDigest,
     pullRequestBodyDigest: projection.bodyDigest,
     remoteHeadSha,
     pullRequestHeadSha: projection.pullRequest.headRefOid,
+    sourceRemotePrefix,
     headSha,
     treeSha,
     changedPaths,
@@ -197,6 +240,28 @@ export function captureExpiredCommittedHeartbeatSnapshot({
       sourceBranch: lease.branch,
       sourceBaseSha: lease.baseSha,
       sourceFenceSha: lease.fenceSha,
+      sourceRemoteHeadSha: remoteHeadSha,
+      sourceRemoteTreeSha: sourceRemotePrefix.treeSha,
+      sourceRemoteChangedPathCount:
+        sourceRemotePrefix.changedPaths.length,
+      sourceRemoteChangedPathsDigest: digestValue(
+        sourceRemotePrefix.changedPaths,
+      ),
+      sourceRemoteDeclaredChangedPathCount:
+        sourceRemotePrefix.declaredChangedPaths.length,
+      sourceRemoteDeclaredChangedPathsDigest: digestValue(
+        sourceRemotePrefix.declaredChangedPaths,
+      ),
+      sourceRemoteProtectedEquivalentPathCount:
+        sourceRemotePrefix.protectedEquivalentPaths.length,
+      sourceRemoteProtectedEquivalentPathsDigest: digestValue(
+        sourceRemotePrefix.protectedEquivalentPaths,
+      ),
+      sourceRemoteSharedAncestorEquivalence:
+        sourceRemotePrefix.sharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        sourceRemotePrefix.sharedAncestorEquivalenceDigest,
+      sourceRemoteRangeDiffDigest: sourceRemotePrefix.rangeDiffDigest,
       sourcePullRequestUrl: lease.pullRequestUrl,
       sourceClaimId: lease.cloudAuthority.claimId,
       sourceClaimDigest: lease.cloudAuthority.claimDigest,
@@ -220,6 +285,94 @@ export function captureExpiredCommittedHeartbeatSnapshot({
       pullRequestBodyDigest: projection.bodyDigest,
       rangeDiffDigest,
     }),
+  });
+}
+
+export function captureSourceRemotePrefixEvidence({
+  lease,
+  sourceRemoteHeadSha,
+  worktreeHeadSha,
+  gitText,
+  bindProtectedMain = true,
+}) {
+  if (!SHA_PATTERN.test(String(sourceRemoteHeadSha || ""))) {
+    throw new Error(
+      "Expired committed recovery source remote head is not an exact Git SHA.",
+    );
+  }
+  if (!SHA_PATTERN.test(String(worktreeHeadSha || ""))) {
+    throw new Error(
+      "Expired committed recovery worktree head is not an exact Git SHA.",
+    );
+  }
+  const treeSha = gitText([
+    "rev-parse",
+    `${sourceRemoteHeadSha}^{tree}`,
+  ]).trim();
+  if (!SHA_PATTERN.test(treeSha)) {
+    throw new Error(
+      "Expired committed recovery could not resolve the source remote tree.",
+    );
+  }
+  const changedPaths = uniqueSorted(splitNul(gitText([
+    "diff",
+    "--name-only",
+    "-z",
+    "--no-renames",
+    lease.fenceSha,
+    sourceRemoteHeadSha,
+    "--",
+  ])));
+  requireBoundedChangedPaths(changedPaths);
+  const partition = partitionChangedPathsByScope({
+    changedPaths,
+    declaredWriteSet: lease.admission.declaredWriteSet,
+  });
+  if (!bindProtectedMain && partition.protectedEquivalentPaths.length) {
+    throw new Error(
+      `Expired committed recovery published-prefix path is outside declared write scope: ${partition.protectedEquivalentPaths[0]}`,
+    );
+  }
+  const sharedAncestorEquivalence = bindProtectedMain
+    ? captureProtectedMainSharedAncestorPathEquivalence({
+      baseSha: lease.baseSha,
+      headSha: sourceRemoteHeadSha,
+      exemptPaths: partition.protectedEquivalentPaths,
+      gitText,
+      worktreeHeadSha,
+    })
+    : null;
+  if (
+    sharedAncestorEquivalence &&
+    sharedAncestorEquivalence.headTreeSha !== treeSha
+  ) {
+    throw new Error(
+      "Expired committed recovery source remote tree drifted during published-prefix capture.",
+    );
+  }
+  const rangeDiffDigest = sha256(gitText([
+    "diff",
+    "--binary",
+    "--no-renames",
+    lease.fenceSha,
+    sourceRemoteHeadSha,
+    "--",
+  ]));
+  return Object.freeze({
+    headSha: sourceRemoteHeadSha,
+    treeSha,
+    changedPaths: Object.freeze(changedPaths),
+    declaredChangedPaths: Object.freeze(partition.declaredChangedPaths),
+    protectedEquivalentPaths: Object.freeze(
+      partition.protectedEquivalentPaths,
+    ),
+    ...(sharedAncestorEquivalence ? {
+      sharedAncestorEquivalence,
+      sharedAncestorEquivalenceDigest: digestValue(
+        sharedAncestorEquivalence,
+      ),
+    } : {}),
+    rangeDiffDigest,
   });
 }
 
@@ -265,12 +418,14 @@ export function readExactPullRequestProjection({
   branch,
   ghText,
   expectedBody = null,
+  expectedHeadSha = lease.fenceSha,
 }) {
   const projection = readPullRequestProjection({
     lease,
     branch,
     ghText,
     expectedBody,
+    expectedHeadSha,
   });
   const expectedMarker = projectWriterLeasePullRequestMarker(lease);
   if (projection.markerDigest !== digestValue(expectedMarker)) {
@@ -286,6 +441,7 @@ export function readPullRequestProjection({
   branch,
   ghText,
   expectedBody = null,
+  expectedHeadSha = lease.fenceSha,
 }) {
   const pullRequest = readOwnershipPullRequest({
     url: lease.pullRequestUrl,
@@ -295,7 +451,8 @@ export function readPullRequestProjection({
   const expectedRepository = repositoryFromPullRequestUrl(lease.pullRequestUrl);
   if (
     pullRequest.isDraft !== true ||
-    pullRequest.headRefOid !== lease.fenceSha ||
+    !SHA_PATTERN.test(String(expectedHeadSha || "")) ||
+    pullRequest.headRefOid !== expectedHeadSha ||
     pullRequest.headRepository?.nameWithOwner !== expectedRepository ||
     (expectedBody !== null && pullRequest.body !== expectedBody)
   ) {
@@ -314,6 +471,41 @@ export function readPullRequestProjection({
     markerDigest: digestValue(marker),
     bodyDigest: sha256(pullRequest.body),
   });
+}
+
+function requireSourceRemotePrefix({
+  sourceFenceSha,
+  sourceRemoteHeadSha,
+  headSha,
+  gitText,
+}) {
+  if (!SHA_PATTERN.test(String(sourceRemoteHeadSha || ""))) {
+    throw new Error(
+      "Expired committed recovery source remote head is not an exact Git SHA.",
+    );
+  }
+  try {
+    if (sourceRemoteHeadSha !== sourceFenceSha) {
+      gitText([
+        "merge-base",
+        "--is-ancestor",
+        sourceFenceSha,
+        sourceRemoteHeadSha,
+      ]);
+    }
+    if (sourceRemoteHeadSha !== headSha) {
+      gitText([
+        "merge-base",
+        "--is-ancestor",
+        sourceRemoteHeadSha,
+        headSha,
+      ]);
+    }
+  } catch {
+    throw new Error(
+      "Expired committed recovery requires source fence, remote/PR prefix, and local HEAD ancestry.",
+    );
+  }
 }
 
 export function remoteBranchHead({ branch, gitOptional }) {

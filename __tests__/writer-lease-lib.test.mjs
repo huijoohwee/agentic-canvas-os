@@ -7,6 +7,7 @@ import path from "node:path";
 import {
   createWriterLeaseStore,
   EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+  PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
@@ -441,6 +442,50 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     assert.deepEqual(parseWriterLeasePullRequestBody(
       renderWriterLeasePullRequestBody(recovered),
     ).expiredCommittedHeartbeatRecovery, recovered.expiredCommittedHeartbeatRecovery);
+    const {
+      sourceRemoteHeadSha: _sourceRemoteHeadSha,
+      sourceRemoteTreeSha: _sourceRemoteTreeSha,
+      sourceRemoteChangedPathCount: _sourceRemoteChangedPathCount,
+      sourceRemoteChangedPathsDigest: _sourceRemoteChangedPathsDigest,
+      sourceRemoteDeclaredChangedPathCount:
+        _sourceRemoteDeclaredChangedPathCount,
+      sourceRemoteDeclaredChangedPathsDigest:
+        _sourceRemoteDeclaredChangedPathsDigest,
+      sourceRemoteProtectedEquivalentPathCount:
+        _sourceRemoteProtectedEquivalentPathCount,
+      sourceRemoteProtectedEquivalentPathsDigest:
+        _sourceRemoteProtectedEquivalentPathsDigest,
+      sourceRemoteSharedAncestorEquivalence:
+        _sourceRemoteSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        _sourceRemoteSharedAncestorEquivalenceDigest,
+      sourceRemoteRangeDiffDigest: _sourceRemoteRangeDiffDigest,
+      ...prePushedPrefixRecovery
+    } = recovered.expiredCommittedHeartbeatRecovery;
+    const v2Recovery = {
+      ...prePushedPrefixRecovery,
+      schema:
+        PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    };
+    const v2Lease = {
+      ...recovered,
+      expiredCommittedHeartbeatRecovery: v2Recovery,
+    };
+    assert.deepEqual(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(v2Lease),
+    ).expiredCommittedHeartbeatRecovery, v2Recovery);
+    assert.equal(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(v2Lease).replace(
+        '"sourcePullRequestUrl":',
+        `"sourceRemoteHeadSha":"${source.fenceSha}","sourcePullRequestUrl":`,
+      ),
+    ), null);
+    assert.equal(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(recovered).replace(
+        `"sourceRemoteHeadSha":"${source.fenceSha}",`,
+        "",
+      ),
+    ), null);
     const markerBody = renderWriterLeasePullRequestBody(recovered);
     assert.doesNotMatch(markerBody, /worktreePathDigest|sourceLeaseDigest|changedPaths"|snapshotDigest/);
     assert.match(markerBody, /changedPathCount|changedPathsDigest/);
@@ -569,6 +614,21 @@ test("writer lease marker recovery distinguishes invalid markers from absent mar
 function recoveryEvidence({ source, headSha }) {
   const declaredChangedPaths = ["scripts/recovery.mjs"];
   const protectedEquivalentPaths = [];
+  const sourceRemoteSharedAncestorEquivalence = {
+    schema:
+      "agentic-protected-main-shared-ancestor-path-equivalence/v1",
+    baseSha: source.baseSha,
+    headSha: source.fenceSha,
+    headTreeSha: "7".repeat(40),
+    protectedMainRef: "refs/remotes/origin/main",
+    protectedMainSha: "5".repeat(40),
+    protectedMainTreeSha: "6".repeat(40),
+    sharedAncestorSha: source.baseSha,
+    sharedAncestorTreeSha: "9".repeat(40),
+    exemptPathCount: 0,
+    entries: [],
+    exemptPathsDigest: digestValue(protectedEquivalentPaths),
+  };
   const protectedMainEquivalence = {
     schema: "agentic-protected-main-path-equivalence/v1", baseSha: source.baseSha,
     headSha, headTreeSha: "f".repeat(40),
@@ -581,7 +641,19 @@ function recoveryEvidence({ source, headSha }) {
     sourceEpoch: source.epoch, sourceSessionId: source.sessionId,
     sourceDevice: source.device, sourceScope: source.scope,
     sourceBranch: source.branch, sourceBaseSha: source.baseSha,
-    sourceFenceSha: source.fenceSha, sourcePullRequestUrl: source.pullRequestUrl,
+    sourceFenceSha: source.fenceSha, sourceRemoteHeadSha: source.fenceSha,
+    sourceRemoteTreeSha: "7".repeat(40),
+    sourceRemoteChangedPathCount: 0,
+    sourceRemoteChangedPathsDigest: digestValue([]),
+    sourceRemoteDeclaredChangedPathCount: 0,
+    sourceRemoteDeclaredChangedPathsDigest: digestValue([]),
+    sourceRemoteProtectedEquivalentPathCount: 0,
+    sourceRemoteProtectedEquivalentPathsDigest: digestValue([]),
+    sourceRemoteSharedAncestorEquivalence,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      digestValue(sourceRemoteSharedAncestorEquivalence),
+    sourceRemoteRangeDiffDigest: "8".repeat(64),
+    sourcePullRequestUrl: source.pullRequestUrl,
     sourceClaimId: source.cloudAuthority.claimId, sourceClaimDigest: source.cloudAuthority.claimDigest,
     sourceLedgerRevision: source.cloudAuthority.ledgerRevision,
     sourceClaimLedgerRevision: source.cloudAuthority.claimLedgerRevision,

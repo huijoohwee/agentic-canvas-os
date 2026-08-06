@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 983,
-  "headDigest": "a3ac45e5a8cfaebae44fd3f48cb26b7da9669d5f0d65fdd7bfef8fc2d1681886",
+  "sequence": 984,
+  "headDigest": "b8608f09d4df3e7599733f9958693ab91db3b807c18129c210e54a8aa32a066a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -49726,6 +49726,65 @@
       },
       "claimDigest": "13817982baef8378b6404b452485d15e9bd7f9f2ae2d011062ded891297dc264",
       "digest": "a3ac45e5a8cfaebae44fd3f48cb26b7da9669d5f0d65fdd7bfef8fc2d1681886"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 984,
+      "parentDigest": "a3ac45e5a8cfaebae44fd3f48cb26b7da9669d5f0d65fdd7bfef8fc2d1681886",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "a3c26f63382c800c0986bb5f2c9a5dcfd823e61dbb84ac2409daa16bdec37fc8",
+      "idempotencyKey": "a2b49f583c0af595c957679d46d75743200c358b26e440cb0432b496088dd8ab",
+      "requestDigest": "eab2cb114d1accca58e4d3c0fb1ba14209bbb884fc4349d7a496f87d8754f8e1",
+      "evaluationTime": "2026-08-06T09:48:05.000Z",
+      "claimCore": {
+        "claimId": "a3c26f63382c800c0986bb5f2c9a5dcfd823e61dbb84ac2409daa16bdec37fc8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c6ba6c747fb85887a6deb1429940df9c6c22f9b1fb1e170179d498d305c3ed18",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:af26f9913d9e81c0b1d64b1b7941bea55aeb3d76dd2388f514796a9da368db2b",
+        "canonicalBaseRevision": "192d7f3cc7fcca02db0edb8ca7b89c3f176ce570",
+        "declaredWriteScope": [
+          "path:canvas/scripts/__tests__/local-vite-browser-smoke-runtime.test.mjs",
+          "path:canvas/scripts/lib/local-chromium-executable.mjs",
+          "path:canvas/scripts/verify_xr_v2_browser_smoke.mjs",
+          "path:canvas/src/App.tsx",
+          "path:canvas/src/__tests__/workspaceSeedCompletenessHardening.test.ts",
+          "path:canvas/src/__tests__/xrPhysicsWorkspaceBootstrap.test.ts",
+          "path:docs/runtime-api.md",
+          "path:docs/runtime-readiness-contract.md",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/check-game-fps-readiness.mjs",
+          "semantic:xr-v2-runtime-readiness-support"
+        ],
+        "writeSetDigest": "74af552b2943387bc14f740d81a919d8dda46fb91544d00188a6f6aa371d50a9",
+        "laneRevision": "3d36559debdef9adab5727e2f0bcc172e6a839ee",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-07T09:32:54.000Z",
+        "evidenceDigest": "0526a199c2799aa20eb196ba8699c2962e5fed7ce0a16ea0d66ba7cd5d1ffbe9",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77gwO_",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "3d36559debdef9adab5727e2f0bcc172e6a839ee",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77gwO_",
+          "focusedEvidenceDigest": "0526a199c2799aa20eb196ba8699c2962e5fed7ce0a16ea0d66ba7cd5d1ffbe9",
+          "dependencyClosureDigest": "865f0e2949bbc08397490090f866ca57426cdc21b8db83daa0793ad67cbf2ada",
+          "namedChecksDigest": "f4e271fedb5bc12881926160013d5f95e125f4ba99ea9a2b0cf7bd33912b3370",
+          "handoffEvidenceDigest": "d38dcfab1bda88f1ed1aa2de626d8c8669cab5322c1ce5bc2390751a57c00de3",
+          "operatorDecisionDigest": "34d77c4509ef7df397fabe8dc372c1a3e67cb77fb7c127a915397a748cd82004",
+          "integrationIntentDigest": "abf3e2bdf1de8ba622855769dfb3be3bdee90f0a0733e001c5d9fe3cf3c7fa87",
+          "integratedAt": "2026-08-06T09:48:05.000Z"
+        }
+      },
+      "claimDigest": "71e2dfa969a872754652edf11e1f4d6c94bd837dd075608ad0accf32990e33fc",
+      "digest": "b8608f09d4df3e7599733f9958693ab91db3b807c18129c210e54a8aa32a066a"
     }
   ]
 }

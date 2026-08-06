@@ -21,6 +21,7 @@ const baseSha = "a".repeat(40);
 const fenceSha = "b".repeat(40);
 const headSha = "c".repeat(40);
 const treeSha = "d".repeat(40);
+const pushedRemoteHeadSha = "e".repeat(40);
 const protectedMainSha = "1".repeat(40);
 const protectedMainTreeSha = "2".repeat(40);
 
@@ -48,6 +49,7 @@ test("captures one exact clean committed descendant inside declared path scope",
   assert.match(snapshot.snapshotDigest, /^[0-9a-f]{64}$/);
   assert.equal(snapshot.recoveryEvidence.sourceEpoch, lease.epoch);
   assert.equal(snapshot.recoveryEvidence.sourceClaimId, lease.cloudAuthority.claimId);
+  assert.equal(snapshot.recoveryEvidence.sourceRemoteHeadSha, fenceSha);
 });
 
 test("captures mixed authored and protected-main-equivalent descendant paths", () => {
@@ -79,6 +81,47 @@ test("captures mixed authored and protected-main-equivalent descendant paths", (
     digestValue(snapshot.protectedMainEquivalence));
 });
 
+test("captures an exact pushed remote/PR prefix while proving the full fence-to-HEAD range", () => {
+  const lease = expiredCloudLease();
+  const protectedBlobSha = "3".repeat(40);
+  const protectedEntry = { mode: "100644", blobSha: protectedBlobSha };
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      paths: ["scripts/recovery/check.mjs", "docs/protected.md"],
+      headEntries: { "docs/protected.md": protectedEntry },
+      protectedEntries: { "docs/protected.md": protectedEntry },
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.equal(snapshot.remoteHeadSha, pushedRemoteHeadSha);
+  assert.equal(snapshot.pullRequestHeadSha, pushedRemoteHeadSha);
+  assert.equal(
+    snapshot.recoveryEvidence.sourceRemoteHeadSha,
+    pushedRemoteHeadSha,
+  );
+  assert.deepEqual(snapshot.changedPaths, [
+    "docs/protected.md",
+    "scripts/recovery/check.mjs",
+  ]);
+  assert.deepEqual(snapshot.declaredChangedPaths, [
+    "scripts/recovery/check.mjs",
+  ]);
+  assert.deepEqual(snapshot.protectedEquivalentPaths, [
+    "docs/protected.md",
+  ]);
+});
+
 test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", () => {
   const lease = expiredCloudLease();
   const base = {
@@ -98,7 +141,7 @@ test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", 
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
     gitOptional: () => `${"e".repeat(40)}\trefs/heads/${branch}`,
-  }), /exact remote and pull-request fence/);
+  }), /exact open draft ownership pull request/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
     gitText: recoveryGitText({ dirt: "?? untracked.txt\0" }),
@@ -107,6 +150,30 @@ test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", 
     ...base,
     gitText: recoveryGitText({ ancestryError: true }),
   }), /not an ancestor/);
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    ...base,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      remoteFenceAncestryError: true,
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+  }), /fence, remote\/PR prefix, and local HEAD ancestry/);
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    ...base,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      remoteHeadAncestryError: true,
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+  }), /fence, remote\/PR prefix, and local HEAD ancestry/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
     gitText: recoveryGitText({ baseAncestryError: true }),
@@ -313,6 +380,78 @@ test("protected-main ref drift after cloud renewal fails before local CAS or mar
   assert.equal(harness.cloudCalls(), 1);
   assert.equal(harness.localWrites(), 0);
   assert.equal(harness.markerWrites(), 0);
+});
+
+test("remote, pull-request, and local HEAD TOCTOU fail after cloud and before local CAS", async t => {
+  const source = liveManifestLease();
+  const driftedHeadSha = "0".repeat(40);
+
+  await t.test("remote head", () => {
+    const harness = recoveryHarness({ source,
+      renewedManifestDigest: source.cloudAuthority.manifestDigest });
+    let reads = 0;
+    harness.input.gitOptional = () => {
+      reads += 1;
+      const remote = reads === 1 ? fenceSha : driftedHeadSha;
+      return `${remote}\trefs/heads/${branch}`;
+    };
+    assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
+      /exact open draft ownership pull request|state drifted after cloud renewal/);
+    assert.equal(harness.cloudCalls(), 1);
+    assert.equal(harness.localWrites(), 0);
+    assert.equal(harness.markerWrites(), 0);
+  });
+
+  await t.test("pull-request head", () => {
+    const harness = recoveryHarness({ source,
+      renewedManifestDigest: source.cloudAuthority.manifestDigest });
+    let reads = 0;
+    harness.input.ghText = () => {
+      reads += 1;
+      return pullRequestBodyJson(harness.remoteBody(), {
+        headRefOid: reads === 1 ? fenceSha : driftedHeadSha,
+      });
+    };
+    assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
+      /exact open draft ownership pull request/);
+    assert.equal(harness.cloudCalls(), 1);
+    assert.equal(harness.localWrites(), 0);
+    assert.equal(harness.markerWrites(), 0);
+  });
+
+  await t.test("local HEAD", () => {
+    const stable = recoveryGitText();
+    const driftedTreeSha = "4".repeat(40);
+    let headReads = 0;
+    const recoveryGit = args => {
+      const key = args.join(" ");
+      if (key === "rev-parse HEAD") {
+        headReads += 1;
+        return headReads <= 3 ? headSha : driftedHeadSha;
+      }
+      if (key ===
+        `merge-base --is-ancestor ${fenceSha} ${driftedHeadSha}`) return "";
+      if (key === `rev-parse ${driftedHeadSha}^{tree}`) {
+        return driftedTreeSha;
+      }
+      if (key ===
+        `diff --name-only -z --no-renames ${fenceSha} ${driftedHeadSha} --`) {
+        return "scripts/recovery/check.mjs\0docs/runtime.md\0";
+      }
+      if (key ===
+        `diff --binary --no-renames ${fenceSha} ${driftedHeadSha} --`) {
+        return "binary committed range";
+      }
+      return stable(args);
+    };
+    const harness = recoveryHarness({ source, recoveryGit,
+      renewedManifestDigest: source.cloudAuthority.manifestDigest });
+    assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
+      /state drifted after cloud renewal/);
+    assert.equal(harness.cloudCalls(), 1);
+    assert.equal(harness.localWrites(), 0);
+    assert.equal(harness.markerWrites(), 0);
+  });
 });
 
 function liveManifestLease({ cloudExpiresAt = null } = {}) {
@@ -525,6 +664,9 @@ function recoveryGitText({
   ancestryError = false,
   baseAncestryError = false,
   fenceParentSha = baseSha,
+  sourceRemoteHeadSha = fenceSha,
+  remoteFenceAncestryError = false,
+  remoteHeadAncestryError = false,
   headEntries = {},
   protectedEntries = {},
 } = {}) {
@@ -545,6 +687,22 @@ function recoveryGitText({
     }
     if (key === `merge-base --is-ancestor ${fenceSha} ${headSha}`) {
       if (ancestryError) throw new Error("fatal: not an ancestor");
+      return "";
+    }
+    if (
+      sourceRemoteHeadSha !== fenceSha &&
+      key ===
+        `merge-base --is-ancestor ${fenceSha} ${sourceRemoteHeadSha}`
+    ) {
+      if (remoteFenceAncestryError) throw new Error("not an ancestor");
+      return "";
+    }
+    if (
+      sourceRemoteHeadSha !== headSha &&
+      key ===
+        `merge-base --is-ancestor ${sourceRemoteHeadSha} ${headSha}`
+    ) {
+      if (remoteHeadAncestryError) throw new Error("not an ancestor");
       return "";
     }
     if (key === "rev-parse refs/remotes/origin/main") {
@@ -581,17 +739,20 @@ function recoveryGitText({
   };
 }
 
-function pullRequestJson(markerLease) {
-  return pullRequestBodyJson(renderWriterLeasePullRequestBody(markerLease));
+function pullRequestJson(markerLease, options = {}) {
+  return pullRequestBodyJson(
+    renderWriterLeasePullRequestBody(markerLease),
+    options,
+  );
 }
 
-function pullRequestBodyJson(body) {
+function pullRequestBodyJson(body, { headRefOid = fenceSha } = {}) {
   return JSON.stringify({
     url: pullRequestUrl,
     state: "OPEN",
     isDraft: true,
     headRefName: branch,
-    headRefOid: fenceSha,
+    headRefOid,
     headRepository: { nameWithOwner: "org/repo" },
     baseRefName: "main",
     body,

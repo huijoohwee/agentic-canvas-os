@@ -24,7 +24,9 @@ import {
   fetchProtectedMain,
 } from "./protected-main-path-equivalence-lib.mjs";
 import {
+  EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+  PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   parseDeviceBranch,
   projectExpiredCommittedHeartbeatLease,
   projectWriterLeasePullRequestMarker,
@@ -168,6 +170,7 @@ export function recoverExpiredCommittedHeartbeat({
     lease: before.lease,
     branch,
     ghText,
+    expectedHeadSha: before.remoteHeadSha,
   });
   if (
     sourceProjection.bodyDigest !== before.pullRequestBodyDigest ||
@@ -201,6 +204,7 @@ export function recoverExpiredCommittedHeartbeat({
     branch,
     ghText,
     expectedBody: renewedBody,
+    expectedHeadSha: before.remoteHeadSha,
   });
   if (projected.markerDigest !== digestValue(
     projectWriterLeasePullRequestMarker(lease),
@@ -217,7 +221,7 @@ export function recoverExpiredCommittedHeartbeat({
   });
 
   log(
-    `Recovered expired ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}; committed descendant remains unpushed.`,
+    `Recovered expired ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}; committed descendant remains locally preserved.`,
   );
   return recoveryResult({
     branch,
@@ -313,14 +317,20 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
   }
   requireCloudAdmission({ lease, instant });
   requireClean({ gitText });
+  const expectedRemoteHeadSha = recovery.schema ===
+    EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA
+    ? recovery.sourceRemoteHeadSha
+    : lease.fenceSha;
   const remoteHeadSha = remoteBranchHead({ branch, gitOptional });
-  const projection = readPullRequestProjection({ lease, branch, ghText });
-  if (
-    remoteHeadSha !== lease.fenceSha ||
-    projection.pullRequest.headRefOid !== lease.fenceSha
-  ) {
+  const projection = readPullRequestProjection({
+    lease,
+    branch,
+    ghText,
+    expectedHeadSha: expectedRemoteHeadSha,
+  });
+  if (remoteHeadSha !== expectedRemoteHeadSha) {
     throw new Error(
-      "Expired committed recovery replay requires the exact remote and pull-request fence.",
+      "Expired committed recovery replay requires its exact stored remote and pull-request head.",
     );
   }
   const descendant = captureCommittedDescendantEvidence({
@@ -329,6 +339,7 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
     bindProtectedMain:
       recovery.schema !==
       LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    sourceRemoteHeadSha: expectedRemoteHeadSha,
   });
   requireRecoveredEvidenceMatchesCurrent({ lease, recovery, descendant });
 
@@ -387,6 +398,7 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
       branch,
       ghText,
       expectedBody: renewedBody,
+      expectedHeadSha: expectedRemoteHeadSha,
     });
     if (projected.markerDigest !== currentMarkerDigest) {
       throw new Error(
@@ -403,7 +415,7 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
     leaseStore,
   });
   log(
-    `Reconciled recovered ${lease.scope} lease ${lease.epoch}; committed descendant remains unpushed.`,
+    `Reconciled recovered ${lease.scope} lease ${lease.epoch}; committed descendant remains locally preserved.`,
   );
   return recoveryResult({
     branch,
@@ -460,7 +472,22 @@ function requireRecoveredEvidenceMatchesCurrent({
         descendant.protectedMainEquivalenceDigest
     )
   );
-  if (commonDrift || protectedMainDrift) {
+  const pushedPrefixDrift = (
+    recovery.schema === EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA &&
+    recovery.sourceRemoteHeadSha !== descendant.sourceRemoteHeadSha
+  );
+  const unsupportedProtectedSchema = (
+    recovery.schema !== LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA &&
+    recovery.schema !==
+      PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA &&
+    recovery.schema !== EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA
+  );
+  if (
+    commonDrift ||
+    protectedMainDrift ||
+    pushedPrefixDrift ||
+    unsupportedProtectedSchema
+  ) {
     throw new Error(
       "Expired committed recovery replay evidence changed from its exact recovered subject.",
     );

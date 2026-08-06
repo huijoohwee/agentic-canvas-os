@@ -726,6 +726,7 @@ function maybeBootstrapLegacyRootSourceReviewAdmission({
     canonicalBaseSha,
     branch,
     headSha: lease.fenceSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
     deviceId: lease.device,
     sessionId,
   });
@@ -792,6 +793,7 @@ function maybeUpgradeLegacyRootSourceReadyReview({
     canonicalBaseSha,
     branch,
     headSha: lease.reviewHeadSha,
+    pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
     deviceId: lease.device,
     sessionId,
   });

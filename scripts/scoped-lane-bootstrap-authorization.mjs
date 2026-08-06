@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync, readlinkSync } from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -14,6 +14,7 @@ export const ROOT_SOURCE_BOOTSTRAP_AUTHORIZATION_SCHEMA =
   "agentic-root-source-bootstrap-preservation-authorization/v1";
 export const ROOT_SOURCE_BOOTSTRAP_OPERATOR_DECISION_SCHEMA =
   "agentic-root-source-bootstrap-operator-decision/v1";
+export const ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES = 16;
 
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -51,6 +52,8 @@ const OPERATOR_DECISION_KEYS = Object.freeze([
   "forbiddenOperations",
   "decisionDigest",
 ]);
+const ROOT_SOURCE_BOOTSTRAP_MAINTENANCE_MANIFEST_SCHEMA =
+  "agentic-write-scope-manifest/v1";
 
 export function normalizeRootSourceBootstrapOperatorDecision({
   source,
@@ -136,6 +139,238 @@ export function normalizeRootSourceBootstrapOperatorDecision({
     throw new Error("Root-source bootstrap operator decision digest is invalid.");
   }
   return Object.freeze({ ...core, decisionDigest });
+}
+
+export function buildRootSourceBootstrapOperatorDecision({
+  actorId,
+  candidateClaimId,
+} = {}) {
+  const core = {
+    schema: ROOT_SOURCE_BOOTSTRAP_OPERATOR_DECISION_SCHEMA,
+    operation: "root-source-bootstrap-exception",
+    authorizationToken: OPERATOR_AUTHORIZATION_TOKEN,
+    explicit: true,
+    approved: true,
+    actorId: requiredText(actorId, "root-source bootstrap candidate actorId"),
+    candidateClaimId: requiredDigest(
+      candidateClaimId,
+      "root-source bootstrap candidate claimId",
+    ),
+    maintenanceWorktreeCount: 1,
+    maintenanceIsolation: "required",
+    allowedMaintenanceChanges: [...OPERATOR_ALLOWED_MAINTENANCE_CHANGES],
+    preservationPolicy: "all-existing-lanes-and-bytes",
+    requiredSuccessor: "normal-cloud-authoritative-admitted-lane",
+    forbiddenOperations: [...OPERATOR_FORBIDDEN_OPERATIONS],
+  };
+  return Object.freeze({ ...core, decisionDigest: digestValue(core) });
+}
+
+export function selectRootSourceBootstrapPreservedLanes({
+  lanes,
+  canonicalPath,
+  targetPath,
+  maintenanceSourcePath,
+  branch,
+  currentRemoteClaims = [],
+  maxCount = ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES,
+} = {}) {
+  if (!Array.isArray(lanes)) throw new Error("Root-source bootstrap lane discovery requires lanes.");
+  const normalizedCanonicalPath = path.resolve(requiredText(canonicalPath, "canonicalPath"));
+  const normalizedTargetPath = path.resolve(requiredText(targetPath, "targetPath"));
+  const normalizedMaintenancePath = path.resolve(requiredText(
+    maintenanceSourcePath,
+    "maintenanceSourcePath",
+  ));
+  const candidateBranch = `refs/heads/${requiredText(branch, "branch")}`;
+  const currentClaimIds = new Set(
+    currentRemoteClaims
+      .map(claim => String(claim?.claimId || "").trim())
+      .filter(Boolean),
+  );
+  const discovered = lanes
+    .map((lane) => normalizeBootstrapPreservedLaneCandidate(lane))
+    .filter((lane) => (
+      lane.path !== normalizedCanonicalPath
+      && lane.path !== normalizedTargetPath
+      && lane.path !== normalizedMaintenancePath
+      && lane.branch !== candidateBranch
+      && lane.branch
+      && !lane.detached
+      && !lane.invalid
+      && !lane.leaseAmbiguous
+      && lane.dirty
+      && !currentClaimIds.has(String(lane.lease?.cloudAuthority?.claimId || ""))
+    ))
+    .map(lane => Object.freeze({
+      path: lane.path,
+      stateDigest: lane.stateDigest,
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  if (discovered.length === 0) {
+    throw new Error("Root-source bootstrap preservation requires at least one eligible preserved lane.");
+  }
+  if (discovered.length > maxCount) {
+    throw new Error(
+      `Root-source bootstrap preservation exceeds the bounded lane count (${discovered.length}/${maxCount}).`,
+    );
+  }
+  return Object.freeze(discovered);
+}
+
+export function writeRootSourceBootstrapMaintenanceManifest({
+  lanePath,
+  outputPath,
+} = {}) {
+  const normalizedLanePath = path.resolve(requiredText(lanePath, "maintenance lane path"));
+  const normalizedOutputPath = path.resolve(requiredText(outputPath, "maintenance manifest output path"));
+  const branch = execFileSync("git", [
+    "-C",
+    normalizedLanePath,
+    "symbolic-ref",
+    "--quiet",
+    "--short",
+    "HEAD",
+  ], { encoding: "utf8" }).trim();
+  const semanticScope = branch.split("/").at(-1);
+  if (!semanticScope) {
+    throw new Error("Root-source bootstrap maintenance source must be on a semantic task branch.");
+  }
+  const changedPaths = [...new Set([
+    ...readGitPaths(normalizedLanePath, ["diff", "--name-only", "-z", "--cached"]),
+    ...readGitPaths(normalizedLanePath, ["diff", "--name-only", "-z"]),
+    ...readGitPaths(normalizedLanePath, ["ls-files", "--others", "--exclude-standard", "-z"]),
+  ])].sort();
+  if (changedPaths.length === 0) {
+    throw new Error("Root-source bootstrap maintenance source must contain changed paths.");
+  }
+  const declaredWriteSet = normalizeWriteSet([
+    `semantic:${semanticScope}`,
+    ...changedPaths.map(changedPath => `path:${changedPath}`),
+  ]);
+  const manifest = {
+    schema: ROOT_SOURCE_BOOTSTRAP_MAINTENANCE_MANIFEST_SCHEMA,
+    semanticScope,
+    declaredWriteSet,
+  };
+  mkdirSync(path.dirname(normalizedOutputPath), { recursive: true });
+  const bytes = `${JSON.stringify(manifest, null, 2)}\n`;
+  writeFileSync(normalizedOutputPath, bytes);
+  return Object.freeze({
+    path: normalizedOutputPath,
+    manifest,
+    manifestDigest: sha256(Buffer.from(bytes, "utf8")),
+    changedPaths,
+  });
+}
+
+export function createRootSourceBootstrapAuthorization({
+  lanes,
+  canonicalPath,
+  canonicalBaseSha,
+  targetPath,
+  branch,
+  semanticScope,
+  manifest,
+  cloudAuthority,
+  remoteAuthorityVerification,
+  maintenanceSourcePath,
+  maintenanceManifestPath,
+  maintenanceManifestDigest,
+  preservedLanes = null,
+  inspectMaintenanceSource = inspectRootSourceMaintenance,
+  evaluatedAt = new Date(),
+} = {}) {
+  requireObject(manifest, "Root-source bootstrap candidate manifest");
+  requireObject(cloudAuthority, "Root-source bootstrap cloud authority");
+  requireObject(remoteAuthorityVerification, "Root-source bootstrap remote authority verification");
+  const currentRemoteClaims = remoteAuthorityVerification.inventory?.claims;
+  if (!Array.isArray(currentRemoteClaims)) {
+    throw new Error("Root-source bootstrap authorization requires a verified remote claim inventory.");
+  }
+  const candidateClaim = currentRemoteClaims.find(
+    claim => claim.claimId === cloudAuthority.claimId,
+  );
+  if (!candidateClaim) {
+    throw new Error("Root-source bootstrap authorization requires the exact candidate claim in inventory.");
+  }
+  const discoveredPreservedLanes = selectRootSourceBootstrapPreservedLanes({
+    lanes,
+    canonicalPath,
+    targetPath,
+    maintenanceSourcePath,
+    branch,
+    currentRemoteClaims,
+  });
+  const requestedPreservedLanes = Array.isArray(preservedLanes)
+    ? preservedLanes.map((lane) => Object.freeze({
+      path: path.resolve(requiredText(lane.path, "preserved lane path")),
+      stateDigest: requiredDigest(lane.stateDigest, "preserved lane stateDigest"),
+    }))
+    : [];
+  const mergedPreservedLanes = [
+    ...new Map(
+      [...discoveredPreservedLanes, ...requestedPreservedLanes].map((lane) => [
+        lane.path,
+        lane,
+      ]),
+    ).values(),
+  ].sort((left, right) => left.path.localeCompare(right.path));
+  const authorization = {
+    schema: ROOT_SOURCE_BOOTSTRAP_AUTHORIZATION_SCHEMA,
+    operatorDecision: buildRootSourceBootstrapOperatorDecision({
+      actorId: candidateClaim.actorId,
+      candidateClaimId: cloudAuthority.claimId,
+    }),
+    actorId: candidateClaim.actorId,
+    candidateClaimId: cloudAuthority.claimId,
+    canonicalBaseSha: requiredSha(canonicalBaseSha, "canonicalBaseSha"),
+    semanticScope: requiredText(semanticScope, "semanticScope"),
+    branch: requiredText(branch, "branch"),
+    targetPath: path.resolve(requiredText(targetPath, "targetPath")),
+    manifestDigest: requiredDigest(manifest.manifestDigest, "manifest.manifestDigest"),
+    writeSetDigest: requiredDigest(manifest.writeSetDigest, "manifest.writeSetDigest"),
+    ledgerRevision: requiredSha(
+      remoteAuthorityVerification.ledgerRevision,
+      "remoteAuthorityVerification.ledgerRevision",
+    ),
+    ledgerDigest: requiredDigest(
+      remoteAuthorityVerification.ledgerDigest,
+      "remoteAuthorityVerification.ledgerDigest",
+    ),
+    maintenanceSourcePath: path.resolve(requiredText(
+      maintenanceSourcePath,
+      "maintenanceSourcePath",
+    )),
+    maintenanceManifestDigest: requiredDigest(
+      maintenanceManifestDigest,
+      "maintenanceManifestDigest",
+    ),
+    maintenanceManifestPath: path.resolve(requiredText(
+      maintenanceManifestPath,
+      "maintenanceManifestPath",
+    )),
+    expiresAt: requiredInstant(
+      cloudAuthority.expiresAt,
+      "cloudAuthority.expiresAt",
+    ),
+    preservedLanes: mergedPreservedLanes,
+  };
+  return normalizeRootSourceBootstrapAuthorization({
+    source: authorization,
+    lanes,
+    canonicalPath,
+    canonicalBaseSha,
+    targetPath,
+    branch,
+    semanticScope,
+    manifest,
+    cloudAuthority,
+    remoteAuthorityVerification,
+    currentRemoteClaims,
+    evaluatedAt,
+    inspectMaintenanceSource,
+  });
 }
 
 export function normalizeRootSourceBootstrapAuthorization({
@@ -261,7 +496,7 @@ export function normalizeRootSourceBootstrapAuthorization({
   if (!Array.isArray(source.preservedLanes) || source.preservedLanes.length === 0) {
     throw new Error("Root-source bootstrap authorization requires preservedLanes.");
   }
-  if (source.preservedLanes.length > 8) {
+  if (source.preservedLanes.length > ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES) {
     throw new Error("Root-source bootstrap authorization exceeds its bounded lane count.");
   }
   const observedByPath = new Map(lanes.map(lane => [lane.path, lane]));
@@ -398,6 +633,20 @@ function isRetiredAdmissionOwnerLane({
     && DIGEST_PATTERN.test(String(authority?.claimId || ""))
     && admission?.writeSetDigest === authority?.writeSetDigest
   );
+}
+
+function normalizeBootstrapPreservedLaneCandidate(lane) {
+  requireObject(lane, "Root-source bootstrap preserved lane candidate");
+  return Object.freeze({
+    path: path.resolve(requiredText(lane.path, "preserved lane path")),
+    branch: lane.branch ? requiredText(lane.branch, "preserved lane branch") : null,
+    detached: Boolean(lane.detached),
+    dirty: Boolean(lane.dirty),
+    invalid: Boolean(lane.invalid || lane.bare || lane.locked || lane.prunable),
+    leaseAmbiguous: Boolean(lane.leaseAmbiguous),
+    lease: lane.lease || null,
+    stateDigest: requiredDigest(lane.stateDigest, "preserved lane stateDigest"),
+  });
 }
 
 export function assertRootSourceBootstrapCurrent({

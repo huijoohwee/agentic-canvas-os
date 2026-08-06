@@ -93,3 +93,15 @@ test("claim, identity schema, and operation receipt substitutions fail closed", 
     requireCurrentEntry: false,
   }), false);
 });
+
+test("reconciliation can preserve claim identity across operation receipt advancement", () => {
+  const remote = currentClaim({ operationReceiptDigest: "d".repeat(64) });
+  const local = currentClaim();
+  assert.equal(claimProvenanceMatches(remote, local), false);
+  assert.equal(
+    claimProvenanceMatches(remote, local, {
+      ignoreOperationReceiptDigest: true,
+    }),
+    true,
+  );
+});

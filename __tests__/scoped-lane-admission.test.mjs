@@ -726,6 +726,58 @@ test("raw v1 current peers remain historical-only and block new admission", () =
   assert.deepEqual(observed.overlapReasons, ["missing-authoritative-owner"]);
   assert.equal(report.authoringAdmission.status, "blocked");
 });
+test("detached integrated completion lanes remain disjoint-attributed after merge", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const integratedLane = laneState({
+    lanePath: "/workspace/.worktrees/repository/integrated-runtime",
+    laneBranch: null,
+    head: canonicalSha,
+    dirty: false,
+    lease: {
+      schema: "agentic-writer-lease/v2",
+      status: "completing",
+      epoch: 200,
+      sessionId: "merge-session",
+      device: "peer",
+      scope: "integrated-runtime",
+      branch: "agent/peer/integrated-runtime",
+      worktreePath: "/workspace/.worktrees/repository/integrated-runtime",
+      baseSha: fenceSha,
+      fenceSha,
+      pullRequestUrl: "https://github.test/owner/repository/pull/99",
+      expiresAt: future,
+      admission: {
+        schema: "agentic-lane-admission-lease/v1",
+        status: "admitted",
+        semanticScope: "integrated-runtime",
+        declaredWriteSet: manifest.declaredWriteSet,
+        writeSetDigest: manifest.writeSetDigest,
+        manifestDigest: "1".repeat(64),
+        planReceiptDigest: "2".repeat(64),
+        admissionReceiptDigest: "3".repeat(64),
+        admittedReportDigest: "4".repeat(64),
+        preservationReceiptDigest: "5".repeat(64),
+        existingLaneStateDigest: "6".repeat(64),
+      },
+      completion: {
+        mergeCommitSha: canonicalSha,
+        mainSha: canonicalSha,
+      },
+    },
+  });
+  const verified = verifiedBundle(authority, manifest);
+  const report = evaluate({
+    manifest,
+    authority: verified.authority,
+    verification: verified.verification,
+    lanes: [canonicalLane(), integratedLane],
+  });
+  const observed = report.lanes.find(lane => lane.path === integratedLane.path);
+  assert.equal(observed.classification, "disjoint-attributed");
+  assert.deepEqual(observed.overlapReasons, []);
+  assert.equal(report.authoringAdmission.status, "planned");
+});
 test("delivery-authorized peers use canonical proof at reviewed and protected-refresh heads", async t => {
   for (const options of [
     { refreshed: false, heartbeatCount: 0 },

@@ -31,6 +31,39 @@ const REQUIRED_CHECKS = Object.freeze({
   "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration"],
   knowgrph: ["Integration Gate"],
 });
+const BLOCKING_CONFIG_FILES = Object.freeze([
+  /^\.env(?:\..+)?$/u,
+  /^package(?:-lock)?\.json$/u,
+  /^pnpm-lock\.ya?ml$/u,
+  /^bun\.lockb?$/u,
+  /^tsconfig(?:\..+)?\.json$/u,
+  /^vite\.config\.[^.]+$/u,
+  /^vitest\.config\.[^.]+$/u,
+  /^playwright\.config\.[^.]+$/u,
+  /^wrangler(?:\.[^.]+)?\.(?:jsonc?|toml)$/u,
+  /^\.npmrc$/u,
+  /^\.nvmrc$/u,
+]);
+const BLOCKING_AUTHORITY_ROOTS = Object.freeze({
+  "agentic-canvas-os": Object.freeze([
+    "agent-api",
+    "scripts",
+    ".github/workflows",
+  ]),
+  knowgrph: Object.freeze([
+    "app",
+    "src",
+    "api",
+    "canvas",
+    "components",
+    "functions",
+    "public",
+    "scripts",
+    "server",
+    "storage",
+    "workers",
+  ]),
+});
 
 export async function ensureLocalRuntime(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
@@ -159,7 +192,12 @@ export async function stopSessionRuntime(options = {}, dependencies = {}) {
 export function validateCanonicalRuntimeCandidate(evidence) {
   for (const repository of [evidence.agenticCanvasOs, evidence.knowgrph]) {
     if (repository.branch !== "main") throw new Error(`${repository.id} canonical runtime checkout must be on main.`);
-    if (!repository.clean) throw new Error(`${repository.id} canonical runtime checkout must be clean.`);
+    const residue = normalizeCanonicalRuntimeResidue(repository);
+    if (!residue.runtimeSafe) {
+      throw new Error(
+        `${repository.id} canonical runtime checkout has runtime-blocking residue: ${summarizeCanonicalRuntimeResidue(residue.blocking)}.`,
+      );
+    }
     if (!SHA_PATTERN.test(String(repository.headSha || ""))) throw new Error(`${repository.id} requires an exact 40-character SHA.`);
     if (repository.headSha !== repository.remoteSha) throw new Error(`${repository.id} canonical HEAD must equal fetched origin/main.`);
     if (!repository.protectedChecksVerified) throw new Error(`${repository.id} protected checks are not verified for ${repository.headSha}.`);
@@ -554,19 +592,130 @@ function inspectRepository(id, root, deps, verifyProtected) {
   const headSha = deps.gitText(root, ["rev-parse", "HEAD"]).trim();
   const remoteSha = deps.gitText(root, ["rev-parse", "origin/main"]).trim();
   const treeSha = deps.gitText(root, ["rev-parse", "HEAD^{tree}"]).trim();
+  const statusPorcelain = deps.gitText(root, ["status", "--porcelain", "--untracked-files=all"]).trimEnd();
+  const residue = classifyCanonicalRuntimeResidue({ repositoryId: id, statusPorcelain });
   const checks = verifyProtected ? deps.verifyProtectedChecks(id, root, remoteSha, REQUIRED_CHECKS[id]) : ["cached-status-check"];
   return {
     id,
     root,
     gitCommonDir: resolveGitCommonDir(root, deps),
     branch: deps.gitText(root, ["branch", "--show-current"]).trim(),
-    clean: deps.gitText(root, ["status", "--porcelain"]).trim() === "",
+    clean: residue.clean,
     headSha,
     remoteSha,
     treeSha,
+    residue,
     protectedChecksVerified: checks.length > 0,
     checks,
   };
+}
+
+export function classifyCanonicalRuntimeResidue({
+  repositoryId,
+  statusPorcelain = "",
+} = {}) {
+  const entries = parseGitStatusPorcelain(statusPorcelain);
+  const blocking = [];
+  const foreign = [];
+  for (const entry of entries) {
+    const classified = classifyCanonicalRuntimeResidueEntry(repositoryId, entry);
+    if (classified.blocking) {
+      blocking.push(classified);
+    } else {
+      foreign.push(classified);
+    }
+  }
+  return Object.freeze({
+    clean: entries.length === 0,
+    runtimeSafe: blocking.length === 0,
+    blocking,
+    foreign,
+    blockingDigest: blocking.length ? sha256(JSON.stringify(blocking)) : null,
+    foreignDigest: foreign.length ? sha256(JSON.stringify(foreign)) : null,
+  });
+}
+
+function normalizeCanonicalRuntimeResidue(repository) {
+  if (repository?.residue) return repository.residue;
+  if (repository?.clean === true) {
+    return {
+      clean: true,
+      runtimeSafe: true,
+      blocking: [],
+      foreign: [],
+      blockingDigest: null,
+      foreignDigest: null,
+    };
+  }
+  return {
+    clean: Boolean(repository?.clean),
+    runtimeSafe: Boolean(repository?.clean),
+    blocking: repository?.clean ? [] : [{ path: "*", reason: "legacy-uncategorized-residue" }],
+    foreign: [],
+    blockingDigest: null,
+    foreignDigest: null,
+  };
+}
+
+function classifyCanonicalRuntimeResidueEntry(repositoryId, entry) {
+  const pathName = entry.toPath || entry.path;
+  if (entry.code !== "??") {
+    return Object.freeze({
+      ...entry,
+      path: pathName,
+      blocking: true,
+      reason: "tracked-residue",
+    });
+  }
+  if (matchesBlockingRuntimeAuthority(repositoryId, pathName)) {
+    return Object.freeze({
+      ...entry,
+      path: pathName,
+      blocking: true,
+      reason: "untracked-runtime-authority",
+    });
+  }
+  return Object.freeze({
+    ...entry,
+    path: pathName,
+    blocking: false,
+    reason: "foreign-parallel-residue",
+  });
+}
+
+function parseGitStatusPorcelain(statusPorcelain) {
+  return String(statusPorcelain || "")
+    .split(/\r?\n/u)
+    .map(line => line.trimEnd())
+    .filter(Boolean)
+    .map(line => {
+      const code = line.slice(0, 2);
+      const payload = line.slice(3);
+      const [fromPath, toPath] = payload.split(" -> ");
+      return Object.freeze({
+        code,
+        path: fromPath,
+        ...(toPath ? { toPath } : {}),
+      });
+    });
+}
+
+function matchesBlockingRuntimeAuthority(repositoryId, pathName) {
+  const normalizedPath = String(pathName || "").replace(/\\/gu, "/");
+  const baseName = normalizedPath.split("/").at(-1) || normalizedPath;
+  if (BLOCKING_CONFIG_FILES.some(pattern => pattern.test(baseName))) return true;
+  return (BLOCKING_AUTHORITY_ROOTS[repositoryId] || []).some(root => (
+    normalizedPath === root || normalizedPath.startsWith(`${root}/`)
+  ));
+}
+
+function summarizeCanonicalRuntimeResidue(entries) {
+  if (!entries.length) return "unknown residue";
+  const preview = entries
+    .slice(0, 3)
+    .map(entry => `${entry.path} (${entry.reason})`)
+    .join(", ");
+  return entries.length > 3 ? `${preview}, +${entries.length - 3} more` : preview;
 }
 
 function verifyProtectedChecks(id, root, revision, requiredNames) {

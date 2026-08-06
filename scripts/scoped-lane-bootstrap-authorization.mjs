@@ -488,8 +488,6 @@ export function normalizeRootSourceBootstrapAuthorization({
     || bindings.targetPath !== path.resolve(targetPath)
     || bindings.manifestDigest !== manifest.manifestDigest
     || bindings.writeSetDigest !== manifest.writeSetDigest
-    || bindings.ledgerRevision !== remoteAuthorityVerification.ledgerRevision
-    || bindings.ledgerDigest !== remoteAuthorityVerification.ledgerDigest
   ) {
     throw new Error("Root-source bootstrap authorization drifted from its candidate bindings.");
   }
@@ -535,6 +533,8 @@ export function normalizeRootSourceBootstrapAuthorization({
     if (
       lane.lease
       && lane.dirty
+      && liveClaimId
+      && currentRemoteClaims.some(claim => claim.claimId === liveClaimId)
       && !isRetiredAdmissionOwnerLane({
         lane,
         lanePath,

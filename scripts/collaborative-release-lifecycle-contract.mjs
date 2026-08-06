@@ -1,5 +1,31 @@
 import { createHash } from "node:crypto";
 
+export {
+  DEPLOYMENT_RECEIPT_SCHEMA,
+  LIVE_VERIFICATION_RECEIPT_SCHEMA,
+  LIVE_VERIFICATION_RECEIPT_V2_SCHEMA,
+  PUBLICATION_RECEIPT_SCHEMA,
+  PUBLICATION_RECEIPT_V2_SCHEMA,
+  ROLLBACK_RECEIPT_SCHEMA,
+  STATE_RECONCILIATION_RECEIPT_SCHEMA,
+  createDeploymentReceipt,
+  createLegacyLiveObservationReceipt,
+  createLegacyPublicationObservationReceipt,
+  createLiveVerificationReceipt,
+  createLiveVerificationReceiptV2,
+  createPublicationReceipt,
+  createPublicationReceiptV2,
+  createRollbackReceipt,
+  createStateReconciliationReceipt,
+  validateDeploymentReceipt,
+  validateLiveVerificationReceipt,
+  validateLiveVerificationReceiptV2,
+  validatePublicationReceipt,
+  validatePublicationReceiptV2,
+  validateRollbackReceipt,
+  validateStateReconciliationReceipt,
+} from "./collaborative-release-terminal-receipts.mjs";
+
 export const OVERLAP_PRESERVATION_RECEIPT_SCHEMA = "agentic-overlap-preservation-receipt/v1";
 export const OVERLAP_DISPOSITION_RECEIPT_SCHEMA = "agentic-overlap-disposition-receipt/v1";
 export const INTEGRATION_RECEIPT_SCHEMA = "agentic-integration-receipt/v2";
@@ -7,8 +33,6 @@ export const RUNTIME_REVIEW_RECEIPT_SCHEMA = "agentic-runtime-review-receipt/v1"
 export const CANDIDATE_MANIFEST_SCHEMA = "agentic-candidate-manifest/v1";
 export const AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA = "agentic-authorization-interaction-receipt/v1";
 export const HUMAN_AUTHORIZATION_RECEIPT_SCHEMA = "agentic-human-authorization-receipt/v2";
-export const LIVE_VERIFICATION_RECEIPT_SCHEMA = "agentic-live-verification-receipt/v1";
-export const PUBLICATION_RECEIPT_SCHEMA = "agentic-publication-receipt/v1";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const COLLABORATION_FIELDS = [
@@ -331,45 +355,6 @@ export function consumeHumanAuthorizationReceipt(authorization, { consumedAt, co
   });
 }
 
-export function createLiveVerificationReceipt(consumedAuthorization, input) {
-  validateConsumedAuthorizationReceipt(consumedAuthorization);
-  requireExact(input, [
-    "deployedArtifactDigest",
-    "observedRuntimeDigest",
-    "probesDigest",
-    "rollbackTargetDigest",
-    "verifiedAt",
-  ], "Live Verification Receipt input");
-  for (const field of ["deployedArtifactDigest", "observedRuntimeDigest", "probesDigest", "rollbackTargetDigest"]) {
-    requireDigest(input[field], field);
-  }
-  requireInstant(input.verifiedAt, "verifiedAt");
-  return receipt({
-    schema: LIVE_VERIFICATION_RECEIPT_SCHEMA,
-    status: "verified",
-    authorizationReceiptDigest: consumedAuthorization.receiptDigest,
-    candidateDigest: consumedAuthorization.candidateDigest,
-    targetDigest: consumedAuthorization.targetDigest,
-    controllerId: consumedAuthorization.controllerId,
-    ...input,
-  });
-}
-
-export function createPublicationReceipt(liveVerification, { publicationIdentitiesDigest, publishedAt }) {
-  validateLiveVerificationReceipt(liveVerification);
-  requireDigest(publicationIdentitiesDigest, "publicationIdentitiesDigest");
-  requireInstant(publishedAt, "publishedAt");
-  return receipt({
-    schema: PUBLICATION_RECEIPT_SCHEMA,
-    status: "published",
-    liveVerificationReceiptDigest: liveVerification.receiptDigest,
-    candidateDigest: liveVerification.candidateDigest,
-    targetDigest: liveVerification.targetDigest,
-    publicationIdentitiesDigest,
-    publishedAt,
-  });
-}
-
 export function releaseKey(targetDigest, candidateDigest) {
   requireDigest(targetDigest, "targetDigest");
   requireDigest(candidateDigest, "candidateDigest");
@@ -460,13 +445,6 @@ function validateConsumedAuthorizationReceipt(value) {
     "controllerId", "authorizationReceiptDigest",
   ]);
   requireInstant(value.consumedAt, "consumedAt");
-}
-
-function validateLiveVerificationReceipt(value) {
-  validateReceipt(value, LIVE_VERIFICATION_RECEIPT_SCHEMA, "verified", [
-    "authorizationReceiptDigest", "candidateDigest", "targetDigest", "controllerId",
-    "deployedArtifactDigest", "observedRuntimeDigest", "probesDigest", "rollbackTargetDigest", "verifiedAt",
-  ]);
 }
 
 function validateReceipt(value, schema, status, evidenceFields) {
@@ -566,11 +544,16 @@ function requireWindow(issuedAt, expiresAt, label) {
 }
 
 function requireInstant(value, label) {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) throw new Error(`${label} must be an ISO timestamp.`);
+  const parsed = typeof value === "string" ? Date.parse(value) : Number.NaN;
+  if (Number.isNaN(parsed) || new Date(parsed).toISOString() !== value) {
+    throw new Error(`${label} must be an ISO timestamp.`);
+  }
 }
 
 function requireDigest(value, label) {
-  if (!SHA256_PATTERN.test(String(value || ""))) throw new Error(`${label} must be a SHA-256 digest.`);
+  if (typeof value !== "string" || !SHA256_PATTERN.test(value)) {
+    throw new Error(`${label} must be a SHA-256 digest.`);
+  }
 }
 
 function requireText(value, label) {

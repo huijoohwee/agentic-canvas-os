@@ -1,22 +1,39 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
-
 import {
+  DEPLOYMENT_RECEIPT_SCHEMA,
+  LIVE_VERIFICATION_RECEIPT_SCHEMA,
+  LIVE_VERIFICATION_RECEIPT_V2_SCHEMA,
+  ROLLBACK_RECEIPT_SCHEMA,
+  STATE_RECONCILIATION_RECEIPT_SCHEMA,
   consumeHumanAuthorizationReceipt,
   createAuthorizationInteractionReceipt,
   createCandidateManifest,
+  createDeploymentReceipt,
   createHumanAuthorizationReceipt,
   createIntegrationReceipt,
   createLiveVerificationReceipt,
+  createLiveVerificationReceiptV2,
   createOverlapDispositionReceipt,
   createOverlapPreservationReceipt,
   createPublicationReceipt,
+  createPublicationReceiptV2,
+  createRollbackReceipt,
   createRuntimeReviewReceipt,
+  createStateReconciliationReceipt,
   dispatchReleaseController,
+  validateDeploymentReceipt,
+  validateLiveVerificationReceiptV2,
+  validateRollbackReceipt,
+  validateStateReconciliationReceipt,
   validateAuthorizedDeployment,
 } from "../scripts/collaborative-release-lifecycle-contract.mjs";
-
 const digest = character => character.repeat(64);
+const ordered = value => Array.isArray(value) ? value.map(ordered)
+  : value && typeof value === "object"
+    ? Object.fromEntries(Object.keys(value).sort().map(key => [key, ordered(value[key])])) : value;
+const receiptDigest = value => createHash("sha256").update(JSON.stringify(ordered(value))).digest("hex");
 const clock = {
   integrated: "2026-07-29T00:00:00.000Z",
   preserved: "2026-07-28T23:58:00.000Z",
@@ -27,10 +44,11 @@ const clock = {
   authorized: "2026-07-29T00:03:00.000Z",
   authorizationExpires: "2026-07-29T00:33:00.000Z",
   deploy: "2026-07-29T00:04:00.000Z",
+  reconciled: "2026-07-29T00:04:30.000Z",
   verified: "2026-07-29T00:05:00.000Z",
   published: "2026-07-29T00:06:00.000Z",
+  rolledBack: "2026-07-29T00:07:00.000Z",
 };
-
 function collaboration(overrides = {}) {
   return {
     actorId: "actor:authenticated-user",
@@ -44,7 +62,6 @@ function collaboration(overrides = {}) {
     ...overrides,
   };
 }
-
 function buildChain(overrides = {}) {
   const primaryCollaboration = collaboration(overrides.collaboration);
   const secondaryCollaboration = collaboration({
@@ -145,7 +162,6 @@ function buildChain(overrides = {}) {
   });
   return { preservation, disposition, integration, review, candidate, interaction, authorization };
 }
-
 function current(chain) {
   return {
     preservationReceiptDigest: chain.preservation.receiptDigest,
@@ -162,7 +178,6 @@ function current(chain) {
     manifestDigest: chain.candidate.manifestDigest,
   };
 }
-
 test("joined receipts authorize the exact candidate and target", () => {
   const chain = buildChain();
   assert.equal(validateAuthorizedDeployment({
@@ -171,7 +186,6 @@ test("joined receipts authorize the exact candidate and target", () => {
     now: clock.deploy,
   }), true);
 });
-
 test("collaboration identity distinguishes actors, devices, sessions, worktrees, scopes, epochs, and fences", () => {
   const first = buildChain().integration;
   const second = buildChain({
@@ -210,7 +224,6 @@ test("collaboration identity distinguishes actors, devices, sessions, worktrees,
     /missing or unknown fields/,
   );
 });
-
 for (const field of [
   "preservationReceiptDigest",
   "overlapDispositionReceiptDigest",
@@ -235,7 +248,6 @@ for (const field of [
     );
   });
 }
-
 test("overlapping work remains retained while exact disjoint state may be restored", () => {
   const chain = buildChain();
   assert.equal(chain.preservation.entries.length, 2);
@@ -258,7 +270,6 @@ test("overlapping work remains retained while exact disjoint state may be restor
     /must remain retained/,
   );
 });
-
 test("overlap disposition fails closed on missing, changed, or unaccounted work", () => {
   const chain = buildChain();
   const observations = chain.disposition.observations;
@@ -286,7 +297,6 @@ test("overlap disposition fails closed on missing, changed, or unaccounted work"
     /state or recovery identity drifted/,
   );
 });
-
 test("authorization interaction is candidate-bound, transport-explicit, and browser-capability explicit", () => {
   const { candidate } = buildChain();
   const interaction = createAuthorizationInteractionReceipt(candidate, {
@@ -313,7 +323,6 @@ test("authorization interaction is candidate-bound, transport-explicit, and brow
     /must be a boolean/,
   );
 });
-
 test("authorization cannot be synthesized by a machine, detached from interaction, or issued before it", () => {
   const { candidate, interaction } = buildChain();
   assert.throws(
@@ -350,7 +359,6 @@ test("authorization cannot be synthesized by a machine, detached from interactio
     /another candidate, target, or actor/,
   );
 });
-
 test("expired and consumed authorization cannot be replayed", () => {
   const chain = buildChain();
   assert.throws(
@@ -374,7 +382,6 @@ test("expired and consumed authorization cannot be replayed", () => {
     /schema or status|unconsumed|already consumed|missing or unknown fields/,
   );
 });
-
 test("one target controller owns deployment while exact duplicates coalesce", () => {
   const { candidate } = buildChain();
   const first = dispatchReleaseController({}, {
@@ -399,29 +406,182 @@ test("one target controller owns deployment while exact duplicates coalesce", ()
     /competing release candidate/,
   );
 });
-
-test("publication is joined to consumed authorization and live verification", () => {
-  const chain = buildChain();
+function buildTerminalChain(chain = buildChain(), controllerId = "controller:one") {
   const consumed = consumeHumanAuthorizationReceipt(chain.authorization, {
     consumedAt: clock.deploy,
-    controllerId: "controller:one",
+    controllerId,
   });
-  const live = createLiveVerificationReceipt(consumed, {
+  const deploymentInput = {
+    deploymentAdapterId: "deployment:replaceable-adapter",
     deployedArtifactDigest: chain.candidate.artifactDigest,
-    observedRuntimeDigest: digest("6"),
-    probesDigest: digest("7"),
+    immutableDeploymentId: "deployment:immutable-id",
+    immutableDeploymentOrigin: "origin:immutable-candidate",
     rollbackTargetDigest: chain.candidate.rollbackTargetDigest,
+    deployedAt: clock.deploy,
+  };
+  const deployment = createDeploymentReceipt(chain.candidate, consumed, deploymentInput);
+  const stateInput = {
+    stateContractDigest: digest("6"),
+    operationsDigest: digest("7"),
+    operationCount: 3,
+    operationLimit: 10,
+    readbackAdapterId: "state:direct-readback",
+    readbackKind: "direct-authoritative",
+    readbackDigest: digest("8"),
+    expectedCounts: { documentCount: 12, chunkCount: 34, graphCount: 5 },
+    observedCounts: { documentCount: 12, chunkCount: 34, graphCount: 5 },
+    pathHashParity: true,
+    contentParity: true,
+    reconciledAt: clock.reconciled,
+  };
+  const state = createStateReconciliationReceipt(deployment, stateInput);
+  const liveInput = {
+    observedRuntimeDigest: digest("9"),
+    immutableOriginProbesDigest: digest("a"),
+    publicRouteProbesDigest: digest("b"),
+    browserFidelityDigest: digest("c"),
+    clientCacheConvergenceDigest: digest("d"),
+    markerParityDigest: digest("e"),
+    markerBytesParity: true,
     verifiedAt: clock.verified,
-  });
-  const publication = createPublicationReceipt(live, {
-    publicationIdentitiesDigest: digest("8"),
+  };
+  const live = createLiveVerificationReceiptV2(deployment, state, liveInput);
+  return { chain, consumed, deploymentInput, deployment, stateInput, state, liveInput, live };
+}
+test("terminal receipt schemas form one exact deployment-to-publication chain", () => {
+  const terminal = buildTerminalChain();
+  const publication = createPublicationReceiptV2(terminal.live, {
+    publicationIdentitiesDigest: digest("f"),
     publishedAt: clock.published,
   });
-  assert.equal(publication.liveVerificationReceiptDigest, live.receiptDigest);
-  assert.equal(publication.candidateDigest, chain.candidate.receiptDigest);
-  assert.equal(publication.targetDigest, chain.candidate.targetDigest);
+  assert.equal(terminal.deployment.schema, DEPLOYMENT_RECEIPT_SCHEMA);
+  assert.equal(terminal.state.schema, STATE_RECONCILIATION_RECEIPT_SCHEMA);
+  assert.equal(terminal.live.schema, LIVE_VERIFICATION_RECEIPT_V2_SCHEMA);
+  assert.equal(terminal.live.deploymentReceiptDigest, terminal.deployment.receiptDigest);
+  assert.equal(terminal.live.stateReconciliationReceiptDigest, terminal.state.receiptDigest);
+  assert.equal(terminal.live.deployedArtifactDigest, terminal.chain.candidate.artifactDigest);
+  assert.deepEqual([publication.schema, publication.liveVerificationReceiptDigest], ["agentic-publication-receipt/v2", terminal.live.receiptDigest]);
+  assert.equal(validateDeploymentReceipt(terminal.deployment), true);
+  assert.equal(validateStateReconciliationReceipt(terminal.state), true);
+  assert.equal(validateLiveVerificationReceiptV2(terminal.live), true);
 });
-
+test("deployment rejects authorization, artifact, rollback, and chronology drift", () => {
+  const terminal = buildTerminalChain();
+  const other = buildTerminalChain(buildChain({ collaboration: { sessionId: "session:other" } }));
+  assert.throws(
+    () => createDeploymentReceipt(terminal.chain.candidate, other.consumed, terminal.deploymentInput),
+    /unjoined/,
+  );
+  const forgedAuthorization = { ...terminal.consumed, authorizationReceiptDigest: digest("0") };
+  delete forgedAuthorization.receiptDigest;
+  forgedAuthorization.receiptDigest = receiptDigest(forgedAuthorization);
+  assert.throws(() => createDeploymentReceipt(terminal.chain.candidate, forgedAuthorization,
+    terminal.deploymentInput), /unjoined from its authorized predecessor/);
+  assert.throws(
+    () => createDeploymentReceipt(terminal.chain.candidate, terminal.consumed, {
+      ...terminal.deploymentInput,
+      deployedArtifactDigest: digest("0"),
+    }),
+    /artifact or rollback target drifted/,
+  );
+  assert.throws(
+    () => createDeploymentReceipt(terminal.chain.candidate, terminal.consumed, {
+      ...terminal.deploymentInput,
+      deployedAt: "2026-07-29T00:03:59.000Z",
+    }),
+    /cannot predate authorization consumption/,
+  );
+});
+test("state reconciliation requires bounded operations and exact direct parity", () => {
+  const terminal = buildTerminalChain();
+  for (const invalid of [
+    { operationCount: 11 },
+    { operationLimit: 10_001 }, { reconciledAt: "07/29/2026" },
+    { stateContractDigest: [digest("6")] },
+    { readbackKind: "indirect-cache" },
+    { observedCounts: { ...terminal.stateInput.observedCounts, chunkCount: 33 } },
+    { pathHashParity: false },
+    { contentParity: false },
+  ]) {
+    assert.throws(
+      () => createStateReconciliationReceipt(terminal.deployment, {
+        ...terminal.stateInput,
+        ...invalid,
+      }),
+      /operation|readbackKind|does not match|must be true|SHA-256|ISO/,
+    );
+  }
+});
+test("live verification rejects a different deployment controller and marker mismatch", () => {
+  const first = buildTerminalChain();
+  const second = buildTerminalChain(buildChain(), "controller:two");
+  assert.throws(
+    () => createLiveVerificationReceiptV2(first.deployment, second.state, first.liveInput),
+    /unjoined from its deployment controller or candidate/,
+  );
+  const forgedState = { ...first.state, reconciledAt: "2026-07-29T00:03:59.000Z" };
+  delete forgedState.receiptDigest;
+  forgedState.receiptDigest = receiptDigest(forgedState);
+  assert.throws(() => createLiveVerificationReceiptV2(
+    first.deployment, forgedState, first.liveInput,
+  ), /cannot predate its joined deployment/);
+  assert.throws(
+    () => createLiveVerificationReceiptV2(first.deployment, first.state, {
+      ...first.liveInput,
+      markerBytesParity: false,
+    }),
+    /markerBytesParity must be true/,
+  );
+  const legacy = createLiveVerificationReceipt(first.consumed, {
+    deployedArtifactDigest: first.chain.candidate.artifactDigest,
+    observedRuntimeDigest: digest("1"),
+    probesDigest: digest("2"),
+    rollbackTargetDigest: first.chain.candidate.rollbackTargetDigest,
+    verifiedAt: clock.verified,
+  });
+  assert.equal(legacy.schema, LIVE_VERIFICATION_RECEIPT_SCHEMA);
+  assert.throws(() => validateLiveVerificationReceiptV2(legacy), /missing or unknown fields/);
+  assert.throws(() => createPublicationReceiptV2(legacy, {
+    publicationIdentitiesDigest: digest("3"), publishedAt: clock.published,
+  }), /missing or unknown fields/);
+});
+test("rollback is terminal only after exact last-known-good restoration", () => {
+  const terminal = buildTerminalChain();
+  const rollbackInput = {
+    failedStage: "live-verification",
+    failureDigest: digest("1"),
+    lastKnownGoodIdentityDigest: terminal.deployment.rollbackTargetDigest,
+    restoredDeploymentIdentityDigest: terminal.deployment.rollbackTargetDigest,
+    stateDisposition: "retained-compatible",
+    stateDispositionDigest: digest("2"),
+    restoredProbesDigest: digest("3"),
+    mirrorDisposition: "unchanged-last-known-good",
+    lastKnownGoodMirrorIdentityDigest: digest("4"),
+    observedMirrorIdentityDigest: digest("4"),
+    terminalResult: "restored-last-known-good",
+    rolledBackAt: clock.rolledBack,
+  };
+  const rollback = createRollbackReceipt(terminal.deployment, rollbackInput);
+  assert.equal(rollback.schema, ROLLBACK_RECEIPT_SCHEMA);
+  assert.equal(rollback.deploymentReceiptDigest, terminal.deployment.receiptDigest);
+  assert.equal(validateRollbackReceipt(rollback), true);
+  for (const invalid of [
+    { lastKnownGoodIdentityDigest: digest("0") },
+    { restoredDeploymentIdentityDigest: digest("0") },
+    { mirrorDisposition: "advanced" },
+    { observedMirrorIdentityDigest: digest("0") },
+    { terminalResult: "partial" },
+  ]) {
+    assert.throws(
+      () => createRollbackReceipt(terminal.deployment, { ...rollbackInput, ...invalid }),
+      /last-known-good|mirrorDisposition|mirror|terminalResult/,
+    );
+  }
+  assert.throws(
+    () => validateRollbackReceipt({ ...rollback, unexpected: true }),
+    /missing or unknown fields/,
+  );
+});
 test("receipt chains reject mismatched integration ancestry", () => {
   const first = buildChain();
   const second = buildChain({ collaboration: { sessionId: "session:other" } });

@@ -655,6 +655,126 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
   }
 });
 
+test("review-ready delivery reclaims a dormant preserved review authority before authorization", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-dormant-review-"));
+  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  mkdirSync(canonicalKnowgrphRoot, { recursive: true });
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), "{}");
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), "{}");
+  let lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+    cloudAuthority: {
+      schema: "agentic-lane-cloud-authority/v1",
+      state: "review_ready",
+      canonicalBaseSha: baseSha,
+      laneRevision: commitSha,
+      reviewRequestId,
+      focusedEvidenceDigest,
+      transitionCounter: 4,
+      claimDigest: "8".repeat(64),
+      claimLedgerRevision: "9".repeat(64),
+      ledgerRevision: baseSha,
+      expiresAt: "2026-08-06T06:18:06.000Z",
+    },
+  });
+  const seenTransitionCounters = [];
+  const authorizeTransitions = [];
+  let reclaimCount = 0;
+  let completed = false;
+  try {
+    const result = integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "MERGED",
+        baseRefName: "main",
+        headRefOid: commitSha,
+        mergeCommit: { oid: mergeSha },
+      }),
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+      },
+      sessionId: "session-a",
+      buildDeliveryEvidence: ({ authority }) => {
+        seenTransitionCounters.push(authority.transitionCounter);
+        return deliveryEvidence;
+      },
+      authorizeCloudDelivery: ({ authority, headSha }) => {
+        authorizeTransitions.push(authority.transitionCounter);
+        if (authorizeTransitions.length === 1) {
+          throw new Error("Cloud collaboration integrate failed: Cloud reconciliation cannot recover claim state dormant_preserved.");
+        }
+        return { authority: deliveryAuthorizedAuthority(authority, headSha) };
+      },
+      continueReviewReadyCloudAuthority: ({ branch: continuedBranch, sessionId }) => {
+        reclaimCount += 1;
+        assert.equal(continuedBranch, branch);
+        assert.equal(sessionId, "session-a");
+        lease = {
+          ...lease,
+          cloudAuthority: {
+            ...lease.cloudAuthority,
+            transitionCounter: 5,
+            claimDigest: "a".repeat(64),
+            claimLedgerRevision: "b".repeat(64),
+            expiresAt: "2026-08-06T06:48:06.000Z",
+          },
+        };
+        return { outcome: "reclaimed-live" };
+      },
+      verifyCloudAuthority: () => ({ ok: true }),
+      run: () => {},
+      runText: (command, args) => {
+        if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        return "";
+      },
+      publishTask: () => {
+        throw new Error("review-ready delivery should not republish authored work");
+      },
+      completeTask: () => {
+        completed = true;
+        lease = { ...lease, status: "completed", completion: { mergeCommitSha: mergeSha, mainSha } };
+        return lease.completion;
+      },
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    });
+
+    assert.equal(result.status, "integrated");
+    assert.equal(reclaimCount, 1);
+    assert.equal(completed, true);
+    assert.deepEqual(authorizeTransitions, [4, 5]);
+    assert.deepEqual(seenTransitionCounters, [4, 5]);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("review-ready delivery rejects evidence failure before authorization or protected auto-merge", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-evidence-failure-"));
   const lease = createLease({

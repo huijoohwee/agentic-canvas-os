@@ -21,6 +21,7 @@ import {
   parsePorcelainV1,
   proveIgnoredStateRetention,
 } from "./canonical-main-recovery-evidence.mjs";
+import { readTreeBlobEntry } from "./protected-main-path-equivalence-lib.mjs";
 
 const RESULT_SCHEMA = "agentic-canonical-main-fast-forward-equivalence-result/v1";
 const JOURNAL_SCHEMA = "agentic-canonical-main-fast-forward-equivalence/v1";
@@ -271,10 +272,13 @@ function readDirtyPaths() {
 }
 
 function readTreeBlob(treeish, relativePath, label) {
-  const target = gitText(["ls-tree", "-z", treeish, "--", relativePath]);
-  const match = /^([0-7]{6}) (blob) ([0-9a-f]{40})\t/.exec(target);
-  if (!match) throw new Error(`${label} does not contain tracked blob ${relativePath}.`);
-  return Object.freeze({ mode: match[1], blob: match[3] });
+  const entry = readTreeBlobEntry({
+    gitText,
+    treeish,
+    relativePath,
+    label,
+  });
+  return Object.freeze({ mode: entry.mode, blob: entry.blobSha });
 }
 
 function readWorkingMode(repoRoot, relativePath) {

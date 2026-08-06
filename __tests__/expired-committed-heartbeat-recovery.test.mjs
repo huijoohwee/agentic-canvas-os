@@ -21,6 +21,8 @@ const baseSha = "a".repeat(40);
 const fenceSha = "b".repeat(40);
 const headSha = "c".repeat(40);
 const treeSha = "d".repeat(40);
+const protectedMainSha = "1".repeat(40);
+const protectedMainTreeSha = "2".repeat(40);
 
 test("captures one exact clean committed descendant inside declared path scope", () => {
   const lease = expiredCloudLease();
@@ -34,23 +36,53 @@ test("captures one exact clean committed descendant inside declared path scope",
     sessionId: lease.sessionId,
     now: () => new Date("2026-08-04T12:00:00.000Z"),
   });
-
   assert.equal(snapshot.headSha, headSha);
   assert.equal(snapshot.treeSha, treeSha);
-  assert.deepEqual(snapshot.changedPaths, [
-    "docs/runtime.md",
-    "scripts/recovery/check.mjs",
-  ]);
+  assert.deepEqual(snapshot.changedPaths,
+    ["docs/runtime.md", "scripts/recovery/check.mjs"]);
+  assert.deepEqual(snapshot.declaredChangedPaths, snapshot.changedPaths);
+  assert.deepEqual(snapshot.protectedEquivalentPaths, []);
+  assert.equal(snapshot.protectedMainEquivalence.protectedMainSha, protectedMainSha);
+  assert.equal(snapshot.protectedMainEquivalence.protectedMainTreeSha, protectedMainTreeSha);
+  assert.deepEqual(snapshot.protectedMainEquivalence.entries, []);
   assert.match(snapshot.snapshotDigest, /^[0-9a-f]{64}$/);
   assert.equal(snapshot.recoveryEvidence.sourceEpoch, lease.epoch);
   assert.equal(snapshot.recoveryEvidence.sourceClaimId, lease.cloudAuthority.claimId);
 });
 
+test("captures mixed authored and protected-main-equivalent descendant paths", () => {
+  const lease = expiredCloudLease();
+  const protectedBlobSha = "3".repeat(40);
+  const protectedEntry = { mode: "100644", blobSha: protectedBlobSha };
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo, branch,
+    gitText: recoveryGitText({
+      paths: ["scripts/recovery/check.mjs", "docs/protected.md"],
+      headEntries: { "docs/protected.md": protectedEntry },
+      protectedEntries: { "docs/protected.md": protectedEntry },
+    }),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.deepEqual(snapshot.declaredChangedPaths, ["scripts/recovery/check.mjs"]);
+  assert.deepEqual(snapshot.protectedEquivalentPaths, ["docs/protected.md"]);
+  assert.deepEqual(snapshot.protectedMainEquivalence.entries, [{
+    path: "docs/protected.md", headMode: "100644", headBlobSha: protectedBlobSha,
+    protectedMode: "100644", protectedBlobSha,
+  }]);
+  assert.equal(snapshot.recoveryEvidence.protectedEquivalentPathCount, 1);
+  assert.equal(snapshot.recoveryEvidence.protectedMainEquivalenceDigest,
+    digestValue(snapshot.protectedMainEquivalence));
+});
+
 test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", () => {
   const lease = expiredCloudLease();
   const base = {
-    repo,
-    branch,
+    repo, branch,
     gitText: recoveryGitText(),
     gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
     ghText: () => pullRequestJson(lease),
@@ -77,12 +109,16 @@ test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", 
   }), /not an ancestor/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
+    gitText: recoveryGitText({ baseAncestryError: true }),
+  }), /protected base is not an ancestor/);
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    ...base,
     gitText: recoveryGitText({ fenceParentSha: "e".repeat(40) }),
   }), /single-parent fence/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
     gitText: recoveryGitText({ paths: ["outside.txt"] }),
-  }), /outside declared write scope/);
+  }), /does not contain exactly one tracked blob/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
     gitText: recoveryGitText({
@@ -234,6 +270,51 @@ test("expired-source replay requires the next exact cloud transition", () => {
   assert.equal(harness.markerWrites(), 0);
 });
 
+test("non-equivalent out-of-scope bytes fail before cloud, local CAS, or marker", () => {
+  const source = liveManifestLease();
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest,
+    recoveryGit: recoveryGitText({
+      paths: ["scripts/recovery/check.mjs", "docs/protected.md"],
+      headEntries: { "docs/protected.md": { mode: "100644",
+        blobSha: "3".repeat(40) } },
+      protectedEntries: { "docs/protected.md": { mode: "100755",
+        blobSha: "3".repeat(40) } },
+    }),
+  });
+  assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
+    /differs from fetched protected main/);
+  assert.equal(harness.cloudCalls(), 0);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
+test("protected-main ref drift after cloud renewal fails before local CAS or marker", () => {
+  const source = liveManifestLease();
+  const nextProtectedMainSha = "4".repeat(40);
+  const nextProtectedMainTreeSha = "5".repeat(40);
+  const stableGit = recoveryGitText();
+  let protectedRefReads = 0;
+  const recoveryGit = args => {
+    const key = args.join(" ");
+    if (key === "rev-parse refs/remotes/origin/main") {
+      protectedRefReads += 1;
+      return protectedRefReads <= 2 ? protectedMainSha : nextProtectedMainSha;
+    }
+    if (key === `merge-base --is-ancestor ${baseSha} ${nextProtectedMainSha}`) return "";
+    if (key === `rev-parse ${nextProtectedMainSha}^{tree}`) return nextProtectedMainTreeSha;
+    return stableGit(args);
+  };
+  const harness = recoveryHarness({ source, recoveryGit,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest });
+  assert.throws(() => recoverExpiredCommittedHeartbeat(harness.input),
+    /state drifted after cloud renewal/);
+  assert.equal(harness.cloudCalls(), 1);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
+});
+
 function liveManifestLease({ cloudExpiresAt = null } = {}) {
   const lease = expiredCloudLease();
   return {
@@ -251,6 +332,7 @@ function recoveryHarness({
   renewedManifestDigest,
   transitionIncrement = 1,
   useProductionAuthority = false,
+  recoveryGit = recoveryGitText(),
 }) {
   const renewedCloudAuthority = {
     ...source.cloudAuthority,
@@ -271,7 +353,7 @@ function recoveryHarness({
     input: {
       invocationPath: repo,
       repo,
-      gitText: recoveryGitText(),
+      gitText: recoveryGit,
       gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
       ghText: () => pullRequestBodyJson(remoteBody),
       leaseStore: {
@@ -300,7 +382,16 @@ function recoveryHarness({
           return { status: "ready" };
         },
       } : {}),
-      run: (_command, args) => {
+      run: (command, args) => {
+        if (command === "git") {
+          assert.deepEqual(args, [
+            "fetch",
+            "--no-tags",
+            "origin",
+            "+refs/heads/main:refs/remotes/origin/main",
+          ]);
+          return;
+        }
         markerWrites += 1;
         remoteBody = args[args.indexOf("--body") + 1];
       },
@@ -432,7 +523,10 @@ function recoveryGitText({
   dirt = "",
   paths = ["scripts/recovery/check.mjs", "docs/runtime.md"],
   ancestryError = false,
+  baseAncestryError = false,
   fenceParentSha = baseSha,
+  headEntries = {},
+  protectedEntries = {},
 } = {}) {
   return args => {
     const key = args.join(" ");
@@ -452,6 +546,30 @@ function recoveryGitText({
     if (key === `merge-base --is-ancestor ${fenceSha} ${headSha}`) {
       if (ancestryError) throw new Error("fatal: not an ancestor");
       return "";
+    }
+    if (key === "rev-parse refs/remotes/origin/main") {
+      return protectedMainSha;
+    }
+    if (key === `merge-base --is-ancestor ${baseSha} ${protectedMainSha}`) {
+      if (baseAncestryError) {
+        throw new Error("fatal: protected base is not an ancestor");
+      }
+      return "";
+    }
+    if (key === `rev-parse ${protectedMainSha}^{tree}`) {
+      return protectedMainTreeSha;
+    }
+    if (args[0] === "ls-tree" && args[1] === "-z") {
+      const treeish = args[2];
+      const relativePath = args[4];
+      const entry = treeish === headSha
+        ? headEntries[relativePath]
+        : treeish === protectedMainSha
+          ? protectedEntries[relativePath]
+          : null;
+      return entry
+        ? `${entry.mode} blob ${entry.blobSha}\t${relativePath}\0`
+        : "";
     }
     if (key === `diff --name-only -z --no-renames ${fenceSha} ${headSha} --`) {
       return `${paths.join("\0")}\0`;

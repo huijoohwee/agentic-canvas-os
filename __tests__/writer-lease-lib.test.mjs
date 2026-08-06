@@ -436,26 +436,18 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     assert.equal(recovered.cloudAuthority.ledgerRevision, renewedCloudAuthority.ledgerRevision);
     assert.equal(recovered.heartbeatAt, "2026-08-04T10:02:00.000Z");
     assert.equal(recovered.expiresAt, "2026-08-04T10:32:00.000Z");
-    assert.equal(
-      recovered.expiredCommittedHeartbeatRecovery.schema,
-      EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
-    );
-    assert.deepEqual(
-      parseWriterLeasePullRequestBody(
-        renderWriterLeasePullRequestBody(recovered),
-      ).expiredCommittedHeartbeatRecovery,
-      recovered.expiredCommittedHeartbeatRecovery,
-    );
+    assert.equal(recovered.expiredCommittedHeartbeatRecovery.schema,
+      EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA);
+    assert.deepEqual(parseWriterLeasePullRequestBody(
+      renderWriterLeasePullRequestBody(recovered),
+    ).expiredCommittedHeartbeatRecovery, recovered.expiredCommittedHeartbeatRecovery);
     const markerBody = renderWriterLeasePullRequestBody(recovered);
     assert.doesNotMatch(markerBody, /worktreePathDigest|sourceLeaseDigest|changedPaths"|snapshotDigest/);
     assert.match(markerBody, /changedPathCount|changedPathsDigest/);
-    assert.equal(
-      parseWriterLeasePullRequestBody(markerBody.replace(
-        '"recoveredAt":',
-        `"worktreePathDigest":"${"0".repeat(64)}","recoveredAt":`,
-      )),
-      null,
-    );
+    assert.equal(parseWriterLeasePullRequestBody(markerBody.replace(
+      '"recoveredAt":',
+      `"worktreePathDigest":"${"0".repeat(64)}","recoveredAt":`,
+    )), null);
   } finally {
     rmSync(gitCommonDir, { recursive: true, force: true });
   }
@@ -575,26 +567,33 @@ test("writer lease marker recovery distinguishes invalid markers from absent mar
 });
 
 function recoveryEvidence({ source, headSha }) {
+  const declaredChangedPaths = ["scripts/recovery.mjs"];
+  const protectedEquivalentPaths = [];
+  const protectedMainEquivalence = {
+    schema: "agentic-protected-main-path-equivalence/v1", baseSha: source.baseSha,
+    headSha, headTreeSha: "f".repeat(40),
+    protectedMainRef: "refs/remotes/origin/main", protectedMainSha: "5".repeat(40),
+    protectedMainTreeSha: "6".repeat(40),
+    exemptPathCount: 0, entries: [],
+    exemptPathsDigest: digestValue(protectedEquivalentPaths),
+  };
   return {
-    sourceEpoch: source.epoch,
-    sourceSessionId: source.sessionId,
-    sourceDevice: source.device,
-    sourceScope: source.scope,
-    sourceBranch: source.branch,
-    sourceBaseSha: source.baseSha,
-    sourceFenceSha: source.fenceSha,
-    sourcePullRequestUrl: source.pullRequestUrl,
-    sourceClaimId: source.cloudAuthority.claimId,
-    sourceClaimDigest: source.cloudAuthority.claimDigest,
+    sourceEpoch: source.epoch, sourceSessionId: source.sessionId,
+    sourceDevice: source.device, sourceScope: source.scope,
+    sourceBranch: source.branch, sourceBaseSha: source.baseSha,
+    sourceFenceSha: source.fenceSha, sourcePullRequestUrl: source.pullRequestUrl,
+    sourceClaimId: source.cloudAuthority.claimId, sourceClaimDigest: source.cloudAuthority.claimDigest,
     sourceLedgerRevision: source.cloudAuthority.ledgerRevision,
     sourceClaimLedgerRevision: source.cloudAuthority.claimLedgerRevision,
     sourceCloudTransitionCounter: source.cloudAuthority.transitionCounter,
-    headSha,
-    treeSha: "f".repeat(40),
-    changedPathCount: 1,
-    changedPathsDigest: digestValue(["scripts/recovery.mjs"]),
-    sourceMarkerDigest: "2".repeat(64),
-    pullRequestBodyDigest: "3".repeat(64),
-    rangeDiffDigest: "4".repeat(64),
+    headSha, treeSha: "f".repeat(40), changedPathCount: 1,
+    changedPathsDigest: digestValue(declaredChangedPaths),
+    declaredChangedPathCount: declaredChangedPaths.length,
+    declaredChangedPathsDigest: digestValue(declaredChangedPaths),
+    protectedEquivalentPathCount: protectedEquivalentPaths.length,
+    protectedEquivalentPathsDigest: digestValue(protectedEquivalentPaths),
+    protectedMainEquivalence, sourceMarkerDigest: "2".repeat(64),
+    protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
+    pullRequestBodyDigest: "3".repeat(64), rangeDiffDigest: "4".repeat(64),
   };
 }

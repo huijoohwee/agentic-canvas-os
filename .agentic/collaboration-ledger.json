@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1188,
-  "headDigest": "7143146bc1ab3d3542d937420eb0d3ac9942d22b97ddfdf5309cde3a2489928f",
+  "sequence": 1189,
+  "headDigest": "7ec8a2c9d184e7b38dba669c6372147f60d1750dbd1eff632ba1ff53b44d1a3a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -59771,6 +59771,51 @@
       },
       "claimDigest": "015274c7092cb77f24262331256e4272249d0ef1eb10991d06dc9b519c58f2a0",
       "digest": "7143146bc1ab3d3542d937420eb0d3ac9942d22b97ddfdf5309cde3a2489928f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1189,
+      "parentDigest": "7143146bc1ab3d3542d937420eb0d3ac9942d22b97ddfdf5309cde3a2489928f",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "ba4b74f9ac9d022c7b9c11fb8134e13252e77fdc1657b0b1b304bc08b480b019",
+      "idempotencyKey": "411380d598c96cfc1b56d224c44cc6d9cc311fc0085bd0ed15351234908e0c1e",
+      "requestDigest": "9076fe07ec3edf7d076857bc3a1887c3ada22696712290f7bf1c2e57fd204cbf",
+      "evaluationTime": "2026-08-06T23:54:42.000Z",
+      "claimCore": {
+        "claimId": "ba4b74f9ac9d022c7b9c11fb8134e13252e77fdc1657b0b1b304bc08b480b019",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:e85cdaf48be3eace76f510a650151378d9acad956b90e4673df0dcdd26349adf",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:592c9663bf77bc302c5b9fae270b4b8657be756d1c4f9c248336194d28f734f9",
+        "canonicalBaseRevision": "ee41edcf87e9d1946cd12c898b9b20627bc1f086",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/fetchRemoteTextInterop.test.ts",
+          "path:canvas/src/__tests__/workspaceImportUrlContentFormat.test.ts",
+          "path:canvas/src/features/markdown-workspace/workspaceImport/urlContent.ts",
+          "path:canvas/src/features/markdown-workspace/workspaceImport/urlContentFormat.ts",
+          "path:canvas/src/tests/registry/postParserCases4.ts",
+          "path:docs/documents/knowgrph-csv-json-prd-tad.md",
+          "path:grph-shared/src/net/fetchRemoteText.ts",
+          "semantic:import-url-content-classification-successor"
+        ],
+        "writeSetDigest": "ee0a988a629a2bdbe6598e92b5fa510876e9bb559c30124d8fa1d176dc2e8d55",
+        "laneRevision": "552b3273d660fc8b38f1c9f0c16d0d789de42517",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T00:22:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77zNkP",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1ac56c0062d7354c787347f32afa2b938d5b7bbed325cb301bc80a045d4b5e5a",
+      "digest": "7ec8a2c9d184e7b38dba669c6372147f60d1750dbd1eff632ba1ff53b44d1a3a"
     }
   ]
 }

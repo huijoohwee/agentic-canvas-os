@@ -55,7 +55,8 @@ export function integrateSession({
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
   buildDeliveryEvidence = createDeviceDeliveryEvidence,
   authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
-  invokeCloudMutation = invokeRepositoryCloudAction,
+    invokeCloudMutation = invokeRepositoryCloudAction,
+    continueReviewReadyCloudAuthority = continueReviewReadyCloudAuthorityProjection,
   log = console.log,
 }) {
   requireRepositoryRoot({ invocationPath, repo });
@@ -124,41 +125,62 @@ export function integrateSession({
       }
     }
     if (reviewReadyDelivery) {
-      const reviewedCloudAuthority = deliveryCloudAuthority;
-      const deliveryEvidence = requireDeliveryEvidenceDigests(buildDeliveryEvidence({
-        operation: "integrate",
-        branch,
-        headSha: lease.reviewHeadSha,
-        headTreeSha: gitText(["rev-parse", `${lease.reviewHeadSha}^{tree}`]).trim(),
-        pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
-        deviceId: lease.device,
-        sessionId,
-        manifest: lease.admission,
-        authority: reviewedCloudAuthority,
-      }));
-      const authorized = authorizeCloudDelivery({
-        authority: reviewedCloudAuthority,
-        manifest: lease.admission,
-        branch,
-        headSha: lease.reviewHeadSha,
-        pullRequestNumber: protectedMainAuthorizationRefresh
-          ? null
-          : pullRequestNumber(lease.pullRequestUrl),
-        reviewRequestId: protectedMainAuthorizationRefresh
-          ? deliveryCloudAuthority?.reviewRequestId || null
-          : null,
-        allowProtectedMainRefresh: Boolean(protectedMainAuthorizationRefresh),
-        dependencyClosureDigest: deliveryEvidence.dependencyClosureDigest,
-        namedChecksDigest: deliveryEvidence.namedChecksDigest,
-        handoffEvidenceDigest: deliveryEvidence.handoffEvidenceDigest,
-        operatorDecisionDigest: deliveryEvidence.operatorDecisionDigest,
-        integrationIntentDigest: deliveryEvidence.integrationIntentDigest,
-        deviceId: lease.device,
-        sessionId,
-        invoke: input => invokeCloudMutation(
-          compactDeviceCloudMutationIdempotencyKey(input),
-        ),
-      });
+      const authorizeReviewedDelivery = reviewedCloudAuthority => {
+        const deliveryEvidence = requireDeliveryEvidenceDigests(buildDeliveryEvidence({
+          operation: "integrate",
+          branch,
+          headSha: lease.reviewHeadSha,
+          headTreeSha: gitText(["rev-parse", `${lease.reviewHeadSha}^{tree}`]).trim(),
+          pullRequestNumber: pullRequestNumber(lease.pullRequestUrl),
+          deviceId: lease.device,
+          sessionId,
+          manifest: lease.admission,
+          authority: reviewedCloudAuthority,
+        }));
+        const authorized = authorizeCloudDelivery({
+          authority: reviewedCloudAuthority,
+          manifest: lease.admission,
+          branch,
+          headSha: lease.reviewHeadSha,
+          pullRequestNumber: protectedMainAuthorizationRefresh
+            ? null
+            : pullRequestNumber(lease.pullRequestUrl),
+          reviewRequestId: protectedMainAuthorizationRefresh
+            ? reviewedCloudAuthority?.reviewRequestId || null
+            : null,
+          allowProtectedMainRefresh: Boolean(protectedMainAuthorizationRefresh),
+          dependencyClosureDigest: deliveryEvidence.dependencyClosureDigest,
+          namedChecksDigest: deliveryEvidence.namedChecksDigest,
+          handoffEvidenceDigest: deliveryEvidence.handoffEvidenceDigest,
+          operatorDecisionDigest: deliveryEvidence.operatorDecisionDigest,
+          integrationIntentDigest: deliveryEvidence.integrationIntentDigest,
+          deviceId: lease.device,
+          sessionId,
+          invoke: input => invokeCloudMutation(
+            compactDeviceCloudMutationIdempotencyKey(input),
+          ),
+        });
+        return { authorized, deliveryEvidence };
+      };
+      let reviewedCloudAuthority = deliveryCloudAuthority;
+      let authorized;
+      let deliveryEvidence;
+      try {
+        ({ authorized, deliveryEvidence } = authorizeReviewedDelivery(reviewedCloudAuthority));
+      } catch (error) {
+        if (!isDormantPreservedCloudReconciliationError(error)) throw error;
+        continueReviewReadyCloudAuthority({
+          repo,
+          branch,
+          lease,
+          sessionId,
+          runText,
+          controllerRoot,
+        });
+        lease = leaseStore.read(branch);
+        reviewedCloudAuthority = lease?.cloudAuthority;
+        ({ authorized, deliveryEvidence } = authorizeReviewedDelivery(reviewedCloudAuthority));
+      }
       requireAuthorizedIntegrationEvidence({
         authority: authorized.authority,
         reviewedAuthority: reviewedCloudAuthority,
@@ -354,6 +376,47 @@ function isReviewReadyDeliveryLease(lease) {
     lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1" &&
     lease.cloudAuthority.state === "review_ready" &&
     SHA_PATTERN.test(String(lease.reviewHeadSha || ""));
+}
+
+function isDormantPreservedCloudReconciliationError(error) {
+  return /Cloud reconciliation cannot recover claim state dormant_preserved\./u
+    .test(String(error?.message || ""));
+}
+
+function continueReviewReadyCloudAuthorityProjection({
+  repo,
+  branch,
+  lease,
+  sessionId,
+  runText,
+  controllerRoot,
+} = {}) {
+  const controller = path.resolve(controllerRoot || "");
+  if (!controllerRoot || !path.isAbsolute(controllerRoot)) {
+    throw new Error("Dormant review recovery requires the absolute Agentic Canvas OS controller root.");
+  }
+  const output = runText("node", [
+    path.join(controller, "scripts", "cloud-authority-handoff-controller.mjs"),
+    "reclaim",
+    `--repository=${repo}`,
+    `--branch=${branch}`,
+    `--session=${sessionId}`,
+    `--successor-session=${sessionId}`,
+    `--successor-device=${lease?.device}`,
+    "--json",
+  ], { cwd: repo });
+  const line = String(output || "").trim().split(/\r?\n/u).reverse()
+    .find(value => value.trim().startsWith("{"));
+  if (!line) {
+    throw new Error("Dormant review recovery returned no machine-readable result.");
+  }
+  const result = JSON.parse(line);
+  if (result?.outcome !== "reclaimed-live" && result?.outcome !== "reclaimed-live-replay") {
+    throw new Error(
+      `Dormant review recovery did not reclaim the exact review-ready authority: ${result?.error?.message || result?.outcome || "blocked"}.`,
+    );
+  }
+  return result;
 }
 
 function pullRequestNumber(value) {

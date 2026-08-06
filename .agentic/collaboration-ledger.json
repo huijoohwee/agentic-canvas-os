@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 934,
-  "headDigest": "bd550c1aa8a115d1ac43ecb07136a70f4e801c9fff7caada121616f2d3f2c444",
+  "sequence": 935,
+  "headDigest": "0a183b4458339de6f4380459f05166cd7dd14e44cdf72560e4f1fbe1bf721e11",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -47531,6 +47531,47 @@
       },
       "claimDigest": "8bf87e1462bbeda118d1b18621de2ae8ba74afe968f11c3a9af71be67f881d4e",
       "digest": "bd550c1aa8a115d1ac43ecb07136a70f4e801c9fff7caada121616f2d3f2c444"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 935,
+      "parentDigest": "bd550c1aa8a115d1ac43ecb07136a70f4e801c9fff7caada121616f2d3f2c444",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "5ad7af3f006875cc97e3f9e7124e9e849aac893a7f1f5ede47728c44b7d3f05e",
+      "idempotencyKey": "4c24fb8ce782cc67172bf5a131c08591c21c8ad1f1a4eda4fc1c86d2687784ba",
+      "requestDigest": "08a07be478d8d9ea38d68e58a3db4dc8ad304bc7bc4aa571b1f8b84fbc295aac",
+      "evaluationTime": "2026-08-06T07:30:57.000Z",
+      "claimCore": {
+        "claimId": "5ad7af3f006875cc97e3f9e7124e9e849aac893a7f1f5ede47728c44b7d3f05e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:c0c3f893eb868cd3d1f79756e4c1f2d0ccdb8a66ca388872ebc4fa8305ffe74d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cfb0d9cd1e2b20975faf9533b9a9559a2ec416f56b5f7694b9acde6e98b51141",
+        "canonicalBaseRevision": "f9fa625e6b79e10fbeea36591133d7dd270ff57b",
+        "declaredWriteScope": [
+          "path:package.json",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "path:scripts/legacy-clean-committed-lane-refresh.mjs",
+          "semantic:legacy-clean-review-admission"
+        ],
+        "writeSetDigest": "53053afa553d3275f91742c1544b212ef05b086e8e87e46589ffda8717ea5832",
+        "laneRevision": "f9fa625e6b79e10fbeea36591133d7dd270ff57b",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T08:00:57.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0ed4349b19f9bbd2c33ae6f8bc83258dff71065183068c09211ceb6748ab0169",
+      "digest": "0a183b4458339de6f4380459f05166cd7dd14e44cdf72560e4f1fbe1bf721e11"
     }
   ]
 }

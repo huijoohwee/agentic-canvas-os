@@ -5,6 +5,7 @@ import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
 import {
   normalizeProtectedMainPathEquivalenceEvidence,
+  normalizeProtectedMainSharedAncestorPathEquivalenceEvidence,
   RECOVERY_PATH_EVIDENCE_MAX_PATHS,
 } from "./protected-main-path-equivalence-lib.mjs";
 
@@ -71,8 +72,8 @@ const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   "sourceRemoteHeadSha",
   "sourceRemoteProtectedEquivalentPathCount",
   "sourceRemoteProtectedEquivalentPathsDigest",
-  "sourceRemoteProtectedMainEquivalence",
-  "sourceRemoteProtectedMainEquivalenceDigest",
+  "sourceRemoteSharedAncestorEquivalence",
+  "sourceRemoteSharedAncestorEquivalenceDigest",
   "sourceRemoteRangeDiffDigest",
   "sourceRemoteTreeSha",
 ].sort());
@@ -776,7 +777,7 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         ? EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
         : null;
   let protectedMainEquivalence = null;
-  let sourceRemoteProtectedMainEquivalence = null;
+  let sourceRemoteSharedAncestorEquivalence = null;
   if (bindsProtectedMain) {
     try {
       protectedMainEquivalence =
@@ -789,12 +790,12 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
   }
   if (current) {
     try {
-      sourceRemoteProtectedMainEquivalence =
-        normalizeProtectedMainPathEquivalenceEvidence(
-          value.sourceRemoteProtectedMainEquivalence,
+      sourceRemoteSharedAncestorEquivalence =
+        normalizeProtectedMainSharedAncestorPathEquivalenceEvidence(
+          value.sourceRemoteSharedAncestorEquivalence,
         );
     } catch {
-      sourceRemoteProtectedMainEquivalence = null;
+      sourceRemoteSharedAncestorEquivalence = null;
     }
   }
   const invalid = (
@@ -842,27 +843,27 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         value.sourceRemoteProtectedEquivalentPathsDigest || "",
       )) ||
       !DIGEST_PATTERN.test(String(
-        value.sourceRemoteProtectedMainEquivalenceDigest || "",
+        value.sourceRemoteSharedAncestorEquivalenceDigest || "",
       )) ||
       !DIGEST_PATTERN.test(
         String(value.sourceRemoteRangeDiffDigest || ""),
       ) ||
-      !sourceRemoteProtectedMainEquivalence ||
-      sourceRemoteProtectedMainEquivalence.baseSha !==
+      !sourceRemoteSharedAncestorEquivalence ||
+      sourceRemoteSharedAncestorEquivalence.baseSha !==
         value.sourceBaseSha ||
-      sourceRemoteProtectedMainEquivalence.headSha !==
+      sourceRemoteSharedAncestorEquivalence.headSha !==
         value.sourceRemoteHeadSha ||
-      sourceRemoteProtectedMainEquivalence.headTreeSha !==
+      sourceRemoteSharedAncestorEquivalence.headTreeSha !==
         value.sourceRemoteTreeSha ||
-      sourceRemoteProtectedMainEquivalence.exemptPathCount !==
+      sourceRemoteSharedAncestorEquivalence.exemptPathCount !==
         value.sourceRemoteProtectedEquivalentPathCount ||
-      sourceRemoteProtectedMainEquivalence.exemptPathsDigest !==
+      sourceRemoteSharedAncestorEquivalence.exemptPathsDigest !==
         value.sourceRemoteProtectedEquivalentPathsDigest ||
-      sourceRemoteProtectedMainEquivalence.protectedMainRef !==
+      sourceRemoteSharedAncestorEquivalence.protectedMainRef !==
         protectedMainEquivalence?.protectedMainRef ||
-      sourceRemoteProtectedMainEquivalence.protectedMainSha !==
+      sourceRemoteSharedAncestorEquivalence.protectedMainSha !==
         protectedMainEquivalence?.protectedMainSha ||
-      sourceRemoteProtectedMainEquivalence.protectedMainTreeSha !==
+      sourceRemoteSharedAncestorEquivalence.protectedMainTreeSha !==
         protectedMainEquivalence?.protectedMainTreeSha ||
       (value.sourceRemoteProtectedEquivalentPathCount === 0 && (
         value.sourceRemoteProtectedEquivalentPathsDigest !==
@@ -876,8 +877,8 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         value.sourceRemoteChangedPathsDigest !==
           value.sourceRemoteProtectedEquivalentPathsDigest
       )) ||
-      digestValue(sourceRemoteProtectedMainEquivalence) !==
-        value.sourceRemoteProtectedMainEquivalenceDigest
+      digestValue(sourceRemoteSharedAncestorEquivalence) !==
+        value.sourceRemoteSharedAncestorEquivalenceDigest
     )) ||
     !SHA_PATTERN.test(String(value.headSha || "")) ||
     value.headSha === value.sourceFenceSha ||
@@ -965,9 +966,9 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         value.sourceRemoteProtectedEquivalentPathCount,
       sourceRemoteProtectedEquivalentPathsDigest:
         value.sourceRemoteProtectedEquivalentPathsDigest,
-      sourceRemoteProtectedMainEquivalence,
-      sourceRemoteProtectedMainEquivalenceDigest:
-        value.sourceRemoteProtectedMainEquivalenceDigest,
+      sourceRemoteSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        value.sourceRemoteSharedAncestorEquivalenceDigest,
       sourceRemoteRangeDiffDigest: value.sourceRemoteRangeDiffDigest,
     } : {}),
     sourcePullRequestUrl: value.sourcePullRequestUrl,

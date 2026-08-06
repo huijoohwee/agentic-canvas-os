@@ -544,10 +544,10 @@ function requireRecoveredEvidenceMatchesCurrent({
       recovery.sourceRemoteProtectedEquivalentPathsDigest !== digestValue(
         descendant.sourceRemotePrefix?.protectedEquivalentPaths,
       ) ||
-      recovery.sourceRemoteProtectedMainEquivalenceDigest !==
-        descendant.sourceRemotePrefix?.protectedMainEquivalenceDigest ||
-      digestValue(recovery.sourceRemoteProtectedMainEquivalence) !==
-        descendant.sourceRemotePrefix?.protectedMainEquivalenceDigest ||
+      recovery.sourceRemoteSharedAncestorEquivalenceDigest !==
+        descendant.sourceRemotePrefix?.sharedAncestorEquivalenceDigest ||
+      digestValue(recovery.sourceRemoteSharedAncestorEquivalence) !==
+        descendant.sourceRemotePrefix?.sharedAncestorEquivalenceDigest ||
       recovery.sourceRemoteRangeDiffDigest !==
         descendant.sourceRemotePrefix?.rangeDiffDigest
     )

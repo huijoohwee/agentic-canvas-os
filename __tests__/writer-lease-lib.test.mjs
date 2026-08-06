@@ -455,10 +455,10 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
         _sourceRemoteProtectedEquivalentPathCount,
       sourceRemoteProtectedEquivalentPathsDigest:
         _sourceRemoteProtectedEquivalentPathsDigest,
-      sourceRemoteProtectedMainEquivalence:
-        _sourceRemoteProtectedMainEquivalence,
-      sourceRemoteProtectedMainEquivalenceDigest:
-        _sourceRemoteProtectedMainEquivalenceDigest,
+      sourceRemoteSharedAncestorEquivalence:
+        _sourceRemoteSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        _sourceRemoteSharedAncestorEquivalenceDigest,
       sourceRemoteRangeDiffDigest: _sourceRemoteRangeDiffDigest,
       ...prePushedPrefixRecovery
     } = recovered.expiredCommittedHeartbeatRecovery;
@@ -614,14 +614,17 @@ test("writer lease marker recovery distinguishes invalid markers from absent mar
 function recoveryEvidence({ source, headSha }) {
   const declaredChangedPaths = ["scripts/recovery.mjs"];
   const protectedEquivalentPaths = [];
-  const sourceRemoteProtectedMainEquivalence = {
-    schema: "agentic-protected-main-path-equivalence/v1",
+  const sourceRemoteSharedAncestorEquivalence = {
+    schema:
+      "agentic-protected-main-shared-ancestor-path-equivalence/v1",
     baseSha: source.baseSha,
     headSha: source.fenceSha,
     headTreeSha: "7".repeat(40),
     protectedMainRef: "refs/remotes/origin/main",
     protectedMainSha: "5".repeat(40),
     protectedMainTreeSha: "6".repeat(40),
+    sharedAncestorSha: source.baseSha,
+    sharedAncestorTreeSha: "9".repeat(40),
     exemptPathCount: 0,
     entries: [],
     exemptPathsDigest: digestValue(protectedEquivalentPaths),
@@ -646,9 +649,9 @@ function recoveryEvidence({ source, headSha }) {
     sourceRemoteDeclaredChangedPathsDigest: digestValue([]),
     sourceRemoteProtectedEquivalentPathCount: 0,
     sourceRemoteProtectedEquivalentPathsDigest: digestValue([]),
-    sourceRemoteProtectedMainEquivalence,
-    sourceRemoteProtectedMainEquivalenceDigest:
-      digestValue(sourceRemoteProtectedMainEquivalence),
+    sourceRemoteSharedAncestorEquivalence,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      digestValue(sourceRemoteSharedAncestorEquivalence),
     sourceRemoteRangeDiffDigest: "8".repeat(64),
     sourcePullRequestUrl: source.pullRequestUrl,
     sourceClaimId: source.cloudAuthority.claimId, sourceClaimDigest: source.cloudAuthority.claimDigest,

@@ -8,6 +8,7 @@ import { assertLeaseWorktree } from "./device-branch-ownership-lib.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import {
   captureProtectedMainPathEquivalence,
+  captureProtectedMainSharedAncestorPathEquivalence,
   RECOVERY_PATH_EVIDENCE_MAX_BYTES,
   RECOVERY_PATH_EVIDENCE_MAX_PATHS,
 } from "./protected-main-path-equivalence-lib.mjs";
@@ -106,18 +107,18 @@ export function captureCommittedDescendantEvidence({
     );
   }
   if (
-    sourceRemotePrefix?.protectedMainEquivalence &&
+    sourceRemotePrefix?.sharedAncestorEquivalence &&
     (
-      sourceRemotePrefix.protectedMainEquivalence.protectedMainRef !==
+      sourceRemotePrefix.sharedAncestorEquivalence.protectedMainRef !==
         protectedMainEquivalence?.protectedMainRef ||
-      sourceRemotePrefix.protectedMainEquivalence.protectedMainSha !==
+      sourceRemotePrefix.sharedAncestorEquivalence.protectedMainSha !==
         protectedMainEquivalence?.protectedMainSha ||
-      sourceRemotePrefix.protectedMainEquivalence.protectedMainTreeSha !==
+      sourceRemotePrefix.sharedAncestorEquivalence.protectedMainTreeSha !==
         protectedMainEquivalence?.protectedMainTreeSha
     )
   ) {
     throw new Error(
-      "Expired committed recovery protected-main subject drifted between published-prefix and full-range capture.",
+      "Expired committed recovery protected-main anchor drifted between published-prefix and full-range capture.",
     );
   }
   const rangeDiffDigest = sha256(gitText([
@@ -256,10 +257,10 @@ export function captureExpiredCommittedHeartbeatSnapshot({
       sourceRemoteProtectedEquivalentPathsDigest: digestValue(
         sourceRemotePrefix.protectedEquivalentPaths,
       ),
-      sourceRemoteProtectedMainEquivalence:
-        sourceRemotePrefix.protectedMainEquivalence,
-      sourceRemoteProtectedMainEquivalenceDigest:
-        sourceRemotePrefix.protectedMainEquivalenceDigest,
+      sourceRemoteSharedAncestorEquivalence:
+        sourceRemotePrefix.sharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        sourceRemotePrefix.sharedAncestorEquivalenceDigest,
       sourceRemoteRangeDiffDigest: sourceRemotePrefix.rangeDiffDigest,
       sourcePullRequestUrl: lease.pullRequestUrl,
       sourceClaimId: lease.cloudAuthority.claimId,
@@ -332,8 +333,8 @@ export function captureSourceRemotePrefixEvidence({
       `Expired committed recovery published-prefix path is outside declared write scope: ${partition.protectedEquivalentPaths[0]}`,
     );
   }
-  const protectedMainEquivalence = bindProtectedMain
-    ? captureProtectedMainPathEquivalence({
+  const sharedAncestorEquivalence = bindProtectedMain
+    ? captureProtectedMainSharedAncestorPathEquivalence({
       baseSha: lease.baseSha,
       headSha: sourceRemoteHeadSha,
       exemptPaths: partition.protectedEquivalentPaths,
@@ -342,8 +343,8 @@ export function captureSourceRemotePrefixEvidence({
     })
     : null;
   if (
-    protectedMainEquivalence &&
-    protectedMainEquivalence.headTreeSha !== treeSha
+    sharedAncestorEquivalence &&
+    sharedAncestorEquivalence.headTreeSha !== treeSha
   ) {
     throw new Error(
       "Expired committed recovery source remote tree drifted during published-prefix capture.",
@@ -365,10 +366,10 @@ export function captureSourceRemotePrefixEvidence({
     protectedEquivalentPaths: Object.freeze(
       partition.protectedEquivalentPaths,
     ),
-    ...(protectedMainEquivalence ? {
-      protectedMainEquivalence,
-      protectedMainEquivalenceDigest: digestValue(
-        protectedMainEquivalence,
+    ...(sharedAncestorEquivalence ? {
+      sharedAncestorEquivalence,
+      sharedAncestorEquivalenceDigest: digestValue(
+        sharedAncestorEquivalence,
       ),
     } : {}),
     rangeDiffDigest,

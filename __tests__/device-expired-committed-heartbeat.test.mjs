@@ -25,6 +25,8 @@ const pushedRemoteHeadSha = "6".repeat(40);
 const sourceRemoteTreeSha = "7".repeat(40);
 const protectedMainSha = "1".repeat(40);
 const protectedMainTreeSha = "2".repeat(40);
+const sharedAncestorSha = "4".repeat(40);
+const sharedAncestorTreeSha = "5".repeat(40);
 const LEGACY_V1_PULL_REQUEST_BODY = String.raw`---
 action: /change
 scope: "#expired-heartbeat"
@@ -144,15 +146,25 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
     protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
   };
   const mismatchedPrefixEquivalence = {
-    ...result.recovery.sourceRemoteProtectedMainEquivalence,
+    ...result.recovery.sourceRemoteSharedAncestorEquivalence,
     protectedMainSha: "9".repeat(40),
     protectedMainTreeSha: "a".repeat(40),
   };
   const mismatchedProtectedMainSubjects = {
     ...result.recovery,
-    sourceRemoteProtectedMainEquivalence: mismatchedPrefixEquivalence,
-    sourceRemoteProtectedMainEquivalenceDigest:
+    sourceRemoteSharedAncestorEquivalence: mismatchedPrefixEquivalence,
+    sourceRemoteSharedAncestorEquivalenceDigest:
       digestValue(mismatchedPrefixEquivalence),
+  };
+  const {
+    sharedAncestorTreeSha: _missingSharedAncestorTreeSha,
+    ...missingSharedAncestorTree
+  } = result.recovery.sourceRemoteSharedAncestorEquivalence;
+  const malformedSharedAncestorEvidence = {
+    ...result.recovery,
+    sourceRemoteSharedAncestorEquivalence: missingSharedAncestorTree,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      digestValue(missingSharedAncestorTree),
   };
   const marker = parseWriterLeasePullRequestBody(remoteBody);
   const replaceRecovery = recovery => remoteBody.replace(
@@ -169,6 +181,7 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
     { ...result.recovery, sourceRemoteTreeSha: "0".repeat(40) },
     { ...result.recovery, sourceRemoteChangedPathCount: 1 },
     mismatchedProtectedMainSubjects,
+    malformedSharedAncestorEvidence,
     { ...result.recovery, changedPathCount: 129, declaredChangedPathCount: 129 },
     { ...allProtectedRecovery, declaredChangedPathsDigest: "0".repeat(64) },
     { ...allProtectedRecovery, changedPathsDigest: "0".repeat(64) },
@@ -277,6 +290,31 @@ test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
     expiredCommittedHeartbeatRecovery: {
       ...saved.expiredCommittedHeartbeatRecovery,
       sourceRemoteRangeDiffDigest: "0".repeat(64),
+    },
+  };
+  remoteBody = renderWriterLeasePullRequestBody(saved);
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...common,
+    heartbeatCloudAuthority: () => {
+      throw new Error("v3 replay must not renew cloud authority again");
+    },
+  }), /replay evidence changed from its exact recovered subject/);
+  saved = exactRecoveredLease;
+  remoteBody = exactRecoveredBody;
+
+  const tamperedSharedAncestorEquivalence = {
+    ...saved.expiredCommittedHeartbeatRecovery
+      .sourceRemoteSharedAncestorEquivalence,
+    sharedAncestorSha: "0".repeat(40),
+  };
+  saved = {
+    ...saved,
+    expiredCommittedHeartbeatRecovery: {
+      ...saved.expiredCommittedHeartbeatRecovery,
+      sourceRemoteSharedAncestorEquivalence:
+        tamperedSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        digestValue(tamperedSharedAncestorEquivalence),
     },
   };
   remoteBody = renderWriterLeasePullRequestBody(saved);
@@ -587,10 +625,10 @@ test("v2 replay stays exact-fence and cannot adopt a pushed prefix", () => {
       _sourceRemoteProtectedEquivalentPathCount,
     sourceRemoteProtectedEquivalentPathsDigest:
       _sourceRemoteProtectedEquivalentPathsDigest,
-    sourceRemoteProtectedMainEquivalence:
-      _sourceRemoteProtectedMainEquivalence,
-    sourceRemoteProtectedMainEquivalenceDigest:
-      _sourceRemoteProtectedMainEquivalenceDigest,
+    sourceRemoteSharedAncestorEquivalence:
+      _sourceRemoteSharedAncestorEquivalence,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      _sourceRemoteSharedAncestorEquivalenceDigest,
     sourceRemoteRangeDiffDigest: _sourceRemoteRangeDiffDigest,
     ...v2Evidence
   } = saved.expiredCommittedHeartbeatRecovery;
@@ -801,11 +839,17 @@ function recoveryGitText({
       "rev-parse HEAD": headSha,
       [`rev-parse ${headSha}^{tree}`]: treeSha,
       [`rev-parse ${sourceRemoteHeadSha}^{tree}`]: remoteTreeSha,
+      [`rev-parse ${sharedAncestorSha}^{tree}`]: sharedAncestorTreeSha,
       "rev-parse refs/remotes/origin/main": protectedMainSha,
       [`rev-parse ${protectedMainSha}^{tree}`]: protectedMainTreeSha,
       [`rev-list --parents -n 1 ${fenceSha}`]: `${fenceSha} ${baseSha}`,
       [`merge-base --is-ancestor ${fenceSha} ${headSha}`]: "",
       [`merge-base --is-ancestor ${baseSha} ${protectedMainSha}`]: "",
+      [`merge-base --all ${sourceRemoteHeadSha} ${protectedMainSha}`]:
+        sharedAncestorSha,
+      [`merge-base --is-ancestor ${baseSha} ${sharedAncestorSha}`]: "",
+      [`merge-base --is-ancestor ${sharedAncestorSha} ${protectedMainSha}`]: "",
+      [`merge-base --is-ancestor ${sharedAncestorSha} ${sourceRemoteHeadSha}`]: "",
       [`diff --name-only -z --no-renames ${fenceSha} ${headSha} --`]:
         `${paths.join("\0")}\0`,
       [`diff --binary --no-renames ${fenceSha} ${headSha} --`]:

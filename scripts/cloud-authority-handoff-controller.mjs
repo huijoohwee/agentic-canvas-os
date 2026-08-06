@@ -390,10 +390,12 @@ function validateContinuation({ request, lane, actor, status }) {
     findings.push(finding("cloud-status-unavailable"));
     return findings.sort(compareFindings);
   }
-  const overlaps = status.claims.filter(claim => {
+  const otherClaims = status.claims.filter(
+    claim => claim.claimId !== lane.authority.claimId,
+  );
+  const overlaps = otherClaims.filter(claim => {
     try {
-      return claim.claimId !== lane.authority.claimId
-        && writeSetsOverlap(claim.declaredWriteScope, lane.manifest.declaredWriteSet);
+      return writeSetsOverlap(claim.declaredWriteScope, lane.manifest.declaredWriteSet);
     } catch {
       return true;
     }
@@ -403,7 +405,7 @@ function validateContinuation({ request, lane, actor, status }) {
       competingClaimIds: overlaps.map(claim => claim.claimId).sort(),
     }));
   }
-  if (status.claims.some(claim => claim.reviewRequestId === lane.authority.reviewRequestId)) {
+  if (otherClaims.some(claim => claim.reviewRequestId === lane.authority.reviewRequestId)) {
     findings.push(finding("review-request-already-live"));
   }
   return findings.sort(compareFindings);

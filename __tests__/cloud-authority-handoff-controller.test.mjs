@@ -184,7 +184,11 @@ test("reclaim restores live authority for the exact preserved review lane", asyn
   const adapter = createCloudAuthorityHandoffControllerAdapter({
     readPreservedReviewLane: () => preservedLane(),
     readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
-    readCloudStatus: () => statusResult(),
+    readCloudStatus: () => statusResult([{
+      claimId: PREDECESSOR_CLAIM_ID,
+      reviewRequestId: "github-pull-request:PR_238",
+      declaredWriteScope: preservedLane().manifest.declaredWriteSet,
+    }]),
     claimSuccessor: ({ request, lane }) => {
       events.push(["claim", request.transition, lane.authority.claimId]);
       return claimResult();
@@ -497,6 +501,49 @@ test("a competing live overlap blocks reclaim", async () => {
 
   assert.equal(result.outcome, "blocked");
   assert.equal(result.blockingFindings.some(item => item.type === "competing-live-claim"), true);
+});
+
+test("another live claim using the same review request blocks before mutation", async () => {
+  let mutated = false;
+  const adapter = createCloudAuthorityHandoffControllerAdapter({
+    readPreservedReviewLane: () => preservedLane(),
+    readAuthenticatedOwner: () => ({ id: 1, login: "owner" }),
+    readCloudStatus: () => statusResult([{
+      claimId: "a".repeat(64),
+      reviewRequestId: "github-pull-request:PR_238",
+      declaredWriteScope: ["semantic:independent-scope"],
+    }]),
+    claimSuccessor: () => {
+      mutated = true;
+      return claimResult();
+    },
+    bindAndReviewReady: () => {
+      mutated = true;
+      return {
+        authority: successorAuthority(),
+        verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
+      };
+    },
+    persistReviewProjection: () => {
+      mutated = true;
+      return { receiptDigest: PROJECTION_RECEIPT_DIGEST };
+    },
+  });
+
+  const result = await continueExpiredReviewLaneAuthority({
+    transition: "reclaim",
+    branch: "agent/legacy-device/legacy-authority-evaluator",
+    sessionId: "legacy-session",
+    successorSessionId: "legacy-session",
+    successorDeviceId: "legacy-device",
+  }, { adapter });
+
+  assert.equal(result.outcome, "blocked");
+  assert.equal(
+    result.blockingFindings.some(item => item.type === "review-request-already-live"),
+    true,
+  );
+  assert.equal(mutated, false);
 });
 
 test("owner mismatch blocks reclaim", async () => {

@@ -459,7 +459,7 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
       return { authority };
     },
     run: (command, args) => {
-      if (command === "gh" && args[1] === "pr" && args[2] === "ready") {
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") {
         isDraft = false;
       }
       const bodyIndex = args.indexOf("--body");

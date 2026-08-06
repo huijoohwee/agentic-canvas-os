@@ -537,6 +537,48 @@ test("cloud-admitted review verifies around check and transitions the pushed hea
   assert.equal(outcome.saved.cloudAuthority.laneRevision, headSha);
 });
 
+test("cloud-admitted review accepts an already projected active lane before the final push", () => {
+  const events = [];
+  const projectedHead = "9".repeat(40);
+  const initial = cloudLease({ laneRevision: projectedHead });
+  const outcome = runCloudReview({
+    initial,
+    events,
+    reconcileCloudAuthority: ({ authority }) => {
+      events.push(`cloud:active:${authority.laneRevision}`);
+      return {
+        authority: {
+          ...authority,
+          laneRevision: projectedHead,
+          state: "active",
+        },
+        verification: operationVerification({
+          ...authority,
+          laneRevision: projectedHead,
+          state: "active",
+        }),
+      };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha: pushedHead }) => {
+      events.push(`cloud:transition:${pushedHead}`);
+      return {
+        authority: {
+          ...authority,
+          state: "review_ready",
+          laneRevision: pushedHead,
+          focusedEvidenceDigest: "9".repeat(64),
+        },
+      };
+    },
+    verifyReviewReadyCloudAuthority: ({ authority }) => ({ authority }),
+  });
+
+  assert.equal(outcome.saved.cloudAuthority.state, "review_ready");
+  assert.equal(outcome.saved.cloudAuthority.laneRevision, headSha);
+  assert.ok(events.includes(`cloud:active:${projectedHead}`));
+  assert.ok(events.includes(`cloud:transition:${headSha}`));
+});
+
 test("cloud transition crash reconciles the exact pushed review-ready head before local release", () => {
   const events = [];
   const initial = cloudLease();

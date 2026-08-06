@@ -929,7 +929,12 @@ function acceptReviewCloudReconciliation({
     return { lease, cloudReady: reconciled };
   }
   const laneRevision = reconciled.authority?.laneRevision;
-  if (laneRevision !== lease.fenceSha && laneRevision !== expectedHeadSha) {
+  const priorProjectedLaneRevision = lease.cloudAuthority?.laneRevision || null;
+  if (
+    laneRevision !== lease.fenceSha
+    && laneRevision !== expectedHeadSha
+    && laneRevision !== priorProjectedLaneRevision
+  ) {
     throw new Error(
       "Active cloud review reconciliation is neither the authoring fence nor the exact review HEAD.",
     );

@@ -26,8 +26,8 @@ const ROLLBACK_FAILURE_STAGES = [
 ];
 
 export function createDeploymentReceipt(candidate, consumedAuthorization, input) {
-  validateCandidateManifest(candidate);
-  validateConsumedAuthorizationReceipt(consumedAuthorization);
+  validateDeploymentCandidateManifest(candidate);
+  validateConsumedDeploymentAuthorizationReceipt(consumedAuthorization);
   requireExact(input, [
     "deploymentAdapterId",
     "deployedArtifactDigest",
@@ -122,7 +122,7 @@ export function createStateReconciliationReceipt(deployment, input) {
 }
 
 export function createLegacyLiveObservationReceipt(consumedAuthorization, input) {
-  validateConsumedAuthorizationReceipt(consumedAuthorization);
+  validateConsumedDeploymentAuthorizationReceipt(consumedAuthorization);
   requireExact(input, [
     "deployedArtifactDigest",
     "observedRuntimeDigest",
@@ -434,7 +434,7 @@ function assertStateJoinsDeployment(deployment, state) {
   }
 }
 
-function validateCandidateManifest(value) {
+export function validateDeploymentCandidateManifest(value) {
   validateReceipt(value, CANDIDATE_MANIFEST_SCHEMA, "awaiting-human-authorization", [
     "runtimeReviewReceiptDigest", "sourceDigest", "dependencyClosureDigest", "policyDigest",
     "targetDigest", "artifactDigest", "manifestDigest", "rollbackTargetDigest", "builtAt",
@@ -446,7 +446,7 @@ function validateCandidateManifest(value) {
   requireInstant(value.builtAt, "builtAt");
 }
 
-function validateConsumedAuthorizationReceipt(value) {
+export function validateConsumedDeploymentAuthorizationReceipt(value) {
   validateReceipt(value, HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "consumed", [
     "candidateDigest", "targetDigest", "releaseKey", "decisionKind", "humanActorId",
     "decisionRef", "authorityAdapterId", "interactionReceiptDigest", "issuedAt", "expiresAt",

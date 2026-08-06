@@ -45,6 +45,8 @@ export {
 export {
   AGENTIC_SDLC_RUN_JSON_SCHEMA,
   COLLABORATIVE_RELEASE_LIFECYCLE_JSON_SCHEMA,
+  COLLABORATIVE_RELEASE_LIFECYCLE_V1_JSON_SCHEMA,
+  COLLABORATIVE_RELEASE_LIFECYCLE_V2_JSON_SCHEMA,
   assertCanonicalRunSchema,
 } from "./schema-validation.mjs";
 export { validateExecutionRun } from "./validate-execution-run.mjs";

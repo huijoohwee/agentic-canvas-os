@@ -18,6 +18,8 @@ export {
   createRollbackReceipt,
   createStateReconciliationReceipt,
   validateDeploymentReceipt,
+  validateDeploymentCandidateManifest,
+  validateConsumedDeploymentAuthorizationReceipt,
   validateLiveVerificationReceipt,
   validateLiveVerificationReceiptV2,
   validatePublicationReceipt,
@@ -158,6 +160,9 @@ export function createRuntimeReviewReceipt(integration, input) {
   for (const field of ["reviewSurfaceDigest", "policyDigest", "probesDigest"]) requireDigest(input[field], field);
   requireText(input.reviewerId, "reviewerId");
   requireWindow(input.issuedAt, input.expiresAt, "Runtime Review Receipt");
+  if (Date.parse(input.issuedAt) < Date.parse(integration.integratedAt)) {
+    throw new Error("Runtime review cannot predate integration.");
+  }
   return receipt({
     schema: RUNTIME_REVIEW_RECEIPT_SCHEMA,
     status: "reviewed",
@@ -181,8 +186,9 @@ export function createCandidateManifest(review, input) {
     requireDigest(input[field], field);
   }
   requireInstant(input.builtAt, "builtAt");
-  if (Date.parse(input.builtAt) > Date.parse(review.expiresAt)) {
-    throw new Error("Candidate preparation occurred after the Runtime Review Receipt expired.");
+  if (Date.parse(input.builtAt) < Date.parse(review.issuedAt) ||
+      Date.parse(input.builtAt) > Date.parse(review.expiresAt)) {
+    throw new Error("Candidate preparation must occur within the Runtime Review Receipt window.");
   }
   return receipt({
     schema: CANDIDATE_MANIFEST_SCHEMA,
@@ -361,7 +367,7 @@ export function releaseKey(targetDigest, candidateDigest) {
   return digest({ targetDigest, candidateDigest });
 }
 
-function validateIntegrationReceipt(value) {
+export function validateIntegrationReceipt(value) {
   validateReceipt(value, INTEGRATION_RECEIPT_SCHEMA, "integrated", [
     "preservationReceiptDigest", "overlapDispositionReceiptDigest",
     "sourceRevision", "sourceDigest", "dependencyClosureDigest", "checksDigest",
@@ -370,14 +376,14 @@ function validateIntegrationReceipt(value) {
   requireCollaboration(value.collaboration);
 }
 
-function validateOverlapPreservationReceipt(value) {
+export function validateOverlapPreservationReceipt(value) {
   validateReceipt(value, OVERLAP_PRESERVATION_RECEIPT_SCHEMA, "preserved", [
     "convergenceBaseDigest", "protectedTipDigest", "captureAdapterId", "entries", "capturedAt",
   ]);
   normalizePreservationEntries(value.entries);
 }
 
-function validateOverlapDispositionReceipt(value) {
+export function validateOverlapDispositionReceipt(value) {
   validateReceipt(value, OVERLAP_DISPOSITION_RECEIPT_SCHEMA, "accounted", [
     "preservationReceiptDigest", "convergenceBaseDigest", "protectedTipDigest",
     "observations", "observedAt",
@@ -385,7 +391,7 @@ function validateOverlapDispositionReceipt(value) {
   normalizeDispositionObservations(value.observations);
 }
 
-function validateJoinedOverlapDisposition(preservation, disposition) {
+export function validateJoinedOverlapDisposition(preservation, disposition) {
   if (disposition.preservationReceiptDigest !== preservation.receiptDigest ||
       disposition.convergenceBaseDigest !== preservation.convergenceBaseDigest ||
       disposition.protectedTipDigest !== preservation.protectedTipDigest ||
@@ -404,21 +410,21 @@ function validateJoinedOverlapDisposition(preservation, disposition) {
   }
 }
 
-function validateRuntimeReviewReceipt(value) {
+export function validateRuntimeReviewReceipt(value) {
   validateReceipt(value, RUNTIME_REVIEW_RECEIPT_SCHEMA, "reviewed", [
     "integrationReceiptDigest", "sourceDigest", "dependencyClosureDigest",
     "reviewSurfaceDigest", "policyDigest", "probesDigest", "reviewerId", "issuedAt", "expiresAt",
   ]);
 }
 
-function validateCandidateManifest(value) {
+export function validateCandidateManifest(value) {
   validateReceipt(value, CANDIDATE_MANIFEST_SCHEMA, "awaiting-human-authorization", [
     "runtimeReviewReceiptDigest", "sourceDigest", "dependencyClosureDigest",
     "policyDigest", "targetDigest", "artifactDigest", "manifestDigest", "rollbackTargetDigest", "builtAt",
   ]);
 }
 
-function validateAuthorizationInteractionReceipt(value) {
+export function validateAuthorizationInteractionReceipt(value) {
   validateReceipt(value, AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA, "observed", [
     "candidateDigest", "targetDigest", "humanActorId", "interactionAdapterId",
     "transportClass", "browserRequired", "challengeDigest", "responseDigest", "recordedAt",
@@ -426,7 +432,7 @@ function validateAuthorizationInteractionReceipt(value) {
   requireBoolean(value.browserRequired, "browserRequired");
 }
 
-function validateHumanAuthorizationReceipt(value) {
+export function validateHumanAuthorizationReceipt(value) {
   validateReceipt(value, HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "authorized", [
     "candidateDigest", "targetDigest", "releaseKey", "decisionKind", "humanActorId",
     "decisionRef", "authorityAdapterId", "interactionReceiptDigest",
@@ -437,7 +443,7 @@ function validateHumanAuthorizationReceipt(value) {
   }
 }
 
-function validateConsumedAuthorizationReceipt(value) {
+export function validateConsumedAuthorizationReceipt(value) {
   validateReceipt(value, HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "consumed", [
     "candidateDigest", "targetDigest", "releaseKey", "decisionKind", "humanActorId",
     "decisionRef", "authorityAdapterId", "interactionReceiptDigest",

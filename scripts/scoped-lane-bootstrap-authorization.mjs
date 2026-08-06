@@ -627,7 +627,7 @@ function isRetiredAdmissionOwnerLane({
     && path.resolve(lease?.worktreePath || "") === lanePath
     && lease?.branch === String(branch || "").replace(/^refs\/heads\//u, "")
     && admission?.schema === "agentic-lane-admission-lease/v1"
-    && admission?.status === "admitted"
+    && ["planned", "admitted"].includes(admission?.status)
     && authority?.schema === "agentic-lane-cloud-authority/v1"
     && authority?.targetRepository === targetRepository
     && DIGEST_PATTERN.test(String(authority?.claimId || ""))

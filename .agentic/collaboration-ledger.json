@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 887,
-  "headDigest": "a6ac26c39297a1f846811e1bbebc8a064d8f53518731d9a9b4bea5dd2d55b703",
+  "sequence": 888,
+  "headDigest": "b60c9397642d3e4d80402338b3135a6622224da739874991a436aea7498f69d3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -44830,6 +44830,50 @@
       },
       "claimDigest": "329fe76ca739825a8d22f63da740e70b91a9e295efa4c605c7b1045babda1738",
       "digest": "a6ac26c39297a1f846811e1bbebc8a064d8f53518731d9a9b4bea5dd2d55b703"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 888,
+      "parentDigest": "a6ac26c39297a1f846811e1bbebc8a064d8f53518731d9a9b4bea5dd2d55b703",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d0f806bc07c68207a18591409a3e63e77db16270485243ced19f306cb62091c4",
+      "idempotencyKey": "a8515eeff707a2fa3f12a84b34eb4e437ae70fe6a795c13764b532bf88918e30",
+      "requestDigest": "efb2e0369d85c199cd3e1ce676519b526a0cc3086f30c11df55adc6981bd4ed5",
+      "evaluationTime": "2026-08-06T03:25:18.000Z",
+      "claimCore": {
+        "claimId": "d0f806bc07c68207a18591409a3e63e77db16270485243ced19f306cb62091c4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3eb9e6f7816cc2a695a9bcb7b705e0179f219c4d3d29510c4f64aba551e75c2a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:10dfb759a1ec86b4cd0952b1500751eee9ac921ff028e6750f75ca280cc5b4e9",
+        "canonicalBaseRevision": "0e29bb571fa5e198318792549802dc858e226e8d",
+        "declaredWriteScope": [
+          "path:__tests__/device-review.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:docs/PROJECT-RULES.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "semantic:root-source-start-guard"
+        ],
+        "writeSetDigest": "fe4b290d4c5f07551a862608126810dc8f7b67bc67301b6871b7e43889716c0c",
+        "laneRevision": "b2dabba62b76e6efb58a0734add967362e5ad5b2",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-06T03:55:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0e9852bc7e44f6beb89824eac89e2d8480c7eacb55a4b85b64e7f9502ac2e045",
+      "digest": "b60c9397642d3e4d80402338b3135a6622224da739874991a436aea7498f69d3"
     }
   ]
 }

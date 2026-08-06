@@ -241,6 +241,125 @@ function projectionHarness(initialClaim) {
   };
 }
 
+function waitingSuccessorHarness({
+  predecessorState = "dormant-preserved",
+  duplicateWaitingScope = false,
+  chainedWaitingPredecessor = false,
+} = {}) {
+  let predecessor = rootClaim({
+    claimId: "6".repeat(64),
+    state: predecessorState,
+    laneRevision: "5".repeat(40),
+    transitionCounter: 4,
+    fenceRevision: "7".repeat(64),
+    transitionDigest: "8".repeat(64),
+    reviewRequestId: REVIEW_REQUEST_ID,
+  });
+  let waiting = {
+    ...rootClaim({
+      claimId: "9".repeat(64),
+      laneRevision: BASE_SHA,
+      transitionCounter: 1,
+      fenceRevision: "a".repeat(64),
+      transitionDigest: "b".repeat(64),
+    }),
+    state: "waiting-successor",
+    writeAuthority: false,
+    scopeReserved: false,
+    predecessorClaimId: predecessor.claimId,
+  };
+  const duplicateScope = normalizeWriteSet([
+    "path:scripts/older-legacy-refresh.mjs",
+    "semantic:git-guidelines-companion",
+  ]);
+  let staleWaiting = {
+    ...rootClaim({
+      claimId: "c".repeat(64),
+      laneRevision: BASE_SHA,
+      transitionCounter: 1,
+      fenceRevision: "d".repeat(64),
+      transitionDigest: "e".repeat(64),
+    }),
+    state: "waiting-successor",
+    writeAuthority: false,
+    scopeReserved: false,
+    predecessorClaimId: predecessor.claimId,
+    declaredWriteScope: duplicateWaitingScope ? waiting.declaredWriteScope : duplicateScope,
+    writeSetDigest: duplicateWaitingScope
+      ? waiting.writeSetDigest
+      : digestValue(duplicateScope),
+  };
+  let current = waiting;
+  const calls = [];
+  return {
+    calls,
+    inspect: () => (
+      current.state === "waiting-successor"
+        ? {
+          ...statusResult(predecessor, NEXT_LEDGER_SHA),
+          claims: chainedWaitingPredecessor
+            ? [predecessor, staleWaiting, waiting].map((claim, index) => (
+              index === 0
+                ? { ...claim, state: "waiting-successor" }
+                : claim
+            ))
+            : [predecessor, staleWaiting, waiting],
+        }
+        : statusResult(current, NEXT_LEDGER_SHA)
+    ),
+    verify: () => verificationResult(current, NEXT_LEDGER_SHA),
+    invoke: ({ action, request }) => {
+      calls.push({ action, request });
+      if (action === "claim") {
+        current = waiting;
+        return mutationResult("claim", waiting, NEXT_LEDGER_SHA);
+      }
+      if (action === "retire" && request.claimId === staleWaiting.claimId) {
+        staleWaiting = {
+          ...staleWaiting,
+          state: "retired",
+          transitionCounter: staleWaiting.transitionCounter + 1,
+          fenceRevision: digestValue({ action, request }),
+          transitionDigest: digestValue({ retireQueued: calls.length }),
+        };
+        return mutationResult("retire", staleWaiting, NEXT_LEDGER_SHA);
+      }
+      if (action === "retire") {
+        predecessor = {
+          ...predecessor,
+          state: "retired",
+          transitionCounter: predecessor.transitionCounter + 1,
+          fenceRevision: digestValue({ action, request }),
+          transitionDigest: digestValue({ retire: calls.length }),
+        };
+        return mutationResult("retire", predecessor, NEXT_LEDGER_SHA);
+      }
+      if (action === "continue" && request.mode === "promote") {
+        current = rootClaim({
+          claimId: waiting.claimId,
+          laneRevision: BASE_SHA,
+          transitionCounter: waiting.transitionCounter + 1,
+          fenceRevision: digestValue({ action, request }),
+          transitionDigest: digestValue({ promote: calls.length }),
+        });
+        return mutationResult("continue", current, NEXT_LEDGER_SHA);
+      }
+      if (action === "continue" && request.mode === "projection") {
+        current = rootClaim({
+          claimId: current.claimId,
+          laneRevision: request.headSha,
+          transitionCounter: current.transitionCounter + 1,
+          fenceRevision: digestValue({ action, request }),
+          transitionDigest: digestValue({ projection: calls.length }),
+          reviewRequestId: request.reviewRequestId || current.reviewRequestId,
+        });
+        return mutationResult("continue", current, NEXT_LEDGER_SHA);
+      }
+      throw new Error(`Unexpected action ${action}:${request.mode || "none"}`);
+    },
+  };
+}
+
 test("claim projection accepts v2 logical identity without device/session in claimId", () => {
   const claim = rootClaim({ laneRevision: BASE_SHA, transitionCounter: 1 });
   const authority = cloudAuthorityFromResult({
@@ -371,6 +490,160 @@ test("legacy review bootstrap claims at base and binds the exact reviewed head",
   assert.equal(harness.calls[0].request.headSha, BASE_SHA);
   assert.equal(harness.calls[1].action, "continue");
   assert.equal(harness.calls[1].request.mode, "projection");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap retries claim with the required lease epoch", () => {
+  const harness = projectionHarness(rootClaim({
+    laneRevision: BASE_SHA,
+    transitionCounter: 1,
+  }));
+  let firstAttempt = true;
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    inspect: harness.inspect,
+    verify: harness.verify,
+    invoke: (input) => {
+      if (input.action === "claim" && firstAttempt) {
+        firstAttempt = false;
+        throw new Error("Cloud collaboration claim failed: leaseEpoch must be 2");
+      }
+      return harness.invoke(input);
+    },
+  });
+  const claimCalls = harness.calls.filter(call => call.action === "claim");
+  assert.equal(claimCalls.length, 1);
+  assert.equal(claimCalls[0].request.leaseEpoch, 2);
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap supersedes a preserved predecessor before promoting its waiting successor", () => {
+  const harness = waitingSuccessorHarness();
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["claim", null],
+      ["retire", null],
+      ["retire", null],
+      ["continue", "promote"],
+      ["continue", "projection"],
+    ],
+  );
+  assert.equal(harness.calls[1].request.reason, "superseded");
+  assert.equal(harness.calls[2].request.reason, "superseded");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap supersedes a current predecessor before promoting its waiting successor", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "current",
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["claim", null],
+      ["retire", null],
+      ["retire", null],
+      ["continue", "promote"],
+      ["continue", "projection"],
+    ],
+  );
+  assert.equal(harness.calls[1].request.reason, "superseded");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap retires duplicate queued successors before promotion", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "current",
+    duplicateWaitingScope: true,
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["claim", null],
+      ["retire", null],
+      ["retire", null],
+      ["continue", "promote"],
+      ["continue", "projection"],
+    ],
+  );
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap collapses waiting-successor predecessor chains before promotion", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "current",
+    duplicateWaitingScope: true,
+    chainedWaitingPredecessor: true,
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });

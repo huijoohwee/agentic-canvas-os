@@ -323,16 +323,35 @@ export function claimLegacyReviewAdmissionCloudAuthority({
     },
     environment,
   });
-  const claimed = cloudAuthorityFromResult({
-    ledgerRepository: resolvedLedgerRepository,
-    targetRepository: resolvedTargetRepository,
-    deviceId,
-    sessionId,
-    result: claimResult,
-  }, {
-    manifest,
-    canonicalBaseSha: resolvedCanonicalBaseSha,
-  });
+  const claimedState = projectRootState(
+    claimResult?.claim?.state || claimResult?.status || null,
+  );
+  const claimed = claimedState === "waiting-successor"
+    ? supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
+      claimResult,
+      ledgerRepository: resolvedLedgerRepository,
+      targetRepository: resolvedTargetRepository,
+      manifest,
+      canonicalBaseSha: resolvedCanonicalBaseSha,
+      branch: resolvedBranch,
+      deviceId,
+      sessionId,
+      ttlSeconds,
+      environment,
+      inspect,
+      invoke,
+      verify,
+    })
+    : cloudAuthorityFromResult({
+      ledgerRepository: resolvedLedgerRepository,
+      targetRepository: resolvedTargetRepository,
+      deviceId,
+      sessionId,
+      result: claimResult,
+    }, {
+      manifest,
+      canonicalBaseSha: resolvedCanonicalBaseSha,
+    });
   if (resolvedHeadSha === resolvedCanonicalBaseSha) {
     return verifyAdmissionCloudAuthority({
       authority: claimed,
@@ -364,6 +383,147 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       resolvedHeadSha,
     ].join(":"),
   });
+}
+function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
+  claimResult,
+  ledgerRepository,
+  targetRepository,
+  manifest,
+  canonicalBaseSha,
+  branch,
+  deviceId,
+  sessionId,
+  ttlSeconds,
+  environment,
+  inspect,
+  invoke,
+  verify,
+}) {
+  const waitingClaim = claimResult?.claim;
+  const waitingClaimId = requiredDigest(waitingClaim?.claimId, "waiting claimId");
+  const predecessorClaimId = requiredDigest(
+    waitingClaim?.predecessorClaimId,
+    "waiting predecessorClaimId",
+  );
+  const statusResult = inspect({
+    action: "status",
+    ledgerRepository,
+    request: { targetRepository },
+    environment,
+  });
+  const predecessor = statusResult?.claims?.find(
+    claim => claim?.claimId === predecessorClaimId,
+  );
+  if (!predecessor) {
+    throw new Error(
+      "Legacy review waiting successor could not find its preserved predecessor claim.",
+    );
+  }
+  if (projectRootState(predecessor.state) !== "parked") {
+    throw new Error(
+      `Legacy review waiting successor requires a dormant-preserved predecessor; received ${predecessor.state || "missing"}.`,
+    );
+  }
+  if (predecessor.actorId !== waitingClaim.actorId) {
+    throw new Error("Legacy review waiting successor cannot supersede another actor's preserved claim.");
+  }
+  const successionEvidence = {
+    schema: "agentic-legacy-review-successor-promotion/v1",
+    branch: requiredText(branch, "branch"),
+    predecessorClaimId,
+    successorClaimId: waitingClaimId,
+    canonicalBaseSha: requiredSha(canonicalBaseSha, "canonicalBaseSha"),
+    manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
+    writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
+  };
+  invoke({
+    action: "retire",
+    ledgerRepository,
+    request: {
+      targetRepository,
+      claimId: predecessorClaimId,
+      expectedFenceRevision: requiredDigest(
+        predecessor.fenceRevision,
+        "predecessor fenceRevision",
+      ),
+      expectedTransitionCounter: positiveInteger(
+        predecessor.transitionCounter,
+        "predecessor transitionCounter",
+      ),
+      reason: "superseded",
+      finalRevision: requiredSha(
+        predecessor.laneRevision,
+        "predecessor laneRevision",
+      ),
+      reviewRequestId: predecessor.reviewRequestId || null,
+      bytesDigest: digestValue({
+        ...successionEvidence,
+        operation: "retire-bytes",
+      }),
+      namedChecksDigest: digestValue({
+        ...successionEvidence,
+        operation: "retire-checks",
+      }),
+      handoffEvidenceDigest: digestValue({
+        ...successionEvidence,
+        operation: "retire-handoff",
+      }),
+      deviceId: requiredText(deviceId, "deviceId"),
+      sessionId: requiredText(sessionId, "sessionId"),
+      idempotencyKey: [
+        "legacy-review-supersede",
+        predecessorClaimId,
+        waitingClaimId,
+        requiredDigest(waitingClaim.fenceRevision, "waiting fenceRevision"),
+      ].join(":"),
+    },
+    environment,
+  });
+  const promotedResult = invoke({
+    action: "continue",
+    ledgerRepository,
+    request: {
+      targetRepository,
+      claimId: waitingClaimId,
+      expectedFenceRevision: requiredDigest(
+        waitingClaim.fenceRevision,
+        "waiting fenceRevision",
+      ),
+      expectedTransitionCounter: positiveInteger(
+        waitingClaim.transitionCounter,
+        "waiting transitionCounter",
+      ),
+      mode: "promote",
+      ttlSeconds: positiveInteger(ttlSeconds, "ttlSeconds"),
+      deviceId: requiredText(deviceId, "deviceId"),
+      sessionId: requiredText(sessionId, "sessionId"),
+      idempotencyKey: [
+        "legacy-review-promote",
+        waitingClaimId,
+        positiveInteger(waitingClaim.transitionCounter, "waiting transitionCounter"),
+        requiredDigest(waitingClaim.fenceRevision, "waiting fenceRevision"),
+      ].join(":"),
+    },
+    environment,
+  });
+  const promoted = cloudAuthorityFromResult({
+    ledgerRepository,
+    targetRepository,
+    deviceId,
+    sessionId,
+    result: promotedResult,
+  }, {
+    manifest,
+    canonicalBaseSha,
+  });
+  return verifyAdmissionCloudAuthority({
+    authority: promoted,
+    manifest,
+    canonicalBaseSha,
+    environment,
+    inspect,
+    invoke: verify,
+  }).authority;
 }
 export function heartbeatAdmissionCloudAuthority({
   authority,

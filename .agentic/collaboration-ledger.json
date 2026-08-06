@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 854,
-  "headDigest": "fcdbb8fa458330a1f093c8e897c0e17da099c311972be049901f23d6da81e890",
+  "sequence": 855,
+  "headDigest": "dbf65d70967e770d58a082320d93cd6ea75667b457b47a3de0bf7956151fad76",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -42561,6 +42561,65 @@
       },
       "claimDigest": "495d313109e5de19672fc7c28eaa1e29c0b0789930bab80a2469d8032f3732bc",
       "digest": "fcdbb8fa458330a1f093c8e897c0e17da099c311972be049901f23d6da81e890"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 855,
+      "parentDigest": "fcdbb8fa458330a1f093c8e897c0e17da099c311972be049901f23d6da81e890",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "f3922afabe92c0cf8716277073d1798b4b9c9d06a9d3f7258dc63b66cbd1b5a1",
+      "idempotencyKey": "b704d4eba0d35d565748d818a5503aa34ec1896bc69640f17c960cd19b3be3f3",
+      "requestDigest": "8983d51ad9466ccfd489baa6b3b025c85fab307d4d5377cc8fb537dd2f2c4ca1",
+      "evaluationTime": "2026-08-06T00:47:23.000Z",
+      "claimCore": {
+        "claimId": "f3922afabe92c0cf8716277073d1798b4b9c9d06a9d3f7258dc63b66cbd1b5a1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:6995c2096e652f4e4cbbadb57d798ef93dd3bf5a8a7711d6a34b09e20914e8f0",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:1e3f9dfa742c4bef7256f7c66ac7e7675f569569c6fc794b2758a085434df33c",
+        "canonicalBaseRevision": "7edadd10f497e4e714a86100cac737121dbb4b9d",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/canvasLarkAppHandoffRuntime.test.tsx",
+          "path:canvas/src/__tests__/feishuBaseSourceImport.test.ts",
+          "path:canvas/src/__tests__/knowledgeSourceReadClient.test.ts",
+          "path:canvas/src/__tests__/larkAppCanvasHandoff.test.ts",
+          "path:canvas/src/features/canvas/CanvasQueryBootstrapRuntime.tsx",
+          "path:canvas/src/features/canvas/larkAppCanvasHandoff.ts",
+          "path:canvas/src/features/source-files/feishuBaseSourceImportCommand.ts",
+          "path:canvas/src/features/source-files/knowledge-source",
+          "path:canvas/src/features/source-files/sourceFilesParseRuntime.ts",
+          "path:canvas/src/lib/routing/queryParams.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageRoutePaths.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageSyncContract.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageWorkerEnvContract.ts",
+          "path:canvas/src/tests/registry/postParserCases8.ts",
+          "path:cloudflare/workers/knowgrph-storage/.dev.vars.example",
+          "path:cloudflare/workers/knowgrph-storage/index.ts",
+          "path:cloudflare/workers/knowgrph-storage/knowledge-source",
+          "path:docs/documents/knowgrph-mcp/knowgrph-feishu-base-mcp-prd-tad.companion.md",
+          "path:docs/documents/knowgrph-mcp/knowgrph-feishu-base-mcp-prd-tad.md",
+          "path:docs/documents/knowgrph-mcp/knowgrph-lark-app-mcp-prd-tad.companion.md",
+          "path:docs/documents/knowgrph-mcp/knowgrph-lark-app-mcp-prd-tad.md",
+          "semantic:lark-readonly-knowledge-ingestion"
+        ],
+        "writeSetDigest": "907929b06dba3cd7b3f98c5b1bf2ac426c7e4eec244e31642d4a2fa560c71a7e",
+        "laneRevision": "ecc9d84336420477ad8916a5d07e371d321caf85",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 4,
+        "state": "current",
+        "expiresAt": "2026-08-06T01:17:23.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77Vu4L",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c61265a7d88f474809079c9da7b5fb38fd4d7075f63653300af746d0317997ce",
+      "digest": "dbf65d70967e770d58a082320d93cd6ea75667b457b47a3de0bf7956151fad76"
     }
   ]
 }

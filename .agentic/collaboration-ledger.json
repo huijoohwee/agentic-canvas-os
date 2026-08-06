@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 999,
-  "headDigest": "3f6848c4cf95c56eb2b3cbf34e9d3d74ac3bf9c144a7dead84210d5aaef5573f",
+  "sequence": 1000,
+  "headDigest": "1592edd6a414c7dfeaed354348b68bf3889365ee124903badca3c5656c4621e7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -50561,6 +50561,48 @@
       },
       "claimDigest": "5ec7f1d7cb7b5103183e3ca03bd127abd13991789d9cff593bdea4590b388c2c",
       "digest": "3f6848c4cf95c56eb2b3cbf34e9d3d74ac3bf9c144a7dead84210d5aaef5573f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1000,
+      "parentDigest": "3f6848c4cf95c56eb2b3cbf34e9d3d74ac3bf9c144a7dead84210d5aaef5573f",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "99b1daec01a88f30011c84d004b58741431e6a2f8f752334a7000021105b8f30",
+      "idempotencyKey": "b3acf07a7c8c1fad795d88e03afc5a2666ff51e4c435dcf35306b7a03007f95f",
+      "requestDigest": "20ee7c3ccd3543c4310765856e3721711304994775683a6d45e434baf1422e2e",
+      "evaluationTime": "2026-08-06T10:33:43.000Z",
+      "claimCore": {
+        "claimId": "99b1daec01a88f30011c84d004b58741431e6a2f8f752334a7000021105b8f30",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:dc2312d37d7cbd9c88620bd7b64be46af35c453e6f7ec5927ded839f2ef2476e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3f46a39c8d1f3a935fac2f6989d71ea4f80f893fad67d4b7562409ceab5b933e",
+        "canonicalBaseRevision": "10e0ee5fd94e30cb3b52470b62ab71d58e23edb6",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:device-branch-planned-review-recovery-20260806"
+        ],
+        "writeSetDigest": "63275c1de3de1a74aab9025c7ba6c6bc4eb053c8b1c4e76692240cd3648b7146",
+        "laneRevision": "b520a9d0e524da382095d5a05cdc63334d51b95d",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-06T10:56:03.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM77g0Lk",
+        "predecessorClaimId": "0de2dac0aaa11e66a2e4961e1dbb7bbf82c2ff5d4fee97ce3b972f4ed5940436",
+        "eligibleSince": "2026-08-06T10:21:51.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-06T10:26:03.000Z"
+      },
+      "claimDigest": "47353cf517da0fa19938c95e2a23a51ed610d59cbadeaa3018ba66b219c2725f",
+      "digest": "1592edd6a414c7dfeaed354348b68bf3889365ee124903badca3c5656c4621e7"
     }
   ]
 }

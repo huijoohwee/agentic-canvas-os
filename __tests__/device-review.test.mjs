@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { heartbeat, park, resume, review } from "../scripts/device-branch-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 import { reconcileCloudAuthorityProjection } from "../scripts/scoped-lane-cloud-reconciliation.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
@@ -220,6 +219,80 @@ test("review replays an exact same-session ready handoff without verification or
   ]);
 });
 
+test("review replays and upgrades a ready legacy root-source lane into cloud authority", () => {
+  const calls = [];
+  let saved = { ...lease, status: "review_ready", reviewHeadSha: headSha };
+  let remoteBody = "## Work item\n\nPreserve me.";
+  const result = review({
+    invocationPath: repo,
+    repo,
+    gitText: args => {
+      const key = args.join(" ");
+      const values = {
+        "worktree list --porcelain -z": `worktree ${repo}\0HEAD ${headSha}\0branch refs/heads/${branch}\0`,
+        "diff --name-only --diff-filter=U": "",
+        "ls-files -u": "",
+        "status --porcelain": "",
+        "branch --show-current": branch,
+        "rev-parse HEAD": headSha,
+        "rev-parse origin/main": lease.baseSha,
+        "log -1 --pretty=%s": "feat: managed autonomous run",
+        [`diff --name-only ${lease.baseSha}..${headSha} --`]: "scripts/device-branch-lib.mjs\n",
+      };
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    },
+    gitOptional: args => {
+      if (args[0] === "config" && args[2] === "remote.origin.url") {
+        return "git@github.com:huijoohwee/agentic-canvas-os.git";
+      }
+      if (args[0] === "ls-remote") return `${headSha}\trefs/heads/${branch}`;
+      return "";
+    },
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
+      : pullRequestJson({ body: remoteBody, isDraft: false }),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: () => saved,
+      annotate: ({ values }) => (saved = { ...saved, ...values }),
+    },
+    sessionId: "session-a",
+    claimLegacyReviewCloudAuthority: ({ headSha: claimedHeadSha }) => {
+      const local = cloudLease({ state: "active", laneRevision: claimedHeadSha });
+      return {
+        authority: local.cloudAuthority,
+        verification: operationVerification(local.cloudAuthority),
+      };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha: reviewedHeadSha }) => ({
+      authority: {
+        ...authority,
+        state: "review_ready",
+        laneRevision: reviewedHeadSha,
+        focusedEvidenceDigest: "9".repeat(64),
+      },
+    }),
+    verifyReviewReadyCloudAuthority: ({ authority }) => ({ authority }),
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.equal(saved.cloudAuthority.state, "review_ready");
+  assert.equal(saved.admission.status, "admitted");
+  assert.equal(calls.some(call => call[0] === "npm" || call[1] === "push"), false);
+  assert.deepEqual(calls.map(call => call.slice(0, 3)), [
+    ["git", "merge-base", "--is-ancestor"],
+    ["gh", "pr", "edit"],
+  ]);
+});
+
 test("resume reactivates an attached reviewed handoff under a new fenced session", () => {
   const calls = [];
   const prior = { ...lease, status: "review_ready", reviewHeadSha: headSha };
@@ -322,6 +395,104 @@ test("resume reactivates an attached reviewed handoff under a new fenced session
   assert.equal(parkCalls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"), false);
 });
 
+test("review upgrades a legacy root-source lane into cloud-authoritative review", () => {
+  const events = [];
+  let isDraft = true;
+  let remoteBody = "## Work item";
+  let remoteHead = lease.fenceSha;
+  let saved = { ...lease };
+  const reviewResult = review({
+    invocationPath: repo,
+    repo,
+    gitText: args => {
+      const key = args.join(" ");
+      const values = {
+        "worktree list --porcelain -z": `worktree ${repo}\0HEAD ${headSha}\0branch refs/heads/${branch}\0`,
+        "diff --name-only --diff-filter=U": "",
+        "ls-files -u": "",
+        "status --porcelain": "",
+        "branch --show-current": branch,
+        "rev-parse HEAD": headSha,
+        "rev-parse origin/main": lease.baseSha,
+        "log -1 --pretty=%s": "feat: managed autonomous run",
+        [`diff --name-only ${lease.baseSha}..${headSha} --`]: "scripts/device-branch-lib.mjs\n",
+      };
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    },
+    gitOptional: args => (
+      args[0] === "config" && args[2] === "remote.origin.url"
+        ? "git@github.com:huijoohwee/agentic-canvas-os.git"
+        : ""
+    ),
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 42, headRefName: branch, url: pullRequestUrl }])
+      : pullRequestJson({ body: remoteBody, isDraft, headRefOid: remoteHead }),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      read: () => saved,
+      verify: () => saved,
+      annotate: ({ values }) => {
+        saved = { ...saved, ...values };
+        events.push(`lease:annotate:${Object.keys(values).sort().join(",")}`);
+        return saved;
+      },
+      release: ({ status }) => {
+        saved = { ...saved, status };
+        events.push(`lease:release:${status}`);
+        return saved;
+      },
+    },
+    sessionId: "session-a",
+    claimLegacyReviewCloudAuthority: ({ manifest, headSha: claimedHeadSha }) => {
+      events.push(`bootstrap:${claimedHeadSha}:${manifest.writeSetDigest}`);
+      const local = cloudLease({ state: "active", laneRevision: claimedHeadSha });
+      return {
+        authority: local.cloudAuthority,
+        verification: operationVerification(local.cloudAuthority),
+      };
+    },
+    reconcileCloudAuthority: ({ authority }) => {
+      events.push(`reconcile:${authority.state}:${authority.laneRevision}`);
+      return { authority, verification: operationVerification(authority) };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha: reviewedHeadSha }) => {
+      events.push(`transition:${reviewedHeadSha}`);
+      return {
+        authority: {
+          ...authority,
+          state: "review_ready",
+          laneRevision: reviewedHeadSha,
+          focusedEvidenceDigest: "9".repeat(64),
+        },
+      };
+    },
+    verifyReviewReadyCloudAuthority: ({ authority }) => {
+      events.push(`verify:${authority.state}:${authority.laneRevision}`);
+      return { authority };
+    },
+    run: (command, args) => {
+      const trace = `${command} ${args.join(" ")}`;
+      events.push(`run:${trace}`);
+      if (command === "git" && args[0] === "push") remoteHead = headSha;
+      if (command === "gh" && args[0] === "pr" && args[1] === "ready") isDraft = false;
+      if (command === "gh" && args[0] === "pr" && args[1] === "edit") {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+  });
+
+  assert.equal(reviewResult, pullRequestUrl);
+  assert.equal(saved.status, "review_ready");
+  assert.equal(saved.cloudAuthority.state, "review_ready");
+  assert.equal(saved.admission.status, "admitted");
+  assert.equal(saved.admission.semanticScope, lease.scope);
+  assert.match(saved.admission.manifestDigest, /^[0-9a-f]{64}$/u);
+  assert.ok(events.indexOf(`bootstrap:${lease.fenceSha}:${saved.admission.writeSetDigest}`) < events.indexOf("run:npm run check"));
+  assert.ok(events.some(event => event === `transition:${headSha}`));
+});
+
 test("cloud-admitted review verifies around check and transitions the pushed head before local release", () => {
   const events = [];
   const initial = cloudLease();
@@ -364,6 +535,48 @@ test("cloud-admitted review verifies around check and transitions the pushed hea
   assert.ok(events.indexOf(transitioned) < events.indexOf("lease:release:review_ready"));
   assert.equal(outcome.saved.cloudAuthority.state, "review_ready");
   assert.equal(outcome.saved.cloudAuthority.laneRevision, headSha);
+});
+
+test("cloud-admitted review accepts an already projected active lane before the final push", () => {
+  const events = [];
+  const projectedHead = "9".repeat(40);
+  const initial = cloudLease({ laneRevision: projectedHead });
+  const outcome = runCloudReview({
+    initial,
+    events,
+    reconcileCloudAuthority: ({ authority }) => {
+      events.push(`cloud:active:${authority.laneRevision}`);
+      return {
+        authority: {
+          ...authority,
+          laneRevision: projectedHead,
+          state: "active",
+        },
+        verification: operationVerification({
+          ...authority,
+          laneRevision: projectedHead,
+          state: "active",
+        }),
+      };
+    },
+    reviewReadyCloudAuthority: ({ authority, headSha: pushedHead }) => {
+      events.push(`cloud:transition:${pushedHead}`);
+      return {
+        authority: {
+          ...authority,
+          state: "review_ready",
+          laneRevision: pushedHead,
+          focusedEvidenceDigest: "9".repeat(64),
+        },
+      };
+    },
+    verifyReviewReadyCloudAuthority: ({ authority }) => ({ authority }),
+  });
+
+  assert.equal(outcome.saved.cloudAuthority.state, "review_ready");
+  assert.equal(outcome.saved.cloudAuthority.laneRevision, headSha);
+  assert.ok(events.includes(`cloud:active:${projectedHead}`));
+  assert.ok(events.includes(`cloud:transition:${headSha}`));
 });
 
 test("cloud transition crash reconciles the exact pushed review-ready head before local release", () => {
@@ -479,9 +692,7 @@ function cloudLease({ state = "active", laneRevision = lease.fenceSha } = {}) {
   const writeSetDigest = digestValue(declaredWriteSet);
   const claimId = digestValue({
     actorId: "github-user:1", canonicalBaseRevision: lease.baseSha,
-    deviceId: pseudonymousIdentifier("device", lease.device),
     leaseEpoch: 1, repositoryId: "github-repository:1",
-    sessionId: pseudonymousIdentifier("session", lease.sessionId),
     workItemId: "work-item:1", writeSetDigest,
   });
   return {
@@ -501,7 +712,12 @@ function cloudLease({ state = "active", laneRevision = lease.fenceSha } = {}) {
       ledgerRepository: "org/ledger", targetRepository: "org/repo", claimId,
       claimDigest: "2".repeat(64),
       ledgerRevision: "d".repeat(40),
+      ledgerDigest: "b".repeat(64),
       claimLedgerRevision: "3".repeat(64),
+      entrySchema: "agentic-cloud-collaboration-entry/v2",
+      claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+      operationReceiptDigest: "4".repeat(64),
+      mutationAuthorityEligible: true,
       canonicalBaseSha: lease.baseSha, laneRevision,
       cloudDeclaredWriteScope: declaredWriteSet, writeSetDigest,
       deviceId: lease.device, sessionId: lease.sessionId, reviewRequestId: "42",
@@ -537,6 +753,10 @@ function operationVerification(authority) {
 function operationClaim(authority) {
   return {
     claimId: authority.claimId, state: authority.state, actorId: "github-user:1",
+    entrySchema: authority.entrySchema,
+    claimIdentitySchema: authority.claimIdentitySchema,
+    operationReceiptDigest: authority.operationReceiptDigest,
+    mutationAuthorityEligible: authority.mutationAuthorityEligible,
     repositoryId: "github-repository:1", workItemId: "work-item:1",
     canonicalBaseRevision: authority.canonicalBaseSha, laneRevision: authority.laneRevision,
     declaredWriteScope: authority.cloudDeclaredWriteScope, writeSetDigest: authority.writeSetDigest,

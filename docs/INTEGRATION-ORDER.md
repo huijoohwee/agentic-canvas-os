@@ -2,7 +2,7 @@
 title: "Dependency-Ordered Integration Contract"
 graphId: "md:dependency-ordered-integration-contract"
 doc_type: "Integration Workflow Contract"
-date: "2026-07-30"
+date: "2026-08-04"
 lang: "en-US"
 schema: "agentic-integration-order/v1"
 frontmatter_contract: "required"
@@ -14,10 +14,12 @@ runtime_claim: "deterministic model-free contract; reading or checking this docu
 runtime_proof: "RUNTIME-PROOF.md"
 runtime_readiness_policy: "fail-closed"
 runtime_readiness_finding: "runtime-readiness-unproven"
-guideline_source_version: "1.6.0"
+guideline_source_version: "1.14.0"
 guideline_module_version: "1.0.0"
-guideline_source_revision: "bc78529f6ab4ec29beb26f0b67d015aed24d08c1"
-guideline_source_digest: "d200775cf96c7cb6e7ae973dde8b03baca81ba7acaafadf365fa6ab2daa07195"
+guideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"
+guideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"
+guideline_source_digest: "ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd"
+git_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5"
 ---
 
 # Dependency-Ordered Integration Contract
@@ -141,6 +143,30 @@ A release frontier may be sealed only when:
 The seal is an immutable candidate input. It is not release authorization and
 does not deploy, publish, or mutate any target.
 
+## Cross-Repository Coordination Task
+
+A cross-repository coordination task is a dependency-ordered directed acyclic
+graph of immutable per-repository work units. Each unit retains its own
+repository, branch, registered worktree, semantic scope, normalized write set
+and digest, authenticated claim, authority epoch, fence, review request, source
+revision and digest, named checks, and handoff evidence. The group identity is
+correlation only: it must not become a shared branch, worktree, lease, claim,
+fence, review request, or mutable evidence record.
+
+Every unit is admitted and continued independently through the four
+provider-neutral root operations `claim(scope)`, `continue(claim)`,
+`integrate(candidate)`, and `retire(claim)`. Disjoint units may progress in the
+same dependency wave without a global concurrency cap. Within one repository,
+path-prefix overlap serializes work even when an explicit dependency edge is
+absent. A waiting successor retains only its ordered non-writing request, while
+`dormant-preserved` retains its scope reservation until continuation or retirement.
+
+An edge means the consumer's integration receipt must bind the predecessor's
+exact terminal evidence. It does not transfer authority. A candidate advances
+only after every dependency is exact, its immutable review identity and
+revision still match, named checks pass, handoff evidence resolves, and the
+current monotonic compare-and-swap succeeds.
+
 ## Evidence and Findings
 
 Minimum findings are:
@@ -169,10 +195,22 @@ changing the core:
 | Runtime convergence | The repository-owned canonical runtime handoff and exact visible revision proof required by the lifecycle. |
 | Release frontier | A sealed input to `RELEASE-WORKFLOW.md`; still subject to candidate review and authenticated release authorization. |
 
-Use `device:start` or `device:resume` to establish the current writer lease.
-Use `device:review` for a non-terminal reviewed handoff. Use
-`device:integrate` only when protected delivery is authorized. Run `turn:end`
-only after protected convergence when canonical runtime handoff is required.
+The canonical source unit is JH `huijoohwee.github.io` revision
+`8a2e5e0711f7193535b9aac2aee285e0ee705111`, tree
+`63c13dcfb3ce01aa60213f4f6fa214bfa0e76778`, guideline digest
+`ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd`,
+and git-companion digest
+`c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5`.
+Its immutable unit is the predecessor of the ACOS runtime and registration
+unit: `JH guideline/checker -> ACOS coordination/runtime/registration`. Source
+drift blocks the consumer before mutation.
+
+Repository lifecycle wrappers are replaceable projections. Start and resume
+map to `claim(scope)` or `continue(claim)`; review binds immutable evidence
+through `continue(claim)`; protected delivery maps to `integrate(candidate)`;
+terminal cleanup becomes eligible only after `retire(claim)` and independent
+protected convergence proof. No wrapper creates another root operation or
+derives absent operator authority.
 
 For multiple units, create the plan before integration. Integrate successful
 dependency waves first, fetch the protected revision after every advancement,

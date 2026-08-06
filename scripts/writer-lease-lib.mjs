@@ -5,10 +5,43 @@ import { normalizePreClaimIntegrationContinuation } from "./expired-committed-co
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
+export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+  "agentic-expired-committed-heartbeat-recovery/v1";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_PULL_REQUEST_ACTION = "/change";
 export const DEVICE_BRANCH_PATTERN =
   /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
+  "changedPathCount",
+  "changedPathsDigest",
+  "headSha",
+  "pullRequestBodyDigest",
+  "rangeDiffDigest",
+  "recoveredAt",
+  "renewedClaimDigest",
+  "renewedClaimLedgerRevision",
+  "renewedCloudTransitionCounter",
+  "renewedLedgerRevision",
+  "schema",
+  "sourceBaseSha",
+  "sourceBranch",
+  "sourceClaimDigest",
+  "sourceClaimId",
+  "sourceClaimLedgerRevision",
+  "sourceCloudTransitionCounter",
+  "sourceDevice",
+  "sourceEpoch",
+  "sourceFenceSha",
+  "sourceLedgerRevision",
+  "sourceMarkerDigest",
+  "sourcePullRequestUrl",
+  "sourceScope",
+  "sourceSessionId",
+  "status",
+  "treeSha",
+]);
 
 export function parseDeviceBranch(branch) {
   const match = String(branch || "").match(DEVICE_BRANCH_PATTERN);
@@ -207,6 +240,58 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
+  function recoverExpiredCommittedHeartbeat({
+    sessionId,
+    branch,
+    expectedLease,
+    renewedCloudAuthority,
+    recoveryEvidence,
+    ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
+    recoveredAt,
+  }) {
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      const instant = now();
+      if (!current || JSON.stringify(current) !== JSON.stringify(expectedLease)) {
+        throw new Error(`Writer lease for ${branch} changed before expired committed recovery.`);
+      }
+      if (
+        current.schema !== WRITER_LEASE_SCHEMA ||
+        current.status !== "active" ||
+        current.sessionId !== sessionId ||
+        current.branch !== branch
+      ) {
+        throw new Error("Expired committed recovery lost its exact active writer lease identity.");
+      }
+      const sourceExpiry = Date.parse(current.expiresAt);
+      if (!Number.isFinite(sourceExpiry) || sourceExpiry > instant.getTime()) {
+        throw new Error("Expired committed recovery requires an expired local writer lease.");
+      }
+      const lease = projectExpiredCommittedHeartbeatLease({
+        sourceLease: current,
+        renewedCloudAuthority,
+        recoveryEvidence,
+        ttlMs,
+        recoveredAt,
+      });
+      if (
+        Date.parse(lease.heartbeatAt) > instant.getTime() ||
+        Date.parse(lease.expiresAt) <= instant.getTime()
+      ) {
+        throw new Error(
+          "Expired committed recovery projection is not live at the local registry CAS.",
+        );
+      }
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      });
+      return lease;
+    });
+  }
+
   function annotate({ sessionId, branch, values }) {
     return withLock(() => {
       const registry = readRegistry();
@@ -392,8 +477,56 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   }
 
   return { annotate, beginCompletion, claim, complete, heartbeat, read,
+    recoverExpiredCommittedHeartbeat,
     recoverFromPullRequestMarker,
     readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
+}
+
+export function projectExpiredCommittedHeartbeatLease({
+  sourceLease,
+  renewedCloudAuthority,
+  recoveryEvidence,
+  ttlMs = DEFAULT_WRITER_LEASE_TTL_MS,
+  recoveredAt,
+}) {
+  const instant = new Date(recoveredAt);
+  if (
+    !Number.isFinite(instant.getTime()) ||
+    instant.toISOString() !== recoveredAt ||
+    Date.parse(sourceLease?.expiresAt) > instant.getTime()
+  ) {
+    throw new Error(
+      "Expired committed recovery projection requires one exact expired source instant.",
+    );
+  }
+  requireSameRecoveryCloudSubject({
+    source: sourceLease?.cloudAuthority,
+    renewed: renewedCloudAuthority,
+    lease: sourceLease,
+    instant,
+  });
+  const recovery = normalizeExpiredCommittedHeartbeatRecovery({
+    ...recoveryEvidence,
+    schema: EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    status: "recovered",
+    renewedClaimDigest: renewedCloudAuthority.claimDigest,
+    renewedLedgerRevision: renewedCloudAuthority.ledgerRevision,
+    renewedClaimLedgerRevision: renewedCloudAuthority.claimLedgerRevision,
+    renewedCloudTransitionCounter: renewedCloudAuthority.transitionCounter,
+    recoveredAt,
+  });
+  requireRecoveryEvidenceMatchesLease({ recovery, lease: sourceLease });
+  return {
+    ...sourceLease,
+    cloudAuthority: renewedCloudAuthority,
+    expiredCommittedHeartbeatRecovery: recovery,
+    heartbeatAt: recoveredAt,
+    expiresAt: boundedExpiry({
+      instant,
+      ttlMs,
+      expiresAtCap: renewedCloudAuthority.expiresAt,
+    }),
+  };
 }
 
 export function renderWriterLeasePullRequestBody(lease) {
@@ -419,8 +552,8 @@ export function updateWriterLeasePullRequestBody(body, lease) {
   return source ? `${source}\n\n${marker}` : renderWriterLeasePullRequestBody(lease);
 }
 
-function renderWriterLeaseMarker(lease) {
-  const payload = JSON.stringify({
+export function projectWriterLeasePullRequestMarker(lease) {
+  return {
     schema: lease.schema,
     status: lease.status,
     epoch: lease.epoch,
@@ -438,6 +571,12 @@ function renderWriterLeaseMarker(lease) {
     ...(lease.deliveryHeadSha ? { deliveryHeadSha: lease.deliveryHeadSha } : {}),
     ...(lease.ownedDirtRecovery ? {
       ownedDirtRecovery: normalizeOwnedDirtRecovery(lease.ownedDirtRecovery),
+    } : {}),
+    ...(lease.expiredCommittedHeartbeatRecovery ? {
+      expiredCommittedHeartbeatRecovery:
+        normalizeExpiredCommittedHeartbeatRecovery(
+          lease.expiredCommittedHeartbeatRecovery,
+        ),
     } : {}),
     ...(lease.pullRequestProjectionRepair ? {
       pullRequestProjectionRepair: lease.pullRequestProjectionRepair,
@@ -464,12 +603,16 @@ function renderWriterLeaseMarker(lease) {
       parkStashStatus: lease.parkStashStatus ?? null,
     } : {}),
     ...(lease.completion || {}),
-  });
+  };
+}
+
+function renderWriterLeaseMarker(lease) {
+  const payload = JSON.stringify(projectWriterLeasePullRequestMarker(lease));
   return `<!-- ${WRITER_LEASE_SCHEMA} ${payload} -->`;
 }
 
 function requireSha(value, label) {
-  if (!/^[0-9a-f]{40}$/.test(String(value || ""))) {
+  if (!SHA_PATTERN.test(String(value || ""))) {
     throw new Error(`${label} must be an exact lowercase 40-character Git commit SHA.`);
   }
 }
@@ -502,12 +645,155 @@ export function parseWriterLeasePullRequestBody(body) {
     !["repairing", "completed"].includes(value.pullRequestProjectionRepair?.status)
   )) return null;
   let ownedDirtRecovery;
+  let expiredCommittedHeartbeatRecovery;
   try {
     ownedDirtRecovery = normalizeOwnedDirtRecovery(value.ownedDirtRecovery);
+    expiredCommittedHeartbeatRecovery =
+      normalizeExpiredCommittedHeartbeatRecovery(
+        value.expiredCommittedHeartbeatRecovery,
+      );
   } catch {
     return null;
   }
-  return ownedDirtRecovery ? { ...value, ownedDirtRecovery } : value;
+  return {
+    ...value,
+    ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
+    ...(expiredCommittedHeartbeatRecovery
+      ? { expiredCommittedHeartbeatRecovery }
+      : {}),
+  };
+}
+
+export function normalizeExpiredCommittedHeartbeatRecovery(value) {
+  if (value === undefined || value === null) return null;
+  const invalid = (
+    JSON.stringify(Object.keys(value).sort()) !==
+      JSON.stringify(EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS) ||
+    value?.schema !== EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA ||
+    value.status !== "recovered" ||
+    !Number.isInteger(value.sourceEpoch) ||
+    value.sourceEpoch < 1 ||
+    !requiredRecoveryText(value.sourceSessionId) ||
+    !requiredRecoveryText(value.sourceDevice) ||
+    !requiredRecoveryText(value.sourceScope) ||
+    !parseDeviceBranch(value.sourceBranch) ||
+    !requiredRecoveryText(value.sourcePullRequestUrl) ||
+    !SHA_PATTERN.test(String(value.sourceBaseSha || "")) ||
+    !SHA_PATTERN.test(String(value.sourceFenceSha || "")) ||
+    !SHA_PATTERN.test(String(value.headSha || "")) ||
+    value.headSha === value.sourceFenceSha ||
+    !SHA_PATTERN.test(String(value.treeSha || "")) ||
+    !DIGEST_PATTERN.test(String(value.sourceClaimId || "")) ||
+    !DIGEST_PATTERN.test(String(value.sourceClaimDigest || "")) ||
+    !SHA_PATTERN.test(String(value.sourceLedgerRevision || "")) ||
+    !DIGEST_PATTERN.test(String(value.sourceClaimLedgerRevision || "")) ||
+    !Number.isInteger(value.sourceCloudTransitionCounter) ||
+    value.sourceCloudTransitionCounter < 1 ||
+    !DIGEST_PATTERN.test(String(value.renewedClaimDigest || "")) ||
+    !SHA_PATTERN.test(String(value.renewedLedgerRevision || "")) ||
+    !DIGEST_PATTERN.test(String(value.renewedClaimLedgerRevision || "")) ||
+    !Number.isInteger(value.renewedCloudTransitionCounter) ||
+    value.renewedCloudTransitionCounter <= value.sourceCloudTransitionCounter ||
+    !DIGEST_PATTERN.test(String(value.sourceMarkerDigest || "")) ||
+    !DIGEST_PATTERN.test(String(value.pullRequestBodyDigest || "")) ||
+    !DIGEST_PATTERN.test(String(value.rangeDiffDigest || "")) ||
+    !Number.isInteger(value.changedPathCount) ||
+    value.changedPathCount < 1 ||
+    !DIGEST_PATTERN.test(String(value.changedPathsDigest || "")) ||
+    !Number.isFinite(Date.parse(value.recoveredAt))
+  );
+  if (invalid) {
+    throw new Error("Expired committed heartbeat recovery evidence is malformed.");
+  }
+  return {
+    schema: value.schema,
+    status: value.status,
+    sourceEpoch: value.sourceEpoch,
+    sourceSessionId: value.sourceSessionId,
+    sourceDevice: value.sourceDevice,
+    sourceScope: value.sourceScope,
+    sourceBranch: value.sourceBranch,
+    sourceBaseSha: value.sourceBaseSha,
+    sourceFenceSha: value.sourceFenceSha,
+    sourcePullRequestUrl: value.sourcePullRequestUrl,
+    sourceClaimId: value.sourceClaimId,
+    sourceClaimDigest: value.sourceClaimDigest,
+    sourceLedgerRevision: value.sourceLedgerRevision,
+    sourceClaimLedgerRevision: value.sourceClaimLedgerRevision,
+    sourceCloudTransitionCounter: value.sourceCloudTransitionCounter,
+    renewedClaimDigest: value.renewedClaimDigest,
+    renewedLedgerRevision: value.renewedLedgerRevision,
+    renewedClaimLedgerRevision: value.renewedClaimLedgerRevision,
+    renewedCloudTransitionCounter: value.renewedCloudTransitionCounter,
+    headSha: value.headSha,
+    treeSha: value.treeSha,
+    changedPathCount: value.changedPathCount,
+    changedPathsDigest: value.changedPathsDigest,
+    sourceMarkerDigest: value.sourceMarkerDigest,
+    pullRequestBodyDigest: value.pullRequestBodyDigest,
+    rangeDiffDigest: value.rangeDiffDigest,
+    recoveredAt: new Date(value.recoveredAt).toISOString(),
+  };
+}
+
+function requireSameRecoveryCloudSubject({ source, renewed, lease, instant }) {
+  const immutableFields = [
+    "schema",
+    "provider",
+    "ledgerRepository",
+    "targetRepository",
+    "claimId",
+    "canonicalBaseSha",
+    "laneRevision",
+    "writeSetDigest",
+    "deviceId",
+    "sessionId",
+    "reviewRequestId",
+    "leaseEpoch",
+    "state",
+    "manifestDigest",
+  ];
+  if (
+    !source ||
+    !renewed ||
+    immutableFields.some(field => source[field] !== renewed[field]) ||
+    JSON.stringify(source.cloudDeclaredWriteScope) !==
+      JSON.stringify(renewed.cloudDeclaredWriteScope) ||
+    renewed.state !== "active" ||
+    renewed.canonicalBaseSha !== lease.baseSha ||
+    renewed.laneRevision !== lease.fenceSha ||
+    renewed.deviceId !== lease.device ||
+    renewed.sessionId !== lease.sessionId ||
+    renewed.transitionCounter !== source.transitionCounter + 1 ||
+    Date.parse(renewed.expiresAt) <= instant.getTime()
+  ) {
+    throw new Error("Cloud heartbeat changed the expired lease claim subject.");
+  }
+}
+
+function requireRecoveryEvidenceMatchesLease({ recovery, lease }) {
+  const cloud = lease.cloudAuthority;
+  if (
+    recovery.sourceEpoch !== lease.epoch ||
+    recovery.sourceSessionId !== lease.sessionId ||
+    recovery.sourceDevice !== lease.device ||
+    recovery.sourceScope !== lease.scope ||
+    recovery.sourceBranch !== lease.branch ||
+    recovery.sourceBaseSha !== lease.baseSha ||
+    recovery.sourceFenceSha !== lease.fenceSha ||
+    recovery.sourcePullRequestUrl !== lease.pullRequestUrl ||
+    recovery.sourceClaimId !== cloud?.claimId ||
+    recovery.sourceClaimDigest !== cloud?.claimDigest ||
+    recovery.sourceLedgerRevision !== cloud?.ledgerRevision ||
+    recovery.sourceClaimLedgerRevision !== cloud?.claimLedgerRevision ||
+    recovery.sourceCloudTransitionCounter !== cloud?.transitionCounter
+  ) {
+    throw new Error("Expired committed recovery evidence changed from its source lease.");
+  }
+}
+
+function requiredRecoveryText(value) {
+  return typeof value === "string" && value.trim() === value && value.length > 0;
 }
 
 function escapeRegExp(value) {

@@ -73,6 +73,7 @@ export function start({
     if (currentBranch || !worktree.detached) {
       throw new Error("device:start requires a detached registered task worktree; keep main checked out in its canonical worktree.");
     }
+    requireProvisionedRootSourceStart({ branch, admission, cloudAuthority, gitOptional });
     if (existingOwner) throw new Error(`Pull request ${existingOwner.url} exists for ${branch} without its exact local lease.`);
     const localCollision = gitOptional(["show-ref", "--hash", "--verify", `refs/heads/${branch}`]).trim();
     const remoteCollision = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]).trim();
@@ -253,4 +254,27 @@ function requireClean(gitText) {
 
 function requireSession(sessionId) {
   if (!String(sessionId || "").trim()) throw new Error("A stable session id is required through --session=<id> or AGENTIC_SESSION_ID.");
+}
+
+function requireProvisionedRootSourceStart({ branch, admission, cloudAuthority, gitOptional }) {
+  if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return;
+  if (admission && cloudAuthority) return;
+  throw new Error(
+    `Root-source repository agentic-canvas-os requires provisioned device:start for ${branch}; supply scoped lane admission and cloud authority before claiming a fresh lane.`,
+  );
+}
+
+function resolveOriginRepositoryName(gitOptional) {
+  const remoteOrigin = [
+    gitOptional(["config", "--get", "remote.origin.url"]),
+    gitOptional(["remote", "get-url", "origin"]),
+  ]
+    .map(value => String(value || "").trim())
+    .find(Boolean);
+  if (!remoteOrigin) return null;
+  const segments = remoteOrigin
+    .replace(/\.git$/u, "")
+    .split(/[/:]/u)
+    .filter(Boolean);
+  return segments.at(-1) || null;
 }

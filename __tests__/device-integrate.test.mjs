@@ -9,6 +9,7 @@ import {
   DEVICE_INTEGRATION_RESULT_SCHEMA,
   integrateSession,
 } from "../scripts/device-integrate-lib.mjs";
+import { CLOUD_COLLABORATION_BOUNDS } from "../scripts/cloud-collaboration-primitives.mjs";
 
 const branch = "agent/device/runtime-integration";
 const baseSha = "a".repeat(40);
@@ -19,6 +20,31 @@ const mergeSha = "e".repeat(40);
 const mainSha = "f".repeat(40);
 const knowgrphSha = "1".repeat(40);
 const pullRequestUrl = "https://github.test/example/repo/pull/42";
+const protectedSquashSubject = "fix: bind exact protected squash subjects";
+const deliveryEvidence = Object.freeze({
+  dependencyClosureDigest: "1".repeat(64),
+  namedChecksDigest: "2".repeat(64),
+  handoffEvidenceDigest: "3".repeat(64),
+  operatorDecisionDigest: "4".repeat(64),
+  integrationIntentDigest: "5".repeat(64),
+});
+const reviewRequestId = "github-pull-request:PR_42";
+const focusedEvidenceDigest = "6".repeat(64);
+
+function deliveryAuthorizedAuthority(authority, headSha = commitSha, overrides = {}) {
+  return {
+    ...authority,
+    state: "delivery_authorized",
+    integrationReceiptDigest: "7".repeat(64),
+    integration: {
+      candidateRevision: headSha,
+      reviewRequestId,
+      focusedEvidenceDigest,
+      ...deliveryEvidence,
+      ...overrides,
+    },
+  };
+}
 
 test("dirty integration validates an exact manifest, commits, publishes, completes, and proves runtime readiness", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-"));
@@ -526,6 +552,7 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
   });
   const verifiedHeads = [];
   const commands = [];
+  let cloudMutation = null;
   let completed = false;
   try {
     const result = integrateSession({
@@ -535,6 +562,8 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: args => {
@@ -549,9 +578,32 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
       },
       leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
       sessionId: "session-a",
-      authorizeCloudDelivery: ({ authority, headSha }) => {
+      buildDeliveryEvidence: input => {
+        assert.deepEqual(input, {
+          operation: "integrate",
+          branch,
+          headSha: commitSha,
+          headTreeSha: treeSha,
+          pullRequestNumber: 42,
+          deviceId: "device-a",
+          sessionId: "session-a",
+          manifest: lease.admission,
+          authority: lease.cloudAuthority,
+        });
+        return deliveryEvidence;
+      },
+      authorizeCloudDelivery: ({ authority, headSha, invoke, ...input }) => {
         assert.equal(headSha, commitSha);
-        return { authority: { ...authority, state: "delivery_authorized" } };
+        assert.deepEqual(deliveryDigests(input), deliveryEvidence);
+        invoke({
+          action: "integrate",
+          request: { idempotencyKey: "oversized:" + "a".repeat(600) },
+        });
+        return { authority: deliveryAuthorizedAuthority(authority, headSha) };
+      },
+      invokeCloudMutation: input => {
+        cloudMutation = input;
+        return { ok: true };
       },
       verifyCloudAuthority: ({ headSha }) => {
         verifiedHeads.push(headSha);
@@ -590,8 +642,133 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
 
     assert.equal(result.status, "integrated");
     assert.equal(completed, true);
+    assert.match(cloudMutation.request.idempotencyKey, /^device-cloud-mutation:[0-9a-f]{64}$/u);
+    assert.ok(
+      cloudMutation.request.idempotencyKey.length
+        <= CLOUD_COLLABORATION_BOUNDS.textCharacters,
+    );
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
-    assert.ok(commands.some(call => call.join(" ") === `gh pr merge --auto --squash ${pullRequestUrl}`));
+    assert.ok(commands.some(call => call.join(" ") ===
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("review-ready delivery rejects evidence failure before authorization or protected auto-merge", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-evidence-failure-"));
+  const lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+  });
+  const commands = [];
+  let authorized = false;
+  let completed = false;
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "OPEN",
+        baseRefName: "main",
+        headRefOid: commitSha,
+        mergeCommit: null,
+      }),
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      buildDeliveryEvidence: () => {
+        throw new Error("delivery evidence could not be derived");
+      },
+      authorizeCloudDelivery: () => {
+        authorized = true;
+        return { authority: lease.cloudAuthority };
+      },
+      verifyCloudAuthority: () => ({ ok: true }),
+      run: (command, args) => commands.push([command, ...args]),
+      runText: () => "",
+      publishTask: () => {},
+      completeTask: () => { completed = true; },
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    }), /delivery evidence could not be derived/);
+    assert.equal(authorized, false);
+    assert.equal(completed, false);
+    assert.equal(commands.some(call => call.join(" ").includes("gh pr merge")), false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("review-ready delivery rejects authorization that changes one derived evidence digest", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-evidence-drift-"));
+  const lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+  });
+  const commands = [];
+  let verified = false;
+  let completed = false;
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "OPEN",
+        baseRefName: "main",
+        headRefOid: commitSha,
+        mergeCommit: null,
+      }),
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      buildDeliveryEvidence: () => deliveryEvidence,
+      authorizeCloudDelivery: ({ authority, headSha }) => ({
+        authority: deliveryAuthorizedAuthority(authority, headSha, {
+          namedChecksDigest: "f".repeat(64),
+        }),
+      }),
+      verifyCloudAuthority: () => {
+        verified = true;
+        throw new Error("drifted authorization must not be verified");
+      },
+      run: (command, args) => commands.push([command, ...args]),
+      runText: () => "",
+      publishTask: () => {},
+      completeTask: () => { completed = true; },
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    }), /does not record the exact derived delivery evidence and receipt/u);
+    assert.equal(verified, false);
+    assert.equal(completed, false);
+    assert.equal(commands.some(call => call.join(" ").includes("gh pr merge")), false);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -636,7 +813,9 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
         if (key === `merge-tree --write-tree --no-messages ${commitSha} ${refreshedMainSha}`) {
           return refreshedTreeSha;
         }
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
         if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return refreshedTreeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         if (key === "rev-parse HEAD") return head;
         if (key === "status --porcelain") return "";
         throw new Error(`unexpected git command: ${key}`);
@@ -659,9 +838,10 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       },
       leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
       sessionId: "session-a",
+      buildDeliveryEvidence: () => deliveryEvidence,
       authorizeCloudDelivery: ({ authority, headSha }) => {
         assert.equal(headSha, commitSha);
-        return { authority: { ...authority, state: "delivery_authorized" } };
+        return { authority: deliveryAuthorizedAuthority(authority, headSha) };
       },
       verifyCloudAuthority: ({ headSha }) => {
         verifiedHeads.push(headSha);
@@ -710,7 +890,8 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       refreshedHeadSha,
       mainParentSha: refreshedMainSha,
     });
-    assert.ok(commands.some(call => call.join(" ") === `gh pr merge --auto --squash ${pullRequestUrl}`));
+    assert.ok(commands.some(call => call.join(" ") ===
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin refs/pull/42/head"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --ff-only FETCH_HEAD"));
   } finally {
@@ -744,6 +925,8 @@ test("authorized auto-delivery completes only through canonical runtime readines
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log -1 --pretty=%s ${commitSha}`) return protectedSquashSubject;
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({
@@ -766,8 +949,9 @@ test("authorized auto-delivery completes only through canonical runtime readines
         },
       },
       sessionId: "session-a",
+      buildDeliveryEvidence: () => deliveryEvidence,
       authorizeCloudDelivery: ({ authority }) => ({
-        authority: { ...authority, state: "delivery_authorized" },
+        authority: deliveryAuthorizedAuthority(authority),
       }),
       verifyCloudAuthority: () => ({ ok: true }),
       run: () => {},
@@ -851,6 +1035,7 @@ function createLease({ repo, ...overrides }) {
     status: "active",
     epoch: 1,
     sessionId: "session-a",
+    device: "device-a",
     branch,
     worktreePath: repo,
     baseSha,
@@ -867,9 +1052,16 @@ function createLease({ repo, ...overrides }) {
       schema: "agentic-lane-cloud-authority/v1",
       state: "review_ready",
       canonicalBaseSha: baseSha,
+      laneRevision: lease.reviewHeadSha,
+      reviewRequestId,
+      focusedEvidenceDigest,
     };
   }
   return lease;
+}
+
+function deliveryDigests(value) {
+  return Object.fromEntries(Object.keys(deliveryEvidence).map(key => [key, value[key]]));
 }
 
 function canonicalWorktree(repo) {

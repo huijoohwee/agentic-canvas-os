@@ -23,10 +23,51 @@ import {
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
 const branchWorktree = branch => `worktree ${repo}\nHEAD ${"a".repeat(40)}\nbranch refs/heads/${branch}\n`;
-const pullJson = (url, branch, body = "", isDraft = true) => JSON.stringify({
-  url, state: "OPEN", isDraft, headRefName: branch,
+const pullJson = (url, branch, body = "", isDraft = true, state = "OPEN") => JSON.stringify({
+  url, state, isDraft, headRefName: branch,
   headRefOid: "c".repeat(40), baseRefName: "main", body,
 });
+const publishDeclaredWriteSet = [
+  "path:scripts/device-branch-lib.mjs",
+  "semantic:runtime-leases",
+];
+const publishWriteSetDigest = "8".repeat(64);
+const publishAdmission = Object.freeze({
+  schema: "agentic-lane-admission-lease/v1",
+  status: "admitted",
+  semanticScope: "runtime-leases",
+  declaredWriteSet: publishDeclaredWriteSet,
+  writeSetDigest: publishWriteSetDigest,
+  manifestDigest: "9".repeat(64),
+  planReceiptDigest: "a".repeat(64),
+  admissionReceiptDigest: "b".repeat(64),
+  existingLaneStateDigest: "c".repeat(64),
+  admittedReportDigest: "d".repeat(64),
+  preservationReceiptDigest: "e".repeat(64),
+});
+
+function publishAuthority(overrides = {}) {
+  return {
+    schema: "agentic-lane-cloud-authority/v1",
+    provider: "github",
+    ledgerRepository: "example/ledger",
+    targetRepository: "example/repo",
+    claimId: "f".repeat(64),
+    claimDigest: "0".repeat(64),
+    ledgerRevision: "1".repeat(40),
+    claimLedgerRevision: "2".repeat(64),
+    canonicalBaseSha: "a".repeat(40),
+    cloudDeclaredWriteScope: publishDeclaredWriteSet,
+    writeSetDigest: publishWriteSetDigest,
+    deviceId: "device",
+    sessionId: "chat-a",
+    manifestDigest: publishAdmission.manifestDigest,
+    leaseEpoch: 1,
+    transitionCounter: 1,
+    state: "active",
+    ...overrides,
+  };
+}
 
 function createGitText(responses) {
   return args => {
@@ -217,6 +258,15 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
 
 test("publish verifies the session lease and fencing ancestor before delivery", () => {
   const calls = [];
+  const evidence = {
+    dependencyClosureDigest: "1".repeat(64),
+    namedChecksDigest: "2".repeat(64),
+    handoffEvidenceDigest: "3".repeat(64),
+    operatorDecisionDigest: "4".repeat(64),
+    integrationIntentDigest: "5".repeat(64),
+  };
+  const focusedEvidenceDigest = "6".repeat(64);
+  const reviewRequestId = "github-pull-request:PR_1";
   const branch = "agent/device/runtime-leases";
   const pullRequestUrl = "https://github.test/pull/1";
   const gitText = createGitText({
@@ -227,9 +277,32 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     "branch --show-current": `${branch}\n`,
     "log -1 --pretty=%s": "fix: coordination runtime\n",
     "rev-parse HEAD": "c".repeat(40),
+    [`rev-parse ${"c".repeat(40)}^{tree}`]: "d".repeat(40),
   });
   let releaseStatus = null;
   let isDraft = true;
+  let body = "";
+  let cloudMutation = null;
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "runtime-leases",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    admission: publishAdmission,
+    cloudAuthority: publishAuthority(),
+    acquiredAt: "2026-07-17T10:00:00.000Z",
+    heartbeatAt: "2026-07-17T10:00:00.000Z",
+    expiresAt: "2099-07-17T10:30:00.000Z",
+  };
 
   const result = publish({
     invocationPath: repo,
@@ -237,11 +310,110 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
     gitText,
     ghText: args => args[1] === "list"
       ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
-      : args.includes("--jq") ? "" : pullJson(pullRequestUrl, branch, "", isDraft),
+      : args.includes("--jq") ? body : pullJson(pullRequestUrl, branch, body, isDraft),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      verify: () => lease,
+      annotate: ({ values }) => (lease = { ...lease, ...values }),
+      release: ({ status }) => {
+        releaseStatus = status;
+        return (lease = { ...lease, status });
+      },
+    },
+    sessionId: "chat-a",
+    reviewReadyCloudAuthority: ({ authority }) => ({
+      authority: {
+        ...authority,
+        state: "review_ready",
+        laneRevision: "c".repeat(40),
+        reviewRequestId,
+        focusedEvidenceDigest,
+      },
+    }),
+    buildDeliveryEvidence: input => {
+      assert.equal(input.operation, "publish");
+      assert.equal(input.branch, branch);
+      assert.equal(input.headSha, "c".repeat(40));
+      assert.equal(input.headTreeSha, "d".repeat(40));
+      assert.equal(input.pullRequestNumber, 1);
+      assert.equal(input.deviceId, "device");
+      assert.equal(input.sessionId, "chat-a");
+      return evidence;
+    },
+    authorizeCloudDelivery: ({ authority, headSha, invoke, ...input }) => {
+      assert.deepEqual(
+        Object.fromEntries(Object.keys(evidence).map(key => [key, input[key]])),
+        evidence,
+      );
+      invoke({
+        action: "integrate",
+        request: { idempotencyKey: "p".repeat(513) },
+      });
+      return {
+        authority: {
+          ...authority,
+          state: "delivery_authorized",
+          integrationReceiptDigest: "7".repeat(64),
+          integration: {
+            candidateRevision: headSha,
+            reviewRequestId,
+            focusedEvidenceDigest,
+            ...evidence,
+          },
+        },
+      };
+    },
+    invokeCloudMutation: input => {
+      cloudMutation = input;
+      return { ok: true };
+    },
+    verifyCloudAuthority: () => ({ ok: true }),
+    run: (command, args) => {
+      calls.push([command, ...args]);
+      if (command === "gh" && args[1] === "ready") isDraft = false;
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && bodyIndex >= 0) body = args[bodyIndex + 1];
+    },
+    log: () => {},
+  });
+
+  assert.equal(result, pullRequestUrl);
+  assert.match(cloudMutation.request.idempotencyKey, /^device-cloud-mutation:[0-9a-f]{64}$/u);
+  assert.deepEqual(calls[0], ["git", "merge-base", "--is-ancestor", "b".repeat(40), "HEAD"]);
+  assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"));
+  assert.equal(releaseStatus, "delivery");
+});
+
+test("publish rejects delivery evidence failure before review activation or merge authorization", () => {
+  const calls = [];
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "rev-parse HEAD": "c".repeat(40),
+    [`rev-parse ${"c".repeat(40)}^{tree}`]: "d".repeat(40),
+  });
+  let authorized = false;
+  let released = false;
+
+  assert.throws(() => publish({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+      : args.includes("--jq") ? "" : pullJson(pullRequestUrl, branch),
     ghOptional: () => pullRequestUrl,
     leaseStore: {
       verify: () => ({
-        branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo,
+        branch,
+        fenceSha: "b".repeat(40),
+        pullRequestUrl,
+        worktreePath: repo,
         device: "device",
         admission: { schema: "agentic-lane-admission-lease/v1", status: "admitted" },
         cloudAuthority: {
@@ -250,42 +422,526 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
           canonicalBaseSha: "a".repeat(40),
         },
       }),
-      annotate: () => ({ branch, fenceSha: "b".repeat(40), pullRequestUrl, worktreePath: repo }),
-      release: ({ status }) => {
-        releaseStatus = status;
-        return {
-          schema: "agentic-writer-lease/v2",
-          status,
-          epoch: 1,
-          sessionId: "chat-a",
-          device: "device",
-          scope: "runtime-leases",
-          branch,
-          baseSha: "a".repeat(40),
-          fenceSha: "b".repeat(40),
-          heartbeatAt: "2026-07-17T10:00:00.000Z",
-          expiresAt: "2026-07-17T10:00:00.000Z",
-        };
+      annotate: () => {
+        throw new Error("evidence failure must not annotate delivery");
+      },
+      release: () => {
+        released = true;
+        throw new Error("evidence failure must not release delivery");
       },
     },
     sessionId: "chat-a",
     reviewReadyCloudAuthority: ({ authority }) => ({
       authority: { ...authority, state: "review_ready" },
     }),
-    authorizeCloudDelivery: ({ authority }) => ({
-      authority: { ...authority, state: "delivery_authorized" },
-    }),
+    buildDeliveryEvidence: () => {
+      throw new Error("delivery evidence unavailable");
+    },
+    authorizeCloudDelivery: () => {
+      authorized = true;
+      throw new Error("must not authorize");
+    },
+    verifyCloudAuthority: () => ({ ok: true }),
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  }), /delivery evidence unavailable/);
+
+  assert.equal(authorized, false);
+  assert.equal(released, false);
+  assert.equal(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"), false);
+  assert.equal(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "merge"), false);
+});
+
+test("publish replays an exact checkpoint after remote authorization succeeds but its response is lost", () => {
+  const calls = [];
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const headSha = "c".repeat(40);
+  const evidence = {
+    dependencyClosureDigest: "1".repeat(64),
+    namedChecksDigest: "2".repeat(64),
+    handoffEvidenceDigest: "3".repeat(64),
+    operatorDecisionDigest: "4".repeat(64),
+    integrationIntentDigest: "5".repeat(64),
+  };
+  const reviewRequestId = "github-pull-request:PR_1";
+  const focusedEvidenceDigest = "6".repeat(64);
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "log -1 --pretty=%s": "fix: replay protected delivery\n",
+    "rev-parse HEAD": headSha,
+    [`rev-parse ${headSha}^{tree}`]: "d".repeat(40),
+  });
+  let isDraft = true;
+  let body = "";
+  let reviewCalls = 0;
+  let evidenceCalls = 0;
+  let authorizationCalls = 0;
+  let recordedIntegration = null;
+  let released = false;
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "chat-a",
+    branch,
+    scope: "runtime-leases",
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    worktreePath: repo,
+    device: "device",
+    autoDelivery: false,
+    runtimeRequired: false,
+    admission: publishAdmission,
+    cloudAuthority: publishAuthority(),
+    acquiredAt: "2026-07-17T10:00:00.000Z",
+    heartbeatAt: "2026-07-17T10:00:00.000Z",
+    expiresAt: "2099-07-17T10:30:00.000Z",
+  };
+  const leaseStore = {
+    verify: () => lease,
+    annotate: ({ values }) => (lease = { ...lease, ...values }),
+    release: ({ status }) => {
+      released = true;
+      return (lease = { ...lease, status });
+    },
+  };
+  const input = {
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+      : args.includes("--jq") ? body : pullJson(pullRequestUrl, branch, body, isDraft),
+    ghOptional: () => pullRequestUrl,
+    leaseStore,
+    sessionId: "chat-a",
+    reviewReadyCloudAuthority: ({ authority }) => {
+      reviewCalls += 1;
+      return {
+        authority: {
+          ...authority,
+          state: "review_ready",
+          laneRevision: headSha,
+          reviewRequestId,
+          focusedEvidenceDigest,
+        },
+      };
+    },
+    buildDeliveryEvidence: () => {
+      evidenceCalls += 1;
+      return evidence;
+    },
+    authorizeCloudDelivery: ({ authority, headSha: candidateRevision, ...subject }) => {
+      authorizationCalls += 1;
+      const supplied = Object.fromEntries(
+        Object.keys(evidence).map(field => [field, subject[field]]),
+      );
+      if (!recordedIntegration) {
+        recordedIntegration = supplied;
+        throw new Error("simulated authorization response loss");
+      }
+      assert.deepEqual(supplied, recordedIntegration);
+      return {
+        authority: {
+          ...authority,
+          state: "delivery_authorized",
+          integrationReceiptDigest: "7".repeat(64),
+          integration: {
+            candidateRevision,
+            reviewRequestId,
+            focusedEvidenceDigest,
+            ...recordedIntegration,
+          },
+        },
+      };
+    },
     verifyCloudAuthority: () => ({ ok: true }),
     run: (command, args) => {
-      calls.push([command, ...args]); if (command === "gh" && args[1] === "ready") isDraft = false;
+      calls.push([command, ...args]);
+      if (command === "gh" && args[1] === "ready") isDraft = false;
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && bodyIndex >= 0) body = args[bodyIndex + 1];
+    },
+    log: () => {},
+  };
+
+  assert.throws(() => publish(input), /simulated authorization response loss/u);
+  assert.equal(lease.deliveryHeadSha, headSha);
+  assert.equal(lease.cloudAuthority.state, "review_ready");
+  assert.equal(isDraft, false);
+  assert.equal(released, false);
+
+  assert.equal(publish(input), pullRequestUrl);
+  assert.equal(reviewCalls, 1);
+  assert.equal(evidenceCalls, 2);
+  assert.equal(authorizationCalls, 2);
+  assert.deepEqual(recordedIntegration, evidence);
+  assert.equal(released, true);
+  assert.equal(
+    calls.filter(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready").length,
+    1,
+  );
+  assert.equal(
+    calls.filter(call => call[0] === "gh" && call[1] === "pr" && call[2] === "merge").length,
+    1,
+  );
+});
+
+test("publish rejects a replay authorization whose recorded integration changes one derived digest", () => {
+  const calls = [];
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const headSha = "c".repeat(40);
+  const reviewRequestId = "github-pull-request:PR_1";
+  const focusedEvidenceDigest = "6".repeat(64);
+  const evidence = {
+    dependencyClosureDigest: "1".repeat(64),
+    namedChecksDigest: "2".repeat(64),
+    handoffEvidenceDigest: "3".repeat(64),
+    operatorDecisionDigest: "4".repeat(64),
+    integrationIntentDigest: "5".repeat(64),
+  };
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "log -1 --pretty=%s": "fix: replay protected delivery\n",
+    "rev-parse HEAD": headSha,
+    [`rev-parse ${headSha}^{tree}`]: "d".repeat(40),
+  });
+  let verified = false;
+  let released = false;
+  const authority = publishAuthority({
+    state: "review_ready",
+    laneRevision: headSha,
+    reviewRequestId,
+    focusedEvidenceDigest,
+  });
+
+  assert.throws(() => publish({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+      : args.includes("--jq") ? "" : pullJson(pullRequestUrl, branch, "", false),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      verify: () => ({
+        schema: "agentic-writer-lease/v2",
+        status: "active",
+        branch,
+        fenceSha: "b".repeat(40),
+        pullRequestUrl,
+        worktreePath: repo,
+        device: "device",
+        deliveryHeadSha: headSha,
+        admission: { schema: "agentic-lane-admission-lease/v1", status: "admitted" },
+        cloudAuthority: authority,
+      }),
+      annotate: () => {
+        throw new Error("mismatched replay must not annotate delivery");
+      },
+      release: () => {
+        released = true;
+        throw new Error("mismatched replay must not release delivery");
+      },
+    },
+    sessionId: "chat-a",
+    reviewReadyCloudAuthority: () => {
+      throw new Error("checkpoint replay must not repeat review transition");
+    },
+    buildDeliveryEvidence: () => evidence,
+    authorizeCloudDelivery: () => ({
+      authority: {
+        ...authority,
+        state: "delivery_authorized",
+        integrationReceiptDigest: "7".repeat(64),
+        integration: {
+          candidateRevision: headSha,
+          reviewRequestId,
+          focusedEvidenceDigest,
+          ...evidence,
+          namedChecksDigest: "f".repeat(64),
+        },
+      },
+    }),
+    verifyCloudAuthority: () => {
+      verified = true;
+      throw new Error("must not verify mismatched authorization");
+    },
+    run: (command, args) => calls.push([command, ...args]),
+    log: () => {},
+  }), /does not record the exact derived delivery evidence and receipt/u);
+
+  assert.equal(verified, false);
+  assert.equal(released, false);
+  assert.equal(
+    calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "merge"),
+    false,
+  );
+});
+
+test("publish persists an authorized checkpoint before merge and replays without rebuilding evidence", () => {
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const headSha = "c".repeat(40);
+  const reviewRequestId = "github-pull-request:PR_1";
+  const focusedEvidenceDigest = "6".repeat(64);
+  const evidence = {
+    dependencyClosureDigest: "1".repeat(64),
+    namedChecksDigest: "2".repeat(64),
+    handoffEvidenceDigest: "3".repeat(64),
+    operatorDecisionDigest: "4".repeat(64),
+    integrationIntentDigest: "5".repeat(64),
+  };
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "status --porcelain": "",
+    "branch --show-current": `${branch}\n`,
+    "log -1 --pretty=%s": "fix: checkpoint protected delivery\n",
+    "rev-parse HEAD": headSha,
+    [`rev-parse ${headSha}^{tree}`]: "d".repeat(40),
+  });
+  let body = "";
+  let isDraft = true;
+  let failAutomerge = true;
+  let reviewCalls = 0;
+  let evidenceCalls = 0;
+  let authorizationCalls = 0;
+  let releaseCalls = 0;
+  const commands = [];
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "runtime-leases",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    admission: publishAdmission,
+    cloudAuthority: publishAuthority(),
+    acquiredAt: "2026-07-17T10:00:00.000Z",
+    heartbeatAt: "2026-07-17T10:00:00.000Z",
+    expiresAt: "2099-07-17T10:30:00.000Z",
+  };
+  const input = {
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: args => args[1] === "list"
+      ? JSON.stringify([{ number: 1, headRefName: branch, url: pullRequestUrl }])
+      : args.includes("--jq") ? body : pullJson(pullRequestUrl, branch, body, isDraft),
+    ghOptional: () => pullRequestUrl,
+    leaseStore: {
+      verify: () => lease,
+      annotate: ({ values }) => (lease = { ...lease, ...values }),
+      release: ({ status }) => {
+        releaseCalls += 1;
+        return (lease = { ...lease, status });
+      },
+    },
+    sessionId: "chat-a",
+    reviewReadyCloudAuthority: ({ authority }) => {
+      reviewCalls += 1;
+      return {
+        authority: {
+          ...authority,
+          state: "review_ready",
+          laneRevision: headSha,
+          reviewRequestId,
+          focusedEvidenceDigest,
+        },
+      };
+    },
+    buildDeliveryEvidence: () => {
+      evidenceCalls += 1;
+      return evidence;
+    },
+    authorizeCloudDelivery: ({ authority, headSha: candidateRevision, ...subject }) => {
+      authorizationCalls += 1;
+      assert.deepEqual(
+        Object.fromEntries(Object.keys(evidence).map(field => [field, subject[field]])),
+        evidence,
+      );
+      return {
+        authority: {
+          ...authority,
+          state: "delivery_authorized",
+          integrationReceiptDigest: "7".repeat(64),
+          integration: {
+            candidateRevision,
+            reviewRequestId,
+            focusedEvidenceDigest,
+            ...evidence,
+          },
+        },
+      };
+    },
+    verifyCloudAuthority: () => ({ ok: true }),
+    run: (command, args) => {
+      commands.push([command, ...args]);
+      if (command === "gh" && args[1] === "ready") isDraft = false;
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && bodyIndex >= 0) body = args[bodyIndex + 1];
+      if (command === "gh" && args.includes("--add-label") && failAutomerge) {
+        failAutomerge = false;
+        throw new Error("simulated merge-intent failure");
+      }
+    },
+    log: () => {},
+  };
+
+  assert.throws(() => publish(input), /simulated merge-intent failure/u);
+  assert.equal(lease.status, "active");
+  assert.equal(lease.cloudAuthority.state, "delivery_authorized");
+  assert.equal(parseWriterLeasePullRequestBody(body).cloudAuthority.state, "delivery_authorized");
+  assert.equal(releaseCalls, 0);
+
+  assert.equal(publish(input), pullRequestUrl);
+  assert.equal(reviewCalls, 1);
+  assert.equal(evidenceCalls, 1);
+  assert.equal(authorizationCalls, 2);
+  assert.equal(releaseCalls, 1);
+  assert.equal(
+    commands.filter(call => call[0] === "git" && call[1] === "push").length,
+    1,
+  );
+  const authorizedProjectionIndex = commands.findIndex(call => {
+    const bodyIndex = call.indexOf("--body");
+    return bodyIndex >= 0
+      && parseWriterLeasePullRequestBody(call[bodyIndex + 1])?.cloudAuthority?.state === "delivery_authorized";
+  });
+  const mergeIntentIndex = commands.findIndex(call => call.includes("--add-label"));
+  assert.ok(authorizedProjectionIndex >= 0);
+  assert.ok(authorizedProjectionIndex < mergeIntentIndex);
+});
+
+test("publish finalizes an already-merged authorized checkpoint without recreating merge intent", () => {
+  const branch = "agent/device/runtime-leases";
+  const pullRequestUrl = "https://github.test/pull/1";
+  const headSha = "c".repeat(40);
+  const reviewRequestId = "github-pull-request:PR_1";
+  const focusedEvidenceDigest = "6".repeat(64);
+  const evidence = {
+    dependencyClosureDigest: "1".repeat(64),
+    namedChecksDigest: "2".repeat(64),
+    handoffEvidenceDigest: "3".repeat(64),
+    operatorDecisionDigest: "4".repeat(64),
+    integrationIntentDigest: "5".repeat(64),
+  };
+  const authority = publishAuthority({
+    state: "delivery_authorized",
+    laneRevision: headSha,
+    reviewRequestId,
+    focusedEvidenceDigest,
+    integrationReceiptDigest: "7".repeat(64),
+    integration: {
+      candidateRevision: headSha,
+      reviewRequestId,
+      focusedEvidenceDigest,
+      ...evidence,
+    },
+  });
+  let lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "chat-a",
+    device: "device",
+    scope: "runtime-leases",
+    branch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    pullRequestUrl,
+    autoDelivery: false,
+    runtimeRequired: false,
+    deliveryHeadSha: headSha,
+    admission: publishAdmission,
+    cloudAuthority: authority,
+    acquiredAt: "2026-07-17T10:00:00.000Z",
+    heartbeatAt: "2026-07-17T10:00:00.000Z",
+    expiresAt: "2099-07-17T10:30:00.000Z",
+  };
+  let body = renderWriterLeasePullRequestBody(lease);
+  const commands = [];
+  let released = false;
+
+  const result = publish({
+    invocationPath: repo,
+    repo,
+    gitText: createGitText({
+      "worktree list --porcelain -z": branchWorktree(branch),
+      "diff --name-only --diff-filter=U": "",
+      "ls-files -u": "",
+      "status --porcelain": "",
+      "branch --show-current": `${branch}\n`,
+      "rev-parse HEAD": headSha,
+    }),
+    ghText: args => {
+      if (args[1] === "list") throw new Error("merged replay must not inspect competing open pull requests");
+      if (args.includes("--jq")) return body;
+      return pullJson(pullRequestUrl, branch, body, false, "MERGED");
+    },
+    ghOptional: () => {
+      throw new Error("merged replay must use its recorded pull-request URL");
+    },
+    leaseStore: {
+      verify: () => lease,
+      annotate: ({ values }) => (lease = { ...lease, ...values }),
+      release: ({ status }) => {
+        released = true;
+        return (lease = { ...lease, status });
+      },
+    },
+    sessionId: "chat-a",
+    reviewReadyCloudAuthority: () => {
+      throw new Error("authorized replay must not repeat review transition");
+    },
+    buildDeliveryEvidence: () => {
+      throw new Error("authorized replay must not rebuild delivery evidence");
+    },
+    authorizeCloudDelivery: input => {
+      assert.equal(input.authority, authority);
+      assert.deepEqual(
+        Object.fromEntries(Object.keys(evidence).map(field => [field, input[field]])),
+        evidence,
+      );
+      return { authority };
+    },
+    verifyCloudAuthority: () => ({ ok: true }),
+    run: (command, args) => {
+      commands.push([command, ...args]);
+      const bodyIndex = args.indexOf("--body");
+      if (command === "gh" && bodyIndex >= 0) body = args[bodyIndex + 1];
     },
     log: () => {},
   });
 
   assert.equal(result, pullRequestUrl);
-  assert.deepEqual(calls[0], ["git", "merge-base", "--is-ancestor", "b".repeat(40), "HEAD"]);
-  assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"));
-  assert.equal(releaseStatus, "delivery");
+  assert.equal(released, true);
+  assert.equal(lease.status, "delivery");
+  assert.equal(commands.some(call => call[0] === "git" && call[1] === "push"), false);
+  assert.equal(commands.some(call => call.includes("--add-label")), false);
+  assert.equal(commands.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"), false);
+  assert.equal(commands.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "merge"), false);
 });
 
 test("resume fences parked and reviewed handoffs with a newer epoch", () => {

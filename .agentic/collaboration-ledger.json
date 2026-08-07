@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1347,
-  "headDigest": "6595a2b00d8b715040109b5c898c3c1471ee2ea8d86808935f9e5f712ee82547",
+  "sequence": 1348,
+  "headDigest": "ed765bab4baed3d41bf4101ae9ebd49ad05a9781dcc4bef1760fdb8f3e3f99fc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -67267,6 +67267,61 @@
       },
       "claimDigest": "6887856207091e67ad2f688c86bd4bb4bf5f262f332acc6ea15f2d30efc2afb8",
       "digest": "6595a2b00d8b715040109b5c898c3c1471ee2ea8d86808935f9e5f712ee82547"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1348,
+      "parentDigest": "6595a2b00d8b715040109b5c898c3c1471ee2ea8d86808935f9e5f712ee82547",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "6dd0e2bc2b85263938cc767403f51f2ebe10cf87e6cfe5920fd273f54f1df86a",
+      "idempotencyKey": "9c382f6dd8b3d64e0a0cdceca6a552eabaae9a7ce2b4a452d06fcf36f93efa4a",
+      "requestDigest": "8e1ebec4c7084cdaa11cbe959329c009ac6554f860f2fbfaaf925852da500b69",
+      "evaluationTime": "2026-08-07T11:47:58.000Z",
+      "claimCore": {
+        "claimId": "6dd0e2bc2b85263938cc767403f51f2ebe10cf87e6cfe5920fd273f54f1df86a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:3d5b0d6395d309a9359196e3b394c81709fb3d8d68413373b4280a349cae581a",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:a08ce1c228b7034cd48db40f271e8e445355b77a642bec9b548228d03d382e5e",
+        "canonicalBaseRevision": "93994acae8ddda542b271ee569ad8b12297e3357",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/motionControlDeviceSensorRuntime.test.ts",
+          "path:canvas/src/features/three/motionControlDeviceSensorRuntime.ts",
+          "path:docs/documents/knowgrph-apple-spatial-input-shared-contract.md",
+          "path:grph-shared/README.md",
+          "path:grph-shared/__tests__/apple-spatial-input.test.mjs",
+          "path:grph-shared/package.json",
+          "path:grph-shared/src/spatial-input/appleSpatialInput.ts",
+          "semantic:apple-spatial-input-shared-utils"
+        ],
+        "writeSetDigest": "4267ecb1c11bfe74b2c39e48bb5ca506c4cbdfbf4d5b1f856835a02c3f752464",
+        "laneRevision": "796d7f3fa6365c0fabe792d784adf6ffdf9566dd",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 2,
+        "state": "retired",
+        "expiresAt": "2026-08-07T15:44:10.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs78AwEE",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "796d7f3fa6365c0fabe792d784adf6ffdf9566dd",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs78AwEE",
+          "bytesDigest": "ce6dacb206651c84dd4cf7100278a710a758654acbd33ee0c55be924f41baece",
+          "namedChecksDigest": "4cc521bda2083d367bfac7bcc6ba720ce07e57b13913adf93bc4b87f0b2d58b9",
+          "handoffEvidenceDigest": "d615e9cfc9e996a84ff2b4f2b5e5a80e903d3136ed6b4133381f82ed9ef23743",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-07T11:47:58.000Z"
+        }
+      },
+      "claimDigest": "6bb1926614ddd064a2b2295770d9808e8a61b79517b8f0bd9df060ad7c1dbe8d",
+      "digest": "ed765bab4baed3d41bf4101ae9ebd49ad05a9781dcc4bef1760fdb8f3e3f99fc"
     }
   ]
 }

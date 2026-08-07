@@ -9,6 +9,7 @@ import {
   CHANGE_MANIFEST_SCHEMA,
   DEVICE_INTEGRATION_RESULT_SCHEMA,
   integrateSession,
+  renderManagedCommitMessage,
   resolveRuntimeRepositories,
 } from "../scripts/device-integrate-lib.mjs";
 import { CLOUD_COLLABORATION_BOUNDS } from "../scripts/cloud-collaboration-primitives.mjs";
@@ -319,7 +320,7 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
         lease = { ...lease, status: "completed", completion: { mergeCommitSha: mergeSha, mainSha } };
         return lease.completion;
       },
-      commitMessage: "feat: integrate the canonical runtime",
+      commitMessage: "feat(runtime-integration): integrate the canonical runtime",
       pathsManifest: manifestPath,
       waitSeconds: 1,
       pollSeconds: 0.1,
@@ -334,7 +335,10 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     assert.ok(commands.some(call => call.join(" ") ===
       "git add -- :(literal)package.json :(literal)scripts/runtime.mjs"));
     assert.ok(commands.some(call => call.join(" ") ===
-      "git commit -m feat: integrate the canonical runtime"));
+      "git commit -m feat(runtime-integration): integrate the canonical runtime " +
+      "-m Integrate the declared runtime-integration change through its protected managed task lane so downstream policy can attribute the change to its writer lease. " +
+      "-m Agentic-Task: runtime-integration\nAgentic-Scope: runtime-integration\n" +
+      "Agentic-Lease-Epoch: 1\nAgentic-Mechanism: Agentic Canvas OS protected integration"));
     assert.ok(commands.some(call => call.join(" ") === "npm run check"));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin main"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --no-edit origin/main"));
@@ -364,6 +368,100 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     assert.equal(runtimeCommands[5].command, "node");
     assert.ok(runtimeCommands[5].args.includes(`--worktree=${repo}`));
     assert.equal(result.cleanup.status, "cleaned");
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(manifestPath, { force: true });
+  }
+});
+
+test("managed integration commit attribution is bound to the leased branch scope", () => {
+  const lease = createLease({ repo: "/tmp/managed-integration" });
+  assert.deepEqual(renderManagedCommitMessage({
+    branch,
+    commitMessage: "fix(runtime-integration): emit lease attribution",
+    lease,
+  }), {
+    subject: "fix(runtime-integration): emit lease attribution",
+    body: "Integrate the declared runtime-integration change through its protected managed task lane so downstream policy can attribute the change to its writer lease.",
+    trailers: [
+      "Agentic-Task: runtime-integration",
+      "Agentic-Scope: runtime-integration",
+      "Agentic-Lease-Epoch: 1",
+      "Agentic-Mechanism: Agentic Canvas OS protected integration",
+    ],
+  });
+  assert.throws(() => renderManagedCommitMessage({
+    branch,
+    commitMessage: "fix(other-scope): emit lease attribution",
+    lease,
+  }), /<leased-scope>/u);
+  assert.throws(() => renderManagedCommitMessage({
+    branch,
+    commitMessage: "fix: emit lease attribution",
+    lease,
+  }), /<leased-scope>/u);
+  assert.throws(() => renderManagedCommitMessage({
+    branch,
+    commitMessage: " fix(runtime-integration): emit lease attribution",
+    lease,
+  }), /leading or trailing whitespace/u);
+  assert.throws(() => renderManagedCommitMessage({
+    branch,
+    commitMessage: `fix(runtime-integration): ${"x".repeat(61)}`,
+    lease,
+  }), /summary of at most 60 characters/u);
+  assert.equal(renderManagedCommitMessage({
+    branch,
+    commitMessage: "fix(runtime-integration): bind cloud claim epoch",
+    lease: { ...lease, epoch: 197, cloudAuthority: { leaseEpoch: 3 } },
+  }).trailers[2], "Agentic-Lease-Epoch: 3");
+  assert.throws(() => renderManagedCommitMessage({
+    branch,
+    commitMessage: "fix(runtime-integration): reject missing claim epoch",
+    lease: { ...lease, epoch: 197, cloudAuthority: {} },
+  }), /positive claim epoch/u);
+});
+
+test("invalid managed integration subjects fail before validation or staging", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-invalid-subject-"));
+  const manifestPath = path.join(os.tmpdir(), `agentic-invalid-subject-${process.pid}.json`);
+  writeFileSync(manifestPath, JSON.stringify({
+    schema: CHANGE_MANIFEST_SCHEMA,
+    branch,
+    baseSha,
+    paths: ["package.json"],
+  }));
+  const lease = createLease({ repo });
+  const commands = [];
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === "diff --name-only -z HEAD --") return "package.json\0";
+        if (key === "ls-files --others --exclude-standard -z") return "";
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => "",
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: () => { throw new Error("invalid subject must not annotate integration"); },
+      },
+      sessionId: "session-a",
+      run: (command, args) => commands.push([command, ...args]),
+      runText: () => "",
+      publishTask: () => {},
+      completeTask: () => {},
+      commitMessage: "fix: missing leased scope",
+      pathsManifest: manifestPath,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    }), /<leased-scope>/u);
+    assert.deepEqual(commands, [["git", "merge-base", "--is-ancestor", fenceSha, "HEAD"]]);
   } finally {
     rmSync(repo, { recursive: true, force: true });
     rmSync(manifestPath, { force: true });
@@ -2230,6 +2328,7 @@ function createLease({ repo, ...overrides }) {
     epoch: 1,
     sessionId: "session-a",
     device: "device-a",
+    scope: "runtime-integration",
     branch,
     worktreePath: repo,
     baseSha,

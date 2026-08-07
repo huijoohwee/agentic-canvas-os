@@ -28,6 +28,7 @@ export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+const REPOSITORY_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/u;
 const DELIVERY_EVIDENCE_FIELDS = Object.freeze([
   "dependencyClosureDigest",
   "namedChecksDigest",
@@ -355,6 +356,7 @@ export function integrateSession({
     canonicalRoot,
     mainSha,
     controllerRoot,
+    runtime,
     runtimeRepository,
     runText,
   });
@@ -1045,7 +1047,7 @@ function parsePullRequestNumber(url) {
   return match[1];
 }
 
-function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runtimeRepository, runText }) {
+function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runtime, runtimeRepository, runText }) {
   const controller = path.resolve(controllerRoot || "");
   if (!controllerRoot || !path.isAbsolute(controllerRoot)) {
     throw new Error("Canonical integration requires the absolute Agentic Canvas OS controller root.");
@@ -1058,7 +1060,10 @@ function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runti
 
   const { integratedRepository, ...repositories } = resolveRuntimeRepositories({
     canonicalRoot,
+    controllerRoot,
     runtimeRepository,
+    allowAncillary: true,
+    runtimeRequired: runtime === "canonical",
     readOriginRemote: () => runText(
       "git",
       ["remote", "get-url", "origin"],
@@ -1083,13 +1088,21 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
   if (!line) throw new Error("Canonical runtime reconciler returned no machine-readable readiness result.");
   const result = JSON.parse(line);
   const integratedRepository = integratedSource.repository;
+  const integratedSourceMatches =
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: integratedSource.root })).trim() === mainSha;
   const integratedRevision = integratedRepository === "agentic-canvas-os"
     ? result.agenticCanvasOs?.revision
     : integratedRepository === "knowgrph"
       ? result.source?.revision
       : null;
+  const ancillaryRuntimeMatches = integratedRevision === null &&
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: repositories.agenticCanvasOsRoot })).trim() ===
+      result.agenticCanvasOs?.revision &&
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: repositories.knowgrphRoot })).trim() ===
+      result.source?.revision;
   if (result.schema !== "agentic-local-runtime-readiness/v1" || result.ready !== true ||
-      result.status !== "runtime-ready" || integratedRevision !== mainSha) {
+      result.status !== "runtime-ready" || !integratedSourceMatches ||
+      (integratedRevision === null ? !ancillaryRuntimeMatches : integratedRevision !== mainSha)) {
     throw new Error("Canonical runtime readiness did not match the integrated main SHA.");
   }
   return { integratedSource, readiness: result };
@@ -1115,13 +1128,25 @@ function cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree,
 
 export function resolveRuntimeRepositories({
   canonicalRoot,
+  controllerRoot = "",
   runtimeRepository,
   readOriginRemote = () => "",
+  allowAncillary = false,
+  runtimeRequired = true,
 }) {
   const integratedRepository = resolveCanonicalRepositoryIdentity({
     canonicalRoot,
     readOriginRemote,
+    allowAncillary,
   });
+  const ancillaryIntegration = !["agentic-canvas-os", "knowgrph"].includes(integratedRepository);
+  if (ancillaryIntegration && (!controllerRoot || !path.isAbsolute(controllerRoot))) {
+    throw new Error("Ancillary integration requires an explicit absolute Agentic Canvas OS controller root.");
+  }
+  if (ancillaryIntegration && runtimeRequired &&
+      (!runtimeRepository || !path.isAbsolute(runtimeRepository))) {
+    throw new Error("Ancillary canonical runtime requires an explicit absolute Knowgrph repository.");
+  }
   const workspaceRoot = path.dirname(canonicalRoot);
   const knowgrphRoot = runtimeRepository
     ? path.resolve(runtimeRepository)
@@ -1130,18 +1155,28 @@ export function resolveRuntimeRepositories({
       : path.join(workspaceRoot, "knowgrph");
   const agenticCanvasOsRoot = integratedRepository === "agentic-canvas-os"
     ? canonicalRoot
-    : path.join(workspaceRoot, "agentic-canvas-os");
-  for (const [label, candidate] of [["Agentic Canvas OS", agenticCanvasOsRoot], ["Knowgrph", knowgrphRoot]]) {
+    : ancillaryIntegration
+      ? path.resolve(controllerRoot)
+      : path.join(workspaceRoot, "agentic-canvas-os");
+  const requiredRepositories = [
+    ["Agentic Canvas OS", agenticCanvasOsRoot],
+    ...(runtimeRequired ? [["Knowgrph", knowgrphRoot]] : []),
+  ];
+  for (const [label, candidate] of requiredRepositories) {
     try {
       JSON.parse(readFileSync(path.join(candidate, "package.json"), "utf8"));
     } catch {
       throw new Error(`${label} canonical repository is unavailable at ${candidate}.`);
     }
   }
+  if (allowAncillary && ancillaryIntegration) {
+    requireRepositoryPackageIdentity(agenticCanvasOsRoot, "agentic-canvas-os", "Agentic Canvas OS");
+    if (runtimeRequired) requireRepositoryPackageIdentity(knowgrphRoot, "knowgrph", "Knowgrph");
+  }
   return { integratedRepository, agenticCanvasOsRoot, knowgrphRoot };
 }
 
-function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote }) {
+function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote, allowAncillary = false }) {
   const allowed = new Set(["agentic-canvas-os", "knowgrph"]);
   let packageName = "";
   try {
@@ -1161,11 +1196,28 @@ function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote })
   }
   if (allowed.has(remoteName)) return remoteName;
 
+  if (allowAncillary && packageName && packageName === remoteName &&
+      REPOSITORY_IDENTITY_PATTERN.test(packageName)) {
+    return packageName;
+  }
+
   const observed = [
     packageName ? `package ${JSON.stringify(packageName)}` : null,
     remoteName ? `origin ${JSON.stringify(remoteName)}` : null,
   ].filter(Boolean).join(" and ") || "no supported package or origin metadata";
   throw new Error(`Unsupported canonical integration repository identity: ${observed}.`);
+}
+
+function requireRepositoryPackageIdentity(root, expectedName, label) {
+  let packageName = "";
+  try {
+    packageName = String(JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"))?.name || "").trim();
+  } catch {
+    packageName = "";
+  }
+  if (packageName !== expectedName) {
+    throw new Error(`${label} canonical repository identity is unavailable at ${root}.`);
+  }
 }
 
 function repositoryNameFromRemote(value) {

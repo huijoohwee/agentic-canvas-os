@@ -472,10 +472,10 @@ The commit options are required only while the worktree is dirty. The manifest i
 ```
 
 Changed paths must equal `paths` before and after `npm run check`; the command stages those paths explicitly and rejects any residue. A clean worktree must already contain an authored commit beyond its fence. Runtime reconciliation targets the sibling canonical Knowgrph checkout by default; use `--runtime-repository=<path>` only for a nonstandard workspace layout.
+Repository-owned integration may also converge an ancillary canonical source when its package and origin names are identical safe repository identities and the command supplies an explicit valid Agentic Canvas OS controller root. Canonical runtime reconciliation additionally requires an explicit valid Knowgrph runtime root. The ancillary SHA is bound independently before and after `turn:end`, which must still prove the exact canonical Agentic Canvas OS and Knowgrph revisions before the integration can report `runtime_ready`. Ambiguous identities, implicit controller discovery, source drift, or a mismatched runtime root fail closed.
 If protected synchronization advances a published pull request, integration accepts a bounded exact first-parent chain from the recorded delivery head. Every refresh must have exactly two parents, use the preceding head as its first parent, use a second parent contained by current protected `main`, and have the same tree as the deterministic merge of those parents.
 It fetches the immutable pull-request head, admits only a clean local HEAD that is an exact chain member, fast-forwards to the observed head, and records either the compatible single-refresh receipt or the ordered refresh-chain proof; authored, non-ancestral, discontinuous, octopus, tree-mismatched, or unbounded movement fails closed.
-`--runtime=none` is an explicit recovery escape hatch: it emits `integrated`,
-not `runtime_ready`, and cannot support a runtime-ready completion claim.
+`--runtime=none` is an explicit recovery escape hatch: it emits `integrated`, not `runtime_ready`, and cannot support a runtime-ready completion claim.
 After canonical convergence (and, by default, runtime proof), the command uses
 the lifecycle cleaner to remove only its own clean detached completed checkout;
 the task branch and commits remain recoverable.

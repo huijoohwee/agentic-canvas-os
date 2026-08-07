@@ -78,17 +78,21 @@ test("runtime repository identity falls back to origin metadata and rejects unsu
   const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-runtime-origin-"));
   const isolatedCanonicalRoot = path.join(workspace, "isolated-knowgrph-canonical");
   const agenticCanvasOsRoot = path.join(workspace, "agentic-canvas-os");
+  const knowgrphRoot = path.join(workspace, "knowgrph");
   mkdirSync(isolatedCanonicalRoot, { recursive: true });
   mkdirSync(agenticCanvasOsRoot, { recursive: true });
+  mkdirSync(knowgrphRoot, { recursive: true });
   writeFileSync(path.join(isolatedCanonicalRoot, "package.json"), JSON.stringify({ private: true }));
   writeFileSync(
     path.join(agenticCanvasOsRoot, "package.json"),
     JSON.stringify({ name: "agentic-canvas-os" }),
   );
+  writeFileSync(path.join(knowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
 
   try {
     assert.deepEqual(resolveRuntimeRepositories({
       canonicalRoot: isolatedCanonicalRoot,
+      controllerRoot: path.join(workspace, "ignored-controller-root"),
       readOriginRemote: () => "git@github.com:huijoohwee/knowgrph.git",
     }), {
       integratedRepository: "knowgrph",
@@ -99,8 +103,118 @@ test("runtime repository identity falls back to origin metadata and rejects unsu
       canonicalRoot: isolatedCanonicalRoot,
       readOriginRemote: () => "https://github.com/example/unsupported-runtime.git",
     }), /Unsupported canonical integration repository identity/u);
+    writeFileSync(
+      path.join(isolatedCanonicalRoot, "package.json"),
+      JSON.stringify({ name: "huijoohwee.github.io" }),
+    );
+    assert.deepEqual(resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      runtimeRepository: knowgrphRoot,
+      allowAncillary: true,
+      readOriginRemote: () => "https://github.com/huijoohwee/huijoohwee.github.io.git",
+    }), {
+      integratedRepository: "huijoohwee.github.io",
+      agenticCanvasOsRoot,
+      knowgrphRoot,
+    });
+    assert.throws(() => resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      allowAncillary: true,
+      readOriginRemote: () => "https://github.com/huijoohwee/huijoohwee.github.io.git",
+    }), /requires an explicit absolute Knowgrph repository/u);
+    rmSync(knowgrphRoot, { recursive: true, force: true });
+    assert.deepEqual(resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      allowAncillary: true,
+      runtimeRequired: false,
+      readOriginRemote: () => "https://github.com/huijoohwee/huijoohwee.github.io.git",
+    }), {
+      integratedRepository: "huijoohwee.github.io",
+      agenticCanvasOsRoot,
+      knowgrphRoot,
+    });
+    assert.throws(() => resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      runtimeRepository: knowgrphRoot,
+      allowAncillary: true,
+      readOriginRemote: () => "https://github.com/example/different-repository.git",
+    }), /Unsupported canonical integration repository identity/u);
   } finally {
     rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("ancillary source-only completion needs no Knowgrph checkout", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-ancillary-source-only-"));
+  const canonicalAncillaryRoot = path.join(repo, "canonical", "huijoohwee.github.io");
+  const canonicalAgenticRoot = path.join(repo, "controller", "agentic-canvas-os");
+  mkdirSync(canonicalAncillaryRoot, { recursive: true });
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  writeFileSync(
+    path.join(canonicalAncillaryRoot, "package.json"),
+    JSON.stringify({ name: "huijoohwee.github.io" }),
+  );
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  const lease = createLease({
+    repo,
+    status: "completed",
+    completion: { mergeCommitSha: mergeSha, mainSha },
+  });
+  const commands = [];
+  try {
+    const result = integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") {
+          return canonicalWorktree(repo, "huijoohwee.github.io");
+        }
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => { throw new Error("completed replay must not query GitHub"); },
+      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      sessionId: "session-a",
+      run: () => { throw new Error("completed replay must not mutate through run"); },
+      runText: (command, args, options = {}) => {
+        commands.push({ command, args, options });
+        if (command === "node" && args[0].endsWith("live-sync.mjs") &&
+            options.cwd === canonicalAncillaryRoot) return "";
+        if (command === "git" && args.join(" ") === "rev-parse HEAD" &&
+            options.cwd === canonicalAncillaryRoot) return `${mainSha}\n`;
+        if (command === "git" && args.join(" ") === "remote get-url origin" &&
+            options.cwd === canonicalAncillaryRoot) {
+          return "https://github.com/huijoohwee/huijoohwee.github.io.git\n";
+        }
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs") &&
+            options.cwd === canonicalAgenticRoot) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+      },
+      publishTask: () => { throw new Error("completed replay must not publish"); },
+      completeTask: () => { throw new Error("completed replay must not complete twice"); },
+      runtime: "none",
+      controllerRoot: canonicalAgenticRoot,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    });
+
+    assert.equal(result.status, "integrated");
+    assert.equal(result.canonical.repository, "huijoohwee.github.io");
+    assert.equal(commands.some(({ command }) => command === "npm"), false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
   }
 });
 
@@ -242,8 +356,13 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     assert.equal(runtimeCommands[3].command, "npm");
     assert.ok(runtimeCommands[3].args.includes(`--repository=${canonicalKnowgrphRoot}`));
     assert.equal(runtimeCommands[3].options.cwd, canonicalAgenticRoot);
-    assert.equal(runtimeCommands[4].command, "node");
-    assert.ok(runtimeCommands[4].args.includes(`--worktree=${repo}`));
+    assert.deepEqual(runtimeCommands[4], {
+      command: "git",
+      args: ["rev-parse", "HEAD"],
+      options: { cwd: canonicalAgenticRoot },
+    });
+    assert.equal(runtimeCommands[5].command, "node");
+    assert.ok(runtimeCommands[5].args.includes(`--worktree=${repo}`));
     assert.equal(result.cleanup.status, "cleaned");
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -1637,6 +1756,152 @@ test("authorized auto-delivery completes only through canonical runtime readines
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
+});
+
+function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {}) {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-ancillary-auto-"));
+  const canonicalAncillaryRoot = path.join(repo, "canonical", "huijoohwee.github.io");
+  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
+  mkdirSync(canonicalAncillaryRoot, { recursive: true });
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  mkdirSync(canonicalKnowgrphRoot, { recursive: true });
+  writeFileSync(
+    path.join(canonicalAncillaryRoot, "package.json"),
+    JSON.stringify({ name: "huijoohwee.github.io" }),
+  );
+  writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
+  writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
+  const agenticCanvasOsSha = "2".repeat(40);
+  let lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: true,
+    runtimeRequired: true,
+    reviewHeadSha: commitSha,
+  });
+  let runtimeProven = false;
+  let ancillaryHeadReads = 0;
+  const commands = [];
+  try {
+    const result = integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") {
+          return canonicalWorktree(repo, "huijoohwee.github.io");
+        }
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: () => JSON.stringify({
+        url: pullRequestUrl,
+        state: "MERGED",
+        baseRefName: "main",
+        headRefOid: commitSha,
+        mergeCommit: { oid: mergeSha },
+      }),
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+        complete: values => {
+          assert.equal(runtimeProven, true);
+          lease = { ...lease, status: "completed", completion: {
+            mergeCommitSha: values.mergeCommitSha,
+            mainSha: values.mainSha,
+          } };
+          return lease;
+        },
+      },
+      sessionId: "session-a",
+      buildDeliveryEvidence: () => deliveryEvidence,
+      authorizeCloudDelivery: ({ authority }) => ({
+        authority: deliveryAuthorizedAuthority(authority),
+      }),
+      verifyCloudAuthority: () => ({ ok: true }),
+      run: () => {},
+      runText: (command, args, options = {}) => {
+        commands.push({ command, args, options });
+        if (command === "git" && args.join(" ") === "rev-parse HEAD") {
+          if (options.cwd === canonicalAncillaryRoot) {
+            ancillaryHeadReads += 1;
+            return `${ancillaryHeadReads === 1 ? mainSha : postRuntimeMainSha}\n`;
+          }
+          if (options.cwd === canonicalAgenticRoot) return `${agenticCanvasOsSha}\n`;
+          if (options.cwd === canonicalKnowgrphRoot) return `${knowgrphSha}\n`;
+        }
+        if (command === "git" && args.join(" ") === "remote get-url origin") {
+          return "https://github.com/huijoohwee/huijoohwee.github.io.git\n";
+        }
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        if (command === "node") return "";
+        if (command === "npm" && options.cwd === canonicalAgenticRoot &&
+            args.join(" ") === `--prefix ${canonicalAgenticRoot} run turn:end -- --repository=${canonicalKnowgrphRoot} --json`) {
+          runtimeProven = true;
+          return JSON.stringify({
+            schema: "agentic-local-runtime-readiness/v1",
+            ready: true,
+            status: "runtime-ready",
+            source: { repository: "huijoohwee/knowgrph", revision: knowgrphSha },
+            agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: agenticCanvasOsSha },
+          });
+        }
+        throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+      },
+      publishTask: () => {},
+      completeTask: () => {
+        lease = { ...lease, status: "completing", completion: { mergeCommitSha: mergeSha, mainSha } };
+        return lease.completion;
+      },
+      controllerRoot: canonicalAgenticRoot,
+      runtimeRepository: canonicalKnowgrphRoot,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    });
+
+    assert.equal(result.status, "runtime_ready");
+    assert.equal(result.canonical.repository, "huijoohwee.github.io");
+    assert.equal(result.canonical.mainSha, mainSha);
+    assert.equal(result.runtime.readiness.agenticCanvasOs.revision, agenticCanvasOsSha);
+    assert.equal(result.runtime.readiness.source.revision, knowgrphSha);
+    const cleanup = commands.find(({ command, args }) =>
+      command === "node" && args[0].endsWith("worktree-lifecycle.mjs"));
+    assert.deepEqual(cleanup, {
+      command: "node",
+      args: [
+        path.join(canonicalAgenticRoot, "scripts", "worktree-lifecycle.mjs"),
+        "cleanup",
+        `--repository=${canonicalAncillaryRoot}`,
+        `--worktree=${repo}`,
+      ],
+      options: { cwd: canonicalAgenticRoot },
+    });
+    return result;
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+}
+
+test("authorized ancillary auto-delivery binds canonical source and exact runtime roots", () => {
+  runAuthorizedAncillaryAutoDelivery();
+});
+
+test("authorized ancillary auto-delivery rejects canonical source drift during runtime proof", () => {
+  assert.throws(
+    () => runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha: "3".repeat(40) }),
+    /Canonical runtime readiness did not match the integrated main SHA/u,
+  );
 });
 
 test("authorized auto-delivery rejects integration without canonical runtime proof", () => {

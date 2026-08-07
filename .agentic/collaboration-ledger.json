@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1211,
-  "headDigest": "320be71f378e1674b266d10a5c1d6808443861b066c1f1d4fe1f6d9705145a7b",
+  "sequence": 1212,
+  "headDigest": "e581eedc55ff9a86b6a0e5afdf62766a306262031f9d2964667631e6f66a02d5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -60846,6 +60846,58 @@
       },
       "claimDigest": "783f3d9ebf6795adc26fef13809994351917698513a333ad305788ff2b7c979f",
       "digest": "320be71f378e1674b266d10a5c1d6808443861b066c1f1d4fe1f6d9705145a7b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1212,
+      "parentDigest": "320be71f378e1674b266d10a5c1d6808443861b066c1f1d4fe1f6d9705145a7b",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "08bb318bc45b41f288feb31b4192502bcafe78b2e3fc8ec23cf40f0cb24a137e",
+      "idempotencyKey": "f774d61beb2fe86089c2dd24faee6a34624c8e546fb2646473d550d3c94f81af",
+      "requestDigest": "3a895a0c42ec17709d3a0617e03802725da9d277cdc5c4220bf0b9349ab66a90",
+      "evaluationTime": "2026-08-07T00:28:08.000Z",
+      "claimCore": {
+        "claimId": "08bb318bc45b41f288feb31b4192502bcafe78b2e3fc8ec23cf40f0cb24a137e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5da9057132107f9fd6443d98ca0949a9fc15878c205c86b61400be3ab9246c80",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:edb6f4c8d02db1677531c5c9c79640915cfc1d8d609bf3fe07216b3f398b9629",
+        "canonicalBaseRevision": "49532270a4099a0025b3ee5e21454f022947cf6e",
+        "declaredWriteScope": [
+          "path:docs/reference.md",
+          "path:guidelines/media-gaming-development-guidelines.md",
+          "path:guidelines/workspace-artifact-lifecycle-guidelines.md",
+          "path:template/media-gaming-development-template.md",
+          "semantic:workspace-artifact-lifecycle-guidelines"
+        ],
+        "writeSetDigest": "ea7094e52e1eaed71ec35f653d831c62e93897f8f1bab61984e598d6d25c7930",
+        "laneRevision": "49532270a4099a0025b3ee5e21454f022947cf6e",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-07T06:26:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "49532270a4099a0025b3ee5e21454f022947cf6e",
+          "reviewRequestId": null,
+          "bytesDigest": "08c7c8c4699b7c847667216da734a26edaf5b448a4e3d812113b18aada7e8466",
+          "namedChecksDigest": "c1c54b1e87c4505e0f8a8e321d9a4dd323768d1c9ddf048253d3c0dad643655f",
+          "handoffEvidenceDigest": "d25670e86cb4d15ef9d4d168e530a548c4b5f98303a001433a8627ff7950082c",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-07T00:28:08.000Z"
+        }
+      },
+      "claimDigest": "40b9f36239270a1aeb773a814fc614e1ef316d89df167a2a94653a629472476d",
+      "digest": "e581eedc55ff9a86b6a0e5afdf62766a306262031f9d2964667631e6f66a02d5"
     }
   ]
 }

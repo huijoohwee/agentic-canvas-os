@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-08-03"
+date: "2026-08-08"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
@@ -96,6 +96,13 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 | Live Verification Receipt | Immutable Pages origin smoke, public route identity and smoke, browser fidelity, returning-user service-worker convergence, and rollback target |
 | Publication Receipt | Exact verified `huijoohwee` mirror revision, emitted only after live verification |
 | Rollback Receipt | Restored last-known-good Pages deployment, state disposition, restored probes, and unchanged mirror identity when recovery runs |
+
+ACOS also exposes
+`createProviderNeutralProductionAuthorizationPrompt` for consumers such as
+GameXR. It reads the canonical `collaborative-release-lifecycle/v1` carrier and
+does not add provider fields to any lifecycle receipt. The existing Knowgrph
+prompt remains the reference localhost adapter and keeps its current schema and
+rendered output.
 
 ## Inputs and Outputs
 
@@ -267,6 +274,47 @@ fresh candidate from that fetched revision. Do not approve, resume, or deploy
 the older candidate after the newer protected revision exists.
 
 ### 9. Authorize and Deploy Cloudflare
+
+#### Provider-neutral authorization prompt
+
+Before a non-Knowgrph consumer asks for authorization, pass its canonical
+`{ receipts }` lifecycle carrier, controller-current authority receipt, strict
+versioned readiness, exact Candidate Manifest digest, and bounded run reference to
+`createProviderNeutralProductionAuthorizationPrompt`. The adapter validates the
+closed carrier through the shared lifecycle schema, reconstructs the joined
+Preservation, Disposition, Integration, Runtime Review, and Candidate receipts
+through their canonical constructors, and rejects a missing, forged, ambiguous,
+previously challenged, or previously authorized selected candidate.
+
+The controller input must be a self-digesting
+`agentic-provider-neutral-production-authorization-authority/v1` receipt. It
+binds the order-neutral carrier digest, selected candidate, no current
+competitor, uninitiated authorization state, canonical and release-owner source,
+and current-state observation. The adapter recomputes that authority digest and
+joins every field to the selected receipt chain. Readiness must be
+`agentic-provider-neutral-production-authorization-readiness/v1` and
+`runtime-ready`; it must carry the exact controller authority digest and state,
+every integration/review/candidate digest, full source/dependency/check/policy/
+target/artifact/manifest/rollback identity, review surface, probes, and observed
+instant. Every named probe must be `passed`. The carrier digest proves both
+authority and readiness were issued for those exact receipts.
+
+The adapter accepts one canonical HTTPS locator or an HTTP loopback locator with
+an explicit port. URL syntax alone does not prove an HTTPS surface immutable;
+any immutability claim must be established independently by the controller and
+the readiness-bound artifact and manifest identities. The ordered evidence
+window is Integration Receipt time, Runtime Review issue time, candidate build
+time, current observation time, controller-clock prompt time, then review
+expiry. The controller-derived prompt instant is bound into the prompt digest.
+Drift or expiry blocks prompt creation.
+
+The provider-neutral formatter renders candidate, target, source, run, review
+surface, portable formatter template, and the exact `authorize <digest>` reply.
+A loopback or HTTPS surface proves review only. Prompt creation and
+presentation create no Authorization Interaction Receipt, Human Authorization
+Receipt, Production authority, publication authority, or deployment authority.
+GameXR may consume this adapter with the same canonical carrier and without
+GitHub, Cloudflare, Pages, Knowgrph, or localhost-specific receipt fields.
 
 Deploy only the already-built candidate whose exact digest and target an
 authenticated human reviewer authorized in the protected GitHub `production`

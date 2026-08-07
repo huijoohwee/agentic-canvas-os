@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1268,
-  "headDigest": "d72d2f2c7c4ff20c2e2cb75c4cb81a3d5f17579268d81897e83c597b54686675",
+  "sequence": 1269,
+  "headDigest": "8bfcdcf2bd34599d08b5d83807256be867b9248b61a0e19ab0d07095dbea8392",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -63394,6 +63394,52 @@
       },
       "claimDigest": "97a6aba45ebfa0e742b383f6b99c9eca0d4a841a24a3410159004f9707e7127d",
       "digest": "d72d2f2c7c4ff20c2e2cb75c4cb81a3d5f17579268d81897e83c597b54686675"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1269,
+      "parentDigest": "d72d2f2c7c4ff20c2e2cb75c4cb81a3d5f17579268d81897e83c597b54686675",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2d2da0a188aad5f789d822ca5a40fad739ced87ecde2b6d5f26f383fdf69776c",
+      "idempotencyKey": "9e7af7aa06b78d8f96971fb620d41cc1e27f7aa1a7e60be03e29983484cbaa49",
+      "requestDigest": "03d1ac9c8294da23e8339231eb7a97ce27e8f1484d517893538709ff8dd01254",
+      "evaluationTime": "2026-08-07T06:18:19.000Z",
+      "claimCore": {
+        "claimId": "2d2da0a188aad5f789d822ca5a40fad739ced87ecde2b6d5f26f383fdf69776c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:74cd58b56cf146f571eb4deb8552c62a6961d4ca0d658276102e47dca5627e0e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1c38788fb557a3817f0ebed0237a658691b1a43c91f7e49195ab5f9ccdb2e940",
+        "canonicalBaseRevision": "53347ae932bb72fc6fbc8859c7cf7d6223eb0841",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-active-authority-recovery-contract.test.mjs",
+          "path:__tests__/dormant-active-authority-recovery-controller.test.mjs",
+          "path:__tests__/dormant-active-authority-recovery-replay.test.mjs",
+          "path:__tests__/dormant-active-authority-registry-cas.test.mjs",
+          "path:scripts/dormant-active-authority-recovery-contract.mjs",
+          "path:scripts/dormant-active-authority-recovery-controller.mjs",
+          "path:scripts/dormant-active-authority-recovery.mjs",
+          "path:scripts/dormant-active-authority-registry-cas.mjs",
+          "semantic:dormant-active-authority-recovery-controller"
+        ],
+        "writeSetDigest": "ab01ca6c2f45af660ce808000eedbf7d3b2a936ad69b4e70d8961b9c53639241",
+        "laneRevision": "72a38e3a205b3837d61d610bcf64331324f624b8",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T14:16:08.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM775drX",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ed2a0ae63fca1258ab81b935853dd4e9d71b292930eae4fa03d158a5551964d2",
+      "digest": "8bfcdcf2bd34599d08b5d83807256be867b9248b61a0e19ab0d07095dbea8392"
     }
   ]
 }

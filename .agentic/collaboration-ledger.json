@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1230,
-  "headDigest": "dd7cb9ae2cbad51d665c7f429d32b92c9c9f6e476f6159aaf05e960ed66261f2",
+  "sequence": 1231,
+  "headDigest": "c963a2f61ade56775f2caba9d84ce9d7587d509d216acf32c0abe1fcf3c3bd42",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -61654,6 +61654,47 @@
       },
       "claimDigest": "05c219caf33c5aa374d5cb34194dad84d6739d8c73eb9a840a29e56e38546071",
       "digest": "dd7cb9ae2cbad51d665c7f429d32b92c9c9f6e476f6159aaf05e960ed66261f2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1231,
+      "parentDigest": "dd7cb9ae2cbad51d665c7f429d32b92c9c9f6e476f6159aaf05e960ed66261f2",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b4412e347418b4304d015c8833a08b9000f8ec4463d83deb242a3cd153ef5495",
+      "idempotencyKey": "300d3a44dd712f48e17ba8ae8f5f64aaa2c9371e36aa612013d948bb4afb81b4",
+      "requestDigest": "3ce7cc3d7208fd43da7d4dc197f0ae6bf6462fd65f148cb91fd9d47f1613308a",
+      "evaluationTime": "2026-08-07T01:26:14.000Z",
+      "claimCore": {
+        "claimId": "b4412e347418b4304d015c8833a08b9000f8ec4463d83deb242a3cd153ef5495",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5da9057132107f9fd6443d98ca0949a9fc15878c205c86b61400be3ab9246c80",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:6a495aeccf20d011257ddf99226ddf280be42774941b65c2cb313dafc356acc0",
+        "canonicalBaseRevision": "49532270a4099a0025b3ee5e21454f022947cf6e",
+        "declaredWriteScope": [
+          "path:guidelines/media-gaming-development-guidelines.md",
+          "path:guidelines/workspace-artifact-lifecycle-guidelines.md",
+          "path:template/media-gaming-development-template.md",
+          "semantic:workspace-artifact-lifecycle-guidelines"
+        ],
+        "writeSetDigest": "da38fa1989ab9e64c427eb4d9641eadf1639329012724b69eb5fb2ec0803fa3d",
+        "laneRevision": "a638ee410e629b6ee0cd4c3517832bcc73f6b31f",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 1,
+        "state": "reviewed",
+        "expiresAt": "2026-08-07T09:03:16.000Z",
+        "evidenceDigest": "f3b606238ca8743c8bad9f3c2bd6c455168ccb9b9c0e61bd173e80481328d051",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc77z15k",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "14b8cfc87e45da60bc4e5296a0c193f3926d1eb49db1fb5811b72995ba2550ca",
+      "digest": "c963a2f61ade56775f2caba9d84ce9d7587d509d216acf32c0abe1fcf3c3bd42"
     }
   ]
 }

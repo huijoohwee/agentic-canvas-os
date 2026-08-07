@@ -465,7 +465,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:integrate -- \
   --json
 ```
 
-The commit options are required only while the worktree is dirty. The manifest is external coordination input, not an authored task file, and has this exact shape:
+The commit options are required only while the worktree is dirty. `--commit-message` must use `<type>(<leased-scope>): <summary>` with `feat`, `fix`, `docs`, `test`, `refactor`, or `chore`, a summary of at most 60 characters, and at most 72 total characters. The controller rejects whitespace or scope drift before validation or staging, then preserves that subject and writes an explanatory body plus a final `Agentic-Task`, `Agentic-Scope`, `Agentic-Lease-Epoch`, and `Agentic-Mechanism` trailer block from the exact writer lease and current cloud claim when present. The external manifest is coordination input, not an authored task file, and has this exact shape:
 
 ```json
 {"schema":"agentic-change-manifest/v1","branch":"agent/<device>/<scope>","baseSha":"<lease-base-sha>","paths":["path/owned-by-task"]}

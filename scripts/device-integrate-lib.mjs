@@ -29,6 +29,8 @@ export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-resu
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const REPOSITORY_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/u;
+const MANAGED_COMMIT_SUBJECT_PATTERN =
+  /^(feat|fix|docs|test|refactor|chore)\(([a-z0-9][a-z0-9._/-]*)\): (\S.*)$/u;
 const DELIVERY_EVIDENCE_FIELDS = Object.freeze([
   "dependencyClosureDigest",
   "namedChecksDigest",
@@ -548,7 +550,7 @@ function prepareIntegrationCommit({
   if (changedBeforeCheck.length) {
     manifest = readChangeManifest({ filePath: pathsManifest, repo, branch, lease });
     requireExactPaths({ changed: changedBeforeCheck, approved: manifest.value.paths });
-    requireCommitMessage(commitMessage);
+    const managedCommit = renderManagedCommitMessage({ branch, commitMessage, lease });
     run("npm", ["run", "check"]);
     const changedAfterCheck = listChangedPaths(gitText);
     requireExactPaths({ changed: changedAfterCheck, approved: manifest.value.paths });
@@ -561,11 +563,16 @@ function prepareIntegrationCommit({
       approved: manifest.value.paths,
     });
     const stagedDiffDigest = sha256(gitText(["diff", "--cached", "--binary"]));
-    run("git", ["commit", "-m", commitMessage]);
+    run("git", [
+      "commit",
+      "-m", managedCommit.subject,
+      "-m", managedCommit.body,
+      "-m", managedCommit.trailers.join("\n"),
+    ]);
     return annotateIntegration({
       branch, leaseStore, sessionId, gitText, now,
       values: {
-        commitMessage,
+        commitMessage: managedCommit.subject,
         manifestDigest: manifest.digest,
         stagedDiffDigest,
         paths: manifest.value.paths,
@@ -1313,6 +1320,47 @@ function requireCommitMessage(value) {
   if (!message || message.length > 200 || /[\r\n]/.test(message)) {
     throw new Error("Dirty integration requires one intentional single-line --commit-message of at most 200 characters.");
   }
+}
+
+export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
+  requireCommitMessage(commitMessage);
+  const rawSubject = String(commitMessage);
+  const subject = rawSubject.trim();
+  if (rawSubject !== subject) {
+    throw new Error("Managed integration commit subject must not contain leading or trailing whitespace.");
+  }
+  const branchParts = String(branch || "").split("/");
+  const branchScope = branchParts[0] === "agent" && branchParts.length >= 3
+    ? branchParts.slice(2).join("/")
+    : "";
+  if (!branchScope || lease?.branch !== branch || lease?.scope !== branchScope) {
+    throw new Error("Managed integration commit attribution requires the exact leased task-branch scope.");
+  }
+  const subjectMatch = subject.match(MANAGED_COMMIT_SUBJECT_PATTERN);
+  if (
+    !subjectMatch ||
+    subjectMatch[2] !== branchScope ||
+    [...subject].length > 72 ||
+    [...(subjectMatch?.[3] || "")].length > 60
+  ) {
+    throw new Error(
+      "Managed integration commit subject must use <type>(<leased-scope>): <summary> with an allowed type, a summary of at most 60 characters, and at most 72 total characters.",
+    );
+  }
+  const claimEpoch = lease.cloudAuthority ? lease.cloudAuthority.leaseEpoch : lease.epoch;
+  if (!Number.isInteger(claimEpoch) || claimEpoch <= 0) {
+    throw new Error("Managed integration commit attribution requires a positive claim epoch.");
+  }
+  return Object.freeze({
+    subject,
+    body: `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
+    trailers: Object.freeze([
+      `Agentic-Task: ${branchScope}`,
+      `Agentic-Scope: ${branchScope}`,
+      `Agentic-Lease-Epoch: ${claimEpoch}`,
+      "Agentic-Mechanism: Agentic Canvas OS protected integration",
+    ]),
+  });
 }
 
 function requireRepositoryRoot({ invocationPath, repo }) {

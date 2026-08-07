@@ -437,43 +437,44 @@ export function createProtectedHeadRefreshGithubProvider({
   }
 
   function verifyBranchProtection() {
-    const query = [
-      "query ProtectedHeadRefreshProtection($owner: String!, $name: String!) {",
-      "  repository(owner: $owner, name: $name) {",
-      "    ref(qualifiedName: \"refs/heads/main\") {",
-      "      branchProtectionRule {",
-      "        pattern requiresStatusChecks requiresStrictStatusChecks",
-      "        requiredStatusChecks { context app { databaseId slug } }",
-      "      }",
-      "    }",
-      "  }",
-      "}",
-    ].join("\n");
-    const [owner, name] = repository.split("/");
-    const response = ghJson([
-      "api", "graphql",
-      "-f", `query=${query}`,
-      "-f", `owner=${owner}`,
-      "-f", `name=${name}`,
-    ]);
-    const mainRule = response?.data?.repository?.ref?.branchProtectionRule;
     const classicContexts = [
       "test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration",
     ];
+    const mainBranch = ghJson([
+      "api", "--method", "GET", `repos/${repository}/branches/main`,
+    ]);
+    const branchProtectionRule = mainBranch?.protection?.required_status_checks;
+    const contexts = branchProtectionRule?.contexts;
+    const checks = branchProtectionRule?.checks;
+    const hasExactContexts = (
+      Array.isArray(contexts)
+      && contexts.length === classicContexts.length
+      && new Set(contexts).size === classicContexts.length
+      && classicContexts.every(context => contexts.includes(context))
+    );
+    const hasExactChecks = (
+      Array.isArray(checks)
+      && checks.length === classicContexts.length
+      && new Set(checks.map(check => check?.context)).size === classicContexts.length
+      && checks.every(check => (
+        classicContexts.includes(check?.context)
+        && check?.app_id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
+      ))
+    );
     if (
-      mainRule?.requiresStatusChecks !== true
-      || mainRule?.requiresStrictStatusChecks !== true
-      || !Array.isArray(mainRule?.requiredStatusChecks)
-      || classicContexts.some(context => !mainRule.requiredStatusChecks.some(check => (
-        check?.context === context
-        && Number(check?.app?.databaseId) === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
-        && check?.app?.slug === "github-actions"
-      )))
+      mainBranch?.name !== "main"
+      || mainBranch?.commit?.sha !== projection.target_main_sha
+      || mainBranch?.protected !== true
+      || mainBranch?.protection?.enabled !== true
+      || branchProtectionRule?.enforcement_level !== "everyone"
+      || !hasExactContexts
+      || !hasExactChecks
     ) {
-      throw new Error("Protected main lacks the exact strict classic required checks.");
+      throw new Error("Protected main lacks the exact enforced classic required checks.");
     }
     const applicable = ghJson([
       "api", "--method", "GET", `repos/${repository}/rules/branches/main`,
+      "-f", "per_page=100",
     ]);
     if (!Array.isArray(applicable)) {
       throw new Error("Protected-head refresh applicable ruleset proof is malformed.");
@@ -484,7 +485,7 @@ export function createProtectedHeadRefreshGithubProvider({
       && Array.isArray(rule?.parameters?.required_status_checks)
       && rule.parameters.required_status_checks.some(check => (
         check?.context === "agentic-sdlc-policy-runtime"
-        && Number(check?.integration_id) === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
+        && check?.integration_id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
       ))
     ));
     if (!hasAgenticRuntime) {

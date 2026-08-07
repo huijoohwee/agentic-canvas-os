@@ -168,11 +168,45 @@ test('auto-delivery revokes stale exact-head authorization without label races',
     source,
     /types: \[labeled, unlabeled, edited, converted_to_draft, ready_for_review, synchronize, reopened\]/,
   );
-  assert.match(source, /workflow_dispatch:\n\s+inputs:\n\s+pull_request_number:/);
+  assert.match(source, /workflow_dispatch:\n\s+inputs:\n\s+operation:/);
   assert.match(source, /pull_request_number:\n\s+description:.*\n\s+required: true\n\s+type: number/);
+  for (const input of [
+    'operation',
+    'pull_request_number',
+    'branch',
+    'delivered_head_sha',
+    'observed_head_sha',
+    'target_main_sha',
+    'canonical_base_sha',
+    'claim_id',
+    'claim_digest',
+    'ledger_revision',
+    'review_request_id',
+    'pull_request_node_id',
+    'pull_request_title',
+    'auto_merge_method',
+    'auto_merge_enabled_by_database_id',
+    'auto_merge_enabled_by_node_id',
+    'auto_merge_enabled_by_login',
+    'auto_merge_enabled_by_type',
+    'auto_merge_commit_title',
+    'auto_merge_commit_message',
+    'candidate_auto_merge_commit_title',
+    'candidate_auto_merge_commit_message',
+    'integration_receipt_digest',
+    'transition_counter',
+    'operation_id',
+  ]) {
+    assert.match(source, new RegExp(`^      ${input}:$`, 'm'));
+  }
   assert.match(source, /cancel-in-progress: false/);
+  assert.match(
+    source,
+    /github\.event_name == 'workflow_dispatch' &&\n\s+github\.ref == 'refs\/heads\/main'/,
+  );
+  assert.doesNotMatch(source, /inputs\.operation != 'protected-head-refresh'/);
   assert.ok(
-    source.indexOf('    concurrency:') > source.indexOf('jobs:\n  enable:'),
+    source.indexOf('    concurrency:') > source.indexOf('jobs:\n  auto-delivery:'),
     'concurrency must apply only after the job event filter',
   );
   assert.match(
@@ -190,6 +224,23 @@ test('auto-delivery revokes stale exact-head authorization without label races',
     source,
     /AGENTIC_LEDGER_REPOSITORY: \$\{\{ github\.repository \}\}/,
   );
+  assert.match(source, /ref: \$\{\{ github\.sha \}\}\n\s+persist-credentials: false\n\s+fetch-depth: 0/);
+  assert.match(source, /run: node scripts\/sync-open-pr\.mjs --protected-head-refresh/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_OPERATION_ID: \$\{\{ inputs\.operation_id \}\}/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_TARGET_MAIN_SHA: \$\{\{ inputs\.target_main_sha \}\}/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_CONTROLLER_REVISION: \$\{\{ github\.sha \}\}/);
+  assert.match(source, /^permissions: \{\}$/m);
+  assert.match(source, /auto-delivery:[\s\S]*?permissions:\n      contents: write\n      pull-requests: write/);
+  assert.match(source, /protected-head-refresh:[\s\S]*?permissions:\n      actions: write\n      checks: write\n      contents: write\n      pull-requests: read/);
+  const protectedJob = source.slice(source.indexOf('\n  protected-head-refresh:'));
+  assert.match(protectedJob, /runs-on: ubuntu-latest/);
+  assert.doesNotMatch(protectedJob, /runs-on: ubuntu-slim/);
+  assert.match(protectedJob, /timeout-minutes: 60/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_AUTO_MERGE_ENABLED_BY_DATABASE_ID/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_AUTO_MERGE_COMMIT_MESSAGE/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_CANDIDATE_AUTO_MERGE_COMMIT_TITLE/);
+  assert.match(source, /PROTECTED_HEAD_REFRESH_CANDIDATE_AUTO_MERGE_COMMIT_MESSAGE/);
+  assert.doesNotMatch(source, /AUTO_DELIVERY_EVENT_(?:NAME|ACTION|BEFORE|AFTER|ACTOR|SENDER)/);
 
   const controller = await readFile(path.join(repositoryRoot, 'scripts', 'sync-open-pr.mjs'), 'utf8');
   assert.ok(
@@ -202,6 +253,115 @@ test('auto-delivery revokes stale exact-head authorization without label races',
   assert.match(
     controller,
     /"--subject", squashSubject, "--match-head-commit", headSha/,
+  );
+  assert.ok(
+    controller.indexOf('if (protectedHeadRefreshOnly)') < controller.indexOf('const pulls'),
+    'protected refresh must run before label and global PR selection',
+  );
+  const [protectedAdapter, protectedProvider] = await Promise.all([
+    readFile(
+      path.join(repositoryRoot, 'scripts', 'protected-head-refresh-github-adapter.mjs'),
+      'utf8',
+    ),
+    readFile(
+      path.join(repositoryRoot, 'scripts', 'protected-head-refresh-github-provider.mjs'),
+      'utf8',
+    ),
+  ]);
+  const protectedController = `${protectedAdapter}\n${protectedProvider}`;
+  assert.match(protectedController, /invokeRepositoryCloudVerifier/);
+  assert.match(protectedController, /expectedLedgerRevision: projection\.ledger_revision/);
+  assert.match(protectedController, /requiredEnv\("GITHUB_REF"\) !== "refs\/heads\/main"/);
+  assert.match(protectedController, /agentic-protected-head-refresh-result\/v1/);
+  assert.match(protectedController, /operationId: projection\.operation_id/);
+  assert.match(protectedController, /controllerRevision/);
+  assert.ok(
+    protectedController.indexOf('requireProtectedHeadRefreshControllerRevision({')
+      < protectedController.indexOf('executeProtectedHeadRefreshController({'),
+    'controller revision equality must be proven before provider orchestration',
+  );
+  assert.match(protectedController, /PROTECTED_HEAD_REFRESH_TARGET_MAIN_SHA/);
+  assert.match(protectedController, /readProtectedMainSha/);
+  assert.match(
+    protectedController,
+    /--force-with-lease=refs\/heads\/\$\{branch\}:\$\{observedHeadSha\}/,
+  );
+  assert.doesNotMatch(protectedController, /["'`]--force["'`]/);
+  assert.doesNotMatch(protectedController, /update-branch/);
+  assert.doesNotMatch(controller, /update-branch/);
+  assert.match(protectedController, /GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic \$\{authorization\}`/);
+  const protectedPush = protectedController.slice(
+    protectedController.indexOf('pushCandidate:'),
+    protectedController.indexOf('verifyCandidateWorkflow:'),
+  );
+  const protectedPushArgv = protectedPush.slice(
+    protectedPush.indexOf('git(['),
+    protectedPush.indexOf('], {'),
+  );
+  assert.doesNotMatch(protectedPushArgv, /GH_TOKEN|token|authorization|x-access-token/i);
+  assert.match(protectedPush, /GIT_CONFIG_VALUE_0/);
+  for (const trace of [
+    'GIT_TRACE',
+    'GIT_TRACE_PACKET',
+    'GIT_TRACE_PACK_ACCESS',
+    'GIT_CURL_VERBOSE',
+  ]) assert.match(protectedPush, new RegExp(`${trace}: "0"`));
+  assert.doesNotMatch(protectedController, /\$\{candidateSha\}:refs\/heads\/main/);
+  assert.match(protectedController, /"workflow", "run", "ci\.yml"/);
+  assert.match(protectedController, /"-f", "operation=protected-head-refresh"/);
+  assert.match(protectedController, /`expected_head_sha=\$\{candidateSha\}`/);
+  assert.match(protectedController, /verifyCandidateWorkflow/);
+  assert.match(protectedController, /`\$\{candidateSha\}:\$\{workflowPath\}`/);
+  assert.match(protectedController, /`\$\{targetMainSha\}:\$\{workflowPath\}`/);
+  assert.match(protectedController, /candidateBytes\.equals\(trustedBytes\)/);
+  assert.ok(
+    protectedController.indexOf('verifyCandidateWorkflow:')
+      < protectedController.indexOf('reconcileCandidateCi:'),
+    'trusted-main CI bytes must be verified before any workflow dispatch',
+  );
+  for (const context of [
+    'test',
+    'build',
+    'docs-contract',
+    'collaboration-integration',
+    'agentic-sdlc-policy-runtime',
+    'cloud-collaboration',
+  ]) {
+    assert.match(protectedController, new RegExp(`"${context}"`));
+  }
+  assert.match(protectedController, /check-suites\/\$\{ci\.checkSuiteId\}\/check-runs/);
+  assert.match(protectedController, /run\?\.app\?\.id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID/);
+  assert.match(protectedController, /run\?\.app\?\.slug === "github-actions"/);
+  assert.match(protectedController, /status: "in_progress"/);
+  assert.match(protectedController, /renderProtectedHeadRefreshHandshakeEvidence/);
+  assert.match(protectedController, /pending-user-authorization/);
+  assert.match(protectedController, /authorization-complete/);
+  assert.match(protectedController, /matching\.length !== 1/);
+  assert.match(
+    protectedController,
+    /"--method", "PATCH", `repos\/\$\{repository\}\/check-runs\/\$\{checkRunId\}`/,
+  );
+  assert.match(protectedController, /branchProtectionRule/);
+  assert.match(protectedController, /rules\/branches\/main/);
+  assert.match(protectedController, /strict_required_status_checks_policy === true/);
+  assert.match(protectedController, /\["auto-delivery\.yml", "cloud-collaboration\.yml"\]/);
+  assert.doesNotMatch(protectedController, /enablePullRequestAutoMerge|"--auto"|--disable-auto/);
+  assert.doesNotMatch(protectedController, /npm (?:test|run)|node --test/);
+  assert.doesNotMatch(controller, /preserveControllerRefreshSynchronize|ProtectedRefreshSynchronize/);
+  const mergedVerifier = protectedAdapter.slice(
+    protectedAdapter.indexOf('verifyMergedCommit:'),
+    protectedAdapter.indexOf('sleep:', protectedAdapter.indexOf('verifyMergedCommit:')),
+  );
+  assert.match(mergedVerifier, /verifyProtectedHeadRefreshMergedProviderState/);
+  const mergedProviderHelper = protectedAdapter.slice(
+    protectedAdapter.indexOf('export function verifyProtectedHeadRefreshMergedProviderState'),
+    protectedAdapter.indexOf('\nfunction projectionInput'),
+  );
+  assert.match(mergedProviderHelper, /fetchProtectedMainRef\(providerMainSha\)/);
+  assert.doesNotMatch(
+    mergedProviderHelper,
+    /fetchProtectedHeadRefreshRefs/,
+    'merged replay must survive provider deletion of the feature branch',
   );
 });
 

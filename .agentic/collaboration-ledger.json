@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1196,
-  "headDigest": "918cedc78eea14c62712869f6734b68f5e17e6161eaf678061163fe9d0ef7b9d",
+  "sequence": 1197,
+  "headDigest": "5eb2aaac0b1f3efe29925d6b24954e596882d654e76dbd25eeff8430ea23ae4b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -60155,6 +60155,62 @@
       },
       "claimDigest": "35a266f38606cf1bd86e1e99b1f8cf6ff2dcaca79dcf54f1f9e206d2b5918f47",
       "digest": "918cedc78eea14c62712869f6734b68f5e17e6161eaf678061163fe9d0ef7b9d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1197,
+      "parentDigest": "918cedc78eea14c62712869f6734b68f5e17e6161eaf678061163fe9d0ef7b9d",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "b6a43a707a7ada34a8267b945f5906694f45bc6857230ac22ea79d00c77a10ae",
+      "idempotencyKey": "388be9e03011bbcde45fea713982ff6c119f1611e2a215cb979bfaec844de140",
+      "requestDigest": "f181424e80b0d7be5fd384286b1994149e80664f53637e96e03dac37fa4a4801",
+      "evaluationTime": "2026-08-07T00:08:36.000Z",
+      "claimCore": {
+        "claimId": "b6a43a707a7ada34a8267b945f5906694f45bc6857230ac22ea79d00c77a10ae",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:c7359ff6a2412f9222f911119ebc5c41a25f7e7535b12e4d257617971f71f371",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:4f66e44eda8878df9f3ba6020a61a38ea5c83a40822449cc5e087ee78b86740c",
+        "canonicalBaseRevision": "ee41edcf87e9d1946cd12c898b9b20627bc1f086",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/fetchRemoteTextInterop.test.ts",
+          "path:canvas/src/__tests__/workspaceImportUrlContentFormat.test.ts",
+          "path:canvas/src/features/markdown-workspace/workspaceImport/urlContent.ts",
+          "path:canvas/src/features/markdown-workspace/workspaceImport/urlContentFormat.ts",
+          "path:canvas/src/tests/registry/postParserCases4.ts",
+          "path:docs/documents/knowgrph-csv-json-prd-tad.md",
+          "path:grph-shared/src/net/fetchRemoteText.ts",
+          "semantic:import-url-content-classification-successor-2"
+        ],
+        "writeSetDigest": "cba07d768316ecea1bf5cc518a94063b003f0f27fadbcf46a93575d3d17fe123",
+        "laneRevision": "27ae467e2ac034ef2ed832bf594fda3180976908",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-07T00:30:08.000Z",
+        "evidenceDigest": "da819647f51c09d78ff7baa69969f8eb50378c2aeb08c86de1ccf9fe1cd82d59",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77zVLx",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "27ae467e2ac034ef2ed832bf594fda3180976908",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs77zVLx",
+          "focusedEvidenceDigest": "da819647f51c09d78ff7baa69969f8eb50378c2aeb08c86de1ccf9fe1cd82d59",
+          "dependencyClosureDigest": "89e94b4fdb0d89716c482a9a5429952ca578ca29624a440e4cd47b0a9f045c9c",
+          "namedChecksDigest": "2a5a98cf379140b7ec6fa0ad055640a9fc79915fa359069f06be8c8984d6cfe0",
+          "handoffEvidenceDigest": "27cf5fe5a3ed5bce1f004aa91f81ca3858e811a89f5e462fb5d45e9448005c56",
+          "operatorDecisionDigest": "91f0e22c3a09336ea857cd8fc4ca78b9e7315ca6cb570c2e3bd5c4f5f0aa44ac",
+          "integrationIntentDigest": "cec4e66101034cd26222f64e986f02ea9a94282e6753dc839710e987b279547f",
+          "integratedAt": "2026-08-07T00:08:36.000Z"
+        }
+      },
+      "claimDigest": "7f81d99dcad64398053b81e6e9de673ac4a69dae7b678d599987e5e04c09ea40",
+      "digest": "5eb2aaac0b1f3efe29925d6b24954e596882d654e76dbd25eeff8430ea23ae4b"
     }
   ]
 }

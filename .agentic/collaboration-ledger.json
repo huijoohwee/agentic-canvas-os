@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1237,
-  "headDigest": "26cbe54615cf8514d72fd994ef5da4b9063a51e6bcc0b65ffd1cef250c023da6",
+  "sequence": 1238,
+  "headDigest": "62a48247358c04a4c2476cdb1fcbf0ca6c8c01f6140d412519bae16253c31199",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -61979,6 +61979,52 @@
       },
       "claimDigest": "de2ea73f9fc3f2a47100f19c4aafd4592ba061bc0d4e7f793f4705ee77e8410d",
       "digest": "26cbe54615cf8514d72fd994ef5da4b9063a51e6bcc0b65ffd1cef250c023da6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1238,
+      "parentDigest": "26cbe54615cf8514d72fd994ef5da4b9063a51e6bcc0b65ffd1cef250c023da6",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "5ef044ffa5aca3e5d75374a7008335bd4b406e68d90454468ac869d93956814a",
+      "idempotencyKey": "274070a344952d1b1bbe00eb42a1f8148d6774f074c70488e412ed63c6ea87e2",
+      "requestDigest": "64028b05b15008ccd1db5e57e20e648158d878c2f3a37e337940da192035d8f9",
+      "evaluationTime": "2026-08-07T01:36:21.000Z",
+      "claimCore": {
+        "claimId": "5ef044ffa5aca3e5d75374a7008335bd4b406e68d90454468ac869d93956814a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:5da9057132107f9fd6443d98ca0949a9fc15878c205c86b61400be3ab9246c80",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:76f64c8fbed4f26e77a70dcd6b4f09e5fd32c6d3f52c6d1bf9d90d71e765033e",
+        "canonicalBaseRevision": "3a9507510d10855abb69e93768db5a49297b086c",
+        "declaredWriteScope": [
+          "path:canvas/src/features/agent-ready/knowgrphLocalMcpToolNames.mjs",
+          "path:mcp/__tests__/workspace-artifact-contract.test.mjs",
+          "path:mcp/__tests__/workspace-artifact-runtime.test.mjs",
+          "path:mcp/__tests__/workspace-artifact-stdio-e2e.test.mjs",
+          "path:mcp/local-tool-contract.js",
+          "path:mcp/server.js",
+          "path:mcp/workspace-artifact-contract.js",
+          "path:mcp/workspace-artifact-runtime.js",
+          "semantic:workspace-artifact-lifecycle-runtime"
+        ],
+        "writeSetDigest": "f4da556fa5adf32c1547101b81dac49e9fbf0965295889bddef4bf89136d3812",
+        "laneRevision": "3a9507510d10855abb69e93768db5a49297b086c",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T07:36:21.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "2bcf583c5bcc4e70b02c35639fc215574ce1bc1aabd0fa7cdc39c3bf73eff038",
+      "digest": "62a48247358c04a4c2476cdb1fcbf0ca6c8c01f6140d412519bae16253c31199"
     }
   ]
 }

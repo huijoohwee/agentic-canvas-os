@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -21,6 +22,17 @@ const mergeSha = "e".repeat(40);
 const mainSha = "f".repeat(40);
 const knowgrphSha = "1".repeat(40);
 const pullRequestUrl = "https://github.test/example/repo/pull/42";
+const githubPullRequestUrl = "https://github.com/example/repo/pull/42";
+const claimId = "8".repeat(64);
+const claimDigest = "9".repeat(64);
+const ledgerRevision = "8".repeat(40);
+const transitionCounter = 5;
+const targetMainSha = "0".repeat(40);
+const pullRequestNodeId = "PR_42";
+const autoMergeActorDatabaseId = 8_945_812;
+const autoMergeActorNodeId = "MDQ6VXNlcjg5NDU4MTI=";
+const autoMergeActorLogin = "huijoohwee";
+const autoMergeActorType = "User";
 const protectedSquashSubject = "fix: bind exact protected squash subjects";
 const oversizedReviewedMergeSubject =
   "Merge remote-tracking branch 'origin/main' into agent/huis-macbook-pro-3/lark-readonly-knowledge-ingestion";
@@ -642,7 +654,9 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         pullRequestRead += 1;
         assert.equal(
           args.join(" "),
-          `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`,
+          pullRequestRead === 1
+            ? `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`
+            : `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest`,
         );
         return JSON.stringify({
           url: pullRequestUrl,
@@ -727,7 +741,7 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
     );
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
     assert.ok(commands.some(call => call.join(" ") ===
-      `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --match-head-commit ${commitSha} ${pullRequestUrl}`));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -1172,7 +1186,9 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       ghText: args => {
         assert.equal(
           args.join(" "),
-          `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`,
+          pullRequestRead === 0
+            ? `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`
+            : `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest`,
         );
         return JSON.stringify(pullRequestRead++ === 0 ? {
           url: pullRequestUrl,
@@ -1244,11 +1260,285 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       mainParentSha: refreshedMainSha,
     });
     assert.ok(commands.some(call => call.join(" ") ===
-      `gh pr merge --auto --squash --subject ${protectedSquashSubject} ${pullRequestUrl}`));
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --match-head-commit ${refreshedHeadSha} ${pullRequestUrl}`));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin refs/pull/42/head"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --ff-only FETCH_HEAD"));
   } finally {
     rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("review-ready delivery dispatches one exact protected refresh per accepted behind head", () => {
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    observations: [
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      mergedPullRequest(),
+    ],
+  });
+
+  assert.equal(result.status, "integrated");
+  const mergeCommand =
+    `run:gh pr merge --auto --squash --subject ${protectedSquashSubject} --match-head-commit ${commitSha} ${githubPullRequestUrl}`;
+  const dispatchCommand = expectedProtectedRefreshDispatchCommand();
+  const dispatchIndexes = events.flatMap(
+    (event, index) => event === dispatchCommand ? [index] : [],
+  );
+  assert.equal(dispatchIndexes.length, 1);
+  assert.ok(events.indexOf(mergeCommand) < dispatchIndexes[0]);
+  assert.ok(events.indexOf("read:protected-refresh-pull-request") < dispatchIndexes[0]);
+  assert.ok(events.indexOf("read:protected-main-ref") < dispatchIndexes[0]);
+  assert.equal(events[dispatchIndexes[0] - 1], `verify:${commitSha}`);
+  assert.equal(events.some(event => event.includes("update-branch")), false);
+});
+
+test("review-ready delivery does not dispatch a protected refresh when the fresh PR is not behind", () => {
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    observations: [
+      openPullRequest({ mergeStateStatus: "CLEAN" }),
+      mergedPullRequest(),
+    ],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("review-ready delivery re-verifies original cloud authority immediately before dispatch", () => {
+  const events = [];
+  let verificationCount = 0;
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    observations: [openPullRequest({ mergeStateStatus: "BEHIND" })],
+    onVerify: () => {
+      verificationCount += 1;
+      if (verificationCount === 3) throw new Error("fresh cloud authority rejected");
+    },
+  }), /fresh cloud authority rejected/u);
+
+  assert.equal(verificationCount, 3);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  assert.ok(events.some(event => event.startsWith("run:gh pr merge --auto")));
+});
+
+test("review-ready delivery fails closed when GitHub rejects the protected refresh dispatch", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    observations: [openPullRequest({ mergeStateStatus: "BEHIND" })],
+    onRun: ({ command, args }) => {
+      if (command === "gh" && args[0] === "workflow") {
+        throw new Error("GitHub protected refresh dispatch failed");
+      }
+    },
+  }), /GitHub protected refresh dispatch failed/u);
+  assert.equal(events.filter(event => event.includes("workflow run auto-delivery.yml")).length, 1);
+});
+
+test("review-ready delivery accepts a failed auto-merge command only as an exact armed replay", () => {
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    failAutoMerge: true,
+    autoMergeReplay: openPullRequest({
+      url: githubPullRequestUrl,
+      autoMergeRequest: { mergeMethod: "SQUASH" },
+    }),
+    observations: [mergedPullRequest()],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.filter(event => event.startsWith("run:gh pr merge --auto")).length, 1);
+  assert.ok(events.includes("read:replay:OPEN:CLEAN"));
+});
+
+test("review-ready delivery rejects an auto-merge head race and unarmed replay", () => {
+  assert.throws(() => runProtectedRefreshScenario({
+    failAutoMerge: true,
+    autoMergeReplay: openPullRequest({
+      url: githubPullRequestUrl,
+      headRefOid: "2".repeat(40),
+      autoMergeRequest: { mergeMethod: "SQUASH" },
+    }),
+    observations: [],
+  }), /no exact armed replay was observed/u);
+
+  for (const autoMergeRequest of [null, { mergeMethod: "MERGE" }]) {
+    const events = [];
+    assert.throws(() => runProtectedRefreshScenario({
+      events,
+      failAutoMerge: true,
+      autoMergeReplay: openPullRequest({
+        url: githubPullRequestUrl,
+        autoMergeRequest,
+      }),
+      observations: [],
+    }), /no exact armed replay was observed/u);
+    assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  }
+});
+
+test("review-ready delivery treats UNKNOWN as a bounded non-mutating poll before verified refresh", () => {
+  const events = [];
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  const refreshedTreeSha = "4".repeat(40);
+  const result = runProtectedRefreshScenario({
+    events,
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: refreshedTreeSha,
+    },
+    observations: [
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      openPullRequest({ mergeStateStatus: "UNKNOWN" }),
+      mergedPullRequest({ headRefOid: refreshedHeadSha }),
+    ],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.filter(event => event.includes("workflow run auto-delivery.yml")).length, 1);
+  assert.equal(events.some(event => event.includes("update-branch")), false);
+  assert.equal(result.protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+});
+
+test("review-ready delivery requires github.com and rejects unsupported merge states", () => {
+  assert.throws(() => runProtectedRefreshScenario({
+    pullUrl: pullRequestUrl,
+    observations: [openPullRequest({
+      mergeStateStatus: "BEHIND",
+    })],
+  }), /requires the github\.com provider/u);
+
+  assert.throws(() => runProtectedRefreshScenario({
+    observations: [openPullRequest({ mergeStateStatus: "ALIEN" })],
+  }), /requires a known merge state/u);
+
+  assert.throws(() => runProtectedRefreshScenario({
+    pullUrl: `${pullRequestUrl}?unexpected=identity-drift`,
+    observations: [openPullRequest({
+      url: `${pullRequestUrl}?unexpected=identity-drift`,
+      mergeStateStatus: "BEHIND",
+    })],
+  }), /requires a plain HTTPS pull-request URL/u);
+});
+
+test("review-ready delivery refuses forked or unarmed protected refresh dispatches", () => {
+  assert.throws(() => runProtectedRefreshScenario({
+    observations: [openPullRequest({
+      mergeStateStatus: "BEHIND",
+      isCrossRepository: true,
+    })],
+  }), /refuses a fork or unknown head repository/u);
+
+  for (const autoMergeRequest of [null, { mergeMethod: "MERGE" }]) {
+    const events = [];
+    assert.throws(() => runProtectedRefreshScenario({
+      events,
+      observations: [openPullRequest({ mergeStateStatus: "BEHIND", autoMergeRequest })],
+    }), /requires fresh SQUASH auto-merge authorization/u);
+    assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  }
+});
+
+test("review-ready delivery rejects missing or drifted full protected-refresh metadata before dispatch", () => {
+  const missingBody = protectedRefreshPullRequest();
+  delete missingBody.auto_merge.commit_message;
+  const missingActorNode = protectedRefreshPullRequest({
+    auto_merge: {
+      ...protectedRefreshPullRequest().auto_merge,
+      enabled_by: {
+        ...protectedRefreshPullRequest().auto_merge.enabled_by,
+        node_id: null,
+      },
+    },
+  });
+  const wrongActor = protectedRefreshPullRequest({
+    auto_merge: {
+      ...protectedRefreshPullRequest().auto_merge,
+      enabled_by: {
+        ...protectedRefreshPullRequest().auto_merge.enabled_by,
+        login: "another-user",
+      },
+    },
+  });
+  const wrongNodeIdentity = protectedRefreshPullRequest({ node_id: "PR_other" });
+  const cases = [
+    {
+      livePullRequest: missingBody,
+      error: /exact original auto-merge title and nullable body/u,
+    },
+    {
+      livePullRequest: missingActorNode,
+      error: /auto-merge actor node ID must be exact bounded text/u,
+    },
+    {
+      livePullRequest: wrongActor,
+      error: /exact original and candidate huijoohwee SQUASH authorizations/u,
+    },
+    {
+      livePullRequest: wrongNodeIdentity,
+      error: /exact original and candidate huijoohwee SQUASH authorizations/u,
+    },
+  ];
+
+  for (const fixture of cases) {
+    const events = [];
+    assert.throws(() => runProtectedRefreshScenario({
+      events,
+      observations: [openPullRequest({ mergeStateStatus: "BEHIND" })],
+      ...fixture,
+    }), fixture.error);
+    assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  }
+});
+
+test("review-ready delivery rejects live head or protected-main drift before dispatch", () => {
+  const driftedHead = protectedRefreshPullRequest({
+    head: {
+      ...protectedRefreshPullRequest().head,
+      sha: "2".repeat(40),
+    },
+  });
+  const cases = [
+    {
+      livePullRequest: driftedHead,
+      error: /metadata drifted from the accepted head or canonical base/u,
+    },
+    {
+      livePullRequest: protectedRefreshPullRequest({
+        base: {
+          ...protectedRefreshPullRequest().base,
+          sha: "3".repeat(40),
+        },
+      }),
+      error: /metadata drifted from the accepted head or canonical base/u,
+    },
+    {
+      liveMainRef: protectedRefreshMainRef({
+        object: { type: "commit", sha: null },
+      }),
+      error: /no exact live protected main SHA/u,
+    },
+    {
+      liveMainRef: protectedRefreshMainRef({ ref: "refs/heads/not-main" }),
+      error: /no exact live protected main SHA/u,
+    },
+  ];
+
+  for (const fixture of cases) {
+    const events = [];
+    assert.throws(() => runProtectedRefreshScenario({
+      events,
+      observations: [openPullRequest({ mergeStateStatus: "BEHIND" })],
+      ...fixture,
+    }), fixture.error);
+    assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
   }
 });
 
@@ -1384,6 +1674,290 @@ test("authorized auto-delivery rejects integration without canonical runtime pro
   }
 });
 
+function runProtectedRefreshScenario({
+  pullUrl = githubPullRequestUrl,
+  observations,
+  events = [],
+  onVerify = null,
+  onRun = null,
+  failAutoMerge = false,
+  autoMergeReplay = null,
+  protectedRefresh = null,
+  livePullRequest = protectedRefreshPullRequest(),
+  liveMainRef = protectedRefreshMainRef(),
+}) {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-protected-refresh-"));
+  const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
+  const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
+  mkdirSync(canonicalAgenticRoot, { recursive: true });
+  mkdirSync(canonicalKnowgrphRoot, { recursive: true });
+  writeFileSync(
+    path.join(canonicalAgenticRoot, "package.json"),
+    JSON.stringify({ name: "agentic-canvas-os" }),
+  );
+  writeFileSync(
+    path.join(canonicalKnowgrphRoot, "package.json"),
+    JSON.stringify({ name: "knowgrph" }),
+  );
+  let lease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+    pullRequestUrl: pullUrl,
+  });
+  let initialPullRequestRead = false;
+  let autoMergeReplayPending = false;
+  let observationIndex = 0;
+  let head = commitSha;
+  let clock = 0;
+  try {
+    return integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return protectedSquashSubject;
+        }
+        if (protectedRefresh) {
+          if (key === "rev-parse FETCH_HEAD") return protectedRefresh.headSha;
+          if (key === `rev-list --parents -n 1 ${protectedRefresh.headSha}`) {
+            return `${protectedRefresh.headSha} ${commitSha} ${protectedRefresh.mainSha}`;
+          }
+          if (key === `merge-base --is-ancestor ${protectedRefresh.mainSha} origin/main`) return "";
+          if (key ===
+            `merge-tree --write-tree --no-messages ${commitSha} ${protectedRefresh.mainSha}`) {
+            return protectedRefresh.treeSha;
+          }
+          if (key === `rev-parse ${protectedRefresh.headSha}^{tree}`) {
+            return protectedRefresh.treeSha;
+          }
+          if (key === "rev-parse HEAD") return head;
+          if (key === "status --porcelain") return "";
+        }
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: args => {
+        const key = args.join(" ");
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          events.push("read:protected-refresh-pull-request");
+          return JSON.stringify(livePullRequest);
+        }
+        if (key === "api --method GET repos/example/repo/git/ref/heads/main") {
+          events.push("read:protected-main-ref");
+          return JSON.stringify(liveMainRef);
+        }
+        const expectedFields = !initialPullRequestRead
+          ? "state,baseRefName,url,headRefOid,mergeCommit"
+          : "state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest";
+        assert.equal(
+          key,
+          `pr view ${pullUrl} --json ${expectedFields}`,
+        );
+        let phase;
+        let pullRequest;
+        if (!initialPullRequestRead) {
+          initialPullRequestRead = true;
+          phase = "initial";
+          pullRequest = openPullRequest({ url: pullUrl, mergeStateStatus: "CLEAN" });
+        } else if (autoMergeReplayPending) {
+          autoMergeReplayPending = false;
+          phase = "replay";
+          pullRequest = autoMergeReplay;
+        } else {
+          phase = "wait";
+          pullRequest = observations[observationIndex++];
+        }
+        if (!pullRequest) throw new Error("protected refresh fixture exhausted PR observations");
+        const boundPullRequest = pullRequest.url === pullRequestUrl
+          ? { ...pullRequest, url: pullUrl }
+          : pullRequest;
+        events.push(
+          `read:${phase}:${boundPullRequest.state}:${boundPullRequest.mergeStateStatus || "merged"}`,
+        );
+        return JSON.stringify(boundPullRequest);
+      },
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+      },
+      sessionId: "session-a",
+      buildDeliveryEvidence: () => deliveryEvidence,
+      authorizeCloudDelivery: ({ authority, headSha }) => ({
+        authority: deliveryAuthorizedAuthority(authority, headSha),
+      }),
+      verifyCloudAuthority: ({ headSha }) => {
+        events.push(`verify:${headSha}`);
+        onVerify?.({ headSha });
+        return { ok: true };
+      },
+      run: (command, args) => {
+        events.push(`run:${[command, ...args].join(" ")}`);
+        onRun?.({ command, args });
+        if (command === "gh" && args[0] === "pr" && failAutoMerge) {
+          autoMergeReplayPending = true;
+          throw new Error("auto-merge command reported already enabled");
+        }
+        if (command === "git" && args.join(" ") === "merge --ff-only FETCH_HEAD") {
+          head = protectedRefresh.headSha;
+        }
+      },
+      runText: (command, args) => {
+        if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
+          return JSON.stringify({
+            schema: "agentic-worktree-lifecycle-report/v1",
+            status: "cleaned",
+            removedWorktree: repo,
+          });
+        }
+        return "";
+      },
+      publishTask: () => {
+        throw new Error("review-ready delivery should not republish authored work");
+      },
+      completeTask: () => {
+        lease = {
+          ...lease,
+          status: "completed",
+          completion: { mergeCommitSha: mergeSha, mainSha },
+        };
+        return lease.completion;
+      },
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      now: () => new Date(clock),
+      sleep: milliseconds => { clock += milliseconds; },
+      log: () => {},
+    });
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+}
+
+function openPullRequest(overrides = {}) {
+  return {
+    url: pullRequestUrl,
+    state: "OPEN",
+    baseRefName: "main",
+    headRefOid: commitSha,
+    mergeCommit: null,
+    isDraft: false,
+    isCrossRepository: false,
+    mergeStateStatus: "CLEAN",
+    autoMergeRequest: { mergeMethod: "SQUASH" },
+    ...overrides,
+  };
+}
+
+function mergedPullRequest(overrides = {}) {
+  return {
+    url: pullRequestUrl,
+    state: "MERGED",
+    baseRefName: "main",
+    headRefOid: commitSha,
+    mergeCommit: { oid: mergeSha },
+    ...overrides,
+  };
+}
+
+function protectedRefreshPullRequest(overrides = {}) {
+  return {
+    number: 42,
+    html_url: githubPullRequestUrl,
+    state: "open",
+    merged: false,
+    merged_at: null,
+    draft: false,
+    node_id: pullRequestNodeId,
+    title: protectedSquashSubject,
+    base: {
+      ref: "main",
+      sha: baseSha,
+      repo: { full_name: "example/repo" },
+    },
+    head: {
+      ref: branch,
+      sha: commitSha,
+      repo: { full_name: "example/repo" },
+    },
+    auto_merge: {
+      merge_method: "squash",
+      enabled_by: {
+        id: autoMergeActorDatabaseId,
+        node_id: autoMergeActorNodeId,
+        login: autoMergeActorLogin,
+        type: autoMergeActorType,
+      },
+      commit_title: protectedSquashSubject,
+      commit_message: null,
+    },
+    mergeable_state: "behind",
+    merge_commit_sha: null,
+    ...overrides,
+  };
+}
+
+function protectedRefreshMainRef(overrides = {}) {
+  return {
+    ref: "refs/heads/main",
+    object: { type: "commit", sha: targetMainSha },
+    ...overrides,
+  };
+}
+
+function expectedProtectedRefreshDispatchCommand({ observedHeadSha = commitSha } = {}) {
+  const candidateAutoMergeMessage = JSON.stringify([
+    "Protected head refresh authorization",
+    "",
+    "Agentic-Pull-Request: 42",
+    `Agentic-Delivered-Head: ${commitSha}`,
+    `Agentic-Target-Main: ${targetMainSha}`,
+  ].join("\n"));
+  const projection = {
+    operation: "protected-head-refresh",
+    pull_request_number: "42",
+    branch,
+    delivered_head_sha: commitSha,
+    observed_head_sha: observedHeadSha,
+    target_main_sha: targetMainSha,
+    canonical_base_sha: baseSha,
+    claim_id: claimId,
+    claim_digest: claimDigest,
+    ledger_revision: ledgerRevision,
+    review_request_id: reviewRequestId,
+    pull_request_node_id: pullRequestNodeId,
+    pull_request_title: protectedSquashSubject,
+    auto_merge_method: "squash",
+    auto_merge_enabled_by_database_id: autoMergeActorDatabaseId,
+    auto_merge_enabled_by_node_id: autoMergeActorNodeId,
+    auto_merge_enabled_by_login: autoMergeActorLogin,
+    auto_merge_enabled_by_type: autoMergeActorType,
+    auto_merge_commit_title: protectedSquashSubject,
+    auto_merge_commit_message: "null",
+    candidate_auto_merge_commit_title: protectedSquashSubject,
+    candidate_auto_merge_commit_message: candidateAutoMergeMessage,
+    integration_receipt_digest: "7".repeat(64),
+    transition_counter: transitionCounter,
+  };
+  projection.operation_id = createHash("sha256").update(JSON.stringify({
+    schema: "agentic-protected-head-refresh-operation/v1",
+    repository: "example/repo",
+    ...projection,
+  })).digest("hex");
+  return [
+    "run:gh", "workflow", "run", "auto-delivery.yml",
+    "--repo", "example/repo", "--ref", "main",
+    ...Object.entries(projection).flatMap(([name, value]) => ["-f", `${name}=${value}`]),
+  ].join(" ");
+}
+
 function createLease({ repo, ...overrides }) {
   const lease = {
     schema: "agentic-writer-lease/v2",
@@ -1410,6 +1984,10 @@ function createLease({ repo, ...overrides }) {
       laneRevision: lease.reviewHeadSha,
       reviewRequestId,
       focusedEvidenceDigest,
+      claimId,
+      claimDigest,
+      ledgerRevision,
+      transitionCounter,
     };
   }
   return lease;

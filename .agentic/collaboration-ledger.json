@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1372,
-  "headDigest": "01d9526443f6686de965b4209509507d0118f977b1eb8a90194b69549a6b073c",
+  "sequence": 1373,
+  "headDigest": "8ef139a532ceb8312e016d37e75805c4f1209249cef00fc6c2ea34f7ca65ac7e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -68723,6 +68723,49 @@
       },
       "claimDigest": "7ab459b5927a2cbe377e032a07ed7e659fea8739296dbf382a1ac2d743c44f20",
       "digest": "01d9526443f6686de965b4209509507d0118f977b1eb8a90194b69549a6b073c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1373,
+      "parentDigest": "01d9526443f6686de965b4209509507d0118f977b1eb8a90194b69549a6b073c",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "26b8000a28f249c16ce04243216611e7be903802657733ed9c7008c4b0933a52",
+      "idempotencyKey": "7550817656848c74a03a4008da04d75e92c7f6090651e9a61066b294fbd32450",
+      "requestDigest": "8449bb3df9c3dd141c37c7016b6136007cceb234a1b7e6297e38ed0889a0a4e3",
+      "evaluationTime": "2026-08-07T15:07:15.000Z",
+      "claimCore": {
+        "claimId": "26b8000a28f249c16ce04243216611e7be903802657733ed9c7008c4b0933a52",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:20ff672818e76bfd0718db5ffedce972e1164d871115cacf366297cfdc5328c5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:79256028abfe7125f19d3a745424a2f92aa2b8ef80028a1bcfb9bedc5ef9fc15",
+        "canonicalBaseRevision": "7ad71c312fa84d1c9e3502c520d5cfe30dd0e7d8",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:memory/2026-08.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:todo/2026-08.md",
+          "semantic:ancillary-repository-integration"
+        ],
+        "writeSetDigest": "f1049a87ec33ded88cdbe09faaf01a181b87da8321da81abdb7383bfb79f92c0",
+        "laneRevision": "b5b24d53796e5d785896be1cdc12398116f96524",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-07T17:07:15.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78GJkU",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e3cba27a5c2c1fc7b9dca606774eb1263f84233cdf55829edf6f6f1ddfc44dcb",
+      "digest": "8ef139a532ceb8312e016d37e75805c4f1209249cef00fc6c2ea34f7ca65ac7e"
     }
   ]
 }

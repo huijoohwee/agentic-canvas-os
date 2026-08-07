@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1214,
-  "headDigest": "2eb08dba6ca511cb2f4aedf786c1114ccf073876cc23aac653785ef0cf61e441",
+  "sequence": 1215,
+  "headDigest": "10930fbcb0ec3ed958d4f73c0bc41b322264bc452ca3df610d040085a7ec4cff",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -60978,6 +60978,50 @@
       },
       "claimDigest": "268da40e67ca8496328228fbd79e95dd62bdcbcda6f12c020b794ba144a2bded",
       "digest": "2eb08dba6ca511cb2f4aedf786c1114ccf073876cc23aac653785ef0cf61e441"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1215,
+      "parentDigest": "2eb08dba6ca511cb2f4aedf786c1114ccf073876cc23aac653785ef0cf61e441",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c1b5ab9106e8ff92878b3b1a876db15d5e87405962d7b47ec579a579cb4460ef",
+      "idempotencyKey": "1e222a7d837352612ac9c45c8662e5a632d8f7011dca5d9bd2a6438e6999b121",
+      "requestDigest": "92c8b81bc3d5a8f8c20bcd63c2bc9d46d1c12270c1bb320b459bfb5e4b5a21ed",
+      "evaluationTime": "2026-08-07T00:35:16.000Z",
+      "claimCore": {
+        "claimId": "c1b5ab9106e8ff92878b3b1a876db15d5e87405962d7b47ec579a579cb4460ef",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b0db24657752f8740f61a4c6ba4c31ef7fc0c31171162dd3ce6613b9b1b3a2b6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cbcb132d1b0063dac7bc109e65e4261dd2817977aa6ebda56dd493c69332afe3",
+        "canonicalBaseRevision": "22ff62eb6c7d3790fd2016ff4fd2c6b1cb722b0c",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:__tests__/github-lifecycle-policy.test.mjs",
+          "path:__tests__/protected-main-refresh.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:scripts/protected-main-refresh-lib.mjs",
+          "path:scripts/sync-open-pr.mjs",
+          "semantic:protected-head-refresh-controller"
+        ],
+        "writeSetDigest": "fe4f2d91b0a6d31d1bc0f0f56f3712922fc9da3217084b7de7d17752f2177a62",
+        "laneRevision": "22ff62eb6c7d3790fd2016ff4fd2c6b1cb722b0c",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T06:35:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "6cc82555cc2d95fc92dfe4e989ac9e0857ffd706c74a09af814278e528f28e0b",
+      "digest": "10930fbcb0ec3ed958d4f73c0bc41b322264bc452ca3df610d040085a7ec4cff"
     }
   ]
 }

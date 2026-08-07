@@ -5,6 +5,7 @@ import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
 import {
   normalizeProtectedMainPathEquivalenceEvidence,
+  normalizeProtectedMainSharedAncestorPathEquivalenceEvidence,
   RECOVERY_PATH_EVIDENCE_MAX_PATHS,
 } from "./protected-main-path-equivalence-lib.mjs";
 
@@ -12,8 +13,10 @@ export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
 export const LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
   "agentic-expired-committed-heartbeat-recovery/v1";
-export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+export const PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
   "agentic-expired-committed-heartbeat-recovery/v2";
+export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+  "agentic-expired-committed-heartbeat-recovery/v3";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_PULL_REQUEST_ACTION = "/change";
 export const DEVICE_BRANCH_PATTERN =
@@ -50,14 +53,29 @@ const LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   "status",
   "treeSha",
 ]);
+const PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS =
+  Object.freeze([
+    ...LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
+    "declaredChangedPathCount",
+    "declaredChangedPathsDigest",
+    "protectedEquivalentPathCount",
+    "protectedEquivalentPathsDigest",
+    "protectedMainEquivalence",
+    "protectedMainEquivalenceDigest",
+  ].sort());
 const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
-  ...LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
-  "declaredChangedPathCount",
-  "declaredChangedPathsDigest",
-  "protectedEquivalentPathCount",
-  "protectedEquivalentPathsDigest",
-  "protectedMainEquivalence",
-  "protectedMainEquivalenceDigest",
+  ...PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
+  "sourceRemoteChangedPathCount",
+  "sourceRemoteChangedPathsDigest",
+  "sourceRemoteDeclaredChangedPathCount",
+  "sourceRemoteDeclaredChangedPathsDigest",
+  "sourceRemoteHeadSha",
+  "sourceRemoteProtectedEquivalentPathCount",
+  "sourceRemoteProtectedEquivalentPathsDigest",
+  "sourceRemoteSharedAncestorEquivalence",
+  "sourceRemoteSharedAncestorEquivalenceDigest",
+  "sourceRemoteRangeDiffDigest",
+  "sourceRemoteTreeSha",
 ].sort());
 
 export function parseDeviceBranch(branch) {
@@ -746,15 +764,21 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
   if (value === undefined || value === null) return null;
   const legacy = value?.schema ===
     LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const prePushedPrefix = value?.schema ===
+    PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
   const current = value?.schema ===
     EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const bindsProtectedMain = prePushedPrefix || current;
   const expectedKeys = legacy
     ? LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
-    : current
-      ? EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
-      : null;
+    : prePushedPrefix
+      ? PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+      : current
+        ? EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+        : null;
   let protectedMainEquivalence = null;
-  if (current) {
+  let sourceRemoteSharedAncestorEquivalence = null;
+  if (bindsProtectedMain) {
     try {
       protectedMainEquivalence =
         normalizeProtectedMainPathEquivalenceEvidence(
@@ -762,6 +786,16 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
         );
     } catch {
       protectedMainEquivalence = null;
+    }
+  }
+  if (current) {
+    try {
+      sourceRemoteSharedAncestorEquivalence =
+        normalizeProtectedMainSharedAncestorPathEquivalenceEvidence(
+          value.sourceRemoteSharedAncestorEquivalence,
+        );
+    } catch {
+      sourceRemoteSharedAncestorEquivalence = null;
     }
   }
   const invalid = (
@@ -778,6 +812,74 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     !requiredRecoveryText(value.sourcePullRequestUrl) ||
     !SHA_PATTERN.test(String(value.sourceBaseSha || "")) ||
     !SHA_PATTERN.test(String(value.sourceFenceSha || "")) ||
+    (current && !SHA_PATTERN.test(
+      String(value.sourceRemoteHeadSha || ""),
+    )) ||
+    (current && (
+      !SHA_PATTERN.test(String(value.sourceRemoteTreeSha || "")) ||
+      !Number.isSafeInteger(value.sourceRemoteChangedPathCount) ||
+      value.sourceRemoteChangedPathCount < 0 ||
+      value.sourceRemoteChangedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteChangedPathsDigest || ""),
+      ) ||
+      !Number.isSafeInteger(value.sourceRemoteDeclaredChangedPathCount) ||
+      value.sourceRemoteDeclaredChangedPathCount < 0 ||
+      value.sourceRemoteDeclaredChangedPathCount >
+        RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteDeclaredChangedPathsDigest || ""),
+      ) ||
+      !Number.isSafeInteger(
+        value.sourceRemoteProtectedEquivalentPathCount,
+      ) ||
+      value.sourceRemoteProtectedEquivalentPathCount < 0 ||
+      value.sourceRemoteProtectedEquivalentPathCount >
+        RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      value.sourceRemoteDeclaredChangedPathCount +
+        value.sourceRemoteProtectedEquivalentPathCount !==
+        value.sourceRemoteChangedPathCount ||
+      !DIGEST_PATTERN.test(String(
+        value.sourceRemoteProtectedEquivalentPathsDigest || "",
+      )) ||
+      !DIGEST_PATTERN.test(String(
+        value.sourceRemoteSharedAncestorEquivalenceDigest || "",
+      )) ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteRangeDiffDigest || ""),
+      ) ||
+      !sourceRemoteSharedAncestorEquivalence ||
+      sourceRemoteSharedAncestorEquivalence.baseSha !==
+        value.sourceBaseSha ||
+      sourceRemoteSharedAncestorEquivalence.headSha !==
+        value.sourceRemoteHeadSha ||
+      sourceRemoteSharedAncestorEquivalence.headTreeSha !==
+        value.sourceRemoteTreeSha ||
+      sourceRemoteSharedAncestorEquivalence.exemptPathCount !==
+        value.sourceRemoteProtectedEquivalentPathCount ||
+      sourceRemoteSharedAncestorEquivalence.exemptPathsDigest !==
+        value.sourceRemoteProtectedEquivalentPathsDigest ||
+      sourceRemoteSharedAncestorEquivalence.protectedMainRef !==
+        protectedMainEquivalence?.protectedMainRef ||
+      sourceRemoteSharedAncestorEquivalence.protectedMainSha !==
+        protectedMainEquivalence?.protectedMainSha ||
+      sourceRemoteSharedAncestorEquivalence.protectedMainTreeSha !==
+        protectedMainEquivalence?.protectedMainTreeSha ||
+      (value.sourceRemoteProtectedEquivalentPathCount === 0 && (
+        value.sourceRemoteProtectedEquivalentPathsDigest !==
+          EMPTY_PATHS_DIGEST ||
+        value.sourceRemoteChangedPathsDigest !==
+          value.sourceRemoteDeclaredChangedPathsDigest
+      )) ||
+      (value.sourceRemoteDeclaredChangedPathCount === 0 && (
+        value.sourceRemoteDeclaredChangedPathsDigest !==
+          EMPTY_PATHS_DIGEST ||
+        value.sourceRemoteChangedPathsDigest !==
+          value.sourceRemoteProtectedEquivalentPathsDigest
+      )) ||
+      digestValue(sourceRemoteSharedAncestorEquivalence) !==
+        value.sourceRemoteSharedAncestorEquivalenceDigest
+    )) ||
     !SHA_PATTERN.test(String(value.headSha || "")) ||
     value.headSha === value.sourceFenceSha ||
     !SHA_PATTERN.test(String(value.treeSha || "")) ||
@@ -799,7 +901,7 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     value.changedPathCount < 1 ||
     !DIGEST_PATTERN.test(String(value.changedPathsDigest || "")) ||
     !Number.isFinite(Date.parse(value.recoveredAt)) ||
-    (current && (
+    (bindsProtectedMain && (
       !Number.isSafeInteger(value.changedPathCount) ||
       value.changedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
       !Number.isSafeInteger(value.declaredChangedPathCount) ||
@@ -850,6 +952,25 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     sourceBranch: value.sourceBranch,
     sourceBaseSha: value.sourceBaseSha,
     sourceFenceSha: value.sourceFenceSha,
+    ...(current ? {
+      sourceRemoteHeadSha: value.sourceRemoteHeadSha,
+      sourceRemoteTreeSha: value.sourceRemoteTreeSha,
+      sourceRemoteChangedPathCount: value.sourceRemoteChangedPathCount,
+      sourceRemoteChangedPathsDigest:
+        value.sourceRemoteChangedPathsDigest,
+      sourceRemoteDeclaredChangedPathCount:
+        value.sourceRemoteDeclaredChangedPathCount,
+      sourceRemoteDeclaredChangedPathsDigest:
+        value.sourceRemoteDeclaredChangedPathsDigest,
+      sourceRemoteProtectedEquivalentPathCount:
+        value.sourceRemoteProtectedEquivalentPathCount,
+      sourceRemoteProtectedEquivalentPathsDigest:
+        value.sourceRemoteProtectedEquivalentPathsDigest,
+      sourceRemoteSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        value.sourceRemoteSharedAncestorEquivalenceDigest,
+      sourceRemoteRangeDiffDigest: value.sourceRemoteRangeDiffDigest,
+    } : {}),
     sourcePullRequestUrl: value.sourcePullRequestUrl,
     sourceClaimId: value.sourceClaimId,
     sourceClaimDigest: value.sourceClaimDigest,
@@ -864,7 +985,7 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     treeSha: value.treeSha,
     changedPathCount: value.changedPathCount,
     changedPathsDigest: value.changedPathsDigest,
-    ...(current ? {
+    ...(bindsProtectedMain ? {
       declaredChangedPathCount: value.declaredChangedPathCount,
       declaredChangedPathsDigest: value.declaredChangedPathsDigest,
       protectedEquivalentPathCount: value.protectedEquivalentPathCount,

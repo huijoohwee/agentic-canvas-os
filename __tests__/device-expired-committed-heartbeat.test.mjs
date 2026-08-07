@@ -9,6 +9,7 @@ import { recoverExpiredCommittedHeartbeat } from "../scripts/expired-committed-h
 import {
   EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+  PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
@@ -20,8 +21,12 @@ const baseSha = "a".repeat(40);
 const fenceSha = "b".repeat(40);
 const headSha = "c".repeat(40);
 const treeSha = "d".repeat(40);
+const pushedRemoteHeadSha = "6".repeat(40);
+const sourceRemoteTreeSha = "7".repeat(40);
 const protectedMainSha = "1".repeat(40);
 const protectedMainTreeSha = "2".repeat(40);
+const sharedAncestorSha = "4".repeat(40);
+const sharedAncestorTreeSha = "5".repeat(40);
 const LEGACY_V1_PULL_REQUEST_BODY = String.raw`---
 action: /change
 scope: "#expired-heartbeat"
@@ -115,6 +120,12 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
   assert.equal("changedPaths" in result.recovery, false);
   assert.equal("worktreePathDigest" in result.recovery, false);
   assert.equal("sourceLeaseDigest" in result.recovery, false);
+  assert.equal(result.recovery.sourceRemoteTreeSha, sourceRemoteTreeSha);
+  assert.equal(result.recovery.sourceRemoteChangedPathCount, 0);
+  assert.equal(
+    result.recovery.sourceRemoteChangedPathsDigest,
+    digestValue([]),
+  );
   const recoveryPaths = ["docs/runtime.md", "scripts/recovery/check.mjs"];
   const protectedEntries = recoveryPaths.map((entryPath, index) => ({
     path: entryPath, headMode: "100644", protectedMode: "100644",
@@ -134,6 +145,27 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
     protectedMainEquivalence,
     protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
   };
+  const mismatchedPrefixEquivalence = {
+    ...result.recovery.sourceRemoteSharedAncestorEquivalence,
+    protectedMainSha: "9".repeat(40),
+    protectedMainTreeSha: "a".repeat(40),
+  };
+  const mismatchedProtectedMainSubjects = {
+    ...result.recovery,
+    sourceRemoteSharedAncestorEquivalence: mismatchedPrefixEquivalence,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      digestValue(mismatchedPrefixEquivalence),
+  };
+  const {
+    sharedAncestorTreeSha: _missingSharedAncestorTreeSha,
+    ...missingSharedAncestorTree
+  } = result.recovery.sourceRemoteSharedAncestorEquivalence;
+  const malformedSharedAncestorEvidence = {
+    ...result.recovery,
+    sourceRemoteSharedAncestorEquivalence: missingSharedAncestorTree,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      digestValue(missingSharedAncestorTree),
+  };
   const marker = parseWriterLeasePullRequestBody(remoteBody);
   const replaceRecovery = recovery => remoteBody.replace(
     /<!--\s*agentic-writer-lease\/v2\s+\{.*\}\s*-->/s,
@@ -146,6 +178,10 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
   ).expiredCommittedHeartbeatRecovery, allProtectedRecovery);
   for (const malformed of [
     { ...result.recovery, changedPathsDigest: "0".repeat(64) },
+    { ...result.recovery, sourceRemoteTreeSha: "0".repeat(40) },
+    { ...result.recovery, sourceRemoteChangedPathCount: 1 },
+    mismatchedProtectedMainSubjects,
+    malformedSharedAncestorEvidence,
     { ...result.recovery, changedPathCount: 129, declaredChangedPathCount: 129 },
     { ...allProtectedRecovery, declaredChangedPathsDigest: "0".repeat(64) },
     { ...allProtectedRecovery, changedPathsDigest: "0".repeat(64) },
@@ -160,6 +196,149 @@ test("dedicated recovery orders cloud, revalidation, atomic local CAS, and marke
     ],
     ["gh", "pr", "edit", pullRequestUrl, "--body", remoteBody],
   ]);
+});
+
+test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
+  const source = expiredCloudLease();
+  const renewedAuthority = renewedAuthorityFor(source);
+  let saved = source;
+  let remoteBody = renderWriterLeasePullRequestBody(source);
+  let markerWrites = 0;
+  let fetches = 0;
+  let instant = new Date("2026-08-04T12:00:00.000Z");
+  const common = {
+    invocationPath: repo,
+    repo,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      sourceRemotePaths: ["scripts/recovery/check.mjs"],
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(remoteBody, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+    leaseStore: {
+      read: () => saved,
+      recoverExpiredCommittedHeartbeat: input => {
+        saved = recoveredLease({
+          source,
+          renewedAuthority,
+          evidence: input.recoveryEvidence,
+          recoveredAt: input.recoveredAt,
+        });
+        return saved;
+      },
+    },
+    sessionId: source.sessionId,
+    leaseTtlMs: 1_800_000,
+    heartbeatCloudAuthority: () => ({
+      authority: renewedAuthority,
+      verification: { status: "ready" },
+    }),
+    verifyActiveCloudAuthority: () => ({
+      authority: saved.cloudAuthority,
+      verification: { status: "ready" },
+    }),
+    assertMutationAuthority: () => ({ status: "ready" }),
+    run: (command, args) => {
+      if (command === "git") {
+        fetches += 1;
+        return;
+      }
+      markerWrites += 1;
+      remoteBody = args[args.indexOf("--body") + 1];
+    },
+    log: () => {},
+    now: () => instant,
+  };
+
+  const recovered = recoverExpiredCommittedHeartbeat(common);
+  assert.equal(
+    recovered.recovery.schema,
+    EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+  );
+  assert.equal(
+    recovered.recovery.sourceRemoteHeadSha,
+    pushedRemoteHeadSha,
+  );
+  assert.equal(recovered.recovery.sourceRemoteTreeSha, sourceRemoteTreeSha);
+  assert.equal(recovered.recovery.sourceRemoteChangedPathCount, 1);
+  assert.equal(
+    recovered.recovery.sourceRemoteDeclaredChangedPathCount,
+    1,
+  );
+  assert.equal(recovered.lease.fenceSha, fenceSha);
+  assert.equal(recovered.lease.cloudAuthority.laneRevision, fenceSha);
+  assert.equal(markerWrites, 1);
+
+  instant = new Date("2026-08-04T12:01:00.000Z");
+  const replay = recoverExpiredCommittedHeartbeat({
+    ...common,
+    heartbeatCloudAuthority: () => {
+      throw new Error("v3 replay must not renew cloud authority again");
+    },
+  });
+  assert.equal(replay.replayed, true);
+  assert.equal(fetches, 2);
+  assert.equal(markerWrites, 1);
+
+  const exactRecoveredLease = saved;
+  const exactRecoveredBody = remoteBody;
+  saved = {
+    ...saved,
+    expiredCommittedHeartbeatRecovery: {
+      ...saved.expiredCommittedHeartbeatRecovery,
+      sourceRemoteRangeDiffDigest: "0".repeat(64),
+    },
+  };
+  remoteBody = renderWriterLeasePullRequestBody(saved);
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...common,
+    heartbeatCloudAuthority: () => {
+      throw new Error("v3 replay must not renew cloud authority again");
+    },
+  }), /replay evidence changed from its exact recovered subject/);
+  saved = exactRecoveredLease;
+  remoteBody = exactRecoveredBody;
+
+  const tamperedSharedAncestorEquivalence = {
+    ...saved.expiredCommittedHeartbeatRecovery
+      .sourceRemoteSharedAncestorEquivalence,
+    sharedAncestorSha: "0".repeat(40),
+  };
+  saved = {
+    ...saved,
+    expiredCommittedHeartbeatRecovery: {
+      ...saved.expiredCommittedHeartbeatRecovery,
+      sourceRemoteSharedAncestorEquivalence:
+        tamperedSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        digestValue(tamperedSharedAncestorEquivalence),
+    },
+  };
+  remoteBody = renderWriterLeasePullRequestBody(saved);
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...common,
+    heartbeatCloudAuthority: () => {
+      throw new Error("v3 replay must not renew cloud authority again");
+    },
+  }), /replay evidence changed from its exact recovered subject/);
+  saved = exactRecoveredLease;
+  remoteBody = exactRecoveredBody;
+
+  const driftedRemoteHeadSha = "0".repeat(40);
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...common,
+    gitOptional: () =>
+      `${driftedRemoteHeadSha}\trefs/heads/${branch}`,
+  }), /exact stored remote and pull-request head/);
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...common,
+    ghText: () => pullRequestJson(remoteBody, {
+      headRefOid: driftedRemoteHeadSha,
+    }),
+  }), /exact open draft ownership pull request/);
 });
 
 test("cloud or post-cloud snapshot failure cannot mutate the local lease or marker", () => {
@@ -390,6 +569,105 @@ test("legacy v1 replay stays fetch-free and cannot gain protected-main exemption
   }), /outside declared write scope/);
 });
 
+test("v2 replay stays exact-fence and cannot adopt a pushed prefix", () => {
+  const source = expiredCloudLease();
+  const renewedAuthority = renewedAuthorityFor(source);
+  let saved = source;
+  let remoteBody = renderWriterLeasePullRequestBody(source);
+  const base = {
+    invocationPath: repo,
+    repo,
+    gitText: recoveryGitText(),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(remoteBody),
+    leaseStore: {
+      read: () => saved,
+      recoverExpiredCommittedHeartbeat: input => {
+        saved = recoveredLease({
+          source,
+          renewedAuthority,
+          evidence: input.recoveryEvidence,
+          recoveredAt: input.recoveredAt,
+        });
+        return saved;
+      },
+    },
+    sessionId: source.sessionId,
+    leaseTtlMs: 1_800_000,
+    heartbeatCloudAuthority: () => ({
+      authority: renewedAuthority,
+      verification: { status: "ready" },
+    }),
+    verifyActiveCloudAuthority: () => ({
+      authority: saved.cloudAuthority,
+      verification: { status: "ready" },
+    }),
+    assertMutationAuthority: () => ({ status: "ready" }),
+    run: (command, args) => {
+      if (command === "gh") {
+        remoteBody = args[args.indexOf("--body") + 1];
+      }
+    },
+    log: () => {},
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  };
+  recoverExpiredCommittedHeartbeat(base);
+  const {
+    sourceRemoteHeadSha: _sourceRemoteHeadSha,
+    sourceRemoteTreeSha: _sourceRemoteTreeSha,
+    sourceRemoteChangedPathCount: _sourceRemoteChangedPathCount,
+    sourceRemoteChangedPathsDigest: _sourceRemoteChangedPathsDigest,
+    sourceRemoteDeclaredChangedPathCount:
+      _sourceRemoteDeclaredChangedPathCount,
+    sourceRemoteDeclaredChangedPathsDigest:
+      _sourceRemoteDeclaredChangedPathsDigest,
+    sourceRemoteProtectedEquivalentPathCount:
+      _sourceRemoteProtectedEquivalentPathCount,
+    sourceRemoteProtectedEquivalentPathsDigest:
+      _sourceRemoteProtectedEquivalentPathsDigest,
+    sourceRemoteSharedAncestorEquivalence:
+      _sourceRemoteSharedAncestorEquivalence,
+    sourceRemoteSharedAncestorEquivalenceDigest:
+      _sourceRemoteSharedAncestorEquivalenceDigest,
+    sourceRemoteRangeDiffDigest: _sourceRemoteRangeDiffDigest,
+    ...v2Evidence
+  } = saved.expiredCommittedHeartbeatRecovery;
+  saved = {
+    ...saved,
+    expiredCommittedHeartbeatRecovery: {
+      ...v2Evidence,
+      schema:
+        PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+    },
+  };
+  remoteBody = renderWriterLeasePullRequestBody(saved);
+
+  const replay = recoverExpiredCommittedHeartbeat({
+    ...base,
+    heartbeatCloudAuthority: () => {
+      throw new Error("v2 replay must not renew cloud authority again");
+    },
+    now: () => new Date("2026-08-04T12:01:00.000Z"),
+  });
+  assert.equal(replay.replayed, true);
+  assert.equal(
+    replay.recovery.schema,
+    PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA,
+  );
+
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    ...base,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(remoteBody, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+  }), /exact open draft ownership pull request/);
+});
+
 test("dedicated CLI emits a no-deployment JSON failure before repository mutation", () => {
   const script = path.resolve("scripts/device-expired-committed-heartbeat.mjs");
   const result = spawnSync(process.execPath, [
@@ -545,6 +823,9 @@ function renewedAuthorityFor(source) {
 
 function recoveryGitText({
   paths = ["docs/runtime.md", "scripts/recovery/check.mjs"],
+  sourceRemoteHeadSha = fenceSha,
+  remoteTreeSha = sourceRemoteTreeSha,
+  sourceRemotePaths = [],
 } = {}) {
   return args => {
     const key = args.join(" ");
@@ -557,28 +838,49 @@ function recoveryGitText({
       "branch --show-current": branch,
       "rev-parse HEAD": headSha,
       [`rev-parse ${headSha}^{tree}`]: treeSha,
+      [`rev-parse ${sourceRemoteHeadSha}^{tree}`]: remoteTreeSha,
+      [`rev-parse ${sharedAncestorSha}^{tree}`]: sharedAncestorTreeSha,
       "rev-parse refs/remotes/origin/main": protectedMainSha,
       [`rev-parse ${protectedMainSha}^{tree}`]: protectedMainTreeSha,
       [`rev-list --parents -n 1 ${fenceSha}`]: `${fenceSha} ${baseSha}`,
       [`merge-base --is-ancestor ${fenceSha} ${headSha}`]: "",
       [`merge-base --is-ancestor ${baseSha} ${protectedMainSha}`]: "",
+      [`merge-base --all ${sourceRemoteHeadSha} ${protectedMainSha}`]:
+        sharedAncestorSha,
+      [`merge-base --is-ancestor ${baseSha} ${sharedAncestorSha}`]: "",
+      [`merge-base --is-ancestor ${sharedAncestorSha} ${protectedMainSha}`]: "",
+      [`merge-base --is-ancestor ${sharedAncestorSha} ${sourceRemoteHeadSha}`]: "",
       [`diff --name-only -z --no-renames ${fenceSha} ${headSha} --`]:
         `${paths.join("\0")}\0`,
       [`diff --binary --no-renames ${fenceSha} ${headSha} --`]:
         "binary committed range",
+      [`diff --name-only -z --no-renames ${fenceSha} ${sourceRemoteHeadSha} --`]:
+        sourceRemotePaths.length ? `${sourceRemotePaths.join("\0")}\0` : "",
+      [`diff --binary --no-renames ${fenceSha} ${sourceRemoteHeadSha} --`]:
+        sourceRemotePaths.length ? "binary published prefix" : "",
     };
+    if (sourceRemoteHeadSha !== fenceSha) {
+      values[
+        `merge-base --is-ancestor ${fenceSha} ${sourceRemoteHeadSha}`
+      ] = "";
+    }
+    if (sourceRemoteHeadSha !== headSha) {
+      values[
+        `merge-base --is-ancestor ${sourceRemoteHeadSha} ${headSha}`
+      ] = "";
+    }
     if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
     return values[key];
   };
 }
 
-function pullRequestJson(body) {
+function pullRequestJson(body, { headRefOid = fenceSha } = {}) {
   return JSON.stringify({
     url: pullRequestUrl,
     state: "OPEN",
     isDraft: true,
     headRefName: branch,
-    headRefOid: fenceSha,
+    headRefOid,
     headRepository: { nameWithOwner: "org/repo" },
     baseRefName: "main",
     body,

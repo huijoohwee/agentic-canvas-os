@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1273,
-  "headDigest": "c0f3ca00d61023d2aedd442856bcf85d4e012bc9b74c8506b933b6571de7262a",
+  "sequence": 1274,
+  "headDigest": "1bb22243030d4e9ba7c48dd0b3264cd7c76f39ed5b7627eeea808314542c5949",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -63660,6 +63660,47 @@
       },
       "claimDigest": "b7757e1bf9dbced00f6751a92f71bd6eb574cf23461c57ffac77adfab21a2dbd",
       "digest": "c0f3ca00d61023d2aedd442856bcf85d4e012bc9b74c8506b933b6571de7262a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1274,
+      "parentDigest": "c0f3ca00d61023d2aedd442856bcf85d4e012bc9b74c8506b933b6571de7262a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "40cfb3f5303ceca4d74317c17fba86d77ed59dea55774f28967802a94b71989b",
+      "idempotencyKey": "a99db0d4c0b36701653b3dfe76901de3da1782b29269989c07db584694857f56",
+      "requestDigest": "fcc34b7b7b89c78fa8fa69e47c41da778ca1b87f25bd993eeabdb4f227b6882d",
+      "evaluationTime": "2026-08-07T06:41:10.000Z",
+      "claimCore": {
+        "claimId": "40cfb3f5303ceca4d74317c17fba86d77ed59dea55774f28967802a94b71989b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3ccb71170c1f2282cab37a5c38bc407ff98979d2a2ee2dbb87d323319b17ec0c",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:73f6ed26c329d500e9c92b64cdd7670a66f1955c4e9a8ed9cfe59aae146cc9d0",
+        "canonicalBaseRevision": "49532270a4099a0025b3ee5e21454f022947cf6e",
+        "declaredWriteScope": [
+          "path:guidelines/media-gaming-development-guidelines.md",
+          "path:guidelines/workspace-artifact-lifecycle-guidelines.md",
+          "path:template/media-gaming-development-template.md",
+          "semantic:workspace-artifact-lifecycle-guidelines-attribution-repair"
+        ],
+        "writeSetDigest": "5bbc9f6d6a158874e9d3ed69f237819c5cd27a1b9af1ab287ed155dde819a6f8",
+        "laneRevision": "49532270a4099a0025b3ee5e21454f022947cf6e",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T12:41:10.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "4d0cc5cc463dd69bb9c20ef184b1eed49d059bbfd4d33230bbfb8e42b42fbb54",
+      "digest": "1bb22243030d4e9ba7c48dd0b3264cd7c76f39ed5b7627eeea808314542c5949"
     }
   ]
 }

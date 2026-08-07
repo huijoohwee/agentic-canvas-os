@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1287,
-  "headDigest": "85a3c0e6d9c92f07b26be50b184fa24f12494eac17036b8be8e04ce5d9451cc1",
+  "sequence": 1288,
+  "headDigest": "414df40f3da8ce9e39f2f72ca731c23a02c68c7e09f0b597131a6e5f85201ac9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -64349,6 +64349,66 @@
       },
       "claimDigest": "22cec2af9d25081b8a94e1b10e1ea8ded62bc0c36a59b0fcb65a4ce45f8e4bdf",
       "digest": "85a3c0e6d9c92f07b26be50b184fa24f12494eac17036b8be8e04ce5d9451cc1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1288,
+      "parentDigest": "85a3c0e6d9c92f07b26be50b184fa24f12494eac17036b8be8e04ce5d9451cc1",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cff50bbe8c07e1c7974d7960e8bd197fc49a3ea9fef8cc2db760a061b9891c6a",
+      "idempotencyKey": "2fff8e05c32d9d8b2b4ce81a1300713dd88515e878bdb5ee4a40c6c3e4aa75e7",
+      "requestDigest": "d6c7cc6032250f5f28b87770ff19b848171b06d6bdc77c9027c7d65be7271307",
+      "evaluationTime": "2026-08-07T07:06:45.000Z",
+      "claimCore": {
+        "claimId": "cff50bbe8c07e1c7974d7960e8bd197fc49a3ea9fef8cc2db760a061b9891c6a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b0db24657752f8740f61a4c6ba4c31ef7fc0c31171162dd3ce6613b9b1b3a2b6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cbcb132d1b0063dac7bc109e65e4261dd2817977aa6ebda56dd493c69332afe3",
+        "canonicalBaseRevision": "0bbcb0e3cc5f3a32f498200da68f21025855f5ec",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:__tests__/github-lifecycle-policy.test.mjs",
+          "path:__tests__/protected-head-refresh-authorization.test.mjs",
+          "path:__tests__/protected-head-refresh-candidate.test.mjs",
+          "path:__tests__/protected-head-refresh-controller.test.mjs",
+          "path:__tests__/protected-head-refresh-fixtures.mjs",
+          "path:__tests__/protected-head-refresh-provider.test.mjs",
+          "path:__tests__/protected-main-refresh.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:scripts/protected-head-refresh-controller-state.mjs",
+          "path:scripts/protected-head-refresh-controller.mjs",
+          "path:scripts/protected-head-refresh-github-adapter.mjs",
+          "path:scripts/protected-head-refresh-github-ci.mjs",
+          "path:scripts/protected-head-refresh-github-cloud-check.mjs",
+          "path:scripts/protected-head-refresh-github-provider.mjs",
+          "path:scripts/protected-head-refresh-projection.mjs",
+          "path:scripts/protected-head-refresh-pull-request.mjs",
+          "path:scripts/protected-head-refresh-shared.mjs",
+          "path:scripts/protected-main-refresh-candidate.mjs",
+          "path:scripts/protected-main-refresh-lib.mjs",
+          "path:scripts/sync-open-pr.mjs",
+          "semantic:protected-head-refresh-controller"
+        ],
+        "writeSetDigest": "06211da09f4af109a9d269ad6528c6945d67b094f4a1611f449e7a321c0db2dc",
+        "laneRevision": "41b346140d713d99201a7b838879a0f2f09d8d04",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T14:50:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM770QN0",
+        "predecessorClaimId": "c1b5ab9106e8ff92878b3b1a876db15d5e87405962d7b47ec579a579cb4460ef",
+        "eligibleSince": "2026-08-07T06:50:19.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-07T06:50:58.000Z"
+      },
+      "claimDigest": "e6dc7d72b7aec63bd88c3154f631b6d85d26b48b7e0d1e0a3e1c287c2db3b65e",
+      "digest": "414df40f3da8ce9e39f2f72ca731c23a02c68c7e09f0b597131a6e5f85201ac9"
     }
   ]
 }

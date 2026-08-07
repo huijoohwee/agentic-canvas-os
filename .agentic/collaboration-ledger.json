@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1281,
-  "headDigest": "8e975d910caec6016757baacf67aba351c60e09d4df47a8aa1c53ed801ed74de",
+  "sequence": 1282,
+  "headDigest": "8e4d98e562b57c83d0d880a997334a92961ca9b44cc74fa704338055443d1ded",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -64073,6 +64073,66 @@
       },
       "claimDigest": "8bc6744baea5e654cb31190d21fea29f8b1f850da2e4619a02f595bb919d09a9",
       "digest": "8e975d910caec6016757baacf67aba351c60e09d4df47a8aa1c53ed801ed74de"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1282,
+      "parentDigest": "8e975d910caec6016757baacf67aba351c60e09d4df47a8aa1c53ed801ed74de",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cff50bbe8c07e1c7974d7960e8bd197fc49a3ea9fef8cc2db760a061b9891c6a",
+      "idempotencyKey": "5399eb7f0c06142080a7434b57d7fb92bac72e3b8c4393800bc97501fcabc190",
+      "requestDigest": "e60c39fa50a82f6f2bc20513da525609e4cad8d715bea94c443520cc4d0ee793",
+      "evaluationTime": "2026-08-07T06:51:16.000Z",
+      "claimCore": {
+        "claimId": "cff50bbe8c07e1c7974d7960e8bd197fc49a3ea9fef8cc2db760a061b9891c6a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b0db24657752f8740f61a4c6ba4c31ef7fc0c31171162dd3ce6613b9b1b3a2b6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cbcb132d1b0063dac7bc109e65e4261dd2817977aa6ebda56dd493c69332afe3",
+        "canonicalBaseRevision": "0bbcb0e3cc5f3a32f498200da68f21025855f5ec",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:__tests__/github-lifecycle-policy.test.mjs",
+          "path:__tests__/protected-head-refresh-authorization.test.mjs",
+          "path:__tests__/protected-head-refresh-candidate.test.mjs",
+          "path:__tests__/protected-head-refresh-controller.test.mjs",
+          "path:__tests__/protected-head-refresh-fixtures.mjs",
+          "path:__tests__/protected-head-refresh-provider.test.mjs",
+          "path:__tests__/protected-main-refresh.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:scripts/protected-head-refresh-controller-state.mjs",
+          "path:scripts/protected-head-refresh-controller.mjs",
+          "path:scripts/protected-head-refresh-github-adapter.mjs",
+          "path:scripts/protected-head-refresh-github-ci.mjs",
+          "path:scripts/protected-head-refresh-github-cloud-check.mjs",
+          "path:scripts/protected-head-refresh-github-provider.mjs",
+          "path:scripts/protected-head-refresh-projection.mjs",
+          "path:scripts/protected-head-refresh-pull-request.mjs",
+          "path:scripts/protected-head-refresh-shared.mjs",
+          "path:scripts/protected-main-refresh-candidate.mjs",
+          "path:scripts/protected-main-refresh-lib.mjs",
+          "path:scripts/sync-open-pr.mjs",
+          "semantic:protected-head-refresh-controller"
+        ],
+        "writeSetDigest": "06211da09f4af109a9d269ad6528c6945d67b094f4a1611f449e7a321c0db2dc",
+        "laneRevision": "1fb8cbaaa5cc3139e7ae02430795420c345ca8f5",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T14:50:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM770QN0",
+        "predecessorClaimId": "c1b5ab9106e8ff92878b3b1a876db15d5e87405962d7b47ec579a579cb4460ef",
+        "eligibleSince": "2026-08-07T06:50:19.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-07T06:50:58.000Z"
+      },
+      "claimDigest": "41dc0621c3e28f54b47262cc7984d4a1e36be95186761ad1f2369beb70b3a09e",
+      "digest": "8e4d98e562b57c83d0d880a997334a92961ca9b44cc74fa704338055443d1ded"
     }
   ]
 }

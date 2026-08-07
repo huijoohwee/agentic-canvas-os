@@ -12,6 +12,13 @@ import {
 import { captureOwnedDirtEvidence } from "./owned-dirt-resume-lib.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
+import {
+  assertHeartbeatScopeExpansionFence,
+  casWriterLeaseProjection,
+  heartbeatWriterLeaseProjection,
+  withHeartbeatProjectionFence,
+  writerLeaseDigest,
+} from "./writer-lease-registry-cas.mjs";
 
 export function heartbeat({
   invocationPath,
@@ -59,6 +66,8 @@ export function heartbeat({
   let cloudExpiryCap = null;
   let cloudVerification = null;
   let mutationAuthorityReceipt = null;
+  let expectedLeaseDigest = writerLeaseDigest(current);
+  let expectedClaimId = current.cloudAuthority?.claimId || null;
   if (current.cloudAuthority) {
     if (typeof heartbeatCloudAuthority !== "function") {
       throw new Error("Cloud-authoritative heartbeat requires the repository cloud heartbeat adapter.");
@@ -66,6 +75,12 @@ export function heartbeat({
     if (typeof verifyActiveCloudAuthority !== "function") {
       throw new Error("Cloud-authoritative heartbeat requires the repository cloud verifier.");
     }
+    assertHeartbeatScopeExpansionFence({
+      leaseStore,
+      branch,
+      expectedLeaseDigest,
+      expectedClaimId,
+    });
     const renewed = heartbeatCloudAuthority({
       authority: current.cloudAuthority,
       deviceId: current.device,
@@ -78,20 +93,39 @@ export function heartbeat({
       cloudAuthority: renewedAuthority,
       remoteAuthorityVerification: renewed.verification,
     });
-    current = leaseStore.annotate({
-      sessionId,
+    current = casWriterLeaseProjection({
+      leaseStore,
       branch,
+      expectedLeaseDigest,
+      expectedClaimId,
+      requireNoActiveIntent: true,
       values: { cloudAuthority: renewedAuthority },
-    });
+    }).lease;
+    expectedLeaseDigest = writerLeaseDigest(current);
+    expectedClaimId = renewedAuthority.claimId;
     cloudExpiryCap = renewedAuthority.expiresAt;
     cloudVerification = renewed.verification;
   }
-  let lease = leaseStore.heartbeat({
-    sessionId,
-    branch,
-    ttlMs: leaseTtlMs,
-    expiresAtCap: cloudExpiryCap,
-  });
+  let lease = current.cloudAuthority
+    ? heartbeatWriterLeaseProjection({
+      leaseStore,
+      branch,
+      expectedLeaseDigest,
+      expectedClaimId,
+      ttlMs: leaseTtlMs,
+      expiresAtCap: cloudExpiryCap,
+      now,
+    })
+    : leaseStore.heartbeat({
+      sessionId,
+      branch,
+      ttlMs: leaseTtlMs,
+      expiresAtCap: cloudExpiryCap,
+    });
+  if (lease.cloudAuthority) {
+    expectedLeaseDigest = writerLeaseDigest(lease);
+    expectedClaimId = lease.cloudAuthority.claimId;
+  }
   if (cloudVerification) {
     const immediate = verifyActiveCloudAuthority({
       authority: lease.cloudAuthority,
@@ -106,16 +140,34 @@ export function heartbeat({
       cloudAuthority: immediate.authority,
       remoteAuthorityVerification: immediate.verification,
     });
-    lease = leaseStore.annotate({
-      sessionId,
+    lease = casWriterLeaseProjection({
+      leaseStore,
       branch,
+      expectedLeaseDigest,
+      expectedClaimId,
+      requireNoActiveIntent: true,
       values: { cloudAuthority: immediate.authority },
-    });
+    }).lease;
+    expectedLeaseDigest = writerLeaseDigest(lease);
+    expectedClaimId = immediate.authority.claimId;
   }
-  run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", updateWriterLeasePullRequestBody(
-    pullRequest.body,
-    lease,
-  )]);
+  if (lease.cloudAuthority) {
+    withHeartbeatProjectionFence({
+      leaseStore,
+      branch,
+      expectedLeaseDigest,
+      expectedClaimId,
+      action: () => run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", updateWriterLeasePullRequestBody(
+        pullRequest.body,
+        lease,
+      )]),
+    });
+  } else {
+    run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", updateWriterLeasePullRequestBody(
+      pullRequest.body,
+      lease,
+    )]);
+  }
   requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
   log(`Renewed ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}.`);
   return mutationAuthorityReceipt

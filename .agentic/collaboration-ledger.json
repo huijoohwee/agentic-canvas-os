@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1408,
-  "headDigest": "386b248a56ba3db3ce67fb67e65c6e041d1a89b018e4b0f363fb112ddf8706c0",
+  "sequence": 1409,
+  "headDigest": "63c6888d1d6e667d38265e17812cdc04471a98ea8ddd1ea243c289074a9088f8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -70346,6 +70346,47 @@
       },
       "claimDigest": "fe385b0d119482c56add794f14be5875df475662d77bfe527f07b5d126daa837",
       "digest": "386b248a56ba3db3ce67fb67e65c6e041d1a89b018e4b0f363fb112ddf8706c0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1409,
+      "parentDigest": "386b248a56ba3db3ce67fb67e65c6e041d1a89b018e4b0f363fb112ddf8706c0",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "6ed71dcbc1a1b2bd116d020c1461ab1fd2870dc066965393a4da37f30117e485",
+      "idempotencyKey": "fd579894210b123aa5781d0b8832576dbab42d228c999dfddc05a37af44b190b",
+      "requestDigest": "38d95535ec3b6a1264ff67154e813b9f7d188a82ba2be6c823810beca638838c",
+      "evaluationTime": "2026-08-07T21:15:32.000Z",
+      "claimCore": {
+        "claimId": "6ed71dcbc1a1b2bd116d020c1461ab1fd2870dc066965393a4da37f30117e485",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b209a9cef3b5f5fdffc35c233ae87e7e2cdbd37d62a7e3a9268f3dc58edf2766",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:eb180fa56fef3edd15767a277ad538c820e119f2ba406b077ac83732955c2c3c",
+        "canonicalBaseRevision": "b36efb5fcb24c42bc9f542dd929cab2c937762fd",
+        "declaredWriteScope": [
+          "path:__tests__/production-release-authorization-contract.test.mjs",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:scripts/production-release-authorization-contract.mjs",
+          "semantic:gamexr-release-frontier-20260808"
+        ],
+        "writeSetDigest": "f6df90028a76c5c89dd818db093cefae54bee022a8d864b9164f1c303a886b1a",
+        "laneRevision": "b36efb5fcb24c42bc9f542dd929cab2c937762fd",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T21:45:32.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c97cb6568c5abf20dff59865bacf6297fbe77828b708b946bb2d2c9eb16b48ac",
+      "digest": "63c6888d1d6e667d38265e17812cdc04471a98ea8ddd1ea243c289074a9088f8"
     }
   ]
 }

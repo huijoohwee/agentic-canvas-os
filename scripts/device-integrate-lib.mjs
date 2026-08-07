@@ -202,6 +202,8 @@ export function integrateSession({
       });
       deliveryCloudAuthority = authorized.authority;
       const reviewedDeliveryHeadSha = lease.reviewHeadSha;
+      const protectedMergeHeadSha = protectedMainAuthorizationRefresh?.refreshedHeadSha
+        || reviewedDeliveryHeadSha;
       verifyCloudAuthority({
         pullRequestUrl: lease.pullRequestUrl,
         branch,
@@ -209,16 +211,31 @@ export function integrateSession({
         canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
         cloudAuthority: deliveryCloudAuthority,
       });
-      run("gh", [
+      const autoMergeArgs = [
         "pr", "merge", "--auto", "--squash", "--subject", squashSubject,
-        lease.pullRequestUrl,
-      ]);
+        "--match-head-commit", protectedMergeHeadSha, lease.pullRequestUrl,
+      ];
+      try {
+        run("gh", autoMergeArgs);
+      } catch (error) {
+        const replay = readPullRequestForProtectedRefresh({
+          ghText,
+          url: lease.pullRequestUrl,
+        });
+        requireArmedAutoMergeReplay({
+          pullRequest: replay,
+          url: lease.pullRequestUrl,
+          expectedHeadSha: protectedMergeHeadSha,
+          originalError: error,
+        });
+      }
     }
     const allowProtectedMainRefresh = lease.sessionId === sessionId &&
       (lease.status === "delivery" || reviewReadyDelivery);
     const deliveryAuthorizedHeadSha = lease.deliveryHeadSha
       || commitEvidence?.commitSha
       || (reviewReadyDelivery ? lease.reviewHeadSha : null);
+    const requestedProtectedMainRefreshHeads = new Set();
     verifyCloudAuthority({
       pullRequestUrl: lease.pullRequestUrl,
       branch,
@@ -233,14 +250,17 @@ export function integrateSession({
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
           const refresh = protectedMainAuthorizationRefresh
-            || reconcileProtectedMainRefresh({
-            url: lease.pullRequestUrl,
-            expectedHeadSha,
-            observedHeadSha,
-            gitText,
-            run,
-          });
-          if (!protectedMainAuthorizationRefresh) {
+            && protectedMainAuthorizationRefresh.deliveredHeadSha === expectedHeadSha
+            && protectedMainAuthorizationRefresh.refreshedHeadSha === observedHeadSha
+            ? protectedMainAuthorizationRefresh
+            : reconcileProtectedMainRefresh({
+              url: lease.pullRequestUrl,
+              expectedHeadSha,
+              observedHeadSha,
+              gitText,
+              run,
+            });
+          if (refresh !== protectedMainAuthorizationRefresh) {
             protectedMainRefresh = appendProtectedMainRefresh(
               protectedMainRefresh,
               refresh,
@@ -254,6 +274,28 @@ export function integrateSession({
             cloudAuthority: deliveryCloudAuthority,
           });
           return refresh.refreshedHeadSha;
+        }
+        : null,
+      onOpenPullRequest: reviewReadyDelivery
+        ? ({ acceptedHeadSha, pullRequest: openPullRequest }) => {
+          dispatchProtectedMainRefresh({
+            url: lease.pullRequestUrl,
+            pullRequest: openPullRequest,
+            acceptedHeadSha,
+            requestedHeads: requestedProtectedMainRefreshHeads,
+            branch,
+            deliveredHeadSha: deliveryAuthorizedHeadSha,
+            canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
+            cloudAuthority: deliveryCloudAuthority,
+            verifyCloudAuthority: () => verifyCloudAuthority({
+              pullRequestUrl: lease.pullRequestUrl,
+              branch,
+              headSha: deliveryAuthorizedHeadSha,
+              canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
+              cloudAuthority: deliveryCloudAuthority,
+            }),
+            run,
+          });
         }
         : null,
     });
@@ -626,7 +668,15 @@ function annotateIntegration({ branch, leaseStore, sessionId, gitText, now, valu
 }
 
 function waitForMergedPullRequest({
-  url, expectedHeadSha, ghText, waitSeconds, pollSeconds, now, sleep, onHeadAdvance = null,
+  url,
+  expectedHeadSha,
+  ghText,
+  waitSeconds,
+  pollSeconds,
+  now,
+  sleep,
+  onHeadAdvance = null,
+  onOpenPullRequest = null,
 }) {
   if (!url) throw new Error("Integration requires the lease-owned pull request URL.");
   if (!SHA_PATTERN.test(String(expectedHeadSha || ""))) {
@@ -635,9 +685,7 @@ function waitForMergedPullRequest({
   const deadline = now().getTime() + waitSeconds * 1000;
   let acceptedHeadSha = expectedHeadSha;
   for (;;) {
-    const pullRequest = JSON.parse(ghText([
-      "pr", "view", url, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
-    ]));
+    const pullRequest = readPullRequestForProtectedRefresh({ ghText, url });
     if (pullRequest.url !== url || pullRequest.baseRefName !== "main") {
       throw new Error(`Pull request identity for ${url} changed during integration.`);
     }
@@ -663,6 +711,7 @@ function waitForMergedPullRequest({
     if (pullRequest.state !== "OPEN") {
       throw new Error(`Pull request ${url} is ${String(pullRequest.state || "unknown").toLowerCase()}, not merged.`);
     }
+    onOpenPullRequest?.({ acceptedHeadSha, pullRequest });
     if (now().getTime() >= deadline) {
       throw new Error(
         `Protected integration remains pending after ${waitSeconds}s at ${url}; the delivery lease is preserved for replay.`,
@@ -670,6 +719,182 @@ function waitForMergedPullRequest({
     }
     sleep(Math.min(pollSeconds * 1000, Math.max(1, deadline - now().getTime())));
   }
+}
+
+function dispatchProtectedMainRefresh({
+  url,
+  pullRequest,
+  acceptedHeadSha,
+  requestedHeads,
+  branch,
+  deliveredHeadSha,
+  canonicalBaseSha,
+  cloudAuthority,
+  verifyCloudAuthority,
+  run,
+}) {
+  if (pullRequest.isDraft !== false) {
+    throw new Error("Protected-main refresh requires an exact non-draft pull request.");
+  }
+  if (pullRequest.isCrossRepository !== false) {
+    throw new Error("Protected-main refresh refuses a fork or unknown head repository.");
+  }
+  const mergeStateStatus = String(pullRequest.mergeStateStatus || "").toUpperCase();
+  const knownMergeStates = new Set([
+    "BEHIND", "BLOCKED", "CLEAN", "DIRTY", "DRAFT", "HAS_HOOKS", "UNKNOWN", "UNSTABLE",
+  ]);
+  if (!knownMergeStates.has(mergeStateStatus)) {
+    throw new Error(
+      `Protected-main refresh requires a known merge state, not ${mergeStateStatus || "unknown"}.`,
+    );
+  }
+  if (mergeStateStatus !== "BEHIND") return false;
+  if (pullRequest.autoMergeRequest?.mergeMethod !== "SQUASH") {
+    throw new Error(
+      "Protected-main refresh requires fresh SQUASH auto-merge authorization.",
+    );
+  }
+  if (requestedHeads.has(acceptedHeadSha)) return false;
+  if (!SHA_PATTERN.test(String(acceptedHeadSha || ""))) {
+    throw new Error("Protected-main refresh requires an exact accepted pull-request head SHA.");
+  }
+  const subject = parseProtectedMainRefreshUrl(url, { requireGitHubDotCom: true });
+  const dispatch = requireProtectedMainRefreshDispatch({
+    subject,
+    branch,
+    deliveredHeadSha,
+    observedHeadSha: acceptedHeadSha,
+    canonicalBaseSha,
+    cloudAuthority,
+  });
+  verifyCloudAuthority();
+  run("gh", [
+    "workflow", "run", "auto-delivery.yml",
+    "--repo", subject.repository,
+    "--ref", "main",
+    ...Object.entries(dispatch).flatMap(([name, value]) => ["-f", `${name}=${value}`]),
+  ]);
+  requestedHeads.add(acceptedHeadSha);
+  return true;
+}
+
+function readPullRequestForProtectedRefresh({ ghText, url }) {
+  return JSON.parse(ghText([
+    "pr", "view", url, "--json",
+    "state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest",
+  ]));
+}
+
+function requireArmedAutoMergeReplay({
+  pullRequest,
+  url,
+  expectedHeadSha,
+  originalError,
+}) {
+  const exactReplay = pullRequest?.url === url
+    && pullRequest?.state === "OPEN"
+    && pullRequest?.baseRefName === "main"
+    && pullRequest?.headRefOid === expectedHeadSha
+    && pullRequest?.isDraft === false
+    && pullRequest?.isCrossRepository === false
+    && pullRequest?.autoMergeRequest?.mergeMethod === "SQUASH";
+  if (!exactReplay) {
+    throw new Error(
+      `Protected auto-merge failed and no exact armed replay was observed: ${originalError?.message || "command failed"}.`,
+    );
+  }
+  return pullRequest;
+}
+
+function requireProtectedMainRefreshDispatch({
+  subject,
+  branch,
+  deliveredHeadSha,
+  observedHeadSha,
+  canonicalBaseSha,
+  cloudAuthority,
+}) {
+  const exactText = (value, label) => {
+    const normalized = String(value || "");
+    if (!normalized || normalized.length > 512 || /[\u0000-\u001f\u007f]/u.test(normalized)) {
+      throw new Error(`Protected-main refresh dispatch requires exact ${label}.`);
+    }
+    return normalized;
+  };
+  const exactDigest = (value, label) => {
+    if (!DIGEST_PATTERN.test(String(value || ""))) {
+      throw new Error(`Protected-main refresh dispatch requires exact ${label}.`);
+    }
+    return value;
+  };
+  const exactSha = (value, label) => {
+    if (!SHA_PATTERN.test(String(value || ""))) {
+      throw new Error(`Protected-main refresh dispatch requires exact ${label}.`);
+    }
+    return value;
+  };
+  if (cloudAuthority?.state !== "delivery_authorized") {
+    throw new Error("Protected-main refresh dispatch requires delivery-authorized cloud authority.");
+  }
+  const projection = {
+    operation: "protected-head-refresh",
+    pull_request_number: subject.pullRequestNumber,
+    branch: exactText(branch, "branch"),
+    delivered_head_sha: exactSha(deliveredHeadSha, "delivered head SHA"),
+    observed_head_sha: exactSha(observedHeadSha, "observed head SHA"),
+    canonical_base_sha: exactSha(canonicalBaseSha, "canonical base SHA"),
+    claim_id: exactDigest(cloudAuthority.claimId, "claim id"),
+    claim_digest: exactDigest(cloudAuthority.claimDigest, "claim digest"),
+    ledger_revision: exactSha(cloudAuthority.ledgerRevision, "ledger revision"),
+    review_request_id: exactText(cloudAuthority.reviewRequestId, "review request id"),
+    integration_receipt_digest: exactDigest(
+      cloudAuthority.integrationReceiptDigest,
+      "integration receipt digest",
+    ),
+    transition_counter: cloudAuthority.transitionCounter,
+  };
+  if (!Number.isInteger(projection.transition_counter) || projection.transition_counter < 1) {
+    throw new Error("Protected-main refresh dispatch requires an exact transition counter.");
+  }
+  projection.operation_id = sha256(JSON.stringify({
+    schema: "agentic-protected-head-refresh-operation/v1",
+    repository: subject.repository,
+    ...projection,
+  }));
+  return projection;
+}
+
+function parseProtectedMainRefreshUrl(value, { requireGitHubDotCom = false } = {}) {
+  let url;
+  try {
+    url = new URL(String(value || "").trim());
+  } catch {
+    throw new Error("Protected-main refresh requires an absolute pull-request URL.");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("Protected-main refresh requires a plain HTTPS pull-request URL.");
+  }
+  const match = url.pathname.match(
+    /^\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/pull\/([1-9]\d*)\/?$/u,
+  );
+  if (!url.hostname || !match) {
+    throw new Error("Protected-main refresh requires an owner/repository pull-request URL.");
+  }
+  if (requireGitHubDotCom && url.hostname.toLowerCase() !== "github.com") {
+    throw new Error("Protected-main refresh dispatch requires the github.com provider.");
+  }
+  return {
+    hostname: url.hostname,
+    repository: `${match[1]}/${match[2]}`,
+    pullRequestNumber: match[3],
+  };
 }
 
 function reconcileProtectedMainRefresh({

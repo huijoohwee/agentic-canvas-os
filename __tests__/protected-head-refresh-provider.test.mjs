@@ -29,6 +29,84 @@ import {
   targetMain,
 } from "./protected-head-refresh-fixtures.mjs";
 
+const classicProtectionContexts = Object.freeze([
+  "test",
+  "build",
+  "docs-contract",
+  "collaboration-integration",
+  "cloud-collaboration",
+]);
+
+function protectedMainBranch({
+  name = "main",
+  sha = targetMain,
+  isProtected = true,
+  enabled = true,
+  enforcement = "everyone",
+  contexts = [...classicProtectionContexts],
+  checks = classicProtectionContexts.map(context => ({
+    context,
+    app_id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
+  })),
+} = {}) {
+  return {
+    name,
+    commit: { sha },
+    protected: isProtected,
+    protection: {
+      enabled,
+      required_status_checks: {
+        enforcement_level: enforcement,
+        contexts,
+        checks,
+      },
+    },
+  };
+}
+
+function applicableProtectionRules({
+  strict = true,
+  context = "agentic-sdlc-policy-runtime",
+  integrationId = PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
+} = {}) {
+  return [{
+    type: "required_status_checks",
+    parameters: {
+      strict_required_status_checks_policy: strict,
+      required_status_checks: [{
+        context,
+        integration_id: integrationId,
+      }],
+    },
+  }];
+}
+
+function branchProtectionHarness({
+  mainBranch = protectedMainBranch(),
+  applicable = applicableProtectionRules(),
+} = {}) {
+  const calls = [];
+  const provider = createProtectedHeadRefreshGithubProvider({
+    repository,
+    projection: normalizedProjection(),
+    gh: args => {
+      throw new Error(`unexpected gh call: ${args.join(" ")}`);
+    },
+    ghJson: args => {
+      calls.push(args);
+      const endpoint = args.find(value => value.startsWith(`repos/${repository}/`));
+      if (endpoint === `repos/${repository}/branches/main`) return mainBranch;
+      if (endpoint === `repos/${repository}/rules/branches/main`) return applicable;
+      throw new Error(`unexpected ghJson call: ${args.join(" ")}`);
+    },
+    requiredEnv: name => {
+      throw new Error(`unexpected environment read: ${name}`);
+    },
+    sleepSeconds: () => {},
+  });
+  return { calls, provider };
+}
+
 test("normalizes a projection whose operation digest binds the actual target main ref", () => {
   const input = projectionInput();
   const projection = normalizeProtectedHeadRefreshProjection({ repository, input });
@@ -89,6 +167,107 @@ test("merged verification needs protected main but not a deleted feature branch"
     "verify-durable-candidate",
   ]);
   assert.deepEqual(result, { status: "verified", candidateSha: candidate });
+});
+
+test("GitHub provider proves protected main through exact public REST projections", () => {
+  const { calls, provider } = branchProtectionHarness();
+  provider.verifyBranchProtection();
+  assert.deepEqual(calls, [
+    ["api", "--method", "GET", `repos/${repository}/branches/main`],
+    [
+      "api", "--method", "GET", `repos/${repository}/rules/branches/main`,
+      "-f", "per_page=100",
+    ],
+  ]);
+  assert.equal(calls.flat().includes("graphql"), false);
+});
+
+test("GitHub provider rejects classic branch-protection projection drift", async t => {
+  const exactChecks = () => classicProtectionContexts.map(context => ({
+    context,
+    app_id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
+  }));
+  const cases = [
+    ["wrong branch name", protectedMainBranch({ name: "trunk" })],
+    ["stale protected-main SHA", protectedMainBranch({ sha: mainOne })],
+    ["unprotected branch", protectedMainBranch({ isProtected: false })],
+    ["disabled protection", protectedMainBranch({ enabled: false })],
+    ["non-universal enforcement", protectedMainBranch({ enforcement: "non_admins" })],
+    ["malformed contexts", protectedMainBranch({ contexts: "test" })],
+    ["missing context", protectedMainBranch({
+      contexts: classicProtectionContexts.slice(1),
+    })],
+    ["duplicate context", protectedMainBranch({
+      contexts: classicProtectionContexts.map((context, index) => (
+        index === 1 ? classicProtectionContexts[0] : context
+      )),
+    })],
+    ["extra context", protectedMainBranch({
+      contexts: [...classicProtectionContexts, "extra"],
+    })],
+    ["malformed checks", protectedMainBranch({ checks: "test" })],
+    ["missing check", protectedMainBranch({ checks: exactChecks().slice(1) })],
+    ["duplicate check", protectedMainBranch({
+      checks: exactChecks().map((check, index) => (
+        index === 1 ? exactChecks()[0] : check
+      )),
+    })],
+    ["extra check", protectedMainBranch({
+      checks: [...exactChecks(), {
+        context: "extra",
+        app_id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
+      }],
+    })],
+    ["wrong app binding", protectedMainBranch({
+      checks: exactChecks().map((check, index) => (
+        index === 0 ? { ...check, app_id: 1 } : check
+      )),
+    })],
+    ["string app binding", protectedMainBranch({
+      checks: exactChecks().map((check, index) => (
+        index === 0
+          ? { ...check, app_id: String(PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID) }
+          : check
+      )),
+    })],
+  ];
+
+  for (const [name, mainBranch] of cases) {
+    await t.test(name, () => {
+      const { provider } = branchProtectionHarness({ mainBranch });
+      assert.throws(
+        () => provider.verifyBranchProtection(),
+        /lacks the exact enforced classic required checks/u,
+      );
+    });
+  }
+});
+
+test("GitHub provider rejects malformed or weakened applicable-rules proof", async t => {
+  const cases = [
+    ["non-array rules", {}],
+    ["missing status-check rule", []],
+    ["wrong rule type", [{ type: "pull_request" }]],
+    ["non-strict rule", applicableProtectionRules({ strict: false })],
+    ["missing agentic context", applicableProtectionRules({ context: "test" })],
+    ["wrong integration binding", applicableProtectionRules({ integrationId: 1 })],
+    [
+      "string integration binding",
+      applicableProtectionRules({
+        integrationId: String(PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID),
+      }),
+    ],
+  ];
+
+  for (const [name, applicable] of cases) {
+    await t.test(name, () => {
+      const { provider } = branchProtectionHarness({ applicable });
+      assert.throws(
+        () => provider.verifyBranchProtection(),
+        /applicable ruleset proof is malformed|required agentic-sdlc ruleset context/u,
+      );
+    });
+  }
 });
 
 test("GitHub provider binds synchronize probes and CI dispatch to exact operation argv", () => {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1280,
-  "headDigest": "62d510f4c1cfc8684b960a11d73e52c7e45b005aa8919be9b8595760848ed4f3",
+  "sequence": 1281,
+  "headDigest": "8e975d910caec6016757baacf67aba351c60e09d4df47a8aa1c53ed801ed74de",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -64013,6 +64013,66 @@
       },
       "claimDigest": "9c1887c0b2d0116db97f0b5f19d09f9ad461df5bf8a99da9198df10250c34142",
       "digest": "62d510f4c1cfc8684b960a11d73e52c7e45b005aa8919be9b8595760848ed4f3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1281,
+      "parentDigest": "62d510f4c1cfc8684b960a11d73e52c7e45b005aa8919be9b8595760848ed4f3",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cff50bbe8c07e1c7974d7960e8bd197fc49a3ea9fef8cc2db760a061b9891c6a",
+      "idempotencyKey": "2024535155f537c079746bf15e1c1ab41160600d6628af531d91e89d45cafbe4",
+      "requestDigest": "67c1b5dd5de6c6ec6d3397ea80608cc1a70efa3c4c93b5bf97e1b254adde5de4",
+      "evaluationTime": "2026-08-07T06:50:58.000Z",
+      "claimCore": {
+        "claimId": "cff50bbe8c07e1c7974d7960e8bd197fc49a3ea9fef8cc2db760a061b9891c6a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b0db24657752f8740f61a4c6ba4c31ef7fc0c31171162dd3ce6613b9b1b3a2b6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cbcb132d1b0063dac7bc109e65e4261dd2817977aa6ebda56dd493c69332afe3",
+        "canonicalBaseRevision": "0bbcb0e3cc5f3a32f498200da68f21025855f5ec",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:__tests__/github-lifecycle-policy.test.mjs",
+          "path:__tests__/protected-head-refresh-authorization.test.mjs",
+          "path:__tests__/protected-head-refresh-candidate.test.mjs",
+          "path:__tests__/protected-head-refresh-controller.test.mjs",
+          "path:__tests__/protected-head-refresh-fixtures.mjs",
+          "path:__tests__/protected-head-refresh-provider.test.mjs",
+          "path:__tests__/protected-main-refresh.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:scripts/protected-head-refresh-controller-state.mjs",
+          "path:scripts/protected-head-refresh-controller.mjs",
+          "path:scripts/protected-head-refresh-github-adapter.mjs",
+          "path:scripts/protected-head-refresh-github-ci.mjs",
+          "path:scripts/protected-head-refresh-github-cloud-check.mjs",
+          "path:scripts/protected-head-refresh-github-provider.mjs",
+          "path:scripts/protected-head-refresh-projection.mjs",
+          "path:scripts/protected-head-refresh-pull-request.mjs",
+          "path:scripts/protected-head-refresh-shared.mjs",
+          "path:scripts/protected-main-refresh-candidate.mjs",
+          "path:scripts/protected-main-refresh-lib.mjs",
+          "path:scripts/sync-open-pr.mjs",
+          "semantic:protected-head-refresh-controller"
+        ],
+        "writeSetDigest": "06211da09f4af109a9d269ad6528c6945d67b094f4a1611f449e7a321c0db2dc",
+        "laneRevision": "1fb8cbaaa5cc3139e7ae02430795420c345ca8f5",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-07T14:50:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "c1b5ab9106e8ff92878b3b1a876db15d5e87405962d7b47ec579a579cb4460ef",
+        "eligibleSince": "2026-08-07T06:50:19.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-07T06:50:58.000Z"
+      },
+      "claimDigest": "8bc6744baea5e654cb31190d21fea29f8b1f850da2e4619a02f595bb919d09a9",
+      "digest": "8e975d910caec6016757baacf67aba351c60e09d4df47a8aa1c53ed801ed74de"
     }
   ]
 }

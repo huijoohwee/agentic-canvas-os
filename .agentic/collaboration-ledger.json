@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1460,
-  "headDigest": "881d294cb4cc8b420c97949222a7c5c65a7a2675743447382f675a372884cf2e",
+  "sequence": 1461,
+  "headDigest": "fd9f30033dc42d403db2b2ee1e73a39c0e824f1657f40fee071f52b5e3958771",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -72781,6 +72781,59 @@
       },
       "claimDigest": "f9abd30d870b56e8f25214d2910c250d8414d80665448b6711b5bf2cdc62d6f1",
       "digest": "881d294cb4cc8b420c97949222a7c5c65a7a2675743447382f675a372884cf2e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1461,
+      "parentDigest": "881d294cb4cc8b420c97949222a7c5c65a7a2675743447382f675a372884cf2e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "48b04dc4f6090468ea3d47dc75cc384f64faf236b968e395a85be267f4437f3c",
+      "idempotencyKey": "34591593c6d7e56f387e94a504244e45e5f5f856c0c595e575c47fbea1f607d5",
+      "requestDigest": "b5d2c44dfee938ddb2a1258b55a20af2030a61ae087007c9191ff46d64113396",
+      "evaluationTime": "2026-08-08T12:52:03.000Z",
+      "claimCore": {
+        "claimId": "48b04dc4f6090468ea3d47dc75cc384f64faf236b968e395a85be267f4437f3c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:aad7ae3285986d1862731d4bc79744dd38dcb13cff91a43b9bce598a5537a343",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:5eda9d7f0f1c22c08689d4c1c19a66b5dbf9e52cd03bbceaf0db3f0bc6d65139",
+        "canonicalBaseRevision": "9abc08dcab2597ab05901e27cf0ab9ac37c11c33",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/gameMmorpgCore.test.ts",
+          "path:canvas/src/features/game-mmorpg",
+          "path:docs/documents/knowgrph-game-mmorpg-prd-tad.md",
+          "path:grph-shared/__tests__/game-os-core.test.mjs",
+          "path:grph-shared/src/game-os",
+          "semantic:game-os-core"
+        ],
+        "writeSetDigest": "d34e99b8fd6ea7d48c02ddee0ab104b7e247ebd4bd19cab8edb82634275feb16",
+        "laneRevision": "224d404461a3a4f2e08a50eb5671febe25f72918",
+        "leaseEpoch": 1,
+        "transitionCounter": 9,
+        "heartbeatCounter": 6,
+        "state": "retired",
+        "expiresAt": "2026-08-08T13:13:41.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs78T_6h",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "224d404461a3a4f2e08a50eb5671febe25f72918",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs78T_6h",
+          "bytesDigest": "188c9bf6132c90cd5902bf59f137512ab17d01e5c5e6312b545cb52f3a1254c5",
+          "namedChecksDigest": "3796fff764ec9dab330d3e3c09e9f13cb830c68ffcf0d924648052096e5fcf35",
+          "handoffEvidenceDigest": "b302867a738e92fcb84a0937f84a4ae436b6048df0b9b275ffdae001e3fd7a8c",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-08T12:52:03.000Z"
+        }
+      },
+      "claimDigest": "d24ed76171917435ab5ad87aceb18e7a60c6675fda3d8f3c9a50f43708a00751",
+      "digest": "fd9f30033dc42d403db2b2ee1e73a39c0e824f1657f40fee071f52b5e3958771"
     }
   ]
 }

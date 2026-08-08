@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1422,
-  "headDigest": "84aa58d6263243ac45aee15948b71e65f3f1a692c41cb975f5a0311056d0b362",
+  "sequence": 1423,
+  "headDigest": "cc4bc8fec41b85c804270f0ac4b45020edb10093292d81fa210d02412fd49b2b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -70957,6 +70957,49 @@
       },
       "claimDigest": "ae82a3ebb88ff53d948b76ef5765c55566bed99271c1aa950b78ca9d775e8365",
       "digest": "84aa58d6263243ac45aee15948b71e65f3f1a692c41cb975f5a0311056d0b362"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1423,
+      "parentDigest": "84aa58d6263243ac45aee15948b71e65f3f1a692c41cb975f5a0311056d0b362",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "48b04dc4f6090468ea3d47dc75cc384f64faf236b968e395a85be267f4437f3c",
+      "idempotencyKey": "8a448a44e77d4b4e3c5ac3e44e39828cd675191e3c9eb722aa5548cb1a858d18",
+      "requestDigest": "afa13cc9b9fa7fbf64baee9673c3ab65e59e66813a39cd0c8a1d7ee5204def82",
+      "evaluationTime": "2026-08-08T03:51:00.000Z",
+      "claimCore": {
+        "claimId": "48b04dc4f6090468ea3d47dc75cc384f64faf236b968e395a85be267f4437f3c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:aad7ae3285986d1862731d4bc79744dd38dcb13cff91a43b9bce598a5537a343",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:5eda9d7f0f1c22c08689d4c1c19a66b5dbf9e52cd03bbceaf0db3f0bc6d65139",
+        "canonicalBaseRevision": "9abc08dcab2597ab05901e27cf0ab9ac37c11c33",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/gameMmorpgCore.test.ts",
+          "path:canvas/src/features/game-mmorpg",
+          "path:docs/documents/knowgrph-game-mmorpg-prd-tad.md",
+          "path:grph-shared/__tests__/game-os-core.test.mjs",
+          "path:grph-shared/src/game-os",
+          "semantic:game-os-core"
+        ],
+        "writeSetDigest": "d34e99b8fd6ea7d48c02ddee0ab104b7e247ebd4bd19cab8edb82634275feb16",
+        "laneRevision": "9abc08dcab2597ab05901e27cf0ab9ac37c11c33",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-08T07:51:00.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1f448b511de684b4e330c5372f697ef4e78e3b686cfe7ef6f122900778df2bb6",
+      "digest": "cc4bc8fec41b85c804270f0ac4b45020edb10093292d81fa210d02412fd49b2b"
     }
   ]
 }

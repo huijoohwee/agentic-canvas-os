@@ -9,6 +9,8 @@ import {
   adoptLegacyDirtyLane,
   CANONICAL_UNTRACKED_RETENTION_CAPTURE_PROFILE,
   captureLegacyDirtyLane,
+  MERGED_PULL_REQUEST_EVIDENCE_SCHEMA,
+  SQUASH_INTEGRATED_TASK_LANE_CAPTURE_PROFILE,
   verifyLegacyRecoveryPackage,
 } from "../scripts/legacy-dirty-lane-adoption-lib.mjs";
 
@@ -95,6 +97,66 @@ test("capture preserves exact dirty source evidence and verifies the recovery pa
   assert.equal(recovery.untracked.length, 1);
   assert.equal(readFileSync(path.join(fixture.recovery, "files/new.txt"), "utf8"), "untracked\n");
   assert.equal(verifyLegacyRecoveryPackage({ recoveryDirectory: fixture.recovery }).packageDigest, recovery.packageDigest);
+});
+
+test("squash-integrated capture proves merged tree continuity and reconciles all tracked residue", () => {
+  const fixture = createSquashIntegratedFixture();
+  const before = status(fixture.source);
+  const recovery = captureLegacyDirtyLane({
+    sourceWorktree: fixture.source,
+    recoveryDirectory: fixture.recovery,
+    protectedTipSha: fixture.protectedTip,
+    operatorSessionId: "squash-session",
+    captureProfile: SQUASH_INTEGRATED_TASK_LANE_CAPTURE_PROFILE,
+    pullRequestEvidence: fixture.pullRequestEvidence,
+  });
+
+  assert.equal(status(fixture.source), before);
+  assert.equal(recovery.squashIntegrationProof.pullRequest.pullRequestNumber, 96);
+  assert.equal(
+    recovery.squashIntegrationProof.sourceTreeSha,
+    recovery.squashIntegrationProof.integratedTreeSha,
+  );
+  const target = path.join(fixture.root, "target");
+  git(fixture.repository, [
+    "worktree", "add", "-b", "agent/test/squash-adoption", target, fixture.protectedTip,
+  ]);
+  const receipt = adoptLegacyDirtyLane({
+    sourceWorktree: fixture.source,
+    recoveryDirectory: fixture.recovery,
+    targetWorktree: target,
+    operatorSessionId: "squash-session",
+    reconciliationPaths: [".DS_Store"],
+    lease: {
+      status: "active",
+      sessionId: "squash-session",
+      branch: "agent/test/squash-adoption",
+      worktreePath: target,
+      baseSha: fixture.protectedTip,
+      fenceSha: fixture.protectedTip,
+    },
+  });
+
+  assert.equal(receipt.status, "reconciliation-required");
+  assert.deepEqual(receipt.adoptedPaths, ["docs/documents/agentic-game-os-prd-tad-adr.md"]);
+  assert.deepEqual(receipt.reconciliationPaths, [".DS_Store"]);
+  assert.equal(readFileSync(path.join(target, ".DS_Store"), "utf8"), "protected\n");
+  assert.equal(
+    readFileSync(path.join(target, "docs/documents/agentic-game-os-prd-tad-adr.md"), "utf8"),
+    "# Agentic Game OS\n",
+  );
+});
+
+test("squash-integrated capture rejects unmerged pull request evidence", () => {
+  const fixture = createSquashIntegratedFixture();
+  assert.throws(() => captureLegacyDirtyLane({
+    sourceWorktree: fixture.source,
+    recoveryDirectory: fixture.recovery,
+    protectedTipSha: fixture.protectedTip,
+    operatorSessionId: "squash-session",
+    captureProfile: SQUASH_INTEGRATED_TASK_LANE_CAPTURE_PROFILE,
+    pullRequestEvidence: { ...fixture.pullRequestEvidence, merged: false },
+  }), /authoritative merged pull request/);
 });
 
 test("verification rejects changed recovery bytes", () => {
@@ -212,6 +274,65 @@ function createCanonicalRetentionFixture() {
   mkdirSync(path.join(source, "retained"));
   writeFileSync(path.join(source, "retained/doc.md"), "retain me\n");
   return { root, remote, source, recovery, protectedTip };
+}
+
+function createSquashIntegratedFixture() {
+  const root = mkdtempSync(path.join(os.tmpdir(), "squash-integrated-adoption-"));
+  const remote = path.join(root, "remote.git");
+  const repository = path.join(root, "repository");
+  const source = path.join(root, "source");
+  const recovery = path.join(root, "recovery");
+  git(root, ["init", "--bare", remote]);
+  git(root, ["clone", remote, repository]);
+  git(repository, ["config", "user.email", "test@example.com"]);
+  git(repository, ["config", "user.name", "Test"]);
+  git(repository, ["switch", "-c", "main"]);
+  writeFileSync(path.join(repository, ".DS_Store"), "protected\n");
+  writeFileSync(path.join(repository, "committed.txt"), "base\n");
+  git(repository, ["add", ".DS_Store", "committed.txt"]);
+  git(repository, ["commit", "-m", "base"]);
+  git(repository, ["push", "-u", "origin", "main"]);
+  const baseSha = git(repository, ["rev-parse", "HEAD"]).trim();
+  const sourceBranch = "agent/test/canonical-branch-state-glossary";
+  git(repository, ["worktree", "add", "-b", sourceBranch, source, baseSha]);
+  writeFileSync(path.join(source, "committed.txt"), "merged\n");
+  git(source, ["add", "committed.txt"]);
+  git(source, ["commit", "-m", "source head"]);
+  const sourceHeadSha = git(source, ["rev-parse", "HEAD"]).trim();
+  const sourceTreeSha = git(source, ["rev-parse", "HEAD^{tree}"]).trim();
+  const mergeCommitSha = git(repository, [
+    "commit-tree", sourceTreeSha, "-p", baseSha, "-m", "squash merge",
+  ]).trim();
+  git(repository, ["push", "origin", `${mergeCommitSha}:refs/heads/main`]);
+  writeFileSync(path.join(source, ".DS_Store"), "local residue\n");
+  mkdirSync(path.join(source, "docs/documents"), { recursive: true });
+  writeFileSync(
+    path.join(source, "docs/documents/agentic-game-os-prd-tad-adr.md"),
+    "# Agentic Game OS\n",
+  );
+  return {
+    root,
+    repository,
+    source,
+    recovery,
+    protectedTip: mergeCommitSha,
+    pullRequestEvidence: {
+      schema: MERGED_PULL_REQUEST_EVIDENCE_SCHEMA,
+      repository: "test/repository",
+      pullRequestNumber: 96,
+      state: "closed",
+      draft: false,
+      merged: true,
+      mergedAt: "2026-08-04T01:40:48Z",
+      mergeCommitSha,
+      headRepository: "test/repository",
+      headBranch: sourceBranch,
+      headSha: sourceHeadSha,
+      baseRepository: "test/repository",
+      baseBranch: "main",
+      baseSha,
+    },
+  };
 }
 
 function status(worktree) {

@@ -276,6 +276,32 @@ The legacy lane remains untouched and retained until its adopted pull request is
 protected-merged and independently verified. Capture and adoption do not merge,
 push, deploy, clean, or grant release authority.
 
+A non-ancestor task branch whose committed tree was squash-integrated has one
+strict capture profile: `--capture-profile=task-lane-squash-integrated`. The
+command fetches protected `origin/main` and obtains the named pull request from
+GitHub itself. It requires a closed, non-draft, merged, same-repository pull
+request into `main`; exact source branch and HEAD identity; a single-parent
+integration commit at the recorded base; that commit within the exact fetched
+protected tip; and byte-identical source-HEAD and integration trees. The proof is
+digest-bound into the recovery package. A pull-request number, local branch name,
+tree match, or ancestry check alone is insufficient. Example:
+
+```sh
+npm run workspace:legacy-adoption -- capture \
+  --source="[registered legacy worktree]" \
+  --recovery="[new external recovery directory]" \
+  --protected-tip="[exact fetched origin/main SHA]" \
+  --session="[operator session]" \
+  --capture-profile=task-lane-squash-integrated \
+  --pull-request="[merged pull request number]" \
+  --repository="[owner/repository]" --json
+```
+
+During adoption, `--reconcile` may name exact tracked residue that must not be
+transferred. If every tracked entry is reconciled, the controller deliberately
+skips the now-empty patch and restores only admitted untracked paths; the receipt
+remains `reconciliation-required` and lists both sets explicitly.
+
 For an unrelated canonical repository whose primary `main` worktree contains
 only untracked retained content, capture has a separate preservation-only profile:
 `--capture-profile=canonical-untracked-retention`. It fetches `origin/main`, then

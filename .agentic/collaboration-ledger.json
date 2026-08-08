@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1459,
-  "headDigest": "842e697709c31000b358cec01d997577b83708cb7ba33279b44970a373ac2010",
+  "sequence": 1460,
+  "headDigest": "881d294cb4cc8b420c97949222a7c5c65a7a2675743447382f675a372884cf2e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -72728,6 +72728,59 @@
       },
       "claimDigest": "8c1486b5f5b240db10b1b1687d3eec0bd1d9bbd1ccb15124d4b4fcfab961afd6",
       "digest": "842e697709c31000b358cec01d997577b83708cb7ba33279b44970a373ac2010"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1460,
+      "parentDigest": "842e697709c31000b358cec01d997577b83708cb7ba33279b44970a373ac2010",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "dc4b47520ae9f9660c9575aa804a7acf09b00e729fcdb55620b6c0c3c95fc29b",
+      "idempotencyKey": "98433206a5e1e6b361d2531a7f55eb257d099e130a461a7c4b3cdc4968cb8216",
+      "requestDigest": "03ef7e412040753ec8c0430ade61fe983ef95e147a0bf470f387253a5274c055",
+      "evaluationTime": "2026-08-08T12:51:47.000Z",
+      "claimCore": {
+        "claimId": "dc4b47520ae9f9660c9575aa804a7acf09b00e729fcdb55620b6c0c3c95fc29b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:aad7ae3285986d1862731d4bc79744dd38dcb13cff91a43b9bce598a5537a343",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:b76e19a9d2221f153caa73cf8138de8d8a33a4b15abeb1bf4aa8cf5e735b70fc",
+        "canonicalBaseRevision": "9abc08dcab2597ab05901e27cf0ab9ac37c11c33",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/canvasSurfaceGameDeparture.test.ts",
+          "path:canvas/src/__tests__/canvasXrSharedSurfaceOwnership.test.ts",
+          "path:canvas/src/__tests__/gameMmorpgCore.test.ts",
+          "path:canvas/src/features/game-city-sim/citySimRuntime.ts",
+          "path:canvas/src/features/game-flight-sim/flightSimRuntime.ts",
+          "path:canvas/src/features/game-fps/gameModeRuntime.ts",
+          "path:canvas/src/features/game-mmorpg",
+          "path:canvas/src/features/three/xrSceneSurfaceRuntime.ts",
+          "path:docs/documents/knowgrph-game-mmorpg-prd-tad.md",
+          "path:grph-shared/__tests__/game-os-core.test.mjs",
+          "path:grph-shared/package.json",
+          "path:grph-shared/src/game-os",
+          "path:packages/apple-spatial-input-swift/Sources/KnowgrphSpatialCore/GameOsPersistentStrategy.swift",
+          "path:packages/apple-spatial-input-swift/Tests/Fixtures/game-os-persistent-strategy-parity.v1.json",
+          "path:packages/apple-spatial-input-swift/Tests/KnowgrphSpatialCoreTests/GameOsPersistentStrategyGoldenTests.swift",
+          "semantic:game-os-core"
+        ],
+        "writeSetDigest": "8fe40d6b2bb3b24940bb8a342e26b6fd075a07ac77d1f7ca410bc15117af8898",
+        "laneRevision": "224d404461a3a4f2e08a50eb5671febe25f72918",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-08T20:51:47.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "48b04dc4f6090468ea3d47dc75cc384f64faf236b968e395a85be267f4437f3c",
+        "eligibleSince": "2026-08-08T12:51:47.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f9abd30d870b56e8f25214d2910c250d8414d80665448b6711b5bf2cdc62d6f1",
+      "digest": "881d294cb4cc8b420c97949222a7c5c65a7a2675743447382f675a372884cf2e"
     }
   ]
 }

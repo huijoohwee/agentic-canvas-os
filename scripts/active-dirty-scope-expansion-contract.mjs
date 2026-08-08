@@ -21,7 +21,7 @@ export function buildActiveDirtyScopeExpansionPlan({
   if (!strictSubset(sourceWriteSet, target.declaredWriteSet)) {
     throw new Error("Scope expansion requires the source write set to be a strict subset of the target write set.");
   }
-  if (!normalizedSource.changedPaths.every(path => sourceWriteSet.includes(`path:${path}`))) {
+  if (!normalizedSource.changedPaths.every(path => writeSetCoversPath(sourceWriteSet, path))) {
     throw new Error("Source dirty bytes extend outside the currently admitted write set.");
   }
   const core = {
@@ -250,11 +250,22 @@ function strictSubset(left, right) {
   return left.length < right.length && left.every(value => right.includes(value));
 }
 
+function writeSetCoversPath(writeSet, changedPath) {
+  return writeSet.some((scope) => {
+    if (!scope.startsWith("path:")) return false;
+    const declaredPath = scope.slice("path:".length);
+    // Coverage is directional: a directory owns descendants, while a narrower
+    // descendant declaration must never authorize mutation of its parent.
+    return declaredPath === "."
+      || changedPath === declaredPath
+      || changedPath.startsWith(`${declaredPath}/`);
+  });
+}
+
 function requiredPath(value) {
-  const path = requiredText(value, "changed path").replaceAll("\\", "/");
-  if (path.startsWith("/") || path.startsWith("../") || path.includes("/../")) {
-    throw new Error("Changed source path is not repository-relative.");
-  }
+  const [scope] = normalizeWriteSet([`path:${requiredText(value, "changed path")}`]);
+  const path = scope.slice("path:".length);
+  if (path === ".") throw new Error("Changed source path must identify a repository entry.");
   return path;
 }
 

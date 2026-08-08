@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1434,
-  "headDigest": "803911dc757fbd26278645bc3d6671a645bbfe5caf8df0e27416662c26a24d63",
+  "sequence": 1435,
+  "headDigest": "84557d930181f19af3c22a90c34058647d0522b5a8f583fcdf6638902631bce1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -71485,6 +71485,62 @@
       },
       "claimDigest": "da7e0698bae06d35f1cfb7b9a268cff7f8d7c3d93b1ee14ccd7f388efd2ae551",
       "digest": "803911dc757fbd26278645bc3d6671a645bbfe5caf8df0e27416662c26a24d63"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1435,
+      "parentDigest": "803911dc757fbd26278645bc3d6671a645bbfe5caf8df0e27416662c26a24d63",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOTw_rMA",
+      "claimId": "13d3784e3c00ba074549c582a91f66bbb3f392ebe1cfa3123ffda008931fedb1",
+      "idempotencyKey": "be7d1b8d24a5306a6f5277cd4f54a5e81c2713825b001682fc3e07e698f771b9",
+      "requestDigest": "1b7849ae4150cf0befa0752f9d1d487ff5d14f2c5aa42aa671c2851ee74858eb",
+      "evaluationTime": "2026-08-08T05:05:32.000Z",
+      "claimCore": {
+        "claimId": "13d3784e3c00ba074549c582a91f66bbb3f392ebe1cfa3123ffda008931fedb1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:61c2dddb356de5eb7c99492750f0c53dcababd182e5c7c3bb110fd3f20f2788e",
+        "repositoryId": "github-repository:R_kgDOTw_rMA",
+        "workItemId": "work-item:d8e278f302803748e0472fdbe7d2e1d473319897a129a12b6fce7539aca5ed5a",
+        "canonicalBaseRevision": "803e3a2a20dfcd1401673690a3b5d82500322f67",
+        "declaredWriteScope": [
+          "path:browser-tests/persistent-strategy.spec.ts",
+          "path:native/Sources/GameXRNative/GameXRPersistentStrategyView.swift",
+          "path:native/Tests/GameXRNativeTests/GameXRPersistentStrategyTests.swift",
+          "path:package-lock.json",
+          "path:package.json",
+          "path:src/main.ts",
+          "path:src/mcp/WebMcpBridge.ts",
+          "path:src/mcp/contracts.ts",
+          "path:src/runtime/GameRuntime.ts",
+          "path:src/runtime/PersistentStrategyProjection.ts",
+          "path:src/storage/LocalDatabase.ts",
+          "path:src/styles.css",
+          "path:src/ui/AppController.ts",
+          "path:src/ui/PersistentStrategyController.ts",
+          "path:src/ui/shell.ts",
+          "path:tests/mcp-contract.test.ts",
+          "path:tests/persistent-strategy.test.ts",
+          "path:vendor/grph-shared-0.0.0.tgz",
+          "semantic:agentic-game-os-frontend"
+        ],
+        "writeSetDigest": "743111a16329a1d0ebbfcb8adfc67e057f4630b29f627a91ee76d1bcbfacb8ca",
+        "laneRevision": "ae264818df3501f809f50ad41eb9c4d595e4de2c",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-08T09:00:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOTw_rMM78UtL3",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3db6462d7bd7b21dcaa05e90f43eb837a4ea46bf91e8173aff48a7947993b3cb",
+      "digest": "84557d930181f19af3c22a90c34058647d0522b5a8f583fcdf6638902631bce1"
     }
   ]
 }

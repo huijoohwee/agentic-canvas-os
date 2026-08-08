@@ -57,8 +57,7 @@ export function prepareMutationRequest({
     );
     return {
       ...common,
-      workItemId: pseudonymousIdentifier(
-        "work-item",
+      workItemId: normalizeWorkItemIdentifier(
         requiredText(
           first(input.workItemId, input.taskId, input.scopeId, input.branch),
           "workItemId",
@@ -163,7 +162,7 @@ export function prepareReadRequest({ input, repository, pullRequest }) {
     repositoryId: repository ? contractRepository(repository).repositoryId : undefined,
     claimId: input.claimId,
     workItemId: input.workItemId
-      ? pseudonymousIdentifier("work-item", input.workItemId)
+      ? normalizeWorkItemIdentifier(input.workItemId)
       : undefined,
     canonicalBaseRevision: resolvedCanonicalBaseRevision,
     laneRevision: resolvedLaneRevision,
@@ -377,6 +376,15 @@ function normalizeRequiredState(value) {
 
 export function pseudonymousIdentifier(namespace, value) {
   return `${namespace}:${digestValue({ namespace, value })}`;
+}
+
+function normalizeWorkItemIdentifier(value) {
+  const text = requiredText(value, "workItemId");
+  const prefix = "work-item:";
+  if (text.startsWith(prefix) && SHA256_PATTERN.test(text.slice(prefix.length))) {
+    return text;
+  }
+  return pseudonymousIdentifier("work-item", text);
 }
 
 function normalizeOwnerIdentifier(namespace, value) {

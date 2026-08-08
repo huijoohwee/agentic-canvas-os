@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { isRetiredPreservedLane } from "./legacy-review-ready-retirement-lib.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 
 const SAFE_STATES = new Set([
@@ -11,6 +12,7 @@ const SAFE_STATES = new Set([
   "delivery",
   "parked",
   "owned-untracked",
+  "retired-preserved",
   "cleanup-ready",
 ]);
 
@@ -61,6 +63,9 @@ export function classifyWorktreeLifecycle({
       return { ...base, state: "blocked-dirty" };
     }
     if (record.branch) {
+      if (isRetiredPreservedLane({ record, lease })) {
+        return { ...base, state: "retired-preserved", cleanupEligible: false };
+      }
       if (lease?.status === "active" && Date.parse(lease.expiresAt) > now.getTime()) {
         return { ...base, state: "active" };
       }

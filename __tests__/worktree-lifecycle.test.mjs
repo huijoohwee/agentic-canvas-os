@@ -1,11 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import {
+  LOCAL_REVIEW_RETIREMENT_INTENT_SCHEMA,
+  LOCAL_REVIEW_RETIREMENT_RECEIPT_SCHEMA,
+  renderLocalReviewRetirementMarker,
+} from "../scripts/legacy-review-ready-retirement-lib.mjs";
 import {
   buildLifecycleReport,
   classifyWorktreeLifecycle,
   cleanupCompletedWorktree,
 } from "../scripts/worktree-lifecycle-lib.mjs";
+import {
+  projectWriterLeasePullRequestMarker,
+  WRITER_LEASE_SCHEMA,
+} from "../scripts/writer-lease-lib.mjs";
 
 const canonicalSha = "a".repeat(40);
 const main = { path: "/repo", head: canonicalSha, branch: "refs/heads/main" };
@@ -235,3 +245,176 @@ test("cleanup removes only an explicitly completed candidate and preserves its b
     target: "/tasks/completed",
   }), /lifecycle state is owned-untracked/);
 });
+
+test("released local review lanes stay retired-preserved and never become cleanup candidates", () => {
+  const taskPath = "/tasks/retired-review";
+  const head = "9".repeat(40);
+  const branch = "agent/old-device/retired-review";
+  const lease = retiredLease({ taskPath, head, branch });
+  const records = [
+    main,
+    { path: taskPath, head, branch: `refs/heads/${branch}` },
+  ];
+  const result = classifyWorktreeLifecycle({ records, canonicalSha, leases: [lease] });
+  assert.equal(result[1].state, "retired-preserved");
+  assert.equal(result[1].cleanupEligible, false);
+  assert.throws(() => cleanupCompletedWorktree({
+    report: { repository: "/repo", worktrees: result },
+    target: taskPath,
+  }), /lifecycle state is retired-preserved/);
+
+  const invalid = structuredClone(lease);
+  invalid.localReviewRetirement.receiptDigest = "0".repeat(64);
+  assert.equal(classifyWorktreeLifecycle({
+    records,
+    canonicalSha,
+    leases: [invalid],
+  })[1].state, "review-required");
+  assert.equal(classifyWorktreeLifecycle({
+    records,
+    canonicalSha,
+    leases: [lease],
+    dirt: new Map([[taskPath, true]]),
+  })[1].state, "blocked-dirty");
+});
+
+test("lifecycle report treats cryptographically attributed retirement as safe preservation", () => {
+  const taskPath = "/tasks/retired-review";
+  const head = "9".repeat(40);
+  const branch = "agent/old-device/retired-review";
+  const porcelain = [
+    `worktree /repo\nHEAD ${canonicalSha}\nbranch refs/heads/main`,
+    `worktree ${taskPath}\nHEAD ${head}\nbranch refs/heads/${branch}`,
+    "",
+  ].join("\n\n");
+  const report = buildLifecycleReport({
+    repository: "/repo",
+    git: (_cwd, args) => {
+      const command = args.join(" ");
+      if (command === "worktree list --porcelain") return porcelain;
+      if (command === "rev-parse origin/main") return `${canonicalSha}\n`;
+      if (command === "status --porcelain=v1 -z --untracked-files=all") return "";
+      throw new Error(`Unexpected git call: ${command}`);
+    },
+    readLeases: () => [retiredLease({ taskPath, head, branch })],
+  });
+  assert.equal(report.status, "ready");
+  assert.equal(report.worktrees[1].state, "retired-preserved");
+});
+
+function retiredLease({ taskPath, head, branch }) {
+  const retiredAt = "2026-08-08T12:00:00.000Z";
+  const sourceLease = {
+    schema: WRITER_LEASE_SCHEMA,
+    status: "review_ready",
+    epoch: 9,
+    sessionId: "retired-source-session",
+    device: "old-device",
+    scope: "retired-review",
+    branch,
+    worktreePath: taskPath,
+    baseSha: "7".repeat(40),
+    fenceSha: "6".repeat(40),
+    pullRequestUrl: "https://github.com/owner/repository/pull/9",
+    reviewHeadSha: head,
+    heartbeatAt: "2026-08-01T00:00:00.000Z",
+    expiresAt: "2026-08-01T00:00:00.000Z",
+  };
+  const preservation = {
+    worktree: "preserved",
+    branch: "preserved",
+    pullRequest: "closed-preserved",
+    bytes: "exact",
+    cleanupEligible: false,
+  };
+  const source = {
+    worktreePath: taskPath,
+    branch,
+    headSha: head,
+    treeSha: "8".repeat(40),
+    remoteHeadSha: head,
+    indexDigest: "1".repeat(64),
+    workingTreeDigest: "2".repeat(64),
+    stateDigest: "3".repeat(64),
+    lease: {
+      status: "review_ready",
+      epoch: sourceLease.epoch,
+      sessionId: sourceLease.sessionId,
+      device: sourceLease.device,
+      scope: sourceLease.scope,
+      baseSha: sourceLease.baseSha,
+      fenceSha: sourceLease.fenceSha,
+      heartbeatAt: sourceLease.heartbeatAt,
+      expiresAt: sourceLease.expiresAt,
+      leaseDigest: digestValue(sourceLease),
+    },
+    pullRequest: {
+      url: "https://github.com/owner/repository/pull/9",
+      number: 9,
+      nodeId: "PR_node_9",
+      reviewRequestId: "github-pull-request:PR_node_9",
+      headRepository: "owner/repository",
+      headBranch: branch,
+      headSha: head,
+      baseRepository: "owner/repository",
+      baseBranch: "main",
+    },
+  };
+  const intentCore = {
+    schema: LOCAL_REVIEW_RETIREMENT_INTENT_SCHEMA,
+    targetRepository: "owner/repository",
+    ledgerRepository: "owner/ledger",
+    operatorSessionId: "retirement-operator-session",
+    operatorDecisionDigest: "5".repeat(64),
+    source,
+    preservation,
+  };
+  const intent = { ...intentCore, intentDigest: digestValue(intentCore) };
+  const releasedLease = {
+    ...sourceLease,
+    status: "released",
+    heartbeatAt: retiredAt,
+    expiresAt: retiredAt,
+  };
+  const marker = {
+    schema: LOCAL_REVIEW_RETIREMENT_INTENT_SCHEMA,
+    intentDigest: intent.intentDigest,
+    retiredAt,
+    releasedWriterMarkerDigest: digestValue(
+      projectWriterLeasePullRequestMarker(releasedLease),
+    ),
+  };
+  const receiptCore = {
+    schema: LOCAL_REVIEW_RETIREMENT_RECEIPT_SCHEMA,
+    status: "completed",
+    intent,
+    intentDigest: intent.intentDigest,
+    preservation,
+    cloud: {
+      ledgerRepository: "owner/ledger",
+      ledgerRevision: "b".repeat(40),
+      ledgerDigest: "c".repeat(64),
+      remoteClaimInventoryDigest: "d".repeat(64),
+      cloudVerificationReceiptDigest: "e".repeat(64),
+      dormantPreservationReceiptDigest: "f".repeat(64),
+    },
+    provider: {
+      state: "CLOSED",
+      merged: false,
+      closedAt: retiredAt,
+      headSha: head,
+      bodyDigest: "0".repeat(64),
+      marker,
+      markerDigest: digestValue(renderLocalReviewRetirementMarker(marker)),
+      releasedWriterMarkerDigest: marker.releasedWriterMarkerDigest,
+    },
+    retiredAt,
+  };
+  return {
+    ...releasedLease,
+    localReviewRetirement: {
+      ...receiptCore,
+      receiptDigest: digestValue(receiptCore),
+    },
+  };
+}

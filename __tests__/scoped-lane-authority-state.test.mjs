@@ -7,6 +7,12 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
+  buildCompletedReceipt,
+  buildLocalReviewRetirementIntent,
+  normalizeReviewReadySnapshot,
+  prepareProviderCheckpoint,
+} from "../scripts/legacy-review-ready-retirement-lib.mjs";
+import {
   evaluateScopedLaneAdmission,
   normalizeDeclaredWriteScopeManifest,
 } from "../scripts/scoped-lane-admission-lib.mjs";
@@ -18,6 +24,11 @@ import {
   verifyCurrentCloudInventory,
   verifyDormantPreservation,
 } from "../scripts/scoped-lane-authority-state.mjs";
+import {
+  projectWriterLeasePullRequestMarker,
+  updateWriterLeasePullRequestBody,
+  WRITER_LEASE_SCHEMA,
+} from "../scripts/writer-lease-lib.mjs";
 
 const HEAD_SHA = "a".repeat(40);
 const TREE_SHA = "b".repeat(40);
@@ -456,3 +467,132 @@ test("queued waiting-successor projections do not trigger missing-authoritative-
   assert.equal(observed.authorityState, "unattributed");
   assert.deepEqual(observed.overlapReasons, []);
 });
+
+test("retired-preserved lanes release semantic scope but retain branch reservation", () => {
+  const historical = retiredPreservedLane();
+  const common = {
+    lane: structuredClone(historical),
+    semanticScope: "retired-scope",
+    declaredWriteSet: ["path:docs/retired", "semantic:retired-scope"],
+    evaluatedAt: new Date("2026-08-08T13:00:00.000Z"),
+    currentRemoteClaims: [],
+  };
+  const successor = classifyExistingLane({
+    ...common,
+    branch: "agent/new-device/retired-scope",
+  });
+  assert.equal(successor.classification, "disjoint-attributed");
+  assert.equal(successor.authorityState, "retired-preserved");
+  assert.deepEqual(successor.overlapReasons, []);
+
+  const sameBranch = classifyExistingLane({
+    ...common,
+    lane: structuredClone(historical),
+    branch: "agent/old-device/retired-scope",
+  });
+  assert.equal(sameBranch.classification, "overlapping");
+  assert.deepEqual(sameBranch.overlapReasons, ["same-branch"]);
+});
+
+test("current cloud authority invalidates a serialized retired-preserved attribution", () => {
+  const historical = structuredClone(retiredPreservedLane());
+  const reviewRequestId = historical.lease.localReviewRetirement
+    .intent.source.pullRequest.reviewRequestId;
+  const observed = classifyExistingLane({
+    lane: historical,
+    branch: "agent/new-device/retired-scope",
+    semanticScope: "retired-scope",
+    declaredWriteSet: ["path:docs/retired", "semantic:retired-scope"],
+    evaluatedAt: new Date("2026-08-08T13:00:00.000Z"),
+    currentRemoteClaims: [{ reviewRequestId, workItemId: "other" }],
+  });
+  assert.equal(observed.classification, "overlapping");
+  assert.equal(observed.authorityState, "retired-preserved");
+  assert.deepEqual(observed.overlapReasons, ["current-authority-conflict"]);
+});
+
+function retiredPreservedLane() {
+  const branch = "agent/old-device/retired-scope";
+  const worktreePath = "/workspace/worktrees/retired-scope";
+  const retiredAt = "2026-08-08T12:00:00.000Z";
+  const pullRequestUrl = "https://github.com/owner/repository/pull/737";
+  const lease = {
+    schema: WRITER_LEASE_SCHEMA,
+    status: "review_ready",
+    epoch: 11,
+    sessionId: "retired-session",
+    device: "old-device",
+    scope: "retired-scope",
+    branch,
+    worktreePath,
+    baseSha: HEAD_SHA,
+    fenceSha: HEAD_SHA,
+    reviewHeadSha: HEAD_SHA,
+    pullRequestUrl,
+    heartbeatAt: "2026-08-01T00:00:00.000Z",
+    expiresAt: "2026-08-01T00:00:00.000Z",
+  };
+  const snapshot = {
+    lane: lane({ lanePath: worktreePath, branch: `refs/heads/${branch}`, dirty: false, lease }),
+    lease,
+    remoteHeadSha: HEAD_SHA,
+    pullRequest: {
+      url: pullRequestUrl,
+      number: 737,
+      nodeId: "PR_retired_737",
+      state: "OPEN", draft: false, merged: false, closedAt: null,
+      body: writerMarker(lease), providerVersion: '"etag-open"',
+      headRepository: REPOSITORY_NAME,
+      headBranch: branch,
+      headSha: HEAD_SHA,
+      baseRepository: REPOSITORY_NAME,
+      baseBranch: "main",
+      baseSha: HEAD_SHA,
+    },
+  };
+  const request = {
+    repository: worktreePath, targetRepository: REPOSITORY_NAME,
+    ledgerRepository: "owner/ledger", branch, sourceSessionId: lease.sessionId,
+    operatorSessionId: "retirement-operator-session",
+    expectedHead: HEAD_SHA, expectedPullRequest: 737, expectedPullRequestUrl: pullRequestUrl,
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+    evaluatedAt: retiredAt,
+  };
+  const source = normalizeReviewReadySnapshot(snapshot, request);
+  const intent = buildLocalReviewRetirementIntent({ request, snapshot: source });
+  const adapter = {
+    now: () => retiredAt,
+    projectWriterMarker: writerMarker,
+    updateWriterBody: updateWriterLeasePullRequestBody,
+  };
+  const checkpoint = prepareProviderCheckpoint({ source, intent, adapter });
+  const receipt = buildCompletedReceipt({
+    intent,
+    pullRequest: {
+      ...source.pullRequest,
+      state: "CLOSED",
+      closedAt: retiredAt,
+      body: checkpoint.body,
+    },
+    checkpoint,
+    preservation: {
+      cloudVerification: {
+        ledgerRevision: LEDGER_SHA,
+        ledgerDigest: LEDGER_DIGEST,
+        remoteClaimInventoryDigest: "4".repeat(64),
+        receiptDigest: "5".repeat(64),
+      },
+      dormantReceipt: { receiptDigest: "6".repeat(64) },
+    },
+  });
+  const released = {
+    ...lease,
+    status: "released", heartbeatAt: retiredAt, expiresAt: retiredAt,
+    localReviewRetirement: receipt,
+  };
+  return { ...source.lane, lease: released };
+}
+
+function writerMarker(lease) {
+  return `<!-- ${WRITER_LEASE_SCHEMA} ${JSON.stringify(projectWriterLeasePullRequestMarker(lease))} -->`;
+}

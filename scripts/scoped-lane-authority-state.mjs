@@ -7,6 +7,19 @@ import {
   writeSetsOverlap,
 } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
+import {
+  isRetiredPreservedLane,
+  normalizeCurrentCloudClaim,
+  positiveInteger,
+  requiredDigest,
+  requiredInstant,
+  requiredRepository,
+  requiredSha,
+  requiredText,
+  requireObject,
+  uniqueSorted,
+  withoutReceiptDigest,
+} from "./legacy-review-ready-retirement-lib.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 
 export const LANE_ADMISSION_LEASE_SCHEMA = "agentic-lane-admission-lease/v1";
@@ -67,7 +80,7 @@ export function verifyCurrentCloudInventory({
   ) {
     throw new Error("Cloud status did not return one complete bounded current-claim inventory.");
   }
-  const claims = result.claims.map(normalizeCurrentClaim)
+  const claims = result.claims.map(normalizeCurrentCloudClaim)
     .sort((left, right) => left.claimId.localeCompare(right.claimId));
   if (new Set(claims.map(claim => claim.claimId)).size !== claims.length) {
     throw new Error("Cloud status returned duplicate current claim identities.");
@@ -237,6 +250,25 @@ export function classifyExistingLane({
       overlapReasons: [],
     };
   }
+  if (isRetiredPreservedLane({ lane })) {
+    const reasons = [];
+    if (lane.invalid || lane.leaseAmbiguous) reasons.push("structural-ambiguity");
+    if (lane.branch === `refs/heads/${branch}`) reasons.push("same-branch");
+    if (retiredPreservationHasCurrentClaim(lane, currentRemoteClaims)) {
+      reasons.push("current-authority-conflict");
+    }
+    const result = {
+      ...lane,
+      authorityState: "retired-preserved",
+      dormantPreservationReceiptDigest: null,
+      overlapReasons: reasons,
+    };
+    if (reasons.includes("structural-ambiguity")) {
+      return { ...result, classification: "ambiguous" };
+    }
+    if (reasons.length > 0) return { ...result, classification: "overlapping" };
+    return { ...result, classification: "disjoint-attributed" };
+  }
   if (lane.invalid || lane.leaseAmbiguous) reasons.push("structural-ambiguity");
   if (lane.branch === `refs/heads/${branch}`) reasons.push("same-branch");
   const identity = lane.branch
@@ -329,6 +361,19 @@ function hasQueuedSuccessorProjection(lease, evaluatedAt, currentRemoteClaims) {
       && Number.isFinite(expiry)
       && expiry > evaluatedAt.getTime();
   });
+}
+
+function retiredPreservationHasCurrentClaim(lane, currentRemoteClaims) {
+  if (!Array.isArray(currentRemoteClaims)) return true;
+  const source = lane.lease.localReviewRetirement.intent.source;
+  const workItemIds = new Set([
+    pseudonymousIdentifier("work-item", source.branch),
+    pseudonymousIdentifier("work-item", source.lease.scope),
+  ]);
+  return currentRemoteClaims.some(claim => (
+    claim.reviewRequestId === source.pullRequest.reviewRequestId
+    || workItemIds.has(claim.workItemId)
+  ));
 }
 
 function hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims) {
@@ -527,105 +572,10 @@ function normalizeWorktreeProjection(lane) {
   });
 }
 
-function normalizeCurrentClaim(source) {
-  const core = {
-    claimId: requiredDigest(source?.claimId, "claimId"),
-    state: requiredText(source?.state, "claim state").replaceAll("-", "_"),
-    actorId: requiredText(source?.actorId, "claim actorId"),
-    repositoryId: requiredText(source?.repositoryId, "claim repositoryId"),
-    workItemId: requiredText(source?.workItemId, "claim workItemId"),
-    canonicalBaseRevision: requiredSha(source?.canonicalBaseRevision, "claim canonical base"),
-    laneRevision: requiredSha(source?.laneRevision, "claim lane revision"),
-    declaredWriteScope: normalizeWriteSet(source?.declaredWriteScope),
-    writeSetDigest: requiredDigest(source?.writeSetDigest, "claim writeSetDigest"),
-    leaseEpoch: positiveInteger(source?.leaseEpoch, "claim leaseEpoch"),
-    transitionCounter: positiveInteger(source?.transitionCounter, "claim transitionCounter"),
-    heartbeatCounter: nonnegativeInteger(source?.heartbeatCounter, "claim heartbeatCounter"),
-    reviewRequestId: source?.reviewRequestId
-      ? requiredText(source.reviewRequestId, "claim reviewRequestId") : null,
-    expiresAt: requiredInstant(source?.expiresAt, "claim expiresAt"),
-    fenceRevision: requiredDigest(source?.fenceRevision, "claim fenceRevision"),
-    transitionDigest: requiredDigest(source?.transitionDigest, "claim transitionDigest"),
-  };
-  if (!["active", "review_ready", "delivery_authorized", "parked"].includes(core.state)) {
-    throw new Error(`Cloud inventory claim state ${core.state} is not current.`);
-  }
-  if (digestValue(core.declaredWriteScope) !== core.writeSetDigest) {
-    throw new Error(`Cloud inventory claim ${core.claimId} has an invalid write-set digest.`);
-  }
-  return Object.freeze({ ...core, recordDigest: digestValue(core) });
-}
-
 function executeGitHubJson(argumentsList) {
   return JSON.parse(execFileSync("gh", argumentsList, {
     encoding: "utf8",
     maxBuffer: 8 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
   }));
-}
-
-function withoutReceiptDigest(receipt) {
-  const { receiptDigest: _receiptDigest, ...core } = receipt;
-  return core;
-}
-
-function uniqueSorted(values, label) {
-  const unique = [...new Set(values)].sort();
-  if (unique.length !== values.length) throw new Error(`${label} values must be unique.`);
-  return unique;
-}
-
-function requireObject(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be an object.`);
-  }
-}
-
-function requiredText(value, label) {
-  const normalized = String(value || "").trim();
-  if (!normalized) throw new Error(`${label} is required.`);
-  return normalized;
-}
-
-function requiredRepository(value, label) {
-  const normalized = requiredText(value, label);
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(normalized)) {
-    throw new Error(`${label} must be an owner/repository name.`);
-  }
-  return normalized;
-}
-
-function requiredSha(value, label) {
-  const normalized = requiredText(value, label);
-  if (!SHA_PATTERN.test(normalized)) throw new Error(`${label} must be a lowercase 40-character SHA.`);
-  return normalized;
-}
-
-function requiredDigest(value, label) {
-  const normalized = requiredText(value, label);
-  if (!DIGEST_PATTERN.test(normalized)) throw new Error(`${label} must be a lowercase SHA-256 digest.`);
-  return normalized;
-}
-
-function requiredInstant(value, label) {
-  const normalized = requiredText(value, label);
-  const milliseconds = Date.parse(normalized);
-  if (!Number.isFinite(milliseconds)) throw new Error(`${label} must be an ISO-8601 instant.`);
-  return new Date(milliseconds).toISOString();
-}
-
-function positiveInteger(value, label) {
-  const normalized = Number(value);
-  if (!Number.isInteger(normalized) || normalized <= 0) {
-    throw new Error(`${label} must be a positive integer.`);
-  }
-  return normalized;
-}
-
-function nonnegativeInteger(value, label) {
-  const normalized = Number(value);
-  if (!Number.isInteger(normalized) || normalized < 0) {
-    throw new Error(`${label} must be a nonnegative integer.`);
-  }
-  return normalized;
 }

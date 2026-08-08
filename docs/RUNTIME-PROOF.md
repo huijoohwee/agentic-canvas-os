@@ -115,6 +115,14 @@ flow:
 
 # Runtime Proof
 
+The local review-ready retirement proof is source-bounded and provider-safe:
+focused tests simulate lease-fenced conditional provider closure, fresh
+pre-release cloud verification, lease CAS failure/replay, exact marker and
+receipt joins, split source/operator sessions, invalid identity, live and dirty
+owners, lifecycle classification, and admission release without calling a real
+pull request. Exact operator and live provider evidence remain run-specific; see
+[`LOCAL-REVIEW-RETIREMENT.md`](./LOCAL-REVIEW-RETIREMENT.md).
+
 This ledger proves the local Agentic Canvas OS docs control surface, one
 repository-owned live GitHub collaboration lifecycle, and one explicitly
 approved bounded paid provider proof. It does not claim a Prod mirror write,

@@ -150,7 +150,14 @@
       "default": []
     },
     "releaseLifecycle": {
-      "$ref": "https://agentic-canvas-os.dev/schemas/collaborative-release-lifecycle/v1"
+      "oneOf": [
+        {
+          "$ref": "https://agentic-canvas-os.dev/schemas/collaborative-release-lifecycle/v1"
+        },
+        {
+          "$ref": "https://agentic-canvas-os.dev/schemas/collaborative-release-lifecycle/v2"
+        }
+      ]
     }
   },
   "$defs": {

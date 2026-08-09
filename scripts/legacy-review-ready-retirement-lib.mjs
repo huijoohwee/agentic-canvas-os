@@ -1,5 +1,6 @@
 import path from "node:path";
 import { canonicalJson, digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { projectRootState } from "./cloud-collaboration-state-projection.mjs";
 import { projectWriterLeasePullRequestMarker, WRITER_LEASE_SCHEMA } from "./writer-lease-lib.mjs";
 export const LOCAL_REVIEW_RETIREMENT_INTENT_SCHEMA = "agentic-local-review-retirement-intent/v1";
 export const LOCAL_REVIEW_RETIREMENT_RECEIPT_SCHEMA = "agentic-local-review-retirement-receipt/v1";
@@ -507,7 +508,7 @@ export function normalizeLocalReviewRetirementRequest(value) {
 export function normalizeCurrentCloudClaim(source) {
   const core = {
     claimId: requiredDigest(source?.claimId, "claimId"),
-    state: requiredText(source?.state, "claim state").replaceAll("-", "_"),
+    state: projectRootState(requiredText(source?.state, "claim state")),
     actorId: requiredText(source?.actorId, "claim actorId"),
     repositoryId: requiredText(source?.repositoryId, "claim repositoryId"),
     workItemId: requiredText(source?.workItemId, "claim workItemId"),
@@ -524,7 +525,7 @@ export function normalizeCurrentCloudClaim(source) {
     fenceRevision: requiredDigest(source?.fenceRevision, "claim fenceRevision"),
     transitionDigest: requiredDigest(source?.transitionDigest, "claim transitionDigest"),
   };
-  if (!["active", "review_ready", "delivery_authorized", "parked"].includes(core.state)) {
+  if (!["active", "waiting-successor", "review_ready", "delivery_authorized", "parked"].includes(core.state)) {
     throw new Error(`Cloud inventory claim state ${core.state} is not current.`);
   }
   if (digestValue(core.declaredWriteScope) !== core.writeSetDigest) {

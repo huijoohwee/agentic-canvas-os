@@ -10,6 +10,12 @@ import {
   claimProvenanceMatches,
   normalizeClaimProvenance,
 } from "./scoped-lane-claim-provenance.mjs";
+import {
+  projectRootState,
+  rootStateForProjection,
+} from "./cloud-collaboration-state-projection.mjs";
+
+export { projectRootState, rootStateForProjection };
 
 const RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -440,29 +446,6 @@ function nonnegativeInteger(value, label) {
     throw new Error(`${label} must be a nonnegative integer.`);
   }
   return normalized;
-}
-
-export function projectRootState(value) {
-  const state = String(value || "").replaceAll("-", "_");
-  return ({
-    current: "active", active: "active",
-    waiting_successor: "waiting-successor",
-    reviewed: "review_ready", review_ready: "review_ready",
-    integrated_preserved: "delivery_authorized", delivery_authorized: "delivery_authorized",
-    dormant_preserved: "parked", parked: "parked",
-    retired: "released", released: "released",
-  })[state] || state;
-}
-
-export function rootStateForProjection(value) {
-  return ({
-    active: "current",
-    waiting_successor: "waiting-successor",
-    review_ready: "reviewed",
-    delivery_authorized: "integrated-preserved",
-    parked: "dormant-preserved",
-    released: "retired",
-  })[String(value || "").replaceAll("-", "_")] || value;
 }
 
 function requiredState(value) {

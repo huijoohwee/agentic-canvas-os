@@ -6,16 +6,10 @@ import Ajv2020 from "ajv/dist/2020.js";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
-import {
-  buildCompletedReceipt,
-  buildLocalReviewRetirementIntent,
-  normalizeReviewReadySnapshot,
-  prepareProviderCheckpoint,
-} from "../scripts/legacy-review-ready-retirement-lib.mjs";
-import {
-  evaluateScopedLaneAdmission,
-  normalizeDeclaredWriteScopeManifest,
-} from "../scripts/scoped-lane-admission-lib.mjs";
+import { buildCompletedReceipt, buildLocalReviewRetirementIntent,
+  normalizeReviewReadySnapshot, prepareProviderCheckpoint } from "../scripts/legacy-review-ready-retirement-lib.mjs";
+import { evaluateScopedLaneAdmission,
+  normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
 import { assertPeersUnchanged } from "../scripts/scoped-lane-admission-state.mjs";
 import {
   classifyExistingLane,
@@ -30,15 +24,9 @@ import {
   WRITER_LEASE_SCHEMA,
 } from "../scripts/writer-lease-lib.mjs";
 
-const HEAD_SHA = "a".repeat(40);
-const TREE_SHA = "b".repeat(40);
-const LEDGER_SHA = "c".repeat(40);
-const LEDGER_DIGEST = "d".repeat(64);
-const OPERATOR_DECISION_DIGEST = "e".repeat(64);
-const FUTURE = "2099-08-04T00:00:00.000Z";
-const REPOSITORY_PATH = "/workspace/repository";
-const REPOSITORY_NAME = "owner/repository";
-
+const HEAD_SHA = "a".repeat(40), TREE_SHA = "b".repeat(40), LEDGER_SHA = "c".repeat(40);
+const LEDGER_DIGEST = "d".repeat(64), OPERATOR_DECISION_DIGEST = "e".repeat(64), FUTURE = "2099-08-04T00:00:00.000Z";
+const REPOSITORY_PATH = "/workspace/repository", REPOSITORY_NAME = "owner/repository";
 function inventoryVerification(claims = []) {
   return verifyCurrentCloudInventory({
     ledgerRepository: "owner/ledger",
@@ -129,12 +117,13 @@ function dormantReceipt({
 
 function publicClaim({
   workItem = "other-scope",
+  state = "active",
   reviewRequestId = null,
   declaredWriteScope = ["path:docs/other", "semantic:other-scope"],
 } = {}) {
   const core = {
     claimId: "4".repeat(64),
-    state: "active",
+    state,
     actorId: "github-user:7",
     repositoryId: "github-repository:R_repo",
     workItemId: pseudonymousIdentifier("work-item", workItem),
@@ -159,6 +148,33 @@ test("inventory-only status verification is operation-derived without a local pe
   assert.equal(verification.inventory.claims.length, 0);
   assert.equal(verification.ledgerRevision, LEDGER_SHA);
   assert.equal(verification.ledgerDigest, LEDGER_DIGEST);
+});
+
+test("provider root states project before current-authority filtering", () => {
+  const projections = [
+    ["current", "active"], ["waiting-successor", "waiting-successor"],
+    ["reviewed", "review_ready"], ["integrated-preserved", "delivery_authorized"],
+    ["dormant-preserved", "parked"],
+  ];
+  for (const [state, expected] of projections) {
+    const verification = inventoryVerification([publicClaim({ state })]);
+    assert.equal(verification.inventory.claims[0].state, expected);
+  }
+  assert.doesNotThrow(() => dormantReceipt({
+    remoteAuthorityVerification: inventoryVerification([
+      publicClaim({ state: "dormant-preserved" }),
+    ]),
+  }));
+  for (const state of ["current", "waiting-successor", "dormant-preserved"]) {
+    assert.throws(() => dormantReceipt({
+      remoteAuthorityVerification: inventoryVerification([
+        publicClaim({ state, workItem: "new-scope" }),
+      ]),
+    }), /matched current cloud authority/u);
+  }
+  for (const state of ["retired", "unknown-provider-state"]) {
+    assert.throws(() => inventoryVerification([publicClaim({ state })]), /is not current/u);
+  }
 });
 
 test("post-bind verification ignores observation time while detecting peer drift", () => {
@@ -307,15 +323,8 @@ test("admission report binds dormant receipts while remote write overlap still b
     paths: ["docs/new"],
   });
   const cleanInventory = inventoryVerification();
-  const receipt = dormantReceipt({
-    sourceLane,
-    remoteAuthorityVerification: cleanInventory,
-  });
-  const canonical = lane({
-    lanePath: REPOSITORY_PATH,
-    branch: "refs/heads/main",
-    dirty: false,
-  });
+  const receipt = dormantReceipt({ sourceLane, remoteAuthorityVerification: cleanInventory });
+  const canonical = lane({ lanePath: REPOSITORY_PATH, branch: "refs/heads/main", dirty: false });
   const evaluate = remoteAuthorityVerification => evaluateScopedLaneAdmission({
     repository: REPOSITORY_PATH,
     canonicalPath: REPOSITORY_PATH,
@@ -339,10 +348,9 @@ test("admission report binds dormant receipts while remote write overlap still b
     planned.lanes.find(item => item.path === sourceLane.path).authorityState,
     "dormant-preserved",
   );
-  const schema = JSON.parse(readFileSync(
-    new URL("../docs/schemas/scoped-lane-admission-report.v1.schema.json", import.meta.url),
-    "utf8",
-  ));
+  const schema = JSON.parse(readFileSync(new URL(
+    "../docs/schemas/scoped-lane-admission-report.v1.schema.json", import.meta.url,
+  ), "utf8"));
   const validate = new Ajv2020({ strict: false, allErrors: true }).compile(schema);
   assert.equal(validate(planned), true, JSON.stringify(validate.errors));
 
@@ -352,10 +360,7 @@ test("admission report binds dormant receipts while remote write overlap still b
       declaredWriteScope: ["path:docs/new", "semantic:independent-current-authority"],
     }),
   ]);
-  const blockedReceipt = dormantReceipt({
-    sourceLane,
-    remoteAuthorityVerification: overlappingInventory,
-  });
+  const blockedReceipt = dormantReceipt({ sourceLane, remoteAuthorityVerification: overlappingInventory });
   const blocked = evaluateScopedLaneAdmission({
     ...planned,
     repository: REPOSITORY_PATH,
@@ -403,11 +408,7 @@ test("expired local authoring projections stop causing global ambiguity once aut
       expiresAt: "2026-08-03T00:00:00.000Z",
     },
   });
-  const canonical = lane({
-    lanePath: REPOSITORY_PATH,
-    branch: "refs/heads/main",
-    dirty: false,
-  });
+  const canonical = lane({ lanePath: REPOSITORY_PATH, branch: "refs/heads/main", dirty: false });
   const report = evaluateScopedLaneAdmission({
     repository: REPOSITORY_PATH,
     canonicalPath: REPOSITORY_PATH,

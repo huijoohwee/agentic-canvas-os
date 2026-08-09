@@ -3,6 +3,7 @@
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import {
   createWriterLeaseStore,
@@ -16,7 +17,7 @@ import {
 
 const args = process.argv.slice(2);
 
-main();
+if (isDirectExecution()) main();
 
 function main() {
 try {
@@ -94,17 +95,14 @@ try {
     "--body",
     updateWriterLeasePullRequestBody(refreshedPullRequest.body, lease),
   ], { cwd: worktreePath });
-  console.log(JSON.stringify({
-    schema: "agentic-legacy-clean-committed-lane-refresh-result/v1",
-    status: "refreshed",
+  console.log(JSON.stringify(buildRefreshResult({
     branch,
     pullRequestUrl: pullRequest.url,
     previousHeadSha: startHeadSha,
     refreshedHeadSha,
     epoch: lease.epoch,
     merged,
-    sessionId,
-  }));
+  })));
 } catch (error) {
   console.error(JSON.stringify({
     schema: "agentic-legacy-clean-committed-lane-refresh-result/v1",
@@ -115,12 +113,38 @@ try {
 }
 }
 
+export function buildRefreshResult({
+  branch,
+  pullRequestUrl,
+  previousHeadSha,
+  refreshedHeadSha,
+  epoch,
+  merged,
+} = {}) {
+  return Object.freeze({
+    schema: "agentic-legacy-clean-committed-lane-refresh-result/v1",
+    status: "refreshed",
+    branch,
+    pullRequestUrl,
+    previousHeadSha,
+    refreshedHeadSha,
+    epoch,
+    merged,
+  });
+}
+
 function publicMessage(error) {
   return String(error instanceof Error ? error.message : error || "blocked")
     .replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]")
     .replace(/[A-Za-z0-9_-]{32,}/gu, "[redacted]")
     .replace(/\/(?:Users|home)\/[^\s"']+/gu, "[local-path]")
     .slice(0, 240);
+}
+
+function isDirectExecution(argv = process.argv) {
+  const scriptPath = argv[1];
+  if (!scriptPath) return false;
+  return import.meta.url === pathToFileURL(scriptPath).href;
 }
 
 function findPullRequest({ branch, cwd }) {

@@ -301,7 +301,7 @@ active branch and remote fence agree, run the same heartbeat command with
 `--repair-pr-projection`; it binds owned dirt and both PR identities, while
 review and publish independently require the exact pushed head.
 
-If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree through ordinary start or resume, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session; the explicit same-session owned-dirt recovery below is the only dirty review-ready exception.
+If the owned branch already exists, inspect its exact SHA, draft pull request, lease metadata, upstream, and registered worktree before switching to it. An expired lease does not authorize silent takeover: the prior writer must park or hand off its exact pushed SHA, after which the receiver claims the next epoch. The only renewal exception is exact same-session replay of an incomplete start or resume claim: session, worktree, branch, base, epoch, empty-claim shape, draft PR marker, and remote handoff/fence must still match, and a competing remote fence wins. Never reuse a dirty worktree through ordinary start or resume, activate one branch in multiple worktrees, use `--ignore-other-worktrees`, or activate a branch owned by another session; the explicit same-session owned-dirt resume below is the only dirty review-ready exception. An expired cloud-admitted active lane with owned dirt instead uses `node "$AGENTIC_CANVAS_OS_ROOT/scripts/active-owned-dirt-recovery.mjs" plan --repository="$TASK_WORKTREE" --session="$AGENTIC_SESSION_ID" --json`, then `execute` with the exact returned `authorize active-owned-dirt-reclaim <planDigest>` text; it is reclaim-only for the recorded source session, pins exact index/worktree/untracked/type/mode/blob evidence before same-claim cloud recovery, never changes authored bytes, HEAD, branch refs, remote refs, or PR draft state, and still requires ordinary clean `device:review` to reach `review_ready`. See `MANAGED-IMPLEMENTATION-RUNS.md` for its replay and proof boundary.
 
 Legacy local-only lanes may resume only a parked or expired handoff branch, an exact review-ready handoff, or a delivered branch that the same session must revise after a failed protected check. A lane carrying admission or cloud-authority projection is cloud-admitted: ordinary `device:resume` refuses every local-only successor, including same-session recovery, until the repository's explicit cloud handoff/reclaim protocol advances and re-verifies the claim. Review-ready and same-session delivery resume first demote a ready PR, independently prove it is draft, and only then claim `remote epoch + 1`. Review-ready work may reactivate in its attached worktree and transfer sessions only when local HEAD, remote HEAD, review-head evidence, PR metadata, and the prior fence match exactly. If the exact review-owning session authored post-review dirt in that same attached worktree, it may explicitly add `--recover-owned-dirt`; the command requires matching local and remote review-ready evidence, binds a digest of the tracked, staged, unstaged, and untracked state to the successor lease, creates the empty claim with `git commit --allow-empty --only`, and proves the dirt stayed unchanged. This exception never transfers dirty bytes to another session or worktree. Its empty claim publication alone rechecks the evidence immediately before and after `git push --no-verify`; that bounded bypass skips only the checkout-local pre-push hook, while review, publish, integration, protected checks, and deployment gates remain mandatory. An expired active lease may retain clean committed local descendants only for the exact same session, worktree, branch, pull request, local/remote lease marker, pull-request head, and ancestry. The v3 recovery stores the exact source remote/PR head: the source fence must equal or precede that prefix, the prefix must precede local HEAD, and scope plus protected-main equivalence are proven over the complete fence-to-HEAD range rather than only the unpushed tail. Before recovery, the dedicated command force-fetches the exact protected `origin/main`; net descendant paths outside the declared write scope qualify only when their HEAD mode and blob exactly equal that fetched tree, while declared or non-equivalent authored paths remain scope-restricted. The v3 snapshot, successor lease, and PR marker bind `sourceRemoteHeadSha`, source-base ancestry, protected ref SHA/tree, every exempt path's mode/blob pair, and partition digests; replay requires the exact stored remote/PR prefix. The command revalidates clean state, refs, trees, evidence, and remote identities around cloud/local CAS and marker publication, so dirt, untracked files, ancestry failure, path/mode/blob drift, ref drift, or TOCTOU fails closed. Legacy v1 and v2 recovery stay strict: v1 remains fetch-free and cannot gain exemptions, while v2 still requires the exact source fence at the remote and PR and cannot adopt a pushed prefix. This evidence expands neither authoring scope nor push, review, merge, release, run, or deployment authority. Resume binds the pre-claim head/tree and range-diff digest plus source status, epoch, session, device, scope, branch, base, fence, PR, and integration commit/tree into the successor lease. A same-session delivery retry additionally requires the exact prior local integration receipt, binds its recorded delivery head and the latest observed handoff through a bounded first-parent chain of tree-equivalent protected-main merges, and carries the original authored base/fence separately from the current source lease into the successor marker. `device:integrate` then requires the intentional commit message and original source-base `agentic-change-manifest/v1`, rechecks the original authored path set and range digest, and runs the full repository check before republishing; missing prior delivery integration evidence fails closed, and the new empty fence never substitutes for those gates. A same-session parked task may retain committed local descendants ahead of the remote only when its local registry, worktree, branch, pull request, epoch, fence, and ancestry all match; cross-session parked handoff still requires the exact remote head. The command creates a descendant fencing commit and performs a normal fast-forward push; concurrent receivers cannot both win, and another session cannot reclaim delivery. A retry interrupted after demotion, claim, empty commit, annotation, push, or PR-body edit reconciles only the exact same-session successor and single-parent empty claim commit, then completes only the missing steps:
 
@@ -532,7 +532,7 @@ detached completion-proven lanes pending cleanup. `owned-untracked` requires a
 worktree-bound session, branch, scope, epoch, and pull request; its report records
 the observed paths, byte sizes, Git object ids, and observation time without
 copying or storing their contents. It fails closed on
-unattributed dirt, unregistered, stale, ambiguous, invalid, or already-completed
+unattributed dirt, present-but-unregistered, stale, ambiguous, invalid, or completed
 residual task worktrees. A completed task becomes cleanup-eligible only after
 `device:complete` verifies its merged pull request, detaches it cleanly at the
 exact fetched `origin/main`, and records the completed writer-lease state.
@@ -543,29 +543,29 @@ Remove one eligible checkout explicitly from the canonical main worktree:
 npm run worktree:lifecycle:cleanup -- --worktree="$TASK_WORKTREE"
 ```
 
-Cleanup uses `git worktree remove` without force and then prunes registration
-metadata. It preserves the task branch and commits. It never removes canonical,
-active, delivery, parked, `owned-untracked`, dirty, divergent, or unclassified
+Cleanup uses exact `git worktree remove` without force, then rechecks target
+registration and path absence; it never prunes unrelated prunable records. It
+preserves task branch/commits and never removes canonical, active, delivery,
+parked, `owned-untracked`, dirty, divergent, or unclassified
 worktrees; uncertain files remain in their physical owning lane. Automatic park
-or stash is forbidden for `owned-untracked`; only its owner may explicitly
-choose a later supported handoff. Branch deletion is a separate
+or stash is forbidden for `owned-untracked`; only its owner may explicitly choose
+a later supported handoff. Branch deletion is a separate
 operator-authorized action.
 
 Given a completion claim, when the protocol runs, then the protected Dev pull
-request is merged, the task worktree is detached and clean at the exact fetched
-`origin/main` revision containing that merge, the registered main worktree is
-fast-forwarded separately, and the original failure is
-retested on a local runtime started from that same SHA. Dev integration alone
+request is merged and its typed cleanup receipt proves the exact target has
+`registeredAfter:false`, `pathExistsAfter:false`, and `registrationPruned:false`;
+the target is absent/unregistered, canonical main converges separately, and the original failure is retested on that SHA's runtime. Integration
 does not authorize Prod mirror or Cloudflare action.
 
 VCC: Verify `npm run device:integrate -- --json` exits zero with schema
 `agentic-device-integration-result/v1` and status `runtime_ready`; it emits the
 required commit/tree/digest, branch, pull-request, merge, integrated-source, and
-runtime evidence; the task worktree is clean and detached; all registered
-canonical sources align with `origin/main`; the managed local runtime identifies
-the exact Knowgrph application SHA and integrated source SHA; and the original
-browser acceptance passes. Any missing item
-leaves the task pending, paused, or blocked rather than complete.
+runtime evidence; its cleanup receipt proves the exact target absent/unregistered,
+postconditions false, no broad registration prune, and preserved branch/commits;
+all canonical sources align with `origin/main`; the runtime identifies the exact
+Knowgrph and integrated-source SHAs; and browser acceptance passes. Any missing
+item leaves the task pending, paused, or blocked rather than complete.
 
 Session-end VCC: Verify the lifecycle report names every registered worktree and
 its state; a runtime-relevant review-ready lane reports one ready server whose

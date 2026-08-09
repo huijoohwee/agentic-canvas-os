@@ -2,12 +2,14 @@
 title: "Cloud Authority Handoff And Reclaim"
 graphId: "md:cloud-authority-handoff-and-reclaim"
 doc_type: "Lifecycle Capability"
-date: "2026-08-03"
+date: "2026-08-09"
 lang: "en-US"
 schema: "agentic-cloud-authority-handoff-controller/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "Source-owned continuation of expired preserved review lanes"
+runtime_owner: "../scripts/cloud-authority-handoff-controller.mjs; ../scripts/cloud-authority-handoff-lineage.mjs; ../scripts/cloud-authority-scope-expansion-lineage-contract.mjs; ../scripts/cloud-authority-scope-expansion-lineage-migration.mjs"
+runtime_proof: "../__tests__/cloud-authority-handoff-controller.test.mjs; ../__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs"
 ---
 
 # Cloud Authority Handoff And Reclaim
@@ -136,6 +138,83 @@ continues to own the protected-main refresh chain.
 different successor session or device. When the successor differs from the
 current preserved lease owner, the controller emits `handed-off-live` and
 leaves local projection rebinding to a recipient-owned repository step.
+
+## Historical Scope-Expansion Lineage Migration
+
+The ordinary handoff validator remains strict: a v2 epoch-1 claim must have no
+predecessor. One repository-owned migration admits only the historical shape
+created when an active dirty lane expanded its declared scope through a waiting
+successor. It does not rewrite that claim or make the shape generally valid.
+
+`scripts/cloud-authority-scope-expansion-lineage-migration.mjs` proves all of
+the following before it can call this controller:
+
+- one valid append-only v2 ledger and an exact current status digest
+- one epoch-1 target genesis whose predecessor is the earlier source claim
+- a strict source-scope subset with the same actor, device, session,
+  repository, base, and initial lane revision
+- a `superseded` source retirement whose bytes, checks, and handoff digests are
+  recomputed from the lane admission's portable plan receipt
+- exact clean review-lane, owner, pull-request, manifest, authority, and cloud
+  projection parity, with no competing overlapping claim
+
+The execute phase revalidates the saved plan against current bytes and requires
+the exact text `authorize lineage-migration <planDigest>`. It then mints a
+process-local authorization and admission bound to the exact reclaim execution
+intent, current claim transition, local authority, and ledger revision. Their
+identity lives only in module-private weak registries; serialization, property
+copying, and symbol reflection cannot reconstruct either capability.
+The existing handoff controller creates a normal epoch-2 successor, retires the
+historical claim through the standard root operation, restores the unchanged
+review projection, and persists it through repository-owned APIs. A rerun
+verifies and returns the same successor as `already-migrated`; it never creates
+epoch 3 for the same plan.
+
+This migration is reclaim-only. The execution session, successor session, and
+successor device must equal the exact preserved lease session and device before
+the controller is called. A distinct recipient blocks with no cloud mutation;
+recipient handoff requires its own end-to-end projection owner and is outside
+this migration capability.
+
+Immediately before successor claim, the controller's second lane read must
+rejoin the complete plan and the request session/device to the current local
+and pull-request marker owner. Success and `already-migrated` replay require
+both markers to carry one stable normalized successor authority across every
+canonical field, including ledger and claim digests, manifest digest, device,
+session, transition counter, expiry, operation receipt, and integration state.
+If execution stops after the local lease update but before the marker update,
+replay blocks without attesting migration or appending another transition until
+the two repository-owned projections converge.
+
+The CLI requires a canonical `agent/<device>/<scope>` branch before it starts a
+subprocess. Repository execution resolves one real worktree root, verifies that
+exact registered branch worktree, and uses only explicit protected-main and
+agent-branch fetch refspecs. JSON failures redact every GitHub token family,
+credentialed URLs, and local paths, suppress child-process stderr, and cap the
+public diagnostic length.
+
+Plan first, without mutation:
+
+```sh
+node ./scripts/cloud-authority-scope-expansion-lineage-migration.mjs plan \
+  --session="<exact-lease-session-id>" \
+  --branch="agent/<device>/<semantic-scope>" \
+  --json > "<lineage-plan-result.json>"
+```
+
+After inspecting the receipt-bound plan, execute that exact plan:
+
+```sh
+node ./scripts/cloud-authority-scope-expansion-lineage-migration.mjs execute \
+  --session="<exact-lease-session-id>" \
+  --plan-file="<lineage-plan-result.json>" \
+  --authorize="authorize lineage-migration <planDigest>" \
+  --json
+```
+
+Plan, authorization, ephemeral admission, continuation, and migrated-state
+receipts are content-addressed. None grants integration, merge, deployment,
+publication, Production, or worktree cleanup authority.
 
 ## Forbidden Behavior
 

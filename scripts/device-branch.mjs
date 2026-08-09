@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Responsibility: Dispatch fenced device lifecycle commands and machine-readable results.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -7,59 +8,42 @@ import os from "node:os";
 import path from "node:path";
 import { textCommandOptions } from "./command-text-options.mjs";
 import {
-  completeSession,
-  heartbeat,
-  park,
-  publish,
-  resume,
-  review,
-  sanitizeDevice,
-  sanitizeScope,
-  start,
+  completeSession, heartbeat, park, publish, resume, review, sanitizeDevice,
+  sanitizeScope, start,
 } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
 import { integrateSession } from "./device-integrate-lib.mjs";
 import {
-  readOwnershipPullRequest,
-  requireOwnershipPullRequestDraft,
+  readOwnershipPullRequest, requireOwnershipPullRequestDraft,
 } from "./device-pull-request-state.mjs";
 import {
-  inspectTaskWorktreeTarget,
-  provisionTaskWorktree,
-  rollbackUnclaimedProvision,
+  inspectTaskWorktreeTarget, provisionTaskWorktree, rollbackUnclaimedProvision,
 } from "./task-worktree-provision.mjs";
 import {
-  createWriterLeaseStore,
-  DEFAULT_WRITER_LEASE_TTL_MS,
+  createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS,
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import {
-  assertRootSourceBootstrapCurrent,
-  createAdmissionLeaseProjection,
-  evaluateScopedLaneAdmission,
-  normalizeCloudAuthority,
+  assertRootSourceBootstrapCurrent, createAdmissionLeaseProjection,
+  evaluateScopedLaneAdmission, normalizeCloudAuthority,
   normalizeDeclaredWriteScopeManifest,
 } from "./scoped-lane-admission-lib.mjs";
 import {
-  attachCloudHeartbeatMachineEvidence,
-  bindAdmissionCloudAuthority,
-  heartbeatAdmissionCloudAuthority,
-  reconcileAdmissionCloudAuthority,
-  reviewReadyAdmissionCloudAuthority,
-  verifyAdmissionCloudAuthority,
+  attachCloudHeartbeatMachineEvidence, bindAdmissionCloudAuthority,
+  heartbeatAdmissionCloudAuthority, reconcileAdmissionCloudAuthority,
+  reviewReadyAdmissionCloudAuthority, verifyAdmissionCloudAuthority,
   verifyReviewReadyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import {
-  assertAdmissionMutationAuthority,
-  assertPeersUnchanged,
-  assertWorkspaceGuardsReady,
-  attachAdmissionReceipt,
-  collectScopedLaneState,
-  finalizeScopedLaneAdmission,
-  verifyPreservedLaneState,
+  assertAdmissionMutationAuthority, assertPeersUnchanged,
+  assertWorkspaceGuardsReady, attachAdmissionReceipt, collectScopedLaneState,
+  finalizeScopedLaneAdmission, verifyPreservedLaneState,
 } from "./scoped-lane-admission-state.mjs";
-import { verifyDormantPreservation } from "./scoped-lane-authority-state.mjs";
 import { continuePlannedAdmissionFromRepository } from "./scoped-lane-admission-continuation.mjs";
+import {
+  createDeviceDormantPreservationAdmissionGate,
+  createDeviceDormantPreservationPlannedContinuationGate,
+} from "./dormant-preservation-decision-repository-adapter.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -170,25 +154,16 @@ try {
         canonicalBaseSha: before.canonicalBaseSha,
       },
     );
-    const verified = verifyAdmissionCloudAuthority({
-      authority,
-      manifest,
-      canonicalBaseSha: before.canonicalBaseSha,
+    const dormantGate = createDeviceDormantPreservationAdmissionGate({
+      argumentsList: args, controllerRoot: scriptControllerRoot,
+      repository: canonicalRepo, targetRepository, targetPath: targetPlan.target,
+      manifest, authority, sessionId, worktreePaths: dormantWorktreePaths,
+      pullRequestReferences: dormantPullRequests, gitText,
+    });
+    const { verified, dormantPreservationReceipt, decision } = dormantGate.verify({
+      laneState: before, targetPlan,
     });
     verifiedCloudAuthority = verified.authority;
-    const dormantPreservationReceipt = verifyDormantPreservation({
-      repository: canonicalRepo,
-      targetRepository,
-      lanes: before.lanes,
-      worktreePaths: dormantWorktreePaths,
-      pullRequestReferences: dormantPullRequests,
-      operatorDecisionDigest: dormantWorktreePaths.length + dormantPullRequests.length > 0
-        ? requiredOption(args, "operator-decision-digest")
-        : "",
-      sessionId,
-      remoteAuthorityVerification: verified.verification,
-      verifiedAt: verified.verification.verifiedAt,
-    });
     admissionReport = evaluateScopedLaneAdmission({
       repository: canonicalRepo,
       canonicalPath: canonicalRepo,
@@ -224,16 +199,15 @@ try {
       gitCommonDir: canonicalCommonDir,
     });
     run("git", ["fetch", "origin", "main"]);
-    provision = admissionLeaseStore.withRegistryLock(() => provisionTaskWorktree({
-      invocationPath,
-      repoRoot: canonicalRepo,
-      targetPath: requestedWorktreePath,
-      gitText,
-      run,
-      expectedBaseSha: before.canonicalBaseSha,
-      expectedTargetObservationDigest: targetPlan.targetObservationDigest,
-      fetchBase: false,
-    }));
+    provision = admissionLeaseStore.withRegistryLock(() => {
+      dormantGate.revalidate({ expectedDecision: decision });
+      return provisionTaskWorktree({
+        invocationPath, repoRoot: canonicalRepo, targetPath: requestedWorktreePath,
+        gitText, run, expectedBaseSha: before.canonicalBaseSha,
+        expectedTargetObservationDigest: targetPlan.targetObservationDigest,
+        fetchBase: false,
+      });
+    });
     activeInvocationPath = provision.target;
   } else if (requestedWorktreePath) {
     throw new Error("--worktree requires --provision.");
@@ -276,15 +250,26 @@ try {
       throw new Error("--continue-admission requires --write-scope-manifest.");
     }
     const branch = gitText(["branch", "--show-current"]).trim();
+    const manifestSource = readJsonFile(
+      writeScopeManifestPath, "declared write-scope manifest",
+    );
+    const continuationGate = dormantWorktreePaths.length + dormantPullRequests.length > 0
+      ? createDeviceDormantPreservationPlannedContinuationGate({
+        argumentsList: args, repository: repo, branch, sessionId, leaseStore,
+        manifestSource, worktreePaths: dormantWorktreePaths,
+        pullRequestReferences: dormantPullRequests,
+      })
+      : null;
     admissionContinuation = continuePlannedAdmissionFromRepository({
       repository: repo,
       branch,
       sessionId,
       leaseStore,
-      manifestSource: readJsonFile(writeScopeManifestPath, "declared write-scope manifest"),
+      manifestSource,
       dormantWorktreePaths,
       dormantPullRequests,
       operatorDecisionDigest: requiredOption(args, "operator-decision-digest"),
+      verifyDormant: continuationGate?.verifyDormant, verifyCloudAuthority: continuationGate?.verifyCloudAuthority,
       gitText,
     });
   }
@@ -563,7 +548,7 @@ function runText(command, args, options = {}) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--workspace-guard-controller=<clean-protected-main-controller>] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --operator-decision-digest=<sha256>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--continue-admission --write-scope-manifest=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --operator-decision-digest=<sha256>] [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--workspace-guard-controller=<clean-protected-main-controller>] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --dormant-preservation-selection=<json> --dormant-preservation-evidence-digest=<sha256> --dormant-preservation-authorization=<exact-text> --dormant-preservation-state=<journal> --operator-decision-digest=<sha256>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--continue-admission --write-scope-manifest=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --dormant-preservation-selection=<json> --dormant-preservation-evidence-digest=<sha256> --dormant-preservation-authorization=<exact-text> --dormant-preservation-state=<journal> --operator-decision-digest=<sha256>] [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
   );
   process.exit(2);
 }

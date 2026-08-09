@@ -64,6 +64,7 @@
     "canonical:main:fast-forward-equivalence:check": "node --test __tests__/canonical-main-fast-forward-equivalence.test.mjs",
     "workspace:legacy-integrated-disposition": "node ./scripts/legacy-integrated-lane-disposition.mjs",
     "workspace:legacy-integrated-disposition:check": "node --test __tests__/legacy-integrated-lane-disposition.test.mjs",
+    "workspace:legacy-clean-refresh": "node ./scripts/legacy-clean-committed-lane-refresh.mjs",
     "workspace:legacy-clean-bootstrap": "node ./scripts/legacy-clean-committed-lane-bootstrap.mjs",
     "workspace:legacy-clean-bootstrap:check": "node --test __tests__/legacy-clean-committed-lane-bootstrap.test.mjs",
     "session:start:classify": "node ./scripts/session-start-policy.mjs",
@@ -94,6 +95,9 @@
     "workspace:parallelism:test": "node --test __tests__/workspace-parallelism.test.mjs __tests__/workspace-guard-enforcement.test.mjs",
     "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
     "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
+    "worktree:lifecycle:cleanup-empty": "node ./scripts/worktree-lifecycle.mjs cleanup-empty",
+    "worktree:lifecycle:recoverable-cleanup": "node ./scripts/recoverable-lane-cleanup.mjs",
+    "worktree:lifecycle:recoverable-cleanup:check": "node --test __tests__/recoverable-lane-cleanup-contract.test.mjs __tests__/recoverable-lane-cleanup-controller.test.mjs __tests__/recoverable-lane-cleanup-repository-adapter.test.mjs __tests__/recoverable-lane-cleanup-cli.test.mjs",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",
@@ -118,11 +122,12 @@
     "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
-    "ajv": "8.17.1",
+    "ajv": "8.20.0",
     "fast-check": "3.23.2",
-    "wrangler": "4.113.0"
+    "wrangler": "4.120.0"
   },
   "overrides": {
+    "fast-uri": "3.1.5",
     "sharp": "0.35.3"
   }
 }

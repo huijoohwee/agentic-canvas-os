@@ -4,6 +4,7 @@ import {
   digestValue,
   validateLedger,
 } from "./cloud-collaboration-primitives.mjs";
+import { projectRootState } from "./cloud-collaboration-state-projection.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
@@ -278,10 +279,11 @@ function verifyLedgerChain({
   ) {
     throw new Error("Delivery peer ledger snapshots do not form one exact successor chain.");
   }
-  const predecessor = historicalLedger.entries.at(-1);
+  const predecessor = projectLedgerEntry(historicalLedger.entries.at(-1));
   verifyPredecessorEntry(predecessor, cloud);
   const suffix = currentLedger.entries.slice(historicalLedger.entries.length)
-    .filter(entry => entry.claimId === cloud.claimId);
+    .filter(entry => entry.claimId === cloud.claimId)
+    .map(projectLedgerEntry);
   const [deliveryEntry, ...heartbeatEntries] = suffix;
   if (
     !deliveryEntry
@@ -298,6 +300,23 @@ function verifyLedgerChain({
   const latest = suffix.at(-1);
   verifyCurrentEntry(latest, current);
   return { deliveryEntry, heartbeatEntries };
+}
+
+function projectLedgerEntry(entry) {
+  const state = projectRootState(entry?.claimCore?.state).replaceAll("_", "-");
+  const action = String(entry?.action || "").replaceAll("_", "-");
+  const projectedAction = action === "continue" && state === "review-ready"
+    ? "review-ready"
+    : action === "integrate" && state === "delivery-authorized"
+      ? "delivery-authorize"
+      : action === "continue" && state === "delivery-authorized"
+        ? "heartbeat"
+        : action;
+  return {
+    ...entry,
+    action: projectedAction,
+    claimCore: { ...entry?.claimCore, state },
+  };
 }
 
 function verifyPredecessorEntry(entry, cloud) {

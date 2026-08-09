@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import path from "node:path";
 
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
-import {
-  continueClaimedReviewSuccessorCloudAuthority,
-  invokeRepositoryCloudAction,
-  recoverIntegratedPreservedCloudAuthority,
-  reviewReadyAdmissionCloudAuthority,
-} from "./scoped-lane-cloud-authority.mjs";
+import { continueClaimedReviewSuccessorCloudAuthority, invokeRepositoryCloudAction,
+  recoverIntegratedPreservedCloudAuthority, reviewReadyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { sanitizeCloudAuthorityDiagnostic } from "./cloud-authority-scope-expansion-lineage-contract.mjs";
+import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import {
   assertIntegratedReplayRecovery,
   assertResumableSuccessorReplay,
@@ -29,12 +28,8 @@ import {
   validateContinuation,
 } from "./cloud-authority-handoff-lineage.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
-import {
-  createWriterLeaseStore,
-  parseDeviceBranch,
-  parseWriterLeasePullRequestBody,
-  updateWriterLeasePullRequestBody,
-} from "./writer-lease-lib.mjs";
+import { createWriterLeaseStore, parseDeviceBranch, parseWriterLeasePullRequestBody,
+  updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 export { buildCloudAuthoritySuccessorClaimRequest, CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA, CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA };
 const SHA_PATTERN = /^[0-9a-f]{40}$/u, DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
@@ -47,14 +42,8 @@ export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
     persistReviewProjection: methods.persistReviewProjection,
     recoverIntegratedAuthority: methods.recoverIntegratedAuthority,
   });
-  for (const key of [
-    "readPreservedReviewLane",
-    "readAuthenticatedOwner",
-    "readCloudStatus",
-    "claimSuccessor",
-    "bindAndReviewReady",
-    "persistReviewProjection",
-  ]) {
+  for (const key of ["readPreservedReviewLane", "readAuthenticatedOwner", "readCloudStatus",
+    "claimSuccessor", "bindAndReviewReady", "persistReviewProjection"]) {
     if (typeof adapter[key] !== "function") {
       throw new Error(`Controller adapter method ${key} must be a function.`);
     }
@@ -64,22 +53,19 @@ export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
   }
   return adapter;
 }
-export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}) {
+export async function continueExpiredReviewLaneAuthority(input, { adapter, lineageAdmission = null } = {}) {
   const request = normalizeContinuationRequest(input);
+  if (!parseDeviceBranch(request.branch)) {
+    throw new Error("Cloud authority continuation requires a canonical agent/device/scope branch.");
+  }
   const lane = await adapter.readPreservedReviewLane({ branch: request.branch });
   const actor = await adapter.readAuthenticatedOwner();
   const status = await adapter.readCloudStatus({
     ledgerRepository: lane.authority.ledgerRepository,
     targetRepository: lane.authority.targetRepository,
   });
-  const predecessor = classifyPredecessor({ lane, actor, status });
-  const integratedReplay = classifyIntegratedReplay({
-    request,
-    lane,
-    actor,
-    status,
-    predecessor,
-  });
+  const predecessor = classifyPredecessor({ lane, actor, status, request, lineageAdmission });
+  const integratedReplay = classifyIntegratedReplay({ request, lane, actor, status, predecessor });
   const successor = integratedReplay.applicable
     ? emptyResumableSuccessor()
     : classifyResumableSuccessor({ request, lane, actor, status, predecessor });
@@ -234,32 +220,48 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter } = {}
   });
 }
 export function createRepositoryCloudAuthorityHandoffControllerAdapter({
-  repository,
-  sessionId,
-  environment = process.env,
-  gitText = args => execFileSync("git", args, { cwd: repository, encoding: "utf8" }),
-  ghText = args => execFileSync("gh", args, { cwd: repository, encoding: "utf8" }),
-  run = (command, args) => execFileSync(command, args, { cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }),
-  leaseStore = createWriterLeaseStore({
-    gitCommonDir: path.resolve(repository, gitText(["rev-parse", "--git-common-dir"]).trim()),
-  }),
+  repository, sessionId, environment = process.env, gitText = null, ghText = null,
+  run = null, leaseStore = null, resolveRealpath = realpathSync,
 } = {}) {
-  const repoRoot = path.resolve(requiredText(repository, "repository"));
+  const repoRoot = resolveRealpath(path.resolve(requiredText(repository, "repository")));
+  const subprocess = { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] };
+  const git = gitText || (args => execFileSync("git", args, subprocess));
+  const gh = ghText || (args => execFileSync("gh", args, subprocess));
+  const execute = run || ((command, args) => execFileSync(command, args, subprocess));
+  let store = leaseStore;
+  function registeredStore(branch) {
+    if (!parseDeviceBranch(branch)) throw new Error("Controller branch identity is invalid.");
+    const record = assertRegisteredWorktree({
+      cwd: repoRoot, porcelain: git(["worktree", "list", "--porcelain", "-z"]),
+      resolvePath: value => path.resolve(value),
+    });
+    if (record.branch !== `refs/heads/${branch}`
+      || path.resolve(git(["rev-parse", "--show-toplevel"]).trim()) !== repoRoot) {
+      throw new Error("Controller requires the exact registered branch worktree root.");
+    }
+    store ||= createWriterLeaseStore({
+      gitCommonDir: path.resolve(repoRoot, git(["rev-parse", "--git-common-dir"]).trim()),
+    });
+    return store;
+  }
   return createCloudAuthorityHandoffControllerAdapter({
     readPreservedReviewLane({ branch }) {
-      run("git", ["fetch", "origin", "main", branch]);
-      const currentBranch = requiredText(gitText(["branch", "--show-current"]).trim(), "current branch");
+      const laneStore = registeredStore(branch);
+      const branchRef = `refs/heads/${branch}`, remoteRef = `refs/remotes/origin/${branch}`;
+      execute("git", ["fetch", "--no-tags", "origin",
+        "+refs/heads/main:refs/remotes/origin/main", `+${branchRef}:${remoteRef}`]);
+      const currentBranch = requiredText(git(["branch", "--show-current"]).trim(), "current branch");
       if (branch !== currentBranch) {
         throw new Error(`Controller requires ${branch} checked out; received ${currentBranch}.`);
       }
-      const lease = leaseStore.read(branch);
+      const lease = laneStore.read(branch);
       if (!lease) throw new Error(`No writer lease records ${branch}.`);
       const pullRequest = readOwnershipPullRequest({
         url: requiredText(lease.pullRequestUrl, "pullRequestUrl"),
         branch,
-        ghText: args => ghText(args),
+        ghText: args => gh(args),
       });
-      const pullWithAuthor = JSON.parse(ghText([
+      const pullWithAuthor = JSON.parse(gh([
         "pr",
         "view",
         pullRequest.url,
@@ -270,15 +272,15 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       const admission = normalizeManifestFromLease(lease.admission);
       const authority = normalizePreservedAuthority(lease.cloudAuthority, admission);
       const reviewHeadSha = requiredSha(lease.reviewHeadSha, "lease reviewHeadSha");
-      const localHeadSha = requiredSha(gitText(["rev-parse", "HEAD"]).trim(), "local HEAD");
-      const remoteHeadSha = requiredSha(gitText(["rev-parse", `origin/${branch}`]).trim(), "remote HEAD");
+      const localHeadSha = requiredSha(git(["rev-parse", "HEAD"]).trim(), "local HEAD");
+      const remoteHeadSha = requiredSha(git(["rev-parse", remoteRef]).trim(), "remote HEAD");
       const pullRequestHeadSha = requiredSha(pullWithAuthor.headRefOid, "pull request head");
       const protectedMainRefresh = detectProtectedMainRefresh({
         reviewedHeadSha: reviewHeadSha,
         localHeadSha,
         remoteHeadSha,
         pullRequestHeadSha,
-        gitText,
+        gitText: git,
       });
       return Object.freeze({
         repository: repoRoot,
@@ -286,7 +288,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         headSha: reviewHeadSha,
         refreshedHeadSha: protectedMainRefresh ? localHeadSha : null,
         remoteHeadSha,
-        clean: gitText(["status", "--porcelain"]).trim() === "",
+        clean: git(["status", "--porcelain"]).trim() === "",
         baseSha: requiredSha(lease.baseSha, "lease baseSha"),
         lease,
         manifest: admission,
@@ -306,14 +308,14 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       });
     },
     readAuthenticatedOwner() {
-      const user = JSON.parse(ghText(["api", "user"]));
+      const user = JSON.parse(gh(["api", "user"]));
       return Object.freeze({
         id: Number(user.id),
         login: requiredText(user.login, "authenticated login"),
       });
     },
     readCloudStatus({ ledgerRepository, targetRepository }) {
-      const repositoryNodeId = requiredText(ghText([
+      const repositoryNodeId = requiredText(gh([
         "api", `repos/${targetRepository}`, "--jq", ".node_id",
       ]), "target repository node identity");
       const status = invokeRepositoryCloudAction({
@@ -408,7 +410,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       });
     },
     persistReviewProjection({ lane, authority }) {
-      const updatedLease = leaseStore.release({
+      const updatedLease = store.release({
         sessionId,
         branch: lane.branch,
         status: "review_ready",
@@ -423,14 +425,14 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         || updatedLease.cloudAuthority?.claimId !== authority.claimId) {
         throw new Error("Local review-ready projection did not preserve exact cloud expiry and authority.");
       }
-      run("gh", [
+      execute("gh", [
         "pr", "edit", lane.pullRequest.url,
         "--body", updateWriterLeasePullRequestBody(lane.pullRequest.body, updatedLease),
       ]);
       const verifiedPull = readOwnershipPullRequest({
         url: lane.pullRequest.url,
         branch: lane.branch,
-        ghText: args => ghText(args),
+        ghText: args => gh(args),
       });
       const verifiedLease = parseWriterLeasePullRequestBody(verifiedPull.body);
       if (
@@ -547,28 +549,25 @@ function option(argumentsList, name) {
 function emit(value) {
   process.stdout.write(`${JSON.stringify(value)}\n`);
 }
-function publicMessage(error) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message
-    .replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]")
-    .replace(/\/(?:Users|home)\/[^\s"']+/gu, "[local-path]");
-}
 async function main() {
   const [transition = "reclaim", ...argumentsList] = process.argv.slice(2);
   const json = argumentsList.includes("--json");
   try {
+    const requestedBranch = option(argumentsList, "branch");
+    if (requestedBranch && !parseDeviceBranch(requestedBranch)) {
+      throw new Error("--branch must use the canonical agent/device/scope form.");
+    }
     const repository = path.resolve(
       option(argumentsList, "repository")
         || execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim(),
     );
     const branch = option(argumentsList, "branch")
       || execFileSync("git", ["branch", "--show-current"], { cwd: repository, encoding: "utf8" }).trim();
+    if (!parseDeviceBranch(branch)) throw new Error("Current branch is not a canonical agent branch.");
     const sessionId = option(argumentsList, "session");
     if (!sessionId) throw new Error("--session is required.");
     const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
-      repository,
-      sessionId,
-      environment: process.env,
+      repository, sessionId, environment: process.env,
     });
     const result = await continueExpiredReviewLaneAuthority({
       transition,
@@ -587,7 +586,7 @@ async function main() {
       schema: CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA,
       outcome: "blocked",
       transition: transition || null,
-      error: { message: publicMessage(error) },
+      error: { message: sanitizeCloudAuthorityDiagnostic(error) },
     };
     if (!json) throw error;
     emit(result);

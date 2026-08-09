@@ -7,6 +7,7 @@ import {
   PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS,
   protectedHeadRefreshCiRunName,
   reconcileProtectedHeadRefreshCiRuns,
+  renderProtectedHeadRefreshHandshakeEvidence,
   requireProtectedHeadRefreshCiRun,
   requireProtectedHeadRefreshCloudResult,
 } from "../scripts/protected-main-refresh-lib.mjs";
@@ -537,4 +538,62 @@ test("cloud authority accepts unrelated ledger advance but rejects claim evidenc
     projection,
     currentHeadSha: delivered,
   }), /claim drifted/u);
+});
+
+test("CI completion projects exact source checks into the candidate rollup before cloud success", () => {
+  const projection = normalizedProjection();
+  const workflow = ciRun({ operationId: projection.operation_id });
+  const source = PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS.map((name, index) => ({
+    id: 1_000 + index, name, head_sha: candidate, status: "completed", conclusion: "success",
+    app: { id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID, slug: "github-actions" },
+    check_suite: { id: workflow.check_suite_id },
+  }));
+  const cloudId = 9_000;
+  const checks = [{ id: cloudId, name: "cloud-collaboration", head_sha: candidate,
+    external_id: `agentic-protected-head-refresh:${projection.operation_id}`,
+    status: "in_progress", conclusion: null,
+    details_url: "https://github.com/owner/repo/actions/runs/9001",
+    output: { title: "Protected refresh awaiting final authorization",
+      summary: renderProtectedHeadRefreshHandshakeEvidence({ projection, candidateSha: candidate,
+        phase: "pending-user-authorization" }) },
+    app: { id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID, slug: "github-actions" } }];
+  const mutations = [];
+  const provider = createProtectedHeadRefreshGithubProvider({ repository, projection,
+    gh: (args, options = {}) => {
+      const endpoint = args.find(value => value.startsWith(`repos/${repository}/`));
+      if (endpoint === `repos/${repository}/commits/${candidate}/check-runs`) return { status: 0,
+        stdout: JSON.stringify({ total_count: source.length + checks.length,
+          check_runs: [...source, ...checks] }), stderr: "" };
+      const body = JSON.parse(options.input); mutations.push({ endpoint, body });
+      if (endpoint === `repos/${repository}/check-runs`) checks.push({ id: 2_000 + checks.length,
+        ...body, head_sha: body.head_sha, external_id: body.external_id,
+        status: body.status, conclusion: body.conclusion,
+        details_url: `https://github.com/${repository}/runs/${2_000 + checks.length}`,
+        app: { id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID, slug: "github-actions" } });
+      else Object.assign(checks[0], body, { details_url: body.details_url });
+      return { status: 0, stdout: "", stderr: "" };
+    },
+    ghJson: args => {
+      const endpoint = args.find(value => value.startsWith(`repos/${repository}/`));
+      if (endpoint === `repos/${repository}/check-suites/${workflow.check_suite_id}/check-runs`)
+        return { total_count: source.length, check_runs: source };
+      if (endpoint?.includes("/check-runs/")) return checks.find(check => endpoint.endsWith(`/${check.id}`));
+      return { data: { repository: { object: { statusCheckRollup: { contexts: {
+        totalCount: checks.length, nodes: checks.map(check => ({ __typename: "CheckRun",
+          databaseId: check.id })) } } } } } };
+    },
+    requiredEnv: () => "unused", sleepSeconds: () => {},
+  });
+  const ci = { workflowRunId: workflow.id, checkSuiteId: workflow.check_suite_id,
+    htmlUrl: workflow.html_url };
+  assert.equal(provider.completeCloudCheck({ candidateSha: candidate,
+    cloudCheck: { checkRunIds: [cloudId] }, ci }).status, "complete");
+  assert.deepEqual(mutations.map(item => item.body.name).filter(Boolean),
+    PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS);
+  assert.equal(mutations.at(-1).endpoint, `repos/${repository}/check-runs/${cloudId}`);
+  const mutationCount = mutations.length;
+  provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci });
+  assert.equal(mutations.length, mutationCount);
+  checks[1].details_url = "https://github.com/foreign/repo/runs/2001";
+  assert.throws(() => provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci }), /drifted/u);
 });

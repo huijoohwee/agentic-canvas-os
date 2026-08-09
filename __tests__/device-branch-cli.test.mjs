@@ -1,7 +1,8 @@
+// Responsibility: Verify device CLI machine output and admission-gate ordering.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -11,6 +12,26 @@ import {
 } from "../scripts/command-text-options.mjs";
 
 const script = path.resolve("scripts/device-branch.mjs");
+
+test("dormant preservation authorization is revalidated before provisioning", () => {
+  const source = readFileSync(script, "utf8");
+  const verify = source.indexOf("dormantGate.verify(");
+  const admission = source.indexOf("admissionReport = evaluateScopedLaneAdmission(");
+  const lock = source.indexOf("admissionLeaseStore.withRegistryLock(");
+  const revalidate = source.indexOf("dormantGate.revalidate(");
+  const provision = source.indexOf("return provisionTaskWorktree(");
+  const continuationGate = source.indexOf("const continuationGate =");
+  const continuation = source.indexOf("admissionContinuation = continuePlannedAdmissionFromRepository(");
+  const injectedVerifier = source.indexOf("verifyDormant: continuationGate?.verifyDormant");
+  const injectedCloudVerifier = source.indexOf("verifyCloudAuthority: continuationGate?.verifyCloudAuthority");
+
+  assert.ok(verify >= 0 && verify < admission);
+  assert.ok(admission < lock && lock < revalidate);
+  assert.ok(revalidate < provision);
+  assert.ok(continuationGate >= 0 && continuationGate < continuation);
+  assert.ok(continuation < injectedVerifier);
+  assert.ok(injectedVerifier < injectedCloudVerifier);
+});
 
 test("text commands retain integration evidence larger than Node's default buffer", () => {
   const outputBytes = 2 * 1024 * 1024;

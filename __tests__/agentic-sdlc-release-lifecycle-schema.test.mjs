@@ -3,37 +3,31 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  consumeHumanAuthorizationReceipt,
-  createAuthorizationInteractionReceipt,
-  createCandidateManifest,
-  createHumanAuthorizationReceipt,
-  createIntegrationReceipt,
-  createLiveVerificationReceipt,
-  createOverlapDispositionReceipt,
-  createOverlapPreservationReceipt,
-  createPublicationReceipt,
-  createRuntimeReviewReceipt,
-  AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA,
-  CANDIDATE_MANIFEST_SCHEMA,
-  HUMAN_AUTHORIZATION_RECEIPT_SCHEMA,
-  INTEGRATION_RECEIPT_SCHEMA,
-  LIVE_VERIFICATION_RECEIPT_SCHEMA,
-  OVERLAP_DISPOSITION_RECEIPT_SCHEMA,
-  OVERLAP_PRESERVATION_RECEIPT_SCHEMA,
-  PUBLICATION_RECEIPT_SCHEMA,
-  RUNTIME_REVIEW_RECEIPT_SCHEMA,
+  consumeHumanAuthorizationReceipt, createAuthorizationInteractionReceipt,
+  createCandidateManifest, createDeploymentReceipt,
+  createHumanAuthorizationReceipt, createIntegrationReceipt,
+  createLiveVerificationReceipt, createLiveVerificationReceiptV2,
+  createOverlapDispositionReceipt, createOverlapPreservationReceipt,
+  createPublicationReceipt, createPublicationReceiptV2,
+  createRollbackReceipt, createRuntimeReviewReceipt,
+  createStateReconciliationReceipt, AUTHORIZATION_INTERACTION_RECEIPT_SCHEMA,
+  CANDIDATE_MANIFEST_SCHEMA, DEPLOYMENT_RECEIPT_SCHEMA,
+  HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, INTEGRATION_RECEIPT_SCHEMA,
+  LIVE_VERIFICATION_RECEIPT_SCHEMA, LIVE_VERIFICATION_RECEIPT_V2_SCHEMA,
+  OVERLAP_DISPOSITION_RECEIPT_SCHEMA, OVERLAP_PRESERVATION_RECEIPT_SCHEMA,
+  PUBLICATION_RECEIPT_SCHEMA, PUBLICATION_RECEIPT_V2_SCHEMA,
+  ROLLBACK_RECEIPT_SCHEMA, RUNTIME_REVIEW_RECEIPT_SCHEMA,
+  STATE_RECONCILIATION_RECEIPT_SCHEMA,
 } from "../scripts/collaborative-release-lifecycle-contract.mjs";
 import {
-  assertCanonicalRunSchema,
-  COLLABORATIVE_RELEASE_LIFECYCLE_JSON_SCHEMA,
-  normalizeCanonicalRun,
+  assertCanonicalRunSchema, COLLABORATIVE_RELEASE_LIFECYCLE_JSON_SCHEMA,
+  COLLABORATIVE_RELEASE_LIFECYCLE_V1_JSON_SCHEMA,
+  COLLABORATIVE_RELEASE_LIFECYCLE_V2_JSON_SCHEMA, normalizeCanonicalRun,
 } from "../scripts/agentic-sdlc/index.mjs";
 import { canonicalRun } from "./fixtures/agentic-sdlc-canonical-run.mjs";
 
-const runSchema = JSON.parse(readFileSync(
-  new URL("../docs/schemas/agentic-sdlc-run.v1.schema.json", import.meta.url),
-  "utf8",
-));
+const runSchema = JSON.parse(readFileSync(new URL(
+  "../docs/schemas/agentic-sdlc-run.v1.schema.json", import.meta.url), "utf8"));
 const runtimeDoc = readFileSync(
   new URL("../docs/AGENTIC-SDLC-RUNTIME.md", import.meta.url),
   "utf8",
@@ -50,6 +44,13 @@ const expectedOrder = [
   [HUMAN_AUTHORIZATION_RECEIPT_SCHEMA, "consumed"],
   [LIVE_VERIFICATION_RECEIPT_SCHEMA, "verified"],
   [PUBLICATION_RECEIPT_SCHEMA, "published"],
+];
+const expectedProductionOrder = [
+  ...expectedOrder.slice(0, 8),
+  [DEPLOYMENT_RECEIPT_SCHEMA, "deployed"],
+  [STATE_RECONCILIATION_RECEIPT_SCHEMA, "reconciled"],
+  [LIVE_VERIFICATION_RECEIPT_V2_SCHEMA, "verified"],
+  [PUBLICATION_RECEIPT_V2_SCHEMA, "published"],
 ];
 const expectedReceiptFields = {
   overlapPreservationReceipt: [
@@ -109,8 +110,7 @@ const expectedReceiptFields = {
     "publishedAt", "receiptDigest",
   ],
 };
-
-function completeLifecycle() {
+function completeLifecycle({ targetCharacter = "b", reviewExpiresAt = "2026-07-29T01:03:00.000Z" } = {}) {
   const collaboration = {
     actorId: "actor:release",
     deviceId: "device:one",
@@ -163,10 +163,10 @@ function completeLifecycle() {
     probesDigest: digest("a"),
     reviewerId: "reviewer:one",
     issuedAt: "2026-07-29T00:03:00.000Z",
-    expiresAt: "2026-07-29T01:03:00.000Z",
+    expiresAt: reviewExpiresAt,
   });
   const candidate = createCandidateManifest(review, {
-    targetDigest: digest("b"),
+    targetDigest: digest(targetCharacter),
     artifactDigest: digest("c"),
     manifestDigest: digest("d"),
     rollbackTargetDigest: digest("e"),
@@ -224,6 +224,82 @@ function completeLifecycle() {
   };
 }
 
+function productionLifecycle({ rollback = false, failedStage = "deployment",
+  rolledBackAt = "2026-07-29T00:11:00.000Z", reviewExpiresAt,
+  targetCharacter = "b" } = {}) {
+  const earlyReceipts = completeLifecycle({ reviewExpiresAt, targetCharacter })
+    .receipts.slice(0, 8);
+  const candidate = earlyReceipts.find((receipt) =>
+    receipt.schema === CANDIDATE_MANIFEST_SCHEMA);
+  const consumed = earlyReceipts.find((receipt) =>
+    receipt.schema === HUMAN_AUTHORIZATION_RECEIPT_SCHEMA
+    && receipt.status === "consumed");
+  const deployment = createDeploymentReceipt(candidate, consumed, {
+    deploymentAdapterId: "deployment:one",
+    deployedArtifactDigest: candidate.artifactDigest,
+    immutableDeploymentId: `deployment:${targetCharacter}`,
+    immutableDeploymentOrigin: `https://${targetCharacter}.example.test`,
+    rollbackTargetDigest: candidate.rollbackTargetDigest,
+    deployedAt: "2026-07-29T00:08:00.000Z",
+  });
+  const state = createStateReconciliationReceipt(deployment, {
+    stateContractDigest: digest("2"),
+    operationsDigest: digest("3"),
+    operationCount: 2,
+    operationLimit: 10,
+    readbackAdapterId: "readback:one",
+    readbackKind: "direct-authoritative",
+    readbackDigest: digest("4"),
+    expectedCounts: { documentCount: 2, chunkCount: 3, graphCount: 1 },
+    observedCounts: { documentCount: 2, chunkCount: 3, graphCount: 1 },
+    pathHashParity: true,
+    contentParity: true,
+    reconciledAt: "2026-07-29T00:09:00.000Z",
+  });
+  const live = createLiveVerificationReceiptV2(deployment, state, {
+    observedRuntimeDigest: digest("5"),
+    immutableOriginProbesDigest: digest("6"),
+    publicRouteProbesDigest: digest("7"),
+    browserFidelityDigest: digest("8"),
+    clientCacheConvergenceDigest: digest("9"),
+    markerParityDigest: digest("a"),
+    markerBytesParity: true,
+    verifiedAt: "2026-07-29T00:10:00.000Z",
+  });
+  if (rollback) {
+    const rollbackReceipt = createRollbackReceipt(deployment, {
+      failedStage,
+      failureDigest: digest("2"),
+      lastKnownGoodIdentityDigest: candidate.rollbackTargetDigest,
+      restoredDeploymentIdentityDigest: candidate.rollbackTargetDigest,
+      stateDisposition: "retained-compatible",
+      stateDispositionDigest: digest("3"),
+      restoredProbesDigest: digest("4"),
+      mirrorDisposition: "unchanged-last-known-good",
+      lastKnownGoodMirrorIdentityDigest: digest("5"),
+      observedMirrorIdentityDigest: digest("5"),
+      terminalResult: "restored-last-known-good",
+      rolledBackAt,
+    });
+    const prefix = failedStage === "live-verification" ? [state]
+      : ["publication", "receipt-persistence"].includes(failedStage) ? [state, live] : [];
+    return {
+      schema: "agentic-collaborative-release-lifecycle/v2",
+      completion: "rolled-back",
+      receipts: [...earlyReceipts, deployment, ...prefix, rollbackReceipt],
+    };
+  }
+  const publication = createPublicationReceiptV2(live, {
+    publicationIdentitiesDigest: digest("b"),
+    publishedAt: "2026-07-29T00:11:00.000Z",
+  });
+  return {
+    schema: "agentic-collaborative-release-lifecycle/v2",
+    completion: "production-complete",
+    receipts: [...earlyReceipts, deployment, state, live, publication],
+  };
+}
+
 function runWithLifecycle(lifecycle = completeLifecycle()) {
   return { ...canonicalRun(), releaseLifecycle: structuredClone(lifecycle) };
 }
@@ -251,6 +327,38 @@ test("a constructor-produced complete receipt chain is admitted and preserved", 
     normalized.releaseLifecycle.receipts[0],
     run.releaseLifecycle.receipts.at(-1),
   );
+});
+
+test("the v2 carrier admits and preserves a joined production receipt chain", () => {
+  const lifecycle = productionLifecycle();
+  const run = runWithLifecycle({
+    ...lifecycle,
+    receipts: [...lifecycle.receipts].reverse(),
+  });
+
+  assert.equal(assertCanonicalRunSchema(run), run);
+  const normalized = normalizeCanonicalRun(run).releaseLifecycle;
+  assert.equal(normalized.schema, lifecycle.schema);
+  assert.equal(normalized.completion, "production-complete");
+  assert.deepEqual(normalized.receipts.map(discriminator), expectedProductionOrder);
+  assert.deepEqual(normalized.receipts, lifecycle.receipts);
+});
+
+test("the v2 carrier admits a terminal rollback branch", () => {
+  const lifecycle = productionLifecycle({ rollback: true });
+  const run = runWithLifecycle({
+    ...lifecycle,
+    receipts: [...lifecycle.receipts].reverse(),
+  });
+
+  assert.equal(assertCanonicalRunSchema(run), run);
+  const normalized = normalizeCanonicalRun(run).releaseLifecycle;
+  assert.equal(normalized.completion, "rolled-back");
+  assert.deepEqual(normalized.receipts.map(discriminator), [
+    ...expectedOrder.slice(0, 8),
+    [DEPLOYMENT_RECEIPT_SCHEMA, "deployed"],
+    [ROLLBACK_RECEIPT_SCHEMA, "rolled-back"],
+  ]);
 });
 
 test("omitted, empty, and partial in-progress lifecycles remain observable", () => {
@@ -344,13 +452,78 @@ test("the external schema rejects identical duplicates, malformed receipts, and 
   }
 });
 
+test("v1 observations and v2 terminal authority cannot substitute for each other", () => {
+  const legacyAsProduction = runWithLifecycle({
+    schema: "agentic-collaborative-release-lifecycle/v2",
+    completion: "production-complete",
+    receipts: completeLifecycle().receipts,
+  });
+  const productionAsLegacy = runWithLifecycle({
+    receipts: productionLifecycle().receipts,
+  });
+  assert.throws(() => assertCanonicalRunSchema(legacyAsProduction));
+  assert.throws(() => assertCanonicalRunSchema(productionAsLegacy));
+});
+
+test("v2 completion states reject incomplete or contradictory terminal evidence", () => {
+  const missingPublication = runWithLifecycle(productionLifecycle());
+  missingPublication.releaseLifecycle.receipts.pop();
+  const publicationAsRollback = runWithLifecycle(productionLifecycle());
+  publicationAsRollback.releaseLifecycle.completion = "rolled-back";
+  const rollbackAsProduction = runWithLifecycle(
+    productionLifecycle({ rollback: true }),
+  );
+  rollbackAsProduction.releaseLifecycle.completion = "production-complete";
+
+  for (const run of [missingPublication, publicationAsRollback, rollbackAsProduction]) {
+    assert.throws(
+      () => assertCanonicalRunSchema(run),
+      /agentic-sdlc-run\/v1 schema validation failed/u,
+    );
+  }
+});
+
+test("v2 semantic validation rejects foreign, tampered, or missing predecessors", () => {
+  const lifecycle = productionLifecycle();
+  const other = productionLifecycle({ targetCharacter: "c" });
+  const foreignState = other.receipts.find((receipt) =>
+    receipt.schema === STATE_RECONCILIATION_RECEIPT_SCHEMA);
+  lifecycle.receipts = lifecycle.receipts.map((receipt) => receipt.schema
+    === STATE_RECONCILIATION_RECEIPT_SCHEMA ? foreignState : receipt);
+  const tampered = runWithLifecycle(productionLifecycle());
+  tampered.releaseLifecycle.receipts.find((receipt) =>
+    receipt.schema === INTEGRATION_RECEIPT_SCHEMA).receiptDigest = digest("f");
+  const truncated = runWithLifecycle(productionLifecycle());
+  truncated.releaseLifecycle.receipts = truncated.releaseLifecycle.receipts
+    .filter((_receipt, index) => index === 4 || index >= 7);
+  const expired = runWithLifecycle(productionLifecycle({ reviewExpiresAt: "2026-07-29T00:04:30.000Z" }));
+  const impossible = runWithLifecycle(productionLifecycle({
+    rollback: true, failedStage: "publication", rolledBackAt: "2026-07-29T00:08:30.000Z",
+  }));
+  const missingPrefix = structuredClone(impossible);
+  missingPrefix.releaseLifecycle.receipts = missingPrefix.releaseLifecycle.receipts.filter((receipt) => receipt.schema !== LIVE_VERIFICATION_RECEIPT_V2_SCHEMA);
+
+  for (const [run, pattern] of [
+    [runWithLifecycle(lifecycle), /State reconciliation is unjoined/u],
+    [tampered, /digest does not match/u],
+    [truncated, /schema validation failed/u],
+    [expired, /Authorization interaction is outside/u],
+    [impossible, /Rollback predates/u],
+    [missingPrefix, /schema validation failed/u],
+  ]) assert.throws(() => assertCanonicalRunSchema(run), pattern);
+});
+
 test("schema registration mirrors the existing receipt discriminators without authority", () => {
   const schema = COLLABORATIVE_RELEASE_LIFECYCLE_JSON_SCHEMA;
+  assert.equal(schema, COLLABORATIVE_RELEASE_LIFECYCLE_V1_JSON_SCHEMA);
   assert.equal(
     schema.$id,
     "https://agentic-canvas-os.dev/schemas/collaborative-release-lifecycle/v1",
   );
-  assert.equal(runSchema.properties.releaseLifecycle.$ref, schema.$id);
+  assert.deepEqual(
+    runSchema.properties.releaseLifecycle.oneOf.map((entry) => entry.$ref),
+    [schema.$id, COLLABORATIVE_RELEASE_LIFECYCLE_V2_JSON_SCHEMA.$id],
+  );
   assert.equal(runSchema.required.includes("releaseLifecycle"), false);
   assert.deepEqual(schema.required, ["receipts"]);
   assert.equal(schema.additionalProperties, false);
@@ -413,4 +586,14 @@ test("schema registration mirrors the existing receipt discriminators without au
   );
   assert.match(schema.description, /grants no release or deployment authority/u);
   assert.match(runtimeDoc, /existing collaborative release-lifecycle constructors and controller remain the owners/u);
+});
+test("the v2 schema declares a closed authoritative completion carrier", () => {
+  const schema = COLLABORATIVE_RELEASE_LIFECYCLE_V2_JSON_SCHEMA;
+  assert.equal(schema.$id, "https://agentic-canvas-os.dev/schemas/collaborative-release-lifecycle/v2");
+  assert.deepEqual(schema.required, ["schema", "completion", "receipts"]);
+  assert.equal(schema.additionalProperties, false);
+  assert.equal(schema.$defs.fullPreDeploymentChain.allOf.length, 8);
+  assert.deepEqual(schema.properties.completion.enum,
+    ["in-progress", "production-complete", "rolled-back"]);
+  assert.match(schema.description, /strict Deployment/u);
 });

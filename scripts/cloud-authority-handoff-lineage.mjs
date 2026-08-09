@@ -1,4 +1,5 @@
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { scopeExpansionLineageAdmissionMatches } from "./cloud-authority-scope-expansion-lineage-contract.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 
@@ -62,7 +63,7 @@ export function buildCloudAuthoritySuccessorClaimRequest({ request, lane, predec
   });
 }
 
-export function classifyPredecessor({ lane, actor, status }) {
+export function classifyPredecessor({ lane, actor, status, request = null, lineageAdmission = null }) {
   const unavailable = predecessorResult("unavailable");
   if (!completeStatus(status)) return unavailable;
   const matches = status.claims.filter(claim => claim?.claimId === lane.authority.claimId);
@@ -73,7 +74,8 @@ export function classifyPredecessor({ lane, actor, status }) {
   }
   const candidate = matches[0];
   if (!predecessorImmutableIdentityMatches({
-    claim: candidate, lane, actor, repositoryId: status.repositoryId,
+    claim: candidate, lane, actor, status, request, repositoryId: status.repositoryId,
+    lineageAdmission,
   })) {
     return predecessorResult("mismatched", null, candidate);
   }
@@ -305,11 +307,16 @@ export function buildHandoffReceipt(kind, payload) {
   return Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) });
 }
 
-function predecessorImmutableIdentityMatches({ claim, lane, actor, repositoryId }) {
+function predecessorImmutableIdentityMatches({
+  claim, lane, actor, repositoryId, status = null, request = null, lineageAdmission = null,
+}) {
   const authority = lane.authority;
-  const predecessorLineageValid = claim?.leaseEpoch === 1
+  const strictLineageValid = claim?.leaseEpoch === 1
     ? claim.predecessorClaimId === null || claim.predecessorClaimId === undefined
     : DIGEST_PATTERN.test(String(claim?.predecessorClaimId || ""));
+  const predecessorLineageValid = strictLineageValid || scopeExpansionLineageAdmissionMatches({
+    admission: lineageAdmission, claim, lane, status, repositoryId, request,
+  });
   try {
     return Boolean(
       authenticatedActorId(actor)

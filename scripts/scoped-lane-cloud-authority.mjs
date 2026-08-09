@@ -1419,10 +1419,10 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     : null;
   if (
     predecessor
-    && !["parked", "active", "waiting-successor"].includes(predecessorState)
+    && !["parked", "active", "waiting-successor", "delivery_authorized"].includes(predecessorState)
   ) {
     throw new Error(
-      `Legacy review waiting successor requires a dormant-preserved, current, or waiting predecessor; received ${predecessor.state || "missing"}.`,
+      `Legacy review waiting successor requires a dormant-preserved, current, waiting, or integrated-preserved predecessor; received ${predecessor.state || "missing"}.`,
     );
   }
   if (predecessor && predecessor.actorId !== waitingClaim.actorId) {
@@ -1438,6 +1438,7 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
     writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
   };
   if (predecessor) {
+    const integratedPredecessor = predecessorState === "delivery_authorized";
     invoke({
       action: "retire",
       ledgerRepository,
@@ -1452,7 +1453,7 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
           predecessor.transitionCounter,
           "predecessor transitionCounter",
         ),
-        reason: "superseded",
+        reason: integratedPredecessor ? "integrated" : "superseded",
         finalRevision: requiredSha(
           predecessor.laneRevision,
           "predecessor laneRevision",
@@ -1470,6 +1471,12 @@ function supersedePredecessorAndPromoteWaitingLegacyReviewClaim({
           ...successionEvidence,
           operation: "retire-handoff",
         }),
+        integrationReceiptDigest: integratedPredecessor
+          ? requiredDigest(
+            predecessor.integrationReceiptDigest,
+            "integrated predecessor integrationReceiptDigest",
+          )
+          : null,
         deviceId: requiredText(deviceId, "deviceId"),
         sessionId: requiredText(sessionId, "sessionId"),
         idempotencyKey: [

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1482,
-  "headDigest": "f00d1e7646ec73128c0487dd728e7cdbd2b38ff8f910bbc8d7469817fe05e243",
+  "sequence": 1483,
+  "headDigest": "6f4fcc63abe9e8fe1251d460d0c4a5dae8de1279be1ae0dad786bd6124dc4258",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -73858,6 +73858,62 @@
       },
       "claimDigest": "8cca4addc0d68beeca3e30e318a66096c2eb7d7ba3a3d86c35e1e8c4ffd09653",
       "digest": "f00d1e7646ec73128c0487dd728e7cdbd2b38ff8f910bbc8d7469817fe05e243"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1483,
+      "parentDigest": "f00d1e7646ec73128c0487dd728e7cdbd2b38ff8f910bbc8d7469817fe05e243",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "acfbae3e3016b33a2ec073db821bfec383bee287e3a5464319fdcbd91c531b0b",
+      "idempotencyKey": "8f791fd51692daed6017dcf7c49c24743a73049266e7ef878ce63e12b5837866",
+      "requestDigest": "e18b231f686b2d8a971e02957cbc7de80f6ec5153e97a7d0a87662e1f4c3d268",
+      "evaluationTime": "2026-08-09T00:24:52.000Z",
+      "claimCore": {
+        "claimId": "acfbae3e3016b33a2ec073db821bfec383bee287e3a5464319fdcbd91c531b0b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:781177169abad2ac56ea4164272844ba084092955ae0c0a9ef1c3d778939b77d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8c7dae320f346b62406e9cd1ae800511df1f137cdd928ae461330d2d9377696b",
+        "canonicalBaseRevision": "9272e28e472184d2628b305393339c15fdf8a8fd",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:scripts/cloud-authority-handoff-controller.mjs",
+          "path:scripts/cloud-authority-handoff-lineage.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "semantic:cloud-successor-work-item-identity"
+        ],
+        "writeSetDigest": "b4ae2ef97de4c9868d32a23c100b0e94ecc0c6a2b814ded47e0e753ffeee8f84",
+        "laneRevision": "e704742209cefa3b8adcefd6a539f0411eed1241",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-09T06:16:20.000Z",
+        "evidenceDigest": "93097dd658264c4149cc8324035c7d5a3d46aa36f29066f9d36e31b9bcdd4aee",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78g48q",
+        "predecessorClaimId": "cf385bededdf1d964b85e6b162d444c0209c1502036db413abec4a5c424e1dfe",
+        "eligibleSince": "2026-08-08T23:47:48.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-08T23:48:18.000Z",
+        "integration": {
+          "candidateRevision": "e704742209cefa3b8adcefd6a539f0411eed1241",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78g48q",
+          "focusedEvidenceDigest": "93097dd658264c4149cc8324035c7d5a3d46aa36f29066f9d36e31b9bcdd4aee",
+          "dependencyClosureDigest": "c0072310c5a033c01c706fad17cad346a76b8f8d9a32b1ca4a2e8f69a342ce60",
+          "namedChecksDigest": "91430372d57b149b62352bdc9418c0f3d0cf9350544223b321afd7ed6f27dd8b",
+          "handoffEvidenceDigest": "1734bb0cbbb68c7ee36b98977ca51474ae6f7747286fd96a712d232fe5088879",
+          "operatorDecisionDigest": "967153dcbab46fe28ac83c82fe12c42620a09e8077b797c490a09f9c06d83750",
+          "integrationIntentDigest": "1aec6ae9c9073919f7fc6f10ff36ad3a12da998e8a1ecb5fa705505ac074bd1a",
+          "integratedAt": "2026-08-09T00:24:52.000Z"
+        }
+      },
+      "claimDigest": "fb84494f3cf7a79c60ee09819eb00d8b370833dfb8de31c63d82498ffc100dc2",
+      "digest": "6f4fcc63abe9e8fe1251d460d0c4a5dae8de1279be1ae0dad786bd6124dc4258"
     }
   ]
 }

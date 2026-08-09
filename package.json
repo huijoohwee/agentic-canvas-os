@@ -64,6 +64,7 @@
     "canonical:main:fast-forward-equivalence:check": "node --test __tests__/canonical-main-fast-forward-equivalence.test.mjs",
     "workspace:legacy-integrated-disposition": "node ./scripts/legacy-integrated-lane-disposition.mjs",
     "workspace:legacy-integrated-disposition:check": "node --test __tests__/legacy-integrated-lane-disposition.test.mjs",
+    "workspace:legacy-clean-refresh": "node ./scripts/legacy-clean-committed-lane-refresh.mjs",
     "workspace:legacy-clean-bootstrap": "node ./scripts/legacy-clean-committed-lane-bootstrap.mjs",
     "workspace:legacy-clean-bootstrap:check": "node --test __tests__/legacy-clean-committed-lane-bootstrap.test.mjs",
     "session:start:classify": "node ./scripts/session-start-policy.mjs",

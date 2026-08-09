@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1642,
-  "headDigest": "9e69ea9d4a264601e4170f3fe22549524529594c51914f2c6796807651942f6a",
+  "sequence": 1643,
+  "headDigest": "3ca355b66974c5f0f15ed86d24f267f17b933c3495c49c091251077f8181b32a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -81623,6 +81623,57 @@
       },
       "claimDigest": "dcc42bf5e6cb066d985505dbd0aeef3ce073ebbec691f709335da31102d41a02",
       "digest": "9e69ea9d4a264601e4170f3fe22549524529594c51914f2c6796807651942f6a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1643,
+      "parentDigest": "9e69ea9d4a264601e4170f3fe22549524529594c51914f2c6796807651942f6a",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "53c8d17cf22bcfde0087fe3ef01b46aca5000f810b382cdc8ddba409d19a0d2f",
+      "idempotencyKey": "b703cd4f2c4e3758d4c0ed24f26564aa0f3ebcbc540192cb5701e18707b5e205",
+      "requestDigest": "7c0cec354e1e2e1ebad2b927dcb51be5add8cd7d694cb83e154069096abbdbd0",
+      "evaluationTime": "2026-08-09T14:22:19.000Z",
+      "claimCore": {
+        "claimId": "53c8d17cf22bcfde0087fe3ef01b46aca5000f810b382cdc8ddba409d19a0d2f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c545c6afb66e4b63152ae6e5b4537e9ad0c27389b79c858c932805bd0094edcf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b9f9f15323c2c435b0752bf3eff96624f72a75815accac2153880e8a9c8a5d9d",
+        "canonicalBaseRevision": "baa0ce86d3790e740df5d504c861c0f8e11c43f2",
+        "declaredWriteScope": [
+          "path:__tests__/agentic-game-os-apple-vision-os-auditors.test.mjs",
+          "path:__tests__/agentic-game-os-apple-vision-os-invocation-resolver.test.mjs",
+          "path:__tests__/agentic-game-os-apple-vision-os-pipeline-controller.test.mjs",
+          "path:docs/AGENTIC-GAME-OS-APPLE-VISION-OS.md",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:scripts/audit/duplicate-logic-auditor.mjs",
+          "path:scripts/audit/file-size-auditor.mjs",
+          "path:scripts/audit/frontmatter-validator.mjs",
+          "path:scripts/audit/path-portability-auditor.mjs",
+          "path:scripts/invocation-resolve.mjs",
+          "path:scripts/pipeline-controller.mjs",
+          "semantic:agentic-game-os-apple-vision-os-acos"
+        ],
+        "writeSetDigest": "3805326d312167ec4063d66e1be8a892e12fad9f945a695d884c128def4f79bd",
+        "laneRevision": "ff8a17bae205455d331461808d64944c6e6dd036",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-09T14:50:51.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78p2ir",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "255c51d897b97e32f4a1072d564592112391251f69ee26ac755d5ba0f809a7d6",
+      "digest": "3ca355b66974c5f0f15ed86d24f267f17b933c3495c49c091251077f8181b32a"
     }
   ]
 }

@@ -210,7 +210,7 @@ export function resume({
   const parkedResumeHead = remoteLease.status === "parked" ? requireParkedResumeHead(remoteLease) : null;
 
   if (remoteLease.fenceSha) run("git", ["merge-base", "--is-ancestor", remoteLease.fenceSha, remoteRef]);
-  let claimBaseSha = ownedDirtRecovery ? remoteLease.baseSha : remoteSha;
+  let claimBaseSha = remoteSha;
   if (currentBranch) {
     if (currentBranch !== branchName || (!reviewHandoff && !sameSessionDelivery && !integrationContinuation)) {
       throw new Error("Attached resume is allowed only for the exact reviewed handoff or same-session delivery revision.");

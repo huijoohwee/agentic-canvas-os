@@ -304,6 +304,7 @@ test("same-session owned-dirt recovery replays every interruptible resume transi
       assert.equal(state.remoteHead, nextFence);
       assert.equal(state.claims, 1);
       assert.equal(state.commits, 1);
+      assert.equal(state.localLease.baseSha, reviewedHead);
       assert.equal(state.localLease.ownedDirtRecovery.pathCount, 3);
       assert.equal(
         parseWriterLeasePullRequestBody(state.remoteBody).ownedDirtRecovery.evidenceDigest,
@@ -476,7 +477,7 @@ function createOwnedDirtHarness({
           status: "active",
           epoch: claimEpoch,
           sessionId,
-          baseSha: reviewedHead,
+          baseSha: input.baseSha,
           fenceSha: null,
           pullRequestUrl: null,
           ownedDirtRecovery: input.ownedDirtRecovery,

@@ -109,10 +109,18 @@ try {
   console.error(JSON.stringify({
     schema: "agentic-legacy-clean-committed-lane-refresh-result/v1",
     status: "blocked",
-    message: error.message,
+    message: publicMessage(error),
   }));
   process.exitCode = 1;
 }
+}
+
+function publicMessage(error) {
+  return String(error instanceof Error ? error.message : error || "blocked")
+    .replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]")
+    .replace(/[A-Za-z0-9_-]{32,}/gu, "[redacted]")
+    .replace(/\/(?:Users|home)\/[^\s"']+/gu, "[local-path]")
+    .slice(0, 240);
 }
 
 function findPullRequest({ branch, cwd }) {

@@ -262,7 +262,7 @@ export function buildConditionalPullRequestCloseRequest({ repository, expected, 
   return Object.freeze({
     args: [
       "api", "--method", "PATCH", `repos/${repository}/pulls/${expected.number}`,
-      "-H", `If-Match: ${expected.providerVersion}`, "--input", "-",
+      "--input", "-",
     ],
     input: JSON.stringify({ body, state: "closed" }),
   });

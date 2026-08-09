@@ -202,7 +202,7 @@ test("requires one exact source writer marker", () => {
   }
 });
 
-test("production close primitives fence the lease and bind the exact ETag", () => {
+test("production close primitives track exact ETags on reads and avoid unsupported close headers", () => {
   const response = [
     "HTTP/2.0 200 OK", 'etag: "etag-exact"', "",
     JSON.stringify({ state: "open" }),
@@ -217,7 +217,7 @@ test("production close primitives fence the lease and bind the exact ETag", () =
   });
   assert.deepEqual(request.args, [
     "api", "--method", "PATCH", `repos/${REPOSITORY}/pulls/737`,
-    "-H", 'If-Match: "etag-exact"', "--input", "-",
+    "--input", "-",
   ]);
   assert.deepEqual(JSON.parse(request.input), { body: "bounded body", state: "closed" });
 

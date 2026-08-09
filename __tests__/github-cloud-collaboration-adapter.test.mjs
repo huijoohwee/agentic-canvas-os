@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createGitHubCloudCollaborationAdapter } from "../scripts/github-cloud-collaboration-adapter.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 const ledgerRepository = "owner/ledger";
 const targetRepository = "owner/target";
 const targetMainSha = "3".repeat(40);
@@ -17,6 +18,7 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   assert.equal(first.ok, true);
   assert.equal(first.status, "current");
   assert.equal(first.claim.claimIdentitySchema, "agentic-cloud-collaboration-entry/v2");
+  assert.equal(first.claim.workItemId, pseudonymousIdentifier("work-item", input.workItemId));
   assert.equal(first.replayed, false);
   assert.match(first.ledgerRevision, /^[0-9a-f]{40}$/u);
   assert.match(first.claimDigest, /^[0-9a-f]{64}$/u);
@@ -35,6 +37,19 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   assert.equal(replay.claimDigest, first.claimDigest);
   assert.equal(replay.ledgerRevision, first.ledgerRevision);
   assert.equal(github.mutationCount(), writesBeforeReplay);
+});
+test("adapter preserves canonical work-item identifiers without a second pseudonymization", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const workItemId = `work-item:${"a".repeat(64)}`;
+  const claimed = await adapter.execute("claim", claimInput({
+    workItemId,
+    idempotencyKey: "canonical-work-item-identity",
+  }));
+  assert.equal(claimed.claim.workItemId, workItemId);
+  const status = await adapter.execute("status", { targetRepository, workItemId });
+  assert.equal(status.claims.length, 1);
+  assert.equal(status.claims[0].workItemId, workItemId);
 });
 test("adapter rejects actor metadata that does not match the authenticated token", async () => {
   const github = createFakeGitHub();
@@ -141,14 +156,7 @@ test("adapter exhausts bounded CAS conflicts without force or target mutation", 
 test("adapter continues and verifies one exact reviewed PR without mutation", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
-  const claimed = await adapter.execute("claim", claimInput());
-  const bound = await adapter.execute("continue", fencedInput(claimed, {
-    mode: "projection", idempotencyKey: "projection-run-1", expectedTransitionCounter: 1, pullRequestNumber: 17,
-  }));
-  const ready = await adapter.execute("continue", fencedInput(bound, {
-    mode: "review", idempotencyKey: "review-run-1", expectedTransitionCounter: 2,
-    pullRequestNumber: 17, focusedEvidenceDigest: evidenceDigest,
-  }));
+  const ready = await reviewClaim(adapter, "1");
   assert.equal(ready.status, "reviewed");
   const writesBeforeVerify = github.mutationCount();
   const verification = await adapter.execute("verify", {
@@ -207,32 +215,7 @@ test("adapter reads large ledgers through Git trees and blobs instead of content
 test("adapter lists claims, resolves pull requests, integrates, and retires by exact receipt", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
-  const claimed = await adapter.execute("claim", claimInput());
-  const bound = await adapter.execute("continue", fencedInput(claimed, {
-    mode: "projection",
-    idempotencyKey: "projection-run-2",
-    expectedTransitionCounter: 1,
-    pullRequestNumber: 17,
-  }));
-  const ready = await adapter.execute("continue", fencedInput(bound, {
-    mode: "review",
-    idempotencyKey: "review-run-2",
-    expectedTransitionCounter: 2,
-    pullRequestNumber: 17,
-    focusedEvidenceDigest: evidenceDigest,
-  }));
-  const authorized = await adapter.execute("integrate", fencedInput(ready, {
-    idempotencyKey: "integrate-run-2",
-    expectedTransitionCounter: 3,
-    pullRequestNumber: 17,
-    laneRevision: pullHeadSha,
-    focusedEvidenceDigest: evidenceDigest,
-    dependencyClosureDigest: evidenceDigest,
-    namedChecksDigest: evidenceDigest,
-    handoffEvidenceDigest: evidenceDigest,
-    operatorDecisionDigest,
-    integrationIntentDigest,
-  }));
+  const authorized = await integrateClaim(adapter, "2");
   assert.equal(authorized.status, "integrated-preserved");
   assert.equal(authorized.operationReceipt.schema, "agentic-collaboration-integration-receipt/v1");
   assert.equal(authorized.operationReceipt.operation, "integrate");
@@ -299,32 +282,7 @@ test("adapter rejects pull-request head drift and malformed ledger bytes before 
 test("adapter verifies an integrated-preserved candidate after protected-main refresh", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
-  const claimed = await adapter.execute("claim", claimInput());
-  const bound = await adapter.execute("continue", fencedInput(claimed, {
-    mode: "projection",
-    idempotencyKey: "projection-run-refresh",
-    expectedTransitionCounter: 1,
-    pullRequestNumber: 17,
-  }));
-  const ready = await adapter.execute("continue", fencedInput(bound, {
-    mode: "review",
-    idempotencyKey: "review-run-refresh",
-    expectedTransitionCounter: 2,
-    pullRequestNumber: 17,
-    focusedEvidenceDigest: evidenceDigest,
-  }));
-  const authorized = await adapter.execute("integrate", fencedInput(ready, {
-    idempotencyKey: "integrate-run-refresh",
-    expectedTransitionCounter: 3,
-    pullRequestNumber: 17,
-    laneRevision: pullHeadSha,
-    focusedEvidenceDigest: evidenceDigest,
-    dependencyClosureDigest: evidenceDigest,
-    namedChecksDigest: evidenceDigest,
-    handoffEvidenceDigest: evidenceDigest,
-    operatorDecisionDigest,
-    integrationIntentDigest,
-  }));
+  const authorized = await integrateClaim(adapter, "refresh");
   github.setPullRequestValue({
     head: {
       ref: "agent/device/cloud-scope",
@@ -355,6 +313,26 @@ test("adapter verifies an integrated-preserved candidate after protected-main re
 });
 function createAdapter(github, options = {}) {
   return createGitHubCloudCollaborationAdapter({ ledgerRepository, request: github.request, ...options });
+}
+async function reviewClaim(adapter, suffix) {
+  const claimed = await adapter.execute("claim", claimInput());
+  const bound = await adapter.execute("continue", fencedInput(claimed, {
+    mode: "projection", idempotencyKey: `projection-run-${suffix}`,
+    expectedTransitionCounter: 1, pullRequestNumber: 17,
+  }));
+  return adapter.execute("continue", fencedInput(bound, {
+    mode: "review", idempotencyKey: `review-run-${suffix}`,
+    expectedTransitionCounter: 2, pullRequestNumber: 17, focusedEvidenceDigest: evidenceDigest,
+  }));
+}
+async function integrateClaim(adapter, suffix) {
+  const ready = await reviewClaim(adapter, suffix);
+  return adapter.execute("integrate", fencedInput(ready, {
+    idempotencyKey: `integrate-run-${suffix}`, expectedTransitionCounter: 3,
+    pullRequestNumber: 17, laneRevision: pullHeadSha, focusedEvidenceDigest: evidenceDigest,
+    dependencyClosureDigest: evidenceDigest, namedChecksDigest: evidenceDigest,
+    handoffEvidenceDigest: evidenceDigest, operatorDecisionDigest, integrationIntentDigest,
+  }));
 }
 function claimInput(overrides = {}) {
   return {

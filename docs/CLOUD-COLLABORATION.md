@@ -128,6 +128,23 @@ replaceable projections. They must join the current claim, epoch, normalized
 write set, fence, immutable revision, and receipt before use. They may improve
 recovery or ergonomics, but they never become a second authority source.
 
+Successor continuation begins from a fresh current-ledger status. The
+controller must select exactly one predecessor by its bound `claimId`, then
+validate the complete immutable claim identity: entry and identity schemas,
+authenticated actor, repository, canonical work item, predecessor lineage,
+base and lane revisions, normalized write set and digest, lease epoch, and
+review identity. Its current fence, transition, expiry, operation receipt, and
+non-integrated review state must also match the local projection. Missing,
+duplicate, malformed, or drifted predecessors stop before cloud or local
+mutation.
+
+The successor reuses the predecessor claim's observed canonical
+`work-item:<sha256>` and advances only to `predecessor.leaseEpoch + 1`.
+Provider mapping passes an already canonical work-item identifier through
+unchanged and pseudonymizes raw input exactly once. A continuation must never
+retry epoch 1, rederive identity from a branch or scope projection, or weaken
+the cloud contract to make a mismatched tuple admissible.
+
 The current local lifecycle vocabulary is an outer projection only:
 
 | Provider-neutral state | Local projection |
@@ -185,9 +202,12 @@ Focused proof must cover concurrent disjoint claims, one writer per overlap,
 waiting-successor ordering, dormant preservation, lease-independent recovery,
 review and revision immutability, authenticated actor mismatch, stale CAS,
 cross-process idempotent typed receipts, hash-consistent queue forgery rejection,
-projection equivalence, live-ledger migration, and cross-repository DAG
-validation. Schema and documentation checks must agree with the executable
-reducer and provider adapter.
+projection equivalence, branch-derived and scope-derived predecessor identity,
+canonical work-item pass-through, raw-input pseudonymization, missing or
+duplicate predecessor rejection without partial mutation, replay identity,
+live-ledger migration, and cross-repository DAG validation. Schema and
+documentation checks must agree with the executable reducer and provider
+adapter.
 
 Passing local checks proves only the bounded Dev contract at the tested source
 revision. Protected integration, runtime publication, Production, Cloudflare,

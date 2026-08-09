@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, unlinkSync, u
 import { syncBuiltinESMExports } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import { runInNewContext } from "node:vm";
 import Ajv2020 from "ajv/dist/2020.js";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
@@ -17,10 +18,129 @@ const claimDigest = "2".repeat(64), claimLedgerRevision = "3".repeat(64), ledger
 const ledgerDigest = "4".repeat(64), future = "2099-07-31T00:00:00.000Z", evaluationTime = "2026-07-30T00:00:00.000Z";
 const repository = "/workspace/repository", canonicalPath = repository;
 const targetPath = "/workspace/.worktrees/repository/scoped-runtime", branch = "agent/device/scoped-runtime";
+function scopedAdmissionScriptFunction(name) {
+  const source = readFileSync(
+    new URL("../scripts/scoped-lane-admission.mjs", import.meta.url),
+    "utf8",
+  );
+  const start = source.indexOf(`function ${name}`);
+  const end = source.indexOf("\nfunction ", start + 1);
+  assert.notEqual(start, -1, `${name} must exist in scoped-lane-admission.mjs`);
+  assert.notEqual(end, -1, `${name} must be followed by another function`);
+  return runInNewContext(`(${source.slice(start, end).trim()})`, { digestValue });
+}
 function manifestFor(paths = ["scripts/scoped-runtime"]) {
   return normalizeDeclaredWriteScopeManifest({ schema: "agentic-declared-write-scope/v1",
     semanticScope: "scoped-runtime", paths }, { expectedScope: "scoped-runtime" });
 }
+
+test("planned recovery separates exact downstream replay from root bootstrap", () => {
+  const createPlanRecoveryReceipt = scopedAdmissionScriptFunction(
+    "createPlanRecoveryReceipt",
+  );
+  const isRootSourceRecovery = scopedAdmissionScriptFunction(
+    "isRootSourceRecovery",
+  );
+  const laneStateDigest = "3".repeat(64);
+  const previousAdmission = {
+    status: "planned",
+    planReceiptDigest: "1".repeat(64),
+    admissionReceiptDigest: "2".repeat(64),
+    existingLaneStateDigest: laneStateDigest,
+  };
+  const report = {
+    authoringAdmission: { status: "planned" },
+    admissionReceipt: {
+      status: "accepted",
+      receiptDigest: "4".repeat(64),
+    },
+    reportDigest: "5".repeat(64),
+    existingLaneStateDigest: laneStateDigest,
+    rootSourceBootstrapAuthorization: null,
+  };
+
+  const downstream = createPlanRecoveryReceipt({
+    previousAdmission,
+    report,
+    allowExactDownstreamRecovery: true,
+  });
+  const replay = createPlanRecoveryReceipt({
+    previousAdmission,
+    report,
+    allowExactDownstreamRecovery: true,
+  });
+  assert.equal(downstream.schema, "agentic-lane-admission-plan-recovery/v2");
+  assert.equal(downstream.status, "accepted");
+  assert.equal(downstream.recoveryMode, "exact-downstream-finalization");
+  assert.equal(downstream.reason, "exact-plan-replay");
+  assert.equal(downstream.rootSourceBootstrapAuthorizationDigest, null);
+  assert.equal(downstream.maintenanceSourcePath, null);
+  assert.equal(replay.receiptDigest, downstream.receiptDigest);
+
+  assert.throws(() => createPlanRecoveryReceipt({
+    previousAdmission,
+    report: { ...report, existingLaneStateDigest: "6".repeat(64) },
+    allowExactDownstreamRecovery: true,
+  }), /exact downstream evidence/u);
+  const bootstrap = {
+    authorizationDigest: "7".repeat(64),
+    maintenanceSourcePath: "/workspace/root-maintenance",
+  };
+  assert.throws(() => createPlanRecoveryReceipt({
+    previousAdmission,
+    report: {
+      ...report,
+      existingLaneStateDigest: "6".repeat(64),
+      rootSourceBootstrapAuthorization: bootstrap,
+    },
+    allowExactDownstreamRecovery: true,
+  }), /exact downstream evidence/u);
+  assert.throws(() => createPlanRecoveryReceipt({
+    previousAdmission,
+    report,
+    allowExactDownstreamRecovery: false,
+  }), /root-source bootstrap authorization/u);
+
+  const root = createPlanRecoveryReceipt({
+    previousAdmission,
+    report: {
+      ...report,
+      existingLaneStateDigest: "6".repeat(64),
+      rootSourceBootstrapAuthorization: bootstrap,
+    },
+    allowExactDownstreamRecovery: false,
+  });
+  assert.equal(root.recoveryMode, "root-source-bootstrap");
+  assert.equal(root.reason, "operator-authorized-maintenance-replan");
+  assert.equal(root.rootSourceBootstrapAuthorizationDigest, bootstrap.authorizationDigest);
+  assert.equal(root.maintenanceSourcePath, bootstrap.maintenanceSourcePath);
+
+  assert.equal(isRootSourceRecovery({
+    targetRepository: "HuijooHwee/Agentic-Canvas-OS",
+    ledgerRepository: "huijoohwee/agentic-canvas-os",
+  }), true);
+  assert.equal(isRootSourceRecovery({
+    targetRepository: "huijoohwee/knowgrph",
+    ledgerRepository: "huijoohwee/agentic-canvas-os",
+  }), false);
+  for (const invalid of [
+    { previousAdmission: { ...previousAdmission, status: "admitted" }, report },
+    { previousAdmission: { ...previousAdmission, existingLaneStateDigest: "" }, report },
+    { previousAdmission, report: {
+      ...report,
+      authoringAdmission: { status: "admitted" },
+    } },
+    { previousAdmission, report: {
+      ...report,
+      admissionReceipt: { ...report.admissionReceipt, status: "rejected" },
+    } },
+  ]) {
+    assert.throws(() => createPlanRecoveryReceipt({
+      ...invalid,
+      allowExactDownstreamRecovery: true,
+    }), /exact downstream evidence/u);
+  }
+});
 function publicClaim(manifest, overrides = {}) {
   const { claimId: suppliedClaimId, ...overrideFields } = overrides;
   const claim = {

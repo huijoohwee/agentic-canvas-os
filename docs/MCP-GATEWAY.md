@@ -253,6 +253,15 @@ Repository packing is one local stdio MCP capability. `/repository.pack #reposit
 |---|---|---|
 | `knowgrph.repository.pack` | Convert every eligible path in one exact local Git worktree into one deterministic AI-friendly Markdown artifact and return verified metadata only. | Local, idempotent, bounded, zero-network, zero-model, and zero-cost; secrets, traversal, symlinks, source drift, hard-limit overflow, external dependency, Prod, and Cloudflare fail before publication. |
 
+## Workspace Artifact Lifecycle Capabilities
+
+`/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof` is the canonical host invocation for bounded local file and folder lifecycle work. Add `@operator` only for apply. Agentic Canvas OS owns neutral invocation and safety truth; Knowgrph owns the configured-root, symlink-safe, digest-fenced local runtime. The publishing repository owns its authored guideline and template bytes. Browser Launch, URL ingest, and cloud/provider synchronization continue through `/workspace.launch`, `/source.ingest`, and `/file.sync`.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `knowgrph.workspace_artifact.plan` | Normalize one inspect, create-file, create-folder, update-file, import-file, export-file, trash, or restore request and return observed state plus a deterministic plan digest. | Read-only, local, configured-root-only, symlink-safe, bounded, zero-network, zero-model, and zero-cost; unsupported recursive transfer and purge fail closed. |
+| `knowgrph.workspace_artifact.apply` | Re-plan the exact request, require matching plan digest and operator intent, perform one atomic mutation, and return read-back plus recovery evidence. | The named operation only; source or target drift, collision-policy mismatch, undeclared roots, traversal, special files, symlinks, network, Git integration, Prod, and Cloudflare fail before mutation. |
+
 ## Managed Implementation Run Capabilities
 
 Managed implementation runs are local stdio MCP capabilities backed by Knowgrph's durable run ledger and one supervisor per claimed run. Agentic Canvas OS remains the invocation, safe worktree, branch, lease, fence, and pull-request lifecycle owner through its stable JSON CLI; the MCP server never parses lifecycle prose or creates a second Git lock.

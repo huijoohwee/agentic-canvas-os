@@ -18,6 +18,14 @@ publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
 
 # Scoped Concurrent Lane Admission
 
+An exact local-only review reservation may project as `retired-preserved` only
+after the repository-owned provider-first terminalizer records a valid
+`agentic-local-review-retirement-receipt/v1`. Its historical semantic scope and
+write set no longer block a successor on a different branch. The preserved
+branch remains reserved, cleanup remains forbidden, and a matching current
+cloud claim invalidates the projection. See
+[`LOCAL-REVIEW-RETIREMENT.md`](./LOCAL-REVIEW-RETIREMENT.md).
+
 ## Decision
 
 Adding one isolated task lane is a different decision from declaring the whole

@@ -326,8 +326,14 @@ function recoverAdmission({
       pullRequestUrl: pullRequest.url,
     });
   }
-  if (!rootSourceBootstrapAuthorization) {
+  const rootSourceRecovery = isRootSourceRecovery(verified.authority);
+  if (!rootSourceBootstrapAuthorization && rootSourceRecovery) {
     throw new Error("Planned admission recovery requires fresh root-source bootstrap preservation authorization.");
+  }
+  if (rootSourceBootstrapAuthorization && !rootSourceRecovery) {
+    throw new Error(
+      "Downstream planned admission recovery requires exact lane-state replay and does not accept root-source bootstrap authorization.",
+    );
   }
   const candidateLanes = snapshot.lanes.filter(
     lane => path.resolve(lane.path) === path.resolve(targetPath),
@@ -381,6 +387,7 @@ function recoverAdmission({
   const planRecoveryReceipt = createPlanRecoveryReceipt({
     previousAdmission: lease.admission,
     report,
+    allowExactDownstreamRecovery: !rootSourceRecovery,
   });
   assertAdmissionMutationAuthority({
     lease: { ...lease, cloudAuthority: verified.authority },
@@ -447,21 +454,37 @@ function recoverAdmission({
   });
 }
 
-function createPlanRecoveryReceipt({ previousAdmission, report }) {
+function createPlanRecoveryReceipt({
+  previousAdmission,
+  report,
+  allowExactDownstreamRecovery = false,
+}) {
   const bootstrap = report.rootSourceBootstrapAuthorization;
+  const exactExistingLaneReplay = typeof previousAdmission?.existingLaneStateDigest === "string"
+    && previousAdmission.existingLaneStateDigest.length > 0
+    && previousAdmission.existingLaneStateDigest === report.existingLaneStateDigest;
+  const rootSourceBootstrapRecovery = !allowExactDownstreamRecovery
+    && Boolean(bootstrap?.authorizationDigest);
+  const exactDownstreamRecovery = !bootstrap
+    && allowExactDownstreamRecovery
+    && exactExistingLaneReplay;
   if (
     previousAdmission?.status !== "planned"
-    || !bootstrap?.authorizationDigest
+    || (!rootSourceBootstrapRecovery && !exactDownstreamRecovery)
     || report.authoringAdmission?.status !== "planned"
     || report.admissionReceipt?.status !== "accepted"
   ) {
-    throw new Error("Plan recovery requires old planned evidence and fresh bootstrap authorization.");
+    throw new Error(
+      "Plan recovery requires exact downstream evidence or fresh root-source bootstrap authorization.",
+    );
   }
   const receipt = {
-    schema: "agentic-lane-admission-plan-recovery/v1",
+    schema: "agentic-lane-admission-plan-recovery/v2",
     status: "accepted",
-    reason: previousAdmission.existingLaneStateDigest
-      === report.existingLaneStateDigest
+    recoveryMode: exactDownstreamRecovery
+      ? "exact-downstream-finalization"
+      : "root-source-bootstrap",
+    reason: exactExistingLaneReplay
       ? "exact-plan-replay"
       : "operator-authorized-maintenance-replan",
     previousPlanReportDigest: previousAdmission.planReceiptDigest,
@@ -470,10 +493,15 @@ function createPlanRecoveryReceipt({ previousAdmission, report }) {
     recoveredPlanReportDigest: report.reportDigest,
     recoveredAdmissionReceiptDigest: report.admissionReceipt.receiptDigest,
     recoveredExistingLaneStateDigest: report.existingLaneStateDigest,
-    rootSourceBootstrapAuthorizationDigest: bootstrap.authorizationDigest,
-    maintenanceSourcePath: bootstrap.maintenanceSourcePath,
+    rootSourceBootstrapAuthorizationDigest: bootstrap?.authorizationDigest || null,
+    maintenanceSourcePath: bootstrap?.maintenanceSourcePath || null,
   };
   return Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) });
+}
+
+function isRootSourceRecovery(authority) {
+  return authority.targetRepository.toLowerCase()
+    === authority.ledgerRepository.toLowerCase();
 }
 
 function requireRecoveryLease({

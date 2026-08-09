@@ -96,6 +96,7 @@ skill_contracts:
   - "knowledge.graph.query"
   - "knowledge.graph.explain"
   - "repository.pack"
+  - "workspace.artifact.lifecycle"
   - "sme.risk.profile"
   - "crawler.run"
   - "url.ingest"
@@ -144,7 +145,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 
 | Family | Skill ids | Detail owner |
 |---|---|---|
-| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md`, `REPOSITORY-RUNTIME-READINESS.md` |
+| Source and proof | `source.normalize`, `context.resolve`, `harness.define`, `runtime.check`, `instruction.audit`, `instruction.quality.evaluate`, `cost.audit`, `deploy.guard`, `docs.sync`, `repository.pack`, `workspace.artifact.lifecycle` | `FACTS.md`, `HARNESS-CONTRACTS.md`, `INSTRUCTION-AUDIT.md`, `INSTRUCTION-QUALITY-EVALUATION.md`, `REPOSITORY-PACKING.md`, `REPOSITORY-RUNTIME-READINESS.md`, the invocation dictionaries, and `MCP-GATEWAY.md` |
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
@@ -169,6 +170,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Managed implementation runs | `MANAGED-IMPLEMENTATION-RUNS.md` |
 | Deterministic knowledge graph | `KNOWLEDGE-GRAPH.md` |
 | Repository packing | `REPOSITORY-PACKING.md` |
+| Workspace artifact lifecycle | Invocation dictionaries and `MCP-GATEWAY.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
 
 Variants remain metadata aliases over registered owners: `agent.moa`,
@@ -183,6 +185,7 @@ variants resolve through `/investment-research-agent`, `/sme-care-agent`,
 A variant does not create a wildcard command or a second execution registry.
 The `url.ingest` skill resolves only through the exact four-token invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `knowgrph.agentic_canvas_os.docs.invoke` supplies read-only discovery metadata and guarded browser WebMCP tool `knowgrph.control_local_import_url` remains the sole Import URL executor.
 The `knowledge.graph.parser.generate` skill resolves only through `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof`; dictionary resolution remains read-only, while the exact local Knowgrph MCP tool owns deterministic compilation and returns digest-fenced identity without generated code or implicit ingest.
+The `workspace.artifact.lifecycle` skill resolves only through `/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof`; add `@operator` only for apply. The skill delegates local execution to the exact plan/apply MCP tools and preserves `/workspace.launch`, `/source.ingest`, and `/file.sync` as the UI, URL-ingest, and provider-sync owners.
 
 ## Selection And Mutation
 

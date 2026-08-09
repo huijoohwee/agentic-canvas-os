@@ -12,7 +12,11 @@ import {
 } from "./scoped-lane-cloud-authority.mjs";
 import {
   appendProtectedMainRefresh,
+  normalizeProtectedHeadRefreshProjection,
+  protectedHeadRefreshOperationId,
   protectedMainRefreshHeads,
+  renderProtectedHeadRefreshRearmCommitMessage,
+  requireProtectedHeadRefreshPullRequest,
   verifyProtectedMainRefreshChain,
 } from "./protected-main-refresh-lib.mjs";
 import {
@@ -24,12 +28,42 @@ export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+const REPOSITORY_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/u;
+const MANAGED_COMMIT_SUBJECT_PATTERN =
+  /^(feat|fix|docs|test|refactor|chore)\(([a-z0-9][a-z0-9._/-]*)\): (\S.*)$/u;
 const DELIVERY_EVIDENCE_FIELDS = Object.freeze([
   "dependencyClosureDigest",
   "namedChecksDigest",
   "handoffEvidenceDigest",
   "operatorDecisionDigest",
   "integrationIntentDigest",
+]);
+const PROTECTED_HEAD_REFRESH_DISPATCH_FIELDS = Object.freeze([
+  "operation",
+  "pull_request_number",
+  "branch",
+  "delivered_head_sha",
+  "observed_head_sha",
+  "target_main_sha",
+  "canonical_base_sha",
+  "claim_id",
+  "claim_digest",
+  "ledger_revision",
+  "review_request_id",
+  "pull_request_node_id",
+  "pull_request_title",
+  "auto_merge_method",
+  "auto_merge_enabled_by_database_id",
+  "auto_merge_enabled_by_node_id",
+  "auto_merge_enabled_by_login",
+  "auto_merge_enabled_by_type",
+  "auto_merge_commit_title",
+  "auto_merge_commit_message",
+  "candidate_auto_merge_commit_title",
+  "candidate_auto_merge_commit_message",
+  "integration_receipt_digest",
+  "transition_counter",
+  "operation_id",
 ]);
 
 export function integrateSession({
@@ -55,8 +89,8 @@ export function integrateSession({
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
   buildDeliveryEvidence = createDeviceDeliveryEvidence,
   authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
-    invokeCloudMutation = invokeRepositoryCloudAction,
-    continueReviewReadyCloudAuthority = continueReviewReadyCloudAuthorityProjection,
+  invokeCloudMutation = invokeRepositoryCloudAction,
+  continueReviewReadyCloudAuthority = continueReviewReadyCloudAuthorityProjection,
   log = console.log,
 }) {
   requireRepositoryRoot({ invocationPath, repo });
@@ -98,6 +132,7 @@ export function integrateSession({
     let deliveryCloudAuthority = lease.cloudAuthority || null;
     const deliveryVerifiedBaseSha = deliveryCloudAuthority?.canonicalBaseSha || "";
     let protectedMainAuthorizationRefresh = null;
+    let squashSubject = null;
     if (reviewReadyDelivery) {
       const currentPullRequest = JSON.parse(ghText([
         "pr", "view", lease.pullRequestUrl, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
@@ -105,6 +140,18 @@ export function integrateSession({
       if (currentPullRequest.url !== lease.pullRequestUrl || currentPullRequest.baseRefName !== "main") {
         throw new Error(`Pull request identity for ${lease.pullRequestUrl} changed before integration.`);
       }
+      if (lease.baseSha !== deliveryVerifiedBaseSha) {
+        throw new Error(
+          `Reviewed lease base ${lease.baseSha || "unknown"} does not match cloud-authoritative base ${deliveryVerifiedBaseSha || "unknown"}.`,
+        );
+      }
+      squashSubject = requireProtectedSquashSubject(
+        gitText([
+          "log", "--first-parent", "--no-merges", "-1", "--format=%s",
+          `${deliveryVerifiedBaseSha}..${lease.reviewHeadSha}`,
+        ]).replace(/\r?\n$/u, ""),
+        { label: "Reviewed authored commit subject" },
+      );
       protectedMainAuthorizationRefresh = (
         lease.reviewHeadSha
         && currentPullRequest.headRefOid !== lease.reviewHeadSha
@@ -189,6 +236,8 @@ export function integrateSession({
       });
       deliveryCloudAuthority = authorized.authority;
       const reviewedDeliveryHeadSha = lease.reviewHeadSha;
+      const protectedMergeHeadSha = protectedMainAuthorizationRefresh?.refreshedHeadSha
+        || reviewedDeliveryHeadSha;
       verifyCloudAuthority({
         pullRequestUrl: lease.pullRequestUrl,
         branch,
@@ -196,20 +245,31 @@ export function integrateSession({
         canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
         cloudAuthority: deliveryCloudAuthority,
       });
-      const squashSubject = requireProtectedSquashSubject(
-        gitText(["log", "-1", "--pretty=%s", lease.reviewHeadSha]).trim(),
-        { label: "Reviewed commit subject" },
-      );
-      run("gh", [
+      const autoMergeArgs = [
         "pr", "merge", "--auto", "--squash", "--subject", squashSubject,
-        lease.pullRequestUrl,
-      ]);
+        "--match-head-commit", protectedMergeHeadSha, lease.pullRequestUrl,
+      ];
+      try {
+        run("gh", autoMergeArgs);
+      } catch (error) {
+        const replay = readPullRequestForProtectedRefresh({
+          ghText,
+          url: lease.pullRequestUrl,
+        });
+        requireArmedAutoMergeReplay({
+          pullRequest: replay,
+          url: lease.pullRequestUrl,
+          expectedHeadSha: protectedMergeHeadSha,
+          originalError: error,
+        });
+      }
     }
     const allowProtectedMainRefresh = lease.sessionId === sessionId &&
       (lease.status === "delivery" || reviewReadyDelivery);
     const deliveryAuthorizedHeadSha = lease.deliveryHeadSha
       || commitEvidence?.commitSha
       || (reviewReadyDelivery ? lease.reviewHeadSha : null);
+    const requestedProtectedMainRefreshHeads = new Set();
     verifyCloudAuthority({
       pullRequestUrl: lease.pullRequestUrl,
       branch,
@@ -224,14 +284,17 @@ export function integrateSession({
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
           const refresh = protectedMainAuthorizationRefresh
-            || reconcileProtectedMainRefresh({
-            url: lease.pullRequestUrl,
-            expectedHeadSha,
-            observedHeadSha,
-            gitText,
-            run,
-          });
-          if (!protectedMainAuthorizationRefresh) {
+            && protectedMainAuthorizationRefresh.deliveredHeadSha === expectedHeadSha
+            && protectedMainAuthorizationRefresh.refreshedHeadSha === observedHeadSha
+            ? protectedMainAuthorizationRefresh
+            : reconcileProtectedMainRefresh({
+              url: lease.pullRequestUrl,
+              expectedHeadSha,
+              observedHeadSha,
+              gitText,
+              run,
+            });
+          if (refresh !== protectedMainAuthorizationRefresh) {
             protectedMainRefresh = appendProtectedMainRefresh(
               protectedMainRefresh,
               refresh,
@@ -245,6 +308,29 @@ export function integrateSession({
             cloudAuthority: deliveryCloudAuthority,
           });
           return refresh.refreshedHeadSha;
+        }
+        : null,
+      onOpenPullRequest: reviewReadyDelivery
+        ? ({ acceptedHeadSha, pullRequest: openPullRequest }) => {
+          dispatchProtectedMainRefresh({
+            url: lease.pullRequestUrl,
+            pullRequest: openPullRequest,
+            acceptedHeadSha,
+            requestedHeads: requestedProtectedMainRefreshHeads,
+            branch,
+            deliveredHeadSha: deliveryAuthorizedHeadSha,
+            canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
+            cloudAuthority: deliveryCloudAuthority,
+            ghText,
+            verifyCloudAuthority: () => verifyCloudAuthority({
+              pullRequestUrl: lease.pullRequestUrl,
+              branch,
+              headSha: deliveryAuthorizedHeadSha,
+              canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
+              cloudAuthority: deliveryCloudAuthority,
+            }),
+            run,
+          });
         }
         : null,
     });
@@ -272,6 +358,7 @@ export function integrateSession({
     canonicalRoot,
     mainSha,
     controllerRoot,
+    runtime,
     runtimeRepository,
     runText,
   });
@@ -463,7 +550,7 @@ function prepareIntegrationCommit({
   if (changedBeforeCheck.length) {
     manifest = readChangeManifest({ filePath: pathsManifest, repo, branch, lease });
     requireExactPaths({ changed: changedBeforeCheck, approved: manifest.value.paths });
-    requireCommitMessage(commitMessage);
+    const managedCommit = renderManagedCommitMessage({ branch, commitMessage, lease });
     run("npm", ["run", "check"]);
     const changedAfterCheck = listChangedPaths(gitText);
     requireExactPaths({ changed: changedAfterCheck, approved: manifest.value.paths });
@@ -476,11 +563,16 @@ function prepareIntegrationCommit({
       approved: manifest.value.paths,
     });
     const stagedDiffDigest = sha256(gitText(["diff", "--cached", "--binary"]));
-    run("git", ["commit", "-m", commitMessage]);
+    run("git", [
+      "commit",
+      "-m", managedCommit.subject,
+      "-m", managedCommit.body,
+      "-m", managedCommit.trailers.join("\n"),
+    ]);
     return annotateIntegration({
       branch, leaseStore, sessionId, gitText, now,
       values: {
-        commitMessage,
+        commitMessage: managedCommit.subject,
         manifestDigest: manifest.digest,
         stagedDiffDigest,
         paths: manifest.value.paths,
@@ -617,7 +709,15 @@ function annotateIntegration({ branch, leaseStore, sessionId, gitText, now, valu
 }
 
 function waitForMergedPullRequest({
-  url, expectedHeadSha, ghText, waitSeconds, pollSeconds, now, sleep, onHeadAdvance = null,
+  url,
+  expectedHeadSha,
+  ghText,
+  waitSeconds,
+  pollSeconds,
+  now,
+  sleep,
+  onHeadAdvance = null,
+  onOpenPullRequest = null,
 }) {
   if (!url) throw new Error("Integration requires the lease-owned pull request URL.");
   if (!SHA_PATTERN.test(String(expectedHeadSha || ""))) {
@@ -626,9 +726,7 @@ function waitForMergedPullRequest({
   const deadline = now().getTime() + waitSeconds * 1000;
   let acceptedHeadSha = expectedHeadSha;
   for (;;) {
-    const pullRequest = JSON.parse(ghText([
-      "pr", "view", url, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
-    ]));
+    const pullRequest = readPullRequestForProtectedRefresh({ ghText, url });
     if (pullRequest.url !== url || pullRequest.baseRefName !== "main") {
       throw new Error(`Pull request identity for ${url} changed during integration.`);
     }
@@ -654,6 +752,7 @@ function waitForMergedPullRequest({
     if (pullRequest.state !== "OPEN") {
       throw new Error(`Pull request ${url} is ${String(pullRequest.state || "unknown").toLowerCase()}, not merged.`);
     }
+    onOpenPullRequest?.({ acceptedHeadSha, pullRequest });
     if (now().getTime() >= deadline) {
       throw new Error(
         `Protected integration remains pending after ${waitSeconds}s at ${url}; the delivery lease is preserved for replay.`,
@@ -661,6 +760,258 @@ function waitForMergedPullRequest({
     }
     sleep(Math.min(pollSeconds * 1000, Math.max(1, deadline - now().getTime())));
   }
+}
+
+function dispatchProtectedMainRefresh({
+  url,
+  pullRequest,
+  acceptedHeadSha,
+  requestedHeads,
+  branch,
+  deliveredHeadSha,
+  canonicalBaseSha,
+  cloudAuthority,
+  ghText,
+  verifyCloudAuthority,
+  run,
+}) {
+  if (pullRequest.isDraft !== false) {
+    throw new Error("Protected-main refresh requires an exact non-draft pull request.");
+  }
+  if (pullRequest.isCrossRepository !== false) {
+    throw new Error("Protected-main refresh refuses a fork or unknown head repository.");
+  }
+  const mergeStateStatus = String(pullRequest.mergeStateStatus || "").toUpperCase();
+  const knownMergeStates = new Set([
+    "BEHIND", "BLOCKED", "CLEAN", "DIRTY", "DRAFT", "HAS_HOOKS", "UNKNOWN", "UNSTABLE",
+  ]);
+  if (!knownMergeStates.has(mergeStateStatus)) {
+    throw new Error(
+      `Protected-main refresh requires a known merge state, not ${mergeStateStatus || "unknown"}.`,
+    );
+  }
+  if (mergeStateStatus !== "BEHIND") return false;
+  if (pullRequest.autoMergeRequest?.mergeMethod !== "SQUASH") {
+    throw new Error(
+      "Protected-main refresh requires fresh SQUASH auto-merge authorization.",
+    );
+  }
+  if (requestedHeads.has(acceptedHeadSha)) return false;
+  if (!SHA_PATTERN.test(String(acceptedHeadSha || ""))) {
+    throw new Error("Protected-main refresh requires an exact accepted pull-request head SHA.");
+  }
+  const subject = parseProtectedMainRefreshUrl(url, { requireGitHubDotCom: true });
+  const dispatch = requireProtectedMainRefreshDispatch({
+    subject,
+    url,
+    ghText,
+    branch,
+    deliveredHeadSha,
+    observedHeadSha: acceptedHeadSha,
+    canonicalBaseSha,
+    cloudAuthority,
+  });
+  verifyCloudAuthority();
+  run("gh", [
+    "workflow", "run", "auto-delivery.yml",
+    "--repo", subject.repository,
+    "--ref", "main",
+    ...Object.entries(dispatch).flatMap(([name, value]) => ["-f", `${name}=${value}`]),
+  ]);
+  requestedHeads.add(acceptedHeadSha);
+  return true;
+}
+
+function readPullRequestForProtectedRefresh({ ghText, url }) {
+  return JSON.parse(ghText([
+    "pr", "view", url, "--json",
+    "state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest",
+  ]));
+}
+
+function requireArmedAutoMergeReplay({
+  pullRequest,
+  url,
+  expectedHeadSha,
+  originalError,
+}) {
+  const exactReplay = pullRequest?.url === url
+    && pullRequest?.state === "OPEN"
+    && pullRequest?.baseRefName === "main"
+    && pullRequest?.headRefOid === expectedHeadSha
+    && pullRequest?.isDraft === false
+    && pullRequest?.isCrossRepository === false
+    && pullRequest?.autoMergeRequest?.mergeMethod === "SQUASH";
+  if (!exactReplay) {
+    throw new Error(
+      `Protected auto-merge failed and no exact armed replay was observed: ${originalError?.message || "command failed"}.`,
+    );
+  }
+  return pullRequest;
+}
+
+function requireProtectedMainRefreshDispatch({
+  subject,
+  url,
+  ghText,
+  branch,
+  deliveredHeadSha,
+  observedHeadSha,
+  canonicalBaseSha,
+  cloudAuthority,
+}) {
+  if (cloudAuthority?.state !== "delivery_authorized") {
+    throw new Error("Protected-main refresh dispatch requires delivery-authorized cloud authority.");
+  }
+  const pullRequest = readProtectedHeadRefreshPullRequest({
+    subject,
+    ghText,
+  });
+  const targetMainSha = readProtectedHeadRefreshTargetMain({
+    subject,
+    ghText,
+  });
+  if (
+    !pullRequest.auto_merge
+    || !Object.hasOwn(pullRequest.auto_merge, "commit_title")
+    || !Object.hasOwn(pullRequest.auto_merge, "commit_message")
+  ) {
+    throw new Error(
+      "Protected-main refresh dispatch requires the exact original auto-merge title and nullable body.",
+    );
+  }
+  const originalAutoMergeTitle = pullRequest.auto_merge.commit_title;
+  const originalAutoMergeMessage = JSON.stringify(
+    pullRequest.auto_merge.commit_message,
+  );
+  const candidateAutoMergeMessage = JSON.stringify(
+    renderProtectedHeadRefreshRearmCommitMessage({
+      pullRequestNumber: subject.pullRequestNumber,
+      deliveredHeadSha,
+      targetMainSha,
+    }),
+  );
+  const projection = {
+    operation: "protected-head-refresh",
+    pull_request_number: subject.pullRequestNumber,
+    branch,
+    delivered_head_sha: deliveredHeadSha,
+    observed_head_sha: observedHeadSha,
+    target_main_sha: targetMainSha,
+    canonical_base_sha: canonicalBaseSha,
+    claim_id: cloudAuthority.claimId,
+    claim_digest: cloudAuthority.claimDigest,
+    ledger_revision: cloudAuthority.ledgerRevision,
+    review_request_id: cloudAuthority.reviewRequestId,
+    pull_request_node_id: pullRequest.node_id,
+    pull_request_title: pullRequest.title,
+    auto_merge_method: pullRequest.auto_merge.merge_method,
+    auto_merge_enabled_by_database_id: pullRequest.auto_merge.enabled_by?.id,
+    auto_merge_enabled_by_node_id: pullRequest.auto_merge.enabled_by?.node_id,
+    auto_merge_enabled_by_login: pullRequest.auto_merge.enabled_by?.login,
+    auto_merge_enabled_by_type: pullRequest.auto_merge.enabled_by?.type,
+    auto_merge_commit_title: originalAutoMergeTitle,
+    auto_merge_commit_message: originalAutoMergeMessage,
+    candidate_auto_merge_commit_title: originalAutoMergeTitle,
+    candidate_auto_merge_commit_message: candidateAutoMergeMessage,
+    integration_receipt_digest: cloudAuthority.integrationReceiptDigest,
+    transition_counter: cloudAuthority.transitionCounter,
+  };
+  projection.operation_id = protectedHeadRefreshOperationId({
+    repository: subject.repository,
+    projection,
+  });
+  const normalized = normalizeProtectedHeadRefreshProjection({
+    repository: subject.repository,
+    input: projection,
+  });
+  if (
+    pullRequest.html_url !== url
+    || pullRequest.head?.sha !== observedHeadSha
+    || pullRequest.base?.sha !== canonicalBaseSha
+  ) {
+    throw new Error(
+      "Protected-main refresh live pull-request metadata drifted from the accepted head or canonical base.",
+    );
+  }
+  const verifiedPullRequest = requireProtectedHeadRefreshPullRequest({
+    pullRequest,
+    projection: normalized,
+    autoMerge: "armed",
+  });
+  if (
+    verifiedPullRequest.headSha !== observedHeadSha
+    || verifiedPullRequest.mergeState !== "behind"
+  ) {
+    throw new Error(
+      "Protected-main refresh live pull-request metadata drifted from the accepted behind head.",
+    );
+  }
+  return Object.freeze(Object.fromEntries(
+    PROTECTED_HEAD_REFRESH_DISPATCH_FIELDS.map(field => [field, normalized[field]]),
+  ));
+}
+
+function readProtectedHeadRefreshPullRequest({ subject, ghText }) {
+  const value = JSON.parse(ghText([
+    "api", "--method", "GET",
+    `repos/${subject.repository}/pulls/${subject.pullRequestNumber}`,
+  ]));
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Protected-main refresh dispatch received no live pull-request metadata.");
+  }
+  return value;
+}
+
+function readProtectedHeadRefreshTargetMain({ subject, ghText }) {
+  const value = JSON.parse(ghText([
+    "api", "--method", "GET",
+    `repos/${subject.repository}/git/ref/heads/main`,
+  ]));
+  if (
+    !value
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || value.ref !== "refs/heads/main"
+    || value.object?.type !== "commit"
+    || !SHA_PATTERN.test(String(value.object?.sha || ""))
+  ) {
+    throw new Error("Protected-main refresh dispatch received no exact live protected main SHA.");
+  }
+  return value.object.sha;
+}
+
+function parseProtectedMainRefreshUrl(value, { requireGitHubDotCom = false } = {}) {
+  let url;
+  try {
+    url = new URL(String(value || "").trim());
+  } catch {
+    throw new Error("Protected-main refresh requires an absolute pull-request URL.");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("Protected-main refresh requires a plain HTTPS pull-request URL.");
+  }
+  const match = url.pathname.match(
+    /^\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/pull\/([1-9]\d*)\/?$/u,
+  );
+  if (!url.hostname || !match) {
+    throw new Error("Protected-main refresh requires an owner/repository pull-request URL.");
+  }
+  if (requireGitHubDotCom && url.hostname.toLowerCase() !== "github.com") {
+    throw new Error("Protected-main refresh dispatch requires the github.com provider.");
+  }
+  return {
+    hostname: url.hostname,
+    repository: `${match[1]}/${match[2]}`,
+    pullRequestNumber: match[3],
+  };
 }
 
 function reconcileProtectedMainRefresh({
@@ -703,7 +1054,7 @@ function parsePullRequestNumber(url) {
   return match[1];
 }
 
-function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runtimeRepository, runText }) {
+function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runtime, runtimeRepository, runText }) {
   const controller = path.resolve(controllerRoot || "");
   if (!controllerRoot || !path.isAbsolute(controllerRoot)) {
     throw new Error("Canonical integration requires the absolute Agentic Canvas OS controller root.");
@@ -714,9 +1065,20 @@ function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runti
     throw new Error(`Canonical source ${canonicalRoot} did not converge to integrated main ${mainSha}.`);
   }
 
-  const repositories = resolveRuntimeRepositories({ canonicalRoot, runtimeRepository });
+  const { integratedRepository, ...repositories } = resolveRuntimeRepositories({
+    canonicalRoot,
+    controllerRoot,
+    runtimeRepository,
+    allowAncillary: true,
+    runtimeRequired: runtime === "canonical",
+    readOriginRemote: () => runText(
+      "git",
+      ["remote", "get-url", "origin"],
+      { cwd: canonicalRoot },
+    ),
+  });
   return {
-    integratedSource: { repository: path.basename(canonicalRoot), root: canonicalRoot, mainSha },
+    integratedSource: { repository: integratedRepository, root: canonicalRoot, mainSha },
     repositories,
   };
 }
@@ -733,13 +1095,21 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
   if (!line) throw new Error("Canonical runtime reconciler returned no machine-readable readiness result.");
   const result = JSON.parse(line);
   const integratedRepository = integratedSource.repository;
+  const integratedSourceMatches =
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: integratedSource.root })).trim() === mainSha;
   const integratedRevision = integratedRepository === "agentic-canvas-os"
     ? result.agenticCanvasOs?.revision
     : integratedRepository === "knowgrph"
       ? result.source?.revision
       : null;
+  const ancillaryRuntimeMatches = integratedRevision === null &&
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: repositories.agenticCanvasOsRoot })).trim() ===
+      result.agenticCanvasOs?.revision &&
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: repositories.knowgrphRoot })).trim() ===
+      result.source?.revision;
   if (result.schema !== "agentic-local-runtime-readiness/v1" || result.ready !== true ||
-      result.status !== "runtime-ready" || integratedRevision !== mainSha) {
+      result.status !== "runtime-ready" || !integratedSourceMatches ||
+      (integratedRevision === null ? !ancillaryRuntimeMatches : integratedRevision !== mainSha)) {
     throw new Error("Canonical runtime readiness did not match the integrated main SHA.");
   }
   return { integratedSource, readiness: result };
@@ -763,10 +1133,26 @@ function cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree,
   return result;
 }
 
-function resolveRuntimeRepositories({ canonicalRoot, runtimeRepository }) {
-  const integratedRepository = path.basename(canonicalRoot);
-  if (!["agentic-canvas-os", "knowgrph"].includes(integratedRepository)) {
-    throw new Error(`Unsupported canonical integration repository: ${canonicalRoot}`);
+export function resolveRuntimeRepositories({
+  canonicalRoot,
+  controllerRoot = "",
+  runtimeRepository,
+  readOriginRemote = () => "",
+  allowAncillary = false,
+  runtimeRequired = true,
+}) {
+  const integratedRepository = resolveCanonicalRepositoryIdentity({
+    canonicalRoot,
+    readOriginRemote,
+    allowAncillary,
+  });
+  const ancillaryIntegration = !["agentic-canvas-os", "knowgrph"].includes(integratedRepository);
+  if (ancillaryIntegration && (!controllerRoot || !path.isAbsolute(controllerRoot))) {
+    throw new Error("Ancillary integration requires an explicit absolute Agentic Canvas OS controller root.");
+  }
+  if (ancillaryIntegration && runtimeRequired &&
+      (!runtimeRepository || !path.isAbsolute(runtimeRepository))) {
+    throw new Error("Ancillary canonical runtime requires an explicit absolute Knowgrph repository.");
   }
   const workspaceRoot = path.dirname(canonicalRoot);
   const knowgrphRoot = runtimeRepository
@@ -776,15 +1162,75 @@ function resolveRuntimeRepositories({ canonicalRoot, runtimeRepository }) {
       : path.join(workspaceRoot, "knowgrph");
   const agenticCanvasOsRoot = integratedRepository === "agentic-canvas-os"
     ? canonicalRoot
-    : path.join(workspaceRoot, "agentic-canvas-os");
-  for (const [label, candidate] of [["Agentic Canvas OS", agenticCanvasOsRoot], ["Knowgrph", knowgrphRoot]]) {
+    : ancillaryIntegration
+      ? path.resolve(controllerRoot)
+      : path.join(workspaceRoot, "agentic-canvas-os");
+  const requiredRepositories = [
+    ["Agentic Canvas OS", agenticCanvasOsRoot],
+    ...(runtimeRequired ? [["Knowgrph", knowgrphRoot]] : []),
+  ];
+  for (const [label, candidate] of requiredRepositories) {
     try {
       JSON.parse(readFileSync(path.join(candidate, "package.json"), "utf8"));
     } catch {
       throw new Error(`${label} canonical repository is unavailable at ${candidate}.`);
     }
   }
-  return { agenticCanvasOsRoot, knowgrphRoot };
+  if (allowAncillary && ancillaryIntegration) {
+    requireRepositoryPackageIdentity(agenticCanvasOsRoot, "agentic-canvas-os", "Agentic Canvas OS");
+    if (runtimeRequired) requireRepositoryPackageIdentity(knowgrphRoot, "knowgrph", "Knowgrph");
+  }
+  return { integratedRepository, agenticCanvasOsRoot, knowgrphRoot };
+}
+
+function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote, allowAncillary = false }) {
+  const allowed = new Set(["agentic-canvas-os", "knowgrph"]);
+  let packageName = "";
+  try {
+    packageName = String(
+      JSON.parse(readFileSync(path.join(canonicalRoot, "package.json"), "utf8"))?.name || "",
+    ).trim();
+  } catch {
+    packageName = "";
+  }
+  if (allowed.has(packageName)) return packageName;
+
+  let remoteName = "";
+  try {
+    remoteName = repositoryNameFromRemote(readOriginRemote());
+  } catch {
+    remoteName = "";
+  }
+  if (allowed.has(remoteName)) return remoteName;
+
+  if (allowAncillary && packageName && packageName === remoteName &&
+      REPOSITORY_IDENTITY_PATTERN.test(packageName)) {
+    return packageName;
+  }
+
+  const observed = [
+    packageName ? `package ${JSON.stringify(packageName)}` : null,
+    remoteName ? `origin ${JSON.stringify(remoteName)}` : null,
+  ].filter(Boolean).join(" and ") || "no supported package or origin metadata";
+  throw new Error(`Unsupported canonical integration repository identity: ${observed}.`);
+}
+
+function requireRepositoryPackageIdentity(root, expectedName, label) {
+  let packageName = "";
+  try {
+    packageName = String(JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"))?.name || "").trim();
+  } catch {
+    packageName = "";
+  }
+  if (packageName !== expectedName) {
+    throw new Error(`${label} canonical repository identity is unavailable at ${root}.`);
+  }
+}
+
+function repositoryNameFromRemote(value) {
+  const normalized = String(value || "").trim().replace(/\/+$/u, "").replace(/\.git$/u, "");
+  const separator = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf(":"));
+  return separator >= 0 ? normalized.slice(separator + 1) : normalized;
 }
 
 function readChangeManifest({
@@ -874,6 +1320,47 @@ function requireCommitMessage(value) {
   if (!message || message.length > 200 || /[\r\n]/.test(message)) {
     throw new Error("Dirty integration requires one intentional single-line --commit-message of at most 200 characters.");
   }
+}
+
+export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
+  requireCommitMessage(commitMessage);
+  const rawSubject = String(commitMessage);
+  const subject = rawSubject.trim();
+  if (rawSubject !== subject) {
+    throw new Error("Managed integration commit subject must not contain leading or trailing whitespace.");
+  }
+  const branchParts = String(branch || "").split("/");
+  const branchScope = branchParts[0] === "agent" && branchParts.length >= 3
+    ? branchParts.slice(2).join("/")
+    : "";
+  if (!branchScope || lease?.branch !== branch || lease?.scope !== branchScope) {
+    throw new Error("Managed integration commit attribution requires the exact leased task-branch scope.");
+  }
+  const subjectMatch = subject.match(MANAGED_COMMIT_SUBJECT_PATTERN);
+  if (
+    !subjectMatch ||
+    subjectMatch[2] !== branchScope ||
+    [...subject].length > 72 ||
+    [...(subjectMatch?.[3] || "")].length > 60
+  ) {
+    throw new Error(
+      "Managed integration commit subject must use <type>(<leased-scope>): <summary> with an allowed type, a summary of at most 60 characters, and at most 72 total characters.",
+    );
+  }
+  const claimEpoch = lease.cloudAuthority ? lease.cloudAuthority.leaseEpoch : lease.epoch;
+  if (!Number.isInteger(claimEpoch) || claimEpoch <= 0) {
+    throw new Error("Managed integration commit attribution requires a positive claim epoch.");
+  }
+  return Object.freeze({
+    subject,
+    body: `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
+    trailers: Object.freeze([
+      `Agentic-Task: ${branchScope}`,
+      `Agentic-Scope: ${branchScope}`,
+      `Agentic-Lease-Epoch: ${claimEpoch}`,
+      "Agentic-Mechanism: Agentic Canvas OS protected integration",
+    ]),
+  });
 }
 
 function requireRepositoryRoot({ invocationPath, repo }) {

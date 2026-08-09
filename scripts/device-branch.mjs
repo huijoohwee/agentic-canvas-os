@@ -51,15 +51,20 @@ import {
 } from "./scoped-lane-cloud-authority.mjs";
 import {
   assertAdmissionMutationAuthority,
+  assertPeersUnchanged,
   assertWorkspaceGuardsReady,
   attachAdmissionReceipt,
   collectScopedLaneState,
   finalizeScopedLaneAdmission,
   verifyPreservedLaneState,
 } from "./scoped-lane-admission-state.mjs";
+import { verifyDormantPreservation } from "./scoped-lane-authority-state.mjs";
+import { continuePlannedAdmissionFromRepository } from "./scoped-lane-admission-continuation.mjs";
 
 const [command, ...args] = process.argv.slice(2);
-const scriptControllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+let workspaceGuardControllerRoot = controllerRoot;
+let scriptControllerRoot = controllerRoot;
 if (!command || !["start", "resume", "heartbeat", "review", "publish", "integrate", "park", "complete", "end"].includes(command)) usage();
 
 const json = args.includes("--json");
@@ -67,6 +72,7 @@ const provisionRequested = args.includes("--provision");
 const autoDelivery = args.includes("--auto-delivery");
 const recoverOwnedDirt = args.includes("--recover-owned-dirt");
 const repairPullRequestProjection = args.includes("--repair-pr-projection");
+const continueAdmission = args.includes("--continue-admission");
 const rawScope = args.find((value) => !value.startsWith("--"));
 const sessionId = readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "";
 if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
@@ -86,7 +92,11 @@ const requestedWorktreePath = readOption(args, "worktree");
 const writeScopeManifestPath = readOption(args, "write-scope-manifest");
 const cloudAuthorityPath = readOption(args, "cloud-authority");
 const rootSourceBootstrapInput = readOption(args, "root-source-bootstrap");
+const dormantWorktreePaths = readOptions(args, "dormant-preservation");
+const dormantPullRequests = readOptions(args, "dormant-preservation-pr");
 try {
+  workspaceGuardControllerRoot = resolveWorkspaceGuardControllerRoot(args);
+  scriptControllerRoot = workspaceGuardControllerRoot;
   if (autoDelivery && command !== "start") {
     throw new Error("--auto-delivery is accepted only by device:start; authorization is immutable for the task lease.");
   }
@@ -95,6 +105,9 @@ try {
   }
   if (repairPullRequestProjection && command !== "heartbeat") {
     throw new Error("--repair-pr-projection is accepted only by device:heartbeat.");
+  }
+  if (continueAdmission && command !== "heartbeat") {
+    throw new Error("--continue-admission is accepted only by device:heartbeat.");
   }
   if (rootSourceBootstrapInput && (command !== "start" || !provisionRequested)) {
     throw new Error("--root-source-bootstrap is accepted only by provisioned device:start.");
@@ -105,7 +118,7 @@ try {
   canonicalRepo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(canonicalRepo);
   if (command === "start") {
-    bindControllerHooksEnvironment(scriptControllerRoot);
+    scriptControllerRoot = bindControllerHooksEnvironment(scriptControllerRoot);
     assertWorkspaceGuardsReady({
       repository: canonicalRepo,
       controllerRoot: scriptControllerRoot,
@@ -144,14 +157,15 @@ try {
         "root-source bootstrap authorization",
       )
       : null;
+    const targetRepository = readOption(args, "target-repository")
+      || ghText(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim();
     const authority = normalizeCloudAuthority(
       readJsonFile(cloudAuthorityPath, "cloud authority"),
       {
         ledgerRepository: readOption(args, "ledger-repository")
           || process.env.AGENTIC_LEDGER_REPOSITORY
           || "huijoohwee/agentic-canvas-os",
-        targetRepository: readOption(args, "target-repository")
-          || ghText(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim(),
+        targetRepository,
         manifest,
         canonicalBaseSha: before.canonicalBaseSha,
       },
@@ -162,6 +176,19 @@ try {
       canonicalBaseSha: before.canonicalBaseSha,
     });
     verifiedCloudAuthority = verified.authority;
+    const dormantPreservationReceipt = verifyDormantPreservation({
+      repository: canonicalRepo,
+      targetRepository,
+      lanes: before.lanes,
+      worktreePaths: dormantWorktreePaths,
+      pullRequestReferences: dormantPullRequests,
+      operatorDecisionDigest: dormantWorktreePaths.length + dormantPullRequests.length > 0
+        ? requiredOption(args, "operator-decision-digest")
+        : "",
+      sessionId,
+      remoteAuthorityVerification: verified.verification,
+      verifiedAt: verified.verification.verifiedAt,
+    });
     admissionReport = evaluateScopedLaneAdmission({
       repository: canonicalRepo,
       canonicalPath: canonicalRepo,
@@ -176,6 +203,7 @@ try {
       cloudAuthority: verifiedCloudAuthority,
       remoteAuthorityRequired: true,
       remoteAuthorityVerification: verified.verification,
+      dormantPreservationReceipt,
       rootSourceBootstrapAuthorization,
       mode: "check",
     });
@@ -242,7 +270,31 @@ try {
     log: json ? () => {} : console.log,
     now: () => new Date(),
   };
-  const result = execute(command, context);
+  let admissionContinuation = null;
+  if (continueAdmission) {
+    if (!writeScopeManifestPath) {
+      throw new Error("--continue-admission requires --write-scope-manifest.");
+    }
+    const branch = gitText(["branch", "--show-current"]).trim();
+    admissionContinuation = continuePlannedAdmissionFromRepository({
+      repository: repo,
+      branch,
+      sessionId,
+      leaseStore,
+      manifestSource: readJsonFile(writeScopeManifestPath, "declared write-scope manifest"),
+      dormantWorktreePaths,
+      dormantPullRequests,
+      operatorDecisionDigest: requiredOption(args, "operator-decision-digest"),
+      gitText,
+    });
+  }
+  let result = execute(command, context);
+  if (admissionContinuation && result && typeof result === "object") {
+    result = Object.freeze({
+      ...result,
+      admissionContinuationReceipt: admissionContinuation.continuationReceipt,
+    });
+  }
   if (provision && admissionReport) {
     const branch = resolveResultBranch(command, result);
     let lease = context.leaseStore.verify({ sessionId, branch });
@@ -305,6 +357,7 @@ try {
       manifest: admissionManifest,
       canonicalBaseSha: admissionReport.canonicalBaseSha,
     });
+    assertPeersUnchanged(admissionReport, immediate.verification);
     mutationAuthorityReceipt = assertAdmissionMutationAuthority({
       lease,
       cloudAuthority: immediate.authority,
@@ -338,7 +391,7 @@ function execute(action, context) {
     runtimeRepository: readOption(args, "runtime-repository"),
     waitSeconds: Number(readOption(args, "wait-seconds") || 900),
     pollSeconds: Number(readOption(args, "poll-seconds") || 5),
-    controllerRoot: scriptControllerRoot,
+    controllerRoot,
     publishTask: () => publish(context),
     completeTask: () => completeSession({ ...context, json: false, finalize: false }),
     runText,
@@ -348,23 +401,6 @@ function execute(action, context) {
     return completeSession({ ...context, json: false, allowAlreadyOnCleanMain: true });
   }
   return completeSession({ ...context, json: false });
-}
-
-function bindControllerHooksEnvironment(controllerRoot) {
-  const configuredCount = Number(process.env.GIT_CONFIG_COUNT || 0);
-  const count = Number.isInteger(configuredCount) && configuredCount >= 0
-    ? configuredCount
-    : 0;
-  const hooksPath = path.resolve(controllerRoot, ".githooks");
-  for (let index = 0; index < count; index += 1) {
-    if (process.env[`GIT_CONFIG_KEY_${index}`] === "core.hooksPath") {
-      process.env[`GIT_CONFIG_VALUE_${index}`] = hooksPath;
-      return;
-    }
-  }
-  process.env[`GIT_CONFIG_KEY_${count}`] = "core.hooksPath";
-  process.env[`GIT_CONFIG_VALUE_${count}`] = hooksPath;
-  process.env.GIT_CONFIG_COUNT = String(count + 1);
 }
 
 function emitJson(action, context, result, { provisioned }) {
@@ -493,6 +529,10 @@ function parseJsonObject(source, label) {
   return value;
 }
 
+function bindControllerHooksEnvironment(defaultControllerRoot) {
+  return defaultControllerRoot;
+}
+
 function gitText(args) {
   return execFileSync("git", args, textCommandOptions());
 }
@@ -523,7 +563,7 @@ function runText(command, args, options = {}) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--workspace-guard-controller=<clean-protected-main-controller>] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --operator-decision-digest=<sha256>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--continue-admission --write-scope-manifest=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --operator-decision-digest=<sha256>] [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
   );
   process.exit(2);
 }
@@ -532,4 +572,43 @@ function readOption(values, name) {
   const prefix = `--${name}=`;
   const match = values.find((value) => value.startsWith(prefix));
   return match ? match.slice(prefix.length).trim() : "";
+}
+
+function readOptions(values, name) {
+  const prefix = `--${name}=`;
+  return values
+    .filter(value => value.startsWith(prefix))
+    .map(value => value.slice(prefix.length).trim())
+    .filter(Boolean);
+}
+
+function requiredOption(values, name) {
+  const value = readOption(values, name);
+  if (!value) throw new Error(`--${name}=<value> is required.`);
+  return value;
+}
+
+function resolveWorkspaceGuardControllerRoot(values) {
+  const configured = readOption(values, "workspace-guard-controller");
+  if (!configured) return controllerRoot;
+  const candidate = path.resolve(configured);
+  const currentRemote = gitAt(controllerRoot, ["remote", "get-url", "origin"]);
+  const candidateRemote = gitAt(candidate, ["remote", "get-url", "origin"]);
+  const candidateHead = gitAt(candidate, ["rev-parse", "HEAD"]);
+  const candidateProtectedHead = gitAt(candidate, ["rev-parse", "origin/main"]);
+  const candidateBranch = gitAt(candidate, ["symbolic-ref", "--short", "HEAD"]);
+  const candidateStatus = gitAt(candidate, ["status", "--porcelain"]);
+  if (
+    candidateRemote !== currentRemote
+    || candidateBranch !== "main"
+    || candidateHead !== candidateProtectedHead
+    || candidateStatus
+  ) {
+    throw new Error("--workspace-guard-controller must be a clean protected main checkout of this controller repository.");
+  }
+  return candidate;
+}
+
+function gitAt(directory, argumentsList) {
+  return execFileSync("git", ["-C", directory, ...argumentsList], textCommandOptions()).trim();
 }

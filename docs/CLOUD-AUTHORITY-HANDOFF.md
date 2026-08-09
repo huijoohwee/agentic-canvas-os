@@ -12,6 +12,12 @@ authority: "Source-owned continuation of expired preserved review lanes"
 
 # Cloud Authority Handoff And Reclaim
 
+Expired review lanes that never had an admission or cloud-authority projection
+use the separate, provider-first contract in
+[`LOCAL-REVIEW-RETIREMENT.md`](./LOCAL-REVIEW-RETIREMENT.md). That controller
+fails closed for any cloud-backed lane; this handoff controller remains the
+only owner for current or recoverable cloud claims.
+
 ## Purpose
 
 `scripts/cloud-authority-handoff-controller.mjs` restores or preserves cloud

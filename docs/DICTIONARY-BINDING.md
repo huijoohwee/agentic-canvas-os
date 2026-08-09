@@ -122,6 +122,9 @@ dictionary_entries:
   - "@context-file"
   - "@working-directory"
   - "@repository-root"
+  - "@artifact-operation"
+  - "@workspace-entry"
+  - "@artifact-policy"
   - "@context-policy"
   - "@file:"
   - "@folder:"
@@ -280,6 +283,9 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@context-file` | One discovered project-local context file. | Working directory, ancestor, or touched subdirectory under the approved project scope. | Read-only unless operator requests edits; must scan, bound, and never override `FACTS.md`, `SOUL.md`, system, developer, or operator instructions. |
 | `@working-directory` | Current startup or tool-call working directory used for context discovery. | Runtime session state or explicit operator path. | Must be explicit, normalized, and scoped; no home-wide or global scan unless approved. |
 | `@repository-root` | Exact local Git worktree root selected for deterministic repository packing. | Explicit operator path resolved under the configured Knowgrph local MCP root. | Must equal Git's canonical worktree root after symlink-safe validation; it grants reads only within that root and one content-addressed write under the approved output directory. |
+| `@artifact-operation` | One normalized workspace artifact operation: inspect, create file, create folder, update file, import file, export file, trash, or restore. | Explicit request field accepted by the selected lifecycle owner. | Grants only the named operation; plan is read-only, apply additionally requires `@operator`, and recursive import/export or purge is unsupported until separately specified and proven. |
+| `@workspace-entry` | One relative file or folder path inside an explicitly configured workspace root, plus a source or destination path when the selected operation requires it. | Operator-selected path resolved by the local MCP owner against configured roots. | Traversal, reserved names, special files, undeclared roots, and every symlink component fail before read or mutation; the binding never grants network, provider, repository, Prod, or deployment authority. |
+| `@artifact-policy` | Collision, bounds, atomicity, and recovery policy for one workspace artifact operation. | Host defaults narrowed by explicit request values. | Cannot weaken configured roots or security limits; replace requires an expected digest, idempotent identical reuse is explicit, mutations use atomic publication and read-back, and typed recovery evidence is returned without hidden deletion. |
 | `@context-policy` | Precedence, scan, truncation, and progressive-discovery rules for context files. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | First-match project context, per-directory visited set, prompt-injection block, capacity bound, and deploy gate are required. |
 | `@file:` | Context reference to one workspace file or 1-indexed line range. | Explicit message text plus normalized workspace path. | Text only, workspace-scoped, sensitive path blocked, path traversal blocked, binary rejected, and bounded before expansion. |
 | `@folder:` | Context reference to a directory listing or bounded folder summary. | Explicit message text plus normalized workspace directory. | Maximum entry cap, no recursive content dump by default, sensitive children skipped with warnings. |

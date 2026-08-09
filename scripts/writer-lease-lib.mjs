@@ -1,19 +1,30 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
+import {
+  normalizeProtectedMainPathEquivalenceEvidence,
+  normalizeProtectedMainSharedAncestorPathEquivalenceEvidence,
+  RECOVERY_PATH_EVIDENCE_MAX_PATHS,
+} from "./protected-main-path-equivalence-lib.mjs";
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
-export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+export const LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
   "agentic-expired-committed-heartbeat-recovery/v1";
+export const PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+  "agentic-expired-committed-heartbeat-recovery/v2";
+export const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA =
+  "agentic-expired-committed-heartbeat-recovery/v3";
 export const DEFAULT_WRITER_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_PULL_REQUEST_ACTION = "/change";
 export const DEVICE_BRANCH_PATTERN =
   /^agent\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/;
-const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
+const EMPTY_PATHS_DIGEST = digestValue([]);
+const LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   "changedPathCount",
   "changedPathsDigest",
   "headSha",
@@ -42,6 +53,30 @@ const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
   "status",
   "treeSha",
 ]);
+const PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS =
+  Object.freeze([
+    ...LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
+    "declaredChangedPathCount",
+    "declaredChangedPathsDigest",
+    "protectedEquivalentPathCount",
+    "protectedEquivalentPathsDigest",
+    "protectedMainEquivalence",
+    "protectedMainEquivalenceDigest",
+  ].sort());
+const EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS = Object.freeze([
+  ...PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS,
+  "sourceRemoteChangedPathCount",
+  "sourceRemoteChangedPathsDigest",
+  "sourceRemoteDeclaredChangedPathCount",
+  "sourceRemoteDeclaredChangedPathsDigest",
+  "sourceRemoteHeadSha",
+  "sourceRemoteProtectedEquivalentPathCount",
+  "sourceRemoteProtectedEquivalentPathsDigest",
+  "sourceRemoteSharedAncestorEquivalence",
+  "sourceRemoteSharedAncestorEquivalenceDigest",
+  "sourceRemoteRangeDiffDigest",
+  "sourceRemoteTreeSha",
+].sort());
 
 export function parseDeviceBranch(branch) {
   const match = String(branch || "").match(DEVICE_BRANCH_PATTERN);
@@ -292,10 +327,10 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
-  function annotate({ sessionId, branch, values }) {
+  function annotate({ sessionId, branch, allowExpired = false, values }) {
     return withLock(() => {
       const registry = readRegistry();
-      const current = verify({ sessionId, branch });
+      const current = verify({ sessionId, branch, allowExpired });
       const lease = { ...current, ...values, schema: WRITER_LEASE_SCHEMA };
       writeRegistry({
         ...registry,
@@ -727,10 +762,46 @@ export function parseWriterLeasePullRequestBody(body) {
 
 export function normalizeExpiredCommittedHeartbeatRecovery(value) {
   if (value === undefined || value === null) return null;
+  const legacy = value?.schema ===
+    LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const prePushedPrefix = value?.schema ===
+    PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const current = value?.schema ===
+    EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA;
+  const bindsProtectedMain = prePushedPrefix || current;
+  const expectedKeys = legacy
+    ? LEGACY_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+    : prePushedPrefix
+      ? PRE_PUSHED_PREFIX_EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+      : current
+        ? EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS
+        : null;
+  let protectedMainEquivalence = null;
+  let sourceRemoteSharedAncestorEquivalence = null;
+  if (bindsProtectedMain) {
+    try {
+      protectedMainEquivalence =
+        normalizeProtectedMainPathEquivalenceEvidence(
+          value.protectedMainEquivalence,
+        );
+    } catch {
+      protectedMainEquivalence = null;
+    }
+  }
+  if (current) {
+    try {
+      sourceRemoteSharedAncestorEquivalence =
+        normalizeProtectedMainSharedAncestorPathEquivalenceEvidence(
+          value.sourceRemoteSharedAncestorEquivalence,
+        );
+    } catch {
+      sourceRemoteSharedAncestorEquivalence = null;
+    }
+  }
   const invalid = (
+    !expectedKeys ||
     JSON.stringify(Object.keys(value).sort()) !==
-      JSON.stringify(EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_KEYS) ||
-    value?.schema !== EXPIRED_COMMITTED_HEARTBEAT_RECOVERY_SCHEMA ||
+      JSON.stringify(expectedKeys) ||
     value.status !== "recovered" ||
     !Number.isInteger(value.sourceEpoch) ||
     value.sourceEpoch < 1 ||
@@ -741,6 +812,74 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     !requiredRecoveryText(value.sourcePullRequestUrl) ||
     !SHA_PATTERN.test(String(value.sourceBaseSha || "")) ||
     !SHA_PATTERN.test(String(value.sourceFenceSha || "")) ||
+    (current && !SHA_PATTERN.test(
+      String(value.sourceRemoteHeadSha || ""),
+    )) ||
+    (current && (
+      !SHA_PATTERN.test(String(value.sourceRemoteTreeSha || "")) ||
+      !Number.isSafeInteger(value.sourceRemoteChangedPathCount) ||
+      value.sourceRemoteChangedPathCount < 0 ||
+      value.sourceRemoteChangedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteChangedPathsDigest || ""),
+      ) ||
+      !Number.isSafeInteger(value.sourceRemoteDeclaredChangedPathCount) ||
+      value.sourceRemoteDeclaredChangedPathCount < 0 ||
+      value.sourceRemoteDeclaredChangedPathCount >
+        RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteDeclaredChangedPathsDigest || ""),
+      ) ||
+      !Number.isSafeInteger(
+        value.sourceRemoteProtectedEquivalentPathCount,
+      ) ||
+      value.sourceRemoteProtectedEquivalentPathCount < 0 ||
+      value.sourceRemoteProtectedEquivalentPathCount >
+        RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      value.sourceRemoteDeclaredChangedPathCount +
+        value.sourceRemoteProtectedEquivalentPathCount !==
+        value.sourceRemoteChangedPathCount ||
+      !DIGEST_PATTERN.test(String(
+        value.sourceRemoteProtectedEquivalentPathsDigest || "",
+      )) ||
+      !DIGEST_PATTERN.test(String(
+        value.sourceRemoteSharedAncestorEquivalenceDigest || "",
+      )) ||
+      !DIGEST_PATTERN.test(
+        String(value.sourceRemoteRangeDiffDigest || ""),
+      ) ||
+      !sourceRemoteSharedAncestorEquivalence ||
+      sourceRemoteSharedAncestorEquivalence.baseSha !==
+        value.sourceBaseSha ||
+      sourceRemoteSharedAncestorEquivalence.headSha !==
+        value.sourceRemoteHeadSha ||
+      sourceRemoteSharedAncestorEquivalence.headTreeSha !==
+        value.sourceRemoteTreeSha ||
+      sourceRemoteSharedAncestorEquivalence.exemptPathCount !==
+        value.sourceRemoteProtectedEquivalentPathCount ||
+      sourceRemoteSharedAncestorEquivalence.exemptPathsDigest !==
+        value.sourceRemoteProtectedEquivalentPathsDigest ||
+      sourceRemoteSharedAncestorEquivalence.protectedMainRef !==
+        protectedMainEquivalence?.protectedMainRef ||
+      sourceRemoteSharedAncestorEquivalence.protectedMainSha !==
+        protectedMainEquivalence?.protectedMainSha ||
+      sourceRemoteSharedAncestorEquivalence.protectedMainTreeSha !==
+        protectedMainEquivalence?.protectedMainTreeSha ||
+      (value.sourceRemoteProtectedEquivalentPathCount === 0 && (
+        value.sourceRemoteProtectedEquivalentPathsDigest !==
+          EMPTY_PATHS_DIGEST ||
+        value.sourceRemoteChangedPathsDigest !==
+          value.sourceRemoteDeclaredChangedPathsDigest
+      )) ||
+      (value.sourceRemoteDeclaredChangedPathCount === 0 && (
+        value.sourceRemoteDeclaredChangedPathsDigest !==
+          EMPTY_PATHS_DIGEST ||
+        value.sourceRemoteChangedPathsDigest !==
+          value.sourceRemoteProtectedEquivalentPathsDigest
+      )) ||
+      digestValue(sourceRemoteSharedAncestorEquivalence) !==
+        value.sourceRemoteSharedAncestorEquivalenceDigest
+    )) ||
     !SHA_PATTERN.test(String(value.headSha || "")) ||
     value.headSha === value.sourceFenceSha ||
     !SHA_PATTERN.test(String(value.treeSha || "")) ||
@@ -761,12 +900,49 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     !Number.isInteger(value.changedPathCount) ||
     value.changedPathCount < 1 ||
     !DIGEST_PATTERN.test(String(value.changedPathsDigest || "")) ||
-    !Number.isFinite(Date.parse(value.recoveredAt))
+    !Number.isFinite(Date.parse(value.recoveredAt)) ||
+    (bindsProtectedMain && (
+      !Number.isSafeInteger(value.changedPathCount) ||
+      value.changedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !Number.isSafeInteger(value.declaredChangedPathCount) ||
+      value.declaredChangedPathCount < 0 ||
+      value.declaredChangedPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      !DIGEST_PATTERN.test(String(value.declaredChangedPathsDigest || "")) ||
+      !Number.isSafeInteger(value.protectedEquivalentPathCount) ||
+      value.protectedEquivalentPathCount < 0 ||
+      value.protectedEquivalentPathCount > RECOVERY_PATH_EVIDENCE_MAX_PATHS ||
+      value.declaredChangedPathCount + value.protectedEquivalentPathCount !==
+        value.changedPathCount ||
+      !DIGEST_PATTERN.test(
+        String(value.protectedEquivalentPathsDigest || ""),
+      ) ||
+      !DIGEST_PATTERN.test(
+        String(value.protectedMainEquivalenceDigest || ""),
+      ) ||
+      !protectedMainEquivalence ||
+      protectedMainEquivalence.baseSha !== value.sourceBaseSha ||
+      protectedMainEquivalence.headSha !== value.headSha ||
+      protectedMainEquivalence.headTreeSha !== value.treeSha ||
+      protectedMainEquivalence.exemptPathCount !==
+        value.protectedEquivalentPathCount ||
+      protectedMainEquivalence.exemptPathsDigest !==
+        value.protectedEquivalentPathsDigest ||
+      (value.protectedEquivalentPathCount === 0 && (
+        value.protectedEquivalentPathsDigest !== EMPTY_PATHS_DIGEST ||
+        value.changedPathsDigest !== value.declaredChangedPathsDigest
+      )) ||
+      (value.declaredChangedPathCount === 0 && (
+        value.declaredChangedPathsDigest !== EMPTY_PATHS_DIGEST ||
+        value.changedPathsDigest !== value.protectedEquivalentPathsDigest
+      )) ||
+      digestValue(protectedMainEquivalence) !==
+        value.protectedMainEquivalenceDigest
+    ))
   );
   if (invalid) {
     throw new Error("Expired committed heartbeat recovery evidence is malformed.");
   }
-  return {
+  return Object.freeze({
     schema: value.schema,
     status: value.status,
     sourceEpoch: value.sourceEpoch,
@@ -776,6 +952,25 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     sourceBranch: value.sourceBranch,
     sourceBaseSha: value.sourceBaseSha,
     sourceFenceSha: value.sourceFenceSha,
+    ...(current ? {
+      sourceRemoteHeadSha: value.sourceRemoteHeadSha,
+      sourceRemoteTreeSha: value.sourceRemoteTreeSha,
+      sourceRemoteChangedPathCount: value.sourceRemoteChangedPathCount,
+      sourceRemoteChangedPathsDigest:
+        value.sourceRemoteChangedPathsDigest,
+      sourceRemoteDeclaredChangedPathCount:
+        value.sourceRemoteDeclaredChangedPathCount,
+      sourceRemoteDeclaredChangedPathsDigest:
+        value.sourceRemoteDeclaredChangedPathsDigest,
+      sourceRemoteProtectedEquivalentPathCount:
+        value.sourceRemoteProtectedEquivalentPathCount,
+      sourceRemoteProtectedEquivalentPathsDigest:
+        value.sourceRemoteProtectedEquivalentPathsDigest,
+      sourceRemoteSharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest:
+        value.sourceRemoteSharedAncestorEquivalenceDigest,
+      sourceRemoteRangeDiffDigest: value.sourceRemoteRangeDiffDigest,
+    } : {}),
     sourcePullRequestUrl: value.sourcePullRequestUrl,
     sourceClaimId: value.sourceClaimId,
     sourceClaimDigest: value.sourceClaimDigest,
@@ -790,11 +985,20 @@ export function normalizeExpiredCommittedHeartbeatRecovery(value) {
     treeSha: value.treeSha,
     changedPathCount: value.changedPathCount,
     changedPathsDigest: value.changedPathsDigest,
+    ...(bindsProtectedMain ? {
+      declaredChangedPathCount: value.declaredChangedPathCount,
+      declaredChangedPathsDigest: value.declaredChangedPathsDigest,
+      protectedEquivalentPathCount: value.protectedEquivalentPathCount,
+      protectedEquivalentPathsDigest: value.protectedEquivalentPathsDigest,
+      protectedMainEquivalence,
+      protectedMainEquivalenceDigest:
+        value.protectedMainEquivalenceDigest,
+    } : {}),
     sourceMarkerDigest: value.sourceMarkerDigest,
     pullRequestBodyDigest: value.pullRequestBodyDigest,
     rangeDiffDigest: value.rangeDiffDigest,
     recoveredAt: new Date(value.recoveredAt).toISOString(),
-  };
+  });
 }
 
 function requireSameRecoveryCloudSubject({ source, renewed, lease, instant }) {

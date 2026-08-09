@@ -262,29 +262,65 @@ repository-owned adoption controller provides a bounded two-phase recovery path:
    index, branch, refs, or objects. It records the exact source branch and HEAD,
    protected tip, binary tracked patch, raw copies of every changed and untracked
    path, file modes and symlink targets, and state, write-set, patch, file, and
-   package digests. A second evidence read must match before capture succeeds.
+   package digests. Profiles bound to protected `main` read its current SHA with
+   `git ls-remote`; they never fetch into the dirty source and require every proof
+   commit to be already present. A second evidence read must match before capture
+   succeeds.
 2. `adopt` revalidates every package byte and the still-unchanged legacy source. It
-   accepts only a clean registered target whose exact active writer lease belongs
-   to the capturing session and started at the captured protected tip. It rejects
-   divergent untracked-path collisions while recording byte-identical upstream
-   paths as already integrated. A caller may declare exact tracked paths for
-   bounded semantic reconciliation; the controller excludes only those paths,
-   three-way applies the remainder, and emits `reconciliation-required` rather
-   than claiming complete adoption.
+   accepts only a clean registered target whose exact live writer-lease digest
+   belongs to the capturing session and started at the captured protected tip.
+   The repository registry lock and digest compare-and-swap fence remain held from
+   target preflight through patch/copy and receipt publication; expiry or lease
+   replacement fails before target mutation. It rejects divergent untracked-path
+   collisions while recording byte-identical upstream paths as already integrated.
+   A caller may declare exact tracked paths for bounded semantic reconciliation;
+   the controller excludes only those paths, three-way applies the remainder, and
+   emits `reconciliation-required` rather than claiming complete adoption.
 
 The legacy lane remains untouched and retained until its adopted pull request is
 protected-merged and independently verified. Capture and adoption do not merge,
 push, deploy, clean, or grant release authority.
 
+A non-ancestor task branch whose committed tree was squash-integrated has one
+strict capture profile: `--capture-profile=task-lane-squash-integrated`. The
+command derives the repository from the source's normalized GitHub HTTPS, SSH
+URL, or SCP origin and rejects a conflicting explicit `--repository` value before
+requesting the exact REST pull-request payload. It requires a closed, non-draft, merged,
+same-repository pull request into `main`; exact source branch and HEAD identity; a
+single-parent integration commit at the recorded base; that commit as an ancestor
+of the exact remote protected tip (which may be a later descendant); and
+byte-identical source-HEAD and integration trees. Verification repeats every
+pull-request semantic check even for a redigested package. Adoption reruns the
+remote-tip, commit ancestry, parent, and tree checks from the repository and must
+reproduce the digest-bound proof. A pull-request number, local branch name, tree
+match, package digest, or ancestry claim alone is insufficient. Example:
+
+```sh
+npm run workspace:legacy-adoption -- capture \
+  --source="[registered legacy worktree]" \
+  --recovery="[new external recovery directory]" \
+  --protected-tip="[exact remote origin/main SHA]" \
+  --session="[operator session]" \
+  --capture-profile=task-lane-squash-integrated \
+  --pull-request="[merged pull request number]" \
+  --repository="[owner/repository]" --json
+```
+
+During adoption, `--reconcile` may name exact tracked residue that must not be
+transferred. If every tracked entry is reconciled, the controller deliberately
+skips the now-empty patch and restores only admitted untracked paths; the receipt
+remains `reconciliation-required` and lists both sets explicitly.
+
 For an unrelated canonical repository whose primary `main` worktree contains
 only untracked retained content, capture has a separate preservation-only profile:
-`--capture-profile=canonical-untracked-retention`. It fetches `origin/main`, then
-requires the registered primary worktree, branch `main`, exact
-`HEAD == origin/main == protected-tip`, zero tracked/index changes, zero conflicts,
-and at least one untracked path. It copies and digest-binds those paths without
-changing the source. The resulting package cannot be adopted; it is only a durable
-recovery handle for an external disjoint-lane reconciliation receipt. This profile
-does not authorize cleanup, staging, committing, branch creation, or publication.
+`--capture-profile=canonical-untracked-retention`. It reads `origin/main` with
+`ls-remote` without updating a local ref or object, then requires the registered
+primary worktree, branch `main`, exact `HEAD == remote-main == protected-tip`, zero
+tracked/index changes, zero conflicts, and at least one untracked path. It copies
+and digest-binds those paths without changing the source. The resulting package
+cannot be adopted; it is only a durable recovery handle for an external
+disjoint-lane reconciliation receipt. This profile does not authorize cleanup,
+staging, committing, branch creation, or publication.
 
 ## Already-Integrated Legacy Lane Disposition
 
@@ -383,7 +419,7 @@ A bypassed operation still prints what it is destroying before it proceeds.
 | Verify retained disjoint work for a release controller | `npm run workspace:parallelism:check -- --reconciliation-receipt "[immutable receipt path]"` |
 | Capture an unleased dirty legacy lane | `npm run workspace:legacy-adoption -- capture --source="[worktree]" --recovery="[new directory]" --protected-tip="[40-hex main SHA]" --session="[operator session]"` |
 | Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
-| Adopt into an exact active leased lane | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
+| Adopt under an exact live registry lease fence | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 

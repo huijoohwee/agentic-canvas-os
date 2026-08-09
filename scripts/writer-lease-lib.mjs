@@ -2,6 +2,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, u
 import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
+import { normalizeActiveOwnedDirtLeaseRecovery } from "./active-owned-dirt-recovery-contract.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
 import {
   normalizeProtectedMainPathEquivalenceEvidence,
@@ -259,6 +260,14 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   }) {
     return withLock(() => {
       const registry = readRegistry();
+      const recoveryIntent = registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null;
+      const completedRecovery = recoveryIntent?.schema === "agentic-active-owned-dirt-recovery-intent/v1"
+        && recoveryIntent.status === "complete" && recoveryIntent.branch === branch
+        && DIGEST_PATTERN.test(String(recoveryIntent.planDigest || ""))
+        && DIGEST_PATTERN.test(String(recoveryIntent.finalReceiptDigest || ""));
+      if (recoveryIntent && !completedRecovery) {
+        throw new Error("Active-owned-dirt recovery intent fences this writer-lease heartbeat.");
+      }
       const current = verify({ sessionId, branch, allowExpired: true });
       const instant = now();
       const lease = {
@@ -668,6 +677,10 @@ export function projectWriterLeasePullRequestMarker(lease) {
     ...(lease.ownedDirtRecovery ? {
       ownedDirtRecovery: normalizeOwnedDirtRecovery(lease.ownedDirtRecovery),
     } : {}),
+    ...(lease.activeOwnedDirtRecovery ? {
+      activeOwnedDirtRecovery:
+        normalizeActiveOwnedDirtLeaseRecovery(lease.activeOwnedDirtRecovery),
+    } : {}),
     ...(lease.expiredCommittedHeartbeatRecovery ? {
       expiredCommittedHeartbeatRecovery:
         normalizeExpiredCommittedHeartbeatRecovery(
@@ -741,9 +754,12 @@ export function parseWriterLeasePullRequestBody(body) {
     !["repairing", "completed"].includes(value.pullRequestProjectionRepair?.status)
   )) return null;
   let ownedDirtRecovery;
+  let activeOwnedDirtRecovery;
   let expiredCommittedHeartbeatRecovery;
   try {
     ownedDirtRecovery = normalizeOwnedDirtRecovery(value.ownedDirtRecovery);
+    activeOwnedDirtRecovery =
+      normalizeActiveOwnedDirtLeaseRecovery(value.activeOwnedDirtRecovery);
     expiredCommittedHeartbeatRecovery =
       normalizeExpiredCommittedHeartbeatRecovery(
         value.expiredCommittedHeartbeatRecovery,
@@ -754,6 +770,7 @@ export function parseWriterLeasePullRequestBody(body) {
   return {
     ...value,
     ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
+    ...(activeOwnedDirtRecovery ? { activeOwnedDirtRecovery } : {}),
     ...(expiredCommittedHeartbeatRecovery
       ? { expiredCommittedHeartbeatRecovery }
       : {}),

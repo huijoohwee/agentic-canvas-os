@@ -8,6 +8,8 @@ import { heartbeat } from "../scripts/device-branch-ownership-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { renderWriterLeasePullRequestBody, createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
 import { beginScopeExpansionIntent, writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
+import { beginActiveOwnedDirtRecoveryIntent } from "../scripts/active-owned-dirt-recovery-registry.mjs";
+import { normalizeActiveOwnedDirtRecoveryPlan } from "../scripts/active-owned-dirt-recovery-contract.mjs";
 
 const BRANCH = "agent/device/protected-head-refresh-controller";
 const CLAIM = "a".repeat(64);
@@ -78,3 +80,98 @@ test("device heartbeat reads the expansion fence before it can renew C1 remotely
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("device heartbeat cannot cross an active-owned-dirt recovery intent", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "owned-dirt-heartbeat-"));
+  const store = createWriterLeaseStore({
+    gitCommonDir: root,
+    now: () => new Date("2026-08-09T00:00:00.000Z"),
+  });
+  try {
+    let lease = store.claim({
+      sessionId: "session", device: "device", scope: "protected-head-refresh-controller",
+      branch: BRANCH, worktreePath: root, baseSha: "c".repeat(40), ttlMs: 1_800_000,
+    });
+    lease = store.annotate({
+      sessionId: "session", branch: BRANCH,
+      values: {
+        fenceSha: FENCE, pullRequestUrl: PR_URL,
+        cloudAuthority: { claimId: CLAIM },
+      },
+    });
+    const plan = recoveryPlan(lease);
+    beginActiveOwnedDirtRecoveryIntent({
+      leaseStore: store,
+      branch: BRANCH,
+      expectedLeaseDigest: writerLeaseDigest(lease),
+      expectedClaimId: CLAIM,
+      plan,
+    });
+    let cloudRenewed = false;
+    assert.throws(() => heartbeat({
+      invocationPath: root,
+      repo: root,
+      gitText: args => {
+        const values = {
+          "worktree list --porcelain -z": `worktree ${root}\0HEAD ${FENCE}\0branch refs/heads/${BRANCH}\0`,
+          "diff --name-only --diff-filter=U": "",
+          "ls-files -u": "",
+          "branch --show-current": BRANCH,
+        };
+        const key = args.join(" ");
+        if (!Object.hasOwn(values, key)) throw new Error(`unexpected git ${key}`);
+        return values[key];
+      },
+      gitOptional: () => `${FENCE}\trefs/heads/${BRANCH}`,
+      ghText: () => JSON.stringify({
+        url: PR_URL, state: "OPEN", isDraft: true, headRefName: BRANCH,
+        headRefOid: FENCE, baseRefName: "main", body: renderWriterLeasePullRequestBody(lease),
+      }),
+      leaseStore: store,
+      sessionId: "session",
+      leaseTtlMs: 1_800_000,
+      heartbeatCloudAuthority: () => { cloudRenewed = true; },
+      verifyActiveCloudAuthority: () => { throw new Error("unexpected verifier"); },
+      run: () => { throw new Error("unexpected mutation"); },
+    }), /recovery intent fences this heartbeat/);
+    assert.equal(cloudRenewed, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function recoveryPlan(lease) {
+  const declaredWriteSet = ["path:scripts/recovery.mjs", "semantic:protected-head-refresh-controller"];
+  const writeSetDigest = digestValue(declaredWriteSet);
+  const core = {
+    schema: "agentic-active-owned-dirt-recovery-plan/v1",
+    sourceSessionId: lease.sessionId,
+    sourceDevice: lease.device,
+    sourceScope: lease.scope,
+    sourceBranch: lease.branch,
+    sourceEpoch: lease.epoch,
+    sourceLeaseDigest: writerLeaseDigest(lease),
+    sourceBaseSha: lease.baseSha,
+    sourceFenceSha: lease.fenceSha,
+    sourcePullRequestUrl: lease.pullRequestUrl,
+    sourcePullRequestBodyDigest: "1".repeat(64),
+    sourceMarkerDigest: "2".repeat(64),
+    sourceWorktreeIdentityDigest: "3".repeat(64),
+    sourceClaimId: CLAIM,
+    sourceClaimDigest: "4".repeat(64),
+    sourceClaimLedgerRevision: "5".repeat(64),
+    sourceCloudTransitionCounter: 3,
+    sourceCloudLeaseEpoch: 1,
+    sourceLedgerRevision: "6".repeat(40),
+    sourceLedgerDigest: "7".repeat(64),
+    sourceReviewRequestId: "github-pull-request:42",
+    sourceManifestDigest: "8".repeat(64),
+    sourceWriteSetDigest: writeSetDigest,
+    sourceDeclaredWriteSet: declaredWriteSet,
+    evidenceDigest: "9".repeat(64),
+    dirtyPathCount: 1,
+    snapshotTimestamp: "2026-08-09T00:00:00.000Z",
+    ttlSeconds: 1_800,
+  };
+  return normalizeActiveOwnedDirtRecoveryPlan({ ...core, planDigest: digestValue(core) });
+}

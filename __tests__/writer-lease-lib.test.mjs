@@ -246,6 +246,50 @@ test("pull request metadata round-trips the current fencing identity", () => {
   assert.doesNotMatch(body, /worktrees\/runtime-leases/);
 });
 
+test("pull request metadata round-trips compact active-owned-dirt recovery evidence", () => {
+  const planDigest = "c".repeat(64);
+  const claimId = "d".repeat(64);
+  const recovery = {
+    schema: "agentic-active-owned-dirt-recovery-lease/v1",
+    status: "recovered",
+    sourceEpoch: 12,
+    sourceSessionId: "source-session",
+    sourceDevice: "mac-a",
+    sourceBranch: "agent/mac-a/runtime-leases",
+    sourceFenceSha: "b".repeat(40),
+    sourceClaimId: claimId,
+    planDigest,
+    evidenceDigest: "e".repeat(64),
+    snapshotReceiptDigest: "f".repeat(64),
+    snapshotRef: `refs/agentic-canvas-os/recovery/active-owned-dirt/${claimId}/${planDigest}`,
+    snapshotCommitSha: "1".repeat(40),
+    snapshotIndexCommitSha: "5".repeat(40),
+    recoveredClaimDigest: "2".repeat(64),
+    recoveredLedgerRevision: "3".repeat(40),
+    recoveredClaimLedgerRevision: "4".repeat(64),
+    recoveredTransitionCounter: 4,
+    recoveredAt: "2026-08-09T00:00:00.000Z",
+  };
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 13,
+    sessionId: "source-session",
+    device: "mac-a",
+    scope: "runtime-leases",
+    branch: "agent/mac-a/runtime-leases",
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    heartbeatAt: "2026-08-09T00:00:00.000Z",
+    expiresAt: "2026-08-09T00:30:00.000Z",
+    activeOwnedDirtRecovery: recovery,
+  };
+  const parsed = parseWriterLeasePullRequestBody(renderWriterLeasePullRequestBody(lease));
+  assert.deepEqual(parsed.activeOwnedDirtRecovery, recovery);
+  assert.equal(parsed.sessionId, recovery.sourceSessionId);
+  assert.equal(parsed.branch, recovery.sourceBranch);
+});
+
 test("writer lease updates replace only the hidden marker and preserve handoff context", () => {
   const active = {
     schema: "agentic-writer-lease/v2",

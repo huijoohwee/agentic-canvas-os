@@ -13,7 +13,7 @@ import { captureOwnedDirtEvidence } from "./owned-dirt-resume-lib.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import {
-  assertHeartbeatScopeExpansionFence,
+  assertHeartbeatMutationIntentFence,
   casWriterLeaseProjection,
   heartbeatWriterLeaseProjection,
   withHeartbeatProjectionFence,
@@ -75,7 +75,7 @@ export function heartbeat({
     if (typeof verifyActiveCloudAuthority !== "function") {
       throw new Error("Cloud-authoritative heartbeat requires the repository cloud verifier.");
     }
-    assertHeartbeatScopeExpansionFence({
+    assertHeartbeatMutationIntentFence({
       leaseStore,
       branch,
       expectedLeaseDigest,

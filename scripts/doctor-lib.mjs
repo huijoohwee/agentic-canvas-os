@@ -31,6 +31,7 @@ function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
   const findings = [];
   const lease = worktree.lease;
   if (!lease) return findings;
+  const activeLease = ACTIVE_LEASE_STATUSES.has(lease.status);
   const label = path.relative(repository, worktree.path) || ".";
   const branchRef = worktree.branch || null;
   const expectedBranchRef = lease.branch ? `refs/heads/${lease.branch}` : null;
@@ -45,7 +46,7 @@ function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
     }));
   }
 
-  if (worktree.state === "review-required" && ACTIVE_LEASE_STATUSES.has(lease.status)) {
+  if (worktree.state === "review-required" && activeLease) {
     findings.push(createFinding({
       level: "WARN",
       code: "review-required-transition-drift",
@@ -77,7 +78,7 @@ function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
   }
 
   const effectiveExpiry = computeEffectiveExpiry(lease);
-  if (!effectiveExpiry) return findings;
+  if (!effectiveExpiry || !activeLease) return findings;
   const remainingMs = effectiveExpiry.getTime() - now.getTime();
   if (remainingMs <= 0) {
     findings.push(createFinding({
@@ -87,10 +88,7 @@ function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
       summary: `${label} expired at ${effectiveExpiry.toISOString()}`,
       action: "Use the repository recovery path immediately; do not keep mutating this lane.",
     }));
-  } else if (
-    ACTIVE_LEASE_STATUSES.has(lease.status)
-    && remainingMs <= expiryWarningWindowMs
-  ) {
+  } else if (remainingMs <= expiryWarningWindowMs) {
     findings.push(createFinding({
       level: "WARN",
       code: "lease-expiring-soon",

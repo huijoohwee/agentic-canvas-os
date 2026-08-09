@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1497,
-  "headDigest": "9dae955c0207aab83c6244d90e4346f562bbd77f57dc908d803c064738bf45ed",
+  "sequence": 1498,
+  "headDigest": "456307974905aa2bc73a560c124b673973d750fda4e2d68cf464f5a59c7c5121",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -74636,6 +74636,48 @@
       },
       "claimDigest": "2a0e92e11c7f8563eb9ea4efec797954f793297cfff0b0f5bf0f45267e0a9412",
       "digest": "9dae955c0207aab83c6244d90e4346f562bbd77f57dc908d803c064738bf45ed"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1498,
+      "parentDigest": "9dae955c0207aab83c6244d90e4346f562bbd77f57dc908d803c064738bf45ed",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "91008c215138e07e3f6611a4ad90511848de2429e4862a8180498f97538065f4",
+      "idempotencyKey": "be59997d79416df8e88fc53dee7f34dea1f9e27df6ff954be726d681a1e6efb6",
+      "requestDigest": "58c68578aaa1cf60fc330d4912b20dcbcd22103b72023140d07d30bdadc5343d",
+      "evaluationTime": "2026-08-09T01:23:16.000Z",
+      "claimCore": {
+        "claimId": "91008c215138e07e3f6611a4ad90511848de2429e4862a8180498f97538065f4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:22a34a087eae0b0ad67a0c8069bbf7e6ac58b551b51dafa525da6c2308339b5f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2728df38d3e27b7521cdde62800e6cd7814aced4e6cca11bafd83d9395243aff",
+        "canonicalBaseRevision": "342380a4362403c3d08c4bbb947284165421f188",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-dirty-lane-adoption.test.mjs",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:scripts/legacy-dirty-lane-adoption-lib.mjs",
+          "path:scripts/legacy-dirty-lane-adoption.mjs",
+          "semantic:legacy-dirty-lane-adoption-squash"
+        ],
+        "writeSetDigest": "4c61000093670f44fee2c8538e543bfa337ba14dc21705b4be1161d7207b386b",
+        "laneRevision": "9e6b454d33fa7abb514eae995ad106ebae705c2f",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-09T01:44:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78h5IF",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "fcea45af8bcd4b9fbb2ce0fd4b5b97c9a049cef6e54dd80d39556a1e9e815c06",
+      "digest": "456307974905aa2bc73a560c124b673973d750fda4e2d68cf464f5a59c7c5121"
     }
   ]
 }

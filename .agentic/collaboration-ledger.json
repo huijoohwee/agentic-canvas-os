@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1662,
-  "headDigest": "ec148f8f5c461c8ac994fd824d0274c40ead363a8490ba7390af750a1b8784b5",
+  "sequence": 1663,
+  "headDigest": "8acc6625c508a5c015bc1a485c253cbcc95979345cfc33b865c645dad2d31402",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -82687,6 +82687,64 @@
       },
       "claimDigest": "6209a88c05643c46a7aad6c45c6fc3255b59390ebd34dc3569699b3a147d8c67",
       "digest": "ec148f8f5c461c8ac994fd824d0274c40ead363a8490ba7390af750a1b8784b5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1663,
+      "parentDigest": "ec148f8f5c461c8ac994fd824d0274c40ead363a8490ba7390af750a1b8784b5",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "dc4b47520ae9f9660c9575aa804a7acf09b00e729fcdb55620b6c0c3c95fc29b",
+      "idempotencyKey": "f3a579e15832b6ab30d987a02ee91659c96a26254c55a586f1cb396b0938c171",
+      "requestDigest": "98260cc364579496bb8b5941848ff09a7c13b110eff9ef81d5c2b1e5d2fbc865",
+      "evaluationTime": "2026-08-09T18:03:10.000Z",
+      "claimCore": {
+        "claimId": "dc4b47520ae9f9660c9575aa804a7acf09b00e729fcdb55620b6c0c3c95fc29b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:aad7ae3285986d1862731d4bc79744dd38dcb13cff91a43b9bce598a5537a343",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:b76e19a9d2221f153caa73cf8138de8d8a33a4b15abeb1bf4aa8cf5e735b70fc",
+        "canonicalBaseRevision": "9abc08dcab2597ab05901e27cf0ab9ac37c11c33",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/canvasSurfaceGameDeparture.test.ts",
+          "path:canvas/src/__tests__/canvasXrSharedSurfaceOwnership.test.ts",
+          "path:canvas/src/__tests__/gameMmorpgCore.test.ts",
+          "path:canvas/src/features/game-city-sim/citySimRuntime.ts",
+          "path:canvas/src/features/game-flight-sim/flightSimRuntime.ts",
+          "path:canvas/src/features/game-fps/gameModeRuntime.ts",
+          "path:canvas/src/features/game-mmorpg",
+          "path:canvas/src/features/three/xrSceneSurfaceRuntime.ts",
+          "path:docs/documents/knowgrph-game-mmorpg-prd-tad.md",
+          "path:grph-shared/__tests__/game-os-core.test.mjs",
+          "path:grph-shared/package.json",
+          "path:grph-shared/src/game-os",
+          "path:packages/apple-spatial-input-swift/Sources/KnowgrphSpatialCore/GameOsPersistentStrategy.swift",
+          "path:packages/apple-spatial-input-swift/Tests/Fixtures/game-os-persistent-strategy-parity.v1.json",
+          "path:packages/apple-spatial-input-swift/Tests/KnowgrphSpatialCoreTests/GameOsPersistentStrategyGoldenTests.swift",
+          "semantic:game-os-core"
+        ],
+        "writeSetDigest": "8fe40d6b2bb3b24940bb8a342e26b6fd075a07ac77d1f7ca410bc15117af8898",
+        "laneRevision": "5305ae7a3416e5b8effebe5b188814c076133e05",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-09T18:33:10.000Z",
+        "evidenceDigest": "852e58c6c665e72d6101e2dd85f0883e05530894568642d01b5ca945aaeda3b4",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs78T_6h",
+        "predecessorClaimId": "48b04dc4f6090468ea3d47dc75cc384f64faf236b968e395a85be267f4437f3c",
+        "eligibleSince": "2026-08-08T12:51:47.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-08T12:52:20.000Z",
+        "recovery": {
+          "evidenceDigest": "60e6b6610492b008e58df243d2cd5fb99031c1def47ba9f92a16d19bf43523d3",
+          "recoveredAt": "2026-08-09T18:03:10.000Z"
+        }
+      },
+      "claimDigest": "f47177aa14974dc97d6e19c94147b0f8660a53da0af3c95d7b35b0cdd1817dbe",
+      "digest": "8acc6625c508a5c015bc1a485c253cbcc95979345cfc33b865c645dad2d31402"
     }
   ]
 }

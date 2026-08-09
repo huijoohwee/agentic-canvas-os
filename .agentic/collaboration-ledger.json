@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1526,
-  "headDigest": "60ca6066069df5d1f112b962cecb6afc777a8083111cceed24ca2e677f6cd1b3",
+  "sequence": 1527,
+  "headDigest": "1972da6226800f338cfcbdbb539e771ad1c9e500b2270c85e45840f9e8123bd3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -75917,6 +75917,48 @@
       },
       "claimDigest": "c6677f9ac6dcd30e1dda65fc4b0153e92dd88b2e01a5586f60f54cace0580b24",
       "digest": "60ca6066069df5d1f112b962cecb6afc777a8083111cceed24ca2e677f6cd1b3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1527,
+      "parentDigest": "60ca6066069df5d1f112b962cecb6afc777a8083111cceed24ca2e677f6cd1b3",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "62c2a16435e7613459edbd29073944b3e5582bf65a01aa848201a32b1c4f8fd1",
+      "idempotencyKey": "505ecbc72f3cbb8b4e090bf6780f1561e0c813a4562e400f65c761fee658eba4",
+      "requestDigest": "527d83270b8114b5d78e2c3fe8d3dbc51b6beb7e3f32c581d6b87b979c6f7f68",
+      "evaluationTime": "2026-08-09T02:58:47.000Z",
+      "claimCore": {
+        "claimId": "62c2a16435e7613459edbd29073944b3e5582bf65a01aa848201a32b1c4f8fd1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:e2b25ec1f19a01cbabeb7826b40065e8ea63c2fcb28d90f34d0ad7c9d5723460",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:df4dcf88c3cdca196891199e01374d27f02170a7b590906d131699e95bc90489",
+        "canonicalBaseRevision": "e5cb5c24b3149131df97e970ae0b5db5e3dd7a39",
+        "declaredWriteScope": [
+          "path:package.json",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "path:scripts/legacy-clean-committed-lane-refresh.mjs",
+          "semantic:legacy-clean-bootstrap-refresh-recovery-successor-20260806"
+        ],
+        "writeSetDigest": "39314a451c316875a66f443031c751270ab1404e448d5c45a4b7828995660300",
+        "laneRevision": "dabdb38dd7009d896a5498be1b72bf21df3cdfce",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-09T03:28:47.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM77gp5J",
+        "predecessorClaimId": "beca2d585807fb5d52099bc038b5f1248de03a757a3d4068c375f09a8802e493",
+        "eligibleSince": "2026-08-09T02:55:25.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-09T02:56:01.000Z"
+      },
+      "claimDigest": "406f7be38f2d592c52b18baa33192a6eb60e308346e1b5e1f6d2ca3ff5e74caa",
+      "digest": "1972da6226800f338cfcbdbb539e771ad1c9e500b2270c85e45840f9e8123bd3"
     }
   ]
 }

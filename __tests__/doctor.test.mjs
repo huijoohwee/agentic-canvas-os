@@ -111,3 +111,31 @@ test("doctor fails for expired authority and branch projection mismatch", () => 
     "review-required-transition-drift",
   ]);
 });
+
+test("doctor ignores expiry timestamps on retired preserved lanes", () => {
+  const result = auditLaneLifecycleRisks({
+    report: {
+      schema: "agentic-worktree-lifecycle-report/v1",
+      repository: "/repo",
+      worktrees: [
+        canonical,
+        {
+          path: "/repo/tasks/retired",
+          head: "e".repeat(40),
+          branch: "refs/heads/agent/mac/retired",
+          state: "retired-preserved",
+          lease: {
+            status: "released",
+            branch: "agent/mac/retired",
+            expiresAt: "2099-08-06T01:59:00.000Z",
+          },
+        },
+      ],
+    },
+    now: new Date("2099-08-06T02:00:00.000Z"),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.level, "PASS");
+  assert.equal(result.findings.length, 0);
+});

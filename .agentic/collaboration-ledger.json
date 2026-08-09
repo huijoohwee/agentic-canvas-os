@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1582,
-  "headDigest": "af2a4b36d1e787cecc9b29fa2cd2b2997428545a2e5845850002d65a544b5b62",
+  "sequence": 1583,
+  "headDigest": "1136589259c56a53bbc7648ec65862b4f9d228395fc56232b4e1d059e918ea00",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -78630,6 +78630,47 @@
       },
       "claimDigest": "9d4d3cafea73802a6309dd2422e396f0fb865967416954bdbb0906820dfe3497",
       "digest": "af2a4b36d1e787cecc9b29fa2cd2b2997428545a2e5845850002d65a544b5b62"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1583,
+      "parentDigest": "af2a4b36d1e787cecc9b29fa2cd2b2997428545a2e5845850002d65a544b5b62",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "3b123d1a363f880bfb7e4af67cdd842727a721ee745ae4dbea4f5beeba5e5298",
+      "idempotencyKey": "72c66aa8bd562d8d28a507bc5e6f722e0cb884977cf3bd238d3faea02837c388",
+      "requestDigest": "6fec7dd5d87bad4d3ee74498b94b62d94cf00c60c2f88e6800f3d9c1a656c28b",
+      "evaluationTime": "2026-08-09T09:38:33.000Z",
+      "claimCore": {
+        "claimId": "3b123d1a363f880bfb7e4af67cdd842727a721ee745ae4dbea4f5beeba5e5298",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:39cd5af49df9098208dc48f065128d738281ca13b482561efd11da628ae3cb2b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2d9eacb803d0e64c524518a133697c927918b7c68e5e45cd59d61b452e5eba7f",
+        "canonicalBaseRevision": "b2d127f8c11e10044eee3b96c8f8e1becaa7a00b",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "path:scripts/scoped-lane-authority-state.mjs",
+          "semantic:live-peer-attribution-fix-20260809"
+        ],
+        "writeSetDigest": "8a6fe1b8cd972883687c4f2ff2b5aaabb6d8803243d56002354e78690c761940",
+        "laneRevision": "b2d127f8c11e10044eee3b96c8f8e1becaa7a00b",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-09T10:08:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e5f8e6990dafbf28f200866917dc52bca5b86b010a36c0594b75d36e3a861750",
+      "digest": "1136589259c56a53bbc7648ec65862b4f9d228395fc56232b4e1d059e918ea00"
     }
   ]
 }

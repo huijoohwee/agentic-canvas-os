@@ -2,7 +2,7 @@
 title: "Cloud Collaboration Contract"
 graphId: "md:agentic-cloud-collaboration"
 doc_type: "Runtime Contract"
-date: "2026-08-04"
+date: "2026-08-09"
 lang: "en-US"
 schema: "agentic-cloud-collaboration-contract/v2"
 frontmatter_contract: "required"
@@ -10,8 +10,8 @@ status: "runtime-ready"
 authority: "repository-owned provider-neutral claim and fencing contract"
 runtime_scope: "Agentic Canvas OS collaboration reducer, typed ledger schema, provider adapter, and local lifecycle projections"
 runtime_claim: "four root operations coordinate disjoint multi-device authoring while protected integration, Production, publication, and deployment remain separately gated"
-runtime_owner: "../scripts/cloud-collaboration-contract.mjs; ../scripts/cloud-collaboration-primitives.mjs; ../scripts/github-cloud-collaboration-mapping.mjs; ../scripts/github-cloud-collaboration-adapter.mjs; ../scripts/cloud-collaboration.mjs"
-runtime_proof: "../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/cloud-collaboration-cli.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/cloud-collaboration-projection.test.mjs"
+runtime_owner: "../scripts/cloud-collaboration-contract.mjs; ../scripts/cloud-collaboration-primitives.mjs; ../scripts/github-cloud-collaboration-mapping.mjs; ../scripts/github-cloud-collaboration-adapter.mjs; ../scripts/cloud-collaboration.mjs; ../scripts/cloud-authority-scope-expansion-lineage-contract.mjs; ../scripts/cloud-authority-scope-expansion-lineage-migration.mjs"
+runtime_proof: "../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/cloud-collaboration-cli.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/cloud-collaboration-projection.test.mjs; ../__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs"
 guideline_repository: "huijoohwee/huijoohwee.github.io"
 guideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"
 guideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"
@@ -145,6 +145,40 @@ unchanged and pseudonymizes raw input exactly once. A continuation must never
 retry epoch 1, rederive identity from a branch or scope projection, or weaken
 the cloud contract to make a mismatched tuple admissible.
 
+One bounded controller migration preserves this invariant for a historical v2
+scope-expansion artifact: an epoch-1 waiting-successor claim whose immutable
+predecessor names the superseded narrower-scope source claim. The standard
+validator still rejects that tuple. Admission exists only while a dedicated
+plan/execute process has revalidated the full append-only ledger, exact target
+genesis, strict scope subset, authenticated ownership and projections, and all
+three source-retirement evidence digests against the portable scope-expansion
+plan receipt. The admission is also bound to the current claim transition,
+local authority digest, and observed ledger revision and digest; it cannot be
+replayed from serialized JSON.
+
+The migration appends a standard successor at epoch 2 with the historical
+target as predecessor. It preserves the canonical work item, base, reviewed
+head, write set, review request, and focused evidence, then uses the ordinary
+retirement, promotion, review, and projection paths. Historical ledger entries
+remain immutable. It is same-owner reclaim only: the execution and successor
+session plus successor device must match the exact preserved lease. A distinct
+recipient cannot enter the controller because this migration owns no recipient
+projection. Current status drift, competing overlap, malformed lineage,
+receipt mismatch, owner drift, or an authorization other than the exact plan
+digest stops before mutation. See `CLOUD-AUTHORITY-HANDOFF.md` for the typed CLI
+and receipt chain.
+
+The temporary authorization and admission use module-private weak object
+identity and bind one exact reclaim intent; serialization or reflection copies
+cannot activate them. The controller's second read rejoins the request owner
+and complete plan before successor claim. Migrated replay compares stable
+normalized local and pull-request authority projections across every canonical
+field, including ledger and manifest digests. A partial or concurrently drifted
+marker blocks rather than mutating or attesting `already-migrated`. Canonical
+branch validation precedes subprocess use, repository commands remain at one
+verified registered realpath, fetches name explicit safe refs, and public JSON
+diagnostics are bounded and credential-safe.
+
 The current local lifecycle vocabulary is an outer projection only:
 
 | Provider-neutral state | Local projection |
@@ -205,9 +239,10 @@ cross-process idempotent typed receipts, hash-consistent queue forgery rejection
 projection equivalence, branch-derived and scope-derived predecessor identity,
 canonical work-item pass-through, raw-input pseudonymization, missing or
 duplicate predecessor rejection without partial mutation, replay identity,
-live-ledger migration, and cross-repository DAG validation. Schema and
-documentation checks must agree with the executable reducer and provider
-adapter.
+live-ledger migration, receipt-bound historical scope-expansion admission,
+strict default rejection of that historical tuple, replay-safe epoch-2
+continuation, and cross-repository DAG validation. Schema and documentation
+checks must agree with the executable reducer and provider adapter.
 
 Passing local checks proves only the bounded Dev contract at the tested source
 revision. Protected integration, runtime publication, Production, Cloudflare,

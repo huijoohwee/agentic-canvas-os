@@ -425,6 +425,7 @@ test("predecessor, projection, ownership, and overlap drift block before mutatio
     { repositoryId: "github-repository:other" }, { workItemId: "raw-work-item" },
     { canonicalBaseRevision: "9".repeat(40) }, { laneRevision: "8".repeat(40) },
     { writeSetDigest: "7".repeat(64) }, { leaseEpoch: 2 },
+    { predecessorClaimId: "8".repeat(64) },
     { reviewRequestId: "github-pull-request:PR_other" },
   ];
   const projectionDrifts = [
@@ -573,6 +574,7 @@ test("repository projection pins non-writer expiry to cloud authority", () => {
   };
   const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
     repository: "/repo", sessionId: "legacy-session", environment: {},
+    resolveRealpath: value => value,
     leaseStore: { release(input) { released = input; return updated; } },
     run: (_command, args) => { body = args[args.indexOf("--body") + 1]; },
     ghText: () => JSON.stringify({

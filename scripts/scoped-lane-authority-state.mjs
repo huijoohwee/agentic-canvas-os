@@ -456,7 +456,7 @@ function hasReviewReadyProjection(lane, evaluatedAt, declaredWriteSet) {
     || lease.admission?.schema !== LANE_ADMISSION_LEASE_SCHEMA
     || lease.admission.status !== "admitted"
     || cloud.schema !== LANE_CLOUD_AUTHORITY_SCHEMA
-    || cloud.canonicalBaseSha !== lease.baseSha
+    || !matchesReviewReadyProjectionBase({ lease, cloud })
     || cloud.laneRevision !== lease.reviewHeadSha
     || cloud.writeSetDigest !== lease.admission.writeSetDigest
     || JSON.stringify(cloud.cloudDeclaredWriteScope) !== JSON.stringify(lease.admission.declaredWriteSet)
@@ -470,6 +470,19 @@ function hasReviewReadyProjection(lane, evaluatedAt, declaredWriteSet) {
   } catch {
     return false;
   }
+}
+
+function matchesReviewReadyProjectionBase({ lease, cloud }) {
+  if (cloud.canonicalBaseSha === lease.baseSha) return true;
+  const recovery = lease?.ownedDirtRecovery;
+  return (
+    lease?.status === "review_ready"
+    && recovery?.schema === "agentic-owned-dirt-resume/v1"
+    && cloud?.state === "review_ready"
+    && SHA_PATTERN.test(String(recovery.reviewHeadSha || ""))
+    && recovery.reviewHeadSha === lease.baseSha
+    && cloud.laneRevision === lease.reviewHeadSha
+  );
 }
 
 function isDetachedIntegratedCompletionLane(lane, declaredWriteSet) {

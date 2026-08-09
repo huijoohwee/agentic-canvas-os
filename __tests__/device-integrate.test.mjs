@@ -13,6 +13,7 @@ import {
   resolveRuntimeRepositories,
 } from "../scripts/device-integrate-lib.mjs";
 import { CLOUD_COLLABORATION_BOUNDS } from "../scripts/cloud-collaboration-primitives.mjs";
+import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
 
 const branch = "agent/device/runtime-integration";
 const baseSha = "a".repeat(40);
@@ -1092,6 +1093,58 @@ test("review-ready delivery rejects an invalid reviewed authored subject before 
     assert.equal(evidenceBuilt, false);
     assert.equal(authorized, false);
     assert.equal(commands.some(call => call.join(" ").includes("gh pr merge")), false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("durable integrate fence rejects an invalid reviewed subject before any registry or provider mutation", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-durable-subject-"));
+  const gitCommonDir = path.join(repo, "git-common");
+  const registryRoot = path.join(gitCommonDir, "agentic-canvas-os");
+  const durableLease = createLease({
+    repo,
+    status: "review_ready",
+    autoDelivery: false,
+    runtimeRequired: false,
+    reviewHeadSha: commitSha,
+  });
+  mkdirSync(registryRoot, { recursive: true });
+  writeFileSync(path.join(registryRoot, "writer-leases.json"), `${JSON.stringify({
+    schema: "agentic-writer-lease-registry/v2",
+    revision: 1,
+    leases: { [branch]: durableLease },
+  }, null, 2)}\n`);
+  const leaseStore = createWriterLeaseStore({ gitCommonDir });
+  const before = leaseStore.readRegistry();
+  const mutations = [];
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo,
+      repo,
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
+          return "x".repeat(73);
+        }
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      ghText: args => { mutations.push(["ghText", ...args]); return ""; },
+      leaseStore,
+      sessionId: "session-a",
+      run: (command, args) => mutations.push([command, ...args]),
+      runText: (command, args) => { mutations.push([command, ...args]); return ""; },
+      publishTask: () => mutations.push(["publish"]),
+      completeTask: () => mutations.push(["complete"]),
+      runtime: "none",
+      controllerRoot: repo,
+      waitSeconds: 1,
+      pollSeconds: 0.1,
+      log: () => {},
+    }), /Reviewed authored commit subject exceeds 72 characters \(73\)/u);
+    assert.deepEqual(mutations, []);
+    assert.deepEqual(leaseStore.readRegistry(), before);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }

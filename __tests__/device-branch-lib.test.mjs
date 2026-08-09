@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   completeSession,
@@ -16,11 +19,20 @@ import {
   start,
 } from "../scripts/device-branch-lib.mjs";
 import {
+  createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
+import {
+  acquireReviewedLaneEntrypointFence,
+  advanceReviewedLaneRevisionIntent,
+  assertReviewedLaneEntrypointFence,
+  beginReviewedLaneRevisionIntent,
+  readReviewedLaneRevisionIntent,
+  releaseReviewedLaneEntrypointFence,
+} from "../scripts/reviewed-lane-revision-fence.mjs";
 
 const repo = process.cwd();
 const detachedWorktree = `worktree ${repo}\nHEAD ${"a".repeat(40)}\ndetached\n`;
@@ -126,6 +138,251 @@ function createCompletionLeaseStore(overrides = {}) {
     }),
   };
 }
+
+function createReviewedLaneFenceFixture() {
+  const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "agentic-reviewed-fence-"));
+  const registryRoot = path.join(gitCommonDir, "agentic-canvas-os");
+  const fixtureBranch = "agent/device/reviewed-fence";
+  const sourceClaimId = "1".repeat(64);
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "review_ready",
+    epoch: 7,
+    sessionId: "session-reviewed-fence",
+    device: "device",
+    scope: "reviewed-fence",
+    branch: fixtureBranch,
+    worktreePath: repo,
+    baseSha: "a".repeat(40),
+    fenceSha: "b".repeat(40),
+    reviewHeadSha: "b".repeat(40),
+    pullRequestUrl: "https://github.com/example/repo/pull/77",
+    autoDelivery: false,
+    runtimeRequired: false,
+    admission: {
+      status: "admitted",
+      declaredWriteSet: ["path:scripts/reviewed.mjs", "semantic:reviewed-fence"],
+    },
+    acquiredAt: "2026-08-09T09:00:00.000Z",
+    heartbeatAt: "2026-08-09T10:00:00.000Z",
+    expiresAt: "2026-08-09T11:00:00.000Z",
+    cloudAuthority: { claimId: sourceClaimId },
+  };
+  mkdirSync(registryRoot, { recursive: true });
+  writeFileSync(path.join(registryRoot, "writer-leases.json"), `${JSON.stringify({
+    schema: "agentic-writer-lease-registry/v2",
+    revision: 1,
+    leases: { [fixtureBranch]: lease },
+  }, null, 2)}\n`);
+  return {
+    branch: fixtureBranch,
+    gitCommonDir,
+    lease,
+    leaseStore: createWriterLeaseStore({ gitCommonDir }),
+    sourceClaimId,
+  };
+}
+
+test("reviewed-lane entrypoint fence is durable across independent lease-store instances", () => {
+  const fixture = createReviewedLaneFenceFixture();
+  const operationDigest = "2".repeat(64);
+  const options = {
+    leaseStore: fixture.leaseStore,
+    branch: fixture.branch,
+    entrypoint: "review",
+    operationDigest,
+    expectedLeaseDigest: digestValue(fixture.lease),
+    expectedClaimId: fixture.sourceClaimId,
+  };
+  try {
+    const fence = acquireReviewedLaneEntrypointFence(options);
+    assert.equal(assertReviewedLaneEntrypointFence({
+      fence,
+      leaseStore: createWriterLeaseStore({ gitCommonDir: fixture.gitCommonDir }),
+    }).fenceDigest, fence.fenceDigest);
+    assert.throws(() => acquireReviewedLaneEntrypointFence({
+      ...options,
+      leaseStore: createWriterLeaseStore({ gitCommonDir: fixture.gitCommonDir }),
+    }), /already fences/u);
+    assert.equal(releaseReviewedLaneEntrypointFence(fence), true);
+    assert.equal(fixture.leaseStore.readRegistry()
+      .reviewedLaneEntrypointFences?.[fixture.branch], undefined);
+  } finally {
+    rmSync(fixture.gitCommonDir, { recursive: true, force: true });
+  }
+});
+
+test("durable review and publish reject an invalid subject before provider or registry mutation", () => {
+  for (const entrypoint of [review, publish]) {
+    const fixture = createReviewedLaneFenceFixture();
+    const before = fixture.leaseStore.readRegistry();
+    const mutations = [];
+    const earlyGitText = args => {
+      const key = args.join(" ");
+      const values = {
+        "worktree list --porcelain -z": branchWorktree(fixture.branch),
+        "diff --name-only --diff-filter=U": "",
+        "ls-files -u": "",
+        "status --porcelain": "",
+        "branch --show-current": fixture.branch,
+        "rev-parse HEAD": fixture.lease.reviewHeadSha,
+        "log -1 --pretty=%s": "x".repeat(73),
+      };
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    };
+    try {
+      assert.throws(() => entrypoint({
+        invocationPath: repo,
+        repo,
+        gitText: earlyGitText,
+        gitOptional: args => { mutations.push(["gitOptional", ...args]); return ""; },
+        ghText: args => { mutations.push(["ghText", ...args]); return ""; },
+        ghOptional: args => { mutations.push(["ghOptional", ...args]); return ""; },
+        leaseStore: fixture.leaseStore,
+        sessionId: fixture.lease.sessionId,
+        run: (command, args) => mutations.push([command, ...args]),
+      }), /exceeds 72 characters \(73\)/u);
+      assert.deepEqual(mutations, []);
+      assert.deepEqual(fixture.leaseStore.readRegistry(), before);
+    } finally {
+      rmSync(fixture.gitCommonDir, { recursive: true, force: true });
+    }
+  }
+});
+
+test("reviewed-lane lease_updated journals and projects the successor lease atomically", () => {
+  const fixture = createReviewedLaneFenceFixture();
+  const operationDigest = "3".repeat(64);
+  const planDigest = "4".repeat(64);
+  const expectedLeaseDigest = digestValue(fixture.lease);
+  const identity = {
+    leaseStore: fixture.leaseStore,
+    branch: fixture.branch,
+    entrypoint: "reviewed-lane-revision",
+    operationDigest,
+    expectedLeaseDigest,
+    expectedClaimId: fixture.sourceClaimId,
+    planDigest,
+  };
+  let fence;
+  try {
+    fence = acquireReviewedLaneEntrypointFence(identity);
+    let journal = beginReviewedLaneRevisionIntent(identity);
+    for (const phase of [
+      "successor_waiting", "commit_created", "local_ref_updated", "remote_ref_updated",
+      "source_retired", "successor_current", "successor_bound", "successor_review_ready",
+    ]) {
+      journal = advanceReviewedLaneRevisionIntent({
+        ...identity,
+        phase,
+        evidenceDigest: digestValue({ phase }),
+        expectedIntentDigest: journal.intentDigest,
+      });
+    }
+    const successorClaimId = "5".repeat(64);
+    const leaseProjection = {
+      ...fixture.lease,
+      fenceSha: "c".repeat(40),
+      reviewHeadSha: "c".repeat(40),
+      cloudAuthority: { claimId: successorClaimId },
+    };
+    const before = fixture.leaseStore.readRegistry();
+    assert.throws(() => advanceReviewedLaneRevisionIntent({
+      ...identity,
+      phase: "lease_updated",
+      evidenceDigest: "6".repeat(64),
+      expectedIntentDigest: journal.intentDigest,
+      values: { leaseProjection, leaseProjectionDigest: "0".repeat(64) },
+    }), /projection digest is invalid/u);
+    assert.deepEqual(fixture.leaseStore.readRegistry(), before);
+
+    for (const [field, value] of Object.entries({
+      epoch: fixture.lease.epoch + 1,
+      baseSha: "d".repeat(40),
+      admission: { ...fixture.lease.admission, declaredWriteSet: ["path:other.mjs"] },
+      autoDelivery: true,
+      acquiredAt: "2026-08-09T09:00:01.000Z",
+      unrelatedProjection: "forbidden",
+    })) {
+      const driftedProjection = { ...leaseProjection, [field]: value };
+      assert.throws(() => advanceReviewedLaneRevisionIntent({
+        ...identity,
+        phase: "lease_updated",
+        evidenceDigest: digestValue({ field }),
+        expectedIntentDigest: journal.intentDigest,
+        leaseProjection: driftedProjection,
+        values: {
+          leaseProjection: driftedProjection,
+          leaseProjectionDigest: digestValue(driftedProjection),
+        },
+      }), /changed (?:fields outside the authorized successor projection|the source lease field set)/u);
+      assert.deepEqual(fixture.leaseStore.readRegistry(), before);
+    }
+
+    const { expiresAt: _removedExpiry, ...missingExpiryProjection } = leaseProjection;
+    assert.throws(() => advanceReviewedLaneRevisionIntent({
+      ...identity,
+      phase: "lease_updated",
+      evidenceDigest: digestValue({ missing: "expiresAt" }),
+      expectedIntentDigest: journal.intentDigest,
+      leaseProjection: missingExpiryProjection,
+      values: {
+        leaseProjection: missingExpiryProjection,
+        leaseProjectionDigest: digestValue(missingExpiryProjection),
+      },
+    }), /changed the source lease field set/u);
+    assert.deepEqual(fixture.leaseStore.readRegistry(), before);
+
+    const leaseUpdateValues = {
+      revisionIntent: {
+        phases: {
+          lease_updated: {
+            values: { leaseProjection, leaseProjectionDigest: digestValue(leaseProjection) },
+          },
+        },
+      },
+    };
+    journal = advanceReviewedLaneRevisionIntent({
+      ...identity,
+      phase: "lease_updated",
+      evidenceDigest: "6".repeat(64),
+      expectedIntentDigest: journal.intentDigest,
+      leaseProjection,
+      values: leaseUpdateValues,
+    });
+    const registry = fixture.leaseStore.readRegistry();
+    assert.deepEqual(registry.leases[fixture.branch], leaseProjection);
+    assert.equal(registry.reviewedLaneRevisionIntents[fixture.branch].intentDigest,
+      journal.intentDigest);
+    assert.equal(journal.currentLeaseDigest, digestValue(leaseProjection));
+    assert.equal(journal.currentClaimId, successorClaimId);
+    assert.equal(readReviewedLaneRevisionIntent({
+      leaseStore: fixture.leaseStore,
+      branch: fixture.branch,
+    }).phase, "lease_updated");
+    assertReviewedLaneEntrypointFence({ fence, leaseStore: fixture.leaseStore });
+    const replayIdentity = { ...identity,
+      expectedLeaseDigest: digestValue(leaseProjection), expectedClaimId: successorClaimId };
+    assert.equal(advanceReviewedLaneRevisionIntent({
+      ...replayIdentity, phase: "lease_updated", evidenceDigest: "6".repeat(64),
+      expectedIntentDigest: journal.intentDigest, leaseProjection, values: leaseUpdateValues,
+    }).intentDigest, journal.intentDigest);
+    for (const [evidenceDigest, values] of [
+      ["7".repeat(64), leaseUpdateValues],
+      ["6".repeat(64), { ...leaseUpdateValues, replayDrift: true }],
+    ]) {
+      assert.throws(() => advanceReviewedLaneRevisionIntent({
+        ...replayIdentity, phase: "lease_updated", evidenceDigest,
+        expectedIntentDigest: journal.intentDigest, leaseProjection, values,
+      }), /same-phase replay changed its evidence or values/u);
+      assert.deepEqual(fixture.leaseStore.readRegistry(), registry);
+    }
+  } finally {
+    if (fence) releaseReviewedLaneEntrypointFence(fence);
+    rmSync(fixture.gitCommonDir, { recursive: true, force: true });
+  }
+});
 
 test("formatParkTimestamp emits git-friendly UTC stamps", () => {
   assert.equal(formatParkTimestamp(new Date("2026-07-14T22:30:45.123Z")), "20260714T223045Z");

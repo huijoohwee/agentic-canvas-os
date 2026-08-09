@@ -25,6 +25,7 @@ import {
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
+import { withReviewedLaneEntrypointFence } from "./reviewed-lane-revision-fence.mjs";
 import {
   SHA_PATTERN,
   assertLeaseWorktree,
@@ -47,7 +48,16 @@ export {
   resolveSameSessionDeliveryHandoff,
 } from "./device-resume-lib.mjs";
 
-export function review({
+export function review(options) {
+  return withDeviceReviewedLaneFence({
+    options,
+    entrypoint: "review",
+    subjectLabel: "Reviewed commit subject",
+    requireBranch: branch => requireTaskBranch(branch, "Review"),
+  }, () => reviewUnfenced(options));
+}
+
+function reviewUnfenced({
   invocationPath,
   repo,
   gitText,
@@ -341,7 +351,24 @@ export function review({
   return url;
 }
 
-export function publish({
+export function publish(options) {
+  return withDeviceReviewedLaneFence({
+    options,
+    entrypoint: "publish",
+    subjectLabel: "Delivery commit subject",
+    requireBranch: branch => {
+      if (!branch || branch === "main") {
+        throw new Error("Publish from an agent/<device>/<scope> branch, never main.");
+      }
+      if (!branch.startsWith("agent/")) {
+        throw new Error(`Refusing unexpected device branch: ${branch}`);
+      }
+      return branch;
+    },
+  }, () => publishUnfenced(options));
+}
+
+function publishUnfenced({
   invocationPath,
   repo,
   gitText,
@@ -747,6 +774,45 @@ function legacyCloudVerifierTestEvidence(input) {
   return Object.freeze(Object.fromEntries(DELIVERY_EVIDENCE_FIELDS.map(
     field => [field, digestValue({ ...seed, field })],
   )));
+}
+
+function withDeviceReviewedLaneFence({
+  options,
+  entrypoint,
+  subjectLabel,
+  requireBranch,
+}, action) {
+  const { invocationPath, repo, gitText, leaseStore, sessionId } = options;
+  requireSession(sessionId);
+  requireRepositorySafety({ invocationPath, repo, gitText });
+  requireClean({ gitText });
+  const branch = requireBranch(gitText(["branch", "--show-current"]).trim());
+  const lease = leaseStore.read?.(branch) || null;
+  if (!lease || typeof leaseStore.withRegistryLock !== "function" || !leaseStore.statePath) {
+    return action();
+  }
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const subject = requireProtectedSquashSubject(
+    gitText(["log", "-1", "--pretty=%s"]).trim(),
+    { label: subjectLabel },
+  );
+  const expectedLeaseDigest = digestValue(lease);
+  return withReviewedLaneEntrypointFence({
+    leaseStore,
+    branch,
+    entrypoint,
+    operationDigest: digestValue({
+      schema: "agentic-reviewed-lane-entrypoint-operation/v1",
+      entrypoint,
+      branch,
+      sessionId,
+      headSha,
+      subject,
+      expectedLeaseDigest,
+    }),
+    expectedLeaseDigest,
+    expectedClaimId: lease.cloudAuthority?.claimId || null,
+  }, action);
 }
 
 function requireTaskBranch(branch, action) {

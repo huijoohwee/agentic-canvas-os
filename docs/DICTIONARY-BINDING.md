@@ -82,6 +82,7 @@ dictionary_entries:
   - "@video"
   - "@mcp-gateway"
   - "@canvas"
+  - "@portability-layer"
   - "@canvas-view"
   - "@scene"
   - "@camera"
@@ -186,6 +187,7 @@ dictionary_entries:
   - "@collaboration-ledger"
   - "@cloud-claim"
 ---
+<!-- Responsibility: Define canonical binding invocation entries and their authority boundaries. -->
 
 # Binding Dictionary
 
@@ -243,6 +245,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
 | `@canvas` | Source-backed Canvas projection and active browser-local Canvas control surface. | Existing Source Files, frontmatter, KGC, table, Storyboard, Main Toolbar, Launch, Canvas View, and Interaction owners. | No dashboard-only graph store or renderer fork. Semantic row-value and toolbar-action invocations bind to existing owners and add no panel-local state, credential, collaboration grant, or deployment authority. |
+| `@portability-layer` | Shared capability-detected portability contract consumed by browser and native Agentic Game OS projections. | Knowgrph shared substrate and its source-backed public portability surface; Agentic Canvas OS owns invocation metadata and GameXR owns frontend projection only. | No renderer, capability implementation, persistence engine, token registry, credential, provider, model, infrastructure, Prod, Cloudflare, or deploy authority; an unsupported capability remains a typed gap rather than a local fallback. |
 | `@canvas-view` | Active browser-local Canvas View Mode control surface and its canonical option-id inventory. | Existing Canvas View toolbar options, shared selection action, semantic row affordances, and browser-local WebMCP bridge. | Carries no renderer, storage, collaboration, credential, or deployment authority; an unavailable or disabled option fails visibly before mutation. |
 | `@scene` | Current canonical XR scene and immersive placement scope. | Browser-local Knowgrph scene, hit-test, and shared Canvas projection owners. | Carries no camera or sensor grant and creates no duplicate renderer, persistence owner, approval, credential, Prod, or Cloudflare authority. |
 | `@camera` | First-class shared Camera framing and XR motion runtime. | Application-root Camera runtime, shared framing utilities, and canonical BottomPanel Timeline transport. | Does not create a panel-local Camera store, timeline, selection owner, credential, or deployment grant. |
@@ -412,6 +415,7 @@ binding:
 | `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Bind explanation to one exact Knowgrph-stored edge under one expected snapshot digest. |
 | `/agent.team #role-based-agent-team @agent-team` | Resolve one revision-fenced role-based team and hand typed plan/start/list/control lifecycle ownership to the Knowgrph local stdio MCP runtime without creating a second scheduler or broadening Agent Swarm. |
 | `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
+| `/game.portability #game-portability @portability-layer` | Select the source-backed browser/native portability contract while leaving capability execution, projection, persistence, provider, and deployment authority with their existing owners. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |

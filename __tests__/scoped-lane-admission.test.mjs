@@ -765,6 +765,57 @@ test("reviewed cloud authority outlives its expired replaceable local lease proj
   );
   assert.equal(report.authoringAdmission.status, "planned");
 });
+test("parked preserved review-ready retries accept owned-dirt protected refresh projection", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const { peerPath, peer, lease } = peerFixture(authority);
+  const reviewedHeadSha = "d".repeat(40);
+  lease.status = "review_ready";
+  lease.baseSha = reviewedHeadSha;
+  lease.reviewHeadSha = fenceSha;
+  lease.ownedDirtRecovery = {
+    schema: "agentic-owned-dirt-resume/v1",
+    sourceEpoch: 125,
+    sourceSessionId: "peer-session",
+    reviewHeadSha: reviewedHeadSha,
+    evidenceDigest: "e".repeat(64),
+    pathCount: 2,
+  };
+  lease.cloudAuthority = {
+    ...lease.cloudAuthority,
+    canonicalBaseSha: canonicalSha,
+    laneRevision: fenceSha,
+    state: "review_ready",
+  };
+  const parkedPeer = {
+    ...peer,
+    state: "parked",
+    canonicalBaseRevision: canonicalSha,
+    laneRevision: fenceSha,
+  };
+  const lane = laneState({
+    lanePath: peerPath,
+    laneBranch: "refs/heads/agent/peer/peer-docs",
+    head: fenceSha,
+    dirty: true,
+    lease,
+  });
+  const verified = verifiedBundle(authority, manifest, [
+    publicClaim(manifest),
+    parkedPeer,
+  ]);
+  const report = evaluate({
+    manifest,
+    authority,
+    verification: verified.verification,
+    lanes: [canonicalLane(), lane],
+  });
+  assert.equal(
+    report.lanes.find(item => item.path === peerPath).classification,
+    "disjoint-attributed",
+  );
+  assert.equal(report.authoringAdmission.status, "planned");
+});
 test("peer attribution requires an exact current operation-derived remote join", () => {
   const manifest = manifestFor();
   const authority = authorityFor(manifest);

@@ -129,12 +129,13 @@ function dormantReceipt({
 
 function publicClaim({
   workItem = "other-scope",
+  state = "active",
   reviewRequestId = null,
   declaredWriteScope = ["path:docs/other", "semantic:other-scope"],
 } = {}) {
   const core = {
     claimId: "4".repeat(64),
-    state: "active",
+    state,
     actorId: "github-user:7",
     repositoryId: "github-repository:R_repo",
     workItemId: pseudonymousIdentifier("work-item", workItem),
@@ -159,6 +160,35 @@ test("inventory-only status verification is operation-derived without a local pe
   assert.equal(verification.inventory.claims.length, 0);
   assert.equal(verification.ledgerRevision, LEDGER_SHA);
   assert.equal(verification.ledgerDigest, LEDGER_DIGEST);
+});
+
+test("provider root states project before current-authority filtering", () => {
+  const projections = [
+    ["current", "active"],
+    ["waiting-successor", "waiting-successor"],
+    ["reviewed", "review_ready"],
+    ["integrated-preserved", "delivery_authorized"],
+    ["dormant-preserved", "parked"],
+  ];
+  for (const [state, expected] of projections) {
+    const verification = inventoryVerification([publicClaim({ state })]);
+    assert.equal(verification.inventory.claims[0].state, expected);
+  }
+  assert.doesNotThrow(() => dormantReceipt({
+    remoteAuthorityVerification: inventoryVerification([
+      publicClaim({ state: "dormant-preserved" }),
+    ]),
+  }));
+  for (const state of ["current", "waiting-successor", "dormant-preserved"]) {
+    assert.throws(() => dormantReceipt({
+      remoteAuthorityVerification: inventoryVerification([
+        publicClaim({ state, workItem: "new-scope" }),
+      ]),
+    }), /matched current cloud authority/u);
+  }
+  for (const state of ["retired", "unknown-provider-state"]) {
+    assert.throws(() => inventoryVerification([publicClaim({ state })]), /is not current/u);
+  }
 });
 
 test("post-bind verification ignores observation time while detecting peer drift", () => {

@@ -263,6 +263,12 @@ function waitingSuccessorHarness({
     fenceRevision: "7".repeat(64),
     transitionDigest: "8".repeat(64),
     reviewRequestId: REVIEW_REQUEST_ID,
+    integration: predecessorState === "integrated-preserved"
+      ? integratedReplayEvidence()
+      : null,
+    integrationReceiptDigest: predecessorState === "integrated-preserved"
+      ? "f".repeat(64)
+      : null,
   });
   let waiting = {
     ...rootClaim({
@@ -797,6 +803,40 @@ test("legacy review bootstrap supersedes a current predecessor before promoting 
     ],
   );
   assert.equal(harness.calls[1].request.reason, "superseded");
+  assert.equal(bootstrapped.authority.state, "active");
+  assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap retires an integrated-preserved predecessor with its receipt before promoting", () => {
+  const harness = waitingSuccessorHarness({
+    predecessorState: "integrated-preserved",
+  });
+  const bootstrapped = claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null]),
+    [
+      ["claim", null],
+      ["retire", null],
+      ["continue", "promote"],
+      ["continue", "projection"],
+    ],
+  );
+  assert.equal(harness.calls[1].request.reason, "integrated");
+  assert.equal(harness.calls[1].request.integrationReceiptDigest, "f".repeat(64));
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1696,
-  "headDigest": "afdb36b189e4c7ac673f06a59444d9d3561578b780d24994886500a83fd9d120",
+  "sequence": 1697,
+  "headDigest": "25c7f9500212b8720ef50b09b7aa6958a8c8eb17f35a99543a6d70626076866e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -84483,6 +84483,55 @@
       },
       "claimDigest": "19331fbd479c625fcac6596bb330ddcd240900c4f4a82639922835235452c54d",
       "digest": "afdb36b189e4c7ac673f06a59444d9d3561578b780d24994886500a83fd9d120"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1697,
+      "parentDigest": "afdb36b189e4c7ac673f06a59444d9d3561578b780d24994886500a83fd9d120",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "81280847877e41460ec5beed37a8c41519bf251bb15a5dcde732622807fc720c",
+      "idempotencyKey": "c9c3aa96c51e383f149257b8a7e89716e192a539e0a3268f31419e9b68081f86",
+      "requestDigest": "17c70bbc6f1bc27906292a3beca99bf4b49b0c994f581b5e2485f10906072590",
+      "evaluationTime": "2026-08-10T02:24:12.000Z",
+      "claimCore": {
+        "claimId": "81280847877e41460ec5beed37a8c41519bf251bb15a5dcde732622807fc720c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:238ef5137b5e57ea9dbdcde927c2c22e3e9f16626fb6b71d3edd5f69687c458d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:df1574724550ad64b3f21e575ab18a5200c25eb8aab512269964fe26fb61eab4",
+        "canonicalBaseRevision": "b7f0c5e62499e6c71ffad67e2cab2723fe313ae6",
+        "declaredWriteScope": [
+          "path:__tests__/provider-scope-disposition.test.mjs",
+          "path:__tests__/retired-handoff-successor-disposition-cli.test.mjs",
+          "path:__tests__/retired-handoff-successor-disposition-contract.test.mjs",
+          "path:__tests__/retired-handoff-successor-disposition-controller.test.mjs",
+          "path:__tests__/retired-handoff-successor-disposition-repository-adapter.test.mjs",
+          "path:docs/RETIRED-HANDOFF-SUCCESSOR-DISPOSITION.md",
+          "path:scripts/provider-scope-disposition.mjs",
+          "path:scripts/retired-handoff-successor-disposition-contract.mjs",
+          "path:scripts/retired-handoff-successor-disposition-controller.mjs",
+          "path:scripts/retired-handoff-successor-disposition-repository-adapter.mjs",
+          "path:scripts/retired-handoff-successor-disposition.mjs",
+          "semantic:retired-handoff-successor-disposition"
+        ],
+        "writeSetDigest": "a2a0ef018bc0148627c143c4b721081bcb9a9ff1aef17a949c5b59849067f4f1",
+        "laneRevision": "62338755b77fdd689305295a0d416269274ccaa2",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 2,
+        "state": "current",
+        "expiresAt": "2026-08-10T02:54:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78y2Gy",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cb0818ec023291d789bdd344749360170d970b2f488d7302dd31615cbd1e34e6",
+      "digest": "25c7f9500212b8720ef50b09b7aa6958a8c8eb17f35a99543a6d70626076866e"
     }
   ]
 }

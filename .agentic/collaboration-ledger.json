@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1712,
-  "headDigest": "b29fba0982e5a6baeefa95bb11f409faee3ccfdea6a4b3dec86ae927ef04b349",
+  "sequence": 1713,
+  "headDigest": "2599cef9c6bf0f6b2d0057ea6d914bb0947daa8dd8664cbd88035b63dd4c82af",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -85269,6 +85269,50 @@
       },
       "claimDigest": "17eaa21413bc2d11621cae5a698b510f3baa4b6a6a20b339bdf93cd51afa28e2",
       "digest": "b29fba0982e5a6baeefa95bb11f409faee3ccfdea6a4b3dec86ae927ef04b349"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1713,
+      "parentDigest": "b29fba0982e5a6baeefa95bb11f409faee3ccfdea6a4b3dec86ae927ef04b349",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "4ef1608827b125f2cbabc5445f4510ef94ca180d35abc6d550e84457a9fcd223",
+      "idempotencyKey": "b995c01763a781645655f233d632984a60c4bac027ac86ee469c0ba7e3e74a15",
+      "requestDigest": "7cadeebc7eff3ff8581911a09ad594c21b1d80cbf49c395777611d0cf5e461df",
+      "evaluationTime": "2026-08-10T03:46:33.000Z",
+      "claimCore": {
+        "claimId": "4ef1608827b125f2cbabc5445f4510ef94ca180d35abc6d550e84457a9fcd223",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:70bbb6c4db6c28120744f63805b7035e6607429b9d4f156987827f53b4a37360",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:aacdd56d311ccce2038d9286c85f734696aeda87639a412acede210a02c3c3f1",
+        "canonicalBaseRevision": "a0c39f5e13515bdd48e867cb396aeb060218813d",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:guidelines/agentic-sdlc-cloud-collaboration.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-review-authority.test.mjs",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "path:scripts/lib/git-guidelines/review-authority.mjs",
+          "semantic:delivery-authorization-successor"
+        ],
+        "writeSetDigest": "30f0df6a275cc4caebaf7cc8c6bad6acf00fe8192f3c11c9b4f68c0a5e0a7fe8",
+        "laneRevision": "6037b79c7b24d47622473543cac774addd58f04a",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-10T04:15:21.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc780P4p",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "70a5869bcbebdd554ad54aafb222bff44ffb48f16f97ce62517d1cc2538961ca",
+      "digest": "2599cef9c6bf0f6b2d0057ea6d914bb0947daa8dd8664cbd88035b63dd4c82af"
     }
   ]
 }

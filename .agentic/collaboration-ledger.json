@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1714,
-  "headDigest": "a02ffbc843176db8b31a6c1ab971f88aa09ac6a951f59bb4e26a32a5173f17e8",
+  "sequence": 1715,
+  "headDigest": "3344c27d931064d552c9a29b06e52667f14e03a2096b1483ec7804e8578c0a9a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -85357,6 +85357,47 @@
       },
       "claimDigest": "80e512ec76988f77be800a66056596ae6725a14e49b8b44d3e674ec4012265b5",
       "digest": "a02ffbc843176db8b31a6c1ab971f88aa09ac6a951f59bb4e26a32a5173f17e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1715,
+      "parentDigest": "a02ffbc843176db8b31a6c1ab971f88aa09ac6a951f59bb4e26a32a5173f17e8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "20d7ae7c7077a7660ed58f17f6df3bac53c4c2520792034bc22e36f22818231d",
+      "idempotencyKey": "79a6aaf00f1163b738d70988208a699ab1e75c85aaab56dbb123871b92d69b72",
+      "requestDigest": "5ca0e9f7c6d5e1c74984e734ee3b5c711298e08a50f37ae9a26d58d8bb37262f",
+      "evaluationTime": "2026-08-10T03:54:40.000Z",
+      "claimCore": {
+        "claimId": "20d7ae7c7077a7660ed58f17f6df3bac53c4c2520792034bc22e36f22818231d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c13e97da884a6f74bec61437aa0127a1fc61518c6626514bf7c2aa09a2c3dce5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c96f7f77a3629e4b323c85b1164b0d5434bdf9bc5d99ad6f0ac00af8e9ef1373",
+        "canonicalBaseRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "declaredWriteScope": [
+          "path:__tests__/agentic-game-os-apple-vision-os-pipeline-controller.test.mjs",
+          "path:docs/AGENTIC-GAME-OS-APPLE-VISION-OS.md",
+          "path:scripts/pipeline-controller.mjs",
+          "semantic:agentic-game-os-delivery-status-boundary"
+        ],
+        "writeSetDigest": "3afda70385519e142784c63f1f7346cffc6630e663372902284ff309d5fbc8a6",
+        "laneRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-10T04:24:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5478840b68986c29de7b72de37b8811f193b43da2729a0c838f8b012f2f38442",
+      "digest": "3344c27d931064d552c9a29b06e52667f14e03a2096b1483ec7804e8578c0a9a"
     }
   ]
 }

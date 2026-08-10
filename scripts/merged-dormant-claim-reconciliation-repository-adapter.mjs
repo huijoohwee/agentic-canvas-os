@@ -38,21 +38,13 @@ export function createRepositoryMergedDormantClaimReconciliationAdapter({
   const git = gitText || (args => execFileSync("git", args, subprocess(sourceRoot)));
   const github = githubJson || createGitHubReader({ sourceRoot });
   const liveActions = cloudActions || createRepositoryMergedDormantClaimCloudActions({
-    environment,
-    invokeCloudAction: invokeRepositoryCloudAction,
-    ledgerRepository: ledger,
-    targetRepository: target,
-    ttlSeconds,
-  });
+    environment, invokeCloudAction: invokeRepositoryCloudAction,
+    ledgerRepository: ledger, targetRepository: target, ttlSeconds, });
   requireCloudActions(liveActions);
   const commonDirectory = path.resolve(sourceRoot, git(["rev-parse", "--git-common-dir"]).trim());
   const store = intentStore || createMergedDormantClaimReconciliationIntentStore({
-    statePath: statePath || path.join(
-      commonDirectory,
-      "agentic-canvas-os",
-      "merged-dormant-claim-reconciliation",
-      `${sourceClaimId}.json`,
-    ),
+    statePath: statePath || path.join(commonDirectory, "agentic-canvas-os",
+      "merged-dormant-claim-reconciliation", `${sourceClaimId}.json`),
     now,
   });
   const leases = leaseStore || createWriterLeaseStore({ gitCommonDir: commonDirectory, now });
@@ -222,7 +214,7 @@ async function readProviderEvidence({ claim, github, local, pullRequestNumber, t
   const required = await github(
     `repos/${targetRepository}/branches/main/protection/required_status_checks`,
   );
-  const checkedShas = [claim.laneRevision, refreshChain.at(-1).sha, mergeCommitSha];
+  const checkedShas = mergedDormantReconciliationCheckedRevisions(claim.laneRevision, refreshChain, mergeCommitSha);
   const checkRuns = uniqueSuccessfulCheckRuns((await Promise.all([...new Set(checkedShas)]
     .map(sha => readCompleteGitHubCheckRuns(github, targetRepository, sha)))).flat().map(projectCheckRun));
   const pullPaths = await readCompleteGitHubChangedPaths(
@@ -401,6 +393,11 @@ async function readRefreshChain({ claimCommit, declaredWriteScope, github, prote
       ? claimCommit : await readCommit(github, targetRepository, current.parents[0]);
   }
   return Object.freeze(reverse.reverse());
+}
+export function mergedDormantReconciliationCheckedRevisions(claimRevision, refreshChain, mergeRevision) {
+  if (!Array.isArray(refreshChain)) throw new Error("Refresh chain must be an array.");
+  return [...new Set([requiredSha(claimRevision, "claim revision"), requiredSha(
+    refreshChain.at(-1)?.sha ?? claimRevision, "reviewed revision"), requiredSha(mergeRevision, "merge revision")])];
 }
 async function readScopeTreeDigest(github, repository, treeSha, writeScope) {
   const value = await github(`repos/${repository}/git/trees/${treeSha}?recursive=1`);

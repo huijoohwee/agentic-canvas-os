@@ -285,8 +285,7 @@ function createRuntime(options, dependencies) {
     if (written !== plan.childHeadSha) invalid("candidate object");
     return complete({ childHeadSha: written, candidateDigest: plan.candidate.candidateDigest });
   }
-  function successor(plan, accepted, cloudStatus = status(),
-    laneRevision = plan.source.claim.laneRevision) {
+  function successor(plan, accepted, cloudStatus = status(), laneRevision = plan.source.claim.laneRevision) {
     const source = plan.source.claim;
     const matches = cloudStatus.claims.filter(item => item?.predecessorClaimId === plan.sourceClaimId
       && item.actorId === source.actorId && item.repositoryId === source.repositoryId
@@ -328,19 +327,20 @@ function createRuntime(options, dependencies) {
     const before = status();
     const source = before.claims.find(item => item.claimId === plan.sourceClaimId);
     const waiting = successor(plan, new Set(["waiting-successor"]), before);
-    if (!source || source.fenceRevision !== plan.source.claim.claimDigest || !waiting) {
-      invalid("retirement subject");
-    }
+    const integrated = Boolean(source?.integrationReceiptDigest);
+    if (!source || source.fenceRevision !== plan.source.claim.claimDigest || !waiting
+      || integrated !== Boolean(source.integration)) invalid("retirement subject");
     cloudAction("retire", {
       claimId: source.claimId, expectedFenceRevision: source.fenceRevision,
       expectedTransitionCounter: source.transitionCounter, expectedLedgerDigest: before.ledgerDigest,
-      reason: "superseded", finalRevision: source.laneRevision,
+      reason: integrated ? "integrated" : "superseded", finalRevision: source.laneRevision,
       reviewRequestId: source.reviewRequestId,
       bytesDigest: digestValue({ sourceHeadSha: plan.sourceHeadSha,
         sourceTreeSha: plan.source.source.treeSha, childHeadSha: plan.childHeadSha }),
-      namedChecksDigest: plan.source.lease.focusedEvidenceDigest,
-      handoffEvidenceDigest: digestValue({ planDigest: plan.planDigest,
+      namedChecksDigest: source.integration?.namedChecksDigest ?? plan.source.lease.focusedEvidenceDigest,
+      handoffEvidenceDigest: source.integration?.handoffEvidenceDigest ?? digestValue({ planDigest: plan.planDigest,
         successorClaimId: waiting.claimId }),
+      integrationReceiptDigest: source.integrationReceiptDigest,
       deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
       idempotencyKey: `reviewed-forward-child:retire:${plan.planDigest}`,
     }, readLease({ terminal: true }).cloudAuthority);

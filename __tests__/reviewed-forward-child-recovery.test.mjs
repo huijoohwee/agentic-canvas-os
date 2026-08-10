@@ -234,6 +234,8 @@ test("repository publication is compare-and-swap and never force-based", () => {
   assert.match(source, /mode: "projection"/u);
   assert.match(source, /`reviewed-forward-child:bind:\$\{plan\.planDigest\}`/u);
   assert.match(source, /cloudStatus, plan\.childHeadSha\)/u);
+  assert.match(source, /reason: integrated \? "integrated" : "superseded"/u);
+  assert.match(source, /integrationReceiptDigest: source\.integrationReceiptDigest/u);
   assert.doesNotMatch(source, /--force|force-with-lease|reset|stash/u);
 });
 

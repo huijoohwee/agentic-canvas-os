@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1813,
-  "headDigest": "dcc03a97e56c82764c6d82c0a99bf8213ada4679d0a9291c86ed89adb7b59100",
+  "sequence": 1814,
+  "headDigest": "064039b0e724f0cafe452ea9cee4cdf38384616bc5d565308f1634c25a4cbcad",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -90090,6 +90090,46 @@
       },
       "claimDigest": "e5654b43cf1f20cd188deb0de425a80002823c590da375ae281c4c20fa5bfc27",
       "digest": "dcc03a97e56c82764c6d82c0a99bf8213ada4679d0a9291c86ed89adb7b59100"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1814,
+      "parentDigest": "dcc03a97e56c82764c6d82c0a99bf8213ada4679d0a9291c86ed89adb7b59100",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "eff9bcee4bb26e68b8b9f10bbd30ff1c696c0b338c09e8617b67c82660b5b51c",
+      "idempotencyKey": "b773d2a96aa4eb9e3583204e00d314169615c403d36f91b7d1acabd3c58ce598",
+      "requestDigest": "abcb89068b38d3ef219262b0469a5b8251a4cd160e6f2f5a37c0d05683f21b65",
+      "evaluationTime": "2026-08-10T22:59:07.000Z",
+      "claimCore": {
+        "claimId": "eff9bcee4bb26e68b8b9f10bbd30ff1c696c0b338c09e8617b67c82660b5b51c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f1a344057830562331aa30259fc81dda15531aa5ab13929157f735d2bce83136",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:984b40cdacd1bf45cfbdaadb1596ce17f7afb3996e5556930c5ea6428cef3786",
+        "canonicalBaseRevision": "6aeac50c6dd75737c041978c8ef95c6e14872eb0",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-forward-child-recovery.test.mjs",
+          "path:scripts/reviewed-forward-child-recovery-repository-adapter.mjs",
+          "semantic:reviewed-forward-child-recovery-fix-v2"
+        ],
+        "writeSetDigest": "614f95d0ee5df3ee218c8865aba98ecf105485994a386860317b617ce8ffbaa5",
+        "laneRevision": "6aeac50c6dd75737c041978c8ef95c6e14872eb0",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-10T23:59:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "461be7af88631e861f1fb4dc327c9d6ebbb4862acfcf1b29699335b4b3199a0e",
+      "digest": "064039b0e724f0cafe452ea9cee4cdf38384616bc5d565308f1634c25a4cbcad"
     }
   ]
 }

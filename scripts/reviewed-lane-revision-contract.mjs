@@ -294,7 +294,7 @@ function normalizeReviewedLaneRevisionReceipt(value, {
 function planCore({ evidence, commitCandidate, replacementSubject }) {
   return {
     schema: REVIEWED_LANE_REVISION_PLAN_SCHEMA,
-    strategy: "replace-reviewed-subject-preserve-tree-parents-and-authorship",
+    strategy: "append-reviewed-subject-single-parent-forward-child",
     source: evidence,
     sourceEvidenceDigest: evidence.evidenceDigest,
     candidate: commitCandidate,
@@ -303,7 +303,7 @@ function planCore({ evidence, commitCandidate, replacementSubject }) {
     sourceHeadSha: evidence.commit.headSha,
     replacementHeadSha: commitCandidate.candidate.headSha,
     treeSha: evidence.commit.treeSha,
-    parentShas: evidence.commit.parentShas,
+    parentShas: commitCandidate.candidate.parentShas,
     sourceLeaseDigest: evidence.lease.leaseDigest,
     sourceClaimId: evidence.claim.claimId,
     sourceClaimDigest: evidence.authority.claimDigest,
@@ -325,8 +325,9 @@ function assertPlanCommitJoin(evidence, candidate, subject) {
     || candidate.source.treeSha !== evidence.commit.treeSha
     || JSON.stringify(candidate.source.parentShas) !== JSON.stringify(evidence.commit.parentShas)
     || candidate.candidate.treeSha !== evidence.commit.treeSha
-    || JSON.stringify(candidate.candidate.parentShas) !== JSON.stringify(evidence.commit.parentShas)
-    || candidate.candidate.authorHeader !== evidence.commit.authorHeader
+    || candidate.candidate.parentShas.length !== 1
+    || candidate.candidate.parentShas[0] !== evidence.commit.headSha
+    || candidate.candidate.authorHeader !== evidence.commit.committerHeader
     || candidate.candidate.committerHeader !== evidence.commit.committerHeader
   ) {
     throw new Error("Reviewed-lane revision candidate drifted from the exact reviewed source.");

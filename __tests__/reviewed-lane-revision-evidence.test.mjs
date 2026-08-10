@@ -199,17 +199,14 @@ function fixture() {
   return { authority, candidate, claim, headSha, lease, pullRequest, source };
 }
 
-test("builds one changed commit with exact tree, parents, authorship, and remaining bytes", () => {
+test("builds one empty single-parent forward child with deterministic authorship", () => {
   const { candidate } = fixture();
   assert.notEqual(candidate.source.headSha, candidate.candidate.headSha);
   assert.equal(candidate.source.treeSha, candidate.candidate.treeSha);
-  assert.deepEqual(candidate.source.parentShas, candidate.candidate.parentShas);
-  assert.equal(candidate.source.authorHeader, candidate.candidate.authorHeader);
+  assert.deepEqual(candidate.candidate.parentShas, [candidate.source.headSha]);
+  assert.equal(candidate.source.committerHeader, candidate.candidate.authorHeader);
   assert.equal(candidate.source.committerHeader, candidate.candidate.committerHeader);
-  assert.equal(
-    candidate.source.message.slice(candidate.source.subject.length),
-    candidate.candidate.message.slice(candidate.candidate.subject.length),
-  );
+  assert.equal(candidate.candidate.message, `${REPLACEMENT_SUBJECT}\n`);
   assert.deepEqual(normalizeReviewedLaneRevisionCommitCandidate(candidate), candidate);
 });
 

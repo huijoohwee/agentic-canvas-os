@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
@@ -27,7 +28,7 @@ const EFFECTS = Object.freeze([
   ["successor_waiting", "createWaitingSuccessor"],
   ["commit_created", "createCommit"],
   ["local_ref_updated", "compareAndSwapLocalRef"],
-  ["remote_ref_updated", "forceWithLeaseRemote"],
+  ["remote_ref_updated", "fastForwardRemote"],
   ["source_retired", "retireSourceClaim"],
   ["successor_current", "promoteSuccessor"],
   ["successor_bound", "bindSuccessor"],
@@ -134,7 +135,7 @@ test("default cloud roots bind exact source, owner, branch, ledger, and evidence
       assert.equal(request.actorId, Number(plan.source.actor.id));
       assert.equal(request.actorLogin, plan.source.actor.login);
       claims.push({ ...claims[0], claimId: "e".repeat(64),
-        predecessorClaimId: plan.sourceClaimId, laneRevision: plan.replacementHeadSha,
+        predecessorClaimId: plan.sourceClaimId, laneRevision: plan.sourceHeadSha,
         leaseEpoch: claims[0].leaseEpoch + 1, state: "waiting-successor",
         reviewRequestId: null, fenceRevision: "f".repeat(64), transitionDigest: "a".repeat(64),
         transitionCounter: 1, operationReceiptDigest: "b".repeat(64) });
@@ -146,7 +147,7 @@ test("default cloud roots bind exact source, owner, branch, ledger, and evidence
       claims = claims.filter(claim => claim.claimId !== plan.sourceClaimId);
     } else if (action === "continue") {
       assert.equal(request.branch, branch);
-      assert.equal(request.headSha, plan.replacementHeadSha);
+      assert.equal(request.headSha, plan.sourceHeadSha);
       assert.equal(request.expectedLedgerDigest, ledgerDigest);
       claims = claims.map(claim => claim.claimId === request.claimId
         ? { ...claim, state: "current", fenceRevision: "c".repeat(64),
@@ -191,6 +192,15 @@ test("default cloud roots bind exact source, owner, branch, ledger, and evidence
   await runtime.promoteSuccessor({ plan,
     operationKey: reviewedLaneRevisionOperationKey(plan, "successor_current") });
   assert.deepEqual(observed.map(item => item.action), ["claim", "retire", "continue"]);
+});
+
+test("publishes the forward child without any force push", () => {
+  const source = readFileSync(new URL(
+    "../scripts/reviewed-lane-revision-repository-adapter.mjs", import.meta.url,
+  ), "utf8");
+  assert.doesNotMatch(source, /--force|forceWithLease/u);
+  assert.match(source, /refs\/heads\/\$\{branch\}:refs\/heads\/\$\{branch\}/u);
+  assert.match(source, /mode: "projection"/u);
 });
 
 test("rejects stale durable review-ready authority after crash and heartbeat advance", async () => {

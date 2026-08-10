@@ -7,7 +7,7 @@ lang: "en-US"
 schema: "agentic-reviewed-lane-revision/v1"
 frontmatter_contract: "required"
 status: "source-ready"
-authority: "Exact authorized subject-only revision of a review-ready lane"
+authority: "Exact authorized forward-child revision of a review-ready lane"
 runtime_owner: "../scripts/reviewed-lane-revision.mjs; ../scripts/reviewed-lane-revision-controller.mjs; ../scripts/reviewed-lane-revision-repository-adapter.mjs"
 runtime_proof: "../__tests__/reviewed-lane-revision-controller.test.mjs; ../__tests__/reviewed-lane-revision-evidence.test.mjs"
 ---
@@ -16,9 +16,9 @@ runtime_proof: "../__tests__/reviewed-lane-revision-controller.test.mjs; ../__te
 
 ## Purpose
 
-The reviewed-lane revision controller repairs one invalid protected-delivery
-commit subject without changing the reviewed tree, parent topology, author,
-committer, body, trailers, or any other commit byte. It preserves the existing
+The reviewed-lane revision controller follows one invalid protected-delivery
+commit with a deterministic, empty, single-parent child whose subject satisfies
+protected policy. The reviewed source commit and tree remain immutable. It preserves the existing
 registered worktree, branch, pull-request identity, semantic scope, device,
 session, and review request.
 
@@ -45,7 +45,8 @@ Planning succeeds only when all source observations join exactly:
   pseudonymous device and session identities are admitted;
 - the source subject fails current protected-subject policy, while the proposed
   replacement subject passes it; and
-- the deterministic candidate differs only in its subject.
+- the deterministic candidate has the source tree, exactly one parent equal to
+  the source head, and a policy-valid replacement subject.
 
 The plan embeds normalized source evidence and the full deterministic commit
 candidate. Its SHA-256 digest changes if any source identity, byte, projection,
@@ -85,13 +86,13 @@ source drift requires a new plan and authorization.
 | Phase | Required effect or proof |
 | --- | --- |
 | `prepared` | Persist the exact plan and authorization under the shared fence. |
-| `successor_waiting` | Claim one same-owner, same-scope waiting successor for the deterministic replacement SHA. |
-| `commit_created` | Write the precomputed commit object and verify its SHA, tree, and parents. |
+| `successor_waiting` | Claim one same-owner, same-scope waiting successor at the reviewed source SHA. |
+| `commit_created` | Write the precomputed empty child and verify its SHA, tree, and single source parent. |
 | `local_ref_updated` | Compare-and-swap the local branch from source SHA to replacement SHA. |
-| `remote_ref_updated` | Push with an exact `--force-with-lease` source SHA. |
+| `remote_ref_updated` | Publish the child with an ordinary no-force fast-forward push. |
 | `source_retired` | Retire the reviewed predecessor with head/tree/candidate evidence. |
 | `successor_current` | Promote only after the predecessor is absent from live inventory. |
-| `successor_bound` | Bind the current successor to the unchanged GitHub review request. |
+| `successor_bound` | Project the successor to the child, then bind it to the unchanged review request. |
 | `successor_review_ready` | Restore verified review-ready cloud authority at the replacement SHA. |
 | `lease_updated` | Atomically update the writer lease and durable journal in one registry lock. |
 | `pr_projected` | Project the exact updated writer marker into the unchanged pull request. |
@@ -101,8 +102,8 @@ source drift requires a new plan and authorization.
 Every effect is reconciled before execution and after an error. A live effect
 may be adopted only when it matches the plan-derived operation key and exact
 phase identity. The source claim is retired before the successor can become
-current. The local branch uses Git ref CAS; the remote branch uses
-force-with-lease, never an unfenced force push.
+current. The local branch uses Git ref CAS; the remote branch accepts only the
+ordinary fast-forward from the source to its child. No force push is permitted.
 
 The lease projection is special: the controller first builds and validates it,
 then the fence owner writes the lease and `lease_updated` journal step in one

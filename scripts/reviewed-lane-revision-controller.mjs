@@ -57,7 +57,7 @@ const TRANSITIONS = Object.freeze([
   ["successor_waiting", "createWaitingSuccessor"],
   ["commit_created", "createCommit"],
   ["local_ref_updated", "compareAndSwapLocalRef"],
-  ["remote_ref_updated", "forceWithLeaseRemote"],
+  ["remote_ref_updated", "fastForwardRemote"],
   ["source_retired", "retireSourceClaim"],
   ["successor_current", "promoteSuccessor"],
   ["successor_bound", "bindSuccessor"],
@@ -343,12 +343,12 @@ export function reviewedLaneGitObjectExists(gitText, commitSha) {
   try { return gitText(["cat-file", "-t", commitSha]) === "commit"; } catch { return false; }
 }
 
-export function assertReviewedLaneSameTreeAndParents({ gitText, local, commitSha }) {
+export function assertReviewedLaneForwardChild({ gitText, local, commitSha }) {
   const treeSha = gitText(["show", "-s", "--format=%T", commitSha]);
   const parentShas = gitText(["show", "-s", "--format=%P", commitSha])
     .split(/\s+/u).filter(Boolean);
-  if (treeSha !== local.treeSha || JSON.stringify(parentShas) !== JSON.stringify(local.parentShas)) {
-    throw new Error("Replacement commit changed the reviewed tree or parent topology.");
+  if (treeSha !== local.treeSha || parentShas.length !== 1 || parentShas[0] !== local.headSha) {
+    throw new Error("Replacement commit is not an empty single-parent forward child.");
   }
 }
 

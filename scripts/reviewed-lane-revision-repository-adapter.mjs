@@ -7,36 +7,28 @@ import { createGitHubCloudCollaborationAdapter } from "./github-cloud-collaborat
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import * as evidence from "./reviewed-lane-revision-evidence.mjs";
 import * as fence from "./reviewed-lane-revision-fence.mjs";
-import { bindAdmissionCloudAuthority, invokeRepositoryCloudAction, reviewReadyAdmissionCloudAuthority,
-  verifyReviewReadyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { bindAdmissionCloudAuthority, invokeRepositoryCloudAction, reviewReadyAdmissionCloudAuthority, verifyReviewReadyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
-import { assertReviewedLaneSameTreeAndParents as assertSameTreeAndParents,
-  assertReviewedLaneSourceHeadProjection,
-  createReviewedLaneRevisionControllerAdapter,
-  joinReviewedLanePublicPrivateClaim,
+import { assertReviewedLaneForwardChild as assertForwardChild, assertReviewedLaneSourceHeadProjection,
+  createReviewedLaneRevisionControllerAdapter, joinReviewedLanePublicPrivateClaim,
   requireReviewedLaneDigest as requiredDigest, requireReviewedLaneFunction as requireFunction,
   requireReviewedLaneSha as requiredSha, requireReviewedLaneText as required,
-  reviewedLaneCompleteResolution as completeResolution,
-  reviewedLaneGitObjectExists as gitObjectExists,
-  reviewedLaneOperationIdentity as operationIdentity,
-  reviewedLaneOperationResult as operationResult,
+  reviewedLaneCompleteResolution as completeResolution, reviewedLaneGitObjectExists as gitObjectExists,
+  reviewedLaneOperationIdentity as operationIdentity, reviewedLaneOperationResult as operationResult,
   reviewedLaneRefResolution as refResolution,
 } from "./reviewed-lane-revision-controller.mjs";
 import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
-  projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody,
-} from "./writer-lease-lib.mjs";
+  projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 export function createReviewedLaneRevisionRepositoryAdapter(options = {}, dependencies = {}) {
-  const runtime = dependencies.runtime
-    || createReviewedLaneRevisionRepositoryRuntime(options, dependencies);
-  return createReviewedLaneRevisionControllerAdapter(runtime);
+  return createReviewedLaneRevisionControllerAdapter(dependencies.runtime
+    || createReviewedLaneRevisionRepositoryRuntime(options, dependencies));
 }
 export function createReviewedLaneRevisionRepositoryRuntime(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session ID");
   const environment = options.environment || process.env;
-  const execute = (command, args, settings = {}) => execFileSync(command, args,
-    { cwd: repository, encoding: "utf8", ...settings });
+  const execute = (command, args, settings = {}) => execFileSync(command, args, { cwd: repository, encoding: "utf8", ...settings });
   const gitText = dependencies.gitText || ((args, settings = {}) => execute("git", args, settings).trim());
   const gitRaw = dependencies.gitRaw || ((args, settings = {}) => execute("git", args, settings));
   const ghText = dependencies.ghText || (args => execute("gh", args).trim());
@@ -44,11 +36,8 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     { stdio: [settings.input === undefined ? "ignore" : "pipe", "pipe", "pipe"], ...settings }).trim());
   const hashCommit = rawCommit => runGit(["hash-object", "-t", "commit", "--stdin"], { input: rawCommit });
   const branch = required(gitText(["branch", "--show-current"]), "branch");
-  const record = assertRegisteredWorktree({ cwd: repository,
-    porcelain: gitText(["worktree", "list", "--porcelain", "-z"]) });
-  if (record.branch !== `refs/heads/${branch}`) {
-    throw new Error("Reviewed lane revision worktree registration drifted from its branch.");
-  }
+  const record = assertRegisteredWorktree({ cwd: repository, porcelain: gitText(["worktree", "list", "--porcelain", "-z"]) });
+  if (record.branch !== `refs/heads/${branch}`) throw new Error("Reviewed lane revision worktree registration drifted from its branch.");
   const commonDirectory = path.resolve(repository, gitText(["rev-parse", "--git-common-dir"]));
   const leaseStore = dependencies.leaseStore || createWriterLeaseStore({ gitCommonDir: commonDirectory });
   const phaseTransport = dependencies.phaseTransport || null;
@@ -60,9 +49,8 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
       .listClaims({ targetRepository: authority.targetRepository }));
   const expectedPullRequest = options.pullRequestNumber || null;
   const ttlSeconds = Number(options.ttlSeconds || 1_800);
-  if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 86_400) {
+  if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 86_400)
     throw new Error("Reviewed lane revision TTL must be 60 through 86400 seconds.");
-  }
   function readLease() {
     const lease = leaseStore.read(branch);
     if (!lease || lease.schema !== "agentic-writer-lease/v2"
@@ -188,13 +176,13 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     }
     return status;
   }
-  async function successor(status, plan, acceptedStates) {
+  async function successor(status, plan, acceptedStates, laneRevisions = [plan.sourceHeadSha]) {
     const source = plan.source.claim;
     const matches = status.claims.filter(claim => claim?.predecessorClaimId === plan.sourceClaimId
       && claim.claimId !== plan.sourceClaimId && claim.actorId === source.actorId
       && claim.repositoryId === source.repositoryId && claim.workItemId === source.workItemId
       && claim.canonicalBaseRevision === source.canonicalBaseRevision
-      && claim.laneRevision === plan.replacementHeadSha && claim.writeSetDigest === source.writeSetDigest
+      && laneRevisions.includes(claim.laneRevision) && claim.writeSetDigest === source.writeSetDigest
       && claim.leaseEpoch === source.leaseEpoch + 1 && acceptedStates.has(projectRootState(claim.state)));
     if (matches.length > 1) throw new Error("Reviewed lane revision successor is ambiguous.");
     return matches[0] ? joinedClaim(status, matches[0].claimId, plan.source.lease) : null;
@@ -242,7 +230,7 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     const predecessor = await exactSource(before, plan);
     cloudResult("claim", { actorId: Number(plan.source.actor.id), actorLogin: plan.source.actor.login,
       branch, workItemId: predecessor.workItemId, canonicalBaseSha: predecessor.canonicalBaseRevision,
-      headSha: plan.replacementHeadSha, declaredWriteSet: predecessor.declaredWriteScope,
+      headSha: plan.sourceHeadSha, declaredWriteSet: predecessor.declaredWriteScope,
       predecessorClaimId: plan.sourceClaimId, leaseEpoch: predecessor.leaseEpoch + 1, ttlSeconds,
       deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
       idempotencyKey: `reviewed-lane-revision:waiting:${plan.planDigest}` });
@@ -281,7 +269,7 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     }
     const waiting = await successor(before, plan, new Set(["waiting-successor"]));
     if (!waiting) throw new Error("Successor promotion requires one waiting claim.");
-    cloudResult("continue", { branch, headSha: plan.replacementHeadSha,
+    cloudResult("continue", { branch, headSha: plan.sourceHeadSha,
       claimId: waiting.claimId, expectedFenceRevision: waiting.fenceRevision,
       expectedTransitionCounter: waiting.transitionCounter, expectedLedgerDigest: before.ledgerDigest,
       mode: "promote", ttlSeconds,
@@ -293,9 +281,22 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     return successorValues(operationKey, status, claim);
   }
   async function bindSuccessor({ operationKey, plan }) {
-    const status = cloudStatus();
-    const claim = await successor(status, plan, new Set(["active"]));
-    if (!claim) throw new Error("Successor binding requires current authority.");
+    let status = cloudStatus();
+    let claim = await successor(status, plan, new Set(["active"]),
+      [plan.sourceHeadSha, plan.replacementHeadSha]);
+    if (!claim || claim.reviewRequestId) {
+      throw new Error("Successor binding requires unbound current authority.");
+    }
+    if (claim.laneRevision !== plan.replacementHeadSha) {
+      cloudResult("continue", { branch, headSha: plan.replacementHeadSha,
+        claimId: claim.claimId, expectedFenceRevision: claim.fenceRevision,
+        expectedTransitionCounter: claim.transitionCounter, expectedLedgerDigest: status.ledgerDigest,
+        mode: "projection", deviceId: readLease().device, sessionId,
+        idempotencyKey: `reviewed-lane-revision:project:${plan.planDigest}` });
+      status = cloudStatus();
+      claim = await successor(status, plan, new Set(["active"]), [plan.replacementHeadSha]);
+    }
+    if (!claim || claim.reviewRequestId) throw new Error("Successor projection did not converge.");
     const bound = bindAdmissionCloudAuthority({ authority: authorityFor(plan, status, claim),
       manifest: manifest(plan), branch, headSha: plan.replacementHeadSha,
       pullRequestNumber: plan.pullRequestNumber, reviewRequestId: plan.sourceReviewRequestId,
@@ -306,7 +307,8 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
   }
   async function markSuccessorReviewReady({ operationKey, plan }) {
     const status = cloudStatus();
-    const claim = await successor(status, plan, new Set(["active", "review_ready"]));
+    const claim = await successor(status, plan, new Set(["active", "review_ready"]),
+      [plan.replacementHeadSha]);
     if (!claim || claim.reviewRequestId !== plan.sourceReviewRequestId) {
       throw new Error("Review-ready transition requires the exact bound successor.");
     }
@@ -320,7 +322,8 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
   async function buildLeaseProjection({ intent, plan }) {
     const ready = intent.phases.successor_review_ready.values.authority;
     const status = cloudStatus();
-    const claim = await successor(status, plan, new Set(["review_ready"]));
+    const claim = await successor(status, plan, new Set(["review_ready"]),
+      [plan.replacementHeadSha]);
     const live = claim?.reviewRequestId === plan.sourceReviewRequestId
       ? authorityFor(plan, status, claim) : null;
     if (!live || digestValue(live) !== digestValue(ready)) {
@@ -361,13 +364,16 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     if (phase === "source_retired") {
       const retired = !status.claims.some(claim => claim?.claimId === plan.sourceClaimId)
         && Boolean(await successor(status, plan,
-          new Set(["waiting-successor", "active", "review_ready"])));
+          new Set(["waiting-successor", "active", "review_ready"]),
+          [plan.sourceHeadSha, plan.replacementHeadSha]));
       return retired ? complete(operationResult(operationKey, { sourceClaimId: plan.sourceClaimId,
         retirementDigest: digestValue({ planDigest: plan.planDigest, sourceClaimId: plan.sourceClaimId }) }))
         : Object.freeze({ kind: "pending" });
     }
     if (!states) throw new Error(`Unsupported repository reconciliation phase ${phase}.`);
-    const claim = await successor(status, plan, states);
+    const revisions = phase === "successor_bound" || phase === "successor_review_ready"
+      ? [plan.replacementHeadSha] : [plan.sourceHeadSha, plan.replacementHeadSha];
+    const claim = await successor(status, plan, states, revisions);
     const bound = phase === "successor_bound" || phase === "successor_review_ready";
     if (!claim || (bound && claim.reviewRequestId !== plan.sourceReviewRequestId)) {
       return Object.freeze({ kind: "pending" });
@@ -529,7 +535,7 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
         || commitSha !== plan.replacementHeadSha) {
         throw new Error("Replacement commit candidate drifted from the authorized plan.");
       }
-      assertSameTreeAndParents({ gitText, local, commitSha });
+      assertForwardChild({ gitText, local, commitSha });
       return operationResult(operationKey, { commitSha, treeSha: local.treeSha,
         candidateDigest: requiredDigest(candidate.candidateDigest, "commit candidate digest") });
     },
@@ -542,17 +548,11 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
       }
       return operationResult(operationKey, { headSha: replacementHeadSha });
     },
-    forceWithLeaseRemote({ operationKey, plan }) {
-      const sourceHeadSha = requiredSha(plan.sourceHeadSha, "planned source head SHA");
+    fastForwardRemote({ operationKey, plan }) {
       const replacementHeadSha = requiredSha(plan.replacementHeadSha, "planned replacement head SHA");
-      runGit([
-        "push",
-        "origin",
-        `--force-with-lease=refs/heads/${branch}:${sourceHeadSha}`,
-        `${replacementHeadSha}:refs/heads/${branch}`,
-      ]);
+      runGit(["push", "origin", `refs/heads/${branch}:refs/heads/${branch}`]);
       if (readRemoteHead() !== replacementHeadSha) {
-        throw new Error("Remote branch did not converge to the force-with-lease replacement.");
+        throw new Error("Remote branch did not converge to the no-force forward child.");
       }
       return operationResult(operationKey, { headSha: replacementHeadSha });
     },

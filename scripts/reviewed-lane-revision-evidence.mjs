@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
@@ -30,11 +29,14 @@ export function buildReviewedLaneRevisionCommitCandidate({
     throw new Error("Reviewed-lane replacement subject must change the reviewed commit bytes.");
   }
   const candidateRawCommit = [
-    source.headerBlock,
-    "\n\n",
+    `tree ${source.treeSha}`,
+    `parent ${source.headSha}`,
+    `author ${source.committerHeader}`,
+    `committer ${source.committerHeader}`,
+    "",
     subject,
-    source.message.slice(source.subject.length),
-  ].join("");
+    "",
+  ].join("\n");
   const candidate = inspectCommit(candidateRawCommit, hashCommit, "replacement commit");
   assertCommitRevision(source, candidate, subject);
   const core = {
@@ -190,21 +192,19 @@ export function normalizeReviewedLaneRevisionCommitCandidate(value) {
   return deepFreeze({ ...core, candidateDigest: value.candidateDigest });
 }
 function assertCommitRevision(source, candidate, replacementSubject) {
-  const sourceSuffix = source.message.slice(source.subject.length);
-  const candidateSuffix = candidate.message.slice(candidate.subject.length);
   if (
     candidate.subject !== replacementSubject
     || source.subject === candidate.subject
     || source.rawCommit === candidate.rawCommit
     || source.headSha === candidate.headSha
     || source.treeSha !== candidate.treeSha
-    || JSON.stringify(source.parentShas) !== JSON.stringify(candidate.parentShas)
-    || source.headerBlock !== candidate.headerBlock
-    || source.authorHeader !== candidate.authorHeader
-    || source.committerHeader !== candidate.committerHeader
-    || sourceSuffix !== candidateSuffix
+    || candidate.parentShas.length !== 1
+    || candidate.parentShas[0] !== source.headSha
+    || candidate.authorHeader !== source.committerHeader
+    || candidate.committerHeader !== source.committerHeader
+    || candidate.message !== `${replacementSubject}\n`
   ) {
-    throw new Error("Reviewed-lane candidate must change only the subject while preserving tree, parents, authorship, and remaining bytes.");
+    throw new Error("Reviewed-lane candidate must be one empty single-parent forward child with the replacement subject.");
   }
 }
 function assertSourceJoin(source) {

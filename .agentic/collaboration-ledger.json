@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1740,
-  "headDigest": "3bdb30358271b78028b4eb18998a767d9bb77f710c29ff690dc2f00ce6d38571",
+  "sequence": 1741,
+  "headDigest": "5ae88bda3ec26fdd689b42237991a9735ee2c10fc112731a88349e21fd82ea6d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -86639,6 +86639,51 @@
       },
       "claimDigest": "60abd609a4b325b8711c3cd5948aa4525aa2b7a5d4d015814c76a49654cd5e35",
       "digest": "3bdb30358271b78028b4eb18998a767d9bb77f710c29ff690dc2f00ce6d38571"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1741,
+      "parentDigest": "3bdb30358271b78028b4eb18998a767d9bb77f710c29ff690dc2f00ce6d38571",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b49a2cfab4d311a326f3f0e365d6119e2d3dcb1e2a042b4e5740d10b197548cd",
+      "idempotencyKey": "a351f7460c71e0a1f1aa8b9f56610fd576f6becf2d64419bf415b2273ecfc051",
+      "requestDigest": "2b99bc0abb01fdcbc456745b12a2ca3f04d542a6e04f24d625dfdcacd85423c8",
+      "evaluationTime": "2026-08-10T07:07:25.000Z",
+      "claimCore": {
+        "claimId": "b49a2cfab4d311a326f3f0e365d6119e2d3dcb1e2a042b4e5740d10b197548cd",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:58986aee47c1b66c52ced3792f442c98ff59bebac574fa48d7e88c579278b05a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:171c42ab6e0d4a039846185f83c8a25561ade6eca9ccc1bb90818fceb80a5767",
+        "canonicalBaseRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-descendant-source-recovery.test.mjs",
+          "path:docs/REVIEWED-DESCENDANT-SOURCE-RECOVERY.md",
+          "path:scripts/reviewed-descendant-source-recovery-contract.mjs",
+          "path:scripts/reviewed-descendant-source-recovery-controller.mjs",
+          "path:scripts/reviewed-descendant-source-recovery-evidence.mjs",
+          "path:scripts/reviewed-descendant-source-recovery-repository-adapter.mjs",
+          "path:scripts/reviewed-descendant-source-recovery.mjs",
+          "semantic:reviewed-descendant-source-recovery"
+        ],
+        "writeSetDigest": "556a4bd5aee77fefec033561103bd2f87a3b45be7776931d13fc2bfea50e4b51",
+        "laneRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-10T07:37:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "51e0c9776a380bbce2a7fc54cea522af627501c3db73e5c942b0e22921736c2d",
+      "digest": "5ae88bda3ec26fdd689b42237991a9735ee2c10fc112731a88349e21fd82ea6d"
     }
   ]
 }

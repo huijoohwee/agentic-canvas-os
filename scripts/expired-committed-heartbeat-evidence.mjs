@@ -6,6 +6,8 @@ import {
 } from "./cloud-collaboration-primitives.mjs";
 import { assertLeaseWorktree } from "./device-branch-ownership-lib.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
+import { requireCloudAdmission } from "./expired-committed-heartbeat-contract.mjs";
+export { requireCloudAdmission };
 import {
   captureProtectedMainPathEquivalence,
   captureProtectedMainSharedAncestorPathEquivalence,
@@ -374,43 +376,6 @@ export function captureSourceRemotePrefixEvidence({
     } : {}),
     rangeDiffDigest,
   });
-}
-
-export function requireCloudAdmission({
-  lease,
-  instant,
-  requireLive = true,
-}) {
-  const authority = lease.cloudAuthority;
-  const declaredWriteSet = normalizeWriteSet(
-    lease.admission?.declaredWriteSet || [],
-  );
-  const cloudExpiry = Date.parse(authority?.expiresAt);
-  if (authority?.manifestDigest !== lease.admission?.manifestDigest) {
-    throw new Error(
-      "Expired committed recovery source cloud manifest differs from its admitted manifest.",
-    );
-  }
-  if (
-    lease.admission?.schema !== "agentic-lane-admission-lease/v1" ||
-    lease.admission.status !== "admitted" ||
-    authority?.schema !== "agentic-lane-cloud-authority/v1" ||
-    authority.state !== "active" ||
-    authority.deviceId !== lease.device ||
-    authority.sessionId !== lease.sessionId ||
-    authority.canonicalBaseSha !== lease.baseSha ||
-    authority.laneRevision !== lease.fenceSha ||
-    authority.writeSetDigest !== lease.admission.writeSetDigest ||
-    !Number.isFinite(cloudExpiry) ||
-    (requireLive && cloudExpiry <= instant.getTime()) ||
-    digestValue(declaredWriteSet) !== lease.admission.writeSetDigest ||
-    JSON.stringify(authority.cloudDeclaredWriteScope) !==
-      JSON.stringify(declaredWriteSet)
-  ) {
-    throw new Error(
-      `Expired committed recovery requires its exact ${requireLive ? "live " : ""}admitted cloud claim.`,
-    );
-  }
 }
 
 export function readExactPullRequestProjection({

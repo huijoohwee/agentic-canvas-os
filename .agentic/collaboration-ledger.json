@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1808,
-  "headDigest": "0f43be2d79f7dafce17790ed54746eb5463fc95f98fa6737dfd113fb32a924c1",
+  "sequence": 1809,
+  "headDigest": "f32eb6bfa184743af361b05d2cab7b783eccb4bf2cf9456ce42a3bebf52b905d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -89858,6 +89858,46 @@
       },
       "claimDigest": "df43255632984820dfb22900058b7d252f8564f317eb2fd7a4b59993fe454b36",
       "digest": "0f43be2d79f7dafce17790ed54746eb5463fc95f98fa6737dfd113fb32a924c1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1809,
+      "parentDigest": "0f43be2d79f7dafce17790ed54746eb5463fc95f98fa6737dfd113fb32a924c1",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "897341378b49e1432429c5684f382111baa74c93b7fd7281c3f85a4b6edb8810",
+      "idempotencyKey": "b1e27145405b954104c7cfe53e257e3b4b05abbb69fe847db20b5fd142508e57",
+      "requestDigest": "2b0794fb608c2d00abfe661584ec3a1451726ebea227f52a147acc1fe1bc642d",
+      "evaluationTime": "2026-08-10T22:49:06.000Z",
+      "claimCore": {
+        "claimId": "897341378b49e1432429c5684f382111baa74c93b7fd7281c3f85a4b6edb8810",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:32597d313bf5c862c8d41e16a403b7990f6c6061217ea3db3f932b405deb90f7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:81e690b66e1b3557a20dabf48ef0e1b7fb00f52b4109792597d573b5caefa0a2",
+        "canonicalBaseRevision": "6191f8e81afcd0ebab38d299b61363702ef15460",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-forward-child-recovery.test.mjs",
+          "path:scripts/reviewed-forward-child-recovery-repository-adapter.mjs",
+          "semantic:reviewed-forward-child-recovery-fix"
+        ],
+        "writeSetDigest": "7b55a6085600fae4e54d14f42449323474fd4a1989a89d532952ab702f530f0c",
+        "laneRevision": "c1a82903db00016827890273eacb05ec84b89e74",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-10T23:31:28.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79P478",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3d4a14bc72b5d0a3ba74a9e53fb995182a7e14ff92ea4c679d9e726b091ff736",
+      "digest": "f32eb6bfa184743af361b05d2cab7b783eccb4bf2cf9456ce42a3bebf52b905d"
     }
   ]
 }

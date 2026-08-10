@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1751,
-  "headDigest": "53b83bec350a4caad04c065facf26618a329e3e3e3134264829e762598dc7e38",
+  "sequence": 1752,
+  "headDigest": "41a4baf67ee84820375d0f55f1bf6eef4cc7ef274d330942259d85ce5f29c3b0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -87228,6 +87228,48 @@
       },
       "claimDigest": "862d12d62f5f98be9b9d1b94bea4c06ac3637632299ee3ff84ce25f8d1f9782a",
       "digest": "53b83bec350a4caad04c065facf26618a329e3e3e3134264829e762598dc7e38"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1752,
+      "parentDigest": "53b83bec350a4caad04c065facf26618a329e3e3e3134264829e762598dc7e38",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9d41e119ef7dce839a050cab2ab3357a93bf3665e2869a128a5cdef3be6e582c",
+      "idempotencyKey": "93c7e4669714233dfc0135860f3545c2d18cf86aaac4acc8b5dfb9513042bf48",
+      "requestDigest": "4da91ef2b5aa49716e3b27ec27c98ca24a63804fec06f56a02254cf221985684",
+      "evaluationTime": "2026-08-10T09:27:24.000Z",
+      "claimCore": {
+        "claimId": "9d41e119ef7dce839a050cab2ab3357a93bf3665e2869a128a5cdef3be6e582c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b6b154f0f0d1c59607d8867c501fa0d5553c1c2cf295ffb06266f0d60629529a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9c716c14bff2d149cac81490b01763f8008691b14d4db5e029c2290d33e1fd78",
+        "canonicalBaseRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "declaredWriteScope": [
+          "path:__tests__/heartbeat-manifest-projection-recovery.test.mjs",
+          "path:scripts/expired-committed-heartbeat-contract.mjs",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "path:scripts/expired-committed-heartbeat-recovery-lib.mjs",
+          "semantic:heartbeat-manifest-projection-recovery"
+        ],
+        "writeSetDigest": "c4f6756ded14e0d75973c4d68f2e3022188df506b1ee39340b955c9c292cc1d1",
+        "laneRevision": "f62072455de8985c74213895fcc9b4e861e923c3",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-10T09:44:42.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM787BeA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e3f64301719de16c8aa824c0f90949f46fc5ebe7842587474887cbc2701c154b",
+      "digest": "41a4baf67ee84820375d0f55f1bf6eef4cc7ef274d330942259d85ce5f29c3b0"
     }
   ]
 }

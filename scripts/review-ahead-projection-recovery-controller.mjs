@@ -1,0 +1,125 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import {
+  continueExpiredReviewLaneAuthority,
+  createRepositoryCloudAuthorityHandoffControllerAdapter,
+} from "./cloud-authority-handoff-controller.mjs";
+import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import {
+  assertReviewAheadAuthorization,
+  createReviewAheadPlan,
+  REVIEW_AHEAD_RESULT_SCHEMA,
+} from "./review-ahead-projection-recovery-contract.mjs";
+import { captureReviewAheadProjectionEvidence } from "./review-ahead-projection-recovery-evidence.mjs";
+
+export function createReviewAheadProjectionController({
+  adapter,
+  now = () => new Date(),
+  reclaim = continueExpiredReviewLaneAuthority,
+} = {}) {
+  if (!adapter) throw new Error("Review-ahead recovery requires a repository adapter.");
+  return Object.freeze({
+    async plan({ branch, sessionId }) {
+      const captured = await captureReviewAheadProjectionEvidence({ adapter, branch, sessionId });
+      return createReviewAheadPlan(captured.evidence, { now: now() });
+    },
+    async execute({ branch, sessionId, authorization, ttlSeconds = 1800 }) {
+      const before = await captureReviewAheadProjectionEvidence({ adapter, branch, sessionId });
+      const plan = createReviewAheadPlan(before.evidence, { now: now() });
+      assertReviewAheadAuthorization(plan, authorization);
+      const projection = before.evidence.leaseStatus === "active"
+        ? await adapter.persistReviewProjection({
+          lane: before.lane,
+          authority: before.lane.authority,
+        })
+        : Object.freeze({ receiptDigest: digestValue({
+          schema: "agentic-review-ahead-existing-projection/v1",
+          branch,
+          claimId: before.evidence.claimId,
+          reviewHeadSha: before.evidence.reviewHeadSha,
+        }) });
+      const projected = await captureReviewAheadProjectionEvidence({ adapter, branch, sessionId });
+      if (projected.evidence.leaseStatus !== "review_ready"
+          || projected.evidence.claimId !== before.evidence.claimId
+          || projected.evidence.localHeadSha !== before.evidence.localHeadSha
+          || projected.evidence.localDescendantReceiptDigest
+            !== before.evidence.localDescendantReceiptDigest
+          || projected.evidence.reviewHeadSha !== before.evidence.reviewHeadSha) {
+        throw new Error("Review-ahead local projection did not preserve exact identity.");
+      }
+      const reclaimed = await reclaim({
+        transition: "reclaim",
+        branch,
+        sessionId,
+        successorSessionId: sessionId,
+        successorDeviceId: before.lane.lease.device,
+        ttlSeconds,
+      }, { adapter });
+      if (!String(reclaimed.outcome || "").startsWith("reclaimed-live")) {
+        throw new Error("Review-ahead cloud reclaim did not converge to live review authority.");
+      }
+      const core = {
+        schema: REVIEW_AHEAD_RESULT_SCHEMA,
+        ok: true,
+        status: "review-ready-reclaimed",
+        branch,
+        planDigest: plan.planDigest,
+        sourceClaimId: before.evidence.claimId,
+        successorClaimId: reclaimed.successorClaimId,
+        projectionReceiptDigest: projection.receiptDigest,
+        reclaimResultDigest: digestValue(reclaimed),
+        sourceBytes: "preserved",
+        deployment: false,
+      };
+      return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+    },
+  });
+}
+
+export function createRepositoryReviewAheadProjectionController({ repository, sessionId } = {}) {
+  const base = createRepositoryCloudAuthorityHandoffControllerAdapter({ repository, sessionId });
+  const adapter = Object.freeze({
+    ...base,
+    readLocalHead() {
+      return execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repository,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    },
+    readLocalDescendantReceipt({ localHeadSha, reviewHeadSha, declaredWriteScope }) {
+      execFileSync("git", ["merge-base", "--is-ancestor", reviewHeadSha, localHeadSha], {
+        cwd: repository,
+        stdio: ["ignore", "ignore", "pipe"],
+      });
+      const commits = execFileSync("git", ["rev-list", "--reverse", `${reviewHeadSha}..${localHeadSha}`], {
+        cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+      }).trim().split("\n").filter(Boolean);
+      if (commits.length === 0 || commits.length > 32) {
+        throw new Error("Review-ahead local descendant range must contain 1 to 32 commits.");
+      }
+      const paths = execFileSync("git", ["diff", "--name-only", "-z", reviewHeadSha, localHeadSha], {
+        cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+      }).split("\0").filter(Boolean).sort();
+      const allowed = new Set(declaredWriteScope
+        .filter(value => value.startsWith("path:"))
+        .map(value => value.slice(5)));
+      if (paths.length === 0 || paths.some(value => !allowed.has(value))) {
+        throw new Error("Review-ahead local descendants exceed the admitted write scope.");
+      }
+      const binaryDiff = execFileSync("git", ["diff", "--binary", reviewHeadSha, localHeadSha], {
+        cwd: repository, encoding: null, stdio: ["ignore", "pipe", "pipe"],
+      });
+      const receipt = Object.freeze({
+        schema: "agentic-review-ahead-local-descendant-evidence/v1",
+        reviewHeadSha, localHeadSha, commits, paths,
+        treeSha: execFileSync("git", ["rev-parse", `${localHeadSha}^{tree}`], {
+          cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+        }).trim(),
+        binaryDiffDigest: createHash("sha256").update(binaryDiff).digest("hex"),
+      });
+      return Object.freeze({ receipt, receiptDigest: digestValue(receipt) });
+    },
+  });
+  return createReviewAheadProjectionController({ adapter });
+}

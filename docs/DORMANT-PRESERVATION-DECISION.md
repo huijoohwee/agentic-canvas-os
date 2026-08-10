@@ -40,6 +40,8 @@ The selection file is the operator-visible scope of the preservation decision:
 
 `pullRequest` may be a positive number, a non-empty pull-request reference, or `null`. Every selected pull request must resolve twice to the same open draft and must match its selected worktree branch and HEAD. The selection must cover the complete dormant-preservation receipt exactly.
 
+An attached preserved worktree carries its canonical non-empty branch and `detached: false`. A detached preserved worktree carries exactly `branch: null` and `detached: true` and cannot bind a pull request. Contradictory branch/detached projections fail before planning.
+
 The other required files are the repository-normalized declared write-scope manifest and cloud-authority receipt already used by provisioned `device:start`. A root-source bootstrap exception is intentionally unsupported: this path requires a clean exact canonical source and does not infer unrelated authority.
 
 ## Plan

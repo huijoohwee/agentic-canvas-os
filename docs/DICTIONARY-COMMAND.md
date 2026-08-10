@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "616c83d5d5b70dc41ec35e4b11fd846fa18f30c15c7cdb74cd8bb505466136f3"
+catalog_digest: "e127aeff89d632efc02b5adabfd666d3e0642ffdbf4d5335a3e623a705123e62"
 catalog_entry_count: 414
 source_docs:
   - "FACTS.md"

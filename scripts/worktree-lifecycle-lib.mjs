@@ -1,9 +1,13 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { isRetiredPreservedLane } from "./legacy-review-ready-retirement-lib.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
+import { cleanupEmptyTaskWorktreeContainers } from "./task-worktree-owned-containers.mjs";
+
+export const WORKTREE_CLEANUP_RESULT_SCHEMA = "agentic-worktree-cleanup-result/v1";
 
 const SAFE_STATES = new Set([
   "canonical",
@@ -101,10 +105,14 @@ export function buildLifecycleReport({
     return [path.resolve(record.path), dirtState];
   }));
   const leases = readLeases(root, git);
-  const integratedCompletionShas = new Set(leases
-    .filter(lease => lease?.status === "completed" && lease.completion?.mainSha &&
-      isAncestor(root, lease.completion.mainSha, canonicalSha))
-    .map(lease => lease.completion.mainSha));
+  const relevantCompletionShas = new Set(records
+    .filter(record => !record.branch && !record.bare && !record.prunable && !record.locked)
+    .map(record => ({ record, lease: latestLeaseForPath(leases, record.path) }))
+    .filter(({ record, lease }) => lease?.status === "completed" &&
+      lease.completion?.mainSha === record.head)
+    .map(({ lease }) => lease.completion.mainSha));
+  const integratedCompletionShas = new Set([...relevantCompletionShas]
+    .filter(completionSha => isAncestor(root, completionSha, canonicalSha)));
   const worktrees = classifyWorktreeLifecycle({
     records,
     canonicalSha,
@@ -121,15 +129,210 @@ export function buildLifecycleReport({
   };
 }
 
-export function cleanupCompletedWorktree({ report, target, remove = removeWorktree }) {
+export function buildWorktreeCleanupReport({
+  repository,
+  target,
+  git = runGit,
+  readLeases = readRepositoryLeases,
+  isAncestor = isGitAncestor,
+  pathExists = pathEntryExists,
+  gitCommonDir = "",
+} = {}) {
+  const root = path.resolve(repository || process.cwd());
   const normalizedTarget = path.resolve(target || "");
-  const candidate = report.worktrees.find(item => path.resolve(item.path) === normalizedTarget);
-  if (!candidate) throw new Error(`Target is not a registered worktree: ${normalizedTarget}`);
-  if (candidate.state !== "cleanup-ready") {
-    throw new Error(`Refusing cleanup for ${normalizedTarget}; lifecycle state is ${candidate.state}.`);
+  if (!target) throw new Error("Cleanup requires one exact worktree target.");
+  const records = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]));
+  const mainRecords = records.filter(record => record.branch === "refs/heads/main");
+  if (mainRecords.length !== 1) {
+    throw new Error(`Expected one canonical main worktree; found ${mainRecords.length}.`);
   }
-  remove(report.repository, normalizedTarget);
-  return { removedWorktree: normalizedTarget, preservedBranch: candidate.lease?.branch || null };
+  const matches = records.filter(record => path.resolve(record.path) === normalizedTarget);
+  if (matches.length > 1) throw new Error(`Target has ambiguous worktree registration: ${normalizedTarget}`);
+  const canonicalSha = git(root, ["rev-parse", "origin/main"]).trim();
+  const commonDirectory = path.resolve(
+    root,
+    gitCommonDir || git(root, ["rev-parse", "--git-common-dir"]).trim(),
+  );
+  const leases = readLeases(root, git);
+  const lease = latestLeaseForPath(leases, normalizedTarget);
+  const record = matches[0] || null;
+  const pathPresentBefore = pathExists(normalizedTarget);
+
+  if (!record) {
+    if (pathPresentBefore) {
+      throw new Error(`Target path remains present without worktree registration: ${normalizedTarget}`);
+    }
+    if (lease?.status !== "completed" || !lease.completion?.mainSha) {
+      throw new Error(`Target is not a registered completed worktree: ${normalizedTarget}`);
+    }
+    if (!isAncestor(root, lease.completion.mainSha, canonicalSha)) {
+      throw new Error(`Completed target is not contained by canonical origin/main: ${normalizedTarget}`);
+    }
+    return {
+      repository: root,
+      canonicalSha,
+      gitCommonDir: commonDirectory,
+      target: {
+        path: normalizedTarget,
+        registeredBefore: false,
+        pathPresentBefore: false,
+        head: null,
+        completionMainSha: lease.completion.mainSha,
+        state: "already-cleaned",
+      },
+      lease,
+    };
+  }
+
+  if (record === mainRecords[0]) {
+    throw new Error(`Refusing cleanup for ${normalizedTarget}; lifecycle state is canonical.`);
+  }
+  if (!pathPresentBefore) {
+    throw new Error(`Registered cleanup target is missing from the filesystem: ${normalizedTarget}`);
+  }
+  const observedAt = new Date().toISOString();
+  const targetDirt = parseDirtState(
+    git(record.path, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
+    observedAt,
+  );
+  const integratedCompletionShas = new Set();
+  if (lease?.status === "completed" && lease.completion?.mainSha === record.head &&
+      isAncestor(root, lease.completion.mainSha, canonicalSha)) {
+    integratedCompletionShas.add(lease.completion.mainSha);
+  }
+  const candidate = classifyWorktreeLifecycle({
+    records: [mainRecords[0], record],
+    canonicalSha,
+    leases: lease ? [lease] : [],
+    dirt: new Map([[normalizedTarget, targetDirt]]),
+    integratedCompletionShas,
+  })[1];
+  return {
+    repository: root,
+    canonicalSha,
+    gitCommonDir: commonDirectory,
+    target: {
+      path: normalizedTarget,
+      registeredBefore: true,
+      pathPresentBefore: true,
+      head: record.head,
+      completionMainSha: lease?.completion?.mainSha || null,
+      state: candidate.state,
+    },
+    lease,
+    candidate,
+  };
+}
+
+export function cleanupCompletedWorktree({
+  report,
+  target,
+  remove = removeWorktree,
+  cleanupContainers = cleanupEmptyTaskWorktreeContainers,
+} = {}) {
+  const normalizedTarget = path.resolve(target || "");
+  if (!target) throw new Error("Cleanup requires one exact worktree target.");
+  const candidate = report.candidate || report.worktrees?.find(
+    item => path.resolve(item.path) === normalizedTarget,
+  ) || null;
+  const lease = report.lease || candidate?.lease || null;
+  const targetEvidence = report.target || (candidate ? {
+    path: normalizedTarget,
+    registeredBefore: true,
+    pathPresentBefore: true,
+    head: candidate.head || lease?.completion?.mainSha || null,
+    completionMainSha: lease?.completion?.mainSha || null,
+    state: candidate.state,
+  } : null);
+  if (!targetEvidence) throw new Error(`Target is not a registered worktree: ${normalizedTarget}`);
+  if (!["cleanup-ready", "already-cleaned"].includes(targetEvidence.state)) {
+    throw new Error(`Refusing cleanup for ${normalizedTarget}; lifecycle state is ${targetEvidence.state}.`);
+  }
+  const replayed = targetEvidence.state === "already-cleaned";
+  const removal = replayed
+    ? { registeredAfter: false, pathExistsAfter: false }
+    : remove(report.repository, normalizedTarget);
+  if (removal?.registeredAfter !== false || removal?.pathExistsAfter !== false) {
+    throw new Error(`Cleanup did not prove exact worktree absence: ${normalizedTarget}`);
+  }
+  const commonDirectory = path.resolve(
+    report.repository,
+    report.gitCommonDir || path.join(report.repository, ".git"),
+  );
+  const finalTargetEvidence = {
+    ...targetEvidence,
+    registeredAfter: false,
+    pathExistsAfter: false,
+  };
+  const containers = cleanupContainers({
+    repoRoot: report.repository,
+    gitCommonDir: commonDirectory,
+    targetPath: normalizedTarget,
+  });
+  const preservedBranch = lease?.branch || null;
+  return {
+    schema: WORKTREE_CLEANUP_RESULT_SCHEMA,
+    status: replayed ? "already-cleaned" : "cleaned",
+    repository: report.repository,
+    gitCommonDir: commonDirectory,
+    canonicalSha: report.canonicalSha,
+    target: finalTargetEvidence,
+    removedWorktree: replayed ? null : normalizedTarget,
+    preservedBranch,
+    registrationPruned: false,
+    ...containers,
+    operationId: createWorktreeCleanupOperationId({
+      repository: report.repository,
+      gitCommonDir: commonDirectory,
+      targetPath: normalizedTarget,
+      completionMainSha: targetEvidence.completionMainSha,
+      preservedBranch,
+      managedContainer: containers.managedContainer,
+      sharedContainer: containers.sharedContainer,
+    }),
+    replayed,
+  };
+}
+
+export function cleanupEmptyWorktreeContainers({
+  repository,
+  git = runGit,
+  gitCommonDir = "",
+  cleanupContainers = cleanupEmptyTaskWorktreeContainers,
+} = {}) {
+  const root = path.resolve(repository || process.cwd());
+  const canonicalSha = git(root, ["rev-parse", "origin/main"]).trim();
+  const commonDirectory = path.resolve(
+    root,
+    gitCommonDir || git(root, ["rev-parse", "--git-common-dir"]).trim(),
+  );
+  const containers = cleanupContainers({ repoRoot: root, gitCommonDir: commonDirectory });
+  const cleaned = containers.removedEmptyDirectories.length > 0;
+  const repositoryResidueAbsent = containers.managedContainer.disposition === "absent"
+    && ["absent", "retained-nonempty"].includes(containers.sharedContainer.disposition);
+  const status = cleaned ? "cleaned" : repositoryResidueAbsent ? "already-cleaned" : "retained";
+  return {
+    schema: WORKTREE_CLEANUP_RESULT_SCHEMA,
+    status,
+    repository: root,
+    gitCommonDir: commonDirectory,
+    canonicalSha,
+    target: null,
+    removedWorktree: null,
+    preservedBranch: null,
+    registrationPruned: false,
+    ...containers,
+    operationId: createWorktreeCleanupOperationId({
+      repository: root,
+      gitCommonDir: commonDirectory,
+      targetPath: null,
+      completionMainSha: null,
+      preservedBranch: null,
+      managedContainer: containers.managedContainer,
+      sharedContainer: containers.sharedContainer,
+    }),
+    replayed: status === "already-cleaned",
+  };
 }
 
 function latestLeaseForPath(leases, worktreePath) {
@@ -217,5 +420,42 @@ function isGitAncestor(cwd, ancestor, descendant) {
 
 function removeWorktree(repository, target) {
   execFileSync("git", ["worktree", "remove", target], { cwd: repository, stdio: "inherit" });
-  execFileSync("git", ["worktree", "prune"], { cwd: repository, stdio: "inherit" });
+  const records = parseWorktreeRecords(runGit(repository, ["worktree", "list", "--porcelain"]));
+  const registeredAfter = records.some(record => path.resolve(record.path) === path.resolve(target));
+  const pathExistsAfter = pathEntryExists(target);
+  if (registeredAfter || pathExistsAfter) {
+    throw new Error(`Exact worktree removal left registered or filesystem residue: ${target}`);
+  }
+  return { registeredAfter, pathExistsAfter };
+}
+
+export function createWorktreeCleanupOperationId({
+  repository,
+  gitCommonDir,
+  targetPath,
+  completionMainSha,
+  preservedBranch,
+  managedContainer,
+  sharedContainer,
+}) {
+  return createHash("sha256").update(JSON.stringify({
+    schema: WORKTREE_CLEANUP_RESULT_SCHEMA,
+    repository: path.resolve(repository),
+    gitCommonDir: path.resolve(repository, gitCommonDir || path.join(repository, ".git")),
+    targetPath: targetPath ? path.resolve(targetPath) : null,
+    completionMainSha,
+    preservedBranch,
+    managedContainerRoot: managedContainer.root,
+    sharedContainerRoot: sharedContainer.root,
+  })).digest("hex");
+}
+
+function pathEntryExists(candidate) {
+  try {
+    lstatSync(candidate);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
 }

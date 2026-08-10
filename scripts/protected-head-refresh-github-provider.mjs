@@ -4,6 +4,9 @@ import {
   reconcileProtectedHeadRefreshCiRuns,
   renderProtectedHeadRefreshHandshakeEvidence,
 } from "./protected-main-refresh-lib.mjs";
+const CI_ROLLUP_PROJECTION_SCHEMA = "agentic-protected-head-refresh-ci-rollup-projection/v1";
+const CI_ROLLUP_EXTERNAL_ID_PREFIX = "agentic-protected-head-refresh-ci:";
+const CI_ROLLUP_TITLE = "Protected refresh CI rollup projection";
 
 export function createProtectedHeadRefreshGithubProvider({
   repository,
@@ -30,7 +33,6 @@ export function createProtectedHeadRefreshGithubProvider({
       );
     }
   }
-
   function verifyNoSynchronizeRun({ candidateSha }) {
     for (const workflow of ["auto-delivery.yml", "cloud-collaboration.yml"]) {
       const response = ghJson([
@@ -66,7 +68,6 @@ export function createProtectedHeadRefreshGithubProvider({
       }
     }
   }
-
   function reconcileCandidateCi({ candidateSha }) {
     let visibilityFence = null;
     for (let attempt = 0; attempt < 210; attempt += 1) {
@@ -110,7 +111,6 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     throw new Error("Protected-head refresh CI did not converge within the 17.5-minute bound.");
   }
-
   function readProtectedHeadRefreshCiDecision({ candidateSha }) {
     const response = ghJson([
       "api", "--method", "GET",
@@ -133,7 +133,6 @@ export function createProtectedHeadRefreshGithubProvider({
       operationId: projection.operation_id,
     });
   }
-
   function dispatchProtectedHeadRefreshCi({ candidateSha, priorRunId }) {
     if (totalCiDispatchAttempts >= maxCiDispatchAttempts) {
       throw new Error("Protected-head refresh exhausted its bounded CI dispatch attempts.");
@@ -163,7 +162,6 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return { priorRunId, polls: 0 };
   }
-
   function classifyProtectedHeadRefreshCiEvidence({ candidateSha, ci }) {
     const suiteResponse = ghJson([
       "api", "--method", "GET",
@@ -197,8 +195,16 @@ export function createProtectedHeadRefreshGithubProvider({
         && run?.app?.id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
         && run?.app?.slug === "github-actions"
       ));
-      if (actionsRuns.length === 0) return "waiting";
-      const newest = actionsRuns.sort((left, right) => Number(left.id) - Number(right.id)).at(-1);
+      const projections = actionsRuns.filter(isCiRollupProjection);
+      if (projections.some(run => !isOperationCiRollupProjection(run))) {
+        throw new Error(
+          `Protected-head refresh required check ${context} has a foreign rollup projection.`,
+        );
+      }
+      const sourceRuns = actionsRuns.filter(run => !isCiRollupProjection(run));
+      if (sourceRuns.length === 0) return "waiting";
+      const newest = sourceRuns
+        .sort((left, right) => Number(left.id) - Number(right.id)).at(-1);
       const state = classifyActionsCheck({ run: newest, candidateSha, context });
       if (state === "pending") return "waiting";
       if (state === "failure") return "superseded";
@@ -206,10 +212,9 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return "accepted";
   }
-
   function classifyActionsCheck({ run, candidateSha, context, checkSuiteId = null }) {
     if (
-      !Number.isSafeInteger(Number(run?.id))
+      !Number.isSafeInteger(Number(run?.id)) || Number(run?.id) <= 0
       || run?.name !== context
       || run?.head_sha !== candidateSha
       || run?.app?.id !== PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
@@ -226,7 +231,14 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return run.conclusion === "success" ? "success" : "failure";
   }
-
+  function isCiRollupProjection(run) {
+    return String(run?.external_id || "").startsWith(CI_ROLLUP_EXTERNAL_ID_PREFIX);
+  }
+  function isOperationCiRollupProjection(run) {
+    return String(run?.external_id || "").startsWith(
+      `${CI_ROLLUP_EXTERNAL_ID_PREFIX}${projection.operation_id}:`,
+    );
+  }
   function reconcileCloudCheck({ candidateSha, create }) {
     const contract = protectedHeadRefreshCheckContract();
     let receipt = readProtectedHeadRefreshCloudChecks({ candidateSha, contract });
@@ -258,7 +270,6 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return receipt;
   }
-
   function completeCloudCheck({ candidateSha, cloudCheck, ci }) {
     if (!ci?.htmlUrl || !Number.isSafeInteger(ci.workflowRunId)) {
       throw new Error("Protected-head refresh cloud completion requires exact CI evidence.");
@@ -283,6 +294,7 @@ export function createProtectedHeadRefreshGithubProvider({
     if (state === "complete" && exactCheck.output?.summary !== completeSummary) {
       throw new Error("Protected-head refresh concurrent cloud completion CI evidence drifted.");
     }
+    reconcileCiRollupProjections({ candidateSha, ci, cloudCheckRunId: checkRunId });
     if (state !== "complete") {
       gh([
         "api", "--method", "PATCH", `repos/${repository}/check-runs/${checkRunId}`,
@@ -310,7 +322,79 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return readProtectedHeadRefreshCloudChecks({ candidateSha, contract });
   }
-
+  function reconcileCiRollupProjections({ candidateSha, ci, cloudCheckRunId }) {
+    if (!Number.isSafeInteger(ci?.workflowRunId) || !Number.isSafeInteger(ci?.checkSuiteId)
+      || !ci?.htmlUrl || !Number.isSafeInteger(cloudCheckRunId)) {
+      throw new Error("Protected-head refresh CI rollup projection requires exact CI evidence.");
+    }
+    const sourcePage = ghJson(["api", "--method", "GET",
+      `repos/${repository}/check-suites/${ci.checkSuiteId}/check-runs`,
+      "-f", "filter=latest", "-f", "per_page=100"]);
+    const sources = requireBoundedArrayPage({ response: sourcePage, key: "check_runs",
+      label: "Protected-head refresh CI rollup source listing" });
+    const ids = [];
+    for (const context of PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS) {
+      const matches = sources.filter(run => run?.name === context);
+      if (matches.length !== 1 || classifyActionsCheck({ run: matches[0], candidateSha,
+        context, checkSuiteId: ci.checkSuiteId }) !== "success") {
+        throw new Error(`Protected-head refresh CI rollup source ${context} is not exact success.`);
+      }
+      const sourceId = Number(matches[0].id);
+      const externalId = `${CI_ROLLUP_EXTERNAL_ID_PREFIX}${projection.operation_id}:${sourceId}`;
+      const summary = JSON.stringify({ schema: CI_ROLLUP_PROJECTION_SCHEMA,
+        operation_id: projection.operation_id, candidate_sha: candidateSha, context,
+        source_workflow_run_id: ci.workflowRunId, source_check_suite_id: ci.checkSuiteId,
+        source_check_run_id: sourceId });
+      const readMatching = () => {
+        const projected = readCommitCheckRuns(candidateSha).filter(check => check?.name === context
+          && check?.app?.id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
+          && check?.app?.slug === "github-actions" && isCiRollupProjection(check));
+        const exact = projected.filter(check => check?.external_id === externalId);
+        if (projected.length !== exact.length) {
+          throw new Error(`Protected-head refresh CI rollup context ${context} is quarantined.`);
+        }
+        return exact;
+      };
+      let projected = readMatching();
+      if (projected.length === 0) {
+        gh(["api", "--method", "POST", `repos/${repository}/check-runs`, "--input", "-"], {
+          allowFailure: true, input: JSON.stringify({ name: context, head_sha: candidateSha,
+            status: "completed", conclusion: "success", external_id: externalId,
+            details_url: ci.htmlUrl, output: { title: CI_ROLLUP_TITLE, summary } }),
+        });
+        projected = readMatching();
+      }
+      if (projected.length !== 1) {
+        throw new Error(`Protected-head refresh CI rollup projection ${context} is not sole.`);
+      }
+      const check = readExactCheckRun(Number(projected[0].id));
+      const canonicalDetailsUrl = `https://github.com/${repository}/runs/${check.id}`;
+      if (check?.name !== context || check?.head_sha !== candidateSha
+        || check?.external_id !== externalId || check?.app?.id !== PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
+        || check?.app?.slug !== "github-actions" || check?.status !== "completed"
+        || check?.conclusion !== "success" || ![ci.htmlUrl, canonicalDetailsUrl].includes(check?.details_url)
+        || check?.output?.title !== CI_ROLLUP_TITLE || check?.output?.summary !== summary) {
+        throw new Error(`Protected-head refresh CI rollup projection ${context} drifted.`);
+      }
+      ids.push(Number(check.id));
+    }
+    const expected = [...ids, cloudCheckRunId];
+    const [owner, name] = repository.split("/");
+    const query = "query($owner:String!,$name:String!,$oid:GitObjectID!){repository(owner:$owner,name:$name){object(oid:$oid){... on Commit{statusCheckRollup{contexts(first:100){totalCount nodes{__typename ... on CheckRun{databaseId}}}}}}}}";
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const response = ghJson(["api", "graphql", "-f", `query=${query}`,
+        "-f", `owner=${owner}`, "-f", `name=${name}`, "-f", `oid=${candidateSha}`]);
+      const contexts = response?.data?.repository?.object?.statusCheckRollup?.contexts;
+      if (!contexts || !Array.isArray(contexts.nodes)
+        || !Number.isSafeInteger(Number(contexts.totalCount)) || Number(contexts.totalCount) > 100) {
+        throw new Error("Protected-head refresh candidate status-check rollup is malformed.");
+      }
+      const observed = new Set(contexts.nodes.map(node => Number(node?.databaseId)));
+      if (expected.every(id => observed.has(id))) return Object.freeze(ids);
+      if (attempt + 1 < 12) sleepSeconds(1);
+    }
+    throw new Error("Protected-head refresh CI projections did not converge into the candidate rollup.");
+  }
   function readProtectedHeadRefreshCloudChecks({ candidateSha, contract }) {
     const allChecks = readCommitCheckRuns(candidateSha);
     const sameContext = allChecks.filter(check => (
@@ -342,7 +426,6 @@ export function createProtectedHeadRefreshGithubProvider({
       externalId: contract.externalId,
     });
   }
-
   function protectedHeadRefreshCheckContract() {
     return Object.freeze({
       name: "cloud-collaboration",
@@ -352,7 +435,6 @@ export function createProtectedHeadRefreshGithubProvider({
       completeTitle: "Protected refresh authorization complete",
     });
   }
-
   function requireProtectedHeadRefreshOwnedCheck({ check, candidateSha, contract }) {
     if (
       check.name !== contract.name
@@ -399,7 +481,6 @@ export function createProtectedHeadRefreshGithubProvider({
       "Protected-head refresh owned cloud check terminalized before authorization commit.",
     );
   }
-
   function readExactCheckRun(checkRunId) {
     const check = ghJson([
       "api", "--method", "GET", `repos/${repository}/check-runs/${checkRunId}`,

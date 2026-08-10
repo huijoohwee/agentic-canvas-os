@@ -1,0 +1,185 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  createReviewAheadPlan,
+  REVIEW_AHEAD_AUTHORIZATION_PREFIX,
+} from "../scripts/review-ahead-projection-recovery-contract.mjs";
+import { createReviewAheadProjectionController } from "../scripts/review-ahead-projection-recovery-controller.mjs";
+
+const sha = character => character.repeat(40);
+const digest = character => character.repeat(64);
+const expired = "2026-08-10T00:00:00.000Z";
+
+function fixture(overrides = {}) {
+  return {
+    repository: "/repo", repositoryId: "github-repository:R_test", branch: "agent/device.local/scope",
+    deviceId: "device.local", sessionId: "source-session", actorLogin: "owner", clean: true,
+    localHeadSha: sha("a"), refreshedHeadSha: null, localDescendantReceiptDigest: null,
+    remoteHeadSha: sha("a"), reviewHeadSha: sha("a"), pullRequestHeadSha: sha("a"),
+    pullRequestUrl: "https://github.com/o/r/pull/1", pullRequestAuthorLogin: "owner",
+    pullRequestState: "OPEN", pullRequestDraft: false,
+    leaseStatus: "active", localExpiresAt: expired, localAuthorityState: "review_ready",
+    claimId: digest("1"), authorityLaneRevision: sha("a"), reviewRequestId: "github-pull-request:PR_1",
+    writeSetDigest: digest("2"), declaredWriteScope: ["path:a", "semantic:scope"], leaseEpoch: 1,
+    remoteClaimId: digest("1"), remoteClaimState: "dormant-preserved",
+    remoteRepositoryId: "github-repository:R_test", remoteLaneRevision: sha("a"),
+    remoteDeviceId: "device.local", remoteSessionId: "source-session",
+    remoteReviewRequestId: "github-pull-request:PR_1", remoteWriteSetDigest: digest("2"),
+    remoteDeclaredWriteScope: ["path:a", "semantic:scope"], remoteLeaseEpoch: 1,
+    remoteExpiresAt: expired,
+    ...overrides,
+  };
+}
+
+test("plan binds the exact expired review-ahead projection", () => {
+  const plan = createReviewAheadPlan(fixture(), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "planned");
+  assert.equal(plan.authorization, `${REVIEW_AHEAD_AUTHORIZATION_PREFIX} ${plan.planDigest}`);
+  assert.deepEqual(plan.findings, []);
+});
+
+test("identity, provider, dirt, and non-expiry drift block before mutation", () => {
+  const cases = [
+    { clean: false }, { leaseStatus: "delivery" }, { remoteClaimState: "current" },
+    { pullRequestDraft: true }, { pullRequestHeadSha: sha("b") },
+    { localHeadSha: sha("b"), localDescendantReceiptDigest: null },
+    { remoteClaimId: digest("3") }, { remoteRepositoryId: "github-repository:R_other" },
+    { localExpiresAt: "2026-08-10T02:00:00.000Z" },
+  ];
+  for (const change of cases) {
+    assert.equal(
+      createReviewAheadPlan(fixture(change), { now: new Date("2026-08-10T01:00:00.000Z") }).status,
+      "blocked",
+    );
+  }
+});
+
+test("receipt-bound in-scope commits may be ahead of the reviewed remote head", () => {
+  const plan = createReviewAheadPlan(fixture({
+    localHeadSha: sha("b"),
+    localDescendantReceiptDigest: digest("6"),
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "planned");
+});
+
+test("an exact integrated-preserved post-success state remains replayable before expiry", () => {
+  const plan = createReviewAheadPlan(fixture({
+    remoteClaimState: "integrated-preserved",
+    localExpiresAt: "2026-08-10T02:00:00.000Z",
+    remoteExpiresAt: "2026-08-10T02:00:00.000Z",
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "planned");
+  assert.deepEqual(plan.findings, []);
+  assert.ok(plan.allowedMutations.includes("cloud-integrated-replay-receipt"));
+});
+
+test("execute projects review-ready once then delegates exact same-session reclaim", async () => {
+  let status = "active";
+  let projected = 0;
+  const base = fixture();
+  const lane = {
+    repository: base.repository, branch: base.branch, headSha: base.reviewHeadSha,
+    refreshedHeadSha: null, remoteHeadSha: base.remoteHeadSha, clean: true,
+    authority: {
+      state: "review_ready", claimId: base.claimId, laneRevision: base.authorityLaneRevision,
+      reviewRequestId: base.reviewRequestId, writeSetDigest: base.writeSetDigest,
+      cloudDeclaredWriteScope: base.declaredWriteScope, leaseEpoch: 1,
+      ledgerRepository: "o/ledger", targetRepository: "o/r",
+    },
+    lease: { status, sessionId: base.sessionId, expiresAt: expired, device: "device.local" },
+    pullRequest: {
+      headRefOid: base.pullRequestHeadSha, url: base.pullRequestUrl,
+      authorLogin: "owner", state: "OPEN", isDraft: false,
+    },
+  };
+  const adapter = {
+    async readPreservedReviewLane() { return { ...lane, lease: { ...lane.lease, status } }; },
+    async readCloudStatus() {
+      return {
+        repositoryId: base.repositoryId,
+        claims: [{
+          claimId: base.claimId, state: "dormant-preserved", repositoryId: base.repositoryId,
+          reviewRequestId: base.reviewRequestId, writeSetDigest: base.writeSetDigest,
+          laneRevision: sha("a"), deviceId: "device.local", sessionId: base.sessionId,
+          declaredWriteScope: base.declaredWriteScope, leaseEpoch: 1, expiresAt: expired,
+        }],
+      };
+    },
+    async readAuthenticatedOwner() { return { login: "owner" }; },
+    async persistReviewProjection() {
+      projected += 1;
+      status = "review_ready";
+      return { receiptDigest: digest("4") };
+    },
+  };
+  let reclaimed = 0;
+  const controller = createReviewAheadProjectionController({
+    adapter,
+    now: () => new Date("2026-08-10T01:00:00.000Z"),
+    async reclaim(request) {
+      reclaimed += 1;
+      assert.equal(request.sessionId, base.sessionId);
+      return {
+        outcome: reclaimed === 1 ? "reclaimed-live" : "reclaimed-live-replay",
+        successorClaimId: digest("5"),
+      };
+    },
+  });
+  const plan = await controller.plan({ branch: base.branch, sessionId: base.sessionId });
+  const result = await controller.execute({
+    branch: base.branch, sessionId: base.sessionId, authorization: plan.authorization,
+  });
+  assert.equal(result.status, "review-ready-reclaimed");
+  assert.equal(result.successorClaimId, digest("5"));
+  assert.equal(status, "review_ready");
+  assert.equal(reclaimed, 1);
+  const replayPlan = await controller.plan({ branch: base.branch, sessionId: base.sessionId });
+  await controller.execute({
+    branch: base.branch, sessionId: base.sessionId, authorization: replayPlan.authorization,
+  });
+  assert.equal(projected, 1);
+  assert.equal(reclaimed, 2);
+});
+
+test("execute rejects a stale authorization before projection", async () => {
+  let projected = false;
+  const base = fixture();
+  const adapter = {
+    async readPreservedReviewLane() {
+      return {
+        repository: base.repository, branch: base.branch, headSha: base.reviewHeadSha,
+        refreshedHeadSha: null, remoteHeadSha: base.remoteHeadSha, clean: true,
+        authority: {
+          state: "review_ready", claimId: base.claimId, laneRevision: base.authorityLaneRevision,
+          reviewRequestId: base.reviewRequestId, writeSetDigest: base.writeSetDigest,
+          cloudDeclaredWriteScope: base.declaredWriteScope, leaseEpoch: 1,
+          ledgerRepository: "o/l", targetRepository: "o/r",
+        },
+        lease: { status: "active", sessionId: base.sessionId, expiresAt: expired, device: "device.local" },
+        pullRequest: {
+          headRefOid: base.pullRequestHeadSha, url: base.pullRequestUrl,
+          authorLogin: "owner", state: "OPEN", isDraft: false,
+        },
+      };
+    },
+    async readCloudStatus() {
+      return { repositoryId: base.repositoryId, claims: [{
+        claimId: base.claimId, state: "dormant-preserved", repositoryId: base.repositoryId,
+        reviewRequestId: base.reviewRequestId, writeSetDigest: base.writeSetDigest,
+        laneRevision: sha("a"), deviceId: "device.local", sessionId: base.sessionId,
+        declaredWriteScope: base.declaredWriteScope, leaseEpoch: 1, expiresAt: expired,
+      }] };
+    },
+    async readAuthenticatedOwner() { return { login: "owner" }; },
+    async persistReviewProjection() { projected = true; },
+  };
+  const controller = createReviewAheadProjectionController({
+    adapter, now: () => new Date("2026-08-10T01:00:00.000Z"),
+  });
+  await assert.rejects(
+    controller.execute({ branch: base.branch, sessionId: base.sessionId, authorization: "stale" }),
+    /Exact authorization required/u,
+  );
+  assert.equal(projected, false);
+});

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1770,
-  "headDigest": "c19dfba116564f1499fe9e83fd8f4a33f0210d607dde15990514c696ca42412c",
+  "sequence": 1771,
+  "headDigest": "bd0e3f988492edd1fa226070dc14961fd470c403ff509f6199481bcac9aab211",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -88120,6 +88120,51 @@
       },
       "claimDigest": "8a465f328be7b36bf31555441d317aba5feb9b90b8c779939f1aea31521809a4",
       "digest": "c19dfba116564f1499fe9e83fd8f4a33f0210d607dde15990514c696ca42412c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1771,
+      "parentDigest": "c19dfba116564f1499fe9e83fd8f4a33f0210d607dde15990514c696ca42412c",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "81cb2a56cd98169cbb5e10b260b63921bc2496ebef4072e51449ab25c4dd165f",
+      "idempotencyKey": "87437e68f852ca939dc5b27297ea1e3d7780a9d467f591a77a2892127adee250",
+      "requestDigest": "c7ed39b02728b3db4ef881e07373619902e2645b38656b602859e4f9f67fe84e",
+      "evaluationTime": "2026-08-10T11:48:22.000Z",
+      "claimCore": {
+        "claimId": "81cb2a56cd98169cbb5e10b260b63921bc2496ebef4072e51449ab25c4dd165f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:d21d72eb1912add26a65e553b15cb6bd037419f1bb709c634968ea9a77800d62",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c34603dea09f284eeadf1d4c03028ab0b92720e2fa4993e1add6a0f24da562b0",
+        "canonicalBaseRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-lane-source-correction.test.mjs",
+          "path:docs/REVIEWED-LANE-SOURCE-CORRECTION.md",
+          "path:scripts/reviewed-lane-source-correction-contract.mjs",
+          "path:scripts/reviewed-lane-source-correction-controller.mjs",
+          "path:scripts/reviewed-lane-source-correction-evidence.mjs",
+          "path:scripts/reviewed-lane-source-correction-repository-adapter.mjs",
+          "path:scripts/reviewed-lane-source-correction.mjs",
+          "semantic:reviewed-lane-source-correction"
+        ],
+        "writeSetDigest": "8aa7cc4cdd18b91a6ccddcc4774248a7ee15038f2e0b8ec5cc7ab6b56310e04c",
+        "laneRevision": "0a2e83846d95f058736f4286cbdfa52d60462b3b",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-10T12:18:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "6a7b0dfa0afa462eaaab267a5c4c1824b42fc728fbcc3d4ff73f20f3e0d69f28",
+        "eligibleSince": "2026-08-10T11:48:22.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5aa33949fbeea1143013df997e2c85d408bdc5cf587138bf7590e14f96481df9",
+      "digest": "bd0e3f988492edd1fa226070dc14961fd470c403ff509f6199481bcac9aab211"
     }
   ]
 }

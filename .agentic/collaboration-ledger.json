@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1758,
-  "headDigest": "e268eaffbd972c368f9b148d3d8226b89604de5f11c0a9d01a416cfcd429376d",
+  "sequence": 1759,
+  "headDigest": "e49bd9717f98ad0b181adf0fdebc2a2d1d6704b743cb2a3f7ac34f3fe3c98f32",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -87524,6 +87524,58 @@
       },
       "claimDigest": "34a941716601dc46f57a7ea6ae66b7864adb94f8f1a8fa0cb8baaa5083f27f06",
       "digest": "e268eaffbd972c368f9b148d3d8226b89604de5f11c0a9d01a416cfcd429376d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1759,
+      "parentDigest": "e268eaffbd972c368f9b148d3d8226b89604de5f11c0a9d01a416cfcd429376d",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9d41e119ef7dce839a050cab2ab3357a93bf3665e2869a128a5cdef3be6e582c",
+      "idempotencyKey": "07f9bf5a50ffaf354928b3c38553f2b6fc840fab553b6f4201371cc984297562",
+      "requestDigest": "5024bb86b691f7140b215863711a90bd2f89a58a5bbdfaf87126a033f6d8dfba",
+      "evaluationTime": "2026-08-10T11:10:25.000Z",
+      "claimCore": {
+        "claimId": "9d41e119ef7dce839a050cab2ab3357a93bf3665e2869a128a5cdef3be6e582c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b6b154f0f0d1c59607d8867c501fa0d5553c1c2cf295ffb06266f0d60629529a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9c716c14bff2d149cac81490b01763f8008691b14d4db5e029c2290d33e1fd78",
+        "canonicalBaseRevision": "7fc8b3d1395649ee74c5e4555612527c4d6b0e93",
+        "declaredWriteScope": [
+          "path:__tests__/heartbeat-manifest-projection-recovery.test.mjs",
+          "path:scripts/expired-committed-heartbeat-contract.mjs",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "path:scripts/expired-committed-heartbeat-recovery-lib.mjs",
+          "semantic:heartbeat-manifest-projection-recovery"
+        ],
+        "writeSetDigest": "c4f6756ded14e0d75973c4d68f2e3022188df506b1ee39340b955c9c292cc1d1",
+        "laneRevision": "f62072455de8985c74213895fcc9b4e861e923c3",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-10T09:44:42.000Z",
+        "evidenceDigest": "cf50db143bb539642e7ad5a8576427884f57620264f6da2972b4dd491298d692",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM787BeA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "f62072455de8985c74213895fcc9b4e861e923c3",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM787BeA",
+          "bytesDigest": "9476159aa320ff8989acd3e49156abde8f95390511e0bc6f086a12e8704d9e87",
+          "namedChecksDigest": "dab0d8bf8bf5d82135c67713d353ae41d30017b73bde072c6d9d6cd0b7eb33eb",
+          "handoffEvidenceDigest": "cc07436e27d21c9c604052cae62328017409dbed9463e6c4f2b16fb41c290c26",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-10T11:10:25.000Z"
+        }
+      },
+      "claimDigest": "abc61ec8cb54658471bc697f46d82b744539835830cfa6e1db7f981a282f6d39",
+      "digest": "e49bd9717f98ad0b181adf0fdebc2a2d1d6704b743cb2a3f7ac34f3fe3c98f32"
     }
   ]
 }

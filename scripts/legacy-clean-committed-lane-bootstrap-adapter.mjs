@@ -1,3 +1,4 @@
+import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -27,6 +28,7 @@ import {
   git,
   gitExitCode,
   gitText,
+  ghText,
   listScopeOwners,
   listedWorktrees,
   lsRemoteHead,
@@ -457,4 +459,3 @@ function createAdmissionProjection({ request, lease, authority, verification }) 
     preservationReceiptDigest,
   });
 }
-

@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
@@ -9,8 +14,12 @@ import {
 } from "../scripts/legacy-review-ready-retirement-lib.mjs";
 import {
   buildLifecycleReport,
+  buildWorktreeCleanupReport,
   classifyWorktreeLifecycle,
   cleanupCompletedWorktree,
+  cleanupEmptyWorktreeContainers,
+  createWorktreeCleanupOperationId,
+  WORKTREE_CLEANUP_RESULT_SCHEMA,
 } from "../scripts/worktree-lifecycle-lib.mjs";
 import {
   projectWriterLeasePullRequestMarker,
@@ -216,34 +225,474 @@ test("lifecycle report remains ready when another scope has attributed untracked
   }]);
 });
 
-test("cleanup removes only an explicitly completed candidate and preserves its branch", () => {
+test("lifecycle ancestry probes are unique and limited to registered detached completion candidates", () => {
+  const completedSha = "c".repeat(40);
+  const firstPath = "/tasks/completed-one";
+  const secondPath = "/tasks/completed-two";
+  const attachedPath = "/tasks/completed-attached";
+  const porcelain = [
+    `worktree /repo\nHEAD ${canonicalSha}\nbranch refs/heads/main`,
+    `worktree ${firstPath}\nHEAD ${completedSha}\ndetached`,
+    `worktree ${secondPath}\nHEAD ${completedSha}\ndetached`,
+    `worktree ${attachedPath}\nHEAD ${completedSha}\nbranch refs/heads/agent/mac/attached`,
+    "",
+  ].join("\n\n");
+  const leases = [
+    completedLease(firstPath, completedSha, "agent/mac/completed-one"),
+    completedLease(secondPath, completedSha, "agent/mac/completed-two"),
+    completedLease(attachedPath, completedSha, "agent/mac/attached"),
+    ...Array.from({ length: 40 }, (_, index) => completedLease(
+      `/historical/absent-${index}`,
+      String(index).padStart(40, "0"),
+      `agent/mac/absent-${index}`,
+    )),
+  ];
+  const probes = [];
+  const report = buildLifecycleReport({
+    repository: "/repo",
+    git: (_cwd, args) => {
+      const command = args.join(" ");
+      if (command === "worktree list --porcelain") return porcelain;
+      if (command === "rev-parse origin/main") return `${canonicalSha}\n`;
+      if (command === "status --porcelain=v1 -z --untracked-files=all") return "";
+      throw new Error(`Unexpected git call: ${command}`);
+    },
+    readLeases: () => leases,
+    isAncestor: (_root, ancestor, descendant) => {
+      probes.push([ancestor, descendant]);
+      return true;
+    },
+  });
+
+  assert.deepEqual(probes, [[completedSha, canonicalSha]]);
+  assert.deepEqual(report.worktrees.map(item => item.state), [
+    "canonical",
+    "cleanup-ready",
+    "cleanup-ready",
+    "review-required",
+  ]);
+});
+
+test("target-scoped cleanup report ignores unrelated lanes and historical completion leases", () => {
+  const target = "/tasks/completed";
+  const unrelated = "/tasks/unrelated";
+  const completedSha = "c".repeat(40);
+  const porcelain = [
+    `worktree /repo\nHEAD ${canonicalSha}\nbranch refs/heads/main`,
+    `worktree ${target}\nHEAD ${completedSha}\ndetached`,
+    `worktree ${unrelated}\nHEAD ${"d".repeat(40)}\nbranch refs/heads/agent/mac/unrelated`,
+    "",
+  ].join("\n\n");
+  const probes = [];
+  const statusPaths = [];
+  const report = buildWorktreeCleanupReport({
+    repository: "/repo",
+    target,
+    gitCommonDir: "/repo/.git",
+    git: (cwd, args) => {
+      const command = args.join(" ");
+      if (command === "worktree list --porcelain") return porcelain;
+      if (command === "rev-parse origin/main") return `${canonicalSha}\n`;
+      if (command === "status --porcelain=v1 -z --untracked-files=all") {
+        statusPaths.push(cwd);
+        return "";
+      }
+      throw new Error(`Unexpected git call: ${cwd} ${command}`);
+    },
+    readLeases: () => [
+      completedLease(target, completedSha, "agent/mac/completed"),
+      ...Array.from({ length: 40 }, (_, index) => completedLease(
+        `/historical/absent-${index}`,
+        String(index).padStart(40, "0"),
+        `agent/mac/absent-${index}`,
+      )),
+    ],
+    isAncestor: (_root, ancestor, descendant) => {
+      probes.push([ancestor, descendant]);
+      return true;
+    },
+    pathExists: candidate => candidate === target,
+  });
+
+  assert.deepEqual(statusPaths, [target]);
+  assert.deepEqual(probes, [[completedSha, canonicalSha]]);
+  assert.equal(report.candidate.state, "cleanup-ready");
+  assert.equal(report.target.path, target);
+});
+
+test("target-scoped cleanup treats a broken symlink as retained path-entry residue", () => {
+  const fixture = mkdtempSync(path.join(os.tmpdir(), "agentic-worktree-broken-link-"));
+  const target = path.join(fixture, "completed");
+  symlinkSync(path.join(fixture, "missing-target"), target);
+  try {
+    assert.throws(() => buildWorktreeCleanupReport({
+      repository: "/repo",
+      target,
+      gitCommonDir: "/repo/.git",
+      git: (_cwd, args) => {
+        const command = args.join(" ");
+        if (command === "worktree list --porcelain") {
+          return `worktree /repo\nHEAD ${canonicalSha}\nbranch refs/heads/main\n`;
+        }
+        if (command === "rev-parse origin/main") return `${canonicalSha}\n`;
+        throw new Error(`Unexpected git call: ${command}`);
+      },
+      readLeases: () => [completedLease(target, canonicalSha, "agent/mac/completed")],
+      isAncestor: () => true,
+    }), /remains present without worktree registration/u);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("cleanup removes only an explicitly completed candidate and emits a typed exact-absence receipt", () => {
   const calls = [];
+  const target = "/tasks/completed";
+  const completionMainSha = "c".repeat(40);
   const report = {
     repository: "/repo",
-    worktrees: [{
-      path: "/tasks/completed",
+    canonicalSha,
+    gitCommonDir: "/repo/.git",
+    target: {
+      path: target,
+      registeredBefore: true,
+      pathPresentBefore: true,
+      head: completionMainSha,
+      completionMainSha,
       state: "cleanup-ready",
-      lease: { branch: "agent/mac/completed" },
-    }],
+    },
+    lease: { branch: "agent/mac/completed", completion: { mainSha: completionMainSha } },
   };
   const result = cleanupCompletedWorktree({
     report,
-    target: "/tasks/completed",
-    remove: (...args) => calls.push(args),
+    target,
+    remove: (...args) => {
+      calls.push(args);
+      return { registeredAfter: false, pathExistsAfter: false };
+    },
+    cleanupContainers: input => ({
+      kind: "managed",
+      managedContainer: { root: "/tasks", disposition: "retained-nonempty" },
+      sharedContainer: { root: "/", disposition: "not-attempted" },
+      removedEmptyDirectories: [],
+      input,
+    }),
   });
-  assert.deepEqual(calls, [["/repo", "/tasks/completed"]]);
-  assert.deepEqual(result, {
-    removedWorktree: "/tasks/completed",
+  assert.deepEqual(calls, [["/repo", target]]);
+  assert.equal(result.schema, WORKTREE_CLEANUP_RESULT_SCHEMA);
+  assert.equal(result.status, "cleaned");
+  assert.equal(result.gitCommonDir, "/repo/.git");
+  assert.equal(result.canonicalSha, canonicalSha);
+  assert.deepEqual(result.target, {
+    ...report.target,
+    registeredAfter: false,
+    pathExistsAfter: false,
+  });
+  assert.equal(result.removedWorktree, target);
+  assert.equal(result.preservedBranch, "agent/mac/completed");
+  assert.equal(result.registrationPruned, false);
+  assert.deepEqual(result.removedEmptyDirectories, []);
+  assert.match(result.operationId, /^[0-9a-f]{64}$/u);
+  assert.equal(result.operationId, createWorktreeCleanupOperationId({
+    repository: report.repository,
+    gitCommonDir: report.gitCommonDir,
+    targetPath: target,
+    completionMainSha,
     preservedBranch: "agent/mac/completed",
-  });
+    managedContainer: result.managedContainer,
+    sharedContainer: result.sharedContainer,
+  }));
+  assert.equal(result.replayed, false);
   assert.throws(() => cleanupCompletedWorktree({
-    report: { ...report, worktrees: [{ path: "/tasks/completed", state: "parked" }] },
-    target: "/tasks/completed",
+    report: { ...report, target: { ...report.target, state: "parked" } },
+    target,
   }), /lifecycle state is parked/);
   assert.throws(() => cleanupCompletedWorktree({
-    report: { ...report, worktrees: [{ path: "/tasks/completed", state: "owned-untracked" }] },
-    target: "/tasks/completed",
+    report: { ...report, target: { ...report.target, state: "owned-untracked" } },
+    target,
   }), /lifecycle state is owned-untracked/);
+});
+
+test("already-cleaned target replay proves absence without invoking worktree removal", () => {
+  const target = "/tasks/completed";
+  const completionMainSha = "c".repeat(40);
+  const report = {
+    repository: "/repo",
+    canonicalSha,
+    gitCommonDir: "/repo/.git",
+    target: {
+      path: target,
+      registeredBefore: false,
+      pathPresentBefore: false,
+      head: null,
+      completionMainSha,
+      state: "already-cleaned",
+    },
+    lease: { branch: "agent/mac/completed", completion: { mainSha: completionMainSha } },
+  };
+  const result = cleanupCompletedWorktree({
+    report,
+    target,
+    remove: () => { throw new Error("replay must not remove again"); },
+    cleanupContainers: () => ({
+      kind: "managed",
+      managedContainer: { root: "/tasks", disposition: "absent" },
+      sharedContainer: { root: "/", disposition: "retained-nonempty" },
+      removedEmptyDirectories: [],
+    }),
+  });
+
+  assert.equal(result.status, "already-cleaned");
+  assert.equal(result.removedWorktree, null);
+  assert.equal(result.target.registeredAfter, false);
+  assert.equal(result.target.pathExistsAfter, false);
+  assert.equal(result.replayed, true);
+});
+
+test("cleanup-empty emits an idempotent typed orphan-container sweep receipt", () => {
+  const removals = [["/workspace/.worktrees/repository", "/workspace/.worktrees"], []];
+  const run = () => cleanupEmptyWorktreeContainers({
+    repository: "/workspace/repository",
+    gitCommonDir: "/workspace/repository/.git",
+    git: (_cwd, args) => {
+      if (args.join(" ") === "rev-parse origin/main") return `${canonicalSha}\n`;
+      throw new Error(`Unexpected git call: ${args.join(" ")}`);
+    },
+    cleanupContainers: () => ({
+      kind: "managed",
+      managedContainer: { root: "/workspace/.worktrees/repository", disposition: removals[0].length ? "removed-empty" : "absent" },
+      sharedContainer: { root: "/workspace/.worktrees", disposition: removals[0].length ? "removed-empty" : "absent" },
+      removedEmptyDirectories: removals.shift(),
+    }),
+  });
+
+  const cleaned = run();
+  const replay = run();
+  assert.equal(cleaned.schema, WORKTREE_CLEANUP_RESULT_SCHEMA);
+  assert.equal(cleaned.status, "cleaned");
+  assert.equal(cleaned.target, null);
+  assert.equal(cleaned.registrationPruned, false);
+  assert.equal(cleaned.replayed, false);
+  assert.equal(replay.status, "already-cleaned");
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.operationId, cleaned.operationId);
+});
+
+test("cleanup-empty replays as already cleaned when only sibling repositories retain the shared root", () => {
+  const observations = [
+    {
+      kind: "managed",
+      managedContainer: {
+        root: "/workspace/.worktrees/repository",
+        disposition: "removed-empty",
+      },
+      sharedContainer: {
+        root: "/workspace/.worktrees",
+        disposition: "retained-nonempty",
+      },
+      removedEmptyDirectories: ["/workspace/.worktrees/repository"],
+    },
+    {
+      kind: "managed",
+      managedContainer: {
+        root: "/workspace/.worktrees/repository",
+        disposition: "absent",
+      },
+      sharedContainer: {
+        root: "/workspace/.worktrees",
+        disposition: "retained-nonempty",
+      },
+      removedEmptyDirectories: [],
+    },
+  ];
+  const run = () => cleanupEmptyWorktreeContainers({
+    repository: "/workspace/repository",
+    gitCommonDir: "/workspace/repository/.git",
+    git: (_cwd, args) => {
+      if (args.join(" ") === "rev-parse origin/main") return `${canonicalSha}\n`;
+      throw new Error(`Unexpected git call: ${args.join(" ")}`);
+    },
+    cleanupContainers: () => observations.shift(),
+  });
+
+  const cleaned = run();
+  const replay = run();
+  assert.equal(cleaned.status, "cleaned");
+  assert.equal(cleaned.replayed, false);
+  assert.equal(replay.status, "already-cleaned");
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.operationId, cleaned.operationId);
+});
+
+test("cleanup-empty distinguishes retained container residue from an exact-absence replay", () => {
+  for (const [name, managedDisposition, sharedDisposition] of [
+    ["nonempty", "retained-nonempty", "not-attempted"],
+    ["symlink", "retained-symlink", "not-attempted"],
+    ["ambiguous", "retained-ambiguous", "retained-ambiguous"],
+  ]) {
+    const result = cleanupEmptyWorktreeContainers({
+      repository: "/workspace/repository",
+      gitCommonDir: "/workspace/separate-git-common",
+      git: (_cwd, args) => {
+        if (args.join(" ") === "rev-parse origin/main") return `${canonicalSha}\n`;
+        throw new Error(`Unexpected git call: ${args.join(" ")}`);
+      },
+      cleanupContainers: () => ({
+        kind: "managed",
+        managedContainer: {
+          root: "/workspace/.worktrees/repository",
+          disposition: managedDisposition,
+        },
+        sharedContainer: {
+          root: "/workspace/.worktrees",
+          disposition: sharedDisposition,
+        },
+        removedEmptyDirectories: [],
+      }),
+    });
+
+    assert.equal(result.status, "retained", name);
+    assert.equal(result.replayed, false, name);
+    assert.equal(result.gitCommonDir, "/workspace/separate-git-common", name);
+    assert.deepEqual(result.removedEmptyDirectories, [], name);
+  }
+});
+
+test("cleanup-empty CLI removes only empty owned containers and replays idempotently", () => {
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-worktree-cleanup-empty-"));
+  const repository = path.join(workspace, "repository");
+  const sharedContainer = path.join(workspace, ".worktrees");
+  const managedContainer = path.join(sharedContainer, "repository");
+  const script = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../scripts/worktree-lifecycle.mjs",
+  );
+  try {
+    mkdirSync(repository, { recursive: true });
+    execFileSync("git", ["init", "-b", "main"], { cwd: repository, stdio: "ignore" });
+    writeFileSync(path.join(repository, "README.md"), "fixture\n");
+    execFileSync("git", ["add", "README.md"], { cwd: repository });
+    execFileSync("git", [
+      "-c", "user.name=Fixture",
+      "-c", "user.email=fixture@example.test",
+      "commit", "-m", "test: initialize fixture",
+    ], { cwd: repository, stdio: "ignore" });
+    const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repository,
+      encoding: "utf8",
+    }).trim();
+    execFileSync("git", ["update-ref", "refs/remotes/origin/main", revision], { cwd: repository });
+    mkdirSync(managedContainer, { recursive: true });
+
+    const invoke = () => spawnSync(process.execPath, [
+      script,
+      "cleanup-empty",
+      `--repository=${repository}`,
+    ], { cwd: repository, encoding: "utf8" });
+    const first = invoke();
+    assert.equal(first.status, 0, first.stderr);
+    const cleaned = JSON.parse(first.stdout);
+    assert.equal(cleaned.status, "cleaned");
+    assert.deepEqual(cleaned.removedEmptyDirectories, [managedContainer, sharedContainer]);
+    assert.equal(existsSync(sharedContainer), false);
+
+    const second = invoke();
+    assert.equal(second.status, 0, second.stderr);
+    const replay = JSON.parse(second.stdout);
+    assert.equal(replay.status, "already-cleaned");
+    assert.deepEqual(replay.removedEmptyDirectories, []);
+    assert.equal(replay.operationId, cleaned.operationId);
+
+    mkdirSync(managedContainer, { recursive: true });
+    writeFileSync(path.join(managedContainer, "retained.txt"), "retain\n");
+    const retainedRun = invoke();
+    assert.equal(retainedRun.status, 0, retainedRun.stderr);
+    const retained = JSON.parse(retainedRun.stdout);
+    assert.equal(retained.status, "retained");
+    assert.equal(retained.replayed, false);
+    assert.deepEqual(retained.removedEmptyDirectories, []);
+    assert.equal(existsSync(path.join(managedContainer, "retained.txt")), true);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("cleanup CLI removes the exact completed worktree without pruning unrelated stale registration", () => {
+  const workspace = realpathSync(mkdtempSync(path.join(os.tmpdir(), "agentic-worktree-cleanup-exact-")));
+  const repository = path.join(workspace, "repository");
+  const target = path.join(workspace, ".worktrees", "repository", "completed");
+  const stale = path.join(workspace, "unrelated-stale-worktree");
+  const branch = "agent/mac/completed";
+  const script = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../scripts/worktree-lifecycle.mjs",
+  );
+  try {
+    mkdirSync(repository, { recursive: true });
+    execFileSync("git", ["init", "-b", "main"], { cwd: repository, stdio: "ignore" });
+    writeFileSync(path.join(repository, "README.md"), "fixture\n");
+    execFileSync("git", ["add", "README.md"], { cwd: repository });
+    execFileSync("git", [
+      "-c", "user.name=Fixture",
+      "-c", "user.email=fixture@example.test",
+      "commit", "-m", "test: initialize fixture",
+    ], { cwd: repository, stdio: "ignore" });
+    const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repository,
+      encoding: "utf8",
+    }).trim();
+    execFileSync("git", ["update-ref", "refs/remotes/origin/main", revision], { cwd: repository });
+    mkdirSync(path.dirname(target), { recursive: true });
+    execFileSync("git", ["worktree", "add", "--detach", target, revision], {
+      cwd: repository,
+      stdio: "ignore",
+    });
+    execFileSync("git", ["worktree", "add", "--detach", stale, revision], {
+      cwd: repository,
+      stdio: "ignore",
+    });
+    rmSync(stale, { recursive: true, force: true });
+    const commonDirectory = path.join(repository, ".git", "agentic-canvas-os");
+    mkdirSync(commonDirectory, { recursive: true });
+    writeFileSync(path.join(commonDirectory, "writer-leases.json"), `${JSON.stringify({
+      schema: "agentic-writer-lease-registry/v2",
+      revision: 1,
+      leases: {
+        [branch]: completedLease(target, revision, branch),
+      },
+    })}\n`);
+
+    const invoke = () => spawnSync(process.execPath, [
+      script,
+      "cleanup",
+      `--repository=${repository}`,
+      `--worktree=${target}`,
+    ], { cwd: repository, encoding: "utf8" });
+    const first = invoke();
+    assert.equal(first.status, 0, first.stderr);
+    const cleaned = JSON.parse(first.stdout);
+    assert.equal(cleaned.status, "cleaned");
+    assert.equal(cleaned.removedWorktree, target);
+    assert.equal(cleaned.registrationPruned, false);
+    assert.equal(cleaned.target.registeredAfter, false);
+    assert.equal(cleaned.target.pathExistsAfter, false);
+    assert.equal(existsSync(target), false);
+    const registryAfter = execFileSync("git", ["worktree", "list", "--porcelain"], {
+      cwd: repository,
+      encoding: "utf8",
+    });
+    assert.match(registryAfter, new RegExp(`worktree ${escapeRegExp(stale)}`));
+    assert.match(registryAfter, /prunable/u);
+
+    const second = invoke();
+    assert.equal(second.status, 0, second.stderr);
+    const replay = JSON.parse(second.stdout);
+    assert.equal(replay.status, "already-cleaned");
+    assert.equal(replay.removedWorktree, null);
+    assert.equal(replay.operationId, cleaned.operationId);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
 });
 
 test("released local review lanes stay retired-preserved and never become cleanup candidates", () => {
@@ -301,6 +750,20 @@ test("lifecycle report treats cryptographically attributed retirement as safe pr
   assert.equal(report.status, "ready");
   assert.equal(report.worktrees[1].state, "retired-preserved");
 });
+
+function completedLease(worktreePath, mainSha, branch) {
+  return {
+    epoch: 1,
+    status: "completed",
+    branch,
+    worktreePath,
+    completion: { mainSha },
+  };
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
 
 function retiredLease({ taskPath, head, branch }) {
   const retiredAt = "2026-08-08T12:00:00.000Z";

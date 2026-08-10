@@ -229,6 +229,7 @@ test("repository publication is compare-and-swap and never force-based", () => {
   ), "utf8");
   assert.match(source, /"update-ref", `refs\/heads\/\$\{branch\}`, plan\.childHeadSha, plan\.sourceHeadSha/u);
   assert.match(source, /"push", "origin", `refs\/heads\/\$\{branch\}:refs\/heads\/\$\{branch\}`/u);
+  assert.match(source, /const prepared = rawCandidate\(plan\.source\)/u);
   assert.doesNotMatch(source, /--force|force-with-lease|reset|stash/u);
 });
 

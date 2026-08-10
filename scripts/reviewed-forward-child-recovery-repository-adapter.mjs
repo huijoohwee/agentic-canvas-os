@@ -280,7 +280,7 @@ function createRuntime(options, dependencies) {
   }
   async function createForwardChild({ plan }) {
     assertPlanSource(plan, { allowAutoMergeDisabled: true });
-    const prepared = rawCandidate(plan);
+    const prepared = rawCandidate(plan.source);
     if (prepared.headSha !== plan.childHeadSha) invalid("candidate determinism");
     const written = execute("git", ["hash-object", "-t", "commit", "-w", "--stdin"], { input: prepared.raw }).trim();
     if (written !== plan.childHeadSha) invalid("candidate object");

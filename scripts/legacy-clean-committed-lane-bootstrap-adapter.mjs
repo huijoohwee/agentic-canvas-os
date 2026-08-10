@@ -1,3 +1,4 @@
+import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -26,6 +27,7 @@ import {
   findOpenPullRequest,
   git,
   gitExitCode,
+  ghText,
   gitText,
   listScopeOwners,
   listedWorktrees,
@@ -316,6 +318,8 @@ function projectOwnerReceipt({ context, leaseStore, repository, stateDir }) {
       pullRequestUrl: lease.pullRequestUrl,
       admission,
       cloudAuthority: authority,
+      heartbeatAt: verification.verifiedAt,
+      expiresAt: authority.expiresAt,
     },
   });
   const pullRequest = readOwnershipPullRequest({
@@ -457,4 +461,3 @@ function createAdmissionProjection({ request, lease, authority, verification }) 
     preservationReceiptDigest,
   });
 }
-

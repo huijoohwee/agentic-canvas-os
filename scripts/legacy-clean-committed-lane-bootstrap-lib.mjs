@@ -127,7 +127,10 @@ function normalizeRequest(value) {
   }
   let declaredWriteScope;
   try {
-    declaredWriteScope = normalizeWriteSet(value.declaredWriteScope);
+    declaredWriteScope = normalizeWriteSet([
+      `semantic:${semanticScope}`,
+      ...(Array.isArray(value.declaredWriteScope) ? value.declaredWriteScope : []),
+    ]);
   } catch (error) {
     blocked("invalid_write_scope", error.message);
   }

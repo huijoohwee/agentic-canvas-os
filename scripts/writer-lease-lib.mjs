@@ -1129,6 +1129,10 @@ function requireIdentity(values) {
 
 function normalizeScopedAdmission({ admission, cloudAuthority, scope, baseSha, strict = true }) {
   if (!admission && !cloudAuthority) return null;
+  const declaredWriteSet = Array.isArray(admission?.declaredWriteSet)
+    ? admission.declaredWriteSet
+    : null;
+  const requiresSemanticScope = strict;
   const invalid = (
     admission?.schema !== "agentic-lane-admission-lease/v1"
     || !["planned", "admitted"].includes(admission.status)
@@ -1136,11 +1140,14 @@ function normalizeScopedAdmission({ admission, cloudAuthority, scope, baseSha, s
     || admission.semanticScope !== scope
     || cloudAuthority.canonicalBaseSha !== baseSha
     || cloudAuthority.writeSetDigest !== admission.writeSetDigest
-    || !Array.isArray(admission.declaredWriteSet)
-    || admission.declaredWriteSet.length < 2
-    || !admission.declaredWriteSet.includes(`semantic:${scope}`)
+    || !declaredWriteSet
+    || declaredWriteSet.length < 1
+    || (requiresSemanticScope && (
+      declaredWriteSet.length < 2
+      || !declaredWriteSet.includes(`semantic:${scope}`)
+    ))
     || JSON.stringify(cloudAuthority.cloudDeclaredWriteScope)
-      !== JSON.stringify(admission.declaredWriteSet)
+      !== JSON.stringify(declaredWriteSet)
     || !/^[0-9a-f]{64}$/.test(String(admission.writeSetDigest || ""))
     || !/^[0-9a-f]{64}$/.test(String(admission.manifestDigest || ""))
     || !/^[0-9a-f]{64}$/.test(String(admission.planReceiptDigest || ""))

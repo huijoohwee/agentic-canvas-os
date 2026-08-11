@@ -25,6 +25,13 @@ import {
 } from "./expired-committed-continuation-lib.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
 import { withReviewedLaneEntrypointFence } from "./reviewed-lane-revision-fence.mjs";
+import {
+  createWorktreeCleanupOperationId,
+  WORKTREE_CLEANUP_RESULT_SCHEMA,
+} from "./worktree-lifecycle-lib.mjs";
+import { deriveTaskWorktreeContainers } from "./task-worktree-owned-containers.mjs";
+
+export { WORKTREE_CLEANUP_RESULT_SCHEMA };
 
 export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
@@ -384,6 +391,7 @@ function integrateSessionUnfenced({
   lease = finalizedLease;
   const cleanup = cleanupIntegrationWorktree({
     canonicalIntegration,
+    integrationBranch: branch,
     integrationWorktree: repo,
     runText,
   });
@@ -1191,22 +1199,200 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
   return { integratedSource, readiness: result };
 }
 
-function cleanupIntegrationWorktree({ canonicalIntegration, integrationWorktree, runText }) {
+export function cleanupIntegrationWorktree({
+  canonicalIntegration,
+  integrationBranch,
+  integrationWorktree,
+  runText,
+}) {
   const { integratedSource, repositories } = canonicalIntegration;
-  const output = runText("node", [
+  const observedGitCommonDir = String(runText(
+    "git",
+    ["rev-parse", "--git-common-dir"],
+    { cwd: integratedSource.root },
+  ) || "").trim();
+  if (!observedGitCommonDir) {
+    throw new Error("Integration worktree cleanup could not resolve canonical Git ownership.");
+  }
+  const expectedGitCommonDir = path.resolve(integratedSource.root, observedGitCommonDir);
+  const cleanupArgs = [
     path.join(repositories.agenticCanvasOsRoot, "scripts", "worktree-lifecycle.mjs"),
     "cleanup",
     `--repository=${integratedSource.root}`,
     `--worktree=${integrationWorktree}`,
-  ], { cwd: repositories.agenticCanvasOsRoot });
-  const line = String(output || "").trim().split(/\r?\n/).reverse().find(value => value.trim().startsWith("{"));
-  if (!line) throw new Error("Integration worktree cleanup returned no machine-readable result.");
-  const result = JSON.parse(line);
-  if (result.schema !== "agentic-worktree-lifecycle-report/v1" || result.status !== "cleaned" ||
-      path.resolve(result.removedWorktree || "") !== path.resolve(integrationWorktree)) {
-    throw new Error("Integration worktree cleanup did not remove the completed task checkout.");
+  ];
+  let parsedResult = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const output = runText("node", cleanupArgs, { cwd: repositories.agenticCanvasOsRoot });
+    const lines = String(output || "").trim().split(/\r?\n/).reverse()
+      .map(value => value.trim()).filter(Boolean);
+    for (const line of lines) {
+      try {
+        parsedResult = { value: JSON.parse(line) };
+        break;
+      } catch {
+        // Continue past non-machine-readable child log lines.
+      }
+    }
+    if (parsedResult) break;
   }
-  return result;
+  if (!parsedResult) {
+    throw new Error(
+      "Integration worktree cleanup returned no machine-readable result after one bounded retry.",
+    );
+  }
+  return validateIntegrationCleanupReceipt({
+    receipt: parsedResult.value,
+    repository: integratedSource.root,
+    completionMainSha: integratedSource.mainSha,
+    expectedGitCommonDir,
+    integrationBranch,
+    integrationWorktree,
+  });
+}
+
+export function validateIntegrationCleanupReceipt({
+  receipt,
+  repository,
+  completionMainSha,
+  expectedGitCommonDir,
+  integrationBranch,
+  integrationWorktree,
+}) {
+  const normalizedRepository = path.resolve(repository || "");
+  const normalizedTarget = path.resolve(integrationWorktree || "");
+  const expectedGitCommonDirValue = String(expectedGitCommonDir || "");
+  const normalizedGitCommonDir = path.resolve(expectedGitCommonDirValue);
+  const target = receipt?.target;
+  const cleaned = receipt?.status === "cleaned";
+  const alreadyCleaned = receipt?.status === "already-cleaned";
+  const exactTarget = target &&
+    path.isAbsolute(String(target.path || "")) &&
+    target.path === normalizedTarget &&
+    target.completionMainSha === completionMainSha &&
+    target.registeredAfter === false &&
+    target.pathExistsAfter === false;
+  const exactRemoval = cleaned && exactTarget &&
+    target.registeredBefore === true &&
+    target.pathPresentBefore === true &&
+    target.head === completionMainSha &&
+    target.state === "cleanup-ready" &&
+    path.isAbsolute(String(receipt.removedWorktree || "")) &&
+    receipt.removedWorktree === normalizedTarget &&
+    receipt.replayed === false;
+  const exactAbsence = alreadyCleaned && exactTarget &&
+    target.registeredBefore === false &&
+    target.pathPresentBefore === false &&
+    target.head === null &&
+    target.state === "already-cleaned" &&
+    receipt.removedWorktree === null &&
+    receipt.replayed === true;
+  if (!path.isAbsolute(expectedGitCommonDirValue) ||
+      expectedGitCommonDirValue !== normalizedGitCommonDir ||
+      !path.isAbsolute(String(receipt?.gitCommonDir || "")) ||
+      receipt.gitCommonDir !== normalizedGitCommonDir) {
+    throw new Error("Integration worktree cleanup Git common-directory evidence changed.");
+  }
+  if (
+    receipt?.schema !== WORKTREE_CLEANUP_RESULT_SCHEMA ||
+    (!cleaned && !alreadyCleaned) ||
+    !path.isAbsolute(String(receipt.repository || "")) ||
+    receipt.repository !== normalizedRepository ||
+    !SHA_PATTERN.test(String(receipt.canonicalSha || "")) ||
+    !SHA_PATTERN.test(String(completionMainSha || "")) ||
+    receipt.preservedBranch !== integrationBranch ||
+    receipt.registrationPruned !== false ||
+    !DIGEST_PATTERN.test(String(receipt.operationId || "")) ||
+    (!exactRemoval && !exactAbsence)
+  ) {
+    throw new Error("Integration worktree cleanup lacks exact target removal or absence evidence.");
+  }
+  requireSafeContainerCleanupReceipt({
+    receipt,
+    repository: normalizedRepository,
+    gitCommonDir: normalizedGitCommonDir,
+    integrationWorktree: normalizedTarget,
+  });
+  const expectedOperationId = createWorktreeCleanupOperationId({
+    repository: normalizedRepository,
+    gitCommonDir: normalizedGitCommonDir,
+    targetPath: normalizedTarget,
+    completionMainSha,
+    preservedBranch: integrationBranch,
+    managedContainer: receipt.managedContainer,
+    sharedContainer: receipt.sharedContainer,
+  });
+  if (receipt.operationId !== expectedOperationId) {
+    throw new Error("Integration worktree cleanup operation identity does not match its receipt.");
+  }
+  return receipt;
+}
+
+function requireSafeContainerCleanupReceipt({
+  receipt,
+  repository,
+  gitCommonDir,
+  integrationWorktree,
+}) {
+  const managedRootValue = String(receipt?.managedContainer?.root || "");
+  const sharedRootValue = String(receipt?.sharedContainer?.root || "");
+  const managedRoot = path.resolve(managedRootValue);
+  const sharedRoot = path.resolve(sharedRootValue);
+  const managedDisposition = receipt?.managedContainer?.disposition;
+  const sharedDisposition = receipt?.sharedContainer?.disposition;
+  const removed = receipt?.removedEmptyDirectories;
+  const ownership = deriveTaskWorktreeContainers({
+    repoRoot: repository,
+    gitCommonDir,
+    targetPath: integrationWorktree,
+  });
+  const rootsAreExact = path.isAbsolute(managedRootValue) && path.isAbsolute(sharedRootValue) &&
+    receipt.kind === ownership.kind &&
+    managedRootValue === ownership.managedContainer.root &&
+    sharedRootValue === ownership.sharedContainer.root;
+  if (!rootsAreExact || !Array.isArray(removed)) {
+    throw new Error("Integration worktree cleanup lacks safe container dispositions.");
+  }
+
+  if (receipt.kind === "external") {
+    if (managedDisposition !== "not-managed" || sharedDisposition !== "not-managed" ||
+        removed.length !== 0) {
+      throw new Error("Integration worktree cleanup lacks safe container dispositions.");
+    }
+    return;
+  }
+
+  const retained = new Set([
+    "retained-nonempty",
+    "retained-symlink",
+    "retained-nondirectory",
+    "retained-ambiguous",
+  ]);
+  const completedAttempt = new Set([
+    "removed-empty",
+    "absent",
+    "retained-nonempty",
+    "retained-ambiguous",
+  ]);
+  const safePair = receipt.kind === "managed" &&
+    path.dirname(integrationWorktree) === managedRoot &&
+    (
+      ((managedDisposition === "removed-empty" || managedDisposition === "absent") &&
+        completedAttempt.has(sharedDisposition)) ||
+      (managedDisposition === "retained-ambiguous" &&
+        sharedDisposition === "retained-ambiguous") ||
+      (retained.has(managedDisposition) && sharedDisposition === "not-attempted") ||
+      (managedDisposition === "not-attempted" &&
+        new Set(["retained-symlink", "retained-nondirectory", "retained-ambiguous"])
+          .has(sharedDisposition))
+    );
+  const expectedRemoved = [
+    ...(managedDisposition === "removed-empty" ? [managedRoot] : []),
+    ...(sharedDisposition === "removed-empty" ? [sharedRoot] : []),
+  ];
+  if (!safePair || JSON.stringify(removed) !== JSON.stringify(expectedRemoved)) {
+    throw new Error("Integration worktree cleanup lacks safe container dispositions.");
+  }
 }
 
 export function resolveRuntimeRepositories({

@@ -4,6 +4,10 @@ import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import { createAdmissionLeaseProjection } from "./scoped-lane-admission-lib.mjs";
+import {
+  cleanupEmptyTaskWorktreeContainers,
+  deriveTaskWorktreeContainers,
+} from "./task-worktree-owned-containers.mjs";
 
 const SAFE_TASK_NAME = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
@@ -11,8 +15,7 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const CLEAN_WORKTREE_DIGEST = digestValue({ status: "", workingFiles: [] });
 
 export function deriveTaskWorktreeRoot(repoRoot, gitCommonDir = path.join(path.resolve(repoRoot), ".git")) {
-  const repositoryOwnerRoot = path.dirname(path.resolve(gitCommonDir));
-  return path.join(path.dirname(repositoryOwnerRoot), ".worktrees", path.basename(repositoryOwnerRoot));
+  return deriveTaskWorktreeContainers({ repoRoot, gitCommonDir }).managedContainer.root;
 }
 
 export function provisionTaskWorktree({
@@ -144,6 +147,8 @@ export function provisionTaskWorktree({
   } catch (error) {
     throw rollbackPostAddFailure({
       error,
+      canonicalRoot,
+      safeRoot,
       target,
       baseSha,
       gitText,
@@ -343,6 +348,7 @@ export function rollbackUnclaimedProvision({
   gitText,
   run,
   pathExists = existsSync,
+  cleanupContainers = cleanupEmptyTaskWorktreeContainers,
 }) {
   const unclaimed = candidateUnclaimed ?? registryUnchanged;
   if (!provision || !unclaimed || !pathExists(provision.target)) return false;
@@ -351,12 +357,23 @@ export function rollbackUnclaimedProvision({
   if (!created?.detached || created.branch) return false;
   if (gitText(["-C", provision.target, "status", "--porcelain"]).trim()) return false;
   if (gitText(["-C", provision.target, "rev-parse", "HEAD"]).trim() !== provision.baseSha) return false;
+  const rawGitCommonDir = gitText(["rev-parse", "--git-common-dir"]).trim();
+  const repositoryRoot = provision.canonicalRoot
+    || path.dirname(path.resolve(process.cwd(), rawGitCommonDir));
+  const gitCommonDir = path.resolve(repositoryRoot, rawGitCommonDir);
   run("git", ["worktree", "remove", provision.target]);
+  cleanupContainers({
+    repoRoot: repositoryRoot,
+    gitCommonDir,
+    targetPath: provision.target,
+  });
   return true;
 }
 
 function rollbackPostAddFailure({
   error,
+  canonicalRoot,
+  safeRoot,
   target,
   baseSha,
   gitText,
@@ -365,7 +382,7 @@ function rollbackPostAddFailure({
 }) {
   try {
     const removed = rollbackUnclaimedProvision({
-      provision: { target, baseSha },
+      provision: { canonicalRoot, safeRoot, target, baseSha },
       candidateUnclaimed: true,
       gitText,
       run,

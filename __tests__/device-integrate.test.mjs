@@ -7,13 +7,18 @@ import path from "node:path";
 
 import {
   CHANGE_MANIFEST_SCHEMA,
+  cleanupIntegrationWorktree,
   DEVICE_INTEGRATION_RESULT_SCHEMA,
+  WORKTREE_CLEANUP_RESULT_SCHEMA,
   integrateSession,
   renderManagedCommitMessage,
   resolveRuntimeRepositories,
+  validateIntegrationCleanupReceipt,
 } from "../scripts/device-integrate-lib.mjs";
 import { CLOUD_COLLABORATION_BOUNDS } from "../scripts/cloud-collaboration-primitives.mjs";
 import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
+import { createWorktreeCleanupOperationId } from "../scripts/worktree-lifecycle-lib.mjs";
+import { deriveTaskWorktreeContainers } from "../scripts/task-worktree-owned-containers.mjs";
 
 const branch = "agent/device/runtime-integration";
 const baseSha = "a".repeat(40);
@@ -49,6 +54,66 @@ const deliveryEvidence = Object.freeze({
 });
 const reviewRequestId = "github-pull-request:PR_42";
 const focusedEvidenceDigest = "6".repeat(64);
+
+function cleanupReceipt({
+  worktreePath,
+  repository = path.join(worktreePath, "canonical", "agentic-canvas-os"),
+  gitCommonDir = path.join(repository, ".git"),
+  canonicalSha = mainSha,
+  status = "cleaned",
+  kind,
+  managedDisposition,
+  sharedDisposition,
+  receiptOverrides = {},
+} = {}) {
+  const ownership = deriveTaskWorktreeContainers({ repoRoot: repository, gitCommonDir, targetPath: worktreePath });
+  const receiptKind = kind || ownership.kind;
+  const managedRoot = ownership.managedContainer.root;
+  const sharedRoot = ownership.sharedContainer.root;
+  const finalManagedDisposition = managedDisposition ||
+    (receiptKind === "managed" ? "removed-empty" : "not-managed");
+  const finalSharedDisposition = sharedDisposition ||
+    (receiptKind === "managed" ? "removed-empty" : "not-managed");
+  const cleaned = status === "cleaned";
+  const receipt = {
+    schema: WORKTREE_CLEANUP_RESULT_SCHEMA,
+    status,
+    repository,
+    gitCommonDir,
+    canonicalSha,
+    target: {
+      path: worktreePath,
+      registeredBefore: cleaned,
+      pathPresentBefore: cleaned,
+      registeredAfter: false,
+      pathExistsAfter: false,
+      head: cleaned ? canonicalSha : null,
+      completionMainSha: canonicalSha,
+      state: cleaned ? "cleanup-ready" : "already-cleaned",
+    },
+    removedWorktree: cleaned ? worktreePath : null,
+    preservedBranch: branch,
+    registrationPruned: false,
+    kind: receiptKind,
+    managedContainer: { root: managedRoot, disposition: finalManagedDisposition },
+    sharedContainer: { root: sharedRoot, disposition: finalSharedDisposition },
+    removedEmptyDirectories: [
+      ...(finalManagedDisposition === "removed-empty" ? [managedRoot] : []),
+      ...(finalSharedDisposition === "removed-empty" ? [sharedRoot] : []),
+    ],
+    replayed: !cleaned,
+  };
+  receipt.operationId = createWorktreeCleanupOperationId({
+    repository,
+    gitCommonDir,
+    targetPath: worktreePath,
+    completionMainSha: canonicalSha,
+    preservedBranch: branch,
+    managedContainer: receipt.managedContainer,
+    sharedContainer: receipt.sharedContainer,
+  });
+  return { ...receipt, ...receiptOverrides };
+}
 
 test("runtime repository identity is independent from the isolated canonical directory name", () => {
   const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-runtime-identity-"));
@@ -150,6 +215,200 @@ test("runtime repository identity falls back to origin metadata and rejects unsu
   }
 });
 
+test("cleanup validation accepts safe retained containers and preserves the typed receipt", () => {
+  const repository = "/workspace/agentic-canvas-os";
+  const worktreePath = "/workspace/.worktrees/agentic-canvas-os/runtime-integration";
+  const receipt = cleanupReceipt({
+    repository,
+    worktreePath,
+    kind: "managed",
+    managedDisposition: "retained-nonempty",
+    sharedDisposition: "not-attempted",
+    receiptOverrides: { canonicalSha: "8".repeat(40) },
+  });
+  assert.strictEqual(validateIntegrationCleanupReceipt({
+    receipt,
+    repository,
+    completionMainSha: mainSha,
+    expectedGitCommonDir: receipt.gitCommonDir,
+    integrationBranch: branch,
+    integrationWorktree: worktreePath,
+  }), receipt);
+
+  const replay = cleanupReceipt({
+    repository,
+    worktreePath: "/workspace/external/runtime-integration",
+    status: "already-cleaned",
+  });
+  assert.strictEqual(validateIntegrationCleanupReceipt({
+    receipt: replay,
+    repository,
+    completionMainSha: mainSha,
+    expectedGitCommonDir: replay.gitCommonDir,
+    integrationBranch: branch,
+    integrationWorktree: replay.target.path,
+  }), replay);
+
+  const identityDrift = cleanupReceipt({
+    repository,
+    worktreePath,
+    kind: "managed",
+    managedDisposition: "retained-ambiguous",
+    sharedDisposition: "retained-ambiguous",
+  });
+  assert.strictEqual(validateIntegrationCleanupReceipt({
+    receipt: identityDrift,
+    repository,
+    completionMainSha: mainSha,
+    expectedGitCommonDir: identityDrift.gitCommonDir,
+    integrationBranch: branch,
+    integrationWorktree: worktreePath,
+  }), identityDrift);
+});
+
+test("cleanup validation rejects legacy, inexact, pruned, and unsafe receipts", () => {
+  const repository = "/workspace/agentic-canvas-os";
+  const worktreePath = "/workspace/external/runtime-integration";
+  const valid = cleanupReceipt({ repository, worktreePath });
+  const validate = receipt => validateIntegrationCleanupReceipt({
+    receipt,
+    repository,
+    completionMainSha: mainSha,
+    expectedGitCommonDir: valid.gitCommonDir,
+    integrationBranch: branch,
+    integrationWorktree: worktreePath,
+  });
+  for (const receipt of [
+    { ...valid, schema: "agentic-worktree-lifecycle-report/v1" },
+    { ...valid, status: "already_cleaned" },
+    { ...valid, registrationPruned: true },
+    { ...valid, preservedBranch: "agent/device/other" },
+    { ...valid, target: { ...valid.target, path: "/workspace/external/other" } },
+    { ...valid, target: { ...valid.target, registeredAfter: true } },
+    { ...valid, target: { ...valid.target, pathExistsAfter: true } },
+    { ...valid, removedWorktree: null },
+  ]) {
+    assert.throws(() => validate(receipt), /exact target removal or absence evidence/u);
+  }
+
+  assert.throws(() => validate({
+    ...valid,
+    managedContainer: { ...valid.managedContainer, disposition: "removed-empty" },
+    removedEmptyDirectories: [valid.managedContainer.root],
+  }), /safe container dispositions/u);
+  assert.throws(() => validate({
+    ...valid,
+    managedContainer: { root: "/outside/.worktrees/fake", disposition: "not-managed" },
+    sharedContainer: { root: "/outside/.worktrees", disposition: "not-managed" },
+  }), /safe container dispositions/u);
+  assert.throws(() => validate({
+    ...valid,
+    operationId: "0".repeat(64),
+  }), /operation identity does not match/u);
+
+  const fabricatedGitCommonDir = "/outside/fake/.git";
+  const fabricatedOwnership = deriveTaskWorktreeContainers({
+    repoRoot: repository,
+    gitCommonDir: fabricatedGitCommonDir,
+    targetPath: worktreePath,
+  });
+  const fabricated = {
+    ...valid,
+    gitCommonDir: fabricatedGitCommonDir,
+    kind: fabricatedOwnership.kind,
+    managedContainer: {
+      root: fabricatedOwnership.managedContainer.root,
+      disposition: "not-managed",
+    },
+    sharedContainer: {
+      root: fabricatedOwnership.sharedContainer.root,
+      disposition: "not-managed",
+    },
+    removedEmptyDirectories: [],
+  };
+  fabricated.operationId = createWorktreeCleanupOperationId({
+    repository,
+    gitCommonDir: fabricatedGitCommonDir,
+    targetPath: worktreePath,
+    completionMainSha: mainSha,
+    preservedBranch: branch,
+    managedContainer: fabricated.managedContainer,
+    sharedContainer: fabricated.sharedContainer,
+  });
+  assert.throws(() => validate(fabricated), /Git common-directory evidence changed/u);
+});
+
+test("cleanup child retries one absent response and accepts the same-command replay", () => {
+  const repository = "/workspace/agentic-canvas-os";
+  const worktreePath = "/workspace/external/runtime-integration";
+  const receipt = cleanupReceipt({ repository, worktreePath, status: "already-cleaned" });
+  const nodeCalls = [];
+  const outputs = ["", JSON.stringify(receipt)];
+  const result = cleanupIntegrationWorktree({
+    canonicalIntegration: {
+      integratedSource: { root: repository, mainSha },
+      repositories: { agenticCanvasOsRoot: repository },
+    },
+    integrationBranch: branch,
+    integrationWorktree: worktreePath,
+    runText: (command, args, options) => {
+      if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") return ".git\n";
+      if (command === "node") {
+        nodeCalls.push({ args, options });
+        return outputs.shift();
+      }
+      throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+    },
+  });
+  assert.deepEqual(result, receipt);
+  assert.equal(nodeCalls.length, 2);
+  assert.deepEqual(nodeCalls[1], nodeCalls[0]);
+});
+
+test("cleanup child does not retry a parseable invalid receipt", () => {
+  const repository = "/workspace/agentic-canvas-os";
+  const worktreePath = "/workspace/external/runtime-integration";
+  const invalidReceipt = {
+    ...cleanupReceipt({ repository, worktreePath }),
+    schema: "invalid-cleanup-result",
+  };
+  let nodeCalls = 0;
+  assert.throws(() => cleanupIntegrationWorktree({
+    canonicalIntegration: {
+      integratedSource: { root: repository, mainSha },
+      repositories: { agenticCanvasOsRoot: repository },
+    },
+    integrationBranch: branch,
+    integrationWorktree: worktreePath,
+    runText: (command, args) => {
+      if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") return ".git\n";
+      nodeCalls += 1;
+      return JSON.stringify(invalidReceipt);
+    },
+  }), /exact target removal or absence evidence/u);
+  assert.equal(nodeCalls, 1);
+});
+
+test("cleanup child reports two unparseable responses after one bounded retry", () => {
+  const repository = "/workspace/agentic-canvas-os";
+  const worktreePath = "/workspace/external/runtime-integration";
+  let nodeCalls = 0;
+  assert.throws(() => cleanupIntegrationWorktree({
+    canonicalIntegration: {
+      integratedSource: { root: repository, mainSha },
+      repositories: { agenticCanvasOsRoot: repository },
+    },
+    integrationBranch: branch,
+    integrationWorktree: worktreePath,
+    runText: (command, args) => {
+      if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") return ".git\n";
+      nodeCalls += 1;
+      return nodeCalls === 1 ? "not-json" : "{still-not-json";
+    },
+  }), /no machine-readable result after one bounded retry/u);
+  assert.equal(nodeCalls, 2);
+});
+
 test("ancillary source-only completion needs no Knowgrph checkout", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-ancillary-source-only-"));
   const canonicalAncillaryRoot = path.join(repo, "canonical", "huijoohwee.github.io");
@@ -165,6 +424,11 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
     repo,
     status: "completed",
     completion: { mergeCommitSha: mergeSha, mainSha },
+  });
+  const cleanup = cleanupReceipt({
+    repository: canonicalAncillaryRoot,
+    worktreePath: repo,
+    status: "already-cleaned",
   });
   const commands = [];
   try {
@@ -187,6 +451,9 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
         commands.push({ command, args, options });
         if (command === "node" && args[0].endsWith("live-sync.mjs") &&
             options.cwd === canonicalAncillaryRoot) return "";
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args.join(" ") === "rev-parse HEAD" &&
             options.cwd === canonicalAncillaryRoot) return `${mainSha}\n`;
         if (command === "git" && args.join(" ") === "remote get-url origin" &&
@@ -195,11 +462,7 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
         }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs") &&
             options.cwd === canonicalAgenticRoot) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanup);
         }
         throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
       },
@@ -214,6 +477,7 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
 
     assert.equal(result.status, "integrated");
     assert.equal(result.canonical.repository, "huijoohwee.github.io");
+    assert.deepEqual(result.cleanup, cleanup);
     assert.equal(commands.some(({ command }) => command === "npm"), false);
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -295,14 +559,15 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       },
       runText: (command, args, options) => {
         runtimeCommands.push({ command, args, options });
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-            preservedBranch: branch,
-          });
+          return JSON.stringify(cleanupReceipt({
+            repository: canonicalAgenticRoot,
+            worktreePath: repo,
+          }));
         }
         if (command === "node") return "";
         return JSON.stringify({
@@ -366,9 +631,17 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       args: ["rev-parse", "HEAD"],
       options: { cwd: canonicalAgenticRoot },
     });
-    assert.equal(runtimeCommands[5].command, "node");
-    assert.ok(runtimeCommands[5].args.includes(`--worktree=${repo}`));
-    assert.equal(result.cleanup.status, "cleaned");
+    assert.deepEqual(runtimeCommands[5], {
+      command: "git",
+      args: ["rev-parse", "--git-common-dir"],
+      options: { cwd: canonicalAgenticRoot },
+    });
+    assert.equal(runtimeCommands[6].command, "node");
+    assert.ok(runtimeCommands[6].args.includes(`--worktree=${repo}`));
+    assert.deepEqual(result.cleanup, cleanupReceipt({
+      repository: canonicalAgenticRoot,
+      worktreePath: repo,
+    }));
   } finally {
     rmSync(repo, { recursive: true, force: true });
     rmSync(manifestPath, { force: true });
@@ -649,13 +922,12 @@ test("delivery aggregates sequential tree-equivalent refreshes before completion
         }
       },
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         return "";
       },
@@ -797,13 +1069,12 @@ test("a protected-main merge preserves the approved authored commit evidence", (
       sessionId: "session-a",
       run: (command, args) => commands.push([command, ...args]),
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         return "merge preflight";
       },
@@ -922,13 +1193,12 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         commands.push([command, ...args]);
       },
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         return "";
       },
@@ -1275,13 +1545,12 @@ test("review-ready delivery reclaims a dormant preserved review authority before
       verifyCloudAuthority: () => ({ ok: true }),
       run: () => {},
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         return "";
       },
@@ -1531,13 +1800,12 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
         }
       },
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         return "";
       },
@@ -1909,13 +2177,12 @@ test("authorized auto-delivery completes only through canonical runtime readines
       verifyCloudAuthority: () => ({ ok: true }),
       run: () => {},
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         if (command === "node") return "";
         runtimeProven = true;
@@ -2015,6 +2282,9 @@ function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {
       run: () => {},
       runText: (command, args, options = {}) => {
         commands.push({ command, args, options });
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args.join(" ") === "rev-parse HEAD") {
           if (options.cwd === canonicalAncillaryRoot) {
             ancillaryHeadReads += 1;
@@ -2027,11 +2297,10 @@ function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {
           return "https://github.com/huijoohwee/huijoohwee.github.io.git\n";
         }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({
+            repository: canonicalAncillaryRoot,
+            worktreePath: repo,
+          }));
         }
         if (command === "node") return "";
         if (command === "npm" && options.cwd === canonicalAgenticRoot &&
@@ -2261,13 +2530,12 @@ function runProtectedRefreshScenario({
         }
       },
       runText: (command, args) => {
+        if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
+          return ".git\n";
+        }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
-          return JSON.stringify({
-            schema: "agentic-worktree-lifecycle-report/v1",
-            status: "cleaned",
-            removedWorktree: repo,
-          });
+          return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
         return "";
       },

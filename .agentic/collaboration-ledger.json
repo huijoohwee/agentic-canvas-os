@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1918,
-  "headDigest": "917f0155808723775befd6c026436203fb9b680865d689212cc9867fdf7f8414",
+  "sequence": 1919,
+  "headDigest": "f3d0c16212803069216f93e55ecbd732c1e9e95d29e522d3797db2524d03dbb9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -95405,6 +95405,50 @@
       },
       "claimDigest": "e51c2fe7e15480b8d72fb85380b315bbf766ad783cce862a9163eb3d8c1e17b0",
       "digest": "917f0155808723775befd6c026436203fb9b680865d689212cc9867fdf7f8414"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1919,
+      "parentDigest": "917f0155808723775befd6c026436203fb9b680865d689212cc9867fdf7f8414",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a2015625bf7e78a7b12cf798d1675e2b02434d7c64a8c58f9814501605a8cfcf",
+      "idempotencyKey": "e4a6997b8dfb889def8df862ec28b42a504743f8acc400fd6f92fe29198ad41c",
+      "requestDigest": "31946007f4476430ee34b09862da77e2a2fbc4f9b6cb82b4d5080c359b73aba5",
+      "evaluationTime": "2026-08-11T05:24:11.000Z",
+      "claimCore": {
+        "claimId": "a2015625bf7e78a7b12cf798d1675e2b02434d7c64a8c58f9814501605a8cfcf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:972b8e0a7ad29926cf47b5f02bdd936a51e97f37d87637bbdd287d3e4e40dea5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:28a428745162ac3211c80b7c272ed71cd2d42ef1453dec4e0ca5e65a5dc0ecb3",
+        "canonicalBaseRevision": "4f66c6892c5cadf2f6909bfd7c532c31564b8ff5",
+        "declaredWriteScope": [
+          "path:__tests__/open-reviewed-lane-rehydration.test.mjs",
+          "path:docs/OPEN-REVIEWED-LANE-REHYDRATION.md",
+          "path:scripts/open-reviewed-lane-rehydration-contract.mjs",
+          "path:scripts/open-reviewed-lane-rehydration-controller.mjs",
+          "path:scripts/open-reviewed-lane-rehydration-repository-adapter.mjs",
+          "path:scripts/open-reviewed-lane-rehydration.mjs",
+          "semantic:open-reviewed-lane-rehydration"
+        ],
+        "writeSetDigest": "fbd261f5b004e1c1adedb707c160c55ac63bab82154ebee5bf92dc67d89eb59c",
+        "laneRevision": "3c94c82f7a86f68c38f92f7816083304ce75a375",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T06:22:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79VICM",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d62a1be47c73892c36476cc2d1722800b9f9c0b448970b632f3d5f79c0f11fe9",
+      "digest": "f3d0c16212803069216f93e55ecbd732c1e9e95d29e522d3797db2524d03dbb9"
     }
   ]
 }

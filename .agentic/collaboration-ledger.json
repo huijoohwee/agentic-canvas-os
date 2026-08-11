@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1876,
-  "headDigest": "8da4c2407506ee25e52a8f9aa6bcc564cb699b7a5d313f38e0a80a9f4a62d117",
+  "sequence": 1877,
+  "headDigest": "5505b985c4febcf802baa124f09d501687af3a7912da71b79e54e1c8df86991e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -93383,6 +93383,50 @@
       },
       "claimDigest": "35ebda61dfe362ad1532df1d1b5ad59dacf722354bc9ea84606eff8a042e8a75",
       "digest": "8da4c2407506ee25e52a8f9aa6bcc564cb699b7a5d313f38e0a80a9f4a62d117"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1877,
+      "parentDigest": "8da4c2407506ee25e52a8f9aa6bcc564cb699b7a5d313f38e0a80a9f4a62d117",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "44ed3811d592305e7be00c12f79dd92834f4f5a86fd1298eb6b82484a4b6cdd3",
+      "idempotencyKey": "10fb562f645c6f33d7a41060aebe7dbc78d7511e95594329e1d69d78ff498cde",
+      "requestDigest": "ab922edd96a147171efb0c14a256e38d8f434926cc1f1399f382815c3825c3db",
+      "evaluationTime": "2026-08-11T02:15:39.000Z",
+      "claimCore": {
+        "claimId": "44ed3811d592305e7be00c12f79dd92834f4f5a86fd1298eb6b82484a4b6cdd3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:02244c388646dde094deb4f3987097fadce483570b181c0aa6e96e994bcdd41b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b3703854e24f78c4cc7cb5989c4904a2f2d9475c1e1b39faffb33914328edf92",
+        "canonicalBaseRevision": "4fe3493d7c6e40868c29df569caef678416165bf",
+        "declaredWriteScope": [
+          "path:__tests__/adaptive-claim-recovery-contract.test.mjs",
+          "path:__tests__/reviewed-forward-child-recovery.test.mjs",
+          "path:docs/ADAPTIVE-CLAIM-RECOVERY.md",
+          "path:scripts/adaptive-claim-recovery-contract.mjs",
+          "path:scripts/reviewed-forward-child-recovery-evidence.mjs",
+          "path:scripts/reviewed-forward-child-recovery-repository-adapter.mjs",
+          "semantic:adaptive-claim-recovery"
+        ],
+        "writeSetDigest": "e06f51a84c3b3a484dc0b8b49f27ccb29f666a38bbcdee7578dda449c4e5e7ec",
+        "laneRevision": "3508e5bbd683c1ab9d68eaa2539203640eec6c80",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 1,
+        "state": "reviewed",
+        "expiresAt": "2026-08-11T04:03:48.000Z",
+        "evidenceDigest": "22c3a1b92cfd73d446cc8494d0b5c3f4d7f84fcf35f04d68f6d3d512d9ccad7e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79S3zD",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3b6fb38d62cf6657109435febef91dbe1a3b08c91702582b0ccaa6050dd957ac",
+      "digest": "5505b985c4febcf802baa124f09d501687af3a7912da71b79e54e1c8df86991e"
     }
   ]
 }

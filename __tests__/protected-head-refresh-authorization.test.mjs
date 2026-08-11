@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -21,6 +22,26 @@ import {
   rawPull,
   targetMain,
 } from "./protected-head-refresh-fixtures.mjs";
+
+test("workflow encodes recovery without exceeding the 25-input provider cap", () => {
+  const workflow = readFileSync(new URL(
+    "../.github/workflows/auto-delivery.yml",
+    import.meta.url,
+  ), "utf8");
+  const dispatchInputs = workflow
+    .split("permissions: {}", 1)[0]
+    .match(/^      [a-z][a-z_]+:$/gmu) || [];
+  assert.equal(dispatchInputs.length, 25);
+  assert.doesNotMatch(workflow, /^      merged_authorization_recovery:$/mu);
+  assert.match(
+    workflow,
+    /protected-head-refresh-recover-absent-merged-authorization/u,
+  );
+  assert.match(
+    workflow,
+    /recover-absent-merged-authorization:\{0\}/u,
+  );
+});
 
 test("absent merged recovery token binds exact operation and human actor", () => {
   const projection = normalizedProjection();

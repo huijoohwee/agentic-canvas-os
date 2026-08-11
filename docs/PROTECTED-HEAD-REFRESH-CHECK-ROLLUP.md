@@ -57,10 +57,13 @@ or partially completed check remains fail closed. Protected main may have
 advanced after the exact merge; replay proves the immutable merge instead of
 requiring the old target SHA to remain the current tip.
 
-An absent post-merge gate remains fail closed by default. Recovery requires a
-new workflow-dispatch input exactly equal to
-`recover-absent-merged-authorization:<operation-id>`, dispatched by the same
-GitHub actor bound to the retained SQUASH authorization. Only after the merged
+An absent post-merge gate remains fail closed by default. GitHub permits at
+most 25 workflow-dispatch inputs, so recovery uses the existing `operation`
+input with exact value
+`protected-head-refresh-recover-absent-merged-authorization`; the trusted
+workflow derives `recover-absent-merged-authorization:<operation-id>` from the
+already-bound operation ID. The dispatching GitHub actor must still equal the
+human bound to the retained SQUASH authorization. Only after the merged
 commit and deterministic candidate are proven may the controller repeat the
 candidate workflow, source CI, branch-protection, no-synchronize, and cloud
 authority proofs, create the sole operation-owned pending check, re-read the

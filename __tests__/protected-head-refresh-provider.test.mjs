@@ -567,7 +567,8 @@ test("CI completion projects exact source checks into the candidate rollup befor
       const body = JSON.parse(options.input); mutations.push({ endpoint, body });
       if (endpoint === `repos/${repository}/check-runs`) checks.push({ id: 2_000 + checks.length,
         ...body, head_sha: body.head_sha, external_id: body.external_id,
-        status: body.status, conclusion: body.conclusion, details_url: body.details_url,
+        status: body.status, conclusion: body.conclusion,
+        details_url: `https://github.com/${repository}/runs/${2_000 + checks.length}`,
         app: { id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID, slug: "github-actions" } });
       else Object.assign(checks[0], body, { details_url: body.details_url });
       return { status: 0, stdout: "", stderr: "" };
@@ -593,4 +594,6 @@ test("CI completion projects exact source checks into the candidate rollup befor
   const mutationCount = mutations.length;
   provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci });
   assert.equal(mutations.length, mutationCount);
+  checks[1].details_url = "https://github.com/foreign/repo/runs/2001";
+  assert.throws(() => provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci }), /drifted/u);
 });

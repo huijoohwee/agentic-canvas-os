@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1988,
-  "headDigest": "48dbe10a770293909778c501b702c139cf3b5da3240bcd4fb4492d492a915bb8",
+  "sequence": 1989,
+  "headDigest": "b1b332a4a11e23b20c8b7e311ee1c1cdfd9601ada7967385d231653b026a5553",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -98992,6 +98992,54 @@
       },
       "claimDigest": "565f502cc431ea1c7a0dd4892cb9f1eeccfb5bb301e83d3e33d1c25ff89cec88",
       "digest": "48dbe10a770293909778c501b702c139cf3b5da3240bcd4fb4492d492a915bb8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1989,
+      "parentDigest": "48dbe10a770293909778c501b702c139cf3b5da3240bcd4fb4492d492a915bb8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "48fa8ff26b2e95c054a9545332a8b5e4431ce25c44903625884d8215b066a2d8",
+      "idempotencyKey": "30999b2a6e79f1fc8e1050f9c732dcd7cfe0bf671d742f2d0a5a4f70f576e2c0",
+      "requestDigest": "3faa6d026e409624a66c0fa3caf31f8863c9dc6209e7b3b09776182ef25c87b6",
+      "evaluationTime": "2026-08-11T08:56:12.000Z",
+      "claimCore": {
+        "claimId": "48fa8ff26b2e95c054a9545332a8b5e4431ce25c44903625884d8215b066a2d8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9d066a2fefc667378d4e22f1435d72251e84b586beefe749a59bbc010b1b7de7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8eec78b2f93c65687a0cbe0b061274e5af17e5f2be86a34761c87052daed8d7c",
+        "canonicalBaseRevision": "2162352ac56daffa84b55868c8ff0af6356b9a4d",
+        "declaredWriteScope": [
+          "path:__tests__/history-lifecycle-cli.test.mjs",
+          "path:__tests__/history-lifecycle-contract.test.mjs",
+          "path:__tests__/history-lifecycle-controller.test.mjs",
+          "path:__tests__/history-lifecycle-repository-adapter.test.mjs",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:package.json",
+          "path:scripts/history-lifecycle-contract.mjs",
+          "path:scripts/history-lifecycle-controller.mjs",
+          "path:scripts/history-lifecycle-repository-adapter.mjs",
+          "path:scripts/history-lifecycle.mjs",
+          "semantic:history-lifecycle-audit-plan"
+        ],
+        "writeSetDigest": "e5783c7765ad4df3e482cdcfd554d1c6c86a2f8a82f4d021e89b9c1ae50a3ab7",
+        "laneRevision": "2162352ac56daffa84b55868c8ff0af6356b9a4d",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-11T09:26:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "c4d0f8d2b26e8ab0a47a452e03bbe61046d2de1b51bdf62c349d46e16741d117",
+        "eligibleSince": "2026-08-11T08:56:12.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "6e69feccecd2d15ac8d9407b9fd1aee077c962273ef63112be02e1cf19e7705b",
+      "digest": "b1b332a4a11e23b20c8b7e311ee1c1cdfd9601ada7967385d231653b026a5553"
     }
   ]
 }

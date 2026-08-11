@@ -37,7 +37,14 @@ export function collectDeliveryAuthorizedBaseRecoveryEvidence({
     .filter(item => item.startsWith("path:"))
     .map(item => item.slice(5)));
   const originalChangedPaths = changedPaths(git, lease.baseSha, localHeadSha);
-  const deliveryChangedPaths = changedPaths(git, protectedMainSha, localHeadSha);
+  const deliveryChangedPaths = changedPaths(git, authority.canonicalBaseSha, localHeadSha);
+  const protectedMainChangedPaths = changedPaths(
+    git,
+    authority.canonicalBaseSha,
+    protectedMainSha,
+  );
+  const protectedMainOverlapPaths = protectedMainChangedPaths
+    .filter(item => declaredPaths.has(item));
   const outsideScopeRecords = originalChangedPaths
     .filter(item => !declaredPaths.has(item))
     .map(item => ({
@@ -110,11 +117,18 @@ export function collectDeliveryAuthorizedBaseRecoveryEvidence({
     writeSetDigest: manifest.writeSetDigest,
     declaredWriteSet: manifest.declaredWriteSet,
     deliveryChangedPaths,
+    protectedMainChangedPaths,
+    protectedMainOverlapPaths,
     originalAuthoredPaths,
     outsideScopeEquivalenceDigest: digestValue(outsideScopeRecords),
     clean: git(["status", "--porcelain=v1", "--untracked-files=all"]) === "",
     originalBaseAncestor: isAncestor(execute, lease.baseSha, localHeadSha),
-    deliveryBaseAncestor: isAncestor(execute, protectedMainSha, localHeadSha),
+    deliveryBaseAncestor: isAncestor(execute, authority.canonicalBaseSha, localHeadSha),
+    deliveryBaseAncestorOfProtectedMain: isAncestor(
+      execute,
+      authority.canonicalBaseSha,
+      protectedMainSha,
+    ),
     fenceAncestor: isAncestor(execute, lease.fenceSha, localHeadSha),
   });
 }

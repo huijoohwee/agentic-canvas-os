@@ -26,6 +26,11 @@ the admitted write set, the ready pull request has no auto-merge request, and th
 writer projection is `delivery_authorized`, while the exact live claim has naturally become
 `dormant-preserved`, remains scope-reserved, and has no write authority.
 
+Protected `main` may advance after the bound delivery base only when that base remains its
+ancestor and every intervening protected path is disjoint from the lane's admitted write set.
+The successor deliberately retains the immutable delivery base; refreshing the candidate onto
+newer protected `main` remains a later authoring-stage operation.
+
 ## Plan
 
 Run the planner from the exact registered owner worktree:

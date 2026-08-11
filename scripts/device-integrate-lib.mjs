@@ -777,7 +777,8 @@ function requireExpiredDeliverySubject({ lease, authority, branch, headSha }) {
     DIGEST_PATTERN.test(String(authority.claimDigest || "")) &&
     DIGEST_PATTERN.test(String(authority.claimLedgerRevision || "")) &&
     DIGEST_PATTERN.test(String(authority.operationReceiptDigest || "")) &&
-    Number.isInteger(authority.transitionCounter) && authority.transitionCounter > 0 &&
+    authority.operationReceiptDigest === authority.integrationReceiptDigest &&
+    Number.isSafeInteger(authority.transitionCounter) && authority.transitionCounter > 0 &&
     integration?.candidateRevision === headSha &&
     integration.reviewRequestId === authority.reviewRequestId &&
     integration.focusedEvidenceDigest === authority.focusedEvidenceDigest &&
@@ -839,6 +840,9 @@ function requireExactExpiredDeliveryPullRequest({
 function requireExpiredDeliveryClaim({ status, authority, admission, headSha, observedAt }) {
   const claim = exactStatusClaim(status, authority.claimId);
   const state = projectRootState(claim?.state);
+  const claimExpiry = Date.parse(String(claim?.expiresAt || ""));
+  const claimCounterIsValid = Number.isSafeInteger(claim?.transitionCounter) &&
+    claim.transitionCounter > 0;
   const recomputedClaimId = claim && digestValue({
     actorId: claim.actorId,
     canonicalBaseRevision: claim.canonicalBaseRevision,
@@ -847,10 +851,26 @@ function requireExpiredDeliveryClaim({ status, authority, admission, headSha, ob
     workItemId: claim.workItemId,
     writeSetDigest: claim.writeSetDigest,
   });
-  const transitionIsExact = state === "parked"
-    ? claim?.transitionCounter === authority.transitionCounter
-    : claim?.transitionCounter > authority.transitionCounter &&
-      Date.parse(String(claim?.expiresAt || "")) > observedAt;
+  const parkedBaseline = state === "parked" &&
+    claimCounterIsValid &&
+    claim?.transitionCounter === authority.transitionCounter &&
+    claim?.operationReceiptDigest === claim?.integrationReceiptDigest &&
+    claim.operationReceiptDigest === authority.operationReceiptDigest;
+  const parkedRepeat = state === "parked" &&
+    claimCounterIsValid &&
+    claim.transitionCounter > authority.transitionCounter &&
+    DIGEST_PATTERN.test(String(claim?.operationReceiptDigest || "")) &&
+    claim.operationReceiptDigest !== authority.operationReceiptDigest &&
+    claim.operationReceiptDigest !== claim.integrationReceiptDigest &&
+    Number.isFinite(claimExpiry) &&
+    claimExpiry > Date.parse(authority.expiresAt) && claimExpiry <= observedAt &&
+    claim.fenceRevision !== authority.claimDigest &&
+    claim.transitionDigest !== authority.claimLedgerRevision;
+  const transitionIsExact = parkedBaseline || parkedRepeat || (
+    state === "delivery_authorized" &&
+    claimCounterIsValid &&
+    claim?.transitionCounter > authority.transitionCounter && claimExpiry > observedAt
+  );
   const exact = claim && ["parked", "delivery_authorized"].includes(state) &&
     claim.entrySchema === "agentic-cloud-collaboration-entry/v2" &&
     claim.claimIdentitySchema === "agentic-cloud-collaboration-entry/v2" &&
@@ -865,8 +885,7 @@ function requireExpiredDeliveryClaim({ status, authority, admission, headSha, ob
     DIGEST_PATTERN.test(String(claim.fenceRevision || "")) &&
     DIGEST_PATTERN.test(String(claim.transitionDigest || "")) &&
     DIGEST_PATTERN.test(String(claim.operationReceiptDigest || "")) &&
-    Number.isFinite(Date.parse(String(claim.expiresAt || ""))) &&
-    (state !== "parked" || claim.operationReceiptDigest === claim.integrationReceiptDigest);
+    Number.isFinite(claimExpiry);
   if (!exact) {
     throw new Error("Expired delivery recovery requires one exact integrated-preserved cloud claim.");
   }

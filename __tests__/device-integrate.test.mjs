@@ -815,13 +815,7 @@ test("bounded merge waiting preserves delivery state for replay", () => {
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify({
-        url: pullRequestUrl,
-        state: "OPEN",
-        baseRefName: "main",
-        headRefOid: commitSha,
-        mergeCommit: null,
-      }),
+      ghText: () => JSON.stringify(openPullRequest()),
       leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
       sessionId: "session-a",
       run: () => {},
@@ -901,13 +895,9 @@ test("delivery aggregates sequential tree-equivalent refreshes before completion
         if (key === "status --porcelain") return "";
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify(pullRequestRead++ === 0 ? {
-        url: pullRequestUrl,
-        state: "OPEN",
-        baseRefName: "main",
-        headRefOid: firstRefreshedHeadSha,
-        mergeCommit: null,
-      } : {
+      ghText: () => JSON.stringify(pullRequestRead++ === 0
+        ? openPullRequest({ headRefOid: firstRefreshedHeadSha })
+        : {
         url: pullRequestUrl,
         state: "MERGED",
         baseRefName: "main",
@@ -1501,6 +1491,65 @@ test("active integration refreshes an exact synchronized stale-base cloud succes
     assert.equal(fixture.lease.expiresAt, fixture.successor.authority.expiresAt);
     assert.equal(fixture.lease.admission.schema, "agentic-lane-admission-lease/v1");
     assert.notEqual(fixture.lease.admission.admittedReportDigest, fixture.sourceAdmission.admittedReportDigest);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration accepts the exact cloud fallback manifest projection", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-fallback-manifest-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    authorityManifestProjection: "fallback",
+  });
+  let publishCalls = 0;
+  try {
+    assert.notEqual(
+      fixture.sourceAuthority.manifestDigest,
+      fixture.sourceAdmission.manifestDigest,
+    );
+    assert.equal(fixture.sourceAuthority.manifestDigest, digestValue({
+      declaredWriteSet: fixture.sourceAdmission.declaredWriteSet,
+      writeSetDigest: fixture.sourceAdmission.writeSetDigest,
+    }));
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        throw new Error("stop after fallback-manifest successor");
+      },
+    }), /stop after fallback-manifest successor/u);
+    assert.equal(publishCalls, 1);
+    assert.equal(fixture.calls.successor.length, 1);
+    assert.equal(fixture.calls.cas.length, 2);
+    assert.equal(
+      fixture.calls.successor[0].manifest.manifestDigest,
+      fixture.sourceAdmission.manifestDigest,
+    );
+    assert.equal(
+      fixture.lease.cloudAuthority.manifestDigest,
+      fixture.sourceAdmission.manifestDigest,
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects an arbitrary authority manifest projection", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-arbitrary-manifest-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    authorityManifestProjection: "arbitrary",
+  });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /Active publish predecessor drifted/u);
+    assert.equal(publishCalls, 0);
+    assert.equal(fixture.calls.successor.length, 0);
+    assert.equal(fixture.calls.cas.length, 0);
+    assert.strictEqual(fixture.lease, fixture.sourceLease);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -2189,6 +2238,353 @@ test("review-ready delivery dispatches one exact protected refresh per accepted 
   assert.equal(events.some(event => event.includes("update-branch")), false);
 });
 
+test("delivery replay dispatches one protected refresh and continues from the exact refreshed head", () => {
+  const events = [];
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  const refreshedTreeSha = "4".repeat(40);
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: refreshedTreeSha,
+    },
+    observations: [
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      mergedPullRequest({ headRefOid: refreshedHeadSha }),
+    ],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(
+    events.filter(event => event === expectedProtectedRefreshDispatchCommand()).length,
+    1,
+  );
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+  assert.equal(result.protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+  assert.ok(events.includes("run:git fetch origin refs/pull/42/head"));
+  assert.ok(events.includes("run:git merge --ff-only FETCH_HEAD"));
+});
+
+test("expired delivery replay recovers the same integrated claim before one protected refresh dispatch", () => {
+  const events = [];
+  const refreshedHeadSha = "2".repeat(40);
+  let recoveryInput;
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      onRecover: input => { recoveryInput = input; },
+    },
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: "3".repeat(40),
+      treeSha: "4".repeat(40),
+    },
+    observations: [
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      mergedPullRequest({ headRefOid: refreshedHeadSha }),
+    ],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(recoveryInput.integratedClaim.state, "dormant-preserved");
+  assert.equal(recoveryInput.queuedSuccessor, null);
+  assert.equal(recoveryInput.branch, branch);
+  assert.equal(recoveryInput.headSha, commitSha);
+  assert.equal(recoveryInput.deviceId, "device-a");
+  assert.equal(recoveryInput.sessionId, "session-a");
+  assert.deepEqual(events.slice(0, 11), [
+    "read:recovery:1",
+    "read:protected-refresh-pull-request",
+    "read:protected-main-ref",
+    "run:git fetch origin main",
+    "verify:recovery-fetched-main",
+    "verify:recovery-main-ancestor",
+    "recover:status",
+    "recover:continue",
+    "read:recovery:2",
+    "read:protected-refresh-pull-request",
+    "read:protected-main-ref",
+  ]);
+  assert.equal(events.filter(event => event.includes("workflow run auto-delivery.yml")).length, 1);
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+  assert.equal(result.protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+});
+
+test("expired delivery replay adopts an already-live same-claim recovery after response loss", () => {
+  const events = [];
+  let recoveryInput;
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      alreadyLive: true,
+      onRecover: input => { recoveryInput = input; },
+    },
+    observations: [mergedPullRequest()],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(recoveryInput.integratedClaim.state, "integrated-preserved");
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("expired delivery replay verifies an existing protected-refresh successor without redispatch", () => {
+  const events = [];
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  const refreshed = openPullRequest({
+    baseRefOid: refreshedMainSha,
+    headRefOid: refreshedHeadSha,
+    mergeStateStatus: "CLEAN",
+  });
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: { pullRequests: [refreshed, refreshed] },
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: "4".repeat(40),
+    },
+    livePullRequest: protectedRefreshPullRequest({
+      base: {
+        ...protectedRefreshPullRequest().base,
+        sha: refreshedMainSha,
+      },
+      head: {
+        ...protectedRefreshPullRequest().head,
+        sha: refreshedHeadSha,
+      },
+      mergeable_state: "clean",
+    }),
+    liveMainRef: protectedRefreshMainRef({
+      object: { type: "commit", sha: refreshedMainSha },
+    }),
+    observations: [mergedPullRequest({ headRefOid: refreshedHeadSha })],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  assert.equal(result.protectedMainRefresh.deliveredHeadSha, commitSha);
+  assert.equal(result.protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+});
+
+test("expired delivery replay verifies a two-hop protected-refresh successor chain", () => {
+  const events = [];
+  const firstHeadSha = "2".repeat(40);
+  const firstMainSha = "3".repeat(40);
+  const finalHeadSha = "5".repeat(40);
+  const finalMainSha = "6".repeat(40);
+  const refreshed = openPullRequest({
+    baseRefOid: finalMainSha,
+    headRefOid: finalHeadSha,
+    mergeStateStatus: "CLEAN",
+  });
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: { pullRequests: [refreshed, refreshed] },
+    protectedRefresh: {
+      headSha: finalHeadSha,
+      mainSha: finalMainSha,
+      treeSha: "7".repeat(40),
+      refreshes: [
+        {
+          previousHeadSha: commitSha,
+          refreshedHeadSha: firstHeadSha,
+          mainParentSha: firstMainSha,
+          treeSha: "4".repeat(40),
+        },
+        {
+          previousHeadSha: firstHeadSha,
+          refreshedHeadSha: finalHeadSha,
+          mainParentSha: finalMainSha,
+          treeSha: "7".repeat(40),
+        },
+      ],
+    },
+    livePullRequest: protectedRefreshPullRequest({
+      base: { ...protectedRefreshPullRequest().base, sha: finalMainSha },
+      head: { ...protectedRefreshPullRequest().head, sha: finalHeadSha },
+      mergeable_state: "clean",
+    }),
+    liveMainRef: protectedRefreshMainRef({
+      object: { type: "commit", sha: finalMainSha },
+    }),
+    observations: [mergedPullRequest({ headRefOid: finalHeadSha })],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  assert.equal(result.protectedMainRefresh.schema, "agentic-protected-main-refresh-chain/v1");
+  assert.equal(result.protectedMainRefresh.refreshCount, 2);
+  assert.equal(result.protectedMainRefresh.refreshedHeadSha, finalHeadSha);
+});
+
+test("expired delivery replay recovers an exact already-merged pull request", () => {
+  const events = [];
+  const mergedRecovery = mergedPullRequest({
+    baseRefOid: baseSha,
+    isDraft: false,
+    isCrossRepository: false,
+    mergeStateStatus: "UNKNOWN",
+    autoMergeRequest: null,
+  });
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: { pullRequests: [mergedRecovery, mergedRecovery] },
+    livePullRequest: protectedRefreshPullRequest({
+      state: "closed",
+      merged: true,
+      merged_at: "2026-08-11T09:45:00.000Z",
+      merge_commit_sha: mergeSha,
+    }),
+    observations: [mergedPullRequest()],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("expired delivery recovery rejects pull-request drift before cloud mutation", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      pullRequests: [openPullRequest({
+        baseRefOid: "3".repeat(40),
+        mergeStateStatus: "BEHIND",
+      })],
+    },
+    observations: [],
+  }), /pull-request evidence drifted/u);
+  assert.equal(events.includes("recover:status"), false);
+  assert.equal(events.includes("recover:continue"), false);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("expired delivery recovery rejects an unproven protected-main descendant before cloud mutation", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: { mainAncestry: false },
+    observations: [],
+  }), /protected main diverged/u);
+  assert.equal(events.includes("recover:status"), false);
+  assert.equal(events.includes("recover:continue"), false);
+});
+
+test("expired delivery recovery rejects a refreshed successor on a divergent canonical main", () => {
+  const events = [];
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  const refreshed = openPullRequest({
+    baseRefOid: refreshedMainSha,
+    headRefOid: refreshedHeadSha,
+    mergeStateStatus: "CLEAN",
+  });
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      mainAncestry: false,
+      pullRequests: [refreshed, refreshed],
+    },
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: "4".repeat(40),
+    },
+    livePullRequest: protectedRefreshPullRequest({
+      base: { ...protectedRefreshPullRequest().base, sha: refreshedMainSha },
+      head: { ...protectedRefreshPullRequest().head, sha: refreshedHeadSha },
+      mergeable_state: "clean",
+    }),
+    liveMainRef: protectedRefreshMainRef({
+      object: { type: "commit", sha: refreshedMainSha },
+    }),
+    observations: [],
+  }), /protected main diverged/u);
+  assert.equal(events.includes("recover:status"), false);
+  assert.equal(events.includes("recover:continue"), false);
+});
+
+test("expired delivery recovery rejects fetched protected-main drift before cloud mutation", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: { fetchedMainSha: "8".repeat(40) },
+    observations: [],
+  }), /provider and Git evidence diverged/u);
+  assert.ok(events.includes("run:git fetch origin main"));
+  assert.ok(events.includes("verify:recovery-fetched-main"));
+  assert.equal(events.includes("recover:status"), false);
+  assert.equal(events.includes("recover:continue"), false);
+});
+
+test("expired delivery recovery rejects exact PR revocation after cloud convergence", () => {
+  const events = [];
+  const armed = openPullRequest({ baseRefOid: baseSha, mergeStateStatus: "BEHIND" });
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      pullRequests: [armed, { ...armed, autoMergeRequest: null }],
+    },
+    observations: [],
+  }), /pull-request evidence drifted/u);
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("expired delivery recovery rejects a drifted recovered authority before dispatch", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      mutateResult: result => ({
+        ...result,
+        authority: { ...result.authority, laneRevision: "3".repeat(40) },
+      }),
+    },
+    observations: [],
+  }), /exact verified same-claim convergence evidence/u);
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+  assert.equal(events.filter(event => event.startsWith("read:recovery:")).length, 1);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("delivery replay rejects protected-refresh projection drift before dispatch", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    observations: [openPullRequest({ mergeStateStatus: "BEHIND" })],
+    livePullRequest: protectedRefreshPullRequest({
+      base: {
+        ...protectedRefreshPullRequest().base,
+        sha: "3".repeat(40),
+      },
+    }),
+  }), /metadata drifted from the accepted head or canonical base/u);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+});
+
 test("review-ready delivery does not dispatch a protected refresh when the fresh PR is not behind", () => {
   const events = [];
   const result = runProtectedRefreshScenario({
@@ -2718,6 +3114,8 @@ test("authorized auto-delivery rejects integration without canonical runtime pro
 
 function runProtectedRefreshScenario({
   pullUrl = githubPullRequestUrl,
+  leaseStatus = "review_ready",
+  deliveryRecovery = null,
   observations,
   events = [],
   onVerify = null,
@@ -2741,7 +3139,7 @@ function runProtectedRefreshScenario({
     path.join(canonicalKnowgrphRoot, "package.json"),
     JSON.stringify({ name: "knowgrph" }),
   );
-  let lease = createLease({
+  const reviewedLease = createLease({
     repo,
     status: "review_ready",
     autoDelivery: false,
@@ -2749,7 +3147,27 @@ function runProtectedRefreshScenario({
     reviewHeadSha: commitSha,
     pullRequestUrl: pullUrl,
   });
-  let initialPullRequestRead = false;
+  const recoveryFixture = deliveryRecovery
+    ? expiredDeliveryRecoveryFixture(reviewedLease, deliveryRecovery)
+    : null;
+  let lease = leaseStatus === "delivery"
+    ? {
+      ...reviewedLease,
+      status: "delivery",
+      deliveryHeadSha: commitSha,
+      ...(recoveryFixture ? {
+        admission: recoveryFixture.admission,
+        cloudAuthority: recoveryFixture.authority,
+      } : {
+        cloudAuthority: {
+          ...deliveryAuthorizedAuthority(reviewedLease.cloudAuthority),
+          expiresAt: "2099-08-11T12:00:00.000Z",
+        },
+      }),
+    }
+    : reviewedLease;
+  let initialPullRequestRead = leaseStatus === "delivery";
+  let recoveryPullRequestRead = 0;
   let autoMergeReplayPending = false;
   let observationIndex = 0;
   let head = commitSha;
@@ -2762,23 +3180,42 @@ function runProtectedRefreshScenario({
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (recoveryFixture && key === `merge-base --is-ancestor ${baseSha} origin/main`) {
+          events.push("verify:recovery-main-ancestor");
+          if (deliveryRecovery.mainAncestry === false) {
+            throw new Error("protected main is not a descendant");
+          }
+          return "";
+        }
+        if (recoveryFixture && key === "rev-parse origin/main") {
+          events.push("verify:recovery-fetched-main");
+          return deliveryRecovery.fetchedMainSha || liveMainRef.object.sha;
+        }
         if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
         if (key === `log --first-parent --no-merges -1 --format=%s ${baseSha}..${commitSha}`) {
           return protectedSquashSubject;
         }
         if (protectedRefresh) {
+          const refreshSteps = protectedRefresh.refreshes || [{
+            previousHeadSha: commitSha,
+            refreshedHeadSha: protectedRefresh.headSha,
+            mainParentSha: protectedRefresh.mainSha,
+            treeSha: protectedRefresh.treeSha,
+          }];
           if (key === "rev-parse FETCH_HEAD") return protectedRefresh.headSha;
-          if (key === `rev-list --parents -n 1 ${protectedRefresh.headSha}`) {
-            return `${protectedRefresh.headSha} ${commitSha} ${protectedRefresh.mainSha}`;
+          const parentStep = refreshSteps.find(step =>
+            key === `rev-list --parents -n 1 ${step.refreshedHeadSha}`);
+          if (parentStep) {
+            return `${parentStep.refreshedHeadSha} ${parentStep.previousHeadSha} ${parentStep.mainParentSha}`;
           }
-          if (key === `merge-base --is-ancestor ${protectedRefresh.mainSha} origin/main`) return "";
-          if (key ===
-            `merge-tree --write-tree --no-messages ${commitSha} ${protectedRefresh.mainSha}`) {
-            return protectedRefresh.treeSha;
-          }
-          if (key === `rev-parse ${protectedRefresh.headSha}^{tree}`) {
-            return protectedRefresh.treeSha;
-          }
+          if (refreshSteps.some(step =>
+            key === `merge-base --is-ancestor ${step.mainParentSha} origin/main`)) return "";
+          const mergeStep = refreshSteps.find(step => key ===
+            `merge-tree --write-tree --no-messages ${step.previousHeadSha} ${step.mainParentSha}`);
+          if (mergeStep) return mergeStep.treeSha;
+          const treeStep = refreshSteps.find(step =>
+            key === `rev-parse ${step.refreshedHeadSha}^{tree}`);
+          if (treeStep) return treeStep.treeSha;
           if (key === "rev-parse HEAD") return head;
           if (key === "status --porcelain") return "";
         }
@@ -2786,6 +3223,14 @@ function runProtectedRefreshScenario({
       },
       ghText: args => {
         const key = args.join(" ");
+        const recoveryFields =
+          "state,baseRefName,baseRefOid,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest";
+        if (recoveryFixture && key === `pr view ${pullUrl} --json ${recoveryFields}`) {
+          const pullRequest = recoveryFixture.pullRequests[recoveryPullRequestRead++];
+          if (!pullRequest) throw new Error("expired delivery fixture exhausted PR recovery observations");
+          events.push(`read:recovery:${recoveryPullRequestRead}`);
+          return JSON.stringify({ ...pullRequest, url: pullUrl });
+        }
         if (key === "api --method GET repos/example/repo/pulls/42") {
           events.push("read:protected-refresh-pull-request");
           return JSON.stringify(livePullRequest);
@@ -2828,10 +3273,30 @@ function runProtectedRefreshScenario({
         read: requested => requested ? lease : { leases: { [branch]: lease } },
       },
       sessionId: "session-a",
-      buildDeliveryEvidence: () => deliveryEvidence,
-      authorizeCloudDelivery: ({ authority, headSha }) => ({
-        authority: deliveryAuthorizedAuthority(authority, headSha),
-      }),
+      inspectCloudStatus: input => {
+        if (!recoveryFixture) throw new Error("unexpected delivery cloud-status inspection");
+        events.push("recover:status");
+        assert.equal(input.action, "status");
+        return recoveryFixture.status;
+      },
+      recoverIntegratedCloudAuthority: input => {
+        if (!recoveryFixture) throw new Error("unexpected integrated-preserved recovery");
+        events.push("recover:continue");
+        recoveryFixture.onRecover?.(input);
+        return recoveryFixture.result;
+      },
+      buildDeliveryEvidence: () => {
+        if (leaseStatus === "delivery") {
+          throw new Error("delivery replay must not rebuild delivery evidence");
+        }
+        return deliveryEvidence;
+      },
+      authorizeCloudDelivery: ({ authority, headSha }) => {
+        if (leaseStatus === "delivery") {
+          throw new Error("delivery replay must not authorize delivery twice");
+        }
+        return { authority: deliveryAuthorizedAuthority(authority, headSha) };
+      },
       verifyCloudAuthority: ({ headSha }) => {
         events.push(`verify:${headSha}`);
         onVerify?.({ headSha });
@@ -2880,6 +3345,173 @@ function runProtectedRefreshScenario({
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
+}
+
+function expiredDeliveryRecoveryFixture(reviewedLease, options = {}) {
+  const manifest = normalizeDeclaredWriteScopeManifest({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: "runtime-integration",
+    paths: ["scripts/runtime.mjs"],
+  }, { expectedScope: "runtime-integration" });
+  const admission = Object.freeze({
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: manifest.semanticScope,
+    declaredWriteSet: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+    manifestDigest: manifest.manifestDigest,
+    planReceiptDigest: "1".repeat(64),
+    admissionReceiptDigest: "2".repeat(64),
+    existingLaneStateDigest: "3".repeat(64),
+    admittedReportDigest: "4".repeat(64),
+    preservationReceiptDigest: "5".repeat(64),
+  });
+  const identity = Object.freeze({
+    actorId: "github-user:actor",
+    canonicalBaseRevision: baseSha,
+    leaseEpoch: 2,
+    repositoryId: "github-repository:repo",
+    workItemId: "work-item:history-lifecycle",
+    writeSetDigest: manifest.writeSetDigest,
+  });
+  const recoveredClaimId = digestValue(identity);
+  const integration = Object.freeze({
+    candidateRevision: commitSha,
+    reviewRequestId,
+    focusedEvidenceDigest,
+    ...deliveryEvidence,
+    integratedAt: "2026-08-11T08:45:00.000Z",
+  });
+  const authority = Object.freeze({
+    ...deliveryAuthorizedAuthority(reviewedLease.cloudAuthority),
+    provider: "github",
+    ledgerRepository: "example/ledger",
+    targetRepository: "example/repo",
+    claimId: recoveredClaimId,
+    claimDigest: "6".repeat(64),
+    ledgerRevision: "7".repeat(40),
+    ledgerDigest: "8".repeat(64),
+    claimLedgerRevision: "9".repeat(64),
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    operationReceiptDigest: "7".repeat(64),
+    canonicalBaseSha: baseSha,
+    laneRevision: commitSha,
+    cloudDeclaredWriteScope: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+    deviceId: reviewedLease.device,
+    sessionId: reviewedLease.sessionId,
+    reviewRequestId,
+    leaseEpoch: 2,
+    transitionCounter: 5,
+    state: "delivery_authorized",
+    expiresAt: "1969-12-31T23:59:59.000Z",
+    focusedEvidenceDigest,
+    manifestDigest: manifest.manifestDigest,
+    integrationReceiptDigest: "7".repeat(64),
+    integration,
+  });
+  const parkedClaim = Object.freeze({
+    claimId: recoveredClaimId,
+    entrySchema: authority.entrySchema,
+    claimIdentitySchema: authority.claimIdentitySchema,
+    state: "dormant-preserved",
+    ...identity,
+    laneRevision: commitSha,
+    declaredWriteScope: manifest.declaredWriteSet,
+    transitionCounter: 5,
+    heartbeatCounter: 0,
+    reviewRequestId,
+    predecessorClaimId: null,
+    expiresAt: authority.expiresAt,
+    fenceRevision: authority.claimDigest,
+    transitionDigest: authority.claimLedgerRevision,
+    operationReceiptDigest: authority.integrationReceiptDigest,
+    integrationReceiptDigest: authority.integrationReceiptDigest,
+    integration,
+  });
+  const liveClaim = Object.freeze({
+    ...parkedClaim,
+    state: "integrated-preserved",
+    transitionCounter: 6,
+    expiresAt: "2099-08-11T12:30:00.000Z",
+    fenceRevision: "a".repeat(64),
+    transitionDigest: "b".repeat(64),
+    operationReceiptDigest: "c".repeat(64),
+  });
+  const observedClaim = options.alreadyLive ? liveClaim : parkedClaim;
+  const nextAuthority = Object.freeze({
+    ...authority,
+    claimDigest: liveClaim.fenceRevision,
+    ledgerRevision: "d".repeat(40),
+    ledgerDigest: "e".repeat(64),
+    claimLedgerRevision: liveClaim.transitionDigest,
+    operationReceiptDigest: liveClaim.operationReceiptDigest,
+    transitionCounter: liveClaim.transitionCounter,
+    expiresAt: liveClaim.expiresAt,
+  });
+  const verification = Object.freeze({
+    schema: "agentic-lane-cloud-verification/v1",
+    status: "ready",
+    claimId: nextAuthority.claimId,
+    claimDigest: nextAuthority.claimDigest,
+    ledgerRevision: nextAuthority.ledgerRevision,
+    ledgerDigest: nextAuthority.ledgerDigest,
+    canonicalBaseSha: nextAuthority.canonicalBaseSha,
+    laneRevision: nextAuthority.laneRevision,
+    writeSetDigest: nextAuthority.writeSetDigest,
+    reviewRequestId: nextAuthority.reviewRequestId,
+    receiptDigest: "f".repeat(64),
+  });
+  const convergenceEvidence = Object.freeze({
+    schema: "agentic-integrated-replay-convergence-evidence/v1",
+    claimId: nextAuthority.claimId,
+    claimDigest: nextAuthority.claimDigest,
+    fenceRevision: nextAuthority.claimDigest,
+    claimLedgerRevision: nextAuthority.claimLedgerRevision,
+    transitionDigest: nextAuthority.claimLedgerRevision,
+    transitionCounter: nextAuthority.transitionCounter,
+    state: nextAuthority.state,
+    expiresAt: nextAuthority.expiresAt,
+    branch,
+    canonicalBaseSha: nextAuthority.canonicalBaseSha,
+    candidateRevision: nextAuthority.laneRevision,
+    manifestDigest: admission.manifestDigest,
+    writeSetDigest: nextAuthority.writeSetDigest,
+    leaseEpoch: nextAuthority.leaseEpoch,
+    reviewRequestId: nextAuthority.reviewRequestId,
+    focusedEvidenceDigest: nextAuthority.focusedEvidenceDigest,
+    currentOperationReceiptDigest: nextAuthority.operationReceiptDigest,
+    integrationReceiptDigest: nextAuthority.integrationReceiptDigest,
+    integrationEvidenceDigest: digestValue(nextAuthority.integration),
+    currentQueuedDerivativeDisposition: "absent-from-verified-inventory",
+    overlappingCurrentClaimIds: [],
+    lifecycleAttribution: "not-reconstructed",
+    observation: "current-state-only",
+  });
+  const defaultPullRequest = openPullRequest({ baseRefOid: baseSha, mergeStateStatus: "BEHIND" });
+  const defaultResult = Object.freeze({
+    authority: nextAuthority,
+    verification,
+    convergenceEvidence,
+    convergenceEvidenceDigest: digestValue(convergenceEvidence),
+  });
+  return {
+    admission,
+    authority,
+    status: Object.freeze({
+      schema: "agentic-cloud-collaboration-result/v1",
+      ok: true,
+      action: "status",
+      status: "ready",
+      ledgerRevision: "7".repeat(40),
+      ledgerDigest: "8".repeat(64),
+      claims: [observedClaim],
+    }),
+    result: options.mutateResult ? options.mutateResult(defaultResult) : defaultResult,
+    pullRequests: options.pullRequests || [defaultPullRequest, defaultPullRequest],
+    onRecover: options.onRecover || null,
+  };
 }
 
 function openPullRequest(overrides = {}) {
@@ -3046,6 +3678,7 @@ function createActiveSuccessorFixture({
   derivativeFault = null,
   providerEpochDemand = null,
   laggingPullRequestBase = false,
+  authorityManifestProjection = "canonical",
 }) {
   const successorHeadSha = "2".repeat(40);
   const successorClaimId = "c".repeat(64);
@@ -3078,6 +3711,15 @@ function createActiveSuccessorFixture({
     admittedReportDigest: "7".repeat(64),
     preservationReceiptDigest: "8".repeat(64),
   });
+  const fallbackManifestDigest = digestValue({
+    declaredWriteSet: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+  });
+  const sourceManifestDigest = ({
+    canonical: manifest.manifestDigest,
+    fallback: fallbackManifestDigest,
+    arbitrary: "0".repeat(64),
+  })[authorityManifestProjection];
   const sourceAuthority = Object.freeze({
     schema: "agentic-lane-cloud-authority/v1",
     provider: "github",
@@ -3105,7 +3747,7 @@ function createActiveSuccessorFixture({
     expiresAt,
     integrationReceiptDigest: null,
     integration: null,
-    manifestDigest: manifest.manifestDigest,
+    manifestDigest: sourceManifestDigest,
   });
   const sourceLease = createLease({
     repo,
@@ -3165,6 +3807,7 @@ function createActiveSuccessorFixture({
     leaseEpoch: 2,
     transitionCounter: 2,
     expiresAt: successorExpiresAt,
+    manifestDigest: manifest.manifestDigest,
   });
   const waitingSuccessor = Object.freeze({
     ...claimCore,

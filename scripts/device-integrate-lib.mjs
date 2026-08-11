@@ -15,9 +15,13 @@ import {
   bindAdmissionCloudAuthority,
   claimLegacyReviewAdmissionCloudAuthority,
   invokeRepositoryCloudAction,
+  recoverIntegratedPreservedCloudAuthority,
   verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
-import { normalizeBoundAuthority } from "./scoped-lane-cloud-reconciliation.mjs";
+import {
+  normalizeBoundAuthority,
+  projectRootState,
+} from "./scoped-lane-cloud-reconciliation.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
 import {
@@ -118,6 +122,7 @@ function integrateSessionUnfenced({
   bindActiveCloudSuccessor = bindAdmissionCloudAuthority,
   verifyActiveCloudSuccessor = verifyAdmissionCloudAuthority,
   inspectCloudStatus = invokeRepositoryCloudAction,
+  recoverIntegratedCloudAuthority = recoverIntegratedPreservedCloudAuthority,
   invokeCloudSuccessor = invokeRepositoryCloudAction,
   verifyCloudSuccessor = invokeRepositoryCloudVerifier,
   casActiveLeaseProjection = casWriterLeaseProjection,
@@ -358,6 +363,23 @@ function integrateSessionUnfenced({
     const deliveryAuthorizedHeadSha = lease.deliveryHeadSha
       || commitEvidence?.commitSha
       || (reviewReadyDelivery ? lease.reviewHeadSha : null);
+    const expiredDeliveryRecovery = recoverExpiredDeliveryCloudAuthority({
+      lease, authority: deliveryCloudAuthority, branch,
+      headSha: deliveryAuthorizedHeadSha, gitText, ghText, run, inspectCloudStatus,
+      recoverIntegratedCloudAuthority, now,
+    });
+    deliveryCloudAuthority = expiredDeliveryRecovery.authority;
+    if (expiredDeliveryRecovery.protectedMainRefresh) {
+      protectedMainAuthorizationRefresh = expiredDeliveryRecovery.protectedMainRefresh;
+      protectedMainRefresh = appendProtectedMainRefresh(
+        protectedMainRefresh,
+        protectedMainAuthorizationRefresh,
+      );
+      acceptedProtectedRefreshBaseSha = projectRepeatedProtectedRefreshBase({
+        acceptedHeadSha: deliveryAuthorizedHeadSha,
+        refreshReceipt: protectedMainAuthorizationRefresh,
+      }).canonicalBaseSha;
+    }
     const requestedProtectedMainRefreshHeads = new Set();
     verifyCloudAuthority({
       pullRequestUrl: lease.pullRequestUrl,
@@ -403,7 +425,7 @@ function integrateSessionUnfenced({
           return refresh.refreshedHeadSha;
         }
         : null,
-      onOpenPullRequest: reviewReadyDelivery
+      onOpenPullRequest: allowProtectedMainRefresh
         ? ({ acceptedHeadSha, pullRequest: openPullRequest }) => {
           dispatchProtectedMainRefresh({
             url: lease.pullRequestUrl,
@@ -629,6 +651,279 @@ function isReviewReadyDeliveryLease(lease) {
     lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1" &&
     lease.cloudAuthority.state === "review_ready" &&
     SHA_PATTERN.test(String(lease.reviewHeadSha || ""));
+}
+
+function recoverExpiredDeliveryCloudAuthority({
+  lease,
+  authority,
+  branch,
+  headSha,
+  gitText,
+  ghText,
+  run,
+  inspectCloudStatus,
+  recoverIntegratedCloudAuthority,
+  now,
+}) {
+  const unchanged = () => Object.freeze({ authority, protectedMainRefresh: null });
+  if (lease?.status !== "delivery") return unchanged();
+  const observedAt = now().getTime();
+  const expiresAt = Date.parse(String(authority?.expiresAt || ""));
+  if (!Number.isFinite(observedAt)) throw new Error("Delivery replay clock evidence is invalid.");
+  // Legacy test doubles and malformed authorities remain subject to the existing verifier;
+  // only an exact finite expired authority enters this mutation-capable recovery path.
+  if (!Number.isFinite(expiresAt)) return unchanged();
+  if (expiresAt > observedAt) return unchanged();
+
+  requireExpiredDeliverySubject({ lease, authority, branch, headSha });
+  const preflight = requireExactExpiredDeliveryPullRequest({
+    ghText,
+    url: lease.pullRequestUrl,
+    branch,
+    headSha,
+    authority,
+  });
+  let protectedMainRefresh = null;
+  if (preflight.headSha === headSha) {
+    run("git", ["fetch", "origin", "main"]);
+  } else {
+    protectedMainRefresh = reconcileProtectedMainRefresh({
+      url: lease.pullRequestUrl,
+      expectedHeadSha: headSha,
+      observedHeadSha: preflight.headSha,
+      gitText,
+      run,
+    });
+  }
+  if (gitText(["rev-parse", "origin/main"]).trim() !== preflight.liveMainSha) {
+    throw new Error("Expired delivery recovery protected-main provider and Git evidence diverged.");
+  }
+  try {
+    gitText(["merge-base", "--is-ancestor", authority.canonicalBaseSha, "origin/main"]);
+  } catch {
+    throw new Error("Expired delivery recovery protected main diverged from its accepted canonical base.");
+  }
+  if (protectedMainRefresh && projectRepeatedProtectedRefreshBase({
+    acceptedHeadSha: headSha,
+    refreshReceipt: protectedMainRefresh,
+  }).canonicalBaseSha !== preflight.baseSha) {
+    throw new Error("Expired delivery recovery protected-refresh chain drifted from the pull-request base.");
+  }
+  const status = inspectCloudStatus({
+    action: "status",
+    ledgerRepository: authority.ledgerRepository,
+    request: { targetRepository: authority.targetRepository },
+  });
+  const integratedClaim = requireExpiredDeliveryClaim({
+    status,
+    authority,
+    admission: lease.admission,
+    headSha,
+    observedAt,
+  });
+  const recovered = recoverIntegratedCloudAuthority({
+    authority,
+    integratedClaim,
+    queuedSuccessor: null,
+    manifest: lease.admission,
+    branch,
+    headSha,
+    focusedEvidenceDigest: authority.focusedEvidenceDigest,
+    deviceId: lease.device,
+    sessionId: lease.sessionId,
+    inspect: inspectCloudStatus,
+  });
+  const recoveredAuthority = requireRecoveredExpiredDeliveryAuthority({
+    recovered,
+    authority,
+    integratedClaim,
+    admission: lease.admission,
+    headSha,
+    observedAt: now().getTime(),
+  });
+  requireExactExpiredDeliveryPullRequest({
+    ghText,
+    url: lease.pullRequestUrl,
+    branch,
+    headSha,
+    authority,
+    expected: preflight,
+  });
+  return Object.freeze({ authority: recoveredAuthority, protectedMainRefresh });
+}
+
+function requireExpiredDeliverySubject({ lease, authority, branch, headSha }) {
+  const admission = lease?.admission;
+  const integration = authority?.integration;
+  const exact = SHA_PATTERN.test(String(headSha || "")) && lease.branch === branch &&
+    lease.deliveryHeadSha === headSha && lease.cloudAuthority === authority &&
+    admission?.schema === "agentic-lane-admission-lease/v1" && admission.status === "admitted" &&
+    DIGEST_PATTERN.test(String(admission.manifestDigest || "")) &&
+    DIGEST_PATTERN.test(String(admission.writeSetDigest || "")) &&
+    digestValue(admission.declaredWriteSet) === admission.writeSetDigest &&
+    authority?.schema === "agentic-lane-cloud-authority/v1" &&
+    authority.state === "delivery_authorized" && authority.laneRevision === headSha &&
+    authority.writeSetDigest === admission.writeSetDigest &&
+    sameValue(authority.cloudDeclaredWriteScope, admission.declaredWriteSet) &&
+    authority.manifestDigest === admission.manifestDigest &&
+    authority.deviceId === lease.device && authority.sessionId === lease.sessionId &&
+    Number.isInteger(authority.leaseEpoch) && authority.leaseEpoch > 0 &&
+    typeof authority.reviewRequestId === "string" && authority.reviewRequestId.length > 0 &&
+    DIGEST_PATTERN.test(String(authority.focusedEvidenceDigest || "")) &&
+    DIGEST_PATTERN.test(String(authority.integrationReceiptDigest || "")) &&
+    authority.entrySchema === "agentic-cloud-collaboration-entry/v2" &&
+    authority.claimIdentitySchema === "agentic-cloud-collaboration-entry/v2" &&
+    DIGEST_PATTERN.test(String(authority.claimId || "")) &&
+    DIGEST_PATTERN.test(String(authority.claimDigest || "")) &&
+    DIGEST_PATTERN.test(String(authority.claimLedgerRevision || "")) &&
+    DIGEST_PATTERN.test(String(authority.operationReceiptDigest || "")) &&
+    Number.isInteger(authority.transitionCounter) && authority.transitionCounter > 0 &&
+    integration?.candidateRevision === headSha &&
+    integration.reviewRequestId === authority.reviewRequestId &&
+    integration.focusedEvidenceDigest === authority.focusedEvidenceDigest &&
+    DELIVERY_EVIDENCE_FIELDS.every(field => DIGEST_PATTERN.test(String(integration[field] || ""))) &&
+    Number.isFinite(Date.parse(String(integration.integratedAt || "")));
+  if (!exact) {
+    throw new Error("Expired delivery recovery drifted from its exact local reviewed integration subject.");
+  }
+}
+
+function requireExactExpiredDeliveryPullRequest({
+  ghText, url, branch, headSha, authority, expected = null,
+}) {
+  const subject = parseProtectedMainRefreshUrl(url, { requireGitHubDotCom: true });
+  const pullRequest = JSON.parse(ghText([
+    "pr", "view", url, "--json",
+    "state,baseRefName,baseRefOid,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest",
+  ]));
+  const providerPullRequest = readProtectedHeadRefreshPullRequest({ subject, ghText });
+  const liveMainSha = readProtectedHeadRefreshTargetMain({ subject, ghText });
+  const observedBaseSha = pullRequest?.baseRefOid;
+  const observedHeadSha = pullRequest?.headRefOid;
+  const common = pullRequest?.url === url && ["OPEN", "MERGED"].includes(pullRequest.state) &&
+    pullRequest.baseRefName === "main" && SHA_PATTERN.test(String(observedBaseSha || "")) &&
+    SHA_PATTERN.test(String(observedHeadSha || "")) && pullRequest.isDraft === false &&
+    pullRequest.isCrossRepository === false && subject.repository === authority.targetRepository &&
+    providerPullRequest.html_url === url && providerPullRequest.draft === false &&
+    providerPullRequest.base?.ref === "main" && providerPullRequest.base?.sha === observedBaseSha &&
+    providerPullRequest.base?.repo?.full_name === authority.targetRepository &&
+    providerPullRequest.head?.ref === branch && providerPullRequest.head?.sha === observedHeadSha &&
+    providerPullRequest.head?.repo?.full_name === authority.targetRepository &&
+    (observedHeadSha !== headSha || observedBaseSha === authority.canonicalBaseSha);
+  const open = pullRequest?.state === "OPEN" && pullRequest.mergeCommit === null &&
+    providerPullRequest.state === "open" && providerPullRequest.merged === false &&
+    pullRequest.autoMergeRequest?.mergeMethod === "SQUASH" &&
+    providerPullRequest.auto_merge?.merge_method === "squash";
+  const mergeCommitSha = pullRequest?.mergeCommit?.oid;
+  const merged = pullRequest?.state === "MERGED" && providerPullRequest.state === "closed" &&
+    providerPullRequest.merged === true && SHA_PATTERN.test(String(mergeCommitSha || "")) &&
+    providerPullRequest.merge_commit_sha === mergeCommitSha;
+  if (!common || (!open && !merged)) {
+    throw new Error("Expired delivery recovery pull-request evidence drifted from the exact delivery subject.");
+  }
+  const projection = Object.freeze({
+    state: pullRequest.state,
+    url,
+    baseSha: observedBaseSha,
+    headSha: observedHeadSha,
+    liveMainSha,
+    mergeCommitSha: merged ? mergeCommitSha : null,
+    autoMergeMethod: open ? "SQUASH" : null,
+  });
+  if (expected && !sameValue(projection, expected)) {
+    throw new Error("Expired delivery recovery pull-request evidence changed during cloud convergence.");
+  }
+  return projection;
+}
+
+function requireExpiredDeliveryClaim({ status, authority, admission, headSha, observedAt }) {
+  const claim = exactStatusClaim(status, authority.claimId);
+  const state = projectRootState(claim?.state);
+  const recomputedClaimId = claim && digestValue({
+    actorId: claim.actorId,
+    canonicalBaseRevision: claim.canonicalBaseRevision,
+    leaseEpoch: claim.leaseEpoch,
+    repositoryId: claim.repositoryId,
+    workItemId: claim.workItemId,
+    writeSetDigest: claim.writeSetDigest,
+  });
+  const transitionIsExact = state === "parked"
+    ? claim?.transitionCounter === authority.transitionCounter
+    : claim?.transitionCounter > authority.transitionCounter &&
+      Date.parse(String(claim?.expiresAt || "")) > observedAt;
+  const exact = claim && ["parked", "delivery_authorized"].includes(state) &&
+    claim.entrySchema === "agentic-cloud-collaboration-entry/v2" &&
+    claim.claimIdentitySchema === "agentic-cloud-collaboration-entry/v2" &&
+    claim.entrySchema === authority.entrySchema &&
+    claim.claimIdentitySchema === authority.claimIdentitySchema &&
+    claim.claimId === recomputedClaimId && claim.canonicalBaseRevision === authority.canonicalBaseSha &&
+    claim.laneRevision === headSha && claim.writeSetDigest === admission.writeSetDigest &&
+    sameValue(claim.declaredWriteScope, admission.declaredWriteSet) &&
+    claim.leaseEpoch === authority.leaseEpoch && claim.reviewRequestId === authority.reviewRequestId &&
+    claim.integrationReceiptDigest === authority.integrationReceiptDigest &&
+    sameValue(claim.integration, authority.integration) && transitionIsExact &&
+    DIGEST_PATTERN.test(String(claim.fenceRevision || "")) &&
+    DIGEST_PATTERN.test(String(claim.transitionDigest || "")) &&
+    DIGEST_PATTERN.test(String(claim.operationReceiptDigest || "")) &&
+    Number.isFinite(Date.parse(String(claim.expiresAt || ""))) &&
+    (state !== "parked" || claim.operationReceiptDigest === claim.integrationReceiptDigest);
+  if (!exact) {
+    throw new Error("Expired delivery recovery requires one exact integrated-preserved cloud claim.");
+  }
+  return claim;
+}
+
+function requireRecoveredExpiredDeliveryAuthority({
+  recovered, authority, integratedClaim, admission, headSha, observedAt,
+}) {
+  const next = recovered?.authority;
+  const evidence = recovered?.convergenceEvidence;
+  const verification = recovered?.verification;
+  const priorState = projectRootState(integratedClaim?.state);
+  const transitionIsExact = priorState === "parked"
+    ? next?.transitionCounter > integratedClaim.transitionCounter
+    : next?.transitionCounter === integratedClaim.transitionCounter;
+  const stableFields = [
+    "provider", "ledgerRepository", "targetRepository", "claimId", "entrySchema",
+    "claimIdentitySchema", "canonicalBaseSha", "writeSetDigest", "deviceId", "sessionId",
+    "reviewRequestId", "leaseEpoch", "focusedEvidenceDigest", "manifestDigest",
+    "integrationReceiptDigest",
+  ];
+  const exact = next?.schema === "agentic-lane-cloud-authority/v1" &&
+    stableFields.every(field => sameValue(next[field], authority[field])) &&
+    next.state === "delivery_authorized" && next.laneRevision === headSha &&
+    sameValue(next.cloudDeclaredWriteScope, admission.declaredWriteSet) &&
+    sameValue(next.integration, authority.integration) && transitionIsExact &&
+    Number.isFinite(observedAt) && Date.parse(String(next.expiresAt || "")) > observedAt &&
+    DIGEST_PATTERN.test(String(next.claimDigest || "")) &&
+    DIGEST_PATTERN.test(String(next.claimLedgerRevision || "")) &&
+    DIGEST_PATTERN.test(String(next.ledgerDigest || "")) &&
+    DIGEST_PATTERN.test(String(next.operationReceiptDigest || "")) &&
+    SHA_PATTERN.test(String(next.ledgerRevision || "")) &&
+    verification?.schema === "agentic-lane-cloud-verification/v1" &&
+    verification.status === "ready" && verification.claimId === next.claimId &&
+    verification.claimDigest === next.claimDigest && verification.ledgerRevision === next.ledgerRevision &&
+    verification.ledgerDigest === next.ledgerDigest &&
+    verification.canonicalBaseSha === next.canonicalBaseSha &&
+    verification.laneRevision === headSha && verification.writeSetDigest === admission.writeSetDigest &&
+    verification.reviewRequestId === next.reviewRequestId &&
+    DIGEST_PATTERN.test(String(verification.receiptDigest || "")) &&
+    evidence?.schema === "agentic-integrated-replay-convergence-evidence/v1" &&
+    recovered.convergenceEvidenceDigest === digestValue(evidence) &&
+    evidence.claimId === next.claimId && evidence.claimDigest === next.claimDigest &&
+    evidence.transitionCounter === next.transitionCounter &&
+    evidence.currentOperationReceiptDigest === next.operationReceiptDigest &&
+    evidence.integrationReceiptDigest === next.integrationReceiptDigest &&
+    evidence.canonicalBaseSha === next.canonicalBaseSha &&
+    evidence.candidateRevision === headSha && evidence.leaseEpoch === next.leaseEpoch &&
+    evidence.reviewRequestId === next.reviewRequestId &&
+    evidence.writeSetDigest === admission.writeSetDigest &&
+    evidence.focusedEvidenceDigest === next.focusedEvidenceDigest &&
+    evidence.manifestDigest === admission.manifestDigest;
+  if (!exact) {
+    throw new Error("Expired delivery recovery did not return exact verified same-claim convergence evidence.");
+  }
+  return next;
 }
 
 function isDormantPreservedCloudReconciliationError(error) {
@@ -1257,10 +1552,14 @@ function requireExactActivePublishClaim({ status, authority, admission }) {
 
 function exactActivePublishClaim({ status, authority, admission }) {
   const claim = exactStatusClaim(status, authority.claimId);
+  const fallbackManifestDigest = digestValue({
+    declaredWriteSet: admission.declaredWriteSet,
+    writeSetDigest: admission.writeSetDigest,
+  });
   const exact = ["active", "current"].includes(claim?.state) &&
     authority.writeSetDigest === admission.writeSetDigest &&
     sameValue(authority.cloudDeclaredWriteScope, admission.declaredWriteSet) &&
-    authority.manifestDigest === admission.manifestDigest &&
+    [admission.manifestDigest, fallbackManifestDigest].includes(authority.manifestDigest) &&
     sameProjection(claim, authority, ACTIVE_CLAIM_AUTHORITY_FIELDS) &&
     sameValue(claim.declaredWriteScope, admission.declaredWriteSet) &&
     typeof claim.workItemId === "string" && claim.workItemId.length > 0;

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2252,
-  "headDigest": "7ecb755fbc66346cc8842cc7d29838960ade68928ecaf1d06fbd711a4c43fc7e",
+  "sequence": 2253,
+  "headDigest": "789061113c313f5b88fe060655759f6d530f0b0a921dfc60f0ef6a3d16d8b2b0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -111869,6 +111869,49 @@
       },
       "claimDigest": "025e7e54b27f3b59c9de7e4700b0e782cc251d4d680a81f62be6aa9b0906062f",
       "digest": "7ecb755fbc66346cc8842cc7d29838960ade68928ecaf1d06fbd711a4c43fc7e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2253,
+      "parentDigest": "7ecb755fbc66346cc8842cc7d29838960ade68928ecaf1d06fbd711a4c43fc7e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "dff56f54fe1d451eafef595d60609858ce433fbb6454494c2bcac7cdf62c8e50",
+      "idempotencyKey": "472158e04a172f13691545b232df3828b9347f086d957757f75ab70dd8635ffb",
+      "requestDigest": "ae9a88a1308fbd9feb97da22be3302035d0580ef92740453bfce2ca51ba5dc81",
+      "evaluationTime": "2026-08-11T22:55:53.000Z",
+      "claimCore": {
+        "claimId": "dff56f54fe1d451eafef595d60609858ce433fbb6454494c2bcac7cdf62c8e50",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:98022989f479c13cfe814da91a90a17d1651648dadadbed24f82cb915c60dab5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f63fa322528f6a3915ec2dfa82cfc99da47a73894d3381613e2fc56db3ef4993",
+        "canonicalBaseRevision": "723e23ece0080d0d26f7a3f63a66a3e16179f67c",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "semantic:release-recovery-finalization"
+        ],
+        "writeSetDigest": "d5027799018a9f7b51969c0d047379a4e97a1ae12592abdedcc4d7844df5738a",
+        "laneRevision": "723e23ece0080d0d26f7a3f63a66a3e16179f67c",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-12T00:55:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "0be0075786d8a57a654ac48a36d5c105f028ecd895f983ea88a8b5acb39e6352",
+        "eligibleSince": "2026-08-11T22:55:53.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "58a02a8dfb232874b7b7109a17238f360ca94a479e4e2a93b7e08c65a6ffe8b4",
+      "digest": "789061113c313f5b88fe060655759f6d530f0b0a921dfc60f0ef6a3d16d8b2b0"
     }
   ]
 }

@@ -15,7 +15,12 @@ import {
   resolveRuntimeRepositories,
   validateIntegrationCleanupReceipt,
 } from "../scripts/device-integrate-lib.mjs";
-import { CLOUD_COLLABORATION_BOUNDS } from "../scripts/cloud-collaboration-primitives.mjs";
+import {
+  CLOUD_COLLABORATION_BOUNDS,
+  digestValue,
+} from "../scripts/cloud-collaboration-primitives.mjs";
+import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
+import { casWriterLeaseProjection } from "../scripts/writer-lease-registry-cas.mjs";
 import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
 import { createWorktreeCleanupOperationId } from "../scripts/worktree-lifecycle-lib.mjs";
 import { deriveTaskWorktreeContainers } from "../scripts/task-worktree-owned-containers.mjs";
@@ -1461,6 +1466,283 @@ test("active integration delegates its only entrypoint fence to nested publish",
   }
 });
 
+test("active integration refreshes an exact synchronized stale-base cloud successor before publish", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-successor-"));
+  const fixture = createActiveSuccessorFixture({ repo, durableCas: true });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        assert.equal(fixture.lease.cloudAuthority.claimId, fixture.successor.authority.claimId);
+        assert.equal(fixture.lease.baseSha, mainSha);
+        assert.equal(fixture.lease.fenceSha, "2".repeat(40));
+        throw new Error("stop after refreshed publish");
+      },
+    }), /stop after refreshed publish/u);
+    assert.equal(publishCalls, 1);
+    assert.equal(fixture.calls.successor.length, 1);
+    assert.equal(fixture.calls.cas.length, 2);
+    assert.equal(fixture.calls.successor[0].workItemId, fixture.workItemId);
+    assert.equal(fixture.calls.successor[0].leaseEpoch, 2);
+    assert.deepEqual(fixture.calls.successor[0].manifest, fixture.sourceAdmission);
+    assert.equal(fixture.calls.successor[0].manifest.schema, "agentic-lane-admission-lease/v1");
+    assert.equal(
+      fixture.calls.successor[0].manifest.admittedReportDigest,
+      fixture.sourceAdmission.admittedReportDigest,
+    );
+    assert.equal(fixture.calls.cas[0].expectedClaimId, fixture.sourceAuthority.claimId);
+    assert.equal(fixture.calls.cas[0].values.status, "active");
+    assert.equal(fixture.calls.cas[0].values.activePublishSuccessorIntent.status, "prepared");
+    assert.equal(fixture.calls.cas[1].values.status, "active");
+    assert.equal(fixture.calls.cas[1].values.baseSha, mainSha);
+    assert.equal(fixture.calls.cas[1].values.fenceSha, "2".repeat(40));
+    assert.equal(fixture.calls.cas[1].values.activePublishSuccessorIntent, null);
+    assert.equal(fixture.lease.expiresAt, fixture.successor.authority.expiresAt);
+    assert.equal(fixture.lease.admission.schema, "agentic-lane-admission-lease/v1");
+    assert.notEqual(fixture.lease.admission.admittedReportDigest, fixture.sourceAdmission.admittedReportDigest);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration can refresh two sequential canonical-base advances", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-two-advances-"));
+  const fixture = createActiveSuccessorFixture({ repo, durableCas: true });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        throw new Error("stop after first advance");
+      },
+    }), /stop after first advance/u);
+    const firstProjectedAdmission = fixture.lease.admission;
+    assert.equal(fixture.lease.baseSha, mainSha);
+    assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+
+    fixture.advanceCanonicalBase();
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        assert.equal(fixture.lease.cloudAuthority.claimId, fixture.successor.authority.claimId);
+        throw new Error("stop after second advance");
+      },
+    }), /stop after second advance/u);
+    assert.equal(publishCalls, 2);
+    assert.equal(fixture.calls.successor.length, 2);
+    assert.equal(fixture.calls.successor[1].leaseEpoch, 3);
+    assert.equal(
+      fixture.calls.successor[1].manifest.admittedReportDigest,
+      firstProjectedAdmission.admittedReportDigest,
+    );
+    assert.equal(fixture.calls.cas.length, 4);
+    assert.equal(fixture.lease.baseSha, "3".repeat(40));
+    assert.equal(fixture.lease.fenceSha, "4".repeat(40));
+    assert.equal(fixture.lease.cloudAuthority.leaseEpoch, 3);
+    assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration retries publish once after exact pushed-head or stale-base convergence", () => {
+  const recoverableErrors = [
+    `Ownership pull request head ${commitSha} does not match local head ${"2".repeat(40)}.`,
+    "Cloud collaboration continue failed: Supplied canonical base does not match the resolved pull request.; " +
+      "exact live bind reconciliation failed: Live cloud claim drifted from the recoverable admission subject.",
+  ];
+  for (const recoverableError of recoverableErrors) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-retry-"));
+    const fixture = createActiveSuccessorFixture({ repo, synchronized: false });
+    let publishCalls = 0;
+    try {
+      assert.throws(() => fixture.integrate({
+        publishTask: () => {
+          publishCalls += 1;
+          if (publishCalls === 1) {
+            fixture.convergeRemote();
+            throw new Error(recoverableError);
+          }
+          throw new Error("stop after bounded retry");
+        },
+      }), /stop after bounded retry/u);
+      assert.equal(publishCalls, 2);
+      assert.equal(fixture.calls.successor.length, 1);
+      assert.equal(fixture.calls.cas.length, 2);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration rejects invalid successor lineage before local annotation or publish", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-invalid-successor-"));
+  const fixture = createActiveSuccessorFixture({ repo, tamperPredecessor: true });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /successor lacks exact predecessor, subject, or verification evidence/u);
+    assert.equal(fixture.calls.successor.length, 1);
+    assert.equal(fixture.calls.cas.length, 1);
+    assert.equal(publishCalls, 0);
+    assert.equal(fixture.lease.status, "active");
+    assert.equal(fixture.lease.activePublishSuccessorIntent.status, "prepared");
+    assert.equal(fixture.lease.cloudAuthority.claimId, fixture.sourceAuthority.claimId);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects a canonical-base race before successor mutation or publish", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-base-race-"));
+  const fixture = createActiveSuccessorFixture({ repo, ancestorPasses: 1 });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /head does not contain the live canonical base/u);
+    assert.equal(fixture.calls.successor.length, 0);
+    assert.equal(fixture.calls.cas.length, 0);
+    assert.equal(publishCalls, 0);
+    assert.strictEqual(fixture.lease, fixture.sourceLease);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration durably resumes every successor response-loss phase", () => {
+  for (const phase of ["after-intent", "waiting", "current", "bound", "final-cas"]) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), `agentic-integrate-active-${phase}-`));
+    const fixture = createActiveSuccessorFixture({ repo, durableCas: true, crashPhase: phase });
+    try {
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error("publish preceded successor recovery"); },
+      }), new RegExp(`simulated ${phase} response loss`, "u"));
+      assert.equal(fixture.lease.status, "active", `${phase} must retain branch ownership`);
+      const completedLocally = phase === "final-cas";
+      assert.equal(
+        fixture.lease.activePublishSuccessorIntent?.status || null,
+        completedLocally ? null : "prepared",
+      );
+      assert.throws(() => fixture.leaseStore.claim({
+        sessionId: "competing-session",
+        device: "device",
+        scope: fixture.sourceLease.scope,
+        branch,
+        worktreePath: repo,
+        baseSha,
+      }), /leased to another session/u);
+
+      const runCallsBeforeReplay = fixture.calls.run.length;
+      let publishCalls = 0;
+      assert.throws(() => fixture.integrate({
+        publishTask: () => {
+          publishCalls += 1;
+          assert.equal(fixture.lease.cloudAuthority.claimId, fixture.successor.authority.claimId);
+          assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+          throw new Error(`stop after ${phase} replay`);
+        },
+      }), new RegExp(`stop after ${phase} replay`, "u"));
+      assert.equal(publishCalls, 1);
+      assert.equal(fixture.lease.status, "active");
+      assert.equal(fixture.lease.baseSha, mainSha);
+      assert.equal(fixture.lease.fenceSha, "2".repeat(40));
+      assert.equal(fixture.lease.expiresAt, fixture.successor.authority.expiresAt);
+      if (!completedLocally) {
+        assert.equal(
+          fixture.calls.run.length,
+          runCallsBeforeReplay,
+          `${phase} recovery must skip commit and protected-main refresh`,
+        );
+      }
+      if (["after-intent", "waiting"].includes(phase)) {
+        assert.equal(fixture.calls.successor.length, 2);
+      } else {
+        assert.equal(fixture.calls.successor.length, 1);
+      }
+      assert.equal(fixture.calls.bind.length, phase === "current" ? 1 : 0);
+      assert.equal(fixture.calls.verify.length, phase === "bound" ? 1 : 0);
+      assert.equal(fixture.calls.cas.length, 2);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration retains a prepared intent when the successor expires before local CAS", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-expired-successor-"));
+  const fixture = createActiveSuccessorFixture({ repo, durableCas: true, expiredSuccessor: true });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /successor expired before its local projection CAS/u);
+    assert.equal(publishCalls, 0);
+    assert.equal(fixture.calls.cas.length, 1);
+    assert.equal(fixture.lease.status, "active");
+    assert.equal(fixture.lease.activePublishSuccessorIntent.status, "prepared");
+    assert.equal(fixture.lease.cloudAuthority.claimId, fixture.sourceAuthority.claimId);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects ambiguous or wrong-epoch durable successor derivatives", () => {
+  for (const derivativeFault of ["ambiguous", "wrong-epoch"]) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), `agentic-integrate-active-${derivativeFault}-`));
+    const fixture = createActiveSuccessorFixture({
+      repo,
+      durableCas: true,
+      crashPhase: "waiting",
+      derivativeFault,
+    });
+    let publishCalls = 0;
+    try {
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { publishCalls += 1; },
+      }), /simulated waiting response loss/u);
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { publishCalls += 1; },
+      }), /no exact resumable derivative claim/u);
+      assert.equal(publishCalls, 0);
+      assert.equal(fixture.calls.successor.length, 1);
+      assert.equal(fixture.calls.cas.length, 1);
+      assert.equal(fixture.lease.status, "active");
+      assert.equal(fixture.lease.activePublishSuccessorIntent.status, "prepared");
+      assert.equal(fixture.lease.cloudAuthority.claimId, fixture.sourceAuthority.claimId);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration fences provider claim epoch fallback to its durable intent", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-epoch-fence-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    providerEpochDemand: 3,
+  });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /claim epoch drifted from its durable intent/u);
+    assert.equal(publishCalls, 0);
+    assert.equal(fixture.calls.invoke.length, 1);
+    assert.equal(fixture.calls.invoke[0].action, "claim");
+    assert.equal(fixture.calls.invoke[0].request.leaseEpoch, 2);
+    assert.equal(fixture.calls.cas.length, 1);
+    assert.equal(fixture.lease.status, "active");
+    assert.equal(fixture.lease.activePublishSuccessorIntent.status, "prepared");
+    assert.equal(fixture.lease.cloudAuthority.claimId, fixture.sourceAuthority.claimId);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("review-ready delivery reclaims a dormant preserved review authority before authorization", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-dormant-review-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
@@ -2717,6 +2999,453 @@ function createLease({ repo, ...overrides }) {
     };
   }
   return lease;
+}
+
+function createActiveSuccessorFixture({
+  repo,
+  synchronized = true,
+  tamperPredecessor = false,
+  durableCas = false,
+  ancestorPasses = Number.POSITIVE_INFINITY,
+  crashPhase = null,
+  expiredSuccessor = false,
+  derivativeFault = null,
+  providerEpochDemand = null,
+}) {
+  const successorHeadSha = "2".repeat(40);
+  const successorClaimId = "c".repeat(64);
+  const successorClaimDigest = "d".repeat(64);
+  const successorLedgerRevision = "e".repeat(40);
+  const successorLedgerDigest = "f".repeat(64);
+  const sourceClaimLedgerRevision = "a".repeat(64);
+  const sourceLedgerDigest = "b".repeat(64);
+  const successorClaimLedgerRevision = "1".repeat(64);
+  const sourceOperationReceiptDigest = "2".repeat(64);
+  const successorOperationReceiptDigest = "3".repeat(64);
+  const workItemId = "work-item:28780f7acb64b0c6";
+  const expiresAt = "2099-08-11T12:12:56.000Z";
+  const successorExpiresAt = expiredSuccessor ? "2026-08-11T03:59:59.000Z" : expiresAt;
+  const manifest = normalizeDeclaredWriteScopeManifest({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: "runtime-integration",
+    paths: ["scripts/runtime.mjs"],
+  }, { expectedScope: "runtime-integration" });
+  const sourceAdmission = Object.freeze({
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: manifest.semanticScope,
+    declaredWriteSet: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+    manifestDigest: manifest.manifestDigest,
+    planReceiptDigest: "4".repeat(64),
+    admissionReceiptDigest: "5".repeat(64),
+    existingLaneStateDigest: "6".repeat(64),
+    admittedReportDigest: "7".repeat(64),
+    preservationReceiptDigest: "8".repeat(64),
+  });
+  const sourceAuthority = Object.freeze({
+    schema: "agentic-lane-cloud-authority/v1",
+    provider: "github",
+    ledgerRepository: "example/ledger",
+    targetRepository: "example/repo",
+    claimId,
+    claimDigest,
+    ledgerRevision,
+    ledgerDigest: sourceLedgerDigest,
+    claimLedgerRevision: sourceClaimLedgerRevision,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    operationReceiptDigest: sourceOperationReceiptDigest,
+    mutationAuthorityEligible: true,
+    canonicalBaseSha: baseSha,
+    laneRevision: commitSha,
+    cloudDeclaredWriteScope: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+    deviceId: "device-a",
+    sessionId: "session-a",
+    reviewRequestId,
+    leaseEpoch: 1,
+    transitionCounter: 2,
+    state: "active",
+    expiresAt,
+    integrationReceiptDigest: null,
+    integration: null,
+    manifestDigest: manifest.manifestDigest,
+  });
+  const sourceLease = createLease({
+    repo,
+    baseSha,
+    fenceSha,
+    heartbeatAt: "2026-08-11T03:55:00.000Z",
+    expiresAt,
+    admission: sourceAdmission,
+    cloudAuthority: sourceAuthority,
+    integration: {
+      schema: "agentic-integration-commit/v1",
+      commitSha,
+      treeSha,
+      commitMessage: protectedSquashSubject,
+      manifestDigest: "9".repeat(64),
+      stagedDiffDigest: "a".repeat(64),
+      paths: ["scripts/runtime.mjs"],
+      recordedAt: "2026-08-10T00:00:00.000Z",
+    },
+  });
+  const claimCore = {
+    entrySchema: sourceAuthority.entrySchema,
+    claimIdentitySchema: sourceAuthority.claimIdentitySchema,
+    actorId: "actor:device-a",
+    repositoryId: "repository:example/repo",
+    workItemId,
+    declaredWriteScope: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+    reviewRequestId,
+    expiresAt,
+    integrationReceiptDigest: null,
+    integration: null,
+  };
+  const predecessor = Object.freeze({
+    ...claimCore,
+    claimId,
+    state: "current",
+    canonicalBaseRevision: baseSha,
+    laneRevision: commitSha,
+    leaseEpoch: 1,
+    transitionCounter: 2,
+    heartbeatCounter: 0,
+    fenceRevision: claimDigest,
+    transitionDigest: sourceClaimLedgerRevision,
+    operationReceiptDigest: sourceOperationReceiptDigest,
+  });
+  const successorAuthority = Object.freeze({
+    ...sourceAuthority,
+    claimId: successorClaimId,
+    claimDigest: successorClaimDigest,
+    ledgerRevision: successorLedgerRevision,
+    ledgerDigest: successorLedgerDigest,
+    claimLedgerRevision: successorClaimLedgerRevision,
+    operationReceiptDigest: successorOperationReceiptDigest,
+    canonicalBaseSha: mainSha,
+    laneRevision: successorHeadSha,
+    leaseEpoch: 2,
+    transitionCounter: 2,
+    expiresAt: successorExpiresAt,
+  });
+  const waitingSuccessor = Object.freeze({
+    ...claimCore,
+    claimId: successorClaimId,
+    predecessorClaimId: claimId,
+    state: "waiting-successor",
+    canonicalBaseRevision: mainSha,
+    laneRevision: mainSha,
+    leaseEpoch: 2,
+    transitionCounter: 1,
+    heartbeatCounter: 0,
+    reviewRequestId: null,
+    expiresAt: successorExpiresAt,
+    fenceRevision: "6".repeat(64),
+    transitionDigest: "7".repeat(64),
+    operationReceiptDigest: "8".repeat(64),
+  });
+  const currentBaseSuccessor = Object.freeze({
+    ...waitingSuccessor,
+    state: "current",
+    transitionCounter: 2,
+    fenceRevision: "9".repeat(64),
+    transitionDigest: "a".repeat(64),
+    operationReceiptDigest: "b".repeat(64),
+  });
+  const liveSuccessor = Object.freeze({
+    ...claimCore,
+    claimId: successorClaimId,
+    predecessorClaimId: tamperPredecessor ? "0".repeat(64) : claimId,
+    state: "current",
+    canonicalBaseRevision: mainSha,
+    laneRevision: successorHeadSha,
+    leaseEpoch: 2,
+    transitionCounter: 2,
+    heartbeatCounter: 0,
+    expiresAt: successorExpiresAt,
+    fenceRevision: successorClaimDigest,
+    transitionDigest: successorClaimLedgerRevision,
+    operationReceiptDigest: successorOperationReceiptDigest,
+  });
+  const verifiedClaim = Object.freeze({ ...liveSuccessor, state: "active" });
+  const inventoryCore = Object.freeze({
+    schema: "agentic-cloud-claim-inventory/v1",
+    observedLedgerHeadRevision: successorLedgerRevision,
+    ledgerDigest: successorLedgerDigest,
+    evaluationTime: "2026-08-11T04:00:00.000Z",
+    claims: [verifiedClaim],
+  });
+  const inventory = Object.freeze({ ...inventoryCore, inventoryDigest: digestValue(inventoryCore) });
+  const successor = Object.freeze({
+    authority: successorAuthority,
+    verification: Object.freeze({
+      schema: "agentic-lane-cloud-verification/v1",
+      status: "ready",
+      claimId: successorClaimId,
+      claimDigest: successorClaimDigest,
+      ledgerRevision: successorLedgerRevision,
+      ledgerDigest: successorLedgerDigest,
+      canonicalBaseSha: mainSha,
+      laneRevision: successorHeadSha,
+      writeSetDigest: manifest.writeSetDigest,
+      reviewRequestId,
+      remoteClaimInventoryDigest: inventory.inventoryDigest,
+      inventory,
+      receiptDigest: "b".repeat(64),
+      verifiedAt: "2026-08-11T04:00:00.000Z",
+    }),
+  });
+  const secondBaseSha = "3".repeat(40);
+  const secondHeadSha = "4".repeat(40);
+  const secondClaimId = "5".repeat(64);
+  const secondClaimDigest = "6".repeat(64);
+  const secondLedgerRevision = "7".repeat(40);
+  const secondLedgerDigest = "8".repeat(64);
+  const secondClaimLedgerRevision = "9".repeat(64);
+  const secondOperationReceiptDigest = "a".repeat(64);
+  const secondSuccessorAuthority = Object.freeze({
+    ...successorAuthority,
+    claimId: secondClaimId,
+    claimDigest: secondClaimDigest,
+    ledgerRevision: secondLedgerRevision,
+    ledgerDigest: secondLedgerDigest,
+    claimLedgerRevision: secondClaimLedgerRevision,
+    operationReceiptDigest: secondOperationReceiptDigest,
+    canonicalBaseSha: secondBaseSha,
+    laneRevision: secondHeadSha,
+    leaseEpoch: 3,
+  });
+  const secondLiveSuccessor = Object.freeze({
+    ...claimCore,
+    claimId: secondClaimId,
+    predecessorClaimId: successorClaimId,
+    state: "current",
+    canonicalBaseRevision: secondBaseSha,
+    laneRevision: secondHeadSha,
+    leaseEpoch: 3,
+    transitionCounter: 2,
+    heartbeatCounter: 0,
+    fenceRevision: secondClaimDigest,
+    transitionDigest: secondClaimLedgerRevision,
+    operationReceiptDigest: secondOperationReceiptDigest,
+  });
+  const secondVerifiedClaim = Object.freeze({ ...secondLiveSuccessor, state: "active" });
+  const secondInventoryCore = Object.freeze({
+    schema: "agentic-cloud-claim-inventory/v1",
+    observedLedgerHeadRevision: secondLedgerRevision,
+    ledgerDigest: secondLedgerDigest,
+    evaluationTime: "2026-08-11T04:00:00.000Z",
+    claims: [secondVerifiedClaim],
+  });
+  const secondInventory = Object.freeze({
+    ...secondInventoryCore,
+    inventoryDigest: digestValue(secondInventoryCore),
+  });
+  const secondSuccessor = Object.freeze({
+    authority: secondSuccessorAuthority,
+    verification: Object.freeze({
+      schema: "agentic-lane-cloud-verification/v1",
+      status: "ready",
+      claimId: secondClaimId,
+      claimDigest: secondClaimDigest,
+      ledgerRevision: secondLedgerRevision,
+      ledgerDigest: secondLedgerDigest,
+      canonicalBaseSha: secondBaseSha,
+      laneRevision: secondHeadSha,
+      writeSetDigest: manifest.writeSetDigest,
+      reviewRequestId,
+      remoteClaimInventoryDigest: secondInventory.inventoryDigest,
+      inventory: secondInventory,
+      receiptDigest: "c".repeat(64),
+      verifiedAt: "2026-08-11T04:00:00.000Z",
+    }),
+  });
+  const cloudStatus = claims => Object.freeze({
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "status",
+    status: "ready",
+    ledgerRevision: claims.includes(predecessor) ? ledgerRevision : "4".repeat(40),
+    ledgerDigest: claims.includes(predecessor) ? sourceLedgerDigest : "5".repeat(64),
+    claims,
+  });
+  const calls = { successor: [], bind: [], verify: [], cas: [], run: [], invoke: [] };
+  let leaseStore = null;
+  if (durableCas) {
+    const gitCommonDir = path.join(repo, "git-common");
+    const registryRoot = path.join(gitCommonDir, "agentic-canvas-os");
+    mkdirSync(registryRoot, { recursive: true });
+    writeFileSync(path.join(registryRoot, "writer-leases.json"), `${JSON.stringify({
+      schema: "agentic-writer-lease-registry/v2",
+      revision: 1,
+      leases: { [branch]: sourceLease },
+    }, null, 2)}\n`);
+    leaseStore = createWriterLeaseStore({ gitCommonDir });
+  }
+  let lease = leaseStore?.read(branch) || sourceLease;
+  let headSha = commitSha;
+  let activeRound = 1;
+  let canonicalHeadSha = mainSha;
+  let refreshHeadSha = successorHeadSha;
+  let pullRequestHeadSha = synchronized ? successorHeadSha : commitSha;
+  let remoteHeadSha = pullRequestHeadSha;
+  let ancestorReads = 0;
+  let cloudPhase = "predecessor";
+  let crashInjected = false;
+  const fixture = {
+    calls,
+    sourceAdmission,
+    sourceAuthority,
+    sourceLease,
+    get successor() { return activeRound === 1 ? successor : secondSuccessor; },
+    workItemId,
+    leaseStore,
+    get lease() { return lease; },
+    convergeRemote() {
+      pullRequestHeadSha = refreshHeadSha;
+      remoteHeadSha = refreshHeadSha;
+    },
+    advanceCanonicalBase() {
+      activeRound = 2;
+      canonicalHeadSha = secondBaseSha;
+      refreshHeadSha = secondHeadSha;
+      pullRequestHeadSha = secondHeadSha;
+      remoteHeadSha = secondHeadSha;
+      cloudPhase = "predecessor";
+      ancestorReads = 0;
+    },
+    integrate({ publishTask }) {
+      return integrateSession({
+        invocationPath: repo,
+        repo,
+        sessionId: "session-a",
+        runtime: "none",
+        waitSeconds: 1,
+        pollSeconds: 0.1,
+        now: () => new Date("2026-08-11T04:00:00.000Z"),
+        sleep: () => {},
+        leaseStore: leaseStore || {
+          read: requested => requested ? lease : { leases: { [branch]: lease } },
+        },
+        gitText: args => {
+          const key = args.join(" ");
+          if (key === "branch --show-current") return branch;
+          if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+          if (key === "diff --name-only -z HEAD --" ||
+              key === "ls-files --others --exclude-standard -z" || key === "status --porcelain") return "";
+          if (key === "rev-parse HEAD") return headSha;
+          if (key === `diff --name-only -z ${canonicalHeadSha}..${refreshHeadSha} --`) {
+            return "scripts/runtime.mjs\0";
+          }
+          if (key === `merge-base --is-ancestor ${canonicalHeadSha} ${refreshHeadSha}`) {
+            if (ancestorReads++ >= ancestorPasses) throw new Error("not an ancestor");
+            return "";
+          }
+          if (key === `ls-remote --heads origin refs/heads/main refs/heads/${branch}`) {
+            return `${canonicalHeadSha}\trefs/heads/main\n${remoteHeadSha}\trefs/heads/${branch}\n`;
+          }
+          throw new Error(`unexpected git command: ${key}`);
+        },
+        ghText: args => {
+          assert.equal(
+            args.join(" "),
+            `pr view ${pullRequestUrl} --json ` +
+              "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository",
+          );
+          return JSON.stringify({
+            id: pullRequestNodeId,
+            url: pullRequestUrl,
+            state: "OPEN",
+            isDraft: true,
+            baseRefName: "main",
+            baseRefOid: canonicalHeadSha,
+            headRefName: branch,
+            headRefOid: pullRequestHeadSha,
+            headRepository: { nameWithOwner: sourceAuthority.targetRepository },
+          });
+        },
+        run: (command, args) => {
+          const key = [command, ...args].join(" ");
+          calls.run.push(key);
+          if (key === `git merge -m ${protectedSquashSubject} origin/main`) headSha = refreshHeadSha;
+        },
+        runText: () => "",
+        publishTask,
+        completeTask: () => { throw new Error("successor fixture must stop during publish"); },
+        ...(providerEpochDemand ? {} : { refreshActiveCloudSuccessor: input => {
+          calls.successor.push(input);
+          if (!crashInjected && crashPhase && crashPhase !== "final-cas") {
+            crashInjected = true;
+            cloudPhase = {
+              "after-intent": "predecessor",
+              waiting: "waiting",
+              current: "current-base",
+              bound: "bound",
+              "final-cas": "bound",
+            }[crashPhase];
+            throw new Error(`simulated ${crashPhase} response loss`);
+          }
+          cloudPhase = "bound";
+          return activeRound === 1 ? successor : secondSuccessor;
+        } }),
+        bindActiveCloudSuccessor: input => {
+          calls.bind.push(input);
+          cloudPhase = "bound";
+          return activeRound === 1 ? successor : secondSuccessor;
+        },
+        verifyActiveCloudSuccessor: input => {
+          calls.verify.push(input);
+          return activeRound === 1 ? successor : secondSuccessor;
+        },
+        inspectCloudStatus: () => ({
+          predecessor: cloudStatus([activeRound === 1 ? predecessor : liveSuccessor]),
+          waiting: cloudStatus(derivativeFault === "ambiguous"
+            ? [waitingSuccessor, { ...waitingSuccessor, claimId: "0".repeat(64) }]
+            : [{
+              ...waitingSuccessor,
+              leaseEpoch: derivativeFault === "wrong-epoch" ? 3 : waitingSuccessor.leaseEpoch,
+            }]),
+          "current-base": cloudStatus([currentBaseSuccessor]),
+          bound: cloudStatus([activeRound === 1 ? liveSuccessor : secondLiveSuccessor]),
+        })[cloudPhase],
+        invokeCloudSuccessor: input => {
+          calls.invoke.push(input);
+          if (providerEpochDemand && input?.action === "claim") {
+            throw new Error(`leaseEpoch must be ${providerEpochDemand}`);
+          }
+          throw new Error("fake successor must own cloud invocation");
+        },
+        verifyCloudSuccessor: () => { throw new Error("fake successor must own cloud verification"); },
+        casActiveLeaseProjection: input => {
+          calls.cas.push(input);
+          assert.equal(digestValue(lease), input.expectedLeaseDigest);
+          assert.equal(lease.cloudAuthority.claimId, input.expectedClaimId);
+          if (leaseStore) {
+            const projected = casWriterLeaseProjection(input);
+            lease = projected.lease;
+            if (!crashInjected && crashPhase === "final-cas" &&
+                input.values.activePublishSuccessorIntent === null) {
+              crashInjected = true;
+              throw new Error("simulated final-cas response loss");
+            }
+            return projected;
+          }
+          lease = Object.freeze({ ...lease, ...input.values });
+          if (!crashInjected && crashPhase === "final-cas" &&
+              input.values.activePublishSuccessorIntent === null) {
+            crashInjected = true;
+            throw new Error("simulated final-cas response loss");
+          }
+          return Object.freeze({ lease, intent: null, registryRevision: null });
+        },
+        log: () => {},
+      });
+    },
+  };
+  return fixture;
 }
 
 function deliveryDigests(value) {

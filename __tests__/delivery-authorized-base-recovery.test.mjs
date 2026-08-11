@@ -88,11 +88,14 @@ function evidence(overrides = {}) {
     writeSetDigest: digest("b"),
     declaredWriteSet,
     deliveryChangedPaths: ["scripts/recover.mjs"],
+    protectedMainChangedPaths: ["scripts/controller.mjs"],
+    protectedMainOverlapPaths: [],
     originalAuthoredPaths: ["scripts/recover.mjs"],
     outsideScopeEquivalenceDigest: digest("c"),
     clean: true,
     originalBaseAncestor: true,
     deliveryBaseAncestor: true,
+    deliveryBaseAncestorOfProtectedMain: true,
     fenceAncestor: true,
     ...overrides,
   };
@@ -136,6 +139,18 @@ test("plan blocks provider, authority, ancestry, and write-set drift", () => {
       deliveryChangedPaths: ["docs/unowned.md"],
     })).findings,
     ["delivery-diff-outside-write-set"],
+  );
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({
+      protectedMainOverlapPaths: ["scripts/recover.mjs"],
+    })).findings,
+    ["protected-main-drift-overlaps-write-set"],
+  );
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({
+      deliveryBaseAncestorOfProtectedMain: false,
+    })).findings,
+    ["protected-main-not-delivery-base-descendant"],
   );
 });
 

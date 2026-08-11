@@ -184,6 +184,14 @@ export function normalizeDeliveryAuthorizedBaseRecoveryEvidence(value) {
     writeSetDigest: digest(value.writeSetDigest, "write-set digest"),
     declaredWriteSet: normalizeWriteSet(value.declaredWriteSet),
     deliveryChangedPaths: pathArray(value.deliveryChangedPaths, "delivery changed paths"),
+    protectedMainChangedPaths: pathArray(
+      value.protectedMainChangedPaths,
+      "protected-main changed paths",
+    ),
+    protectedMainOverlapPaths: pathArray(
+      value.protectedMainOverlapPaths,
+      "protected-main overlap paths",
+    ),
     originalAuthoredPaths: pathArray(value.originalAuthoredPaths, "original authored paths"),
     outsideScopeEquivalenceDigest: digest(
       value.outsideScopeEquivalenceDigest,
@@ -192,6 +200,10 @@ export function normalizeDeliveryAuthorizedBaseRecoveryEvidence(value) {
     clean: boolean(value.clean, "clean state"),
     originalBaseAncestor: boolean(value.originalBaseAncestor, "original-base ancestry"),
     deliveryBaseAncestor: boolean(value.deliveryBaseAncestor, "delivery-base ancestry"),
+    deliveryBaseAncestorOfProtectedMain: boolean(
+      value.deliveryBaseAncestorOfProtectedMain,
+      "protected-main delivery-base ancestry",
+    ),
     fenceAncestor: boolean(value.fenceAncestor, "fence ancestry"),
   };
   exact(value, Object.keys(result), "evidence");
@@ -222,6 +234,9 @@ function findingsFor(value) {
   if (value.originalBaseSha === value.deliveryBaseSha) findings.push("no-base-drift");
   if (!value.originalBaseAncestor) findings.push("original-base-not-ancestor");
   if (!value.deliveryBaseAncestor) findings.push("delivery-base-not-ancestor");
+  if (!value.deliveryBaseAncestorOfProtectedMain) {
+    findings.push("protected-main-not-delivery-base-descendant");
+  }
   if (!value.fenceAncestor) findings.push("fence-not-ancestor");
   if (new Set([
     value.headSha,
@@ -231,7 +246,6 @@ function findingsFor(value) {
     value.deliveryHeadSha,
   ]).size !== 1) findings.push("head-identity-drift");
   if (new Set([
-    value.protectedMainSha,
     value.deliveryBaseSha,
     value.pullRequestBaseSha,
     value.claimCanonicalBaseSha,
@@ -240,6 +254,9 @@ function findingsFor(value) {
     && item !== `semantic:${value.semanticScope}`)) findings.push("semantic-scope-drift");
   if (value.deliveryChangedPaths.some(item => !declaredPaths.has(item))) {
     findings.push("delivery-diff-outside-write-set");
+  }
+  if (value.protectedMainOverlapPaths.length > 0) {
+    findings.push("protected-main-drift-overlaps-write-set");
   }
   if (value.originalAuthoredPaths.some(item => !declaredPaths.has(item))) {
     findings.push("original-authorship-outside-write-set");

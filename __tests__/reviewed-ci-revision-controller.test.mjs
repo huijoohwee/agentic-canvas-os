@@ -324,7 +324,10 @@ test("review-ready source loses a delivery CAS before any integration write", ()
 
 test("active local mismatch enters integration writes before cloud verification", () => {
   const source = sourceFixture(), trace = [];
-  const lease = { ...source.lease, status: "active", integration: { commitSha: source.headSha } };
+  const lease = { ...source.lease, status: "active", integration: {
+    commitSha: source.headSha,
+    commitMessage: "fix(reviewed-ci-revision-recovery): test active refresh",
+  } };
   assert.throws(() => integrateSession({
     invocationPath: lease.worktreePath, repo: lease.worktreePath,
     gitText: integrationGit(source, lease), ghText: () => "{}",
@@ -334,7 +337,9 @@ test("active local mismatch enters integration writes before cloud verification"
     verifyCloudAuthority() { trace.push("verify-cloud"); throw new Error("stop after pre-auth writes"); },
   }), /stop after pre-auth writes/);
   assert.ok(trace.includes("git fetch origin main"));
-  assert.ok(trace.includes("git merge --no-edit origin/main"));
+  assert.ok(trace.includes(
+    "git merge -m fix(reviewed-ci-revision-recovery): test active refresh origin/main",
+  ));
   assert.ok(trace.indexOf("publish") < trace.indexOf("verify-cloud"));
 });
 

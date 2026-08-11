@@ -51,6 +51,9 @@ function evidence(overrides = {}) {
     deliveryBaseSha: sha("c"),
     fenceSha: sha("b"),
     deliveryHeadSha: sha("d"),
+    protectedRefreshReceiptDigest: null,
+    protectedRefreshBaseSha: null,
+    protectedRefreshCount: 0,
     leaseStatus: "active",
     leaseEpoch: 234,
     leaseDigest: digest("1"),
@@ -78,7 +81,7 @@ function evidence(overrides = {}) {
     claimScopeReserved: true,
     claimLeaseEpoch: 18,
     claimTransitionCounter: 9,
-    claimCanonicalBaseSha: sha("c"),
+    claimCanonicalBaseSha: sha("a"),
     claimLaneRevision: sha("d"),
     claimReviewRequestId: "github-pull-request:PR_368",
     claimWorkItemId: "work-item:delivery-peer-root-ledger-projection",
@@ -118,6 +121,48 @@ test("plan binds exact identities and one authorization", () => {
       `${plan.exactAuthorization} `,
     ),
     /does not match/u,
+  );
+});
+
+test("plan admits active and delivery source projections only", () => {
+  assert.equal(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({ leaseStatus: "active" })).status,
+    "planned",
+  );
+  assert.equal(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({ leaseStatus: "delivery" })).status,
+    "planned",
+  );
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({ leaseStatus: "review_ready" })).findings,
+    ["local-lease-state-not-recoverable"],
+  );
+});
+
+test("plan binds an exact protected-main refresh above the delivered head", () => {
+  const refreshed = evidence({
+    headSha: sha("e"),
+    remoteHeadSha: sha("e"),
+    pullRequestHeadSha: sha("e"),
+    protectedRefreshReceiptDigest: digest("d"),
+    protectedRefreshBaseSha: sha("c"),
+    protectedRefreshCount: 3,
+  });
+  assert.equal(buildDeliveryAuthorizedBaseRecoveryPlan(refreshed).status, "planned");
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan({
+      ...refreshed,
+      protectedRefreshBaseSha: sha("b"),
+    }).findings,
+    ["protected-refresh-proof-invalid"],
+  );
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({
+      protectedRefreshReceiptDigest: digest("d"),
+      protectedRefreshBaseSha: sha("c"),
+      protectedRefreshCount: 1,
+    })).findings,
+    ["unexpected-protected-refresh-proof"],
   );
 });
 
@@ -285,6 +330,7 @@ test("repository adapter preserves CAS and no-force invariants", () => {
   assert.match(source, /expectedLedgerDigest/u);
   assert.match(source, /casWriterLeaseProjection/u);
   assert.match(source, /predecessorClaimId/u);
+  assert.match(source, /RECOVERABLE_SOURCE_STATUSES/u);
   assert.match(source, /openSync\(lockPath, "wx"/u);
   assert.doesNotMatch(source, /--force|force-with-lease/u);
 });

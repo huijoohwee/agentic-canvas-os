@@ -15,16 +15,24 @@ runtime_proof: "../__tests__/delivery-authorized-base-recovery.test.mjs"
 
 This controller repairs one narrow projection failure: an open, ready pull request and its
 cloud claim are already bound to current protected `main`, while the exact owner writer
-lease still names an older base. It is provider-neutral at the contract boundary; the
-repository adapter binds that contract to Git, GitHub, and the configured collaboration
-ledger.
+lease still names an older base. The source lease may be `active` or may retain the exact
+`delivery` projection from an interrupted terminal integration. It is provider-neutral at
+the contract boundary; the repository adapter binds that contract to Git, GitHub, and the
+configured collaboration ledger.
 
 The controller never edits source bytes, creates commits, force-pushes, merges, cleans a
 worktree, or deploys. It fails closed unless the lane is clean, all local/remote/provider
 heads match, both bases are ancestors of the exact head, the delivery diff stays inside
 the admitted write set, the ready pull request has no auto-merge request, and the current
-writer projection is `delivery_authorized`, while the exact live claim has naturally become
+cloud projection is `delivery_authorized`, while the exact live claim has naturally become
 `dormant-preserved`, remains scope-reserved, and has no write authority.
+
+The immutable delivered head may be followed only by a bounded, tree-equivalent chain of
+protected-main refresh merges. The repository evidence adapter verifies every merge and
+requires the final refresh main parent to equal the provider's current pull-request base.
+The successor claim is based on that provider base and exact refreshed head; the predecessor
+claim's canonical base and delivered head remain immutable evidence rather than being
+rewritten into the new projection.
 
 Protected `main` may advance after the bound delivery base only when that base remains its
 ancestor and every intervening protected path is disjoint from the lane's admitted write set.

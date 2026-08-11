@@ -55,7 +55,10 @@ check ID. It repeats the mutable proofs after CI reconciliation immediately
 before completing the check. An absent, foreign, duplicate, terminal, replaced,
 or partially completed check remains fail closed. Protected main may have
 advanced after the exact merge; replay proves the immutable merge instead of
-requiring the old target SHA to remain the current tip.
+requiring the old target SHA to remain the current tip. The current classic
+and ruleset protection projection is verified independently of that historical
+target; controller-revision admission separately proves that both the target
+and exact merge commit remain ancestors of the newer protected-main revision.
 
 An absent post-merge gate remains fail closed by default. GitHub permits at
 most 25 workflow-dispatch inputs, so recovery uses the existing `operation`

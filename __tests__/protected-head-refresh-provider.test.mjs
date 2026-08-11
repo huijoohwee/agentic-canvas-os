@@ -183,6 +183,13 @@ test("GitHub provider proves protected main through exact public REST projection
   assert.equal(calls.flat().includes("graphql"), false);
 });
 
+test("GitHub provider accepts exact protection after main advances beyond the historical target", () => {
+  const { provider } = branchProtectionHarness({
+    mainBranch: protectedMainBranch({ sha: mainOne }),
+  });
+  assert.doesNotThrow(() => provider.verifyBranchProtection());
+});
+
 test("GitHub provider rejects classic branch-protection projection drift", async t => {
   const exactChecks = () => classicProtectionContexts.map(context => ({
     context,
@@ -190,7 +197,6 @@ test("GitHub provider rejects classic branch-protection projection drift", async
   }));
   const cases = [
     ["wrong branch name", protectedMainBranch({ name: "trunk" })],
-    ["stale protected-main SHA", protectedMainBranch({ sha: mainOne })],
     ["unprotected branch", protectedMainBranch({ isProtected: false })],
     ["disabled protection", protectedMainBranch({ enabled: false })],
     ["non-universal enforcement", protectedMainBranch({ enforcement: "non_admins" })],

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1874,
-  "headDigest": "3f98ccdc9b83893439d6f245f63a5d75a293b0cff32fd2148ba2125dea787325",
+  "sequence": 1875,
+  "headDigest": "7203656f0e0f4665dc8e0f041689a4646f6de4b05ea96e50b6b65605687f0d50",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -93290,6 +93290,55 @@
       },
       "claimDigest": "6812b2999f4fa9afcc2cb7f51e296c1ac1eca44894771931c687aa7c438af3f4",
       "digest": "3f98ccdc9b83893439d6f245f63a5d75a293b0cff32fd2148ba2125dea787325"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1875,
+      "parentDigest": "3f98ccdc9b83893439d6f245f63a5d75a293b0cff32fd2148ba2125dea787325",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "5bbaa33ba5291b89b7dd7e617c83bd3c3293c9ea1fc9ba343785fb27e3f5a285",
+      "idempotencyKey": "69a25bc478677b19be5345e2b2b62427fb1e22430ba27be6e1a8f3d80083b830",
+      "requestDigest": "9e8921911ead08778ac93f698f767d6fd39020aa963cb05f0cceb3926ca2c4e7",
+      "evaluationTime": "2026-08-11T02:14:01.000Z",
+      "claimCore": {
+        "claimId": "5bbaa33ba5291b89b7dd7e617c83bd3c3293c9ea1fc9ba343785fb27e3f5a285",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:052d03bf26e75d3d6103d32e3ae35bec2967eb29c19de4d234b61a83cf6c3b61",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:28780f7829d0d0228b4cfcf3b1653410c7961b66a9ae407f4409a5f348b1281d",
+        "canonicalBaseRevision": "4fe3493d7c6e40868c29df569caef678416165bf",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/task-worktree-provision.test.mjs",
+          "path:__tests__/worktree-lifecycle.test.mjs",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:package.json",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/task-worktree-owned-containers.mjs",
+          "path:scripts/task-worktree-provision.mjs",
+          "path:scripts/worktree-lifecycle-lib.mjs",
+          "path:scripts/worktree-lifecycle.mjs",
+          "semantic:worktree-empty-container-cleanup"
+        ],
+        "writeSetDigest": "60116d3366f83d333e23cc5770096e73f4b119ee8b9c953aba4aba9ebb8850c8",
+        "laneRevision": "d26c9d2699ec96a4649d1f82603835021a439d0b",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T04:12:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79TIGC",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "84846e288019d475bc506aefc9f566c090ce993a728502b1bf9be726ff5a6143",
+      "digest": "7203656f0e0f4665dc8e0f041689a4646f6de4b05ea96e50b6b65605687f0d50"
     }
   ]
 }

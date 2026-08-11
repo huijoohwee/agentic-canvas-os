@@ -1,6 +1,6 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { WRITER_LEASE_REGISTRY_SCHEMA, WRITER_LEASE_SCHEMA } from "./writer-lease-lib.mjs";
 export const REVIEWED_LANE_ENTRYPOINT_FENCE_SCHEMA =
@@ -12,6 +12,7 @@ export const REVIEWED_LANE_REVISION_PHASES = Object.freeze([
   "remote_ref_updated", "source_retired", "successor_current", "successor_bound",
   "successor_review_ready", "lease_updated", "pr_projected", "verified", "complete",
 ]);
+const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const PHASE_INDEX = new Map(REVIEWED_LANE_REVISION_PHASES.map((phase, index) => [phase, index]));
 const fenceStores = new WeakMap();
@@ -138,6 +139,121 @@ export function readReviewedLaneRevisionIntent({ leaseStore, branch }) {
   const normalizedBranch = requiredText(branch, "branch");
   const registry = requireRegistry(leaseStore?.readRegistry?.());
   return normalizeIntent(registry.reviewedLaneRevisionIntents?.[normalizedBranch] ?? null);
+}
+export function supersedePreparedReviewedLaneRevisionIntent({
+  leaseStore,
+  branch,
+  expectedIntentDigest,
+  recoveryCompletion,
+  recoverySourceCommit = null,
+  currentClaim,
+  predecessorClaimIds = [],
+}) {
+  const normalizedBranch = requiredText(branch, "branch");
+  const expectedDigest = requiredDigest(expectedIntentDigest, "expected intent digest");
+  const completion = normalizeForwardChildCompletion(recoveryCompletion);
+  return mutateRegistry({
+    leaseStore,
+    action: registry => {
+      const current = normalizeIntent(
+        registry.reviewedLaneRevisionIntents?.[normalizedBranch] ?? null,
+      );
+      if (!current || current.intentDigest !== expectedDigest) {
+        throw new Error("Prepared reviewed-lane revision intent changed before supersession.");
+      }
+      if (current.status === "superseded") {
+        return { registry, value: current, changed: false };
+      }
+      if (current.status !== "active" || current.phase !== "prepared"
+        || current.journalRevision !== 1 || current.history.length !== 0) {
+        throw new Error("Only a prepared-only reviewed-lane revision intent can be superseded.");
+      }
+      const lease = requireCurrentForwardChildLease({
+        registry,
+        branch: normalizedBranch,
+        completion,
+        currentClaim,
+        predecessorClaimIds,
+      });
+      const plannedSourceHead = current.values?.revisionIntent?.planSnapshot?.sourceHeadSha;
+      const sourceContinuity = verifyRecoverySourceContinuity({
+        plannedSourceHead,
+        completion,
+        recoverySourceCommit,
+      });
+      if (current.sourceClaimId !== completion.sourceClaimId) {
+        throw new Error("Forward-child recovery does not supersede this prepared revision intent.");
+      }
+      const updatedAt = new Date().toISOString();
+      const supersession = Object.freeze({
+        schema: "agentic-reviewed-lane-revision-supersession/v1",
+        recoveryReceiptDigest: completion.receiptDigest,
+        sourceClaimId: completion.sourceClaimId,
+        successorClaimId: currentClaim.claimId,
+        childHeadSha: completion.childHeadSha,
+        currentLeaseDigest: digestValue(lease),
+        sourceContinuityDigest: sourceContinuity.receiptDigest,
+      });
+      const next = sealIntent({
+        ...current,
+        status: "superseded",
+        currentLeaseDigest: digestValue(lease),
+        currentClaimId: currentClaim.claimId,
+        journalRevision: current.journalRevision + 1,
+        updatedAt,
+        values: Object.freeze({ ...current.values, supersession }),
+      });
+      return {
+        registry: withBranchRecord(
+          registry,
+          "reviewedLaneRevisionIntents",
+          normalizedBranch,
+          next,
+        ),
+        value: next,
+        changed: true,
+      };
+    },
+  });
+}
+
+function verifyRecoverySourceContinuity({
+  plannedSourceHead,
+  completion,
+  recoverySourceCommit,
+}) {
+  const plannedSourceHeadSha = requiredSha(plannedSourceHead, "planned source head");
+  if (plannedSourceHeadSha === completion.sourceHeadSha) {
+    const core = {
+      schema: "agentic-reviewed-lane-source-continuity/v1",
+      plannedSourceHeadSha,
+      recoverySourceHeadSha: completion.sourceHeadSha,
+      relationship: "identical",
+    };
+    return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+  }
+  if (typeof recoverySourceCommit !== "string" || recoverySourceCommit.length === 0) {
+    throw new Error("Forward-child recovery does not supersede this prepared revision intent.");
+  }
+  const sourceCommitObjectSha = createHash("sha1")
+    .update(`commit ${Buffer.byteLength(recoverySourceCommit)}\0`)
+    .update(recoverySourceCommit)
+    .digest("hex");
+  const header = recoverySourceCommit.split("\n\n", 1)[0];
+  const parentShas = header.split("\n")
+    .filter(line => line.startsWith("parent "))
+    .map(line => line.slice("parent ".length));
+  if (sourceCommitObjectSha !== completion.sourceHeadSha
+    || !parentShas.includes(plannedSourceHeadSha)) {
+    throw new Error("Forward-child recovery source commit does not descend from the planned source head.");
+  }
+  const core = {
+    schema: "agentic-reviewed-lane-source-continuity/v1",
+    plannedSourceHeadSha,
+    recoverySourceHeadSha: completion.sourceHeadSha,
+    relationship: "direct-parent",
+  };
+  return Object.freeze({ ...core, receiptDigest: digestValue(core) });
 }
 export function beginReviewedLaneRevisionIntent({ leaseStore, branch, entrypoint,
   operationDigest, expectedLeaseDigest, expectedClaimId = null, planDigest,
@@ -348,7 +464,7 @@ function requireCurrentIntent({ registry, identity, expectedIntentDigest, intent
   return current;
 }
 function assertIntentOwner(intent, identity) {
-  if (!intent || intent.status === "complete") return;
+  if (!intent || ["complete", "superseded"].includes(intent.status)) return;
   if (intent.entrypoint !== identity.entrypoint
     || intent.operationDigest !== identity.operationDigest) {
     throw new Error("A foreign reviewed-lane revision intent fences this branch.");
@@ -364,7 +480,7 @@ function normalizeIntent(value) {
   if (value === null || value === undefined) return null;
   if (!value || typeof value !== "object" || Array.isArray(value)
     || value.schema !== REVIEWED_LANE_REVISION_JOURNAL_SCHEMA
-    || !["active", "complete"].includes(value.status)
+    || !["active", "complete", "superseded"].includes(value.status)
     || !Number.isInteger(value.journalRevision) || value.journalRevision < 1
     || !PHASE_INDEX.has(value.phase)) {
     throw new Error("Reviewed-lane revision intent is malformed.");
@@ -396,6 +512,63 @@ function normalizeIntent(value) {
 function sealIntent(value) {
   const { intentDigest: _ignored, ...core } = value;
   return normalizeIntent({ ...core, intentDigest: digestValue(core) });
+}
+function normalizeForwardChildCompletion(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || value.schema !== "agentic-reviewed-forward-child-recovery-completion/v1"
+    || value.status !== "authoring-restored"
+    || value.disposition !== "same-owner-forward-child-authoring-restored") {
+    throw new Error("Reviewed-lane supersession requires a completed forward-child receipt.");
+  }
+  const { receiptDigest, ...core } = value;
+  if (requiredDigest(receiptDigest, "forward-child receipt digest") !== digestValue(core)) {
+    throw new Error("Forward-child recovery completion receipt digest is invalid.");
+  }
+  for (const [field, label] of [
+    ["sourceClaimId", "forward-child source claim ID"],
+    ["successorClaimId", "forward-child successor claim ID"],
+    ["leaseDigest", "forward-child lease digest"],
+  ]) requiredDigest(value[field], label);
+  for (const [field, label] of [
+    ["sourceHeadSha", "forward-child source head"],
+    ["childHeadSha", "forward-child child head"],
+  ]) requiredSha(value[field], label);
+  return Object.freeze(value);
+}
+function requireCurrentForwardChildLease({
+  registry,
+  branch,
+  completion,
+  currentClaim,
+  predecessorClaimIds,
+}) {
+  const lease = registry.leases?.[branch];
+  const lineage = Array.isArray(predecessorClaimIds)
+    ? predecessorClaimIds.map((claimId, index) => requiredDigest(
+      claimId,
+      `forward-child predecessor claim ${index + 1}`,
+    ))
+    : null;
+  if (!lease || lease.schema !== WRITER_LEASE_SCHEMA || lease.status !== "active"
+    || !lineage || new Set(lineage).size !== lineage.length
+    || lease.branch !== branch || lease.fenceSha !== completion.childHeadSha
+    || lease.cloudAuthority?.claimId !== currentClaim?.claimId
+    || lease.cloudAuthority?.claimDigest !== currentClaim?.fenceRevision
+    || lease.cloudAuthority?.claimLedgerRevision !== currentClaim?.transitionDigest
+    || lease.cloudAuthority?.canonicalBaseSha !== currentClaim?.canonicalBaseRevision
+    || lease.cloudAuthority?.laneRevision !== currentClaim?.laneRevision
+    || lease.cloudAuthority?.writeSetDigest !== currentClaim?.writeSetDigest
+    || lease.cloudAuthority?.transitionCounter !== currentClaim?.transitionCounter
+    || lease.cloudAuthority?.reviewRequestId !== currentClaim?.reviewRequestId
+    || (currentClaim?.claimId !== completion.successorClaimId
+      && !lineage.includes(completion.successorClaimId))
+    || (lineage.length > 0
+      && lineage.at(-1) !== currentClaim?.predecessorClaimId)
+    || currentClaim?.state !== "current"
+    || currentClaim?.laneRevision !== completion.childHeadSha) {
+    throw new Error("Current cloud claim and local lease do not continue the forward-child recovery.");
+  }
+  return lease;
 }
 function normalizeHistory(value) {
   if (!Array.isArray(value) || value.length > REVIEWED_LANE_REVISION_PHASES.length) {
@@ -572,6 +745,10 @@ function requirePhase(value) {
 }
 function requiredDigest(value, label) {
   if (!DIGEST_PATTERN.test(String(value || ""))) throw new Error(`${label} must be a SHA-256 digest.`);
+  return String(value);
+}
+function requiredSha(value, label) {
+  if (!SHA_PATTERN.test(String(value || ""))) throw new Error(`${label} must be a Git SHA.`);
   return String(value);
 }
 function optionalDigest(value, label) {

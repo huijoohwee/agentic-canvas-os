@@ -1,5 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   advanceReviewedCiRevisionIntent,
@@ -22,6 +26,16 @@ import { sourceFixture } from "./reviewed-ci-revision-contract.test.mjs";
 import { integrateSession } from "../scripts/device-integrate-lib.mjs";
 import { review } from "../scripts/device-branch-lib.mjs";
 import { assertAdmissionMutationAuthority } from "../scripts/scoped-lane-admission-state.mjs";
+import {
+  beginReviewedLaneRevisionIntent,
+  readReviewedLaneRevisionIntent,
+  supersedePreparedReviewedLaneRevisionIntent,
+} from "../scripts/reviewed-lane-revision-fence.mjs";
+import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
+import {
+  casWriterLeaseProjection,
+  writerLeaseDigest,
+} from "../scripts/writer-lease-registry-cas.mjs";
 
 const D = value => String(value).repeat(64);
 
@@ -340,6 +354,7 @@ test("active local mismatch enters integration writes before cloud verification"
   assert.ok(trace.includes(
     "git merge -m fix(reviewed-ci-revision-recovery): test active refresh origin/main",
   ));
+  assert.equal(trace.filter(command => command.startsWith("git merge -m ")).length, 1);
   assert.ok(trace.indexOf("publish") < trace.indexOf("verify-cloud"));
 });
 
@@ -376,6 +391,123 @@ test("shared review replay can overwrite a marker after its one cloud verificati
     }, log() {} });
   assert.ok(reviewReads >= 2);
   assert.doesNotMatch(liveBody, /FINAL/u);
+});
+
+test("completed forward-child recovery supersedes only its prepared revision intent", () => {
+  const source = sourceFixture();
+  const gitCommonDirectory = mkdtempSync(path.join(os.tmpdir(), "reviewed-intent-supersession-"));
+  const registryDirectory = path.join(gitCommonDirectory, "agentic-canvas-os");
+  mkdirSync(registryDirectory, { recursive: true });
+  writeFileSync(path.join(registryDirectory, "writer-leases.json"), `${JSON.stringify({
+    schema: "agentic-writer-lease-registry/v2",
+    revision: 1,
+    leases: { [source.lease.branch]: source.lease },
+  })}\n`);
+  const leaseStore = createWriterLeaseStore({ gitCommonDir: gitCommonDirectory });
+  const identity = {
+    leaseStore,
+    branch: source.lease.branch,
+    entrypoint: "reviewed-lane-revision",
+    operationDigest: D(8),
+    expectedLeaseDigest: writerLeaseDigest(source.lease),
+    expectedClaimId: source.lease.cloudAuthority.claimId,
+    planDigest: D(9),
+    intent: { revisionIntent: { planSnapshot: { sourceHeadSha: source.headSha } } },
+  };
+  try {
+    const intent = beginReviewedLaneRevisionIntent(identity);
+    const childHeadSha = "d".repeat(40);
+    const successorClaimId = D(2);
+    const claimDigest = D(3);
+    const claimLedgerRevision = D(4);
+    const recoverySourceCommit = [
+      `tree ${"a".repeat(40)}`,
+      `parent ${source.headSha}`,
+      "author Test <test@example.com> 0 +0000",
+      "committer Test <test@example.com> 0 +0000",
+      "",
+      "Protected head refresh",
+      "",
+    ].join("\n");
+    const recoverySourceHeadSha = createHash("sha1")
+      .update(`commit ${Buffer.byteLength(recoverySourceCommit)}\0`)
+      .update(recoverySourceCommit)
+      .digest("hex");
+    const projected = casWriterLeaseProjection({
+      leaseStore,
+      branch: source.lease.branch,
+      expectedLeaseDigest: writerLeaseDigest(source.lease),
+      expectedClaimId: source.lease.cloudAuthority.claimId,
+      values: {
+        status: "active",
+        fenceSha: childHeadSha,
+        reviewHeadSha: null,
+        cloudAuthority: {
+          ...source.lease.cloudAuthority,
+          claimId: successorClaimId,
+          claimDigest,
+          claimLedgerRevision,
+          laneRevision: childHeadSha,
+          transitionCounter: 4,
+          state: "active",
+        },
+      },
+    }).lease;
+    const completionCore = {
+      schema: "agentic-reviewed-forward-child-recovery-completion/v1",
+      status: "authoring-restored",
+      planDigest: D(5),
+      sourceClaimId: source.lease.cloudAuthority.claimId,
+      sourceHeadSha: recoverySourceHeadSha,
+      childHeadSha,
+      autoMergeCancellationDigest: D(6),
+      successorClaimId,
+      successorClaimDigest: claimDigest,
+      leaseDigest: D(7),
+      pullRequestDigest: D(8),
+      verificationDigest: D(9),
+      disposition: "same-owner-forward-child-authoring-restored",
+    };
+    const recoveryCompletion = {
+      ...completionCore,
+      receiptDigest: digestValue(completionCore),
+    };
+    const currentClaim = {
+      claimId: successorClaimId,
+      state: "current",
+      predecessorClaimId: null,
+      canonicalBaseRevision: projected.baseSha,
+      laneRevision: childHeadSha,
+      writeSetDigest: projected.admission.writeSetDigest,
+      transitionCounter: 4,
+      reviewRequestId: projected.cloudAuthority.reviewRequestId,
+      fenceRevision: claimDigest,
+      transitionDigest: claimLedgerRevision,
+    };
+    assert.throws(() => supersedePreparedReviewedLaneRevisionIntent({
+      leaseStore,
+      branch: source.lease.branch,
+      expectedIntentDigest: intent.intentDigest,
+      recoveryCompletion: { ...recoveryCompletion, childHeadSha: "e".repeat(40) },
+      currentClaim,
+    }), /receipt digest is invalid/u);
+    const superseded = supersedePreparedReviewedLaneRevisionIntent({
+      leaseStore,
+      branch: source.lease.branch,
+      expectedIntentDigest: intent.intentDigest,
+      recoveryCompletion,
+      recoverySourceCommit,
+      currentClaim,
+    });
+    assert.equal(superseded.status, "superseded");
+    assert.equal(superseded.currentClaimId, successorClaimId);
+    assert.equal(readReviewedLaneRevisionIntent({
+      leaseStore,
+      branch: source.lease.branch,
+    }).values.supersession.recoveryReceiptDigest, recoveryCompletion.receiptDigest);
+  } finally {
+    rmSync(gitCommonDirectory, { recursive: true, force: true });
+  }
 });
 
 function integrationGit(source, lease) {

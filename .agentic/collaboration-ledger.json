@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1935,
-  "headDigest": "8998ee0192a638a8723cf3122ad19235a81b52b8c8b59428aa704d3cb51c8ed8",
+  "sequence": 1936,
+  "headDigest": "c53bc5f0ed4874a4bd981e83504f62c83bfeede00b4694956e3837c39d6ea791",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -96265,6 +96265,50 @@
       },
       "claimDigest": "8dc1d5cd806c2a9825e34c8dbf029e3351caa479639c0182a312d529718eb99d",
       "digest": "8998ee0192a638a8723cf3122ad19235a81b52b8c8b59428aa704d3cb51c8ed8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1936,
+      "parentDigest": "8998ee0192a638a8723cf3122ad19235a81b52b8c8b59428aa704d3cb51c8ed8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7cd2d9d4d504cb085bccfd6f2fe3392c140f9094b56517d81f75d346eaa85785",
+      "idempotencyKey": "97f71e933d921e63c9975349ae0b8c70195d742d69c20e74dab8dc3e27b401f0",
+      "requestDigest": "cfef2244f8c6f12cbd0298e6f2fba7cb0e68174676a8468a6677afd8e50f2fef",
+      "evaluationTime": "2026-08-11T06:02:47.000Z",
+      "claimCore": {
+        "claimId": "7cd2d9d4d504cb085bccfd6f2fe3392c140f9094b56517d81f75d346eaa85785",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c0a60a37c9d65282d60a6300aa8131670746c6b9984fb4059d6136fa605ac6d5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:eac0da1dd896d8231aec79594e3bef0af318c69c85872f2020655925b6d77432",
+        "canonicalBaseRevision": "975339f76f9b97eecb7d823c9322918abb9fd148",
+        "declaredWriteScope": [
+          "path:__tests__/admission-manifest-projection-repair.test.mjs",
+          "path:docs/ADMISSION-MANIFEST-PROJECTION-REPAIR.md",
+          "path:scripts/admission-manifest-projection-repair-contract.mjs",
+          "path:scripts/admission-manifest-projection-repair-controller.mjs",
+          "path:scripts/admission-manifest-projection-repair-repository-adapter.mjs",
+          "path:scripts/admission-manifest-projection-repair.mjs",
+          "semantic:admission-manifest-projection-repair"
+        ],
+        "writeSetDigest": "721fcc194dc14a97a5be05af69b2ed378102719ddbc4c437a995953ff3b7930e",
+        "laneRevision": "bf194b7c2657367e2a41afb87ff036af5b2d1e4b",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 2,
+        "state": "reviewed",
+        "expiresAt": "2026-08-11T06:30:46.000Z",
+        "evidenceDigest": "6da55e858615652e8375f926d69cd12cbfd7eec22cc89b3ecfd890cf4fc0845d",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79WdFU",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "568e602c7f81c69970cba01dd251558353c1561f0cdc35c087c00b67ad884823",
+      "digest": "c53bc5f0ed4874a4bd981e83504f62c83bfeede00b4694956e3837c39d6ea791"
     }
   ]
 }

@@ -2611,7 +2611,8 @@ function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote, a
   }
   if (allowed.has(remoteName)) return remoteName;
 
-  if (allowAncillary && packageName && packageName === remoteName &&
+  if (allowAncillary && packageName &&
+      packageName.toLowerCase() === remoteName.toLowerCase() &&
       REPOSITORY_IDENTITY_PATTERN.test(packageName)) {
     return packageName;
   }

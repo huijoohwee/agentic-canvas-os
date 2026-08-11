@@ -523,7 +523,8 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
 });
 
 test("review recovers an expired planned cloud-bound lane into review-ready authority", () => {
-  const branch = "agent/device/runtime-leases";
+  const scope = "delivery-base-recovery-protected-source-advance";
+  const branch = `agent/device/${scope}`;
   const pullRequestUrl = "https://github.test/pull/42";
   const headSha = "c".repeat(40);
   const declaredWriteSet = [
@@ -544,7 +545,7 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
     "branch --show-current": `${branch}\n`,
     "rev-parse HEAD": headSha,
     [`merge-base --is-ancestor ${headSha} HEAD`]: "",
-    "log -1 --pretty=%s": "fix: recover planned review authority\n",
+    "log -1 --pretty=%s": `chore(coordination): claim ${scope} lease 7\n`,
   });
   let lease = {
     schema: "agentic-writer-lease/v2",
@@ -552,7 +553,7 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
     epoch: 7,
     sessionId: "chat-a",
     device: "device",
-    scope: "runtime-leases",
+    scope,
     branch,
     worktreePath: repo,
     baseSha: "a".repeat(40),

@@ -91,6 +91,97 @@ test("repository adapter discovers a completed dormant-preservation journal", ()
   });
 });
 
+test("repository adapter ignores an unrelated stale dormant-preservation journal", () => {
+  withFixture(fixture => {
+    const directory = path.join(
+      fixture.repo, ".git", "agentic-canvas-os", "dormant-preservation-admission",
+    );
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(directory, "unrelated-stale.json"), `${JSON.stringify({
+      intent: {
+        planSnapshot: {
+          sourceEvidence: {
+            preservation: {
+              selectedLanes: [{ worktree: {
+                path: path.join(fixture.root, "another-lane"),
+                branch: "refs/heads/agent/device/another-lane",
+                headSha: "a".repeat(40),
+                treeSha: "b".repeat(40),
+              } }],
+            },
+          },
+        },
+      },
+    })}\n`);
+    let normalizationCalls = 0;
+    const adapter = createAdapter(fixture, {
+      normalizeDormantIntent() {
+        normalizationCalls += 1;
+        throw new Error("unrelated stale journal was normalized");
+      },
+    });
+    assert.doesNotThrow(() => adapter.captureEvidence({}));
+    assert.equal(normalizationCalls, 0);
+  });
+});
+
+test("repository adapter still validates a stale journal selecting the target lane", () => {
+  withFixture(fixture => {
+    const directory = path.join(
+      fixture.repo, ".git", "agentic-canvas-os", "dormant-preservation-admission",
+    );
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(directory, "target-stale.json"), `${JSON.stringify({
+      intent: {
+        planSnapshot: {
+          sourceEvidence: {
+            preservation: {
+              selectedLanes: [{ worktree: {
+                path: fixture.worktree,
+                branch: "refs/heads/agent/device/cleanup-lane",
+                headSha: fixture.laneSha,
+                treeSha: git(fixture.worktree, ["rev-parse", "HEAD^{tree}"]).trim(),
+              } }],
+            },
+          },
+        },
+      },
+    })}\n`);
+    const adapter = createAdapter(fixture, {
+      normalizeDormantIntent() {
+        throw new Error("target stale journal is invalid");
+      },
+    });
+    assert.throws(() => adapter.captureEvidence({}), /target stale journal is invalid/);
+  });
+});
+
+test("repository adapter still validates a journal with an ambiguous subject", () => {
+  withFixture(fixture => {
+    const directory = path.join(
+      fixture.repo, ".git", "agentic-canvas-os", "dormant-preservation-admission",
+    );
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(directory, "ambiguous.json"), `${JSON.stringify({
+      intent: {
+        planSnapshot: {
+          sourceEvidence: {
+            preservation: {
+              selectedLanes: [{ worktree: { path: fixture.worktree } }],
+            },
+          },
+        },
+      },
+    })}\n`);
+    const adapter = createAdapter(fixture, {
+      normalizeDormantIntent() {
+        throw new Error("ambiguous journal is invalid");
+      },
+    });
+    assert.throws(() => adapter.captureEvidence({}), /ambiguous journal is invalid/);
+  });
+});
+
 test("repository adapter refuses tracked, untracked, ignored, unmerged, and operation residue", () => {
   withFixture(fixture => {
     writeFileSync(path.join(fixture.worktree, "README.md"), "tracked dirt\n");

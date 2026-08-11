@@ -190,6 +190,25 @@ test("runtime repository identity falls back to origin metadata and rejects unsu
       agenticCanvasOsRoot,
       knowgrphRoot,
     });
+    writeFileSync(
+      path.join(isolatedCanonicalRoot, "package.json"),
+      JSON.stringify({ name: "gamexr" }),
+    );
+    assert.deepEqual(resolveRuntimeRepositories({
+      canonicalRoot: isolatedCanonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      runtimeRepository: knowgrphRoot,
+      allowAncillary: true,
+      readOriginRemote: () => "https://github.com/huijoohwee/GameXR.git",
+    }), {
+      integratedRepository: "gamexr",
+      agenticCanvasOsRoot,
+      knowgrphRoot,
+    });
+    writeFileSync(
+      path.join(isolatedCanonicalRoot, "package.json"),
+      JSON.stringify({ name: "huijoohwee.github.io" }),
+    );
     assert.throws(() => resolveRuntimeRepositories({
       canonicalRoot: isolatedCanonicalRoot,
       controllerRoot: agenticCanvasOsRoot,

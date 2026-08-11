@@ -13,6 +13,8 @@ import {
 } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
 import { integrateSession } from "./device-integrate-lib.mjs";
+import { createPostMergeCloudAuthorityVerifier } from
+  "./post-merge-cloud-authority-verifier.mjs";
 import {
   readOwnershipPullRequest, requireOwnershipPullRequestDraft,
 } from "./device-pull-request-state.mjs";
@@ -377,6 +379,7 @@ function execute(action, context) {
     waitSeconds: Number(readOption(args, "wait-seconds") || 900),
     pollSeconds: Number(readOption(args, "poll-seconds") || 5),
     controllerRoot,
+    verifyCloudAuthority: createPostMergeCloudAuthorityVerifier({ ghText }),
     publishTask: () => publish(context),
     completeTask: () => completeSession({ ...context, json: false, finalize: false }),
     runText,

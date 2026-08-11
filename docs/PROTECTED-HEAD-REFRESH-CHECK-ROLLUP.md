@@ -57,6 +57,17 @@ or partially completed check remains fail closed. Protected main may have
 advanced after the exact merge; replay proves the immutable merge instead of
 requiring the old target SHA to remain the current tip.
 
+An absent post-merge gate remains fail closed by default. Recovery requires a
+new workflow-dispatch input exactly equal to
+`recover-absent-merged-authorization:<operation-id>`, dispatched by the same
+GitHub actor bound to the retained SQUASH authorization. Only after the merged
+commit and deterministic candidate are proven may the controller repeat the
+candidate workflow, source CI, branch-protection, no-synchronize, and cloud
+authority proofs, create the sole operation-owned pending check, re-read the
+unchanged merged identity, repeat every proof twice more, and complete that
+same check. Any foreign, duplicate, partial, drifted, or unbound recovery stays
+closed.
+
 An open operation remains pinned to the projected target-main controller
 revision before any provider mutation can run. A newer protected-main
 controller may replay only after the exact pull request validates as merged

@@ -544,7 +544,6 @@ export function createProtectedHeadRefreshGithubProvider({
     );
     if (
       mainBranch?.name !== "main"
-      || mainBranch?.commit?.sha !== projection.target_main_sha
       || mainBranch?.protected !== true
       || mainBranch?.protection?.enabled !== true
       || branchProtectionRule?.enforcement_level !== "everyone"

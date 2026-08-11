@@ -1,7 +1,10 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+// Responsibility: Own writer-lease registry storage, lifecycle transitions, and PR marker projections.
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
+import { normalizeActiveOwnedDirtLeaseRecovery,
+  validateCompletedActiveOwnedDirtRecoveryIntent } from "./active-owned-dirt-recovery-contract.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
 import {
   normalizeProtectedMainPathEquivalenceEvidence,
@@ -113,17 +116,25 @@ export function assertNoCompetingScopePullRequests(pulls, activeBranch) {
 }
 
 export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() }) {
-  const root = path.resolve(gitCommonDir, "agentic-canvas-os");
+  const commonRoot = path.resolve(gitCommonDir);
+  requireRealDirectory(commonRoot, "Git common directory");
+  const root = path.resolve(commonRoot, "agentic-canvas-os");
   const statePath = path.join(root, "writer-leases.json");
   const lockPath = path.join(root, "writer-leases.lock");
 
   function readRegistry() {
+    requireRegistryStoragePath(root, statePath);
     if (!existsSync(statePath)) {
       return { schema: WRITER_LEASE_REGISTRY_SCHEMA, revision: 0, leases: {} };
     }
     const value = JSON.parse(readFileSync(statePath, "utf8"));
-    if (value.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases || typeof value.leases !== "object") {
-      throw new Error(`Unsupported writer lease registry schema at ${statePath}`);
+    if (value.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases || typeof value.leases !== "object"
+      || Array.isArray(value.leases)
+      || !validRegistryRevision(value.revision)
+      || Object.values(value.leases).some(candidate => !validStoredLease(candidate))) {
+      throw new Error(
+        `Unsupported writer lease registry schema; writer registry revision or lease is invalid at ${statePath}`,
+      );
     }
     return value;
   }
@@ -171,6 +182,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
+      if (current) requireMutableLeaseEpoch(current, branch);
       const instant = now();
       const normalizedWorktreePath = path.resolve(worktreePath);
       if (current?.status === "completing") {
@@ -239,6 +251,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     if (!branch) throw new Error("Writer lease verification requires a branch.");
     const lease = read(branch);
     if (!lease || lease.status !== "active") throw new Error(`No active writer lease owns ${branch}.`);
+    requireMutableLeaseEpoch(lease, branch);
     if (sessionId && lease.sessionId !== sessionId) {
       throw new Error("Writer lease belongs to another session.");
     }
@@ -259,6 +272,12 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   }) {
     return withLock(() => {
       const registry = readRegistry();
+      const recoveryIntent = registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null;
+      const completedRecovery = recoveryIntent?.status === "complete"
+        ? Boolean(validateCompletedActiveOwnedDirtRecoveryIntent(recoveryIntent)) : false;
+      if (recoveryIntent && !completedRecovery) {
+        throw new Error("Active-owned-dirt recovery intent fences this writer-lease heartbeat.");
+      }
       const current = verify({ sessionId, branch, allowExpired: true });
       const instant = now();
       const lease = {
@@ -291,6 +310,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       if (!current || JSON.stringify(current) !== JSON.stringify(expectedLease)) {
         throw new Error(`Writer lease for ${branch} changed before expired committed recovery.`);
       }
+      requireMutableLeaseEpoch(current, branch);
       if (
         current.schema !== WRITER_LEASE_SCHEMA ||
         current.status !== "active" ||
@@ -347,6 +367,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
+      if (current) requireMutableLeaseEpoch(current, branch);
       if (["completing", "completed"].includes(current?.status)) {
         if (current.pullRequestUrl === pullRequestUrl && current.completion?.mergeCommitSha === mergeCommitSha &&
             /^[0-9a-f]{40}$/.test(String(current.completion?.mainSha || ""))) return current;
@@ -382,7 +403,10 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
-      if (current) return current;
+      if (current) {
+        requireMutableLeaseEpoch(current, branch);
+        return current;
+      }
       const hasMarker = String(pullRequestBody || "").includes(WRITER_LEASE_SCHEMA);
       const recovered = parseWriterLeasePullRequestBody(pullRequestBody);
       if (!recovered || recovered.branch !== branch) {
@@ -429,7 +453,10 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
-      if (current) return current;
+      if (current) {
+        requireMutableLeaseEpoch(current, branch);
+        return current;
+      }
       const timestamp = now().toISOString();
       const maximumEpoch = Object.values(registry.leases)
         .reduce((highest, lease) => Math.max(highest, Number(lease?.epoch || 0)), 0);
@@ -471,6 +498,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
+      if (current) requireMutableLeaseEpoch(current, branch);
       if (current?.status === "completed") {
         if (current.pullRequestUrl === pullRequestUrl && current.completion?.mergeCommitSha === mergeCommitSha &&
             current.completion?.mainSha === mainSha) return current;
@@ -504,6 +532,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
+      if (current) requireMutableLeaseEpoch(current, branch);
       if (!current || !["active", "delivery", "review_ready"].includes(current.status)) {
         throw new Error(`No releasable writer lease owns ${branch}.`);
       }
@@ -533,6 +562,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const current = registry.leases[branch] || null;
+      if (current) requireMutableLeaseEpoch(current, branch);
       if (!current || current.status !== "active" || current.sessionId !== sessionId ||
           current.branch !== branch || current.epoch !== epoch || current.fenceSha !== fenceSha) {
         throw new Error(`Writer lease claim for ${branch} changed before rollback.`);
@@ -549,7 +579,34 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   }
 
   function writeRegistry(value) {
+    if (value?.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases
+      || !validRegistryRevision(value.revision)
+      || typeof value.leases !== "object" || Array.isArray(value.leases)
+      || Object.values(value.leases).some(candidate => !validStoredLease(candidate))) {
+      throw new Error("Writer lease registry mutation would exceed its safe revision or epoch bounds.");
+    }
+    const persisted = readRegistry();
+    for (const [branch, candidate] of Object.entries(persisted.leases)) {
+      if (candidate.epoch !== undefined) continue;
+      if (!Object.hasOwn(value.leases, branch)
+          || digestValue(value.leases[branch]) !== digestValue(candidate)) {
+        throw new Error(
+          `Writer lease registry cannot mutate legacy epoch-less peer ${branch}; recover it first.`,
+        );
+      }
+    }
+    for (const [branch, candidate] of Object.entries(value.leases)) {
+      if (candidate.epoch !== undefined) continue;
+      const previous = persisted.leases[branch];
+      if (!previous || previous.epoch !== undefined
+          || digestValue(previous) !== digestValue(candidate)) {
+        throw new Error(
+          `Writer lease registry cannot introduce legacy epoch-less peer ${branch}.`,
+        );
+      }
+    }
     mkdirSync(root, { recursive: true });
+    requireRegistryStoragePath(root, statePath);
     const temporaryPath = `${statePath}.${process.pid}.tmp`;
     writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
     renameSync(temporaryPath, statePath);
@@ -576,6 +633,41 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     recoverMergedPullRequestCompletion,
     recoverFromPullRequestMarker,
     readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
+}
+
+function requireRealDirectory(candidate, label) {
+  const stat = lstatSync(candidate);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(`${label} must be a real non-symlink directory.`);
+  }
+}
+
+function requireRegistryStoragePath(root, statePath) {
+  if (existsSync(root)) requireRealDirectory(root, "Writer-lease registry directory");
+  if (!existsSync(statePath)) return;
+  const stat = lstatSync(statePath);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error("Writer-lease registry must be a regular non-symlink file.");
+  }
+}
+
+function validRegistryRevision(value) {
+  return Number.isSafeInteger(value) && value >= 0 && value < Number.MAX_SAFE_INTEGER;
+}
+
+function validLeaseEpoch(value) {
+  return Number.isSafeInteger(value) && value >= 1 && value < Number.MAX_SAFE_INTEGER;
+}
+
+function validStoredLease(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+    && (value.epoch === undefined || validLeaseEpoch(value.epoch));
+}
+
+function requireMutableLeaseEpoch(lease, branch) {
+  if (!validLeaseEpoch(lease?.epoch)) {
+    throw new Error(`Writer lease ${branch} has no valid fencing epoch and cannot be mutated.`);
+  }
 }
 
 export function projectExpiredCommittedHeartbeatLease({
@@ -668,6 +760,10 @@ export function projectWriterLeasePullRequestMarker(lease) {
     ...(lease.ownedDirtRecovery ? {
       ownedDirtRecovery: normalizeOwnedDirtRecovery(lease.ownedDirtRecovery),
     } : {}),
+    ...(lease.activeOwnedDirtRecovery ? {
+      activeOwnedDirtRecovery:
+        normalizeActiveOwnedDirtLeaseRecovery(lease.activeOwnedDirtRecovery),
+    } : {}),
     ...(lease.expiredCommittedHeartbeatRecovery ? {
       expiredCommittedHeartbeatRecovery:
         normalizeExpiredCommittedHeartbeatRecovery(
@@ -741,9 +837,12 @@ export function parseWriterLeasePullRequestBody(body) {
     !["repairing", "completed"].includes(value.pullRequestProjectionRepair?.status)
   )) return null;
   let ownedDirtRecovery;
+  let activeOwnedDirtRecovery;
   let expiredCommittedHeartbeatRecovery;
   try {
     ownedDirtRecovery = normalizeOwnedDirtRecovery(value.ownedDirtRecovery);
+    activeOwnedDirtRecovery =
+      normalizeActiveOwnedDirtLeaseRecovery(value.activeOwnedDirtRecovery);
     expiredCommittedHeartbeatRecovery =
       normalizeExpiredCommittedHeartbeatRecovery(
         value.expiredCommittedHeartbeatRecovery,
@@ -754,6 +853,7 @@ export function parseWriterLeasePullRequestBody(body) {
   return {
     ...value,
     ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
+    ...(activeOwnedDirtRecovery ? { activeOwnedDirtRecovery } : {}),
     ...(expiredCommittedHeartbeatRecovery
       ? { expiredCommittedHeartbeatRecovery }
       : {}),

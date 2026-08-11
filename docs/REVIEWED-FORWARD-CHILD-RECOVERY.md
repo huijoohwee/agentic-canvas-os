@@ -7,7 +7,7 @@ lang: "en-US"
 schema: "agentic-reviewed-forward-child-recovery/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
-runtime_owner: "../scripts/reviewed-forward-child-recovery.mjs"
+runtime_owner: "../scripts/reviewed-forward-child-recovery.mjs; ../scripts/reviewed-forward-child-recovery-journal.mjs"
 runtime_proof: "../__tests__/reviewed-forward-child-recovery.test.mjs"
 ---
 
@@ -61,6 +61,18 @@ The durable intent performs and receipt-binds these phases in order:
 Every phase first reconciles provider and repository state. A lost response is adopted only when the
 effect matches the bound operation. Stale source evidence, another successor, a ref race, a non-fast-
 forward publication, marker drift, cancellation ambiguity, or claim drift fails closed.
+
+## Journal generations
+
+Each operator session owns one immutable journal generation under the source branch's journal
+directory. The generation identity combines the branch and operator session, so an exact retry
+continues the same intent even after the protected sequence advances the branch. A branch-wide
+fence serializes every generation.
+
+Completed generations, including the original flat branch-keyed journal, remain untouched as
+historical receipts and do not block a later recovery. A non-complete or malformed historical
+generation blocks creation of another intent. The controller never migrates, rewrites, deletes, or
+uses a completed legacy plan as authority for a new source head.
 
 ## Forbidden effects
 

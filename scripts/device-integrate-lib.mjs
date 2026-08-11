@@ -129,7 +129,13 @@ function integrateSessionUnfenced({
       branch, lease, repo, gitText, leaseStore, sessionId, run,
       commitMessage, pathsManifest, now,
     });
-    refreshTaskBranchFromMain({ repo, gitText, run, runText });
+    refreshTaskBranchFromMain({
+      repo,
+      gitText,
+      run,
+      runText,
+      squashSubject: commitEvidence.commitMessage,
+    });
     publishTask();
     lease = leaseStore.read(branch);
   } else if (!['delivery', 'completing', 'completed'].includes(lease.status) && !reviewReadyDelivery) {
@@ -596,13 +602,16 @@ function pullRequestNumber(value) {
   return Number(match[1]);
 }
 
-function refreshTaskBranchFromMain({ repo, gitText, run, runText }) {
+function refreshTaskBranchFromMain({ repo, gitText, run, runText, squashSubject }) {
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Integration commit did not leave a clean task worktree.");
   }
+  const refreshSubject = requireProtectedSquashSubject(squashSubject, {
+    label: "Integration refresh subject",
+  });
   run("git", ["fetch", "origin", "main"]);
   runText("git", ["merge-tree", "--write-tree", "HEAD", "origin/main"], { cwd: repo });
-  run("git", ["merge", "--no-edit", "origin/main"]);
+  run("git", ["merge", "-m", refreshSubject, "origin/main"]);
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Protected-main refresh did not leave a clean task worktree.");
   }

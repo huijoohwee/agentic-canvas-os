@@ -503,6 +503,7 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-"));
   const manifestPath = path.join(os.tmpdir(), `agentic-manifest-${process.pid}.json`);
   const paths = ["package.json", "scripts/runtime.mjs"];
+  const managedCommitSubject = "feat(runtime-integration): integrate the canonical runtime";
   const canonicalAgenticRoot = path.join(repo, "canonical", "isolated-acos-canonical");
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
   mkdirSync(canonicalAgenticRoot, { recursive: true });
@@ -586,7 +587,7 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
         lease = { ...lease, status: "completed", completion: { mergeCommitSha: mergeSha, mainSha } };
         return lease.completion;
       },
-      commitMessage: "feat(runtime-integration): integrate the canonical runtime",
+      commitMessage: managedCommitSubject,
       pathsManifest: manifestPath,
       waitSeconds: 1,
       pollSeconds: 0.1,
@@ -607,7 +608,8 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       "Agentic-Lease-Epoch: 1\nAgentic-Mechanism: Agentic Canvas OS protected integration"));
     assert.ok(commands.some(call => call.join(" ") === "npm run check"));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin main"));
-    assert.ok(commands.some(call => call.join(" ") === "git merge --no-edit origin/main"));
+    assert.ok(commands.some(call => call.join(" ") ===
+      `git merge -m ${managedCommitSubject} origin/main`));
     assert.equal(result.runtime.integratedSource.mainSha, mainSha);
     assert.equal(result.runtime.integratedSource.repository, "agentic-canvas-os");
     assert.equal(result.runtime.readiness.source.revision, knowgrphSha);
@@ -1037,6 +1039,7 @@ test("a protected-main merge preserves the approved authored commit evidence", (
     schema: "agentic-integration-commit/v1",
     commitSha,
     treeSha,
+    commitMessage: protectedSquashSubject,
     manifestDigest: "3".repeat(64),
     stagedDiffDigest: "4".repeat(64),
     paths: ["scripts/device-integrate-lib.mjs"],

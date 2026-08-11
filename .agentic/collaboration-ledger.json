@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2238,
-  "headDigest": "4057d02f2e6a1d30b88cf0dcfd10957b33934a0a865c6dac3650412a3b641fc0",
+  "sequence": 2239,
+  "headDigest": "83abdcb539e63ccb50b3ace506b7267742c19423c6757573b730b96a9aa1888e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -111190,6 +111190,48 @@
       },
       "claimDigest": "8afcea20c2fbc3e3ee7c43c95b1ccac6f0154cf5ab8417d2681abde1bb4dceae",
       "digest": "4057d02f2e6a1d30b88cf0dcfd10957b33934a0a865c6dac3650412a3b641fc0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2239,
+      "parentDigest": "4057d02f2e6a1d30b88cf0dcfd10957b33934a0a865c6dac3650412a3b641fc0",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "acf13b316671517ad45d5cdf414d08d3963b211797292ced1c0c9a845303dfe8",
+      "idempotencyKey": "627c2de1adf79b54e91e5a037db41bd1725e36bce69098e2f3f8fe5a11b41531",
+      "requestDigest": "5b59149bca95668ceb60f309787e556c238165dcbcfef924623ea69d6c7158f9",
+      "evaluationTime": "2026-08-11T21:55:38.000Z",
+      "claimCore": {
+        "claimId": "acf13b316671517ad45d5cdf414d08d3963b211797292ced1c0c9a845303dfe8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:de0e14faa3e1c38e9beec57c7b917853493ac3634c5eab2a1e2e057547205aac",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c72ea9864fa7936bca41e811a7a5b4e043047712a66031f1f9473caaf9bb0465",
+        "canonicalBaseRevision": "f3a9f7156db068b2e3ce422917b66625ace8e87c",
+        "declaredWriteScope": [
+          "path:__tests__/post-merge-cloud-authority-verifier.test.mjs",
+          "path:docs/POST-MERGE-CLOUD-AUTHORITY.md",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/post-merge-cloud-authority-verifier.mjs",
+          "semantic:post-merge-retirement-replay"
+        ],
+        "writeSetDigest": "eb7b9f52e42d7d49ce9f93eade5938606af0a6a0a7ecd275d64bc71526c3198c",
+        "laneRevision": "0f0b54a92fbd6a67448a4c34aa9302e829d104fc",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-11T23:44:23.000Z",
+        "evidenceDigest": "486c9dd18011857adac285d88f3534d2f3047e30ec2da31afe54d6b7d107109b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79v5Ng",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3a0aa46d0a62438438c37849a2c1a6816a5b85e8aa3fc45c3cdca7fa72379403",
+      "digest": "83abdcb539e63ccb50b3ace506b7267742c19423c6757573b730b96a9aa1888e"
     }
   ]
 }

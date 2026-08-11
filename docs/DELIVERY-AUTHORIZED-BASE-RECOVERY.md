@@ -46,6 +46,10 @@ ancestor and every intervening protected path is disjoint from the lane's admitt
 The successor deliberately retains the protected source observed by the authorized plan. The
 older delivery base remains bound for authored-diff and refresh-chain proof; refreshing the
 candidate beyond that protected source remains a later authoring-stage operation.
+When protected `main` advances before a partial authorized replay creates its successor, the
+adapter may derive the live protected source only after proving the plan source is its ancestor
+and every intervening changed path is disjoint from the admitted write set. That derived SHA is
+then bound consistently through the successor claim, local lease, and ownership marker.
 
 ## Plan
 

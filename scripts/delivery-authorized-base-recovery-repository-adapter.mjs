@@ -172,7 +172,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
       && item.actorId === source.claimActorId
       && item.repositoryId === source.claimRepositoryId
       && item.workItemId === source.claimWorkItemId
-      && item.canonicalBaseRevision === source.deliveryBaseSha
+      && item.canonicalBaseRevision === source.protectedMainSha
       && item.laneRevision === source.headSha
       && item.writeSetDigest === source.writeSetDigest
       && item.leaseEpoch === source.claimLeaseEpoch + 1
@@ -254,7 +254,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
       actorLogin: plan.evidence.actorLogin,
       branch,
       workItemId: plan.evidence.claimWorkItemId,
-      canonicalBaseSha: plan.evidence.deliveryBaseSha,
+      canonicalBaseSha: plan.evidence.protectedMainSha,
       headSha: plan.evidence.headSha,
       declaredWriteSet: plan.evidence.declaredWriteSet,
       predecessorClaimId: plan.evidence.claimId,
@@ -344,12 +344,13 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
       planDigest: plan.planDigest,
       originalBaseSha: plan.evidence.originalBaseSha,
       deliveryBaseSha: plan.evidence.deliveryBaseSha,
+      protectedMainSha: plan.evidence.protectedMainSha,
       sourceLeaseDigest: plan.evidence.leaseDigest,
       sourceClaimId: plan.evidence.claimId,
       successorClaimId: authority.claimId,
       effects: EFFECTS,
     });
-    const projected = current.baseSha === plan.evidence.deliveryBaseSha
+    const projected = current.baseSha === plan.evidence.protectedMainSha
       && current.cloudAuthority?.claimId === authority.claimId
       && current.deliveryBaseRecovery?.planDigest === plan.planDigest
       ? current
@@ -361,7 +362,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
         requireNoActiveIntent: true,
         values: {
           status: "active",
-          baseSha: plan.evidence.deliveryBaseSha,
+          baseSha: plan.evidence.protectedMainSha,
           fenceSha: plan.evidence.headSha,
           cloudAuthority: authority,
           reviewHeadSha: null,
@@ -380,7 +381,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
     if (body !== before.body) execute("gh", ["pr", "edit", before.url, "--body", body]);
     const after = providerSubject().pull;
     const marker = parseWriterLeasePullRequestBody(after.body);
-    if (!after.isDraft || marker?.baseSha !== plan.evidence.deliveryBaseSha
+    if (!after.isDraft || marker?.baseSha !== plan.evidence.protectedMainSha
       || marker.cloudAuthority?.claimId !== lease.cloudAuthority.claimId) {
       invalid("pull-request marker projection");
     }
@@ -395,17 +396,17 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
     const cloudStatus = status(lease.cloudAuthority);
     const claim = successor(plan, new Set(["active"]), cloudStatus);
     if (!claim || sourceClaim(plan, cloudStatus)
-      || lease.baseSha !== plan.evidence.deliveryBaseSha
+      || lease.baseSha !== plan.evidence.protectedMainSha
       || lease.fenceSha !== plan.evidence.headSha
       || lease.cloudAuthority?.claimId !== claim.claimId
       || lease.cloudAuthority?.state !== "active"
-      || lease.cloudAuthority?.canonicalBaseSha !== plan.evidence.deliveryBaseSha
+      || lease.cloudAuthority?.canonicalBaseSha !== plan.evidence.protectedMainSha
       || lease.cloudAuthority?.laneRevision !== plan.evidence.headSha
       || lease.deliveryBaseRecovery?.planDigest !== plan.planDigest
       || pull.state !== "OPEN" || !pull.isDraft
       || pull.headRefOid !== plan.evidence.headSha
       || pull.baseRefOid !== plan.evidence.deliveryBaseSha
-      || marker?.baseSha !== plan.evidence.deliveryBaseSha
+      || marker?.baseSha !== plan.evidence.protectedMainSha
       || marker.cloudAuthority?.claimId !== claim.claimId
       || git(["rev-parse", "HEAD"]) !== plan.evidence.headSha
       || git(["rev-parse", `refs/remotes/origin/${branch}`]) !== plan.evidence.headSha
@@ -455,7 +456,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
     }
     if (phase === "lease_projected") {
       const lease = readLease();
-      return lease.baseSha === plan.evidence.deliveryBaseSha
+      return lease.baseSha === plan.evidence.protectedMainSha
         && lease.deliveryBaseRecovery?.planDigest === plan.planDigest
         && successor(plan, new Set(["active"]), cloudStatus)?.claimId
           === lease.cloudAuthority?.claimId
@@ -464,7 +465,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
     if (phase === "marker_projected") {
       const lease = readLease();
       const marker = parseWriterLeasePullRequestBody(providerSubject().pull.body);
-      return marker?.baseSha === plan.evidence.deliveryBaseSha
+      return marker?.baseSha === plan.evidence.protectedMainSha
         && marker.cloudAuthority?.claimId === lease.cloudAuthority?.claimId
         ? complete(stored || { markerDigest: digestValue(marker) }) : pending();
     }

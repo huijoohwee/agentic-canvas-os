@@ -30,14 +30,17 @@ cloud projection is `delivery_authorized`, while the exact live claim has natura
 The immutable delivered head may be followed only by a bounded, tree-equivalent chain of
 protected-main refresh merges. The repository evidence adapter verifies every merge and
 requires the final refresh main parent to equal the provider's current pull-request base.
-The successor claim is based on that provider base and exact refreshed head; the predecessor
-claim's canonical base and delivered head remain immutable evidence rather than being
-rewritten into the new projection.
+The successor claim, local lease, and writer marker are based on the exact protected `main`
+observed by the authorized plan and the exact refreshed head. The provider's older pull-
+request base remains separate delivery evidence; it is never represented as the current
+protected source. The predecessor claim's canonical base and delivered head remain immutable
+evidence rather than being rewritten into the new projection.
 
 Protected `main` may advance after the bound delivery base only when that base remains its
 ancestor and every intervening protected path is disjoint from the lane's admitted write set.
-The successor deliberately retains the immutable delivery base; refreshing the candidate onto
-newer protected `main` remains a later authoring-stage operation.
+The successor deliberately retains the protected source observed by the authorized plan. The
+older delivery base remains bound for authored-diff and refresh-chain proof; refreshing the
+candidate beyond that protected source remains a later authoring-stage operation.
 
 ## Plan
 
@@ -74,7 +77,7 @@ reconciled before it is issued, so retries and lost responses resume from receip
 of repeating an unproven mutation. The protected sequence is:
 
 1. demote the existing pull request to draft;
-2. create one same-owner waiting successor against the delivery base;
+2. create one same-owner waiting successor against the protected source;
 3. retire the receipt-bound predecessor;
 4. promote the successor to active;
 5. CAS-update the writer lease base and cloud projection;

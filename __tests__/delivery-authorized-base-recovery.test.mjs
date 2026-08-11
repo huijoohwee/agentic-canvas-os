@@ -331,6 +331,10 @@ test("repository adapter preserves CAS and no-force invariants", () => {
   assert.match(source, /casWriterLeaseProjection/u);
   assert.match(source, /predecessorClaimId/u);
   assert.match(source, /RECOVERABLE_SOURCE_STATUSES/u);
+  assert.match(source, /canonicalBaseSha: plan\.evidence\.protectedMainSha/u);
+  assert.match(source, /baseSha: plan\.evidence\.protectedMainSha/u);
+  assert.match(source, /pull\.baseRefOid !== plan\.evidence\.deliveryBaseSha/u);
+  assert.doesNotMatch(source, /canonicalBaseSha: plan\.evidence\.deliveryBaseSha/u);
   assert.match(source, /openSync\(lockPath, "wx"/u);
   assert.doesNotMatch(source, /--force|force-with-lease/u);
 });

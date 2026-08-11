@@ -19,6 +19,9 @@ git_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f282
 owner_scripts:
   - "scripts/workspace-parallelism-lib.mjs"
   - "scripts/workspace-parallelism-guard.mjs"
+  - "scripts/worktree-lifecycle-lib.mjs"
+  - "scripts/worktree-lifecycle.mjs"
+  - "scripts/task-worktree-owned-containers.mjs"
   - "scripts/recoverable-lane-cleanup-contract.mjs"
   - "scripts/recoverable-lane-cleanup-controller.mjs"
   - "scripts/recoverable-lane-cleanup-recovery-store.mjs"
@@ -26,6 +29,9 @@ owner_scripts:
   - "scripts/recoverable-lane-cleanup.mjs"
 owner_tests:
   - "__tests__/workspace-parallelism.test.mjs"
+  - "__tests__/worktree-lifecycle.test.mjs"
+  - "__tests__/device-integrate.test.mjs"
+  - "__tests__/task-worktree-provision.test.mjs"
   - "__tests__/recoverable-lane-cleanup-contract.test.mjs"
   - "__tests__/recoverable-lane-cleanup-controller.test.mjs"
   - "__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs"
@@ -413,6 +419,44 @@ npm run worktree:lifecycle:recoverable-cleanup -- run \
   --authorize="authorize recoverable-lane-cleanup [planDigest]" --json
 ```
 
+## Completed-Lane Container Cleanup
+
+Ordinary provider-neutral device integration delegates cleanup to the repository-owned worktree
+lifecycle controller only after the exact task result has converged to canonical
+`main`. The controller removes the exact registered task worktree through Git without
+force, then proves that same absolute target is absent from both the worktree registry
+and the filesystem. It returns the unchanged typed
+`agentic-worktree-cleanup-result/v1` receipt; only `cleaned` and idempotent
+`already-cleaned` outcomes with exact absence evidence complete integration. The
+receipt binds the absolute Git common directory, repository-derived container roots,
+preserved task branch, and stable operation identity without provider assumptions.
+
+Container cleanup is narrower than lane cleanup. After target removal, the controller
+may issue nonrecursive empty-directory removal for the derived managed repository
+parent and then its shared `.worktrees` parent. A directory is removed only when it is
+the exact derived managed location, is an ordinary directory rather than a symbolic
+link, and its identity is pinned and immediately revalidated under the cooperative
+Git-common-directory registry lock. Observed drift is retained; this boundary claims
+no atomic immunity to an out-of-contract same-user path swap after the final check.
+A nonempty, symbolic-link, or externally located container is retained and named by a
+safe typed disposition. No recursive deletion, branch deletion, provider mutation,
+merge, deployment, or inferred path ownership is authorized.
+
+The device consumer repeats the same cleanup child command at most once when the
+first synchronous child stdout is absent or unparseable. Thrown, nonzero, and
+parseable-invalid results are not retried. This same-process response recovery is not
+top-level lost-final-stdout recovery or canonical-root device replay.
+
+Use the orphan-container command once after upgrading an existing workspace whose
+last worktree was removed by an older lifecycle version:
+
+```sh
+npm run worktree:lifecycle:cleanup-empty -- --repository="[canonical repository root]"
+```
+
+This command applies the same derived-root and nonrecursive-empty checks. It does not
+remove a registered worktree or make a retained directory cleanup-eligible.
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.
@@ -485,6 +529,7 @@ A bypassed operation still prints what it is destroying before it proceeds.
 | Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
 | Adopt under an exact live registry lease fence | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
 | Plan or run one exact recoverable clean-lane removal | `npm run worktree:lifecycle:recoverable-cleanup -- <plan|run> ...` |
+| Remove managed empty-container residue after a legacy cleanup | `npm run worktree:lifecycle:cleanup-empty -- --repository="[canonical repository root]"` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 
@@ -504,6 +549,8 @@ audit is always runnable.
   still evaluates that operation and every existing lane independently.
 - Recoverable cleanup authority is plan-specific and one-shot. It grants no branch,
   remote, provider, pull-request, object-pruning, integration, or deploy authority.
+- Empty-container cleanup is nonrecursive, derived-root-only maintenance and grants no
+  lane, branch, provider, integration, or deployment authority.
 - Discovery skips dotted directories at the workspace root, so backup, worktree, and
   quarantine directories are not treated as lanes.
 - A Dev merge does not authorize Prod mirror or Cloudflare mutation. This contract
@@ -518,6 +565,7 @@ audit is always runnable.
 | Foreign lanes are protected | A destructive operation is refused while another session holds uncommitted or untracked work in the same repository. |
 | Untracked work is never discarded | A destructive operation over a lane with untracked paths is refused with no override in this contract. |
 | Recovery is durable | A dirty lane requires an existing branch, tag, or bundle reference; a stash reference is rejected. |
+| Completed cleanup is exact and idempotent | Focused lifecycle and integration tests require exact target removal or proved absence, no registry prune, unchanged typed-receipt propagation, and only safe managed or external container dispositions. |
 | Exceptional clean-lane removal is recoverable | The exact task branch is bundled and independently verified, then the full checkout is atomically preserved before one non-force staging-registration removal; branch refs and canonical state remain unchanged. |
 | Destructive operations never return plain allow | The strongest outcome for a catalog operation is `allow-with-recovery` and it carries the recovery reference. |
 | Audit is read-only | A full workspace audit reports lanes and at-risk work without mutating any repository. |

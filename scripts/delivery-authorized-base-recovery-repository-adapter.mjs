@@ -36,6 +36,7 @@ import {
 import { casWriterLeaseProjection, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 const DIGEST = /^[0-9a-f]{64}$/u;
+const RECOVERABLE_SOURCE_STATUSES = new Set(["active", "delivery"]);
 const EFFECTS = Object.freeze([
   "pull-request-draft-demotion",
   "same-owner-successor-claim",
@@ -88,11 +89,12 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
 
   function readLease() {
     const lease = leaseStore.read(branch);
-    if (!lease || lease.schema !== "agentic-writer-lease/v2" || lease.status !== "active"
+    if (!lease || lease.schema !== "agentic-writer-lease/v2"
+      || !RECOVERABLE_SOURCE_STATUSES.has(lease.status)
       || lease.sessionId !== sessionId || lease.branch !== branch
       || realpathSync(lease.worktreePath) !== repository
       || lease.admission?.status !== "admitted") {
-      invalid("exact active owner lease");
+      invalid("exact recoverable owner lease");
     }
     return lease;
   }

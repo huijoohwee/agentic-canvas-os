@@ -1496,6 +1496,65 @@ test("active integration refreshes an exact synchronized stale-base cloud succes
   }
 });
 
+test("active integration accepts the exact cloud fallback manifest projection", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-fallback-manifest-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    authorityManifestProjection: "fallback",
+  });
+  let publishCalls = 0;
+  try {
+    assert.notEqual(
+      fixture.sourceAuthority.manifestDigest,
+      fixture.sourceAdmission.manifestDigest,
+    );
+    assert.equal(fixture.sourceAuthority.manifestDigest, digestValue({
+      declaredWriteSet: fixture.sourceAdmission.declaredWriteSet,
+      writeSetDigest: fixture.sourceAdmission.writeSetDigest,
+    }));
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        throw new Error("stop after fallback-manifest successor");
+      },
+    }), /stop after fallback-manifest successor/u);
+    assert.equal(publishCalls, 1);
+    assert.equal(fixture.calls.successor.length, 1);
+    assert.equal(fixture.calls.cas.length, 2);
+    assert.equal(
+      fixture.calls.successor[0].manifest.manifestDigest,
+      fixture.sourceAdmission.manifestDigest,
+    );
+    assert.equal(
+      fixture.lease.cloudAuthority.manifestDigest,
+      fixture.sourceAdmission.manifestDigest,
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects an arbitrary authority manifest projection", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-arbitrary-manifest-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    authorityManifestProjection: "arbitrary",
+  });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /Active publish predecessor drifted/u);
+    assert.equal(publishCalls, 0);
+    assert.equal(fixture.calls.successor.length, 0);
+    assert.equal(fixture.calls.cas.length, 0);
+    assert.strictEqual(fixture.lease, fixture.sourceLease);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("active integration can refresh two sequential canonical-base advances", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-two-advances-"));
   const fixture = createActiveSuccessorFixture({ repo, durableCas: true });
@@ -3619,6 +3678,7 @@ function createActiveSuccessorFixture({
   derivativeFault = null,
   providerEpochDemand = null,
   laggingPullRequestBase = false,
+  authorityManifestProjection = "canonical",
 }) {
   const successorHeadSha = "2".repeat(40);
   const successorClaimId = "c".repeat(64);
@@ -3651,6 +3711,15 @@ function createActiveSuccessorFixture({
     admittedReportDigest: "7".repeat(64),
     preservationReceiptDigest: "8".repeat(64),
   });
+  const fallbackManifestDigest = digestValue({
+    declaredWriteSet: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest,
+  });
+  const sourceManifestDigest = ({
+    canonical: manifest.manifestDigest,
+    fallback: fallbackManifestDigest,
+    arbitrary: "0".repeat(64),
+  })[authorityManifestProjection];
   const sourceAuthority = Object.freeze({
     schema: "agentic-lane-cloud-authority/v1",
     provider: "github",
@@ -3678,7 +3747,7 @@ function createActiveSuccessorFixture({
     expiresAt,
     integrationReceiptDigest: null,
     integration: null,
-    manifestDigest: manifest.manifestDigest,
+    manifestDigest: sourceManifestDigest,
   });
   const sourceLease = createLease({
     repo,
@@ -3738,6 +3807,7 @@ function createActiveSuccessorFixture({
     leaseEpoch: 2,
     transitionCounter: 2,
     expiresAt: successorExpiresAt,
+    manifestDigest: manifest.manifestDigest,
   });
   const waitingSuccessor = Object.freeze({
     ...claimCore,

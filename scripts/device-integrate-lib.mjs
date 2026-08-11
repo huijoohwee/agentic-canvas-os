@@ -1552,10 +1552,14 @@ function requireExactActivePublishClaim({ status, authority, admission }) {
 
 function exactActivePublishClaim({ status, authority, admission }) {
   const claim = exactStatusClaim(status, authority.claimId);
+  const fallbackManifestDigest = digestValue({
+    declaredWriteSet: admission.declaredWriteSet,
+    writeSetDigest: admission.writeSetDigest,
+  });
   const exact = ["active", "current"].includes(claim?.state) &&
     authority.writeSetDigest === admission.writeSetDigest &&
     sameValue(authority.cloudDeclaredWriteScope, admission.declaredWriteSet) &&
-    authority.manifestDigest === admission.manifestDigest &&
+    [admission.manifestDigest, fallbackManifestDigest].includes(authority.manifestDigest) &&
     sameProjection(claim, authority, ACTIVE_CLAIM_AUTHORITY_FIELDS) &&
     sameValue(claim.declaredWriteScope, admission.declaredWriteSet) &&
     typeof claim.workItemId === "string" && claim.workItemId.length > 0;

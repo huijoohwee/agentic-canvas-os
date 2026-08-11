@@ -27,6 +27,10 @@ owner_scripts:
   - "scripts/recoverable-lane-cleanup-recovery-store.mjs"
   - "scripts/recoverable-lane-cleanup-repository-adapter.mjs"
   - "scripts/recoverable-lane-cleanup.mjs"
+  - "scripts/history-lifecycle-contract.mjs"
+  - "scripts/history-lifecycle-controller.mjs"
+  - "scripts/history-lifecycle-repository-adapter.mjs"
+  - "scripts/history-lifecycle.mjs"
 owner_tests:
   - "__tests__/workspace-parallelism.test.mjs"
   - "__tests__/worktree-lifecycle.test.mjs"
@@ -36,6 +40,10 @@ owner_tests:
   - "__tests__/recoverable-lane-cleanup-controller.test.mjs"
   - "__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs"
   - "__tests__/recoverable-lane-cleanup-cli.test.mjs"
+  - "__tests__/history-lifecycle-contract.test.mjs"
+  - "__tests__/history-lifecycle-controller.test.mjs"
+  - "__tests__/history-lifecycle-repository-adapter.test.mjs"
+  - "__tests__/history-lifecycle-cli.test.mjs"
 owner_command: "npm run workspace:parallelism:check"
 ---
 
@@ -518,12 +526,22 @@ AGENTIC_WORKSPACE_GUARD_BYPASS=i-accept-destroying-unrecoverable-work git clean 
 
 A bypassed operation still prints what it is destroying before it proceeds.
 
+## Historical Audit and Planning
+
+`history:lifecycle audit` captures bounded Git, worktree, lease, remote, change, anchor,
+and stash evidence without fetching or writing. The CLI has a GitHub reference adapter;
+core provider identities stay opaque. `plan` requires one pinned analysis bracketed by
+identical frontiers, with no authority, authorization, intent, lock, journal, or receipt.
+Unobservable reflog ancestry and current-main stash projection stay unknown; age, names,
+messages, and missing upstreams never prove retirement; mutation must recapture and gain authority.
+
 ## Invocation
 
 | Need | Command |
 |---|---|
 | Audit every lane in the workspace | `npm run workspace:parallelism:check` |
 | Machine-readable audit | `npm run workspace:parallelism:check -- --json` |
+| Audit or plan historical refs and stashes | `npm run history:lifecycle -- <audit\|plan> --repository="[repository]" --comparison-ref="[full ref]" [--remote="[remote]"] [--provider-repository="[GitHub owner/name]"] --json` |
 | Verify retained disjoint work for a release controller | `npm run workspace:parallelism:check -- --reconciliation-receipt "[immutable receipt path]"` |
 | Capture an unleased dirty legacy lane | `npm run workspace:legacy-adoption -- capture --source="[worktree]" --recovery="[new directory]" --protected-tip="[40-hex main SHA]" --session="[operator session]"` |
 | Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
@@ -551,6 +569,7 @@ audit is always runnable.
   remote, provider, pull-request, object-pruning, integration, or deploy authority.
 - Empty-container cleanup is nonrecursive, derived-root-only maintenance and grants no
   lane, branch, provider, integration, or deployment authority.
+- Historical audit and planning are read-only evidence; their output cannot authorize archival, selector retirement, ref deletion, object pruning, provider mutation, or deployment.
 - Discovery skips dotted directories at the workspace root, so backup, worktree, and
   quarantine directories are not treated as lanes.
 - A Dev merge does not authorize Prod mirror or Cloudflare mutation. This contract
@@ -569,6 +588,7 @@ audit is always runnable.
 | Exceptional clean-lane removal is recoverable | The exact task branch is bundled and independently verified, then the full checkout is atomically preserved before one non-force staging-registration removal; branch refs and canonical state remain unchanged. |
 | Destructive operations never return plain allow | The strongest outcome for a catalog operation is `allow-with-recovery` and it carries the recovery reference. |
 | Audit is read-only | A full workspace audit reports lanes and at-risk work without mutating any repository. |
+| Historical planning is advisory | Pinned evidence has identical bracket and verification frontiers, effects are empty, authority is null, and no ref, stash, worktree, object, provider, or lock changes. |
 | Report readiness is honest | `ready` is true only when no lane holds untracked work or unreferenced modifications. |
 | Scoped readiness stays separate | Workspace `ready` never promotes `authoringAdmission`, `runtimeReadiness`, `lifecycleReadiness`, or `admissionRuntimeConformance`. |
 | Ref transactions are classified | Create, fast-forward update, noop, rewind, and delete are distinguished, and only rewind and delete are gated. |

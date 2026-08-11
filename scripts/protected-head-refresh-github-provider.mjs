@@ -175,7 +175,9 @@ export function createProtectedHeadRefreshGithubProvider({
       label: "Protected-head refresh selected check-suite listing",
     });
     for (const context of PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS) {
-      const matches = suiteRuns.filter(run => run?.name === context);
+      const matches = suiteRuns.filter(run => (
+        run?.name === context && !isCiRollupProjection(run)
+      ));
       if (matches.length !== 1) {
         throw new Error(`Protected-head refresh selected suite has no exact ${context} check.`);
       }
@@ -350,7 +352,9 @@ export function createProtectedHeadRefreshGithubProvider({
       label: "Protected-head refresh CI rollup source listing" });
     const ids = [];
     for (const context of PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS) {
-      const matches = sources.filter(run => run?.name === context);
+      const matches = sources.filter(run => (
+        run?.name === context && !isCiRollupProjection(run)
+      ));
       if (matches.length !== 1 || classifyActionsCheck({ run: matches[0], candidateSha,
         context, checkSuiteId: ci.checkSuiteId }) !== "success") {
         throw new Error(`Protected-head refresh CI rollup source ${context} is not exact success.`);

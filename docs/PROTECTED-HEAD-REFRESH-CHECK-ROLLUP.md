@@ -29,6 +29,12 @@ projection binds the operation ID, candidate SHA, context, workflow run, check
 suite, and source check-run ID in canonical JSON. The external ID is unique to
 that operation and source check.
 
+On replay, GitHub may associate those projections with the selected source
+suite. Source evidence therefore excludes checks carrying the projection
+schema before requiring one exact successful source check per context; the
+commit-wide projection pass still rejects foreign, duplicate, or drifted
+operation projections.
+
 The projected contexts are exactly `test`, `build`, `docs-contract`,
 `collaboration-integration`, and `agentic-sdlc-policy-runtime`. A projection is
 accepted only when its name, candidate, source identity, GitHub Actions app,

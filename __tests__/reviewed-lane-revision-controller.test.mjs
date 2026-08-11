@@ -164,8 +164,11 @@ test("default cloud roots bind exact source, owner, branch, ledger, and evidence
     if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git";
     throw new Error(`Unexpected git read: ${args.join(" ")}`);
   };
-  const runtime = createReviewedLaneRevisionRepositoryRuntime({ repository,
-    sessionId: lease.sessionId }, { gitText, leaseStore: { read: () => lease }, inspectCloud,
+  const runtime = createReviewedLaneRevisionRepositoryRuntime({
+    repository,
+    sessionId: lease.sessionId,
+    environment: {},
+  }, { gitText, leaseStore: { read: () => lease }, inspectCloud,
     privateClaims: async () => privateInventory(claims, owner) });
   for (const drift of [
     { heartbeatCounter: 1 }, { transitionCounter: owner.transitionCounter + 1 },

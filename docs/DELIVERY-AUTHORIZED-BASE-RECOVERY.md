@@ -36,6 +36,11 @@ request base remains separate delivery evidence; it is never represented as the 
 protected source. The predecessor claim's canonical base and delivered head remain immutable
 evidence rather than being rewritten into the new projection.
 
+Replay tolerates unrelated global-ledger movement only after freshly rejoining the exact
+authorized predecessor claim and proving that no other scope-reserved claim overlaps the
+declared write set. Predecessor identity, fence, transition, integration, or overlapping-write
+drift still fails closed.
+
 Protected `main` may advance after the bound delivery base only when that base remains its
 ancestor and every intervening protected path is disjoint from the lane's admitted write set.
 The successor deliberately retains the protected source observed by the authorized plan. The

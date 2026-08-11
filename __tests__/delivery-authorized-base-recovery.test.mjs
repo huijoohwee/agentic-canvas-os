@@ -15,6 +15,8 @@ import {
   advanceDeliveryAuthorizedBaseRecoveryIntent,
   createDeliveryAuthorizedBaseRecoveryIntent,
 } from "../scripts/delivery-authorized-base-recovery-intent.mjs";
+import { requireAuthorizedDeliveryCloudPreimage }
+  from "../scripts/delivery-authorized-base-recovery-repository-adapter.mjs";
 
 const sha = character => character.repeat(40);
 const digest = character => character.repeat(64);
@@ -322,12 +324,45 @@ test("stale authorization reaches no protected effect", async () => {
   assert.equal(fake.getIntent(), null);
 });
 
+test("cloud replay permits only disjoint global-ledger movement", () => {
+  const plan = planned();
+  const source = {
+    claimId: plan.evidence.claimId, fenceRevision: plan.evidence.claimDigest,
+    transitionDigest: plan.evidence.claimLedgerRevision,
+    transitionCounter: plan.evidence.claimTransitionCounter,
+    leaseEpoch: plan.evidence.claimLeaseEpoch, actorId: plan.evidence.claimActorId,
+    repositoryId: plan.evidence.claimRepositoryId, workItemId: plan.evidence.claimWorkItemId,
+    canonicalBaseRevision: plan.evidence.claimCanonicalBaseSha,
+    laneRevision: plan.evidence.claimLaneRevision, writeSetDigest: plan.evidence.writeSetDigest,
+    reviewRequestId: plan.evidence.claimReviewRequestId,
+    integrationReceiptDigest: plan.evidence.integrationReceiptDigest,
+    state: "dormant-preserved", scopeReserved: true, writeAuthority: false,
+  };
+  const disjoint = { claimId: digest("d"), scopeReserved: true,
+    declaredWriteScope: ["path:docs/disjoint.md", "semantic:disjoint"] };
+  assert.equal(requireAuthorizedDeliveryCloudPreimage(plan, {
+    ledgerDigest: digest("e"), claims: [source, disjoint],
+  }), source);
+  assert.throws(() => requireAuthorizedDeliveryCloudPreimage(plan, {
+    claims: [{ ...source, fenceRevision: digest("e") }],
+  }), /authorized cloud preimage drift/u);
+  assert.throws(() => requireAuthorizedDeliveryCloudPreimage(plan, {
+    claims: [source, { ...disjoint, declaredWriteScope: declaredWriteSet }],
+  }), /authorized cloud preimage drift/u);
+});
+
 test("repository adapter preserves CAS and no-force invariants", () => {
   const source = readFileSync(
     new URL("../scripts/delivery-authorized-base-recovery-repository-adapter.mjs", import.meta.url),
     "utf8",
   );
   assert.match(source, /expectedLedgerDigest/u);
+  assert.match(source, /requireAuthorizedDeliveryCloudPreimage\(plan, before\)/u);
+  assert.match(source, /source\.fenceRevision !== plan\.evidence\.claimDigest/u);
+  assert.match(source, /source\.transitionDigest !== plan\.evidence\.claimLedgerRevision/u);
+  assert.match(source, /writeSetsOverlap\(item\.declaredWriteScope, plan\.evidence\.declaredWriteSet\)/u);
+  assert.doesNotMatch(source, /before\.ledgerDigest !== plan\.evidence\.ledgerDigest/u);
+  assert.doesNotMatch(source, /digestValue\(before\.claims\) !== plan\.evidence\.claimInventoryDigest/u);
   assert.match(source, /casWriterLeaseProjection/u);
   assert.match(source, /predecessorClaimId/u);
   assert.match(source, /RECOVERABLE_SOURCE_STATUSES/u);

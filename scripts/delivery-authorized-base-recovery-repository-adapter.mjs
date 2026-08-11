@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { buildDeliveryAuthorizedBaseRecoveryReceipt } from "./delivery-authorized-base-recovery-contract.mjs";
 import {
   complete,
@@ -44,6 +44,31 @@ const EFFECTS = Object.freeze([
   "writer-lease-base-cas",
   "pull-request-marker-projection",
 ]);
+
+export function requireAuthorizedDeliveryCloudPreimage(plan, cloudStatus) {
+  const matches = cloudStatus?.claims?.filter(item => item?.claimId === plan.evidence.claimId) || [];
+  const source = matches.length === 1 ? matches[0] : null;
+  if (!source || source.fenceRevision !== plan.evidence.claimDigest
+    || source.transitionDigest !== plan.evidence.claimLedgerRevision
+    || source.transitionCounter !== plan.evidence.claimTransitionCounter
+    || source.leaseEpoch !== plan.evidence.claimLeaseEpoch
+    || source.actorId !== plan.evidence.claimActorId
+    || source.repositoryId !== plan.evidence.claimRepositoryId
+    || source.workItemId !== plan.evidence.claimWorkItemId
+    || source.canonicalBaseRevision !== plan.evidence.claimCanonicalBaseSha
+    || source.laneRevision !== plan.evidence.claimLaneRevision
+    || source.writeSetDigest !== plan.evidence.writeSetDigest
+    || source.reviewRequestId !== plan.evidence.claimReviewRequestId
+    || source.integrationReceiptDigest !== plan.evidence.integrationReceiptDigest
+    || source.state !== "dormant-preserved" || source.scopeReserved !== true
+    || source.writeAuthority !== false
+    || cloudStatus.claims.some(item => item?.claimId !== source.claimId
+      && item?.scopeReserved === true
+      && writeSetsOverlap(item.declaredWriteScope, plan.evidence.declaredWriteSet))) {
+    invalid("authorized cloud preimage drift");
+  }
+  return source;
+}
 
 export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
   options = {},
@@ -245,10 +270,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
 
   async function createWaitingSuccessor({ plan, operationKey }) {
     const before = status();
-    if (before.ledgerDigest !== plan.evidence.ledgerDigest
-      || digestValue(before.claims) !== plan.evidence.claimInventoryDigest) {
-      invalid("authorized cloud preimage drift");
-    }
+    requireAuthorizedDeliveryCloudPreimage(plan, before);
     cloudAction("claim", {
       actorId: plan.evidence.actorId,
       actorLogin: plan.evidence.actorLogin,

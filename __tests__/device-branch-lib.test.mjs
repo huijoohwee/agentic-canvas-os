@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -1412,6 +1412,15 @@ test("publish verifies the session lease and fencing ancestor before delivery", 
   assert.deepEqual(calls[0], ["git", "merge-base", "--is-ancestor", "b".repeat(40), "HEAD"]);
   assert.ok(calls.some(call => call[0] === "gh" && call[1] === "pr" && call[2] === "ready"));
   assert.equal(releaseStatus, "delivery");
+});
+
+test("publish refreshes a stale active admission to the live pull-request base", () => {
+  const source = readFileSync(new URL("../scripts/device-branch-lib.mjs", import.meta.url), "utf8");
+  const publishBody = source.slice(source.indexOf("function publishUnfenced"),
+    source.indexOf("function resolvePublishHeadTreeSha"));
+  assert.match(publishBody, /maybeRefreshLegacyRootSourceReviewAdmission/u);
+  assert.match(publishBody, /claimLegacyReviewCloudAuthority/u);
+  assert.match(publishBody, /Refreshed active delivery admission for live PR base/u);
 });
 
 test("publish rejects delivery evidence failure before review activation or merge authorization", () => {

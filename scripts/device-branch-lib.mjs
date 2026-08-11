@@ -372,6 +372,7 @@ function publishUnfenced({
   invocationPath,
   repo,
   gitText,
+  gitOptional = () => "",
   ghText,
   ghOptional,
   leaseStore,
@@ -379,6 +380,7 @@ function publishUnfenced({
   run,
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
   reviewReadyCloudAuthority = reviewReadyAdmissionCloudAuthority,
+  claimLegacyReviewCloudAuthority = claimLegacyReviewAdmissionCloudAuthority,
   buildDeliveryEvidence = createDeviceDeliveryEvidence,
   authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
   invokeCloudMutation = invokeRepositoryCloudAction,
@@ -395,9 +397,18 @@ function publishUnfenced({
   if (!lease.pullRequestUrl || !lease.fenceSha) {
     throw new Error("Publish requires the draft ownership pull request and fencing SHA created by device:start.");
   }
-  const cloud = requireCloudPublishAdmission(lease);
+  let cloud = requireCloudPublishAdmission(lease);
   if (!cloud) {
     throw new Error("Publish requires one admitted cloud claim; local-only delivery authority is forbidden.");
+  }
+  const refreshed = maybeRefreshLegacyRootSourceReviewAdmission({
+    lease, branch, repo, gitText, gitOptional, ghText, leaseStore, sessionId,
+    claimLegacyReviewCloudAuthority,
+  });
+  if (refreshed) {
+    lease = refreshed.lease;
+    cloud = refreshed.cloud;
+    log(`Refreshed active delivery admission for live PR base ${cloud.authority.canonicalBaseSha}.`);
   }
   const validationHeadSha = gitText(["rev-parse", "HEAD"]).trim();
   const replayCheckpoint = requirePublishReplayCheckpoint({

@@ -1,6 +1,9 @@
 // Responsibility: verify stable complete projections and fail-closed dormant-preservation admission evidence joins.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+
+import Ajv2020 from "ajv/dist/2020.js";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
@@ -99,6 +102,49 @@ test("dormant receipt projection ignores only circular and observation fields", 
     projectDormantPreservationAdmissionReceipt(dormantReceipt).projectionDigest,
     projectDormantPreservationAdmissionReceipt(changedLane).projectionDigest,
   );
+});
+
+test("detached worktrees bind a null branch and reject contradictory or pull-request projections", () => {
+  const detachedLane = { ...laneFixture(), branch: null, detached: true };
+  const operation = operationFixture({ dormantLane: detachedLane });
+  const source = buildDormantPreservationAdmissionSourceEvidence(operation.sourceInput);
+  const selected = source.preservation.selectedLanes[0];
+  assert.equal(selected.worktree.branch, null);
+  assert.equal(selected.worktree.detached, true);
+  assert.deepEqual(normalizeDormantPreservationAdmissionSourceEvidence(source), source);
+
+  for (const drift of [
+    { branch: null, detached: false },
+    { branch: "refs/heads/agent/invented", detached: true },
+  ]) {
+    const receipt = structuredClone(operation.dormantReceipt);
+    Object.assign(receipt.worktrees[0], drift);
+    assert.throws(() => projectDormantPreservationAdmissionReceipt(receipt), /branch and detached state/);
+  }
+
+  const detachedPullReceipt = pullReceipt(operation);
+  assert.throws(() => buildDormantPreservationAdmissionSourceEvidence({
+    ...operation.sourceInput,
+    dormantReceipt: detachedPullReceipt,
+    selection: { schema: DORMANT_PRESERVATION_ADMISSION_SELECTION_SCHEMA,
+      lanes: [{ worktreePath: DORMANT_PATH, pullRequest: 90 }] },
+  }), /absent or mismatched/);
+
+  const schema = JSON.parse(readFileSync(new URL(
+    "../docs/schemas/dormant-preservation-decision-plan.v1.schema.json", import.meta.url,
+  ), "utf8"));
+  const validate = new Ajv2020({ strict: false }).compile({
+    $schema: schema.$schema, $ref: "#/$defs/selectedLane", $defs: schema.$defs,
+  });
+  assert.equal(validate(selected), true, JSON.stringify(validate.errors));
+  for (const drift of [
+    { branch: null, detached: false },
+    { branch: "refs/heads/agent/invented", detached: true },
+  ]) {
+    const invalid = structuredClone(selected);
+    Object.assign(invalid.worktree, drift);
+    assert.equal(validate(invalid), false);
+  }
 });
 
 test("selected pull request must exactly pair repository, branch, and head with its worktree", () => {
@@ -244,10 +290,9 @@ test("planned continuation requires the exact one-parent same-tree fence child",
   }), /lease, manifest, or source files drifted/);
 });
 
-function operationFixture() {
+function operationFixture({ dormantLane = laneFixture() } = {}) {
   const remoteInventory = inventoryVerification([claimFixture("candidate")]);
   const candidateClaim = remoteInventory.inventory.claims[0];
-  const dormantLane = laneFixture();
   const dormantReceipt = verifyDormantPreservation({
     repository: REPOSITORY_PATH,
     targetRepository: "owner/repository",

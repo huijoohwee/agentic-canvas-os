@@ -328,11 +328,32 @@
           "required": ["path", "branch", "headSha", "treeSha", "stateDigest"],
           "properties": {
             "path": { "$ref": "#/$defs/absolutePath" },
-            "branch": { "type": "string", "minLength": 1 },
+            "branch": {
+              "anyOf": [
+                { "type": "string", "minLength": 1 },
+                { "type": "null" }
+              ]
+            },
+            "detached": { "type": "boolean" },
             "headSha": { "$ref": "#/$defs/sha" },
             "treeSha": { "$ref": "#/$defs/sha" },
             "stateDigest": { "$ref": "#/$defs/digest" }
-          }
+          },
+          "oneOf": [
+            {
+              "required": ["detached"],
+              "properties": {
+                "branch": { "type": "null" },
+                "detached": { "const": true }
+              }
+            },
+            {
+              "properties": {
+                "branch": { "type": "string", "minLength": 1 },
+                "detached": { "const": false }
+              }
+            }
+          ]
         },
         "pullRequest": {
           "anyOf": [

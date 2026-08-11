@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2188,
-  "headDigest": "3599b9d9cac1fef7012a3f3e00f084da6b417ce6a0cc86cf7cfe6ec9836b36ea",
+  "sequence": 2189,
+  "headDigest": "3b003ad6626692278764b3a47a1ed15dda5587ecf736c67da2f740971e001005",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -108829,6 +108829,47 @@
       },
       "claimDigest": "5804624a92799f84af57ba5d346df613098e0daed65c82ebf7fac06df77e4cb9",
       "digest": "3599b9d9cac1fef7012a3f3e00f084da6b417ce6a0cc86cf7cfe6ec9836b36ea"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2189,
+      "parentDigest": "3599b9d9cac1fef7012a3f3e00f084da6b417ce6a0cc86cf7cfe6ec9836b36ea",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9608c72953ee87a091bf3f362a156a4006da6b306289c908f756593cd221f781",
+      "idempotencyKey": "52d105e4d503db4836767f41c1a13bb3e77c5ba1044e88f466d7f4fbaff4ac0a",
+      "requestDigest": "eea889f9d72474297aace4f9ce8e2dcd57371cff5c549f5370aa22e13bca90ba",
+      "evaluationTime": "2026-08-11T19:14:44.000Z",
+      "claimCore": {
+        "claimId": "9608c72953ee87a091bf3f362a156a4006da6b306289c908f756593cd221f781",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:f9808c24dd92b131d5e4e8a93f9da04d716c26ad579cffd8124573838783340f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:083f28c25ef5cbfba80d0a77024b3b0da8dd0b82bf0537262f648c39f4b6cfe3",
+        "canonicalBaseRevision": "5fd1434bf291efb2b8768e9ddf510d612b0ed999",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-base-recovery.test.mjs",
+          "path:docs/DELIVERY-AUTHORIZED-BASE-RECOVERY.md",
+          "path:scripts/delivery-authorized-base-recovery-repository-adapter.mjs",
+          "semantic:delivery-base-recovery-protected-source"
+        ],
+        "writeSetDigest": "fbe1df421b59d07c7702f290246c02c410763ba7de27a572954bda7eebb160d7",
+        "laneRevision": "5fd1434bf291efb2b8768e9ddf510d612b0ed999",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T20:14:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "28552f7be22fb4b4953bbe829775de7cc8179e0c57449ae9350c8b706f6c4d41",
+      "digest": "3b003ad6626692278764b3a47a1ed15dda5587ecf736c67da2f740971e001005"
     }
   ]
 }

@@ -379,16 +379,19 @@ function verifyFinal({ context, repository, leaseStore, stateDir }) {
 }
 
 function admissionManifest(request) {
-  return {
+  const declaredWriteSet = normalizeWriteSet(request.declaredWriteScope);
+  const sourceManifest = {
     schema: "agentic-declared-write-scope/v1",
     semanticScope: request.semanticScope,
-    declaredWriteSet: normalizeWriteSet(request.declaredWriteScope),
+    paths: declaredWriteSet
+      .filter(item => item.startsWith("path:"))
+      .map(item => item.slice("path:".length)),
+  };
+  return {
+    ...sourceManifest,
+    declaredWriteSet,
     writeSetDigest: request.writeSetDigest,
-    manifestDigest: digestValue({
-      schema: "agentic-declared-write-scope/v1",
-      semanticScope: request.semanticScope,
-      declaredWriteSet: normalizeWriteSet(request.declaredWriteScope),
-    }),
+    manifestDigest: digestValue(sourceManifest),
     admittedReportDigest: digestValue({
       schema: "agentic-legacy-bootstrap-admitted-report-input/v1",
       branch: request.branch,

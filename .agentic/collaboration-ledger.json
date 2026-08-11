@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2077,
-  "headDigest": "59eb3c5a417addaa15e42ef38920257ef5f3daf84fc2b73781c3feba82630134",
+  "sequence": 2078,
+  "headDigest": "0f868fbe26ddf63b85c60274faa94dacc68e67c26562f69c9fbe5e53689fdddb",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -103434,6 +103434,52 @@
       },
       "claimDigest": "4b1d741ae8e0eb9404190fd4e96a226ce1093d714d7cae4ad02d32e2daac863b",
       "digest": "59eb3c5a417addaa15e42ef38920257ef5f3daf84fc2b73781c3feba82630134"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2078,
+      "parentDigest": "59eb3c5a417addaa15e42ef38920257ef5f3daf84fc2b73781c3feba82630134",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7632c1fbb3b1667c4e69a563472b5b322135c5b30e7a2e07c81a58fbc800d940",
+      "idempotencyKey": "7bbb69e00f4f5ea34500562bd1d2f3ef1c8267a4b2d1b30709928adb72b039b2",
+      "requestDigest": "ecceebc7279d4020c87e86164386901a024dbb725ba6f09a45b9d8063e596e4d",
+      "evaluationTime": "2026-08-11T12:08:01.000Z",
+      "claimCore": {
+        "claimId": "7632c1fbb3b1667c4e69a563472b5b322135c5b30e7a2e07c81a58fbc800d940",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:fee31a17326735da6a6fddd394c08b803867687454773a7e31e7623257c22414",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2ba0f887303a317770d648a6236415c378d15362cccf6cb560c5a57f028cb798",
+        "canonicalBaseRevision": "6d2826c11d6501b8e09c7fb946f0bee5e62fa5a9",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-preservation-decision-evidence.test.mjs",
+          "path:docs/DORMANT-PRESERVATION-DECISION.md",
+          "path:docs/schemas/dormant-preservation-decision-plan.v1.schema.json",
+          "path:scripts/dormant-preservation-decision-evidence.mjs",
+          "semantic:dormant-preservation-detached-fix"
+        ],
+        "writeSetDigest": "e41182c007d9000e0144027731bd26a07ad67c8febc014b1ceb1b34767298956",
+        "laneRevision": "1e923e864365761abcf15bbec8878815046d8748",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-11T12:38:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78uP3D",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "f5aab7fdfe224d48290775aabce22b858649a65438af751f499f8aa1ca129ac9",
+          "recoveredAt": "2026-08-11T12:08:01.000Z"
+        }
+      },
+      "claimDigest": "80bdf7facdd9299b1a08ba044a469c0b6df3f194047ad2e42d616cdd1692a4c9",
+      "digest": "0f868fbe26ddf63b85c60274faa94dacc68e67c26562f69c9fbe5e53689fdddb"
     }
   ]
 }

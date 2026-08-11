@@ -61,13 +61,18 @@ test("rejects a receipt that does not continue the accepted head", () => {
   }), /does not continue the accepted head/u);
 });
 
-test("device integration keeps cloud verification pinned and dispatches the projected base", () => {
+test("device integration separates the immutable claim base from the live PR base", () => {
   const source = readFileSync(
     new URL("../scripts/device-integrate-lib.mjs", import.meta.url),
     "utf8",
   );
   assert.match(source, /acceptedProtectedRefreshBaseSha = projectRepeatedProtectedRefreshBase/u);
-  assert.match(source, /canonicalBaseSha: acceptedProtectedRefreshBaseSha,/u);
+  assert.match(
+    source,
+    /canonicalBaseSha: deliveryCloudAuthority\?\.canonicalBaseSha\s*\|\| deliveryVerifiedBaseSha,/u,
+  );
+  assert.match(source, /pullRequestBaseSha: acceptedProtectedRefreshBaseSha,/u);
+  assert.match(source, /pullRequest\.base\?\.sha !== pullRequestBaseSha/u);
   assert.match(
     source,
     /verifyCloudAuthority:\s*\(\) => verifyCloudAuthority\([\s\S]*canonicalBaseSha: deliveryCloudAuthority\?\.canonicalBaseSha \|\| deliveryVerifiedBaseSha,/u,

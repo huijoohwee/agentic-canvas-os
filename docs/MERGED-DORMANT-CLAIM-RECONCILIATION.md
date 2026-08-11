@@ -46,11 +46,13 @@ fence's ancestry to the reviewed head. The target repository is never opened
 or switched locally. GitHub REST refs and immutable objects provide:
 
 - the closed, non-draft, merged pull request and retained head identity;
-- the original reviewed head and exact first-parent chain to the final PR head;
+- the original reviewed head and either its exact first-parent refresh chain to
+  the final PR head or an exact direct PR-head identity with no refresh commit;
 - two-parent protected-main refresh commits, including superseded intermediate
   refreshes, with every second parent contained by protected main;
 - the actual one-parent squash commit, same tree as the final PR head, and its
-  parent equal to the final refresh's protected-main parent;
+  parent equal to the final refresh's protected-main parent or, for a direct
+  merge, the reviewed claim's canonical base;
 - complete PR and squash changed-path sets, all covered by the admitted claim
   scope;
 - successful required checks on the original reviewed head, final PR head, and

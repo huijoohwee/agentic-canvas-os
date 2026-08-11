@@ -270,16 +270,16 @@ function normalizeClaim(value) {
 function normalizeProvider(value) {
   requireObject(value, "Provider evidence");
   const pullRequest = normalizePullRequest(value.pullRequest);
-  const requiredChecks = normalizeRequiredChecks(value.requiredChecks);
+  const claimHead = normalizeRevision(value.claimHead, "provider claim head"), requiredChecks = normalizeRequiredChecks(value.requiredChecks);
   const checkRuns = normalizeCheckRuns(value.checkRuns);
   const provider = {
-    provider: requiredText(value.provider, "provider"), repository: requiredRepository(value.repository, "provider repository"), repositoryId: requiredText(value.repositoryId, "provider repository ID"), pullRequest, claimHead: normalizeRevision(value.claimHead, "provider claim head"),
-    protectedMain: normalizeProtectedMain(value.protectedMain), ancestry: normalizeAncestry(value.ancestry), refreshChain: normalizeRefreshChain(value.refreshChain, pullRequest), mergeCommitParents: normalizeSingleParent(value.mergeCommitParents, "merge commit parents"),
+    provider: requiredText(value.provider, "provider"), repository: requiredRepository(value.repository, "provider repository"), repositoryId: requiredText(value.repositoryId, "provider repository ID"), pullRequest, claimHead,
+    protectedMain: normalizeProtectedMain(value.protectedMain), ancestry: normalizeAncestry(value.ancestry), refreshChain: normalizeRefreshChain(value.refreshChain, pullRequest, claimHead), mergeCommitParents: normalizeSingleParent(value.mergeCommitParents, "merge commit parents"),
     mergeChangedPaths: Object.freeze(normalizePaths(value.mergeChangedPaths, "merge changed paths")), requiredChecks: Object.freeze(requiredChecks), checkRuns: Object.freeze(checkRuns), };
   if (provider.provider !== "github") {
     throw new Error("Merged dormant reconciliation currently requires GitHub provider evidence.");
   }
-  const checkedRevisions = [provider.claimHead.sha, provider.refreshChain.at(-1).sha, pullRequest.mergeCommitSha];
+  const checkedRevisions = [provider.claimHead.sha, provider.refreshChain.at(-1)?.sha ?? provider.claimHead.sha, pullRequest.mergeCommitSha];
   for (const sha of [...new Set(checkedRevisions)]) {
     for (const required of requiredChecks) {
       if (!checkRuns.some(run => run.name === required.context && (required.appId === null || run.appId === required.appId)
@@ -319,9 +319,13 @@ function normalizeAncestry(value) {
   return Object.freeze({
     claimHeadIsAncestorOfPullRequestHead: true, mergeCommitIsAncestorOfProtectedMain: true, });
 }
-function normalizeRefreshChain(values, pullRequest) {
-  if (!Array.isArray(values) || values.length === 0) {
-    throw new Error("Provider evidence requires the protected-main refresh chain.");
+function normalizeRefreshChain(values, pullRequest, claimHead) {
+  if (!Array.isArray(values)) throw new Error("Provider refresh chain must be an array.");
+  if (values.length === 0) {
+    if (claimHead.sha !== pullRequest.headSha || claimHead.treeSha !== pullRequest.headTreeSha) {
+      throw new Error("A direct merge requires the reviewed claim head to equal the pull-request head.");
+    }
+    return Object.freeze([]);
   }
   const chain = values.map((value, index) => {
     requireObject(value, `Refresh chain item ${index}`);
@@ -465,7 +469,7 @@ function assertSourceJoins({ claim, provider, local }) {
     }
     previous = refresh.sha;
   }
-  const lastMainParent = provider.refreshChain.at(-1).parents[1];
+  const lastMainParent = provider.refreshChain.at(-1)?.parents[1] ?? claim.canonicalBaseRevision;
   if (provider.mergeCommitParents[0] !== lastMainParent
     || provider.mergeChangedPaths.some(path => !writeSetCoversPath(claim.declaredWriteScope, path))) {
     throw new Error("Provider merge topology or changed paths escape the reviewed claim.");

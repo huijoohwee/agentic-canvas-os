@@ -10,6 +10,7 @@ import {
   createMergedDormantClaimReconciliationIntentStore,
   createGitHubReader,
   createRepositoryMergedDormantClaimCloudActions,
+  mergedDormantReconciliationCheckedRevisions,
   readCompleteGitHubChangedPaths,
   readCompleteGitHubCheckRuns,
   readCompleteGitHubCommitPaths,
@@ -176,6 +177,17 @@ test("default GitHub reader pins the current REST version header", async () => {
   assert.equal(invocation.command, "gh");
   assert.ok(invocation.argumentsList.includes("X-GitHub-Api-Version: 2026-03-10"));
   assert.equal(invocation.options.cwd, "/preserved/source");
+});
+
+test("provider check revisions support a direct merge without a refresh commit", () => {
+  assert.deepEqual(
+    mergedDormantReconciliationCheckedRevisions(sha("a"), [], sha("b")),
+    [sha("a"), sha("b")],
+  );
+  assert.deepEqual(
+    mergedDormantReconciliationCheckedRevisions(sha("a"), [{ sha: sha("c") }], sha("b")),
+    [sha("a"), sha("c"), sha("b")],
+  );
 });
 
 test("merged PR evidence recovers a null REST merge SHA from one complete merge event", async () => {

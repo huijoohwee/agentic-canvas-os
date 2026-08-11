@@ -21,6 +21,12 @@ import {
   requireChangedPathsWithinScope,
 } from "./expired-committed-heartbeat-evidence.mjs";
 import {
+  assertPullRequestBodyWithinGitHubLimit,
+  assertSameCloudSubject,
+  GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
+  reconcileHeartbeatManifestProjection,
+} from "./expired-committed-heartbeat-contract.mjs";
+import {
   assertProtectedMainPathEquivalence,
   fetchProtectedMain,
 } from "./protected-main-path-equivalence-lib.mjs";
@@ -34,9 +40,12 @@ import {
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 
-export const EXPIRED_COMMITTED_HEARTBEAT_RESULT_SCHEMA =
-  "agentic-expired-committed-heartbeat-result/v1";
-export const GITHUB_PULL_REQUEST_BODY_MAX_BYTES = 65_536;
+export const EXPIRED_COMMITTED_HEARTBEAT_RESULT_SCHEMA = "agentic-expired-committed-heartbeat-result/v1";
+export {
+  assertPullRequestBodyWithinGitHubLimit,
+  GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
+  reconcileHeartbeatManifestProjection,
+};
 
 export {
   captureExpiredCommittedHeartbeatSnapshot,
@@ -269,37 +278,6 @@ export function recoverExpiredCommittedHeartbeat({
     headSha: before.headSha,
     mutationAuthorityReceipt,
     replayed: false,
-  });
-}
-
-export function assertPullRequestBodyWithinGitHubLimit(body) {
-  const byteLength = Buffer.byteLength(String(body || ""), "utf8");
-  if (byteLength > GITHUB_PULL_REQUEST_BODY_MAX_BYTES) {
-    throw new Error(
-      `Expired committed recovery pull-request body requires ${byteLength} bytes and exceeds the ${GITHUB_PULL_REQUEST_BODY_MAX_BYTES}-byte GitHub limit before local CAS.`,
-    );
-  }
-  return byteLength;
-}
-
-export function reconcileHeartbeatManifestProjection({
-  source,
-  renewed,
-  admittedManifestDigest,
-}) {
-  if (renewed?.manifestDigest === source?.manifestDigest) {
-    return renewed;
-  }
-  const transportManifestDigest = digestValue({
-    declaredWriteSet: renewed?.cloudDeclaredWriteScope,
-    writeSetDigest: renewed?.writeSetDigest,
-  });
-  if (renewed?.manifestDigest !== transportManifestDigest) {
-    return renewed;
-  }
-  return Object.freeze({
-    ...renewed,
-    manifestDigest: admittedManifestDigest,
   });
 }
 
@@ -617,36 +595,5 @@ function assertRecoveredLocalState({
         "Recovered published remote prefix drifted before PR projection.",
       );
     }
-  }
-}
-
-function assertSameCloudSubject({ source, renewed, lease, now }) {
-  const immutableFields = [
-    "schema",
-    "provider",
-    "ledgerRepository",
-    "targetRepository",
-    "claimId",
-    "canonicalBaseSha",
-    "laneRevision",
-    "writeSetDigest",
-    "deviceId",
-    "sessionId",
-    "reviewRequestId",
-    "leaseEpoch",
-    "state",
-    "manifestDigest",
-  ];
-  if (
-    !renewed ||
-    immutableFields.some(field => renewed[field] !== source[field]) ||
-    JSON.stringify(renewed.cloudDeclaredWriteScope) !==
-      JSON.stringify(source.cloudDeclaredWriteScope) ||
-    renewed.state !== "active" ||
-    renewed.laneRevision !== lease.fenceSha ||
-    renewed.transitionCounter !== source.transitionCounter + 1 ||
-    Date.parse(renewed.expiresAt) <= now.getTime()
-  ) {
-    throw new Error("Cloud heartbeat changed the expired lease claim subject.");
   }
 }

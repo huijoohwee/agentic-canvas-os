@@ -54,6 +54,10 @@ if (!pull) {
 }
 
 const current = awaitMergeability(pull.number);
+if (!autoDeliveryOnly && !isLegacyAutomergePullRequest(current, repo)) {
+  console.log("No eligible automerge PR needs synchronization.");
+  process.exit(0);
+}
 const number = current.number;
 const headSha = current.head.sha;
 const headRef = current.head.ref;
@@ -102,7 +106,12 @@ function isLegacyAutomergePullRequest(candidate, repository) {
   return !candidate.draft
     && candidate.head?.repo?.full_name === repository
     && candidate.labels?.some(label => label.name === "automerge")
-    && !candidate.labels?.some(label => label.name === "automerge/conflict");
+    && !candidate.labels?.some(label => label.name === "automerge/conflict")
+    && !hasReservedWriterLeaseMarker(candidate.body);
+}
+
+function hasReservedWriterLeaseMarker(body) {
+  return /<!--\s*agentic-writer-lease(?:\/[^\s>]*)?/iu.test(String(body || ""));
 }
 
 function revokeAutoDelivery(pullRequest) {

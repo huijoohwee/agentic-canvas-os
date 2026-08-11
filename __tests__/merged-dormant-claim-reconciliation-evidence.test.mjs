@@ -65,6 +65,21 @@ test("rejects authored refresh bytes, malformed squash topology, escaped paths, 
   }
 });
 
+test("accepts only an exact reviewed-head squash when no refresh commit exists", () => {
+  const direct = directMergeFixture();
+  const evidence = buildMergedDormantClaimReconciliationSourceEvidence(direct);
+  assert.deepEqual(evidence.provider.refreshChain, []);
+  for (const corrupt of [
+    raw => { raw.provider.pullRequest.headSha = sha("different-head"); },
+    raw => { raw.provider.pullRequest.headTreeSha = sha("different-tree"); },
+    raw => { raw.provider.mergeCommitParents = [sha("different-base")]; },
+  ]) {
+    const raw = directMergeFixture();
+    corrupt(raw);
+    assert.throws(() => buildMergedDormantClaimReconciliationSourceEvidence(raw));
+  }
+});
+
 test("classifies exact predecessors pending and keeps earlier evidence stable after later transitions", () => {
   const plan = buildMergedDormantClaimReconciliationPlan(
     buildMergedDormantClaimReconciliationSourceEvidence(sourceFixture()),
@@ -234,6 +249,20 @@ function sourceFixture() {
       },
     },
   };
+}
+
+function directMergeFixture() {
+  const raw = sourceFixture();
+  raw.provider.pullRequest.headSha = raw.provider.claimHead.sha;
+  raw.provider.pullRequest.headTreeSha = raw.provider.claimHead.treeSha;
+  raw.provider.pullRequest.mergeCommitTreeSha = raw.provider.claimHead.treeSha;
+  raw.provider.refreshChain = [];
+  raw.provider.mergeCommitParents = [raw.claim.canonicalBaseRevision];
+  raw.provider.checkRuns = [
+    checkRun(raw.provider.claimHead.sha, "SUCCESS"),
+    checkRun(raw.provider.pullRequest.mergeCommitSha, "SUCCESS"),
+  ];
+  return raw;
 }
 
 function checkRun(headSha, conclusion) {

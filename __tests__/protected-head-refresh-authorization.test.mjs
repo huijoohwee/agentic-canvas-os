@@ -41,6 +41,13 @@ test("workflow encodes recovery without exceeding the 25-input provider cap", ()
     workflow,
     /recover-absent-merged-authorization:\{0\}/u,
   );
+  const adapter = readFileSync(new URL(
+    "../scripts/protected-head-refresh-github-adapter.mjs",
+    import.meta.url,
+  ), "utf8");
+  assert.match(adapter, /allowRetiredIntegratedPreserved: true/u);
+  assert.match(adapter, /integrationReceiptDigest: projection\.integration_receipt_digest/u);
+  assert.match(adapter, /transitionCounter: projection\.transition_counter/u);
 });
 
 test("absent merged recovery token binds exact operation and human actor", () => {

@@ -165,6 +165,11 @@ export function runProtectedHeadRefresh({
           reviewRequestId: projection.review_request_id,
           requireStatus: "integrated-preserved",
           allowProtectedMainRefresh: true,
+          ...(pullRequest.merged && allowAbsentMergedAuthorizationRecovery ? {
+            allowRetiredIntegratedPreserved: true,
+            integrationReceiptDigest: projection.integration_receipt_digest,
+            transitionCounter: projection.transition_counter,
+          } : {}),
         },
       });
       requireProtectedHeadRefreshCloudResult({

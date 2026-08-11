@@ -507,11 +507,19 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
   const evaluatedAt = instant(evaluationTime, "evaluationTime");
   const failures = validateLedger(ledger);
   const claimId = request.claimId ? digest(request.claimId, "claimId") : null;
-  const claim = claimId ? hydrateWithLedger(ledger, findClaimEntry(ledger, claimId), evaluatedAt) : null;
+  const currentClaim = claimId
+    ? hydrateWithLedger(ledger, findClaimEntry(ledger, claimId), evaluatedAt)
+    : null;
+  const historicalClaim = recoverRetiredIntegratedClaim({
+    ledger,
+    currentClaim,
+    request,
+  });
+  const claim = historicalClaim || currentClaim;
   const findings = [];
   if (failures.length > 0) {
     findings.push(collaborationFinding("runtime-readiness-unproven", ledger, claim, request, null, "repair-ledger"));
-  } else if (!claim || TERMINAL_STATES.has(claim.state) || claim.state === "waiting-successor") {
+  } else if (!claim || (!historicalClaim && TERMINAL_STATES.has(claim.state)) || claim.state === "waiting-successor") {
     findings.push(collaborationFinding("stale-collaboration-fence", ledger, claim, request, null, "obtain-current-claim"));
   } else {
     const stale = [
@@ -524,7 +532,8 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
       ["fenceRevision", claim.fenceRevision],
       ["ledgerRevision", claim.ledgerRevision],
     ].some(([field, observed]) => request[field] !== undefined && request[field] !== observed);
-    if (stale || claim.ledgerRevision !== findClaimEntry(ledger, claim.claimId)?.digest) {
+    if (stale || (!historicalClaim
+      && claim.ledgerRevision !== findClaimEntry(ledger, claim.claimId)?.digest)) {
       findings.push(collaborationFinding("stale-collaboration-fence", ledger, claim, request, claim.evidenceDigest, "refresh-cloud-fence"));
     }
     const collisions = currentClaims(ledger, evaluatedAt).filter((other) => (
@@ -581,4 +590,36 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
     findingCounts,
   };
   return { ...draft, receiptDigest: digestValue(draft) };
+}
+
+function recoverRetiredIntegratedClaim({ ledger, currentClaim, request }) {
+  if (request.allowRetiredIntegratedPreserved !== true) return null;
+  if (
+    !currentClaim
+    || currentClaim.state !== "retired"
+    || request.requiredState !== "integrated-preserved"
+    || !request.fenceRevision
+    || !request.integrationReceiptDigest
+    || !Number.isSafeInteger(request.transitionCounter)
+  ) return null;
+  const lineage = ledger.entries.filter(entry => entry.claimId === currentClaim.claimId);
+  const historicalIndex = lineage.findIndex(
+    entry => entry.claimDigest === request.fenceRevision,
+  );
+  if (historicalIndex < 0 || lineage.length !== historicalIndex + 2) return null;
+  const historical = hydrateWithLedger(
+    ledger,
+    lineage[historicalIndex],
+    null,
+  );
+  const retirement = lineage.at(-1);
+  if (
+    historical.state !== "integrated-preserved"
+    || historical.transitionCounter !== request.transitionCounter
+    || historical.integrationReceiptDigest !== request.integrationReceiptDigest
+    || retirement.action !== "retire"
+    || currentClaim.transitionCounter !== request.transitionCounter + 1
+    || currentClaim.integrationReceiptDigest !== request.integrationReceiptDigest
+  ) return null;
+  return historical;
 }

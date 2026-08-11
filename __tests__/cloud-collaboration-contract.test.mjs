@@ -12,6 +12,7 @@ import {
   listCurrentClaims,
   normalizeWriteSet,
   validateLedger,
+  verifyCloudClaim,
   writeSetsOverlap,
 } from "../scripts/cloud-collaboration-contract.mjs";
 
@@ -370,6 +371,77 @@ test("review identity is immutable; integrate preserves; retire joins the typed 
   });
   assert.equal(retired.claim.state, "retired");
   assert.equal(retired.receipt.schema, "agentic-collaboration-retirement-receipt/v1");
+});
+
+test("verification can recover one exact integrated entry followed by its valid retirement", () => {
+  const claimed = claim(createEmptyLedger("ledger:repository"), { expiresAt: T4 });
+  const projected = continueClaim(claimed.ledger, claimed.claim, {
+    mode: "projection",
+    laneRevision: revision("historical-candidate"),
+    reviewRequestId: "review:historical",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review",
+    time: T2,
+    laneRevision: projected.claim.laneRevision,
+    reviewRequestId: projected.claim.reviewRequestId,
+    focusedEvidenceDigest: evidence("historical-focused"),
+  });
+  const integrated = applyCloudTransition({
+    ledger: reviewed.ledger,
+    action: "integrate",
+    actor: owner,
+    repository,
+    evaluationTime: T3,
+    request: {
+      claimId: reviewed.claim.claimId,
+      expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      expectedLedgerDigest: reviewed.ledger.headDigest,
+      candidateRevision: reviewed.claim.laneRevision,
+      reviewRequestId: reviewed.claim.reviewRequestId,
+      focusedEvidenceDigest: reviewed.claim.evidenceDigest,
+      dependencyClosureDigest: evidence("historical-dependencies"),
+      namedChecksDigest: evidence("historical-checks"),
+      handoffEvidenceDigest: evidence("historical-handoff"),
+      operatorDecisionDigest: evidence("historical-operator"),
+      integrationIntentDigest: evidence("historical-intent"),
+      idempotencyKey: "integrate:historical",
+    },
+  });
+  const retired = retire(integrated.ledger, integrated.claim, {
+    reason: "integrated",
+    integrationReceiptDigest: integrated.receipt.receiptDigest,
+  });
+  const request = {
+    claimId: integrated.claim.claimId,
+    fenceRevision: integrated.claim.fenceRevision,
+    requiredState: "integrated-preserved",
+    allowRetiredIntegratedPreserved: true,
+    integrationReceiptDigest: integrated.receipt.receiptDigest,
+    transitionCounter: integrated.claim.transitionCounter,
+  };
+  const verified = verifyCloudClaim({
+    ledger: retired.ledger,
+    request,
+    evaluationTime: T5,
+  });
+  assert.equal(verified.ok, true);
+  assert.equal(verified.claim.state, "integrated-preserved");
+  assert.equal(verified.claimDigest, integrated.claim.fenceRevision);
+
+  for (const mutation of [
+    { allowRetiredIntegratedPreserved: false },
+    { integrationReceiptDigest: evidence("wrong-integration") },
+    { transitionCounter: integrated.claim.transitionCounter - 1 },
+  ]) {
+    const blocked = verifyCloudClaim({
+      ledger: retired.ledger,
+      request: { ...request, ...mutation },
+      evaluationTime: T5,
+    });
+    assert.equal(blocked.ok, false);
+  }
 });
 
 test("ledger validation rejects hash-consistent forged authority semantics", () => {

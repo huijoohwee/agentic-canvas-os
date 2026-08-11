@@ -333,10 +333,12 @@ function reviewUnfenced({
   if (pullRequest.isDraft) run("gh", ["pr", "ready", url]);
   const readyPullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
   requirePullRequestHead({ pullRequest: readyPullRequest, expectedHeadSha: reviewHeadSha });
-  const title = requireProtectedSquashSubject(
-    gitText(["log", "-1", "--pretty=%s"]).trim(),
-    { label: "Reviewed commit subject" },
-  );
+  const title = requireReviewedLaneSubject({
+    lease,
+    headSha: reviewHeadSha,
+    subject: gitText(["log", "-1", "--pretty=%s"]).trim(),
+    label: "Reviewed commit subject",
+  });
   const readyLease = leaseStore.release({ sessionId, branch, status: "review_ready" });
   run("gh", ["pr", "edit", url, "--title", title, "--body", updateWriterLeasePullRequestBody(
     readyPullRequest.body,
@@ -805,10 +807,12 @@ function withDeviceReviewedLaneFence({
     return action();
   }
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
-  const subject = requireProtectedSquashSubject(
-    gitText(["log", "-1", "--pretty=%s"]).trim(),
-    { label: subjectLabel },
-  );
+  const subject = requireReviewedLaneSubject({
+    lease,
+    headSha,
+    subject: gitText(["log", "-1", "--pretty=%s"]).trim(),
+    label: subjectLabel,
+  });
   const expectedLeaseDigest = digestValue(lease);
   return withReviewedLaneEntrypointFence({
     leaseStore,
@@ -826,6 +830,22 @@ function withDeviceReviewedLaneFence({
     expectedLeaseDigest,
     expectedClaimId: lease.cloudAuthority?.claimId || null,
   }, action);
+}
+
+function requireReviewedLaneSubject({ lease, headSha, subject, label }) {
+  try {
+    return requireProtectedSquashSubject(subject, { label });
+  } catch (error) {
+    const coordinationSubject = `chore(coordination): claim ${lease?.scope} lease ${lease?.epoch}`;
+    const plannedFenceRecovery = (
+      lease?.status === "active"
+      && ["planned", "admitted"].includes(lease?.admission?.status)
+      && lease?.fenceSha === headSha
+      && subject === coordinationSubject
+    );
+    if (!plannedFenceRecovery) throw error;
+    return "chore(coordination): recover planned admission";
+  }
 }
 
 function requireTaskBranch(branch, action) {

@@ -183,6 +183,13 @@ test("GitHub provider proves protected main through exact public REST projection
   assert.equal(calls.flat().includes("graphql"), false);
 });
 
+test("GitHub provider accepts exact protection after main advances beyond the historical target", () => {
+  const { provider } = branchProtectionHarness({
+    mainBranch: protectedMainBranch({ sha: mainOne }),
+  });
+  assert.doesNotThrow(() => provider.verifyBranchProtection());
+});
+
 test("GitHub provider rejects classic branch-protection projection drift", async t => {
   const exactChecks = () => classicProtectionContexts.map(context => ({
     context,
@@ -190,7 +197,6 @@ test("GitHub provider rejects classic branch-protection projection drift", async
   }));
   const cases = [
     ["wrong branch name", protectedMainBranch({ name: "trunk" })],
-    ["stale protected-main SHA", protectedMainBranch({ sha: mainOne })],
     ["unprotected branch", protectedMainBranch({ isProtected: false })],
     ["disabled protection", protectedMainBranch({ enabled: false })],
     ["non-universal enforcement", protectedMainBranch({ enforcement: "non_admins" })],
@@ -549,6 +555,7 @@ test("CI completion projects exact source checks into the candidate rollup befor
     check_suite: { id: workflow.check_suite_id },
   }));
   const cloudId = 9_000;
+  let rollupAvailable = true;
   const checks = [{ id: cloudId, name: "cloud-collaboration", head_sha: candidate,
     external_id: `agentic-protected-head-refresh:${projection.operation_id}`,
     status: "in_progress", conclusion: null,
@@ -576,11 +583,11 @@ test("CI completion projects exact source checks into the candidate rollup befor
     ghJson: args => {
       const endpoint = args.find(value => value.startsWith(`repos/${repository}/`));
       if (endpoint === `repos/${repository}/check-suites/${workflow.check_suite_id}/check-runs`)
-        return { total_count: source.length, check_runs: source };
+        return { total_count: source.length + checks.length, check_runs: [...source, ...checks] };
       if (endpoint?.includes("/check-runs/")) return checks.find(check => endpoint.endsWith(`/${check.id}`));
-      return { data: { repository: { object: { statusCheckRollup: { contexts: {
+      return { data: { repository: { object: { statusCheckRollup: rollupAvailable ? { contexts: {
         totalCount: checks.length, nodes: checks.map(check => ({ __typename: "CheckRun",
-          databaseId: check.id })) } } } } } };
+          databaseId: check.id })) } } : null } } } };
     },
     requiredEnv: () => "unused", sleepSeconds: () => {},
   });
@@ -594,6 +601,13 @@ test("CI completion projects exact source checks into the candidate rollup befor
   const mutationCount = mutations.length;
   provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci });
   assert.equal(mutations.length, mutationCount);
+  rollupAvailable = false;
+  assert.throws(() => provider.completeCloudCheck({ projection, candidateSha: candidate,
+    cloudCheck: { checkRunIds: [cloudId] }, ci }), /rollup is malformed/u);
+  assert.equal(provider.completeCloudCheck({ projection: Object.freeze({ ...projection,
+    allowAbsentMergedAuthorizationRecovery: true }), candidateSha: candidate,
+    cloudCheck: { checkRunIds: [cloudId] }, ci }).status, "complete");
+  rollupAvailable = true;
   checks[1].details_url = "https://github.com/foreign/repo/runs/2001";
   assert.throws(() => provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci }), /drifted/u);
 });

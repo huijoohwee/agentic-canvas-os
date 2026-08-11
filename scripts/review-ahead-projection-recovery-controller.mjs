@@ -65,7 +65,7 @@ export function createReviewAheadProjectionController({
         branch,
         planDigest: plan.planDigest,
         sourceClaimId: before.evidence.claimId,
-        successorClaimId: reclaimed.authority.claimId,
+        successorClaimId: reclaimed.successorClaimId,
         projectionReceiptDigest: projection.receiptDigest,
         reclaimResultDigest: digestValue(reclaimed),
         sourceBytes: "preserved",

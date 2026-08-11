@@ -15,6 +15,8 @@ import {
   advanceDeliveryAuthorizedBaseRecoveryIntent,
   createDeliveryAuthorizedBaseRecoveryIntent,
 } from "../scripts/delivery-authorized-base-recovery-intent.mjs";
+import { requireAuthorizedDeliveryCloudPreimage }
+  from "../scripts/delivery-authorized-base-recovery-repository-adapter.mjs";
 
 const sha = character => character.repeat(40);
 const digest = character => character.repeat(64);
@@ -51,6 +53,9 @@ function evidence(overrides = {}) {
     deliveryBaseSha: sha("c"),
     fenceSha: sha("b"),
     deliveryHeadSha: sha("d"),
+    protectedRefreshReceiptDigest: null,
+    protectedRefreshBaseSha: null,
+    protectedRefreshCount: 0,
     leaseStatus: "active",
     leaseEpoch: 234,
     leaseDigest: digest("1"),
@@ -78,7 +83,7 @@ function evidence(overrides = {}) {
     claimScopeReserved: true,
     claimLeaseEpoch: 18,
     claimTransitionCounter: 9,
-    claimCanonicalBaseSha: sha("c"),
+    claimCanonicalBaseSha: sha("a"),
     claimLaneRevision: sha("d"),
     claimReviewRequestId: "github-pull-request:PR_368",
     claimWorkItemId: "work-item:delivery-peer-root-ledger-projection",
@@ -118,6 +123,48 @@ test("plan binds exact identities and one authorization", () => {
       `${plan.exactAuthorization} `,
     ),
     /does not match/u,
+  );
+});
+
+test("plan admits active and delivery source projections only", () => {
+  assert.equal(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({ leaseStatus: "active" })).status,
+    "planned",
+  );
+  assert.equal(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({ leaseStatus: "delivery" })).status,
+    "planned",
+  );
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({ leaseStatus: "review_ready" })).findings,
+    ["local-lease-state-not-recoverable"],
+  );
+});
+
+test("plan binds an exact protected-main refresh above the delivered head", () => {
+  const refreshed = evidence({
+    headSha: sha("e"),
+    remoteHeadSha: sha("e"),
+    pullRequestHeadSha: sha("e"),
+    protectedRefreshReceiptDigest: digest("d"),
+    protectedRefreshBaseSha: sha("c"),
+    protectedRefreshCount: 3,
+  });
+  assert.equal(buildDeliveryAuthorizedBaseRecoveryPlan(refreshed).status, "planned");
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan({
+      ...refreshed,
+      protectedRefreshBaseSha: sha("b"),
+    }).findings,
+    ["protected-refresh-proof-invalid"],
+  );
+  assert.deepEqual(
+    buildDeliveryAuthorizedBaseRecoveryPlan(evidence({
+      protectedRefreshReceiptDigest: digest("d"),
+      protectedRefreshBaseSha: sha("c"),
+      protectedRefreshCount: 1,
+    })).findings,
+    ["unexpected-protected-refresh-proof"],
   );
 });
 
@@ -277,14 +324,54 @@ test("stale authorization reaches no protected effect", async () => {
   assert.equal(fake.getIntent(), null);
 });
 
+test("cloud replay permits only disjoint global-ledger movement", () => {
+  const plan = planned();
+  const source = {
+    claimId: plan.evidence.claimId, fenceRevision: plan.evidence.claimDigest,
+    transitionDigest: plan.evidence.claimLedgerRevision,
+    transitionCounter: plan.evidence.claimTransitionCounter,
+    leaseEpoch: plan.evidence.claimLeaseEpoch, actorId: plan.evidence.claimActorId,
+    repositoryId: plan.evidence.claimRepositoryId, workItemId: plan.evidence.claimWorkItemId,
+    canonicalBaseRevision: plan.evidence.claimCanonicalBaseSha,
+    laneRevision: plan.evidence.claimLaneRevision, writeSetDigest: plan.evidence.writeSetDigest,
+    reviewRequestId: plan.evidence.claimReviewRequestId,
+    integrationReceiptDigest: plan.evidence.integrationReceiptDigest,
+    state: "dormant-preserved", scopeReserved: true, writeAuthority: false,
+  };
+  const disjoint = { claimId: digest("d"), scopeReserved: true,
+    declaredWriteScope: ["path:docs/disjoint.md", "semantic:disjoint"] };
+  assert.equal(requireAuthorizedDeliveryCloudPreimage(plan, {
+    ledgerDigest: digest("e"), claims: [source, disjoint],
+  }), source);
+  assert.throws(() => requireAuthorizedDeliveryCloudPreimage(plan, {
+    claims: [{ ...source, fenceRevision: digest("e") }],
+  }), /authorized cloud preimage drift/u);
+  assert.throws(() => requireAuthorizedDeliveryCloudPreimage(plan, {
+    claims: [source, { ...disjoint, declaredWriteScope: declaredWriteSet }],
+  }), /authorized cloud preimage drift/u);
+});
+
 test("repository adapter preserves CAS and no-force invariants", () => {
   const source = readFileSync(
     new URL("../scripts/delivery-authorized-base-recovery-repository-adapter.mjs", import.meta.url),
     "utf8",
   );
   assert.match(source, /expectedLedgerDigest/u);
+  assert.match(source, /requireAuthorizedDeliveryCloudPreimage\(plan, before\)/u);
+  assert.match(source, /source\.fenceRevision !== plan\.evidence\.claimDigest/u);
+  assert.match(source, /source\.transitionDigest !== plan\.evidence\.claimLedgerRevision/u);
+  assert.match(source, /writeSetsOverlap\(item\.declaredWriteScope, plan\.evidence\.declaredWriteSet\)/u);
+  assert.doesNotMatch(source, /before\.ledgerDigest !== plan\.evidence\.ledgerDigest/u);
+  assert.doesNotMatch(source, /digestValue\(before\.claims\) !== plan\.evidence\.claimInventoryDigest/u);
   assert.match(source, /casWriterLeaseProjection/u);
   assert.match(source, /predecessorClaimId/u);
+  assert.match(source, /RECOVERABLE_SOURCE_STATUSES/u);
+  assert.match(source, /const canonicalBaseSha = protectedSource\(plan\)/u);
+  assert.match(source, /baseSha: authority\.canonicalBaseSha/u);
+  assert.match(source, /merge-base", "--is-ancestor", plan\.evidence\.protectedMainSha, selected/u);
+  assert.match(source, /writeSetsOverlap\(changed, plan\.evidence\.declaredWriteSet\)/u);
+  assert.match(source, /pull\.baseRefOid !== plan\.evidence\.deliveryBaseSha/u);
+  assert.doesNotMatch(source, /canonicalBaseSha: plan\.evidence\.(?:deliveryBaseSha|protectedMainSha)/u);
   assert.match(source, /openSync\(lockPath, "wx"/u);
   assert.doesNotMatch(source, /--force|force-with-lease/u);
 });

@@ -11,9 +11,12 @@ import {
   createRepositoryActiveOwnedDirtRecoveryAdapter,
   captureProtectedMainAdvance,
   invokeActiveOwnedDirtRecoveryContinue,
+  requireLaneFence,
   requireProtectedMainEquivalent,
   runActiveOwnedDirtRecovery,
 } from "../scripts/active-owned-dirt-recovery-controller.mjs";
+import { assertActiveOwnedDirtPlanSource }
+  from "../scripts/active-owned-dirt-recovery-registry.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 
 const CLI = fileURLToPath(new URL("../scripts/active-owned-dirt-recovery.mjs", import.meta.url));
@@ -118,6 +121,62 @@ test("protected-main evidence admits only disjoint descendant advancement", () =
       return gitText(args);
     },
   }), /not a descendant/);
+});
+
+test("lane fence revalidates protected-main advancement with its repository Git adapter", () => {
+  const source = sourceFixture();
+  const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });
+  const current = {
+    source: {
+      headSha: plan.sourceFenceSha,
+      remoteHeadSha: plan.sourceFenceSha,
+      pullRequest: {
+        isDraft: true,
+        headRefOid: plan.sourceFenceSha,
+        baseRefOid: plan.sourceProtectedMainAdvance.pullRequestBaseSha,
+      },
+      protectedMainAdvance: plan.sourceProtectedMainAdvance,
+    },
+  };
+  assert.doesNotThrow(() => requireLaneFence(current, plan, () => ""));
+});
+
+test("plan replay permits only disjoint global-ledger movement", () => {
+  const source = sourceFixture();
+  source.leaseDigest = digestValue(source.lease);
+  const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });
+  const disjointLedgerMovement = {
+    source: {
+      ...source,
+      ledgerRevision: "e".repeat(40),
+      ledgerDigest: "f".repeat(64),
+    },
+  };
+  assert.doesNotThrow(() => assertActiveOwnedDirtPlanSource({
+    plan,
+    current: disjointLedgerMovement,
+  }));
+  assert.throws(() => assertActiveOwnedDirtPlanSource({
+    plan,
+    current: {
+      source: {
+        ...disjointLedgerMovement.source,
+        claim: { ...source.claim, fenceRevision: "0".repeat(64) },
+      },
+    },
+  }), /projection drifted/u);
+  assert.throws(() => assertActiveOwnedDirtPlanSource({
+    plan,
+    current: {
+      source: {
+        ...disjointLedgerMovement.source,
+        overlappingClaims: [{
+          claimId: "1".repeat(64),
+          declaredWriteScope: source.claim.declaredWriteScope,
+        }],
+      },
+    },
+  }), /projection drifted/u);
 });
 
 test("controller orders durable snapshot before cloud and replays every phase once", async () => {

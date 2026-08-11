@@ -10,8 +10,8 @@ status: "focused-tested"
 authority: "additive registered-worktree admission while preserving every existing lane"
 runtime_scope: "read-only lane planning, operation-derived cloud-authority verification, candidate-only device:start provisioning, and receipt-joined authoring admission"
 runtime_claim: "the bounded source-lane path is executable and focused-tested; full shared-coordination-state and independently advancing peer receipt support remain fail-closed and unevaluated"
-runtime_owner: "../scripts/scoped-lane-admission-lib.mjs; ../scripts/scoped-lane-admission-state.mjs; ../scripts/scoped-lane-cloud-authority.mjs; ../scripts/scoped-lane-cloud-reconciliation.mjs; ../scripts/scoped-lane-admission.mjs; ../scripts/task-worktree-provision.mjs; ../scripts/device-branch.mjs; ../scripts/device-start-lib.mjs; ../scripts/device-branch-lib.mjs; ../scripts/device-branch-ownership-lib.mjs; ../scripts/device-resume-lib.mjs; ../scripts/device-resume-replay-lib.mjs; ../scripts/device-park-lib.mjs; ../scripts/writer-lease-lib.mjs"
-runtime_proof: "../__tests__/scoped-lane-admission.test.mjs; ../__tests__/scoped-lane-cloud-authority.test.mjs; ../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/device-start.test.mjs; ../__tests__/device-branch-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-review.test.mjs; ../__tests__/task-worktree-provision.test.mjs; ../__tests__/writer-lease-lib.test.mjs"
+runtime_owner: "../scripts/scoped-lane-admission-lib.mjs; ../scripts/scoped-lane-admission-state.mjs; ../scripts/scoped-lane-cloud-authority.mjs; ../scripts/scoped-lane-cloud-reconciliation.mjs; ../scripts/scoped-lane-admission.mjs; ../scripts/scoped-lane-admission-cli.mjs; ../scripts/scoped-lane-bootstrap-authorization.mjs; ../scripts/scoped-lane-bootstrap-maintenance.mjs; ../scripts/task-worktree-provision.mjs; ../scripts/device-branch.mjs; ../scripts/device-start-lib.mjs; ../scripts/device-branch-lib.mjs; ../scripts/device-branch-ownership-lib.mjs; ../scripts/device-resume-lib.mjs; ../scripts/device-resume-replay-lib.mjs; ../scripts/device-park-lib.mjs; ../scripts/writer-lease-lib.mjs"
+runtime_proof: "../__tests__/scoped-lane-admission.test.mjs; ../__tests__/scoped-lane-cloud-authority.test.mjs; ../__tests__/scoped-lane-bootstrap-admission.test.mjs; ../__tests__/scoped-lane-clean-preservation-bootstrap.test.mjs; ../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/device-start.test.mjs; ../__tests__/device-branch-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-review.test.mjs; ../__tests__/task-worktree-provision.test.mjs; ../__tests__/writer-lease-lib.test.mjs"
 report_schema: "schemas/scoped-lane-admission-report.v1.schema.json"
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
 ---
@@ -147,6 +147,25 @@ heartbeat, claim, provider, Git, or ancestry drift blocks the final preservation
 rerun. This classification only permits preservation of an unrelated lane. It
 grants no authority to author, resume, review, merge, release, reconcile, run,
 or deploy the peer.
+
+## Root-Source Bootstrap Maintenance
+
+Root-source bootstrap remains an exceptional, candidate-bound admission path.
+It requires one registered maintenance source that is either:
+
+- dirty, unleased, and limited to its exact declared maintenance paths; or
+- clean, unchanged, and owned by exactly one cryptographically valid
+  `retired-preserved` lease whose provider-first retirement receipt is joined
+  into the maintenance proof.
+
+An ordinary clean worktree, a clean lane with changed paths, a leased dirty
+lane, a terminal receipt with a matching current cloud claim, or any proof with
+path, branch, head, manifest, content, state, or receipt drift remains
+ineligible. The clean path does not manufacture maintenance dirt and does not
+reactivate, rewrite, clean, or remove the retired source. It uses that immutable
+source only as the already-authorized preservation owner for the candidate-bound
+bootstrap decision. See
+[`CLEAN-PRESERVED-BOOTSTRAP.md`](./CLEAN-PRESERVED-BOOTSTRAP.md).
 
 ## Read-Only Commands
 

@@ -66,7 +66,19 @@ export function createProtectedHeadRefreshControllerState({
   };
   const mergedReplay = pull => {
     verifyChain(pull);
+    verifyMergedCommit({
+      mergeCommitSha: pull.mergeCommitSha,
+      candidateSha: pull.headSha,
+      targetMainSha: projection.target_main_sha,
+      commitTitle: pull.headSha === projection.delivered_head_sha
+        ? projection.auto_merge_commit_title
+        : projection.candidate_auto_merge_commit_title,
+      commitMessageJson: pull.headSha === projection.delivered_head_sha
+        ? projection.auto_merge_commit_message
+        : projection.candidate_auto_merge_commit_message,
+    });
     let cloudCheckRunIds;
+    let mutated = false;
     if (pull.headSha !== projection.delivered_head_sha) {
       if (pull.baseSha !== projection.target_main_sha) {
         throw new Error("Protected-head refresh merged candidate base drifted from target main.");
@@ -82,7 +94,85 @@ export function createProtectedHeadRefreshControllerState({
           "Protected-head refresh merged head is not the deterministic operation candidate.",
         );
       }
-      const cloud = readCloudReceipt({ candidateSha: pull.headSha, create: false });
+      let cloud = readCloudReceipt({ candidateSha: pull.headSha, create: false });
+      const verifyRecoveryEvidence = confirmed => {
+        verifyCandidateWorkflow({
+          candidateSha: candidate.candidateSha,
+          targetMainSha: projection.target_main_sha,
+          projection,
+        });
+        const ci = requireCiReceipt(reconcileCandidateCi({
+          projection,
+          candidateSha: candidate.candidateSha,
+          pullRequest: confirmed,
+        }));
+        verifyBranchProtection({ projection, candidateSha: candidate.candidateSha });
+        verifyNoSynchronizeRun({ projection, candidateSha: candidate.candidateSha });
+        verifyCloudAuthority({ projection, pullRequest: confirmed });
+        return ci;
+      };
+      if (
+        cloud.status === "absent"
+        && projection.allowAbsentMergedAuthorizationRecovery === true
+      ) {
+        verifyRecoveryEvidence(pull);
+        cloud = requireCloudReceipt(readCloudReceipt({
+          candidateSha: candidate.candidateSha,
+          create: true,
+        }));
+        if (cloud.status !== "pending") {
+          throw new Error(
+            "Protected-head refresh absent merged authorization gate was not created exactly.",
+          );
+        }
+        mutated = true;
+      }
+      if (cloud.status === "pending") {
+        let ci = verifyRecoveryEvidence(pull);
+
+        const confirmed = readSettled({ autoMerge: "armed" });
+        if (
+          !confirmed.merged
+          || !sameProviderIdentity(confirmed, pull)
+          || confirmed.mergeCommitSha !== pull.mergeCommitSha
+        ) {
+          throw new Error(
+            "Protected-head refresh merged candidate identity drifted before authorization recovery.",
+          );
+        }
+        verifyMergedCommit({
+          mergeCommitSha: confirmed.mergeCommitSha,
+          candidateSha: confirmed.headSha,
+          targetMainSha: projection.target_main_sha,
+          commitTitle: projection.candidate_auto_merge_commit_title,
+          commitMessageJson: projection.candidate_auto_merge_commit_message,
+        });
+        ci = verifyRecoveryEvidence(confirmed);
+        const pending = readCloudReceipt({ candidateSha: pull.headSha, create: false });
+        if (
+          pending.status !== "pending"
+          || pending.checkRunIds.join(",") !== cloud.checkRunIds.join(",")
+        ) {
+          throw new Error(
+            "Protected-head refresh merged pending gate drifted before authorization recovery.",
+          );
+        }
+        cloud = requireCloudReceipt(completeCloudCheck({
+          projection,
+          candidateSha: candidate.candidateSha,
+          cloudCheck: pending,
+          ci,
+        }));
+        if (
+          cloud.status !== "complete"
+          || cloud.checkRunIds.join(",") !== pending.checkRunIds.join(",")
+        ) {
+          throw new Error(
+            "Protected-head refresh merged owned cloud checks did not complete exactly.",
+          );
+        }
+        mutated = true;
+      }
       if (cloud.status !== "complete") {
         throw new Error(
           "Protected-head refresh candidate merged without complete owned authorization evidence.",
@@ -90,24 +180,13 @@ export function createProtectedHeadRefreshControllerState({
       }
       cloudCheckRunIds = cloud.checkRunIds;
     }
-    verifyMergedCommit({
-      mergeCommitSha: pull.mergeCommitSha,
-      candidateSha: pull.headSha,
-      targetMainSha: projection.target_main_sha,
-      commitTitle: pull.headSha === projection.delivered_head_sha
-        ? projection.auto_merge_commit_title
-        : projection.candidate_auto_merge_commit_title,
-      commitMessageJson: pull.headSha === projection.delivered_head_sha
-        ? projection.auto_merge_commit_message
-        : projection.candidate_auto_merge_commit_message,
-    });
     return Object.freeze({
       status: "merged-replay",
       pullRequestNumber: projection.pullRequestNumber,
       headSha: pull.headSha,
       mergeCommitSha: pull.mergeCommitSha,
       ...(cloudCheckRunIds ? { cloudCheckRunIds } : {}),
-      mutated: false,
+      mutated,
     });
   };
   const inspectExactCandidate = pull => {

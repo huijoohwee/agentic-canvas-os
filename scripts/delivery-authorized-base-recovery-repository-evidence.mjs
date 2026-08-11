@@ -1,5 +1,6 @@
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { DELIVERY_BASE_RECOVERY_EVIDENCE_SCHEMA } from "./delivery-authorized-base-recovery-contract.mjs";
+import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 import { parseWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
@@ -33,29 +34,37 @@ export function collectDeliveryAuthorizedBaseRecoveryEvidence({
     git(["rev-parse", "refs/remotes/origin/main"]),
     "protected main",
   );
+  const deliveryBaseSha = sha(provider.pull.baseRefOid, "delivery base");
+  const deliveredHeadSha = sha(lease.deliveryHeadSha, "delivery head");
+  const protectedRefresh = verifyProtectedMainRefreshChain({
+    expectedHeadSha: deliveredHeadSha,
+    observedHeadSha: localHeadSha,
+    gitText: git,
+    mainRef: "refs/remotes/origin/main",
+  });
+  const protectedRefreshSteps = protectedRefresh
+    ? (protectedRefresh.refreshes || [protectedRefresh])
+    : [];
+  const protectedRefreshBaseSha = protectedRefreshSteps.at(-1)?.mainParentSha || null;
   const declaredPaths = new Set(manifest.declaredWriteSet
     .filter(item => item.startsWith("path:"))
     .map(item => item.slice(5)));
-  const originalChangedPaths = changedPaths(git, lease.baseSha, localHeadSha);
-  const deliveryChangedPaths = changedPaths(git, authority.canonicalBaseSha, localHeadSha);
+  const deliveryChangedPaths = changedPaths(git, deliveryBaseSha, localHeadSha);
   const protectedMainChangedPaths = changedPaths(
     git,
-    authority.canonicalBaseSha,
+    deliveryBaseSha,
     protectedMainSha,
   );
   const protectedMainOverlapPaths = protectedMainChangedPaths
     .filter(item => declaredPaths.has(item));
-  const outsideScopeRecords = originalChangedPaths
+  const outsideScopeRecords = deliveryChangedPaths
     .filter(item => !declaredPaths.has(item))
     .map(item => ({
       path: item,
-      delivery: treeEntry(git, protectedMainSha, item),
+      delivery: treeEntry(git, deliveryBaseSha, item),
       head: treeEntry(git, localHeadSha, item),
     }));
-  const originalAuthoredPaths = originalChangedPaths.filter(item => (
-    declaredPaths.has(item)
-    || treeEntry(git, protectedMainSha, item) !== treeEntry(git, localHeadSha, item)
-  ));
+  const originalAuthoredPaths = deliveryChangedPaths;
   const marker = parseWriterLeasePullRequestBody(provider.pull.body);
   return Object.freeze({
     schema: DELIVERY_BASE_RECOVERY_EVIDENCE_SCHEMA,
@@ -77,9 +86,14 @@ export function collectDeliveryAuthorizedBaseRecoveryEvidence({
       "protected main tree",
     ),
     originalBaseSha: sha(lease.baseSha, "original base"),
-    deliveryBaseSha: sha(authority.canonicalBaseSha, "delivery base"),
+    deliveryBaseSha,
     fenceSha: sha(lease.fenceSha, "fence"),
-    deliveryHeadSha: sha(lease.deliveryHeadSha, "delivery head"),
+    deliveryHeadSha: deliveredHeadSha,
+    protectedRefreshReceiptDigest: protectedRefresh
+      ? digestValue(protectedRefresh)
+      : null,
+    protectedRefreshBaseSha,
+    protectedRefreshCount: protectedRefreshSteps.length,
     leaseStatus: text(lease.status, "lease status"),
     leaseEpoch: positiveInteger(lease.epoch, "lease epoch"),
     leaseDigest: writerLeaseDigest(lease),
@@ -123,10 +137,10 @@ export function collectDeliveryAuthorizedBaseRecoveryEvidence({
     outsideScopeEquivalenceDigest: digestValue(outsideScopeRecords),
     clean: git(["status", "--porcelain=v1", "--untracked-files=all"]) === "",
     originalBaseAncestor: isAncestor(execute, lease.baseSha, localHeadSha),
-    deliveryBaseAncestor: isAncestor(execute, authority.canonicalBaseSha, localHeadSha),
+    deliveryBaseAncestor: isAncestor(execute, deliveryBaseSha, localHeadSha),
     deliveryBaseAncestorOfProtectedMain: isAncestor(
       execute,
-      authority.canonicalBaseSha,
+      deliveryBaseSha,
       protectedMainSha,
     ),
     fenceAncestor: isAncestor(execute, lease.fenceSha, localHeadSha),

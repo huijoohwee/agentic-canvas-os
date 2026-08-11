@@ -73,12 +73,17 @@ test("renders and verifies deterministic exact two-parent candidate bytes", () =
 
 test("candidate construction freezes exact parent order, tree, identity, date, and message", () => {
   const operationId = normalizedProjection().operation_id;
+  const gitCommands = [];
+  const fixtureGitText = createCandidateGitText({ operationId });
   let request;
   const receipt = createProtectedHeadRefreshCandidate({
     observedHeadSha: delivered,
     targetMainSha: targetMain,
     operationId,
-    gitText: createCandidateGitText({ operationId }),
+    gitText: args => {
+      gitCommands.push(args.join(" "));
+      return fixtureGitText(args);
+    },
     commitTree: value => {
       request = value;
       return candidate;
@@ -91,7 +96,7 @@ test("candidate construction freezes exact parent order, tree, identity, date, a
   assert.equal(request.committerName, PROTECTED_HEAD_REFRESH_BOT_NAME);
   assert.equal(request.authorEmail, PROTECTED_HEAD_REFRESH_BOT_EMAIL);
   assert.equal(request.committerEmail, PROTECTED_HEAD_REFRESH_BOT_EMAIL);
-  assert.equal(request.authorDate, "2026-02-02T10:40:00+08:00");
+  assert.equal(request.authorDate, parentTimestamp);
   assert.equal(request.committerDate, request.authorDate);
   assert.equal(request.message, renderProtectedHeadRefreshCommitMessage({
     operationId,
@@ -100,6 +105,65 @@ test("candidate construction freezes exact parent order, tree, identity, date, a
   }));
   assert.equal(Object.isFrozen(request), true);
   assert.equal(Object.isFrozen(request.parents), true);
+  assert.equal(gitCommands.some(command => command.includes("--format=%cI")), false);
+});
+
+test("candidate construction preserves an exact raw UTC committer timestamp", () => {
+  const operationId = normalizedProjection().operation_id;
+  const utcTimestamp = "1786443889 +0000";
+  const values = candidateGitValues({ operationId });
+  const observedKey = `cat-file commit ${delivered}`;
+  const candidateKey = `cat-file commit ${candidate}`;
+  const overrides = {
+    [observedKey]: values[observedKey].replaceAll(parentTimestamp, utcTimestamp),
+    [candidateKey]: values[candidateKey].replaceAll(parentTimestamp, utcTimestamp),
+  };
+  const gitCommands = [];
+  const fixtureGitText = createCandidateGitText({ operationId, overrides });
+  let request;
+  const receipt = createProtectedHeadRefreshCandidate({
+    observedHeadSha: delivered,
+    targetMainSha: targetMain,
+    operationId,
+    gitText: args => {
+      gitCommands.push(args.join(" "));
+      return fixtureGitText(args);
+    },
+    commitTree: value => {
+      request = value;
+      return candidate;
+    },
+  });
+  assert.equal(receipt.timestamp, utcTimestamp);
+  assert.equal(request.authorDate, utcTimestamp);
+  assert.equal(request.committerDate, utcTimestamp);
+  assert.equal(gitCommands.some(command => command.includes("--format=%cI")), false);
+});
+
+test("candidate construction rejects a malformed raw committer timestamp before commit creation", () => {
+  const operationId = normalizedProjection().operation_id;
+  const values = candidateGitValues({ operationId });
+  const observedKey = `cat-file commit ${delivered}`;
+  let commitTreeCalls = 0;
+  assert.throws(() => createProtectedHeadRefreshCandidate({
+    observedHeadSha: delivered,
+    targetMainSha: targetMain,
+    operationId,
+    gitText: createCandidateGitText({
+      operationId,
+      overrides: {
+        [observedKey]: values[observedKey].replace(
+          `committer Developer <developer@example.com> ${parentTimestamp}`,
+          "committer Developer <developer@example.com> invalid-timestamp",
+        ),
+      },
+    }),
+    commitTree: () => {
+      commitTreeCalls += 1;
+      return candidate;
+    },
+  }), /committer timestamp is malformed/u);
+  assert.equal(commitTreeCalls, 0);
 });
 
 test("candidate proof rejects parent, tree, identity, timestamp, and message drift", async t => {

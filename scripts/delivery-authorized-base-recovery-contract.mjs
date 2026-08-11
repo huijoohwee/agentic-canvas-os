@@ -126,6 +126,18 @@ export function normalizeDeliveryAuthorizedBaseRecoveryEvidence(value) {
     deliveryBaseSha: sha(value.deliveryBaseSha, "delivery base SHA"),
     fenceSha: sha(value.fenceSha, "fence SHA"),
     deliveryHeadSha: sha(value.deliveryHeadSha, "delivery head SHA"),
+    protectedRefreshReceiptDigest: nullableDigest(
+      value.protectedRefreshReceiptDigest,
+      "protected refresh receipt digest",
+    ),
+    protectedRefreshBaseSha: nullableSha(
+      value.protectedRefreshBaseSha,
+      "protected refresh base SHA",
+    ),
+    protectedRefreshCount: nonnegativeInteger(
+      value.protectedRefreshCount,
+      "protected refresh count",
+    ),
     leaseStatus: text(value.leaseStatus, "lease status"),
     leaseEpoch: positiveInteger(value.leaseEpoch, "lease epoch"),
     leaseDigest: digest(value.leaseDigest, "lease digest"),
@@ -216,7 +228,9 @@ function findingsFor(value) {
     .filter(item => item.startsWith("path:"))
     .map(item => item.slice(5)));
   if (!value.clean) findings.push("dirty-source-lane");
-  if (value.leaseStatus !== "active") findings.push("local-lease-not-active");
+  if (!["active", "delivery"].includes(value.leaseStatus)) {
+    findings.push("local-lease-state-not-recoverable");
+  }
   if (value.projectedAuthorityState !== "delivery_authorized") {
     findings.push("projection-not-delivery-authorized");
   }
@@ -242,14 +256,26 @@ function findingsFor(value) {
     value.headSha,
     value.remoteHeadSha,
     value.pullRequestHeadSha,
-    value.claimLaneRevision,
-    value.deliveryHeadSha,
-  ]).size !== 1) findings.push("head-identity-drift");
-  if (new Set([
-    value.deliveryBaseSha,
-    value.pullRequestBaseSha,
-    value.claimCanonicalBaseSha,
-  ]).size !== 1) findings.push("delivery-base-identity-drift");
+  ]).size !== 1) findings.push("provider-head-identity-drift");
+  if (value.claimLaneRevision !== value.deliveryHeadSha) {
+    findings.push("delivered-head-identity-drift");
+  }
+  if (value.deliveryBaseSha !== value.pullRequestBaseSha
+    || value.claimCanonicalBaseSha !== value.originalBaseSha) {
+    findings.push("base-identity-drift");
+  }
+  const refreshRequired = value.headSha !== value.deliveryHeadSha;
+  if (refreshRequired) {
+    if (value.protectedRefreshReceiptDigest === null
+      || value.protectedRefreshBaseSha !== value.deliveryBaseSha
+      || value.protectedRefreshCount < 1) {
+      findings.push("protected-refresh-proof-invalid");
+    }
+  } else if (value.protectedRefreshReceiptDigest !== null
+    || value.protectedRefreshBaseSha !== null
+    || value.protectedRefreshCount !== 0) {
+    findings.push("unexpected-protected-refresh-proof");
+  }
   if (value.declaredWriteSet.some(item => item.startsWith("semantic:")
     && item !== `semantic:${value.semanticScope}`)) findings.push("semantic-scope-drift");
   if (value.deliveryChangedPaths.some(item => !declaredPaths.has(item))) {
@@ -289,8 +315,15 @@ function digest(value, label) {
 function nullableDigest(value, label) {
   return value === null ? null : digest(value, label);
 }
+function nullableSha(value, label) {
+  return value === null ? null : sha(value, label);
+}
 function positiveInteger(value, label) {
   if (!Number.isSafeInteger(value) || value < 1) invalid(label);
+  return value;
+}
+function nonnegativeInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0) invalid(label);
   return value;
 }
 function boolean(value, label) {

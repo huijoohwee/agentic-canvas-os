@@ -6,6 +6,7 @@ import {
   compactDeviceCloudMutationIdempotencyKey,
   createDeviceDeliveryEvidence,
 } from "./device-delivery-evidence.mjs";
+import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
   invokeRepositoryCloudAction,
@@ -23,6 +24,7 @@ import {
   normalizePreClaimIntegrationContinuation,
 } from "./expired-committed-continuation-lib.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
+import { withReviewedLaneEntrypointFence } from "./reviewed-lane-revision-fence.mjs";
 
 export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
@@ -66,7 +68,11 @@ const PROTECTED_HEAD_REFRESH_DISPATCH_FIELDS = Object.freeze([
   "operation_id",
 ]);
 
-export function integrateSession({
+export function integrateSession(options) {
+  return withIntegrationEntrypointFence(options, () => integrateSessionUnfenced(options));
+}
+
+function integrateSessionUnfenced({
   invocationPath,
   repo,
   gitText,
@@ -455,6 +461,76 @@ function finalizeIntegrationLease({ leaseStore, branch, completion }) {
     mergeCommitSha: completion?.mergeCommitSha,
     mainSha: completion?.mainSha,
   });
+}
+
+function withIntegrationEntrypointFence(options, action) {
+  const {
+    invocationPath,
+    repo,
+    gitText,
+    leaseStore,
+    sessionId,
+    runtime = "canonical",
+    waitSeconds = 900,
+    pollSeconds = 5,
+  } = options;
+  requireRepositoryRoot({ invocationPath, repo });
+  requireBounds({ waitSeconds, pollSeconds });
+  if (!sessionId) throw new Error("Integration requires --session or AGENTIC_SESSION_ID.");
+  if (!["canonical", "none"].includes(runtime)) {
+    throw new Error("--runtime must be canonical or none.");
+  }
+  const { branch, lease } = resolveIntegrationLease({ repo, gitText, leaseStore });
+  if (lease.sessionId !== sessionId) throw new Error("Integration lease belongs to another session.");
+  if (path.resolve(lease.worktreePath) !== path.resolve(repo)) {
+    throw new Error(`Integration lease belongs to ${lease.worktreePath}, not ${repo}.`);
+  }
+  const reviewReadyDelivery = isReviewReadyDeliveryLease(lease);
+  if (reviewReadyDelivery && lease.autoDelivery === true
+    && lease.runtimeRequired === true && runtime !== "canonical") {
+    throw new Error("Auto-delivery integration requires canonical runtime readiness; --runtime=none is not permitted.");
+  }
+  // Active integration delegates the single durable subject fence to its nested publish.
+  if (!reviewReadyDelivery || typeof leaseStore.withRegistryLock !== "function" || !leaseStore.statePath) {
+    return action();
+  }
+  const protectedSubject = resolveIntegrationEntrypointSubject({
+    lease,
+    gitText,
+  });
+  const expectedLeaseDigest = digestValue(lease);
+  return withReviewedLaneEntrypointFence({
+    leaseStore,
+    branch,
+    entrypoint: "integrate",
+    operationDigest: digestValue({
+      schema: "agentic-reviewed-lane-entrypoint-operation/v1",
+      entrypoint: "integrate",
+      branch,
+      sessionId,
+      headSha: lease.reviewHeadSha || lease.deliveryHeadSha
+        || lease.integration?.commitSha || lease.fenceSha,
+      subject: protectedSubject,
+      expectedLeaseDigest,
+    }),
+    expectedLeaseDigest,
+    expectedClaimId: lease.cloudAuthority?.claimId || null,
+  }, action);
+}
+
+function resolveIntegrationEntrypointSubject({ lease, gitText }) {
+  if (isReviewReadyDeliveryLease(lease)) {
+    const canonicalBaseSha = lease.cloudAuthority?.canonicalBaseSha || "";
+    if (lease.baseSha !== canonicalBaseSha) return null;
+    return requireProtectedSquashSubject(
+      gitText([
+        "log", "--first-parent", "--no-merges", "-1", "--format=%s",
+        `${canonicalBaseSha}..${lease.reviewHeadSha}`,
+      ]).replace(/\r?\n$/u, ""),
+      { label: "Reviewed authored commit subject" },
+    );
+  }
+  return null;
 }
 
 function isReviewReadyDeliveryLease(lease) {

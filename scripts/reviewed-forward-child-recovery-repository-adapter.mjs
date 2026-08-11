@@ -48,7 +48,6 @@ function createRuntime(options, dependencies) {
   const lockPath = `${statePath}.lock`;
   const ttlSeconds = Number(options.ttlSeconds || 3_600);
   if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds < 300 || ttlSeconds > 86_400) invalid("TTL");
-
   function readLease({ terminal = false } = {}) {
     const lease = leaseStore.read(branch);
     const allowed = terminal ? ["review_ready", "active"] : ["review_ready"];
@@ -286,12 +285,12 @@ function createRuntime(options, dependencies) {
     if (written !== plan.childHeadSha) invalid("candidate object");
     return complete({ childHeadSha: written, candidateDigest: plan.candidate.candidateDigest });
   }
-  function successor(plan, accepted, cloudStatus = status()) {
+  function successor(plan, accepted, cloudStatus = status(), laneRevision = plan.source.claim.laneRevision) {
     const source = plan.source.claim;
     const matches = cloudStatus.claims.filter(item => item?.predecessorClaimId === plan.sourceClaimId
       && item.actorId === source.actorId && item.repositoryId === source.repositoryId
       && item.workItemId === source.workItemId && item.canonicalBaseRevision === source.canonicalBaseSha
-      && item.laneRevision === plan.childHeadSha && item.writeSetDigest === source.writeSetDigest
+      && item.laneRevision === laneRevision && item.writeSetDigest === source.writeSetDigest
       && item.leaseEpoch === plan.successorLeaseEpoch && accepted.has(projectRootState(item.state)));
     if (matches.length > 1) invalid("successor cardinality");
     return matches[0] || null;
@@ -310,7 +309,8 @@ function createRuntime(options, dependencies) {
     cloudAction("claim", {
       actorId: Number(plan.source.actor.id), actorLogin: plan.source.actor.login,
       branch, workItemId: plan.source.claim.workItemId,
-      canonicalBaseSha: plan.source.claim.canonicalBaseSha, headSha: plan.childHeadSha,
+      canonicalBaseSha: plan.source.claim.canonicalBaseSha,
+      headSha: plan.source.claim.laneRevision,
       declaredWriteSet: plan.source.claim.declaredWriteSet,
       predecessorClaimId: plan.sourceClaimId, leaseEpoch: plan.successorLeaseEpoch,
       ttlSeconds, expectedLedgerDigest: before.ledgerDigest,
@@ -327,19 +327,20 @@ function createRuntime(options, dependencies) {
     const before = status();
     const source = before.claims.find(item => item.claimId === plan.sourceClaimId);
     const waiting = successor(plan, new Set(["waiting-successor"]), before);
-    if (!source || source.fenceRevision !== plan.source.claim.claimDigest || !waiting) {
-      invalid("retirement subject");
-    }
+    const integrated = Boolean(source?.integrationReceiptDigest);
+    if (!source || source.fenceRevision !== plan.source.claim.claimDigest || !waiting
+      || integrated !== Boolean(source.integration)) invalid("retirement subject");
     cloudAction("retire", {
       claimId: source.claimId, expectedFenceRevision: source.fenceRevision,
       expectedTransitionCounter: source.transitionCounter, expectedLedgerDigest: before.ledgerDigest,
-      reason: "superseded", finalRevision: source.laneRevision,
+      reason: integrated ? "integrated" : "superseded", finalRevision: source.laneRevision,
       reviewRequestId: source.reviewRequestId,
       bytesDigest: digestValue({ sourceHeadSha: plan.sourceHeadSha,
         sourceTreeSha: plan.source.source.treeSha, childHeadSha: plan.childHeadSha }),
-      namedChecksDigest: plan.source.lease.focusedEvidenceDigest,
-      handoffEvidenceDigest: digestValue({ planDigest: plan.planDigest,
+      namedChecksDigest: source.integration?.namedChecksDigest ?? plan.source.lease.focusedEvidenceDigest,
+      handoffEvidenceDigest: source.integration?.handoffEvidenceDigest ?? digestValue({ planDigest: plan.planDigest,
         successorClaimId: waiting.claimId }),
+      integrationReceiptDigest: source.integrationReceiptDigest,
       deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
       idempotencyKey: `reviewed-forward-child:retire:${plan.planDigest}`,
     }, readLease({ terminal: true }).cloudAuthority);
@@ -355,7 +356,7 @@ function createRuntime(options, dependencies) {
     const waiting = successor(plan, new Set(["waiting-successor"]), before);
     if (!waiting) invalid("promotion successor");
     cloudAction("continue", {
-      branch, headSha: plan.childHeadSha, claimId: waiting.claimId,
+      branch, headSha: plan.source.claim.laneRevision, claimId: waiting.claimId,
       expectedFenceRevision: waiting.fenceRevision,
       expectedTransitionCounter: waiting.transitionCounter,
       expectedLedgerDigest: before.ledgerDigest, mode: "promote", ttlSeconds,
@@ -367,7 +368,6 @@ function createRuntime(options, dependencies) {
     if (!claim || claim.reviewRequestId) invalid("current successor");
     return complete(successorValues(after, claim));
   }
-
   async function updateLocalRef({ plan }) {
     assertPlanSource(plan, { allowAutoMergeDisabled: true });
     execute("git", ["update-ref", `refs/heads/${branch}`, plan.childHeadSha, plan.sourceHeadSha]);
@@ -375,7 +375,6 @@ function createRuntime(options, dependencies) {
     return complete({ localHeadSha: plan.childHeadSha,
       localRefReceiptDigest: digestValue({ branch, old: plan.sourceHeadSha, next: plan.childHeadSha }) });
   }
-
   async function updateRemoteRef({ plan }) {
     assertPlanSource(plan, { allowLocalChild: true, allowAutoMergeDisabled: true });
     execute("git", ["push", "origin", `refs/heads/${branch}:refs/heads/${branch}`]);
@@ -385,7 +384,6 @@ function createRuntime(options, dependencies) {
     return complete({ remoteHeadSha: plan.childHeadSha,
       remoteRefReceiptDigest: digestValue({ branch, old: plan.sourceHeadSha, next: plan.childHeadSha }) });
   }
-
   function manifest(plan) {
     return {
       semanticScope: plan.source.lease.scope,
@@ -394,12 +392,25 @@ function createRuntime(options, dependencies) {
       manifestDigest: plan.source.lease.manifestDigest,
     };
   }
-
   async function activateLease({ plan }) {
     const sourceLease = readLease();
-    const cloudStatus = status(sourceLease.cloudAuthority);
-    const claim = successor(plan, new Set(["active"]), cloudStatus);
+    let cloudStatus = status(sourceLease.cloudAuthority);
+    let claim = successor(plan, new Set(["active"]), cloudStatus)
+      || successor(plan, new Set(["active"]), cloudStatus, plan.childHeadSha);
     if (!claim || remoteHead() !== plan.childHeadSha) invalid("active successor");
+    if (claim.laneRevision !== plan.childHeadSha) {
+      cloudAction("continue", {
+        branch, headSha: plan.childHeadSha, claimId: claim.claimId,
+        expectedFenceRevision: claim.fenceRevision,
+        expectedTransitionCounter: claim.transitionCounter,
+        expectedLedgerDigest: cloudStatus.ledgerDigest, mode: "projection",
+        deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
+        idempotencyKey: `reviewed-forward-child:bind:${plan.planDigest}`,
+      }, sourceLease.cloudAuthority);
+      cloudStatus = status(sourceLease.cloudAuthority);
+      claim = successor(plan, new Set(["active"]), cloudStatus, plan.childHeadSha);
+    }
+    if (!claim || claim.reviewRequestId) invalid("projected successor");
     const authority = normalizeBoundAuthority({
       result: { claim, claimDigest: claim.fenceRevision,
         ledgerRevision: cloudStatus.ledgerRevision, ledgerDigest: cloudStatus.ledgerDigest },
@@ -418,7 +429,6 @@ function createRuntime(options, dependencies) {
     }).lease;
     return complete({ leaseDigest: writerLeaseDigest(updated), authority });
   }
-
   async function projectDraftPullRequest({ plan }) {
     const lease = readLease({ terminal: true });
     let provider = providerSubject();
@@ -441,12 +451,11 @@ function createRuntime(options, dependencies) {
     return complete({ pullRequestDigest: digestValue(provider.pullRequest),
       pullRequestUrl: provider.pullRequest.url });
   }
-
   async function verifyTerminal({ plan, intent }) {
     const lease = readLease({ terminal: true });
     const provider = providerSubject();
     const cloudStatus = status(lease.cloudAuthority);
-    const claim = successor(plan, new Set(["active"]), cloudStatus);
+    const claim = successor(plan, new Set(["active"]), cloudStatus, plan.childHeadSha);
     const cancellation = intent.phases.auto_merge_cancelled?.values;
     if (lease.status !== "active" || lease.reviewHeadSha !== null
       || lease.cloudAuthority.claimId !== claim?.claimId
@@ -467,7 +476,6 @@ function createRuntime(options, dependencies) {
     };
     return complete({ ...values, verificationDigest: digestValue(values) });
   }
-
   async function reconcilePhase({ intent, phase, plan }) {
     const stored = intent.phases?.[phase]?.values;
     if (phase === "auto_merge_cancelled") {
@@ -496,7 +504,8 @@ function createRuntime(options, dependencies) {
     }
     if (phase === "lease_activated") {
       const lease = readLease({ terminal: true });
-      const claim = successor(plan, new Set(["active"]), status(lease.cloudAuthority));
+      const cloudStatus = status(lease.cloudAuthority);
+      const claim = successor(plan, new Set(["active"]), cloudStatus, plan.childHeadSha);
       return lease.status === "active" && lease.reviewHeadSha === null
         && lease.cloudAuthority?.claimId === claim?.claimId
         && lease.cloudAuthority?.laneRevision === plan.childHeadSha
@@ -528,7 +537,6 @@ function createRuntime(options, dependencies) {
     const claim = successor(plan, accepted, cloudStatus);
     return claim ? complete(stored || successorValues(cloudStatus, claim)) : pending();
   }
-
   async function withFence(action) {
     mkdirSync(journalDirectory, { recursive: true });
     const lock = acquireFence();
@@ -569,7 +577,6 @@ function createRuntime(options, dependencies) {
     writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
     renameSync(temporary, statePath);
   }
-
   return {
     withFence, readSource, prepareCandidate, readIntent, writeIntent, reconcilePhase,
     cancelAutoMerge, createForwardChild, createWaitingSuccessor, retireSourceClaim,
@@ -577,7 +584,6 @@ function createRuntime(options, dependencies) {
     projectDraftPullRequest, verifyTerminal,
   };
 }
-
 function text(value, label) {
   if (typeof value !== "string" || !value || value !== value.trim()) invalid(label);
   return value;

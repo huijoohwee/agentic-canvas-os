@@ -1,3 +1,4 @@
+import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -457,4 +458,3 @@ function createAdmissionProjection({ request, lease, authority, verification }) 
     preservationReceiptDigest,
   });
 }
-

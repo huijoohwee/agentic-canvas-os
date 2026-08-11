@@ -1,11 +1,11 @@
 #!/usr/bin/env node
+// Responsibility: Expose sanitized plan and exact-authorization execution for active-owned-dirt recovery.
 
 import { realpathSync } from "node:fs";
 import path from "node:path";
 
 import {
-  buildActiveOwnedDirtRecoveryPlan,
-  normalizeActiveOwnedDirtRecoveryPlan,
+  selectActiveOwnedDirtRecoveryPlan,
 } from "./active-owned-dirt-recovery-contract.mjs";
 import {
   createRepositoryActiveOwnedDirtRecoveryAdapter,
@@ -30,9 +30,7 @@ try {
   let result;
   if (command === "plan") {
     const state = await adapter.readState();
-    const plan = state.intent?.planSnapshot
-      ? normalizeActiveOwnedDirtRecoveryPlan(state.intent.planSnapshot)
-      : buildActiveOwnedDirtRecoveryPlan({ source: state.source, ttlSeconds });
+    const { plan } = selectActiveOwnedDirtRecoveryPlan({ state, ttlSeconds });
     result = Object.freeze({
       schema: "agentic-active-owned-dirt-recovery-plan-result/v1",
       status: "planned",
@@ -65,7 +63,8 @@ function publicMessage(error) {
   return String(error?.message || error || "Recovery failed.")
     .replace(/(?:gh[pousr]|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]")
     .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^/\s@]+@/giu, "$1[redacted]@")
-    .replace(/\/(?:Users|home)\/[^\s"']+/gu, "[local-path]")
+    .replace(/(["'`])\/[^"'`\r\n]*\1/gu, (_match, quote) => `${quote}[local-path]${quote}`)
+    .replace(/(^|[\s(=,:])\/(?!\/)[^\s"'`,;)\]}]+/gu, "$1[local-path]")
     .replace(/[A-Za-z]:\\Users\\[^\s"']+/gu, "[local-path]")
     .slice(0, 300);
 }

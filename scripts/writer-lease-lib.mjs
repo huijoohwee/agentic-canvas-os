@@ -1,8 +1,10 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+// Responsibility: Own writer-lease registry storage, lifecycle transitions, and PR marker projections.
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { normalizeOwnedDirtRecovery } from "./owned-dirt-resume-lib.mjs";
-import { normalizeActiveOwnedDirtLeaseRecovery } from "./active-owned-dirt-recovery-contract.mjs";
+import { normalizeActiveOwnedDirtLeaseRecovery,
+  validateCompletedActiveOwnedDirtRecoveryIntent } from "./active-owned-dirt-recovery-contract.mjs";
 import { normalizePreClaimIntegrationContinuation } from "./expired-committed-continuation-lib.mjs";
 import {
   normalizeProtectedMainPathEquivalenceEvidence,
@@ -114,16 +116,21 @@ export function assertNoCompetingScopePullRequests(pulls, activeBranch) {
 }
 
 export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() }) {
-  const root = path.resolve(gitCommonDir, "agentic-canvas-os");
+  const commonRoot = path.resolve(gitCommonDir);
+  requireRealDirectory(commonRoot, "Git common directory");
+  const root = path.resolve(commonRoot, "agentic-canvas-os");
   const statePath = path.join(root, "writer-leases.json");
   const lockPath = path.join(root, "writer-leases.lock");
 
   function readRegistry() {
+    requireRegistryStoragePath(root, statePath);
     if (!existsSync(statePath)) {
       return { schema: WRITER_LEASE_REGISTRY_SCHEMA, revision: 0, leases: {} };
     }
     const value = JSON.parse(readFileSync(statePath, "utf8"));
-    if (value.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases || typeof value.leases !== "object") {
+    if (value.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases || typeof value.leases !== "object"
+      || !validRegistryRevision(value.revision)
+      || Object.values(value.leases).some(candidate => !validLeaseEpoch(candidate?.epoch))) {
       throw new Error(`Unsupported writer lease registry schema at ${statePath}`);
     }
     return value;
@@ -261,10 +268,8 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => {
       const registry = readRegistry();
       const recoveryIntent = registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null;
-      const completedRecovery = recoveryIntent?.schema === "agentic-active-owned-dirt-recovery-intent/v1"
-        && recoveryIntent.status === "complete" && recoveryIntent.branch === branch
-        && DIGEST_PATTERN.test(String(recoveryIntent.planDigest || ""))
-        && DIGEST_PATTERN.test(String(recoveryIntent.finalReceiptDigest || ""));
+      const completedRecovery = recoveryIntent?.status === "complete"
+        ? Boolean(validateCompletedActiveOwnedDirtRecoveryIntent(recoveryIntent)) : false;
       if (recoveryIntent && !completedRecovery) {
         throw new Error("Active-owned-dirt recovery intent fences this writer-lease heartbeat.");
       }
@@ -558,7 +563,13 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
   }
 
   function writeRegistry(value) {
+    if (value?.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases
+      || !validRegistryRevision(value.revision)
+      || Object.values(value.leases).some(candidate => !validLeaseEpoch(candidate?.epoch))) {
+      throw new Error("Writer lease registry mutation would exceed its safe revision or epoch bounds.");
+    }
     mkdirSync(root, { recursive: true });
+    requireRegistryStoragePath(root, statePath);
     const temporaryPath = `${statePath}.${process.pid}.tmp`;
     writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
     renameSync(temporaryPath, statePath);
@@ -585,6 +596,30 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     recoverMergedPullRequestCompletion,
     recoverFromPullRequestMarker,
     readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
+}
+
+function requireRealDirectory(candidate, label) {
+  const stat = lstatSync(candidate);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(`${label} must be a real non-symlink directory.`);
+  }
+}
+
+function requireRegistryStoragePath(root, statePath) {
+  if (existsSync(root)) requireRealDirectory(root, "Writer-lease registry directory");
+  if (!existsSync(statePath)) return;
+  const stat = lstatSync(statePath);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error("Writer-lease registry must be a regular non-symlink file.");
+  }
+}
+
+function validRegistryRevision(value) {
+  return Number.isSafeInteger(value) && value >= 0 && value < Number.MAX_SAFE_INTEGER;
+}
+
+function validLeaseEpoch(value) {
+  return Number.isSafeInteger(value) && value >= 1 && value < Number.MAX_SAFE_INTEGER;
 }
 
 export function projectExpiredCommittedHeartbeatLease({

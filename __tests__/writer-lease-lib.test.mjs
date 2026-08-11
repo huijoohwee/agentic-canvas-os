@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -36,6 +36,52 @@ test("device branch identity separates device from semantic scope", () => {
   assert.equal(parseDeviceBranch("agent/.local/rich-media"), null);
   assert.equal(parseDeviceBranch("agent/mac-a/rich_media"), null);
   assert.equal(parseDeviceBranch("agent/mac-a/rich.media"), null);
+});
+
+test("writer lease registry rejects symlinks and unsafe revisions before mutation", () => {
+  const common = mkdtempSync(path.join(os.tmpdir(), "writer-lease-storage-"));
+  const registryRoot = path.join(common, "agentic-canvas-os");
+  const statePath = path.join(registryRoot, "writer-leases.json");
+  const target = path.join(common, "outside.json");
+  mkdirSync(registryRoot);
+  writeFileSync(target, "outside\n");
+  symlinkSync(target, statePath);
+  const store = createWriterLeaseStore({ gitCommonDir: common });
+  try {
+    assert.throws(() => store.readRegistry(), /regular non-symlink/);
+    assert.equal(readFileSync(target, "utf8"), "outside\n");
+    unlinkSync(statePath);
+    for (const revision of [-1, Number.MAX_SAFE_INTEGER]) {
+      writeFileSync(statePath, JSON.stringify({
+        schema: "agentic-writer-lease-registry/v2", revision, leases: {},
+      }));
+      assert.throws(() => store.readRegistry(), /Unsupported writer lease registry schema/);
+    }
+    const bounded = { schema: "agentic-writer-lease-registry/v2",
+      revision: Number.MAX_SAFE_INTEGER - 1, leases: {} };
+    writeFileSync(statePath, JSON.stringify(bounded));
+    assert.throws(() => store.claim({ sessionId: "session", device: "device", scope: "scope",
+      branch: "agent/device/scope", worktreePath: common, baseSha: "a".repeat(40) }),
+    /safe revision or epoch bounds/);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, "utf8")), bounded);
+    bounded.revision = 0;
+    bounded.leases.old = { epoch: Number.MAX_SAFE_INTEGER - 1, status: "parked" };
+    writeFileSync(statePath, JSON.stringify(bounded));
+    assert.throws(() => store.claim({ sessionId: "session", device: "device", scope: "scope",
+      branch: "agent/device/scope", worktreePath: common, baseSha: "a".repeat(40) }),
+    /safe revision or epoch bounds/);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, "utf8")), bounded);
+    unlinkSync(statePath);
+    symlinkSync(target, path.join(registryRoot, "writer-leases.lock"));
+    assert.throws(() => store.claim({
+      sessionId: "session", device: "device", scope: "scope",
+      branch: "agent/device/scope", worktreePath: common,
+      baseSha: "a".repeat(40),
+    }), /operation is in progress/);
+    assert.equal(readFileSync(target, "utf8"), "outside\n");
+  } finally {
+    rmSync(common, { recursive: true, force: true });
+  }
 });
 
 test("writer lease registry isolates worktrees, increments fencing epochs, and supports heartbeat", () => {

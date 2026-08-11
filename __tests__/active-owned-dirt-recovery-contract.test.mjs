@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   authorizeActiveOwnedDirtRecovery,
   buildActiveOwnedDirtRecoveryPlan,
-  classifyActiveOwnedDirtCloudRecoveryState,
   createActiveOwnedDirtLeaseRecovery,
   normalizeActiveOwnedDirtLeaseRecovery,
   normalizeActiveOwnedDirtRecoveryPlan,
@@ -19,6 +18,9 @@ test("plan binds the exact expired admitted dormant lane and typed authorization
   const source = sourceFixture();
   const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });
   assert.equal(plan.sourceSessionId, "source-session");
+  assert.equal(plan.sourceCloudLeaseEpoch, 3);
+  assert.equal(plan.sourceReviewRequestId, null);
+  assert.match(plan.sourceWorkItemId, /^work-item:[0-9a-f]{64}$/u);
   assert.equal(plan.dirtyPathCount, 2);
   assert.deepEqual(normalizeActiveOwnedDirtRecoveryPlan(plan), plan);
   assert.throws(() => authorizeActiveOwnedDirtRecovery({
@@ -31,32 +33,17 @@ test("plan binds the exact expired admitted dormant lane and typed authorization
   }).planDigest, plan.planDigest);
 });
 
-test("cloud response-loss replay accepts only the exact recovered same claim", () => {
+test("cloud response-loss replay accepts only the exact producer receipt", () => {
   const source = sourceFixture();
   const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });
-  const snapshotReceiptDigest = "8".repeat(64);
-  assert.equal(classifyActiveOwnedDirtCloudRecoveryState({
-    plan, source, snapshotReceiptDigest,
-  }), "source");
-  source.claim = {
-    ...source.claim,
-    state: "current",
-    fenceRevision: "6".repeat(64),
-    transitionDigest: "a".repeat(64),
-    transitionCounter: plan.sourceCloudTransitionCounter + 1,
-    operationReceiptDigest: "9".repeat(64),
-    recovery: {
-      evidenceDigest: snapshotReceiptDigest,
-      recoveredAt: "2026-08-09T00:00:00.000Z",
-    },
-  };
-  assert.equal(classifyActiveOwnedDirtCloudRecoveryState({
-    plan, source, snapshotReceiptDigest,
-  }), "recovered");
-  source.claim.recovery.evidenceDigest = "0".repeat(64);
-  assert.throws(() => classifyActiveOwnedDirtCloudRecoveryState({
-    plan, source, snapshotReceiptDigest,
-  }), /neither the exact source/);
+  const result = cloudResult(plan, { replayed: true });
+  assert.equal(verifyActiveOwnedDirtCloudRecovery({
+    plan, result, recoveryEvidenceDigest: "8".repeat(64),
+  }).claimId, plan.sourceClaimId);
+  result.operationReceipt.requestDigest = "0".repeat(64);
+  assert.throws(() => verifyActiveOwnedDirtCloudRecovery({
+    plan, result, recoveryEvidenceDigest: "8".repeat(64),
+  }), /claim identity/);
 });
 
 test("plan rejects a different session and out-of-scope dirt", () => {
@@ -81,12 +68,16 @@ test("cloud recovery reuses the exact claim identity and produces compact lease 
     ttlSeconds: 1_800,
   });
   const result = cloudResult(plan);
+  assert.equal("deviceId" in result.claim, false);
+  assert.equal("sessionId" in result.claim, false);
+  assert.equal("recovery" in result.claim, false);
   const cloud = verifyActiveOwnedDirtCloudRecovery({
     plan,
     result,
     recoveryEvidenceDigest: "8".repeat(64),
   });
   assert.equal(cloud.transitionCounter, plan.sourceCloudTransitionCounter + 1);
+  assert.notEqual(result.receipt.ledgerDigest, result.claim.transitionDigest);
   const snapshot = {
     snapshotReceiptDigest: "8".repeat(64),
     snapshotRef: `refs/agentic-canvas-os/recovery/active-owned-dirt/${plan.sourceClaimId}/${plan.planDigest}`,
@@ -103,16 +94,35 @@ test("cloud recovery reuses the exact claim identity and produces compact lease 
   assert.equal(recovery.sourceSessionId, plan.sourceSessionId);
   assert.equal(recovery.snapshotReceiptDigest, snapshot.snapshotReceiptDigest);
 
-  result.claim.sessionId = "successor-session";
+  result.claim.workItemId = `work-item:${"0".repeat(64)}`;
   assert.throws(() => verifyActiveOwnedDirtCloudRecovery({
     plan,
     result,
     recoveryEvidenceDigest: "8".repeat(64),
   }), /claim identity/);
+
+  for (const mutate of [
+    value => { value.claim.predecessorClaimId = "1".repeat(64); },
+    value => { value.operationReceipt.receiptDigest = "2".repeat(64); },
+    value => { value.receipt.receiptDigest = "3".repeat(64); },
+  ]) {
+    const tampered = cloudResult(plan);
+    mutate(tampered);
+    assert.throws(() => verifyActiveOwnedDirtCloudRecovery({
+      plan, result: tampered, recoveryEvidenceDigest: "8".repeat(64),
+    }), /claim identity/);
+  }
 });
 
 function sourceFixture() {
   const evidence = evidenceFixture("src/runtime.mjs");
+  const actorId = "github-user:123";
+  const repositoryId = "github-repository:R_repo";
+  const workItemId = `work-item:${"9".repeat(64)}`;
+  const leaseEpoch = 3;
+  const claimId = digestValue({ actorId, canonicalBaseRevision: "a".repeat(40),
+    leaseEpoch, repositoryId, workItemId, writeSetDigest });
+  const operationReceiptDigest = "0".repeat(64);
   const lease = {
     schema: "agentic-writer-lease/v2",
     status: "active",
@@ -137,40 +147,52 @@ function sourceFixture() {
     cloudAuthority: {
       schema: "agentic-lane-cloud-authority/v1",
       state: "active",
-      claimId: "d".repeat(64),
+      claimId,
       claimDigest: "e".repeat(64),
       claimLedgerRevision: "f".repeat(64),
       transitionCounter: 3,
-      leaseEpoch: 1,
+      leaseEpoch,
+      entrySchema: "agentic-cloud-collaboration-entry/v2",
+      claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+      operationReceiptDigest,
       deviceId: "device",
       sessionId: "source-session",
-      reviewRequestId: "github-pull-request:9",
+      reviewRequestId: null,
     },
   };
   const claim = {
     claimId: lease.cloudAuthority.claimId,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    actorId,
+    repositoryId,
+    workItemId,
     fenceRevision: lease.cloudAuthority.claimDigest,
     transitionDigest: "f".repeat(64),
     transitionCounter: 3,
-    leaseEpoch: 1,
+    leaseEpoch,
     state: "dormant-preserved",
     canonicalBaseRevision: lease.baseSha,
     laneRevision: lease.fenceSha,
     writeSetDigest,
     declaredWriteScope: writeSet,
     reviewRequestId: lease.cloudAuthority.reviewRequestId,
-    deviceId: lease.device,
-    sessionId: lease.sessionId,
+    operationReceiptDigest,
   };
   const expectedMarker = { marker: "source" };
   const pullRequest = {
+    id: "PR_source",
+    url: lease.pullRequestUrl,
     state: "OPEN",
     isDraft: true,
     headRefName: lease.branch,
     headRefOid: lease.fenceSha,
     baseRefName: "main",
-    baseRefOid: lease.baseSha,
+    baseRefOid: "c".repeat(40),
+    headRepository: { nameWithOwner: "org/repo" },
+    autoMergeRequest: null,
   };
+  lease.cloudAuthority.targetRepository = "org/repo";
   return {
     sessionId: lease.sessionId,
     branch: lease.branch,
@@ -178,7 +200,7 @@ function sourceFixture() {
     leaseDigest: "1".repeat(64),
     headSha: lease.fenceSha,
     remoteHeadSha: lease.fenceSha,
-    remoteMainSha: lease.baseSha,
+    remoteMainSha: "d".repeat(40),
     pullRequest,
     pullRequestBodyDigest: "2".repeat(64),
     markerDigest: digestValue(expectedMarker),
@@ -189,6 +211,16 @@ function sourceFixture() {
     ledgerRevision: "4".repeat(40),
     ledgerDigest: "5".repeat(64),
     evidence,
+    protectedMainAdvance: {
+      schema: "agentic-active-owned-dirt-protected-main-advance/v1",
+      baseSha: lease.baseSha,
+      pullRequestBaseSha: pullRequest.baseRefOid,
+      protectedMainSha: "d".repeat(40),
+      protectedMainTreeSha: "e".repeat(40),
+      declaredWriteSetDigest: writeSetDigest,
+      changedPathCount: 1,
+      changedPathsDigest: digestValue(["docs/unrelated.md"]),
+    },
     evaluatedAt: "2026-08-09T00:00:00.000Z",
   };
 }
@@ -219,35 +251,90 @@ function evidenceFixture(firstPath) {
   return { ...core, evidenceDigest: digestValue(core) };
 }
 
-function cloudResult(plan) {
+function cloudResult(plan, { replayed = false } = {}) {
+  const evaluationTime = "2026-08-09T00:00:00.000Z";
+  const expiresAt = "2026-08-09T00:30:00.000Z";
+  const claimDigest = "6".repeat(64);
+  const claimTransitionDigest = "a".repeat(64);
+  const idempotencyKey = digestValue(`active-owned-dirt-recovery:${plan.planDigest}`);
+  const requestDigest = digestValue({ action: "continue", intent: {
+    repositoryId: plan.sourceRepositoryId,
+    actorId: plan.sourceActorId,
+    deviceId: plan.sourceCloudDeviceId,
+    sessionId: plan.sourceCloudSessionId,
+    claimId: plan.sourceClaimId,
+    expectedFenceRevision: plan.sourceClaimDigest,
+    expectedTransitionCounter: plan.sourceCloudTransitionCounter,
+    mode: "recovery",
+    laneRevision: null,
+    reviewRequestId: null,
+    expiresAt,
+    focusedEvidenceDigest: null,
+    handoffEvidenceDigest: null,
+    recoveryEvidenceDigest: "8".repeat(64),
+  } });
+  const operationCore = {
+    schema: "agentic-collaboration-continuation-receipt/v1",
+    operation: "continue",
+    status: "current",
+    repositoryId: plan.sourceRepositoryId,
+    claimId: plan.sourceClaimId,
+    claimDigest,
+    fenceRevision: claimDigest,
+    ledgerRevision: claimTransitionDigest,
+    ledgerSequence: 5,
+    idempotencyKey,
+    requestDigest,
+    evaluationTime,
+  };
+  const operationReceipt = { ...operationCore, receiptDigest: digestValue(operationCore) };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-receipt/v1",
+    action: "continue",
+    ledgerRevision: "7".repeat(40),
+    ledgerDigest: "8".repeat(64),
+    claimId: plan.sourceClaimId,
+    claimDigest,
+    contractReceiptDigest: operationReceipt.receiptDigest,
+    sequence: 6,
+    evaluationTime,
+  };
   return {
     schema: "agentic-cloud-collaboration-result/v1",
     ok: true,
     action: "continue",
-    claimDigest: "6".repeat(64),
+    status: "current",
+    replayed,
+    attempts: 1,
+    claimDigest,
     ledgerRevision: "7".repeat(40),
-    ledgerDigest: "8".repeat(64),
-    receipt: {
-      receiptDigest: "9".repeat(64),
-      ledgerDigest: "8".repeat(64),
-      evaluationTime: "2026-08-09T00:00:00.000Z",
-    },
+    operationReceipt,
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
     claim: {
       claimId: plan.sourceClaimId,
+      entrySchema: "agentic-cloud-collaboration-entry/v2",
+      claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
       state: "current",
+      writeAuthority: true,
+      scopeReserved: true,
+      actorId: plan.sourceActorId,
+      repositoryId: plan.sourceRepositoryId,
+      workItemId: plan.sourceWorkItemId,
       canonicalBaseRevision: plan.sourceBaseSha,
       laneRevision: plan.sourceFenceSha,
       writeSetDigest: plan.sourceWriteSetDigest,
       declaredWriteScope: plan.sourceDeclaredWriteSet,
       reviewRequestId: plan.sourceReviewRequestId,
-      leaseEpoch: 1,
+      leaseEpoch: plan.sourceCloudLeaseEpoch,
       transitionCounter: plan.sourceCloudTransitionCounter + 1,
-      transitionDigest: "a".repeat(64),
-      operationReceiptDigest: "b".repeat(64),
-      deviceId: plan.sourceDevice,
-      sessionId: plan.sourceSessionId,
-      expiresAt: "2099-08-09T01:00:00.000Z",
-      recovery: { evidenceDigest: "8".repeat(64) },
+      heartbeatCounter: 0,
+      predecessorClaimId: null,
+      transitionDigest: claimTransitionDigest,
+      fenceRevision: claimDigest,
+      operationReceiptDigest: operationReceipt.receiptDigest,
+      integrationReceiptDigest: null,
+      integration: null,
+      expiresAt,
     },
   };
 }

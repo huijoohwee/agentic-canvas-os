@@ -1,11 +1,11 @@
+// Responsibility: Orchestrate one receipt-bound active-owned-dirt recovery through injected effect adapters.
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import {
-  authorizeActiveOwnedDirtRecovery, buildActiveOwnedDirtRecoveryPlan,
-  buildActiveOwnedDirtRecoveryReceipt, classifyActiveOwnedDirtCloudRecoveryState,
+import { authorizeActiveOwnedDirtRecovery,
+  buildActiveOwnedDirtRecoveryReceipt, createActiveOwnedDirtCloudRecoveryRequest,
   createActiveOwnedDirtLeaseRecovery, normalizeActiveOwnedDirtRecoveryPlan,
-  reconstructActiveOwnedDirtCloudRecoveryResult, verifyActiveOwnedDirtCloudRecovery,
+  selectActiveOwnedDirtRecoveryPlan, verifyActiveOwnedDirtCloudRecovery,
 } from "./active-owned-dirt-recovery-contract.mjs";
 import {
   captureActiveOwnedDirtEvidence, createActiveOwnedDirtSnapshot,
@@ -13,28 +13,26 @@ import {
 } from "./active-owned-dirt-recovery-evidence.mjs";
 import {
   advanceActiveOwnedDirtRecoveryIntent, beginActiveOwnedDirtRecoveryIntent,
+  assertActiveDraftMutationAuthority, assertActiveOwnedDirtPlanSource,
   normalizeActiveOwnedDirtRecoveryIntent, projectActiveOwnedDirtRecoveredLease,
-  readActiveOwnedDirtRecoveryIntent,
+  readActiveOwnedDirtRecoveryIntent, verifiedHeartbeatAuthority,
 } from "./active-owned-dirt-recovery-registry.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { captureProtectedMainAdvance, readActiveOwnedDirtRecoveryPullRequest,
+  requireProtectedMainEquivalent }
+  from "./device-branch-ownership-lib.mjs";
+export { captureProtectedMainAdvance, requireProtectedMainEquivalent }
+  from "./device-branch-ownership-lib.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
-import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
-import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority }
   from "./scoped-lane-cloud-authority.mjs";
 import { normalizeBoundAuthority } from "./scoped-lane-cloud-reconciliation.mjs";
-import {
-  createWriterLeaseStore,
-  parseWriterLeasePullRequestBody,
-  projectWriterLeasePullRequestMarker,
-  updateWriterLeasePullRequestBody,
-} from "./writer-lease-lib.mjs";
+import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
+  projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody }
+  from "./writer-lease-lib.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
-const PHASES = Object.freeze([
-  "intent", "snapshot", "cloud", "local-cas", "pr-marker", "complete",
-]);
-const GITHUB_BODY_LIMIT = 65_536;
-const PREFLIGHT_MARGIN = 4_096;
+const PHASES = Object.freeze(["intent", "snapshot", "cloud", "local-cas", "pr-marker", "complete"]);
+const GITHUB_BODY_LIMIT = 65_536, PREFLIGHT_MARGIN = 4_096;
 export function createActiveOwnedDirtRecoveryControllerAdapter(methods = {}) {
   const names = [
     "readState", "beginIntent", "markIntent", "createSnapshot",
@@ -48,12 +46,25 @@ export function createActiveOwnedDirtRecoveryControllerAdapter(methods = {}) {
   }
   return adapter;
 }
+export function invokeActiveOwnedDirtRecoveryContinue({ invoke, invocation }) {
+  if (typeof invoke !== "function" || !invocation || typeof invocation !== "object") {
+    throw new Error("Active-owned-dirt cloud continuation requires an exact invocation.");
+  }
+  try {
+    return invoke(invocation);
+  } catch {
+    return invoke(invocation);
+  }
+}
 export async function runActiveOwnedDirtRecovery({ authorization = null } = {}, { adapter } = {}) {
   if (!adapter) throw new Error("Active-owned-dirt recovery adapter is required.");
   const state = await adapter.readState();
-  const existing = state.intent ? normalizeActiveOwnedDirtRecoveryIntent(state.intent) : null;
-  const plan = existing?.planSnapshot
-    || buildActiveOwnedDirtRecoveryPlan({ source: state.source, ttlSeconds: state.ttlSeconds });
+  const selected = selectActiveOwnedDirtRecoveryPlan({
+    state, ttlSeconds: state.ttlSeconds,
+  });
+  const plan = selected.plan;
+  const existing = selected.resumeIntent
+    ? normalizeActiveOwnedDirtRecoveryIntent(state.intent) : null;
   const receipts = [buildActiveOwnedDirtRecoveryReceipt({
     phase: "preflight", plan, values: { evidenceDigest: plan.evidenceDigest },
   })];
@@ -184,8 +195,9 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
     const remoteMainSha = firstSha(gitText([
       "ls-remote", "--heads", "origin", "refs/heads/main",
     ]));
-    const pullRequest = readOwnershipPullRequest({
-      url: lease.pullRequestUrl, branch, ghText,
+    const pullRequest = readActiveOwnedDirtRecoveryPullRequest({
+      url: lease.pullRequestUrl, branch,
+      targetRepository: lease.cloudAuthority?.targetRepository, ghText,
     });
     const marker = parseWriterLeasePullRequestBody(pullRequest.body);
     const status = invoke({
@@ -205,6 +217,21 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
     ));
     const evidence = captureEvidence();
     const expectedMarker = projectWriterLeasePullRequestMarker(lease);
+    const protectedMainAdvance = captureProtectedMainAdvance({
+      baseSha: lease.baseSha, pullRequestBaseSha: pullRequest.baseRefOid,
+      protectedMainSha: remoteMainSha,
+      declaredWriteSet: lease.admission?.declaredWriteSet, gitText,
+    });
+    const confirmedRemoteHeadSha = firstSha(gitText([
+      "ls-remote", "--heads", "origin", `refs/heads/${branch}`,
+    ]));
+    const confirmedRemoteMainSha = firstSha(gitText([
+      "ls-remote", "--heads", "origin", "refs/heads/main",
+    ]));
+    if (confirmedRemoteHeadSha !== remoteHeadSha
+      || confirmedRemoteMainSha !== remoteMainSha) {
+      throw new Error("Remote branch or protected main changed during evidence capture.");
+    }
     const source = {
       sessionId: sourceSession,
       branch,
@@ -223,6 +250,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
       ledgerRevision: status.ledgerRevision,
       ledgerDigest: status.ledgerDigest,
       evidence,
+      protectedMainAdvance,
       evaluatedAt: now().toISOString(),
     };
     return Object.freeze({
@@ -231,17 +259,16 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
       ttlSeconds: ttl,
     });
   };
-  const requirePreLocalState = plan => {
+  const requirePreLocalState = (plan, { allowRecoveredClaim = false } = {}) => {
     const current = readState();
     const normalized = normalizeActiveOwnedDirtRecoveryPlan(plan);
-    if (writerLeaseDigest(current.source.lease) !== normalized.sourceLeaseDigest
-      || current.source.claim.claimId !== normalized.sourceClaimId
-      || current.source.claim.fenceRevision !== normalized.sourceClaimDigest
-      || current.source.claim.transitionCounter !== normalized.sourceCloudTransitionCounter
-      || current.source.pullRequestBodyDigest !== normalized.sourcePullRequestBodyDigest
-      || current.source.markerDigest !== normalized.sourceMarkerDigest) {
-      throw new Error("Source lease, cloud claim, or pull-request marker drifted.");
-    }
+    assertActiveOwnedDirtPlanSource({ plan: normalized, current, allowRecoveredClaim });
+    requireLaneFence(current, normalized);
+    requireProtectedMainEquivalent({
+      planned: normalized.sourceProtectedMainAdvance,
+      observed: current.source.protectedMainAdvance,
+      gitText,
+    });
     requireEvidence(plan, current.source.evidence);
     return current;
   };
@@ -285,46 +312,29 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
       return snapshot;
     },
     recoverCloud({ plan, snapshot }) {
-      const current = readState();
-      const cloudState = classifyActiveOwnedDirtCloudRecoveryState({
-        plan, source: current.source,
-        snapshotReceiptDigest: snapshot.snapshotReceiptDigest,
-      });
       verifyActiveOwnedDirtSnapshot({ repository: root, snapshot });
+      const current = requirePreLocalState(plan, { allowRecoveredClaim: true });
       preflightPullRequestBody({ lease: current.source.lease, pullRequest: current.source.pullRequest });
+      const recoveryRequest = createActiveOwnedDirtCloudRecoveryRequest({
+        plan, recoveryEvidenceDigest: snapshot.snapshotReceiptDigest,
+      });
       const invocation = {
         action: "continue",
         ledgerRepository: current.source.lease.cloudAuthority.ledgerRepository,
         request: {
           targetRepository: current.source.lease.cloudAuthority.targetRepository,
-          claimId: plan.sourceClaimId,
-          expectedFenceRevision: plan.sourceClaimDigest,
-          expectedLedgerRevision: plan.sourceLedgerRevision,
-          expectedLedgerDigest: plan.sourceLedgerDigest,
-          expectedTransitionCounter: plan.sourceCloudTransitionCounter,
-          mode: "recovery",
-          ttlSeconds: plan.ttlSeconds,
-          recoveryEvidenceDigest: snapshot.snapshotReceiptDigest,
-          deviceId: plan.sourceDevice,
-          sessionId: plan.sourceSessionId,
-          idempotencyKey: `active-owned-dirt-recovery:${plan.planDigest}`,
+          ...recoveryRequest,
         },
         environment,
       };
-      let result;
-      try {
-        result = invoke(invocation);
-      } catch (error) {
-        if (cloudState !== "recovered") throw error;
-        result = reconstructActiveOwnedDirtCloudRecoveryResult(current.source);
-      }
+      const result = invokeActiveOwnedDirtRecoveryContinue({ invoke, invocation });
       const cloud = verifyActiveOwnedDirtCloudRecovery({
         plan,
         result,
         recoveryEvidenceDigest: snapshot.snapshotReceiptDigest,
       });
       const authority = normalizeBoundAuthority({
-        result,
+        result: { ...result, ledgerDigest: cloud.ledgerDigest },
         authority: current.source.lease.cloudAuthority,
         manifest: current.source.lease.admission,
         deviceId: plan.sourceDevice,
@@ -340,7 +350,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
       });
       return Object.freeze({
         ...cloud,
-        authority: verified.authority,
+        authority: verifiedHeartbeatAuthority(verified),
         cloudVerificationReceiptDigest: requiredDigest(
           verified.verification.receiptDigest,
           "cloud verification receipt digest",
@@ -383,10 +393,11 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
             current.source.pullRequest.body,
             candidate,
           ));
-          return assertAdmissionMutationAuthority({
+          return assertActiveDraftMutationAuthority({
             lease: candidate,
             cloudAuthority: verification.authority,
             remoteAuthorityVerification: verification.verification,
+            pullRequest: current.source.pullRequest,
           });
         },
       });
@@ -450,10 +461,11 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
         canonicalBaseSha: plan.sourceBaseSha,
         environment, inspect: invoke, invoke: verify,
       });
-      assertAdmissionMutationAuthority({
+      assertActiveDraftMutationAuthority({
         lease: current.source.lease,
         cloudAuthority: verified.authority,
         remoteAuthorityVerification: verified.verification,
+        pullRequest: current.source.pullRequest,
       });
       return buildActiveOwnedDirtRecoveryReceipt({
         phase: "complete",
@@ -494,11 +506,16 @@ function assertRecoveredLease({ lease, plan, snapshot, cloud, localProjection })
 function requireLaneFence(current, plan) {
   const source = current.source;
   if (source.headSha !== plan.sourceFenceSha || source.remoteHeadSha !== plan.sourceFenceSha
-    || source.remoteMainSha !== plan.sourceBaseSha || source.pullRequest.isDraft !== true
+    || source.pullRequest.isDraft !== true
     || source.pullRequest.headRefOid !== plan.sourceFenceSha
-    || source.pullRequest.baseRefOid !== plan.sourceBaseSha) {
+    || source.pullRequest.baseRefOid !== plan.sourceProtectedMainAdvance.pullRequestBaseSha) {
     throw new Error("Branch, remote, protected base, or draft pull request drifted.");
   }
+  requireProtectedMainEquivalent({
+    planned: plan.sourceProtectedMainAdvance,
+    observed: source.protectedMainAdvance,
+    gitText,
+  });
 }
 function assertRegisteredWorktree({ root, branch, gitText }) {
   const listing = gitText(["worktree", "list", "--porcelain", "-z"]);
@@ -514,19 +531,15 @@ function preflightPullRequestBody({ lease, pullRequest }) {
   const body = updateWriterLeasePullRequestBody(pullRequest.body, {
     ...lease,
     activeOwnedDirtRecovery: {
-      schema: "agentic-active-owned-dirt-recovery-lease/v1",
-      status: "recovered",
-      sourceEpoch: lease.epoch,
-      sourceSessionId: lease.sessionId,
-      sourceDevice: lease.device,
-      sourceBranch: lease.branch,
-      sourceFenceSha: lease.fenceSha,
-      sourceClaimId: "f".repeat(64),
+      schema: "agentic-active-owned-dirt-recovery-lease/v1", status: "recovered",
+      sourceEpoch: lease.epoch, sourceSessionId: lease.sessionId,
+      sourceDevice: lease.device, sourceBranch: lease.branch,
+      sourceFenceSha: lease.fenceSha, sourceClaimId: "f".repeat(64),
       planDigest: "f".repeat(64), evidenceDigest: "f".repeat(64),
       snapshotReceiptDigest: "f".repeat(64),
       snapshotRef: `refs/agentic-canvas-os/recovery/active-owned-dirt/${"f".repeat(64)}/${"f".repeat(64)}`,
-      snapshotCommitSha: "f".repeat(40), recoveredClaimDigest: "f".repeat(64),
-      snapshotIndexCommitSha: "f".repeat(40),
+      snapshotCommitSha: "f".repeat(40), snapshotIndexCommitSha: "f".repeat(40),
+      recoveredClaimDigest: "f".repeat(64),
       recoveredLedgerRevision: "f".repeat(40), recoveredClaimLedgerRevision: "f".repeat(64),
       recoveredTransitionCounter: lease.cloudAuthority.transitionCounter + 1,
       recoveredAt: lease.heartbeatAt,
@@ -537,62 +550,46 @@ function preflightPullRequestBody({ lease, pullRequest }) {
   }
 }
 function assertBodyLimit(value) {
-  if (Buffer.byteLength(value) > GITHUB_BODY_LIMIT) {
-    throw new Error("Recovered pull-request marker exceeds GitHub's body limit.");
-  }
+  if (Buffer.byteLength(value) > GITHUB_BODY_LIMIT) throw new Error(
+    "Recovered pull-request marker exceeds GitHub's body limit.");
 }
 function requireIntentPlan(intent, plan) {
   if (intent.planDigest !== plan.planDigest
     || intent.sourceLeaseDigest !== plan.sourceLeaseDigest
-    || intent.sourceClaimId !== plan.sourceClaimId) {
-    throw new Error("Recovery intent drifted from the exact plan.");
-  }
+    || intent.sourceClaimId !== plan.sourceClaimId) throw new Error(
+      "Recovery intent drifted from the exact plan.");
 }
-function atLeast(current, expected) {
-  return phaseIndex(current) >= phaseIndex(expected);
-}
+function atLeast(current, expected) { return phaseIndex(current) >= phaseIndex(expected); }
 function phaseIndex(value) {
   const index = PHASES.indexOf(value);
   if (index < 0) throw new Error("Recovery phase is invalid.");
-  return index;
-}
+  return index; }
 function defaultGitText(repository) {
-  return args => execFileSync("git", args, { cwd: repository, encoding: "utf8" }).trim();
-}
+  return args => execFileSync("git", args, { cwd: repository, encoding: "utf8" }).trim(); }
 function defaultGhText(repository) {
-  return args => execFileSync("gh", args, { cwd: repository, encoding: "utf8" }).trim();
-}
+  return args => execFileSync("gh", args, { cwd: repository, encoding: "utf8" }).trim(); }
 function defaultRun(repository) {
   return (command, args) => execFileSync(command, args, {
-    cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
-  });
-}
-function firstSha(value) {
-  return requiredSha(String(value || "").trim().split(/\s+/u)[0], "remote SHA");
-}
+    cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], }); }
+function firstSha(value) { return requiredSha(
+  String(value || "").trim().split(/\s+/u)[0], "remote SHA"); }
 function boundedTtl(value) {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 60 || parsed > 86_400) {
-    throw new Error("Recovery TTL must be an integer from 60 through 86400 seconds.");
-  }
-  return parsed;
-}
+  if (!Number.isInteger(parsed) || parsed < 60 || parsed > 86_400) throw new Error(
+    "Recovery TTL must be an integer from 60 through 86400 seconds.");
+  return parsed; }
 function requiredObjectId(value, label) {
   const candidate = String(value || "");
   if (!/^[0-9a-f]{40,64}$/u.test(candidate)) throw new Error(`${label} must be a Git object ID.`);
-  return candidate;
-}
+  return candidate; }
 function requiredSha(value, label) {
   const candidate = String(value || "").trim();
   if (!/^[0-9a-f]{40}$/u.test(candidate)) throw new Error(`${label} must be a SHA.`);
-  return candidate;
-}
+  return candidate; }
 function requiredDigest(value, label) {
   const candidate = String(value || "");
   if (!/^[0-9a-f]{64}$/u.test(candidate)) throw new Error(`${label} must be a SHA-256 digest.`);
-  return candidate;
-}
+  return candidate; }
 function requiredText(value, label) {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${label} is required.`);
-  return value.trim();
-}
+  return value.trim(); }

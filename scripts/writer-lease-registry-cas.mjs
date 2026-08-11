@@ -1,4 +1,5 @@
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+// Responsibility: Apply exact writer-lease registry projections under one cooperative CAS lock.
+import { existsSync, lstatSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
@@ -6,6 +7,8 @@ import {
   WRITER_LEASE_REGISTRY_SCHEMA,
   WRITER_LEASE_SCHEMA,
 } from "./writer-lease-lib.mjs";
+import { validateCompletedActiveOwnedDirtRecoveryIntent }
+  from "./active-owned-dirt-recovery-contract.mjs";
 
 export const SCOPE_EXPANSION_INTENT_SCHEMA =
   "agentic-active-dirty-scope-expansion-intent/v1";
@@ -299,8 +302,10 @@ function writeRegistryCas({ statePath, expectedRegistry, nextRegistry }) {
     schema: WRITER_LEASE_REGISTRY_SCHEMA,
     revision: Number(expectedRegistry.revision || 0) + 1,
   };
+  requireRegistry(next);
   const root = path.dirname(statePath);
   mkdirSync(root, { recursive: true });
+  requireRegularRegistryPath(statePath);
   const temporary = `${statePath}.${process.pid}.${Date.now()}.writer-lease-cas.tmp`;
   writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
   renameSync(temporary, statePath);
@@ -347,7 +352,11 @@ function assertHeartbeatIntentAllows({
 
 function recoveryFenceIntent(registry, branch) {
   const value = registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null;
-  if (value === null || value === undefined || value.status === "complete") return null;
+  if (value === null || value === undefined) return null;
+  if (value.status === "complete") {
+    validateCompletedActiveOwnedDirtRecoveryIntent(value);
+    return null;
+  }
   if (value.schema !== "agentic-active-owned-dirt-recovery-intent/v1"
     || !DIGEST_PATTERN.test(String(value.planDigest || ""))) {
     throw new Error("Active-owned-dirt recovery intent is malformed.");
@@ -470,10 +479,24 @@ function snapshotPlan(value) {
 
 function requireRegistry(registry) {
   if (registry?.schema !== WRITER_LEASE_REGISTRY_SCHEMA
-    || !registry.leases || typeof registry.leases !== "object") {
+    || !registry.leases || typeof registry.leases !== "object"
+    || !Number.isSafeInteger(registry.revision) || registry.revision < 0
+    || registry.revision >= Number.MAX_SAFE_INTEGER
+    || Object.values(registry.leases).some(candidate => (
+      !Number.isSafeInteger(candidate?.epoch) || candidate.epoch < 1
+      || candidate.epoch >= Number.MAX_SAFE_INTEGER
+    ))) {
     throw new Error("Writer-lease registry schema is unsupported.");
   }
   return registry;
+}
+
+function requireRegularRegistryPath(statePath) {
+  if (!existsSync(statePath)) return;
+  const stat = lstatSync(statePath);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error("Writer-lease registry must be a regular non-symlink file.");
+  }
 }
 
 function requireLease(lease) {

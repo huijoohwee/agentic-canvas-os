@@ -532,7 +532,7 @@ detached completion-proven lanes pending cleanup. `owned-untracked` requires a
 worktree-bound session, branch, scope, epoch, and pull request; its report records
 the observed paths, byte sizes, Git object ids, and observation time without
 copying or storing their contents. It fails closed on
-unattributed dirt, unregistered, stale, ambiguous, invalid, or already-completed
+unattributed dirt, present-but-unregistered, stale, ambiguous, invalid, or completed
 residual task worktrees. A completed task becomes cleanup-eligible only after
 `device:complete` verifies its merged pull request, detaches it cleanly at the
 exact fetched `origin/main`, and records the completed writer-lease state.
@@ -543,29 +543,29 @@ Remove one eligible checkout explicitly from the canonical main worktree:
 npm run worktree:lifecycle:cleanup -- --worktree="$TASK_WORKTREE"
 ```
 
-Cleanup uses `git worktree remove` without force and then prunes registration
-metadata. It preserves the task branch and commits. It never removes canonical,
-active, delivery, parked, `owned-untracked`, dirty, divergent, or unclassified
+Cleanup uses exact `git worktree remove` without force, then rechecks target
+registration and path absence; it never prunes unrelated prunable records. It
+preserves task branch/commits and never removes canonical, active, delivery,
+parked, `owned-untracked`, dirty, divergent, or unclassified
 worktrees; uncertain files remain in their physical owning lane. Automatic park
-or stash is forbidden for `owned-untracked`; only its owner may explicitly
-choose a later supported handoff. Branch deletion is a separate
+or stash is forbidden for `owned-untracked`; only its owner may explicitly choose
+a later supported handoff. Branch deletion is a separate
 operator-authorized action.
 
 Given a completion claim, when the protocol runs, then the protected Dev pull
-request is merged, the task worktree is detached and clean at the exact fetched
-`origin/main` revision containing that merge, the registered main worktree is
-fast-forwarded separately, and the original failure is
-retested on a local runtime started from that same SHA. Dev integration alone
+request is merged and its typed cleanup receipt proves the exact target has
+`registeredAfter:false`, `pathExistsAfter:false`, and `registrationPruned:false`;
+the target is absent/unregistered, canonical main converges separately, and the original failure is retested on that SHA's runtime. Integration
 does not authorize Prod mirror or Cloudflare action.
 
 VCC: Verify `npm run device:integrate -- --json` exits zero with schema
 `agentic-device-integration-result/v1` and status `runtime_ready`; it emits the
 required commit/tree/digest, branch, pull-request, merge, integrated-source, and
-runtime evidence; the task worktree is clean and detached; all registered
-canonical sources align with `origin/main`; the managed local runtime identifies
-the exact Knowgrph application SHA and integrated source SHA; and the original
-browser acceptance passes. Any missing item
-leaves the task pending, paused, or blocked rather than complete.
+runtime evidence; its cleanup receipt proves the exact target absent/unregistered,
+postconditions false, no broad registration prune, and preserved branch/commits;
+all canonical sources align with `origin/main`; the runtime identifies the exact
+Knowgrph and integrated-source SHAs; and browser acceptance passes. Any missing
+item leaves the task pending, paused, or blocked rather than complete.
 
 Session-end VCC: Verify the lifecycle report names every registered worktree and
 its state; a runtime-relevant review-ready lane reports one ready server whose

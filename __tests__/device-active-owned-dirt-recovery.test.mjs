@@ -10,6 +10,7 @@ import {
 } from "../scripts/active-owned-dirt-recovery-contract.mjs";
 import {
   advanceActiveOwnedDirtRecoveryIntent,
+  assertActiveOwnedDirtPlanSource,
   beginActiveOwnedDirtRecoveryIntent,
   projectActiveOwnedDirtRecoveredLease,
 } from "../scripts/active-owned-dirt-recovery-registry.mjs";
@@ -20,7 +21,14 @@ import { writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
 test("recovery CAS renews only the same source session and preserves fence/admission", () => {
   const gitCommonDir = mkdtempSync(path.join(os.tmpdir(), "device-active-owned-dirt-"));
   const branch = "agent/device/recovery";
-  const claimId = "a".repeat(64);
+  const declaredWriteSet = ["path:src", "semantic:recovery"];
+  const actorId = "github-user:1";
+  const repositoryId = "github-repository:R";
+  const workItemId = `work-item:${"f".repeat(64)}`;
+  const cloudLeaseEpoch = 3;
+  const claimId = digestValue({ actorId, canonicalBaseRevision: "b".repeat(40),
+    leaseEpoch: cloudLeaseEpoch, repositoryId, workItemId,
+    writeSetDigest: digestValue(declaredWriteSet) });
   const store = createWriterLeaseStore({
     gitCommonDir,
     now: () => new Date("2026-08-09T00:00:00.000Z"),
@@ -35,7 +43,6 @@ test("recovery CAS renews only the same source session and preserves fence/admis
       baseSha: "b".repeat(40),
       ttlMs: 60_000,
     });
-    const declaredWriteSet = ["path:src", "semantic:recovery"];
     lease = store.annotate({
       sessionId: lease.sessionId,
       branch,
@@ -49,10 +56,37 @@ test("recovery CAS renews only the same source session and preserves fence/admis
           writeSetDigest: digestValue(declaredWriteSet),
           manifestDigest: "d".repeat(64),
         },
-        cloudAuthority: { claimId },
+        cloudAuthority: { claimId, leaseEpoch: cloudLeaseEpoch },
       },
     });
-    const plan = planFixture({ lease, declaredWriteSet });
+    const plan = planFixture({ lease, declaredWriteSet, actorId, repositoryId, workItemId });
+    const claim = { claimId, entrySchema: plan.sourceEntrySchema,
+      claimIdentitySchema: plan.sourceClaimIdentitySchema, actorId, repositoryId, workItemId,
+      predecessorClaimId: null, canonicalBaseRevision: plan.sourceBaseSha,
+      laneRevision: plan.sourceFenceSha, leaseEpoch: plan.sourceCloudLeaseEpoch,
+      declaredWriteScope: declaredWriteSet, writeSetDigest: plan.sourceWriteSetDigest,
+      reviewRequestId: null, state: "dormant-preserved",
+      transitionCounter: plan.sourceCloudTransitionCounter,
+      fenceRevision: plan.sourceClaimDigest,
+      transitionDigest: plan.sourceClaimLedgerRevision,
+      operationReceiptDigest: plan.sourceOperationReceiptDigest };
+    const source = { lease, claim, worktreeIdentityDigest: plan.sourceWorktreeIdentityDigest,
+      pullRequest: { id: plan.sourcePullRequestId, url: plan.sourcePullRequestUrl,
+        headRepository: { nameWithOwner: plan.sourcePullRequestRepository } },
+      pullRequestBodyDigest: plan.sourcePullRequestBodyDigest,
+      markerDigest: plan.sourceMarkerDigest, ledgerRevision: plan.sourceLedgerRevision,
+      ledgerDigest: plan.sourceLedgerDigest, overlappingClaims: [] };
+    assert.equal(assertActiveOwnedDirtPlanSource({ plan, current: { source } }).recoveredClaim, false);
+    const recoveredClaim = { ...claim, state: "current", writeAuthority: true,
+      scopeReserved: true, transitionCounter: claim.transitionCounter + 1,
+      fenceRevision: "1".repeat(64), transitionDigest: "2".repeat(64),
+      operationReceiptDigest: "3".repeat(64) };
+    assert.equal(assertActiveOwnedDirtPlanSource({ plan,
+      current: { source: { ...source, claim: recoveredClaim } },
+      allowRecoveredClaim: true }).recoveredClaim, true);
+    assert.throws(() => assertActiveOwnedDirtPlanSource({ plan,
+      current: { source: { ...source, pullRequestBodyDigest: "0".repeat(64) } } }),
+    /projection drifted/);
     let intent = beginActiveOwnedDirtRecoveryIntent({
       leaseStore: store,
       branch,
@@ -76,10 +110,12 @@ test("recovery CAS renews only the same source session and preserves fence/admis
       values: { snapshot },
     }).intent;
     const cloud = {
+      claimId,
       claimDigest: "1".repeat(64),
       ledgerRevision: "2".repeat(40),
       claimLedgerRevision: "3".repeat(64),
       transitionCounter: 4,
+      operationReceiptDigest: "4".repeat(64),
       recoveredAt: "2026-08-09T00:01:00.000Z",
     };
     intent = advanceActiveOwnedDirtRecoveryIntent({
@@ -102,6 +138,8 @@ test("recovery CAS renews only the same source session and preserves fence/admis
       claimId,
       claimDigest: cloud.claimDigest,
       transitionCounter: cloud.transitionCounter,
+      leaseEpoch: cloudLeaseEpoch,
+      operationReceiptDigest: cloud.operationReceiptDigest,
       expiresAt: "2026-08-09T00:31:00.000Z",
     };
     const projected = projectActiveOwnedDirtRecoveredLease({
@@ -145,7 +183,7 @@ test("recovery CAS renews only the same source session and preserves fence/admis
   }
 });
 
-function planFixture({ lease, declaredWriteSet }) {
+function planFixture({ lease, declaredWriteSet, actorId, repositoryId, workItemId }) {
   const core = {
     schema: "agentic-active-owned-dirt-recovery-plan/v1",
     sourceSessionId: lease.sessionId,
@@ -157,20 +195,41 @@ function planFixture({ lease, declaredWriteSet }) {
     sourceBaseSha: lease.baseSha,
     sourceFenceSha: lease.fenceSha,
     sourcePullRequestUrl: lease.pullRequestUrl,
+    sourcePullRequestId: "PR_source",
+    sourcePullRequestRepository: "org/repo",
     sourcePullRequestBodyDigest: "4".repeat(64),
     sourceMarkerDigest: "5".repeat(64),
     sourceWorktreeIdentityDigest: "6".repeat(64),
+    sourceEntrySchema: "agentic-cloud-collaboration-entry/v2",
+    sourceClaimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    sourceActorId: actorId,
+    sourceRepositoryId: repositoryId,
+    sourceWorkItemId: workItemId,
+    sourcePredecessorClaimId: null,
+    sourceCloudDeviceId: `device:${digestValue({ namespace: "device", value: lease.device })}`,
+    sourceCloudSessionId: `session:${digestValue({ namespace: "session", value: lease.sessionId })}`,
     sourceClaimId: lease.cloudAuthority.claimId,
     sourceClaimDigest: "7".repeat(64),
     sourceClaimLedgerRevision: "8".repeat(64),
     sourceCloudTransitionCounter: 3,
-    sourceCloudLeaseEpoch: 1,
+    sourceCloudLeaseEpoch: lease.cloudAuthority.leaseEpoch,
+    sourceOperationReceiptDigest: "0".repeat(64),
     sourceLedgerRevision: "9".repeat(40),
     sourceLedgerDigest: "a".repeat(64),
-    sourceReviewRequestId: "github-pull-request:9",
+    sourceReviewRequestId: null,
     sourceManifestDigest: lease.admission.manifestDigest,
     sourceWriteSetDigest: lease.admission.writeSetDigest,
     sourceDeclaredWriteSet: declaredWriteSet,
+    sourceProtectedMainAdvance: {
+      schema: "agentic-active-owned-dirt-protected-main-advance/v1",
+      baseSha: lease.baseSha,
+      pullRequestBaseSha: "d".repeat(40),
+      protectedMainSha: "e".repeat(40),
+      protectedMainTreeSha: "f".repeat(40),
+      declaredWriteSetDigest: lease.admission.writeSetDigest,
+      changedPathCount: 1,
+      changedPathsDigest: digestValue(["docs/unrelated.md"]),
+    },
     evidenceDigest: "b".repeat(64),
     dirtyPathCount: 15,
     snapshotTimestamp: "2026-08-09T00:00:00.000Z",

@@ -583,7 +583,7 @@ test("CI completion projects exact source checks into the candidate rollup befor
     ghJson: args => {
       const endpoint = args.find(value => value.startsWith(`repos/${repository}/`));
       if (endpoint === `repos/${repository}/check-suites/${workflow.check_suite_id}/check-runs`)
-        return { total_count: source.length, check_runs: source };
+        return { total_count: source.length + checks.length, check_runs: [...source, ...checks] };
       if (endpoint?.includes("/check-runs/")) return checks.find(check => endpoint.endsWith(`/${check.id}`));
       return { data: { repository: { object: { statusCheckRollup: rollupAvailable ? { contexts: {
         totalCount: checks.length, nodes: checks.map(check => ({ __typename: "CheckRun",

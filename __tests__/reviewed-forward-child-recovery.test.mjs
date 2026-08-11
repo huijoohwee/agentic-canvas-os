@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
@@ -21,6 +29,10 @@ import {
   buildReviewedForwardChildCandidate,
   buildReviewedForwardChildEvidence,
 } from "../scripts/reviewed-forward-child-recovery-evidence.mjs";
+import {
+  createReviewedForwardChildJournal,
+  reviewedForwardChildJournalPaths,
+} from "../scripts/reviewed-forward-child-recovery-journal.mjs";
 
 const sha = character => character.repeat(40);
 const digest = character => character.repeat(64);
@@ -265,6 +277,115 @@ test("controller adopts a response-ahead effect only through reconciliation", as
   assert.equal(fake.effects.filter(name => name === "auto_merge_cancelled").length, 1);
 });
 
+test("journal generations preserve completed history and serialize active recovery", async () => {
+  const commonDirectory = mkdtempSync(path.join(os.tmpdir(), "forward-child-journal-"));
+  const branch = "agent/device/source";
+  const firstOperator = "operator-session-1";
+  const secondOperator = "operator-session-2";
+  const firstPaths = reviewedForwardChildJournalPaths({
+    commonDirectory,
+    branch,
+    operatorSessionId: firstOperator,
+  });
+  const secondPaths = reviewedForwardChildJournalPaths({
+    commonDirectory,
+    branch,
+    operatorSessionId: secondOperator,
+  });
+  const completedLegacyCore = {
+    schema: "agentic-reviewed-forward-child-recovery-intent/v1",
+    status: "complete",
+    planSnapshot: {},
+    authorization: {},
+    phases: {},
+    completion: { status: "authoring-restored" },
+  };
+  const completedLegacy = {
+    ...completedLegacyCore,
+    intentDigest: digestValue(completedLegacyCore),
+  };
+  const prepared = {
+    schema: "agentic-reviewed-forward-child-recovery-intent/v1",
+    status: "prepared",
+    completion: null,
+    intentDigest: digest("b"),
+  };
+
+  try {
+    mkdirSync(path.dirname(firstPaths.legacyStatePath), { recursive: true });
+    const legacyBytes = `${JSON.stringify(completedLegacy)}\n`;
+    writeFileSync(firstPaths.legacyStatePath, legacyBytes, { mode: 0o600 });
+    const first = createReviewedForwardChildJournal({
+      commonDirectory,
+      branch,
+      operatorSessionId: firstOperator,
+    });
+    const second = createReviewedForwardChildJournal({
+      commonDirectory,
+      branch,
+      operatorSessionId: secondOperator,
+    });
+
+    await first.withFence(() => first.writeIntent({ expected: null, value: prepared }));
+    assert.equal(readFileSync(firstPaths.legacyStatePath, "utf8"), legacyBytes);
+    assert.notEqual(firstPaths.statePath, secondPaths.statePath);
+    assert.equal(firstPaths.lockPath, secondPaths.lockPath);
+    await assert.rejects(
+      second.withFence(() => second.writeIntent({ expected: null, value: prepared })),
+      /unfinished competing journal generation/u,
+    );
+
+    const completedCore = {
+      ...prepared,
+      status: "complete",
+      planSnapshot: {},
+      authorization: {},
+      phases: {},
+      completion: { status: "authoring-restored" },
+    };
+    const { intentDigest: _preparedDigest, ...completedWithoutDigest } = completedCore;
+    const completed = {
+      ...completedWithoutDigest,
+      intentDigest: digestValue(completedWithoutDigest),
+    };
+    await first.withFence(() => first.writeIntent({ expected: prepared, value: completed }));
+    await second.withFence(() => second.writeIntent({ expected: null, value: prepared }));
+    assert.deepEqual(second.readIntent(), prepared);
+  } finally {
+    rmSync(commonDirectory, { recursive: true, force: true });
+  }
+});
+
+test("malformed terminal history blocks a new journal generation", async () => {
+  const commonDirectory = mkdtempSync(path.join(os.tmpdir(), "forward-child-journal-"));
+  const values = {
+    commonDirectory,
+    branch: "agent/device/source",
+    operatorSessionId: "operator-session",
+  };
+  const paths = reviewedForwardChildJournalPaths(values);
+  try {
+    mkdirSync(path.dirname(paths.legacyStatePath), { recursive: true });
+    writeFileSync(paths.legacyStatePath, JSON.stringify({
+      schema: "agentic-reviewed-forward-child-recovery-intent/v1",
+      status: "complete",
+      planSnapshot: {},
+      authorization: {},
+      phases: {},
+      completion: { status: "authoring-restored" },
+      intentDigest: "not-a-digest",
+    }));
+    const journal = createReviewedForwardChildJournal(values);
+    await assert.rejects(
+      journal.withFence(() => journal.writeIntent({ expected: null, value: {} })),
+      /unfinished competing journal generation/u,
+    );
+    assert.equal(journal.readIntent(), null);
+  } finally {
+    rmSync(commonDirectory, { recursive: true, force: true });
+  }
+});
+
 test("stale authorization reaches no protected effect", async () => {
   const fake = fakeAdapter();
   const controller = createReviewedForwardChildController({ adapter: fake.adapter });
@@ -298,5 +419,6 @@ test("plan-only preparation does not materialize or publish the child", () => {
     import.meta.url,
   ), "utf8");
   assert.match(cli, /controller\.plan/u);
+  assert.match(cli, /operatorSessionId,/u);
   assert.doesNotMatch(cli, /git|push|hash-object/u);
 });

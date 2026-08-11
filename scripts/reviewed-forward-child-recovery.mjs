@@ -25,6 +25,7 @@ export async function runReviewedForwardChildRecovery({
     repository,
     sourceSessionId,
     pullRequestNumber,
+    operatorSessionId,
     ttlSeconds,
   });
   const controller = createReviewedForwardChildController({ adapter });

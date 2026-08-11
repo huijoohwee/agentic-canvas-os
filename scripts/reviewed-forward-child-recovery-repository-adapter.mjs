@@ -1,12 +1,13 @@
 // Responsibility: Bind recovery phases to exact Git, GitHub, cloud, and lease CAS effects.
 import { execFileSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import { buildReviewedForwardChildCandidate, buildReviewedForwardChildEvidence } from "./reviewed-forward-child-recovery-evidence.mjs";
 import { complete, createReviewedForwardChildAdapter, pending } from "./reviewed-forward-child-recovery-controller.mjs";
+import { createReviewedForwardChildJournal } from "./reviewed-forward-child-recovery-journal.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
 import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
@@ -15,6 +16,7 @@ export function createReviewedForwardChildRepositoryAdapter(options = {}, depend
 function createRuntime(options, dependencies) {
   const repository = realpathSync(path.resolve(text(options.repository, "repository")));
   const sourceSessionId = text(options.sourceSessionId, "source session");
+  const operatorSessionId = text(options.operatorSessionId, "operator session");
   const expectedPullRequest = integer(options.pullRequestNumber, "pull-request number");
   const environment = options.environment || process.env;
   const execute = dependencies.execute || ((command, args, settings = {}) => execFileSync(
@@ -33,12 +35,11 @@ function createRuntime(options, dependencies) {
   if (registered.branch !== `refs/heads/${branch}`) invalid("registered branch");
   const commonDirectory = path.resolve(repository, git(["rev-parse", "--git-common-dir"]));
   const leaseStore = dependencies.leaseStore || createWriterLeaseStore({ gitCommonDir: commonDirectory });
-  const journalDirectory = path.join(commonDirectory, "agentic-canvas-os", "reviewed-forward-child-recovery");
-  const statePath = path.join(
-    journalDirectory,
-    `${createHash("sha256").update(branch).digest("hex")}.json`,
-  );
-  const lockPath = `${statePath}.lock`;
+  const journal = createReviewedForwardChildJournal({
+    commonDirectory,
+    branch,
+    operatorSessionId,
+  });
   const ttlSeconds = Number(options.ttlSeconds || 3_600);
   if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds < 300 || ttlSeconds > 86_400) invalid("TTL");
   function readLease({ terminal = false } = {}) {
@@ -537,48 +538,13 @@ function createRuntime(options, dependencies) {
     const claim = successor(plan, accepted, cloudStatus);
     return claim ? complete(stored || successorValues(cloudStatus, claim)) : pending();
   }
-  async function withFence(action) {
-    mkdirSync(journalDirectory, { recursive: true });
-    const lock = acquireFence();
-    try { return await action(); } finally { releaseFence(lock); }
-  }
-  function acquireFence() {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const token = randomUUID();
-      try {
-        const descriptor = openSync(lockPath, "wx", 0o600);
-        writeFileSync(descriptor, `${JSON.stringify({ pid: process.pid, token })}\n`);
-        closeSync(descriptor);
-        return { pid: process.pid, token };
-      } catch (error) {
-        if (error?.code !== "EEXIST") throw error;
-        const current = JSON.parse(readFileSync(lockPath, "utf8"));
-        try { process.kill(current.pid, 0); invalid("concurrent fence"); }
-        catch (probe) {
-          if (probe?.code !== "ESRCH") throw probe;
-          unlinkSync(lockPath);
-        }
-      }
-    }
-    invalid("fence acquisition");
-  }
-  function releaseFence(expected) {
-    if (!existsSync(lockPath)) return;
-    const current = JSON.parse(readFileSync(lockPath, "utf8"));
-    if (current.pid !== expected.pid || current.token !== expected.token) invalid("fence ownership");
-    unlinkSync(lockPath);
-  }
-  function readIntent() {
-    return existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : null;
-  }
-  function writeIntent({ expected, value }) {
-    if (JSON.stringify(readIntent()) !== JSON.stringify(expected)) invalid("journal CAS");
-    const temporary = `${statePath}.${process.pid}.tmp`;
-    writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-    renameSync(temporary, statePath);
-  }
   return {
-    withFence, readSource, prepareCandidate, readIntent, writeIntent, reconcilePhase,
+    withFence: journal.withFence,
+    readSource,
+    prepareCandidate,
+    readIntent: journal.readIntent,
+    writeIntent: journal.writeIntent,
+    reconcilePhase,
     cancelAutoMerge, createForwardChild, createWaitingSuccessor, retireSourceClaim,
     promoteSuccessor, updateLocalRef, updateRemoteRef, activateLease,
     projectDraftPullRequest, verifyTerminal,

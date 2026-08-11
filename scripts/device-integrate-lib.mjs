@@ -142,7 +142,9 @@ function integrateSessionUnfenced({
 
   const canonicalRoot = resolveCanonicalMainWorktree(gitText(["worktree", "list", "--porcelain", "-z"]));
   let commitEvidence = lease.integration || null;
-  const reviewReadyDelivery = isReviewReadyDeliveryLease(lease);
+  const cloudReviewReadyDelivery = isReviewReadyDeliveryLease(lease);
+  const legacyLocalOnlyAutoDeliveryReview = isLegacyLocalOnlyAutoDeliveryReviewLease(lease);
+  const reviewReadyDelivery = cloudReviewReadyDelivery || legacyLocalOnlyAutoDeliveryReview;
   const autoDeliveryReview = reviewReadyDelivery && lease.autoDelivery === true && lease.runtimeRequired === true;
   if (autoDeliveryReview && runtime !== "canonical") {
     throw new Error("Auto-delivery integration requires canonical runtime readiness; --runtime=none is not permitted.");
@@ -217,7 +219,15 @@ function integrateSessionUnfenced({
 
   let protectedMainRefresh = null;
   let completion = lease.completion || null;
-  if (!['completing', 'completed'].includes(lease.status)) {
+  if (legacyLocalOnlyAutoDeliveryReview) {
+    const pullRequest = requireMergedLegacyLocalOnlyAutoDeliveryPullRequest({
+      lease,
+      ghText,
+    });
+    log(`Legacy local-only pull request merged at ${pullRequest.mergeCommit.oid.slice(0, 12)}.`);
+    completion = completeTask();
+    lease = leaseStore.read(branch);
+  } else if (!['completing', 'completed'].includes(lease.status)) {
     let deliveryCloudAuthority = lease.cloudAuthority || null;
     const deliveryVerifiedBaseSha = deliveryCloudAuthority?.canonicalBaseSha || "";
     let acceptedProtectedRefreshBaseSha = deliveryVerifiedBaseSha;
@@ -597,7 +607,7 @@ function withIntegrationEntrypointFence(options, action) {
   if (path.resolve(lease.worktreePath) !== path.resolve(repo)) {
     throw new Error(`Integration lease belongs to ${lease.worktreePath}, not ${repo}.`);
   }
-  const reviewReadyDelivery = isReviewReadyDeliveryLease(lease);
+  const reviewReadyDelivery = isReviewReadyIntegrationLease(lease);
   if (reviewReadyDelivery && lease.autoDelivery === true
     && lease.runtimeRequired === true && runtime !== "canonical") {
     throw new Error("Auto-delivery integration requires canonical runtime readiness; --runtime=none is not permitted.");
@@ -631,8 +641,8 @@ function withIntegrationEntrypointFence(options, action) {
 }
 
 function resolveIntegrationEntrypointSubject({ lease, gitText }) {
-  if (isReviewReadyDeliveryLease(lease)) {
-    const canonicalBaseSha = lease.cloudAuthority?.canonicalBaseSha || "";
+  if (isReviewReadyIntegrationLease(lease)) {
+    const canonicalBaseSha = lease.cloudAuthority?.canonicalBaseSha || lease.baseSha || "";
     if (lease.baseSha !== canonicalBaseSha) return null;
     return requireProtectedSquashSubject(
       gitText([
@@ -651,6 +661,39 @@ function isReviewReadyDeliveryLease(lease) {
     lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1" &&
     lease.cloudAuthority.state === "review_ready" &&
     SHA_PATTERN.test(String(lease.reviewHeadSha || ""));
+}
+
+function isLegacyLocalOnlyAutoDeliveryReviewLease(lease) {
+  return lease?.status === "review_ready" &&
+    lease.autoDelivery === true &&
+    lease.runtimeRequired === true &&
+    lease.admission == null &&
+    lease.cloudAuthority == null &&
+    SHA_PATTERN.test(String(lease.reviewHeadSha || ""));
+}
+
+function isReviewReadyIntegrationLease(lease) {
+  return isReviewReadyDeliveryLease(lease) ||
+    isLegacyLocalOnlyAutoDeliveryReviewLease(lease);
+}
+
+function requireMergedLegacyLocalOnlyAutoDeliveryPullRequest({ lease, ghText }) {
+  const pullRequest = JSON.parse(ghText([
+    "pr", "view", lease.pullRequestUrl,
+    "--json", "state,baseRefName,url,headRefOid,mergeCommit",
+  ]));
+  if (
+    pullRequest?.url !== lease.pullRequestUrl
+    || pullRequest.baseRefName !== "main"
+    || pullRequest.state !== "MERGED"
+    || pullRequest.headRefOid !== lease.reviewHeadSha
+    || !SHA_PATTERN.test(String(pullRequest.mergeCommit?.oid || ""))
+  ) {
+    throw new Error(
+      "Legacy local-only auto-delivery recovery requires the exact already-merged reviewed pull request.",
+    );
+  }
+  return pullRequest;
 }
 
 function recoverExpiredDeliveryCloudAuthority({

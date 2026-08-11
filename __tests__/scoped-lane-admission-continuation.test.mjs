@@ -19,6 +19,8 @@ import {
 
 const BASE_SHA = "a".repeat(40);
 const FENCE_SHA = "b".repeat(40);
+const INTEGRATION_SHA = "4".repeat(40);
+const INTEGRATION_TREE_SHA = "5".repeat(40);
 const PROTECTED_SHA = "c".repeat(40);
 const LEDGER_SHA = "d".repeat(40);
 const CLAIM_FENCE = "e".repeat(64);
@@ -418,6 +420,75 @@ test("continuation rejects a dirty candidate", () => {
     () => continueFixture(source, { lanes: dirtyCandidate }),
     /candidate drifted from its clean registered fence/u,
   );
+});
+
+test("continuation accepts the exact clean controller-prepared integration commit", () => {
+  const source = fixture();
+  const integration = {
+    schema: "agentic-integration-commit/v1",
+    commitSha: INTEGRATION_SHA,
+    treeSha: INTEGRATION_TREE_SHA,
+    commitMessage: "fix(continuation): preserve prepared integration",
+    manifestDigest: "a".repeat(64),
+    stagedDiffDigest: "b".repeat(64),
+    paths: source.manifest.paths,
+    recordedAt: EVALUATED_AT,
+  };
+  const lease = { ...source.lease, integration };
+  const lanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? {
+      ...item,
+      head: INTEGRATION_SHA,
+      treeSha: INTEGRATION_TREE_SHA,
+      lease,
+    }
+    : item);
+  const continued = continueFixture({ ...source, lease, lanes });
+
+  assert.equal(continued.continuationReceipt.candidateRevision, INTEGRATION_SHA);
+  assert.equal(continued.continuationReceipt.candidateTreeSha, INTEGRATION_TREE_SHA);
+  assert.equal(
+    continued.continuationReceipt.preparedIntegrationReceiptDigest,
+    digestValue(integration),
+  );
+});
+
+test("continuation rejects prepared integration identity or declared-path drift", () => {
+  const source = fixture();
+  for (const integration of [
+    {
+      schema: "agentic-integration-commit/v1",
+      commitSha: INTEGRATION_SHA,
+      treeSha: "6".repeat(40),
+      commitMessage: "fix(continuation): wrong tree",
+      manifestDigest: "a".repeat(64),
+      stagedDiffDigest: "b".repeat(64),
+      paths: source.manifest.paths,
+    },
+    {
+      schema: "agentic-integration-commit/v1",
+      commitSha: INTEGRATION_SHA,
+      treeSha: INTEGRATION_TREE_SHA,
+      commitMessage: "fix(continuation): wrong path",
+      manifestDigest: "a".repeat(64),
+      stagedDiffDigest: "b".repeat(64),
+      paths: ["docs/out-of-scope.md"],
+    },
+  ]) {
+    const lease = { ...source.lease, integration };
+    const lanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+      ? {
+        ...item,
+        head: INTEGRATION_SHA,
+        treeSha: INTEGRATION_TREE_SHA,
+        lease,
+      }
+      : item);
+    assert.throws(
+      () => continueFixture({ ...source, lease, lanes }),
+      /exact prepared integration commit/u,
+    );
+  }
 });
 
 test("continuation rejects an uncovered local peer", () => {

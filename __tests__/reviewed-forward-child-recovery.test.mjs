@@ -4,6 +4,9 @@ import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
+  buildAdaptiveClaimRecoveryDecision,
+} from "../scripts/adaptive-claim-recovery-contract.mjs";
+import {
   advanceReviewedForwardChildIntent,
   authorizeReviewedForwardChild,
   buildReviewedForwardChildPlan,
@@ -90,6 +93,42 @@ function plan() {
   });
 }
 
+function adaptiveRecovery(overrides = {}) {
+  const base = {
+    subject: {
+      repositoryId: "github-repository:R_test", workItemId: "work-item:test",
+      candidateHeadSha: sha("d"), protectedMainSha: sha("f"),
+    },
+    claim: {
+      claimId: digest("4"), state: "integrated-preserved", writeAuthority: false,
+      scopeReserved: true, fenceRevision: digest("5"), transitionCounter: 6,
+      heartbeatCounter: 1, heartbeatAt: "2026-08-10T09:00:30.000Z",
+      expiresAt: "2026-08-10T10:00:00.000Z",
+    },
+    operation: {
+      operationId: "provider-operation:5", state: "terminal", conclusion: "failed",
+      immutable: true, candidateHeadSha: sha("d"), protectedMainSha: sha("f"),
+      fenceRevision: digest("0"), generation: 5,
+      heartbeatAt: "2026-08-10T09:00:00.000Z",
+      terminalAt: "2026-08-10T09:01:00.000Z", terminalReceiptDigest: digest("a"),
+      revokedAt: null, revocationReceiptDigest: null, evidenceDigest: digest("b"),
+    },
+    observation: {
+      observedAt: "2026-08-10T09:02:00.000Z", latestFenceRevision: digest("5"),
+      latestTransitionCounter: 6, latestHeartbeatCounter: 1,
+      expectedHeartbeatSeconds: 30, missedHeartbeatTolerance: 3,
+    },
+  };
+  return buildAdaptiveClaimRecoveryDecision({
+    ...base,
+    ...overrides,
+    subject: { ...base.subject, ...overrides.subject },
+    claim: { ...base.claim, ...overrides.claim },
+    operation: { ...base.operation, ...overrides.operation },
+    observation: { ...base.observation, ...overrides.observation },
+  });
+}
+
 test("evidence binds refreshed source and one empty single-parent child", () => {
   const source = sourceEvidence();
   const child = childCandidate();
@@ -97,6 +136,20 @@ test("evidence binds refreshed source and one empty single-parent child", () => 
   assert.equal(source.source.treeSha, child.childTreeSha);
   assert.throws(() => childCandidate({ childTreeSha: sha("0") }), /single-parent empty forward child/u);
   assert.throws(() => childCandidate({ parentShas: [sha("d"), sha("a")] }), /single-parent/u);
+});
+
+test("integrated-preserved source requires an exact adaptive recovery join", () => {
+  const claim = {
+    ...sourceEvidence().claim,
+    state: "integrated-preserved",
+  };
+  const source = sourceEvidence({ claim, adaptiveRecovery: adaptiveRecovery() });
+  assert.equal(source.claim.state, "integrated-preserved");
+  assert.equal(source.adaptiveRecovery.status, "recoverable-now");
+  assert.throws(() => sourceEvidence({
+    claim,
+    adaptiveRecovery: adaptiveRecovery({ subject: { candidateHeadSha: sha("c") } }),
+  }), /adaptive recovery join/u);
 });
 
 test("plan emits one exact content-bound authorization", () => {

@@ -1,24 +1,17 @@
 // Responsibility: Bind recovery phases to exact Git, GitHub, cloud, and lease CAS effects.
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync,
-  renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
-import { buildReviewedForwardChildCandidate, buildReviewedForwardChildEvidence,
-} from "./reviewed-forward-child-recovery-evidence.mjs";
-import { complete, createReviewedForwardChildAdapter, pending,
-} from "./reviewed-forward-child-recovery-controller.mjs";
+import { buildReviewedForwardChildCandidate, buildReviewedForwardChildEvidence } from "./reviewed-forward-child-recovery-evidence.mjs";
+import { complete, createReviewedForwardChildAdapter, pending } from "./reviewed-forward-child-recovery-controller.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
-import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
-  projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody,
-} from "./writer-lease-lib.mjs";
+import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { casWriterLeaseProjection, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
-export function createReviewedForwardChildRepositoryAdapter(options = {}, dependencies = {}) {
-  return createReviewedForwardChildAdapter(createRuntime(options, dependencies));
-}
+export function createReviewedForwardChildRepositoryAdapter(options = {}, dependencies = {}) { return createReviewedForwardChildAdapter(createRuntime(options, dependencies)); }
 function createRuntime(options, dependencies) {
   const repository = realpathSync(path.resolve(text(options.repository, "repository")));
   const sourceSessionId = text(options.sourceSessionId, "source session");
@@ -149,6 +142,12 @@ function createRuntime(options, dependencies) {
       });
     });
   }
+  function adaptiveRecovery(claim) {
+    if (claim.state !== "integrated-preserved") return null;
+    const evidencePath = environment.AGENTIC_ADAPTIVE_RECOVERY_EVIDENCE_PATH;
+    if (!evidencePath) invalid("adaptive recovery evidence path");
+    return JSON.parse(readFileSync(realpathSync(path.resolve(evidencePath)), "utf8"));
+  }
   async function readSource() {
     const lease = readLease();
     const localHeadSha = sha(git(["rev-parse", "HEAD"]), "local head");
@@ -202,6 +201,7 @@ function createRuntime(options, dependencies) {
       },
       protectedMainSha,
       refreshChain: refreshChain(lease.reviewHeadSha, localHeadSha, protectedMainSha),
+      adaptiveRecovery: adaptiveRecovery(claim),
     });
   }
   function rawCandidate(source) {

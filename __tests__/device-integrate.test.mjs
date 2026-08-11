@@ -1150,6 +1150,44 @@ test("durable integrate fence rejects an invalid reviewed subject before any reg
   }
 });
 
+test("active integration delegates its only entrypoint fence to nested publish", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-fence-"));
+  const gitCommonDir = path.join(repo, "git-common");
+  const registryRoot = path.join(gitCommonDir, "agentic-canvas-os");
+  const activeLease = createLease({ repo, status: "active", integration: {
+    schema: "agentic-integration-commit/v1", commitSha, treeSha,
+    commitMessage: protectedSquashSubject, manifestDigest: "1".repeat(64),
+    stagedDiffDigest: "2".repeat(64), paths: ["scripts/runtime.mjs"],
+    recordedAt: "2026-08-10T00:00:00.000Z",
+  } });
+  mkdirSync(registryRoot, { recursive: true });
+  writeFileSync(path.join(registryRoot, "writer-leases.json"), `${JSON.stringify({
+    schema: "agentic-writer-lease-registry/v2", revision: 1,
+    leases: { [branch]: activeLease },
+  }, null, 2)}\n`);
+  const leaseStore = createWriterLeaseStore({ gitCommonDir });
+  try {
+    assert.throws(() => integrateSession({
+      invocationPath: repo, repo, leaseStore, sessionId: "session-a", runtime: "none",
+      gitText: args => {
+        const key = args.join(" ");
+        if (key === "branch --show-current") return branch;
+        if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+        if (key === "diff --name-only -z HEAD --" || key === "ls-files --others --exclude-standard -z"
+          || key === "status --porcelain") return "";
+        if (key === "rev-parse HEAD") return commitSha;
+        throw new Error(`unexpected git command: ${key}`);
+      },
+      run: () => {}, runText: () => "", publishTask: () => {
+        assert.equal(leaseStore.readRegistry().reviewedLaneEntrypointFences?.[branch], undefined);
+        throw new Error("nested publish owns the fence");
+      },
+    }), /nested publish owns the fence/u);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("review-ready delivery reclaims a dormant preserved review authority before authorization", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-dormant-review-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");

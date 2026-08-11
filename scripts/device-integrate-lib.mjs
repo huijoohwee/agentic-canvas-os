@@ -490,7 +490,8 @@ function withIntegrationEntrypointFence(options, action) {
     && lease.runtimeRequired === true && runtime !== "canonical") {
     throw new Error("Auto-delivery integration requires canonical runtime readiness; --runtime=none is not permitted.");
   }
-  if (!lease || typeof leaseStore.withRegistryLock !== "function" || !leaseStore.statePath) {
+  // Active integration delegates the single durable subject fence to its nested publish.
+  if (!reviewReadyDelivery || typeof leaseStore.withRegistryLock !== "function" || !leaseStore.statePath) {
     return action();
   }
   const protectedSubject = resolveIntegrationEntrypointSubject({

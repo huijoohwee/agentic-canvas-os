@@ -423,6 +423,13 @@ test("operation-derived proof projects exact root v2 review and delivery entries
   assert.equal(result.peers[0].heartbeatSuffixCount, 1);
 });
 
+test("root v2 projection accepts a bounded continue heartbeat suffix", () => {
+  const result = verify(fixture({ rootLedger: true, heartbeatCount: 2 }));
+  assert.equal(result.peers.length, 1);
+  assert.equal(result.peers[0].deliveryAuthorizationCounter, 3);
+  assert.equal(result.peers[0].heartbeatSuffixCount, 2);
+});
+
 test("peer authority stays stable across unrelated ledger appends while the operation receipt advances", () => {
   const subject = fixture();
   const before = verify(subject);

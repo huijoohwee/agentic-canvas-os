@@ -35,6 +35,10 @@ accepted only when its name, candidate, source identity, GitHub Actions app,
 terminal success, details URL, title, and evidence bytes all match. Foreign or
 duplicate operation projections fail closed.
 
+GitHub may normalize the requested Actions workflow URL to the canonical
+`https://github.com/<owner>/<repository>/runs/<check-run-id>` URL. The controller
+accepts only the requested URL or that exact repository-and-check-run binding.
+
 Before completing the sole operation-owned `cloud-collaboration` gate, the
 controller queries the candidate's GraphQL status-check rollup and requires the
 exact projected check-run IDs plus the still-pending cloud gate to be visible.

@@ -28,6 +28,7 @@ import {
   git,
   gitExitCode,
   gitText,
+  ghText,
   listScopeOwners,
   listedWorktrees,
   lsRemoteHead,

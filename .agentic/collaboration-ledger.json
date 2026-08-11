@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1838,
-  "headDigest": "ecde02b64869607ff5854537a0f402f31d7283d513f6ddd2bdb4d44da35563b2",
+  "sequence": 1839,
+  "headDigest": "6856c578859ca30ce82c1d92f27937d8dd1a939f36352c44ea3e77fa875f6437",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -91342,6 +91342,68 @@
       },
       "claimDigest": "58e0c6b968218dc89cd9f5d6f264fbf3a216e9e1236ea6af645bb06db3af1994",
       "digest": "ecde02b64869607ff5854537a0f402f31d7283d513f6ddd2bdb4d44da35563b2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1839,
+      "parentDigest": "ecde02b64869607ff5854537a0f402f31d7283d513f6ddd2bdb4d44da35563b2",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "5ffde05ffcd500b84ec1aafdae9d7206c5e0a1b2f90be6faa7959f6c80fc4a3e",
+      "idempotencyKey": "abcb1a9255ad1ae617375ccc739a351280c0954416617b5949ecc624351e8349",
+      "requestDigest": "a2e24704db30e552cbda6b460fa5db4c97a7b4ba0a7e8b1838e8d4a671b2716d",
+      "evaluationTime": "2026-08-11T00:16:07.000Z",
+      "claimCore": {
+        "claimId": "5ffde05ffcd500b84ec1aafdae9d7206c5e0a1b2f90be6faa7959f6c80fc4a3e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8a4253860cf8be5aa3f7fd03ae4ced3464ef23dd78975e16e388b892c426440a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b37425a954b8ee012f474e8ef9a9bb1a6e62869786387379458c84084de3b548",
+        "canonicalBaseRevision": "3713ff345e137bf1516ea2e1d085fa5c65b3a03d",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/reviewed-lane-revision-controller.test.mjs",
+          "path:__tests__/reviewed-lane-revision-evidence.test.mjs",
+          "path:docs/REVIEWED-LANE-REVISION.md",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/reviewed-lane-revision-contract.mjs",
+          "path:scripts/reviewed-lane-revision-controller.mjs",
+          "path:scripts/reviewed-lane-revision-evidence.mjs",
+          "path:scripts/reviewed-lane-revision-fence.mjs",
+          "path:scripts/reviewed-lane-revision-repository-adapter.mjs",
+          "path:scripts/reviewed-lane-revision.mjs",
+          "semantic:reviewed-lane-revision-core-r2"
+        ],
+        "writeSetDigest": "929423ebe95a0b1cba173841e869f5c5c501dbbc1c53d640415b99013cebd5b5",
+        "laneRevision": "3713ff345e137bf1516ea2e1d085fa5c65b3a03d",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-11T00:42:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "8b8ed0143843a395b412b714d618ba3c042461495645270b49a23cb452520234",
+        "eligibleSince": "2026-08-11T00:11:41.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-11T00:12:19.000Z",
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "3713ff345e137bf1516ea2e1d085fa5c65b3a03d",
+          "reviewRequestId": null,
+          "bytesDigest": "606d3aa96e5d6998323a06b8467f938bcbc3ac283bd77d9c16012df55102aefd",
+          "namedChecksDigest": "c2bb86ca13941c2f3f98b1d24baa3febfd4bcb2efd8f29e766997abfb28c72e2",
+          "handoffEvidenceDigest": "406d258b53c136812351f3ad9f17cb3a04db7946aaea87aea6df36eda4c857d2",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-11T00:16:07.000Z"
+        }
+      },
+      "claimDigest": "801ddcfbf6897d03bc97896526bef33e2a2c57b84766dfa73e49b24341f8b08f",
+      "digest": "6856c578859ca30ce82c1d92f27937d8dd1a939f36352c44ea3e77fa875f6437"
     }
   ]
 }

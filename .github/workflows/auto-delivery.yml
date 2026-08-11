@@ -106,10 +106,6 @@ on:
         description: Digest of the complete refresh projection
         required: false
         type: string
-      merged_authorization_recovery:
-        description: Exact operation-bound authorization for absent merged evidence recovery
-        required: false
-        type: string
 
 permissions: {}
 
@@ -169,7 +165,10 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
-      inputs.operation == 'protected-head-refresh'
+      (
+        inputs.operation == 'protected-head-refresh' ||
+        inputs.operation == 'protected-head-refresh-recover-absent-merged-authorization'
+      )
     permissions:
       actions: write
       checks: write
@@ -193,7 +192,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           AGENTIC_LEDGER_REPOSITORY: ${{ github.repository }}
-          PROTECTED_HEAD_REFRESH_OPERATION: ${{ inputs.operation }}
+          PROTECTED_HEAD_REFRESH_OPERATION: ${{ inputs.operation == 'protected-head-refresh-recover-absent-merged-authorization' && 'protected-head-refresh' || inputs.operation }}
           PROTECTED_HEAD_REFRESH_PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
           PROTECTED_HEAD_REFRESH_BRANCH: ${{ inputs.branch }}
           PROTECTED_HEAD_REFRESH_DELIVERED_HEAD_SHA: ${{ inputs.delivered_head_sha }}
@@ -218,6 +217,6 @@ jobs:
           PROTECTED_HEAD_REFRESH_INTEGRATION_RECEIPT_DIGEST: ${{ inputs.integration_receipt_digest }}
           PROTECTED_HEAD_REFRESH_TRANSITION_COUNTER: ${{ inputs.transition_counter }}
           PROTECTED_HEAD_REFRESH_OPERATION_ID: ${{ inputs.operation_id }}
-          PROTECTED_HEAD_REFRESH_MERGED_AUTHORIZATION_RECOVERY: ${{ inputs.merged_authorization_recovery }}
+          PROTECTED_HEAD_REFRESH_MERGED_AUTHORIZATION_RECOVERY: ${{ inputs.operation == 'protected-head-refresh-recover-absent-merged-authorization' && format('recover-absent-merged-authorization:{0}', inputs.operation_id) || '' }}
           PROTECTED_HEAD_REFRESH_CONTROLLER_REVISION: ${{ github.sha }}
         run: node scripts/sync-open-pr.mjs --protected-head-refresh

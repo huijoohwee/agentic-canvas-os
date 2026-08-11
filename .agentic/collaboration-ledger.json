@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2070,
-  "headDigest": "15f3493425e055d1b0951f4d5f522d18956260688c5e1e8c6c92a334e89e7f63",
+  "sequence": 2071,
+  "headDigest": "6cf118aa027ccb1160c1a7a5120fc9b93907e4b06e242cce5e7296860a0c8631",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -103076,6 +103076,46 @@
       },
       "claimDigest": "6ca8211fc8be625d08e041f5a86937f22723ba46b570ff501270fcd5a3c3e2fb",
       "digest": "15f3493425e055d1b0951f4d5f522d18956260688c5e1e8c6c92a334e89e7f63"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2071,
+      "parentDigest": "15f3493425e055d1b0951f4d5f522d18956260688c5e1e8c6c92a334e89e7f63",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "08cb084070dfebc30342faeb99f468bdb6865035e654abbb94aead26779d093f",
+      "idempotencyKey": "445facd74f569e8bc98657aca20fe45ce36f694c5663c299ac0ed76cf488cb2a",
+      "requestDigest": "b29f6af9b47564026256e070db321ac92eae3260985c313352c1134f6cfac930",
+      "evaluationTime": "2026-08-11T11:54:06.000Z",
+      "claimCore": {
+        "claimId": "08cb084070dfebc30342faeb99f468bdb6865035e654abbb94aead26779d093f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:66796b4910cab9cee07e9c10bf0e252a49db987c4075952fad34e0e2df7242ca",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f8b332031e84ccee771cc0fcabede7516f736f9678aaf10f9f312c3bad2a4af6",
+        "canonicalBaseRevision": "1c811f2a7ea7557af45fdf8761e4d733a91a004c",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-recovery-controller.test.mjs",
+          "path:scripts/active-owned-dirt-recovery-controller.mjs",
+          "semantic:lifecycle-recovery-controller-repair-20260811"
+        ],
+        "writeSetDigest": "256e5c88831d9cdd34f34fe16bafdaf5e7c25bfaef336eabd54d52c81549b45c",
+        "laneRevision": "7f7c015344738d9997db4b2047583c465c2479b0",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T12:42:08.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79fYHi",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b80d5007b264a1bcfee334f6850a2d83f60ab2d0a9584b68684910eecad78539",
+      "digest": "6cf118aa027ccb1160c1a7a5120fc9b93907e4b06e242cce5e7296860a0c8631"
     }
   ]
 }

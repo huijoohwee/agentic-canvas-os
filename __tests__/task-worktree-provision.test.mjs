@@ -1,7 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmdirSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
+import {
+  cleanupEmptyTaskWorktreeContainers,
+  deriveTaskWorktreeContainers,
+} from "../scripts/task-worktree-owned-containers.mjs";
 import {
   deriveTaskWorktreeRoot,
   inspectTaskWorktreeTarget,
@@ -242,6 +257,234 @@ test("provision derives the shared task root from Git ownership when canonical m
   );
 });
 
+test("owned-container cleanup removes only the empty managed root and shared root leaf-to-root", () => {
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.managedRoot, { recursive: true });
+    const ownership = deriveTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      targetPath: fixture.target,
+    });
+    assert.equal(ownership.kind, "managed");
+    assert.equal(ownership.managedContainer.root, fixture.managedRoot);
+    assert.equal(ownership.sharedContainer.root, fixture.sharedRoot);
+
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      targetPath: fixture.target,
+    });
+    assert.deepEqual(result, {
+      kind: "managed",
+      managedContainer: { root: fixture.managedRoot, disposition: "removed-empty" },
+      sharedContainer: { root: fixture.sharedRoot, disposition: "removed-empty" },
+      removedEmptyDirectories: [fixture.managedRoot, fixture.sharedRoot],
+    });
+    assert.equal(existsSync(fixture.managedRoot), false);
+    assert.equal(existsSync(fixture.sharedRoot), false);
+
+    assert.deepEqual(cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+    }), {
+      kind: "managed",
+      managedContainer: { root: fixture.managedRoot, disposition: "absent" },
+      sharedContainer: { root: fixture.sharedRoot, disposition: "absent" },
+      removedEmptyDirectories: [],
+    });
+  });
+});
+
+test("owned-container cleanup retains nonempty task and repository siblings", () => {
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(path.join(fixture.managedRoot, "other-task"), { recursive: true });
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      targetPath: fixture.target,
+    });
+    assert.equal(result.managedContainer.disposition, "retained-nonempty");
+    assert.equal(result.sharedContainer.disposition, "not-attempted");
+    assert.deepEqual(result.removedEmptyDirectories, []);
+    assert.equal(existsSync(path.join(fixture.managedRoot, "other-task")), true);
+  });
+
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.managedRoot, { recursive: true });
+    const otherRepository = path.join(fixture.sharedRoot, "other-repository");
+    mkdirSync(otherRepository);
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+    });
+    assert.equal(result.managedContainer.disposition, "removed-empty");
+    assert.equal(result.sharedContainer.disposition, "retained-nonempty");
+    assert.deepEqual(result.removedEmptyDirectories, [fixture.managedRoot]);
+    assert.equal(existsSync(otherRepository), true);
+    const replay = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+    });
+    assert.equal(replay.managedContainer.disposition, "absent");
+    assert.equal(replay.sharedContainer.disposition, "retained-nonempty");
+    assert.deepEqual(replay.removedEmptyDirectories, []);
+    assert.equal(existsSync(otherRepository), true);
+  });
+});
+
+test("owned-container cleanup treats non-direct-child targets as external without mutation", () => {
+  for (const selectTarget of [
+    fixture => path.join(fixture.workspace, "external-task"),
+    fixture => path.join(fixture.managedRoot, "nested", "task"),
+    () => "relative-task",
+  ]) withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.managedRoot, { recursive: true });
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      targetPath: selectTarget(fixture),
+    });
+    assert.deepEqual(result, {
+      kind: "external",
+      managedContainer: { root: fixture.managedRoot, disposition: "not-managed" },
+      sharedContainer: { root: fixture.sharedRoot, disposition: "not-managed" },
+      removedEmptyDirectories: [],
+    });
+    assert.equal(existsSync(fixture.managedRoot), true);
+    assert.equal(existsSync(fixture.sharedRoot), true);
+  });
+});
+
+test("owned-container cleanup never traverses managed or shared symlinks", () => {
+  withOwnedContainerFixture(fixture => {
+    const linkedRoot = path.join(fixture.workspace, "linked-managed-root");
+    mkdirSync(linkedRoot);
+    mkdirSync(fixture.sharedRoot);
+    symlinkSync(linkedRoot, fixture.managedRoot);
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+    });
+    assert.equal(result.managedContainer.disposition, "retained-symlink");
+    assert.equal(result.sharedContainer.disposition, "not-attempted");
+    assert.deepEqual(result.removedEmptyDirectories, []);
+    assert.equal(existsSync(linkedRoot), true);
+  });
+
+  withOwnedContainerFixture(fixture => {
+    const linkedSharedRoot = path.join(fixture.workspace, "linked-shared-root");
+    mkdirSync(path.join(linkedSharedRoot, path.basename(fixture.repoRoot)), { recursive: true });
+    symlinkSync(linkedSharedRoot, fixture.sharedRoot);
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+    });
+    assert.equal(result.managedContainer.disposition, "not-attempted");
+    assert.equal(result.sharedContainer.disposition, "retained-symlink");
+    assert.deepEqual(result.removedEmptyDirectories, []);
+    assert.equal(existsSync(path.join(linkedSharedRoot, path.basename(fixture.repoRoot))), true);
+  });
+});
+
+test("owned-container cleanup rejects a shared-container identity swap before managed removal", () => {
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.managedRoot, { recursive: true });
+    const displacedShared = path.join(fixture.workspace, "displaced-shared");
+    const externalShared = path.join(fixture.workspace, "external-shared");
+    const externalManaged = path.join(externalShared, path.basename(fixture.repoRoot));
+    mkdirSync(externalManaged, { recursive: true });
+    let workspaceProbes = 0;
+    const removals = [];
+
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      pathStat: candidate => {
+        if (candidate === fixture.workspace && ++workspaceProbes === 2) {
+          renameSync(fixture.sharedRoot, displacedShared);
+          symlinkSync(externalShared, fixture.sharedRoot);
+        }
+        return lstatSync(candidate);
+      },
+      removeDirectory: candidate => {
+        removals.push(candidate);
+        rmdirSync(candidate);
+      },
+    });
+
+    assert.deepEqual(removals, []);
+    assert.equal(result.managedContainer.disposition, "retained-ambiguous");
+    assert.equal(result.sharedContainer.disposition, "retained-ambiguous");
+    assert.deepEqual(result.removedEmptyDirectories, []);
+    assert.equal(existsSync(externalManaged), true);
+    assert.equal(existsSync(path.join(displacedShared, path.basename(fixture.repoRoot))), true);
+  });
+});
+
+test("owned-container cleanup rejects a managed-container identity swap before removal", () => {
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.managedRoot, { recursive: true });
+    const displacedManaged = path.join(fixture.workspace, "displaced-managed");
+    const externalManaged = path.join(fixture.workspace, "external-managed");
+    mkdirSync(externalManaged);
+    let workspaceProbes = 0;
+    const removals = [];
+
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      pathStat: candidate => {
+        if (candidate === fixture.workspace && ++workspaceProbes === 2) {
+          renameSync(fixture.managedRoot, displacedManaged);
+          renameSync(externalManaged, fixture.managedRoot);
+        }
+        return lstatSync(candidate);
+      },
+      removeDirectory: candidate => {
+        removals.push(candidate);
+        rmdirSync(candidate);
+      },
+    });
+
+    assert.deepEqual(removals, []);
+    assert.equal(result.managedContainer.disposition, "retained-ambiguous");
+    assert.equal(result.sharedContainer.disposition, "retained-ambiguous");
+    assert.deepEqual(result.removedEmptyDirectories, []);
+    assert.equal(existsSync(fixture.managedRoot), true);
+    assert.equal(existsSync(displacedManaged), true);
+  });
+});
+
+test("owned-container cleanup revalidates the shared identity after managed removal", () => {
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.managedRoot, { recursive: true });
+    const displacedShared = path.join(fixture.workspace, "displaced-after-managed-removal");
+    const externalShared = path.join(fixture.workspace, "external-after-managed-removal");
+    mkdirSync(externalShared);
+    const removals = [];
+
+    const result = cleanupEmptyTaskWorktreeContainers({
+      repoRoot: fixture.repoRoot,
+      gitCommonDir: fixture.gitCommonDir,
+      removeDirectory: candidate => {
+        removals.push(candidate);
+        rmdirSync(candidate);
+        if (candidate === fixture.managedRoot) {
+          renameSync(fixture.sharedRoot, displacedShared);
+          symlinkSync(externalShared, fixture.sharedRoot);
+        }
+      },
+    });
+
+    assert.deepEqual(removals, [fixture.managedRoot]);
+    assert.equal(result.managedContainer.disposition, "removed-empty");
+    assert.equal(result.sharedContainer.disposition, "retained-ambiguous");
+    assert.deepEqual(result.removedEmptyDirectories, [fixture.managedRoot]);
+    assert.equal(existsSync(externalShared), true);
+    assert.equal(existsSync(displacedShared), true);
+  });
+});
+
 test("provision rejects collisions and paths outside the derived safe root before git mutation", () => {
   for (const candidate of [target, "/workspace/other/task", "relative-task"]) {
     const calls = [];
@@ -304,6 +547,41 @@ test("rollback removes only the clean detached exact-base worktree before any le
     run: () => { throw new Error("must not run"); },
     pathExists: () => true,
   }), false);
+});
+
+test("rollback removes empty owned containers after the exact candidate worktree", () => {
+  withOwnedContainerFixture(fixture => {
+    mkdirSync(fixture.target, { recursive: true });
+    const detached = [
+      `worktree ${fixture.repoRoot}\0HEAD ${sha}\0branch refs/heads/main\0`,
+      `worktree ${fixture.target}\0HEAD ${sha}\0detached\0`,
+    ].join("\0");
+    const gitText = args => {
+      const key = args.join(" ");
+      if (key === "worktree list --porcelain -z") return detached;
+      if (key === `-C ${fixture.target} status --porcelain`) return "";
+      if (key === `-C ${fixture.target} rev-parse HEAD`) return sha;
+      if (key === "rev-parse --git-common-dir") return fixture.gitCommonDir;
+      throw new Error(`unexpected git command: ${key}`);
+    };
+    assert.equal(rollbackUnclaimedProvision({
+      provision: {
+        canonicalRoot: fixture.repoRoot,
+        safeRoot: fixture.managedRoot,
+        target: fixture.target,
+        baseSha: sha,
+      },
+      candidateUnclaimed: true,
+      gitText,
+      run: (command, args) => {
+        assert.deepEqual([command, ...args], ["git", "worktree", "remove", fixture.target]);
+        rmSync(fixture.target, { recursive: true });
+      },
+    }), true);
+    assert.equal(existsSync(fixture.target), false);
+    assert.equal(existsSync(fixture.managedRoot), false);
+    assert.equal(existsSync(fixture.sharedRoot), false);
+  });
 });
 
 test("interrupted admission recovery reconstructs only the exact clean pushed fence candidate", () => {
@@ -380,3 +658,24 @@ test("provision rejects any symbolic-link ancestor inside the derived workspace 
     pathStat: candidate => ({ isSymbolicLink: () => candidate === linked }),
   }), /cannot traverse a symbolic link/);
 });
+
+function withOwnedContainerFixture(action) {
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "acos-owned-containers-"));
+  const repo = path.join(workspace, "repository");
+  const common = path.join(repo, ".git");
+  const shared = path.join(workspace, ".worktrees");
+  const managed = path.join(shared, path.basename(repo));
+  mkdirSync(common, { recursive: true });
+  try {
+    action({
+      workspace,
+      repoRoot: repo,
+      gitCommonDir: common,
+      sharedRoot: shared,
+      managedRoot: managed,
+      target: path.join(managed, "task-a"),
+    });
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}

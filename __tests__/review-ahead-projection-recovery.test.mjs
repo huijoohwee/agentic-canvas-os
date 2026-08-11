@@ -63,6 +63,17 @@ test("receipt-bound in-scope commits may be ahead of the reviewed remote head", 
   assert.equal(plan.status, "planned");
 });
 
+test("an exact integrated-preserved post-success state remains replayable before expiry", () => {
+  const plan = createReviewAheadPlan(fixture({
+    remoteClaimState: "integrated-preserved",
+    localExpiresAt: "2026-08-10T02:00:00.000Z",
+    remoteExpiresAt: "2026-08-10T02:00:00.000Z",
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "planned");
+  assert.deepEqual(plan.findings, []);
+  assert.ok(plan.allowedMutations.includes("cloud-integrated-replay-receipt"));
+});
+
 test("execute projects review-ready once then delegates exact same-session reclaim", async () => {
   let status = "active";
   let projected = 0;
@@ -109,7 +120,10 @@ test("execute projects review-ready once then delegates exact same-session recla
     async reclaim(request) {
       reclaimed += 1;
       assert.equal(request.sessionId, base.sessionId);
-      return { outcome: "reclaimed-live", successorClaimId: digest("5") };
+      return {
+        outcome: reclaimed === 1 ? "reclaimed-live" : "reclaimed-live-replay",
+        successorClaimId: digest("5"),
+      };
     },
   });
   const plan = await controller.plan({ branch: base.branch, sessionId: base.sessionId });

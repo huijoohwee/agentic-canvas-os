@@ -35,6 +35,11 @@ delegates same-session successor reclaim to `cloud-authority-handoff-controller.
 controller's existing claim lineage; a retry after the local projection skips that completed phase and
 does not create a second recovery protocol.
 
+If the first execution completes the cloud-side integrated replay but loses its final local result,
+the same plan path accepts only the exact matching `integrated-preserved` claim. That post-success
+replay does not wait for expiry or create another successor; it recovers the already-recorded
+integrated authority and returns its bound receipt.
+
 The handoff controller returns a receipt-shaped result with the successor identity flattened as
 `successorClaimId`. The recovery result binds that public field directly; it does not depend on the
 handoff controller's internal authority object.

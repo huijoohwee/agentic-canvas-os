@@ -11,6 +11,7 @@ import {
   createRepositoryActiveOwnedDirtRecoveryAdapter,
   captureProtectedMainAdvance,
   invokeActiveOwnedDirtRecoveryContinue,
+  requireLaneFence,
   requireProtectedMainEquivalent,
   runActiveOwnedDirtRecovery,
 } from "../scripts/active-owned-dirt-recovery-controller.mjs";
@@ -118,6 +119,24 @@ test("protected-main evidence admits only disjoint descendant advancement", () =
       return gitText(args);
     },
   }), /not a descendant/);
+});
+
+test("lane fence revalidates protected-main advancement with its repository Git adapter", () => {
+  const source = sourceFixture();
+  const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });
+  const current = {
+    source: {
+      headSha: plan.sourceFenceSha,
+      remoteHeadSha: plan.sourceFenceSha,
+      pullRequest: {
+        isDraft: true,
+        headRefOid: plan.sourceFenceSha,
+        baseRefOid: plan.sourceProtectedMainAdvance.pullRequestBaseSha,
+      },
+      protectedMainAdvance: plan.sourceProtectedMainAdvance,
+    },
+  };
+  assert.doesNotThrow(() => requireLaneFence(current, plan, () => ""));
 });
 
 test("controller orders durable snapshot before cloud and replays every phase once", async () => {

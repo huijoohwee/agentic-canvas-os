@@ -263,7 +263,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
     const current = readState();
     const normalized = normalizeActiveOwnedDirtRecoveryPlan(plan);
     assertActiveOwnedDirtPlanSource({ plan: normalized, current, allowRecoveredClaim });
-    requireLaneFence(current, normalized);
+    requireLaneFence(current, normalized, gitText);
     requireProtectedMainEquivalent({
       planned: normalized.sourceProtectedMainAdvance,
       observed: current.source.protectedMainAdvance,
@@ -362,7 +362,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
       if (writerLeaseDigest(current.source.lease) !== plan.sourceLeaseDigest) {
         throw new Error("Source lease drifted before local recovery CAS.");
       }
-      requireLaneFence(current, plan);
+      requireLaneFence(current, plan, gitText);
       if (current.source.pullRequestBodyDigest !== plan.sourcePullRequestBodyDigest
         || current.source.markerDigest !== plan.sourceMarkerDigest) {
         throw new Error("Pull-request body drifted before local recovery CAS.");
@@ -406,7 +406,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
     },
     projectPullRequest({ plan, snapshot, cloud, localProjection }) {
       const current = readState();
-      requireLaneFence(current, plan);
+      requireLaneFence(current, plan, gitText);
       assertRecoveredLease({ lease: current.source.lease, plan, snapshot, cloud, localProjection });
       requireEvidence(plan, current.source.evidence);
       const expectedMarker = projectWriterLeasePullRequestMarker(current.source.lease);
@@ -441,7 +441,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
     },
     finalize({ plan, snapshot, cloud }) {
       const current = readState();
-      requireLaneFence(current, plan);
+      requireLaneFence(current, plan, gitText);
       verifyActiveOwnedDirtSnapshot({ repository: root, snapshot });
       requireEvidence(plan, current.source.evidence);
       assertRecoveredLease({
@@ -503,7 +503,7 @@ function assertRecoveredLease({ lease, plan, snapshot, cloud, localProjection })
     throw new Error("Recovered local lease changed ownership or admitted identity.");
   }
 }
-function requireLaneFence(current, plan) {
+export function requireLaneFence(current, plan, gitText) {
   const source = current.source;
   if (source.headSha !== plan.sourceFenceSha || source.remoteHeadSha !== plan.sourceFenceSha
     || source.pullRequest.isDraft !== true

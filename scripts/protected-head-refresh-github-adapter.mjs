@@ -64,6 +64,13 @@ export function runProtectedHeadRefresh({
     repository: repo,
     input: projectionInput(requiredEnv),
   });
+  const allowAbsentMergedAuthorizationRecovery =
+    requireProtectedHeadRefreshMergedAuthorizationRecovery({
+      value: environment.PROTECTED_HEAD_REFRESH_MERGED_AUTHORIZATION_RECOVERY,
+      projection,
+      actorId: environment.GITHUB_ACTOR_ID,
+      actorLogin: environment.GITHUB_ACTOR,
+    });
   let capturedPullRequest = null;
   let mergedReplay = false;
   let targetMainIsAncestor = false;
@@ -108,7 +115,10 @@ export function runProtectedHeadRefresh({
     sleepSeconds,
   });
   const result = executeProtectedHeadRefreshController({
-    projection,
+    projection: Object.freeze({
+      ...projection,
+      allowAbsentMergedAuthorizationRecovery,
+    }),
     readPullRequest: () => {
       if (capturedPullRequest !== null) {
         const pullRequest = capturedPullRequest;
@@ -341,6 +351,28 @@ export function runProtectedHeadRefresh({
       throw new Error("Protected-head refresh fetched protected main drifted.");
     }
   }
+}
+
+export function requireProtectedHeadRefreshMergedAuthorizationRecovery({
+  value,
+  projection,
+  actorId,
+  actorLogin,
+}) {
+  const authorization = String(value || "");
+  if (authorization === "") return false;
+  if (
+    authorization
+      !== `recover-absent-merged-authorization:${projection.operation_id}`
+    || String(actorId || "")
+      !== String(projection.auto_merge_enabled_by_database_id)
+    || String(actorLogin || "") !== projection.auto_merge_enabled_by_login
+  ) {
+    throw new Error(
+      "Protected-head refresh absent merged authorization recovery identity drifted.",
+    );
+  }
+  return true;
 }
 
 export function verifyProtectedHeadRefreshMergedProviderState(input, {

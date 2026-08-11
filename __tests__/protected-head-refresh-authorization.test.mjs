@@ -8,6 +8,9 @@ import {
   requireProtectedHeadRefreshPullRequest,
 } from "../scripts/protected-main-refresh-lib.mjs";
 import {
+  requireProtectedHeadRefreshMergedAuthorizationRecovery,
+} from "../scripts/protected-head-refresh-github-adapter.mjs";
+import {
   autoMergeActor,
   candidate,
   createControllerHarness,
@@ -18,6 +21,33 @@ import {
   rawPull,
   targetMain,
 } from "./protected-head-refresh-fixtures.mjs";
+
+test("absent merged recovery token binds exact operation and human actor", () => {
+  const projection = normalizedProjection();
+  assert.equal(requireProtectedHeadRefreshMergedAuthorizationRecovery({
+    value: "",
+    projection,
+  }), false);
+  assert.equal(requireProtectedHeadRefreshMergedAuthorizationRecovery({
+    value: `recover-absent-merged-authorization:${projection.operation_id}`,
+    projection,
+    actorId: projection.auto_merge_enabled_by_database_id,
+    actorLogin: projection.auto_merge_enabled_by_login,
+  }), true);
+  for (const overrides of [
+    { value: "recover-absent-merged-authorization:wrong" },
+    { actorId: "7" },
+    { actorLogin: "other" },
+  ]) {
+    assert.throws(() => requireProtectedHeadRefreshMergedAuthorizationRecovery({
+      value: `recover-absent-merged-authorization:${projection.operation_id}`,
+      projection,
+      actorId: projection.auto_merge_enabled_by_database_id,
+      actorLogin: projection.auto_merge_enabled_by_login,
+      ...overrides,
+    }), /recovery identity drifted/u);
+  }
+});
 
 test("binds distinct original and deterministic non-null candidate authorizations", () => {
   const projection = normalizedProjection();
@@ -214,6 +244,27 @@ test("merged replay recovers only exact pending owned evidence for a refreshed c
     assert.throws(() => harness.execute(), /without complete owned authorization/u);
     assert.equal(harness.events.includes("gate-create"), false);
     assert.equal(harness.events.includes("gate-complete"), false);
+  });
+  await t.test("exact recovery authorization creates and completes sole absent evidence", () => {
+    const harness = createControllerHarness({
+      initialHeadSha: candidate,
+      initialAutoMergeAuthorization: "candidate",
+      initialMergeState: "blocked",
+      merged: true,
+    });
+    const result = harness.execute({
+      projection: Object.freeze({
+        ...normalizedProjection(),
+        allowAbsentMergedAuthorizationRecovery: true,
+      }),
+    });
+    assert.equal(result.status, "merged-replay");
+    assert.equal(result.mutated, true);
+    assert.equal(harness.state.cloudStatus, "complete");
+    assert.equal(harness.events.filter(value => value === "gate-create").length, 1);
+    assert.equal(harness.events.filter(value => value === "gate-complete").length, 1);
+    assert.equal(harness.events.filter(value => value === "ci").length, 3);
+    assert.equal(harness.events.filter(value => value === "cloud").length, 3);
   });
   await t.test("pending evidence is not completed when candidate workflow proof drifts", () => {
     const harness = createControllerHarness({

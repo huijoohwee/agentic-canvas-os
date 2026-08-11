@@ -95,20 +95,40 @@ export function createProtectedHeadRefreshControllerState({
         );
       }
       let cloud = readCloudReceipt({ candidateSha: pull.headSha, create: false });
-      if (cloud.status === "pending") {
+      const verifyRecoveryEvidence = confirmed => {
         verifyCandidateWorkflow({
           candidateSha: candidate.candidateSha,
           targetMainSha: projection.target_main_sha,
           projection,
         });
-        let ci = requireCiReceipt(reconcileCandidateCi({
+        const ci = requireCiReceipt(reconcileCandidateCi({
           projection,
           candidateSha: candidate.candidateSha,
-          pullRequest: pull,
+          pullRequest: confirmed,
         }));
         verifyBranchProtection({ projection, candidateSha: candidate.candidateSha });
         verifyNoSynchronizeRun({ projection, candidateSha: candidate.candidateSha });
-        verifyCloudAuthority({ projection, pullRequest: pull });
+        verifyCloudAuthority({ projection, pullRequest: confirmed });
+        return ci;
+      };
+      if (
+        cloud.status === "absent"
+        && projection.allowAbsentMergedAuthorizationRecovery === true
+      ) {
+        verifyRecoveryEvidence(pull);
+        cloud = requireCloudReceipt(readCloudReceipt({
+          candidateSha: candidate.candidateSha,
+          create: true,
+        }));
+        if (cloud.status !== "pending") {
+          throw new Error(
+            "Protected-head refresh absent merged authorization gate was not created exactly.",
+          );
+        }
+        mutated = true;
+      }
+      if (cloud.status === "pending") {
+        let ci = verifyRecoveryEvidence(pull);
 
         const confirmed = readSettled({ autoMerge: "armed" });
         if (
@@ -127,14 +147,7 @@ export function createProtectedHeadRefreshControllerState({
           commitTitle: projection.candidate_auto_merge_commit_title,
           commitMessageJson: projection.candidate_auto_merge_commit_message,
         });
-        ci = requireCiReceipt(reconcileCandidateCi({
-          projection,
-          candidateSha: candidate.candidateSha,
-          pullRequest: confirmed,
-        }));
-        verifyBranchProtection({ projection, candidateSha: candidate.candidateSha });
-        verifyNoSynchronizeRun({ projection, candidateSha: candidate.candidateSha });
-        verifyCloudAuthority({ projection, pullRequest: confirmed });
+        ci = verifyRecoveryEvidence(confirmed);
         const pending = readCloudReceipt({ candidateSha: pull.headSha, create: false });
         if (
           pending.status !== "pending"

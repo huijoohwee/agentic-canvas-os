@@ -33,6 +33,8 @@ import {
   normalizePreClaimIntegrationContinuation,
 } from "./expired-committed-continuation-lib.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
+import { projectRepeatedProtectedRefreshBase } from
+  "./repeated-protected-refresh-base-projection.mjs";
 import { withReviewedLaneEntrypointFence } from "./reviewed-lane-revision-fence.mjs";
 import {
   createWorktreeCleanupOperationId,
@@ -213,6 +215,7 @@ function integrateSessionUnfenced({
   if (!['completing', 'completed'].includes(lease.status)) {
     let deliveryCloudAuthority = lease.cloudAuthority || null;
     const deliveryVerifiedBaseSha = deliveryCloudAuthority?.canonicalBaseSha || "";
+    let acceptedProtectedRefreshBaseSha = deliveryVerifiedBaseSha;
     let protectedMainAuthorizationRefresh = null;
     let squashSubject = null;
     if (reviewReadyDelivery) {
@@ -251,6 +254,10 @@ function integrateSessionUnfenced({
           protectedMainRefresh,
           protectedMainAuthorizationRefresh,
         );
+        acceptedProtectedRefreshBaseSha = projectRepeatedProtectedRefreshBase({
+          acceptedHeadSha: lease.reviewHeadSha,
+          refreshReceipt: protectedMainAuthorizationRefresh,
+        }).canonicalBaseSha;
       }
     }
     if (reviewReadyDelivery) {
@@ -382,6 +389,10 @@ function integrateSessionUnfenced({
               refresh,
             );
           }
+          acceptedProtectedRefreshBaseSha = projectRepeatedProtectedRefreshBase({
+            acceptedHeadSha: expectedHeadSha,
+            refreshReceipt: refresh,
+          }).canonicalBaseSha;
           verifyCloudAuthority({
             pullRequestUrl: lease.pullRequestUrl,
             branch,
@@ -401,7 +412,7 @@ function integrateSessionUnfenced({
             requestedHeads: requestedProtectedMainRefreshHeads,
             branch,
             deliveredHeadSha: deliveryAuthorizedHeadSha,
-            canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
+            canonicalBaseSha: acceptedProtectedRefreshBaseSha,
             cloudAuthority: deliveryCloudAuthority,
             ghText,
             verifyCloudAuthority: () => verifyCloudAuthority({

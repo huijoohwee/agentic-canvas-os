@@ -79,6 +79,13 @@ retirement. The integration receipt, transition counter, claim identity, and
 projected ledger ancestry must all remain exact; arbitrary terminal claims or
 later lineage remain ineligible.
 
+When that explicitly authorized recovery addresses an already-merged candidate
+whose branch is no longer reachable, GitHub may return a null GraphQL status
+rollup. Only in that recovery path, the controller may instead require every
+already-bound projection and pending cloud-gate check-run ID to remain visible
+in the exact bounded REST check-run inventory. A null rollup outside recovery,
+or any missing, foreign, duplicate, quarantined, or drifted check, fails closed.
+
 An open operation remains pinned to the projected target-main controller
 revision before any provider mutation can run. A newer protected-main
 controller may replay only after the exact pull request validates as merged

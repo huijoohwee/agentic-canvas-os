@@ -270,7 +270,12 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return receipt;
   }
-  function completeCloudCheck({ candidateSha, cloudCheck, ci }) {
+  function completeCloudCheck({
+    candidateSha,
+    cloudCheck,
+    ci,
+    projection: authorizationProjection = projection,
+  }) {
     if (!ci?.htmlUrl || !Number.isSafeInteger(ci.workflowRunId)) {
       throw new Error("Protected-head refresh cloud completion requires exact CI evidence.");
     }
@@ -294,7 +299,13 @@ export function createProtectedHeadRefreshGithubProvider({
     if (state === "complete" && exactCheck.output?.summary !== completeSummary) {
       throw new Error("Protected-head refresh concurrent cloud completion CI evidence drifted.");
     }
-    reconcileCiRollupProjections({ candidateSha, ci, cloudCheckRunId: checkRunId });
+    reconcileCiRollupProjections({
+      candidateSha,
+      ci,
+      cloudCheckRunId: checkRunId,
+      allowAbsentMergedAuthorizationRecovery:
+        authorizationProjection.allowAbsentMergedAuthorizationRecovery === true,
+    });
     if (state !== "complete") {
       gh([
         "api", "--method", "PATCH", `repos/${repository}/check-runs/${checkRunId}`,
@@ -322,7 +333,12 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     return readProtectedHeadRefreshCloudChecks({ candidateSha, contract });
   }
-  function reconcileCiRollupProjections({ candidateSha, ci, cloudCheckRunId }) {
+  function reconcileCiRollupProjections({
+    candidateSha,
+    ci,
+    cloudCheckRunId,
+    allowAbsentMergedAuthorizationRecovery,
+  }) {
     if (!Number.isSafeInteger(ci?.workflowRunId) || !Number.isSafeInteger(ci?.checkSuiteId)
       || !ci?.htmlUrl || !Number.isSafeInteger(cloudCheckRunId)) {
       throw new Error("Protected-head refresh CI rollup projection requires exact CI evidence.");
@@ -384,7 +400,17 @@ export function createProtectedHeadRefreshGithubProvider({
     for (let attempt = 0; attempt < 12; attempt += 1) {
       const response = ghJson(["api", "graphql", "-f", `query=${query}`,
         "-f", `owner=${owner}`, "-f", `name=${name}`, "-f", `oid=${candidateSha}`]);
-      const contexts = response?.data?.repository?.object?.statusCheckRollup?.contexts;
+      const rollup = response?.data?.repository?.object?.statusCheckRollup;
+      if (rollup === null && allowAbsentMergedAuthorizationRecovery) {
+        const observed = new Set(readCommitCheckRuns(candidateSha).map(check => Number(check?.id)));
+        if (expected.every(id => observed.has(id))) return Object.freeze(ids);
+        if (attempt + 1 < 12) {
+          sleepSeconds(1);
+          continue;
+        }
+        break;
+      }
+      const contexts = rollup?.contexts;
       if (!contexts || !Array.isArray(contexts.nodes)
         || !Number.isSafeInteger(Number(contexts.totalCount)) || Number(contexts.totalCount) > 100) {
         throw new Error("Protected-head refresh candidate status-check rollup is malformed.");

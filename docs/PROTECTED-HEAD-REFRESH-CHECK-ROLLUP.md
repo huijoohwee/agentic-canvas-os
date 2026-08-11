@@ -72,7 +72,12 @@ candidate workflow, source CI, branch-protection, no-synchronize, and cloud
 authority proofs, create the sole operation-owned pending check, re-read the
 unchanged merged identity, repeat every proof twice more, and complete that
 same check. Any foreign, duplicate, partial, drifted, or unbound recovery stays
-closed.
+closed. If the integrated-preserved claim was subsequently retired by the
+normal protected-main push lifecycle, recovery may select only the exact
+projected historical integration entry followed by one valid integrated
+retirement. The integration receipt, transition counter, claim identity, and
+projected ledger ancestry must all remain exact; arbitrary terminal claims or
+later lineage remain ineligible.
 
 An open operation remains pinned to the projected target-main controller
 revision before any provider mutation can run. A newer protected-main

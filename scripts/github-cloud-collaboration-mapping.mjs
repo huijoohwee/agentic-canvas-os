@@ -177,6 +177,13 @@ export function prepareReadRequest({ input, repository, pullRequest }) {
     fenceRevision: first(input.expectedFenceRevision, input.expectedClaimDigest),
     focusedEvidenceDigest: input.focusedEvidenceDigest,
     requiredState: normalizeRequiredState(first(input.requiredState, input.requireStatus)),
+    allowRetiredIntegratedPreserved: input.allowRetiredIntegratedPreserved === true,
+    integrationReceiptDigest: input.integrationReceiptDigest === undefined
+      ? undefined
+      : requiredDigest(input.integrationReceiptDigest, "integrationReceiptDigest"),
+    transitionCounter: input.transitionCounter === undefined
+      ? undefined
+      : boundedInteger(input.transitionCounter, "transitionCounter", 1),
   };
   return removeUndefined(request);
 }

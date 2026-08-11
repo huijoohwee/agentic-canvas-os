@@ -311,6 +311,48 @@ test("adapter verifies an integrated-preserved candidate after protected-main re
   assert.equal(verification.claim.state, "integrated-preserved");
   assert.equal(verification.claim.laneRevision, pullHeadSha);
 });
+
+test("adapter verifies exact historical integration after its valid retirement", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const integrated = await integrateClaim(adapter, "retired-refresh");
+  const retired = await adapter.execute("retire", {
+    targetRepository,
+    pullRequestNumber: 17,
+    claimId: integrated.claim.claimId,
+    expectedFenceRevision: integrated.claim.fenceRevision,
+    expectedTransitionCounter: integrated.claim.transitionCounter,
+    deviceId: claimInput().deviceId,
+    sessionId: claimInput().sessionId,
+    reason: "integrated",
+    finalRevision: integrated.claim.laneRevision,
+    reviewRequestId: integrated.claim.reviewRequestId,
+    bytesDigest: evidenceDigest,
+    namedChecksDigest: evidenceDigest,
+    handoffEvidenceDigest: evidenceDigest,
+    integrationReceiptDigest: integrated.claim.integrationReceiptDigest,
+    idempotencyKey: "retire-run-retired-refresh",
+  });
+  assert.equal(retired.status, "retired");
+  const verification = await adapter.execute("verify", {
+    targetRepository,
+    pullRequestNumber: 17,
+    branch: "agent/device/cloud-scope",
+    headSha: pullHeadSha,
+    canonicalBaseSha: targetMainSha,
+    requireStatus: "integrated-preserved",
+    claimId: integrated.claim.claimId,
+    expectedClaimDigest: integrated.claimDigest,
+    expectedLedgerRevision: integrated.ledgerRevision,
+    allowProtectedMainRefresh: true,
+    allowRetiredIntegratedPreserved: true,
+    integrationReceiptDigest: integrated.claim.integrationReceiptDigest,
+    transitionCounter: integrated.claim.transitionCounter,
+  });
+  assert.equal(verification.ok, true);
+  assert.equal(verification.claim.state, "integrated-preserved");
+  assert.equal(verification.claimDigest, integrated.claimDigest);
+});
 function createAdapter(github, options = {}) {
   return createGitHubCloudCollaborationAdapter({ ledgerRepository, request: github.request, ...options });
 }

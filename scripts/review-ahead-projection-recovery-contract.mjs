@@ -15,7 +15,10 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
     findings.push("local-lease-not-recoverable");
   }
   if (normalized.localAuthorityState !== "review_ready") findings.push("local-authority-not-reviewed");
-  if (normalized.remoteClaimState !== "dormant-preserved") findings.push("cloud-claim-not-dormant-preserved");
+  const integratedReplay = normalized.remoteClaimState === "integrated-preserved";
+  if (!integratedReplay && normalized.remoteClaimState !== "dormant-preserved") {
+    findings.push("cloud-claim-not-recoverable");
+  }
   if (normalized.pullRequestState !== "OPEN" || normalized.pullRequestDraft) {
     findings.push("pull-request-not-open-reviewed");
   }
@@ -43,8 +46,8 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
   if (normalized.actorLogin !== normalized.pullRequestAuthorLogin) {
     findings.push("authenticated-owner-drift");
   }
-  if (Date.parse(normalized.localExpiresAt) > now.getTime()
-      || Date.parse(normalized.remoteExpiresAt) > now.getTime()) {
+  if (!integratedReplay && (Date.parse(normalized.localExpiresAt) > now.getTime()
+      || Date.parse(normalized.remoteExpiresAt) > now.getTime())) {
     findings.push("authority-not-expired");
   }
   const core = {
@@ -57,7 +60,7 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
       "local-committed-descendants-preserved",
       "local-review-ready-projection",
       "ownership-pull-request-marker",
-      "cloud-successor-reclaim",
+      integratedReplay ? "cloud-integrated-replay-receipt" : "cloud-successor-reclaim",
     ]),
     forbiddenMutations: Object.freeze([
       "cleanup", "deployment", "source-edit", "scope-release", "protected-integration",

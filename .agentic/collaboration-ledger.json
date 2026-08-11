@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1908,
-  "headDigest": "ce808b79033708d1f8a62d95eb50c90df3fd16d01ac6e2e141c0b6687ed0948a",
+  "sequence": 1909,
+  "headDigest": "3646e652a610fe11d12d9bf76da0e9e5824efa749a11a2139c435c277c8736ad",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -94915,6 +94915,67 @@
       },
       "claimDigest": "9164e28d91c2a729c6862d3724ad60c4361a0a66760060d6db6f88283a756b42",
       "digest": "ce808b79033708d1f8a62d95eb50c90df3fd16d01ac6e2e141c0b6687ed0948a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1909,
+      "parentDigest": "ce808b79033708d1f8a62d95eb50c90df3fd16d01ac6e2e141c0b6687ed0948a",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "85f4ae51fa97be23cbcb3db8f8e433c5f7ef3584b96d459cd37f74aac24f5224",
+      "idempotencyKey": "b195d1ca2ac03f3fa4a59c55a11c40f30b6c1f9f8842c62cdd66b53d383ad807",
+      "requestDigest": "e98dc40d6fe1a2de7776b0e4d3804e2139d47e3efea94d11e426e2c74c54e350",
+      "evaluationTime": "2026-08-11T03:58:18.000Z",
+      "claimCore": {
+        "claimId": "85f4ae51fa97be23cbcb3db8f8e433c5f7ef3584b96d459cd37f74aac24f5224",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:052d03bf26e75d3d6103d32e3ae35bec2967eb29c19de4d234b61a83cf6c3b61",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:28780f7829d0d0228b4cfcf3b1653410c7961b66a9ae407f4409a5f348b1281d",
+        "canonicalBaseRevision": "36a0986a732509bf888202deeee958396d9c7437",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/task-worktree-provision.test.mjs",
+          "path:__tests__/worktree-lifecycle.test.mjs",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:package.json",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/task-worktree-owned-containers.mjs",
+          "path:scripts/task-worktree-provision.mjs",
+          "path:scripts/worktree-lifecycle-lib.mjs",
+          "path:scripts/worktree-lifecycle.mjs",
+          "semantic:worktree-empty-container-cleanup"
+        ],
+        "writeSetDigest": "60116d3366f83d333e23cc5770096e73f4b119ee8b9c953aba4aba9ebb8850c8",
+        "laneRevision": "ae2b1b42dba5793516772b1ba5d9b979e3282358",
+        "leaseEpoch": 2,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-11T04:24:34.000Z",
+        "evidenceDigest": "fd3c8595a7980c7ebc90f28061bcb5ad808cf87089f8c2e2025c989477e252e2",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79TIGC",
+        "predecessorClaimId": "5bbaa33ba5291b89b7dd7e617c83bd3c3293c9ea1fc9ba343785fb27e3f5a285",
+        "eligibleSince": "2026-08-11T03:53:57.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-11T03:54:34.000Z",
+        "integration": {
+          "candidateRevision": "ae2b1b42dba5793516772b1ba5d9b979e3282358",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79TIGC",
+          "focusedEvidenceDigest": "fd3c8595a7980c7ebc90f28061bcb5ad808cf87089f8c2e2025c989477e252e2",
+          "dependencyClosureDigest": "62089a492f2cc70116544ef2802b62f03a33413ff89852b52c62604c3510700e",
+          "namedChecksDigest": "551a77799a034cc0db79d9e20ab46fba8cfc2bafedee6dd30d4496fe9487d12b",
+          "handoffEvidenceDigest": "6f6e31adcb46d1ed52e676d919363b82968b2f9c2917f36bac319c0e86de3cb2",
+          "operatorDecisionDigest": "9664c2948e44dec9731cff03f65136602ef5cfb6c4c386f15ffdc0fd77183471",
+          "integrationIntentDigest": "d594746048eda3679d0f2fc4ee10101e210f9ecb59604b06d64d3ff146642c77",
+          "integratedAt": "2026-08-11T03:58:18.000Z"
+        }
+      },
+      "claimDigest": "6419839a1e7e347b12a8018ceb001821ee8eb9f12d2fd5a13bcf05866fbe7613",
+      "digest": "3646e652a610fe11d12d9bf76da0e9e5824efa749a11a2139c435c277c8736ad"
     }
   ]
 }

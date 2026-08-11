@@ -57,5 +57,14 @@ or partially completed check remains fail closed. Protected main may have
 advanced after the exact merge; replay proves the immutable merge instead of
 requiring the old target SHA to remain the current tip.
 
+An open operation remains pinned to the projected target-main controller
+revision before any provider mutation can run. A newer protected-main
+controller may replay only after the exact pull request validates as merged
+with its retained SQUASH authorization and merger identity, and only when both
+the projected target main and exact merge commit are ancestors of that
+controller revision. The captured pull-request projection is reused for the
+controller's first read; later reads remain live. This successor exception
+cannot publish a candidate or authorize an unmerged operation.
+
 Passing focused tests proves only this bounded Dev contract. It does not grant
 Production authorization, Cloudflare deployment, cleanup, or release authority.

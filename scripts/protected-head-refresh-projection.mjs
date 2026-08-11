@@ -260,12 +260,22 @@ export function renderProtectedHeadRefreshHandshakeEvidence({
 export function requireProtectedHeadRefreshControllerRevision({
   controllerRevision,
   targetMainSha,
+  mergedReplay = false,
+  targetMainIsAncestor = false,
+  mergeCommitIsAncestor = false,
 }) {
   requireSha(controllerRevision, "Protected-head refresh controller revision");
   requireSha(targetMainSha, "Protected-head refresh target main revision");
-  if (controllerRevision !== targetMainSha) {
+  if (
+    controllerRevision !== targetMainSha
+    && !(
+      mergedReplay === true
+      && targetMainIsAncestor === true
+      && mergeCommitIsAncestor === true
+    )
+  ) {
     throw new Error(
-      "Protected-head refresh controller revision does not equal its projected target main.",
+      "Protected-head refresh controller revision is neither its projected target main nor an authorized merged successor.",
     );
   }
   return controllerRevision;

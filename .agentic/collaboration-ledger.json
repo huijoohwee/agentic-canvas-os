@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2255,
-  "headDigest": "fb356e9a0f05a6a1ec12eb129032f91561c681a0bd3a69cb0b912c7a8e3942d6",
+  "sequence": 2256,
+  "headDigest": "133dec458736a22e5763eb673aa4fd74861015e466ac8852f8c4a072ed0bd974",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -112007,6 +112007,50 @@
       },
       "claimDigest": "3c2728c47f5aa5579a4b8670f23ab838d66da184d7b9ddad9220d0f2ab185a1e",
       "digest": "fb356e9a0f05a6a1ec12eb129032f91561c681a0bd3a69cb0b912c7a8e3942d6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2256,
+      "parentDigest": "fb356e9a0f05a6a1ec12eb129032f91561c681a0bd3a69cb0b912c7a8e3942d6",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "dff56f54fe1d451eafef595d60609858ce433fbb6454494c2bcac7cdf62c8e50",
+      "idempotencyKey": "c16e059aeec799eb690cd3f1c90dab23fe73aa0a198b241196a4b85303bcdb44",
+      "requestDigest": "8dcacc7eb19be1caf5c2e1e59b11ea41c7dfa9c616257caac0bdcdb0d1f4408a",
+      "evaluationTime": "2026-08-11T22:58:27.000Z",
+      "claimCore": {
+        "claimId": "dff56f54fe1d451eafef595d60609858ce433fbb6454494c2bcac7cdf62c8e50",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:98022989f479c13cfe814da91a90a17d1651648dadadbed24f82cb915c60dab5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f63fa322528f6a3915ec2dfa82cfc99da47a73894d3381613e2fc56db3ef4993",
+        "canonicalBaseRevision": "723e23ece0080d0d26f7a3f63a66a3e16179f67c",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "semantic:release-recovery-finalization"
+        ],
+        "writeSetDigest": "d5027799018a9f7b51969c0d047379a4e97a1ae12592abdedcc4d7844df5738a",
+        "laneRevision": "723e23ece0080d0d26f7a3f63a66a3e16179f67c",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T23:28:27.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "0be0075786d8a57a654ac48a36d5c105f028ecd895f983ea88a8b5acb39e6352",
+        "eligibleSince": "2026-08-11T22:55:53.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-11T22:58:27.000Z"
+      },
+      "claimDigest": "0a773526471ffe85bab91ca8f10e93f437d60617663c4d79c4bdb94218094efd",
+      "digest": "133dec458736a22e5763eb673aa4fd74861015e466ac8852f8c4a072ed0bd974"
     }
   ]
 }

@@ -290,7 +290,7 @@ function buildPreservation(projection, selection) {
     const pullRequest = lane.pullRequest == null ? null : receipt.pullRequests.find(item => (
       item.number === lane.pullRequest || item.url === lane.pullRequest
     ));
-    if (lane.pullRequest != null && (!pullRequest || pullRequest.headSha !== worktree.headSha
+    if (lane.pullRequest != null && (!pullRequest || worktree.detached || pullRequest.headSha !== worktree.headSha
       || pullRequest.branch !== worktree.branch.replace(/^refs\/heads\//u, "")
       || pullRequest.headRepository !== receipt.repository.nameWithOwner)) {
       throw new Error(`Selected dormant pull request is absent or mismatched: ${lane.pullRequest}`); }
@@ -338,7 +338,7 @@ function normalizePreservation(value) {
       requireObject(lane, `Selected dormant lane ${index}`);
       const core = { path: absolutePath(lane.path, `Selected dormant lane ${index} path`), stateDigest: digest(lane.stateDigest, `Selected dormant lane ${index} state digest`), worktree: normalizeWorktree(lane.worktree, index), pullRequest: lane.pullRequest == null ? null : normalizePullRequest(lane.pullRequest, index) };
       if (core.path !== core.worktree.path || lane.selectionDigest !== digestValue(core)
-        || core.pullRequest && (core.pullRequest.headSha !== core.worktree.headSha
+        || core.pullRequest && (core.worktree.detached || core.pullRequest.headSha !== core.worktree.headSha
           || core.pullRequest.branch !== core.worktree.branch.replace(/^refs\/heads\//u, "")
           || core.pullRequest.headRepository !== result.repository.nameWithOwner
           || core.pullRequest.url !== `https://github.com/${result.repository.nameWithOwner}/pull/${core.pullRequest.number}`)) {
@@ -406,7 +406,7 @@ function normalizeCloudClaim(value, index) {
 }
 function normalizeWorktree(value, index) {
   const result = canonicalObject(value, `Dormant worktree ${index}`);
-  result.path = absolutePath(result.path, `Dormant worktree ${index} path`); result.branch = text(result.branch, `Dormant worktree ${index} branch`);
+  result.path = absolutePath(result.path, `Dormant worktree ${index} path`); if (result.branch === null ? result.detached !== true : result.detached === true || result.detached != null && result.detached !== false) throw new Error(`Dormant worktree ${index} branch and detached state are inconsistent.`); result.branch = result.branch === null ? null : text(result.branch, `Dormant worktree ${index} branch`);
   result.headSha = sha(result.headSha, `Dormant worktree ${index} HEAD`); result.treeSha = sha(result.treeSha, `Dormant worktree ${index} tree`);
   result.stateDigest = digest(result.stateDigest, `Dormant worktree ${index} state digest`);
   return deepFreeze(result);

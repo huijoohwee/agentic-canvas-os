@@ -35,12 +35,11 @@ export function createProtectedHeadRefreshCandidate({
     ]).trim().split(/\s+/u)[0],
     "Protected-head refresh candidate merge tree",
   );
-  const commitDate = gitText([
-    "show", "-s", "--format=%cI", observedHeadSha,
-  ]).trim();
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/u.test(commitDate)) {
-    throw new Error("Protected-head refresh parent timestamp is not exact ISO-8601.");
-  }
+  const observedCommit = gitText(["cat-file", "commit", observedHeadSha]);
+  const commitDate = requireCommitTimestamp(
+    commitHeaderLines(observedCommit).find(line => line.startsWith("committer ")),
+    "Protected-head refresh observed parent committer",
+  );
   const message = renderProtectedHeadRefreshCommitMessage({
     operationId,
     observedHeadSha,

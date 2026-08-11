@@ -95,6 +95,8 @@
     "workspace:parallelism:test": "node --test __tests__/workspace-parallelism.test.mjs __tests__/workspace-guard-enforcement.test.mjs",
     "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
     "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
+    "worktree:lifecycle:recoverable-cleanup": "node ./scripts/recoverable-lane-cleanup.mjs",
+    "worktree:lifecycle:recoverable-cleanup:check": "node --test __tests__/recoverable-lane-cleanup-contract.test.mjs __tests__/recoverable-lane-cleanup-controller.test.mjs __tests__/recoverable-lane-cleanup-repository-adapter.test.mjs __tests__/recoverable-lane-cleanup-cli.test.mjs",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",

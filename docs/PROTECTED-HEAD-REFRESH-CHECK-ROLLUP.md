@@ -45,5 +45,17 @@ exact projected check-run IDs plus the still-pending cloud gate to be visible.
 The cloud gate remains the last success mutation. Interrupted execution is
 idempotent: exact projections are reused; drift is rejected.
 
+If GitHub merges the exact re-authorized candidate while that sole owned gate
+is still pending, merged replay may complete only that existing check. It first
+reproves the deterministic candidate and refresh chain, exact target base,
+retained SQUASH authorization and human merger, merged commit, candidate
+workflow, successful source CI run and check suite, current branch protection,
+absence of a synchronize run, cloud authority, and the unchanged operation
+check ID. It repeats the mutable proofs after CI reconciliation immediately
+before completing the check. An absent, foreign, duplicate, terminal, replaced,
+or partially completed check remains fail closed. Protected main may have
+advanced after the exact merge; replay proves the immutable merge instead of
+requiring the old target SHA to remain the current tip.
+
 Passing focused tests proves only this bounded Dev contract. It does not grant
 Production authorization, Cloudflare deployment, cleanup, or release authority.

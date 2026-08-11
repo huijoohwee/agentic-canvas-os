@@ -169,15 +169,21 @@ test("pending gate terminal failure is never overwritten or followed by auth mut
   assert.equal(harness.events.filter(value => value === "disable").length, 0);
 });
 
-test("merged replay requires completed owned evidence for a refreshed candidate", async t => {
-  await t.test("pending evidence is rejected", () => {
+test("merged replay recovers only exact pending owned evidence for a refreshed candidate", async t => {
+  await t.test("pending evidence is completed after full merged proof", () => {
     const harness = createControllerHarness({
       initialHeadSha: candidate,
       initialMergeState: "blocked",
       initialCloudStatus: "pending",
       merged: true,
     });
-    assert.throws(() => harness.execute(), /without complete owned authorization/u);
+    const result = harness.execute();
+    assert.equal(result.status, "merged-replay");
+    assert.equal(result.mutated, true);
+    assert.equal(harness.state.cloudStatus, "complete");
+    assert.equal(harness.events.filter(value => value === "gate-complete").length, 1);
+    assert.equal(harness.events.filter(value => value === "ci").length, 2);
+    assert.equal(harness.events.filter(value => value === "cloud").length, 2);
   });
   await t.test("complete evidence is accepted", () => {
     let mergedProof;
@@ -188,12 +194,49 @@ test("merged replay requires completed owned evidence for a refreshed candidate"
       merged: true,
       captureMergedCommit: value => { mergedProof = value; },
     });
-    assert.equal(harness.execute().status, "merged-replay");
+    const result = harness.execute();
+    assert.equal(result.status, "merged-replay");
+    assert.equal(result.mutated, false);
+    assert.equal(harness.events.includes("gate-complete"), false);
     assert.equal(harness.events.includes("inspect"), true);
     assert.equal(
       mergedProof.commitMessageJson,
       normalizedProjection().candidate_auto_merge_commit_message,
     );
+  });
+  await t.test("absent owned evidence is rejected without creating it", () => {
+    const harness = createControllerHarness({
+      initialHeadSha: candidate,
+      initialAutoMergeAuthorization: "candidate",
+      initialMergeState: "blocked",
+      merged: true,
+    });
+    assert.throws(() => harness.execute(), /without complete owned authorization/u);
+    assert.equal(harness.events.includes("gate-create"), false);
+    assert.equal(harness.events.includes("gate-complete"), false);
+  });
+  await t.test("pending evidence is not completed when candidate workflow proof drifts", () => {
+    const harness = createControllerHarness({
+      initialHeadSha: candidate,
+      initialMergeState: "blocked",
+      initialCloudStatus: "pending",
+      candidateWorkflowDrift: true,
+      merged: true,
+    });
+    assert.throws(() => harness.execute(), /workflow differs/u);
+    assert.equal(harness.state.cloudStatus, "pending");
+    assert.equal(harness.events.includes("gate-complete"), false);
+  });
+  await t.test("partial completion stays fail closed", () => {
+    const harness = createControllerHarness({
+      initialHeadSha: candidate,
+      initialMergeState: "blocked",
+      initialCloudStatus: "pending",
+      partialCloudCompletion: true,
+      merged: true,
+    });
+    assert.throws(() => harness.execute(), /did not complete exactly/u);
+    assert.equal(harness.state.cloudStatus, "pending");
   });
   await t.test("provider base substitution is rejected", () => {
     const harness = createControllerHarness({

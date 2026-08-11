@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1968,
-  "headDigest": "dba6368135974037aede0c9069092f4020ef7f3b582e303deeb5be878a24786f",
+  "sequence": 1969,
+  "headDigest": "50e49e9d1ab5249037ebe893c41ed98be783fd9eedbc10799a23e83766b6c3f2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -97993,6 +97993,72 @@
       },
       "claimDigest": "bdcf734103142d6f3c9fde6dbfe41f433a95801dbee0d0004cb15757d405dbba",
       "digest": "dba6368135974037aede0c9069092f4020ef7f3b582e303deeb5be878a24786f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1969,
+      "parentDigest": "dba6368135974037aede0c9069092f4020ef7f3b582e303deeb5be878a24786f",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7934ae372463ca5188a1b388ce40d40e9f6835d49cee5770a742f734fc5e4d1a",
+      "idempotencyKey": "4b07cd1274c641346bb6da69651a45e3020dd143015e4d84e8686fac85f2ecef",
+      "requestDigest": "51ef106864a80cef15b61e712d5bd5aee426e848fd7c9a5605985d77573938fb",
+      "evaluationTime": "2026-08-11T07:32:05.000Z",
+      "claimCore": {
+        "claimId": "7934ae372463ca5188a1b388ce40d40e9f6835d49cee5770a742f734fc5e4d1a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:1bb3c9862e88ff73d8956ada374e6979cba949b03715b22051a92ac5a430399f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cb02863c86f8d5581cda5619d4260c312af3c441b09a555a995268ee331d2e60",
+        "canonicalBaseRevision": "7dfc3960b73fa91a4a6412dfff2d9440783461d9",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-recovery-contract.test.mjs",
+          "path:__tests__/active-owned-dirt-recovery-controller.test.mjs",
+          "path:__tests__/active-owned-dirt-recovery-evidence.test.mjs",
+          "path:__tests__/device-active-owned-dirt-recovery.test.mjs",
+          "path:__tests__/device-heartbeat-scope-expansion-fence.test.mjs",
+          "path:__tests__/writer-lease-lib.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/active-owned-dirt-recovery-contract.mjs",
+          "path:scripts/active-owned-dirt-recovery-controller.mjs",
+          "path:scripts/active-owned-dirt-recovery-evidence.mjs",
+          "path:scripts/active-owned-dirt-recovery-registry.mjs",
+          "path:scripts/active-owned-dirt-recovery.mjs",
+          "path:scripts/device-branch-ownership-lib.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "path:scripts/writer-lease-registry-cas.mjs",
+          "semantic:active-owned-dirt-recovery"
+        ],
+        "writeSetDigest": "85bd49ac14e438361198f621b178c9b1c8a847563ce1c2aa540b02197130f4d8",
+        "laneRevision": "2f9adb1d4ed7fd26927e8d0be3780f5910dab81e",
+        "leaseEpoch": 2,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-11T08:27:23.000Z",
+        "evidenceDigest": "f54274b679a3eea4ede33f57036a1800ab47e4bb3396365b7b04cf583a9ee163",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78jKL_",
+        "predecessorClaimId": "9ff9c214216d0489dcba9b11577fd750f6e5ae22f475df1dae13bcbaf8c36d5d",
+        "eligibleSince": "2026-08-11T07:26:21.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-11T07:27:23.000Z",
+        "integration": {
+          "candidateRevision": "2f9adb1d4ed7fd26927e8d0be3780f5910dab81e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM78jKL_",
+          "focusedEvidenceDigest": "f54274b679a3eea4ede33f57036a1800ab47e4bb3396365b7b04cf583a9ee163",
+          "dependencyClosureDigest": "9b83350c851a1b0cbd8aa6ecacd5e7ae5b01164b7fd38ecbb9413cc55583dbbc",
+          "namedChecksDigest": "b37155bfcab7921823092fafc610c407c32332113ff458a775b7f12316a84845",
+          "handoffEvidenceDigest": "01acbdc8003c05ab7817a7ca70f821ef15a7184af2046ae030ed01e37a0904dc",
+          "operatorDecisionDigest": "e8039da989d07b2f4b017bd50ef070236307454f516e6f8aeed5414164e48142",
+          "integrationIntentDigest": "dc0575dbc074e15651f1417e730d2df8b617d6b90bd6e40c550834592cf40bfd",
+          "integratedAt": "2026-08-11T07:32:05.000Z"
+        }
+      },
+      "claimDigest": "4d68b7408b17c2c96b70728b11ff01f15257df78b7cdd0011a726f87390ea285",
+      "digest": "50e49e9d1ab5249037ebe893c41ed98be783fd9eedbc10799a23e83766b6c3f2"
     }
   ]
 }

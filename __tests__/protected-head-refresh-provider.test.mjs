@@ -555,6 +555,7 @@ test("CI completion projects exact source checks into the candidate rollup befor
     check_suite: { id: workflow.check_suite_id },
   }));
   const cloudId = 9_000;
+  let rollupAvailable = true;
   const checks = [{ id: cloudId, name: "cloud-collaboration", head_sha: candidate,
     external_id: `agentic-protected-head-refresh:${projection.operation_id}`,
     status: "in_progress", conclusion: null,
@@ -584,9 +585,9 @@ test("CI completion projects exact source checks into the candidate rollup befor
       if (endpoint === `repos/${repository}/check-suites/${workflow.check_suite_id}/check-runs`)
         return { total_count: source.length, check_runs: source };
       if (endpoint?.includes("/check-runs/")) return checks.find(check => endpoint.endsWith(`/${check.id}`));
-      return { data: { repository: { object: { statusCheckRollup: { contexts: {
+      return { data: { repository: { object: { statusCheckRollup: rollupAvailable ? { contexts: {
         totalCount: checks.length, nodes: checks.map(check => ({ __typename: "CheckRun",
-          databaseId: check.id })) } } } } } };
+          databaseId: check.id })) } } : null } } } };
     },
     requiredEnv: () => "unused", sleepSeconds: () => {},
   });
@@ -600,6 +601,13 @@ test("CI completion projects exact source checks into the candidate rollup befor
   const mutationCount = mutations.length;
   provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci });
   assert.equal(mutations.length, mutationCount);
+  rollupAvailable = false;
+  assert.throws(() => provider.completeCloudCheck({ projection, candidateSha: candidate,
+    cloudCheck: { checkRunIds: [cloudId] }, ci }), /rollup is malformed/u);
+  assert.equal(provider.completeCloudCheck({ projection: Object.freeze({ ...projection,
+    allowAbsentMergedAuthorizationRecovery: true }), candidateSha: candidate,
+    cloudCheck: { checkRunIds: [cloudId] }, ci }).status, "complete");
+  rollupAvailable = true;
   checks[1].details_url = "https://github.com/foreign/repo/runs/2001";
   assert.throws(() => provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci }), /drifted/u);
 });

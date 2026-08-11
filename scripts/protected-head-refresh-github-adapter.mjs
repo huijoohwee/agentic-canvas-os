@@ -8,6 +8,7 @@ import {
   normalizeProtectedHeadRefreshProjection,
   requireProtectedHeadRefreshCloudResult,
   requireProtectedHeadRefreshControllerRevision,
+  requireProtectedHeadRefreshPullRequest,
   verifyProtectedHeadRefreshCandidate,
   verifyProtectedHeadRefreshMergedCommit,
   verifyProtectedMainRefreshChain,
@@ -63,9 +64,40 @@ export function runProtectedHeadRefresh({
     repository: repo,
     input: projectionInput(requiredEnv),
   });
+  let capturedPullRequest = null;
+  let mergedReplay = false;
+  let targetMainIsAncestor = false;
+  let mergeCommitIsAncestor = false;
+  if (controllerRevision !== projection.target_main_sha) {
+    capturedPullRequest = ghJson([
+      "api", "--method", "GET",
+      `repos/${repo}/pulls/${projection.pullRequestNumber}`,
+    ]);
+    const pullRequest = requireProtectedHeadRefreshPullRequest({
+      pullRequest: capturedPullRequest,
+      projection,
+      autoMerge: "either",
+    });
+    mergedReplay = pullRequest.merged;
+    if (mergedReplay) {
+      targetMainIsAncestor = git([
+        "merge-base", "--is-ancestor",
+        projection.target_main_sha,
+        controllerRevision,
+      ], { allowFailure: true }).status === 0;
+      mergeCommitIsAncestor = git([
+        "merge-base", "--is-ancestor",
+        pullRequest.mergeCommitSha,
+        controllerRevision,
+      ], { allowFailure: true }).status === 0;
+    }
+  }
   requireProtectedHeadRefreshControllerRevision({
     controllerRevision,
     targetMainSha: projection.target_main_sha,
+    mergedReplay,
+    targetMainIsAncestor,
+    mergeCommitIsAncestor,
   });
   const provider = createProtectedHeadRefreshGithubProvider({
     repository: repo,
@@ -77,10 +109,17 @@ export function runProtectedHeadRefresh({
   });
   const result = executeProtectedHeadRefreshController({
     projection,
-    readPullRequest: () => ghJson([
-      "api", "--method", "GET",
-      `repos/${repo}/pulls/${projection.pullRequestNumber}`,
-    ]),
+    readPullRequest: () => {
+      if (capturedPullRequest !== null) {
+        const pullRequest = capturedPullRequest;
+        capturedPullRequest = null;
+        return pullRequest;
+      }
+      return ghJson([
+        "api", "--method", "GET",
+        `repos/${repo}/pulls/${projection.pullRequestNumber}`,
+      ]);
+    },
     verifyRefreshChain: ({ deliveredHeadSha, currentHeadSha, pullRequestNumber }) => {
       const mainRef = "refs/remotes/origin/main";
       const pullRef = `refs/remotes/pull/${pullRequestNumber}/head`;

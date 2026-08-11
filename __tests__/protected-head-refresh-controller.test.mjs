@@ -13,7 +13,7 @@ import {
   targetMain,
 } from "./protected-head-refresh-fixtures.mjs";
 
-test("controller revision race fails before any provider callback can run", () => {
+test("open controller revisions remain pinned to the projected target main", () => {
   assert.equal(requireProtectedHeadRefreshControllerRevision({
     controllerRevision: targetMain,
     targetMainSha: targetMain,
@@ -21,7 +21,31 @@ test("controller revision race fails before any provider callback can run", () =
   assert.throws(() => requireProtectedHeadRefreshControllerRevision({
     controllerRevision: mainOne,
     targetMainSha: targetMain,
-  }), /does not equal its projected target main/u);
+    mergedReplay: false,
+    targetMainIsAncestor: true,
+    mergeCommitIsAncestor: true,
+  }), /nor an authorized merged successor/u);
+});
+
+test("merged replay accepts only a successor containing target and merge commit", () => {
+  assert.equal(requireProtectedHeadRefreshControllerRevision({
+    controllerRevision: mainOne,
+    targetMainSha: targetMain,
+    mergedReplay: true,
+    targetMainIsAncestor: true,
+    mergeCommitIsAncestor: true,
+  }), mainOne);
+  for (const ancestry of [
+    { targetMainIsAncestor: false, mergeCommitIsAncestor: true },
+    { targetMainIsAncestor: true, mergeCommitIsAncestor: false },
+  ]) {
+    assert.throws(() => requireProtectedHeadRefreshControllerRevision({
+      controllerRevision: mainOne,
+      targetMainSha: targetMain,
+      mergedReplay: true,
+      ...ancestry,
+    }), /nor an authorized merged successor/u);
+  }
 });
 
 test("publishes behind strict absent-check protection and completes only after user re-authorization", () => {

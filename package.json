@@ -93,6 +93,8 @@
     "workspace:guards:install": "node ./scripts/install-workspace-guards.mjs",
     "workspace:parallelism:check": "node ./scripts/workspace-parallelism-guard.mjs",
     "workspace:parallelism:test": "node --test __tests__/workspace-parallelism.test.mjs __tests__/workspace-guard-enforcement.test.mjs",
+    "history:lifecycle": "node ./scripts/history-lifecycle.mjs",
+    "history:lifecycle:check": "node --test __tests__/history-lifecycle-contract.test.mjs __tests__/history-lifecycle-controller.test.mjs __tests__/history-lifecycle-repository-adapter.test.mjs __tests__/history-lifecycle-cli.test.mjs",
     "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
     "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
     "worktree:lifecycle:cleanup-empty": "node ./scripts/worktree-lifecycle.mjs cleanup-empty",

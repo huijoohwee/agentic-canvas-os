@@ -2331,8 +2331,133 @@ test("expired delivery replay adopts an already-live same-claim recovery after r
 
   assert.equal(result.status, "integrated");
   assert.equal(recoveryInput.integratedClaim.state, "integrated-preserved");
+  assert.equal(recoveryInput.authority.transitionCounter, 5);
+  assert.equal(recoveryInput.integratedClaim.transitionCounter, 6);
+  assert.notEqual(
+    recoveryInput.integratedClaim.operationReceiptDigest,
+    recoveryInput.integratedClaim.integrationReceiptDigest,
+  );
   assert.equal(events.filter(event => event === "recover:continue").length, 1);
   assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("expired delivery replay repeats one exact producer-shaped parked recovery suffix", () => {
+  const events = [];
+  let recoveryInput;
+  let recoveredResult;
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      repeatExpired: true,
+      onRecover: input => { recoveryInput = input; },
+      mutateResult: value => {
+        recoveredResult = value;
+        return value;
+      },
+    },
+    observations: [mergedPullRequest()],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(recoveryInput.authority.transitionCounter, 5);
+  assert.equal(recoveryInput.integratedClaim.state, "dormant-preserved");
+  assert.equal(recoveryInput.integratedClaim.transitionCounter, 6);
+  assert.equal(recoveryInput.integratedClaim.expiresAt, "1969-12-31T23:59:59.500Z");
+  assert.notEqual(
+    recoveryInput.integratedClaim.operationReceiptDigest,
+    recoveryInput.integratedClaim.integrationReceiptDigest,
+  );
+  assert.equal(recoveredResult.authority.transitionCounter, 7);
+  assert.equal(recoveredResult.authority.state, "delivery_authorized");
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+});
+
+test("expired delivery replay adopts a live repeated recovery after response loss", () => {
+  const events = [];
+  let recoveryInput;
+  let recoveredResult;
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: {
+      repeatAlreadyLive: true,
+      onRecover: input => { recoveryInput = input; },
+      mutateResult: value => {
+        recoveredResult = value;
+        return value;
+      },
+    },
+    observations: [mergedPullRequest()],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(recoveryInput.authority.transitionCounter, 5);
+  assert.equal(recoveryInput.integratedClaim.state, "integrated-preserved");
+  assert.equal(recoveryInput.integratedClaim.transitionCounter, 7);
+  assert.equal(
+    recoveredResult.authority.transitionCounter,
+    recoveryInput.integratedClaim.transitionCounter,
+  );
+  assert.equal(
+    recoveredResult.authority.operationReceiptDigest,
+    recoveryInput.integratedClaim.operationReceiptDigest,
+  );
+  assert.equal(events.filter(event => event === "recover:continue").length, 1);
+});
+
+test("expired delivery repeat recovery rejects counter and receipt or integration drift", () => {
+  for (const [label, repeatExpired, mutateObservedClaim] of [
+    ["counter regression", true, claim => ({ ...claim, transitionCounter: 4 })],
+    ["unsafe counter", true, claim => ({
+      ...claim,
+      transitionCounter: Number.MAX_SAFE_INTEGER + 1,
+    })],
+    ["same-counter receipt drift", false, claim => ({
+      ...claim,
+      operationReceiptDigest: "c".repeat(64),
+    })],
+    ["reused integration receipt", true, claim => ({
+      ...claim,
+      operationReceiptDigest: claim.integrationReceiptDigest,
+    })],
+    ["recycled expiry", true, claim => ({
+      ...claim,
+      expiresAt: "1969-12-31T23:59:59.000Z",
+    })],
+    ["recycled fence", true, claim => ({
+      ...claim,
+      fenceRevision: "6".repeat(64),
+    })],
+    ["recycled transition digest", true, claim => ({
+      ...claim,
+      transitionDigest: "9".repeat(64),
+    })],
+    ["integration drift", true, claim => ({
+      ...claim,
+      integration: { ...claim.integration, candidateRevision: "0".repeat(40) },
+    })],
+  ]) {
+    const events = [];
+    assert.throws(() => runProtectedRefreshScenario({
+      leaseStatus: "delivery",
+      events,
+      deliveryRecovery: { repeatExpired, mutateObservedClaim },
+      observations: [],
+    }), /requires one exact integrated-preserved cloud claim/u, label);
+    assert.equal(events.includes("recover:continue"), false, label);
+  }
+});
+
+test("expired delivery baseline rejects a drifted local operation receipt", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    deliveryRecovery: { localOperationReceiptDigest: "c".repeat(64) },
+    observations: [],
+  }), /drifted from its exact local reviewed integration subject/u);
+  assert.equal(events.includes("recover:continue"), false);
 });
 
 test("expired delivery replay verifies an existing protected-refresh successor without redispatch", () => {
@@ -3394,7 +3519,7 @@ function expiredDeliveryRecoveryFixture(reviewedLease, options = {}) {
     claimLedgerRevision: "9".repeat(64),
     entrySchema: "agentic-cloud-collaboration-entry/v2",
     claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
-    operationReceiptDigest: "7".repeat(64),
+    operationReceiptDigest: options.localOperationReceiptDigest || "7".repeat(64),
     canonicalBaseSha: baseSha,
     laneRevision: commitSha,
     cloudDeclaredWriteScope: manifest.declaredWriteSet,
@@ -3439,16 +3564,37 @@ function expiredDeliveryRecoveryFixture(reviewedLease, options = {}) {
     transitionDigest: "b".repeat(64),
     operationReceiptDigest: "c".repeat(64),
   });
-  const observedClaim = options.alreadyLive ? liveClaim : parkedClaim;
+  const repeatParkedClaim = Object.freeze({
+    ...liveClaim,
+    state: "dormant-preserved",
+    expiresAt: "1969-12-31T23:59:59.500Z",
+  });
+  const repeatedLiveClaim = Object.freeze({
+    ...liveClaim,
+    transitionCounter: 7,
+    fenceRevision: "d".repeat(64),
+    transitionDigest: "e".repeat(64),
+    operationReceiptDigest: "f".repeat(64),
+  });
+  const selectedClaim = options.repeatAlreadyLive
+    ? repeatedLiveClaim
+    : options.repeatExpired ? repeatParkedClaim
+      : options.alreadyLive ? liveClaim : parkedClaim;
+  const observedClaim = Object.freeze(options.mutateObservedClaim
+    ? options.mutateObservedClaim(selectedClaim)
+    : selectedClaim);
+  const recoveredClaim = options.repeatExpired || options.repeatAlreadyLive
+    ? repeatedLiveClaim
+    : liveClaim;
   const nextAuthority = Object.freeze({
     ...authority,
-    claimDigest: liveClaim.fenceRevision,
+    claimDigest: recoveredClaim.fenceRevision,
     ledgerRevision: "d".repeat(40),
     ledgerDigest: "e".repeat(64),
-    claimLedgerRevision: liveClaim.transitionDigest,
-    operationReceiptDigest: liveClaim.operationReceiptDigest,
-    transitionCounter: liveClaim.transitionCounter,
-    expiresAt: liveClaim.expiresAt,
+    claimLedgerRevision: recoveredClaim.transitionDigest,
+    operationReceiptDigest: recoveredClaim.operationReceiptDigest,
+    transitionCounter: recoveredClaim.transitionCounter,
+    expiresAt: recoveredClaim.expiresAt,
   });
   const verification = Object.freeze({
     schema: "agentic-lane-cloud-verification/v1",
@@ -3511,6 +3657,7 @@ function expiredDeliveryRecoveryFixture(reviewedLease, options = {}) {
     result: options.mutateResult ? options.mutateResult(defaultResult) : defaultResult,
     pullRequests: options.pullRequests || [defaultPullRequest, defaultPullRequest],
     onRecover: options.onRecover || null,
+    observedClaim,
   };
 }
 

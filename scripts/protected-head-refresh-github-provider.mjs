@@ -4,7 +4,6 @@ import {
   reconcileProtectedHeadRefreshCiRuns,
   renderProtectedHeadRefreshHandshakeEvidence,
 } from "./protected-main-refresh-lib.mjs";
-
 const CI_ROLLUP_PROJECTION_SCHEMA = "agentic-protected-head-refresh-ci-rollup-projection/v1";
 const CI_ROLLUP_EXTERNAL_ID_PREFIX = "agentic-protected-head-refresh-ci:";
 const CI_ROLLUP_TITLE = "Protected refresh CI rollup projection";
@@ -369,10 +368,11 @@ export function createProtectedHeadRefreshGithubProvider({
         throw new Error(`Protected-head refresh CI rollup projection ${context} is not sole.`);
       }
       const check = readExactCheckRun(Number(projected[0].id));
+      const canonicalDetailsUrl = `https://github.com/${repository}/runs/${check.id}`;
       if (check?.name !== context || check?.head_sha !== candidateSha
         || check?.external_id !== externalId || check?.app?.id !== PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
         || check?.app?.slug !== "github-actions" || check?.status !== "completed"
-        || check?.conclusion !== "success" || check?.details_url !== ci.htmlUrl
+        || check?.conclusion !== "success" || ![ci.htmlUrl, canonicalDetailsUrl].includes(check?.details_url)
         || check?.output?.title !== CI_ROLLUP_TITLE || check?.output?.summary !== summary) {
         throw new Error(`Protected-head refresh CI rollup projection ${context} drifted.`);
       }

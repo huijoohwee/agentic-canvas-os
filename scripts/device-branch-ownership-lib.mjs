@@ -1,4 +1,7 @@
+// Responsibility: Enforce exact device-branch ownership, heartbeat, PR, and protected-main projections.
 import path from "node:path";
+import { digestValue, normalizeWriteSet, writeSetsOverlap }
+  from "./cloud-collaboration-primitives.mjs";
 import {
   assertNoCompetingPullRequests,
   assertNoUnmergedPaths,
@@ -11,9 +14,12 @@ import {
 } from "./device-pull-request-state.mjs";
 import { captureOwnedDirtEvidence } from "./owned-dirt-resume-lib.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
-import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
+import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
+import { assertActiveDraftMutationAuthority, reconcileLostCloudHeartbeat,
+  requireExactDraftHeartbeatMarker, verifiedHeartbeatAuthority }
+  from "./active-owned-dirt-recovery-registry.mjs";
 import {
-  assertHeartbeatScopeExpansionFence,
+  assertHeartbeatMutationIntentFence,
   casWriterLeaseProjection,
   heartbeatWriterLeaseProjection,
   withHeartbeatProjectionFence,
@@ -31,6 +37,7 @@ export function heartbeat({
   leaseTtlMs,
   repairPullRequestProjection = false,
   heartbeatCloudAuthority = null,
+  inspectCloudStatus = invokeRepositoryCloudAction,
   verifyActiveCloudAuthority = null,
   run,
   log = console.log,
@@ -63,6 +70,7 @@ export function heartbeat({
   const pullRequest = requireOwnershipPullRequestDraft({
     url: current.pullRequestUrl, branch, ghText, expectedDraft: true,
   });
+  let activeDraftPullRequest = null;
   let cloudExpiryCap = null;
   let cloudVerification = null;
   let mutationAuthorityReceipt = null;
@@ -75,23 +83,33 @@ export function heartbeat({
     if (typeof verifyActiveCloudAuthority !== "function") {
       throw new Error("Cloud-authoritative heartbeat requires the repository cloud verifier.");
     }
-    assertHeartbeatScopeExpansionFence({
+    assertHeartbeatMutationIntentFence({
       leaseStore,
       branch,
       expectedLeaseDigest,
       expectedClaimId,
     });
-    const renewed = heartbeatCloudAuthority({
-      authority: current.cloudAuthority,
-      deviceId: current.device,
-      sessionId,
+    if (!current.cloudAuthority.reviewRequestId) {
+      activeDraftPullRequest = readActiveOwnedDirtRecoveryPullRequest({
+        url: current.pullRequestUrl, branch,
+        targetRepository: current.cloudAuthority.targetRepository, ghText,
+      });
+      requireExactDraftHeartbeatMarker({ lease: current, pullRequest: activeDraftPullRequest });
+    }
+    let renewed = typeof leaseStore?.withRegistryLock === "function" && leaseStore.statePath
+      ? reconcileLostCloudHeartbeat({
+        current, branch, inspectCloudStatus, verifyActiveCloudAuthority, now,
+      }) : null;
+    if (!renewed) renewed = heartbeatCloudAuthority({
+      authority: current.cloudAuthority, deviceId: current.device, sessionId,
       ttlSeconds: Math.floor(leaseTtlMs / 1000),
     });
-    const renewedAuthority = renewed.authority;
-    mutationAuthorityReceipt = assertAdmissionMutationAuthority({
+    const renewedAuthority = verifiedHeartbeatAuthority(renewed);
+    mutationAuthorityReceipt = assertActiveDraftMutationAuthority({
       lease: { ...current, cloudAuthority: renewedAuthority },
       cloudAuthority: renewedAuthority,
       remoteAuthorityVerification: renewed.verification,
+      pullRequest: activeDraftPullRequest,
     });
     current = casWriterLeaseProjection({
       leaseStore,
@@ -135,10 +153,12 @@ export function heartbeat({
       },
       canonicalBaseSha: lease.cloudAuthority.canonicalBaseSha,
     });
-    mutationAuthorityReceipt = assertAdmissionMutationAuthority({
-      lease: { ...lease, cloudAuthority: immediate.authority },
-      cloudAuthority: immediate.authority,
+    const finalAuthority = verifiedHeartbeatAuthority(immediate);
+    mutationAuthorityReceipt = assertActiveDraftMutationAuthority({
+      lease: { ...lease, cloudAuthority: finalAuthority },
+      cloudAuthority: finalAuthority,
       remoteAuthorityVerification: immediate.verification,
+      pullRequest: activeDraftPullRequest,
     });
     lease = casWriterLeaseProjection({
       leaseStore,
@@ -146,7 +166,7 @@ export function heartbeat({
       expectedLeaseDigest,
       expectedClaimId,
       requireNoActiveIntent: true,
-      values: { cloudAuthority: immediate.authority },
+      values: { cloudAuthority: finalAuthority },
     }).lease;
     expectedLeaseDigest = writerLeaseDigest(lease);
     expectedClaimId = immediate.authority.claimId;
@@ -169,6 +189,12 @@ export function heartbeat({
     )]);
   }
   requireOwnershipPullRequestDraft({ url: lease.pullRequestUrl, branch, ghText, expectedDraft: true });
+  if (!lease.cloudAuthority?.reviewRequestId) requireExactDraftHeartbeatMarker({
+    lease, pullRequest: readActiveOwnedDirtRecoveryPullRequest({
+      url: lease.pullRequestUrl, branch,
+      targetRepository: lease.cloudAuthority.targetRepository, ghText,
+    }),
+  });
   log(`Renewed ${lease.scope} lease ${lease.epoch} until ${lease.expiresAt}.`);
   return mutationAuthorityReceipt
     ? Object.freeze({ ...lease, mutationAuthorityReceipt })
@@ -499,4 +525,76 @@ export function requireSession(sessionId) {
   if (!String(sessionId || "").trim()) {
     throw new Error("A stable session id is required through --session=<id> or AGENTIC_SESSION_ID.");
   }
+}
+
+export function captureProtectedMainAdvance({
+  baseSha, pullRequestBaseSha, protectedMainSha, declaredWriteSet, gitText,
+}) {
+  for (const [value, label] of [[baseSha, "source base"],
+    [pullRequestBaseSha, "pull-request base"], [protectedMainSha, "protected main"]]) {
+    if (!/^[0-9a-f]{40}$/u.test(String(value || ""))) throw new Error(`${label} must be a SHA.`);
+  }
+  gitText(["merge-base", "--is-ancestor", baseSha, pullRequestBaseSha]);
+  gitText(["merge-base", "--is-ancestor", pullRequestBaseSha, protectedMainSha]);
+  const changedPaths = normalizeProtectedChangedPaths(String(gitText([
+    "diff", "--name-only", "--no-renames", "-z", baseSha, protectedMainSha, "--",
+  ]) || ""));
+  const scopes = normalizeWriteSet(declaredWriteSet);
+  if (changedPaths.some(candidate => writeSetsOverlap([`path:${candidate}`], scopes))) {
+    throw new Error("Protected main advanced within the admitted recovery write set.");
+  }
+  const tree = String(gitText(["rev-parse", `${protectedMainSha}^{tree}`]) || "").trim();
+  if (!/^[0-9a-f]{40,64}$/u.test(tree)) throw new Error("protected-main tree must be a Git object ID.");
+  return Object.freeze({ schema: "agentic-active-owned-dirt-protected-main-advance/v1",
+    baseSha, pullRequestBaseSha, protectedMainSha, protectedMainTreeSha: tree,
+    declaredWriteSetDigest: digestValue(scopes), changedPathCount: changedPaths.length,
+    changedPathsDigest: digestValue(changedPaths) });
+}
+
+function normalizeProtectedChangedPaths(value) {
+  const paths = value.split("\0").filter(Boolean).map(candidate => {
+    const normalized = candidate.replaceAll("\\", "/");
+    if (!normalized || normalized.startsWith("/") || normalized.includes("\0")
+      || normalized.split("/").some(part => !part || part === "." || part === "..")) {
+      throw new Error("Protected-main change path is not repository-relative.");
+    }
+    return normalized;
+  });
+  const sorted = [...new Set(paths)].sort();
+  if (sorted.length !== paths.length || sorted.length > 100_000
+    || Buffer.byteLength(JSON.stringify(sorted)) > 4_000_000) {
+    throw new Error("Protected-main change evidence exceeds bounded exact capture.");
+  }
+  return sorted;
+}
+
+export function requireProtectedMainEquivalent({ planned, observed, gitText }) {
+  if (planned.baseSha !== observed.baseSha
+    || planned.pullRequestBaseSha !== observed.pullRequestBaseSha
+    || planned.declaredWriteSetDigest !== observed.declaredWriteSetDigest) {
+    throw new Error("Protected-main disjoint descendant evidence drifted.");
+  }
+  if (planned.protectedMainSha !== observed.protectedMainSha) {
+    if (typeof gitText !== "function") throw new Error("Protected-main descendant cannot be proven.");
+    gitText(["merge-base", "--is-ancestor", planned.protectedMainSha, observed.protectedMainSha]);
+  } else if (planned.protectedMainTreeSha !== observed.protectedMainTreeSha
+    || planned.changedPathCount !== observed.changedPathCount
+    || planned.changedPathsDigest !== observed.changedPathsDigest) {
+    throw new Error("Protected-main identity drifted without a descendant advance.");
+  }
+}
+
+export function readActiveOwnedDirtRecoveryPullRequest({
+  url, branch, targetRepository, ghText,
+}) {
+  const pullRequest = JSON.parse(ghText(["pr", "view", url, "--json",
+    "id,url,state,isDraft,headRefName,headRefOid,headRepository,baseRefName,baseRefOid,body,autoMergeRequest"]));
+  if (pullRequest?.id === undefined || pullRequest.url !== url
+    || pullRequest.state !== "OPEN" || pullRequest.isDraft !== true
+    || pullRequest.headRefName !== branch || pullRequest.baseRefName !== "main"
+    || pullRequest.headRepository?.nameWithOwner !== targetRepository
+    || pullRequest.autoMergeRequest !== null) {
+    throw new Error("Recovery requires the exact open draft same-repository pull request with no delivery request.");
+  }
+  return pullRequest;
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2243,
-  "headDigest": "2259008af275e8ea317a569a88f2a4d059a26c44260733aa4de25c0b27e36e80",
+  "sequence": 2244,
+  "headDigest": "3e47abcc993d5ea01657b9677fd48e9541934eabe7960dda4ed71cfaf8441701",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -111430,6 +111430,47 @@
       },
       "claimDigest": "70f653428968161cc9783834e53742c663d18ffc8f475de22ecee4b36e8e75a3",
       "digest": "2259008af275e8ea317a569a88f2a4d059a26c44260733aa4de25c0b27e36e80"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2244,
+      "parentDigest": "2259008af275e8ea317a569a88f2a4d059a26c44260733aa4de25c0b27e36e80",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "800e552ce84553c9b8de1a43ac75814c2092254ef054491a6ad09d0d92d63b82",
+      "idempotencyKey": "e651854c17bc57a8345a22ed2a8bd7303e0878a5125292bd14fdf9d376659509",
+      "requestDigest": "3205391b74b3945468b73de8bc30dd834057680d6adf7841e8b27f39c3048bcb",
+      "evaluationTime": "2026-08-11T22:28:59.000Z",
+      "claimCore": {
+        "claimId": "800e552ce84553c9b8de1a43ac75814c2092254ef054491a6ad09d0d92d63b82",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8c296662416e3093c573d1a59fbe8f0f39448e7780599b58acb95985ddd70090",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d5f196bb51901b7251b751da9bb97243bd02ff3f7ff8d5d6d0fd9ca9cf376741",
+        "canonicalBaseRevision": "310f793fdc1121e9cddc7a71dcecc467801dbda8",
+        "declaredWriteScope": [
+          "path:__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs",
+          "path:docs/RECOVERABLE-LANE-CLEANUP.md",
+          "path:scripts/recoverable-lane-cleanup-repository-adapter.mjs",
+          "semantic:recoverable-cleanup-journal-routing"
+        ],
+        "writeSetDigest": "fc9c64865f24514e4036aa6be390bf5dad1f387039856d310576cc7a77f31099",
+        "laneRevision": "095e544fe3351ae5895b6198aa34823405a42ce6",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T00:12:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79whpk",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9ebc82df2ea0c4dafe57b7d40a35c7f2caf01bd7e2f6e1f4f44e263c06948482",
+      "digest": "3e47abcc993d5ea01657b9677fd48e9541934eabe7960dda4ed71cfaf8441701"
     }
   ]
 }

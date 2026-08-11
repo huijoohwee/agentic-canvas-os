@@ -1576,6 +1576,40 @@ test("active integration retries publish once after exact pushed-head or stale-b
   }
 });
 
+test("active integration publishes through a provably lagging pull-request base before convergence recovery", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-lagging-pr-base-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    synchronized: false,
+    laggingPullRequestBase: true,
+  });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        if (publishCalls === 1) {
+          assert.equal(fixture.calls.successor.length, 0);
+          assert.equal(fixture.calls.cas.length, 0);
+          fixture.convergeRemote();
+          throw new Error(
+            "Cloud collaboration continue failed: Supplied canonical base does not match the resolved pull request.; " +
+            "exact live bind reconciliation failed: Live cloud claim drifted from the recoverable admission subject.",
+          );
+        }
+        throw new Error("stop after lagging-base convergence retry");
+      },
+    }), /stop after lagging-base convergence retry/u);
+    assert.equal(publishCalls, 2);
+    assert.equal(fixture.calls.successor.length, 1);
+    assert.equal(fixture.calls.cas.length, 2);
+    assert.equal(fixture.lease.baseSha, mainSha);
+    assert.equal(fixture.lease.fenceSha, "2".repeat(40));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("active integration rejects invalid successor lineage before local annotation or publish", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-invalid-successor-"));
   const fixture = createActiveSuccessorFixture({ repo, tamperPredecessor: true });
@@ -3011,6 +3045,7 @@ function createActiveSuccessorFixture({
   expiredSuccessor = false,
   derivativeFault = null,
   providerEpochDemand = null,
+  laggingPullRequestBase = false,
 }) {
   const successorHeadSha = "2".repeat(40);
   const successorClaimId = "c".repeat(64);
@@ -3290,6 +3325,7 @@ function createActiveSuccessorFixture({
   let activeRound = 1;
   let canonicalHeadSha = mainSha;
   let refreshHeadSha = successorHeadSha;
+  let pullRequestBaseSha = laggingPullRequestBase ? baseSha : canonicalHeadSha;
   let pullRequestHeadSha = synchronized ? successorHeadSha : commitSha;
   let remoteHeadSha = pullRequestHeadSha;
   let ancestorReads = 0;
@@ -3305,6 +3341,7 @@ function createActiveSuccessorFixture({
     leaseStore,
     get lease() { return lease; },
     convergeRemote() {
+      pullRequestBaseSha = canonicalHeadSha;
       pullRequestHeadSha = refreshHeadSha;
       remoteHeadSha = refreshHeadSha;
     },
@@ -3312,6 +3349,7 @@ function createActiveSuccessorFixture({
       activeRound = 2;
       canonicalHeadSha = secondBaseSha;
       refreshHeadSha = secondHeadSha;
+      pullRequestBaseSha = secondBaseSha;
       pullRequestHeadSha = secondHeadSha;
       remoteHeadSha = secondHeadSha;
       cloudPhase = "predecessor";
@@ -3344,6 +3382,7 @@ function createActiveSuccessorFixture({
             if (ancestorReads++ >= ancestorPasses) throw new Error("not an ancestor");
             return "";
           }
+          if (key === `merge-base --is-ancestor ${baseSha} ${canonicalHeadSha}`) return "";
           if (key === `ls-remote --heads origin refs/heads/main refs/heads/${branch}`) {
             return `${canonicalHeadSha}\trefs/heads/main\n${remoteHeadSha}\trefs/heads/${branch}\n`;
           }
@@ -3361,7 +3400,7 @@ function createActiveSuccessorFixture({
             state: "OPEN",
             isDraft: true,
             baseRefName: "main",
-            baseRefOid: canonicalHeadSha,
+            baseRefOid: pullRequestBaseSha,
             headRefName: branch,
             headRefOid: pullRequestHeadSha,
             headRepository: { nameWithOwner: sourceAuthority.targetRepository },

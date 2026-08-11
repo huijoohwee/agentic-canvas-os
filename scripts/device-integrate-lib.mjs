@@ -762,7 +762,12 @@ function readExactActivePublishSubject({ branch, lease, headSha, gitText, ghText
   const remoteBaseSha = remote.get("refs/heads/main") || null;
   if (!remoteHeadSha || !remoteBaseSha) return null;
   if (remoteBaseSha !== pullRequest.baseRefOid) {
-    throw new Error("Active publish successor pull-request base is not the fetched canonical head.");
+    try {
+      gitText(["merge-base", "--is-ancestor", pullRequest.baseRefOid, remoteBaseSha]);
+    } catch {
+      throw new Error("Active publish successor pull-request base diverged from the fetched canonical head.");
+    }
+    return null;
   }
   if (remoteHeadSha !== headSha || pullRequest.headRefOid !== headSha) return null;
   requireActivePublishBaseAncestor({ gitText, canonicalBaseSha: remoteBaseSha, headSha });

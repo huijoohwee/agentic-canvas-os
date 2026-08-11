@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2226,
-  "headDigest": "6d939c0acde7cc04650132171883ed36324435cc828c0a94f8396325f9975151",
+  "sequence": 2227,
+  "headDigest": "d7e98c1686053e1448b738f17f41ac9dcd90641ba5cb317556f7799fe9d20117",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -110633,6 +110633,77 @@
       },
       "claimDigest": "646ec5cf23f04eb139e59de36b7f62217fa71e59028f6df6156f6d1d4275114c",
       "digest": "6d939c0acde7cc04650132171883ed36324435cc828c0a94f8396325f9975151"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2227,
+      "parentDigest": "6d939c0acde7cc04650132171883ed36324435cc828c0a94f8396325f9975151",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOTw_rMA",
+      "claimId": "13d3784e3c00ba074549c582a91f66bbb3f392ebe1cfa3123ffda008931fedb1",
+      "idempotencyKey": "ca63ca592455b11aee7f5b09467760f85be942717f81f5b898c63e2678bcc2bf",
+      "requestDigest": "c9d237d7dcf86aaf67bcd9eb644e8be1df502572865e63321588323b123db29d",
+      "evaluationTime": "2026-08-11T21:06:31.000Z",
+      "claimCore": {
+        "claimId": "13d3784e3c00ba074549c582a91f66bbb3f392ebe1cfa3123ffda008931fedb1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:61c2dddb356de5eb7c99492750f0c53dcababd182e5c7c3bb110fd3f20f2788e",
+        "repositoryId": "github-repository:R_kgDOTw_rMA",
+        "workItemId": "work-item:d8e278f302803748e0472fdbe7d2e1d473319897a129a12b6fce7539aca5ed5a",
+        "canonicalBaseRevision": "803e3a2a20dfcd1401673690a3b5d82500322f67",
+        "declaredWriteScope": [
+          "path:browser-tests/persistent-strategy.spec.ts",
+          "path:native/Sources/GameXRNative/GameXRPersistentStrategyView.swift",
+          "path:native/Tests/GameXRNativeTests/GameXRPersistentStrategyTests.swift",
+          "path:package-lock.json",
+          "path:package.json",
+          "path:src/main.ts",
+          "path:src/mcp/WebMcpBridge.ts",
+          "path:src/mcp/contracts.ts",
+          "path:src/runtime/GameRuntime.ts",
+          "path:src/runtime/PersistentStrategyProjection.ts",
+          "path:src/storage/LocalDatabase.ts",
+          "path:src/styles.css",
+          "path:src/ui/AppController.ts",
+          "path:src/ui/PersistentStrategyController.ts",
+          "path:src/ui/shell.ts",
+          "path:tests/mcp-contract.test.ts",
+          "path:tests/persistent-strategy.test.ts",
+          "path:vendor/grph-shared-0.0.0.tgz",
+          "semantic:agentic-game-os-frontend"
+        ],
+        "writeSetDigest": "743111a16329a1d0ebbfcb8adfc67e057f4630b29f627a91ee76d1bcbfacb8ca",
+        "laneRevision": "7cb54fb58040e6f03774774e861bb32bf5e6551d",
+        "leaseEpoch": 1,
+        "transitionCounter": 8,
+        "heartbeatCounter": 2,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-11T21:26:01.000Z",
+        "evidenceDigest": "4522d50efcdec674de0a91c69d1338190048ccde0890448747cbdf18a195d413",
+        "reviewRequestId": "github-pull-request:PR_kwDOTw_rMM78UtL3",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "10ac13bf6c717316b39df88dcc1757e056b31ce0e8a7232c1fb43f673a8c3d74",
+          "recoveredAt": "2026-08-11T20:39:32.000Z"
+        },
+        "integration": {
+          "candidateRevision": "7cb54fb58040e6f03774774e861bb32bf5e6551d",
+          "reviewRequestId": "github-pull-request:PR_kwDOTw_rMM78UtL3",
+          "focusedEvidenceDigest": "4522d50efcdec674de0a91c69d1338190048ccde0890448747cbdf18a195d413",
+          "dependencyClosureDigest": "c42133cdbff366c8010c06a6506d352c126b42ecea4c7c15c638fdfa27ac87aa",
+          "namedChecksDigest": "6004cfe7af8ed2b874c8ede79a42596b45e295a6c9bc0bbc8fbcde7ef5e4266e",
+          "handoffEvidenceDigest": "0ae94c56768c6cb6f5188e0eeeb29c2c8a08e8edf1042e8f3d3f9e478f9a74fe",
+          "operatorDecisionDigest": "077271d1033aeaadd1f88f8082589a50a2151f30a3f9a24de152124c5cb00ca5",
+          "integrationIntentDigest": "bd6896914bfc95a49bfc7e4a4d94c69eb8a16b3823c1f1eb5e43911acefa0b8d",
+          "integratedAt": "2026-08-11T21:06:31.000Z"
+        }
+      },
+      "claimDigest": "c2eabfd8bff9faf625350c36dde7ab8bdf574d7491891e07649bf57d3eede6c2",
+      "digest": "d7e98c1686053e1448b738f17f41ac9dcd90641ba5cb317556f7799fe9d20117"
     }
   ]
 }

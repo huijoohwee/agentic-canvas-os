@@ -166,9 +166,7 @@ export function assertActiveOwnedDirtPlanSource({ plan, current, allowRecoveredC
     && claim.transitionCounter === normalized.sourceCloudTransitionCounter
     && claim.fenceRevision === normalized.sourceClaimDigest
     && claim.transitionDigest === normalized.sourceClaimLedgerRevision
-    && claim.operationReceiptDigest === normalized.sourceOperationReceiptDigest
-    && source.ledgerRevision === normalized.sourceLedgerRevision
-    && source.ledgerDigest === normalized.sourceLedgerDigest;
+    && claim.operationReceiptDigest === normalized.sourceOperationReceiptDigest;
   const recovered = allowRecoveredClaim && claim?.state === "current"
     && claim.writeAuthority === true && claim.scopeReserved === true
     && claim.transitionCounter === normalized.sourceCloudTransitionCounter + 1

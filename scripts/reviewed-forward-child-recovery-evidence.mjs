@@ -1,7 +1,10 @@
 // Responsibility: Normalize path-free evidence for one reviewed lane and its empty forward child.
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import {
+  normalizeAdaptiveClaimRecoveryDecision,
+} from "./adaptive-claim-recovery-contract.mjs";
 
-export const EVIDENCE_SCHEMA = "agentic-reviewed-forward-child-recovery-evidence/v1";
+export const EVIDENCE_SCHEMA = "agentic-reviewed-forward-child-recovery-evidence/v2";
 export const CHILD_SCHEMA = "agentic-reviewed-forward-child-candidate/v1";
 
 const SHA = /^[0-9a-f]{40}$/u;
@@ -19,6 +22,7 @@ export function buildReviewedForwardChildEvidence(input = {}) {
     pullRequest: input.pullRequest,
     protectedMainSha: input.protectedMainSha,
     refreshChain: input.refreshChain,
+    adaptiveRecovery: input.adaptiveRecovery ?? null,
   });
   return freeze({ ...core, evidenceDigest: digestValue(core) });
 }
@@ -27,7 +31,7 @@ export function normalizeReviewedForwardChildEvidence(value) {
   if (value?.schema !== EVIDENCE_SCHEMA) invalid("evidence schema");
   exact(value, [
     "schema", "repository", "actor", "source", "lease", "claim",
-    "pullRequest", "protectedMainSha", "refreshChain", "evidenceDigest",
+    "pullRequest", "protectedMainSha", "refreshChain", "adaptiveRecovery", "evidenceDigest",
   ], "evidence");
   const core = normalizeCore(value);
   if (digest(value.evidenceDigest, "evidence digest") !== digestValue(core)) {
@@ -80,6 +84,8 @@ function normalizeCore(value) {
     pullRequest: pullRequest(value.pullRequest),
     protectedMainSha: sha(value.protectedMainSha, "protected main"),
     refreshChain: refreshChain(value.refreshChain),
+    adaptiveRecovery: value.adaptiveRecovery === null
+      ? null : normalizeAdaptiveClaimRecoveryDecision(value.adaptiveRecovery),
   };
   assertJoined(core);
   return freeze(core);
@@ -154,7 +160,8 @@ function claim(value) {
     claimDigest: digest(value?.claimDigest, "claim digest"),
     transitionDigest: digest(value?.transitionDigest, "claim transition digest"),
     operationReceiptDigest: digest(value?.operationReceiptDigest, "claim operation receipt"),
-    state: value?.state === "dormant-preserved" ? value.state : invalid("claim state"),
+    state: ["dormant-preserved", "integrated-preserved"].includes(value?.state)
+      ? value.state : invalid("claim state"),
     writeAuthority: value?.writeAuthority === false ? false : invalid("claim write authority"),
     scopeReserved: value?.scopeReserved === true ? true : invalid("claim scope reservation"),
     actorId: text(value?.actorId, "claim actor"),
@@ -249,7 +256,7 @@ function child(value) {
 
 function assertJoined(value) {
   const { repository: repo, actor: owner, source: lane, lease: writer,
-    claim: cloud, pullRequest: pull, refreshChain: chain } = value;
+    claim: cloud, pullRequest: pull, refreshChain: chain, adaptiveRecovery } = value;
   const reviewRequestId = `github-pull-request:${pull.nodeId}`;
   if (lane.headSha !== lane.remoteHeadSha || lane.headSha !== lane.providerHeadSha
     || lane.headSha !== pull.headSha || lane.headSha !== chain.at(-1).headSha
@@ -267,6 +274,25 @@ function assertJoined(value) {
     || cloud.repositoryId !== `github-repository:${repo.nodeId}`
     || cloud.reviewRequestId !== reviewRequestId || cloud.laneRevision !== writer.reviewHeadSha) {
     invalid("joined owner lane");
+  }
+  if (cloud.state === "dormant-preserved") {
+    if (adaptiveRecovery !== null) invalid("unexpected adaptive recovery");
+    return;
+  }
+  const adaptive = adaptiveRecovery?.evidence;
+  if (adaptiveRecovery?.status !== "recoverable-now"
+    || adaptiveRecovery.mutationAuthority !== false
+    || adaptive?.subject.repositoryId !== cloud.repositoryId
+    || adaptive?.subject.workItemId !== cloud.workItemId
+    || adaptive?.subject.candidateHeadSha !== lane.headSha
+    || adaptive?.subject.protectedMainSha !== value.protectedMainSha
+    || adaptive?.claim.claimId !== cloud.claimId
+    || adaptive?.claim.state !== cloud.state
+    || adaptive?.claim.writeAuthority !== cloud.writeAuthority
+    || adaptive?.claim.scopeReserved !== cloud.scopeReserved
+    || adaptive?.claim.fenceRevision !== cloud.claimDigest
+    || adaptive?.claim.transitionCounter !== cloud.transitionCounter) {
+    invalid("adaptive recovery join");
   }
 }
 

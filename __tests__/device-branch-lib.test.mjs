@@ -1421,6 +1421,10 @@ test("publish refreshes a stale active admission to the live pull-request base",
   assert.match(publishBody, /maybeRefreshLegacyRootSourceReviewAdmission/u);
   assert.match(publishBody, /claimLegacyReviewCloudAuthority/u);
   assert.match(publishBody, /Refreshed active delivery admission for live PR base/u);
+  assert.ok(publishBody.indexOf('run("git", ["push"')
+    < publishBody.indexOf("maybeRefreshLegacyRootSourceReviewAdmission"));
+  assert.ok(publishBody.indexOf("requirePullRequestHead")
+    < publishBody.indexOf("maybeRefreshLegacyRootSourceReviewAdmission"));
 });
 
 test("publish rejects delivery evidence failure before review activation or merge authorization", () => {

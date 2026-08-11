@@ -401,15 +401,6 @@ function publishUnfenced({
   if (!cloud) {
     throw new Error("Publish requires one admitted cloud claim; local-only delivery authority is forbidden.");
   }
-  const refreshed = maybeRefreshLegacyRootSourceReviewAdmission({
-    lease, branch, repo, gitText, gitOptional, ghText, leaseStore, sessionId,
-    claimLegacyReviewCloudAuthority,
-  });
-  if (refreshed) {
-    lease = refreshed.lease;
-    cloud = refreshed.cloud;
-    log(`Refreshed active delivery admission for live PR base ${cloud.authority.canonicalBaseSha}.`);
-  }
   const validationHeadSha = gitText(["rev-parse", "HEAD"]).trim();
   const replayCheckpoint = requirePublishReplayCheckpoint({
     lease,
@@ -450,6 +441,17 @@ function publishUnfenced({
     pullRequest: deliveryPullRequest,
     expectedHeadSha: deliveryHeadSha,
   });
+  if (!replayCheckpoint) {
+    const refreshed = maybeRefreshLegacyRootSourceReviewAdmission({
+      lease, branch, repo, gitText, gitOptional, ghText, leaseStore, sessionId,
+      claimLegacyReviewCloudAuthority,
+    });
+    if (refreshed) {
+      lease = refreshed.lease;
+      cloud = refreshed.cloud;
+      log(`Refreshed active delivery admission for live PR base ${cloud.authority.canonicalBaseSha}.`);
+    }
+  }
   const pullNumber = pullRequestNumber(url);
   const reviewed = replayCheckpoint
     ? { authority: replayCheckpoint.authority }

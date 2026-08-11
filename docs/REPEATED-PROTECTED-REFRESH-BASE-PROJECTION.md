@@ -22,11 +22,12 @@ and canonical base. When GitHub advances that head through an exact,
 tree-equivalent protected-main refresh, the live pull request instead exposes
 the verified refresh step's main parent as its current base.
 
-`device:integrate` therefore keeps cloud-authority verification pinned to the
-original claim while projecting only the next refresh dispatch's
-`canonical_base_sha` from the terminal `mainParentSha` of the verified refresh
-receipt. A missing, malformed, discontinuous, or terminally inconsistent
-receipt fails closed.
+`device:integrate` therefore keeps both cloud-authority verification and the
+refresh workflow's `canonical_base_sha` pinned to the immutable claim base. It
+separately projects the live pull-request base from the terminal
+`mainParentSha` of the verified refresh receipt and uses that value only to
+reject live provider drift before dispatch. A missing, malformed,
+discontinuous, or terminally inconsistent receipt fails closed.
 
 This projection cannot authorize authored head movement, change the immutable
 delivery subject, amend the cloud claim, merge a pull request, or open the

@@ -412,7 +412,9 @@ function integrateSessionUnfenced({
             requestedHeads: requestedProtectedMainRefreshHeads,
             branch,
             deliveredHeadSha: deliveryAuthorizedHeadSha,
-            canonicalBaseSha: acceptedProtectedRefreshBaseSha,
+            canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha
+              || deliveryVerifiedBaseSha,
+            pullRequestBaseSha: acceptedProtectedRefreshBaseSha,
             cloudAuthority: deliveryCloudAuthority,
             ghText,
             verifyCloudAuthority: () => verifyCloudAuthority({
@@ -1677,6 +1679,7 @@ function dispatchProtectedMainRefresh({
   branch,
   deliveredHeadSha,
   canonicalBaseSha,
+  pullRequestBaseSha,
   cloudAuthority,
   ghText,
   verifyCloudAuthority,
@@ -1716,6 +1719,7 @@ function dispatchProtectedMainRefresh({
     deliveredHeadSha,
     observedHeadSha: acceptedHeadSha,
     canonicalBaseSha,
+    pullRequestBaseSha,
     cloudAuthority,
   });
   verifyCloudAuthority();
@@ -1765,6 +1769,7 @@ function requireProtectedMainRefreshDispatch({
   deliveredHeadSha,
   observedHeadSha,
   canonicalBaseSha,
+  pullRequestBaseSha,
   cloudAuthority,
 }) {
   if (cloudAuthority?.state !== "delivery_authorized") {
@@ -1835,7 +1840,7 @@ function requireProtectedMainRefreshDispatch({
   if (
     pullRequest.html_url !== url
     || pullRequest.head?.sha !== observedHeadSha
-    || pullRequest.base?.sha !== canonicalBaseSha
+    || pullRequest.base?.sha !== pullRequestBaseSha
   ) {
     throw new Error(
       "Protected-main refresh live pull-request metadata drifted from the accepted head or canonical base.",

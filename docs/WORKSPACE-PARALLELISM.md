@@ -2,7 +2,7 @@
 title: "Agentic Canvas OS Workspace Parallelism Contract"
 graphId: "md:agentic-canvas-os-workspace-parallelism"
 doc_type: "Workspace Parallelism Contract"
-date: "2026-08-04"
+date: "2026-08-11"
 lang: "en-US"
 schema: "agentic-canvas-os-workspace-parallelism/v1"
 frontmatter_contract: "required"
@@ -19,8 +19,17 @@ git_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f282
 owner_scripts:
   - "scripts/workspace-parallelism-lib.mjs"
   - "scripts/workspace-parallelism-guard.mjs"
+  - "scripts/recoverable-lane-cleanup-contract.mjs"
+  - "scripts/recoverable-lane-cleanup-controller.mjs"
+  - "scripts/recoverable-lane-cleanup-recovery-store.mjs"
+  - "scripts/recoverable-lane-cleanup-repository-adapter.mjs"
+  - "scripts/recoverable-lane-cleanup.mjs"
 owner_tests:
   - "__tests__/workspace-parallelism.test.mjs"
+  - "__tests__/recoverable-lane-cleanup-contract.test.mjs"
+  - "__tests__/recoverable-lane-cleanup-controller.test.mjs"
+  - "__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs"
+  - "__tests__/recoverable-lane-cleanup-cli.test.mjs"
 owner_command: "npm run workspace:parallelism:check"
 ---
 
@@ -349,6 +358,61 @@ npm run workspace:legacy-integrated-disposition -- \
   --acknowledge-protected-equivalence --json
 ```
 
+## Recoverable Clean-Lane Cleanup
+
+Recoverable cleanup is an exceptional, one-lane controller for a registered,
+attached, non-`main` worktree that is completely clean and has no current local writer.
+It does not change the ordinary completed-lane lifecycle or make a preserved lane
+automatically cleanup-eligible. Dirty, conflicted, untracked, ignored, submodule-
+dirty, or in-progress Git operation state fails before an intent or effect exists.
+
+`plan` is read-only and double-captures the repository, canonical `origin/main`,
+target branch, HEAD, tree, working state, authority, and observed preservation
+receipts. It binds one normalized external recovery directory, one operator session,
+one no-remaining-value decision digest, and the exact sorted preservation receipts
+being superseded. The resulting authorization is literal and plan-specific:
+
+```text
+authorize recoverable-lane-cleanup <planDigest>
+```
+
+`run` revalidates the same evidence under a subject fence, persists an external
+intent, creates and independently verifies a complete Git bundle for the exact
+branch, then rechecks the target immediately before moving the whole checkout into
+the private same-filesystem recovery directory. The controller atomically preserves
+that checkout as `worktree-snapshot`, including any file created during the final
+race window, and invokes non-force `git worktree remove` only against the now-absent
+private staging path. It never deletes the snapshot, local or remote branches,
+mutates provider objects or pull requests, prunes worktrees or objects, merges, or
+deploys. The completed receipt binds the authorization, bundle bytes, snapshot,
+exact before/after state, registration generation, and preserved branch identities.
+
+Interrupted runs reconcile the durable phases `prepared`, `bundle_verified`,
+`worktree_quarantined`, `worktree_removed`, and `complete`. An already absent exact
+target may complete only when its staging registration, preserved snapshot,
+canonical branch, task branch, remote branch, bundle, and original Git-directory
+generation match the plan. A recreated path, split registration, or identity drift
+fails closed for manual review.
+
+```sh
+npm run worktree:lifecycle:recoverable-cleanup -- plan \
+  --repository="[canonical repository root]" \
+  --worktree="[registered clean task worktree]" \
+  --recovery-directory="[new external recovery directory]" \
+  --session="[operator session]" \
+  --operator-decision-digest="[sha256]" \
+  [--supersede-preservation="[receipt sha256]"] --json
+
+npm run worktree:lifecycle:recoverable-cleanup -- run \
+  --repository="[same canonical repository root]" \
+  --worktree="[same registered clean task worktree]" \
+  --recovery-directory="[same external recovery directory]" \
+  --session="[same operator session]" \
+  --operator-decision-digest="[same sha256]" \
+  --plan-digest="[planDigest]" \
+  --authorize="authorize recoverable-lane-cleanup [planDigest]" --json
+```
+
 ## Enforcement Surfaces
 
 A contract that only this repository's own scripts honor is advice, not enforcement.
@@ -420,6 +484,7 @@ A bypassed operation still prints what it is destroying before it proceeds.
 | Capture an unleased dirty legacy lane | `npm run workspace:legacy-adoption -- capture --source="[worktree]" --recovery="[new directory]" --protected-tip="[40-hex main SHA]" --session="[operator session]"` |
 | Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
 | Adopt under an exact live registry lease fence | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
+| Plan or run one exact recoverable clean-lane removal | `npm run worktree:lifecycle:recoverable-cleanup -- <plan|run> ...` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 
@@ -437,6 +502,8 @@ audit is always runnable.
   caused the block.
 - An admitted source lane grants no destructive-operation authority; this guard
   still evaluates that operation and every existing lane independently.
+- Recoverable cleanup authority is plan-specific and one-shot. It grants no branch,
+  remote, provider, pull-request, object-pruning, integration, or deploy authority.
 - Discovery skips dotted directories at the workspace root, so backup, worktree, and
   quarantine directories are not treated as lanes.
 - A Dev merge does not authorize Prod mirror or Cloudflare mutation. This contract
@@ -451,6 +518,7 @@ audit is always runnable.
 | Foreign lanes are protected | A destructive operation is refused while another session holds uncommitted or untracked work in the same repository. |
 | Untracked work is never discarded | A destructive operation over a lane with untracked paths is refused with no override in this contract. |
 | Recovery is durable | A dirty lane requires an existing branch, tag, or bundle reference; a stash reference is rejected. |
+| Exceptional clean-lane removal is recoverable | The exact task branch is bundled and independently verified, then the full checkout is atomically preserved before one non-force staging-registration removal; branch refs and canonical state remain unchanged. |
 | Destructive operations never return plain allow | The strongest outcome for a catalog operation is `allow-with-recovery` and it carries the recovery reference. |
 | Audit is read-only | A full workspace audit reports lanes and at-risk work without mutating any repository. |
 | Report readiness is honest | `ready` is true only when no lane holds untracked work or unreferenced modifications. |

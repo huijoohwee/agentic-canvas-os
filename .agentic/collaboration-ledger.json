@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2107,
-  "headDigest": "4b278cc75df1e9211a981d1ed318a7ef9bcc54f99c2e7cbe41b536e774a23b42",
+  "sequence": 2108,
+  "headDigest": "1c5b7f9d19356b0992d40e5e9f069200cd43e1751fc0b538d02f399ebddd79fc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -104858,6 +104858,50 @@
       },
       "claimDigest": "589bf2fb0164dde3f4f2110e304942ebe22f28d196380b68944d958694475c74",
       "digest": "4b278cc75df1e9211a981d1ed318a7ef9bcc54f99c2e7cbe41b536e774a23b42"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2108,
+      "parentDigest": "4b278cc75df1e9211a981d1ed318a7ef9bcc54f99c2e7cbe41b536e774a23b42",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9873ff1ff5a9418def3a5cc03474729e29e478bb65102712da39c6773e518b71",
+      "idempotencyKey": "76eb52274336b3da565343c63f4d801ea38fa723f21478c7b056ce78d49a4b8e",
+      "requestDigest": "18e68b334723344cccc80bd962d88505cba24187245e2c9f9672fe91b28893da",
+      "evaluationTime": "2026-08-11T13:13:45.000Z",
+      "claimCore": {
+        "claimId": "9873ff1ff5a9418def3a5cc03474729e29e478bb65102712da39c6773e518b71",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:7a5a1b6af7c93e71abc6b1d3e21953a564b23c982ad3ba425ba0f51c2bf34ce6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e86c51ef60276886be4aa7cc976421fc796fbb50bd4327a7a77db610ea3234c3",
+        "canonicalBaseRevision": "92670a0c6675fadbbf9b7c15c9514b4353f2db5b",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-base-recovery.test.mjs",
+          "path:docs/DELIVERY-AUTHORIZED-BASE-RECOVERY.md",
+          "path:scripts/delivery-authorized-base-recovery-contract.mjs",
+          "path:scripts/delivery-authorized-base-recovery-repository-adapter.mjs",
+          "path:scripts/delivery-authorized-base-recovery-repository-evidence.mjs",
+          "semantic:delivery-base-recovery-source-status"
+        ],
+        "writeSetDigest": "c8ef20f41e1edc18f1b2b9767de5bc1c2aa487d13581ea1bb5c0b385657825cb",
+        "laneRevision": "15b001e8ec19e9b930f4a720da3a8e5d7589323c",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T14:13:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "f5605111574e88c87c77bb70ecdcd24974b8c6bc6bd8ca797648ec5c32083fe9",
+        "eligibleSince": "2026-08-11T13:13:08.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-11T13:13:45.000Z"
+      },
+      "claimDigest": "45d5e0f838d21010a7c2c35c334bad58ea4d812f7af5053be500214d1f8417bd",
+      "digest": "1c5b7f9d19356b0992d40e5e9f069200cd43e1751fc0b538d02f399ebddd79fc"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 1914,
-  "headDigest": "930915a10735d3ddacac4c3f4739458564013d08cf72e9ea0683eeacfbd2dd06",
+  "sequence": 1915,
+  "headDigest": "7cd4cf0c1c28f8f932ea600465f656fcb36ff588d7a1c5e1c4b622d7862a4d9b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -95225,6 +95225,51 @@
       },
       "claimDigest": "5091b55cb5fbc3bd23681284d1304499e75154c84d51c54ad53fbe84b274f658",
       "digest": "930915a10735d3ddacac4c3f4739458564013d08cf72e9ea0683eeacfbd2dd06"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 1915,
+      "parentDigest": "930915a10735d3ddacac4c3f4739458564013d08cf72e9ea0683eeacfbd2dd06",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0467d9b2b1971f2eb8b99939beb6a4f815f398158a00e1682b49914c0136f056",
+      "idempotencyKey": "172b88700fc9f3f42f5dabf5891bf6b1d36da209fbd0b754808c0122b06103f0",
+      "requestDigest": "c04585e778e3982c430846c1525bb8f5d5511c7c2424c181095deb0af5b85823",
+      "evaluationTime": "2026-08-11T05:01:49.000Z",
+      "claimCore": {
+        "claimId": "0467d9b2b1971f2eb8b99939beb6a4f815f398158a00e1682b49914c0136f056",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5d874c2b89fba935e5e3135549b78551027b50f6f096e71cbcd44740da640230",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ef6db64b065b8d8b9b340424ae225fac871e5171a5fd46311b5012560d595110",
+        "canonicalBaseRevision": "4f66c6892c5cadf2f6909bfd7c532c31564b8ff5",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-forward-child-recovery.test.mjs",
+          "path:docs/REVIEWED-FORWARD-CHILD-RECOVERY.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "path:scripts/reviewed-forward-child-recovery-journal.mjs",
+          "path:scripts/reviewed-forward-child-recovery-repository-adapter.mjs",
+          "path:scripts/reviewed-forward-child-recovery.mjs",
+          "semantic:reviewed-forward-child-journal-generation"
+        ],
+        "writeSetDigest": "b9f036dc61baf54b1a14a7cde2ba01b9ae4776cfa234c5f659bf1069489584b1",
+        "laneRevision": "59c1eddcd7653d89c9fa9b159e1437a24fc0d854",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-11T05:29:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79Vrpe",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b9c87d9b42d9871ce1b61271f9bdf3e92eaf59296a7701d5d843184a521d3412",
+      "digest": "7cd4cf0c1c28f8f932ea600465f656fcb36ff588d7a1c5e1c4b622d7862a4d9b"
     }
   ]
 }

@@ -54,7 +54,7 @@ const claimId = digestValue({
   writeSetDigest: identity.writeSetDigest,
 });
 
-function fixture({ refreshed = true, heartbeatCount = 1 } = {}) {
+function fixture({ refreshed = true, heartbeatCount = 1, rootLedger = false } = {}) {
   const activeCore = claimCore({
     state: "active",
     transitionCounter: 1,
@@ -88,14 +88,24 @@ function fixture({ refreshed = true, heartbeatCount = 1 } = {}) {
   const entries = [
     entry({ action: "claim", core: activeCore, entries: [] }),
   ];
-  entries.push(entry({ action: "review-ready", core: reviewCore, entries }));
+  entries.push(entry({
+    action: rootLedger ? "continue" : "review-ready",
+    core: rootLedger ? { ...reviewCore, state: "reviewed" } : reviewCore,
+    entries,
+    schema: rootLedger ? "agentic-cloud-collaboration-entry/v2" : undefined,
+  }));
   const historicalLedger = ledger(entries);
-  entries.push(entry({ action: "delivery-authorize", core: deliveryCore, entries }));
+  entries.push(entry({
+    action: rootLedger ? "integrate" : "delivery-authorize",
+    core: rootLedger ? { ...deliveryCore, state: "integrated-preserved" } : deliveryCore,
+    entries,
+    schema: rootLedger ? "agentic-cloud-collaboration-entry/v2" : undefined,
+  }));
   for (let index = 0; index < heartbeatCount; index += 1) {
     entries.push(entry({
-      action: "heartbeat",
+      action: rootLedger ? "continue" : "heartbeat",
       core: claimCore({
-        state: "delivery-authorized",
+        state: rootLedger ? "integrated-preserved" : "delivery-authorized",
         transitionCounter: 4 + index,
         heartbeatCounter: 1 + index,
         expiresAt: newExpiry,
@@ -104,6 +114,7 @@ function fixture({ refreshed = true, heartbeatCount = 1 } = {}) {
         deliveryAuthorization: deliveryCore.deliveryAuthorization,
       }),
       entries,
+      schema: rootLedger ? "agentic-cloud-collaboration-entry/v2" : undefined,
     }));
   }
   const currentLedger = ledger(entries);
@@ -213,9 +224,9 @@ function claimCore(overrides) {
   };
 }
 
-function entry({ action, core, entries }) {
+function entry({ action, core, entries, schema = "agentic-cloud-collaboration-entry/v1" }) {
   const draft = {
-    schema: "agentic-cloud-collaboration-entry/v1",
+    schema,
     sequence: entries.length + 1,
     parentDigest: entries.at(-1)?.digest || null,
     action,
@@ -242,9 +253,13 @@ function ledger(entries) {
 
 function publicClaim(source) {
   const core = source.claimCore;
+  const state = {
+    reviewed: "review_ready",
+    "integrated-preserved": "delivery_authorized",
+  }[core.state] || core.state.replaceAll("-", "_");
   const claim = {
     claimId: core.claimId,
-    state: core.state.replaceAll("-", "_"),
+    state,
     actorId: core.actorId,
     repositoryId: core.repositoryId,
     workItemId: core.workItemId,
@@ -399,6 +414,20 @@ test("operation-derived proof accepts reviewed or protected-refresh heads and he
       false,
     );
   }
+});
+
+test("operation-derived proof projects exact root v2 review and delivery entries", () => {
+  const result = verify(fixture({ rootLedger: true, heartbeatCount: 1 }));
+  assert.equal(result.peers.length, 1);
+  assert.equal(result.peers[0].deliveryAuthorizationCounter, 3);
+  assert.equal(result.peers[0].heartbeatSuffixCount, 1);
+});
+
+test("root v2 projection accepts a bounded continue heartbeat suffix", () => {
+  const result = verify(fixture({ rootLedger: true, heartbeatCount: 2 }));
+  assert.equal(result.peers.length, 1);
+  assert.equal(result.peers[0].deliveryAuthorizationCounter, 3);
+  assert.equal(result.peers[0].heartbeatSuffixCount, 2);
 });
 
 test("peer authority stays stable across unrelated ledger appends while the operation receipt advances", () => {

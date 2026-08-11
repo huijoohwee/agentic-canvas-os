@@ -35,6 +35,10 @@ delegates same-session successor reclaim to `cloud-authority-handoff-controller.
 controller's existing claim lineage; a retry after the local projection skips that completed phase and
 does not create a second recovery protocol.
 
+The handoff controller returns a receipt-shaped result with the successor identity flattened as
+`successorClaimId`. The recovery result binds that public field directly; it does not depend on the
+handoff controller's internal authority object.
+
 ```sh
 node scripts/review-ahead-projection-recovery.mjs execute \
   --repository=<source-worktree> --branch=<agent/device/scope> \

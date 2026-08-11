@@ -109,7 +109,7 @@ test("execute projects review-ready once then delegates exact same-session recla
     async reclaim(request) {
       reclaimed += 1;
       assert.equal(request.sessionId, base.sessionId);
-      return { outcome: "reclaimed-live", authority: { claimId: digest("5") } };
+      return { outcome: "reclaimed-live", successorClaimId: digest("5") };
     },
   });
   const plan = await controller.plan({ branch: base.branch, sessionId: base.sessionId });
@@ -117,6 +117,7 @@ test("execute projects review-ready once then delegates exact same-session recla
     branch: base.branch, sessionId: base.sessionId, authorization: plan.authorization,
   });
   assert.equal(result.status, "review-ready-reclaimed");
+  assert.equal(result.successorClaimId, digest("5"));
   assert.equal(status, "review_ready");
   assert.equal(reclaimed, 1);
   const replayPlan = await controller.plan({ branch: base.branch, sessionId: base.sessionId });

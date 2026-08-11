@@ -1,4 +1,5 @@
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+// Responsibility: Apply exact writer-lease registry projections under one cooperative CAS lock.
+import { existsSync, lstatSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
@@ -6,6 +7,8 @@ import {
   WRITER_LEASE_REGISTRY_SCHEMA,
   WRITER_LEASE_SCHEMA,
 } from "./writer-lease-lib.mjs";
+import { validateCompletedActiveOwnedDirtRecoveryIntent }
+  from "./active-owned-dirt-recovery-contract.mjs";
 
 export const SCOPE_EXPANSION_INTENT_SCHEMA =
   "agentic-active-dirty-scope-expansion-intent/v1";
@@ -134,7 +137,12 @@ export function casWriterLeaseProjection({
     action: ({ registry, lease }) => {
       const intent = normalizeIntent(registry.scopeExpansionIntents?.[branch] ?? null);
       if (requireNoActiveIntent) {
-        assertHeartbeatIntentAllows({ intent, expectedClaimId, expectedLeaseDigest });
+        assertHeartbeatIntentAllows({
+          intent,
+          recoveryIntent: recoveryFenceIntent(registry, branch),
+          expectedClaimId,
+          expectedLeaseDigest,
+        });
       }
       const next = { ...lease, ...values, schema: WRITER_LEASE_SCHEMA };
       requireLease(next);
@@ -199,12 +207,16 @@ export function assertHeartbeatScopeExpansionFence({
     assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
     assertHeartbeatIntentAllows({
       intent: normalizeIntent(normalized.scopeExpansionIntents?.[branch] ?? null),
+      recoveryIntent: recoveryFenceIntent(normalized, branch),
       expectedClaimId,
       expectedLeaseDigest,
     });
     return lease;
   });
 }
+
+export const assertHeartbeatMutationIntentFence =
+  assertHeartbeatScopeExpansionFence;
 
 export function withHeartbeatProjectionFence({
   leaseStore,
@@ -223,6 +235,7 @@ export function withHeartbeatProjectionFence({
     assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
     assertHeartbeatIntentAllows({
       intent: normalizeIntent(normalized.scopeExpansionIntents?.[branch] ?? null),
+      recoveryIntent: recoveryFenceIntent(normalized, branch),
       expectedClaimId,
       expectedLeaseDigest,
     });
@@ -249,7 +262,7 @@ export function assertExpansionIntentCurrent({
   return intent;
 }
 
-function mutateRegistry({
+export function mutateWriterLeaseRegistry({
   leaseStore,
   branch,
   expectedLeaseDigest,
@@ -257,7 +270,7 @@ function mutateRegistry({
   action,
 }) {
   if (typeof leaseStore?.withRegistryLock !== "function" || !leaseStore.statePath) {
-    throw new Error("Scope expansion requires the repository writer-lease registry CAS capability.");
+    throw new Error("This transition requires the repository writer-lease registry CAS capability.");
   }
   return leaseStore.withRegistryLock((registry) => {
     const normalized = requireRegistry(registry);
@@ -280,6 +293,8 @@ function mutateRegistry({
   });
 }
 
+const mutateRegistry = mutateWriterLeaseRegistry;
+
 function writeRegistryCas({ statePath, expectedRegistry, nextRegistry }) {
   const normalized = requireRegistry(nextRegistry);
   const next = {
@@ -287,9 +302,11 @@ function writeRegistryCas({ statePath, expectedRegistry, nextRegistry }) {
     schema: WRITER_LEASE_REGISTRY_SCHEMA,
     revision: Number(expectedRegistry.revision || 0) + 1,
   };
+  requireRegistry(next);
   const root = path.dirname(statePath);
   mkdirSync(root, { recursive: true });
-  const temporary = `${statePath}.${process.pid}.${Date.now()}.scope-expansion.tmp`;
+  requireRegularRegistryPath(statePath);
+  const temporary = `${statePath}.${process.pid}.${Date.now()}.writer-lease-cas.tmp`;
   writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
   renameSync(temporary, statePath);
 }
@@ -307,14 +324,22 @@ function withIntent(registry, branch, intent) {
 function assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId }) {
   requireLease(lease);
   if (writerLeaseDigest(lease) !== requiredDigest(expectedLeaseDigest, "expected lease digest")) {
-    throw new Error("Writer lease changed before scope-expansion CAS.");
+    throw new Error("Writer lease changed before scope-expansion CAS or active-owned-dirt recovery CAS.");
   }
   if (lease.cloudAuthority?.claimId !== requiredDigest(expectedClaimId, "expected claim ID")) {
-    throw new Error("Writer lease claim changed before scope-expansion CAS.");
+    throw new Error("Writer lease claim changed before scope-expansion CAS or active-owned-dirt recovery CAS.");
   }
 }
 
-function assertHeartbeatIntentAllows({ intent, expectedClaimId, expectedLeaseDigest }) {
+function assertHeartbeatIntentAllows({
+  intent,
+  recoveryIntent = null,
+  expectedClaimId,
+  expectedLeaseDigest,
+}) {
+  if (recoveryIntent) {
+    throw new Error("Active-owned-dirt recovery intent fences this heartbeat projection.");
+  }
   if (!intent) return;
   const sourceMatch = intent.sourceClaimId === expectedClaimId
     && intent.sourceLeaseDigest === expectedLeaseDigest;
@@ -323,6 +348,20 @@ function assertHeartbeatIntentAllows({ intent, expectedClaimId, expectedLeaseDig
   }
   if (intent.targetClaimId && intent.targetClaimId === expectedClaimId) return;
   throw new Error("Another scope-expansion intent owns this branch projection.");
+}
+
+function recoveryFenceIntent(registry, branch) {
+  const value = registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null;
+  if (value === null || value === undefined) return null;
+  if (value.status === "complete") {
+    validateCompletedActiveOwnedDirtRecoveryIntent(value);
+    return null;
+  }
+  if (value.schema !== "agentic-active-owned-dirt-recovery-intent/v1"
+    || !DIGEST_PATTERN.test(String(value.planDigest || ""))) {
+    throw new Error("Active-owned-dirt recovery intent is malformed.");
+  }
+  return value;
 }
 
 function normalizeIntent(value) {
@@ -440,10 +479,24 @@ function snapshotPlan(value) {
 
 function requireRegistry(registry) {
   if (registry?.schema !== WRITER_LEASE_REGISTRY_SCHEMA
-    || !registry.leases || typeof registry.leases !== "object") {
+    || !registry.leases || typeof registry.leases !== "object"
+    || !Number.isSafeInteger(registry.revision) || registry.revision < 0
+    || registry.revision >= Number.MAX_SAFE_INTEGER
+    || Object.values(registry.leases).some(candidate => (
+      !Number.isSafeInteger(candidate?.epoch) || candidate.epoch < 1
+      || candidate.epoch >= Number.MAX_SAFE_INTEGER
+    ))) {
     throw new Error("Writer-lease registry schema is unsupported.");
   }
   return registry;
+}
+
+function requireRegularRegistryPath(statePath) {
+  if (!existsSync(statePath)) return;
+  const stat = lstatSync(statePath);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error("Writer-lease registry must be a regular non-symlink file.");
+  }
 }
 
 function requireLease(lease) {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2334,
-  "headDigest": "584e8644f0490a9a487a80984945c93b0279bf0f0d606f4fa53450cc5b1bb6e8",
+  "sequence": 2335,
+  "headDigest": "aedc83f18e9eda7953075fc49108be1ef8998a53cbd3f0a851f71dfba1c8aceb",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -115832,6 +115832,54 @@
       },
       "claimDigest": "c51b9897909f5118a9ba6d445939c6f0d4077bb4edb60ada76dd1dec222fdaec",
       "digest": "584e8644f0490a9a487a80984945c93b0279bf0f0d606f4fa53450cc5b1bb6e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2335,
+      "parentDigest": "584e8644f0490a9a487a80984945c93b0279bf0f0d606f4fa53450cc5b1bb6e8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "558a6109d3790088ba22a2052c70f1c6d6fa376e426d6a348c276ac4b4631048",
+      "idempotencyKey": "d2ad91c6d64ebb2408dd8a55f8abba8e97021a719e04f9b1a4629094bdfce9f9",
+      "requestDigest": "4579ae8b2572dcdb15339ddf5e7d1519d68dc63bae1a1d76d8170afae60a194e",
+      "evaluationTime": "2026-08-12T02:19:35.000Z",
+      "claimCore": {
+        "claimId": "558a6109d3790088ba22a2052c70f1c6d6fa376e426d6a348c276ac4b4631048",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:e9d08aa90df7a39440bca6aad298939dee3b1963c30dbc45841dff44f5d3d858",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e8860d367ac7f634a08bcd695c4617d4b3d692b1f66220bbba86492102bc7006",
+        "canonicalBaseRevision": "e80348bb4a35563e64436d4cdf2f09f47a1904a2",
+        "declaredWriteScope": [
+          "path:__tests__/preserved-lane-abandonment-purge-contract.test.mjs",
+          "path:__tests__/preserved-lane-abandonment-purge-controller.test.mjs",
+          "path:__tests__/preserved-lane-abandonment-purge-repository-adapter.test.mjs",
+          "path:docs/PRESERVED-LANE-ABANDONMENT-PURGE.md",
+          "path:package.json",
+          "path:scripts/preserved-lane-abandonment-purge-contract.mjs",
+          "path:scripts/preserved-lane-abandonment-purge-controller.mjs",
+          "path:scripts/preserved-lane-abandonment-purge-github-adapter.mjs",
+          "path:scripts/preserved-lane-abandonment-purge-repository-adapter.mjs",
+          "path:scripts/preserved-lane-abandonment-purge.mjs",
+          "semantic:preserved-lane-abandonment-purge"
+        ],
+        "writeSetDigest": "a5ff91d58eb2c97bccbe30d02ecaf9693cc6b086977e586bcaaf910457e19fb6",
+        "laneRevision": "a02451ad063e6dbb039c757e78d2236e0e50f738",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T02:47:46.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM790_h3",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "de27f9a4bc1980fa112f55fd5efe490c75ad251d8a273dbae9f4f98a7ebccf44",
+      "digest": "aedc83f18e9eda7953075fc49108be1ef8998a53cbd3f0a851f71dfba1c8aceb"
     }
   ]
 }

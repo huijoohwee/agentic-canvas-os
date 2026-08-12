@@ -2,12 +2,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import {
+  applyCloudTransition,
+  createEmptyLedger,
+  digestValue,
+} from "../scripts/cloud-collaboration-contract.mjs";
 import {
   continueExpiredCommittedHeartbeatCloudAuthority,
   expiredCommittedCloudRecoveryEvidenceDigest,
   preserveSourceManifestProjection,
 } from "../scripts/expired-committed-heartbeat-cloud-authority.mjs";
+import { resolveExpiredCommittedRecoveryReplayEvidence } from
+  "../scripts/expired-committed-heartbeat-replay-evidence.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -77,10 +83,19 @@ test("an exact dormant claim uses authenticated recovery and seals its operation
 
 test("a lost dormant-recovery response replays the exact recovery key without renewal", () => {
   const source = authority();
-  const advanced = recoveryClaim(source);
+  const advanced = { ...recoveryClaim(source), state: "dormant-preserved",
+    writeAuthority: false };
   let recoveries = 0;
+  let resolutions = 0;
   const result = continueExpiredCommittedHeartbeatCloudAuthority({
     ...common(source, advanced),
+    recoveryEvidenceDigest: digest("2"),
+    resolveReplayEvidence: input => {
+      resolutions += 1;
+      assert.equal(input.source, source);
+      assert.equal(input.liveClaim, advanced);
+      return evidenceDigest;
+    },
     invoke: input => {
       recoveries += 1;
       assert.equal(input.request.mode, "recovery");
@@ -92,6 +107,7 @@ test("a lost dormant-recovery response replays the exact recovery key without re
     verify: ({ authority: projected }) => verifiedResult(projected, 9),
   });
   assert.equal(recoveries, 1);
+  assert.equal(resolutions, 1);
   assert.equal(result.authority.claimDigest, digest("b"));
   assert.equal(result.authority.heartbeatCounter, 9);
 });
@@ -147,6 +163,7 @@ test("ambiguous response loss probes only exact replay keys and rejects foreign 
   let renewals = 0;
   assert.throws(() => continueExpiredCommittedHeartbeatCloudAuthority({
     ...common(source, advanced),
+    resolveReplayEvidence: () => evidenceDigest,
     invoke: () => {
       recoveries += 1;
       throw new Error("expectedFenceRevision is stale");
@@ -158,6 +175,46 @@ test("ambiguous response loss probes only exact replay keys and rejects foreign 
   }), /expectedTransitionCounter is stale/u);
   assert.equal(recoveries, 1);
   assert.equal(renewals, 1);
+});
+
+test("sealed ledger evidence resolves the original recovery key after later snapshot drift", () => {
+  const repository = { repositoryId: "repository:one",
+    canonicalRevision: sha("a") };
+  const actor = { actorId: "actor:one", deviceId: "device", sessionId: "session" };
+  const claimed = applyCloudTransition({
+    ledger: createEmptyLedger(repository), action: "claim", actor, repository,
+    evaluationTime: "2026-08-12T09:00:00.000Z",
+    request: { workItemId: "work:item", canonicalBaseRevision: sha("a"),
+      declaredWriteScope: declaredWriteSet, laneRevision: sha("b"), leaseEpoch: 1,
+      expiresAt: "2026-08-12T09:01:00.000Z", expectedLedgerDigest: null,
+      idempotencyKey: "claim:one" },
+  });
+  const recovered = applyCloudTransition({
+    ledger: claimed.ledger, action: "continue", actor, repository,
+    evaluationTime: "2026-08-12T09:02:00.000Z",
+    request: { claimId: claimed.claim.claimId,
+      expectedFenceRevision: claimed.claim.fenceRevision,
+      expectedTransitionCounter: claimed.claim.transitionCounter,
+      expectedLedgerDigest: claimed.ledger.headDigest, mode: "recovery",
+      expiresAt: "2026-08-12T09:03:00.000Z",
+      recoveryEvidenceDigest: evidenceDigest, idempotencyKey: "recover:one" },
+  });
+  const source = { ...authority(), claimId: claimed.claim.claimId,
+    laneRevision: claimed.claim.laneRevision, leaseEpoch: claimed.claim.leaseEpoch,
+    deviceId: actor.deviceId, sessionId: actor.sessionId, reviewRequestId: null };
+  const liveClaim = { ...recovered.claim,
+    transitionDigest: recovered.claim.ledgerRevision };
+  const revision = sha("f");
+  assert.equal(resolveExpiredCommittedRecoveryReplayEvidence({
+    source, liveClaim,
+    status: { ledgerRevision: revision, ledgerDigest: recovered.ledger.headDigest },
+    readLedger: () => ({ ledger: recovered.ledger, revision }),
+  }), evidenceDigest);
+  assert.throws(() => resolveExpiredCommittedRecoveryReplayEvidence({
+    source, liveClaim: { ...liveClaim, fenceRevision: digest("9") },
+    status: { ledgerRevision: revision, ledgerDigest: recovered.ledger.headDigest },
+    readLedger: () => ({ ledger: recovered.ledger, revision }),
+  }), /does not match the live claim/u);
 });
 
 test("writer CAS projection preserves the source manifest transport identity", () => {

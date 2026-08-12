@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2569,
-  "headDigest": "d7c9adf2c72832900d34c305f0611db0eeda028d930ede39f068acc440f1a578",
+  "sequence": 2570,
+  "headDigest": "1f58076cd76e30b5ef23f61657c9472feeeb90e03b994eb2aa59bf069caea017",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -127016,6 +127016,47 @@
       },
       "claimDigest": "60af32e2cecc29b2494d13088e4f8b1ef21ee511e279d42661cd014df1c27ff9",
       "digest": "d7c9adf2c72832900d34c305f0611db0eeda028d930ede39f068acc440f1a578"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2570,
+      "parentDigest": "d7c9adf2c72832900d34c305f0611db0eeda028d930ede39f068acc440f1a578",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "eae711347ed9a57841d5e7d20764769c78c023af0ba51efe499abaf3bab6368d",
+      "idempotencyKey": "5934467586d407f5202663a208c4342833047a787ce203bd2e408dd33e9e4c10",
+      "requestDigest": "b31ed44048402cea54833e9940267186ce2222ce6dc48c7ae21715fa003a5654",
+      "evaluationTime": "2026-08-12T12:32:05.000Z",
+      "claimCore": {
+        "claimId": "eae711347ed9a57841d5e7d20764769c78c023af0ba51efe499abaf3bab6368d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b0eab59ebff1f9d6120715d8b3d3dff19625307118663fd18999c746374a54a4",
+        "canonicalBaseRevision": "d664a8e0c6622fb76db91c7e88208ace5856e9a6",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-cloud-authority.test.mjs",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "path:todo/2026-08/dormant-recovery-replay-expired-state.md",
+          "semantic:dormant-recovery-replay-expired-state"
+        ],
+        "writeSetDigest": "a26dfb2b1ffc8a0d660c5cddd567f99015504540f5c284e96e49b81017ead6f7",
+        "laneRevision": "d664a8e0c6622fb76db91c7e88208ace5856e9a6",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T13:02:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7271af77ec2bcf0c6edff010bf49f207a95fa3867c104467a7b517a4b8e47fab",
+      "digest": "1f58076cd76e30b5ef23f61657c9472feeeb90e03b994eb2aa59bf069caea017"
     }
   ]
 }

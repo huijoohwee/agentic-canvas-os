@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2628,
-  "headDigest": "b7e49ac33698de47b26e793b5c63d4b40103bb68bba1edf58978c4e751647c16",
+  "sequence": 2629,
+  "headDigest": "202880065090590ee07ed2583faebcf06b56c8a8020ee6fddf39e465b8dc5827",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -129852,6 +129852,46 @@
       },
       "claimDigest": "3ca5a4fea8e6725f1c0714e3b552888be82061622200520dbf1a36b5892e46f7",
       "digest": "b7e49ac33698de47b26e793b5c63d4b40103bb68bba1edf58978c4e751647c16"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2629,
+      "parentDigest": "b7e49ac33698de47b26e793b5c63d4b40103bb68bba1edf58978c4e751647c16",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "841c10985c112b8af7515f78c712a592c8624440ae4ee451dfb70afc454c83f2",
+      "idempotencyKey": "73052b44df03ef7f2801051cdecb45a1383f240c2089b0325da55e1b5b51415a",
+      "requestDigest": "5adec58168212310ea2dae6695add4b01353349bcc224c023e31cc123c5a832a",
+      "evaluationTime": "2026-08-12T14:42:55.000Z",
+      "claimCore": {
+        "claimId": "841c10985c112b8af7515f78c712a592c8624440ae4ee451dfb70afc454c83f2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:48675494d0fdc529ddeee3a8ff386a6f86f45e1ad3fe14c0d269144006f3525f",
+        "canonicalBaseRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/flightSimFloatingPanelControls.test.ts",
+          "path:canvas/src/features/game-flight-sim",
+          "semantic:flight-sim-functionality"
+        ],
+        "writeSetDigest": "988ad56ac6a64fcbe30e91d53b7148e5dd0e6b11b33762a301ee91c0ffaef6ca",
+        "laneRevision": "46154a22a7ccfd995a01aaa8e958ba8cbfd8e9ee",
+        "leaseEpoch": 3,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-12T15:42:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "eeb000b2f445fc26499d5cea5907ef4c75c57fabca85dcefb8a16db71deb272b",
+        "eligibleSince": "2026-08-12T14:42:55.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "fd51b212da00f171ff1558476881c769bc3c0695bd6192b22d232fef3cd188d5",
+      "digest": "202880065090590ee07ed2583faebcf06b56c8a8020ee6fddf39e465b8dc5827"
     }
   ]
 }

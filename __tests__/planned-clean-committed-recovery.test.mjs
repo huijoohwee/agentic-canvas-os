@@ -43,14 +43,13 @@ test("planned clean recovery advances only the exact dormant claim", () => {
         ...dormant, state: "current", transitionCounter: 8,
       } };
     },
-    project: () => projected,
-    verify: input => ({ authority: input.authority, verification: { status: "ready" } }),
+    verify: input => ({ authority: { ...input.authority, marker: projected }, verification: { status: "ready" } }),
   });
 
   assert.equal(request.mode, "recovery");
   assert.equal(request.expectedTransitionCounter, 7);
   assert.equal(request.recoveryEvidenceDigest, digest("f"));
-  assert.equal(result.authority, projected);
+  assert.equal(result.authority.marker, projected);
 });
 
 test("planned clean recovery accepts the provider-neutral dormant state", () => {
@@ -63,10 +62,28 @@ test("planned clean recovery accepts the provider-neutral dormant state", () => 
     invoke: () => ({ ok: true, action: "continue", claim: {
       ...liveDormant, state: "current", transitionCounter: 8,
     } }),
-    project: () => projected,
+    verify: input => ({ authority: { ...input.authority, marker: projected }, verification: { status: "ready" } }),
+  });
+  assert.equal(result.authority.marker, projected);
+});
+
+test("planned clean recovery reconciles a lost recovery response without a second mutation", () => {
+  const current = { ...dormant, state: "current", transitionCounter: 8,
+    fenceRevision: digest("1"), transitionDigest: digest("2"),
+    operationReceiptDigest: digest("3"), entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2", expiresAt: "2026-08-12T03:00:00.000Z" };
+  let invoked = false;
+  const result = recoverPlannedAdmissionCloudAuthority({
+    authority: { ...authority, transitionCounter: 7 }, manifest,
+    branch: "agent/device/scope", recoveryEvidenceDigest: digest("f"),
+    inspect: () => ({ ok: true, action: "status", ledgerRevision: sha("4"),
+      ledgerDigest: digest("5"), claims: [current] }),
+    invoke: () => { invoked = true; },
     verify: input => ({ authority: input.authority, verification: { status: "ready" } }),
   });
-  assert.equal(result.authority, projected);
+  assert.equal(invoked, false);
+  assert.equal(result.authority.claimDigest, digest("1"));
+  assert.equal(result.authority.transitionCounter, 8);
 });
 
 test("planned clean recovery rejects non-dormant or drifted subjects before mutation", () => {

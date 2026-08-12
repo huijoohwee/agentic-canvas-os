@@ -4,7 +4,7 @@ import { assertLeaseWorktree, requireClean, requireRepositorySafety, requireSess
 import { captureCommittedDescendantEvidence, readExactPullRequestProjection, readPullRequestProjection, remoteBranchHead } from "./expired-committed-heartbeat-evidence.mjs";
 import { assertPullRequestBodyWithinGitHubLimit } from "./expired-committed-heartbeat-contract.mjs";
 import { fetchProtectedMain } from "./protected-main-path-equivalence-lib.mjs";
-import { cloudAuthorityFromResult, invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { parseDeviceBranch, projectWriterLeasePullRequestMarker, projectExpiredCommittedHeartbeatLease, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 
 export const PLANNED_CLEAN_COMMITTED_RECOVERY_RESULT_SCHEMA = "agentic-planned-clean-committed-recovery-result/v1";
@@ -54,13 +54,15 @@ export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gi
 export function recoverPlannedAdmissionCloudAuthority({ authority, manifest, branch,
   recoveryEvidenceDigest, ttlSeconds = 1_800, deviceId = authority?.deviceId,
   sessionId = authority?.sessionId, invoke = invokeRepositoryCloudAction,
-  inspect = invokeRepositoryCloudAction, verify = verifyAdmissionCloudAuthority,
-  project = cloudAuthorityFromResult }) {
+  inspect = invokeRepositoryCloudAction, verify = verifyAdmissionCloudAuthority }) {
   const status = inspect({ action: "status", ledgerRepository: authority?.ledgerRepository,
     request: { targetRepository: authority?.targetRepository } });
   const matches = (status?.claims || []).filter(claim => claim.claimId === authority?.claimId);
   const claim = matches[0];
-  if (matches.length !== 1 || !["dormant-preserved", "parked"].includes(claim?.state)
+  const dormant = ["dormant-preserved", "parked"].includes(claim?.state);
+  const responseLossReplay = claim?.state === "current"
+    && claim.transitionCounter === authority.transitionCounter + 1;
+  if (matches.length !== 1 || (!dormant && !responseLossReplay)
     || claim.canonicalBaseRevision !== authority.canonicalBaseSha
     || claim.laneRevision !== authority.laneRevision
     || claim.writeSetDigest !== manifest?.writeSetDigest
@@ -68,23 +70,35 @@ export function recoverPlannedAdmissionCloudAuthority({ authority, manifest, bra
     || claim.reviewRequestId !== authority.reviewRequestId) {
     throw new Error("Planned admission recovery requires its exact dormant cloud claim.");
   }
-  const result = invoke({ action: "continue", ledgerRepository: authority.ledgerRepository,
-    request: { targetRepository: authority.targetRepository, claimId: claim.claimId,
-      expectedFenceRevision: claim.fenceRevision,
-      expectedTransitionCounter: claim.transitionCounter, mode: "recovery", ttlSeconds,
-      recoveryEvidenceDigest, deviceId, sessionId,
+  const result = responseLossReplay ? status : invoke({ action: "continue",
+    ledgerRepository: authority.ledgerRepository, request: {
+      targetRepository: authority.targetRepository, claimId: claim.claimId,
+      expectedFenceRevision: claim.fenceRevision, expectedTransitionCounter: claim.transitionCounter,
+      mode: "recovery", ttlSeconds, recoveryEvidenceDigest, deviceId, sessionId,
       idempotencyKey: ["planned-clean-committed-recovery", claim.claimId,
         claim.transitionCounter, claim.fenceRevision, recoveryEvidenceDigest].join(":") } });
-  if (result?.ok !== true || result.action !== "continue" || result.claim?.state !== "current"
-    || result.claim.claimId !== claim.claimId || result.claim.transitionCounter !== claim.transitionCounter + 1
-    || result.claim.canonicalBaseRevision !== claim.canonicalBaseRevision
-    || result.claim.laneRevision !== claim.laneRevision || result.claim.writeSetDigest !== claim.writeSetDigest
-    || result.claim.reviewRequestId !== claim.reviewRequestId) {
+  const recoveredClaim = responseLossReplay ? claim : result?.claim;
+  if (result?.ok !== true || (!responseLossReplay && result.action !== "continue")
+    || recoveredClaim?.state !== "current" || recoveredClaim.claimId !== claim.claimId
+    || (!responseLossReplay && recoveredClaim.transitionCounter !== claim.transitionCounter + 1)
+    || recoveredClaim.canonicalBaseRevision !== claim.canonicalBaseRevision
+    || recoveredClaim.laneRevision !== claim.laneRevision
+    || recoveredClaim.writeSetDigest !== claim.writeSetDigest
+    || recoveredClaim.reviewRequestId !== claim.reviewRequestId) {
     throw new Error("Planned admission cloud recovery changed its exact claim subject.");
   }
-  const projected = project({ ledgerRepository: authority.ledgerRepository,
-    targetRepository: authority.targetRepository, deviceId, sessionId, result },
-  { manifest, canonicalBaseSha: authority.canonicalBaseSha });
+  const projected = Object.freeze({ ...authority,
+    claimDigest: recoveredClaim.fenceRevision,
+    ledgerRevision: result.ledgerRevision,
+    ledgerDigest: result.ledgerDigest || result.receipt?.ledgerDigest,
+    claimLedgerRevision: recoveredClaim.transitionDigest,
+    entrySchema: recoveredClaim.entrySchema,
+    claimIdentitySchema: recoveredClaim.claimIdentitySchema,
+    operationReceiptDigest: recoveredClaim.operationReceiptDigest,
+    transitionCounter: recoveredClaim.transitionCounter,
+    expiresAt: recoveredClaim.expiresAt,
+    state: "active",
+  });
   return verify({ authority: projected, manifest, canonicalBaseSha: authority.canonicalBaseSha,
     branch });
 }

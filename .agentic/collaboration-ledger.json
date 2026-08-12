@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2365,
-  "headDigest": "0268cab3d0eb3349dd99a54ecda70bd040014d779a9bbe97a11a67269cfea2c0",
+  "sequence": 2366,
+  "headDigest": "b81a9ba004ca8c567cc3f1db77bfff8ca810a9dd2e706d1ddea46176e0555006",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -117293,6 +117293,67 @@
       },
       "claimDigest": "24d0bd0d535a26ee34a89f4d54898c48991440e640553e6ced0e18719d3d38e3",
       "digest": "0268cab3d0eb3349dd99a54ecda70bd040014d779a9bbe97a11a67269cfea2c0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2366,
+      "parentDigest": "0268cab3d0eb3349dd99a54ecda70bd040014d779a9bbe97a11a67269cfea2c0",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b8382ed46616d261c1614c850daebcaf6a605ebe424b3184d5f19ae6ab60d7df",
+      "idempotencyKey": "437ebea8d289a9bb27104f9784c75128cfbe5f5aca87c9f3009f2c90a0ce10e6",
+      "requestDigest": "79ee3e15ee9ce0fb7572982b113c6b3577b4371a371829b2df9a771e5df7b884",
+      "evaluationTime": "2026-08-12T03:39:31.000Z",
+      "claimCore": {
+        "claimId": "b8382ed46616d261c1614c850daebcaf6a605ebe424b3184d5f19ae6ab60d7df",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:7f140a94f204a0eb8c14a86071bf85f19259d9e851cfca55b279da2f7f0ad510",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ea8dab795ce92b2b47a837975e9b61fb759fd3c151756b869a82d4efe9f6f18f",
+        "canonicalBaseRevision": "0dcb610daa88039171b062404434aad2c64bb8ff",
+        "declaredWriteScope": [
+          "path:__tests__/split-window-preparation-contract.test.mjs",
+          "path:__tests__/split-window-preparation-controller.test.mjs",
+          "path:__tests__/split-window-preparation-repository-adapter.test.mjs",
+          "path:__tests__/split-window-preparation-sandbox.test.mjs",
+          "path:__tests__/split-window-preparation-store.test.mjs",
+          "path:docs/SPLIT-WINDOW-PREPARATION.md",
+          "path:scripts/split-window-preparation-contract.mjs",
+          "path:scripts/split-window-preparation-controller.mjs",
+          "path:scripts/split-window-preparation-repository-adapter.mjs",
+          "path:scripts/split-window-preparation-sandbox.mjs",
+          "path:scripts/split-window-preparation-store.mjs",
+          "path:scripts/split-window-preparation.mjs",
+          "semantic:split-window-preparation"
+        ],
+        "writeSetDigest": "81cb02ac88f95a37fbea02fda1613e1f74442cafc5d50ecfc7d68372f4edc21d",
+        "laneRevision": "698fdbccd87a4aefc11b67518a975a85455d04fe",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-12T04:02:21.000Z",
+        "evidenceDigest": "9e050b6f63f784ddb0b3f52effd79f43e54346cf6374bb0ce78928738a0d37d6",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM792NsV",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "698fdbccd87a4aefc11b67518a975a85455d04fe",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM792NsV",
+          "focusedEvidenceDigest": "9e050b6f63f784ddb0b3f52effd79f43e54346cf6374bb0ce78928738a0d37d6",
+          "dependencyClosureDigest": "4d0ff63a35a4e7c01a4629472ef564cf6cf0c04f2a76846a5f076bffbe22cc69",
+          "namedChecksDigest": "ffc6b43e0a611ba3b3f620dc7c9c0e9d87eb8bd00d0f7488fca8f072f64f9529",
+          "handoffEvidenceDigest": "532af8f778afad6a95aa0ad0d573d81cfd050619b4959f4d9f9c4a77fc9446ea",
+          "operatorDecisionDigest": "b2aed7f1147ac6f39f9b674830576cf2d4b9cd1986c078a23ba51890fad574b1",
+          "integrationIntentDigest": "30367535cfa0bd19d4a8f0e2f4ef590a960d6678461d090615958458d39761ef",
+          "integratedAt": "2026-08-12T03:39:31.000Z"
+        }
+      },
+      "claimDigest": "6b1ebd5bb1cf6770311cc5fff829e8054ed2c3f1c5b1c503b8c06c94cb3b5c51",
+      "digest": "b81a9ba004ca8c567cc3f1db77bfff8ca810a9dd2e706d1ddea46176e0555006"
     }
   ]
 }

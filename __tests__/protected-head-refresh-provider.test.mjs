@@ -12,6 +12,7 @@ import {
   requireProtectedHeadRefreshCloudResult,
 } from "../scripts/protected-main-refresh-lib.mjs";
 import {
+  requireProtectedHeadRefreshLedgerRepository,
   verifyProtectedHeadRefreshMergedProviderState,
 } from "../scripts/protected-head-refresh-github-adapter.mjs";
 import {
@@ -37,6 +38,17 @@ const classicProtectionContexts = Object.freeze([
   "collaboration-integration",
   "cloud-collaboration",
 ]);
+
+test("protected refresh keeps target and authenticated ledger identities separate", () => {
+  assert.equal(requireProtectedHeadRefreshLedgerRepository({
+    targetRepository: "huijoohwee/huijoohwee.github.io",
+    ledgerRepository: "huijoohwee/agentic-canvas-os",
+  }), "huijoohwee/agentic-canvas-os");
+  assert.throws(() => requireProtectedHeadRefreshLedgerRepository({
+    targetRepository: "huijoohwee/huijoohwee.github.io",
+    ledgerRepository: "",
+  }), /authenticated ledger repository/u);
+});
 
 function protectedMainBranch({
   name = "main",

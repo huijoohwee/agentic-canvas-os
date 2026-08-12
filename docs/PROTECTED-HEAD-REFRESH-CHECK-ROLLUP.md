@@ -14,6 +14,12 @@ runtime_owner: "../scripts/protected-head-refresh-github-provider.mjs"
 runtime_proof: "../__tests__/protected-head-refresh-provider.test.mjs"
 publish_policy: "protected Dev integration only; no Production or Cloudflare authority"
 ---
+
+The protected refresh target and authenticated cloud-collaboration ledger are
+independent repository identities. The controller mutates and verifies Git
+provider state only in the target repository, while cloud-authority verification
+reads the explicitly bound `AGENTIC_LEDGER_REPOSITORY`. Equality between those
+identities is not inferred or required.
 <!-- Responsibility: Define the provenance and fail-closed boundary for protected-refresh CI rollup projections. -->
 
 # Protected head refresh check rollup projection

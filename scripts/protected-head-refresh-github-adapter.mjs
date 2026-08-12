@@ -52,9 +52,10 @@ export function runProtectedHeadRefresh({
   if (requiredEnv("GITHUB_REF") !== "refs/heads/main") {
     throw new Error("Protected-head refresh requires a workflow dispatched at protected main.");
   }
-  if (requiredEnv("AGENTIC_LEDGER_REPOSITORY") !== repo) {
-    throw new Error("Protected-head refresh requires this repository's authenticated ledger.");
-  }
+  const ledgerRepository = requireProtectedHeadRefreshLedgerRepository({
+    targetRepository: repo,
+    ledgerRepository: requiredEnv("AGENTIC_LEDGER_REPOSITORY"),
+  });
   const controllerRevision = requiredEnv("PROTECTED_HEAD_REFRESH_CONTROLLER_REVISION");
   requireFullSha(controllerRevision, "Protected-head refresh controller revision");
   if (gitText(["rev-parse", "HEAD"]).trim() !== controllerRevision) {
@@ -151,7 +152,7 @@ export function runProtectedHeadRefresh({
     },
     verifyCloudAuthority: ({ pullRequest }) => {
       const cloud = invokeRepositoryCloudVerifier({
-        ledgerRepository: repo,
+        ledgerRepository,
         environment,
         request: {
           targetRepository: repo,
@@ -356,6 +357,17 @@ export function runProtectedHeadRefresh({
       throw new Error("Protected-head refresh fetched protected main drifted.");
     }
   }
+}
+
+export function requireProtectedHeadRefreshLedgerRepository({
+  targetRepository,
+  ledgerRepository,
+}) {
+  requiredText(targetRepository, "Protected-head refresh target repository");
+  return requiredText(
+    ledgerRepository,
+    "Protected-head refresh authenticated ledger repository",
+  );
 }
 
 export function requireProtectedHeadRefreshMergedAuthorizationRecovery({

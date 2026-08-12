@@ -83,6 +83,9 @@ reproducible: `local`
 
 ## Invocation Surface
 
+These routes are fixture-local parser inputs. They do not register global `/`,
+`#`, `@`, or tool invocations outside this bounded alignment-audit fixture.
+
 | surface | token | owner |
 |---|---|---|
 | slash | `/alignment.audit` | `alignment-audit-contract` |

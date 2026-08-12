@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2298,
-  "headDigest": "f2c862ae409ace7dfada7acb1c064122f01ee57faf7e8251af4e5bfbe11e4404",
+  "sequence": 2299,
+  "headDigest": "d28cc28cf2869c607903677f0ca7f067bbceed3765d0dbcc6a45e7c20e433423",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -114144,6 +114144,50 @@
       },
       "claimDigest": "938cd88caf9a006e8441b834066a6a1da20a3288573d15e48016622391eacf72",
       "digest": "f2c862ae409ace7dfada7acb1c064122f01ee57faf7e8251af4e5bfbe11e4404"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2299,
+      "parentDigest": "f2c862ae409ace7dfada7acb1c064122f01ee57faf7e8251af4e5bfbe11e4404",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8a2c9c60c447d7949fe084c2e9fb98319fc4f1287894d585c262fb540d72dd94",
+      "idempotencyKey": "b9721611c8ccb134bb7faf62edb4b640685244440635a38050244a5777030d3a",
+      "requestDigest": "86410c36e25897e187138f6966a03cf785fc94ae581f713e9a4e69de74d66aea",
+      "evaluationTime": "2026-08-12T00:57:02.000Z",
+      "claimCore": {
+        "claimId": "8a2c9c60c447d7949fe084c2e9fb98319fc4f1287894d585c262fb540d72dd94",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:62316b0452f6dacf1d13be42100312ff9c0940fdb0c8cd9fc2da2b277efae542",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:21b8010ff3e64a3effb16dfef15c5b40beb8f173df79359b00ac5e4ba6bac1e9",
+        "canonicalBaseRevision": "0379f0d0660421a2a318359d822b2c8f979e21b1",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "path:scripts/planned-clean-committed-recovery.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:planned-clean-committed-recovery"
+        ],
+        "writeSetDigest": "d627297becb7d1259801ba34b95e10387271f4084df8d69a1486ce653d6eb0e3",
+        "laneRevision": "0379f0d0660421a2a318359d822b2c8f979e21b1",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T01:57:02.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "38f009f835c4e071fb8503b359953bcb8f1eed8d7ae9066e12901966127198b7",
+      "digest": "d28cc28cf2869c607903677f0ca7f067bbceed3765d0dbcc6a45e7c20e433423"
     }
   ]
 }

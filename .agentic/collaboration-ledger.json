@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2420,
-  "headDigest": "6e5ee7d9575649e24b56c38aa9f4e14992a6476f32546522e0f57f1b9a14596e",
+  "sequence": 2421,
+  "headDigest": "817a86636c0ccbedd1d4ca12c30e4a6f0e2d4cd034c6fb640b9df8636be08294",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -119899,6 +119899,56 @@
       },
       "claimDigest": "896f2a12505396b2d1c689da94cc9078b1794ab76b89e8881ca6c1714b150140",
       "digest": "6e5ee7d9575649e24b56c38aa9f4e14992a6476f32546522e0f57f1b9a14596e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2421,
+      "parentDigest": "6e5ee7d9575649e24b56c38aa9f4e14992a6476f32546522e0f57f1b9a14596e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "22ecbc8e5b9c2eed34313a21ee3684dfbb046e3094582d6d7c789e730d50c142",
+      "idempotencyKey": "480a2a42498aea84979fd2d844301da3a615c9f83f6d3d9af1a6fadd665734f4",
+      "requestDigest": "54c8f36f5be911ec8612e188f914d6ec39b79cfe28ab6d52e0491a93d1239fc6",
+      "evaluationTime": "2026-08-12T05:44:09.000Z",
+      "claimCore": {
+        "claimId": "22ecbc8e5b9c2eed34313a21ee3684dfbb046e3094582d6d7c789e730d50c142",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:952bff7c98ba35add3d49b7105eca80f8e8f0cb6442fcb4fbe21282f45d9aeaa",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:8a1b93e43869107ec16617278e69ce07bb5ad30c8c2c21c99ac7b934aed521d0",
+        "canonicalBaseRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/immersiveMediaRuntime.test.ts",
+          "path:canvas/src/features/three/Controls.tsx",
+          "semantic:immersive-input-camera-ownership"
+        ],
+        "writeSetDigest": "9901321d3d9d05909d63ed3ce5fc0d49d4c4bd847b5fe97541a4049e8a5f36a2",
+        "laneRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-12T05:56:58.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+          "reviewRequestId": null,
+          "bytesDigest": "548885ea461dff8ce545fcf08cb411bdda8eeb05e6576d5ef62e47ee0c1e5a16",
+          "namedChecksDigest": "bcd3889707f5a3cf845981cf86a97cdb5dda94f579e2853f717b76933cd48b46",
+          "handoffEvidenceDigest": "e1ec3c6666697e50809fccfc682f135f542ab55d2d16397213f5d8005dc96d86",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-12T05:44:09.000Z"
+        }
+      },
+      "claimDigest": "0696bc146028b5b8c494f8c30bd5d5a2f4594753a74c80e89443a9f302990940",
+      "digest": "817a86636c0ccbedd1d4ca12c30e4a6f0e2d4cd034c6fb640b9df8636be08294"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2417,
-  "headDigest": "70a892d8adb07509cafacb3a50b3ca5142800dea4c51c7ac02e9d872e82a7424",
+  "sequence": 2418,
+  "headDigest": "3ccb4de700733d6a4be70f9b9ffb80a52aad5452be1b8dbb9ecc4bcf3ffc6046",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -119756,6 +119756,67 @@
       },
       "claimDigest": "12fc5dd12bee6aad902fbb36600d5fc2274fcfbf4cfe48d9550081f97b948c8e",
       "digest": "70a892d8adb07509cafacb3a50b3ca5142800dea4c51c7ac02e9d872e82a7424"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2418,
+      "parentDigest": "70a892d8adb07509cafacb3a50b3ca5142800dea4c51c7ac02e9d872e82a7424",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "393c0d7719a53780372b2204ce27b7e5c2abe5f6056d6d8451b1f4dc24ae74f5",
+      "idempotencyKey": "5dfcce1d7318e55f138f9de18eff2510d99cd9f3b2611a3740379286356be1de",
+      "requestDigest": "8023d5f3eed69d0800caf5a64d1d76162788765bbdd13a3f197577fa3d8e4ff9",
+      "evaluationTime": "2026-08-12T05:32:07.000Z",
+      "claimCore": {
+        "claimId": "393c0d7719a53780372b2204ce27b7e5c2abe5f6056d6d8451b1f4dc24ae74f5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:fdac032cd5fa469f76147c4acadcd9adf9a18ecf0a7fc88ff72fed36b0f5c6c9",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:cd0fa8cb22d9e1b20024f16dee7abca72e144fb50987d3b9e3f3f8e4a087a06a",
+        "canonicalBaseRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "declaredWriteScope": [
+          "path:.kiro/specs/knowgrph-city-building-sim/design.md",
+          "path:.kiro/specs/knowgrph-city-building-sim/requirements.md",
+          "path:.kiro/specs/knowgrph-city-building-sim/tasks.md",
+          "path:canvas/src/__tests__/canvasViewportGeospatialPoiPanelMutationGuard.test.ts",
+          "path:canvas/src/__tests__/citySimSourceOwnership.test.ts",
+          "path:canvas/src/__tests__/geospatialHostIntegration.test.ts",
+          "path:canvas/src/__tests__/geospatialHostMapLibreInteractionIntegration.test.ts",
+          "path:canvas/src/__tests__/grabMapsPoiRichMediaPreviewContract.test.ts",
+          "path:canvas/src/__tests__/grabMapsPoiWidgetCardContract.test.ts",
+          "path:canvas/src/__tests__/lazyLoadingGatesRegression.test.ts",
+          "path:canvas/src/components/CanvasViewport.tsx",
+          "path:canvas/src/components/CanvasViewportGeospatialOverlay.tsx",
+          "path:canvas/src/components/useRichMediaPanelMediaState.ts",
+          "path:canvas/src/features/geospatial/grabMapsPoiRichMedia.ts",
+          "path:canvas/src/features/geospatial/grabMapsPoiWidgetCard.ts",
+          "path:canvas/src/lib/storyboardWidget/widgetCardLayoutVariants.ts",
+          "path:canvas/src/tests/registry/postParserCases4.ts",
+          "path:docs/workspace-seeds/README.md",
+          "path:docs/workspace-seeds/knowgrph-game-city-building-sim-demo.md",
+          "path:gympgrph/src/GeospatialHost.tsx",
+          "path:scripts/__tests__/workspace-seed-authority.test.mjs",
+          "path:scripts/workspace-seed-authority.mjs",
+          "path:scripts/workspace-seed-city-authority.mjs",
+          "semantic:city-rich-media-widget-card"
+        ],
+        "writeSetDigest": "6f699264d5981c9df345fba7b1e2f99858e172e7ce00e45c795a56f4f99974b9",
+        "laneRevision": "7c97d356fafa2a65eb2cc7aca288b69fcab32246",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-12T06:02:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs794cWa",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "43fbb769170b3b6883cc66f4e60f1232bfa97b5e20b330942af7cb677afd6d6a",
+      "digest": "3ccb4de700733d6a4be70f9b9ffb80a52aad5452be1b8dbb9ecc4bcf3ffc6046"
     }
   ]
 }

@@ -227,6 +227,19 @@ test("pending gate terminal failure is never overwritten or followed by auth mut
   assert.equal(harness.events.filter(value => value === "disable").length, 0);
 });
 
+test("same serialized completion survives immediate merge and gate disappearance", () => {
+  const harness = createControllerHarness({
+    mergeAfterCompletion: true,
+    dropCloudAfterCompletion: true,
+  });
+  const result = harness.execute();
+  assert.equal(result.status, "merged-replay");
+  assert.equal(result.mutated, true);
+  assert.deepEqual(result.cloudCheckRunIds, [501]);
+  assert.equal(harness.events.filter(value => value === "gate-complete").length, 1);
+  assert.equal(harness.events.filter(value => value === "gate-create").length, 1);
+});
+
 test("merged replay recovers only exact pending owned evidence for a refreshed candidate", async t => {
   await t.test("pending evidence is completed after full merged proof", () => {
     const harness = createControllerHarness({

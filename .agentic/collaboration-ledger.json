@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2496,
-  "headDigest": "68b2c828320fec5d7f307dc4e760315f257f91b21ba97b93c402c3249472beef",
+  "sequence": 2497,
+  "headDigest": "6ed2fc76cf0b2e82ea4a58ce3d011a2c0a4d937329f21ab341942a32b014bf2e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -123484,6 +123484,58 @@
       },
       "claimDigest": "60eb5d47e554466a6314a738c400a0939e470554fe35e2bd4e0d192414586a43",
       "digest": "68b2c828320fec5d7f307dc4e760315f257f91b21ba97b93c402c3249472beef"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2497,
+      "parentDigest": "68b2c828320fec5d7f307dc4e760315f257f91b21ba97b93c402c3249472beef",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d875f75e0a3f7f6004ceca93f83828dbd5be04326d6a2a5f0d83e17f43c2387c",
+      "idempotencyKey": "2901ab39c1a253d087c1d104ce690a9bef15a3bac34aa0d216afd9c99591edf5",
+      "requestDigest": "216564d7a37a42f52ff96161cb8ce2423cac4c85ea14d9eb4b3689f4da382b01",
+      "evaluationTime": "2026-08-12T08:57:55.000Z",
+      "claimCore": {
+        "claimId": "d875f75e0a3f7f6004ceca93f83828dbd5be04326d6a2a5f0d83e17f43c2387c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:fdac032cd5fa469f76147c4acadcd9adf9a18ecf0a7fc88ff72fed36b0f5c6c9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b75ccc7c0fcc4640ed9f7ed37528ecaad1bc1efcac71f5e9da7642b60c4d8abf",
+        "canonicalBaseRevision": "cee9a40633b4597492532c50d351289d3e8907fa",
+        "declaredWriteScope": [
+          "path:__tests__/planning-context-record-contract.test.mjs",
+          "path:docs/AGENTS.md",
+          "path:docs/FACTS.md",
+          "path:docs/MEMORY.md",
+          "path:docs/README.md",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TODO.md",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:scripts/docs-contract.mjs",
+          "path:scripts/planning-context-record-contract.mjs",
+          "path:todo/2026-08/context-sharded-planning-authority.md",
+          "semantic:context-sharded-planning-authority"
+        ],
+        "writeSetDigest": "b14a70b6599ceee85ac3c1cf63b84d86109579b4a84845c7d675d55a2905f8ce",
+        "laneRevision": "97d2e2675cdd8599381907a2a62dd57c2a1615f5",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-12T09:57:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM799QXU",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c816e644dda1bda0f43accec8d10f2cd95df199d9d2808fc7d30b7f9b7335df4",
+      "digest": "6ed2fc76cf0b2e82ea4a58ce3d011a2c0a4d937329f21ab341942a32b014bf2e"
     }
   ]
 }

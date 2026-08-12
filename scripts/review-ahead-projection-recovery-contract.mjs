@@ -16,6 +16,11 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
   }
   if (normalized.localAuthorityState !== "review_ready") findings.push("local-authority-not-reviewed");
   const integratedReplay = normalized.remoteClaimState === "integrated-preserved";
+  const protectedRefreshReplay = integratedReplay
+    && normalized.localHeadSha !== normalized.reviewHeadSha
+    && normalized.localDescendantReceiptDigest !== null
+    && normalized.localHeadSha === normalized.pullRequestHeadSha
+    && normalized.localHeadSha === normalized.remoteHeadSha;
   if (!integratedReplay && normalized.remoteClaimState !== "dormant-preserved") {
     findings.push("cloud-claim-not-recoverable");
   }
@@ -25,8 +30,8 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
   if (normalized.reviewHeadSha !== normalized.authorityLaneRevision) {
     findings.push("review-head-authority-drift");
   }
-  if (normalized.reviewHeadSha !== normalized.pullRequestHeadSha
-      || normalized.reviewHeadSha !== normalized.remoteHeadSha) {
+  if (!protectedRefreshReplay && (normalized.reviewHeadSha !== normalized.pullRequestHeadSha
+      || normalized.reviewHeadSha !== normalized.remoteHeadSha)) {
     findings.push("review-head-provider-drift");
   }
   if (normalized.localHeadSha !== normalized.reviewHeadSha

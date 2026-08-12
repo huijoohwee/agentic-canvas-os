@@ -72,16 +72,22 @@ export function createRepositoryAdapter({ repository, sourceWorktree, now = () =
       throw new Error("Source cloud claim regained nonterminal authority.");
     }
     const lease = store.read(branch);
-    const source = digestValue(lease) === plan.sourceLeaseDigest && lease?.status === "active";
+    const isSourceLeaseProjection = digestValue(lease) === plan.sourceLeaseDigest
+      && lease?.status === "active";
     const released = lease?.status === "released"
       && lease.plannedRecoveryMarkerReconciliation?.planDigest === plan.planDigest;
-    if (!source && !released) throw new Error("Local owner is neither the exact source nor its exact released projection.");
+    if (!isSourceLeaseProjection && !released) {
+      throw new Error("Local owner is neither the exact source nor its exact released projection.");
+    }
     const markerDigest = digestValue(projectWriterLeasePullRequestMarker(parseWriterLeasePullRequestBody(pull.body)));
     const targetMarkerDigest = released ? digestValue(projectWriterLeasePullRequestMarker(lease)) : null;
     if (markerDigest !== plan.sourceMarkerDigest && markerDigest !== targetMarkerDigest) {
       throw new Error("Pull-request projection is neither the exact source nor released target.");
     }
-    return { branch, pull, cloud, lease, source, released, markerDigest, targetMarkerDigest };
+    return {
+      branch, pull, cloud, lease, source: isSourceLeaseProjection,
+      released, markerDigest, targetMarkerDigest,
+    };
   };
   return Object.freeze({
     buildPlan(input) { return readSource(input).plan; },

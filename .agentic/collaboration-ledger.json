@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2651,
-  "headDigest": "8f5dbb0c519cc7a0272baa2dd4aa2b3628f89ac8577a82dc37e5eda00d3c2822",
+  "sequence": 2652,
+  "headDigest": "49b1a2f3ac28307bd00db5e0ffc16cda04c2e1c9d62546e3e9bfbab9821c85f4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -130935,6 +130935,58 @@
       },
       "claimDigest": "6ed65d6b4fdd8688e90f8a945c0555b052250159a0d4fb5fd6d8f716af6fe587",
       "digest": "8f5dbb0c519cc7a0272baa2dd4aa2b3628f89ac8577a82dc37e5eda00d3c2822"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2652,
+      "parentDigest": "8f5dbb0c519cc7a0272baa2dd4aa2b3628f89ac8577a82dc37e5eda00d3c2822",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "55a08211ece2815519e7fa45461a3b343247075fa949cfd5437e59e9ea65937c",
+      "idempotencyKey": "5ab926d128d8db14d75a4851ecc88cb01f0e3ee444bedbfd413259e67971f75e",
+      "requestDigest": "9a4c1491a87dc99eb1413b031d388319ed9c2004bff1182a32988edcb2d647a7",
+      "evaluationTime": "2026-08-12T15:28:50.000Z",
+      "claimCore": {
+        "claimId": "55a08211ece2815519e7fa45461a3b343247075fa949cfd5437e59e9ea65937c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:48675494d0fdc529ddeee3a8ff386a6f86f45e1ad3fe14c0d269144006f3525f",
+        "canonicalBaseRevision": "9bbc5c20d35b7188b6bbcca5309460a4388cd66b",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/flightSimFloatingPanelControls.test.ts",
+          "path:canvas/src/features/game-flight-sim",
+          "semantic:flight-sim-functionality"
+        ],
+        "writeSetDigest": "988ad56ac6a64fcbe30e91d53b7148e5dd0e6b11b33762a301ee91c0ffaef6ca",
+        "laneRevision": "14458b226cfd4f7e2111bc92729893d0a5a05a8b",
+        "leaseEpoch": 4,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-12T15:55:32.000Z",
+        "evidenceDigest": "56ec704f2aa6c4fc5c9dd38f05aedd50a1d7a8cabf4c621bffc12b3ca344836d",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7949tI",
+        "predecessorClaimId": "841c10985c112b8af7515f78c712a592c8624440ae4ee451dfb70afc454c83f2",
+        "eligibleSince": "2026-08-12T15:24:47.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-12T15:25:32.000Z",
+        "integration": {
+          "candidateRevision": "14458b226cfd4f7e2111bc92729893d0a5a05a8b",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7949tI",
+          "focusedEvidenceDigest": "56ec704f2aa6c4fc5c9dd38f05aedd50a1d7a8cabf4c621bffc12b3ca344836d",
+          "dependencyClosureDigest": "8ebf9c039cc637f3da5d8b8e9bc99248ed1a8a5c674bd4b42e30a91a60e5eca3",
+          "namedChecksDigest": "f3c6c4cd0ae2f611f28215bed4dffc97cda0589e31670db98ceb19cb693ec686",
+          "handoffEvidenceDigest": "0e3156486b8aa67a686ac26688ac9f19c28917b400011a36dfbead8324bac740",
+          "operatorDecisionDigest": "9239b5cd29ec46b06371fbbc056528517a6f0b5ceae53245b33de754cc8f04a4",
+          "integrationIntentDigest": "213be584d34352b9d59a9918ebe975b3fd7c437573a418b0c0ffcc230e0f93d3",
+          "integratedAt": "2026-08-12T15:28:50.000Z"
+        }
+      },
+      "claimDigest": "0181ed93aaf2782c308fac7cbcc27be651d3421b865cdd5cb90e62a565987d1a",
+      "digest": "49b1a2f3ac28307bd00db5e0ffc16cda04c2e1c9d62546e3e9bfbab9821c85f4"
     }
   ]
 }

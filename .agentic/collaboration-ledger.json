@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2497,
-  "headDigest": "6ed2fc76cf0b2e82ea4a58ce3d011a2c0a4d937329f21ab341942a32b014bf2e",
+  "sequence": 2498,
+  "headDigest": "f7b8cc617a95dfa6486f67e9d3b147005813287f128f56b5fc8145ace47e6207",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -123536,6 +123536,57 @@
       },
       "claimDigest": "c816e644dda1bda0f43accec8d10f2cd95df199d9d2808fc7d30b7f9b7335df4",
       "digest": "6ed2fc76cf0b2e82ea4a58ce3d011a2c0a4d937329f21ab341942a32b014bf2e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2498,
+      "parentDigest": "6ed2fc76cf0b2e82ea4a58ce3d011a2c0a4d937329f21ab341942a32b014bf2e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "6fe617c48241c586d32534ce79824ddd2f616af6839e8222cd96491d972f6b29",
+      "idempotencyKey": "f679519e0471d321f10124bf3ac886f402d1e331f3407bfb233d459313a7f1a9",
+      "requestDigest": "4b8daf0991faae69a611969ca5d873ffbae35f20524208fa61c57728ef70a2c6",
+      "evaluationTime": "2026-08-12T09:00:42.000Z",
+      "claimCore": {
+        "claimId": "6fe617c48241c586d32534ce79824ddd2f616af6839e8222cd96491d972f6b29",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:29b5042f793eef45ce3a74aa3b1a720e513cef27bdc377581478eca3da3429ad",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:daa25c07defdd2a7198abc5596727594558cf211a63c7a05c6232dfa91cdcfa3",
+        "canonicalBaseRevision": "cee9a40633b4597492532c50d351289d3e8907fa",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-UNBOUND-BASE-REFRESH.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:active-publish-unbound-base-refresh"
+        ],
+        "writeSetDigest": "e3c5148523d8bece25edecb0ab8e05138c676b818b7c38fdb56ca18f5f5809a3",
+        "laneRevision": "cee9a40633b4597492532c50d351289d3e8907fa",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-12T14:57:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "cee9a40633b4597492532c50d351289d3e8907fa",
+          "reviewRequestId": null,
+          "bytesDigest": "852b8adef8c82129d7836cce82fc25626dedac2ef8581a4251bf4126449c7c91",
+          "namedChecksDigest": "e3c5148523d8bece25edecb0ab8e05138c676b818b7c38fdb56ca18f5f5809a3",
+          "handoffEvidenceDigest": "60eb5d47e554466a6314a738c400a0939e470554fe35e2bd4e0d192414586a43",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-12T09:00:42.000Z"
+        }
+      },
+      "claimDigest": "91185eb2f60e9f7f4cf0c4e9deecca5610a65a856dd3b7e471ee596025dd42b0",
+      "digest": "f7b8cc617a95dfa6486f67e9d3b147005813287f128f56b5fc8145ace47e6207"
     }
   ]
 }

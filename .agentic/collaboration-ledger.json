@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2629,
-  "headDigest": "202880065090590ee07ed2583faebcf06b56c8a8020ee6fddf39e465b8dc5827",
+  "sequence": 2630,
+  "headDigest": "8de91ecb539097f83935055ec6e6a3faedce69d033e0243f306b03e49137718c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -129892,6 +129892,72 @@
       },
       "claimDigest": "fd51b212da00f171ff1558476881c769bc3c0695bd6192b22d232fef3cd188d5",
       "digest": "202880065090590ee07ed2583faebcf06b56c8a8020ee6fddf39e465b8dc5827"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2630,
+      "parentDigest": "202880065090590ee07ed2583faebcf06b56c8a8020ee6fddf39e465b8dc5827",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "eeb000b2f445fc26499d5cea5907ef4c75c57fabca85dcefb8a16db71deb272b",
+      "idempotencyKey": "edf87650988e66d3f489a52ea409af70a2cee136acf09eaacee840d32fd19bc7",
+      "requestDigest": "456849a4c4a93b1a8387e8af5fe97250ef6d62a897aaef062742d4a15ba94940",
+      "evaluationTime": "2026-08-12T14:43:55.000Z",
+      "claimCore": {
+        "claimId": "eeb000b2f445fc26499d5cea5907ef4c75c57fabca85dcefb8a16db71deb272b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:48675494d0fdc529ddeee3a8ff386a6f86f45e1ad3fe14c0d269144006f3525f",
+        "canonicalBaseRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/flightSimFloatingPanelControls.test.ts",
+          "path:canvas/src/features/game-flight-sim",
+          "semantic:flight-sim-functionality"
+        ],
+        "writeSetDigest": "988ad56ac6a64fcbe30e91d53b7148e5dd0e6b11b33762a301ee91c0ffaef6ca",
+        "laneRevision": "46154a22a7ccfd995a01aaa8e958ba8cbfd8e9ee",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-12T12:21:29.000Z",
+        "evidenceDigest": "57a782c99f432505b4f06e5e78c9e3ad9a5be48c82dbf36369f319fafcb8e016",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7949tI",
+        "predecessorClaimId": "1bb4c55ac07f57b829c513df3093f90af11492127a300a392cdd64acccf85af6",
+        "eligibleSince": "2026-08-12T06:56:35.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-12T06:57:25.000Z",
+        "integration": {
+          "candidateRevision": "46154a22a7ccfd995a01aaa8e958ba8cbfd8e9ee",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7949tI",
+          "focusedEvidenceDigest": "57a782c99f432505b4f06e5e78c9e3ad9a5be48c82dbf36369f319fafcb8e016",
+          "dependencyClosureDigest": "58a16a05a1c3ca258534b409d40811b9e6151dd24db91e8974a8b46cab5b37d4",
+          "namedChecksDigest": "bbe191cd029af00f55ba11038426f9893546107f2e1097d416133d4a89f6f1a9",
+          "handoffEvidenceDigest": "89248c7b3cba1baadf6292fc8537f8329a89399d05a22aff85cf7fd49e91a6df",
+          "operatorDecisionDigest": "8dbdcc3ac20c85868fa23769384b92b8590b8d1136c54292c9a1b4c502fa6147",
+          "integrationIntentDigest": "ab586839efdec913aae65c43e88d35def7dbb910faf0500e428918fc1fd0a688",
+          "integratedAt": "2026-08-12T06:59:01.000Z"
+        },
+        "recovery": {
+          "evidenceDigest": "d04405d9e83b9b700111d664153e3e0d2deca8c8b40b79d700eb7644949248ee",
+          "recoveredAt": "2026-08-12T11:51:29.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "46154a22a7ccfd995a01aaa8e958ba8cbfd8e9ee",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7949tI",
+          "bytesDigest": "38eb97a155d42c3b93b1c56cb6b3f07472cadd430a8bc1c23b35bfd4f2875aa8",
+          "namedChecksDigest": "bbe191cd029af00f55ba11038426f9893546107f2e1097d416133d4a89f6f1a9",
+          "handoffEvidenceDigest": "89248c7b3cba1baadf6292fc8537f8329a89399d05a22aff85cf7fd49e91a6df",
+          "integrationReceiptDigest": "94a51e510d6bac8fd5e8755ce2fb12f8ab0941ebe25fd8166f2c685735a04553",
+          "retiredAt": "2026-08-12T14:43:55.000Z"
+        }
+      },
+      "claimDigest": "3396a2bc3542ef4b2a588f0b4ba1c9f9a3fc91ae8d9f73ed0ada793a09083473",
+      "digest": "8de91ecb539097f83935055ec6e6a3faedce69d033e0243f306b03e49137718c"
     }
   ]
 }

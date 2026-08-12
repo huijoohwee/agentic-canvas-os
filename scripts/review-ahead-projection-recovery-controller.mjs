@@ -11,6 +11,11 @@ import {
   REVIEW_AHEAD_RESULT_SCHEMA,
 } from "./review-ahead-projection-recovery-contract.mjs";
 import { captureReviewAheadProjectionEvidence } from "./review-ahead-projection-recovery-evidence.mjs";
+import { partitionChangedPathsByScope } from "./expired-committed-heartbeat-evidence.mjs";
+import {
+  captureProtectedMainPathEquivalence,
+  fetchProtectedMain,
+} from "./protected-main-path-equivalence-lib.mjs";
 
 export function createReviewAheadProjectionController({
   adapter,
@@ -88,6 +93,16 @@ export function createRepositoryReviewAheadProjectionController({ repository, se
       }).trim();
     },
     readLocalDescendantReceipt({ localHeadSha, reviewHeadSha, declaredWriteScope }) {
+      const gitText = args => execFileSync("git", args, {
+        cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+      });
+      fetchProtectedMain({
+        run(command, args) {
+          execFileSync(command, args, {
+            cwd: repository, stdio: ["ignore", "ignore", "pipe"],
+          });
+        },
+      });
       execFileSync("git", ["merge-base", "--is-ancestor", reviewHeadSha, localHeadSha], {
         cwd: repository,
         stdio: ["ignore", "ignore", "pipe"],
@@ -101,18 +116,24 @@ export function createRepositoryReviewAheadProjectionController({ repository, se
       const paths = execFileSync("git", ["diff", "--name-only", "-z", reviewHeadSha, localHeadSha], {
         cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
       }).split("\0").filter(Boolean).sort();
-      const allowed = new Set(declaredWriteScope
-        .filter(value => value.startsWith("path:"))
-        .map(value => value.slice(5)));
-      if (paths.length === 0 || paths.some(value => !allowed.has(value))) {
-        throw new Error("Review-ahead local descendants exceed the admitted write scope.");
-      }
+      if (paths.length === 0) throw new Error("Review-ahead local descendant has no changed paths.");
+      const partition = partitionChangedPathsByScope({
+        changedPaths: paths, declaredWriteSet: declaredWriteScope,
+      });
+      const protectedMainEquivalence = captureProtectedMainPathEquivalence({
+        baseSha: reviewHeadSha, headSha: localHeadSha,
+        exemptPaths: partition.protectedEquivalentPaths, gitText,
+      });
       const binaryDiff = execFileSync("git", ["diff", "--binary", reviewHeadSha, localHeadSha], {
         cwd: repository, encoding: null, stdio: ["ignore", "pipe", "pipe"],
       });
       const receipt = Object.freeze({
         schema: "agentic-review-ahead-local-descendant-evidence/v1",
         reviewHeadSha, localHeadSha, commits, paths,
+        declaredChangedPaths: partition.declaredChangedPaths,
+        protectedEquivalentPaths: partition.protectedEquivalentPaths,
+        protectedMainEquivalence,
+        protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
         treeSha: execFileSync("git", ["rev-parse", `${localHeadSha}^{tree}`], {
           cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
         }).trim(),

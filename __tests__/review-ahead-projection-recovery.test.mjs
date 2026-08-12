@@ -74,6 +74,33 @@ test("an exact integrated-preserved post-success state remains replayable before
   assert.ok(plan.allowedMutations.includes("cloud-integrated-replay-receipt"));
 });
 
+test("integrated-preserved replay accepts one receipt-bound protected refresh head", () => {
+  const refreshedHead = sha("b");
+  const plan = createReviewAheadPlan(fixture({
+    remoteClaimState: "integrated-preserved",
+    localHeadSha: refreshedHead,
+    localDescendantReceiptDigest: digest("6"),
+    remoteHeadSha: refreshedHead,
+    pullRequestHeadSha: refreshedHead,
+    localExpiresAt: "2026-08-10T02:00:00.000Z",
+    remoteExpiresAt: "2026-08-10T02:00:00.000Z",
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "planned");
+  assert.deepEqual(plan.findings, []);
+});
+
+test("integrated-preserved protected refresh requires local remote and PR head equality", () => {
+  const plan = createReviewAheadPlan(fixture({
+    remoteClaimState: "integrated-preserved",
+    localHeadSha: sha("b"),
+    localDescendantReceiptDigest: digest("6"),
+    remoteHeadSha: sha("b"),
+    pullRequestHeadSha: sha("c"),
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "blocked");
+  assert.ok(plan.findings.includes("review-head-provider-drift"));
+});
+
 test("execute projects review-ready once then delegates exact same-session reclaim", async () => {
   let status = "active";
   let projected = 0;

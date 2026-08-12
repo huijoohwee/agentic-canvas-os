@@ -106,6 +106,7 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
         status,
         environment,
       }),
+      followupEvidenceDigest: evidenceDigest,
       expectedReplay: true,
       invoke,
       verify,
@@ -122,6 +123,7 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
         status,
         environment,
       }),
+      followupEvidenceDigest: evidenceDigest,
       expectedReplay: true,
       invoke,
       verify,
@@ -137,6 +139,7 @@ function recoverDormant({
   manifest,
   claim,
   evidenceDigest,
+  followupEvidenceDigest = null,
   expectedReplay,
   deviceId,
   sessionId,
@@ -190,6 +193,22 @@ function recoverDormant({
     deviceId,
     sessionId,
   });
+  if (Date.parse(projected.expiresAt) <= Date.now()) {
+    if (!followupEvidenceDigest) drift();
+    return recoverDormant({
+      authority: projected,
+      manifest,
+      claim: result.claim,
+      evidenceDigest: followupEvidenceDigest,
+      expectedReplay: false,
+      deviceId,
+      sessionId,
+      ttlSeconds,
+      environment,
+      invoke,
+      verify,
+    });
+  }
   const verified = verify({
     authority: projected,
     manifest,
@@ -207,13 +226,13 @@ function requireRecoveryResult({
   operationKey,
   expectedReplay,
 }) {
-  requireReadyResult(result, {
+  requireRecoverySubjectResult(result, {
     authority,
     manifest,
     canonicalBaseSha: authority.canonicalBaseSha,
     expectedState: "active",
     expectedLaneRevision: authority.laneRevision,
-  });
+  }, { allowExpired: expectedReplay });
   const operation = result.operationReceipt;
   if (
     result.replayed !== expectedReplay
@@ -232,6 +251,30 @@ function requireRecoveryResult({
   ) {
     throw new Error("Dormant recovery did not return its exact continuation receipt.");
   }
+}
+
+function requireRecoverySubjectResult(result, expected, { allowExpired }) {
+  if (!allowExpired || Date.parse(result?.claim?.expiresAt) > Date.now()) {
+    requireReadyResult(result, expected);
+    return;
+  }
+  const claim = result?.claim;
+  if (
+    result?.schema !== "agentic-cloud-collaboration-result/v1"
+    || result.ok !== true
+    || result.action !== "continue"
+    || claim?.claimId !== expected.authority.claimId
+    || claim.canonicalBaseRevision !== expected.canonicalBaseSha
+    || claim.laneRevision !== expected.expectedLaneRevision
+    || claim.state !== "current"
+    || claim.writeSetDigest !== expected.manifest.writeSetDigest
+    || JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
+      !== JSON.stringify(expected.manifest.declaredWriteSet)
+    || !Array.isArray(result.findings)
+    || result.findings.length > 0
+  ) drift();
+  requiredSha(result.ledgerRevision, "replay ledger revision");
+  requiredDigest(result.claimDigest, "replay claim digest");
 }
 
 function finalizeContinuation(result, source, manifest) {

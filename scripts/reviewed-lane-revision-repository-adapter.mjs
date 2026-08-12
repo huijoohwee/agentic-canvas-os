@@ -326,13 +326,13 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
       [plan.replacementHeadSha]);
     const live = claim?.reviewRequestId === plan.sourceReviewRequestId
       ? authorityFor(plan, status, claim) : null;
-    if (!live || digestValue(live) !== digestValue(ready)) {
+    if (!live || claimAuthorityDigest(live) !== claimAuthorityDigest(ready)) {
       throw new Error("Reviewed successor review-ready authority drifted before lease projection.");
     }
     const current = readLease();
     return Object.freeze({ ...current, fenceSha: plan.replacementHeadSha,
-      reviewHeadSha: plan.replacementHeadSha, cloudAuthority: ready,
-      heartbeatAt: new Date().toISOString(), expiresAt: ready.expiresAt });
+      reviewHeadSha: plan.replacementHeadSha, cloudAuthority: live,
+      heartbeatAt: new Date().toISOString(), expiresAt: live.expiresAt });
   }
   async function reconcileCloudPhase({ intent, operationKey, phase, plan }) {
     const stored = intent.phases?.[phase]?.values;
@@ -381,7 +381,7 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
     const values = bound ? operationResult(operationKey, { authority: authorityFor(plan, status, claim) })
       : successorValues(operationKey, status, claim);
     if (phase === "successor_review_ready" && stored
-      && digestValue(stored.authority) !== digestValue(values.authority)) {
+      && claimAuthorityDigest(stored.authority) !== claimAuthorityDigest(values.authority)) {
       throw new Error("Reviewed successor review-ready authority drifted after durable recording.");
     }
     return complete(values);
@@ -399,7 +399,8 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
       manifest: manifest(plan), headSha: plan.replacementHeadSha, branch,
       focusedEvidenceDigest: plan.sourceFocusedEvidenceDigest,
       environment, inspect: inspectCloud, invoke: verifyCloud });
-    if (digestValue(verified.authority) !== digestValue(lease.cloudAuthority)) {
+    if (claimAuthorityDigest(verified.authority)
+      !== claimAuthorityDigest(lease.cloudAuthority)) {
       throw new Error("Terminal PR, lease, and cloud authority are not exactly equal.");
     }
     return operationResult(operationKey, { headSha: plan.replacementHeadSha,
@@ -407,6 +408,12 @@ export function createReviewedLaneRevisionRepositoryRuntime(options = {}, depend
       markerDigest: digestValue(parseWriterLeasePullRequestBody(provider.pullRequest.body)),
       terminalDigest: digestValue({ planDigest: plan.planDigest,
         claimDigest: lease.cloudAuthority.claimDigest, pullRequestUrl: provider.pullRequest.url }) });
+  }
+
+  function claimAuthorityDigest(authority) {
+    const { ledgerRevision: _ledgerRevision, ledgerDigest: _ledgerDigest, ...claimAuthority }
+      = authority || {};
+    return digestValue(claimAuthority);
   }
   function readJournal() {
     requireFunction(fence.readReviewedLaneRevisionIntent, "readReviewedLaneRevisionIntent");

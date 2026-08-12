@@ -55,7 +55,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |
 | `MEMORY.md` | Agent memory seed | Bounded agent notes, persistence, routing memory, MoA memory, stateful orchestration memory, reusable runtime-readiness context, and local operating lenses. |
 | `MEMORY-LOG.md` | Append-only memory contract | GitHub-as-SSOT sync boundaries, `memory-log/v1` monthly shards, sigil entries, merge rules, bounded retrieval, and the BM25-to-embedding escalation path. |
-| `TODO.md` | Bounded planning index | Cross-repository `todo-log/v1` monthly shards, append-only lifecycle, exact-first retrieval, size caps, and release compliance. |
+| `TODO.md` | Bounded planning index | Immutable legacy monthly history, independent `todo-context-record/v2` task files, deterministic projection, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
 | `CANONICAL-LIFECYCLE.md` | Provider-neutral release lifecycle | Fenced collaboration, exact Release Frontier, joined integration through rollback receipts, immutable-origin and public transport proof, state reconciliation, publication, and ownership-safe cleanup. |

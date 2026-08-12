@@ -67,7 +67,7 @@ completion_requires:
   - "repository-owned collaboration gate pass with two isolated runtime peers and one common verification digest when parity is claimed"
   - "fresh revision-keyed catalog hydration with identical MCP counts and digest plus browser recomputation within at most two explicit refresh attempts"
   - "memory-log structural compliance"
-  - "monthly planning-shard structural compliance"
+  - "context-record planning structural compliance"
 ---
 
 # Knowgrph Conflict-Safe Session Start Workflow
@@ -107,10 +107,10 @@ Use this context for every Knowgrph Codex build session. Resolve all paths from 
 | Operating model | Operator-led, AI-native startup using typed harnesses and bounded orchestration. Optimize minimum-viable maximum-value, time-to-value, ROI, TCO, and token/cache economics. Prefer FOSS, local, zero-egress, and zero-spend paths when capability is equivalent. |
 | Agentic Canvas OS | `$GITHUB_ROOT/agentic-canvas-os/docs` in the registered `main` worktree is the global, centralized, frontmatter-first SSOT. It must be clean and exactly equal to fetched `origin/main` before a normal Knowgrph Dev port starts. Additional registered task worktrees may author isolated branches but never become runtime docs sources. `/`, `#`, and `@` resolve only through the three dictionaries and their shared runtime projection. |
 | Memory log | `$GITHUB_ROOT/agentic-canvas-os/memory/YYYY-MM.md` is append-only history governed by `MEMORY-LOG.md`. YAML owns only file identity; entries must use exact `## @mem-YYYYMMDDTHHmmssZ` UTC sigil-header blocks. A malformed shard blocks session startup. |
-| Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` is append-only planning history governed by `TODO.md`. Load the active month by default, keep closed months immutable, and block startup on malformed identity, month, lifecycle, ordering, or size. |
+| Cross-repository planning | `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM/<context>.md` is one immutable task record governed by `TODO.md`; flat monthly files are immutable legacy history. Claim only the exact record path and block on malformed identity, duplicates, dates, or projection. |
 | Dev | Author in leased task worktrees. Run Knowgrph only from the clean registered `main` worktree at `$GITHUB_ROOT/knowgrph`; Agentic Canvas OS owns the fixed Apex `5173` and storage `8787` supervisor after exact-main and protected-check verification. |
 | Immutable publication | Use Knowgrph's repository-owned `npm run release:publish:immutable -- ...` object lane only for an already-created commit whose writer stopped or when recovering a checkout-independent delivery. Require the exact source SHA, target ref, expected remote SHA, pinned Agentic Canvas OS SHA, and generated manifest; forbid branch switching, staging, worktree creation, application startup, merge, release, or deployment. |
-| Planning authority | `TODO.md` plus the active `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM.md` shard are the sole live planning owner. Repository-local todo files are forbidden. |
+| Planning authority | `TODO.md` plus independently owned `$GITHUB_ROOT/agentic-canvas-os/todo/YYYY-MM/<context>.md` records are the sole live planning owner. Shared writable indexes and repository-local todo files are forbidden. |
 | Prod mirror | `$GITHUB_ROOT/huijoohwee/content/knowgrph` is generated release output, never a default edit target. Only the repository-owned controller may publish the exact human-authorized candidate. |
 | Cloudflare | `https://airvio.co` and `https://airvio.co/knowgrph` are deployment targets, not completion criteria. Only the repository-owned controller may deploy the exact human-authorized candidate. |
 
@@ -363,13 +363,13 @@ The gate requires `memory-log/v1` frontmatter, matching filename and period, imm
 
 Record the fetched Agentic Canvas OS `origin/main` SHA as `memory_base_ref`. Do not repair a failure by rewriting, reordering, compacting, or deleting history; restore the canonical bytes or append a new superseding record on an authorized task branch.
 
-### 8. Verify Monthly Planning Shards
+### 8. Verify Context-Sharded Planning
 
-Set `PLANNING_ROOT` to `$AGENTIC_CANVAS_OS_ROOT/todo` and run the structural command under `Planning Shard Compliance Checks` in `VALIDATION-RUNBOOK.md`.
+Run the structural command under `Planning Context Record Compliance Checks` in `VALIDATION-RUNBOOK.md`.
 
-The gate validates `TODO.md`, every `todo-log/v1` shard, filename-period identity, one scope, active/closed lifecycle, chronological unique UTC date headings, month boundaries, and the 500,000-byte and 599-line caps. Record the fetched Agentic Canvas OS SHA as `planning_base_ref`, the active shard, and one stable `planning_context` for the task row.
+The gate validates `TODO.md`, immutable legacy shard identities, every `todo-context-record/v2` file, path/frontmatter identity, unique Context ownership, one complete 11-cell row, dates, and deterministic projection. Record the fetched Agentic Canvas OS SHA as `planning_base_ref`, one stable `planning_context`, and its exact `todo/YYYY-MM/<context>.md` path.
 
-Imported pre-adoption rows remain historical evidence. Do not normalize them in place. New rows append at EOF and follow the strict row contract in `TODO.md`.
+Legacy rows remain historical evidence and must not change. New work creates exactly one record absent at the base; independent lanes never append to a shared monthly file.
 
 ### 9. Start
 
@@ -594,6 +594,6 @@ Stop before build mutation when scoped admission lacks an actual-path manifest, 
 
 ## Completion VCC
 
-Given a declared device, session, semantic scope, and task worktree, when `/session.start` reports `authoring_status: ready`, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, memory and planning shards are compliant, and Codex mutates only its leased task worktree. When it additionally reports `parity_status: passed`, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, and catalog hydration is fresh with matching full-catalog counts and one browser-verified SHA-256 catalog digest across `/`, `#`, and `@`.
+Given a declared device, session, semantic scope, and task worktree, when `/session.start` reports `authoring_status: ready`, then both repositories' remote refs are fetched, the registered main worktrees remain clean at their fetched bases, the task path is a distinct registered worktree, one unexpired branch-bound lease and one draft pull request own the semantic scope, the lease worktree path, epoch, and fencing SHA match the task branch, memory logs and planning Context records are compliant, and Codex mutates only its leased task worktree. When it additionally reports `parity_status: passed`, one application-root runtime owns global identity, MainPanel Settings projects the gate as shared KTV rows, every participating running surface visibly reports identical exact Knowgrph and Agentic Canvas OS SHAs, and catalog hydration is fresh with matching full-catalog counts and one browser-verified SHA-256 catalog digest across `/`, `#`, and `@`.
 
 VCC: verify both fetches exit zero; `git worktree list --porcelain -z` identifies one registered `main` owner plus the declared task worktree; every checked-out branch is unique; the Agentic Canvas OS main worktree is clean with `HEAD` equal to fetched `origin/main`; the task lease registry entry matches its session, branch, and path; memory and planning checks pass; the Knowgrph main worktree remains clean; and no Prod mirror or Cloudflare action occurred. Before any parity-dependent handoff, additionally verify `npm run collaboration:gate -- --json` exits zero with schema `agentic-collaboration-gate-result/v2`, two distinct automated peers, exact revisions, fresh bounded hydration, and one common verification digest.

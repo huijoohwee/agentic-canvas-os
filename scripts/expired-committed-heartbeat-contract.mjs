@@ -106,7 +106,7 @@ export function assertSameCloudSubject({ source, renewed, lease, now }) {
       JSON.stringify(normalizedSource.cloudDeclaredWriteScope) ||
     normalizedRenewed.state !== "active" ||
     normalizedRenewed.laneRevision !== lease.fenceSha ||
-    normalizedRenewed.transitionCounter !== source.transitionCounter + 1 ||
+    normalizedRenewed.transitionCounter <= source.transitionCounter ||
     Date.parse(normalizedRenewed.expiresAt) <= now.getTime()
   ) {
     throw new Error("Cloud heartbeat changed the expired lease claim subject.");

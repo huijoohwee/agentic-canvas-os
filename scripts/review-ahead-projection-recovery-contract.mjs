@@ -16,12 +16,13 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
   }
   if (normalized.localAuthorityState !== "review_ready") findings.push("local-authority-not-reviewed");
   const integratedReplay = normalized.remoteClaimState === "integrated-preserved";
-  const protectedRefreshReplay = integratedReplay
+  const dormantReplay = normalized.remoteClaimState === "dormant-preserved";
+  const protectedRefreshReplay = (integratedReplay || dormantReplay)
     && normalized.localHeadSha !== normalized.reviewHeadSha
     && normalized.localDescendantReceiptDigest !== null
     && normalized.localHeadSha === normalized.pullRequestHeadSha
     && normalized.localHeadSha === normalized.remoteHeadSha;
-  if (!integratedReplay && normalized.remoteClaimState !== "dormant-preserved") {
+  if (!integratedReplay && !dormantReplay) {
     findings.push("cloud-claim-not-recoverable");
   }
   if (normalized.pullRequestState !== "OPEN" || normalized.pullRequestDraft) {

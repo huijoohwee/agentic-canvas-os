@@ -64,7 +64,7 @@ export function createProtectedHeadRefreshControllerState({
     }
     return observed;
   };
-  const mergedReplay = pull => {
+  const replayMerged = (pull, { completedCloud = null } = {}) => {
     verifyChain(pull);
     verifyMergedCommit({
       mergeCommitSha: pull.mergeCommitSha,
@@ -78,7 +78,7 @@ export function createProtectedHeadRefreshControllerState({
         : projection.candidate_auto_merge_commit_message,
     });
     let cloudCheckRunIds;
-    let mutated = false;
+    let mutated = completedCloud !== null;
     if (pull.headSha !== projection.delivered_head_sha) {
       if (pull.baseSha !== projection.target_main_sha) {
         throw new Error("Protected-head refresh merged candidate base drifted from target main.");
@@ -95,6 +95,15 @@ export function createProtectedHeadRefreshControllerState({
         );
       }
       let cloud = readCloudReceipt({ candidateSha: pull.headSha, create: false });
+      if (cloud.status === "absent" && completedCloud !== null) {
+        const carried = requireCloudReceipt(completedCloud);
+        if (carried.status !== "complete") {
+          throw new Error(
+            "Protected-head refresh carried cloud completion is not terminal success.",
+          );
+        }
+        cloud = carried;
+      }
       const verifyRecoveryEvidence = confirmed => {
         verifyCandidateWorkflow({
           candidateSha: candidate.candidateSha,
@@ -189,6 +198,9 @@ export function createProtectedHeadRefreshControllerState({
       mutated,
     });
   };
+  // Keep the carried-receipt capability private to finishCandidate. Public
+  // replay must always re-observe durable provider evidence.
+  const mergedReplay = pull => replayMerged(pull);
   const inspectExactCandidate = pull => {
     const candidate = inspectCandidate({
       candidateSha: pull.headSha,
@@ -502,7 +514,7 @@ export function createProtectedHeadRefreshControllerState({
       afterAuthorization = readSettled({ autoMerge: "either" });
       if (afterAuthorization.merged) {
         return Object.freeze({
-          ...mergedReplay(afterAuthorization),
+          ...replayMerged(afterAuthorization, { completedCloud: cloud }),
           workflowRunId: ci.workflowRunId,
           checkSuiteId: ci.checkSuiteId,
           cloudCheckRunIds: cloud.checkRunIds,

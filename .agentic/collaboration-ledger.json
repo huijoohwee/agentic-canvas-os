@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2300,
-  "headDigest": "10392492991f7808d6063e1d4f855f878e0ad55c586295bd78ffa21493f86ee5",
+  "sequence": 2301,
+  "headDigest": "d3f3a1919f0cf7dc91a93ac70e9e7dec67560662237cbebe154e8e3065e549f0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -114232,6 +114232,66 @@
       },
       "claimDigest": "c9ecc7eb398d681e904b5041bbc40682d58bb9daf919f539e3f0ed62983d763f",
       "digest": "10392492991f7808d6063e1d4f855f878e0ad55c586295bd78ffa21493f86ee5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2301,
+      "parentDigest": "10392492991f7808d6063e1d4f855f878e0ad55c586295bd78ffa21493f86ee5",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "a5750b777601b2d508d0ab12ce96fd8f3a89b52cce3fe42292c6cb2b633254e0",
+      "idempotencyKey": "a90e735dc8b46d716fa4c05d5271194ff481c7df09a6de6f25a7f2d324909a5a",
+      "requestDigest": "0cefa0b4f78c6a31a6c02f26766bae7c33780dee92e48b19520f4a6b518f8c3a",
+      "evaluationTime": "2026-08-12T01:08:19.000Z",
+      "claimCore": {
+        "claimId": "a5750b777601b2d508d0ab12ce96fd8f3a89b52cce3fe42292c6cb2b633254e0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2e84e17c1d030a60702f627ffc995520edf68b16e1758b9bafdcd36161db9018",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:d82ade18d5ea1d4e82fdc01a5afdb695d22a26bb7586a2501a61205f12be0f98",
+        "canonicalBaseRevision": "6c6ad43b4461d7d83fac866d1964e610246e0eeb",
+        "declaredWriteScope": [
+          "path:docs/runtime-readiness-contract.md",
+          "semantic:release-acos-docs-pin"
+        ],
+        "writeSetDigest": "13824ff43354c109de4d30593fd814802122e3eff3b1bf47afc8cec68281011e",
+        "laneRevision": "51e9ef017d2fde495d16337719520e8c63f49fe7",
+        "leaseEpoch": 1,
+        "transitionCounter": 9,
+        "heartbeatCounter": 3,
+        "state": "retired",
+        "expiresAt": "2026-08-10T16:11:43.000Z",
+        "evidenceDigest": "c4b79d61079ac24879de708407645e9a678cc99262723ad53b049e33e65be86c",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs79FaeF",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "51e9ef017d2fde495d16337719520e8c63f49fe7",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs79FaeF",
+          "focusedEvidenceDigest": "c4b79d61079ac24879de708407645e9a678cc99262723ad53b049e33e65be86c",
+          "dependencyClosureDigest": "cc88d3b7d16b361c7954b29a04017f3cff4d9f7cf616d50da9b7659e60609f8c",
+          "namedChecksDigest": "f356cb22b37a9db0ff20188fe0988e7421a499ff46d6de0d8a69205a983a3c59",
+          "handoffEvidenceDigest": "7b0c3e2f5e3f81f13083a911dd97beb5ce40fd13e610cc771533f5bb9ed894c5",
+          "operatorDecisionDigest": "17a2be59fec1bbe6770f6ad91061dde78b3475ab667d24e1bb9c7aed21029720",
+          "integrationIntentDigest": "fb2eb382ed6c7a8063f52998b101c342bfc4bb2f5416c7cb8730bcf269065186",
+          "integratedAt": "2026-08-10T15:47:15.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "51e9ef017d2fde495d16337719520e8c63f49fe7",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs79FaeF",
+          "bytesDigest": "283d0b37d995127c786408bea6a0c66abada1c5167bee345c0ce1bfa100c71c7",
+          "namedChecksDigest": "f356cb22b37a9db0ff20188fe0988e7421a499ff46d6de0d8a69205a983a3c59",
+          "handoffEvidenceDigest": "7b0c3e2f5e3f81f13083a911dd97beb5ce40fd13e610cc771533f5bb9ed894c5",
+          "integrationReceiptDigest": "fa4e7ce5439fd678de63f710978f2d81057d0b6f08fc81b21da101a6c7e17413",
+          "retiredAt": "2026-08-12T01:08:19.000Z"
+        }
+      },
+      "claimDigest": "1c28853d14d043ec34deedd202bb7ebb26f91b86cefa2fe5010fe6965475b8f0",
+      "digest": "d3f3a1919f0cf7dc91a93ac70e9e7dec67560662237cbebe154e8e3065e549f0"
     }
   ]
 }

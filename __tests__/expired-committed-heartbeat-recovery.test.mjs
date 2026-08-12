@@ -412,6 +412,22 @@ test("recovery replays an advanced heartbeat after source expiry and restores it
   assert.equal(harness.markerWrites(), 1);
 });
 
+test("recovery projects a repeated response-loss transition chain", () => {
+  const source = liveManifestLease();
+  const harness = recoveryHarness({
+    source,
+    renewedManifestDigest: source.cloudAuthority.manifestDigest,
+    transitionIncrement: 3,
+  });
+
+  const result = recoverExpiredCommittedHeartbeat(harness.input);
+
+  assert.equal(result.lease.cloudAuthority.transitionCounter,
+    source.cloudAuthority.transitionCounter + 3);
+  assert.equal(harness.localWrites(), 1);
+  assert.equal(harness.markerWrites(), 1);
+});
+
 test("recovery rejects arbitrary renewed manifest drift before local CAS or marker mutation", () => {
   const source = liveManifestLease();
   const transportManifestDigest = digestValue({
@@ -483,7 +499,7 @@ test("recovery rejects a missing source manifest before cloud, local CAS, or mar
   assert.equal(harness.markerWrites(), 0);
 });
 
-test("expired-source replay requires the next exact cloud transition", () => {
+test("expired-source replay requires a newer cloud transition", () => {
   const source = liveManifestLease({
     cloudExpiresAt: "2026-08-04T11:30:00.000Z",
   });
@@ -494,7 +510,7 @@ test("expired-source replay requires the next exact cloud transition", () => {
   const harness = recoveryHarness({
     source,
     renewedManifestDigest: transportManifestDigest,
-    transitionIncrement: 2,
+    transitionIncrement: 0,
   });
 
   assert.throws(

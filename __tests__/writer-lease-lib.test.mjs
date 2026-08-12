@@ -457,7 +457,7 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     });
     const renewedCloudAuthority = {
       ...cloudAuthority,
-      transitionCounter: cloudAuthority.transitionCounter + 1,
+      transitionCounter: cloudAuthority.transitionCounter + 3,
       ledgerRevision: "d".repeat(40),
       claimLedgerRevision: "e".repeat(64),
       expiresAt: "2026-08-04T13:00:00.000Z",
@@ -490,18 +490,6 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     assert.throws(() => store.recoverExpiredCommittedHeartbeat({
       sessionId: "session-a",
       branch,
-      expectedLease: source,
-      renewedCloudAuthority: {
-        ...renewedCloudAuthority,
-        transitionCounter: cloudAuthority.transitionCounter + 2,
-      },
-      recoveryEvidence: evidence,
-      ttlMs: 1_800_000,
-      recoveredAt: "2026-08-04T10:02:00.000Z",
-    }), /changed the expired lease claim subject/);
-    assert.throws(() => store.recoverExpiredCommittedHeartbeat({
-      sessionId: "session-a",
-      branch,
       expectedLease: { ...source, epoch: source.epoch + 1 },
       renewedCloudAuthority,
       recoveryEvidence: evidence,
@@ -525,6 +513,8 @@ test("expired committed heartbeat atomically preserves epoch and replaces only c
     assert.equal(recovered.pullRequestUrl, source.pullRequestUrl);
     assert.equal(recovered.cloudAuthority.claimId, source.cloudAuthority.claimId);
     assert.equal(recovered.cloudAuthority.ledgerRevision, renewedCloudAuthority.ledgerRevision);
+    assert.equal(recovered.cloudAuthority.transitionCounter,
+      cloudAuthority.transitionCounter + 3);
     assert.equal(recovered.heartbeatAt, "2026-08-04T10:02:00.000Z");
     assert.equal(recovered.expiresAt, "2026-08-04T10:32:00.000Z");
     assert.equal(recovered.expiredCommittedHeartbeatRecovery.schema,

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2634,
-  "headDigest": "02db67effca187291b1b2bf8521dd4d5a9aebbd6b9a752e003dd9675436065cc",
+  "sequence": 2635,
+  "headDigest": "16c9885812b2b71c61126fb1d9b4e47222060151ca2b97469110b4d0077f728a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -130126,6 +130126,49 @@
       },
       "claimDigest": "13c424b6cea25254520c75081b0ca00996324982a08eebefe7b5787d4361f629",
       "digest": "02db67effca187291b1b2bf8521dd4d5a9aebbd6b9a752e003dd9675436065cc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2635,
+      "parentDigest": "02db67effca187291b1b2bf8521dd4d5a9aebbd6b9a752e003dd9675436065cc",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e2374b2b34f44d9d5473388817ff658304d0864b0546c464528af37aa3dd17d6",
+      "idempotencyKey": "e4edb4dd39b34e7c73a42da9f93259edc17f3584ae958587aa4629a275f41a3e",
+      "requestDigest": "0edcbe94125109ed1c00996042d6993fba3c754855758f4d2612ad456c1e5bf4",
+      "evaluationTime": "2026-08-12T14:53:26.000Z",
+      "claimCore": {
+        "claimId": "e2374b2b34f44d9d5473388817ff658304d0864b0546c464528af37aa3dd17d6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:aba4d3f443b214e6bedae1a1a34860dd8fb567b87e70411fbde43eb1b5f6557b",
+        "canonicalBaseRevision": "058c12749d65804e77d4085fa14d2e196b511eaf",
+        "declaredWriteScope": [
+          "path:__tests__/active-publish-write-scope.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-WRITE-SCOPE.md",
+          "path:scripts/active-publish-write-scope.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:todo/2026-08/active-publish-directory-scope-recovery.md",
+          "semantic:active-publish-directory-scope-recovery"
+        ],
+        "writeSetDigest": "3f8b7c7efd971c39bfa7027bcd64840161d216c6d7bfd03ad973f115f49b5fb4",
+        "laneRevision": "058c12749d65804e77d4085fa14d2e196b511eaf",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T15:53:10.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cbd4a59b1825ee89db960aee7abc0b23855ce9f978a784b191b90096cd17b459",
+      "digest": "16c9885812b2b71c61126fb1d9b4e47222060151ca2b97469110b4d0077f728a"
     }
   ]
 }

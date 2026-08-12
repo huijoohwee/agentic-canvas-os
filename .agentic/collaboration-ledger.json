@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2505,
-  "headDigest": "e39d3c602552ed4e619ec7a5c3f111cdc634368a6efc334b47403c1c0c8a3a4f",
+  "sequence": 2506,
+  "headDigest": "96af2d8489e36479a68db7a4626572058e9a4e72c46c160ef3309bfccf8dd484",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -123981,6 +123981,69 @@
       },
       "claimDigest": "567b95a00b6d8826ac42ca9387bd1311bf21c9395c6e882b98ab30b6b030d5cc",
       "digest": "e39d3c602552ed4e619ec7a5c3f111cdc634368a6efc334b47403c1c0c8a3a4f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2506,
+      "parentDigest": "e39d3c602552ed4e619ec7a5c3f111cdc634368a6efc334b47403c1c0c8a3a4f",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4c09809a416a494dbcea33b102c6d2ce23359861a0b4191f4591c80e1af7cb00",
+      "idempotencyKey": "6a39cbaf555a91bae78d0f25f0fe5d35d4eac2653089ef46eb2f766d36de18c8",
+      "requestDigest": "2972243355a9c52a1fd58e3f94b32fd597d4d411983cadb764b2754fcb01c08e",
+      "evaluationTime": "2026-08-12T09:22:18.000Z",
+      "claimCore": {
+        "claimId": "4c09809a416a494dbcea33b102c6d2ce23359861a0b4191f4591c80e1af7cb00",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c062dc1894aa1407ecfe0060f1085ec0b7dda21cdae0d45fc12be04a00900a20",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c660587c6a2b6f73350938405c430dccc4904ac4ccf41ac0a26e73bd10f5746c",
+        "canonicalBaseRevision": "270dfa50cc6825115d0856ae931047cd5e531b18",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-preservation-decision-contract.test.mjs",
+          "path:__tests__/dormant-preservation-decision-controller.test.mjs",
+          "path:__tests__/dormant-preservation-decision-evidence.test.mjs",
+          "path:__tests__/dormant-preservation-decision-repository-adapter.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:docs/DORMANT-PRESERVATION-DECISION.md",
+          "path:docs/SCOPED-LANE-ADMISSION.md",
+          "path:docs/schemas/dormant-preservation-decision-plan.v2.schema.json",
+          "path:scripts/dormant-preservation-decision-contract.mjs",
+          "path:scripts/dormant-preservation-decision-evidence.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "semantic:collaboration-ledger-stable-verification"
+        ],
+        "writeSetDigest": "5ed358191f90860367c8cdc9dddc8856fb9bdf0c33953feb724f6c8a366a8990",
+        "laneRevision": "74ef8cee7135466f931239895b4a81e486971c17",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-12T12:21:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM798u1p",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "74ef8cee7135466f931239895b4a81e486971c17",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM798u1p",
+          "bytesDigest": "6dffc0408b94943a0e44caf9300b962919962c1a55970975ec2e12bf4cb44e43",
+          "namedChecksDigest": "275d4ab20e78fdf2941417f5aac24e15b17267daa181970332089d4342c40569",
+          "handoffEvidenceDigest": "a2443567365094e703dea52ab531a65e2bdfbd272ee8b66c336a97c79c9246db",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-12T09:22:18.000Z"
+        }
+      },
+      "claimDigest": "7b8fad7e5e21089c411ba19a228d6f1b5191d0dd155040d1ca044c3dd5993cf7",
+      "digest": "96af2d8489e36479a68db7a4626572058e9a4e72c46c160ef3309bfccf8dd484"
     }
   ]
 }

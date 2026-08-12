@@ -90,6 +90,33 @@ test("integrated-preserved replay accepts one receipt-bound protected refresh he
   assert.deepEqual(plan.findings, []);
 });
 
+test("expired dormant-preserved replay accepts the same exact protected refresh proof", () => {
+  const refreshedHead = sha("b");
+  const plan = createReviewAheadPlan(fixture({
+    localHeadSha: refreshedHead,
+    localDescendantReceiptDigest: digest("6"),
+    remoteHeadSha: refreshedHead,
+    pullRequestHeadSha: refreshedHead,
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "planned");
+  assert.deepEqual(plan.findings, []);
+  assert.ok(plan.allowedMutations.includes("cloud-successor-reclaim"));
+});
+
+test("dormant-preserved protected refresh remains blocked before expiry", () => {
+  const refreshedHead = sha("b");
+  const plan = createReviewAheadPlan(fixture({
+    localHeadSha: refreshedHead,
+    localDescendantReceiptDigest: digest("6"),
+    remoteHeadSha: refreshedHead,
+    pullRequestHeadSha: refreshedHead,
+    localExpiresAt: "2026-08-10T02:00:00.000Z",
+    remoteExpiresAt: "2026-08-10T02:00:00.000Z",
+  }), { now: new Date("2026-08-10T01:00:00.000Z") });
+  assert.equal(plan.status, "blocked");
+  assert.ok(plan.findings.includes("authority-not-expired"));
+});
+
 test("integrated-preserved protected refresh requires local remote and PR head equality", () => {
   const plan = createReviewAheadPlan(fixture({
     remoteClaimState: "integrated-preserved",

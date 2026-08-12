@@ -25,7 +25,7 @@ try {
   const candidateSession = requiredOption("candidate-session");
   const expectedSourceHead = requiredSha(requiredOption("expected-source-head"), "source head");
   const expectedSourceClaim = requiredDigest(requiredOption("expected-source-claim"), "source claim");
-  const report = readJson(requiredOption("admission-report"));
+  const rootSourceBootstrapAuthorization = readJson(requiredOption("root-source-bootstrap"));
   const result = retirePlannedAdmissionOwner({
     candidateRepository,
     sourcePath,
@@ -33,7 +33,7 @@ try {
     candidateSession,
     expectedSourceHead,
     expectedSourceClaim,
-    report,
+    rootSourceBootstrapAuthorization,
   });
   process.stdout.write(`${JSON.stringify(result, null, json ? 0 : 2)}\n`);
 } catch (error) {
@@ -54,7 +54,7 @@ export function retirePlannedAdmissionOwner({
   candidateSession,
   expectedSourceHead,
   expectedSourceClaim,
-  report,
+  rootSourceBootstrapAuthorization,
   now = () => new Date(),
 }) {
   const candidateRoot = git(candidateRepository, ["rev-parse", "--show-toplevel"]);
@@ -62,6 +62,7 @@ export function retirePlannedAdmissionOwner({
   const commonDirectory = resolveCommonDirectory(candidateRoot);
   const leaseStore = createWriterLeaseStore({ gitCommonDir: commonDirectory });
   const candidateLease = leaseStore.verify({ sessionId: candidateSession, branch: candidateBranch });
+  const report = bootstrapReport(rootSourceBootstrapAuthorization, candidateLease);
   const verified = verifyAdmissionCloudAuthority({
     authority: candidateLease.cloudAuthority,
     manifest: candidateLease.admission,
@@ -151,6 +152,21 @@ export function retirePlannedAdmissionOwner({
   });
 }
 
+function bootstrapReport(authorization, candidateLease) {
+  return {
+    rootSourceBootstrapAuthorization: authorization,
+    cloudAuthority: { claimId: candidateLease.cloudAuthority?.claimId },
+    candidate: {
+      semanticScope: candidateLease.admission?.semanticScope,
+      branch: candidateLease.branch,
+      targetPath: candidateLease.worktreePath,
+      manifestDigest: candidateLease.admission?.manifestDigest,
+      writeSetDigest: candidateLease.admission?.writeSetDigest,
+    },
+    canonicalBaseSha: candidateLease.baseSha,
+  };
+}
+
 function readPullRequest(reference) {
   const value = JSON.parse(execFileSync("gh", ["pr", "view", reference, "--json",
     "url,number,state,isDraft,mergedAt,closedAt,headRefName,headRefOid,baseRefName,baseRefOid"],
@@ -161,7 +177,7 @@ function readPullRequest(reference) {
     state: value.state,
     draft: value.isDraft,
     mergedAt: value.mergedAt,
-    closedAt: value.closedAt,
+    closedAt: value.closedAt ? new Date(value.closedAt).toISOString() : null,
     headBranch: value.headRefName,
     headSha: value.headRefOid,
     baseBranch: value.baseRefName,

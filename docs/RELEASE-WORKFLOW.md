@@ -104,13 +104,14 @@ does not add provider fields to any lifecycle receipt. The existing Knowgrph
 prompt remains the reference localhost adapter and keeps its current schema and
 rendered output.
 
-## Remote Release-Completion Invocation
+## Remote Release-Completion Adapter Profile
 
-A remote caller may inspect, wake, or continue one exact existing release run.
-It is a replaceable transport adapter around `/release.complete`, not a second
-invocation route, release controller, state store, collaboration ledger, or
-authority source. The same contract applies across models, agents, schedulers,
-queues, webhooks, source-control hosts, deployment platforms, and interfaces.
+This reference profile maps remote transport onto the provider-neutral
+lifecycle owned by `CANONICAL-LIFECYCLE.md`. It defines no receipt semantics,
+state machine, route, controller, store, ledger, or authority source. A remote
+caller may inspect, wake, or continue one exact existing release run through
+`/release.complete`; the mapping is replaceable across models, agents,
+schedulers, queues, webhooks, hosts, platforms, and interfaces.
 
 Remote acknowledgement, HTTP success, tool success, runner termination, or a
 model response proves only the stated transport observation. None creates
@@ -118,9 +119,11 @@ review, integration, human authorization, deployment, publication, cleanup, or
 completion authority. Those states advance only through their existing owner
 and canonical receipt.
 
-A remote caller, model, or agent is never inferred as `@operator`. When a state
-requires human authority, only the existing authenticated decision adapter may
-bind that role and emit its canonical receipt.
+A remote caller, model, or agent is never inferred as `@operator`. The
+authenticated human supplies the exact decision, the Interaction Adapter only
+records the challenge and response, and the Authority Adapter independently
+validates the decision and persists the Human Authorization Receipt. Neither
+adapter invents the decision or gains release authority.
 
 ### Bounded Envelope
 
@@ -128,8 +131,8 @@ The adapter maps one normalized envelope onto the current release owner:
 
 | Field group | Required content |
 |---|---|
-| Request identity | Stable invocation ID, idempotency key, and `inspect` or `continue` mode. |
-| Run identity | Existing release-run reference, current state, highest valid receipt digest, and canonical owner. |
+| Request delivery | Stable transport request ID, transport-delivery idempotency key, and `inspect` or `continue` mode. |
+| Canonical release | Existing release-run reference, exact target and candidate digests, their unchanged canonical release key, current state, highest valid receipt digest, and owner. |
 | Immutable subject | Source, candidate, target, dependency-closure, policy, artifact, and manifest identities already established by the run. |
 | Collaboration subject | Current claim, epoch, fence, ledger revision, and predecessor receipt digests when applicable. |
 | Requested transition | One typed blocker, its owner, and the single existing state transition requested. |
@@ -139,7 +142,7 @@ The adapter maps one normalized envelope onto the current release owner:
 The envelope carries digests, bounded deltas, and opaque references. It never
 carries credentials, full transcripts, repository archives, mutable `latest`
 selectors, or unrestricted executable input. Provider-specific fields remain
-inside the selected adapter profile and cannot enter the universal contract.
+inside the selected adapter and cannot redefine the canonical contract.
 
 ### Unblock Procedure
 
@@ -151,16 +154,17 @@ inside the selected adapter profile and cannot enter the universal contract.
    predecessor receipts.
 3. Select one eligible adapter from declared capabilities, trust policy,
    deadline, and observed cost. Do not broadcast to competing controllers.
-4. Dispatch the minimum envelope using one stable idempotency key. Continue
-   only the existing run, claim, checkpoint, or release owner.
+4. Dispatch the minimum envelope with one transport-delivery key while retaining
+   the canonical release key defined by the exact target and candidate digests.
+   Continue only the existing run, claim, checkpoint, or release owner.
 5. When acknowledgement is absent or `unknown`, reconcile status before any
-   retry. Retry the same request and idempotency key; never replay a committed
-   effect.
+   retry. Retry the same transport request and both unchanged keys; never fork
+   release ownership or replay a committed effect.
 6. The canonical owner reruns its gate. An unblock exists only when the
    original typed blocker is absent and that owner emits its existing receipt.
-7. If a human decision is required, pause through `/human.review`. A transport
-   may present the exact challenge but cannot infer, fabricate, or submit the
-   decision.
+7. If a human decision is required, pause through `/human.review`. Transport
+   may present the exact challenge, but only the human decides; the Interaction
+   and Authority Adapters then record and validate through their existing owners.
 8. Resume `/release.complete` only after unchanged predecessor identities join.
    A later gate remains independent and may still block.
 
@@ -169,19 +173,13 @@ Remote continuation may use `/collaboration.continue` for the exact claim and
 own authority, idempotency, and proof rules; this profile adds no alias or
 fallback state machine.
 
-### Typed Result
+### Result Projection
 
-Transport acknowledgement is separately `accepted`, `rejected`, or `unknown`
-and never uses `completed`. The canonical release owner returns one of:
-
-| Result | Maximum valid claim |
+| Layer | Closed values and maximum valid claim |
 |---|---|
-| `advanced` | One owner-validated blocker cleared and its existing next state began. |
-| `awaiting-human-authorization` | The exact challenge is ready; no decision or forward authority exists. |
-| `blocked` | The named owner and required next evidence are known; downstream mutation remains closed. |
-| `stale` | Immutable identity, authority, or proof drift requires a new canonical request. |
-| `rolled-back` | The canonical rollback receipt and state disposition validate; forward completion did not occur. |
-| `completed` | Deployment, state reconciliation, live verification, publication, receipt persistence, and cleanup dispositions join as `production-complete`. |
+| Transport acknowledgement | `accepted`, `rejected`, or `unknown`; delivery observation only. |
+| Continuation observation | `advanced`, `awaiting-human-authorization`, `blocked`, or `stale`; the current owner, evidence, and next action are named without a terminal claim. |
+| Canonical lifecycle `completion` | Exactly `in-progress`, `production-complete`, or `rolled-back`; only the canonical joined receipt chain and cleanup disposition may establish a terminal value. |
 
 ### Adaptiveness And Economics
 
@@ -189,8 +187,9 @@ and never uses `completed`. The canonical release owner returns one of:
   reconciliation, event delivery, cancellation, and bounded artifact
   references. A missing capability selects another eligible transport or
   returns `blocked`; it never weakens proof.
-- Adapter fallback changes transport only. Invocation, immutable subject,
-  policy, human boundary, and required receipts remain unchanged.
+- Adapter fallback changes transport and its delivery key only. The canonical
+  release key, immutable subject, policy, human boundary, controller, and
+  required receipts remain unchanged.
 - Prefer zero-model status, routing, validation, and retry decisions. Reuse a
   valid checkpoint instead of replaying completed work.
 - Use one controller for one candidate and target. Speculative fan-out and

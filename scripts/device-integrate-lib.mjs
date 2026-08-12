@@ -127,6 +127,7 @@ function integrateSessionUnfenced({
   verifyCloudSuccessor = invokeRepositoryCloudVerifier,
   casActiveLeaseProjection = casWriterLeaseProjection,
   continueReviewReadyCloudAuthority = continueReviewReadyCloudAuthorityProjection,
+  renewActiveAuthority = null,
   log = console.log,
 }) {
   requireRepositoryRoot({ invocationPath, repo });
@@ -177,9 +178,17 @@ function integrateSessionUnfenced({
     });
     lease = leaseStore.read(branch);
   } else if (lease.status === "active") {
+    lease = renewIntegrationAuthority({
+      branch, lease, leaseStore, sessionId, gitText, renewActiveAuthority,
+      phase: "before-validation", now,
+    });
     commitEvidence = prepareIntegrationCommit({
       branch, lease, repo, gitText, leaseStore, sessionId, run,
-      commitMessage, pathsManifest, now,
+      commitMessage, pathsManifest, now, renewActiveAuthority,
+    });
+    lease = renewIntegrationAuthority({
+      branch, lease: leaseStore.read(branch), leaseStore, sessionId, gitText,
+      renewActiveAuthority, phase: "before-publication", now,
     });
     refreshTaskBranchFromMain({
       repo,
@@ -1796,7 +1805,7 @@ function requireSha(value, label) {
 
 function prepareIntegrationCommit({
   branch, lease, repo, gitText, leaseStore, sessionId, run,
-  commitMessage, pathsManifest, now,
+  commitMessage, pathsManifest, now, renewActiveAuthority,
 }) {
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
   const changedBeforeCheck = listChangedPaths(gitText);
@@ -1822,6 +1831,10 @@ function prepareIntegrationCommit({
     requireExactPaths({ changed: changedBeforeCheck, approved: manifest.value.paths });
     const managedCommit = renderManagedCommitMessage({ branch, commitMessage, lease });
     run("npm", ["run", "check"]);
+    lease = renewIntegrationAuthority({
+      branch, lease: leaseStore.read(branch), leaseStore, sessionId, gitText,
+      renewActiveAuthority, phase: "before-commit", now,
+    });
     const changedAfterCheck = listChangedPaths(gitText);
     requireExactPaths({ changed: changedAfterCheck, approved: manifest.value.paths });
     run("git", ["add", "--", ...manifest.value.paths.map(value => `:(literal)${value}`)]);
@@ -1868,6 +1881,48 @@ function prepareIntegrationCommit({
       paths: [],
     },
   });
+}
+
+function renewIntegrationAuthority({
+  branch,
+  lease,
+  leaseStore,
+  sessionId,
+  gitText,
+  renewActiveAuthority,
+  phase,
+  now,
+}) {
+  if (typeof renewActiveAuthority !== "function") return lease;
+  const headSha = gitText(["rev-parse", "HEAD"]).trim();
+  const worktreeState = gitText(["status", "--porcelain"]);
+  const renewed = renewActiveAuthority({ branch, lease, phase });
+  const projected = leaseStore.read(branch);
+  if (renewed !== undefined && digestValue(renewed) !== digestValue(projected)) {
+    throw new Error("Integration authority adapter returned a different local projection.");
+  }
+  const observedAt = now().getTime();
+  const expiresAt = Date.parse(String(projected?.expiresAt || ""));
+  const cloudExpiresAt = Date.parse(String(projected?.cloudAuthority?.expiresAt || ""));
+  const exact = projected?.schema === lease.schema && projected.status === "active" &&
+    projected.branch === branch && projected.sessionId === sessionId &&
+    projected.device === lease.device && projected.scope === lease.scope &&
+    projected.worktreePath === lease.worktreePath &&
+    projected.admission?.status === "admitted" &&
+    projected.admission?.semanticScope === lease.admission?.semanticScope &&
+    projected.admission?.writeSetDigest === lease.admission?.writeSetDigest &&
+    projected.cloudAuthority?.claimId === lease.cloudAuthority?.claimId &&
+    projected.cloudAuthority?.state === "active" &&
+    Number.isFinite(expiresAt) && expiresAt > observedAt &&
+    Number.isFinite(cloudExpiresAt) && cloudExpiresAt >= expiresAt;
+  if (!exact) {
+    throw new Error(`Integration authority refresh at ${phase} did not return the exact current admitted lane.`);
+  }
+  if (gitText(["rev-parse", "HEAD"]).trim() !== headSha ||
+      gitText(["status", "--porcelain"]) !== worktreeState) {
+    throw new Error(`Integration authority refresh at ${phase} changed repository bytes.`);
+  }
+  return projected;
 }
 
 function validateRecoveredCommittedContinuation({

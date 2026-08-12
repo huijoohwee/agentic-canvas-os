@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2501,
-  "headDigest": "84af1b556faf27b6501321fd5fcdd75cb6c82e78bc7dec884f363fe5bba539a1",
+  "sequence": 2502,
+  "headDigest": "179fabbe393fc5e7f607095e2470b6a30483e4deb187e19558a86daacc43c18e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -123750,6 +123750,69 @@
       },
       "claimDigest": "972f255cad8c822f9a28452a9d96c15c28f45638bad87a50676f618327213b4d",
       "digest": "84af1b556faf27b6501321fd5fcdd75cb6c82e78bc7dec884f363fe5bba539a1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2502,
+      "parentDigest": "84af1b556faf27b6501321fd5fcdd75cb6c82e78bc7dec884f363fe5bba539a1",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d875f75e0a3f7f6004ceca93f83828dbd5be04326d6a2a5f0d83e17f43c2387c",
+      "idempotencyKey": "d9700a3fe3b0d09af3762d11272804fd2b01f23ecb5c73c17031b2bba3caac80",
+      "requestDigest": "cf3efc348c031210d9c499988cfbfa5492cefd48bb40a18e6d43823b0290b74d",
+      "evaluationTime": "2026-08-12T09:07:47.000Z",
+      "claimCore": {
+        "claimId": "d875f75e0a3f7f6004ceca93f83828dbd5be04326d6a2a5f0d83e17f43c2387c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:fdac032cd5fa469f76147c4acadcd9adf9a18ecf0a7fc88ff72fed36b0f5c6c9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b75ccc7c0fcc4640ed9f7ed37528ecaad1bc1efcac71f5e9da7642b60c4d8abf",
+        "canonicalBaseRevision": "cee9a40633b4597492532c50d351289d3e8907fa",
+        "declaredWriteScope": [
+          "path:__tests__/planning-context-record-contract.test.mjs",
+          "path:docs/AGENTS.md",
+          "path:docs/FACTS.md",
+          "path:docs/MEMORY.md",
+          "path:docs/README.md",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TODO.md",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:scripts/docs-contract.mjs",
+          "path:scripts/planning-context-record-contract.mjs",
+          "path:todo/2026-08/context-sharded-planning-authority.md",
+          "semantic:context-sharded-planning-authority"
+        ],
+        "writeSetDigest": "b14a70b6599ceee85ac3c1cf63b84d86109579b4a84845c7d675d55a2905f8ce",
+        "laneRevision": "40d6f7752c82ea5b8f0c9c7ff20d21ca3e09e512",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-12T09:57:55.000Z",
+        "evidenceDigest": "fe4e8cf672c5e029f8493607b711a905a940d774426766879972a6c39269142a",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM799QXU",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "40d6f7752c82ea5b8f0c9c7ff20d21ca3e09e512",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM799QXU",
+          "focusedEvidenceDigest": "fe4e8cf672c5e029f8493607b711a905a940d774426766879972a6c39269142a",
+          "dependencyClosureDigest": "6cc9208f561862df5b6fb13e18b28a0be44bc1e80301e161e582e25d376673bd",
+          "namedChecksDigest": "5c122f014ca786c5bfd82db6b8d072427e296c13c2a846678e7e9be1227fb260",
+          "handoffEvidenceDigest": "763669a23d460a1aca15a45905f83491fce399ce8137f641cdb20495a29899ed",
+          "operatorDecisionDigest": "6a697938ce293640d5d4c3571685cd0dd0110d634f4c2e9686fb8d991c8e5822",
+          "integrationIntentDigest": "324471c7ceaddc861b900d583afd37d03d7bc47fc1032740b2f6c3cd3951db1d",
+          "integratedAt": "2026-08-12T09:07:47.000Z"
+        }
+      },
+      "claimDigest": "72c84a174ad98a00b9f9bc501445104ec31291a9f385a844516d0fcd66cccc8f",
+      "digest": "179fabbe393fc5e7f607095e2470b6a30483e4deb187e19558a86daacc43c18e"
     }
   ]
 }

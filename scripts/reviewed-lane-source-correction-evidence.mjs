@@ -165,6 +165,7 @@ function claim(value) {
     integrationReceiptDigest: optionalDigest(value?.integrationReceiptDigest,
       "claim integration receipt"),
     integration: integration(value?.integration),
+    recovery: recovery(value?.recovery),
     deviceId: text(value?.deviceId, "claim device"),
     sessionId: text(value?.sessionId, "claim session"),
   };
@@ -172,11 +173,23 @@ function claim(value) {
   if (integrated !== Boolean(result.integration)
     || integrated !== Boolean(result.integrationReceiptDigest)
     || (integrated && (!["integrated-preserved", "dormant-preserved"].includes(result.state)
-      || result.operationReceiptDigest !== result.integrationReceiptDigest))
+      || (result.recovery
+        ? result.operationReceiptDigest === result.integrationReceiptDigest
+        : result.operationReceiptDigest !== result.integrationReceiptDigest)))
     || (!integrated && !["reviewed", "dormant-preserved"].includes(result.state))) {
     invalid("claim lifecycle");
   }
   return freeze({ ...result, recordDigest: digestValue(result) });
+}
+
+function recovery(value) {
+  if (value === null || value === undefined) return null;
+  const result = {
+    evidenceDigest: digest(value?.evidenceDigest, "recovery evidence"),
+    recoveredAt: instant(value?.recoveredAt, "recovery instant"),
+  };
+  exactKeys(value, Object.keys(result), "claim recovery");
+  return freeze(result);
 }
 
 function integration(value) {
@@ -310,13 +323,16 @@ function assertJoined(source) {
   const reviewRequestId = `github-pull-request:${pull.nodeId}`;
   const marker = pull.writerMarker;
   const integratedReplay = record.recordedState === "integrated-preserved";
+  const integratedAdvance = record.recovery ? 2 : 1;
   const claimAuthorityJoined = integratedReplay
     ? ["integrated-preserved", "dormant-preserved"].includes(record.state)
-      && record.transitionCounter === cloud.transitionCounter + 1
+      && record.transitionCounter === cloud.transitionCounter + integratedAdvance
       && record.fenceRevision !== cloud.claimDigest
       && record.transitionDigest !== cloud.claimLedgerRevision
       && record.operationReceiptDigest !== cloud.operationReceiptDigest
-      && record.integrationReceiptDigest === record.operationReceiptDigest
+      && (record.recovery
+        ? record.integrationReceiptDigest !== record.operationReceiptDigest
+        : record.integrationReceiptDigest === record.operationReceiptDigest)
       && record.integration?.candidateRevision === source.localHeadSha
       && record.integration?.reviewRequestId === reviewRequestId
       && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest

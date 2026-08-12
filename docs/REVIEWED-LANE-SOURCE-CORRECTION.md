@@ -43,6 +43,9 @@ Planning is read-only and requires all of the following:
   write authority is false, scope remains reserved, and the fence, integration
   candidate, review evidence, operation receipt, and integration receipt join
   exactly;
+- the same integrated split may be wrapped by exactly one authenticated recovery
+  transition at N+2 when its recovery evidence is present and the integration
+  receipt remains unchanged; any additional or foreign progress is rejected;
 - a separately fetched protected `main` head that is either the source base or
   a descendant whose intervening changed path scope is proven disjoint from the
   lane's admitted write set; the PR `baseRefOid` remains independently bound to

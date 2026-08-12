@@ -127,6 +127,7 @@ test("an expired replay transition recovers once more from current evidence", ()
       if (recoveries === 1) {
         assert.equal(input.request.recoveryEvidenceDigest, evidenceDigest);
         return recoveryResult(source, { replayed: true,
+          findings: null,
           expiresAt: "2026-08-12T09:00:00.000Z",
           claimOverride: { ...recoveryClaim(source), state: "dormant-preserved",
             writeAuthority: false, expiresAt: "2026-08-12T09:00:00.000Z" } });
@@ -380,7 +381,7 @@ function publicClaim(source, values) {
   };
 }
 
-function recoveryResult(source, { replayed, expiresAt = null,
+function recoveryResult(source, { replayed, expiresAt = null, findings = [],
   recoveryEvidence = evidenceDigest, claimOverride = null }) {
   const claim = claimOverride || { ...recoveryClaim(source),
     ...(expiresAt ? { expiresAt } : {}) };
@@ -417,7 +418,7 @@ function recoveryResult(source, { replayed, expiresAt = null,
     ledgerDigest: digest("f"),
     claim,
     claimDigest: claim.fenceRevision,
-    findings: [],
+    findings,
     operationReceipt,
     receipt: { ledgerDigest: digest("f") },
   };

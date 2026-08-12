@@ -259,6 +259,7 @@ function requireRecoverySubjectResult(result, expected, { allowExpired }) {
     return;
   }
   const claim = result?.claim;
+  const findings = result?.findings ?? [];
   if (
     result?.schema !== "agentic-cloud-collaboration-result/v1"
     || result.ok !== true
@@ -270,8 +271,8 @@ function requireRecoverySubjectResult(result, expected, { allowExpired }) {
     || claim.writeSetDigest !== expected.manifest.writeSetDigest
     || JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
       !== JSON.stringify(expected.manifest.declaredWriteSet)
-    || !Array.isArray(result.findings)
-    || result.findings.length > 0
+    || !Array.isArray(findings)
+    || findings.length > 0
   ) drift();
   requiredSha(result.ledgerRevision, "replay ledger revision");
   requiredDigest(result.claimDigest, "replay claim digest");

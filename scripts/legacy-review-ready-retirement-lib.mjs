@@ -1,6 +1,7 @@
 import path from "node:path";
 import { canonicalJson, digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { projectRootState } from "./cloud-collaboration-state-projection.mjs";
+import { isRetiredPlannedAdmissionOwnerLane } from "./retired-planned-admission-owner-lib.mjs";
 import { projectWriterLeasePullRequestMarker, WRITER_LEASE_SCHEMA } from "./writer-lease-lib.mjs";
 export const LOCAL_REVIEW_RETIREMENT_INTENT_SCHEMA = "agentic-local-review-retirement-intent/v1";
 export const LOCAL_REVIEW_RETIREMENT_RECEIPT_SCHEMA = "agentic-local-review-retirement-receipt/v1";
@@ -112,6 +113,7 @@ export function normalizeLocalReviewRetirementReceipt(value) {
 export function isRetiredPreservedLane({ lane = null, record = null, lease = null } = {}) {
   const observed = lane || record;
   const currentLease = lease || lane?.lease || null;
+  if (isRetiredPlannedAdmissionOwnerLane({ lane, record, lease })) return true;
   try {
     requireObject(observed, "Retired lane");
     requireObject(currentLease, "Retired lane lease");

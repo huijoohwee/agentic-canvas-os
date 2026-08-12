@@ -10,11 +10,23 @@ import {
   hasCurrentRootSourceMaintenanceAuthority,
   isEligibleRootSourceMaintenance,
   normalizeRootSourceMaintenanceProof,
+  selectRootSourceBootstrapPreservedLanes,
   writeRootSourceBootstrapMaintenanceManifest,
 } from "../scripts/scoped-lane-bootstrap-maintenance.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
+
+test("explicit clean preservation does not require manufactured dirty auto-discovery", () => {
+  assert.deepEqual(selectRootSourceBootstrapPreservedLanes({
+    lanes: [],
+    canonicalPath: "/workspace/repository",
+    targetPath: "/workspace/candidate",
+    maintenanceSourcePath: "/workspace/maintenance",
+    branch: "agent/device/candidate",
+    currentRemoteClaims: [],
+  }), []);
+});
 
 test("clean retired-preserved evidence is eligible without manufacturing maintenance dirt", () => {
   const source = proof({

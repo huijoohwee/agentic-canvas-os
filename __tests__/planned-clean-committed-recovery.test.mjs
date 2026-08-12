@@ -86,6 +86,25 @@ test("planned clean recovery reconciles a lost recovery response without a secon
   assert.equal(result.authority.transitionCounter, 8);
 });
 
+test("planned clean recovery reconciles repeated lost recovery responses without another mutation", () => {
+  const current = { ...dormant, state: "current", transitionCounter: 10,
+    fenceRevision: digest("6"), transitionDigest: digest("7"),
+    operationReceiptDigest: digest("8"), entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2", expiresAt: "2026-08-12T04:00:00.000Z" };
+  let invoked = false;
+  const result = recoverPlannedAdmissionCloudAuthority({
+    authority: { ...authority, transitionCounter: 7 }, manifest,
+    branch: "agent/device/scope", recoveryEvidenceDigest: digest("f"),
+    inspect: () => ({ ok: true, action: "status", ledgerRevision: sha("8"),
+      ledgerDigest: digest("9"), claims: [current] }),
+    invoke: () => { invoked = true; },
+    verify: input => ({ authority: input.authority, verification: { status: "ready" } }),
+  });
+  assert.equal(invoked, false);
+  assert.equal(result.authority.claimDigest, digest("6"));
+  assert.equal(result.authority.transitionCounter, 10);
+});
+
 test("planned clean recovery rejects non-dormant or drifted subjects before mutation", () => {
   for (const claim of [
     { ...dormant, state: "active" },

@@ -36,16 +36,26 @@ Planning is read-only and requires all of the following:
 - an admitted `review_ready` local lease owned by the supplied source session;
 - an exact reviewed or dormant-preserved cloud claim with the same actor,
   repository, work item, base, scope, device, session, and review request;
-- either the original protected base or a descendant whose intervening changed
-  path scope is proven disjoint from the lane's admitted write set;
+- either exact local/cloud review projection equality, or one integration
+  response-loss split where the local lease and PR marker retain transition N
+  while the private claim records `integrated-preserved` at N+1, its public
+  projection is `integrated-preserved` or, after expiry, `dormant-preserved`,
+  write authority is false, scope remains reserved, and the fence, integration
+  candidate, review evidence, operation receipt, and integration receipt join
+  exactly;
+- a separately fetched protected `main` head that is either the source base or
+  a descendant whose intervening changed path scope is proven disjoint from the
+  lane's admitted write set; the PR `baseRefOid` remains independently bound to
+  the source base and is not treated as the current protected head;
 - an open, non-draft, unqueued pull request with exactly one matching writer
-  marker; and
+  marker and no auto-merge request; and
 - a distinct operator session and byte-exact authorization statement.
 
 The public plan is path-portable. It contains neither the worktree path nor the
 raw pull-request body. It binds stable repository identities, the body digest,
-the protected-base advance receipt, and a path-free writer-marker projection
-instead. Planning creates no journal, lock, claim, lease, or provider mutation.
+the `v2` source evidence and protected-advance receipts (including source, PR,
+and current protected base), and a path-free writer-marker projection instead.
+Planning creates no journal, lock, claim, lease, or provider mutation.
 
 ## Commands
 
@@ -82,17 +92,19 @@ node scripts/reviewed-lane-source-correction.mjs run \
 | --- | --- |
 | `prepared` | Persist the exact path-free plan and authorization. |
 | `successor_waiting` | Claim one same-owner, same-head successor at source cloud epoch + 1. |
-| `source_retired` | Retire the reviewed predecessor with exact head, review, byte, and handoff evidence. |
+| `source_retired` | Replay one idempotent retirement. An integrated predecessor uses reason `integrated` and its exact integration receipt, named-checks, and handoff evidence. |
 | `successor_current` | Promote only after the predecessor is absent from live inventory. |
-| `lease_activated` | Use the exact predecessor lease digest and claim ID to CAS-project the unbound current authority into the same source-session lease. |
+| `lease_activated` | Bind the promoted current successor to the unchanged PR identity through one projection continuation, then use the exact predecessor lease digest and claim ID to CAS-project it into the same source-session lease. |
 | `pr_drafted` | Convert the unchanged pull request to draft and write exactly one active marker. |
 | `verified` | Prove source bytes/head, remote, claim, lease, PR, and marker terminal equality. |
 | `complete` | Seal the authoring-restored receipt without integration authority. |
 
 Each phase reconciles live state before issuing an effect. The journal uses an
-entrypoint lock and compare-and-swap writes. A lost response can adopt only the
-same plan-derived successor or projection. Source retirement precedes successor
-promotion, so the operation never creates two current writers.
+entrypoint lock and compare-and-swap writes. A lost retirement response replays
+the same idempotency key instead of inferring success from absence; other lost
+responses can adopt only the same plan-derived successor or projection. Source
+retirement precedes successor promotion, so the operation never creates two
+current writers.
 
 ## Evidence boundary
 

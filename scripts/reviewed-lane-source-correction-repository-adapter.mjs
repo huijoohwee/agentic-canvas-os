@@ -118,11 +118,14 @@ function createRuntime(options, dependencies) {
     const cloudStatus = status(lease.cloudAuthority);
     const joined = await joinedClaim(lease.cloudAuthority.claimId, lease.cloudAuthority, cloudStatus);
     const claimState = projectRootState(joined.state);
-    if (claimState !== "review_ready" && claimState !== "parked") {
+    const integratedReplay = joined.recordedState === "integrated-preserved";
+    if (integratedReplay ? !["delivery_authorized", "parked"].includes(claimState)
+      : !["review_ready", "parked"].includes(claimState)
+        || joined.recordedState !== "reviewed") {
       invalid("source claim state");
     }
-    const claim = { ...joined, state: claimState === "review_ready" ? "reviewed" : "dormant-preserved" };
-    const authority = normalizeBoundAuthority({
+    const claim = { ...joined, state: joined.state };
+    const authority = integratedReplay ? lease.cloudAuthority : normalizeBoundAuthority({
       result: { claim: joined, claimDigest: joined.fenceRevision,
         ledgerRevision: cloudStatus.ledgerRevision, ledgerDigest: cloudStatus.ledgerDigest },
       authority: lease.cloudAuthority,
@@ -136,7 +139,7 @@ function createRuntime(options, dependencies) {
       sessionId: lease.sessionId,
       focusedEvidenceDigest: lease.cloudAuthority.focusedEvidenceDigest,
     });
-    const advance = protectedAdvance(lease, provider.pullRequest.baseSha);
+    const advance = protectedAdvance(lease, provider.pullRequest.baseSha, protectedMainHead());
     return buildReviewedLaneSourceCorrectionEvidence({
       repository: provider.repository,
       actor: provider.actor,
@@ -152,12 +155,17 @@ function createRuntime(options, dependencies) {
     });
   }
 
-  function protectedAdvance(lease, currentBaseSha) {
+  function protectedMainHead() {
+    git(["fetch", "--quiet", "--no-tags", "origin", "refs/heads/main"]);
+    return sha(git(["rev-parse", "FETCH_HEAD"]), "protected current base");
+  }
+
+  function protectedAdvance(lease, pullRequestBaseSha, currentBaseSha) {
+    const pullBase = sha(pullRequestBaseSha, "pull-request protected base");
     const target = sha(currentBaseSha, "protected current base");
-    try {
-      execute("git", ["merge-base", "--is-ancestor", lease.baseSha, target]);
-    } catch {
-      invalid("protected base ancestry");
+    for (const [ancestor, descendant] of [[lease.baseSha, pullBase], [pullBase, target]]) {
+      try { execute("git", ["merge-base", "--is-ancestor", ancestor, descendant]); }
+      catch { invalid("protected base ancestry"); }
     }
     const changedPaths = lease.baseSha === target ? [] : execute("git", [
       "diff", "--name-only", "-z", "--no-renames", lease.baseSha, target,
@@ -169,8 +177,9 @@ function createRuntime(options, dependencies) {
       invalid("protected base overlap");
     }
     const core = {
-      schema: "agentic-reviewed-lane-protected-advance/v1",
+      schema: "agentic-reviewed-lane-protected-advance/v2",
       sourceBaseSha: lease.baseSha,
+      pullRequestBaseSha: pullBase,
       currentBaseSha: target,
       changedWriteScope,
       changedWriteScopeDigest: digestValue(changedWriteScope),
@@ -220,7 +229,8 @@ function createRuntime(options, dependencies) {
       || remoteHead() !== plan.sourceHeadSha
       || git(["status", "--porcelain=v1", "--untracked-files=all"]) !== ""
       || provider.headSha !== plan.sourceHeadSha
-      || provider.baseSha !== plan.source.protectedAdvance.currentBaseSha
+      || provider.baseSha !== plan.source.pullRequest.baseSha
+      || protectedMainHead() !== plan.source.protectedAdvance.currentBaseSha
       || provider.isDraft !== false
       || provider.autoMergeRequest !== null
       || provider.mergeQueueEntry !== null
@@ -283,8 +293,7 @@ function createRuntime(options, dependencies) {
     assertUnchangedSource(plan);
     const before = status(plan.source.authority);
     const source = await joinedClaim(plan.sourceClaimId, plan.source.authority, before);
-    if (source.laneRevision !== plan.sourceHeadSha
-      || source.fenceRevision !== plan.source.claim.fenceRevision) invalid("source claim drift");
+    if (!sameSourceClaim(source, plan.source.claim)) invalid("source claim drift");
     cloudAction("claim", {
       actorId: Number(plan.source.actor.id), actorLogin: plan.source.actor.login,
       branch, workItemId: source.workItemId,
@@ -304,30 +313,36 @@ function createRuntime(options, dependencies) {
     assertUnchangedSource(plan);
     const before = status(plan.source.authority);
     const waiting = await successor(plan, new Set(["waiting-successor"]), before);
-    const source = await joinedClaim(plan.sourceClaimId, plan.source.authority, before);
-    if (!waiting || source.fenceRevision !== plan.source.claim.fenceRevision) {
+    const source = before.claims.some(item => item.claimId === plan.sourceClaimId)
+      ? await joinedClaim(plan.sourceClaimId, plan.source.authority, before) : null;
+    if (!waiting || (source && !sameSourceClaim(source, plan.source.claim))) {
       invalid("retirement subject");
     }
-    cloudAction("retire", {
-      claimId: source.claimId,
-      expectedFenceRevision: source.fenceRevision,
-      expectedTransitionCounter: source.transitionCounter,
+    const recorded = plan.source.claim;
+    const integrated = recorded.recordedState === "integrated-preserved";
+    const result = cloudAction("retire", {
+      claimId: recorded.claimId,
+      expectedFenceRevision: recorded.fenceRevision,
+      expectedTransitionCounter: recorded.transitionCounter,
       expectedLedgerDigest: before.ledgerDigest,
-      reason: "superseded", finalRevision: plan.sourceHeadSha,
+      reason: integrated ? "integrated" : "superseded", finalRevision: plan.sourceHeadSha,
       reviewRequestId: plan.sourceReviewRequestId,
       bytesDigest: digestValue({ headSha: plan.sourceHeadSha,
         treePreserved: true, sourceEvidenceDigest: plan.source.evidenceDigest }),
-      namedChecksDigest: plan.source.authority.focusedEvidenceDigest,
-      handoffEvidenceDigest: digestValue({ planDigest: plan.planDigest,
-        successorClaimId: waiting.claimId }),
+      namedChecksDigest: recorded.integration?.namedChecksDigest
+        ?? plan.source.authority.focusedEvidenceDigest,
+      handoffEvidenceDigest: recorded.integration?.handoffEvidenceDigest
+        ?? digestValue({ planDigest: plan.planDigest, successorClaimId: waiting.claimId }),
+      integrationReceiptDigest: recorded.integrationReceiptDigest,
       deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
       idempotencyKey: `reviewed-lane-source-correction:retire:${plan.planDigest}`,
     }, plan.source.authority);
-    if (status(plan.source.authority).claims.some(item => item.claimId === plan.sourceClaimId)) {
+    if (result.operationReceipt?.operation !== "retire"
+      || status(plan.source.authority).claims.some(item => item.claimId === plan.sourceClaimId)) {
       invalid("source retirement");
     }
     return complete({ sourceClaimId: plan.sourceClaimId,
-      retirementDigest: digestValue({ planDigest: plan.planDigest, sourceClaimId: plan.sourceClaimId }) });
+      retirementDigest: result.operationReceipt.receiptDigest });
   }
 
   async function promoteSuccessor({ plan }) {
@@ -352,9 +367,24 @@ function createRuntime(options, dependencies) {
 
   async function activateLease({ plan }) {
     const sourceLease = readLease();
-    const cloudStatus = status(plan.source.authority);
-    const claim = await successor(plan, new Set(["active"]), cloudStatus);
-    if (!claim || claim.reviewRequestId) invalid("active successor");
+    let cloudStatus = status(plan.source.authority);
+    let claim = await successor(plan, new Set(["active"]), cloudStatus);
+    if (!claim || (claim.reviewRequestId && claim.reviewRequestId !== plan.sourceReviewRequestId)) {
+      invalid("active successor");
+    }
+    if (!claim.reviewRequestId) {
+      cloudAction("continue", { branch, headSha: plan.sourceHeadSha,
+        claimId: claim.claimId, expectedFenceRevision: claim.fenceRevision,
+        expectedTransitionCounter: claim.transitionCounter,
+        expectedLedgerDigest: cloudStatus.ledgerDigest, mode: "projection",
+        reviewRequestId: plan.sourceReviewRequestId,
+        deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
+        idempotencyKey: `reviewed-lane-source-correction:bind:${plan.planDigest}`,
+      }, plan.source.authority);
+      cloudStatus = status(plan.source.authority);
+      claim = await successor(plan, new Set(["active"]), cloudStatus);
+    }
+    if (!claim || claim.reviewRequestId !== plan.sourceReviewRequestId) invalid("bound successor");
     const authority = normalizeBoundAuthority({
       result: { claim, claimDigest: claim.fenceRevision,
         ledgerRevision: cloudStatus.ledgerRevision, ledgerDigest: cloudStatus.ledgerDigest },
@@ -408,7 +438,8 @@ function createRuntime(options, dependencies) {
     const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     if (lease.status !== "active" || lease.reviewHeadSha !== null
       || lease.cloudAuthority.claimId !== claim?.claimId
-      || lease.cloudAuthority.reviewRequestId !== null
+      || lease.cloudAuthority.reviewRequestId !== plan.sourceReviewRequestId
+      || claim?.reviewRequestId !== plan.sourceReviewRequestId
       || provider.pullRequest.isDraft !== true
       || provider.pullRequest.headSha !== plan.sourceHeadSha
       || git(["rev-parse", "HEAD"]) !== plan.sourceHeadSha
@@ -435,13 +466,13 @@ function createRuntime(options, dependencies) {
       const claim = await successor(plan, new Set(["active"]), cloudStatus);
       return lease.status === "active"
         && claim
-        && !claim.reviewRequestId
+        && claim.reviewRequestId === plan.sourceReviewRequestId
         && lease.reviewHeadSha === null
         && lease.cloudAuthority?.claimId === claim.claimId
         && lease.cloudAuthority?.claimDigest === claim.fenceRevision
         && lease.cloudAuthority?.laneRevision === plan.sourceHeadSha
         && lease.cloudAuthority?.writeSetDigest === plan.source.claim.writeSetDigest
-        && lease.cloudAuthority?.reviewRequestId === null
+        && lease.cloudAuthority?.reviewRequestId === plan.sourceReviewRequestId
         ? complete(stored || { leaseDigest: writerLeaseDigest(lease), authority: lease.cloudAuthority })
         : pending();
     }
@@ -459,11 +490,7 @@ function createRuntime(options, dependencies) {
     if (phase === "verified") return verifyTerminal({ plan });
     const cloudStatus = status(plan.source.authority);
     if (phase === "source_retired") {
-      return !cloudStatus.claims.some(item => item.claimId === plan.sourceClaimId)
-        && await successor(plan, new Set(["waiting-successor", "active"]), cloudStatus)
-        ? complete(stored || { sourceClaimId: plan.sourceClaimId,
-          retirementDigest: digestValue({ planDigest: plan.planDigest,
-            sourceClaimId: plan.sourceClaimId }) }) : pending();
+      return pending();
     }
     const accepted = phase === "successor_waiting"
       ? new Set(["waiting-successor", "active"])
@@ -523,6 +550,17 @@ function createRuntime(options, dependencies) {
     createWaitingSuccessor, retireSourceClaim, promoteSuccessor,
     activateLease, projectDraftPullRequest, verifyTerminal,
   };
+}
+
+function sameSourceClaim(live, expected) {
+  const keys = ["claimId", "state", "recordedState", "actorId", "repositoryId", "workItemId",
+    "canonicalBaseRevision", "laneRevision", "writeSetDigest", "leaseEpoch", "transitionCounter",
+    "reviewRequestId", "fenceRevision", "transitionDigest", "operationReceiptDigest",
+    "integrationReceiptDigest", "writeAuthority", "scopeReserved", "deviceId", "sessionId"];
+  return keys.every(key => live?.[key] === expected[key])
+    && JSON.stringify(normalizeWriteSet(live.declaredWriteScope))
+      === JSON.stringify(expected.declaredWriteScope)
+    && digestValue(live.integration) === digestValue(expected.integration);
 }
 
 function text(value, label) {

@@ -19,6 +19,11 @@ import {
 export const EXPIRED_COMMITTED_CLOUD_RECOVERY_EVIDENCE_SCHEMA =
   "agentic-expired-committed-heartbeat-cloud-recovery-evidence/v1";
 
+export function preserveSourceManifestProjection(source, renewed) {
+  return renewed?.manifestDigest === source?.manifestDigest ? renewed
+    : Object.freeze({ ...renewed, manifestDigest: source?.manifestDigest });
+}
+
 export function expiredCommittedCloudRecoveryEvidenceDigest({
   snapshotDigest,
   recoveryEvidence,
@@ -166,7 +171,10 @@ function recoverDormant({
       ledgerDigest: result.receipt?.ledgerDigest,
     },
     authority,
-    manifest,
+    manifest: {
+      declaredWriteSet: manifest.declaredWriteSet,
+      writeSetDigest: manifest.writeSetDigest,
+    },
     deviceId,
     sessionId,
   });

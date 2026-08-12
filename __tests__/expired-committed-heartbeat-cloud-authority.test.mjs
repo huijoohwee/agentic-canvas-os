@@ -6,6 +6,7 @@ import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   continueExpiredCommittedHeartbeatCloudAuthority,
   expiredCommittedCloudRecoveryEvidenceDigest,
+  preserveSourceManifestProjection,
 } from "../scripts/expired-committed-heartbeat-cloud-authority.mjs";
 
 const digest = character => character.repeat(64);
@@ -157,6 +158,16 @@ test("ambiguous response loss probes only exact replay keys and rejects foreign 
   }), /expectedTransitionCounter is stale/u);
   assert.equal(recoveries, 1);
   assert.equal(renewals, 1);
+});
+
+test("writer CAS projection preserves the source manifest transport identity", () => {
+  const source = authority();
+  assert.equal(preserveSourceManifestProjection(source, source), source);
+  const projected = preserveSourceManifestProjection(source, {
+    ...source,
+    manifestDigest: digest("9"),
+  });
+  assert.equal(projected.manifestDigest, source.manifestDigest);
 });
 
 function common(source, liveClaim) {

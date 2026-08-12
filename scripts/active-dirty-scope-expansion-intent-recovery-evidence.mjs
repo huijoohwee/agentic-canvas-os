@@ -286,7 +286,45 @@ test(result))throw new Error(`${label} must be owner/name.`);return result}funct
 if(!Array.isArray(value))throw new Error(`${label} must be an array.`);const result=[...new Set(value.map(item=>text(item,
 label)))].sort();if(!allowEmpty&&result.length===0||result.some(item=>path.isAbsolute(item)||item.includes("..")))throw new Error(
 `${label} is invalid.`);return deepFreeze(result)}function deepFreeze(value){if(value&&typeof value==="object"&&!Object.
-isFrozen(value)){Object.values(value).forEach(deepFreeze);Object.freeze(value)}return value}export{ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_SOURCE_EVIDENCE_SCHEMA,ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_TERMINAL_OBSERVATION_SCHEMA,
+isFrozen(value)){Object.values(value).forEach(deepFreeze);Object.freeze(value)}return value}
+
+const DECISION_EVIDENCE_SCHEMA=
+"agentic-active-dirty-scope-expansion-intent-recovery-decision-evidence/v2";
+const DECISION_FIELDS=Object.freeze(["schema","controllerDigest","laneDigest","leaseDigest",
+"scopeExpansionIntentDigest","targetManifestDigest","currentAuthorityDigest","currentClaimDigest",
+"heartbeatDigest","pullRequestDigest","dirtDigest","mutationAuthorityDigest","decisionEvidenceDigest"]);
+
+function buildActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence(sourceEvidence){
+const source=normalizeActiveDirtyScopeExpansionIntentRecoverySourceEvidence(sourceEvidence);
+const controller={origin:source.controller.origin,targetRepository:source.controller.targetRepository,
+clean:source.controller.clean,implementationDigest:source.controller.implementationDigest};
+const{path:_lanePath,...lane}=source.lane;
+const{ledgerRevision:_authorityLedgerRevision,ledgerDigest:_authorityLedgerDigest,...authority}=source.currentAuthority;
+const{historicalLedgerDigest:_historicalLedgerDigest,historicalHeadDigest:_historicalHeadDigest,
+historicalSequence:_historicalSequence,currentLedgerDigest:_currentLedgerDigest,currentHeadDigest:_currentHeadDigest,
+currentSequence:_currentSequence,unrelatedSuffixDigest:_unrelatedSuffixDigest,lineageDigest:_lineageDigest,...heartbeat}=source.ledgerLineage;
+const{baseRefOid:_baseRefOid,...pullRequest}=source.pullRequest;
+const{globalLedgerRevision:_globalLedgerRevision,globalLedgerDigest:_globalLedgerDigest,
+currentClaimInventoryDigest:_currentClaimInventoryDigest,cloudVerificationReceiptDigest:_cloudVerificationReceiptDigest,
+evaluatedAt:_evaluatedAt,receiptDigest:_mutationReceiptDigest,...mutationAuthority}=source.mutationAuthority;
+const core={schema:DECISION_EVIDENCE_SCHEMA,controllerDigest:digestValue(controller),laneDigest:digestValue(lane),
+leaseDigest:source.leaseDigest,scopeExpansionIntentDigest:source.scopeExpansionIntentDigest,
+targetManifestDigest:digestValue(source.targetManifest),currentAuthorityDigest:digestValue(authority),
+currentClaimDigest:digestValue(source.currentClaim),heartbeatDigest:digestValue(heartbeat),
+pullRequestDigest:digestValue(pullRequest),dirtDigest:digestValue(source.dirt),
+mutationAuthorityDigest:digestValue(mutationAuthority)};
+return deepFreeze({...core,decisionEvidenceDigest:digestValue(core)})}
+
+function normalizeActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence(value){
+object(value,"Recovery decision evidence");exactKeys(value,DECISION_FIELDS,"Recovery decision evidence");
+if(value.schema!==DECISION_EVIDENCE_SCHEMA)throw new Error("Recovery decision evidence schema drifted.");
+for(const key of DECISION_FIELDS.slice(1))digest(value[key],`decision evidence ${key}`);
+const{decisionEvidenceDigest,...core}=value;if(decisionEvidenceDigest!==digestValue(core)){
+throw new Error("Recovery decision evidence digest drifted.")}return deepFreeze({...core,decisionEvidenceDigest})}
+
+export{ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_SOURCE_EVIDENCE_SCHEMA,ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_TERMINAL_OBSERVATION_SCHEMA,
 assertActiveDirtyScopeExpansionIntentRecoverySourceEvidence,buildActiveDirtyScopeExpansionIntentRecoverySourceEvidence,buildActiveDirtyScopeExpansionIntentRecoveryTerminalObservation,
+buildActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence,
 classifyActiveDirtyScopeExpansionIntentRecoveryTerminal,normalizeActiveDirtyScopeExpansionIntentRecoverySourceEvidence,normalizeActiveDirtyScopeExpansionIntentRecoveryTerminalObservation,
+normalizeActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence,
 normalizeRecoverableScopeExpansionIntent,verifyExactScopeExpansionHeartbeatSuffix};

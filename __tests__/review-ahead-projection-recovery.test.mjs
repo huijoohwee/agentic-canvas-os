@@ -6,6 +6,7 @@ import {
   REVIEW_AHEAD_AUTHORIZATION_PREFIX,
 } from "../scripts/review-ahead-projection-recovery-contract.mjs";
 import { createReviewAheadProjectionController } from "../scripts/review-ahead-projection-recovery-controller.mjs";
+import { captureReviewAheadProjectionEvidence } from "../scripts/review-ahead-projection-recovery-evidence.mjs";
 
 const sha = character => character.repeat(40);
 const digest = character => character.repeat(64);
@@ -99,6 +100,78 @@ test("integrated-preserved protected refresh requires local remote and PR head e
   }), { now: new Date("2026-08-10T01:00:00.000Z") });
   assert.equal(plan.status, "blocked");
   assert.ok(plan.findings.includes("review-head-provider-drift"));
+});
+
+test("descendant evidence binds protected-main equivalence to the lane base", async () => {
+  const base = fixture({ localHeadSha: sha("b") });
+  let receiptRequest;
+  const lane = {
+    repository: base.repository,
+    branch: base.branch,
+    baseSha: sha("0"),
+    headSha: base.reviewHeadSha,
+    refreshedHeadSha: null,
+    remoteHeadSha: base.localHeadSha,
+    clean: true,
+    authority: {
+      state: "review_ready",
+      claimId: base.claimId,
+      laneRevision: base.authorityLaneRevision,
+      reviewRequestId: base.reviewRequestId,
+      writeSetDigest: base.writeSetDigest,
+      cloudDeclaredWriteScope: base.declaredWriteScope,
+      leaseEpoch: 1,
+      ledgerRepository: "o/ledger",
+      targetRepository: "o/r",
+    },
+    lease: {
+      status: "review_ready",
+      sessionId: base.sessionId,
+      expiresAt: expired,
+      device: "device.local",
+    },
+    pullRequest: {
+      headRefOid: base.localHeadSha,
+      url: base.pullRequestUrl,
+      authorLogin: "owner",
+      state: "OPEN",
+      isDraft: false,
+    },
+  };
+  const adapter = {
+    async readPreservedReviewLane() { return lane; },
+    async readLocalHead() { return base.localHeadSha; },
+    async readLocalDescendantReceipt(request) {
+      receiptRequest = request;
+      return { receiptDigest: digest("6") };
+    },
+    async readCloudStatus() {
+      return {
+        repositoryId: base.repositoryId,
+        claims: [{
+          claimId: base.claimId,
+          state: "integrated-preserved",
+          repositoryId: base.repositoryId,
+          laneRevision: base.authorityLaneRevision,
+          reviewRequestId: base.reviewRequestId,
+          writeSetDigest: base.writeSetDigest,
+          declaredWriteScope: base.declaredWriteScope,
+          leaseEpoch: 1,
+          expiresAt: expired,
+        }],
+      };
+    },
+    async readAuthenticatedOwner() { return { login: "owner" }; },
+  };
+
+  await captureReviewAheadProjectionEvidence({
+    adapter,
+    branch: base.branch,
+    sessionId: base.sessionId,
+  });
+  assert.equal(receiptRequest.baseSha, lane.baseSha);
+  assert.equal(receiptRequest.reviewHeadSha, lane.headSha);
+  assert.equal(receiptRequest.localHeadSha, base.localHeadSha);
 });
 
 test("execute projects review-ready once then delegates exact same-session reclaim", async () => {

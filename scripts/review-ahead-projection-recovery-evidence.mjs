@@ -15,6 +15,7 @@ export async function captureReviewAheadProjectionEvidence({ adapter, branch, se
   const descendantReceipt = localHeadSha === lane.headSha
     ? null
     : await adapter.readLocalDescendantReceipt({
+      baseSha: lane.baseSha,
       localHeadSha,
       reviewHeadSha: lane.headSha,
       repository: lane.repository,

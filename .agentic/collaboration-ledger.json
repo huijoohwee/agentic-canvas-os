@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2480,
-  "headDigest": "a6cc56e2f06ae655766d9be10941f99a46b48393d2c12a9c4a9dc6f22f0711b3",
+  "sequence": 2481,
+  "headDigest": "3d63aa44599d9373ba8d7e630d30808a34562aea2db356686c67a06c84730e1a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -122671,6 +122671,68 @@
       },
       "claimDigest": "3765331ba595b6449ae097135becc9011908b0cb98f38d0bf978f685a8f1346f",
       "digest": "a6cc56e2f06ae655766d9be10941f99a46b48393d2c12a9c4a9dc6f22f0711b3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2481,
+      "parentDigest": "a6cc56e2f06ae655766d9be10941f99a46b48393d2c12a9c4a9dc6f22f0711b3",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "5d3336e6d60610e35404a80bd1f40822cead48dcdc289fd9faee19e690497403",
+      "idempotencyKey": "fd45a90c0e2f574d101e5f93e9f418ce87a62e5d5b5430e5b487813651b27029",
+      "requestDigest": "2ca1513aee90d1e8103a8bd83231b6b69bc903dbd2f26073af4726e392804dc4",
+      "evaluationTime": "2026-08-12T08:21:20.000Z",
+      "claimCore": {
+        "claimId": "5d3336e6d60610e35404a80bd1f40822cead48dcdc289fd9faee19e690497403",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c062dc1894aa1407ecfe0060f1085ec0b7dda21cdae0d45fc12be04a00900a20",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c660587c6a2b6f73350938405c430dccc4904ac4ccf41ac0a26e73bd10f5746c",
+        "canonicalBaseRevision": "270dfa50cc6825115d0856ae931047cd5e531b18",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-preservation-decision-contract.test.mjs",
+          "path:__tests__/dormant-preservation-decision-controller.test.mjs",
+          "path:__tests__/dormant-preservation-decision-evidence.test.mjs",
+          "path:__tests__/dormant-preservation-decision-repository-adapter.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:docs/DORMANT-PRESERVATION-DECISION.md",
+          "path:docs/SCOPED-LANE-ADMISSION.md",
+          "path:docs/schemas/dormant-preservation-decision-plan.v1.schema.json",
+          "path:scripts/dormant-preservation-decision-evidence.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "path:scripts/scoped-lane-cloud-reconciliation.mjs",
+          "semantic:collaboration-ledger-stable-verification"
+        ],
+        "writeSetDigest": "58d200225aebeef2e12d9b344d5c96162ff98461c00d8ae1ef1a8a17c410dec1",
+        "laneRevision": "270dfa50cc6825115d0856ae931047cd5e531b18",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-12T12:18:38.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "270dfa50cc6825115d0856ae931047cd5e531b18",
+          "reviewRequestId": null,
+          "bytesDigest": "7edc2b9a292418f3c0f13c1aa72fc800106f4f428d1a283e1b38df1a692a9355",
+          "namedChecksDigest": "70b913f531002e3665968d5126a838f791ad27b2a0577e2c0efdb673f3a3f865",
+          "handoffEvidenceDigest": "a6424675993eec3313fd7f60a42803d50ec3f3930e58c71f2b3dc916f296690b",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-12T08:21:20.000Z"
+        }
+      },
+      "claimDigest": "ee92382bfd9e59d71ed820c5d7a766b490c80be630e90a614c19e4e86ef3791a",
+      "digest": "3d63aa44599d9373ba8d7e630d30808a34562aea2db356686c67a06c84730e1a"
     }
   ]
 }

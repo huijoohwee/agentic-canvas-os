@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2458,
-  "headDigest": "35cea34f906f237744ebcb05b3bf3a610e48daaf014f8e2cb1e0b10aedd23853",
+  "sequence": 2459,
+  "headDigest": "0b79be758e7fd1143c22dfbe4db1758a4c1cc384ec74a0e6916e418fdd2cd701",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -121614,6 +121614,55 @@
       },
       "claimDigest": "c7e481e977a8a42a4e1dbe525e7cb63608e2c82223bf510841aa34f52fe178e4",
       "digest": "35cea34f906f237744ebcb05b3bf3a610e48daaf014f8e2cb1e0b10aedd23853"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2459,
+      "parentDigest": "35cea34f906f237744ebcb05b3bf3a610e48daaf014f8e2cb1e0b10aedd23853",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "228d185eb5b341974180167594e36598b5e1bdc8f2583464bacc674683faa84c",
+      "idempotencyKey": "1b967e2674ff180f7144b5a9327259cffeaeba6a3ef86d2d87de0b7605010036",
+      "requestDigest": "2f390ff88bdcf4980dae052a125b76203375577bdfda3235215fcd949727d25d",
+      "evaluationTime": "2026-08-12T07:43:16.000Z",
+      "claimCore": {
+        "claimId": "228d185eb5b341974180167594e36598b5e1bdc8f2583464bacc674683faa84c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:ee4312bab05815ac65ea0f0f002dda5ce38f1e4829afe647b93dd0d8a6b78491",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:d67519f2feecafcaff4507373371cb48c7486816978c8b4fe78fbb973dce3cf6",
+        "canonicalBaseRevision": "9bbc5c20d35b7188b6bbcca5309460a4388cd66b",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/mainPanelExaIntegrations.test.tsx",
+          "path:canvas/src/__tests__/mainPanelMcpExa.test.tsx",
+          "path:canvas/src/features/integrations/exaSearchApiSsot.ts",
+          "path:canvas/src/features/panels/views/exaMcpApiDocs.ts",
+          "path:canvas/src/features/panels/views/exaSearchApiDocs.ts",
+          "path:canvas/src/features/panels/views/settingsView.constants.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.helpers.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.ts",
+          "path:canvas/src/tests/registry/postParserCases5.ts",
+          "path:docs/documents/knowgrph-mcp/knowgrph-exa-mcp-prd-tad.md",
+          "path:grph-shared/src/search/exaMcpSsot.ts",
+          "semantic:exa-coding-agent-integrations"
+        ],
+        "writeSetDigest": "3f74ca155072eed3db93f1dee59ab771ae6826ef67572e3f9645ea445c4e12d1",
+        "laneRevision": "ad06e835772c33941a55d030f2a328056c75ddc3",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T08:30:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs797X_g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f6500e5eb84cebf3cd8ca54862843406b5ac205f3f9f79baef473c9a3c8c2758",
+      "digest": "0b79be758e7fd1143c22dfbe4db1758a4c1cc384ec74a0e6916e418fdd2cd701"
     }
   ]
 }

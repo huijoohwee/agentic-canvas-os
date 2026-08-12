@@ -1644,6 +1644,39 @@ test("active integration retries publish once after exact pushed-head or stale-b
   }
 });
 
+test("active integration refreshes ordinary authority before validation and publication", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-renewal-"));
+  const fixture = createActiveSuccessorFixture({ repo });
+  const phases = [];
+  try {
+    assert.throws(() => fixture.integrate({
+      renewActiveAuthority: ({ lease, phase }) => {
+        phases.push(phase);
+        return lease;
+      },
+      publishTask: () => { throw new Error("stop after ordinary authority refresh"); },
+    }), /stop after ordinary authority refresh/u);
+    assert.deepEqual(phases, ["before-validation", "before-publication"]);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects an authority adapter that diverges from its projection", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-renewal-drift-"));
+  const fixture = createActiveSuccessorFixture({ repo });
+  let publishCalls = 0;
+  try {
+    assert.throws(() => fixture.integrate({
+      renewActiveAuthority: ({ lease }) => ({ ...lease, heartbeatAt: "2099-01-01T00:00:00.000Z" }),
+      publishTask: () => { publishCalls += 1; },
+    }), /different local projection/u);
+    assert.equal(publishCalls, 0);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("active integration publishes through a provably lagging pull-request base before convergence recovery", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-lagging-pr-base-"));
   const fixture = createActiveSuccessorFixture({
@@ -4178,7 +4211,7 @@ function createActiveSuccessorFixture({
       cloudPhase = "predecessor";
       ancestorReads = 0;
     },
-    integrate({ publishTask }) {
+    integrate({ publishTask, ...integrationOptions }) {
       return integrateSession({
         invocationPath: repo,
         repo,
@@ -4303,6 +4336,7 @@ function createActiveSuccessorFixture({
           }
           return Object.freeze({ lease, intent: null, registryRevision: null });
         },
+        ...integrationOptions,
         log: () => {},
       });
     },

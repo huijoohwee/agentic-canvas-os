@@ -380,6 +380,10 @@ function execute(action, context) {
     pollSeconds: Number(readOption(args, "poll-seconds") || 5),
     controllerRoot,
     verifyCloudAuthority: createPostMergeCloudAuthorityVerifier({ ghText }),
+    renewActiveAuthority: ({ lease }) => {
+      const remainingAuthorityMs = Date.parse(lease.expiresAt) - Date.now();
+      if (remainingAuthorityMs <= context.leaseTtlMs / 2) heartbeat(context);
+    },
     publishTask: () => publish(context),
     completeTask: () => completeSession({ ...context, json: false, finalize: false }),
     runText,

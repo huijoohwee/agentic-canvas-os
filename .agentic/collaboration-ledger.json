@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2602,
-  "headDigest": "77fdaffec0958ef12530d90e93e3df5cbf3a2f520d48d69f3350df7f453f237a",
+  "sequence": 2603,
+  "headDigest": "c91c7da95f41661bb1e34c532e37eab4452663a3823258b5fff58100b4fae009",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -128616,6 +128616,56 @@
       },
       "claimDigest": "c004a0be1bda7d5e4129f1cb80e37cf259c87790a3ffed6f35468ae8bc85fc8b",
       "digest": "77fdaffec0958ef12530d90e93e3df5cbf3a2f520d48d69f3350df7f453f237a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2603,
+      "parentDigest": "77fdaffec0958ef12530d90e93e3df5cbf3a2f520d48d69f3350df7f453f237a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "654f86c5d3ef934b4914626c1d9e1344b5fc47260fbb132708bb89f22579e0e2",
+      "idempotencyKey": "bc47c0636f4321a464ff1f5802779e200d9390ded6665a926656be2b6d9f36f0",
+      "requestDigest": "df023bd7eb159525d2cf231a936faaedde9ee5d1219733a15afa36c99f7180ee",
+      "evaluationTime": "2026-08-12T13:45:47.000Z",
+      "claimCore": {
+        "claimId": "654f86c5d3ef934b4914626c1d9e1344b5fc47260fbb132708bb89f22579e0e2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:d2ed9f10bbf3edeb09831e44f80b116f9bdc7a67076bd904ddd33d3013533d84",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:250e5f954880154a593e8182657d832e4a8c6506902b2b0ba5b750d8ae9da6aa",
+        "canonicalBaseRevision": "f6dd467868aba42409592442bb1d808c47167664",
+        "declaredWriteScope": [
+          "path:__tests__/lifecycle-monitor-cli.test.mjs",
+          "path:__tests__/lifecycle-monitor-contract.test.mjs",
+          "path:__tests__/lifecycle-monitor-controller.test.mjs",
+          "path:docs/FACTS.md",
+          "path:docs/LIFECYCLE-MONITORING.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:scripts/lifecycle-monitor-contract.mjs",
+          "path:scripts/lifecycle-monitor-controller.mjs",
+          "path:scripts/lifecycle-monitor-json-adapter.mjs",
+          "path:scripts/lifecycle-monitor.mjs",
+          "path:todo/2026-08/lifecycle-convergence-monitor.md",
+          "semantic:lifecycle-convergence-monitor"
+        ],
+        "writeSetDigest": "602bf80258695cbf952aca402c8e10a7c307f97d409d000fb44306c86f63da3e",
+        "laneRevision": "f6dd467868aba42409592442bb1d808c47167664",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T15:45:47.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "88175d5a883a340063f52723c58803e99e01ee6a074b2646ae26e4089f45e6a2",
+      "digest": "c91c7da95f41661bb1e34c532e37eab4452663a3823258b5fff58100b4fae009"
     }
   ]
 }

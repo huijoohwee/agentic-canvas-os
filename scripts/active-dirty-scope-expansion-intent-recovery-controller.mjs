@@ -39,9 +39,13 @@ export async function planActiveDirtyScopeExpansionIntentRecovery(
 ) {
   const runtime = normalizeAdapter(adapter);
   const stored = await runtime.readIntent();
-  const plan = stored
-    ? planFromIntent(normalizeIntent(contract, stored), contract)
+  const intent = stored ? normalizeIntent(contract, stored) : null;
+  const plan = intent?.status === "complete"
+    ? planFromIntent(intent, contract)
     : await buildCurrentPlan(runtime, contract);
+  if (intent && intent.planDigest !== plan.planDigest) {
+    throw new Error("Stored recovery decision is not semantically current.");
+  }
   requireRequestedPlanDigest(input?.planDigest, plan, { required: false });
   return plannedResult(plan);
 }
@@ -61,7 +65,7 @@ export async function runActiveDirtyScopeExpansionIntentRecovery(
 async function executeRecovery({ adapter, contract, evidence, input }) {
   const stored = await adapter.readIntent();
   let intent = stored ? normalizeIntent(contract, stored) : null;
-  const plan = intent
+  const plan = intent?.status === "complete"
     ? planFromIntent(intent, contract)
     : await buildCurrentPlan(adapter, contract);
   requireRequestedPlanDigest(input.planDigest, plan, { required: true });
@@ -72,6 +76,19 @@ async function executeRecovery({ adapter, contract, evidence, input }) {
   )(plan, input.authorization);
   if (intent) {
     assertAuthorizationReplay(intent, authorizationReceipt);
+    if (intent.status === "authorized") {
+      const refreshed = normalizeIntent(contract, contractFunction(
+        contract,
+        "refreshActiveDirtyScopeExpansionIntentRecoveryIntent",
+      )(intent, plan));
+      if (refreshed.intentDigest !== intent.intentDigest) {
+        intent = await persistIntent(adapter, contract, {
+          expectedIntent: intent,
+          nextIntent: refreshed,
+          plan,
+        });
+      }
+    }
   } else {
     const candidate = normalizeIntent(contract, contractFunction(
       contract,

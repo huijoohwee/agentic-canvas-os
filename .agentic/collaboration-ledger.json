@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2538,
-  "headDigest": "edc575a242793777c110b4e4d9468e33a849044a976cb9801a81a1eb32fbf5af",
+  "sequence": 2539,
+  "headDigest": "f778eb63ccfed9745d0e2c061cd7089eee3e55ac743b99f297ce232040624150",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -125559,6 +125559,47 @@
       },
       "claimDigest": "3c1aa80a95f2a43b3b1238585a2f724a7dd5958d8d52eb684dc960f9b94803ce",
       "digest": "edc575a242793777c110b4e4d9468e33a849044a976cb9801a81a1eb32fbf5af"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2539,
+      "parentDigest": "edc575a242793777c110b4e4d9468e33a849044a976cb9801a81a1eb32fbf5af",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "ea82db4e10e64662aef517b6b3144d1ee27090cce174dd05b1e148d6aaa08379",
+      "idempotencyKey": "9efb537eda6fb05016a6902eaad2a404bb904dcef08d0c9bfc1f630fbc008da7",
+      "requestDigest": "b4162f55ad0659aec667cfff2d154bd6ab346602d42b6a927db7cd5006bd2dd9",
+      "evaluationTime": "2026-08-12T11:37:35.000Z",
+      "claimCore": {
+        "claimId": "ea82db4e10e64662aef517b6b3144d1ee27090cce174dd05b1e148d6aaa08379",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:af9a96f314ce6f22f19e5e0dff45f5092ce20ed2b930c492967ef8540a50ee96",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:050178c3d3d92e42b2a6f9cf6ca47acfdbecef7d3c2c0281633e94f9eb239f30",
+        "canonicalBaseRevision": "889edbdcdc26e7c3b1f2e510ee1ef7f84429dd50",
+        "declaredWriteScope": [
+          "path:__tests__/alignment-audit-end-to-end.test.mjs",
+          "path:scripts/alignment-audit/__fixtures__/runtime/alignment-audit-runtime.md",
+          "path:scripts/alignment-audit/invocation-surface.mjs",
+          "semantic:alignment-registry-retirement"
+        ],
+        "writeSetDigest": "519ee89c4c9ec4e1111f26510c6a124b8fa6fb6793e15bde3828f23112fe09a7",
+        "laneRevision": "889edbdcdc26e7c3b1f2e510ee1ef7f84429dd50",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T12:07:35.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b5d4fe85afaea7a920dad1021dbf4aa133958eecea356d62737d89261dc27795",
+      "digest": "f778eb63ccfed9745d0e2c061cd7089eee3e55ac743b99f297ce232040624150"
     }
   ]
 }

@@ -27,7 +27,7 @@ import {
 import { recoveryFixture }
   from "./active-dirty-scope-expansion-intent-recovery-evidence.test.mjs";
 
-test("plan and authorization freeze exact C3-to-C4 source evidence", () => {
+test("plan and authorization freeze the semantic C3-to-C4 decision", () => {
   const { plan } = planFixture();
   assert.deepEqual(normalizeActiveDirtyScopeExpansionIntentRecoveryPlan(plan), plan);
   assert.equal(plan.schema, ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_PLAN_SCHEMA);
@@ -50,6 +50,70 @@ test("plan and authorization freeze exact C3-to-C4 source evidence", () => {
     () => normalizeActiveDirtyScopeExpansionIntentRecoveryPlan({ ...plan, extra: true }),
     /unexpected or missing fields/u,
   );
+});
+
+test("authorization survives transport observations but changes for subject drift", () => {
+  const fixture = recoveryFixture();
+  const firstSource = buildActiveDirtyScopeExpansionIntentRecoverySourceEvidence(
+    fixture.sourceInput,
+  );
+  const first = buildActiveDirtyScopeExpansionIntentRecoveryPlan({
+    sourceEvidence: firstSource,
+  });
+  const nextInput = structuredClone(fixture.sourceInput);
+  const nextMain = "a".repeat(40);
+  Object.assign(nextInput.controller, {
+    path: "/different/controller/root",
+    headSha: nextMain,
+    originMainSha: nextMain,
+    remoteMainSha: nextMain,
+    treeSha: "b".repeat(40),
+  });
+  nextInput.pullRequest.baseRefOid = nextMain;
+  const { lineageDigest: _lineageDigest, ...lineageCore } = nextInput.ledgerLineage;
+  Object.assign(lineageCore, {
+    currentLedgerDigest: digestValue({ global: "ledger advanced" }),
+    currentHeadDigest: digestValue({ global: "head advanced" }),
+    currentSequence: lineageCore.currentSequence + 7,
+    unrelatedSuffixDigest: digestValue({ unrelated: "append" }),
+  });
+  nextInput.ledgerLineage = {
+    ...lineageCore,
+    lineageDigest: digestValue(lineageCore),
+  };
+  const { receiptDigest: _receiptDigest, ...mutationCore } =
+    nextInput.mutationAuthority;
+  Object.assign(mutationCore, {
+    globalLedgerRevision: "c".repeat(40),
+    globalLedgerDigest: nextInput.ledgerLineage.currentHeadDigest,
+    currentClaimInventoryDigest: digestValue({ inventory: "fresh" }),
+    cloudVerificationReceiptDigest: digestValue({ verification: "fresh" }),
+    evaluatedAt: "2026-08-12T00:45:00.000Z",
+  });
+  nextInput.mutationAuthority = {
+    ...mutationCore,
+    receiptDigest: digestValue(mutationCore),
+  };
+  const nextSource = buildActiveDirtyScopeExpansionIntentRecoverySourceEvidence(
+    nextInput,
+  );
+  const next = buildActiveDirtyScopeExpansionIntentRecoveryPlan({
+    sourceEvidence: nextSource,
+  });
+  assert.notEqual(first.sourceEvidenceDigest, next.sourceEvidenceDigest);
+  assert.equal(first.decisionEvidenceDigest, next.decisionEvidenceDigest);
+  assert.equal(first.planDigest, next.planDigest);
+  assert.equal(first.exactAuthorization, next.exactAuthorization);
+
+  const semanticInput = structuredClone(nextInput);
+  semanticInput.controller.implementationDigest = digestValue({ implementation: "changed" });
+  const semanticSource = buildActiveDirtyScopeExpansionIntentRecoverySourceEvidence(
+    semanticInput,
+  );
+  const semantic = buildActiveDirtyScopeExpansionIntentRecoveryPlan({
+    sourceEvidence: semanticSource,
+  });
+  assert.notEqual(first.planDigest, semantic.planDigest);
 });
 
 test("terminal projection preserves every historical C3 field and binds C4 receipts", () => {
@@ -154,10 +218,10 @@ test("plan and receipt schemas match exact top-level runtime artifacts", () => {
     fixture.completeIntent,
   );
   const planSchema = readSchema(
-    "active-dirty-scope-expansion-intent-recovery-plan.v1.schema.json",
+    "active-dirty-scope-expansion-intent-recovery-plan.v2.schema.json",
   );
   const receiptSchema = readSchema(
-    "active-dirty-scope-expansion-intent-recovery-receipt.v1.schema.json",
+    "active-dirty-scope-expansion-intent-recovery-receipt.v2.schema.json",
   );
   const ajv = new Ajv2020({ allErrors: true, strict: false, formats: {
     "date-time": value => Number.isFinite(Date.parse(value)),

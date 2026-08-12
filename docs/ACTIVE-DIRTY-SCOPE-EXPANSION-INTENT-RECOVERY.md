@@ -4,7 +4,7 @@ graphId: "md:active-dirty-scope-expansion-intent-recovery"
 doc_type: "Runtime Contract"
 date: "2026-08-12"
 lang: "en-US"
-schema: "agentic-active-dirty-scope-expansion-intent-recovery/v1"
+schema: "agentic-active-dirty-scope-expansion-intent-recovery/v2"
 frontmatter_contract: "required"
 status: "focused-tested"
 authority: "exact-authorized terminal reconciliation of one successor-bound scope-expansion intent after a single heartbeat renewal"
@@ -50,9 +50,14 @@ Planning fails closed unless all source subjects join at one stable observation:
 - a fresh operation-derived mutation-authority receipt joins that lease and C4 cloud authority; and
 - the historical and current collaboration ledgers prove the exact heartbeat lineage below.
 
-The plan embeds these normalized subjects and their digests. It excludes observation timestamps that
-do not change the authority subject, but the run still requires the local and cloud expiries to be
-current when it re-verifies mutation authority.
+The v2 plan keeps two explicit layers. `decisionEvidence` is the portable semantic decision used by
+the operator token. Full `sourceEvidence` is a fresh execution observation used for validation and
+audit. This separation is provider-neutral: transport revisions, absolute controller paths,
+protected-main commits, pull-request base commits, evaluation timestamps, complete inventory
+digests, verification receipts, and unrelated ledger suffixes do not alter the semantic decision.
+They remain sealed in `sourceEvidence` and are re-read before the effect. Target claim, heartbeat,
+lease, intent, manifest, pull-request identity and marker, owned dirt, controller implementation, or
+overlap drift still changes or invalidates the decision.
 
 ## Exact heartbeat lineage
 
@@ -101,9 +106,14 @@ plan, `planDigest`, and this byte-exact token:
 authorize active-dirty-scope-expansion-intent-recovery <planDigest>
 ```
 
-Whitespace, case, digest, source evidence, protected-main, lease, ledger, pull-request, intent, or
-dirt drift requires a fresh plan. The run command requires both the exact lowercase plan digest and
-the byte-identical authorization token. Operator-selected journal or controller paths are rejected.
+Whitespace, case, digest, or semantic-subject drift requires a fresh authorization. Unrelated
+protected-main or collaboration-ledger advancement does not. On an authorized replay, the
+controller rebuilds full source evidence, requires the same semantic decision digest, and
+compare-and-swaps the refreshed observation into the durable journal before any effect. This makes
+the token portable across tasks, sessions, and chats without making authority transferable to a
+different lane, writer session, claim, scope, or repository. The run command still requires the exact
+lowercase plan digest and byte-identical authorization token. Operator-selected journal or
+controller paths are rejected.
 
 ## One-shot terminal effect
 

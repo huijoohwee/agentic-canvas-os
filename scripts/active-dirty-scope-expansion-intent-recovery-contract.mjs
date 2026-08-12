@@ -2,25 +2,27 @@
 import { canonicalJson, digestValue }
   from "./cloud-collaboration-primitives.mjs";
 import {
+  buildActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence,
+  normalizeActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence,
   normalizeActiveDirtyScopeExpansionIntentRecoverySourceEvidence,
   normalizeActiveDirtyScopeExpansionIntentRecoveryTerminalObservation,
   normalizeRecoverableScopeExpansionIntent,
 } from "./active-dirty-scope-expansion-intent-recovery-evidence.mjs";
 
 export const ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_PLAN_SCHEMA =
-  "agentic-active-dirty-scope-expansion-intent-recovery-plan/v1";
+  "agentic-active-dirty-scope-expansion-intent-recovery-plan/v2";
 export const ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_AUTHORIZATION_SCHEMA =
-  "agentic-active-dirty-scope-expansion-intent-recovery-authorization/v1";
+  "agentic-active-dirty-scope-expansion-intent-recovery-authorization/v2";
 export const ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_INTENT_SCHEMA =
-  "agentic-active-dirty-scope-expansion-intent-recovery-intent/v1";
+  "agentic-active-dirty-scope-expansion-intent-recovery-intent/v2";
 export const ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_RECEIPT_SCHEMA =
-  "agentic-active-dirty-scope-expansion-intent-recovery-receipt/v1";
+  "agentic-active-dirty-scope-expansion-intent-recovery-receipt/v2";
 export const ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_PHASES =
   Object.freeze(["complete"]);
 
 const OPERATION = "active-dirty-scope-expansion-intent-recovery";
 const OPERATION_KEY_SCHEMA =
-  "agentic-active-dirty-scope-expansion-intent-recovery-operation-key/v1";
+  "agentic-active-dirty-scope-expansion-intent-recovery-operation-key/v2";
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 
 export function buildActiveDirtyScopeExpansionIntentRecoveryPlan({
@@ -32,9 +34,13 @@ export function buildActiveDirtyScopeExpansionIntentRecoveryPlan({
   if (source.scopeExpansionIntent.status !== "successor-bound") {
     throw new Error("Recovery planning requires the exact successor-bound source intent.");
   }
+  const decisionEvidence =
+    buildActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence(source);
   return sealPlan({
     schema: ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_PLAN_SCHEMA,
     operation: OPERATION,
+    decisionEvidence,
+    decisionEvidenceDigest: decisionEvidence.decisionEvidenceDigest,
     sourceEvidence: source,
     sourceEvidenceDigest: source.sourceEvidenceDigest,
   });
@@ -43,21 +49,31 @@ export function buildActiveDirtyScopeExpansionIntentRecoveryPlan({
 export function normalizeActiveDirtyScopeExpansionIntentRecoveryPlan(value) {
   object(value, "Recovery plan");
   exactKeys(value, [
-    "schema", "operation", "sourceEvidence", "sourceEvidenceDigest",
-    "planDigest", "exactAuthorization",
+    "schema", "operation", "decisionEvidence", "decisionEvidenceDigest",
+    "sourceEvidence", "sourceEvidenceDigest", "planDigest", "exactAuthorization",
   ], "Recovery plan");
   const source = normalizeActiveDirtyScopeExpansionIntentRecoverySourceEvidence(
     value.sourceEvidence,
   );
+  const decision = normalizeActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence(
+    value.decisionEvidence,
+  );
+  const projectedDecision =
+    buildActiveDirtyScopeExpansionIntentRecoveryDecisionEvidence(source);
   const expected = sealPlan({
     schema: text(value.schema, "plan schema"),
     operation: text(value.operation, "plan operation"),
+    decisionEvidence: decision,
+    decisionEvidenceDigest: digest(value.decisionEvidenceDigest,
+      "decision-evidence digest"),
     sourceEvidence: source,
     sourceEvidenceDigest: digest(value.sourceEvidenceDigest, "source-evidence digest"),
   });
   if (expected.schema !== ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_PLAN_SCHEMA
     || expected.operation !== OPERATION
     || source.scopeExpansionIntent.status !== "successor-bound"
+    || expected.decisionEvidenceDigest !== decision.decisionEvidenceDigest
+    || canonicalJson(decision) !== canonicalJson(projectedDecision)
     || expected.sourceEvidenceDigest !== source.sourceEvidenceDigest
     || canonicalJson(value) !== canonicalJson(expected)) {
     throw new Error("Recovery plan digest or exact authorization drifted.");
@@ -91,6 +107,26 @@ export function createActiveDirtyScopeExpansionIntentRecoveryIntent(
     authorizationDigest: authorization.authorizationDigest,
     status: "authorized",
     terminal: null,
+  });
+}
+
+export function refreshActiveDirtyScopeExpansionIntentRecoveryIntent(
+  intent,
+  currentPlan,
+) {
+  const stored = normalizeActiveDirtyScopeExpansionIntentRecoveryIntent(intent);
+  const plan = normalizeActiveDirtyScopeExpansionIntentRecoveryPlan(currentPlan);
+  if (stored.status !== "authorized" || stored.planDigest !== plan.planDigest
+    || stored.authorizationDigest !== authorizationDigestForPlan(plan)) {
+    throw new Error("Recovery observation refresh changed its semantic authority.");
+  }
+  return sealRecoveryIntent({
+    schema: stored.schema,
+    planDigest: stored.planDigest,
+    planSnapshot: plan,
+    authorizationDigest: stored.authorizationDigest,
+    status: stored.status,
+    terminal: stored.terminal,
   });
 }
 
@@ -320,7 +356,12 @@ export function normalizeActiveDirtyScopeExpansionIntentRecoveryReceipt(
 }
 
 function sealPlan(core) {
-  const planDigest = digestValue(core);
+  const planDigest = digestValue({
+    schema: core.schema,
+    operation: core.operation,
+    decisionEvidence: core.decisionEvidence,
+    decisionEvidenceDigest: core.decisionEvidenceDigest,
+  });
   return deepFreeze({
     ...core,
     planDigest,
@@ -332,7 +373,7 @@ function authorizationCore(plan, authorization) {
   return {
     schema: ACTIVE_DIRTY_SCOPE_EXPANSION_INTENT_RECOVERY_AUTHORIZATION_SCHEMA,
     planDigest: plan.planDigest,
-    sourceEvidenceDigest: plan.sourceEvidenceDigest,
+    decisionEvidenceDigest: plan.decisionEvidenceDigest,
     operatorDecisionDigest: plan.planDigest,
     authorization,
   };
@@ -341,12 +382,12 @@ function authorizationCore(plan, authorization) {
 function normalizeAuthorization(value, plan) {
   object(value, "Recovery authorization");
   exactKeys(value, [
-    "schema", "planDigest", "sourceEvidenceDigest", "operatorDecisionDigest",
+    "schema", "planDigest", "decisionEvidenceDigest", "operatorDecisionDigest",
     "authorization", "authorizationDigest",
   ], "Recovery authorization");
   const core = authorizationCore(plan, value.authorization);
   if (value.schema !== core.schema || value.planDigest !== core.planDigest
-    || value.sourceEvidenceDigest !== core.sourceEvidenceDigest
+    || value.decisionEvidenceDigest !== core.decisionEvidenceDigest
     || value.operatorDecisionDigest !== core.operatorDecisionDigest
     || value.authorization !== plan.exactAuthorization
     || value.authorizationDigest !== digestValue(core)) {

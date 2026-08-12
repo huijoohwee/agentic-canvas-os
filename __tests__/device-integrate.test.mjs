@@ -2977,7 +2977,8 @@ test("review-ready delivery rejects live head or protected-main drift before dis
   }
 });
 
-test("authorized auto-delivery completes only through canonical runtime readiness", () => {
+test("authorized and legacy local-only auto-delivery complete only through canonical runtime readiness", () => {
+  for (const legacyLocalOnly of [false, true]) {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-auto-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
   const canonicalKnowgrphRoot = path.join(repo, "canonical", "knowgrph");
@@ -2992,9 +2993,15 @@ test("authorized auto-delivery completes only through canonical runtime readines
     runtimeRequired: true,
     reviewHeadSha: commitSha,
   });
+  if (legacyLocalOnly) {
+    delete lease.admission;
+    delete lease.cloudAuthority;
+  }
   let publishCalled = false;
   let runtimeProven = false;
   let completedAfterRuntime = false;
+  let cloudAuthorizationCalls = 0;
+  let cloudVerificationCalls = 0;
   try {
     const result = integrateSession({
       invocationPath: repo,
@@ -3030,10 +3037,14 @@ test("authorized auto-delivery completes only through canonical runtime readines
       },
       sessionId: "session-a",
       buildDeliveryEvidence: () => deliveryEvidence,
-      authorizeCloudDelivery: ({ authority }) => ({
-        authority: deliveryAuthorizedAuthority(authority),
-      }),
-      verifyCloudAuthority: () => ({ ok: true }),
+      authorizeCloudDelivery: ({ authority }) => {
+        cloudAuthorizationCalls += 1;
+        return { authority: deliveryAuthorizedAuthority(authority) };
+      },
+      verifyCloudAuthority: () => {
+        cloudVerificationCalls += 1;
+        return { ok: true };
+      },
       run: () => {},
       runText: (command, args) => {
         if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
@@ -3068,8 +3079,11 @@ test("authorized auto-delivery completes only through canonical runtime readines
     assert.equal(result.commit, null);
     assert.equal(publishCalled, false);
     assert.equal(completedAfterRuntime, true);
+    assert.equal(cloudAuthorizationCalls, legacyLocalOnly ? 0 : 1);
+    assert.equal(cloudVerificationCalls === 0, legacyLocalOnly);
   } finally {
     rmSync(repo, { recursive: true, force: true });
+  }
   }
 });
 

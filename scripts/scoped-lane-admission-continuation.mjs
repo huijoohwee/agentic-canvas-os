@@ -153,6 +153,9 @@ export function continuePlannedScopedLaneAdmission({
     schema: "agentic-lane-continuation-preservation/v1",
     candidatePath: candidate.path,
     candidateStateDigest: candidate.stateDigest,
+    candidateRevision: candidate.head,
+    candidateTreeSha: candidate.treeSha,
+    preparedIntegrationReceiptDigest: candidate.preparedIntegrationReceiptDigest,
     peerLaneStateDigest: peers.peerLaneStateDigest,
     dormantPreservationReceiptDigest: dormantPreservationReceipt.receiptDigest,
     remotePeerSetDigest: remotePeers.peerSetDigest,
@@ -186,6 +189,9 @@ export function continuePlannedScopedLaneAdmission({
     writeSetDigest: manifest.writeSetDigest,
     localFenceSha: lease.fenceSha,
     candidateStateDigest: candidate.stateDigest,
+    candidateRevision: candidate.head,
+    candidateTreeSha: candidate.treeSha,
+    preparedIntegrationReceiptDigest: candidate.preparedIntegrationReceiptDigest,
     peerLaneStateDigest: peers.peerLaneStateDigest,
     peerOperationReceiptDigests: remotePeers.operationReceiptDigests,
     dormantPreservationReceiptDigest: dormantPreservationReceipt.receiptDigest,
@@ -240,16 +246,51 @@ function requireCandidateLane({ lease, lanes }) {
   );
   if (matches.length !== 1) throw new Error("Admission continuation requires one registered candidate lane.");
   const candidate = matches[0];
+  const preparedIntegration = requirePreparedIntegrationCandidate({
+    lease,
+    candidate,
+  });
   if (
     candidate.branch !== `refs/heads/${lease.branch}`
-    || candidate.head !== lease.fenceSha
     || candidate.dirty
     || candidate.invalid
     || candidate.leaseAmbiguous
     || candidate.lease?.sessionId !== lease.sessionId
     || candidate.lease?.epoch !== lease.epoch
   ) throw new Error("Admission continuation candidate drifted from its clean registered fence.");
-  return candidate;
+  return Object.freeze({
+    ...candidate,
+    preparedIntegrationReceiptDigest: preparedIntegration
+      ? digestValue(preparedIntegration)
+      : null,
+  });
+}
+
+function requirePreparedIntegrationCandidate({ lease, candidate }) {
+  if (candidate.head === lease.fenceSha && !lease.integration) return null;
+  const integration = lease.integration;
+  const declaredPaths = lease.admission?.declaredWriteSet
+    ?.filter(item => item.startsWith("path:"))
+    .map(item => item.slice("path:".length));
+  const exactPaths = Array.isArray(integration?.paths)
+    && JSON.stringify(integration.paths) === JSON.stringify(declaredPaths);
+  if (
+    integration?.schema !== "agentic-integration-commit/v1"
+    || !SHA_PATTERN.test(String(integration.commitSha || ""))
+    || !SHA_PATTERN.test(String(integration.treeSha || ""))
+    || integration.commitSha !== candidate.head
+    || integration.treeSha !== candidate.treeSha
+    || !exactPaths
+    || !/^[0-9a-f]{64}$/u.test(String(integration.stagedDiffDigest || ""))
+    || !/^[0-9a-f]{64}$/u.test(String(integration.manifestDigest || ""))
+    || typeof integration.commitMessage !== "string"
+    || !integration.commitMessage.trim()
+  ) {
+    throw new Error(
+      "Admission continuation candidate drifted from its clean registered fence or exact prepared integration commit.",
+    );
+  }
+  return integration;
 }
 
 function verifyProtectedAdvance({ lease, manifest, protectedRevision, protectedDeltaPaths }) {

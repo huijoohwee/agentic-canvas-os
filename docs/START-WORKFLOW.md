@@ -313,7 +313,7 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run device:resume -- \
   --repository="$TASK_WORKTREE"
 ```
 
-Use `--recover-owned-dirt` only for the explicit same-session review-ready
+An admitted continuation may advance from its original fence to one exact controller-prepared integration commit only when the stored integration receipt matches the current commit, tree, declared paths, staged-diff digest, manifest digest, and commit message. Any other descendant remains drift. A legacy local-only auto-delivery lane that is already review-ready may finalize only when its exact pull request is already merged; `device:integrate` then records task completion without inventing cloud authority or dispatching another merge. Open pull requests still require the normal delivery and authorization path. Use `--recover-owned-dirt` only for the explicit same-session review-ready
 recovery above. Ordinary resume remains clean-only.
 
 ### 6. Verify

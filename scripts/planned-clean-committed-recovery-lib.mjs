@@ -60,7 +60,7 @@ export function recoverPlannedAdmissionCloudAuthority({ authority, manifest, bra
     request: { targetRepository: authority?.targetRepository } });
   const matches = (status?.claims || []).filter(claim => claim.claimId === authority?.claimId);
   const claim = matches[0];
-  if (matches.length !== 1 || claim?.state !== "parked"
+  if (matches.length !== 1 || !["dormant-preserved", "parked"].includes(claim?.state)
     || claim.canonicalBaseRevision !== authority.canonicalBaseSha
     || claim.laneRevision !== authority.laneRevision
     || claim.writeSetDigest !== manifest?.writeSetDigest

@@ -53,6 +53,22 @@ test("planned clean recovery advances only the exact dormant claim", () => {
   assert.equal(result.authority, projected);
 });
 
+test("planned clean recovery accepts the provider-neutral dormant state", () => {
+  const liveDormant = { ...dormant, state: "dormant-preserved" };
+  const projected = { ...authority, state: "active", transitionCounter: 8 };
+  const result = recoverPlannedAdmissionCloudAuthority({
+    authority, manifest, branch: "agent/device/scope",
+    recoveryEvidenceDigest: digest("f"),
+    inspect: () => ({ claims: [liveDormant] }),
+    invoke: () => ({ ok: true, action: "continue", claim: {
+      ...liveDormant, state: "current", transitionCounter: 8,
+    } }),
+    project: () => projected,
+    verify: input => ({ authority: input.authority, verification: { status: "ready" } }),
+  });
+  assert.equal(result.authority, projected);
+});
+
 test("planned clean recovery rejects non-dormant or drifted subjects before mutation", () => {
   for (const claim of [
     { ...dormant, state: "active" },

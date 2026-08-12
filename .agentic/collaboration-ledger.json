@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2440,
-  "headDigest": "b0b13b7c22c74937e40855a29b1ccda7a98b095d3b34531978ac4e47819c7444",
+  "sequence": 2441,
+  "headDigest": "c066a114f746352e9565a81d0e8f3fcc10d84a7b7a631bc2d6c47047e94b775a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -120819,6 +120819,53 @@
       },
       "claimDigest": "8f9c2132e61cdb642e6759c8d470524740dbd79937bd6379fe12875e1ec7b58e",
       "digest": "b0b13b7c22c74937e40855a29b1ccda7a98b095d3b34531978ac4e47819c7444"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2441,
+      "parentDigest": "b0b13b7c22c74937e40855a29b1ccda7a98b095d3b34531978ac4e47819c7444",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c2935db9f4a4404c3d8801c8c52dc5d2f40be655db6e0ac5dbcdfcbf990ae96a",
+      "idempotencyKey": "7ed14eb8a18d5ddd7c122ae5c66a8e5e873c207f59330d0a14fadf84bef75dbc",
+      "requestDigest": "e22bc61d8c4b02146c60fc10d99c089602d8965971cb51cd18373c1f264fa67b",
+      "evaluationTime": "2026-08-12T06:47:04.000Z",
+      "claimCore": {
+        "claimId": "c2935db9f4a4404c3d8801c8c52dc5d2f40be655db6e0ac5dbcdfcbf990ae96a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:cc99b9dd08ad9e739e01a7a13750735ed1b65b9f1775fbfc2cf705eadb0e97c9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8aadcddb2d403bcfd1f91e3bf0f0c19593ff8660357f6f7620c87bfd21a703a7",
+        "canonicalBaseRevision": "270dfa50cc6825115d0856ae931047cd5e531b18",
+        "declaredWriteScope": [
+          "path:__tests__/retired-planned-admission-owner.test.mjs",
+          "path:__tests__/scoped-lane-clean-preservation-bootstrap.test.mjs",
+          "path:docs/RETIRED-PLANNED-ADMISSION-OWNER.md",
+          "path:memory/2026-08.md",
+          "path:scripts/legacy-review-ready-retirement-lib.mjs",
+          "path:scripts/retired-planned-admission-owner-lib.mjs",
+          "path:scripts/retired-planned-admission-owner.mjs",
+          "path:scripts/scoped-lane-bootstrap-maintenance.mjs",
+          "path:todo/2026-08.md",
+          "semantic:retired-planned-admission-owner-successor"
+        ],
+        "writeSetDigest": "c4ecff52b68a0252c582e024bcb6410200b6b48705ab3da6658292825aca758c",
+        "laneRevision": "594c3f2531114585eb5e2a31dcb317aa9ba69d03",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-13T06:44:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM795798",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "6a3eaec922b4af0b230120d9637ea96e568d53b5055216fa5d4473a8898508f8",
+      "digest": "c066a114f746352e9565a81d0e8f3fcc10d84a7b7a631bc2d6c47047e94b775a"
     }
   ]
 }

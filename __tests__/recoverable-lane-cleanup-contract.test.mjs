@@ -14,6 +14,7 @@ import {
   normalizeRecoverableLaneCleanupReceipt,
   RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA,
 } from "../scripts/recoverable-lane-cleanup-contract.mjs";
+import { GENERATED_RESIDUE_SCHEMA } from "../scripts/recoverable-lane-cleanup-generated-residue.mjs";
 
 test("cleanup plan is deterministic and emits one exact digest authorization", () => {
   const first = plan();
@@ -31,6 +32,33 @@ test("cleanup plan is deterministic and emits one exact digest authorization", (
     objectPruning: "forbid",
     globalWorktreePrune: "forbid",
   });
+});
+
+test("legacy v1 evidence and durable intents remain replay-readable", () => {
+  const legacy = legacyEvidence();
+  const legacyPlan = legacyCleanupPlan();
+  const complete = legacyIntent(legacyPlan, "complete");
+  assert.equal(normalizeRecoverableLaneCleanupEvidence(legacy).schema,
+    "agentic-recoverable-lane-cleanup-evidence/v1");
+  assert.deepEqual(normalizeRecoverableLaneCleanupPlan(legacyPlan), legacyPlan);
+  assert.deepEqual(normalizeRecoverableLaneCleanupIntent(complete), complete);
+  assert.deepEqual(legacyPlan.phases, ["prepared", "bundle_verified",
+    "worktree_quarantined", "worktree_removed", "reservation_released", "complete"]);
+  assert.equal("generatedResidue" in complete.plan.evidence.target, false);
+  assert.throws(() => plan({ evidenceValue: legacy }), /require generated-residue evidence v2/);
+  assert.throws(() => authorizeRecoverableLaneCleanup({
+    plan: legacyPlan, authorization: legacyPlan.exactAuthorization,
+  }), /require generated-residue evidence v2/);
+  assert.throws(() => normalizeRecoverableLaneCleanupIntent(
+    legacyIntent(legacyPlan, "prepared"),
+  ), /observation-only/);
+  const currentPlan = plan();
+  const current = createRecoverableLaneCleanupIntent({ plan: currentPlan, authorization:
+    authorizeRecoverableLaneCleanup({ plan: currentPlan, authorization: currentPlan.exactAuthorization }) });
+  const { intentDigest: _intentDigest, ...currentCore } = current;
+  const mismatchedCore = { ...currentCore, schema: "agentic-recoverable-lane-cleanup-intent/v1" };
+  const mismatched = { ...mismatchedCore, intentDigest: digestValue(mismatchedCore) };
+  assert.throws(() => normalizeRecoverableLaneCleanupIntent(mismatched), /versions must match/);
 });
 
 test("cleanup authorization rejects missing, approximate, or foreign decisions", () => {
@@ -70,7 +98,10 @@ test("cleanup evidence and phases reject coerced or open-shaped values", () => {
   })), /boolean/);
   assert.throws(() => normalizeRecoverableLaneCleanupEvidence(evidence({
     target: { unmergedEntries: "0" },
-  })), /non-negative integer/);
+  })), /non-negative/);
+  assert.throws(() => normalizeRecoverableLaneCleanupEvidence(evidence({
+    target: { generatedResidue: { ...generatedResidue(), roots: ["node_modules/"] } },
+  })), /roots are not exact|profile digest/);
   const cleanupPlan = plan();
   const authorization = authorizeRecoverableLaneCleanup({
     plan: cleanupPlan, authorization: cleanupPlan.exactAuthorization,
@@ -210,6 +241,7 @@ function evidence({ target = {}, authority = {}, preservationReceiptDigests = []
       gitDirIdentityDigest: "4".repeat(64),
       gitDirGenerationDigest: "5".repeat(64),
       clean: true,
+      generatedResidue: generatedResidue(),
       unmergedEntries: 0,
       operationMarkers: [],
       stateDigest: "2".repeat(64),
@@ -225,6 +257,71 @@ function evidence({ target = {}, authority = {}, preservationReceiptDigests = []
     },
   };
   return { ...core, evidenceDigest: digestValue(core) };
+}
+
+function generatedResidue() {
+  const core = {
+    schema: GENERATED_RESIDUE_SCHEMA,
+    mode: "none",
+    roots: [],
+    ignoredPathCount: 0,
+    ignoredPathsDigest: digestValue([]),
+    entryCount: 0,
+    totalBytes: 0,
+    inventoryDigest: digestValue([]),
+    checkoutEntryCount: 2,
+    checkoutInventoryDigest: "6".repeat(64),
+  };
+  return { ...core, profileDigest: digestValue(core) };
+}
+
+function legacyEvidence() {
+  const current = evidence();
+  const { generatedResidue: _generatedResidue, ...target } = current.target;
+  const core = { ...current, schema: "agentic-recoverable-lane-cleanup-evidence/v1", target };
+  delete core.evidenceDigest;
+  return { ...core, evidenceDigest: digestValue(core) };
+}
+
+function legacyCleanupPlan() {
+  const current = plan();
+  const legacy = legacyEvidence();
+  const core = { ...current, schema: "agentic-recoverable-lane-cleanup-plan/v1",
+    evidence: legacy, evidenceDigest: legacy.evidenceDigest,
+    phases: ["prepared", "bundle_verified", "worktree_quarantined", "worktree_removed",
+      "reservation_released", "complete"] };
+  delete core.exactAuthorization;
+  delete core.planDigest;
+  const planDigest = digestValue(core);
+  return { ...core,
+    exactAuthorization: `authorize recoverable-lane-cleanup ${planDigest}`, planDigest };
+}
+
+function legacyIntent(cleanupPlan, status) {
+  const operation = phase => digestValue({
+    schema: "agentic-recoverable-lane-cleanup-operation/v1",
+    planDigest: cleanupPlan.planDigest, subjectKey: cleanupPlan.subjectKey, phase,
+  });
+  const phases = { prepared: { operationKey: operation("prepared") } };
+  if (status === "complete") {
+    phases.bundle_verified = { operationKey: operation("bundle_verified"),
+      bundle: bundle(cleanupPlan), reservation: reservation(),
+      quarantineStateDigest: "9".repeat(64) };
+    phases.worktree_quarantined = { operationKey: operation("worktree_quarantined"),
+      ...artifacts(true), disposableGitDirDigest: "8".repeat(64),
+      disposableGitDirGenerationDigest: "9".repeat(64), removalStateDigest: "a".repeat(64) };
+    phases.worktree_removed = { operationKey: operation("worktree_removed"),
+      ...artifacts(false), replayedAbsentRegistration: false };
+    phases.reservation_released = { operationKey: operation("reservation_released"),
+      release: release(cleanupPlan) };
+    phases.complete = { operationKey: operation("complete"), receiptDigest: "b".repeat(64) };
+  }
+  const core = {
+    schema: "agentic-recoverable-lane-cleanup-intent/v1", status,
+    plan: cleanupPlan, planDigest: cleanupPlan.planDigest,
+    subjectKey: cleanupPlan.subjectKey, authorizationDigest: "c".repeat(64), phases,
+  };
+  return { ...core, intentDigest: digestValue(core) };
 }
 
 function bundle(cleanupPlan) {

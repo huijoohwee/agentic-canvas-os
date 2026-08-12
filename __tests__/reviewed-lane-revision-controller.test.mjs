@@ -243,6 +243,43 @@ test("rejects stale durable review-ready authority after crash and heartbeat adv
   /authority drifted before lease projection/u);
 });
 
+test("accepts unrelated outer ledger advance after durable review-ready recording", async () => {
+  const subject = createSubject();
+  const plan = buildReviewedLaneRevisionPlan({ ...subject, replacementSubject: REPLACEMENT_SUBJECT });
+  const repository = process.cwd(), lease = { ...subject.fixture.lease, worktreePath: repository };
+  const owner = subject.fixture.claim;
+  const successor = { ...owner, claimIdentitySchema: owner.entrySchema, claimId: "e".repeat(64),
+    predecessorClaimId: plan.sourceClaimId, laneRevision: plan.replacementHeadSha,
+    leaseEpoch: owner.leaseEpoch + 1, transitionCounter: 3, heartbeatCounter: 1,
+    state: "reviewed", reviewRequestId: plan.sourceReviewRequestId,
+    fenceRevision: "f".repeat(64), transitionDigest: "a".repeat(64),
+    operationReceiptDigest: "b".repeat(64), expiresAt: "2030-01-01T00:00:00.000Z" };
+  const { deviceId: _deviceId, sessionId: _sessionId, ...publicSuccessor } = successor;
+  let ledgerDigest = "d".repeat(64);
+  const gitText = args => {
+    if (args[0] === "branch") return lease.branch;
+    if (args[0] === "worktree") return `worktree ${repository}\nHEAD ${plan.sourceHeadSha}\nbranch refs/heads/${lease.branch}\n`;
+    if (args[0] === "rev-parse") return ".git";
+    throw new Error(`Unexpected git read: ${args.join(" ")}`);
+  };
+  const runtime = createReviewedLaneRevisionRepositoryRuntime({ repository,
+    sessionId: lease.sessionId }, { gitText, leaseStore: { read: () => lease },
+    inspectCloud: () => cloudStatus([publicSuccessor], ledgerDigest),
+    privateClaims: async () => privateInventory([publicSuccessor], owner) });
+  const phase = "successor_review_ready";
+  const operationKey = reviewedLaneRevisionOperationKey(plan, phase);
+  const first = await runtime.reconcilePhase({ intent: { phases: {} }, operationKey, phase, plan });
+  const intent = { phases: { [phase]: { values: first.values } } };
+  ledgerDigest = "c".repeat(64);
+  const reconciled = await runtime.reconcilePhase({ intent, operationKey, phase, plan });
+  assert.equal(reconciled.kind, "complete");
+  const projected = await runtime.updateLease({ intent, plan,
+    operationKey: reviewedLaneRevisionOperationKey(plan, "lease_updated") });
+  assert.equal(projected.leaseProjection.cloudAuthority.ledgerDigest, ledgerDigest);
+  assert.equal(projected.leaseProjection.cloudAuthority.claimLedgerRevision,
+    successor.transitionDigest);
+});
+
 test("review-ready source joins reviewHeadSha while retaining an older fenceSha", () => {
   const headSha = "1".repeat(40);
   assert.equal(assertReviewedLaneSourceHeadProjection({

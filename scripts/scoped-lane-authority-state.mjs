@@ -365,13 +365,19 @@ function hasQueuedSuccessorProjection(lease, evaluatedAt, currentRemoteClaims) {
 
 function retiredPreservationHasCurrentClaim(lane, currentRemoteClaims) {
   if (!Array.isArray(currentRemoteClaims)) return true;
-  const source = lane.lease.localReviewRetirement.intent.source;
+  const lease = lane?.lease;
+  if (!lease?.branch || !lease?.scope) return true;
+  const reviewRequestId = lease.localReviewRetirement?.intent?.source
+    ?.pullRequest?.reviewRequestId
+    ?? lease.admissionOwnerRetirement?.source?.originalLease
+      ?.cloudAuthority?.reviewRequestId
+    ?? null;
   const workItemIds = new Set([
-    pseudonymousIdentifier("work-item", source.branch),
-    pseudonymousIdentifier("work-item", source.lease.scope),
+    pseudonymousIdentifier("work-item", lease.branch),
+    pseudonymousIdentifier("work-item", lease.scope),
   ]);
   return currentRemoteClaims.some(claim => (
-    claim.reviewRequestId === source.pullRequest.reviewRequestId
+    (typeof reviewRequestId === "string" && claim.reviewRequestId === reviewRequestId)
     || workItemIds.has(claim.workItemId)
   ));
 }
@@ -380,7 +386,6 @@ function hasAuthoritativeLaneOwner(lane, lease, evaluatedAt, currentRemoteClaims
   if (!lease || !ADMITTED_LANE_STATES.has(lease.status) || !Array.isArray(currentRemoteClaims)) {
     return false;
   }
-  if (path.resolve(lease.worktreePath || "") !== lane.path) return false;
   if (path.resolve(lease.worktreePath || "") !== lane.path) return false;
   const checkedOut = lane.branch?.replace(/^refs\/heads\//u, "") || null;
   if (checkedOut && checkedOut !== lease.branch) return false;

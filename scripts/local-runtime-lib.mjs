@@ -212,8 +212,8 @@ export function validateOwnedService({ service, processEvidence, token, tokenDig
   if (!service || !Number.isInteger(service.supervisorPid) || service.supervisorPid <= 0) {
     throw new Error("Runtime service state has no valid supervisor PID.");
   }
-  if (!processEvidence || processEvidence.pid !== service.listenerPid) {
-    throw new Error(`${service.name} listener PID no longer matches recorded ownership.`);
+  if (!processEvidence || !Number.isInteger(processEvidence.pid) || processEvidence.pid <= 0) {
+    throw new Error(`${service.name} listener process is unavailable.`);
   }
   if (processEvidence.processGroupId !== service.supervisorPid) {
     throw new Error(`${service.name} listener no longer belongs to its recorded process group.`);

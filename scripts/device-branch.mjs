@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 // Responsibility: Dispatch fenced device lifecycle commands and machine-readable results.
-
-import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
-import { textCommandOptions } from "./command-text-options.mjs";
+import {
+  createCoordinationClaimRunAdapter, createDeviceChildProcessPolicy,
+} from "./device-child-process-policy.mjs";
+import {
+  parseJsonObject, readJsonFile, readOption, readOptions, requiredOption,
+} from "./device-command-input.mjs";
 import {
   completeSession, heartbeat, park, publish, resume, review, sanitizeDevice,
   sanitizeScope, start,
 } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
+import { runProvisionedStartAdmissionRecoveryCli } from "./provisioned-start-admission-recovery.mjs";
 import { integrateSession } from "./device-integrate-lib.mjs";
 import { createPostMergeCloudAuthorityVerifier } from
   "./post-merge-cloud-authority-verifier.mjs";
@@ -22,7 +25,7 @@ import {
   inspectTaskWorktreeTarget, provisionTaskWorktree, rollbackUnclaimedProvision,
 } from "./task-worktree-provision.mjs";
 import {
-  createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS,
+  createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS, parseDeviceBranch,
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import {
@@ -46,13 +49,21 @@ import {
   createDeviceDormantPreservationAdmissionGate,
   createDeviceDormantPreservationPlannedContinuationGate,
 } from "./dormant-preservation-decision-repository-adapter.mjs";
-
 const [command, ...args] = process.argv.slice(2);
+if (command === "recover-start-admission") {
+  try {
+    console.log(JSON.stringify(runProvisionedStartAdmissionRecoveryCli(args)));
+    process.exit(0);
+  } catch (error) {
+    console.error(JSON.stringify({ schema: "agentic-provisioned-start-admission-recovery-command/v1", ok: false,
+      status: "error", error: { code: "provisioned_start_admission_recovery_failed", message: error.message } }));
+    process.exit(1);
+  }
+}
 const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let workspaceGuardControllerRoot = controllerRoot;
 let scriptControllerRoot = controllerRoot;
 if (!command || !["start", "resume", "heartbeat", "review", "publish", "integrate", "park", "complete", "end"].includes(command)) usage();
-
 const json = args.includes("--json");
 const provisionRequested = args.includes("--provision");
 const autoDelivery = args.includes("--auto-delivery");
@@ -62,7 +73,20 @@ const continueAdmission = args.includes("--continue-admission");
 const rawScope = args.find((value) => !value.startsWith("--"));
 const sessionId = readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "";
 if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
-
+const childProcessEnvironment = { ...process.env };
+const taskAuthorityInput = readOption(args, "task-authority")
+  || process.env.AGENTIC_TASK_AUTHORITY_FILE || "";
+const taskAuthorityFile = taskAuthorityInput ? path.resolve(taskAuthorityInput) : "";
+// The capability locator is controller input, never ambient authority for child processes.
+delete process.env.AGENTIC_TASK_AUTHORITY_FILE;
+const {
+  gitText, gitOptional, ghText, ghOptional, run, runText,
+  commitCoordinationClaim,
+} = createDeviceChildProcessPolicy({
+  taskAuthorityFile,
+  environment: childProcessEnvironment,
+  json,
+});
 let repo = null;
 let canonicalRepo = null;
 let provision = null;
@@ -103,6 +127,7 @@ try {
   process.chdir(invocationPath);
   canonicalRepo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(canonicalRepo);
+  if (taskAuthorityFile) assertExternalTaskAuthorityFile(taskAuthorityFile, canonicalRepo);
   if (command === "start") {
     scriptControllerRoot = bindControllerHooksEnvironment(scriptControllerRoot);
     assertWorkspaceGuardsReady({
@@ -218,7 +243,29 @@ try {
   repo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(repo);
   const gitCommonDir = path.resolve(repo, gitText(["rev-parse", "--git-common-dir"]).trim());
-  const leaseStore = createWriterLeaseStore({ gitCommonDir });
+  const leaseStore = createWriterLeaseStore({
+    gitCommonDir,
+    taskAuthorityFile: taskAuthorityFile || null,
+    taskAuthorityPolicy: "required",
+  });
+  const attachedBranch = gitText(["branch", "--show-current"]).trim();
+  const authorityBranch = command === "resume" ? rawScope : attachedBranch;
+  const coordinationClaimScope = command === "resume"
+    ? parseDeviceBranch(rawScope)?.scope
+    : rawScope ? sanitizeScope(rawScope) : "";
+  const coordinationClaimBranch = command === "resume"
+    ? rawScope
+    : coordinationClaimScope
+      ? `agent/${sanitizeDevice(
+        gitOptional(["config", "--get", "agentic.device"]) || os.hostname(),
+      )}/${coordinationClaimScope}`
+      : "";
+  if (authorityBranch && leaseStore.read(authorityBranch)) {
+    leaseStore.assertTaskAuthority({
+      branch: authorityBranch,
+      operation: `device:${command}`,
+    });
+  }
   const context = {
     scope: rawScope,
     invocationPath: activeInvocationPath,
@@ -242,7 +289,25 @@ try {
     reviewReadyCloudAuthority: reviewReadyAdmissionCloudAuthority,
     verifyReviewReadyCloudAuthority:
       verifyReviewReadyAdmissionCloudAuthority,
-    run,
+    run: createCoordinationClaimRunAdapter({
+      action: command,
+      expectedScope: coordinationClaimScope,
+      verifyExpectedClaim: claim => {
+        const lease = coordinationClaimBranch
+          ? leaseStore.read(coordinationClaimBranch)
+          : null;
+        return lease?.status === "active"
+          && lease.sessionId === sessionId
+          && lease.branch === coordinationClaimBranch
+          && lease.scope === claim.scope
+          && lease.epoch === claim.epoch
+          && path.resolve(lease.worktreePath) === path.resolve(repo)
+          && !lease.fenceSha
+          && Boolean(lease.ownedDirtRecovery) === claim.preserveOwnedDirt;
+      },
+      run,
+      commitCoordinationClaim,
+    }),
     log: json ? () => {} : console.log,
     now: () => new Date(),
   };
@@ -363,7 +428,6 @@ try {
   })));
   process.exitCode = 1;
 }
-
 function execute(action, context) {
   if (action === "start") return start(context);
   if (action === "resume") return resume({ ...context, branchName: rawScope });
@@ -394,7 +458,6 @@ function execute(action, context) {
   }
   return completeSession({ ...context, json: false });
 }
-
 function emitJson(action, context, result, { provisioned }) {
   if (action === "complete" || action === "end" || action === "integrate") {
     console.log(JSON.stringify(result));
@@ -423,7 +486,6 @@ function emitJson(action, context, result, { provisioned }) {
   if (action === "heartbeat") attachCloudHeartbeatMachineEvidence(response, { lease, result });
   console.log(JSON.stringify(response));
 }
-
 function readMachinePullRequestDraft({ action, branch, lease, ghText }) {
   const pullRequest = readOwnershipPullRequest({
     url: lease.pullRequestUrl,
@@ -438,7 +500,6 @@ function readMachinePullRequestDraft({ action, branch, lease, ghText }) {
   }
   return pullRequest.isDraft;
 }
-
 function resolveResultBranch(action, result) {
   if (action === "start") return result;
   if (action === "review" || action === "publish") return gitText(["branch", "--show-current"]).trim();
@@ -494,90 +555,22 @@ function bindDeviceStartCloudAuthority({
   });
 }
 
-function readJsonFile(file, label) {
-  const absolutePath = path.resolve(file);
-  let value;
-  try {
-    value = JSON.parse(readFileSync(absolutePath, "utf8"));
-  } catch (error) {
-    throw new Error(`Could not read ${label} at ${absolutePath}: ${error.message}`);
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be a JSON object.`);
-  }
-  return value;
-}
-
-function parseJsonObject(source, label) {
-  let value;
-  try {
-    value = JSON.parse(source);
-  } catch (error) {
-    throw new Error(`Could not parse ${label}: ${error.message}`);
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be a JSON object.`);
-  }
-  return value;
-}
-
 function bindControllerHooksEnvironment(defaultControllerRoot) {
   return defaultControllerRoot;
 }
-
-function gitText(args) {
-  return execFileSync("git", args, textCommandOptions());
-}
-
-function gitOptional(args) {
-  const result = spawnSync("git", args, textCommandOptions());
-  return result.status === 0 ? result.stdout.trim() : "";
-}
-
-function ghText(args) {
-  return execFileSync("gh", args, textCommandOptions());
-}
-
-function ghOptional(args) {
-  const result = spawnSync("gh", args, textCommandOptions());
-  return result.status === 0 ? result.stdout.trim() : "";
-}
-
-function run(command, args) {
-  const stdio = json ? ["ignore", "ignore", "inherit"] : "inherit";
-  const result = spawnSync(command, args, { stdio });
-  if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed`);
-}
-
-function runText(command, args, options = {}) {
-  return execFileSync(command, args, textCommandOptions(options));
+function assertExternalTaskAuthorityFile(file, repository) {
+  const candidate = path.resolve(file);
+  const root = `${path.resolve(repository)}${path.sep}`;
+  if (candidate === path.resolve(repository) || candidate.startsWith(root)) {
+    throw new Error("Task authority capability must remain outside the repository.");
+  }
 }
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--workspace-guard-controller=<clean-protected-main-controller>] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --dormant-preservation-selection=<json> --dormant-preservation-evidence-digest=<sha256> --dormant-preservation-authorization=<exact-text> --dormant-preservation-state=<journal> --operator-decision-digest=<sha256>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--continue-admission --write-scope-manifest=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --dormant-preservation-selection=<json> --dormant-preservation-evidence-digest=<sha256> --dormant-preservation-authorization=<exact-text> --dormant-preservation-state=<journal> --operator-decision-digest=<sha256>] [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs <lifecycle-command> --session=<id> --repository=<path> --task-authority=<external-capability.json> [command-specific options] [--json]",
   );
   process.exit(2);
-}
-
-function readOption(values, name) {
-  const prefix = `--${name}=`;
-  const match = values.find((value) => value.startsWith(prefix));
-  return match ? match.slice(prefix.length).trim() : "";
-}
-
-function readOptions(values, name) {
-  const prefix = `--${name}=`;
-  return values
-    .filter(value => value.startsWith(prefix))
-    .map(value => value.slice(prefix.length).trim())
-    .filter(Boolean);
-}
-
-function requiredOption(values, name) {
-  const value = readOption(values, name);
-  if (!value) throw new Error(`--${name}=<value> is required.`);
-  return value;
 }
 
 function resolveWorkspaceGuardControllerRoot(values) {
@@ -602,5 +595,5 @@ function resolveWorkspaceGuardControllerRoot(values) {
 }
 
 function gitAt(directory, argumentsList) {
-  return execFileSync("git", ["-C", directory, ...argumentsList], textCommandOptions()).trim();
+  return runText("git", ["-C", directory, ...argumentsList]).trim();
 }

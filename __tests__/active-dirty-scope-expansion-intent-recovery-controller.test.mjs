@@ -133,6 +133,23 @@ test("rejects a stored authorization journal from another exact plan authority",
   assert.equal(harness.counts.effects, 1);
 });
 
+test("refreshes volatile evidence under the same semantic authorization before retry", async () => {
+  const harness = createHarness({ effectDoesNotConverge: true });
+  await assert.rejects(runPlanned(harness), /did not become live-complete/u);
+  assert.equal(harness.intent.status, "authorized");
+  const before = harness.intent.intentDigest;
+
+  harness.advanceObservation();
+  harness.enableConvergence();
+  const result = await runPlanned(harness);
+  assert.equal(result.status, "complete");
+  assert.notEqual(harness.intent.planSnapshot.sourceEvidenceDigest,
+    digestValue({ fixture: "source evidence" }));
+  assert.notEqual(before, harness.persistedIntentDigests[1]);
+  assert.deepEqual(harness.persistedStatuses, ["authorized", "authorized", "complete"]);
+  assert.equal(harness.counts.effects, 2);
+});
+
 function createHarness({
   driftTerminal = false,
   effectDoesNotConverge = false,
@@ -141,11 +158,11 @@ function createHarness({
   loseEffectResponse = false,
   wrongOperationKey = false,
 } = {}) {
-  const sourceEvidence = Object.freeze({
+  let sourceEvidence = Object.freeze({
     schema: "test-source-evidence/v1",
     sourceEvidenceDigest: digestValue({ fixture: "source evidence" }),
   });
-  const plan = Object.freeze({
+  let plan = Object.freeze({
     schema: "test-recovery-plan/v1",
     sourceEvidence,
     sourceEvidenceDigest: sourceEvidence.sourceEvidenceDigest,
@@ -154,9 +171,11 @@ function createHarness({
   });
   let intent = null;
   let terminal = initiallyComplete;
+  let converges = !effectDoesNotConverge;
   let lostEffect = false;
   let lostWrite = false;
   const persistedStatuses = [];
+  const persistedIntentDigests = [];
   const events = [];
   const counts = {
     effects: 0,
@@ -187,6 +206,7 @@ function createHarness({
       assert.equal(expectedIntent?.intentDigest ?? null, intent?.intentDigest ?? null);
       intent = nextIntent;
       persistedStatuses.push(intent.status);
+      persistedIntentDigests.push(intent.intentDigest);
       events.push(`persist:${intent.status}`);
       if (intent.status === "complete" && loseCompleteWriteResponse && !lostWrite) {
         lostWrite = true;
@@ -204,7 +224,7 @@ function createHarness({
     async executeTerminal({ operationKey }) {
       counts.effects += 1;
       events.push("effect:terminal");
-      terminal = !effectDoesNotConverge;
+      terminal = converges;
       if (loseEffectResponse && !lostEffect) {
         lostEffect = true;
         throw new Error("terminal effect response lost");
@@ -224,13 +244,26 @@ function createHarness({
     }),
     counts,
     events,
+    persistedIntentDigests,
     persistedStatuses,
     get intent() { return intent; },
+    advanceObservation() {
+      sourceEvidence = Object.freeze({
+        ...sourceEvidence,
+        sourceEvidenceDigest: digestValue({ fixture: "refreshed source evidence" }),
+      });
+      plan = Object.freeze({
+        ...plan,
+        sourceEvidence,
+        sourceEvidenceDigest: sourceEvidence.sourceEvidenceDigest,
+      });
+    },
+    enableConvergence() { converges = true; },
     replaceIntent(value) { intent = value; },
   };
 }
 
-function fakeContract(plan) {
+function fakeContract(basePlan) {
   const normalizePlan = value => {
     if (value?.planDigest !== PLAN_DIGEST) throw new Error("plan drift");
     return value;
@@ -243,8 +276,11 @@ function fakeContract(plan) {
   };
   return {
     buildActiveDirtyScopeExpansionIntentRecoveryPlan: ({ sourceEvidence }) => {
-      assert.deepEqual(sourceEvidence, plan.sourceEvidence);
-      return plan;
+      return Object.freeze({
+        ...basePlan,
+        sourceEvidence,
+        sourceEvidenceDigest: sourceEvidence.sourceEvidenceDigest,
+      });
     },
     normalizeActiveDirtyScopeExpansionIntentRecoveryPlan: normalizePlan,
     authorizeActiveDirtyScopeExpansionIntentRecovery: (value, authorization) => {
@@ -260,6 +296,10 @@ function fakeContract(plan) {
       planSnapshot: value,
       authorizationDigest: receipt.authorizationDigest,
       terminalObservation: null,
+    }),
+    refreshActiveDirtyScopeExpansionIntentRecoveryIntent: (value, currentPlan) => sealIntent({
+      ...value,
+      planSnapshot: currentPlan,
     }),
     normalizeActiveDirtyScopeExpansionIntentRecoveryIntent: normalizeIntent,
     completeActiveDirtyScopeExpansionIntentRecoveryIntent: (value, observation) => sealIntent({

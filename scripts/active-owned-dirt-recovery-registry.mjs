@@ -17,6 +17,8 @@ import {
   mutateWriterLeaseRegistry,
   writerLeaseDigest,
 } from "./writer-lease-registry-cas.mjs";
+import { continueTaskAuthorityBinding }
+  from "./task-bound-lane-authority-store.mjs";
 
 export const ACTIVE_OWNED_DIRT_RECOVERY_INTENT_SCHEMA =
   "agentic-active-owned-dirt-recovery-intent/v1";
@@ -281,6 +283,7 @@ export function projectActiveOwnedDirtRecoveredLease({
   planDigest,
   cloudAuthority,
   recovery,
+  taskAuthorityFile = null,
   validateLease = null,
 }) {
   const normalizedRecovery = normalizeActiveOwnedDirtLeaseRecovery(recovery);
@@ -315,7 +318,7 @@ export function projectActiveOwnedDirtRecoveredLease({
       if (!Number.isSafeInteger(nextEpoch) || nextEpoch >= Number.MAX_SAFE_INTEGER) {
         throw new Error("Recovered writer-lease epoch exceeds the safe global fence range.");
       }
-      const nextLease = {
+      const nextLeaseCore = {
         ...lease,
         status: "active",
         epoch: nextEpoch,
@@ -324,6 +327,17 @@ export function projectActiveOwnedDirtRecoveredLease({
         expiresAt: cloudAuthority.expiresAt,
         activeOwnedDirtRecovery: normalizedRecovery,
       };
+      const nextLease = lease.taskAuthority
+        ? {
+          ...nextLeaseCore,
+          taskAuthority: continueTaskAuthorityBinding({
+            sourceLease: lease,
+            nextLease: nextLeaseCore,
+            capabilityPath: taskAuthorityFile,
+            boundAt: normalizedRecovery.recoveredAt,
+          }),
+        }
+        : nextLeaseCore;
       const validation = typeof validateLease === "function"
         ? validateLease(nextLease) : null;
       const localProjection = Object.freeze({

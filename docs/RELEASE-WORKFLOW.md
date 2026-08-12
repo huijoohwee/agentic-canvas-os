@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-08-08"
+date: "2026-08-12"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
@@ -80,7 +80,11 @@ localhost, the protected `production` environment, Cloudflare, and the
 the neutral receipt chain, complete dependency closure, authenticated human
 boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 
-## Provider-Neutral Protocol Mapping
+This profile inherits the universal composition, capability, adaptive-decision,
+single-owner, typed-receipt, and file-size constraints from
+`CANONICAL-LIFECYCLE.md` without redefining them.
+
+## Reference Adapter Mapping
 
 | Neutral receipt or boundary | Knowgrph reference adapter |
 |---|---|
@@ -97,12 +101,73 @@ boundary, target-scoped concurrency fence, idempotency, and drift invalidation.
 | Publication Receipt | Exact verified `huijoohwee` mirror revision, emitted only after live verification |
 | Rollback Receipt | Restored last-known-good Pages deployment, state disposition, restored probes, and unchanged mirror identity when recovery runs |
 
+The reference adapter persists terminal evidence in the closed
+`agentic-collaborative-release-lifecycle/v2` carrier:
+
+| Terminal receipt | Executable schema and required join |
+|---|---|
+| Deployment | `agentic-deployment-receipt/v1`; authorization, candidate, target, controller, artifact, and rollback target agree |
+| State reconciliation | `agentic-state-reconciliation-receipt/v1`; bounded operations, direct readback, exact counts, and parity agree with deployment |
+| Live verification | `agentic-live-verification-receipt/v2`; predecessor, controller, proof-surface, marker-byte, artifact, target, and rollback identities agree |
+| Publication | `agentic-publication-receipt/v2`; only the validated live-verification predecessor may create publication |
+| Rollback | `agentic-rollback-receipt/v1`; deployment, failed stage, last-known-good target, restoration probes, and unchanged mirror agree |
+
+Unknown fields, stale predecessors, indirect readback, unbounded operations,
+parity failure, partial rollback, or mirror advancement fail before emission.
+The v2 carrier's `completion` is exactly `in-progress`,
+`production-complete`, or `rolled-back`. Production completion requires joined
+Deployment, State Reconciliation, Live Verification v2, and Publication v2
+receipts. Rollback requires joined Deployment and Rollback receipts, names the
+exact failed stage and successful predecessor prefix, and forbids publication.
+Before either terminal state, the carrier recomputes the complete receipt chain
+and validity windows; the interaction and human decision must both occur before
+Runtime Review Receipt expiry.
+
 ACOS also exposes
 `createProviderNeutralProductionAuthorizationPrompt` for consumers such as
-GameXR. It reads the canonical `collaborative-release-lifecycle/v1` carrier and
-does not add provider fields to any lifecycle receipt. The existing Knowgrph
-prompt remains the reference localhost adapter and keeps its current schema and
-rendered output.
+GameXR. It reads the observation-only `collaborative-release-lifecycle/v1`
+carrier, which cannot accept v2 terminal receipts or satisfy a production
+terminal discriminator. The prompt adds no provider fields to lifecycle
+receipts and keeps its existing schema and rendered output.
+
+### Remote Continuation Mapping
+
+The remote transport adapter may inspect, wake, or continue one exact existing
+run through `/release.complete`. It owns no receipt semantics, state machine,
+controller, store, ledger, or authority source and is replaceable across models,
+agents, schedulers, queues, webhooks, hosts, platforms, and interfaces.
+
+Its bounded envelope binds a stable request ID and transport-delivery
+idempotency key; `inspect` or `continue`; the existing run, target, candidate,
+source, dependency-closure, policy, artifact, and manifest identities; canonical
+release key, state, highest valid receipt, claim, epoch, fence, and ledger
+revision; one typed blocker, owner, and transition; deadline, attempt, payload,
+cancellation, and cost ceilings; and capability, adapter-revision, caller
+attestation, observation-time, and evidence digests. Credentials, full
+transcripts, repository archives, mutable selectors, and unrestricted
+executable input are forbidden.
+
+Status discovery, routing, and receipt validation use the existing model-free
+owner. Select one eligible transport without speculative fan-out. An absent or
+`unknown` acknowledgement requires `/collaboration.status` reconciliation and
+retry of the same request and release keys. `/collaboration.continue` and
+`/state.checkpoint` retain their own proof rules. A human gate pauses through
+`/human.review`; transport presents the challenge, while the independent
+Interaction and Authority Adapters record and validate the human decision.
+Fallback changes only the transport and delivery key; the canonical release
+key, immutable subject, policy, human boundary, controller, and required
+receipts remain fixed. No eligible transport returns `blocked`.
+
+| Remote layer | Closed result values |
+|---|---|
+| Transport acknowledgement | `accepted`, `rejected`, or `unknown` |
+| Continuation observation | `advanced`, `awaiting-human-authorization`, `blocked`, or `stale` |
+
+Remote acknowledgement, HTTP or tool success, runner termination, and model
+output prove transport observation only. They create no release authority. An
+unblock exists only when the canonical owner removes the typed blocker and emits
+its existing receipt; `/release.complete` resumes only from unchanged joined
+predecessors.
 
 ## Inputs and Outputs
 

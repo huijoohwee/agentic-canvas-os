@@ -193,6 +193,9 @@ test("cloud projection preserves exact recorded state and seals every hydrated p
   const target = hydratedClaim();
   const peer = hydratedClaim({ claimId: digest("peer"), fenceRevision: digest("peer-fence"),
     ledgerRevision: digest("peer-transition"), recordedState: "reviewed", state: "dormant-preserved" });
+  const hydratedOptionals = ["eligibleSince", "handoff", "release", "recovery", "integration",
+    "handoffEvidenceDigest", "promotedAt", "deliveryAuthorization", "retirement"];
+  for (const field of hydratedOptionals) delete peer[field];
   const cloud = projectExpiredActiveDirtyScopeExpansionRecoveryCloud({
     claim: target, ledgerRepository: "owner/ledger",
     inventory: { ...statusResult([]), claims: [target, peer] },
@@ -203,8 +206,10 @@ test("cloud projection preserves exact recorded state and seals every hydrated p
   assert.equal(cloud.peers[0].transitionDigest, peer.ledgerRevision);
   const { recordDigest, ...record } = cloud.peers[0];
   assert.equal(recordDigest, digestValue(record));
-  for (const field of ["recovery", "integration", "handoffEvidenceDigest", "promotedAt",
-    "deliveryAuthorization", "retirement"]) assert.equal(Object.hasOwn(record, field), true);
+  for (const field of hydratedOptionals) {
+    assert.equal(Object.hasOwn(record, field), true);
+    assert.equal(record[field], null);
+  }
   const missing = { ...target };
   delete missing.recordedState;
   assert.equal(projectExpiredActiveDirtyScopeExpansionRecoveryCloud({

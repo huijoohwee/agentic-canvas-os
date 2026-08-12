@@ -50,7 +50,7 @@ completion_requires:
   - "catalog revision equals the Agentic Canvas OS docs revision after no more than two refresh attempts"
   - "one invocation grammar SSOT"
   - "append-only memory-log compliance"
-  - "append-only monthly planning-shard compliance"
+  - "immutable context-record planning compliance"
   - "centralized planning task-row compliance"
   - "protected integration"
   - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Deployment, State Reconciliation, Live Verification, Publication, and Rollback receipts for every claimed stage"
@@ -139,14 +139,14 @@ rendered output.
 - Before convergence or canonical review isolation, content-bind every pre-existing non-canonical item and its owner, write set, fence, overlap class, state, preservation mode, and recovery handle. Retain overlapping work; restore only exact disjoint state; never treat preservation as Production authority.
 - Before candidate preparation, emit one keep / port / drop inventory for every pre-existing non-canonical lane or worktree. `keep` preserves unrelated or still-active work unchanged, `port` requires the retained value to pass protected Dev integration before the release frontier closes, and `drop` is cleanup-only after exact no-remaining-value proof plus cleanup authority.
 - Treat `memory/YYYY-MM.md` as append-only evidence: validate its hybrid format and compare historical bytes with the recorded Agentic Canvas OS memory base ref before integration.
-- Treat `todo/YYYY-MM.md` as append-only cross-repository planning evidence: validate the index and shards, compare historical bytes with the recorded Agentic Canvas OS planning base ref, and require the declared strict task row before integration.
-- Require one appended active-shard row matching the declared `planning_context`; reject repository-local todo files before integration.
+- Treat flat `todo/YYYY-MM.md` files as immutable legacy evidence and `todo/YYYY-MM/<context>.md` as independently owned task records: validate the index and projection, compare legacy bytes with the recorded base, and require the declared new record before integration.
+- Require one base-absent immutable record matching the declared `planning_context` and exact path; reject shared planning appends and repository-local todo files before integration.
 
 ## Stage Contract
 
 ### 1. Preflight
 
-Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning shard, planning context, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, immutable manifest digest, ownership conflicts, and the exact keep / port / drop classification for every pre-existing non-canonical lane or worktree.
+Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instructions and release contracts. Fetch remotes again, then inspect branches, worktrees, open pull requests, nested repositories, remote divergence, and every staged, unstaged, or untracked path. Record the action, semantic scope, actor, branch, startup base SHA, memory base ref, planning base ref, planning Context and record path, current base SHA, current Dev SHA, current Prod SHA, visible Knowgrph runtime SHA, visible Agentic Canvas OS runtime SHA, catalog revision, catalog hydration status and attempts, immutable manifest digest, ownership conflicts, and the exact keep / port / drop classification for every pre-existing non-canonical lane or worktree.
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another worktree or device is writing the same branch or semantic scope.
 
@@ -166,13 +166,13 @@ Remove duplicate owners; do not edit generated Prod assets directly.
 
 Run both commands under `Memory Log Compliance Checks` in `VALIDATION-RUNBOOK.md`. The structural command must validate every current shard. Set `MEMORY_BASE_REF` to the exact Agentic Canvas OS base SHA recorded at session start; the append-only comparison must prove that every shard present at that base remains byte-for-byte unchanged as a prefix of the current file.
 
-New monthly shards are permitted only when their complete frontmatter and first `## @mem-YYYYMMDDTHHmmssZ` UTC sigil entry validate. Existing shard deletion, rename, frontmatter edits, entry edits, reordering, compaction, insertion before EOF, local-time or minute-only sigils, table conversion, pure-YAML conversion, bolded sigils, or incomplete appended entries block release before Dev integration.
+New memory shards are permitted only when their complete frontmatter and first `## @mem-YYYYMMDDTHHmmssZ` UTC sigil entry validate. Existing shard deletion, rename, frontmatter edits, entry edits, reordering, compaction, insertion before EOF, local-time or minute-only sigils, table conversion, pure-YAML conversion, bolded sigils, or incomplete appended entries block release before Dev integration.
 
 When a prior fact is wrong or obsolete, restore the prior bytes and append a new record that cites or supersedes the earlier decision. Never repair compliance by rewriting history.
 
-### 5. Verify Monthly Planning Shard Compliance
+### 5. Verify Context Record Planning Compliance
 
-Run both commands under `Planning Shard Compliance Checks` in `VALIDATION-RUNBOOK.md`. Set `PLANNING_BASE_REF`, `PLANNING_SHARD`, and `PLANNING_CONTEXT` from the startup declaration.
+Run both commands under `Planning Context Record Compliance Checks` in `VALIDATION-RUNBOOK.md`. Set `PLANNING_BASE_REF`, `PLANNING_CONTEXT`, and `PLANNING_RECORD` from the startup declaration.
 
 The structural gate validates `TODO.md` and every shard. The release gate preserves every committed shard as an exact byte prefix, requires the declared Context exactly once in the active shard, and strictly validates rows at or after the adoption boundary. A closed-shard mutation, historical rewrite, wrong-month heading, duplicate Context, empty cell, overlong Directive, wrong Updated Date, or size overflow blocks release.
 
@@ -417,7 +417,7 @@ parked, dirty, divergent, ambiguous, and unrelated runtime-document lanes.
 Branch deletion remains a separate authorized action.
 
 Report invocation intent, ownership, worktrees, base SHA, memory base ref,
-planning base ref, planning shard and Context, both append-only comparison
+planning base ref, Context record path, immutable legacy comparison
 results, the planning task-row result, handoffs, reconciled paths, SSOT commit,
 Dev commits and pull request, Integration Gate, merge SHA, Release Frontier,
 candidate and authorization digests, validation and cost evidence, Cloudflare
@@ -438,8 +438,8 @@ Stop without downstream mutation when any of these is true:
 - the automatic attestation transport is unavailable or unauthenticated, fewer than two distinct session-bound device principals and live devices respond, the gate is not `pass`, verification digests are missing or differ, evidence is expired, replayed, malformed, duplicated, or mismatched, reconnect recovery is unbounded or exhausts after a stable connection, or the room/verifier builds, persists, selects, synchronizes, or mutates identity;
 - catalog revision differs from the Agentic Canvas OS docs revision, hydration is stale or blocked, or more than two explicit refresh attempts are required;
 - any memory shard is malformed or historical bytes differ from the recorded memory base ref;
-- any planning shard is malformed, over cap, historically rewritten, or missing the declared strict task row;
-- the active planning shard lacks one appended compliant row for the declared planning Context, or any committed shard prefix changes;
+- any Context record is malformed, duplicated, over cap, misidentified, or missing the declared strict task row;
+- the declared record existed at base, more than one record changed, or any immutable legacy monthly shard changed;
 - a required gate fails;
 - Dev, Prod, and promoted SHA cannot be reconciled;
 - schema mirror parity is stale or missing generated document nodes for the promoted Dev SHA;

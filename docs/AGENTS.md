@@ -63,7 +63,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
 | Provider-neutral release semantics, receipts, proof surfaces, and cleanup | `CANONICAL-LIFECYCLE.md` |
 | Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
-| Planning lifecycle | `TODO.md` and the active monthly shard |
+| Planning lifecycle | `TODO.md` and one immutable Context record per task |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |
 
 ## Instruction Placement

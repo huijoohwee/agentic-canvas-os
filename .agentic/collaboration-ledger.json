@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2407,
-  "headDigest": "e0e2f4119804142f721eb5f82bd1796f20b42c8aae72bf3d7dcff32f5f302584",
+  "sequence": 2408,
+  "headDigest": "480d813c2344225c5f4a444fc8edbb351cfc4dd78494e5979ea629e6f0b5e764",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -119263,6 +119263,61 @@
       },
       "claimDigest": "231d85543d8dc13fb159a26fcb63002272432e48465a5ef9b73ad7bd7bf5ddb5",
       "digest": "e0e2f4119804142f721eb5f82bd1796f20b42c8aae72bf3d7dcff32f5f302584"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2408,
+      "parentDigest": "e0e2f4119804142f721eb5f82bd1796f20b42c8aae72bf3d7dcff32f5f302584",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1ce75908cb0237529dd3f71727198977ceaa33c46162024cdeeae28ba897d85b",
+      "idempotencyKey": "3e46bc61dbc0d9ce56ce4b34621a77d39e27e987b5bd3595f4c745123ba3e820",
+      "requestDigest": "7519082c33afc30fc9c0e81efb40ca618ea83ea38357edbba4ddca3e54a0f2b4",
+      "evaluationTime": "2026-08-12T05:14:25.000Z",
+      "claimCore": {
+        "claimId": "1ce75908cb0237529dd3f71727198977ceaa33c46162024cdeeae28ba897d85b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:bdcf196865b7e35c23b4624cbca29de8fcf4fef9b83aeff3bc6020087ce49376",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:af46eacadc8fd7284979267548fa4f17a8169c82d9cba31aa75a6d14fb3b5d61",
+        "canonicalBaseRevision": "9e7ae5709879579275679d4a2025a2c18f76f162",
+        "declaredWriteScope": [
+          "path:__tests__/planned-recovery-pr-marker-reconciliation.test.mjs",
+          "path:docs/PLANNED-RECOVERY-PR-MARKER-RECONCILIATION.md",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-contract.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-controller.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-repository-adapter.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation.mjs",
+          "semantic:planned-recovery-pr-marker-reconciliation"
+        ],
+        "writeSetDigest": "2c055bd5540ddbb27a1e176ea73635a45b2c89fbcfe2ea4c2b08f43e642b9d2f",
+        "laneRevision": "a938108c2b88cf7dad31303fcbcb652717b8ad99",
+        "leaseEpoch": 4,
+        "transitionCounter": 9,
+        "heartbeatCounter": 4,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-12T05:30:39.000Z",
+        "evidenceDigest": "7d0fd28639cb8d2c510ddb5a97b644817bbe6a577451b584e4bf1a06a081dbd9",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM793h0Z",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "a938108c2b88cf7dad31303fcbcb652717b8ad99",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM793h0Z",
+          "focusedEvidenceDigest": "7d0fd28639cb8d2c510ddb5a97b644817bbe6a577451b584e4bf1a06a081dbd9",
+          "dependencyClosureDigest": "5fd56c6f05763853a2dcbda37b09aca68ae73115fa05359f7e85f2d7944b4b4e",
+          "namedChecksDigest": "f616918d1ee174434c0a9f54e9aee503d05e1ebdf95fe1a28353837bdf0b12df",
+          "handoffEvidenceDigest": "59fb0fd62a08727177c356c3840b53d8f19aa7187f3ef6bd511c59ead9c1af6e",
+          "operatorDecisionDigest": "43a295e8504cbc161da64f8ab60b7bb6a20613885c132adf61d8f5f800aef83f",
+          "integrationIntentDigest": "48b5601c24374cb35ef13bb04683535a73c5a65e627c41f7bede2848883b43ee",
+          "integratedAt": "2026-08-12T05:14:25.000Z"
+        }
+      },
+      "claimDigest": "f2f03c52745f8b95e86c9f345c7bd1e51f6dce1e08fb06a25bf8dfd397548dbb",
+      "digest": "480d813c2344225c5f4a444fc8edbb351cfc4dd78494e5979ea629e6f0b5e764"
     }
   ]
 }

@@ -27,7 +27,7 @@ import {
   createDeviceDormantPreservationAdmissionGate,
   createDeviceDormantPreservationPlannedContinuationGate,
   createDormantPreservationAdmissionIntentStore,
-  parseDormantPreservationDeviceResult,
+  parseDormantPreservationDeviceResult, projectExistingPlannedTarget,
 } from "../scripts/dormant-preservation-decision-repository-adapter.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
 import { continuePlannedAdmissionFromRepository } from "../scripts/scoped-lane-admission-continuation.mjs";
@@ -38,6 +38,33 @@ import {
 const digest = label => digestValue({ label });
 const sha = label => digest(label).slice(0, 40);
 const DEVICE_SCRIPT = fileURLToPath(new URL("../scripts/device-branch.mjs", import.meta.url));
+
+test("planner observes an exact existing planned target without provisioning it", () => {
+  const targetPath = "/tmp/existing-planned-target";
+  const branch = "agent/device/existing-planned";
+  const lease = {
+    status: "active", branch, sessionId: "session", epoch: 7,
+    worktreePath: targetPath, baseSha: sha("base"), fenceSha: sha("fence"),
+    admission: { status: "planned", planReceiptDigest: digest("admission plan") },
+  };
+  const candidateLane = {
+    path: targetPath, branch: `refs/heads/${branch}`, dirty: false, invalid: false,
+    leaseAmbiguous: false, head: sha("prepared head"), treeSha: sha("prepared tree"),
+    stateDigest: digest("candidate state"),
+    preparedIntegrationReceiptDigest: digest("prepared integration"),
+  };
+
+  const result = projectExistingPlannedTarget({
+    candidateLane, canonicalSourceDisposition: "exact", lease,
+    sessionId: "session", targetPath,
+  });
+  assert.match(result.targetObservationDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(result.canonicalSourceDisposition, "exact");
+  assert.throws(() => projectExistingPlannedTarget({
+    candidateLane: { ...candidateLane, dirty: true },
+    canonicalSourceDisposition: "exact", lease, sessionId: "session", targetPath,
+  }), /exact clean active planned candidate/u);
+});
 
 test("device gate accepts one exact materialized plan and rejects post-plan dormant drift", (context) => {
   const fixture = createGateFixture(context);

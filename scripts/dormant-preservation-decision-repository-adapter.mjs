@@ -11,6 +11,7 @@ import * as Evidence from "./dormant-preservation-decision-evidence.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { sanitizeDevice } from "./device-branch-lib.mjs";
 import { normalizeCloudAuthority, normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
+import { continuePlannedScopedLaneAdmission } from "./scoped-lane-admission-continuation.mjs";
 import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { assertAdmissionMutationAuthority, collectScopedLaneState } from "./scoped-lane-admission-state.mjs";
 import { verifyDormantPreservation } from "./scoped-lane-authority-state.mjs";
@@ -24,13 +25,10 @@ const ADAPTER_METHODS = Object.freeze([
 ]);
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 export function createDormantPreservationAdmissionAdapter(methods = {}) {
-  const adapter = Object.freeze(Object.fromEntries(ADAPTER_METHODS.map(
-    name => [name, methods[name]],
-  )));
+  const adapter = Object.freeze(Object.fromEntries(ADAPTER_METHODS.map(name => [name, methods[name]])));
   for (const name of ADAPTER_METHODS) {
-    if (typeof adapter[name] !== "function") {
+    if (typeof adapter[name] !== "function")
       throw new Error(`Dormant preservation admission adapter requires ${name}().`);
-    }
   }
   return adapter;
 }
@@ -227,7 +225,7 @@ export function createRepositoryDormantPreservationAdmissionAdapter({
     readIntent: store.readIntent,
     writeIntent: store.writeIntent,
     readSourceEvidence: () => observeRepositoryPlan({
-      ...options, manifest, authoritySource, selection, git, now,
+      ...options, manifest, authoritySource, selection, git, now, leaseStore,
     }),
     classifyLiveStart: context => classifyRepositoryStart({
       ...options, ...context, git, ghText, leaseStore, manifest, selection,
@@ -374,14 +372,15 @@ function assertSelectionMatchesArguments(selection, context) {
 }
 function observeRepositoryPlan(input) {
   const laneState = collectScopedLaneState({ repository: input.repository });
-  const targetPlan = inspectTaskWorktreeTarget({
-    invocationPath: input.repository, repoRoot: input.repository,
-    targetPath: input.targetPath, gitText: input.git,
-  });
-  const authority = normalizeCloudAuthority(input.authoritySource, {
-    ledgerRepository: input.ledgerRepository, targetRepository: input.targetRepository,
-    manifest: input.manifest, canonicalBaseSha: laneState.canonicalBaseSha, now: input.now(),
-  });
+  const candidateLane = laneState.lanes.find(lane => path.resolve(lane.path) === path.resolve(input.targetPath));
+  const device = sanitizeDevice(optionalGit(input.git, ["config", "--get", "agentic.device"]) || os.hostname());
+  const candidateBranch = `agent/${device}/${input.scope}`;
+  const candidateLease = candidateLane ? input.leaseStore.read(candidateBranch) : null;
+  const targetPlan = candidateLane ? projectExistingPlannedTarget({ candidateLane, canonicalSourceDisposition: laneState.canonicalSourceDisposition,
+    lease: candidateLease, sessionId: input.sessionId, targetPath: input.targetPath }) : inspectTaskWorktreeTarget({ invocationPath: input.repository,
+    repoRoot: input.repository, targetPath: input.targetPath, gitText: input.git });
+  const authority = candidateLease?.cloudAuthority || normalizeCloudAuthority(input.authoritySource, { ledgerRepository: input.ledgerRepository,
+    targetRepository: input.targetRepository, manifest: input.manifest, canonicalBaseSha: laneState.canonicalBaseSha, now: input.now() });
   const verified = verifyAdmissionCloudAuthority({
     authority, manifest: input.manifest, canonicalBaseSha: laneState.canonicalBaseSha,
   });
@@ -401,6 +400,7 @@ function observeRepositoryPlan(input) {
     verifiedAt: verified.verification.verifiedAt,
   });
   const argumentsList = materializeDormantPreservationDeviceStartOptions(input);
+  const planningLaneState = candidateLane ? { ...laneState, lanes: laneState.lanes.filter(lane => lane !== candidateLane) } : laneState;
   const context = normalizeGateContext({
     argumentsList, controllerRoot: input.controllerRoot, repository: input.repository,
     targetRepository: input.targetRepository, targetPath: input.targetPath,
@@ -408,7 +408,7 @@ function observeRepositoryPlan(input) {
     worktreePaths, pullRequestReferences, gitText: input.git,
   });
   const sourceEvidence = buildGateSourceEvidence({
-    context, snapshot: laneState, target: targetPlan, verified, dormantPreservationReceipt,
+    context, snapshot: planningLaneState, target: targetPlan, verified, dormantPreservationReceipt,
   });
   const finalContext = Object.freeze({
     ...context,
@@ -420,6 +420,21 @@ function observeRepositoryPlan(input) {
   return Object.freeze({
     sourceEvidence, nestedDeviceStart: buildNestedDeviceStart(finalContext),
   });
+}
+
+export function projectExistingPlannedTarget({ candidateLane, canonicalSourceDisposition, lease, sessionId, targetPath } = {}) {
+  const target = path.resolve(requiredText(targetPath, "target path"));
+  if (canonicalSourceDisposition !== "exact" || path.resolve(candidateLane?.path || "") !== target
+    || candidateLane.dirty || candidateLane.invalid || candidateLane.leaseAmbiguous
+    || candidateLane.branch !== `refs/heads/${lease?.branch}` || lease?.status !== "active"
+    || lease.sessionId !== sessionId || path.resolve(lease.worktreePath || "") !== target
+    || lease.admission?.status !== "planned")
+    throw new Error("Existing target is not the exact clean active planned candidate.");
+  const observation = { schema: "agentic-existing-planned-target-observation/v1", targetPath: target, branch: lease.branch,
+    sessionId: lease.sessionId, leaseEpoch: lease.epoch, baseSha: lease.baseSha, fenceSha: lease.fenceSha, headSha: candidateLane.head,
+    treeSha: candidateLane.treeSha, candidateStateDigest: candidateLane.stateDigest, admissionPlanReceiptDigest: lease.admission.planReceiptDigest,
+    preparedIntegrationReceiptDigest: candidateLane.preparedIntegrationReceiptDigest || null };
+  return Object.freeze({ targetObservationDigest: digestValue(observation), canonicalSourceDisposition });
 }
 function classifyRepositoryStart(input) {
   const source = input.plan.sourceEvidence;
@@ -461,15 +476,22 @@ function classifyRepositoryStart(input) {
   const candidateLineage = readCandidateLineage(input.targetPath);
   const { treeSha, parentSha, parentCount } = candidateLineage;
   if (lease.admission.status === "planned") {
-    Evidence.assertDormantPreservationAdmissionPlannedContinuation(input.plan, {
-      controller: repositoryProjection(input.controllerRoot, input.git, true),
-      canonical: buildCurrentCanonical(input, postLaneState),
-      candidateLease: lease, candidateLineage, postLaneState,
-      dormantPreservationReceipt: dormantReceipt, postCloudInventory: verified.verification,
-      manifest: input.manifest, files: { selectionFileDigest: fileDigest(input.selectionPath),
-        manifestFileDigest: fileDigest(input.manifestPath),
-        cloudAuthorityFileDigest: fileDigest(input.cloudAuthorityPath) },
-    });
+    try {
+      Evidence.assertDormantPreservationAdmissionPlannedContinuation(input.plan, {
+        controller: repositoryProjection(input.controllerRoot, input.git, true),
+        canonical: buildCurrentCanonical(input, postLaneState),
+        candidateLease: lease, candidateLineage, postLaneState,
+        dormantPreservationReceipt: dormantReceipt, postCloudInventory: verified.verification,
+        manifest: input.manifest, files: { selectionFileDigest: fileDigest(input.selectionPath),
+          manifestFileDigest: fileDigest(input.manifestPath),
+          cloudAuthorityFileDigest: fileDigest(input.cloudAuthorityPath) },
+      });
+    } catch (error) {
+      if (!lease.integration) throw error;
+      continuePlannedScopedLaneAdmission({ lease, cloudAuthority: verified.authority, remoteAuthorityVerification: verified.verification,
+        manifest: input.manifest, lanes, protectedRevision: postLaneState.canonicalBaseSha, protectedDeltaPaths: [],
+        dormantPreservationReceipt: dormantReceipt, operatorDecisionDigest: input.plan.planDigest });
+    }
     return Object.freeze({ state: "planned", evidence: null });
   }
   const mutation = assertAdmissionMutationAuthority({ lease,
@@ -544,12 +566,8 @@ function readRemoteMain(git) {
   const value = git(["ls-remote", "origin", "refs/heads/main"]).trim().split(/\s+/u)[0];
   return requiredSha(value, "remote main SHA");
 }
-function fileDigest(filePath) {
-  return createHash("sha256").update(readFileSync(filePath)).digest("hex");
-}
-function claimIdFromAuthority(source) {
-  return requiredDigest(source?.claim?.claimId || source?.result?.claim?.claimId, "claim ID");
-}
+function fileDigest(filePath) { return createHash("sha256").update(readFileSync(filePath)).digest("hex"); }
+function claimIdFromAuthority(source) { return requiredDigest(source?.claim?.claimId || source?.result?.claim?.claimId, "claim ID"); }
 function option(args, name) {
   const prefix = `--${name}=`;
   const match = args.find(value => value.startsWith(prefix));
@@ -564,31 +582,9 @@ function requiredOption(args, name) {
 function unique(values) { return Object.freeze([...new Set(values)].sort()); }
 function laneStates(lanes) { return lanes.map(lane => ({ path: path.resolve(lane.path), stateDigest: lane.stateDigest })).sort((left, right) => left.path.localeCompare(right.path)); }
 function canonicalJson(value) { return JSON.stringify(value); }
-function positiveInteger(value) {
-  const number = Number(value);
-  if (!Number.isSafeInteger(number) || number <= 0) throw new Error("TTL must be a positive integer.");
-  return number;
-}
-function requiredRepository(value) {
-  const text = requiredText(value, "target repository");
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(text)) throw new Error("Target repository must be owner/name.");
-  return text;
-}
-function requiredText(value, label) {
-  const text = String(value ?? "").trim();
-  if (!text) throw new Error(`${label} is required.`);
-  return text;
-}
-function requiredDigest(value, label) {
-  const digest = requiredText(value, label);
-  if (!DIGEST_PATTERN.test(digest)) throw new Error(`${label} must be a SHA-256 digest.`);
-  return digest;
-}
-function requiredSha(value, label) {
-  const sha = requiredText(value, label);
-  if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error(`${label} must be a Git SHA.`);
-  return sha;
-}
-function publicMessage(value) {
-  return String(value || "blocked").replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]").slice(0, 500);
-}
+function positiveInteger(value) { const number = Number(value); if (!Number.isSafeInteger(number) || number <= 0) throw new Error("TTL must be a positive integer."); return number; }
+function requiredRepository(value) { const text = requiredText(value, "target repository"); if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(text)) throw new Error("Target repository must be owner/name."); return text; }
+function requiredText(value, label) { const text = String(value ?? "").trim(); if (!text) throw new Error(`${label} is required.`); return text; }
+function requiredDigest(value, label) { const digest = requiredText(value, label); if (!DIGEST_PATTERN.test(digest)) throw new Error(`${label} must be a SHA-256 digest.`); return digest; }
+function requiredSha(value, label) { const sha = requiredText(value, label); if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error(`${label} must be a Git SHA.`); return sha; }
+function publicMessage(value) { return String(value || "blocked").replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/gu, "[redacted]").slice(0, 500); }

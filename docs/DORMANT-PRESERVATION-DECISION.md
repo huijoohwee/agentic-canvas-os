@@ -97,14 +97,14 @@ Before candidate mutation, the controller rebuilds the source evidence and exact
 The journal is compare-and-swap written under an entrypoint fence.
 
 - `authorized` plus an absent candidate may be replaced only by a fresh current plan and its new exact authorization.
-- `planned` resumes through repository-owned `device:heartbeat --continue-admission`. Its in-command gate loads the bound journal, rechecks the one-parent same-tree fence child, selection, files, all pre-existing lanes, pull requests, controller, canonical source, and exact cloud peers before the continuation mutation.
+- `planned` resumes through repository-owned `device:heartbeat --continue-admission`. Planning may observe an already-registered exact clean active planned candidate without reprovisioning it. Its in-command gate loads the bound journal and rechecks the fence child or repository-recorded prepared integration commit, selection, files, all pre-existing lanes, pull requests, controller, canonical source, and exact cloud peers before the continuation mutation.
 - An effect that completed before its subprocess response or journal write is recovered from live repository evidence without starting a second lane.
 - `admitted` replay seals `complete` from the already journaled execution evidence; it does not repeat live verification or the effect.
 - `complete` replay returns the normalized stored receipt directly.
 
 Subprocess output must be exactly one JSON object and must join the planned session, scope, worktree, draft pull request, cloud claim, and admitted mutation authority. Ambiguous or partial state fails closed.
 
-The candidate pull request must be an open draft in the canonical target repository, use its canonical `https://github.com/<owner>/<repository>/pull/<number>` URL, and have the same head SHA as the local candidate fence child.
+The candidate pull request must be an open draft in the canonical target repository and use its canonical `https://github.com/<owner>/<repository>/pull/<number>` URL. A newly provisioned or admitted candidate has the same pull-request and local head. An exact planned candidate may additionally carry a repository-recorded local prepared integration commit; that commit remains non-authoritative until the authorized continuation and later review transition publish it.
 
 ## Verification boundary
 

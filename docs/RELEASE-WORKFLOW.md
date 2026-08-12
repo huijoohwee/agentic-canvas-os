@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-08-08"
+date: "2026-08-12"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
@@ -103,6 +103,103 @@ GameXR. It reads the canonical `collaborative-release-lifecycle/v1` carrier and
 does not add provider fields to any lifecycle receipt. The existing Knowgrph
 prompt remains the reference localhost adapter and keeps its current schema and
 rendered output.
+
+## Remote Release-Completion Invocation
+
+A remote caller may inspect, wake, or continue one exact existing release run.
+It is a replaceable transport adapter around `/release.complete`, not a second
+invocation route, release controller, state store, collaboration ledger, or
+authority source. The same contract applies across models, agents, schedulers,
+queues, webhooks, source-control hosts, deployment platforms, and interfaces.
+
+Remote acknowledgement, HTTP success, tool success, runner termination, or a
+model response proves only the stated transport observation. None creates
+review, integration, human authorization, deployment, publication, cleanup, or
+completion authority. Those states advance only through their existing owner
+and canonical receipt.
+
+A remote caller, model, or agent is never inferred as `@operator`. When a state
+requires human authority, only the existing authenticated decision adapter may
+bind that role and emit its canonical receipt.
+
+### Bounded Envelope
+
+The adapter maps one normalized envelope onto the current release owner:
+
+| Field group | Required content |
+|---|---|
+| Request identity | Stable invocation ID, idempotency key, and `inspect` or `continue` mode. |
+| Run identity | Existing release-run reference, current state, highest valid receipt digest, and canonical owner. |
+| Immutable subject | Source, candidate, target, dependency-closure, policy, artifact, and manifest identities already established by the run. |
+| Collaboration subject | Current claim, epoch, fence, ledger revision, and predecessor receipt digests when applicable. |
+| Requested transition | One typed blocker, its owner, and the single existing state transition requested. |
+| Bounds | Deadline, attempt ceiling, payload ceiling, cancellation behavior, and cost ceiling. |
+| Adapter evidence | Source-owned capability profile, adapter revision, caller attestation, observation time, and evidence digest. |
+
+The envelope carries digests, bounded deltas, and opaque references. It never
+carries credentials, full transcripts, repository archives, mutable `latest`
+selectors, or unrestricted executable input. Provider-specific fields remain
+inside the selected adapter profile and cannot enter the universal contract.
+
+### Unblock Procedure
+
+1. Read current state through `/collaboration.status` or the existing run
+   owner. Status discovery, routing, and receipt validation are deterministic,
+   read-only, and model-free.
+2. Identify one typed blocker and its canonical owner. Revalidate the exact
+   run, source, candidate, target, claim, epoch, fence, ledger, and relevant
+   predecessor receipts.
+3. Select one eligible adapter from declared capabilities, trust policy,
+   deadline, and observed cost. Do not broadcast to competing controllers.
+4. Dispatch the minimum envelope using one stable idempotency key. Continue
+   only the existing run, claim, checkpoint, or release owner.
+5. When acknowledgement is absent or `unknown`, reconcile status before any
+   retry. Retry the same request and idempotency key; never replay a committed
+   effect.
+6. The canonical owner reruns its gate. An unblock exists only when the
+   original typed blocker is absent and that owner emits its existing receipt.
+7. If a human decision is required, pause through `/human.review`. A transport
+   may present the exact challenge but cannot infer, fabricate, or submit the
+   decision.
+8. Resume `/release.complete` only after unchanged predecessor identities join.
+   A later gate remains independent and may still block.
+
+Remote continuation may use `/collaboration.continue` for the exact claim and
+`/state.checkpoint` for resumable execution. These existing routes retain their
+own authority, idempotency, and proof rules; this profile adds no alias or
+fallback state machine.
+
+### Typed Result
+
+Transport acknowledgement is separately `accepted`, `rejected`, or `unknown`
+and never uses `completed`. The canonical release owner returns one of:
+
+| Result | Maximum valid claim |
+|---|---|
+| `advanced` | One owner-validated blocker cleared and its existing next state began. |
+| `awaiting-human-authorization` | The exact challenge is ready; no decision or forward authority exists. |
+| `blocked` | The named owner and required next evidence are known; downstream mutation remains closed. |
+| `stale` | Immutable identity, authority, or proof drift requires a new canonical request. |
+| `rolled-back` | The canonical rollback receipt and state disposition validate; forward completion did not occur. |
+| `completed` | Deployment, state reconciliation, live verification, publication, receipt persistence, and cleanup dispositions join as `production-complete`. |
+
+### Adaptiveness And Economics
+
+- Capability discovery covers status, idempotent dispatch, acknowledgement
+  reconciliation, event delivery, cancellation, and bounded artifact
+  references. A missing capability selects another eligible transport or
+  returns `blocked`; it never weakens proof.
+- Adapter fallback changes transport only. Invocation, immutable subject,
+  policy, human boundary, and required receipts remain unchanged.
+- Prefer zero-model status, routing, validation, and retry decisions. Reuse a
+  valid checkpoint instead of replaying completed work.
+- Use one controller for one candidate and target. Speculative fan-out and
+  transcript broadcast are forbidden.
+- Bound attempts, elapsed time, payload, tokens, and cost. Record model-bearing
+  work through the existing harness cost owner rather than inventing another
+  token or accounting schema.
+- When no conforming remote adapter is available, remain blocked and return the
+  exact manual owner action.
 
 ## Inputs and Outputs
 

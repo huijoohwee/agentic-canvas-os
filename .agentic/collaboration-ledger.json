@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2381,
-  "headDigest": "c15c79f44e832013285e68275f201bb554708326db1b80402443af56a3e1c410",
+  "sequence": 2382,
+  "headDigest": "0b9bf7345909e5479656a11107028cc06b7e844a24c218fce7f2f110a42ab81d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -118082,6 +118082,47 @@
       },
       "claimDigest": "fe116c8f604059cabc83b4c112d97f4745178b4bd1a8294c040204b9b8eba1c5",
       "digest": "c15c79f44e832013285e68275f201bb554708326db1b80402443af56a3e1c410"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2382,
+      "parentDigest": "c15c79f44e832013285e68275f201bb554708326db1b80402443af56a3e1c410",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4a861674a88187d603ed91023f60eecf7b6bdd4c09031014384ea61cc6e6ae63",
+      "idempotencyKey": "d859a14e0c13e69dbdf1d12fd9ad7e23f4c9b64c81a9becd83a03018254ff3f6",
+      "requestDigest": "46e8898382acbdd9780351be54db2497bddeb36c488415117df55825b1dc172a",
+      "evaluationTime": "2026-08-12T04:14:44.000Z",
+      "claimCore": {
+        "claimId": "4a861674a88187d603ed91023f60eecf7b6bdd4c09031014384ea61cc6e6ae63",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:96187833d1741ab59b864d8cb1ca4ed0a2d5c68e9b8aef11bed3645b96a1f8cf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:af78f2fae38a65eb2a7bc5bdaa6d3885b9f23f202d42c8948a4f472d3d796a0e",
+        "canonicalBaseRevision": "07b762e17807c9e618a67b7c1410e17de8601fbf",
+        "declaredWriteScope": [
+          "path:__tests__/review-ahead-projection-recovery.test.mjs",
+          "path:scripts/review-ahead-projection-recovery-controller.mjs",
+          "path:scripts/review-ahead-projection-recovery-evidence.mjs",
+          "semantic:review-ahead-shared-ancestor-equivalence"
+        ],
+        "writeSetDigest": "1df29cf040b397032a702e2db3bd96a2557646d9308347f6f15ee35468e7cf91",
+        "laneRevision": "47806c6a9d72376c5290ad371679b0bfdba79838",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T05:13:00.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM793Dt-",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "4c929cdca8386bf70d9ef5186e056d4212d81724c92920b6be3b4586fbda6021",
+      "digest": "0b9bf7345909e5479656a11107028cc06b7e844a24c218fce7f2f110a42ab81d"
     }
   ]
 }

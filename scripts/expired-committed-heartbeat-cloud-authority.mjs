@@ -196,7 +196,7 @@ function recoverDormant({
   if (Date.parse(projected.expiresAt) <= Date.now()) {
     if (!followupEvidenceDigest) drift();
     return recoverDormant({
-      authority: projected,
+      authority: Object.freeze({ ...projected, state: "active" }),
       manifest,
       claim: result.claim,
       evidenceDigest: followupEvidenceDigest,

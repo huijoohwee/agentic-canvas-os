@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2411,
-  "headDigest": "c72ef982f29b311daed6e57fed52f5c2b0691807916e8e8a9fb8554b2b87bc2d",
+  "sequence": 2412,
+  "headDigest": "8ea1ba8c70934a8c9cc3f4ba6d075200aa2e2aac5316532d659d2a2cc6fdac4d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -119459,6 +119459,46 @@
       },
       "claimDigest": "8b2ed42f726a1f4251ae112da7c340b87f8e5381ebfefe5efeaaec2da465ba86",
       "digest": "c72ef982f29b311daed6e57fed52f5c2b0691807916e8e8a9fb8554b2b87bc2d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2412,
+      "parentDigest": "c72ef982f29b311daed6e57fed52f5c2b0691807916e8e8a9fb8554b2b87bc2d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "22ecbc8e5b9c2eed34313a21ee3684dfbb046e3094582d6d7c789e730d50c142",
+      "idempotencyKey": "dcb5764be2a0bd704f24c37f10aa593ef68378f2b062fd3d66c6d6c5fc4fb7ae",
+      "requestDigest": "fdeeb822d951c6bbc36c95cc74c4a04f930fe9fbd46ed2fa12e6e32464a89a17",
+      "evaluationTime": "2026-08-12T05:27:28.000Z",
+      "claimCore": {
+        "claimId": "22ecbc8e5b9c2eed34313a21ee3684dfbb046e3094582d6d7c789e730d50c142",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:952bff7c98ba35add3d49b7105eca80f8e8f0cb6442fcb4fbe21282f45d9aeaa",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:8a1b93e43869107ec16617278e69ce07bb5ad30c8c2c21c99ac7b934aed521d0",
+        "canonicalBaseRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/immersiveMediaRuntime.test.ts",
+          "path:canvas/src/features/three/Controls.tsx",
+          "semantic:immersive-input-camera-ownership"
+        ],
+        "writeSetDigest": "9901321d3d9d05909d63ed3ce5fc0d49d4c4bd847b5fe97541a4049e8a5f36a2",
+        "laneRevision": "4375aaf834373b705140a3c95944483cb3cac490",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T05:56:58.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9dcb341ed67f32ccd77293479a74d8a3b6328ca9a0e492b434bd4625130e978a",
+      "digest": "8ea1ba8c70934a8c9cc3f4ba6d075200aa2e2aac5316532d659d2a2cc6fdac4d"
     }
   ]
 }

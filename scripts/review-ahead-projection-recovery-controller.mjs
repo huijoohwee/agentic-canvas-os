@@ -13,7 +13,7 @@ import {
 import { captureReviewAheadProjectionEvidence } from "./review-ahead-projection-recovery-evidence.mjs";
 import { partitionChangedPathsByScope } from "./expired-committed-heartbeat-evidence.mjs";
 import {
-  captureProtectedMainPathEquivalence,
+  captureProtectedMainSharedAncestorPathEquivalence,
   fetchProtectedMain,
 } from "./protected-main-path-equivalence-lib.mjs";
 
@@ -92,7 +92,7 @@ export function createRepositoryReviewAheadProjectionController({ repository, se
         stdio: ["ignore", "pipe", "pipe"],
       }).trim();
     },
-    readLocalDescendantReceipt({ localHeadSha, reviewHeadSha, declaredWriteScope }) {
+    readLocalDescendantReceipt({ baseSha, localHeadSha, reviewHeadSha, declaredWriteScope }) {
       const gitText = args => execFileSync("git", args, {
         cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
       });
@@ -120,8 +120,9 @@ export function createRepositoryReviewAheadProjectionController({ repository, se
       const partition = partitionChangedPathsByScope({
         changedPaths: paths, declaredWriteSet: declaredWriteScope,
       });
-      const protectedMainEquivalence = captureProtectedMainPathEquivalence({
-        baseSha: reviewHeadSha, headSha: localHeadSha,
+      const protectedMainSharedAncestorEquivalence =
+        captureProtectedMainSharedAncestorPathEquivalence({
+        baseSha, headSha: localHeadSha,
         exemptPaths: partition.protectedEquivalentPaths, gitText,
       });
       const binaryDiff = execFileSync("git", ["diff", "--binary", reviewHeadSha, localHeadSha], {
@@ -132,8 +133,9 @@ export function createRepositoryReviewAheadProjectionController({ repository, se
         reviewHeadSha, localHeadSha, commits, paths,
         declaredChangedPaths: partition.declaredChangedPaths,
         protectedEquivalentPaths: partition.protectedEquivalentPaths,
-        protectedMainEquivalence,
-        protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
+        protectedMainSharedAncestorEquivalence,
+        protectedMainSharedAncestorEquivalenceDigest:
+          digestValue(protectedMainSharedAncestorEquivalence),
         treeSha: execFileSync("git", ["rev-parse", `${localHeadSha}^{tree}`], {
           cwd: repository, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
         }).trim(),

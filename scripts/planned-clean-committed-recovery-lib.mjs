@@ -61,7 +61,7 @@ export function recoverPlannedAdmissionCloudAuthority({ authority, manifest, bra
   const claim = matches[0];
   const dormant = ["dormant-preserved", "parked"].includes(claim?.state);
   const responseLossReplay = claim?.state === "current"
-    && claim.transitionCounter === authority.transitionCounter + 1;
+    && claim.transitionCounter > authority.transitionCounter;
   if (matches.length !== 1 || (!dormant && !responseLossReplay)
     || claim.canonicalBaseRevision !== authority.canonicalBaseSha
     || claim.laneRevision !== authority.laneRevision

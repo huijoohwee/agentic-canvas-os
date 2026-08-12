@@ -565,7 +565,7 @@ truth_tokens:
 | Fact | Rule | Proof or source |
 |---|---|---|
 | Graph topology | Stateful orchestration is represented as typed state, nodes, and edges. | `/orchestration.graph`, `#orchestration-graph`, `@orchestration-graph`. |
-| Durable execution | Long-running agents require checkpoint and resume contracts before runtime-ready promotion. | `/state.checkpoint`, `#durable-execution`, `@checkpoint-store`. |
+| Durable execution | Long-running agents require checkpoint and resume contracts before runtime-ready promotion; adaptive lifecycle observation derives bounded evidence-based schedules without treating silence, expiry, or a resume signal as authority. | `/state.checkpoint`, `#durable-execution`, `@checkpoint-store`, `LIFECYCLE-MONITORING.md`. |
 | Human review | Human-in-loop stages are explicit interrupts with inspect, edit, approve, reject, and resume outcomes. | `/human.review`, `#human-in-loop`, `@human-review`. |
 | Streaming trace | Agent runs may surface streaming events for progress and state transitions, but not as source mutation. | `/stream.trace`, `@runtime-proof`, `@cost-log`. |
 | SuperAgent run | Long-horizon research, code, and creation tasks compose orchestration, skills, memory, tools, sandboxed workspace, message gateway, artifacts, and verification under one bounded harness. | `/superagent.run`, `#long-horizon-harness`, `@sandbox-workspace`, `@message-gateway`. |

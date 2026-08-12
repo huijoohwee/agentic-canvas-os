@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2392,
-  "headDigest": "e71c416d0159d4e5ad1d4ed47f91a3f94fbedd865b8c13ba1f6ddccc55612d23",
+  "sequence": 2393,
+  "headDigest": "81b84917746ea9fe72ee9d2f9e1c3d1204a519db5c4eeb1973bb3de7c54dd021",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -118581,6 +118581,50 @@
       },
       "claimDigest": "93e7aebc84952e4f78d8487bb986864a3bd3a2c1219c1f6986ab32da2eb8bf60",
       "digest": "e71c416d0159d4e5ad1d4ed47f91a3f94fbedd865b8c13ba1f6ddccc55612d23"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2393,
+      "parentDigest": "e71c416d0159d4e5ad1d4ed47f91a3f94fbedd865b8c13ba1f6ddccc55612d23",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1ce75908cb0237529dd3f71727198977ceaa33c46162024cdeeae28ba897d85b",
+      "idempotencyKey": "518ff926c691a52f3bf070e2d161145c2f43cdf1d81b50350d1e3128b1810866",
+      "requestDigest": "f58b91728c484390d1ed5e84b6d5f0fa473d780c5e3b05249ad557edc1ca5d02",
+      "evaluationTime": "2026-08-12T04:45:59.000Z",
+      "claimCore": {
+        "claimId": "1ce75908cb0237529dd3f71727198977ceaa33c46162024cdeeae28ba897d85b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:bdcf196865b7e35c23b4624cbca29de8fcf4fef9b83aeff3bc6020087ce49376",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:af46eacadc8fd7284979267548fa4f17a8169c82d9cba31aa75a6d14fb3b5d61",
+        "canonicalBaseRevision": "9e7ae5709879579275679d4a2025a2c18f76f162",
+        "declaredWriteScope": [
+          "path:__tests__/planned-recovery-pr-marker-reconciliation.test.mjs",
+          "path:docs/PLANNED-RECOVERY-PR-MARKER-RECONCILIATION.md",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-contract.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-controller.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-repository-adapter.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation.mjs",
+          "semantic:planned-recovery-pr-marker-reconciliation"
+        ],
+        "writeSetDigest": "2c055bd5540ddbb27a1e176ea73635a45b2c89fbcfe2ea4c2b08f43e642b9d2f",
+        "laneRevision": "d608717815e9b6039f50b94349526515a8afb3f9",
+        "leaseEpoch": 4,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-12T05:15:59.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM793h0Z",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "140a73ede5150d5ccf2724990ea147e2a773de83bb6143509c7344ba0ec8abc2",
+      "digest": "81b84917746ea9fe72ee9d2f9e1c3d1204a519db5c4eeb1973bb3de7c54dd021"
     }
   ]
 }

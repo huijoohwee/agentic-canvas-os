@@ -266,7 +266,7 @@ function requireRecoverySubjectResult(result, expected, { allowExpired }) {
     || claim?.claimId !== expected.authority.claimId
     || claim.canonicalBaseRevision !== expected.canonicalBaseSha
     || claim.laneRevision !== expected.expectedLaneRevision
-    || claim.state !== "current"
+    || !["current", "dormant-preserved"].includes(claim.state)
     || claim.writeSetDigest !== expected.manifest.writeSetDigest
     || JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
       !== JSON.stringify(expected.manifest.declaredWriteSet)

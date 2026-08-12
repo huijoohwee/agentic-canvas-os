@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2590,
-  "headDigest": "c7b583a42a8fee899fe4dc0b7406f3d58b608fe0d9b5abf3c0c561fc87c7911b",
+  "sequence": 2591,
+  "headDigest": "52d9c51c410ca3ab8dbb8aca9a9772008eb5c4feff7c86db2358a65f045c100b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -128026,6 +128026,47 @@
       },
       "claimDigest": "7b6183a029129871c4fa8e8b2b6399c68ecce20d1e30ece7f397ca798861e953",
       "digest": "c7b583a42a8fee899fe4dc0b7406f3d58b608fe0d9b5abf3c0c561fc87c7911b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2591,
+      "parentDigest": "c7b583a42a8fee899fe4dc0b7406f3d58b608fe0d9b5abf3c0c561fc87c7911b",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "ec0e07f89e270b33d4d2ed2b520c68ae52dd740ef64464f0b3867be9c1035338",
+      "idempotencyKey": "49900a1e30d83ffd74c4fee3478c52f8cced508894fbdc15a1c1a920977232fb",
+      "requestDigest": "73d5f8915ce1eb553bbb22c2326e41b107a89e238cd519cda2970d4455215ef1",
+      "evaluationTime": "2026-08-12T13:15:23.000Z",
+      "claimCore": {
+        "claimId": "ec0e07f89e270b33d4d2ed2b520c68ae52dd740ef64464f0b3867be9c1035338",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ad589da4fefdeffa160e86b2825f60b9f304d2f6d19e38da5294a2f19b5ea1e2",
+        "canonicalBaseRevision": "545b19093269a8d4b411e05fc3c15b027f9b9f92",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-cloud-authority.test.mjs",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "path:todo/2026-08/dormant-recovery-replay-findings-shape.md",
+          "semantic:dormant-recovery-replay-findings-shape"
+        ],
+        "writeSetDigest": "763da99cc8884d77cf81d73a808a9c8bf15ac796fcbf2418786b766757afeddc",
+        "laneRevision": "545b19093269a8d4b411e05fc3c15b027f9b9f92",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T13:45:23.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "770aefed1997d73090d22b618446f72b47c2b37075e87e8bded5f767b478be9d",
+      "digest": "52d9c51c410ca3ab8dbb8aca9a9772008eb5c4feff7c86db2358a65f045c100b"
     }
   ]
 }

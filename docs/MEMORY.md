@@ -101,11 +101,12 @@ agentic_os_memory:
     guards: ["bounded stores", "frozen session snapshot", "scan before write", "capacity error before overflow", "explicit user profile only", "no silent auto-compact", "no deploy"]
   planning_history:
     index: "TODO.md"
-    shard_pattern: "../todo/YYYY-MM.md"
-    active_shard: "../todo/2026-08.md"
-    schema: "todo-log/v1"
+    legacy_shard_pattern: "../todo/YYYY-MM.md"
+    context_record_pattern: "../todo/YYYY-MM/<context>.md"
+    active_period: "2026-08"
+    schema: "todo-context-record/v2"
     scope: "cross-repository"
-    guards: ["append-only", "closed-month immutability", "exact-first retrieval", "500000-byte cap", "599-line cap", "no deploy"]
+    guards: ["immutable records", "legacy immutability", "unique Context", "exact-first retrieval", "deterministic projection", "no deploy"]
   skill_system:
     source_policy: "external-pattern-reference-only; forbid copied skills, code, examples, tests, prompt text, layouts, and prose"
     commands: ["/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/skill.propose", "/skill.evolve"]

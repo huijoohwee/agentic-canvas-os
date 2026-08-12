@@ -112,6 +112,45 @@ test("a lost dormant-recovery response replays the exact recovery key without re
   assert.equal(result.authority.heartbeatCounter, 9);
 });
 
+test("an expired replay transition recovers once more from current evidence", () => {
+  const source = authority();
+  const advanced = { ...recoveryClaim(source), state: "dormant-preserved",
+    writeAuthority: false, expiresAt: "2026-08-12T09:00:00.000Z" };
+  const currentEvidence = digest("2");
+  let recoveries = 0;
+  const result = continueExpiredCommittedHeartbeatCloudAuthority({
+    ...common(source, advanced),
+    recoveryEvidenceDigest: currentEvidence,
+    resolveReplayEvidence: () => evidenceDigest,
+    invoke: input => {
+      recoveries += 1;
+      if (recoveries === 1) {
+        assert.equal(input.request.recoveryEvidenceDigest, evidenceDigest);
+        return recoveryResult(source, { replayed: true,
+          expiresAt: "2026-08-12T09:00:00.000Z" });
+      }
+      assert.equal(input.request.expectedFenceRevision, digest("b"));
+      assert.equal(input.request.expectedTransitionCounter, 12);
+      assert.equal(input.request.recoveryEvidenceDigest, currentEvidence);
+      const intermediate = { ...source, claimDigest: digest("b"),
+        claimLedgerRevision: digest("c"), operationReceiptDigest: digest("d"),
+        transitionCounter: 12, expiresAt: "2026-08-12T09:00:00.000Z" };
+      return recoveryResult(intermediate, { replayed: false,
+        recoveryEvidence: currentEvidence,
+        claimOverride: publicClaim(intermediate, { state: "current",
+          writeAuthority: true, scopeReserved: true, transitionCounter: 13,
+          heartbeatCounter: 9, fenceRevision: digest("5"),
+          transitionDigest: digest("6"), operationReceiptDigest: digest("7"),
+          expiresAt: "2099-08-12T10:00:00.000Z" }) });
+    },
+    renew: () => { throw new Error("recovery chain must not renew"); },
+    verify: ({ authority: projected }) => verifiedResult(projected, 9),
+  });
+  assert.equal(recoveries, 2);
+  assert.equal(result.authority.transitionCounter, 13);
+  assert.equal(result.authority.claimDigest, digest("5"));
+});
+
 test("a lost ordinary-renewal response replays renewal without a recovery call", () => {
   const source = authority();
   const advanced = renewalClaim(source);
@@ -339,14 +378,16 @@ function publicClaim(source, values) {
   };
 }
 
-function recoveryResult(source, { replayed }) {
-  const claim = recoveryClaim(source);
+function recoveryResult(source, { replayed, expiresAt = null,
+  recoveryEvidence = evidenceDigest, claimOverride = null }) {
+  const claim = claimOverride || { ...recoveryClaim(source),
+    ...(expiresAt ? { expiresAt } : {}) };
   const operationKey = [
     "device-expired-committed-recovery",
     source.claimId,
     source.transitionCounter,
     source.claimDigest,
-    evidenceDigest,
+    recoveryEvidence,
   ].join(":");
   const operationReceipt = {
     schema: "agentic-collaboration-continuation-receipt/v1",

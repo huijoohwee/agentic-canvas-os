@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2578,
-  "headDigest": "065fc73f57d00cde194c49834e841fff60e161a006a53398cc275568815cfc5e",
+  "sequence": 2579,
+  "headDigest": "2c54f4b1bcf5734d5a700f15921de6f00d0889c9b51733dfe4b245019b8bbb4a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -127431,6 +127431,63 @@
       },
       "claimDigest": "4fdfd5e452ee3486b5dbf9b8dbd39d5a3289bddc417c55654ef08efed3a2baf3",
       "digest": "065fc73f57d00cde194c49834e841fff60e161a006a53398cc275568815cfc5e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2579,
+      "parentDigest": "065fc73f57d00cde194c49834e841fff60e161a006a53398cc275568815cfc5e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a7e86d641ed7adc25d8d764516d2604a60eb6e64e639ba31a685f962b35c9f42",
+      "idempotencyKey": "c714b520f05132ff9158ce7140fcd8da315771cef8109c787183b9cc5a7840d2",
+      "requestDigest": "5fdead3ad658f2590af43ba3c6e13abc0d9d64582546409f6afc06d0ed932b45",
+      "evaluationTime": "2026-08-12T12:53:27.000Z",
+      "claimCore": {
+        "claimId": "a7e86d641ed7adc25d8d764516d2604a60eb6e64e639ba31a685f962b35c9f42",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:e770fc832139d778ecb9520602c5c2272a4ffd3dfa5af97618d7a628ba51b4b8",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:28b323e225560bbe7d01fb0511f22d9e7e1756de30617119e349b7750fe8b110",
+        "canonicalBaseRevision": "1379717e7841b9e9bb28907130f621385bc5465e",
+        "declaredWriteScope": [
+          "path:__tests__/durable-operator-authorization-cli.test.mjs",
+          "path:__tests__/durable-operator-authorization-contract.test.mjs",
+          "path:__tests__/durable-operator-authorization-store.test.mjs",
+          "path:docs/DURABLE-OPERATOR-AUTHORIZATION.md",
+          "path:docs/schemas/durable-operator-authorization-receipt.v1.schema.json",
+          "path:docs/schemas/durable-operator-authorization-record.v1.schema.json",
+          "path:scripts/durable-operator-authorization-contract.mjs",
+          "path:scripts/durable-operator-authorization-store.mjs",
+          "path:scripts/durable-operator-authorization.mjs",
+          "semantic:durable-operator-authorization-handoff"
+        ],
+        "writeSetDigest": "ab46e66573031d503f21617dc4c21276d96a057a89732ea5154e09f07cc2e784",
+        "laneRevision": "1379717e7841b9e9bb28907130f621385bc5465e",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-12T20:51:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "1379717e7841b9e9bb28907130f621385bc5465e",
+          "reviewRequestId": null,
+          "bytesDigest": "fdcea28376cb2ae7fea4616d7856e44ee1da1a46cfc0d8ce758b16f83d551098",
+          "namedChecksDigest": "2ee74c19fcfd7ee5f3b182f34b7e583d5beade5ab1e254d51a5bbfd841955136",
+          "handoffEvidenceDigest": "7ab2d5c5f3907a3d353e9470fa8bd120a43214cbfdbc3bc2cd555b9ae8fc8256",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-12T12:53:27.000Z"
+        }
+      },
+      "claimDigest": "c465963161d8a8042d0c3633d31124ad973b27b3a498d25978b1587801779756",
+      "digest": "2c54f4b1bcf5734d5a700f15921de6f00d0889c9b51733dfe4b245019b8bbb4a"
     }
   ]
 }

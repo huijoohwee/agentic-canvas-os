@@ -141,9 +141,6 @@ export function selectRootSourceBootstrapPreservedLanes({
     && !currentClaimIds.has(String(lane.lease?.cloudAuthority?.claimId || ""))
   )).map(lane => Object.freeze({ path: lane.path, stateDigest: lane.stateDigest }))
     .sort((left, right) => left.path.localeCompare(right.path));
-  if (discovered.length === 0) {
-    throw new Error("Root-source bootstrap preservation requires at least one eligible preserved lane.");
-  }
   if (discovered.length > maxCount) {
     throw new Error(`Root-source bootstrap preservation exceeds the bounded lane count (${discovered.length}/${maxCount}).`);
   }

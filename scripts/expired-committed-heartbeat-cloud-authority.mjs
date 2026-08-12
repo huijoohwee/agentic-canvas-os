@@ -15,6 +15,8 @@ import {
   requiredSha,
   requiredText,
 } from "./scoped-lane-cloud-reconciliation.mjs";
+import { resolveExpiredCommittedRecoveryReplayEvidence } from
+  "./expired-committed-heartbeat-replay-evidence.mjs";
 
 export const EXPIRED_COMMITTED_CLOUD_RECOVERY_EVIDENCE_SCHEMA =
   "agentic-expired-committed-heartbeat-cloud-recovery-evidence/v1";
@@ -47,6 +49,7 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
   invoke = invokeRepositoryCloudAction,
   renew = heartbeatAdmissionCloudAuthority,
   verify = verifyAdmissionCloudAuthority,
+  resolveReplayEvidence = resolveExpiredCommittedRecoveryReplayEvidence,
 } = {}) {
   const admittedManifest = normalizeManifest(manifest);
   const source = normalizeSourceAuthority(authority, admittedManifest);
@@ -71,8 +74,7 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     environment,
   };
 
-  if (claim.state === "dormant-preserved") {
-    if (!exactProjection) drift();
+  if (claim.state === "dormant-preserved" && exactProjection) {
     return recoverDormant({
       ...common,
       claim,
@@ -82,10 +84,10 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
       verify,
     });
   }
-  if (claim.state !== "current") drift();
-  if (exactProjection) {
+  if (claim.state === "current" && exactProjection) {
     return finalizeContinuation(renew(common), source, admittedManifest);
   }
+  if (!["current", "dormant-preserved"].includes(claim.state)) drift();
   if (claim.transitionCounter !== source.transitionCounter + 1) drift();
 
   const sourceHeartbeat = optionalCounter(source.heartbeatCounter);
@@ -98,7 +100,12 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     return recoverDormant({
       ...common,
       claim,
-      evidenceDigest,
+      evidenceDigest: resolveReplayEvidence({
+        source,
+        liveClaim: claim,
+        status,
+        environment,
+      }),
       expectedReplay: true,
       invoke,
       verify,
@@ -109,7 +116,12 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     return recoverDormant({
       ...common,
       claim,
-      evidenceDigest,
+      evidenceDigest: resolveReplayEvidence({
+        source,
+        liveClaim: claim,
+        status,
+        environment,
+      }),
       expectedReplay: true,
       invoke,
       verify,

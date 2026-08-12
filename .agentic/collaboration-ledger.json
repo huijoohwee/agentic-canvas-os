@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2565,
-  "headDigest": "a3cdbbd77d8eeeca86bac11771e4f771059b34f2302e8bf789ae223518414041",
+  "sequence": 2566,
+  "headDigest": "cf24a85ebaa4d9d19487862f083990af437a900f28ef695037e002e4cf976bd0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -126821,6 +126821,47 @@
       },
       "claimDigest": "848ce29161c988647273f1bcd7adb639c73cb1bff98b4b3ce0133f69e60eb139",
       "digest": "a3cdbbd77d8eeeca86bac11771e4f771059b34f2302e8bf789ae223518414041"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2566,
+      "parentDigest": "a3cdbbd77d8eeeca86bac11771e4f771059b34f2302e8bf789ae223518414041",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "23d466aec49eb526bc26dfd5a2f27b863c09f9e2f70a83c0475dea22e04ff788",
+      "idempotencyKey": "5eb96ae9891587f9e41a7cd2171de9542473bf91e14a52f8ca5bfceca02a5fbf",
+      "requestDigest": "a4cf4e4471f14f7c773bd85c50bf6fe4ef04c1d78443cff1b3dc8eb83bfde785",
+      "evaluationTime": "2026-08-12T12:23:21.000Z",
+      "claimCore": {
+        "claimId": "23d466aec49eb526bc26dfd5a2f27b863c09f9e2f70a83c0475dea22e04ff788",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:c911fe3476c0f5101ddbcf125b56b3c52bd694229d04572f5db445dff1f42f0b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b7104be2c0030eb65902d4eaa882169ba235aed8f572e0d9da37bb27638a24c6",
+        "canonicalBaseRevision": "14eeace6c7fa476720a47e52422d7bd45f32310a",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-cloud-authority.test.mjs",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "path:todo/2026-08/dormant-recovery-replay-renewal.md",
+          "semantic:dormant-recovery-replay-renewal"
+        ],
+        "writeSetDigest": "470ac45fb648ead50aeb0eccbaf4b204ddbbff0f3f34ca1350a5794867198d83",
+        "laneRevision": "1254f2a05fa350d46a946558adf1ecfdd2cb1589",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-12T12:43:50.000Z",
+        "evidenceDigest": "95aaedc015e42b0c6aeb91ec773a3680de09af080ef2f53f38b2b686d6fbc9e5",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-C0yB",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c3dcb8ac98bf4e4a0056e1e4bb512097f7533ca8aae14390f071e99de54dd746",
+      "digest": "cf24a85ebaa4d9d19487862f083990af437a900f28ef695037e002e4cf976bd0"
     }
   ]
 }

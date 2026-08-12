@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2454,
-  "headDigest": "f96e5b9f9b85ebf0db5a045ed7eb7a09f1e0c7e074597f1e1a907fc0785bf084",
+  "sequence": 2455,
+  "headDigest": "1e122b88edc4fd74786795e99ef042a907369b905c475eb32e04c638a831495a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -121441,6 +121441,55 @@
       },
       "claimDigest": "c8b8cf8995b8db049cc373666d1f8b0879e112e07d1425ec4f61e7a94b14064f",
       "digest": "f96e5b9f9b85ebf0db5a045ed7eb7a09f1e0c7e074597f1e1a907fc0785bf084"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2455,
+      "parentDigest": "f96e5b9f9b85ebf0db5a045ed7eb7a09f1e0c7e074597f1e1a907fc0785bf084",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "228d185eb5b341974180167594e36598b5e1bdc8f2583464bacc674683faa84c",
+      "idempotencyKey": "c761b300083980a93534d79d15657d22178d388ec48a9a70e3ccd782312a202f",
+      "requestDigest": "b7575aca730410fdeeba01cfc94fe16b1da5d2de9b7b3c3bd73ff4e8eaf02111",
+      "evaluationTime": "2026-08-12T07:30:14.000Z",
+      "claimCore": {
+        "claimId": "228d185eb5b341974180167594e36598b5e1bdc8f2583464bacc674683faa84c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:ee4312bab05815ac65ea0f0f002dda5ce38f1e4829afe647b93dd0d8a6b78491",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:d67519f2feecafcaff4507373371cb48c7486816978c8b4fe78fbb973dce3cf6",
+        "canonicalBaseRevision": "9bbc5c20d35b7188b6bbcca5309460a4388cd66b",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/mainPanelExaIntegrations.test.tsx",
+          "path:canvas/src/__tests__/mainPanelMcpExa.test.tsx",
+          "path:canvas/src/features/integrations/exaSearchApiSsot.ts",
+          "path:canvas/src/features/panels/views/exaMcpApiDocs.ts",
+          "path:canvas/src/features/panels/views/exaSearchApiDocs.ts",
+          "path:canvas/src/features/panels/views/settingsView.constants.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.helpers.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.ts",
+          "path:canvas/src/tests/registry/postParserCases5.ts",
+          "path:docs/documents/knowgrph-mcp/knowgrph-exa-mcp-prd-tad.md",
+          "path:grph-shared/src/search/exaMcpSsot.ts",
+          "semantic:exa-coding-agent-integrations"
+        ],
+        "writeSetDigest": "3f74ca155072eed3db93f1dee59ab771ae6826ef67572e3f9645ea445c4e12d1",
+        "laneRevision": "9bbc5c20d35b7188b6bbcca5309460a4388cd66b",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-12T08:30:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ea08adb1e6eae77f5a0a3980ab07d1cd93312f9d116824f10fbcc2a22f039815",
+      "digest": "1e122b88edc4fd74786795e99ef042a907369b905c475eb32e04c638a831495a"
     }
   ]
 }

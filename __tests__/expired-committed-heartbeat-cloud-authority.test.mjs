@@ -127,7 +127,9 @@ test("an expired replay transition recovers once more from current evidence", ()
       if (recoveries === 1) {
         assert.equal(input.request.recoveryEvidenceDigest, evidenceDigest);
         return recoveryResult(source, { replayed: true,
-          expiresAt: "2026-08-12T09:00:00.000Z" });
+          expiresAt: "2026-08-12T09:00:00.000Z",
+          claimOverride: { ...recoveryClaim(source), state: "dormant-preserved",
+            writeAuthority: false, expiresAt: "2026-08-12T09:00:00.000Z" } });
       }
       assert.equal(input.request.expectedFenceRevision, digest("b"));
       assert.equal(input.request.expectedTransitionCounter, 12);

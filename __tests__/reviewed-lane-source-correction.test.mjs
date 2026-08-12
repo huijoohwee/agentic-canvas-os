@@ -32,6 +32,7 @@ const sourceSession = "codex-source-owner-20260810";
 const operatorSession = "codex-correction-operator-20260810";
 
 function fixture({ currentBaseSha, changedWriteScope = [], integratedReplay = false,
+  recoveredReplay = false,
   integratedState = "dormant-preserved" } = {}) {
   const branch = "agent/huis-macbook-pro-3.local/source-owner";
   const headSha = hex("a", 40);
@@ -120,11 +121,12 @@ function fixture({ currentBaseSha, changedWriteScope = [], integratedReplay = fa
     declaredWriteScope: declaredWriteSet,
     writeSetDigest,
     leaseEpoch: authority.leaseEpoch,
-    transitionCounter: authority.transitionCounter + (integratedReplay ? 1 : 0),
+    transitionCounter: authority.transitionCounter + (integratedReplay ? recoveredReplay ? 2 : 1 : 0),
     reviewRequestId: authority.reviewRequestId,
     fenceRevision: integratedReplay ? hex("d", 64) : authority.claimDigest,
     transitionDigest: integratedReplay ? hex("e", 64) : authority.claimLedgerRevision,
-    operationReceiptDigest: integratedReplay ? hex("f", 64) : authority.operationReceiptDigest,
+    operationReceiptDigest: integratedReplay
+      ? recoveredReplay ? hex("0", 64) : hex("f", 64) : authority.operationReceiptDigest,
     integrationReceiptDigest: integratedReplay ? hex("f", 64) : null,
     integration: integratedReplay ? {
       candidateRevision: headSha,
@@ -136,6 +138,10 @@ function fixture({ currentBaseSha, changedWriteScope = [], integratedReplay = fa
       operatorDecisionDigest: hex("4", 64),
       integrationIntentDigest: hex("5", 64),
       integratedAt: "2026-08-10T06:10:00.000Z",
+    } : null,
+    recovery: recoveredReplay ? {
+      evidenceDigest: hex("8", 64),
+      recoveredAt: "2026-08-10T07:10:00.000Z",
     } : null,
     deviceId: pseudonymousIdentifier("device", lease.device),
     sessionId: pseudonymousIdentifier("session", lease.sessionId),
@@ -288,6 +294,10 @@ test("integrated response loss joins the prior local review projection exactly",
     assert.equal(source.authority.transitionCounter + 1, source.claim.transitionCounter);
     assert.equal(source.claim.state, state);
   }
+  const recovered = fixture({ integratedReplay: true, recoveredReplay: true }).source;
+  assert.equal(recovered.authority.transitionCounter + 2, recovered.claim.transitionCounter);
+  assert.notEqual(recovered.claim.operationReceiptDigest,
+    recovered.claim.integrationReceiptDigest);
   const source = fixture({ integratedReplay: true }).source;
   const changes = {
     state: value => { value.claim.state = "reviewed"; },

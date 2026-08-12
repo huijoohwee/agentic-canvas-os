@@ -560,7 +560,8 @@ function sameSourceClaim(live, expected) {
   return keys.every(key => live?.[key] === expected[key])
     && JSON.stringify(normalizeWriteSet(live.declaredWriteScope))
       === JSON.stringify(expected.declaredWriteScope)
-    && digestValue(live.integration) === digestValue(expected.integration);
+    && digestValue(live.integration) === digestValue(expected.integration)
+    && digestValue(live.recovery) === digestValue(expected.recovery);
 }
 
 function text(value, label) {

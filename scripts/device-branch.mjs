@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // Responsibility: Dispatch fenced device lifecycle commands and machine-readable results.
 
-import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
-import { textCommandOptions } from "./command-text-options.mjs";
+import {
+  createCoordinationClaimRunAdapter, createDeviceChildProcessPolicy,
+} from "./device-child-process-policy.mjs";
+import {
+  parseJsonObject, readJsonFile, readOption, readOptions, requiredOption,
+} from "./device-command-input.mjs";
 import {
   completeSession, heartbeat, park, publish, resume, review, sanitizeDevice,
   sanitizeScope, start,
@@ -22,7 +25,7 @@ import {
   inspectTaskWorktreeTarget, provisionTaskWorktree, rollbackUnclaimedProvision,
 } from "./task-worktree-provision.mjs";
 import {
-  createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS,
+  createWriterLeaseStore, DEFAULT_WRITER_LEASE_TTL_MS, parseDeviceBranch,
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import {
@@ -62,11 +65,20 @@ const continueAdmission = args.includes("--continue-admission");
 const rawScope = args.find((value) => !value.startsWith("--"));
 const sessionId = readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "";
 if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
+const childProcessEnvironment = { ...process.env };
 const taskAuthorityInput = readOption(args, "task-authority")
   || process.env.AGENTIC_TASK_AUTHORITY_FILE || "";
 const taskAuthorityFile = taskAuthorityInput ? path.resolve(taskAuthorityInput) : "";
 // The capability locator is controller input, never ambient authority for child processes.
 delete process.env.AGENTIC_TASK_AUTHORITY_FILE;
+const {
+  gitText, gitOptional, ghText, ghOptional, run, runText,
+  commitCoordinationClaim,
+} = createDeviceChildProcessPolicy({
+  taskAuthorityFile,
+  environment: childProcessEnvironment,
+  json,
+});
 
 let repo = null;
 let canonicalRepo = null;
@@ -231,6 +243,16 @@ try {
   });
   const attachedBranch = gitText(["branch", "--show-current"]).trim();
   const authorityBranch = command === "resume" ? rawScope : attachedBranch;
+  const coordinationClaimScope = command === "resume"
+    ? parseDeviceBranch(rawScope)?.scope
+    : rawScope ? sanitizeScope(rawScope) : "";
+  const coordinationClaimBranch = command === "resume"
+    ? rawScope
+    : coordinationClaimScope
+      ? `agent/${sanitizeDevice(
+        gitOptional(["config", "--get", "agentic.device"]) || os.hostname(),
+      )}/${coordinationClaimScope}`
+      : "";
   if (authorityBranch && leaseStore.read(authorityBranch)) {
     leaseStore.assertTaskAuthority({
       branch: authorityBranch,
@@ -260,7 +282,25 @@ try {
     reviewReadyCloudAuthority: reviewReadyAdmissionCloudAuthority,
     verifyReviewReadyCloudAuthority:
       verifyReviewReadyAdmissionCloudAuthority,
-    run,
+    run: createCoordinationClaimRunAdapter({
+      action: command,
+      expectedScope: coordinationClaimScope,
+      verifyExpectedClaim: claim => {
+        const lease = coordinationClaimBranch
+          ? leaseStore.read(coordinationClaimBranch)
+          : null;
+        return lease?.status === "active"
+          && lease.sessionId === sessionId
+          && lease.branch === coordinationClaimBranch
+          && lease.scope === claim.scope
+          && lease.epoch === claim.epoch
+          && path.resolve(lease.worktreePath) === path.resolve(repo)
+          && !lease.fenceSha
+          && Boolean(lease.ownedDirtRecovery) === claim.preserveOwnedDirt;
+      },
+      run,
+      commitCoordinationClaim,
+    }),
     log: json ? () => {} : console.log,
     now: () => new Date(),
   };
@@ -512,33 +552,6 @@ function bindDeviceStartCloudAuthority({
   });
 }
 
-function readJsonFile(file, label) {
-  const absolutePath = path.resolve(file);
-  let value;
-  try {
-    value = JSON.parse(readFileSync(absolutePath, "utf8"));
-  } catch (error) {
-    throw new Error(`Could not read ${label} at ${absolutePath}: ${error.message}`);
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be a JSON object.`);
-  }
-  return value;
-}
-
-function parseJsonObject(source, label) {
-  let value;
-  try {
-    value = JSON.parse(source);
-  } catch (error) {
-    throw new Error(`Could not parse ${label}: ${error.message}`);
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be a JSON object.`);
-  }
-  return value;
-}
-
 function bindControllerHooksEnvironment(defaultControllerRoot) {
   return defaultControllerRoot;
 }
@@ -550,59 +563,11 @@ function assertExternalTaskAuthorityFile(file, repository) {
   }
 }
 
-function gitText(args) {
-  return execFileSync("git", args, textCommandOptions());
-}
-
-function gitOptional(args) {
-  const result = spawnSync("git", args, textCommandOptions());
-  return result.status === 0 ? result.stdout.trim() : "";
-}
-
-function ghText(args) {
-  return execFileSync("gh", args, textCommandOptions());
-}
-
-function ghOptional(args) {
-  const result = spawnSync("gh", args, textCommandOptions());
-  return result.status === 0 ? result.stdout.trim() : "";
-}
-
-function run(command, args) {
-  const stdio = json ? ["ignore", "ignore", "inherit"] : "inherit";
-  const result = spawnSync(command, args, { stdio });
-  if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed`);
-}
-
-function runText(command, args, options = {}) {
-  return execFileSync(command, args, textCommandOptions(options));
-}
-
 function usage() {
   console.error(
     "Usage: node scripts/device-branch.mjs <lifecycle-command> --session=<id> --repository=<path> --task-authority=<external-capability.json> [command-specific options] [--json]",
   );
   process.exit(2);
-}
-
-function readOption(values, name) {
-  const prefix = `--${name}=`;
-  const match = values.find((value) => value.startsWith(prefix));
-  return match ? match.slice(prefix.length).trim() : "";
-}
-
-function readOptions(values, name) {
-  const prefix = `--${name}=`;
-  return values
-    .filter(value => value.startsWith(prefix))
-    .map(value => value.slice(prefix.length).trim())
-    .filter(Boolean);
-}
-
-function requiredOption(values, name) {
-  const value = readOption(values, name);
-  if (!value) throw new Error(`--${name}=<value> is required.`);
-  return value;
 }
 
 function resolveWorkspaceGuardControllerRoot(values) {
@@ -627,5 +592,5 @@ function resolveWorkspaceGuardControllerRoot(values) {
 }
 
 function gitAt(directory, argumentsList) {
-  return execFileSync("git", ["-C", directory, ...argumentsList], textCommandOptions()).trim();
+  return runText("git", ["-C", directory, ...argumentsList]).trim();
 }

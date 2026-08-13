@@ -10,8 +10,8 @@ status: "focused-tested"
 authority: "proof-of-possession binding for one writer lane"
 runtime_scope: "capability issuance, public lease projection, mutation proof, clean migration, and two-party handoff"
 runtime_claim: "local Dev authority proof only; cloud claims, review, integration, release, and deployment remain separately gated"
-runtime_owner: "../scripts/task-bound-lane-authority-contract.mjs; ../scripts/task-bound-lane-authority-store.mjs; ../scripts/task-bound-lane-authority-cli.mjs; ../scripts/writer-lease-lib.mjs; ../scripts/device-branch.mjs"
-runtime_proof: "../__tests__/task-bound-lane-authority.test.mjs; ../__tests__/writer-lease-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs"
+runtime_owner: "../scripts/task-bound-lane-authority-contract.mjs; ../scripts/task-bound-lane-authority-store.mjs; ../scripts/task-bound-lane-authority-cli.mjs; ../scripts/writer-lease-lib.mjs; ../scripts/device-branch.mjs; ../scripts/device-child-process-policy.mjs"
+runtime_proof: "../__tests__/task-bound-lane-authority.test.mjs; ../__tests__/writer-lease-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-child-process-policy.test.mjs"
 report_schema: "schemas/task-bound-lane-authority.v1.schema.json"
 publish_policy: "Dev-only; no integration, Production, publication, or deployment authority"
 ---
@@ -88,9 +88,15 @@ node scripts/device-branch.mjs start <semantic-scope> \
 
 Every later lifecycle command uses the same `--task-authority` option or the
 process-local `AGENTIC_TASK_AUTHORITY_FILE`. The device entrypoint rejects a
-capability stored inside the repository and scrubs its locator before spawning
-Git, validation, provider, or other child processes. Writer-registry mutations
-preserve the same binding and independently repeat proof-of-possession.
+capability stored inside the repository. Its child-process policy scrubs the
+locator from Git, validation, provider, and arbitrary child processes by
+default. The sole narrow exception is the repository's exact empty
+coordination-claim commit, whose real pre-commit guard must prove the same task
+authority before the lease can acquire a fence. The policy rejects option,
+subject, scope, or epoch lookalikes and never exposes private capability bytes.
+Writer-registry mutations preserve the same binding and independently repeat
+proof-of-possession. The focused recovery and deployment boundaries live in
+`COORDINATION-CLAIM-CHILD-AUTHORITY.md`.
 
 ## Explicit migration
 

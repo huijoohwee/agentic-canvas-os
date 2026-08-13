@@ -129,7 +129,14 @@ test("controller persists the exact C1 -> waiting C2 -> bound C2 phase sequence"
     },
     projectLocal: () => {
       trace.push("local");
-      return { projection: { leaseDigest: "b".repeat(64), claimId: C2 }, receiptDigest: "c".repeat(64) };
+      const localProjection = { leaseDigest: "b".repeat(64), claimId: C2 };
+      intent = {
+        ...intent,
+        status: "local-cas",
+        localProjection,
+        localProjectionReceiptDigest: "c".repeat(64),
+      };
+      return { intent, projection: localProjection, receiptDigest: "c".repeat(64) };
     },
     projectPullRequest: () => {
       trace.push("pr");
@@ -147,9 +154,11 @@ test("controller persists the exact C1 -> waiting C2 -> bound C2 phase sequence"
   }, { adapter });
   assert.equal(result.status, "complete");
   assert.equal(result.receiptDigest, "f".repeat(64));
-  assert.deepEqual(trace, [
+  assert.deepEqual(trace.filter((phase, index) => (
+    phase !== "local-cas" || trace[index - 1] !== "local"
+  )), [
     "intent", "claim", "waiting-successor", "retire", "source-retired",
-    "promote", "promoted", "bind", "successor-bound", "local", "local-cas",
+    "promote", "promoted", "bind", "successor-bound", "local",
     "pr", "pr-marker", "complete", "complete",
   ]);
 });

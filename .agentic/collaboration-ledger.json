@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2686,
-  "headDigest": "3875a674973fdaecd60d7e5be9770594fa058a4b694819e04008075768f3c00e",
+  "sequence": 2687,
+  "headDigest": "441e4fcdf71adbe095bc37deb4fe2f15915b711b4483d10b1f9b277ec68a2bfd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -132710,6 +132710,55 @@
       },
       "claimDigest": "09bf50da58303f5dcdb5f4b42e3d46de370e5a50012d540eede0a73f7b7f75a1",
       "digest": "3875a674973fdaecd60d7e5be9770594fa058a4b694819e04008075768f3c00e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2687,
+      "parentDigest": "3875a674973fdaecd60d7e5be9770594fa058a4b694819e04008075768f3c00e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "86db66584e585f22ee33dfef6073f426f60c338c632da2fdfc1a728ac5441815",
+      "idempotencyKey": "ee05782f6740804fedbda5515c084e0593213b6020088a921f20890ff6e2de97",
+      "requestDigest": "7a9d063f253bd719b5f0054d6fd8d05c7ca9dba92f732cf1c095b80618c295fd",
+      "evaluationTime": "2026-08-13T02:44:19.000Z",
+      "claimCore": {
+        "claimId": "86db66584e585f22ee33dfef6073f426f60c338c632da2fdfc1a728ac5441815",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9757d097cac5a158e23fa36a864dce1e3ab3b6378e802a77e19825e2e64cc150",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3a676822487aaa6baacececa58f52ad861cc5592a65f21f8c0f5bb67cd4c1a9b",
+        "canonicalBaseRevision": "ce22d833230532d9dec96af5426ef33c3b9fc617",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-cli.test.mjs",
+          "path:__tests__/task-bound-lane-authority.test.mjs",
+          "path:__tests__/writer-lease-lib.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:docs/schemas/task-bound-lane-authority.v1.schema.json",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/task-bound-lane-authority-cli.mjs",
+          "path:scripts/task-bound-lane-authority-contract.mjs",
+          "path:scripts/task-bound-lane-authority-store.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:task-bound-lane-authority"
+        ],
+        "writeSetDigest": "6a3d44b1b590924673f8d71444a14cc053b3052a05252da7aba4b9de68a45b5b",
+        "laneRevision": "ce22d833230532d9dec96af5426ef33c3b9fc617",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-13T03:14:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "009836580c882931a5f0945fbacf61165328eb0b12e39668503f097b591a0673",
+      "digest": "441e4fcdf71adbe095bc37deb4fe2f15915b711b4483d10b1f9b277ec68a2bfd"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2721,
-  "headDigest": "937ff540a0d0d2dd0be3f9b0bf90b5ffc52531f7c4ed7ec473f0cd951c3ae0ac",
+  "sequence": 2722,
+  "headDigest": "128142de05d43c1bd3d54603dfcfb6d837e88a776f31db674634938afd3b153a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -134462,6 +134462,53 @@
       },
       "claimDigest": "6960d0a7c5d95461266755842194319041c3ad3b2870961e9cc6e6dd479daf0b",
       "digest": "937ff540a0d0d2dd0be3f9b0bf90b5ffc52531f7c4ed7ec473f0cd951c3ae0ac"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2722,
+      "parentDigest": "937ff540a0d0d2dd0be3f9b0bf90b5ffc52531f7c4ed7ec473f0cd951c3ae0ac",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "afaa31675d4bec7082b3cdcb4782bd6490a3f7a6801ce83e0851199dda0c7cee",
+      "idempotencyKey": "3f6f113b87dd126feef342c10b3fabec328edc3b69459d7d0187ebc9e8a25764",
+      "requestDigest": "a52d42d618eabcd249271adaceb457a0e3c9ded516b52f9b98b877b3f7deb444",
+      "evaluationTime": "2026-08-13T04:16:15.000Z",
+      "claimCore": {
+        "claimId": "afaa31675d4bec7082b3cdcb4782bd6490a3f7a6801ce83e0851199dda0c7cee",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9757d097cac5a158e23fa36a864dce1e3ab3b6378e802a77e19825e2e64cc150",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:00d96863354494772b6a7b124dc2246746b2b3a8faa682558e37f8e61b35e355",
+        "canonicalBaseRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "declaredWriteScope": [
+          "path:__tests__/review-ready-task-authority-migration.test.mjs",
+          "path:docs/REVIEW-READY-TASK-AUTHORITY-MIGRATION.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:scripts/review-ready-task-authority-migration-contract.mjs",
+          "path:scripts/review-ready-task-authority-migration-controller.mjs",
+          "path:scripts/review-ready-task-authority-migration-repository-adapter.mjs",
+          "path:scripts/review-ready-task-authority-migration.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:review-ready-task-authority-migration"
+        ],
+        "writeSetDigest": "b0a4c70daee77c9f9571cb3464cd246d9cec1ac682f5db8c68fda7948a9433a2",
+        "laneRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-13T04:46:15.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "92586eb703be4af19ab66781166c6fad16f2778aba23a67f991010f61c0aced1",
+      "digest": "128142de05d43c1bd3d54603dfcfb6d837e88a776f31db674634938afd3b153a"
     }
   ]
 }

@@ -13,6 +13,7 @@ import {
   TASK_AUTHORITY_TRANSITION_PLAN_SCHEMA,
 } from "./task-bound-lane-authority-contract.mjs";
 import {
+  bindDeliveryTaskAuthorityMigration,
   publicTaskAuthorityStatus,
   readTaskAuthorityCapability,
   writeTaskAuthorityCapability,
@@ -119,13 +120,22 @@ function runTransition(operation) {
   }
   const boundAt = new Date().toISOString();
   const lease = operation === "migration"
-    ? context.leaseStore.bindTaskAuthority({
-      sessionId: context.sessionId,
-      branch: context.branch,
-      targetCapabilityFile: targetCapabilityPath,
-      planDigest: storedPlan.planDigest,
-      boundAt,
-    })
+    ? context.lease.status === "delivery"
+      ? bindDeliveryTaskAuthorityMigration({
+        leaseStore: context.leaseStore,
+        sessionId: context.sessionId,
+        branch: context.branch,
+        targetCapabilityFile: targetCapabilityPath,
+        planDigest: storedPlan.planDigest,
+        boundAt,
+      })
+      : context.leaseStore.bindTaskAuthority({
+        sessionId: context.sessionId,
+        branch: context.branch,
+        targetCapabilityFile: targetCapabilityPath,
+        planDigest: storedPlan.planDigest,
+        boundAt,
+      })
     : context.leaseStore.handoffTaskAuthority({
       sessionId: context.sessionId,
       branch: context.branch,
@@ -158,13 +168,16 @@ function transitionContext({ operation, targetCapabilityPath }) {
   if (sourceCapabilityPath) {
     assertExternalCapability(sourceCapabilityPath, context.repository);
   }
-  if (!context.lease || context.lease.status !== "active") {
-    throw new Error("Task authority transition requires an active writer lease.");
+  const deliveryMigration = operation === "migration"
+    && context.lease?.status === "delivery"
+    && !context.lease.taskAuthority;
+  if (!context.lease || (context.lease.status !== "active" && !deliveryMigration)) {
+    throw new Error("Task authority transition requires an active writer lease or an unbound delivery lease migration.");
   }
   if (context.lease.sessionId !== context.sessionId) {
     throw new Error("Task authority transition session does not match the writer lease.");
   }
-  if (Date.parse(context.lease.expiresAt) <= Date.now()) {
+  if (context.lease.status === "active" && Date.parse(context.lease.expiresAt) <= Date.now()) {
     throw new Error("Task authority transition cannot revive an expired writer lease.");
   }
   if (path.resolve(context.lease.worktreePath) !== context.repository) {

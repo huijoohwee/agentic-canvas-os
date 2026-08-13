@@ -40,6 +40,8 @@ The plan binds a canonical cloud-authority subject rather than a verifier respon
 
 Every execution boundary performs a fresh verification. Its adapter-issued attestation must name the verifier schema and version, reproduce the sealed subject digest from the current authoritative fields, and bind the fresh verifier receipt. A changed authority field changes or invalidates the subject; a forged or mismatched attestation fails closed. The fresh receipt is execution evidence and does not alter the human-authorized plan digest.
 
+Terminal verification follows the same separation. Each read validates and retains its fresh execution attestation, while completion and result receipts compare the canonical terminal subject: admitted lease, deterministic review body, authored descendant, and stable cloud-authority subject. Different valid observation receipts therefore cannot strand an exact completed recovery; any authority-subject or repository-state drift still fails closed. Replaying a durable complete intent performs verification only and returns the same stable result receipt without repeating local or provider effects.
+
 Execution requires the sealed external plan and that exact authorization. It records an external Git-common-directory intent, atomically projects the integration evidence and admitted receipt into the writer registry, then replaces only the deterministic writer marker in the review body. It never pushes the authored descendant. Each phase is replay-safe: an exact completed local or provider effect is adopted, while any third state fails closed.
 
 Use the device entry point from a protected controller checkout:

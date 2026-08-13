@@ -138,7 +138,9 @@ export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
     }
     const cloud = requireCloudFrame({ lease, plan, verifyCloud, environment });
     return Object.freeze({ leaseDigest: digestValue(lease), bodyDigest: expectedBodyDigest,
+      cloudAuthoritySubjectDigest: cloud.verifier.subjectDigest,
       cloudVerificationReceiptDigest: cloud.verificationReceiptDigest,
+      cloudVerificationAttestationReceiptDigest: cloud.verificationAttestationReceiptDigest,
       descendantDigest: digestValue(readDescendant({ repo, lease, git })) });
   }
 

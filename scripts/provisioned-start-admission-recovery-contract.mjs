@@ -79,7 +79,8 @@ export function projectProvisionedStartAdmissionRecovery({ plan, projectedAt, mu
   }) });
 }
 
-export function buildProvisionedStartAdmissionRecoveryResult({ plan, terminalEvidence, phases }) {
+export function buildProvisionedStartAdmissionRecoveryResult({ plan, terminalEvidence, phases,
+  executionAttestation = null }) {
   const normalizedPlan = normalizeProvisionedStartAdmissionRecoveryPlan(plan);
   const phaseNames = ["intent", "local-projected", "marker-projected"];
   for (const name of phaseNames) if (!phases?.[name]?.receiptDigest) {
@@ -95,7 +96,42 @@ export function buildProvisionedStartAdmissionRecoveryResult({ plan, terminalEvi
     branch: normalizedPlan.evidence.lease.branch,
     commitSha: normalizedPlan.evidence.descendant.headSha,
   };
-  return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+  const result = { ...core, receiptDigest: digestValue(core) };
+  return Object.freeze(executionAttestation
+    ? { ...result, executionAttestation: Object.freeze(executionAttestation) }
+    : result);
+}
+
+export function projectProvisionedStartAdmissionRecoveryStableTerminalEvidence({ plan, terminalEvidence }) {
+  const normalizedPlan = normalizeProvisionedStartAdmissionRecoveryPlan(plan);
+  const source = object(terminalEvidence, "Terminal evidence");
+  const expectedSubjectDigest = normalizedPlan.evidence.cloud.verifier.subjectDigest;
+  const observedSubjectDigest = source.cloudAuthoritySubjectDigest === undefined
+    ? expectedSubjectDigest
+    : digest(source.cloudAuthoritySubjectDigest, "terminal cloud authority subject");
+  if (observedSubjectDigest !== expectedSubjectDigest) {
+    throw new Error("Terminal cloud authority subject drifted from the sealed plan.");
+  }
+  return Object.freeze({
+    schema: "agentic-provisioned-start-admission-recovery-terminal-subject/v1",
+    leaseDigest: digest(source.leaseDigest, "terminal lease"),
+    bodyDigest: digest(source.bodyDigest, "terminal pull-request body"),
+    cloudAuthoritySubjectDigest: observedSubjectDigest,
+    descendantDigest: digest(source.descendantDigest, "terminal descendant"),
+  });
+}
+
+export function projectProvisionedStartAdmissionRecoveryExecutionAttestation({ plan, terminalEvidence }) {
+  const stable = projectProvisionedStartAdmissionRecoveryStableTerminalEvidence({ plan, terminalEvidence });
+  const source = object(terminalEvidence, "Terminal evidence");
+  return Object.freeze({
+    schema: "agentic-provisioned-start-admission-recovery-execution-attestation/v1",
+    cloudAuthoritySubjectDigest: stable.cloudAuthoritySubjectDigest,
+    cloudVerificationReceiptDigest: digest(source.cloudVerificationReceiptDigest,
+      "terminal cloud verification receipt"),
+    cloudVerificationAttestationReceiptDigest: digest(source.cloudVerificationAttestationReceiptDigest,
+      "terminal cloud verification attestation receipt"),
+  });
 }
 
 function normalizeEvidence(value) {

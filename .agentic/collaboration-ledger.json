@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2720,
-  "headDigest": "eeee266a0909919b0b8b3cdc5f664011fae7ec4b0f88f65253b9fb0a9b28ac88",
+  "sequence": 2721,
+  "headDigest": "937ff540a0d0d2dd0be3f9b0bf90b5ffc52531f7c4ed7ec473f0cd951c3ae0ac",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -134404,6 +134404,64 @@
       },
       "claimDigest": "cdcd45544a1c486194e3bd21adbcda14dd45cb4b26e39e47a35251d980509d99",
       "digest": "eeee266a0909919b0b8b3cdc5f664011fae7ec4b0f88f65253b9fb0a9b28ac88"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2721,
+      "parentDigest": "eeee266a0909919b0b8b3cdc5f664011fae7ec4b0f88f65253b9fb0a9b28ac88",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f663dc7a4d2f3fe7ea65acac9b279fe8aab2631ff7383965a0e4b8fec024b087",
+      "idempotencyKey": "3a7e15f7f2a49c3e51b16411a5b44f4571ed06b23dd4f05a6d8cc149b47be7cf",
+      "requestDigest": "bdaa08e5d42a033b2c607bcfa85bde27a9cef3925efecf7fecae702aca360046",
+      "evaluationTime": "2026-08-13T04:15:39.000Z",
+      "claimCore": {
+        "claimId": "f663dc7a4d2f3fe7ea65acac9b279fe8aab2631ff7383965a0e4b8fec024b087",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9757d097cac5a158e23fa36a864dce1e3ab3b6378e802a77e19825e2e64cc150",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cc1820058d0be3cd5cbce33cd3d6e94eb3755b151d3a3c4683e4c0f860a65dd5",
+        "canonicalBaseRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "declaredWriteScope": [
+          "path:__tests__/review-ready-task-authority-migration.test.mjs",
+          "path:docs/REVIEW-READY-TASK-AUTHORITY-MIGRATION.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:package.json",
+          "path:scripts/review-ready-task-authority-migration-contract.mjs",
+          "path:scripts/review-ready-task-authority-migration-controller.mjs",
+          "path:scripts/review-ready-task-authority-migration-repository-adapter.mjs",
+          "path:scripts/review-ready-task-authority-migration.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:review-ready-task-authority-migration"
+        ],
+        "writeSetDigest": "70d9ea0555a991a09939a99eba1137f05c24e821d3c8fa7aadcf6e39d30228ff",
+        "laneRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-13T04:44:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "540e62d85223c3c20b0a4d810c8a850a70a58e8c7b9257d257ec2d61b4323f99",
+        "eligibleSince": "2026-08-13T04:14:20.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "2929efde55a5129813238bca25b289dfea48de49",
+          "reviewRequestId": null,
+          "bytesDigest": "214c13c24c61074818e0923b6fb5ff6e1c74d3a08f6d72d8436312b20e7bae12",
+          "namedChecksDigest": "9dd1a2ba4883bff1b38245a545e4bc1e56ffaa8b2a4faa321bf30b4245cd492a",
+          "handoffEvidenceDigest": "76b6892d53acc9b7ec0a8bbfb04747a289b93cabbb688e36d874c54efe358dbf",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-13T04:15:39.000Z"
+        }
+      },
+      "claimDigest": "6960d0a7c5d95461266755842194319041c3ad3b2870961e9cc6e6dd479daf0b",
+      "digest": "937ff540a0d0d2dd0be3f9b0bf90b5ffc52531f7c4ed7ec473f0cd951c3ae0ac"
     }
   ]
 }

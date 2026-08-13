@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2697,
-  "headDigest": "d3c216a47b7a82d4020eeb0f6f1925317ed86b88a18c069b47bb90c187f685cd",
+  "sequence": 2698,
+  "headDigest": "e5d742c420bc018872b0ffbed8b6219eeb6dc63df295c881cc749d9fdbd327ba",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -133269,6 +133269,55 @@
       },
       "claimDigest": "136e186d1a39c69ad80fac9493c78eb361148a05f5b46d21833b6c2f06ea453c",
       "digest": "d3c216a47b7a82d4020eeb0f6f1925317ed86b88a18c069b47bb90c187f685cd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2698,
+      "parentDigest": "d3c216a47b7a82d4020eeb0f6f1925317ed86b88a18c069b47bb90c187f685cd",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "86db66584e585f22ee33dfef6073f426f60c338c632da2fdfc1a728ac5441815",
+      "idempotencyKey": "29afe87d5cefed9b96a0e476b2b862eae59809820cbdc1e5c378307abf44e317",
+      "requestDigest": "16f4a74440f30121d76a0d42ff642b7d58b276c421803f8e049dbfb81354268b",
+      "evaluationTime": "2026-08-13T03:17:40.000Z",
+      "claimCore": {
+        "claimId": "86db66584e585f22ee33dfef6073f426f60c338c632da2fdfc1a728ac5441815",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9757d097cac5a158e23fa36a864dce1e3ab3b6378e802a77e19825e2e64cc150",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3a676822487aaa6baacececa58f52ad861cc5592a65f21f8c0f5bb67cd4c1a9b",
+        "canonicalBaseRevision": "ce22d833230532d9dec96af5426ef33c3b9fc617",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-cli.test.mjs",
+          "path:__tests__/task-bound-lane-authority.test.mjs",
+          "path:__tests__/writer-lease-lib.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:docs/schemas/task-bound-lane-authority.v1.schema.json",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/task-bound-lane-authority-cli.mjs",
+          "path:scripts/task-bound-lane-authority-contract.mjs",
+          "path:scripts/task-bound-lane-authority-store.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "semantic:task-bound-lane-authority"
+        ],
+        "writeSetDigest": "6a3d44b1b590924673f8d71444a14cc053b3052a05252da7aba4b9de68a45b5b",
+        "laneRevision": "0401deb3bda8539bcb47a97760285708bd7b13d6",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 4,
+        "state": "current",
+        "expiresAt": "2026-08-14T03:17:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-XxjP",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "63d5aed2aaac4569f71cd1510a47d608b26aca0fc6ca596020f0ecaefff86a2e",
+      "digest": "e5d742c420bc018872b0ffbed8b6219eeb6dc63df295c881cc749d9fdbd327ba"
     }
   ]
 }

@@ -75,6 +75,7 @@ class FakeDurableObjectCtx {
     this.store = new Map();
     this.sockets = [];
     this.alarmAt = null;
+    this.backgroundTasks = [];
     this.operations = {
       get: 0,
       put: 0,
@@ -84,12 +85,14 @@ class FakeDurableObjectCtx {
       setAlarm: 0,
     };
     this.storage = {
-      get: async (key) => {
+      get: async (key, options) => {
         this.operations.get += 1;
+        this.operations.getOptions = { ...(this.operations.getOptions || {}), [key]: options };
         return this.store.get(key);
       },
-      put: async (key, value) => {
+      put: async (key, value, options) => {
         this.operations.put += 1;
+        this.operations.lastPutOptions = options;
         this.store.set(key, value);
       },
       delete: async (key) => {
@@ -101,12 +104,14 @@ class FakeDurableObjectCtx {
         this.store.clear();
         this.alarmAt = null;
       },
-      getAlarm: async () => {
+      getAlarm: async (options) => {
         this.operations.getAlarm += 1;
+        this.operations.lastGetAlarmOptions = options;
         return this.alarmAt;
       },
-      setAlarm: async (value) => {
+      setAlarm: async (value, options) => {
         this.operations.setAlarm += 1;
+        this.operations.lastAlarmOptions = options;
         this.alarmAt = value;
       },
     };
@@ -120,11 +125,21 @@ class FakeDurableObjectCtx {
   getWebSockets() {
     return this.sockets.slice();
   }
+  waitUntil(promise) {
+    this.backgroundTasks.push(Promise.resolve(promise));
+  }
+  async flushBackground() {
+    let cursor = 0;
+    while (cursor < this.backgroundTasks.length) {
+      const current = this.backgroundTasks.slice(cursor);
+      cursor = this.backgroundTasks.length;
+      await Promise.allSettled(current);
+    }
+  }
 }
 
-function makeRoom() {
-  const ctx = new FakeDurableObjectCtx();
-  const room = new CanvasRoom(ctx, { AGENT_API_JWT_SECRET: SECRET });
+function makeRoom(ctx = new FakeDurableObjectCtx(), env = {}) {
+  const room = new CanvasRoom(ctx, { AGENT_API_JWT_SECRET: SECRET, ...env });
   return { room, ctx };
 }
 
@@ -145,6 +160,29 @@ async function connect(room, ctx, opts) {
 
 function upsert(id, extra = {}) {
   return JSON.stringify({ type: "upsertNode", opId: `op-${id}-000000000000`, node: { id, x: 0, y: 0 }, ...extra });
+}
+
+function failureAuditFixture(overrides = {}) {
+  const recordedAt = new Date(Date.now() - 1_000).toISOString();
+  return {
+    schema: "canvas-room-failure-audit/v1",
+    continuity: "complete",
+    baselineReadFailures: 0,
+    firstFailureAt: recordedAt,
+    lastFailureAt: recordedAt,
+    degradedOperations: 0,
+    recipientFailures: 0,
+    setupFailures: 0,
+    partialOperations: 0,
+    exhaustedOperations: 0,
+    timedOut: 0,
+    canceled: 0,
+    socketErrors: 0,
+    invalidSettlements: 0,
+    auditWriteFailuresRecovered: 0,
+    last: null,
+    ...overrides,
+  };
 }
 
 // --- Tests ------------------------------------------------------------------
@@ -176,6 +214,11 @@ test("a fresh join receives a full snapshot with capacity metadata", async () =>
   assert.equal(snapshot.rev, 0);
   assert.equal(snapshot.limits.maxNodes, 500);
   assert.deepEqual(snapshot.counts, { nodes: 0, links: 0 });
+  const failureAudit = ws.messagesOfType("failureAudit").at(-1);
+  assert.equal(failureAudit.schema, "canvas-room-durable-failure-window/v1");
+  assert.equal(failureAudit.window, "durable-failure-only");
+  assert.equal(failureAudit.continuity, "complete");
+  assert.equal(failureAudit.degradedOperations, 0);
   assert.equal(ctx.operations.put, 0, "an empty room is not persisted on join");
   assert.equal(ctx.operations.setAlarm, 0, "an empty room has no retention alarm");
 });
@@ -190,10 +233,398 @@ test("an applied op is acked to the sender and broadcast to peers", async () => 
   const ack = a.messagesOfType("ack").at(-1);
   assert.equal(ack.opId, "op-n1-000000000000");
   assert.equal(ack.rev, 1);
+  assert.deepEqual(
+    { status: ack.delivery.status, attempted: ack.delivery.attempted, failed: ack.delivery.failed },
+    { status: "completed", attempted: 1, failed: 0 },
+  );
 
   const broadcast = b.messagesOfType("nodeUpserted").at(-1);
   assert.equal(broadcast.node.id, "n1");
   assert.equal(broadcast.opId, "op-n1-000000000000");
+});
+
+test("broadcast continues past a broken peer and audits delivery degradation", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  const broken = await connect(room, ctx, { subject: "broken" });
+  const healthy = await connect(room, ctx, { subject: "healthy" });
+  broken.closed = true;
+
+  await room.webSocketMessage(sender, upsert("fanout"));
+  await ctx.flushBackground();
+
+  assert.equal(healthy.messagesOfType("nodeUpserted").at(-1).node.id, "fanout");
+  const senderAck = sender.messagesOfType("ack").at(-1);
+  assert.equal(senderAck.rev, 1);
+  assert.deepEqual(
+    {
+      status: senderAck.delivery.status,
+      attempted: senderAck.delivery.attempted,
+      succeeded: senderAck.delivery.succeeded,
+      failed: senderAck.delivery.failed,
+      reasonCodes: senderAck.delivery.reasonCodes,
+    },
+    {
+      status: "partial",
+      attempted: 2,
+      succeeded: 1,
+      failed: 1,
+      reasonCodes: ["branch_unavailable"],
+    },
+  );
+  assert.equal(room.state.rev, 1);
+  assert.equal(ctx.store.get("room-state-v1").graph.rev, 1);
+  assert.equal(room.metrics.fanOutRecipientsFailed, 1);
+  assert.equal(room.metrics.fanOutPartial, 1);
+  assert.equal(room.metrics.errors, 0);
+  const audit = ctx.store.get("room-fanout-audit-v1");
+  assert.equal(audit.schema, "canvas-room-failure-audit/v1");
+  assert.equal(audit.recipientFailures, 1);
+  assert.equal(audit.partialOperations, 1);
+  assert.equal(audit.last.eventType, "nodeUpserted");
+  assert.equal(Object.hasOwn(audit, "room"), false);
+  assert.equal(JSON.stringify(audit).includes(ROOM_ID), false);
+  assert.equal(JSON.stringify(audit).includes("sender"), false);
+  assert.equal(JSON.stringify(audit).includes("op-fanout-000000000000"), false);
+  assert.deepEqual(ctx.operations.getOptions["room-fanout-audit-v1"], { allowConcurrency: true });
+  assert.equal(ctx.operations.getOptions["room-state-v1"], undefined, "authoritative state remains input-gated");
+  assert.deepEqual(ctx.operations.lastPutOptions, {
+    allowConcurrency: true,
+    allowUnconfirmed: true,
+  });
+  assert.deepEqual(ctx.operations.lastGetAlarmOptions, { allowConcurrency: true });
+
+  const resumed = new CanvasRoom(ctx, { AGENT_API_JWT_SECRET: SECRET });
+  await resumed.ensureLoaded();
+  assert.equal(resumed.failureAudit.recipientFailures, 1, "failure evidence survives hibernation");
+  assert.equal(resumed.metrics.fanOutRecipientsFailed, 0, "per-wake metrics never mix durable numerators into a new window");
+  assert.equal(resumed.metrics.fanOutRecipientsAttempted, 0);
+  ctx.sockets = [];
+  const auditReader = await connect(resumed, ctx, { subject: "audit-reader" });
+  const durableWindow = auditReader.messagesOfType("failureAudit").at(-1);
+  assert.equal(durableWindow.schema, "canvas-room-durable-failure-window/v1");
+  assert.equal(durableWindow.continuity, "complete");
+  assert.equal(durableWindow.recipientFailures, 1);
+  assert.equal(Object.hasOwn(durableWindow, "last"), false);
+  assert.equal(JSON.stringify(durableWindow).includes(ROOM_ID), false);
+  assert.equal(JSON.stringify(durableWindow).includes("audit-reader"), false);
+  ctx.sockets = [];
+  await resumed.webSocketClose(auditReader, 1000, "", true);
+  const durableLogWindow = parsedLogs().filter((entry) => entry.event === "metrics").at(-1).durableFailureWindow;
+  assert.equal(durableLogWindow.schema, "canvas-room-durable-failure-window/v1");
+  assert.equal(durableLogWindow.recipientFailures, 1);
+
+  const degraded = parsedLogs().find((entry) => (
+    entry.event === "fanout_degraded" && entry.deliveryType === "nodeUpserted"
+  ));
+  assert.ok(degraded, "one structured degradation record was emitted");
+  assert.equal(degraded.level, "warn");
+  assert.deepEqual(
+    { attempted: degraded.attempted, succeeded: degraded.succeeded, failed: degraded.failed },
+    { attempted: 2, succeeded: 1, failed: 1 },
+  );
+  assert.deepEqual(degraded.reasonCodes, ["branch_unavailable"]);
+  assert.equal(JSON.stringify(degraded).includes("socket closed"), false);
+  assert.equal(JSON.stringify(degraded).includes("broken"), false);
+});
+
+test("broadcast setup failure remains fail-soft and visible to the sender", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  ctx.getWebSockets = () => { throw new Error("runtime detail must not escape"); };
+
+  await room.webSocketMessage(sender, upsert("setup-failure"));
+  await ctx.flushBackground();
+
+  const senderAck = sender.messagesOfType("ack").at(-1);
+  assert.equal(senderAck.rev, 1);
+  assert.deepEqual(
+    {
+      status: senderAck.delivery.status,
+      attempted: senderAck.delivery.attempted,
+      setupFailures: senderAck.delivery.setupFailures,
+      reasonCodes: senderAck.delivery.reasonCodes,
+    },
+    {
+      status: "failed",
+      attempted: 0,
+      setupFailures: 1,
+      reasonCodes: ["fanout_setup_failed"],
+    },
+  );
+  assert.equal(room.state.rev, 1);
+  assert.equal(ctx.store.get("room-state-v1").graph.rev, 1);
+  assert.equal(room.metrics.fanOutSetupFailures, 1);
+  assert.equal(room.metrics.fanOutExhausted, 1);
+  assert.equal(ctx.store.get("room-fanout-audit-v1").setupFailures, 1);
+
+  const degraded = parsedLogs().find((entry) => (
+    entry.event === "fanout_degraded" && entry.deliveryType === "nodeUpserted"
+  ));
+  assert.ok(degraded);
+  assert.equal(degraded.setupFailures, 1);
+  assert.deepEqual(degraded.reasonCodes, ["fanout_setup_failed"]);
+  assert.equal(JSON.stringify(degraded).includes("runtime detail must not escape"), false);
+});
+
+test("audit persistence failure cannot suppress healthy delivery or sender acknowledgement", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  const broken = await connect(room, ctx, { subject: "broken" });
+  const healthy = await connect(room, ctx, { subject: "healthy" });
+  broken.closed = true;
+  const originalPut = ctx.storage.put;
+  let puts = 0;
+  ctx.storage.put = async (key, value, options) => {
+    puts += 1;
+    if (puts === 2) throw new Error("storage secret must not escape");
+    return originalPut(key, value, options);
+  };
+
+  await room.webSocketMessage(sender, upsert("audit-write"));
+  await ctx.flushBackground();
+
+  assert.equal(healthy.messagesOfType("nodeUpserted").at(-1).node.id, "audit-write");
+  assert.equal(sender.messagesOfType("ack").at(-1).rev, 1);
+  assert.equal(room.metrics.fanOutAuditPersistFailures, 1);
+  assert.equal(room.metrics.observabilityFailures, 1);
+  const auditFailure = parsedLogs().find((entry) => entry.event === "fanout_audit_persist_failed");
+  assert.ok(auditFailure);
+  assert.equal(JSON.stringify(auditFailure).includes("storage secret must not escape"), false);
+});
+
+test("a stalled audit write cannot stall healthy delivery or sender acknowledgement", async () => {
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  const broken = await connect(room, ctx, { subject: "broken" });
+  const healthy = await connect(room, ctx, { subject: "healthy" });
+  broken.closed = true;
+  const originalPut = ctx.storage.put;
+  ctx.storage.put = (key, value, options) => (
+    key === "room-fanout-audit-v1"
+      ? new Promise(() => {})
+      : originalPut(key, value, options)
+  );
+
+  const completed = await Promise.race([
+    room.webSocketMessage(sender, upsert("audit-stall")).then(() => true),
+    new Promise((resolve) => setTimeout(() => resolve(false), 100)),
+  ]);
+
+  assert.equal(completed, true);
+  assert.equal(healthy.messagesOfType("nodeUpserted").at(-1).node.id, "audit-stall");
+  assert.equal(sender.messagesOfType("ack").at(-1).rev, 1);
+  assert.equal(ctx.backgroundTasks.length > 0, true, "the caught audit task is registered in the background");
+});
+
+test("throwing observability sinks cannot suppress fan-out progress", async () => {
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  const broken = await connect(room, ctx, { subject: "broken" });
+  const healthy = await connect(room, ctx, { subject: "healthy" });
+  broken.closed = true;
+  const captureWarn = console.warn;
+  console.warn = () => { throw new Error("logging unavailable"); };
+  try {
+    await room.webSocketMessage(sender, upsert("log-failure"));
+  } finally {
+    console.warn = captureWarn;
+  }
+  await ctx.flushBackground();
+
+  assert.equal(healthy.messagesOfType("nodeUpserted").at(-1).node.id, "log-failure");
+  assert.equal(sender.messagesOfType("ack").at(-1).rev, 1);
+  assert.equal(room.metrics.observabilityFailures > 0, true);
+});
+
+test("a sidecar read outage cannot brick authoritative room state", async () => {
+  const ctx = new FakeDurableObjectCtx();
+  ctx.store.set("room-state-v1", {
+    graph: { nodes: {}, links: {}, rev: 7 },
+    recentOpIds: [],
+    lastActivityAt: Date.now(),
+    roomLogId: "room_1234567890abcdef12345678",
+  });
+  const originalGet = ctx.storage.get;
+  ctx.storage.get = async (key) => {
+    if (key === "room-fanout-audit-v1") throw new Error("audit store unavailable");
+    return originalGet(key);
+  };
+  const { room } = makeRoom(ctx);
+
+  await room.ensureLoaded();
+  const response = await room.fetch(joinRequest({ subject: "reader" }));
+
+  assert.equal(response.status, 101);
+  assert.equal(room.state.rev, 7);
+  assert.equal(room.metrics.observabilityFailures, 1);
+  assert.equal(room.failureAudit.continuity, "baseline-unavailable");
+  assert.equal(room.failureAudit.baselineReadFailures, 1);
+});
+
+test("a stalled sidecar read is bounded and marks subsequent audit continuity unknown", async () => {
+  const ctx = new FakeDurableObjectCtx();
+  ctx.store.set("room-state-v1", {
+    graph: { nodes: {}, links: {}, rev: 9 },
+    recentOpIds: [],
+    lastActivityAt: Date.now(),
+    roomLogId: "room_1234567890abcdef12345678",
+  });
+  ctx.store.set("room-fanout-audit-v1", failureAuditFixture({
+    degradedOperations: 5,
+    recipientFailures: 5,
+  }));
+  const originalGet = ctx.storage.get;
+  ctx.storage.get = (key) => (
+    key === "room-fanout-audit-v1" ? new Promise(() => {}) : originalGet(key)
+  );
+  const { room } = makeRoom(ctx, { CANVAS_FAILURE_AUDIT_READ_TIMEOUT_MS: "5" });
+
+  const loaded = await Promise.race([
+    room.ensureLoaded().then(() => true),
+    new Promise((resolve) => setTimeout(() => resolve(false), 100)),
+  ]);
+
+  assert.equal(loaded, true);
+  assert.equal(room.state.rev, 9);
+  assert.equal(room.metrics.observabilityFailures, 1);
+  assert.equal(room.failureAudit.continuity, "baseline-unavailable");
+  assert.equal(room.failureAudit.baselineReadFailures, 1);
+
+  const broken = new FakeWebSocket();
+  broken.closed = true;
+  ctx.sockets = [broken];
+  await room.broadcast({ type: "nodeUpserted", private: "must-not-escape" });
+  await ctx.flushBackground();
+
+  const persisted = ctx.store.get("room-fanout-audit-v1");
+  assert.equal(persisted.continuity, "baseline-unavailable");
+  assert.equal(persisted.baselineReadFailures, 1);
+  assert.equal(persisted.recipientFailures, 1, "unknown prior totals are never presented as a complete sum");
+  assert.equal(JSON.stringify(persisted).includes("must-not-escape"), false);
+});
+
+test("a future-dated sidecar cannot extend authoritative room retention", async () => {
+  const ctx = new FakeDurableObjectCtx();
+  const authoritativeActivityAt = Date.now() - 10_000;
+  const future = new Date(Date.now() + ROOM_TTL_MS).toISOString();
+  ctx.store.set("room-state-v1", {
+    graph: { nodes: {}, links: {}, rev: 11 },
+    recentOpIds: [],
+    lastActivityAt: authoritativeActivityAt,
+    roomLogId: "room_1234567890abcdef12345678",
+  });
+  ctx.store.set("room-fanout-audit-v1", failureAuditFixture({
+    firstFailureAt: future,
+    lastFailureAt: future,
+    degradedOperations: 1,
+    recipientFailures: 1,
+  }));
+  const { room } = makeRoom(ctx);
+
+  await room.ensureLoaded();
+
+  assert.equal(room.state.rev, 11);
+  assert.equal(room.lastActivityAt, authoritativeActivityAt);
+  assert.equal(room.failureAudit.continuity, "baseline-unavailable");
+  assert.equal(room.failureAudit.baselineReadFailures, 1);
+  assert.equal(room.metrics.observabilityFailures, 1);
+});
+
+test("a later successful audit write recovers an earlier write failure", async () => {
+  const { room, ctx } = makeRoom();
+  await room.ensureLoaded();
+  const broken = new FakeWebSocket();
+  broken.closed = true;
+  ctx.sockets = [broken];
+  const originalPut = ctx.storage.put;
+  let first = true;
+  ctx.storage.put = async (key, value, options) => {
+    if (key === "room-fanout-audit-v1" && first) {
+      first = false;
+      throw new Error("temporary outage");
+    }
+    return originalPut(key, value, options);
+  };
+
+  await room.broadcast({ type: "nodeUpserted", secret: "first-secret" });
+  await ctx.flushBackground();
+  await room.broadcast({ type: "nodeUpserted", secret: "second-secret" });
+  await ctx.flushBackground();
+
+  const audit = ctx.store.get("room-fanout-audit-v1");
+  assert.equal(audit.degradedOperations, 2);
+  assert.equal(audit.recipientFailures, 2);
+  assert.equal(audit.auditWriteFailuresRecovered, 1);
+  assert.equal(JSON.stringify(audit).includes("secret"), false);
+});
+
+test("an audit-only room gets bounded retention and is collected", async () => {
+  const { room, ctx } = makeRoom();
+  await room.ensureLoaded();
+  const broken = new FakeWebSocket();
+  broken.closed = true;
+  ctx.sockets = [broken];
+
+  await room.broadcast({ type: "nodeUpserted", opId: "private-operation-id" });
+  await ctx.flushBackground();
+
+  assert.equal(ctx.store.has("room-state-v1"), false);
+  assert.equal(ctx.store.has("room-fanout-audit-v1"), true);
+  assert.equal(Number.isFinite(ctx.alarmAt), true);
+  assert.deepEqual(ctx.operations.lastAlarmOptions, {
+    allowConcurrency: true,
+    allowUnconfirmed: true,
+  });
+  const audit = ctx.store.get("room-fanout-audit-v1");
+  const expiredAt = new Date(0).toISOString();
+  ctx.store.set("room-fanout-audit-v1", {
+    ...audit,
+    firstFailureAt: expiredAt,
+    lastFailureAt: expiredAt,
+    last: { ...audit.last, recordedAt: expiredAt },
+  });
+  ctx.sockets = [];
+  ctx.alarmAt = null;
+  const expired = new CanvasRoom(ctx, { AGENT_API_JWT_SECRET: SECRET });
+
+  await expired.alarm();
+
+  assert.equal(ctx.operations.deleteAll, 1);
+  assert.equal(ctx.store.size, 0);
+});
+
+test("malformed fan-out telemetry is counted and projected without caller text", async () => {
+  const { room, ctx } = makeRoom();
+  await room.ensureLoaded();
+
+  room.recordFanOut("sk_live_private", { attempted: 1, auditTrail: [] });
+  await ctx.flushBackground();
+
+  assert.equal(room.metrics.observabilityFailures, 1);
+  const audit = ctx.store.get("room-fanout-audit-v1");
+  assert.equal(audit.invalidSettlements, 1);
+  assert.equal(audit.last.eventType, "fanout_audit_invalid");
+  assert.equal(JSON.stringify(audit).includes("sk_live_private"), false);
+});
+
+test("websocket runtime errors are sanitized and counted", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "socket-owner" });
+
+  await room.webSocketError(ws, new Error("transport secret must not escape"));
+  await ctx.flushBackground();
+
+  assert.equal(room.metrics.socketErrors, 1);
+  assert.equal(ctx.store.get("room-fanout-audit-v1").socketErrors, 1);
+  assert.equal(ctx.store.get("room-fanout-audit-v1").last.eventType, "websocket_error");
+  const socketError = parsedLogs().find((entry) => entry.event === "websocket_error");
+  assert.ok(socketError);
+  assert.equal(JSON.stringify(socketError).includes("transport secret must not escape"), false);
 });
 
 test("ordinary room activity verifies an alarm once and does not rewrite it", async () => {
@@ -340,6 +771,9 @@ test("closing a socket emits leave and a metrics summary log", async () => {
   assert.equal(metrics.joins, 1);
   assert.equal(metrics.opsApplied, 1);
   assert.equal(metrics.connections, 0);
+  assert.equal(metrics.durableFailureWindow.schema, "canvas-room-durable-failure-window/v1");
+  assert.equal(metrics.durableFailureWindow.window, "durable-failure-only");
+  assert.equal(metrics.durableFailureWindow.degradedOperations, 0);
 });
 
 test("a stale baseVersion edit is rejected with a typed conflict carrying the current entity", async () => {

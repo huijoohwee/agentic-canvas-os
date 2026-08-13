@@ -1,4 +1,9 @@
 import { normalizeJson, serializedJsonLength } from "./json-contract.js";
+import {
+  failSoftBranchFailure,
+  failSoftFanOut,
+  MAX_FAN_OUT_TIMEOUT_MS,
+} from "../../src/fail-soft-fan-out.js";
 
 const DEFAULT_MAX_MODEL_TURNS = 8;
 const DEFAULT_MAX_TOOL_CALLS = 32;
@@ -11,6 +16,34 @@ const ALLOWED_CALLERS = new Set(["direct", "programmatic"]);
 const CONTINUATION_MODES = new Set(["stored", "stateless"]);
 const CLIENT_TOOL_TYPE = "function";
 const READ_ONLY_RISK = "read-only";
+const TOOL_FAILURE_SCHEMA = "programmatic-tool-call-failure/v1";
+const TOOL_SETTLEMENT_SCHEMA = "programmatic-tool-settlement/v1";
+const TOOL_AUTHORIZATION_SCHEMA = "programmatic-tool-authorization/v1";
+const TOOL_INTEGRITY_BLOCK = Symbol("programmatic-tool-integrity-block");
+const TOOL_INTEGRITY_REASON_CODES = new Set([
+  "tool_approval_required",
+  "tool_authorization_revoked",
+  "tool_integrity_failed",
+  "tool_policy_changed",
+]);
+const TOOL_FAILURE_REASON_CODES = Object.freeze([
+  "tool_canceled",
+  "tool_deadline_exceeded",
+  "tool_failed",
+  "tool_output_invalid",
+  "tool_result_limit",
+]);
+const TOOL_FAILURE_OUTPUT_SCHEMA = normalizeJson({
+  type: "object",
+  additionalProperties: false,
+  required: ["schema", "status", "reasonCode", "retryable"],
+  properties: {
+    schema: { enum: [TOOL_FAILURE_SCHEMA] },
+    status: { enum: ["failed"] },
+    reasonCode: { enum: TOOL_FAILURE_REASON_CODES },
+    retryable: { enum: [false] },
+  },
+}, "toolFailureOutputSchema");
 
 class RuntimeBlock extends Error {
   constructor(reasonCode, message) {
@@ -20,9 +53,66 @@ class RuntimeBlock extends Error {
   }
 }
 
+/**
+ * Signal that an execution-time authorization or integrity fence failed.
+ * This fixed-taxonomy block stops the whole batch; raw adapter text is never
+ * accepted or projected into the run result.
+ */
+export function programmaticToolIntegrityBlock(reasonCode = "tool_integrity_failed") {
+  return Object.freeze({
+    [TOOL_INTEGRITY_BLOCK]: true,
+    reasonCode: TOOL_INTEGRITY_REASON_CODES.has(reasonCode) ? reasonCode : "tool_integrity_failed",
+  });
+}
+
+function toolIntegrityReason(error) {
+  try {
+    if (error?.[TOOL_INTEGRITY_BLOCK] === true) {
+      return TOOL_INTEGRITY_REASON_CODES.has(error.reasonCode)
+        ? error.reasonCode
+        : "tool_integrity_failed";
+    }
+  } catch {
+    // Hostile adapter values remain ordinary sanitized execution failures.
+  }
+  return null;
+}
+
 function assertPositiveInteger(value, field) {
   if (!Number.isInteger(value) || value < 1) throw new TypeError(`${field} must be a positive integer.`);
   return value;
+}
+
+function assertTimeout(value) {
+  assertPositiveInteger(value, "timeoutMs");
+  if (value > MAX_FAN_OUT_TIMEOUT_MS) {
+    throw new RangeError(`timeoutMs must be no greater than ${MAX_FAN_OUT_TIMEOUT_MS}.`);
+  }
+  return value;
+}
+
+function normalizeAbortSignal(signal) {
+  if (signal === undefined) return undefined;
+  try {
+    if (
+      signal
+      && typeof signal === "object"
+      && typeof signal.aborted === "boolean"
+      && typeof signal.addEventListener === "function"
+      && typeof signal.removeEventListener === "function"
+    ) return signal;
+  } catch {
+    // A hostile signal-like object is rejected at the input boundary.
+  }
+  throw new TypeError("signal must be an AbortSignal when provided.");
+}
+
+function signalIsAborted(signal) {
+  try {
+    return signal?.aborted === true;
+  } catch {
+    throw new RuntimeBlock("signal_invalid", "Programmatic tool run signal could not be observed.");
+  }
 }
 
 function assertIdentifier(value, field) {
@@ -117,7 +207,10 @@ function publicToolDeclarations(tools) {
     idempotent: tool.idempotent,
     approvalRequired: tool.approvalRequired,
     inputSchema: tool.inputSchema,
-    outputSchema: tool.outputSchema,
+    outputSchema: normalizeJson({
+      type: "object",
+      anyOf: [tool.outputSchema, TOOL_FAILURE_OUTPUT_SCHEMA],
+    }, `tools.${tool.name}.publicOutputSchema`),
   })));
 }
 
@@ -141,7 +234,7 @@ function normalizeCostLog(value) {
   return Object.freeze(result);
 }
 
-function aggregateCostLogs(logs) {
+function aggregateCostLogs(logs, providerAttempts = logs.length) {
   const models = [...new Set(logs.map((log) => log.model))];
   return Object.freeze({
     model: models.length === 1 ? models[0] : "multiple",
@@ -149,7 +242,9 @@ function aggregateCostLogs(logs) {
     completion_tokens: logs.reduce((sum, log) => sum + log.completion_tokens, 0),
     cache_hits: logs.reduce((sum, log) => sum + log.cache_hits, 0),
     estimated_cost_usd: logs.reduce((sum, log) => sum + log.estimated_cost_usd, 0),
-    status: "reported",
+    status: logs.length === providerAttempts ? "reported" : "partially-reported",
+    reportedAttempts: logs.length,
+    unreportedAttempts: providerAttempts - logs.length,
   });
 }
 
@@ -270,10 +365,12 @@ function zeroCostLog() {
     cache_hits: 0,
     estimated_cost_usd: 0,
     status: "not-run",
+    reportedAttempts: 0,
+    unreportedAttempts: 0,
   });
 }
 
-function unreportedCostLog() {
+function unreportedCostLog(providerAttempts) {
   return Object.freeze({
     model: "unreported",
     prompt_tokens: null,
@@ -281,38 +378,146 @@ function unreportedCostLog() {
     cache_hits: null,
     estimated_cost_usd: null,
     status: "unreported",
+    reportedAttempts: 0,
+    unreportedAttempts: providerAttempts,
   });
 }
 
-function blockedResult(runId, stage, reasonCode, message, costLog = zeroCostLog()) {
-  return Object.freeze({ runId, status: "blocked", stage, reasonCode, message, costLog });
+function costEvidence(logs, providerAttempts) {
+  if (providerAttempts === 0) return zeroCostLog();
+  if (logs.length === 0) return unreportedCostLog(providerAttempts);
+  return aggregateCostLogs(logs, providerAttempts);
+}
+
+function blockedResult(runId, stage, reasonCode, message, costLog = zeroCostLog(), evidence) {
+  return Object.freeze({
+    runId,
+    status: "blocked",
+    stage,
+    reasonCode,
+    message,
+    ...(evidence ? { evidence } : {}),
+    costLog,
+  });
+}
+
+function createToolSettlement() {
+  return {
+    schema: TOOL_SETTLEMENT_SCHEMA,
+    failurePolicy: "fail-soft",
+    attempted: 0,
+    dispatched: 0,
+    canceledBeforeDispatch: 0,
+    succeeded: 0,
+    failed: 0,
+    deadlineExceeded: 0,
+    canceled: 0,
+    batches: 0,
+    partialBatches: 0,
+    exhaustedBatches: 0,
+    auditTrail: [],
+  };
+}
+
+function publicToolSettlement(value) {
+  return Object.freeze({
+    schema: value.schema,
+    failurePolicy: value.failurePolicy,
+    attempted: value.attempted,
+    dispatched: value.dispatched,
+    canceledBeforeDispatch: value.canceledBeforeDispatch,
+    succeeded: value.succeeded,
+    failed: value.failed,
+    deadlineExceeded: value.deadlineExceeded,
+    canceled: value.canceled,
+    batches: value.batches,
+    partialBatches: value.partialBatches,
+    exhaustedBatches: value.exhaustedBatches,
+    auditTrail: Object.freeze(value.auditTrail.map((entry) => Object.freeze({ ...entry }))),
+  });
+}
+
+function toolFailureReason(reasonCode) {
+  if (reasonCode === "branch_timed_out") return "tool_deadline_exceeded";
+  if (reasonCode === "branch_output_invalid") return "tool_output_invalid";
+  if (reasonCode === "branch_result_limit") return "tool_result_limit";
+  if (reasonCode === "branch_canceled") return "tool_canceled";
+  return "tool_failed";
+}
+
+function failureOutput(call, reasonCode) {
+  return Object.freeze({
+    type: "function_call_output",
+    callId: call.callId,
+    caller: call.caller,
+    output: Object.freeze({
+      schema: TOOL_FAILURE_SCHEMA,
+      status: "failed",
+      reasonCode,
+      retryable: false,
+    }),
+  });
 }
 
 function runWithDeadline(operation, signal, timeoutMs, controller) {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      controller.abort();
-      reject(new RuntimeBlock("aborted", "Programmatic tool run was aborted."));
-      return;
-    }
-    const timer = setTimeout(() => {
-      controller.abort();
-      reject(new RuntimeBlock("timeout", `Programmatic tool run exceeded ${timeoutMs} milliseconds.`));
-    }, timeoutMs);
+    let settled = false;
+    let timer;
+    const cleanup = () => {
+      try {
+        if (timer !== undefined) clearTimeout(timer);
+      } catch {
+        // Timer cleanup cannot suppress the typed settlement.
+      }
+      try {
+        signal?.removeEventListener("abort", onAbort);
+      } catch {
+        // A hostile signal cannot leave the run pending after settlement.
+      }
+    };
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback(value);
+    };
     const onAbort = () => {
       controller.abort();
-      reject(new RuntimeBlock("aborted", "Programmatic tool run was aborted."));
+      finish(reject, new RuntimeBlock("aborted", "Programmatic tool run was aborted."));
     };
-    signal?.addEventListener("abort", onAbort, { once: true });
-    Promise.resolve().then(operation).then(resolve, reject).finally(() => {
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", onAbort);
-    });
+    if (signalIsAborted(signal)) {
+      onAbort();
+      return;
+    }
+    timer = setTimeout(() => {
+      controller.abort();
+      finish(reject, new RuntimeBlock("timeout", `Programmatic tool run exceeded ${timeoutMs} milliseconds.`));
+    }, timeoutMs);
+    try {
+      signal?.addEventListener("abort", onAbort, { once: true });
+    } catch {
+      finish(reject, new RuntimeBlock("signal_invalid", "Programmatic tool run signal could not be observed."));
+      return;
+    }
+    Promise.resolve().then(() => {
+      // Close the call-to-microtask race: cancellation that wins before the
+      // actual adapter boundary must not still spend or execute afterward.
+      if (settled) return undefined;
+      if (signalIsAborted(signal)) {
+        onAbort();
+        return undefined;
+      }
+      return operation();
+    }).then(
+      (value) => finish(resolve, value),
+      (error) => finish(reject, error),
+    );
   });
 }
 
 export function createProgrammaticToolCallingRuntime({
   advanceHostedProgram,
+  authorizeToolCalls,
   callTool,
   maxModelTurns = DEFAULT_MAX_MODEL_TURNS,
   maxToolCalls = DEFAULT_MAX_TOOL_CALLS,
@@ -327,58 +532,279 @@ export function createProgrammaticToolCallingRuntime({
     maxParallelCalls,
     maxProgramChars,
     maxToolResultChars,
-    timeoutMs,
   })) assertPositiveInteger(value, field);
+  assertTimeout(timeoutMs);
 
   const adapterConfigured = typeof advanceHostedProgram === "function";
-  const toolGatewayConfigured = typeof callTool === "function";
+  const toolAuthorizerConfigured = typeof authorizeToolCalls === "function";
+  const toolExecutorConfigured = typeof callTool === "function";
+  const toolGatewayConfigured = toolAuthorizerConfigured && toolExecutorConfigured;
   const activeRuns = new Set();
   let completedRuns = 0;
   let blockedRuns = 0;
   let modelTurns = 0;
   let toolCalls = 0;
+  let toolCallsDispatched = 0;
+  let toolCallsCanceledBeforeDispatch = 0;
+  let toolCallsSucceeded = 0;
+  let toolCallsFailed = 0;
+  let toolDeadlineExceeded = 0;
+  let toolCallsCanceled = 0;
+  let toolBatches = 0;
+  let partialToolBatches = 0;
+  let exhaustedToolBatches = 0;
   let hostedPrograms = 0;
 
-  async function executeFunctionCalls({ calls, toolsByName, runId, signal, controller }) {
-    const outputs = [];
-    for (let offset = 0; offset < calls.length; offset += maxParallelCalls) {
-      const batch = calls.slice(offset, offset + maxParallelCalls);
-      const resolved = await Promise.all(batch.map(async (call) => {
-        const tool = toolsByName.get(call.name);
-        if (!tool || !tool.allowedCallers.includes("programmatic")) {
-          throw new RuntimeBlock("tool_not_allowed", `Tool ${call.name} is not enabled for programmatic calls.`);
-        }
-        if (tool.riskClass !== READ_ONLY_RISK || !tool.idempotent || tool.approvalRequired) {
-          throw new RuntimeBlock("direct_call_required", `Tool ${call.name} requires the direct-call path.`);
-        }
-        if (tool.validateArguments(call.arguments) !== true) {
-          throw new RuntimeBlock("tool_arguments_invalid", `Tool ${call.name} rejected its arguments.`);
-        }
-        let output;
-        try {
-          output = await runWithDeadline(
-            () => callTool({
-              runId,
-              callId: call.callId,
-              name: call.name,
-              arguments: call.arguments,
-              caller: call.caller,
-              signal: controller.signal,
+  async function prepareFunctionCalls(calls, toolsByName, runId, signal, controller) {
+    const locallyValidated = Object.freeze(calls.map((call) => {
+      const tool = toolsByName.get(call.name);
+      if (!tool || !tool.allowedCallers.includes("programmatic")) {
+        throw new RuntimeBlock("tool_not_allowed", `Tool ${call.name} is not enabled for programmatic calls.`);
+      }
+      if (tool.riskClass !== READ_ONLY_RISK || !tool.idempotent || tool.approvalRequired) {
+        throw new RuntimeBlock("direct_call_required", `Tool ${call.name} requires the direct-call path.`);
+      }
+      let argumentsValid = false;
+      try {
+        argumentsValid = tool.validateArguments(call.arguments) === true;
+      } catch {
+        argumentsValid = false;
+      }
+      if (!argumentsValid) {
+        throw new RuntimeBlock("tool_arguments_invalid", `Tool ${call.name} rejected its arguments.`);
+      }
+      return Object.freeze({ call, tool });
+    }));
+    let authorizationResult;
+    try {
+      authorizationResult = await runWithDeadline(
+        () => authorizeToolCalls(Object.freeze({
+          runId,
+          calls: Object.freeze(locallyValidated.map(({ call, tool }) => Object.freeze({
+            callId: call.callId,
+            name: call.name,
+            arguments: call.arguments,
+            caller: call.caller,
+            policy: Object.freeze({
+              allowedCallers: tool.allowedCallers,
+              riskClass: tool.riskClass,
+              idempotent: tool.idempotent,
+              approvalRequired: tool.approvalRequired,
             }),
-            signal,
-            timeoutMs,
-            controller,
+          }))),
+          signal: controller.signal,
+        })),
+        signal,
+        timeoutMs,
+        controller,
+      );
+    } catch (error) {
+      if (error instanceof RuntimeBlock) throw error;
+      throw new RuntimeBlock(
+        "tool_authorization_failed",
+        "Programmatic tool authorization could not be completed.",
+      );
+    }
+    try {
+      if (
+        !authorizationResult
+        || typeof authorizationResult !== "object"
+        || Array.isArray(authorizationResult)
+        || !Array.isArray(authorizationResult.decisions)
+        || authorizationResult.decisions.length !== locallyValidated.length
+      ) {
+        throw new RuntimeBlock(
+          "tool_authorization_invalid",
+          "Programmatic tool authorization returned an invalid whole-turn decision set.",
+        );
+      }
+      let denied = false;
+      for (const [index, decision] of authorizationResult.decisions.entries()) {
+        const { call } = locallyValidated[index];
+        if (
+          !decision
+          || typeof decision !== "object"
+          || Array.isArray(decision)
+          || decision.callId !== call.callId
+        ) {
+          throw new RuntimeBlock(
+            "tool_authorization_invalid",
+            "Programmatic tool authorization returned an invalid whole-turn decision set.",
           );
+        }
+        if (decision.status === "denied") denied = true;
+        else if (decision.status !== "authorized") {
+          throw new RuntimeBlock(
+            "tool_authorization_invalid",
+            "Programmatic tool authorization returned an invalid whole-turn decision set.",
+          );
+        }
+      }
+      if (denied) {
+        throw new RuntimeBlock(
+          "tool_authorization_denied",
+          "At least one programmatic tool call was not authorized for execution.",
+        );
+      }
+      const prepared = [];
+      for (const [index, decision] of authorizationResult.decisions.entries()) {
+        const { call, tool } = locallyValidated[index];
+        const policy = Object.freeze({
+          allowedCallers: tool.allowedCallers,
+          riskClass: tool.riskClass,
+          idempotent: tool.idempotent,
+          approvalRequired: tool.approvalRequired,
+        });
+        const authorization = normalizeJson(
+          decision.authorization,
+          `authorization.decisions[${index}].authorization`,
+        );
+        if (!authorization || typeof authorization !== "object" || Array.isArray(authorization)) {
+          throw new RuntimeBlock(
+            "tool_authorization_invalid",
+            "Programmatic tool authorization returned an invalid whole-turn decision set.",
+          );
+        }
+        const expectedAuthorization = normalizeJson({
+          schema: TOOL_AUTHORIZATION_SCHEMA,
+          authorizationId: assertIdentifier(
+            authorization.authorizationId,
+            `authorization.decisions[${index}].authorization.authorizationId`,
+          ),
+          policyRevision: assertIdentifier(
+            authorization.policyRevision,
+            `authorization.decisions[${index}].authorization.policyRevision`,
+          ),
+          runId,
+          callId: call.callId,
+          toolName: call.name,
+          arguments: call.arguments,
+          caller: call.caller,
+          policy,
+        }, `authorization.decisions[${index}].expectedAuthorization`);
+        if (JSON.stringify(authorization) !== JSON.stringify(expectedAuthorization)) {
+          throw new RuntimeBlock(
+            "tool_authorization_invalid",
+            "Programmatic tool authorization returned an invalid whole-turn decision set.",
+          );
+        }
+        prepared.push(Object.freeze({ call, tool, authorization }));
+      }
+      return Object.freeze(prepared);
+    } catch (error) {
+      if (error instanceof RuntimeBlock) throw error;
+      throw new RuntimeBlock(
+        "tool_authorization_invalid",
+        "Programmatic tool authorization returned an invalid whole-turn decision set.",
+      );
+    }
+  }
+
+  function recordToolBatch(settlement, result, offset, ordinalBase) {
+    settlement.attempted += result.attempted;
+    settlement.dispatched += result.dispatched;
+    settlement.canceledBeforeDispatch += result.canceledBeforeDispatch;
+    settlement.succeeded += result.succeeded;
+    settlement.failed += result.failed;
+    settlement.deadlineExceeded += result.timedOut;
+    settlement.canceled += result.canceled;
+    settlement.batches += 1;
+    settlement.partialBatches += Number(result.succeeded > 0 && result.failed > 0);
+    settlement.exhaustedBatches += Number(result.attempted > 0 && result.succeeded === 0);
+    toolCalls += result.attempted;
+    toolCallsDispatched += result.dispatched;
+    toolCallsCanceledBeforeDispatch += result.canceledBeforeDispatch;
+    toolCallsSucceeded += result.succeeded;
+    toolCallsFailed += result.failed;
+    toolDeadlineExceeded += result.timedOut;
+    toolCallsCanceled += result.canceled;
+    toolBatches += 1;
+    partialToolBatches += Number(result.succeeded > 0 && result.failed > 0);
+    exhaustedToolBatches += Number(result.attempted > 0 && result.succeeded === 0);
+    settlement.auditTrail.push(...result.auditTrail.map((entry, index) => {
+      const branchId = `tool-call-${ordinalBase + offset + index + 1}`;
+      if (entry.status === "succeeded") return { branchId, status: "succeeded" };
+      return {
+        branchId,
+        status: "failed",
+        reasonCode: toolFailureReason(entry.reasonCode),
+        retryable: false,
+      };
+    }));
+  }
+
+  async function executeFunctionCalls({
+    calls,
+    toolsByName,
+    runId,
+    signal,
+    controller,
+    settlement,
+    ordinalBase,
+  }) {
+    const prepared = await prepareFunctionCalls(calls, toolsByName, runId, signal, controller);
+    const outputs = [];
+    for (let offset = 0; offset < prepared.length; offset += maxParallelCalls) {
+      const batch = prepared.slice(offset, offset + maxParallelCalls);
+      const batchController = new AbortController();
+      const cancelBatch = () => batchController.abort();
+      if (signalIsAborted(signal)) cancelBatch();
+      else {
+        try {
+          signal?.addEventListener("abort", cancelBatch, { once: true });
+        } catch {
+          throw new RuntimeBlock("signal_invalid", "Programmatic tool run signal could not be observed.");
+        }
+      }
+      let integrityBlock = null;
+      const result = await failSoftFanOut(batch, async ({ call, tool, authorization }, index, branchSignal) => {
+        let rawOutput;
+        try {
+          rawOutput = await callTool({
+            runId,
+            callId: call.callId,
+            name: call.name,
+            arguments: call.arguments,
+            caller: call.caller,
+            authorization,
+            signal: branchSignal,
+          });
         } catch (error) {
-          if (error instanceof RuntimeBlock) throw error;
-          throw new RuntimeBlock("tool_failed", `Tool ${call.name} failed: ${error instanceof Error ? error.message : String(error)}`);
+          const reasonCode = toolIntegrityReason(error);
+          if (reasonCode) {
+            integrityBlock ||= new RuntimeBlock(
+              reasonCode,
+              "A programmatic tool execution integrity fence rejected the batch.",
+            );
+            cancelBatch();
+            throw failSoftBranchFailure("branch_canceled");
+          }
+          throw failSoftBranchFailure("branch_unavailable");
         }
-        const normalized = normalizeJson(output, `tool.${call.name}.output`);
-        if (tool.validateOutput(normalized) !== true) {
-          throw new RuntimeBlock("tool_output_invalid", `Tool ${call.name} returned an invalid output.`);
+        const returnedIntegrityReason = toolIntegrityReason(rawOutput);
+        if (returnedIntegrityReason) {
+          integrityBlock ||= new RuntimeBlock(
+            returnedIntegrityReason,
+            "A programmatic tool execution integrity fence rejected the batch.",
+          );
+          cancelBatch();
+          throw failSoftBranchFailure("branch_canceled");
         }
+        let normalized;
+        try {
+          normalized = normalizeJson(rawOutput, `tool.${call.name}.output`);
+        } catch {
+          throw failSoftBranchFailure("branch_output_invalid");
+        }
+        let outputValid = false;
+        try {
+          outputValid = tool.validateOutput(normalized) === true;
+        } catch {
+          outputValid = false;
+        }
+        if (!outputValid) throw failSoftBranchFailure("branch_output_invalid");
         if (serializedJsonLength(normalized) > maxToolResultChars) {
-          throw new RuntimeBlock("tool_result_limit", `Tool ${call.name} output exceeds ${maxToolResultChars} characters.`);
+          throw failSoftBranchFailure("branch_result_limit");
         }
         return Object.freeze({
           type: "function_call_output",
@@ -386,8 +812,21 @@ export function createProgrammaticToolCallingRuntime({
           caller: call.caller,
           output: normalized,
         });
+      }, { signal: batchController.signal, timeoutMs });
+      try {
+        signal?.removeEventListener("abort", cancelBatch);
+      } catch {
+        // Listener cleanup cannot suppress the already-settled branch ledger.
+      }
+      recordToolBatch(settlement, result, offset, ordinalBase);
+      if (integrityBlock) throw integrityBlock;
+      if (signalIsAborted(signal)) {
+        throw new RuntimeBlock("aborted", "Programmatic tool run was aborted.");
+      }
+      outputs.push(...result.outcomes.map((outcome, index) => {
+        if (outcome.status === "succeeded") return outcome.value;
+        return failureOutput(batch[index].call, toolFailureReason(outcome.reasonCode));
       }));
-      outputs.push(...resolved);
     }
     return Object.freeze(outputs);
   }
@@ -398,6 +837,7 @@ export function createProgrammaticToolCallingRuntime({
     const safeTools = normalizeToolDefinitions(tools);
     const safeCapabilities = normalizeCapabilities(capabilities);
     const safeContinuationMode = normalizeContinuationMode(continuationMode);
+    const safeSignal = normalizeAbortSignal(signal);
     if (!adapterConfigured || !toolGatewayConfigured) {
       blockedRuns += 1;
       return blockedResult(safeRunId, "configure", "runtime_unconfigured", "Hosted program and tool gateway adapters are required.");
@@ -433,14 +873,17 @@ export function createProgrammaticToolCallingRuntime({
     let runToolCalls = 0;
     let runPrograms = 0;
     let runProgramChars = 0;
-    let providerAttempted = false;
+    let providerAttempts = 0;
     const completedCallIds = new Set();
+    const toolSettlement = createToolSettlement();
 
     try {
       for (let turn = 1; turn <= maxModelTurns; turn += 1) {
         let rawResponse;
         try {
-          providerAttempted = true;
+          if (signalIsAborted(safeSignal)) {
+            throw new RuntimeBlock("aborted", "Programmatic tool run was aborted.");
+          }
           const adapterRequest = {
             runId: safeRunId,
             input: nextInput,
@@ -452,18 +895,21 @@ export function createProgrammaticToolCallingRuntime({
             adapterRequest.previousResponseId = previousResponseId;
           }
           rawResponse = await runWithDeadline(
-            () => advanceHostedProgram(adapterRequest),
-            signal,
+            () => {
+              providerAttempts += 1;
+              return advanceHostedProgram(adapterRequest);
+            },
+            safeSignal,
             timeoutMs,
             controller,
           );
         } catch (error) {
           if (error instanceof RuntimeBlock) throw error;
-          throw new RuntimeBlock("provider_failed", `Hosted program adapter failed: ${error instanceof Error ? error.message : String(error)}`);
+          throw new RuntimeBlock("provider_failed", "Hosted program adapter failed.");
         }
         const response = normalizeResponse(rawResponse);
-        const inspected = inspectItems(response.items, programCallIds, maxProgramChars - runProgramChars);
         costLogs.push(response.costLog);
+        const inspected = inspectItems(response.items, programCallIds, maxProgramChars - runProgramChars);
         modelTurns += 1;
         runPrograms += inspected.programCount;
         runProgramChars += inspected.programChars;
@@ -487,10 +933,11 @@ export function createProgrammaticToolCallingRuntime({
             calls: inspected.functionCalls,
             toolsByName,
             runId: safeRunId,
-            signal,
+            signal: safeSignal,
             controller,
+            settlement: toolSettlement,
+            ordinalBase: runToolCalls - inspected.functionCalls.length,
           });
-          toolCalls += inspected.functionCalls.length;
           if (safeContinuationMode === "stateless") {
             transcript.push(...outputs);
             nextInput = Object.freeze([...transcript]);
@@ -517,8 +964,9 @@ export function createProgrammaticToolCallingRuntime({
               localJavaScriptExecution: "forbidden",
               intermediateResultsReturned: false,
               contextIsolation: "provider-attested",
+              toolSettlement: publicToolSettlement(toolSettlement),
             }),
-            costLog: aggregateCostLogs(costLogs),
+            costLog: costEvidence(costLogs, providerAttempts),
           });
         }
         nextInput = safeContinuationMode === "stateless"
@@ -528,20 +976,20 @@ export function createProgrammaticToolCallingRuntime({
       throw new RuntimeBlock("model_turn_limit", `Programmatic run exceeds ${maxModelTurns} model turns.`);
     } catch (error) {
       blockedRuns += 1;
-      const costLog = costLogs.length > 0
-        ? aggregateCostLogs(costLogs)
-        : providerAttempted
-          ? unreportedCostLog()
-          : zeroCostLog();
+      const costLog = costEvidence(costLogs, providerAttempts);
+      const evidence = toolSettlement.attempted > 0
+        ? Object.freeze({ toolSettlement: publicToolSettlement(toolSettlement) })
+        : undefined;
       if (error instanceof RuntimeBlock) {
-        return blockedResult(safeRunId, "execute", error.reasonCode, error.message, costLog);
+        return blockedResult(safeRunId, "execute", error.reasonCode, error.message, costLog, evidence);
       }
       return blockedResult(
         safeRunId,
         "execute",
         "runtime_failed",
-        error instanceof Error ? error.message : String(error),
+        "Programmatic tool runtime failed.",
         costLog,
+        evidence,
       );
     } finally {
       controller.abort();
@@ -552,12 +1000,24 @@ export function createProgrammaticToolCallingRuntime({
   function stats() {
     return Object.freeze({
       adapterConfigured,
+      toolAuthorizerConfigured,
+      toolExecutorConfigured,
       toolGatewayConfigured,
       activeRuns: activeRuns.size,
       completedRuns,
       blockedRuns,
       modelTurns,
       toolCalls,
+      toolCallsAttempted: toolCalls,
+      toolCallsDispatched,
+      toolCallsCanceledBeforeDispatch,
+      toolCallsSucceeded,
+      toolCallsFailed,
+      toolCallsDeadlineExceeded: toolDeadlineExceeded,
+      toolCallsCanceled,
+      toolBatches,
+      partialToolBatches,
+      exhaustedToolBatches,
       hostedPrograms,
       maxModelTurns,
       maxToolCalls,

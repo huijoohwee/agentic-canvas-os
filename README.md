@@ -226,10 +226,12 @@ run-scoped canvas embed URL.
 |---|---|
 | `wrangler.jsonc` | Cloudflare Worker source of truth: script, static assets, vars, required secrets. |
 | `worker/index.js` | Cloudflare Worker entrypoint for API routes and static asset delegation. |
+| `worker/canvas-room.js` | Durable Object room transport with per-recipient fail-soft delivery, sender-visible settlement receipts, and a bounded failure-only audit window exposed only after room authentication. |
 | `src/config.js` | Public config: Agent-API base and canvas base only. |
 | `src/agent-api-endpoints.js` | Same-origin browser request helper for Cloudflare API routes. |
 | `src/knowgrph-mcp-client.js` | Keyless MCP Streamable HTTP client. |
 | `src/canvas-embed.js` | Run-scoped knowgrph canvas doc-view URL + embed descriptor. |
+| `src/fail-soft-fan-out.js` | Provider- and transport-neutral bounded all-branch settlement with successful values, ordinal sanitized audit records, and attempted, dispatched, success, failure, timeout, and cancellation totals. |
 | `agent-api/src/app.js` | Platform-neutral Agent-API core: auth, MCP forward, readiness. |
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |

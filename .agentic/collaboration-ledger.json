@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2750,
-  "headDigest": "d9d5a7fa888da4a8359c4a1f3231dba1ddb970c4f1168acb29d131bf1009f018",
+  "sequence": 2751,
+  "headDigest": "94da31fdca4691cf38ad180a02db7d84467a06157dcef89b7fe3083510dfe2b1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -135895,6 +135895,61 @@
       },
       "claimDigest": "a32c5256d667d211809c0cf956da3b0a17cf87095ce56fa91e7213c1dab52218",
       "digest": "d9d5a7fa888da4a8359c4a1f3231dba1ddb970c4f1168acb29d131bf1009f018"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2751,
+      "parentDigest": "d9d5a7fa888da4a8359c4a1f3231dba1ddb970c4f1168acb29d131bf1009f018",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "6d493f1d09b5f274dba528611c9aec7047343f6116cd406225f343325077b621",
+      "idempotencyKey": "0fc0d63d50c997a0a9c1fe7cff1a849a23dcc0a80322734d9b67060a5c8f813c",
+      "requestDigest": "e15aa8eeed9e57beb3f628d41bb96893bb885def6c761a511e4ccb52788822c1",
+      "evaluationTime": "2026-08-13T05:30:54.000Z",
+      "claimCore": {
+        "claimId": "6d493f1d09b5f274dba528611c9aec7047343f6116cd406225f343325077b621",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:6da86260868ab4e88c281e6c92de3617f31ad7d16fd7a1aecf6e5ea6659c012f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:90c82127fe1ed700b4db38b24a377e13c083b557b5074f85c06a8b16a452f745",
+        "canonicalBaseRevision": "294c0bbf2bcd348cad80d60f2ccfb7116eb1fed7",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:__tests__/canvas-room.test.mjs",
+          "path:__tests__/collab-metrics.test.mjs",
+          "path:__tests__/fail-soft-fan-out.test.mjs",
+          "path:__tests__/programmatic-tool-calling.test.mjs",
+          "path:agent-api/src/programmatic-tool-calling.js",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/HARNESS-CONTRACTS.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MEMORY.md",
+          "path:docs/PROGRAMMATIC-TOOL-CALLING.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:src/collab-metrics.js",
+          "path:src/fail-soft-fan-out.js",
+          "path:worker/canvas-room.js",
+          "semantic:fail-soft-fan-out-recovery"
+        ],
+        "writeSetDigest": "382bbec4e8498a2597832c78eed1ae940ef790713f5087536ba08a5122f5595d",
+        "laneRevision": "bc386c98338b96ff80cc009c9822830293940fa9",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-13T06:00:27.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-Z0DQ",
+        "predecessorClaimId": "56eb968a39cfeefe8259040a0b8daf252fad03058346608692e8d4e06a713b1a",
+        "eligibleSince": "2026-08-13T05:29:39.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-13T05:30:27.000Z"
+      },
+      "claimDigest": "774d90b11cc86ae91d2c8c77ee2b0f85f119f481c9dd1c11feca3377b576a248",
+      "digest": "94da31fdca4691cf38ad180a02db7d84467a06157dcef89b7fe3083510dfe2b1"
     }
   ]
 }

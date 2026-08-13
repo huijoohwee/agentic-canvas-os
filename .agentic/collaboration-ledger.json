@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2774,
-  "headDigest": "c87b89ebdbfa19998ce20e0814f49cdfc00992cea5ecd6c1537a2fc0dcc337e9",
+  "sequence": 2775,
+  "headDigest": "77eec8461a681e5481bbf6f444f8070fe484591ac446ba4e529c606ec04eee11",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -137059,6 +137059,53 @@
       },
       "claimDigest": "c7d7d7a78f61fceccbdda9648189f61c24cf4a03ae35aeed5a7c29bcb82789d9",
       "digest": "c87b89ebdbfa19998ce20e0814f49cdfc00992cea5ecd6c1537a2fc0dcc337e9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2775,
+      "parentDigest": "c87b89ebdbfa19998ce20e0814f49cdfc00992cea5ecd6c1537a2fc0dcc337e9",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e1b78598163a25b7723bb101371b5f6b8d08c727e06a879def5a7777950abd7f",
+      "idempotencyKey": "c175f4303b1d0690a534a9e9b0ef4470ff71e2e100ce3033bbb23db0a9ad7609",
+      "requestDigest": "efd539d00f0d5c1c146008c557d669cd27397e3cbd9356fdb7fc36835dabb1eb",
+      "evaluationTime": "2026-08-13T07:36:30.000Z",
+      "claimCore": {
+        "claimId": "e1b78598163a25b7723bb101371b5f6b8d08c727e06a879def5a7777950abd7f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:984aebf7206062e630ada3cfd3b915fcd1ae1f1685b2a2bb4b6605fe19e56878",
+        "canonicalBaseRevision": "c4eace513bd39530d84e04232cd6b790472a33b5",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:__tests__/completed-source-correction-fence-recovery-controller.test.mjs",
+          "path:__tests__/completed-source-correction-fence-recovery-repository-adapter.test.mjs",
+          "path:docs/COMPLETED-SOURCE-CORRECTION-FENCE-RECOVERY.md",
+          "path:scripts/completed-source-correction-fence-recovery-contract.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-controller.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-repository-adapter.mjs",
+          "path:scripts/completed-source-correction-fence-recovery.mjs",
+          "semantic:completed-source-fence-recovery"
+        ],
+        "writeSetDigest": "8186531107eb1ced8b3946acc114f37e3f8698136285b7264c7545e2db327c00",
+        "laneRevision": "d2401fa156fcf19cbb58da2b9bc6b7cc9c8e9d75",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 2,
+        "state": "current",
+        "expiresAt": "2026-08-13T09:26:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-ckpP",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "473052cab269703f0a1aaff84f20e0a8375b063a0b147206ce00b4ceb136b55b",
+      "digest": "77eec8461a681e5481bbf6f444f8070fe484591ac446ba4e529c606ec04eee11"
     }
   ]
 }

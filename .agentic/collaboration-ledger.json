@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2713,
-  "headDigest": "6c313f48c57dd6bf302d1aed821113b9f98302c7a5a79e6ddbb2f413e405d12a",
+  "sequence": 2714,
+  "headDigest": "48d006142cbc719d70d12a1751463316aed41fdf1ffdec5a18ded083d361fe19",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -134082,6 +134082,46 @@
       },
       "claimDigest": "0ed84ff5b361cee58bb137daaf9500a53a703c89b58b4e87847858e08e0862e7",
       "digest": "6c313f48c57dd6bf302d1aed821113b9f98302c7a5a79e6ddbb2f413e405d12a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2714,
+      "parentDigest": "6c313f48c57dd6bf302d1aed821113b9f98302c7a5a79e6ddbb2f413e405d12a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "04cde20204707c21e393ac2025d118fa8b6a4b0e523c5fccdf48c9acd1be82e3",
+      "idempotencyKey": "e5b0e4fd8f1d0580744f44e54436e9e5ad86223c2e025178384144654a2f5227",
+      "requestDigest": "30f864cf741e1cf58c65543385f1773362e392d9aa9d151b7f976c2ed7cc84f9",
+      "evaluationTime": "2026-08-13T03:58:23.000Z",
+      "claimCore": {
+        "claimId": "04cde20204707c21e393ac2025d118fa8b6a4b0e523c5fccdf48c9acd1be82e3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a1242f2796e2c2132f22e43e6933d47ff6f4b4f52119a027342e14dfe7aa691c",
+        "canonicalBaseRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-lane-source-correction-repository-adapter.test.mjs",
+          "path:scripts/reviewed-lane-source-correction-repository-adapter.mjs",
+          "semantic:reviewed-source-correction-recovery-normalizatio"
+        ],
+        "writeSetDigest": "1b27c8d5df47a50413d4964768961ec8e67228fed0d5c4762bfd26355e139dd5",
+        "laneRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-13T04:28:23.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "8dac8795e78984ea4609d01cc3cc508125b0ccce07b83a5e2e7f18d768fb793d",
+      "digest": "48d006142cbc719d70d12a1751463316aed41fdf1ffdec5a18ded083d361fe19"
     }
   ]
 }

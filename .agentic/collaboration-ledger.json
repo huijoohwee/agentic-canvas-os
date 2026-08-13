@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2736,
-  "headDigest": "3c465821e3617c64cfde04c03b84b963e903626516fc4a263d50715727534b46",
+  "sequence": 2737,
+  "headDigest": "25ec56ff8298d8ff47fc501a9c3965f2bdcc8bfdeb68fa7700b9431cdeb566b3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -135171,6 +135171,46 @@
       },
       "claimDigest": "0f9f22189f47cd55eb04a7a4d9eed75be668c7df5edfa7a471adb823324df7c8",
       "digest": "3c465821e3617c64cfde04c03b84b963e903626516fc4a263d50715727534b46"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2737,
+      "parentDigest": "3c465821e3617c64cfde04c03b84b963e903626516fc4a263d50715727534b46",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "95637920d3feda36ace01b73de345923294d63c22ebc5a348b1a555d63f90595",
+      "idempotencyKey": "9d753e8c26453c227f3a2e20cecbb69721c64746fdd56ed292180dba6f814bc5",
+      "requestDigest": "4bc35207876ee6b47e47022ba3c57b80ac6969e872ecba9df0c740b0e5eb1683",
+      "evaluationTime": "2026-08-13T05:02:32.000Z",
+      "claimCore": {
+        "claimId": "95637920d3feda36ace01b73de345923294d63c22ebc5a348b1a555d63f90595",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b28bb737ba678d40dab8eabe1cc6bf7a17258bff59033c8d68ee5660c3c2a23b",
+        "canonicalBaseRevision": "4a17e0fb77a1beb0a35a881e262935464b12486c",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-lane-source-correction-repository-adapter.test.mjs",
+          "path:scripts/reviewed-lane-source-correction-repository-adapter.mjs",
+          "semantic:reviewed-source-expiry-replay-equivalence"
+        ],
+        "writeSetDigest": "088465e388c415f22b14bd52464ff2466ce88dd26b302ad16a1ee58055d6fb00",
+        "laneRevision": "362f05f0739bdf6dc6379741f0cafa903e2cc15c",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-13T05:12:43.000Z",
+        "evidenceDigest": "581cb7160d577620753e75b133f3c612c708b199922ed661f954ed31c6b5ee45",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-Z4WG",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e46ea114976e6fda6c08029b64bab50ee312617e045dd352bf2c65740d7300b7",
+      "digest": "25ec56ff8298d8ff47fc501a9c3965f2bdcc8bfdeb68fa7700b9431cdeb566b3"
     }
   ]
 }

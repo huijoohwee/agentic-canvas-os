@@ -48,6 +48,11 @@ test("adapter reads a content-bound planned descendant and fails closed on provi
     createLeaseStore: () => store });
   const plan = buildProvisionedStartAdmissionRecoveryPlan(adapter.readEvidence());
   assert.equal(plan.evidence.descendant.rangeDiffDigest, digestValue({ patch: "patch bytes" }));
+  assert.deepEqual({
+    state: plan.evidence.cloud.state,
+    writeAuthority: plan.evidence.cloud.writeAuthority,
+    scopeReserved: plan.evidence.cloud.scopeReserved,
+  }, { state: "active", writeAuthority: true, scopeReserved: true });
   body = "concurrent body drift";
   assert.throws(() => adapter.assertPlanPreimage(plan, "before-intent"), /preimage drifted/u);
 });

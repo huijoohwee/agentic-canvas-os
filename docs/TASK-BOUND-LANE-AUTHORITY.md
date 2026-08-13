@@ -88,8 +88,9 @@ node scripts/device-branch.mjs start <semantic-scope> \
 
 Every later lifecycle command uses the same `--task-authority` option or the
 process-local `AGENTIC_TASK_AUTHORITY_FILE`. The device entrypoint rejects a
-capability stored inside the repository. Writer-registry mutations preserve the
-same binding and independently repeat proof-of-possession.
+capability stored inside the repository and scrubs its locator before spawning
+Git, validation, provider, or other child processes. Writer-registry mutations
+preserve the same binding and independently repeat proof-of-possession.
 
 ## Explicit migration
 

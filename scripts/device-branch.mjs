@@ -62,9 +62,11 @@ const continueAdmission = args.includes("--continue-admission");
 const rawScope = args.find((value) => !value.startsWith("--"));
 const sessionId = readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "";
 if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
-const taskAuthorityFile = readOption(args, "task-authority")
+const taskAuthorityInput = readOption(args, "task-authority")
   || process.env.AGENTIC_TASK_AUTHORITY_FILE || "";
-if (taskAuthorityFile) process.env.AGENTIC_TASK_AUTHORITY_FILE = path.resolve(taskAuthorityFile);
+const taskAuthorityFile = taskAuthorityInput ? path.resolve(taskAuthorityInput) : "";
+// The capability locator is controller input, never ambient authority for child processes.
+delete process.env.AGENTIC_TASK_AUTHORITY_FILE;
 
 let repo = null;
 let canonicalRepo = null;

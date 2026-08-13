@@ -464,6 +464,7 @@ test("device lifecycle publicly requires an external task authority capability",
   assert.match(source, /--task-authority=<external-capability\.json>/);
   assert.match(source, /taskAuthorityPolicy: "required"/);
   assert.match(source, /assertExternalTaskAuthorityFile\(taskAuthorityFile, canonicalRepo\)/);
+  assert.match(source, /delete process\.env\.AGENTIC_TASK_AUTHORITY_FILE/);
   assert.doesNotMatch(source, /sessionId.*bearer/iu);
 });
 

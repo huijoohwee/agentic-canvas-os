@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2723,
-  "headDigest": "36184da5f946f02439be9a4676bc91dcd344dae1c9611270a25c07419e912ed6",
+  "sequence": 2724,
+  "headDigest": "1547f5b7db9c0ac27eb294ae77703a0c70997267acc6acf5fa0e9140a022e071",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -134549,6 +134549,46 @@
       },
       "claimDigest": "7e8f4bfbbcb20e7e33048868c292a57264f32bc494452bfc470210fb8e7ae1b6",
       "digest": "36184da5f946f02439be9a4676bc91dcd344dae1c9611270a25c07419e912ed6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2724,
+      "parentDigest": "36184da5f946f02439be9a4676bc91dcd344dae1c9611270a25c07419e912ed6",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cd45f088767da3d2e0c0f0840209b4e366e798100251ddc2c2deac0eaeedb46f",
+      "idempotencyKey": "433ca23b32a980cc0bdaeb69672822bdaa6e6de5910fa29f7cdecb929b8410f2",
+      "requestDigest": "dfa7617d90423fbc59cf3e5a79429a5ff9e38c975ed3c2c490b76517426c9a00",
+      "evaluationTime": "2026-08-13T04:26:10.000Z",
+      "claimCore": {
+        "claimId": "cd45f088767da3d2e0c0f0840209b4e366e798100251ddc2c2deac0eaeedb46f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a1242f2796e2c2132f22e43e6933d47ff6f4b4f52119a027342e14dfe7aa691c",
+        "canonicalBaseRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-lane-source-correction-repository-adapter.test.mjs",
+          "path:scripts/reviewed-lane-source-correction-repository-adapter.mjs",
+          "semantic:reviewed-source-correction-recovery-normalizatio"
+        ],
+        "writeSetDigest": "1b27c8d5df47a50413d4964768961ec8e67228fed0d5c4762bfd26355e139dd5",
+        "laneRevision": "cec0f49ea1bf616d531bcaebcbb92c423f537d45",
+        "leaseEpoch": 2,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-13T04:37:22.000Z",
+        "evidenceDigest": "1679c077fa4505a7e9b9cf4fa8db381aaf451360b13f7bb370f35a11873ef249",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-ZLai",
+        "predecessorClaimId": "04cde20204707c21e393ac2025d118fa8b6a4b0e523c5fccdf48c9acd1be82e3",
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f413ada374b455ecf23bf5bc5898a40e806a26ff1dc7244fd8f2dbf9b821c30c",
+      "digest": "1547f5b7db9c0ac27eb294ae77703a0c70997267acc6acf5fa0e9140a022e071"
     }
   ]
 }

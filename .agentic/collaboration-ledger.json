@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2663,
-  "headDigest": "84d37e6ec38569460f50b45fb369bc0f64d860e523b8c7ca51b8de56ea7bec03",
+  "sequence": 2664,
+  "headDigest": "454e178597f946ef2dff219be2283335ac56aa784520837f539b8e37ea71f55d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -131517,6 +131517,60 @@
       },
       "claimDigest": "78faab270445a6cffbc432310c70a942006b223e5debbc9808737bd3325c6872",
       "digest": "84d37e6ec38569460f50b45fb369bc0f64d860e523b8c7ca51b8de56ea7bec03"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2664,
+      "parentDigest": "84d37e6ec38569460f50b45fb369bc0f64d860e523b8c7ca51b8de56ea7bec03",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "bdf28c56f32fbcce3a8276b29bd7e00be4e8d602e3c8b0c7c6e7f4bbd92c59ed",
+      "idempotencyKey": "7921167ae3d04d79ac03c75f55fabd033f767081fa0bf53c19f80f397308a13e",
+      "requestDigest": "f0b56b33051fe4d127fb981c371ab2bfc020025f55e64cceae99ad91b24ddd15",
+      "evaluationTime": "2026-08-13T00:19:58.000Z",
+      "claimCore": {
+        "claimId": "bdf28c56f32fbcce3a8276b29bd7e00be4e8d602e3c8b0c7c6e7f4bbd92c59ed",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:9d0fed643f9b80c324c094c918fbc9d25983a5e37b4e5ae244fecf65f58d95c2",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:0e4b08e820ceb3e4cb10127ad32c6639a6ed8e1daf83c0899c00002157f6221e",
+        "canonicalBaseRevision": "71caf86030604383ca7190084dc767503f805ccb",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/helpers/mainPanelMcpExpectations.ts",
+          "path:canvas/src/__tests__/mainPanelExaIntegrations.test.tsx",
+          "path:canvas/src/__tests__/mainPanelSkillsCommands.test.tsx",
+          "path:canvas/src/features/canvas/utils.ts",
+          "path:canvas/src/features/integrations/ExaSearchSkillsCommandsProjection.tsx",
+          "path:canvas/src/features/panels/views/exaMcpApiDocs.ts",
+          "path:canvas/src/features/panels/views/exaSearchApiDocs.ts",
+          "path:canvas/src/features/panels/views/settingsView.constants.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.helpers.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.ts",
+          "path:canvas/src/features/toolbar/FloatingPanelSkillsCommandsView.tsx",
+          "path:canvas/src/tests/registry/postParserCases5.ts",
+          "path:docs/documents/knowgrph-mcp/knowgrph-exa-mcp-prd-tad.md",
+          "path:docs/runtime-readiness-contract.md",
+          "path:grph-shared/package.json",
+          "path:grph-shared/src/search/exaSearchApiSsot.ts",
+          "semantic:exa-coding-agent-integrations-v3"
+        ],
+        "writeSetDigest": "88ae2b26f1050ebb8fe48a62711ee518f2a434214ddff2cc2da151077617dc6e",
+        "laneRevision": "eb5db0309ac93f72711d0097f9b107f939a88b33",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 2,
+        "state": "current",
+        "expiresAt": "2026-08-13T00:49:58.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7-VRBL",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "37d1ebf1ca594c157271b7f93e39c2a30b96c24ee8b7d5f8e9b82ca9c3285c06",
+      "digest": "454e178597f946ef2dff219be2283335ac56aa784520837f539b8e37ea71f55d"
     }
   ]
 }

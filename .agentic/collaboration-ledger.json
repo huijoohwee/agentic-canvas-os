@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2706,
-  "headDigest": "24b27f6ebf591c198b67cba458604e98c5ecfb240cf2a4eaa4426a6ec29c6dd8",
+  "sequence": 2707,
+  "headDigest": "0cf71157d9040c806716716d4c57808c91a2cf767b5a9a6428c77968ff50e066",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -133706,6 +133706,70 @@
       },
       "claimDigest": "1a7b5a2f4b778a70f0bf0f3c4516478c7eb1f69391ece435da0e41f036f8c729",
       "digest": "24b27f6ebf591c198b67cba458604e98c5ecfb240cf2a4eaa4426a6ec29c6dd8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2707,
+      "parentDigest": "24b27f6ebf591c198b67cba458604e98c5ecfb240cf2a4eaa4426a6ec29c6dd8",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "f73b88a9383b3d759a8c9b86c41eb04133a83bb97b450e9ec7188dfe3b6515a6",
+      "idempotencyKey": "a0f3d104ab3eec1562fda2331af8d985c12e6f1182ae2ebba82ddceef7297bef",
+      "requestDigest": "79922c1eb6479dc7a63e88069efdbe74340e722bbeaf3e23bbf515671756d5e5",
+      "evaluationTime": "2026-08-13T03:41:09.000Z",
+      "claimCore": {
+        "claimId": "f73b88a9383b3d759a8c9b86c41eb04133a83bb97b450e9ec7188dfe3b6515a6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:9d0fed643f9b80c324c094c918fbc9d25983a5e37b4e5ae244fecf65f58d95c2",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:8209aca9d2a76f636d2cc076e3a733111934b86518abdb0407d83c79afd54ca3",
+        "canonicalBaseRevision": "8fd61f511b6449b35a24b4e63ccfb518e6dc9c02",
+        "declaredWriteScope": [
+          "path:.github/workflows/release.yml",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:docs/documents/knowgrph-cloudflare-document.md",
+          "path:docs/documents/knowgrph-cross-repo-publish-topology.md",
+          "path:docs/knowgrph-acos-deploy-runbook.md",
+          "path:package.json",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/__tests__/production-release-lifecycle.test.mjs",
+          "path:scripts/__tests__/seed-storage-documents-d1.test.mjs",
+          "path:scripts/lib/production-release-lifecycle-evidence.mjs",
+          "path:scripts/lib/seed-storage-documents-d1.mjs",
+          "path:scripts/production-release-lifecycle.mjs",
+          "path:scripts/seed-storage-docs-to-cloudflare.mjs",
+          "path:scripts/verify-production-release-transports.mjs",
+          "semantic:production-release-terminal-receipts-v2"
+        ],
+        "writeSetDigest": "7c29e74cb61d8407eb39035645051695e169992e15507191823061c85ba199c2",
+        "laneRevision": "ec0881e646d6079ada729fbf419a84c4827de8c8",
+        "leaseEpoch": 1,
+        "transitionCounter": 15,
+        "heartbeatCounter": 9,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-13T04:05:38.000Z",
+        "evidenceDigest": "3afc458a6ff78a2479aac83fb58f24072a9e98238ff4be2340beeba20ead76e2",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7-WPob",
+        "predecessorClaimId": "36a81995f076e7240ffe0e3d77ed2f724e4c8af0a7b4df8a1fccff5c2415a5a2",
+        "eligibleSince": "2026-08-13T01:03:29.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-13T01:09:56.000Z",
+        "integration": {
+          "candidateRevision": "ec0881e646d6079ada729fbf419a84c4827de8c8",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7-WPob",
+          "focusedEvidenceDigest": "3afc458a6ff78a2479aac83fb58f24072a9e98238ff4be2340beeba20ead76e2",
+          "dependencyClosureDigest": "b11b8c904852d6cdb9bc9b5dc01c2de8d1c98a56f2426857466552af7bbac9b5",
+          "namedChecksDigest": "db7fe1d91f70202cd9c1f57d4dbf0abae87dfd868ccb89b817a62b79be1a5ad9",
+          "handoffEvidenceDigest": "eaa03465747e072d37286f40a8927f044b88fdd7362cd388b17a0173cc7795e7",
+          "operatorDecisionDigest": "1a3900740163ff59e3e43928ed683f6c54518874acbd62431af3415eb345582d",
+          "integrationIntentDigest": "767b96f65cd6c6d5c4fbe90bae3397ca2d2dc1e8f1d9a88b2bd3a0f8fb1dbab9",
+          "integratedAt": "2026-08-13T03:41:09.000Z"
+        }
+      },
+      "claimDigest": "480fca922f39a9170676091946dd407b876f2c444f9f6a15efa89bacddde27ee",
+      "digest": "0cf71157d9040c806716716d4c57808c91a2cf767b5a9a6428c77968ff50e066"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2711,
-  "headDigest": "4a072b3dc5ff7c982d1b035370bdee09b36469f318f3d73ecc2dc06c2af5d392",
+  "sequence": 2712,
+  "headDigest": "2bc8272c418f8a3fcea8c674f7d3063e4daa11ce7c6b97609645a71539ad4d4f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -133978,6 +133978,63 @@
       },
       "claimDigest": "e5d1580e400bca8c4e4f4bbb49d93274c904d7f4ddf3ff6180bdd8e6e505e738",
       "digest": "4a072b3dc5ff7c982d1b035370bdee09b36469f318f3d73ecc2dc06c2af5d392"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2712,
+      "parentDigest": "4a072b3dc5ff7c982d1b035370bdee09b36469f318f3d73ecc2dc06c2af5d392",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1f2444395c4b19745b4fcbd5cf428b0dd52677f3d531ecf323889e559417986d",
+      "idempotencyKey": "4c6b28f4289476998d058d9b8d4acbd3c15f6d1cc47849430798afd1b6a0b27a",
+      "requestDigest": "a921f1b59d9629a69f1fc7305fd9890128a90885a20ed722561da4e7f8bdec93",
+      "evaluationTime": "2026-08-13T03:48:54.000Z",
+      "claimCore": {
+        "claimId": "1f2444395c4b19745b4fcbd5cf428b0dd52677f3d531ecf323889e559417986d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:837482a15760833c6b8dd6cbdb7dc3ed4b2fa9930d25fd45fe8558404218b2e6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0e1504c1f62080ed675dd93f1bfbd3e03be705bcdf281868c6f647dc33e0f9a0",
+        "canonicalBaseRevision": "ce22d833230532d9dec96af5426ef33c3b9fc617",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-ci-failure-recovery-contract.test.mjs",
+          "path:__tests__/delivery-authorized-ci-failure-recovery-controller.test.mjs",
+          "path:__tests__/delivery-authorized-ci-failure-recovery-repository-adapter.test.mjs",
+          "path:docs/DELIVERY-AUTHORIZED-CI-FAILURE-RECOVERY.md",
+          "path:scripts/delivery-authorized-ci-failure-recovery-contract.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-controller.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-evidence.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-repository-adapter.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery.mjs",
+          "semantic:delivery-authorized-ci-failure-recovery"
+        ],
+        "writeSetDigest": "1c579d42c2fd2a2924637d9f5601f819625120d86247b320e64d51e9cd58b9c6",
+        "laneRevision": "ce22d833230532d9dec96af5426ef33c3b9fc617",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-13T05:17:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "ce22d833230532d9dec96af5426ef33c3b9fc617",
+          "reviewRequestId": null,
+          "bytesDigest": "46903ddd2597e717f6748a5409e58f7b86c6dacb9ba9a3a0f3879ade5baa44e1",
+          "namedChecksDigest": "d9bfd71a929d99072a6457c07bf2c3060df7163fe13b8f84d392a2d0337abe90",
+          "handoffEvidenceDigest": "04f8b7f25d41bef1f561397f9da00af783f977c892d8e6898d53636165af4b64",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-13T03:48:54.000Z"
+        }
+      },
+      "claimDigest": "f9ecb53045f7a3bd7450076810b50d8380493d0bce44e84ed943d61fe2eb2fe8",
+      "digest": "2bc8272c418f8a3fcea8c674f7d3063e4daa11ce7c6b97609645a71539ad4d4f"
     }
   ]
 }

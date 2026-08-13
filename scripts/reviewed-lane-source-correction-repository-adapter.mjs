@@ -552,7 +552,7 @@ function createRuntime(options, dependencies) {
   };
 }
 
-function sameSourceClaim(live, expected) {
+export function sameSourceClaim(live, expected) {
   const keys = ["claimId", "state", "recordedState", "actorId", "repositoryId", "workItemId",
     "canonicalBaseRevision", "laneRevision", "writeSetDigest", "leaseEpoch", "transitionCounter",
     "reviewRequestId", "fenceRevision", "transitionDigest", "operationReceiptDigest",
@@ -560,8 +560,8 @@ function sameSourceClaim(live, expected) {
   return keys.every(key => live?.[key] === expected[key])
     && JSON.stringify(normalizeWriteSet(live.declaredWriteScope))
       === JSON.stringify(expected.declaredWriteScope)
-    && digestValue(live.integration) === digestValue(expected.integration)
-    && digestValue(live.recovery) === digestValue(expected.recovery);
+    && digestValue(live.integration ?? null) === digestValue(expected.integration ?? null)
+    && digestValue(live.recovery ?? null) === digestValue(expected.recovery ?? null);
 }
 
 function text(value, label) {

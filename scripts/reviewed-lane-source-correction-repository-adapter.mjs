@@ -401,6 +401,7 @@ function createRuntime(options, dependencies) {
       expectedClaimId: plan.sourceClaimId,
       values: {
         status: "active",
+        fenceSha: plan.sourceHeadSha,
         reviewHeadSha: null,
         cloudAuthority: authority,
         heartbeatAt: new Date().toISOString(),
@@ -437,6 +438,7 @@ function createRuntime(options, dependencies) {
     const claim = await successor(plan, new Set(["active"]), cloudStatus);
     const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     if (lease.status !== "active" || lease.reviewHeadSha !== null
+      || lease.fenceSha !== plan.sourceHeadSha
       || lease.cloudAuthority.claimId !== claim?.claimId
       || lease.cloudAuthority.reviewRequestId !== plan.sourceReviewRequestId
       || claim?.reviewRequestId !== plan.sourceReviewRequestId
@@ -467,6 +469,7 @@ function createRuntime(options, dependencies) {
       return lease.status === "active"
         && claim
         && claim.reviewRequestId === plan.sourceReviewRequestId
+        && lease.fenceSha === plan.sourceHeadSha
         && lease.reviewHeadSha === null
         && lease.cloudAuthority?.claimId === claim.claimId
         && lease.cloudAuthority?.claimDigest === claim.fenceRevision
@@ -552,16 +555,25 @@ function createRuntime(options, dependencies) {
   };
 }
 
-function sameSourceClaim(live, expected) {
-  const keys = ["claimId", "state", "recordedState", "actorId", "repositoryId", "workItemId",
+export function sameSourceClaim(live, expected) {
+  const keys = ["claimId", "recordedState", "actorId", "repositoryId", "workItemId",
     "canonicalBaseRevision", "laneRevision", "writeSetDigest", "leaseEpoch", "transitionCounter",
     "reviewRequestId", "fenceRevision", "transitionDigest", "operationReceiptDigest",
     "integrationReceiptDigest", "writeAuthority", "scopeReserved", "deviceId", "sessionId"];
-  return keys.every(key => live?.[key] === expected[key])
+  return sameSourceClaimState(live, expected)
+    && keys.every(key => live?.[key] === expected[key])
     && JSON.stringify(normalizeWriteSet(live.declaredWriteScope))
       === JSON.stringify(expected.declaredWriteScope)
-    && digestValue(live.integration) === digestValue(expected.integration)
-    && digestValue(live.recovery) === digestValue(expected.recovery);
+    && digestValue(live.integration ?? null) === digestValue(expected.integration ?? null)
+    && digestValue(live.recovery ?? null) === digestValue(expected.recovery ?? null);
+}
+
+function sameSourceClaimState(live, expected) {
+  if (live?.state === expected.state) return true;
+  return expected.state === "integrated-preserved"
+    && live?.state === "dormant-preserved"
+    && expected.recordedState === "integrated-preserved"
+    && live.recordedState === "integrated-preserved";
 }
 
 function text(value, label) {

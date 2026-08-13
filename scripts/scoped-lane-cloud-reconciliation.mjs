@@ -11,6 +11,7 @@ import {
   normalizeClaimProvenance,
 } from "./scoped-lane-claim-provenance.mjs";
 import {
+  projectRootAuthorityState,
   projectRootState,
   rootStateForProjection,
 } from "./cloud-collaboration-state-projection.mjs";
@@ -196,10 +197,17 @@ export function normalizeCurrentClaimInventory({
   );
   const claims = inventoryResult.claims.map(source => {
     const provenance = normalizeClaimProvenance(source, "inventory claim");
+    const projectedAuthority = projectRootAuthorityState(requiredCurrentState(source.state));
+    if (
+      (source.writeAuthority !== undefined && source.writeAuthority !== projectedAuthority.writeAuthority)
+      || (source.scopeReserved !== undefined && source.scopeReserved !== projectedAuthority.scopeReserved)
+    ) {
+      throw new Error("Cloud inventory claim authority flags disagree with its canonical state projection.");
+    }
     const core = {
       claimId: requiredDigest(source.claimId, "inventory claimId"),
       ...provenance,
-      state: requiredCurrentState(source.state),
+      ...projectedAuthority,
       actorId: requiredText(source.actorId, "inventory actorId"),
       repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
       workItemId: requiredText(source.workItemId, "inventory workItemId"),
@@ -467,20 +475,9 @@ function requiredState(value) {
 }
 
 function requiredCurrentState(value) {
-  const state = requiredText(value, "inventory state").replaceAll("-", "_");
-  const projected = {
-    active: "active",
-    current: "active",
-    waiting_successor: "waiting-successor",
-    review_ready: "review_ready",
-    reviewed: "review_ready",
-    delivery_authorized: "delivery_authorized",
-    integrated_preserved: "delivery_authorized",
-    parked: "parked",
-    dormant_preserved: "parked",
-  }[state];
-  if (!projected) {
+  const state = projectRootAuthorityState(requiredText(value, "inventory state")).state;
+  if (!["active", "waiting-successor", "review_ready", "delivery_authorized", "parked"].includes(state)) {
     throw new Error(`Cloud inventory claim state ${state} is not current.`);
   }
-  return projected;
+  return state;
 }

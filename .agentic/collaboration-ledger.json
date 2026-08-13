@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2794,
-  "headDigest": "9ca2165f4ab7e09c24a70c9b9cd98f88566f402eab6401a02b45ed2cab43a319",
+  "sequence": 2795,
+  "headDigest": "c33c7fc7f84bf385b218f18bd1ac596c0400ba547124b5029b509539187a2b1a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -138100,6 +138100,67 @@
       },
       "claimDigest": "c3e2d7356618cbd309ddcb6814024b8e0c2e2bff3b84600189c43d26497c28c2",
       "digest": "9ca2165f4ab7e09c24a70c9b9cd98f88566f402eab6401a02b45ed2cab43a319"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2795,
+      "parentDigest": "9ca2165f4ab7e09c24a70c9b9cd98f88566f402eab6401a02b45ed2cab43a319",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7291d019f6309d301afd4ebf609f83b67f91bfb6d2d8994c77c14911cd7d3cd7",
+      "idempotencyKey": "4a46abcfe3f0586b6882c21f525db585187381f58ae3766afe3f82fdac46f66c",
+      "requestDigest": "d80facc9eadb9ab67f0e437aafd52b918b7b6aa20d61f97b29d110cf0abda57f",
+      "evaluationTime": "2026-08-13T10:16:22.000Z",
+      "claimCore": {
+        "claimId": "7291d019f6309d301afd4ebf609f83b67f91bfb6d2d8994c77c14911cd7d3cd7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4e8e27017cb3bab116b2ccc089e2ba00eeefdb8c245bc450db46cec46ab1c8e6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e4d6df045d8aa86c1fab8e0bc7b239aa6f3d1214879b0994ce80b0524dd4cf40",
+        "canonicalBaseRevision": "294c0bbf2bcd348cad80d60f2ccfb7116eb1fed7",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-ci-failure-recovery-contract.test.mjs",
+          "path:__tests__/delivery-authorized-ci-failure-recovery-controller.test.mjs",
+          "path:__tests__/delivery-authorized-ci-failure-recovery-repository-adapter.test.mjs",
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/writer-lease-registry-cas.test.mjs",
+          "path:docs/DELIVERY-AUTHORIZED-CI-FAILURE-RECOVERY.md",
+          "path:scripts/delivery-authorized-ci-failure-recovery-contract.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-controller.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-evidence.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-repository-adapter.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "path:scripts/writer-lease-registry-cas.mjs",
+          "semantic:delivery-authorized-ci-failure-recovery-v2"
+        ],
+        "writeSetDigest": "911d3d66122663a1d5e8e6f053c6869e85fa7419a9696f27d27c28b7367026cd",
+        "laneRevision": "6c9c18c9ee98168b66b1a0e7f7e8d6a9632b5d8d",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-13T07:46:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "2274c452bd7e40e4f8744df781c89ce231ca22f15529902abca70d7e2f19c5e0",
+        "eligibleSince": "2026-08-13T05:46:05.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "6c9c18c9ee98168b66b1a0e7f7e8d6a9632b5d8d",
+          "reviewRequestId": null,
+          "bytesDigest": "61b110e79b20e63048b7eb643f0dd793ba1a8f14172d8eae1ba85fd98083cdb2",
+          "namedChecksDigest": "3c51f52fbf805f49d1b8713380fbb656c1538ad0bc4b179d5b018937b0726799",
+          "handoffEvidenceDigest": "0b6a30ea98a0e8e6c783553f6bf5362d40211dbc23d83cd3d2aa83b9d13d11df",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-13T10:16:22.000Z"
+        }
+      },
+      "claimDigest": "cd99d0e638a8e2bf9d6e6870db59312b7b70040bb16487e873d6490af9063367",
+      "digest": "c33c7fc7f84bf385b218f18bd1ac596c0400ba547124b5029b509539187a2b1a"
     }
   ]
 }

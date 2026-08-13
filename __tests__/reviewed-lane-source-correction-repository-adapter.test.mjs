@@ -30,3 +30,16 @@ test("hydrated claims still reject material optional recovery drift", () => {
 
   assert.equal(sameSourceClaim(live, expected), false);
 });
+
+test("durable integrated intent accepts only its ordinary dormant expiry projection", () => {
+  const live = { ...expected, state: "dormant-preserved" };
+
+  assert.equal(sameSourceClaim(live, expected), true);
+  assert.equal(sameSourceClaim(expected, live), false);
+});
+
+test("durable integrated intent rejects material source-state drift", () => {
+  const live = { ...expected, state: "reviewed" };
+
+  assert.equal(sameSourceClaim(live, expected), false);
+});

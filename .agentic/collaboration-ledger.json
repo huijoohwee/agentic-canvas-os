@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2784,
-  "headDigest": "e663a741ba08d124a0375aca453171b9624e51e41f40b6e4dfba7c4de35077b0",
+  "sequence": 2785,
+  "headDigest": "99ec11ca984fc9ab02e5bd891884c07e1203622957455fe32ff5e281275fc6c7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -137612,6 +137612,63 @@
       },
       "claimDigest": "8f9f708a632ad729fd40865682c96a40b31d606d405678ccba24a1d0bd7232c3",
       "digest": "e663a741ba08d124a0375aca453171b9624e51e41f40b6e4dfba7c4de35077b0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2785,
+      "parentDigest": "e663a741ba08d124a0375aca453171b9624e51e41f40b6e4dfba7c4de35077b0",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2d0bcebd2552eadba93409a5b86e11f8511c6df4415d7f3ecbf8d75dedbb4795",
+      "idempotencyKey": "6814841e5d6556eb0b0d01472896021b4139930f0ec4ef646fa5b946780436c7",
+      "requestDigest": "5939eb3af7d05165abec447b901b2cfc610fd0cb5ebb282c82adfe6de4d14bfc",
+      "evaluationTime": "2026-08-13T09:22:07.000Z",
+      "claimCore": {
+        "claimId": "2d0bcebd2552eadba93409a5b86e11f8511c6df4415d7f3ecbf8d75dedbb4795",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:087f1047eae8d537f29e636fb40131e336cf33bed861b0ef9265ee96f58b5af1",
+        "canonicalBaseRevision": "097e39303cc65ebc3a1afe86dcd8cca0a07e0233",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-authored-commit-evacuation-cli.test.mjs",
+          "path:__tests__/canonical-authored-commit-evacuation-contract.test.mjs",
+          "path:__tests__/canonical-authored-commit-evacuation-controller.test.mjs",
+          "path:__tests__/canonical-authored-commit-evacuation-repository-adapter.test.mjs",
+          "path:docs/CANONICAL-AUTHORED-COMMIT-EVACUATION.md",
+          "path:scripts/canonical-authored-commit-evacuation-contract.mjs",
+          "path:scripts/canonical-authored-commit-evacuation-controller.mjs",
+          "path:scripts/canonical-authored-commit-evacuation-repository-adapter.mjs",
+          "path:scripts/canonical-authored-commit-evacuation.mjs",
+          "semantic:canonical-authored-commit-evacuation"
+        ],
+        "writeSetDigest": "fc462617808a03489accc2e99c2d39a5c491fd08c43ba4751ce08fd7b82ba0c8",
+        "laneRevision": "11773f9ffa047feb283cb8c2aaafcf7387730cb9",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-13T10:19:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-el03",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "11773f9ffa047feb283cb8c2aaafcf7387730cb9",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-el03",
+          "bytesDigest": "f44860111631445a0659aad0e809d2ba44c492a6bd15818beac2385c040cefc2",
+          "namedChecksDigest": "04a50d86575beff00c74a83c7e4c7129dff5e87f9f48b127a62b6844b6f1f29b",
+          "handoffEvidenceDigest": "b1d3064347a79f7e3ea10f249d837a4a9c60a0c1fc84abce5562072f96a27cc4",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-13T09:22:07.000Z"
+        }
+      },
+      "claimDigest": "5d8934ebbe971c24c1c313ca93589774772db1ac46c64e40f4b0eb5c58b409d8",
+      "digest": "99ec11ca984fc9ab02e5bd891884c07e1203622957455fe32ff5e281275fc6c7"
     }
   ]
 }

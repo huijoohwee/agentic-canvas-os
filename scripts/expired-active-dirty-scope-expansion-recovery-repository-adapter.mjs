@@ -23,7 +23,10 @@ const WRITER_MARKER = /<!--\s*agentic-writer-lease\/v2\s+\{.*?\}\s*-->/gsu;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u, SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const METHODS = Object.freeze(["withEntrypointFence", "readSourceEvidence", "readIntent", "writeIntent", "observeRecovery", "recoverCloud", "persistLocalAuthority", "persistPullRequestMarker"]);
 const IMPLEMENTATION_FILES = Object.freeze(["contract", "controller", "evidence", "repository-adapter", ""].map(suffix => `expired-active-dirty-scope-expansion-recovery${suffix ? `-${suffix}` : ""}.mjs`));
-const HYDRATED_OPTIONALS = Object.freeze(["recovery", "integration", "handoffEvidenceDigest", "promotedAt", "deliveryAuthorization", "retirement"]);
+const HYDRATED_OPTIONALS = Object.freeze([
+  "eligibleSince", "handoff", "release", "recovery", "integration",
+  "handoffEvidenceDigest", "promotedAt", "deliveryAuthorization", "retirement",
+]);
 export function createExpiredActiveDirtyScopeExpansionRecoveryAdapter(methods = {}) {
   const adapter = Object.freeze(Object.fromEntries(METHODS.map(name => [name, methods[name]])));
   for (const name of METHODS) if (typeof adapter[name] !== "function") throw new Error(`Expired active-dirty recovery adapter requires ${name}().`);

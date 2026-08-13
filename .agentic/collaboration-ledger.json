@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2682,
-  "headDigest": "fe795c75705fdbc1972d86e9c103417755fcdd5ed91b308547a7b57dd0b9d483",
+  "sequence": 2683,
+  "headDigest": "0a2e8595173a67811c7e6af02c9aa01d5e392dc3c4f84ab31e3a6e1fe33cfe0d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -132504,6 +132504,59 @@
       },
       "claimDigest": "6a054adf988d29b887b3f85ec028c9ee63f75e0aa12967efd0c6bf9b22a1f936",
       "digest": "fe795c75705fdbc1972d86e9c103417755fcdd5ed91b308547a7b57dd0b9d483"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2683,
+      "parentDigest": "fe795c75705fdbc1972d86e9c103417755fcdd5ed91b308547a7b57dd0b9d483",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "f73b88a9383b3d759a8c9b86c41eb04133a83bb97b450e9ec7188dfe3b6515a6",
+      "idempotencyKey": "379208211d40291c25f4b10df8228f6badbf9893f9cc6f440bb5016d21b309d5",
+      "requestDigest": "4b9c8f13609f1462a50d1109558d76b0c91feab4fd1a2f4bf75edf0d8308caa2",
+      "evaluationTime": "2026-08-13T02:14:16.000Z",
+      "claimCore": {
+        "claimId": "f73b88a9383b3d759a8c9b86c41eb04133a83bb97b450e9ec7188dfe3b6515a6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:9d0fed643f9b80c324c094c918fbc9d25983a5e37b4e5ae244fecf65f58d95c2",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:8209aca9d2a76f636d2cc076e3a733111934b86518abdb0407d83c79afd54ca3",
+        "canonicalBaseRevision": "8fd61f511b6449b35a24b4e63ccfb518e6dc9c02",
+        "declaredWriteScope": [
+          "path:.github/workflows/release.yml",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:docs/documents/knowgrph-cloudflare-document.md",
+          "path:docs/documents/knowgrph-cross-repo-publish-topology.md",
+          "path:docs/knowgrph-acos-deploy-runbook.md",
+          "path:package.json",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/__tests__/production-release-lifecycle.test.mjs",
+          "path:scripts/__tests__/seed-storage-documents-d1.test.mjs",
+          "path:scripts/lib/production-release-lifecycle-evidence.mjs",
+          "path:scripts/lib/seed-storage-documents-d1.mjs",
+          "path:scripts/production-release-lifecycle.mjs",
+          "path:scripts/seed-storage-docs-to-cloudflare.mjs",
+          "path:scripts/verify-production-release-transports.mjs",
+          "semantic:production-release-terminal-receipts-v2"
+        ],
+        "writeSetDigest": "7c29e74cb61d8407eb39035645051695e169992e15507191823061c85ba199c2",
+        "laneRevision": "41b8972e93b1933a47b194957f169da230245d0e",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 4,
+        "state": "current",
+        "expiresAt": "2026-08-13T02:44:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs7-WPob",
+        "predecessorClaimId": "36a81995f076e7240ffe0e3d77ed2f724e4c8af0a7b4df8a1fccff5c2415a5a2",
+        "eligibleSince": "2026-08-13T01:03:29.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-13T01:09:56.000Z"
+      },
+      "claimDigest": "857a4a2ba3e1ba317602b540aeb634c4d04b19ee98b17f0d9585ed60e07be51e",
+      "digest": "0a2e8595173a67811c7e6af02c9aa01d5e392dc3c4f84ab31e3a6e1fe33cfe0d"
     }
   ]
 }

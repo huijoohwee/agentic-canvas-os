@@ -553,15 +553,24 @@ function createRuntime(options, dependencies) {
 }
 
 export function sameSourceClaim(live, expected) {
-  const keys = ["claimId", "state", "recordedState", "actorId", "repositoryId", "workItemId",
+  const keys = ["claimId", "recordedState", "actorId", "repositoryId", "workItemId",
     "canonicalBaseRevision", "laneRevision", "writeSetDigest", "leaseEpoch", "transitionCounter",
     "reviewRequestId", "fenceRevision", "transitionDigest", "operationReceiptDigest",
     "integrationReceiptDigest", "writeAuthority", "scopeReserved", "deviceId", "sessionId"];
-  return keys.every(key => live?.[key] === expected[key])
+  return sameSourceClaimState(live, expected)
+    && keys.every(key => live?.[key] === expected[key])
     && JSON.stringify(normalizeWriteSet(live.declaredWriteScope))
       === JSON.stringify(expected.declaredWriteScope)
     && digestValue(live.integration ?? null) === digestValue(expected.integration ?? null)
     && digestValue(live.recovery ?? null) === digestValue(expected.recovery ?? null);
+}
+
+function sameSourceClaimState(live, expected) {
+  if (live?.state === expected.state) return true;
+  return expected.state === "integrated-preserved"
+    && live?.state === "dormant-preserved"
+    && expected.recordedState === "integrated-preserved"
+    && live.recordedState === "integrated-preserved";
 }
 
 function text(value, label) {

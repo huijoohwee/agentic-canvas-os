@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // Responsibility: Dispatch fenced device lifecycle commands and machine-readable results.
-
 import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
@@ -15,6 +14,7 @@ import {
   sanitizeScope, start,
 } from "./device-branch-lib.mjs";
 import { createDeviceCommandError, createDeviceCommandResult } from "./device-command-result.mjs";
+import { runProvisionedStartAdmissionRecoveryCli } from "./provisioned-start-admission-recovery.mjs";
 import { integrateSession } from "./device-integrate-lib.mjs";
 import { createPostMergeCloudAuthorityVerifier } from
   "./post-merge-cloud-authority-verifier.mjs";
@@ -49,13 +49,21 @@ import {
   createDeviceDormantPreservationAdmissionGate,
   createDeviceDormantPreservationPlannedContinuationGate,
 } from "./dormant-preservation-decision-repository-adapter.mjs";
-
 const [command, ...args] = process.argv.slice(2);
+if (command === "recover-start-admission") {
+  try {
+    console.log(JSON.stringify(runProvisionedStartAdmissionRecoveryCli(args)));
+    process.exit(0);
+  } catch (error) {
+    console.error(JSON.stringify({ schema: "agentic-provisioned-start-admission-recovery-command/v1", ok: false,
+      status: "error", error: { code: "provisioned_start_admission_recovery_failed", message: error.message } }));
+    process.exit(1);
+  }
+}
 const controllerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let workspaceGuardControllerRoot = controllerRoot;
 let scriptControllerRoot = controllerRoot;
 if (!command || !["start", "resume", "heartbeat", "review", "publish", "integrate", "park", "complete", "end"].includes(command)) usage();
-
 const json = args.includes("--json");
 const provisionRequested = args.includes("--provision");
 const autoDelivery = args.includes("--auto-delivery");
@@ -79,7 +87,6 @@ const {
   environment: childProcessEnvironment,
   json,
 });
-
 let repo = null;
 let canonicalRepo = null;
 let provision = null;
@@ -421,7 +428,6 @@ try {
   })));
   process.exitCode = 1;
 }
-
 function execute(action, context) {
   if (action === "start") return start(context);
   if (action === "resume") return resume({ ...context, branchName: rawScope });
@@ -452,7 +458,6 @@ function execute(action, context) {
   }
   return completeSession({ ...context, json: false });
 }
-
 function emitJson(action, context, result, { provisioned }) {
   if (action === "complete" || action === "end" || action === "integrate") {
     console.log(JSON.stringify(result));
@@ -481,7 +486,6 @@ function emitJson(action, context, result, { provisioned }) {
   if (action === "heartbeat") attachCloudHeartbeatMachineEvidence(response, { lease, result });
   console.log(JSON.stringify(response));
 }
-
 function readMachinePullRequestDraft({ action, branch, lease, ghText }) {
   const pullRequest = readOwnershipPullRequest({
     url: lease.pullRequestUrl,
@@ -496,7 +500,6 @@ function readMachinePullRequestDraft({ action, branch, lease, ghText }) {
   }
   return pullRequest.isDraft;
 }
-
 function resolveResultBranch(action, result) {
   if (action === "start") return result;
   if (action === "review" || action === "publish") return gitText(["branch", "--show-current"]).trim();

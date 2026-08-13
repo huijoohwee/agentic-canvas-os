@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2754,
-  "headDigest": "ee713ae7a5f4d3d68400eca9a2268239263adc17c8718ce83890c5e6491590e9",
+  "sequence": 2755,
+  "headDigest": "db17117bd1e3d7db0ef808925a0bc49eb3a6ac797643d0a13af6628f64d819a3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -136081,6 +136081,63 @@
       },
       "claimDigest": "788f33b3706ef07ba2fe184d3e95247148e9c86db3effeaa3ab1ab3edcb46158",
       "digest": "ee713ae7a5f4d3d68400eca9a2268239263adc17c8718ce83890c5e6491590e9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2755,
+      "parentDigest": "ee713ae7a5f4d3d68400eca9a2268239263adc17c8718ce83890c5e6491590e9",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2274c452bd7e40e4f8744df781c89ce231ca22f15529902abca70d7e2f19c5e0",
+      "idempotencyKey": "5b56d3c6a686d58a4dc5aa58f1759caa794fea7ccd9e835b5275819fb6f9deb5",
+      "requestDigest": "574dfe25195b5312d589c794e47426b8d426a890179bb566d303403c36e0b6dc",
+      "evaluationTime": "2026-08-13T05:46:28.000Z",
+      "claimCore": {
+        "claimId": "2274c452bd7e40e4f8744df781c89ce231ca22f15529902abca70d7e2f19c5e0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4e8e27017cb3bab116b2ccc089e2ba00eeefdb8c245bc450db46cec46ab1c8e6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e4d6df045d8aa86c1fab8e0bc7b239aa6f3d1214879b0994ce80b0524dd4cf40",
+        "canonicalBaseRevision": "2929efde55a5129813238bca25b289dfea48de49",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-ci-failure-recovery-contract.test.mjs",
+          "path:__tests__/delivery-authorized-ci-failure-recovery-controller.test.mjs",
+          "path:__tests__/delivery-authorized-ci-failure-recovery-repository-adapter.test.mjs",
+          "path:docs/DELIVERY-AUTHORIZED-CI-FAILURE-RECOVERY.md",
+          "path:scripts/delivery-authorized-ci-failure-recovery-contract.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-controller.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-evidence.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery-repository-adapter.mjs",
+          "path:scripts/delivery-authorized-ci-failure-recovery.mjs",
+          "semantic:delivery-authorized-ci-failure-recovery-v2"
+        ],
+        "writeSetDigest": "5a2f086f721f2270615543e88bb46dcd706fb5c6980b31db396e87f394358b8b",
+        "laneRevision": "6c9c18c9ee98168b66b1a0e7f7e8d6a9632b5d8d",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 3,
+        "state": "retired",
+        "expiresAt": "2026-08-13T07:24:28.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-ZmGR",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "6c9c18c9ee98168b66b1a0e7f7e8d6a9632b5d8d",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-ZmGR",
+          "bytesDigest": "f823e4b3fbc6870a8a21c3cf55c53ab11363e8f22257c8ab589d36b56ad0dd4e",
+          "namedChecksDigest": "3cb7ebfc63740783c0944ba861f401437392657798329d7d522ac12f0780bbc3",
+          "handoffEvidenceDigest": "4a53b1054d7606987c1657e807717915052587dbbe40149eae8965bd7d99849b",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-13T05:46:28.000Z"
+        }
+      },
+      "claimDigest": "03cda63931ad7de262160d66d001b858d9ba33a53b4a75988c668c1761ea8dcf",
+      "digest": "db17117bd1e3d7db0ef808925a0bc49eb3a6ac797643d0a13af6628f64d819a3"
     }
   ]
 }

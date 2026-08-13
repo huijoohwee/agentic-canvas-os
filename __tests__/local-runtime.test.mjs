@@ -178,6 +178,17 @@ test("service ownership binds listener group repository command and token", () =
     listenerEnvironment: `node_modules/.bin/vite AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`,
   };
   assert.equal(validateOwnedService({ service, processEvidence: evidence, token, tokenDigest, candidate: validCandidate() }), true);
+  assert.equal(validateOwnedService({
+    service,
+    processEvidence: { ...evidence, pid: 102 },
+    token,
+    tokenDigest,
+    candidate: validCandidate(),
+  }), true);
+  assert.throws(
+    () => validateOwnedService({ service, processEvidence: null, token, tokenDigest, candidate: validCandidate() }),
+    /process is unavailable/,
+  );
   assert.throws(
     () => validateOwnedService({ service, processEvidence: { ...evidence, gitCommonDir: "/workspace/other/.git" }, token, tokenDigest, candidate: validCandidate() }),
     /unrelated repository/,

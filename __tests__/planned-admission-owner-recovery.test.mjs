@@ -32,3 +32,12 @@ test('interrupted planned admission remains owner-led and mutation closed', () =
     assert.match(authorization, new RegExp(`"${forbiddenOperation}"`, 'u'))
   }
 })
+
+test('planning authority can be claimed per context without a shared monthly writer', () => {
+  const contract = readFileSync(path.resolve(repositoryRoot, 'docs/TODO.md'), 'utf8')
+
+  assert.match(contract, /schema: "todo-index\/v2"/u)
+  assert.match(contract, /context_record_pattern: "\.\.\/todo\/YYYY-MM\/<context>\.md"/u)
+  assert.match(contract, /legacy monthly shards are immutable/u)
+  assert.match(contract, /claim only its exact context record path/u)
+})

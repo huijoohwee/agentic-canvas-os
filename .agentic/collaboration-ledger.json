@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2783,
-  "headDigest": "df180b1cff91fbd94afb0aeb0d9309ae230c7d97ae76bf689553e3b80a8e0865",
+  "sequence": 2784,
+  "headDigest": "e663a741ba08d124a0375aca453171b9624e51e41f40b6e4dfba7c4de35077b0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -137565,6 +137565,53 @@
       },
       "claimDigest": "160092a9ddcbd1e4456a98f87174a8e495951b86ddeb83502757bda03a942f95",
       "digest": "df180b1cff91fbd94afb0aeb0d9309ae230c7d97ae76bf689553e3b80a8e0865"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2784,
+      "parentDigest": "df180b1cff91fbd94afb0aeb0d9309ae230c7d97ae76bf689553e3b80a8e0865",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2d0bcebd2552eadba93409a5b86e11f8511c6df4415d7f3ecbf8d75dedbb4795",
+      "idempotencyKey": "fc24c10ffaed07c572e3fbfadc8de14613f9b84b5f70b9369aae8583f5301084",
+      "requestDigest": "e34717c9906dede5a8f1566fc8134b0531a05b40284963109e7af634390789d8",
+      "evaluationTime": "2026-08-13T08:31:57.000Z",
+      "claimCore": {
+        "claimId": "2d0bcebd2552eadba93409a5b86e11f8511c6df4415d7f3ecbf8d75dedbb4795",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:087f1047eae8d537f29e636fb40131e336cf33bed861b0ef9265ee96f58b5af1",
+        "canonicalBaseRevision": "097e39303cc65ebc3a1afe86dcd8cca0a07e0233",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-authored-commit-evacuation-cli.test.mjs",
+          "path:__tests__/canonical-authored-commit-evacuation-contract.test.mjs",
+          "path:__tests__/canonical-authored-commit-evacuation-controller.test.mjs",
+          "path:__tests__/canonical-authored-commit-evacuation-repository-adapter.test.mjs",
+          "path:docs/CANONICAL-AUTHORED-COMMIT-EVACUATION.md",
+          "path:scripts/canonical-authored-commit-evacuation-contract.mjs",
+          "path:scripts/canonical-authored-commit-evacuation-controller.mjs",
+          "path:scripts/canonical-authored-commit-evacuation-repository-adapter.mjs",
+          "path:scripts/canonical-authored-commit-evacuation.mjs",
+          "semantic:canonical-authored-commit-evacuation"
+        ],
+        "writeSetDigest": "fc462617808a03489accc2e99c2d39a5c491fd08c43ba4751ce08fd7b82ba0c8",
+        "laneRevision": "11773f9ffa047feb283cb8c2aaafcf7387730cb9",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-13T10:19:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-el03",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "8f9f708a632ad729fd40865682c96a40b31d606d405678ccba24a1d0bd7232c3",
+      "digest": "e663a741ba08d124a0375aca453171b9624e51e41f40b6e4dfba7c4de35077b0"
     }
   ]
 }

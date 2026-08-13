@@ -88,7 +88,7 @@ export function createDeviceChildProcessPolicy({
       const argumentsList = [
         "commit",
         "--allow-empty",
-        ...(preserveOwnedDirt ? ["--only"] : []),
+        "--only",
         "-m",
         `chore(coordination): claim ${scope} lease ${epoch}`,
       ];

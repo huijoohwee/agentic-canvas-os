@@ -62,8 +62,10 @@ The start/resume adapter additionally joins that scope and epoch to the exact
 active local lease, session, branch, worktree, unset fence, and owned-dirt
 mode. A canonical-looking subject that does not match that live lease stays on
 the generic scrubbed path. For an ordinary claim, a scrubbed Git probe must
-also prove that the staged index is empty before the privileged commit starts;
-owned-dirt recovery instead uses Git's exact `--only` claim form.
+also prove that the staged index is empty before the privileged commit starts.
+Both claim modes use Git's exact `--only` form, so a concurrent staged-index
+change cannot enter the coordination commit; owned-dirt recovery relies on the
+same isolation while preserving its worktree bytes.
 
 Additional options, alternate executable paths, reordered arguments, invalid
 scope characters, non-positive epochs, suffixes, and whitespace changes remain

@@ -49,7 +49,7 @@ test("only exact coordination-claim commits receive the external locator", () =>
   ]);
   assert.equal(ordinary.calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
   assert.deepEqual(ordinary.calls[1].argumentsList, [
-    "commit", "--allow-empty", "-m", SUBJECT,
+    "commit", "--allow-empty", "--only", "-m", SUBJECT,
   ]);
   assert.equal(ordinary.calls[1].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
   assert.deepEqual(preserving.calls[0].argumentsList, [
@@ -58,6 +58,7 @@ test("only exact coordination-claim commits receive the external locator", () =>
   assert.equal(preserving.calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
   for (const call of [ordinary.calls[1], preserving.calls[0]]) {
     assert.equal(call.command, "git");
+    assert.equal(call.argumentsList.includes("--only"), true);
     assert.equal(call.argumentsList.includes("--no-verify"), false);
   }
 });

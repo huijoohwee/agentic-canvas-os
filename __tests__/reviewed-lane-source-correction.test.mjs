@@ -449,11 +449,22 @@ test("reviewed lease becomes active through an exact predecessor-fenced registry
   const projected = leaseStore.read(sourceLease.branch);
   assert.equal(result.kind, "complete");
   assert.equal(projected.status, "active");
+  assert.equal(projected.fenceSha, plan.sourceHeadSha);
   assert.equal(projected.reviewHeadSha, null);
   assert.equal(projected.cloudAuthority.claimId, successor.claimId);
   assert.equal(projected.cloudAuthority.reviewRequestId, plan.sourceReviewRequestId);
   assert.equal(cloudCalls.filter(item => item.action === "continue").length, 1);
   assert.equal(JSON.parse(readFileSync(statePath, "utf8")).revision, 13);
+
+  assert.equal((await adapter.reconcilePhase({
+    intent: {}, phase: "lease_activated", plan,
+  })).kind, "complete");
+  const drifted = JSON.parse(readFileSync(statePath, "utf8"));
+  drifted.leases[sourceLease.branch].fenceSha = hex("f", 40);
+  writeFileSync(statePath, JSON.stringify(drifted));
+  assert.deepEqual(await adapter.reconcilePhase({
+    intent: {}, phase: "lease_activated", plan,
+  }), pending());
 });
 
 test("integrated response-loss retirement uses and replays the exact integration receipt", async t => {

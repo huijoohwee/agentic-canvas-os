@@ -62,6 +62,11 @@ const continueAdmission = args.includes("--continue-admission");
 const rawScope = args.find((value) => !value.startsWith("--"));
 const sessionId = readOption(args, "session") || process.env.AGENTIC_SESSION_ID || "";
 if (sessionId) process.env.AGENTIC_SESSION_ID = sessionId;
+const taskAuthorityInput = readOption(args, "task-authority")
+  || process.env.AGENTIC_TASK_AUTHORITY_FILE || "";
+const taskAuthorityFile = taskAuthorityInput ? path.resolve(taskAuthorityInput) : "";
+// The capability locator is controller input, never ambient authority for child processes.
+delete process.env.AGENTIC_TASK_AUTHORITY_FILE;
 
 let repo = null;
 let canonicalRepo = null;
@@ -103,6 +108,7 @@ try {
   process.chdir(invocationPath);
   canonicalRepo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(canonicalRepo);
+  if (taskAuthorityFile) assertExternalTaskAuthorityFile(taskAuthorityFile, canonicalRepo);
   if (command === "start") {
     scriptControllerRoot = bindControllerHooksEnvironment(scriptControllerRoot);
     assertWorkspaceGuardsReady({
@@ -218,7 +224,19 @@ try {
   repo = gitText(["rev-parse", "--show-toplevel"]).trim();
   process.chdir(repo);
   const gitCommonDir = path.resolve(repo, gitText(["rev-parse", "--git-common-dir"]).trim());
-  const leaseStore = createWriterLeaseStore({ gitCommonDir });
+  const leaseStore = createWriterLeaseStore({
+    gitCommonDir,
+    taskAuthorityFile: taskAuthorityFile || null,
+    taskAuthorityPolicy: "required",
+  });
+  const attachedBranch = gitText(["branch", "--show-current"]).trim();
+  const authorityBranch = command === "resume" ? rawScope : attachedBranch;
+  if (authorityBranch && leaseStore.read(authorityBranch)) {
+    leaseStore.assertTaskAuthority({
+      branch: authorityBranch,
+      operation: `device:${command}`,
+    });
+  }
   const context = {
     scope: rawScope,
     invocationPath: activeInvocationPath,
@@ -524,6 +542,13 @@ function parseJsonObject(source, label) {
 function bindControllerHooksEnvironment(defaultControllerRoot) {
   return defaultControllerRoot;
 }
+function assertExternalTaskAuthorityFile(file, repository) {
+  const candidate = path.resolve(file);
+  const root = `${path.resolve(repository)}${path.sep}`;
+  if (candidate === path.resolve(repository) || candidate.startsWith(root)) {
+    throw new Error("Task authority capability must remain outside the repository.");
+  }
+}
 
 function gitText(args) {
   return execFileSync("git", args, textCommandOptions());
@@ -555,7 +580,7 @@ function runText(command, args, options = {}) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/device-branch.mjs start <scope> --session=<id> --repository=<path> [--auto-delivery] [--workspace-guard-controller=<clean-protected-main-controller>] [--provision --worktree=<absolute-new-path> --write-scope-manifest=<json> --cloud-authority=<json> --root-source-bootstrap=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --dormant-preservation-selection=<json> --dormant-preservation-evidence-digest=<sha256> --dormant-preservation-authorization=<exact-text> --dormant-preservation-state=<journal> --operator-decision-digest=<sha256>] [--ttl-seconds=<n>] [--json] | resume <agent/device/scope> --session=<id> --repository=<path> [--recover-owned-dirt] [--json] | heartbeat --session=<id> --repository=<path> [--continue-admission --write-scope-manifest=<json> --dormant-preservation=<registered-worktree> ... --dormant-preservation-pr=<number-or-url> ... --dormant-preservation-selection=<json> --dormant-preservation-evidence-digest=<sha256> --dormant-preservation-authorization=<exact-text> --dormant-preservation-state=<journal> --operator-decision-digest=<sha256>] [--repair-pr-projection] [--json] | review --session=<id> --repository=<path> [--json] | publish --session=<id> --repository=<path> [--json] | integrate --session=<id> --repository=<path> [--commit-message=<text> --paths-manifest=<json>] [--runtime=canonical|none] [--runtime-repository=<path>] [--wait-seconds=<n>] [--json] | park --session=<id> --repository=<path> [--json] | complete --repository=<path> --json | end --repository=<path> --json",
+    "Usage: node scripts/device-branch.mjs <lifecycle-command> --session=<id> --repository=<path> --task-authority=<external-capability.json> [command-specific options] [--json]",
   );
   process.exit(2);
 }

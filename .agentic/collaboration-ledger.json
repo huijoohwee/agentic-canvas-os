@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2748,
-  "headDigest": "442648bb8c8918df53ad2b6e0a4bbe93ce52c219711503a922a9d1b2e279f44d",
+  "sequence": 2749,
+  "headDigest": "55fbe29dc426fe2b6fb0bbce9880726c8bdc9d999eae4274ca12b7dc6130f384",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -135776,6 +135776,70 @@
       },
       "claimDigest": "a7876fa99e08312930d54e9c6b34cb921910a270e69ebbd078606525d11eca11",
       "digest": "442648bb8c8918df53ad2b6e0a4bbe93ce52c219711503a922a9d1b2e279f44d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2749,
+      "parentDigest": "442648bb8c8918df53ad2b6e0a4bbe93ce52c219711503a922a9d1b2e279f44d",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "56eb968a39cfeefe8259040a0b8daf252fad03058346608692e8d4e06a713b1a",
+      "idempotencyKey": "22a63cb635ee338f700112fcd6a84944678f8a2fb83d451dfcaf0ae72cb928b7",
+      "requestDigest": "5f05b941223ee49605d255eedb189e3366e68455c1a965ae40a5c34c6f4a3332",
+      "evaluationTime": "2026-08-13T05:30:04.000Z",
+      "claimCore": {
+        "claimId": "56eb968a39cfeefe8259040a0b8daf252fad03058346608692e8d4e06a713b1a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:6da86260868ab4e88c281e6c92de3617f31ad7d16fd7a1aecf6e5ea6659c012f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:90c82127fe1ed700b4db38b24a377e13c083b557b5074f85c06a8b16a452f745",
+        "canonicalBaseRevision": "4a17e0fb77a1beb0a35a881e262935464b12486c",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:__tests__/canvas-room.test.mjs",
+          "path:__tests__/collab-metrics.test.mjs",
+          "path:__tests__/fail-soft-fan-out.test.mjs",
+          "path:__tests__/programmatic-tool-calling.test.mjs",
+          "path:agent-api/src/programmatic-tool-calling.js",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/HARNESS-CONTRACTS.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MEMORY.md",
+          "path:docs/PROGRAMMATIC-TOOL-CALLING.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:src/collab-metrics.js",
+          "path:src/fail-soft-fan-out.js",
+          "path:worker/canvas-room.js",
+          "semantic:fail-soft-fan-out-recovery"
+        ],
+        "writeSetDigest": "382bbec4e8498a2597832c78eed1ae940ef790713f5087536ba08a5122f5595d",
+        "laneRevision": "5f996b1a533695c487d957105472fc7394d0c81c",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "retired",
+        "expiresAt": "2026-08-13T07:57:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-Z0DQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "5f996b1a533695c487d957105472fc7394d0c81c",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-Z0DQ",
+          "bytesDigest": "7b2d91602e8e018072845b54ad79b7ac772192b5389b82a46bdd8b3d59ffbc51",
+          "namedChecksDigest": "8a33e42c99e865feedd0ad4aa76bf987e7759ed9732b1174065531f796b55e10",
+          "handoffEvidenceDigest": "04058f0059aa928815b4c393278c333b02b208bcb5f01d5d65501604f9c5b249",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-13T05:30:04.000Z"
+        }
+      },
+      "claimDigest": "0ded3b50834b65f749847b6cee5094eedffd8b60d8c635dd13e8b7270f7b28c2",
+      "digest": "55fbe29dc426fe2b6fb0bbce9880726c8bdc9d999eae4274ca12b7dc6130f384"
     }
   ]
 }

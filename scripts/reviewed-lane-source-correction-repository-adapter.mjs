@@ -401,6 +401,7 @@ function createRuntime(options, dependencies) {
       expectedClaimId: plan.sourceClaimId,
       values: {
         status: "active",
+        fenceSha: plan.sourceHeadSha,
         reviewHeadSha: null,
         cloudAuthority: authority,
         heartbeatAt: new Date().toISOString(),
@@ -437,6 +438,7 @@ function createRuntime(options, dependencies) {
     const claim = await successor(plan, new Set(["active"]), cloudStatus);
     const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     if (lease.status !== "active" || lease.reviewHeadSha !== null
+      || lease.fenceSha !== plan.sourceHeadSha
       || lease.cloudAuthority.claimId !== claim?.claimId
       || lease.cloudAuthority.reviewRequestId !== plan.sourceReviewRequestId
       || claim?.reviewRequestId !== plan.sourceReviewRequestId
@@ -467,6 +469,7 @@ function createRuntime(options, dependencies) {
       return lease.status === "active"
         && claim
         && claim.reviewRequestId === plan.sourceReviewRequestId
+        && lease.fenceSha === plan.sourceHeadSha
         && lease.reviewHeadSha === null
         && lease.cloudAuthority?.claimId === claim.claimId
         && lease.cloudAuthority?.claimDigest === claim.fenceRevision

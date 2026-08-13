@@ -1,3 +1,17 @@
+---
+title: "Completed Source Correction Fence Recovery"
+graphId: "md:completed-source-correction-fence-recovery"
+doc_type: "Lifecycle Capability"
+date: "2026-08-13"
+lang: "en-US"
+schema: "agentic-completed-source-correction-fence-recovery-plan/v1"
+frontmatter_contract: "required"
+status: "source-ready"
+authority: "Exact completed source-correction fence projection"
+runtime_owner: "../scripts/completed-source-correction-fence-recovery.mjs; ../scripts/completed-source-correction-fence-recovery-controller.mjs; ../scripts/completed-source-correction-fence-recovery-repository-adapter.mjs"
+runtime_proof: "../__tests__/completed-source-correction-fence-recovery-contract.test.mjs; ../__tests__/completed-source-correction-fence-recovery-controller.test.mjs; ../__tests__/completed-source-correction-fence-recovery-repository-adapter.test.mjs"
+---
+
 # Completed source-correction fence recovery
 
 This controller repairs one narrow projection gap after a reviewed-lane source correction has already completed: the durable completion names the corrected remote source head, but a later task-authority migration left the local writer lease fenced at the older coordination commit.

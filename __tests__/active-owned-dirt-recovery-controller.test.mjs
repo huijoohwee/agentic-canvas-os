@@ -46,6 +46,12 @@ test("CLI redacts paths and GitHub tokens and suppresses child-process diagnosti
   assert.equal(JSON.parse(subprocess.stdout).error, "Recovery subprocess failed.");
 });
 
+test("CLI exposes the external task-authority continuation input", () => {
+  const source = spawnSync(process.execPath, [CLI, "invalid"], { encoding: "utf8" });
+  assert.notEqual(source.status, 0);
+  assert.match(source.stderr, /--task-authority=<absolute-capability\.json>/u);
+});
+
 test("repository adapter rejects a branch attached to more than one worktree record", () => {
   const root = process.cwd();
   const branch = "agent/device/recovery";

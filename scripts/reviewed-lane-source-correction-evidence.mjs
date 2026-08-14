@@ -10,7 +10,7 @@ import {
 } from "./writer-lease-lib.mjs";
 
 export const SOURCE_EVIDENCE_SCHEMA =
-  "agentic-reviewed-lane-source-correction-evidence/v1";
+  "agentic-reviewed-lane-source-correction-evidence/v2";
 
 const DIGEST = /^[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
@@ -125,6 +125,8 @@ function authority(value) {
     targetRepository: text(value?.targetRepository, "target repository"),
     claimId: digest(value?.claimId, "claim ID"),
     claimDigest: digest(value?.claimDigest, "claim digest"),
+    claimLedgerRevision: digest(value?.claimLedgerRevision, "claim ledger revision"),
+    operationReceiptDigest: digest(value?.operationReceiptDigest, "authority operation receipt"),
     canonicalBaseSha: sha(value?.canonicalBaseSha, "authority base"),
     laneRevision: sha(value?.laneRevision, "authority lane revision"),
     writeSetDigest: digest(value?.writeSetDigest, "authority write set"),
@@ -141,8 +143,12 @@ function authority(value) {
 function claim(value) {
   const result = {
     claimId: digest(value?.claimId, "claim ID"),
-    state: ["reviewed", "dormant-preserved"].includes(value?.state)
+    state: ["reviewed", "integrated-preserved", "dormant-preserved"].includes(value?.state)
       ? value.state : invalid("claim state"),
+    recordedState: ["reviewed", "integrated-preserved"].includes(value?.recordedState)
+      ? value.recordedState : invalid("claim recorded state"),
+    writeAuthority: value?.writeAuthority === false ? false : invalid("claim write authority"),
+    scopeReserved: value?.scopeReserved === true ? true : invalid("claim scope reservation"),
     actorId: text(value?.actorId, "claim actor"),
     repositoryId: text(value?.repositoryId, "claim repository"),
     workItemId: text(value?.workItemId, "claim work item"),
@@ -155,10 +161,52 @@ function claim(value) {
     reviewRequestId: text(value?.reviewRequestId, "claim review request"),
     fenceRevision: digest(value?.fenceRevision, "claim fence"),
     transitionDigest: digest(value?.transitionDigest, "claim transition digest"),
+    operationReceiptDigest: digest(value?.operationReceiptDigest, "claim operation receipt"),
+    integrationReceiptDigest: optionalDigest(value?.integrationReceiptDigest,
+      "claim integration receipt"),
+    integration: integration(value?.integration),
+    recovery: recovery(value?.recovery),
     deviceId: text(value?.deviceId, "claim device"),
     sessionId: text(value?.sessionId, "claim session"),
   };
+  const integrated = result.recordedState === "integrated-preserved";
+  if (integrated !== Boolean(result.integration)
+    || integrated !== Boolean(result.integrationReceiptDigest)
+    || (integrated && (!["integrated-preserved", "dormant-preserved"].includes(result.state)
+      || (result.recovery
+        ? result.operationReceiptDigest === result.integrationReceiptDigest
+        : result.operationReceiptDigest !== result.integrationReceiptDigest)))
+    || (!integrated && !["reviewed", "dormant-preserved"].includes(result.state))) {
+    invalid("claim lifecycle");
+  }
   return freeze({ ...result, recordDigest: digestValue(result) });
+}
+
+function recovery(value) {
+  if (value === null || value === undefined) return null;
+  const result = {
+    evidenceDigest: digest(value?.evidenceDigest, "recovery evidence"),
+    recoveredAt: instant(value?.recoveredAt, "recovery instant"),
+  };
+  exactKeys(value, Object.keys(result), "claim recovery");
+  return freeze(result);
+}
+
+function integration(value) {
+  if (value === null) return null;
+  const result = {
+    candidateRevision: sha(value?.candidateRevision, "integration candidate"),
+    reviewRequestId: text(value?.reviewRequestId, "integration review request"),
+    focusedEvidenceDigest: digest(value?.focusedEvidenceDigest, "integration focused evidence"),
+    dependencyClosureDigest: digest(value?.dependencyClosureDigest, "integration dependency closure"),
+    namedChecksDigest: digest(value?.namedChecksDigest, "integration named checks"),
+    handoffEvidenceDigest: digest(value?.handoffEvidenceDigest, "integration handoff evidence"),
+    operatorDecisionDigest: digest(value?.operatorDecisionDigest, "integration operator decision"),
+    integrationIntentDigest: digest(value?.integrationIntentDigest, "integration intent"),
+    integratedAt: instant(value?.integratedAt, "integration instant"),
+  };
+  exactKeys(value, Object.keys(result), "claim integration");
+  return freeze(result);
 }
 
 function pullRequest(value) {
@@ -197,9 +245,10 @@ function protectedAdvance(value) {
     : invalid("protected changed scope");
   if (changedWriteScope.length > 256) invalid("protected changed scope bound");
   const core = {
-    schema: value?.schema === "agentic-reviewed-lane-protected-advance/v1"
+    schema: value?.schema === "agentic-reviewed-lane-protected-advance/v2"
       ? value.schema : invalid("protected advance schema"),
     sourceBaseSha: sha(value?.sourceBaseSha, "protected source base"),
+    pullRequestBaseSha: sha(value?.pullRequestBaseSha, "pull-request protected base"),
     currentBaseSha: sha(value?.currentBaseSha, "protected current base"),
     changedWriteScope,
     changedWriteScopeDigest: digest(value?.changedWriteScopeDigest, "protected scope digest"),
@@ -273,6 +322,25 @@ function assertJoined(source) {
     pullRequest: pull, protectedAdvance: advance } = source;
   const reviewRequestId = `github-pull-request:${pull.nodeId}`;
   const marker = pull.writerMarker;
+  const integratedReplay = record.recordedState === "integrated-preserved";
+  const integratedAdvance = record.recovery ? 2 : 1;
+  const claimAuthorityJoined = integratedReplay
+    ? ["integrated-preserved", "dormant-preserved"].includes(record.state)
+      && record.transitionCounter === cloud.transitionCounter + integratedAdvance
+      && record.fenceRevision !== cloud.claimDigest
+      && record.transitionDigest !== cloud.claimLedgerRevision
+      && record.operationReceiptDigest !== cloud.operationReceiptDigest
+      && (record.recovery
+        ? record.integrationReceiptDigest !== record.operationReceiptDigest
+        : record.integrationReceiptDigest === record.operationReceiptDigest)
+      && record.integration?.candidateRevision === source.localHeadSha
+      && record.integration?.reviewRequestId === reviewRequestId
+      && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest
+    : record.recordedState === "reviewed"
+      && cloud.claimDigest === record.fenceRevision
+      && cloud.claimLedgerRevision === record.transitionDigest
+      && cloud.operationReceiptDigest === record.operationReceiptDigest
+      && cloud.transitionCounter === record.transitionCounter;
   if (
     source.localHeadSha !== source.remoteHeadSha
     || source.localHeadSha !== writer.reviewHeadSha
@@ -282,7 +350,7 @@ function assertJoined(source) {
     || writer.baseSha !== cloud.canonicalBaseSha
     || writer.baseSha !== record.canonicalBaseRevision
     || writer.baseSha !== advance.sourceBaseSha
-    || pull.baseSha !== advance.currentBaseSha
+    || pull.baseSha !== advance.pullRequestBaseSha
     || (advance.changedWriteScope.length > 0
       && writeSetsOverlap(advance.changedWriteScope, writer.admission.declaredWriteSet))
     || writer.branch !== pull.headBranch
@@ -295,9 +363,10 @@ function assertJoined(source) {
     || pull.authorLogin !== owner.login
     || cloud.targetRepository !== repo.fullName
     || cloud.claimId !== record.claimId
-    || cloud.claimDigest !== record.fenceRevision
     || cloud.leaseEpoch !== record.leaseEpoch
-    || cloud.transitionCounter !== record.transitionCounter
+    || record.writeAuthority !== false
+    || record.scopeReserved !== true
+    || !claimAuthorityJoined
     || cloud.reviewRequestId !== reviewRequestId
     || record.reviewRequestId !== reviewRequestId
     || cloud.writeSetDigest !== writer.admission.writeSetDigest
@@ -347,6 +416,13 @@ function sha(value, label) {
 }
 function digest(value, label) {
   if (typeof value !== "string" || !DIGEST.test(value)) invalid(label);
+  return value;
+}
+function optionalDigest(value, label) {
+  return value === null ? null : digest(value, label);
+}
+function instant(value, label) {
+  if (typeof value !== "string" || new Date(value).toISOString() !== value) invalid(label);
   return value;
 }
 function freeze(value) {

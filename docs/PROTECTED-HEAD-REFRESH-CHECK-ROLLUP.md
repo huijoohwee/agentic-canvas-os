@@ -57,6 +57,13 @@ exact projected check-run IDs plus the still-pending cloud gate to be visible.
 The cloud gate remains the last success mutation. Interrupted execution is
 idempotent: exact projections are reused; drift is rejected.
 
+The same serialized controller call may observe GitHub merge the candidate and
+remove the just-completed gate before its next pull-request read. That call may
+carry its already-normalized terminal completion receipt into merged replay and
+accept an absent live gate only when the receipt retains the exact operation
+external ID and sole check-run ID. No later process can synthesize this receipt;
+ordinary replay without it still requires explicit absent-merged recovery.
+
 If GitHub merges the exact re-authorized candidate while that sole owned gate
 is still pending, merged replay may complete only that existing check. It first
 reproves the deterministic candidate and refresh chain, exact target base,

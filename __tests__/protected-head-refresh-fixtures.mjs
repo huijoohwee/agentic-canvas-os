@@ -306,17 +306,19 @@ export function createControllerHarness(options = {}) {
           externalId: `agentic-protected-head-refresh:${projection.operation_id}`,
         };
       }
+      const receipt = {
+        status: "complete",
+        checkRunIds: state.cloudCheckRunIds,
+        externalId: `agentic-protected-head-refresh:${projection.operation_id}`,
+      };
       state.cloudStatus = "complete";
       if (options.disableAfterCompletion) {
         state.autoMergeMethod = null;
         state.autoMergeAuthorization = null;
       }
       if (options.mergeAfterCompletion) state.merged = true;
-      return {
-        status: "complete",
-        checkRunIds: state.cloudCheckRunIds,
-        externalId: `agentic-protected-head-refresh:${projection.operation_id}`,
-      };
+      if (options.dropCloudAfterCompletion) state.cloudStatus = "absent";
+      return receipt;
     },
     verifyMergedCommit: value => {
       events.push("merged");

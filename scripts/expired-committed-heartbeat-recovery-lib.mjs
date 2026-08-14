@@ -6,10 +6,9 @@ import {
   requireSession,
 } from "./device-branch-ownership-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
-import {
-  heartbeatAdmissionCloudAuthority,
-  verifyAdmissionCloudAuthority,
-} from "./scoped-lane-cloud-authority.mjs";
+import { continueExpiredCommittedHeartbeatCloudAuthority, expiredCommittedCloudRecoveryEvidenceDigest, preserveSourceManifestProjection }
+  from "./expired-committed-heartbeat-cloud-authority.mjs";
+import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import {
   captureCommittedDescendantEvidence,
   captureExpiredCommittedHeartbeatSnapshot,
@@ -41,17 +40,9 @@ import {
 } from "./writer-lease-lib.mjs";
 
 export const EXPIRED_COMMITTED_HEARTBEAT_RESULT_SCHEMA = "agentic-expired-committed-heartbeat-result/v1";
-export {
-  assertPullRequestBodyWithinGitHubLimit,
-  GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
-  reconcileHeartbeatManifestProjection,
-};
-
-export {
-  captureExpiredCommittedHeartbeatSnapshot,
-  requireChangedPathsWithinScope,
-};
-
+export { assertPullRequestBodyWithinGitHubLimit, GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
+  reconcileHeartbeatManifestProjection };
+export { captureExpiredCommittedHeartbeatSnapshot, requireChangedPathsWithinScope };
 export function recoverExpiredCommittedHeartbeat({
   invocationPath,
   repo,
@@ -61,7 +52,7 @@ export function recoverExpiredCommittedHeartbeat({
   leaseStore,
   sessionId,
   leaseTtlMs,
-  heartbeatCloudAuthority = heartbeatAdmissionCloudAuthority,
+  heartbeatCloudAuthority = continueExpiredCommittedHeartbeatCloudAuthority,
   verifyActiveCloudAuthority = verifyAdmissionCloudAuthority,
   assertMutationAuthority = assertAdmissionMutationAuthority,
   run,
@@ -109,21 +100,30 @@ export function recoverExpiredCommittedHeartbeat({
 
   const heartbeat = heartbeatCloudAuthority({
     authority: before.lease.cloudAuthority,
+    manifest: { manifestDigest: before.lease.admission.manifestDigest,
+      declaredWriteSet: before.lease.admission.declaredWriteSet,
+      writeSetDigest: before.lease.admission.writeSetDigest },
+    recoveryEvidenceDigest: expiredCommittedCloudRecoveryEvidenceDigest({
+      snapshotDigest: before.snapshotDigest,
+      recoveryEvidence: before.recoveryEvidence,
+    }),
     deviceId: before.lease.device,
     sessionId,
     ttlSeconds: Math.floor(leaseTtlMs / 1000),
   });
-  const renewedAuthority = reconcileHeartbeatManifestProjection({
-    source: before.lease.cloudAuthority,
+  const renewedProjection = reconcileHeartbeatManifestProjection({
     renewed: heartbeat?.authority,
     admittedManifestDigest: before.lease.admission.manifestDigest,
   });
   assertSameCloudSubject({
     source: before.lease.cloudAuthority,
-    renewed: renewedAuthority,
+    renewed: renewedProjection,
     lease: before.lease,
     now: now(),
   });
+  const renewedAuthority = preserveSourceManifestProjection(
+    before.lease.cloudAuthority, renewedProjection,
+  );
 
   const afterCloud = captureExpiredCommittedHeartbeatSnapshot({
     repo,

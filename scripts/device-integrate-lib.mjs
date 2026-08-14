@@ -22,7 +22,7 @@ import {
   normalizeBoundAuthority,
   projectRootState,
 } from "./scoped-lane-cloud-reconciliation.mjs";
-import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
+import { assertActivePublishPathsAdmitted } from "./active-publish-write-scope.mjs";
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
 import {
   appendProtectedMainRefresh,
@@ -1189,14 +1189,13 @@ function refreshActivePublishSuccessor({
   const paths = splitNul(gitText([
     "diff", "--name-only", "-z", `${subject.canonicalBaseSha}..${headSha}`, "--",
   ]));
-  const manifest = normalizeDeclaredWriteScopeManifest({
-    schema: "agentic-declared-write-scope/v1", semanticScope: lease.scope, paths,
-  }, { expectedScope: lease.scope });
-  if (manifest.manifestDigest !== admission.manifestDigest ||
-      manifest.writeSetDigest !== admission.writeSetDigest ||
-      JSON.stringify(manifest.declaredWriteSet) !== JSON.stringify(admission.declaredWriteSet)) {
-    throw new Error("Active publish successor paths changed from the admitted write-set evidence.");
-  }
+  assertActivePublishPathsAdmitted({ paths, admission });
+  const manifest = Object.freeze({
+    semanticScope: admission.semanticScope,
+    declaredWriteSet: admission.declaredWriteSet,
+    writeSetDigest: admission.writeSetDigest,
+    manifestDigest: admission.manifestDigest,
+  });
   requireActivePublishBaseAncestor({
     gitText,
     canonicalBaseSha: subject.canonicalBaseSha,

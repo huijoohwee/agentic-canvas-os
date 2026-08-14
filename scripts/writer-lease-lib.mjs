@@ -11,6 +11,13 @@ import {
   normalizeProtectedMainSharedAncestorPathEquivalenceEvidence,
   RECOVERY_PATH_EVIDENCE_MAX_PATHS,
 } from "./protected-main-path-equivalence-lib.mjs";
+import {
+  assertTaskAuthorityTransition,
+  authorizeTaskBoundLeaseMutation,
+  createTaskAuthorityLeaseBinding,
+} from "./task-bound-lane-authority-store.mjs";
+import { normalizeTaskAuthorityBinding }
+  from "./task-bound-lane-authority-contract.mjs";
 
 export const WRITER_LEASE_SCHEMA = "agentic-writer-lease/v2";
 export const WRITER_LEASE_REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2";
@@ -115,7 +122,15 @@ export function assertNoCompetingScopePullRequests(pulls, activeBranch) {
   return owner || null;
 }
 
-export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() }) {
+export function createWriterLeaseStore({
+  gitCommonDir,
+  now = () => new Date(),
+  taskAuthorityFile = process.env.AGENTIC_TASK_AUTHORITY_FILE || null,
+  taskAuthorityPolicy = "projected",
+}) {
+  if (!["projected", "required"].includes(taskAuthorityPolicy)) {
+    throw new Error("Writer lease task authority policy is invalid.");
+  }
   const commonRoot = path.resolve(gitCommonDir);
   requireRealDirectory(commonRoot, "Git common directory");
   const root = path.resolve(commonRoot, "agentic-canvas-os");
@@ -211,10 +226,13 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         }
         return current;
       }
+      if (current && taskAuthorityPolicy === "required" && !current.taskAuthority) {
+        throw new Error("Existing writer lease requires explicit task-bound authority migration.");
+      }
       const timestamp = instant.toISOString();
       const maximumEpoch = Object.values(registry.leases)
         .reduce((highest, lease) => Math.max(highest, Number(lease?.epoch || 0)), 0);
-      const lease = {
+      const leaseCore = {
         schema: WRITER_LEASE_SCHEMA,
         status: "active",
         epoch: Math.max(maximumEpoch, Number(previousEpoch || 0)) + 1,
@@ -238,6 +256,19 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
         heartbeatAt: timestamp,
         expiresAt: boundedExpiry({ instant, ttlMs, expiresAtCap }),
       };
+      if (taskAuthorityPolicy === "required" && !taskAuthorityFile) {
+        throw new Error("A task authority capability file is required for a new writer lease.");
+      }
+      const lease = taskAuthorityFile ? {
+        ...leaseCore,
+        taskAuthority: createTaskAuthorityLeaseBinding({
+          lease: leaseCore,
+          capabilityPath: taskAuthorityFile,
+          bindingMode: current?.taskAuthority ? "continuation" : "claim",
+          boundAt: timestamp,
+          priorBindingDigest: current?.taskAuthority?.bindingDigest || null,
+        }),
+      } : leaseCore;
       writeRegistry({
         ...registry,
         revision: Number(registry.revision || 0) + 1,
@@ -261,7 +292,79 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     if (!allowExpired && !isActive(lease, now())) {
       throw new Error(`Writer lease expired at ${lease.expiresAt}; renew or hand off before mutation.`);
     }
+    requireProjectedTaskAuthority({ lease, operation: "writer-lease-verify" });
     return lease;
+  }
+
+  function assertTaskAuthority({ branch, operation }) {
+    if (!branch) throw new Error("Task authority verification requires a branch.");
+    const lease = read(branch);
+    if (!lease) throw new Error(`No writer lease owns ${branch}.`);
+    requireProjectedTaskAuthority({ lease, operation });
+    return lease;
+  }
+
+  function bindTaskAuthority({
+    sessionId,
+    branch,
+    targetCapabilityFile,
+    planDigest,
+    boundAt,
+  }) {
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (!current || current.status !== "active" || current.sessionId !== sessionId) {
+        throw new Error("Task authority migration requires its exact active writer lease.");
+      }
+      if (current.taskAuthority) throw new Error("Writer lease already has task-bound authority.");
+      const taskAuthority = assertTaskAuthorityTransition({
+        operation: "migration",
+        lease: current,
+        targetCapabilityPath: targetCapabilityFile,
+        planDigest,
+        boundAt,
+      });
+      const lease = { ...current, taskAuthority };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      }, { transitionBranch: branch, transitionKind: "migration" });
+      return lease;
+    });
+  }
+
+  function handoffTaskAuthority({
+    sessionId,
+    branch,
+    sourceCapabilityFile,
+    targetCapabilityFile,
+    planDigest,
+    boundAt,
+  }) {
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (!current || current.status !== "active" || current.sessionId !== sessionId) {
+        throw new Error("Task authority handoff requires its exact active writer lease.");
+      }
+      const taskAuthority = assertTaskAuthorityTransition({
+        operation: "handoff",
+        lease: current,
+        sourceCapabilityPath: sourceCapabilityFile,
+        targetCapabilityPath: targetCapabilityFile,
+        planDigest,
+        boundAt,
+      });
+      const lease = { ...current, taskAuthority };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      }, { transitionBranch: branch, transitionKind: "handoff" });
+      return lease;
+    });
   }
 
   function heartbeat({
@@ -578,7 +681,7 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     });
   }
 
-  function writeRegistry(value) {
+  function writeRegistry(value, { transitionBranch = null, transitionKind = null } = {}) {
     if (value?.schema !== WRITER_LEASE_REGISTRY_SCHEMA || !value.leases
       || !validRegistryRevision(value.revision)
       || typeof value.leases !== "object" || Array.isArray(value.leases)
@@ -586,6 +689,12 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
       throw new Error("Writer lease registry mutation would exceed its safe revision or epoch bounds.");
     }
     const persisted = readRegistry();
+    authorizeChangedTaskAuthorities({
+      persisted,
+      candidate: value,
+      transitionBranch,
+      transitionKind,
+    });
     for (const [branch, candidate] of Object.entries(persisted.leases)) {
       if (candidate.epoch !== undefined) continue;
       if (!Object.hasOwn(value.leases, branch)
@@ -628,11 +737,87 @@ export function createWriterLeaseStore({ gitCommonDir, now = () => new Date() })
     return withLock(() => action(readRegistry()));
   }
 
-  return { annotate, beginCompletion, claim, complete, heartbeat, read,
+  return { annotate, assertTaskAuthority, beginCompletion, bindTaskAuthority, claim, complete,
+    handoffTaskAuthority, heartbeat, read,
     recoverExpiredCommittedHeartbeat,
     recoverMergedPullRequestCompletion,
     recoverFromPullRequestMarker,
     readRegistry, release, rollbackClaim, statePath, verify, withRegistryLock };
+
+  function authorizeChangedTaskAuthorities({
+    persisted,
+    candidate,
+    transitionBranch,
+    transitionKind,
+  }) {
+    const branches = new Set([
+      ...Object.keys(persisted.leases),
+      ...Object.keys(candidate.leases),
+    ]);
+    for (const branch of branches) {
+      const previous = persisted.leases[branch] || null;
+      const next = candidate.leases[branch] || null;
+      if (digestValue(previous) === digestValue(next)) continue;
+      if (branch === transitionBranch && transitionKind) {
+        if (!next?.taskAuthority) throw new Error("Task authority transition lost its binding.");
+        continue;
+      }
+      const authorityLease = previous?.taskAuthority ? previous : next;
+      if (!authorityLease?.taskAuthority) {
+        if (taskAuthorityPolicy === "required") {
+          throw new Error("Writer lease mutation requires explicit task-bound authority migration.");
+        }
+        continue;
+      }
+      if (
+        previous?.taskAuthority
+        && next?.taskAuthority
+        && previous.taskAuthority.bindingDigest !== next.taskAuthority.bindingDigest
+      ) {
+        if (!isTaskAuthorityContinuation(previous.taskAuthority, next.taskAuthority)) {
+          throw new Error("Ordinary writer lease mutation cannot replace task authority.");
+        }
+        authorizeTaskBoundLeaseMutation({
+          lease: previous,
+          capabilityPath: taskAuthorityFile,
+          operation: "writer-lease-successor-claim",
+          now: now(),
+        });
+        continue;
+      }
+      authorizeTaskBoundLeaseMutation({
+        lease: authorityLease,
+        capabilityPath: taskAuthorityFile,
+        operation: "writer-lease-registry-mutation",
+        now: now(),
+      });
+    }
+  }
+
+  function requireProjectedTaskAuthority({ lease, operation }) {
+    if (!lease.taskAuthority && taskAuthorityPolicy !== "required") return;
+    if (!lease.taskAuthority) {
+      throw new Error("Writer lease requires explicit task-bound authority migration.");
+    }
+    authorizeTaskBoundLeaseMutation({
+      lease,
+      capabilityPath: taskAuthorityFile,
+      operation,
+      now: now(),
+    });
+  }
+
+  function isTaskAuthorityContinuation(previousValue, nextValue) {
+    const previous = normalizeTaskAuthorityBinding(previousValue);
+    const next = normalizeTaskAuthorityBinding(nextValue);
+    return next.bindingMode === "continuation"
+      && next.priorBindingDigest === previous.bindingDigest
+      && next.authoritySubjectId === previous.authoritySubjectId
+      && next.proofAdapterId === previous.proofAdapterId
+      && next.generation === previous.generation
+      && next.publicKey === previous.publicKey
+      && next.publicKeyDigest === previous.publicKeyDigest;
+  }
 }
 
 function requireRealDirectory(candidate, label) {
@@ -784,6 +969,9 @@ export function projectWriterLeasePullRequestMarker(lease) {
       admission: lease.admission,
       cloudAuthority: lease.cloudAuthority,
     } : {}),
+    ...(lease.taskAuthority ? {
+      taskAuthority: normalizeTaskAuthorityBinding(lease.taskAuthority),
+    } : {}),
     ...(lease.parkHeadSha ? {
       parkHeadSha: lease.parkHeadSha,
       parkBranchHeadSha: lease.parkBranchHeadSha,
@@ -832,6 +1020,12 @@ export function parseWriterLeasePullRequestBody(body) {
     baseSha: value.baseSha,
     strict: false,
   })) return null;
+  let taskAuthority;
+  try {
+    taskAuthority = normalizeTaskAuthorityBinding(value.taskAuthority);
+  } catch {
+    return null;
+  }
   if (value.pullRequestProjectionRepair !== undefined && (
     value.pullRequestProjectionRepair?.schema !== "agentic-pull-request-projection-repair/v1" ||
     !["repairing", "completed"].includes(value.pullRequestProjectionRepair?.status)
@@ -852,6 +1046,7 @@ export function parseWriterLeasePullRequestBody(body) {
   }
   return {
     ...value,
+    ...(taskAuthority ? { taskAuthority } : {}),
     ...(ownedDirtRecovery ? { ownedDirtRecovery } : {}),
     ...(activeOwnedDirtRecovery ? { activeOwnedDirtRecovery } : {}),
     ...(expiredCommittedHeartbeatRecovery

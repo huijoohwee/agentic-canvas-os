@@ -31,7 +31,9 @@ const hex = (character, length) => character.repeat(length);
 const sourceSession = "codex-source-owner-20260810";
 const operatorSession = "codex-correction-operator-20260810";
 
-function fixture({ currentBaseSha, changedWriteScope = [] } = {}) {
+function fixture({ currentBaseSha, changedWriteScope = [], integratedReplay = false,
+  recoveredReplay = false,
+  integratedState = "dormant-preserved" } = {}) {
   const branch = "agent/huis-macbook-pro-3.local/source-owner";
   const headSha = hex("a", 40);
   const baseSha = hex("b", 40);
@@ -107,7 +109,10 @@ function fixture({ currentBaseSha, changedWriteScope = [] } = {}) {
   const body = updateWriterLeasePullRequestBody("Source owner\n", lease);
   const claim = {
     claimId: authority.claimId,
-    state: "reviewed",
+    state: integratedReplay ? integratedState : "reviewed",
+    recordedState: integratedReplay ? "integrated-preserved" : "reviewed",
+    writeAuthority: false,
+    scopeReserved: true,
     actorId: "github-user:8945812",
     repositoryId: "github-repository:R_repo",
     workItemId: "work-item:" + hex("d", 64),
@@ -116,16 +121,35 @@ function fixture({ currentBaseSha, changedWriteScope = [] } = {}) {
     declaredWriteScope: declaredWriteSet,
     writeSetDigest,
     leaseEpoch: authority.leaseEpoch,
-    transitionCounter: authority.transitionCounter,
+    transitionCounter: authority.transitionCounter + (integratedReplay ? recoveredReplay ? 2 : 1 : 0),
     reviewRequestId: authority.reviewRequestId,
-    fenceRevision: authority.claimDigest,
-    transitionDigest: authority.claimLedgerRevision,
+    fenceRevision: integratedReplay ? hex("d", 64) : authority.claimDigest,
+    transitionDigest: integratedReplay ? hex("e", 64) : authority.claimLedgerRevision,
+    operationReceiptDigest: integratedReplay
+      ? recoveredReplay ? hex("0", 64) : hex("f", 64) : authority.operationReceiptDigest,
+    integrationReceiptDigest: integratedReplay ? hex("f", 64) : null,
+    integration: integratedReplay ? {
+      candidateRevision: headSha,
+      reviewRequestId: authority.reviewRequestId,
+      focusedEvidenceDigest: authority.focusedEvidenceDigest,
+      dependencyClosureDigest: hex("1", 64),
+      namedChecksDigest: hex("2", 64),
+      handoffEvidenceDigest: hex("3", 64),
+      operatorDecisionDigest: hex("4", 64),
+      integrationIntentDigest: hex("5", 64),
+      integratedAt: "2026-08-10T06:10:00.000Z",
+    } : null,
+    recovery: recoveredReplay ? {
+      evidenceDigest: hex("8", 64),
+      recoveredAt: "2026-08-10T07:10:00.000Z",
+    } : null,
     deviceId: pseudonymousIdentifier("device", lease.device),
     sessionId: pseudonymousIdentifier("session", lease.sessionId),
   };
   const protectedAdvanceCore = {
-    schema: "agentic-reviewed-lane-protected-advance/v1",
+    schema: "agentic-reviewed-lane-protected-advance/v2",
     sourceBaseSha: baseSha,
+    pullRequestBaseSha: baseSha,
     currentBaseSha: protectedBaseSha,
     changedWriteScope,
     changedWriteScopeDigest: digestValue(changedWriteScope),
@@ -146,7 +170,7 @@ function fixture({ currentBaseSha, changedWriteScope = [] } = {}) {
       headBranch: branch,
       headSha,
       baseBranch: "main",
-      baseSha: protectedBaseSha,
+      baseSha,
       headRepository: "huijoohwee/agentic-canvas-os",
       baseRepository: "huijoohwee/agentic-canvas-os",
       authorLogin: "huijoohwee",
@@ -251,14 +275,54 @@ test("authorization is byte exact and rejects source projection drift", () => {
 });
 
 test("protected-main advance is accepted only when its write scope is disjoint", () => {
-  assert.equal(fixture({
+  const source = fixture({
     currentBaseSha: hex("e", 40),
     changedWriteScope: ["path:docs/disjoint.md"],
-  }).source.protectedAdvance.disposition, "disjoint-preserved");
+  }).source;
+  assert.equal(source.protectedAdvance.disposition, "disjoint-preserved");
+  assert.equal(source.pullRequest.baseSha, source.protectedAdvance.sourceBaseSha);
+  assert.notEqual(source.pullRequest.baseSha, source.protectedAdvance.currentBaseSha);
   assert.throws(() => fixture({
     currentBaseSha: hex("e", 40),
     changedWriteScope: ["path:scripts/source.mjs"],
   }), /identity join/);
+});
+
+test("integrated response loss joins the prior local review projection exactly", () => {
+  for (const state of ["integrated-preserved", "dormant-preserved"]) {
+    const source = fixture({ integratedReplay: true, integratedState: state }).source;
+    assert.equal(source.authority.transitionCounter + 1, source.claim.transitionCounter);
+    assert.equal(source.claim.state, state);
+  }
+  const recovered = fixture({ integratedReplay: true, recoveredReplay: true }).source;
+  assert.equal(recovered.authority.transitionCounter + 2, recovered.claim.transitionCounter);
+  assert.notEqual(recovered.claim.operationReceiptDigest,
+    recovered.claim.integrationReceiptDigest);
+  const source = fixture({ integratedReplay: true }).source;
+  const changes = {
+    state: value => { value.claim.state = "reviewed"; },
+    writeAuthority: value => { value.claim.writeAuthority = true; },
+    scopeReserved: value => { value.claim.scopeReserved = false; },
+    counter: value => { value.claim.transitionCounter += 1; },
+    fence: value => { value.claim.fenceRevision = value.authority.claimDigest; },
+    transition: value => { value.claim.transitionDigest = value.authority.claimLedgerRevision; },
+    operationReceipt: value => { value.claim.operationReceiptDigest = hex("0", 64); },
+    integrationReceipt: value => { value.claim.integrationReceiptDigest = hex("0", 64); },
+    candidate: value => { value.claim.integration.candidateRevision = hex("c", 40); },
+    review: value => { value.claim.integration.reviewRequestId = "github-pull-request:other"; },
+    focused: value => { value.claim.integration.focusedEvidenceDigest = hex("0", 64); },
+  };
+  for (const [label, change] of Object.entries(changes)) {
+    const drift = structuredClone(source);
+    change(drift);
+    drift.claim.recordDigest = digestValue(Object.fromEntries(
+      Object.entries(drift.claim).filter(([key]) => key !== "recordDigest"),
+    ));
+    drift.evidenceDigest = digestValue(Object.fromEntries(
+      Object.entries(drift).filter(([key]) => key !== "evidenceDigest"),
+    ));
+    assert.throws(() => normalizeReviewedLaneSourceCorrectionEvidence(drift), label);
+  }
 });
 
 test("controller orders protected effects and seals one authoring receipt", async () => {
@@ -331,7 +395,7 @@ test("reviewed lease becomes active through an exact predecessor-fenced registry
     readRegistry() { return JSON.parse(readFileSync(statePath, "utf8")); },
     withRegistryLock(action) { return action(this.readRegistry()); },
   };
-  const successor = {
+  let successor = {
     ...structuredClone(source.claim),
     claimId: hex("d", 64),
     state: "current",
@@ -349,14 +413,10 @@ test("reviewed lease becomes active through an exact predecessor-fenced registry
     integrationReceiptDigest: null,
     integration: null,
   };
-  const status = {
-    schema: "agentic-cloud-collaboration-result/v1",
-    ok: true,
-    action: "status",
-    claims: [successor],
-    ledgerRevision: hex("9", 40),
-    ledgerDigest: hex("7", 64),
-  };
+  const status = () => ({ schema: "agentic-cloud-collaboration-result/v1",
+    ok: true, action: "status", claims: [successor], ledgerRevision: hex("9", 40),
+    ledgerDigest: hex("7", 64) });
+  const cloudCalls = [];
   const git = args => {
     if (args[0] === "branch") return sourceLease.branch;
     if (args[0] === "worktree") {
@@ -372,17 +432,119 @@ test("reviewed lease becomes active through an exact predecessor-fenced registry
   }, {
     git,
     leaseStore,
-    cloud: () => status,
+    cloud(input) {
+      cloudCalls.push(input);
+      if (input.action === "status") return status();
+      assert.equal(input.request.mode, "projection");
+      assert.equal(input.request.reviewRequestId, plan.sourceReviewRequestId);
+      successor = { ...successor, reviewRequestId: plan.sourceReviewRequestId,
+        transitionCounter: successor.transitionCounter + 1, fenceRevision: hex("0", 64),
+        transitionDigest: hex("1", 64), operationReceiptDigest: hex("2", 64) };
+      return { ...status(), action: "continue", claim: successor,
+        claimDigest: successor.fenceRevision };
+    },
     privateClaims: async () => [successor],
   });
   const result = await adapter.activateLease({ plan });
   const projected = leaseStore.read(sourceLease.branch);
   assert.equal(result.kind, "complete");
   assert.equal(projected.status, "active");
+  assert.equal(projected.fenceSha, plan.sourceHeadSha);
   assert.equal(projected.reviewHeadSha, null);
   assert.equal(projected.cloudAuthority.claimId, successor.claimId);
-  assert.equal(projected.cloudAuthority.reviewRequestId, null);
+  assert.equal(projected.cloudAuthority.reviewRequestId, plan.sourceReviewRequestId);
+  assert.equal(cloudCalls.filter(item => item.action === "continue").length, 1);
   assert.equal(JSON.parse(readFileSync(statePath, "utf8")).revision, 13);
+
+  assert.equal((await adapter.reconcilePhase({
+    intent: {}, phase: "lease_activated", plan,
+  })).kind, "complete");
+  const drifted = JSON.parse(readFileSync(statePath, "utf8"));
+  drifted.leases[sourceLease.branch].fenceSha = hex("f", 40);
+  writeFileSync(statePath, JSON.stringify(drifted));
+  assert.deepEqual(await adapter.reconcilePhase({
+    intent: {}, phase: "lease_activated", plan,
+  }), pending());
+});
+
+test("integrated response-loss retirement uses and replays the exact integration receipt", async t => {
+  const subject = fixture({ integratedReplay: true, currentBaseSha: hex("e", 40),
+    changedWriteScope: ["path:docs/disjoint.md"] });
+  const root = mkdtempSync(path.join(os.tmpdir(), "integrated-source-retire-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const repository = path.join(root, "worktree"), commonDirectory = path.join(root, "common");
+  mkdirSync(repository); mkdirSync(commonDirectory);
+  const lease = { ...structuredClone(subject.lease), worktreePath: repository };
+  const sourceClaim = structuredClone(subject.source.claim);
+  const waiting = { ...sourceClaim, claimId: hex("6", 64), state: "waiting-successor",
+    recordedState: "waiting-successor", predecessorClaimId: sourceClaim.claimId,
+    leaseEpoch: sourceClaim.leaseEpoch + 1, transitionCounter: 1, reviewRequestId: null,
+    fenceRevision: hex("7", 64), transitionDigest: hex("8", 64),
+    operationReceiptDigest: hex("9", 64), integrationReceiptDigest: null, integration: null };
+  const publicSource = { ...sourceClaim, state: "integrated-preserved" };
+  for (const key of ["recordedState", "deviceId", "sessionId"]) delete publicSource[key];
+  let retired = false;
+  const retireRequests = [];
+  const status = () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
+    action: "status", claims: retired ? [waiting] : [publicSource, waiting],
+    ledgerRevision: hex("a", 40), ledgerDigest: hex("b", 64) });
+  const pull = subject.source.pullRequest;
+  const gh = args => args[0] === "repo"
+    ? JSON.stringify({ nameWithOwner: subject.source.repository.fullName,
+      id: subject.source.repository.nodeId })
+    : JSON.stringify({ data: { repository: { id: subject.source.repository.nodeId,
+      nameWithOwner: subject.source.repository.fullName, pullRequest: {
+        id: pull.nodeId, url: pull.url, number: pull.number, state: pull.state,
+        isDraft: pull.isDraft, body: subject.body, headRefName: pull.headBranch,
+        headRefOid: pull.headSha, baseRefName: pull.baseBranch, baseRefOid: pull.baseSha,
+        author: { login: pull.authorLogin },
+        headRepository: { nameWithOwner: pull.headRepository },
+        baseRepository: { nameWithOwner: pull.baseRepository },
+        autoMergeRequest: null, mergeQueueEntry: null } },
+      viewer: { login: subject.source.actor.login, databaseId: Number(subject.source.actor.id) } } });
+  const git = args => {
+    if (args[0] === "branch") return lease.branch;
+    if (args[0] === "worktree") return `worktree ${repository}\nHEAD ${subject.source.localHeadSha}\nbranch refs/heads/${lease.branch}\n`;
+    if (args[0] === "status" || args[0] === "fetch") return "";
+    if (args[0] === "ls-remote") return `${subject.source.localHeadSha}\trefs/heads/${lease.branch}`;
+    if (args[0] === "rev-parse") return args[1] === "--git-common-dir"
+      ? commonDirectory : args[1] === "FETCH_HEAD"
+        ? subject.source.protectedAdvance.currentBaseSha : subject.source.localHeadSha;
+    throw new Error(`Unexpected git read: ${args.join(" ")}`);
+  };
+  const adapter = createReviewedLaneSourceCorrectionRepositoryAdapter({ repository,
+    sourceSessionId: sourceSession, pullRequestNumber: pull.number }, {
+    git, gh, leaseStore: { read: () => lease }, privateClaims: async () => [sourceClaim, waiting],
+    execute(command, args) {
+      if (command === "git" && args[0] === "merge-base") return "";
+      if (command === "git" && args[0] === "diff") return "docs/disjoint.md\0";
+      throw new Error(`Unexpected effect: ${command} ${args.join(" ")}`);
+    },
+    cloud(input) {
+      if (input.action === "status") return status();
+      retireRequests.push(input.request); retired = true;
+      return { ...status(), action: "retire", operationReceipt: {
+        operation: "retire", receiptDigest: hex("c", 64) } };
+    },
+  });
+  const observed = await adapter.readSource();
+  assert.equal(observed.claim.state, "integrated-preserved");
+  assert.notEqual(observed.pullRequest.baseSha, observed.protectedAdvance.currentBaseSha);
+  const plan = buildReviewedLaneSourceCorrectionPlan({ source: observed,
+    operatorSessionId: operatorSession });
+  const drifted = structuredClone(plan);
+  drifted.source.claim.operationReceiptDigest = hex("0", 64);
+  await assert.rejects(adapter.createWaitingSuccessor({ plan: drifted }), /source claim drift/);
+  const first = await adapter.retireSourceClaim({ plan });
+  const second = await adapter.retireSourceClaim({ plan });
+  assert.deepEqual(second, first);
+  assert.equal(retireRequests.length, 2);
+  for (const request of retireRequests) {
+    assert.equal(request.reason, "integrated");
+    assert.equal(request.integrationReceiptDigest, sourceClaim.integrationReceiptDigest);
+    assert.equal(request.namedChecksDigest, sourceClaim.integration.namedChecksDigest);
+    assert.equal(request.handoffEvidenceDigest, sourceClaim.integration.handoffEvidenceDigest);
+  }
 });
 
 test("invalid authority stops before intent or remote effect", async () => {

@@ -155,6 +155,7 @@ export async function runActiveOwnedDirtRecovery({ authorization = null } = {}, 
 export function createRepositoryActiveOwnedDirtRecoveryAdapter({
   repository,
   sessionId,
+  taskAuthorityFile = null,
   ttlSeconds = 1_800,
   environment = process.env,
   now = () => new Date(),
@@ -178,6 +179,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
   const commonDir = realpathSync(path.resolve(root, gitText(["rev-parse", "--git-common-dir"])));
   const store = leaseStore || createWriterLeaseStore({
     gitCommonDir: commonDir,
+    taskAuthorityFile,
   });
   const readState = () => {
     const branch = requiredText(gitText(["branch", "--show-current"]), "branch");
@@ -388,6 +390,7 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
         planDigest: plan.planDigest,
         cloudAuthority: verification.authority,
         recovery,
+        taskAuthorityFile,
         validateLease: candidate => {
           assertBodyLimit(updateWriterLeasePullRequestBody(
             current.source.pullRequest.body,

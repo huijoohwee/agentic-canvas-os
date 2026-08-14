@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2907,
-  "headDigest": "48831846fa7f5f97b90e7201eccbfb1f96e7d30955d6ea83906d3aa21743147e",
+  "sequence": 2908,
+  "headDigest": "39d8bb99b0efa3f31be137cdfc685a05fac56ec6fa71a3d08b56e0e203a850fa",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -143631,6 +143631,47 @@
       },
       "claimDigest": "f17b408cd0c1486ee69fc27d4ec3cd5999ecb30e14d24fa6ec68a8c0f37cf10c",
       "digest": "48831846fa7f5f97b90e7201eccbfb1f96e7d30955d6ea83906d3aa21743147e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2908,
+      "parentDigest": "48831846fa7f5f97b90e7201eccbfb1f96e7d30955d6ea83906d3aa21743147e",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d980a0f414b92f5fb5bc3a5012f12930044d4cacea14457107c522d1f95648c8",
+      "idempotencyKey": "aa40f188061bff1669b9d77b10c878aae21f44852cba77c813bdbbd0db53b14d",
+      "requestDigest": "e56a4b4d465ab395b973fdb6bd4db7edceced25054ac3d04eabdbda0251b8d65",
+      "evaluationTime": "2026-08-14T06:25:25.000Z",
+      "claimCore": {
+        "claimId": "d980a0f414b92f5fb5bc3a5012f12930044d4cacea14457107c522d1f95648c8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:7bafabb38d284c3536d6215f0f402232ccf218c302d2f4e49ad0dec58371a487",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:736d28087ef78093e692fe9cf971969de08af1ad8551d9ad66d73a4c7639a554",
+        "canonicalBaseRevision": "415ecba5c6bb3d7174deca491f4bfcf5b09ba415",
+        "declaredWriteScope": [
+          "path:__tests__/open-reviewed-lane-rehydration.test.mjs",
+          "path:docs/OPEN-REVIEWED-LANE-REHYDRATION.md",
+          "path:scripts/open-reviewed-lane-rehydration-repository-adapter.mjs",
+          "semantic:open-reviewed-lane-waiter-classification"
+        ],
+        "writeSetDigest": "8bd85d86512503a190254889ab84fafcd462403252814da5f9af49caa4efde64",
+        "laneRevision": "0f511db337d4cfec0d894bb2ee4c897af5202c51",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-14T07:25:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-9Zp9",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cbc57251bf32493094e6192a9142895963d58138a780afe60e144a283cb518fc",
+      "digest": "39d8bb99b0efa3f31be137cdfc685a05fac56ec6fa71a3d08b56e0e203a850fa"
     }
   ]
 }

@@ -23,6 +23,10 @@ import {
   projectTaskAuthorityCapability,
   verifyTaskAuthorityProof,
 } from "./task-bound-lane-authority-contract.mjs";
+import {
+  mutateWriterLeaseRegistry,
+  writerLeaseDigest,
+} from "./writer-lease-registry-cas.mjs";
 
 const consumedProofDigests = new Set();
 
@@ -83,6 +87,112 @@ export function createTaskAuthorityLeaseBinding({
     transitionPlanDigest,
     priorBindingDigest,
   });
+}
+
+export function continueTaskAuthorityBinding({
+  sourceLease,
+  nextLease,
+  capabilityPath,
+  boundAt = new Date().toISOString(),
+}) {
+  const current = assertTaskAuthorityBinding({
+    binding: sourceLease?.taskAuthority,
+    lease: sourceLease,
+  });
+  authorizeTaskBoundLeaseMutation({
+    lease: sourceLease,
+    capabilityPath,
+    operation: "active-owned-dirt-recovery-continuation",
+    now: new Date(boundAt),
+  });
+  return createTaskAuthorityLeaseBinding({
+    lease: nextLease,
+    capabilityPath,
+    bindingMode: "continuation",
+    boundAt,
+    priorBindingDigest: current.bindingDigest,
+  });
+}
+
+export function continueTaskAuthorityCloudSuccessorBinding({
+  sourceLease,
+  nextLease,
+  capabilityPath,
+  boundAt = new Date().toISOString(),
+}) {
+  const current = assertTaskAuthorityBinding({
+    binding: sourceLease?.taskAuthority,
+    lease: sourceLease,
+  });
+  authorizeTaskBoundLeaseMutation({
+    lease: sourceLease,
+    capabilityPath,
+    operation: "scope-expansion-cloud-successor-continuation",
+    now: new Date(boundAt),
+  });
+  const stableFields = ["branch", "scope", "device", "epoch", "baseSha"];
+  if (stableFields.some(field => sourceLease?.[field] !== nextLease?.[field])
+    || !sourceLease?.cloudAuthority?.claimId
+    || !nextLease?.cloudAuthority?.claimId
+    || sourceLease.cloudAuthority.claimId === nextLease.cloudAuthority.claimId) {
+    throw new Error("Cloud-successor continuation requires one exact stable lane and a new claim identity.");
+  }
+  return createTaskAuthorityLeaseBinding({
+    lease: nextLease,
+    capabilityPath,
+    bindingMode: "continuation",
+    boundAt,
+    priorBindingDigest: current.bindingDigest,
+  });
+}
+
+export function bindDeliveryTaskAuthorityMigration({
+  leaseStore,
+  sessionId,
+  branch,
+  targetCapabilityFile,
+  planDigest,
+  boundAt = new Date().toISOString(),
+}) {
+  const current = leaseStore.read(branch);
+  if (!current || current.status !== "delivery" || current.sessionId !== sessionId) {
+    throw new Error("Delivery task authority migration requires its exact delivery writer lease.");
+  }
+  if (current.taskAuthority) {
+    throw new Error("Writer lease already has task-bound authority.");
+  }
+  const expectedLeaseDigest = writerLeaseDigest(current);
+  const expectedClaimId = current.cloudAuthority?.claimId;
+  if (!expectedClaimId) {
+    throw new Error("Delivery task authority migration requires cloud claim identity.");
+  }
+  return mutateWriterLeaseRegistry({
+    leaseStore,
+    branch,
+    expectedLeaseDigest,
+    expectedClaimId,
+    action: ({ registry, lease }) => {
+      if (lease.status !== "delivery" || lease.sessionId !== sessionId || lease.taskAuthority) {
+        throw new Error("Delivery task authority migration lease drifted before CAS.");
+      }
+      const taskAuthority = assertTaskAuthorityTransition({
+        operation: "migration",
+        lease,
+        targetCapabilityPath: targetCapabilityFile,
+        planDigest,
+        boundAt,
+      });
+      const nextLease = { ...lease, taskAuthority };
+      return {
+        registry: {
+          ...registry,
+          leases: { ...registry.leases, [branch]: nextLease },
+        },
+        lease: nextLease,
+        changed: true,
+      };
+    },
+  }).lease;
 }
 
 export function authorizeTaskBoundLeaseMutation({

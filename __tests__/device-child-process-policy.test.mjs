@@ -10,7 +10,7 @@ import {
 const LOCATOR = "/external/task-authority.json";
 const SUBJECT = "chore(coordination): claim portable-scope lease 7";
 
-test("generic Git, provider, text, and validation children never receive the locator", () => {
+test("only generic Git commit children receive the locator needed by hooks", () => {
   const { policy, calls } = harness();
 
   policy.gitText(["status", "--short"]);
@@ -28,7 +28,10 @@ test("generic Git, provider, text, and validation children never receive the loc
   });
 
   assert.equal(calls.length, 11);
-  for (const call of calls) {
+  assert.equal(calls[4].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
+  assert.equal(calls[5].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
+  for (const [index, call] of calls.entries()) {
+    if ([4, 5].includes(index)) continue;
     assert.equal(call.options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
   }
 });
@@ -95,10 +98,10 @@ test("the lifecycle adapter translates only trusted start and resume claim shape
   assert.equal(start.calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
   assert.equal(start.calls[1].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
   assert.equal(resume.calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
-  assert.equal(heartbeat.calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
+  assert.equal(heartbeat.calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
 });
 
-test("the lifecycle adapter keeps mismatched scope and lease claims unprivileged", () => {
+test("the lifecycle adapter leaves mismatched claims on the hook-checked Git commit path", () => {
   const { policy, calls } = harness();
   const adaptedRun = createCoordinationClaimRunAdapter({
     action: "start",
@@ -119,7 +122,7 @@ test("the lifecycle adapter keeps mismatched scope and lease claims unprivileged
 
   assert.equal(calls.length, 2);
   for (const call of calls) {
-    assert.equal(call.options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
+    assert.equal(call.options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
   }
 });
 
@@ -176,8 +179,10 @@ test("coordination lookalikes remain unprivileged", () => {
     policy.run(command, argumentsList);
   }
 
-  for (const call of calls) {
-    assert.equal(call.options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
+  assert.equal(calls[0].options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
+  assert.equal(calls[1].options.env[TASK_AUTHORITY_LOCATOR_KEY], undefined);
+  for (const call of calls.slice(2)) {
+    assert.equal(call.options.env[TASK_AUTHORITY_LOCATOR_KEY], LOCATOR);
   }
 });
 

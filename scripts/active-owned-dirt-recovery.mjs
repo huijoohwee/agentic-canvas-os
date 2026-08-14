@@ -19,12 +19,14 @@ try {
   if (!["plan", "execute"].includes(command)) usage();
   const repository = realpathSync(path.resolve(requiredOption("repository")));
   const sessionId = requiredOption("session");
+  const taskAuthorityFile = option("task-authority");
   const ttlSeconds = option("ttl-seconds") === null
     ? 1_800
     : boundedTtl(option("ttl-seconds"));
   const adapter = createRepositoryActiveOwnedDirtRecoveryAdapter({
     repository,
     sessionId,
+    taskAuthorityFile,
     ttlSeconds,
   });
   let result;
@@ -91,6 +93,6 @@ function boundedTtl(value) {
 
 function usage() {
   throw new Error(
-    "Usage: active-owned-dirt-recovery.mjs plan|execute --repository=<path> --session=<source-session> [--ttl-seconds=1800] [--authorize=<exact text>] [--json]",
+    "Usage: active-owned-dirt-recovery.mjs plan|execute --repository=<path> --session=<source-session> [--task-authority=<absolute-capability.json>] [--ttl-seconds=1800] [--authorize=<exact text>] [--json]",
   );
 }

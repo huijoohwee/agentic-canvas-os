@@ -19,6 +19,7 @@ export function createProvisionedStartAdmissionRecoveryController({ adapter, int
     const startedAt = clock().toISOString();
     const priorIntent = intentStore.read();
     if (!priorIntent) adapter.assertPlanPreimage(recoveryPlan, "recovery-intent");
+    adapter.assertFreshVerification(recoveryPlan, "before-intent-journal");
     let intent = intentStore.begin({ plan: recoveryPlan, authorization: authority, startedAt });
     if (intent.planDigest !== recoveryPlan.planDigest || intent.evidenceDigest !== digestValue(recoveryPlan.evidence)) {
       throw new Error("Persisted recovery intent does not match the sealed plan.");
@@ -26,12 +27,14 @@ export function createProvisionedStartAdmissionRecoveryController({ adapter, int
 
     if (intent.phase === "intent") {
       const local = adapter.projectLocal({ plan: recoveryPlan, projectedAt: intent.startedAt });
+      adapter.assertFreshVerification(recoveryPlan, "before-local-projected-journal");
       intent = intentStore.advance({ expectedPhase: "intent", phase: "local-projected",
         values: { leaseDigest: digestValue(local.lease), projectionDigest: digestValue(local.projection),
           adopted: local.adopted }, recordedAt: clock().toISOString() });
     }
     if (intent.phase === "local-projected") {
       const marker = adapter.projectMarker({ plan: recoveryPlan, projectedAt: intent.startedAt });
+      adapter.assertFreshVerification(recoveryPlan, "before-marker-projected-journal");
       intent = intentStore.advance({ expectedPhase: "local-projected", phase: "marker-projected",
         values: { bodyDigest: marker.bodyDigest, markerDigest: marker.markerDigest,
           adopted: marker.adopted }, recordedAt: clock().toISOString() });
@@ -39,6 +42,7 @@ export function createProvisionedStartAdmissionRecoveryController({ adapter, int
     if (intent.phase === "marker-projected") {
       const bodyDigest = intent.phases["marker-projected"].values.bodyDigest;
       const terminal = adapter.verifyTerminal({ plan: recoveryPlan, expectedBodyDigest: bodyDigest });
+      adapter.assertFreshVerification(recoveryPlan, "before-complete-journal");
       intent = intentStore.advance({ expectedPhase: "marker-projected", phase: "complete",
         values: terminal, recordedAt: clock().toISOString() });
     }

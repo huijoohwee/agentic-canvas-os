@@ -25,7 +25,8 @@ function evidence() {
   cloud: { status: "ready", state: "active", writeAuthority: true, scopeReserved: true,
     claimId: cloudAuthority.claimId, claimDigest: d("claim digest"), laneRevision: sha("a"),
     transitionCounter: 2, heartbeatCounter: 0, ledgerRevision: sha("d"), ledgerDigest: d("ledger"),
-    verificationReceiptDigest: d("verification") } };
+    verificationReceiptDigest: d("verification"), verifier: { adapterId: "test-verifier", schema: "test-verification/v1",
+      version: 1, subjectDigest: d("verified subject") } } };
 }
 
 test("plan binds the exact descendant and requires its digest token", () => {
@@ -56,4 +57,16 @@ test("plan accepts only current write authority for the exact claim", () => {
   const advanced = evidence(); advanced.cloud.transitionCounter += 1;
   assert.notEqual(buildProvisionedStartAdmissionRecoveryPlan(advanced).planDigest,
     buildProvisionedStartAdmissionRecoveryPlan(current).planDigest);
+});
+
+test("plan authorization is stable across fresh receipts and binds verifier subject identity", () => {
+  const first = evidence(); first.cloud.verificationReceiptDigest = d("receipt one");
+  const second = evidence(); second.cloud.verificationReceiptDigest = d("receipt two");
+  assert.equal(buildProvisionedStartAdmissionRecoveryPlan(first).planDigest,
+    buildProvisionedStartAdmissionRecoveryPlan(second).planDigest);
+  second.cloud.verifier.subjectDigest = d("different subject");
+  assert.notEqual(buildProvisionedStartAdmissionRecoveryPlan(first).planDigest,
+    buildProvisionedStartAdmissionRecoveryPlan(second).planDigest);
+  const forged = evidence(); forged.cloud.verifier.adapterId = "";
+  assert.throws(() => buildProvisionedStartAdmissionRecoveryPlan(forged), /verifier.adapterId/u);
 });

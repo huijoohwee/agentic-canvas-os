@@ -186,12 +186,16 @@ function normalizeCloud(value, lease, fenceSha) {
   if (value.status !== "ready" || value.state !== "active" || value.writeAuthority !== true
     || value.scopeReserved !== true || value.claimId !== (lease.cloudClaimId || lease.cloudAuthority?.claimId)
     || value.laneRevision !== fenceSha) throw new Error("Recovery requires exact current cloud write authority at the fence.");
+  const verifier = object(value.verifier, "cloud.verifier");
   return Object.freeze({ claimId: digest(value.claimId, "cloud.claimId"), claimDigest: digest(value.claimDigest, "cloud.claimDigest"),
     state: value.state, status: value.status, writeAuthority: true, scopeReserved: true,
     laneRevision: fenceSha, transitionCounter: positive(value.transitionCounter, "cloud.transitionCounter"),
     heartbeatCounter: nonnegative(value.heartbeatCounter, "cloud.heartbeatCounter"),
     ledgerRevision: sha(value.ledgerRevision, "cloud.ledgerRevision"), ledgerDigest: digest(value.ledgerDigest, "cloud.ledgerDigest"),
-    verificationReceiptDigest: digest(value.verificationReceiptDigest, "cloud.verificationReceiptDigest") });
+    verifier: Object.freeze({ adapterId: text(verifier.adapterId, "cloud.verifier.adapterId"),
+      schema: text(verifier.schema, "cloud.verifier.schema"),
+      version: positive(verifier.version, "cloud.verifier.version"),
+      subjectDigest: digest(verifier.subjectDigest, "cloud.verifier.subjectDigest") }) });
 }
 
 function object(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} is invalid.`); return value; }

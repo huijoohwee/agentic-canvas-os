@@ -40,8 +40,14 @@ test("adapter reads a content-bound planned descendant and fails closed on provi
     return JSON.stringify({ id: "PR_1", number: 1, url: lease.pullRequestUrl, state: "OPEN", isDraft: true,
       autoMergeRequest: null, headRefName: lease.branch, headRefOid: fence, baseRefOid: sha("0"), body });
   };
-  const verifyCloud = () => ({ authority, verification: { status: "ready", ledgerDigest: d(9),
-    receiptDigest: d(10), inventory: { claims: [{ claimId: authority.claimId, writeAuthority: true,
+  let receipt = 0; let subjectDrift = false; let forgedReceipt = false;
+  const verifyCloud = () => ({ authority, verification: { schema: "agentic-lane-cloud-verification/v1",
+    status: "ready", claimId: authority.claimId, claimDigest: authority.claimDigest,
+    ledgerRevision: authority.ledgerRevision, ledgerDigest: d(9), canonicalBaseSha: lease.baseSha,
+    laneRevision: authority.laneRevision, writeSetDigest: admission.writeSetDigest, reviewRequestId: null,
+    remoteClaimInventoryDigest: subjectDrift ? d("drift") : d("inventory"),
+    receiptDigest: forgedReceipt ? "forged" : d(`receipt ${receipt++}`),
+    inventory: { claims: [{ claimId: authority.claimId, writeAuthority: true,
       scopeReserved: true, heartbeatCounter: 0 }] } } });
   const adapter = createProvisionedStartAdmissionRecoveryRepositoryAdapter({ repository: "/tmp/repo",
     sessionId: "session", taskAuthorityFile: "/tmp/capability", git, gh, verifyCloud,
@@ -53,6 +59,13 @@ test("adapter reads a content-bound planned descendant and fails closed on provi
     writeAuthority: plan.evidence.cloud.writeAuthority,
     scopeReserved: plan.evidence.cloud.scopeReserved,
   }, { state: "active", writeAuthority: true, scopeReserved: true });
+  assert.doesNotThrow(() => adapter.assertPlanPreimage(plan, "fresh-receipt"));
+  subjectDrift = true;
+  assert.throws(() => adapter.assertPlanPreimage(plan, "subject-drift"), /preimage drifted/u);
+  subjectDrift = false;
+  forgedReceipt = true;
+  assert.throws(() => adapter.assertFreshVerification(plan, "forged-receipt"), /invalid fresh receipt/u);
+  forgedReceipt = false;
   body = "concurrent body drift";
   assert.throws(() => adapter.assertPlanPreimage(plan, "before-intent"), /preimage drifted/u);
 });

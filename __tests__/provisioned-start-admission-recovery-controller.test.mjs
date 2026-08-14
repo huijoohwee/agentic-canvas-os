@@ -20,14 +20,18 @@ function evidence() {
       state: "OPEN", isDraft: true, autoMergeRequest: null, branch: lease.branch, headSha: sha("a"),
       baseSha: sha("0"), bodyDigest: d(9) }, cloud: { status: "ready", state: "active", writeAuthority: true,
       scopeReserved: true, claimId: d(7), claimDigest: d(10), laneRevision: sha("a"), transitionCounter: 1,
-      heartbeatCounter: 0, ledgerRevision: sha("d"), ledgerDigest: d(11), verificationReceiptDigest: d(12) } };
+      heartbeatCounter: 0, ledgerRevision: sha("d"), ledgerDigest: d(11), verificationReceiptDigest: d(12),
+      verifier: { adapterId: "test-verifier", schema: "test-verification/v1", version: 1,
+        subjectDigest: d("verified subject") } } };
 }
 
-test("controller resumes a response-lost local projection without a second mutation", () => {
+test("controller replays response loss while fresh verifier receipts change for the same subject", () => {
   const source = evidence();
   const plan = buildProvisionedStartAdmissionRecoveryPlan(source);
   let localCalls = 0; let localMutations = 0; let markerCalls = 0; let terminalCalls = 0; let intent = null; let loseOnce = true;
+  let verificationChecks = 0;
   const adapter = { readEvidence: () => source, assertPlanPreimage: () => source,
+    assertFreshVerification: () => { verificationChecks += 1; return { receiptDigest: d(`fresh ${verificationChecks}`) }; },
     projectLocal: () => { localCalls += 1; if (loseOnce) { loseOnce = false; localMutations += 1;
       throw new Error("simulated response loss"); } return { lease: { value: 1 }, projection: { value: 1 }, adopted: true }; },
     projectMarker: () => ({ bodyDigest: d("body"), markerDigest: d("marker"), adopted: markerCalls++ > 0 }),
@@ -48,6 +52,7 @@ test("controller resumes a response-lost local projection without a second mutat
   assert.equal(localMutations, 1);
   assert.equal(markerCalls, 1);
   assert.equal(terminalCalls, 2);
+  assert.equal(verificationChecks, 5);
 });
 
 function phaseReceipt(phase, values) { return { phase, values, receiptDigest: d(phase) }; }

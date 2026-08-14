@@ -10,6 +10,9 @@ import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
 import { projectProvisionedStartAdmissionRecovery } from "./provisioned-start-admission-recovery-contract.mjs";
 
+const CLOUD_VERIFIER_ADAPTER_ID = "agentic-admission-cloud-authority-verifier";
+const CLOUD_VERIFIER_VERSION = 1;
+
 export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
   repository,
   sessionId,
@@ -59,6 +62,12 @@ export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
     return live;
   }
 
+  function assertFreshVerification(plan, operation) {
+    const lease = store.assertTaskAuthority({ branch: plan.evidence.lease.branch, operation });
+    requireCloudFrame({ lease, plan, verifyCloud, environment });
+    return true;
+  }
+
   function projectLocal({ plan, projectedAt }) {
     const branch = plan.evidence.lease.branch;
     const current = store.read(branch);
@@ -95,6 +104,7 @@ export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
     assertRepositoryFrame({ repo, plan, git });
     const provider = readPullRequest({ lease: { ...lease, pullRequestUrl: plan.evidence.pullRequest.url }, gh });
     requireProviderFrame(provider.evidence, plan.evidence.pullRequest);
+    requireCloudFrame({ lease, plan, verifyCloud, environment });
     const expectedBody = updateWriterLeasePullRequestBody(planPrivateBody(plan, provider.body), lease);
     const currentDigest = digestValue(provider.body);
     const sourceDigest = plan.evidence.pullRequest.bodyDigest;
@@ -129,7 +139,7 @@ export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
       descendantDigest: digestValue(readDescendant({ repo, lease, git })) });
   }
 
-  return Object.freeze({ assertPlanPreimage, projectLocal, projectMarker, readEvidence, verifyTerminal,
+  return Object.freeze({ assertFreshVerification, assertPlanPreimage, projectLocal, projectMarker, readEvidence, verifyTerminal,
     gitCommonDir: common });
 }
 
@@ -168,13 +178,25 @@ function readPullRequest({ lease, gh }) {
 function cloudEvidence(verified, lease) {
   const claim = verified.verification.inventory.claims.find(item => item.claimId === lease.cloudAuthority.claimId);
   if (!claim) throw new Error("Cloud verification omitted the exact claim.");
+  const subject = { schema: verified.verification.schema, status: verified.verification.status,
+    claimId: verified.verification.claimId || verified.authority.claimId,
+    claimDigest: verified.verification.claimDigest || verified.authority.claimDigest,
+    ledgerRevision: verified.verification.ledgerRevision || verified.authority.ledgerRevision,
+    ledgerDigest: verified.verification.ledgerDigest, canonicalBaseSha: verified.verification.canonicalBaseSha,
+    laneRevision: verified.verification.laneRevision || verified.authority.laneRevision,
+    writeSetDigest: verified.verification.writeSetDigest,
+    reviewRequestId: verified.verification.reviewRequestId ?? verified.authority.reviewRequestId ?? null,
+    remoteClaimInventoryDigest: verified.verification.remoteClaimInventoryDigest };
+  requireVerificationReceipt(verified.verification.receiptDigest);
   return Object.freeze({ status: verified.verification.status, state: verified.authority.state,
     writeAuthority: claim.writeAuthority, scopeReserved: claim.scopeReserved,
     claimId: verified.authority.claimId, claimDigest: verified.authority.claimDigest,
     laneRevision: verified.authority.laneRevision, transitionCounter: verified.authority.transitionCounter,
     heartbeatCounter: claim.heartbeatCounter, ledgerRevision: verified.authority.ledgerRevision,
     ledgerDigest: verified.verification.ledgerDigest,
-    verificationReceiptDigest: verified.verification.receiptDigest });
+    verifier: Object.freeze({ adapterId: CLOUD_VERIFIER_ADAPTER_ID,
+      schema: verified.verification.schema, version: CLOUD_VERIFIER_VERSION,
+      subjectDigest: digestValue(subject) }) });
 }
 
 function manifestFromLease(lease) {
@@ -211,7 +233,10 @@ function requireProviderFrame(actual, expected) { if (digestValue(actual) !== di
 function requireCloudFrame({ lease, plan, verifyCloud, environment }) { const verified = verifyCloud({
   authority: lease.cloudAuthority, manifest: manifestFromLease(lease), canonicalBaseSha: lease.baseSha, environment });
   const cloud = cloudEvidence(verified, lease); if (digestValue(cloud) !== digestValue(plan.evidence.cloud)) {
-    throw new Error("Cloud authority drifted from the sealed recovery plan."); } return cloud; }
+    throw new Error("Cloud authority drifted from the sealed recovery plan."); }
+  return { ...cloud, verificationReceiptDigest: requireVerificationReceipt(verified.verification.receiptDigest) }; }
+function requireVerificationReceipt(value) { if (!/^[0-9a-f]{64}$/u.test(String(value || ""))) {
+  throw new Error("Cloud verifier returned an invalid fresh receipt digest."); } return value; }
 function assertRepositoryFrame({ repo, plan, git }) { if (digestValue(readDescendant({ repo, lease: { fenceSha: plan.evidence.descendant.fenceSha }, git })) !== digestValue(plan.evidence.descendant)) throw new Error("Authored descendant drifted."); }
 function capabilityReceipt(lease, operation) { return digestValue({ schema: "agentic-task-authority-mutation-proof/v1", operation,
   taskAuthorityDigest: lease.taskAuthorityDigest, leaseDigest: lease.leaseDigest }); }

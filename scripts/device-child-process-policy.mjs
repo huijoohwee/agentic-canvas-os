@@ -62,9 +62,11 @@ export function createDeviceChildProcessPolicy({
     run(command, argumentsList) {
       const normalized = normalizeInvocation(command, argumentsList);
       const stdio = json ? ["ignore", "ignore", "inherit"] : "inherit";
+      const exposeLocator = normalized.command === "git"
+        && normalized.argumentsList[0] === "commit";
       const result = spawn(normalized.command, normalized.argumentsList, {
         stdio,
-        env: childEnvironment(environment),
+        env: childEnvironment(environment, exposeLocator),
       });
       if (result.status !== 0) {
         throw new Error(`${normalized.command} ${normalized.argumentsList.join(" ")} failed`);

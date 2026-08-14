@@ -24,6 +24,8 @@ import {
 } from "../scripts/task-bound-lane-authority-contract.mjs";
 import {
   authorizeTaskBoundLeaseMutation,
+  continueTaskAuthorityCloudSuccessorBinding,
+  continueTaskAuthorityBinding,
   readTaskAuthorityCapability,
   writeTaskAuthorityCapability,
 } from "../scripts/task-bound-lane-authority-store.mjs";
@@ -283,6 +285,70 @@ test("a successor epoch requires the same capability and records binding continu
   assert.equal(continued.taskAuthority.authoritySubjectId, first.taskAuthority.authoritySubjectId);
 });
 
+test("active-owned-dirt recovery continuation rebinds the exact next lease epoch", () => {
+  const ownerPath = createCapabilityFile(1);
+  const capability = readTaskAuthorityCapability(ownerPath);
+  const sourceLease = leaseFixture();
+  const sourceBinding = createTaskAuthorityBinding({
+    capability,
+    lease: sourceLease,
+    boundAt: "2026-08-13T00:00:00.000Z",
+  });
+  const boundSource = { ...sourceLease, taskAuthority: sourceBinding };
+  const nextLease = { ...boundSource, epoch: sourceLease.epoch + 1 };
+  const continued = continueTaskAuthorityBinding({
+    sourceLease: boundSource,
+    nextLease,
+    capabilityPath: ownerPath,
+    boundAt: "2026-08-13T00:01:00.000Z",
+  });
+  assert.equal(continued.bindingMode, "continuation");
+  assert.equal(continued.priorBindingDigest, sourceBinding.bindingDigest);
+  assert.doesNotThrow(() => authorizeTaskBoundLeaseMutation({
+    lease: { ...nextLease, taskAuthority: continued },
+    capabilityPath: ownerPath,
+    operation: "edit",
+    now: new Date("2026-08-13T00:01:01.000Z"),
+  }));
+});
+
+test("scope expansion continues task authority across one cloud successor claim", () => {
+  const root = temporaryRoot();
+  const ownerPath = path.join(root, "owner.json");
+  writeTaskAuthorityCapability({ outputPath: ownerPath });
+  const sourceLease = leaseFixture();
+  const sourceBinding = createTaskAuthorityBinding({
+    capability: readTaskAuthorityCapability(ownerPath),
+    lease: sourceLease,
+    boundAt: "2026-08-13T00:00:00.000Z",
+  });
+  const boundSource = { ...sourceLease, taskAuthority: sourceBinding };
+  const nextLease = {
+    ...boundSource,
+    cloudAuthority: { claimId: "3".repeat(64) },
+  };
+  const continued = continueTaskAuthorityCloudSuccessorBinding({
+    sourceLease: boundSource,
+    nextLease,
+    capabilityPath: ownerPath,
+    boundAt: "2026-08-13T00:01:00.000Z",
+  });
+  assert.equal(continued.bindingMode, "continuation");
+  assert.equal(continued.priorBindingDigest, sourceBinding.bindingDigest);
+  assert.doesNotThrow(() => authorizeTaskBoundLeaseMutation({
+    lease: { ...nextLease, taskAuthority: continued },
+    capabilityPath: ownerPath,
+    operation: "edit",
+    now: new Date("2026-08-13T00:01:01.000Z"),
+  }));
+  assert.throws(() => continueTaskAuthorityCloudSuccessorBinding({
+    sourceLease: boundSource,
+    nextLease: { ...nextLease, epoch: nextLease.epoch + 1 },
+    capabilityPath: ownerPath,
+    boundAt: "2026-08-13T00:01:02.000Z",
+  }), /exact stable lane/);
+});
+
 test("writer authority handoff requires both keys and invalidates the predecessor", () => {
   const root = temporaryRoot();
   const common = createDirectory(path.join(root, "git-common"));
@@ -418,6 +484,56 @@ test("CLI migration is clean-state, exact-plan, and observable without the capab
     "--json",
   ]);
   assert.equal(observed.taskAuthority.bindingDigest, migrated.taskAuthority.bindingDigest);
+});
+
+test("CLI migrates one clean unbound delivery-authorized legacy lease", () => {
+  const root = temporaryRoot();
+  const repository = path.join(root, "repository");
+  const capabilityPath = path.join(root, "owner.json");
+  const planPath = path.join(root, "delivery-migration-plan.json");
+  mkdirSync(repository);
+  git(repository, ["init", "--initial-branch=main"]);
+  git(repository, ["config", "user.email", "test@example.com"]);
+  git(repository, ["config", "user.name", "Test"]);
+  git(repository, ["commit", "--allow-empty", "-m", "base"]);
+  const branch = "agent/device.local/delivery-authority-migration";
+  git(repository, ["switch", "--create", branch]);
+  const common = path.resolve(repository, git(repository, ["rev-parse", "--git-common-dir"]));
+  const leaseStore = createWriterLeaseStore({ gitCommonDir: common });
+  leaseStore.claim({
+    sessionId: SESSION,
+    device: "device.local",
+    scope: "delivery-authority-migration",
+    branch,
+    worktreePath: repository,
+    baseSha: git(repository, ["rev-parse", "HEAD"]),
+    ttlMs: 600_000,
+  });
+  leaseStore.annotate({
+    sessionId: SESSION,
+    branch,
+    values: { status: "delivery", cloudAuthority: { claimId: CLAIM } },
+  });
+  runCli(["issue", `--output=${capabilityPath}`, "--json"]);
+  const planned = runCli([
+    "plan-migration",
+    `--repository=${repository}`,
+    `--session=${SESSION}`,
+    `--capability=${capabilityPath}`,
+    `--output=${planPath}`,
+    "--json",
+  ]);
+  const migrated = runCli([
+    "migrate",
+    `--repository=${repository}`,
+    `--session=${SESSION}`,
+    `--capability=${capabilityPath}`,
+    `--plan=${planPath}`,
+    `--authorize=${planned.exactAuthorization}`,
+    "--json",
+  ]);
+  assert.equal(migrated.taskAuthority.status, "bound");
+  assert.equal(leaseStore.read(branch).status, "delivery");
 });
 
 test("the public schema validates each canonical authority artifact", () => {

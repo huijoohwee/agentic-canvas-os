@@ -198,7 +198,7 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
     execute("git", ["merge-base", "--is-ancestor", selected, current]);
     const changed = git(["diff", "--name-only", "-z", plan.evidence.protectedMainSha, selected])
       .split("\0").filter(Boolean).map(item => `path:${item}`);
-    if (writeSetsOverlap(changed, plan.evidence.declaredWriteSet)) {
+    if (changed.length > 0 && writeSetsOverlap(changed, plan.evidence.declaredWriteSet)) {
       invalid("protected source advance overlaps authorized write set");
     }
     return selected;

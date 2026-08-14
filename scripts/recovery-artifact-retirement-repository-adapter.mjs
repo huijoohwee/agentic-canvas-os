@@ -190,7 +190,9 @@ function buildManifest(root) {
       const absolute = path.join(directory, name); const relative = prefix ? `${prefix}/${name}` : name;
       const stats = lstatSync(absolute);
       if (stats.isSymbolicLink() || (!stats.isDirectory() && !stats.isFile())) throw new Error(`Unsupported recovery artifact entry: ${relative}`);
-      if (stats.dev !== rootDevice) throw new Error(`Recovery artifact crosses a filesystem mount: ${relative}`);
+      // Mounted subdirectories break the parent-directory rename guarantee, but some
+      // Linux runners report file device ids differently for ordinary files.
+      if (stats.isDirectory() && stats.dev !== rootDevice) throw new Error(`Recovery artifact crosses a filesystem mount: ${relative}`);
       if (stats.isFile() && stats.nlink !== 1) throw new Error(`Recovery artifact contains a hardlinked file: ${relative}`);
       if (entries.length >= MAX_ENTRIES) throw new Error("Recovery artifact manifest entry bound exceeded.");
       if (stats.isDirectory()) { entries.push({ path: relative, type: "directory", mode: stats.mode & 0o777, sizeBytes: 0, sha256: null }); visit(absolute, relative); }

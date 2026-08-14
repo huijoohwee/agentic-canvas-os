@@ -2,9 +2,9 @@
 title: "Provider-Neutral Collaborative Runtime Lifecycle"
 graphId: "md:provider-neutral-collaborative-runtime-lifecycle"
 doc_type: "Lifecycle Contract"
-date: "2026-07-29"
+date: "2026-08-14"
 lang: "en-US"
-schema: "canonical-runtime-lifecycle/v6"
+schema: "canonical-runtime-lifecycle/v7"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "provider-neutral multi-user, multi-device, parallel authoring, integration, review, authorization, deployment, verification, and rollback semantics"
@@ -33,6 +33,30 @@ fences, idempotency, drift checks, and fail-closed results defined here.
 Protected integration proves integration only. Candidate preparation may start
 after verified integration and review, but forward deployment remains closed
 until an authenticated human authorizes the exact candidate and target.
+
+## Universal and Adaptive Composition
+
+Lifecycle vocabulary describes capabilities, evidence, transitions, and
+authority boundaries. It never depends on a named inference model, agent
+product, prompt dialect, vendor, tool, transport, or interface. A conforming
+profile may use any inference model or no inference model. Model and provider
+metadata is optional observation evidence; it never creates authority or
+changes receipt semantics.
+
+Before candidate sealing, each profile declares its required capabilities,
+proof surfaces, and versioned decision policy. Adaptive routing, concurrency,
+retry, and fallback choices must be bounded by that policy, deterministic for
+identical evidence, recorded in digest-bound evidence, and rejected when a
+required capability is missing or a downgrade would weaken the profile.
+
+Each adapter owns one responsibility and composes with other adapters only
+through typed, closed receipts. The canonical source owner defines each
+semantic term once. Duplicate semantic owners, semantic aliases, and
+compatibility shims that redefine, bypass, or weaken canonical receipt or
+authority semantics are forbidden. Profile-level route names may alias
+transports only when they preserve those semantics exactly. Authored lifecycle
+contract and runtime implementation files remain fewer than 600 lines; split a
+module by responsibility before it reaches that limit.
 
 ## Collaboration Identity and Parallelism
 
@@ -247,141 +271,6 @@ reports `blocked`; prose, local state, and provider success labels cannot report
 | Concrete source-control, review, approval, build, hosting, and mirror behavior | Reference implementation adapters |
 | Human decision interaction transport | Replaceable Interaction Adapter |
 | Human forward-deployment decision | Authenticated Operator |
-
-## Reference Implementation Mapping
-
-The current Agentic Canvas OS / Knowgrph profile maps the neutral protocol as
-follows. These names are implementation facts, not universal lifecycle terms.
-
-| Neutral term | Current reference implementation |
-|---|---|
-| Canonical protected source ref | GitHub `origin/main` with protected pull-request integration |
-| Collaboration identity | `agent/<device>/<semantic-scope>`, `agentic-writer-lease/v2`, lease epoch, claim SHA, draft ownership pull request, and authenticated pull-request actor |
-| Overlap preservation | Registered worktree and pull-request ownership for active lanes; a locked, content-addressed stash plus durable recovery ref only when canonical review requires temporary isolation; exact digest verification before any safe restoration |
-| Integration Receipt | Protected merge SHA, paired immutable manifest, required checks, lease and pull-request evidence |
-| Controlled runtime review | Repository-owned localhost runtime supervised by Agentic Canvas OS `turn:end` |
-| Runtime Review Receipt | `agentic-local-review-candidate/v1` |
-| Candidate Manifest | `agentic-production-release-candidate/v1`, binding Knowgrph, Agentic Canvas OS, catalog, mirror, artifact, and immutable-manifest identities |
-| Runtime-ready authorization prompt | ACOS `agentic-production-authorization-prompt/v1`, derived from the current `turn:end` runtime, exact local-review receipt, candidate, source revision, release run, and loopback Apex URL |
-| Human interaction adapter | Knowgrph `npm run production:authorize` interactive terminal command; it downloads the exact candidate, requires an exact-digest challenge response in a TTY, calls the authority API directly, and neither launches nor requires a browser |
-| Human authority adapter | Protected GitHub `production` environment with an authenticated required reviewer |
-| Deployment adapter | Knowgrph repository-owned Cloudflare release controller |
-| Deployment Receipt | Exact Cloudflare Pages deployment identifier, immutable candidate origin, consumed authorization, controller identity, and deployed artifact digest |
-| State reconciler | Repository-owned direct D1 reconciliation with document, chunk, and graph readback plus content and path-hash parity |
-| State Reconciliation Receipt | Exact D1 counts, direct readback, parity results, and state-contract identity |
-| Live verification adapters | Immutable Pages origin smoke, public route smoke, browser fidelity, and returning-user service-worker revision convergence |
-| Publication adapter | Generated `huijoohwee` mirror, published only after live verification |
-| Production targets | `https://airvio.co` and `https://airvio.co/knowgrph` |
-
-The executable terminal chain is owned by
-`scripts/collaborative-release-terminal-receipts.mjs` and re-exported through
-`scripts/collaborative-release-lifecycle-contract.mjs`. It enforces these exact
-content-addressed schemas:
-
-| Receipt | Executable schema and enforced join |
-|---|---|
-| Deployment | `agentic-deployment-receipt/v1`; consumed authorization, candidate, target, release key, controller, artifact, and rollback target must agree |
-| State reconciliation | `agentic-state-reconciliation-receipt/v1`; the deployment/controller join, bounded operation count, direct-authoritative readback, exact document/chunk/graph counts, and path-hash/content parity are mandatory |
-| Live verification | `agentic-live-verification-receipt/v2`; deployment and state-reconciliation predecessors, controller, candidate, target, artifact, rollback target, independent proof-surface digests, and marker-byte parity must agree |
-| Publication | `agentic-publication-receipt/v2`; only a validated live-verification v2 predecessor can create the production publication envelope |
-| Rollback | `agentic-rollback-receipt/v1`; the deployment predecessor and exact last-known-good target must agree, restoration probes are required, the mirror remains unchanged, and only a terminal restored result closes recovery |
-
-Unknown fields, malformed digests, stale predecessor identities, indirect
-readback, unbounded state operations, count drift, parity failure, partial
-rollback, or mirror advancement fail before a terminal receipt is emitted.
-The explicitly named legacy observation adapters retain the earlier
-`agentic-live-verification-receipt/v1` and `agentic-publication-receipt/v1`
-envelopes for closed compatibility. Their historical aliases remain callable,
-but neither receipt can satisfy a v2 validator, the v2 publication constructor,
-or a production carrier discriminator, so they create no production-stage
-authority.
-
-The canonical run persists authoritative terminal evidence only in the closed
-`agentic-collaborative-release-lifecycle/v2` carrier. Its `completion` is
-exactly `in-progress`, `production-complete`, or `rolled-back`; production
-completion requires the joined Deployment, State Reconciliation, Live
-Verification v2, and Publication v2 receipts, while rollback requires its
-joined Deployment and Rollback receipts and forbids publication. The original
-carrier at `collaborative-release-lifecycle/v1` remains observation-only and
-cannot accept any v2 terminal receipt. Before v2 admits either terminal state,
-it recomputes and causally joins every receipt from overlap preservation through
-the consumed human authorization, including all validity windows. Interaction
-and the human decision must both occur before runtime review expiry. A rollback
-must name the exact failed stage, contain exactly the successful State and Live
-Verification prefix implied by that stage, and follow its latest predecessor.
-
-Each device fetches `origin` independently. The registered `main` checkout is
-the automation-owned synchronization and runtime lane; task worktrees are
-mutation lanes only. `npm run sync:workspace` validates changed revisions in
-disposable worktrees and permits only clean fast-forward convergence. Ahead,
-diverged, dirty, remote-unavailable, or failed candidates preserve the prior
-last-known-good checkout and content-addressed diagnostics. Blind pull, reset,
-rebase, moving stash selectors, force checkout, and destructive cleanup are not
-recovery.
-
-The exceptional `canonical:main:recover` adapter is available only in the
-primary registered `main` worktree and only with an explicit acknowledgement,
-stable session, and exact expected local and fetched `origin/main` SHAs. It
-rejects ordinary ahead, behind, merge, empty, or non-equivalent history: every
-local-only commit must be represented by both `git cherry` equivalence and a
-stable patch-id match in the remote divergence. Before changing the checked-out
-ref, it serializes on the shared park lock, pins the original HEAD, captures
-tracked, staged, and untracked state under an immutable stash ref, and emits
-content-addressed prepared and capture receipts with per-path disposition
-evidence. Ignored paths are retained in place only after proving their path-set
-digest, unchanged ignore rules, and absence of filesystem-aware exact,
-ancestor, or descendant collisions with the protected target. That proof is
-revalidated at every realignment boundary, and Git's no-overwrite-ignore guard
-closes the final proof-to-switch race; any collision fails closed. It then
-replays only the exact
-`main(old) -> detached(origin) -> main(origin)` transition and emits a completion
-receipt after proving a clean protected checkout. This is preservation and
-canonical-source reconciliation only; it grants no integration, review,
-deployment, publication, or restoration authority.
-
-`device:integrate` publishes through protected integration, waits for the exact
-PR head to merge, records durable completion, fast-forwards canonical source,
-and delegates runtime review to `turn:end`. That receipt is review evidence, not
-Production authorization. Knowgrph may then build once and wait at the protected
-GitHub environment. The reference operator uses the terminal interaction
-adapter; the browser is not part of the production path. After the adapter
-records the exact challenge response and the protected environment records the
-same authenticated human decision, the controller
-revalidates every bound identity without rebuilding, deploys under one
-environment concurrency lock, captures the immutable Pages origin, reconciles
-D1 with direct readback, proves the immutable origin and both production routes,
-verifies browser fidelity and returning-user service-worker convergence, then
-publishes the exact verified mirror.
-
-The reference adapter may display the authorization gate only after `turn:end`
-returns `runtime-ready` for the exact candidate source and its supervised
-loopback Apex surface. It renders this contract-owned template:
-
-```text
-The release is verified and awaiting fresh human authorization.
-
-Candidate: `{{candidate_digest}}`
-Source: `{{source_revision}}`
-Run: `{{release_run_reference}}`
-localhost: `{{localhost_review_url}}`
-
-Reply exactly:
-
-`authorize {{candidate_digest}}`
-```
-
-The localhost value is derived from the current runtime receipt, not accepted
-as free-form operator input. It is a review locator, never an authority adapter;
-the exact reply must still produce a joined Authorization Interaction Receipt
-and a separate authenticated Human Authorization Receipt.
-
-Agentic Canvas OS owns no independent production Worker. Knowgrph is the sole
-forward-deployment and rollback owner for `airvio.co`. Failed post-deploy probes
-restore the captured successful Cloudflare deployment and leave the mirror at
-its last-known-good revision. Stateful changes use backward-compatible
-expand/migrate/contract stages because code rollback does not reverse data.
-Completed task worktrees are removed only after exact merge, clean-tree, and
-completion proof; unrelated runtime-document lanes remain preserved.
 
 ## VCC
 

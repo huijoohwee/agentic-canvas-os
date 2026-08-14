@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2870,
-  "headDigest": "1b3149a09c61a761901a3cc47079507a2cb78da8fad3b5b6531b0af8edab9fcc",
+  "sequence": 2871,
+  "headDigest": "cd34f34edbd32cc733a82d85a41919f0944c83b5dc61f20f40a6f0b496765dc0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -141822,6 +141822,52 @@
       },
       "claimDigest": "e02d9dd683f1432c4a8ee02cd2ec4f2f049fa3d19f82d1d79ac69eea616d4590",
       "digest": "1b3149a09c61a761901a3cc47079507a2cb78da8fad3b5b6531b0af8edab9fcc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2871,
+      "parentDigest": "1b3149a09c61a761901a3cc47079507a2cb78da8fad3b5b6531b0af8edab9fcc",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a1f9e10c87dfe4610872ef06fda831de190896eded472eddb0e09476e668b737",
+      "idempotencyKey": "d99c59c59c916073e7ac93caca33bd8c4fee7f68b51df2747031f8b68097856c",
+      "requestDigest": "5f39dbe6a471bda9a3db481da9beb8cc7b2293af95d6a930ff4a258daa491aba",
+      "evaluationTime": "2026-08-14T02:51:29.000Z",
+      "claimCore": {
+        "claimId": "a1f9e10c87dfe4610872ef06fda831de190896eded472eddb0e09476e668b737",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:77994dbbeebf0beb3f75410efc942a7ceb6d3ef77ce9aa3cd6a6180255472447",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0995e7b5bc659468fa3c0ab92d1d437a7f8e19c905340be3d59524728865ed42",
+        "canonicalBaseRevision": "b2e256841ff8777ff2c6d3d98dda875febff2931",
+        "declaredWriteScope": [
+          "path:__tests__/task-authority-successor-projection-repair-contract.test.mjs",
+          "path:__tests__/task-authority-successor-projection-repair-controller.test.mjs",
+          "path:__tests__/task-authority-successor-projection-repair-repository-adapter.test.mjs",
+          "path:docs/TASK-AUTHORITY-SUCCESSOR-PROJECTION-REPAIR.md",
+          "path:scripts/task-authority-successor-projection-repair-contract.mjs",
+          "path:scripts/task-authority-successor-projection-repair-controller.mjs",
+          "path:scripts/task-authority-successor-projection-repair-repository-adapter.mjs",
+          "path:scripts/task-authority-successor-projection-repair.mjs",
+          "semantic:task-authority-successor-projection-repair-v3"
+        ],
+        "writeSetDigest": "954137b69ea3c5617cf78535574983d8121a3c089eb95fc2c594a0940a07b422",
+        "laneRevision": "7aa365f92380cbe309ff0fe6c5bb975b0e9bd067",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-14T03:12:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-5l9Y",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "753cebaf882fa28fdc0db508080235328b90076020af29f06b561c9b804bf6d8",
+      "digest": "cd34f34edbd32cc733a82d85a41919f0944c83b5dc61f20f40a6f0b496765dc0"
     }
   ]
 }

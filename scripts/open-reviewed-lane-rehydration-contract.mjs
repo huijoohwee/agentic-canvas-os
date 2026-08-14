@@ -1,11 +1,11 @@
-// Responsibility: Normalize and bind one absent local projection of an open reviewed lane.
+// Responsibility: Normalize and bind one exact local projection gap of an open reviewed lane.
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import path from "node:path";
 
-export const EVIDENCE_SCHEMA = "agentic-open-reviewed-lane-rehydration-evidence/v1";
-export const PLAN_SCHEMA = "agentic-open-reviewed-lane-rehydration-plan/v1";
-export const INTENT_SCHEMA = "agentic-open-reviewed-lane-rehydration-intent/v1";
-export const RECEIPT_SCHEMA = "agentic-open-reviewed-lane-rehydration-receipt/v1";
+export const EVIDENCE_SCHEMA = "agentic-open-reviewed-lane-rehydration-evidence/v2";
+export const PLAN_SCHEMA = "agentic-open-reviewed-lane-rehydration-plan/v2";
+export const INTENT_SCHEMA = "agentic-open-reviewed-lane-rehydration-intent/v2";
+export const RECEIPT_SCHEMA = "agentic-open-reviewed-lane-rehydration-receipt/v2";
 
 const SHA = /^[0-9a-f]{40}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
@@ -111,7 +111,7 @@ export function buildOpenReviewedLaneRehydrationReceipt({ intent: source, leaseD
     phases: normalized.phases,
     leaseDigest: digest(leaseDigest, "lease digest"),
     registrationDigest: digest(registrationDigest, "registration digest"),
-    mutationSet: freeze(["local-branch", "registered-worktree", "writer-lease-projection"]),
+    mutationSet: mutationSetFor(evidence),
     remoteMutation: false,
     providerMutation: false,
     cloudMutation: false,
@@ -127,7 +127,8 @@ export function normalizeOpenReviewedLaneRehydrationReceipt(value) {
   if (core.schema !== RECEIPT_SCHEMA || core.status !== "rehydrated"
     || digest(receiptDigest, "receipt digest") !== digestValue(core)
     || core.remoteMutation !== false || core.providerMutation !== false || core.cloudMutation !== false
-    || JSON.stringify(core.mutationSet) !== JSON.stringify(["local-branch", "registered-worktree", "writer-lease-projection"])) invalid("receipt");
+    || ![["registered-worktree"], ["local-branch", "registered-worktree", "writer-lease-projection"]]
+      .some(expected => JSON.stringify(core.mutationSet) === JSON.stringify(expected))) invalid("receipt");
   digest(core.operationId, "operation ID"); digest(core.planDigest, "receipt plan digest");
   digest(core.leaseDigest, "lease digest"); digest(core.registrationDigest, "registration digest");
   sha(core.remoteHeadSha, "receipt head"); sha(core.currentMainSha, "receipt main");
@@ -141,7 +142,7 @@ export function normalizeOpenReviewedLaneRehydrationReceipt(value) {
 
 function normalizeEvidence(value) {
   exact(value, ["schema", "repository", "actor", "canonical", "target", "branch", "remoteHeadSha",
-    "pullRequest", "marker", "claim", "refresh", "localAbsence", "evidenceDigest"].filter(key => key !== "evidenceDigest" || key in value), "evidence");
+    "pullRequest", "marker", "claim", "refresh", "localProjection", "evidenceDigest"].filter(key => key !== "evidenceDigest" || key in value), "evidence");
   if (value.schema !== EVIDENCE_SCHEMA) invalid("evidence schema");
   const core = {
     schema: EVIDENCE_SCHEMA,
@@ -155,7 +156,7 @@ function normalizeEvidence(value) {
     marker: marker(value.marker),
     claim: claim(value.claim),
     refresh: refresh(value.refresh),
-    localAbsence: absence(value.localAbsence),
+    localProjection: localProjection(value.localProjection),
   };
   assertJoins(core);
   const evidenceDigest = digestValue(core);
@@ -231,7 +232,10 @@ function marker(value) {
     fenceSha: sha(value.fenceSha, "marker fence"), reviewHeadSha: sha(value.reviewHeadSha, "review head"),
     expiresAt: instant(value.expiresAt, "marker expiry"),
     admission: freeze({ ...admission, declaredWriteSet }),
-    cloudAuthority: freeze({ ...authority, cloudDeclaredWriteScope: cloudWriteSet }),
+    cloudAuthority: freeze({ ...authority,
+      ledgerRepository: repositoryIdentity(authority.ledgerRepository, "ledger repository"),
+      targetRepository: repositoryIdentity(authority.targetRepository, "target repository"),
+      cloudDeclaredWriteScope: cloudWriteSet }),
     markerDigest: digest(value.markerDigest, "marker digest") });
 }
 function claim(value) {
@@ -267,16 +271,25 @@ function normalizeIntegration(value) {
     integrationIntentDigest: digest(value.integrationIntentDigest, "integration intent"),
     integratedAt: instant(value.integratedAt, "integration instant") });
 }
-function absence(value) {
-  exact(value, ["targetAbsent", "branchAbsent", "worktreeAbsent", "leaseAbsent"], "local absence");
-  if (!Object.values(value).every(item => item === true)) invalid("local absence");
-  return freeze({ ...value });
+function localProjection(value) {
+  exact(value, ["mode", "branch", "lease", "worktreeAbsent"], "local projection");
+  if (!["all-absent", "worktree-only"].includes(value.mode) || value.worktreeAbsent !== true) invalid("local projection");
+  if (value.branch !== null) exact(value.branch, ["headSha", "refDigest"], "projected branch");
+  if (value.lease !== null) exact(value.lease, ["leaseDigest", "projectionDigest"], "projected lease");
+  const branch = value.branch === null ? null : freeze({ headSha: sha(value.branch?.headSha, "projected branch head"),
+    refDigest: digest(value.branch?.refDigest, "projected branch ref") });
+  const lease = value.lease === null ? null : freeze({ leaseDigest: digest(value.lease?.leaseDigest, "projected lease"),
+    projectionDigest: digest(value.lease?.projectionDigest, "projected lease slice") });
+  if ((value.mode === "all-absent") !== (branch === null && lease === null)
+    || (branch === null) !== (lease === null)) invalid("local projection mode");
+  return freeze({ mode: value.mode, branch, lease, worktreeAbsent: true });
 }
 function assertJoins(value) {
   const { repository: repo, actor: owner, pullRequest: pull, marker: lease, claim: cloud } = value;
   const authority = lease.cloudAuthority, admission = lease.admission;
   const branchIdentity = lease.branch.match(/^agent\/([^/]+)\/([^/]+)$/u);
   const firstRefreshMain = refreshFirstMain(value.refresh);
+  const local = value.localProjection;
   const expectedClaimId = digestValue({ actorId: cloud.actorId, canonicalBaseRevision: cloud.canonicalBaseRevision,
     leaseEpoch: cloud.leaseEpoch, repositoryId: cloud.repositoryId, workItemId: cloud.workItemId,
     writeSetDigest: cloud.writeSetDigest });
@@ -303,7 +316,10 @@ function assertJoins(value) {
     || JSON.stringify(authority.cloudDeclaredWriteScope) !== JSON.stringify(cloud.declaredWriteScope)
     || cloud.actorId !== owner.claimActorId || cloud.repositoryId !== repo.claimRepositoryId
     || cloud.reviewRequestId !== pull.reviewRequestId
-    || authority.ledgerRepository !== repo.nameWithOwner || authority.targetRepository !== repo.nameWithOwner
+    || authority.targetRepository !== repo.nameWithOwner
+    || local.branch && (local.branch.headSha !== value.remoteHeadSha
+      || local.branch.refDigest !== digestValue({ branch: value.branch, head: value.remoteHeadSha }))
+    || local.lease && local.lease.projectionDigest !== value.canonical.leaseProjectionDigest
     || (value.refresh === null && pull.headSha !== lease.reviewHeadSha)
     || (value.refresh !== null && (value.refresh.deliveredHeadSha !== lease.reviewHeadSha
       || value.refresh.refreshedHeadSha !== pull.headSha || firstRefreshMain !== pull.baseSha))) invalid("joined subject");
@@ -350,9 +366,15 @@ function intent(value) {
 }
 function assertPhasePlanJoins(phases, evidence) {
   const branch = phases["branch-created"], worktree = phases["worktree-created"], lease = phases["lease-recovered"];
-  if (branch && (branch.branch !== evidence.branch || branch.headSha !== evidence.remoteHeadSha)
-    || worktree && (worktree.targetPath !== evidence.target.path || worktree.headSha !== evidence.remoteHeadSha)
+  const adopted = evidence.localProjection.mode === "worktree-only";
+  if (branch && (branch.branch !== evidence.branch || branch.headSha !== evidence.remoteHeadSha
+      || branch.disposition !== (adopted ? "adopted" : "created"))
+    || worktree && (worktree.targetPath !== evidence.target.path || worktree.headSha !== evidence.remoteHeadSha
+      || worktree.disposition !== "created")
     || lease && (lease.epoch !== evidence.marker.epoch || lease.sessionId !== evidence.marker.sessionId
+      || lease.disposition !== (adopted ? "adopted" : "created")
+      || adopted && (lease.leaseDigest !== evidence.localProjection.lease.leaseDigest
+        || lease.leaseProjectionDigest !== evidence.localProjection.lease.projectionDigest)
       )) invalid("phase plan join");
 }
 function assertReceiptPlanJoins(receipt, evidence) {
@@ -366,7 +388,8 @@ function assertReceiptPlanJoins(receipt, evidence) {
     || receipt.claim.workItemId !== evidence.claim.workItemId || receipt.claim.fenceRevision !== evidence.claim.fenceRevision
     || receipt.claim.transitionCounter !== evidence.claim.transitionCounter || receipt.claim.leaseEpoch !== evidence.claim.leaseEpoch
     || receipt.leaseDigest !== receipt.phases["lease-recovered"].leaseDigest
-    || receipt.registrationDigest !== receipt.phases["worktree-created"].registrationDigest) invalid("receipt plan join");
+    || receipt.registrationDigest !== receipt.phases["worktree-created"].registrationDigest
+    || JSON.stringify(receipt.mutationSet) !== JSON.stringify(mutationSetFor(evidence))) invalid("receipt plan join");
 }
 function receiptPullRequest(value) {
   exact(value, ["number", "nodeId", "url"], "receipt pull request");
@@ -402,39 +425,45 @@ function normalizePhases(value, status) {
   const result = {};
   if (keys.includes("branch-created")) {
     const phase = value["branch-created"];
-    exact(phase, ["branch", "headSha", "refDigest"], "branch phase");
+    exact(phase, ["branch", "headSha", "refDigest", "disposition"], "branch phase");
     const branch = text(phase.branch, "phase branch"), headSha = sha(phase.headSha, "phase branch head");
-    if (phase.refDigest !== digestValue({ branch, head: headSha })) invalid("phase ref");
-    result["branch-created"] = freeze({ branch, headSha, refDigest: digest(phase.refDigest, "phase ref") });
+    if (phase.refDigest !== digestValue({ branch, head: headSha }) || !["created", "adopted"].includes(phase.disposition)) invalid("phase ref");
+    result["branch-created"] = freeze({ branch, headSha, refDigest: digest(phase.refDigest, "phase ref"), disposition: phase.disposition });
   }
   if (keys.includes("worktree-created")) {
     const phase = value["worktree-created"];
-    exact(phase, ["targetPath", "headSha", "registrationDigest"], "worktree phase");
+    exact(phase, ["targetPath", "headSha", "registrationDigest", "disposition"], "worktree phase");
+    if (phase.disposition !== "created") invalid("worktree disposition");
     result["worktree-created"] = freeze({ targetPath: absolute(phase.targetPath, "phase target"),
-      headSha: sha(phase.headSha, "phase worktree head"), registrationDigest: digest(phase.registrationDigest, "phase registration") });
+      headSha: sha(phase.headSha, "phase worktree head"), registrationDigest: digest(phase.registrationDigest, "phase registration"), disposition: phase.disposition });
   }
   if (keys.includes("lease-recovered")) {
     const phase = value["lease-recovered"];
-    exact(phase, ["leaseDigest", "epoch", "sessionId", "leaseCasReceiptDigest",
-      "leaseRegistryBeforeRevision", "leaseRegistryBeforeDigest",
-      "leaseRegistryAfterRevision", "leaseRegistryAfterDigest"], "lease phase");
+    const created = phase?.disposition === "created";
+    exact(phase, created ? ["disposition", "leaseDigest", "epoch", "sessionId", "leaseCasReceiptDigest",
+      "leaseRegistryBeforeRevision", "leaseRegistryBeforeDigest", "leaseRegistryAfterRevision", "leaseRegistryAfterDigest"]
+      : ["disposition", "leaseDigest", "epoch", "sessionId", "leaseProjectionDigest"], "lease phase");
+    if (!created && phase.disposition !== "adopted") invalid("lease disposition");
     if (!Number.isSafeInteger(phase.epoch) || phase.epoch < 1) invalid("phase lease epoch");
-    if (!Number.isSafeInteger(phase.leaseRegistryBeforeRevision) || phase.leaseRegistryBeforeRevision < 0
+    if (created && (!Number.isSafeInteger(phase.leaseRegistryBeforeRevision) || phase.leaseRegistryBeforeRevision < 0
       || phase.leaseRegistryBeforeRevision >= Number.MAX_SAFE_INTEGER
-      || phase.leaseRegistryAfterRevision !== phase.leaseRegistryBeforeRevision + 1) invalid("phase lease registry revision");
+      || phase.leaseRegistryAfterRevision !== phase.leaseRegistryBeforeRevision + 1)) invalid("phase lease registry revision");
     result["lease-recovered"] = freeze({ leaseDigest: digest(phase.leaseDigest, "phase lease"),
-      epoch: phase.epoch, sessionId: text(phase.sessionId, "phase lease session"),
-      leaseCasReceiptDigest: digest(phase.leaseCasReceiptDigest, "phase lease CAS receipt"),
-      leaseRegistryBeforeRevision: phase.leaseRegistryBeforeRevision,
-      leaseRegistryBeforeDigest: digest(phase.leaseRegistryBeforeDigest, "phase lease registry before"),
-      leaseRegistryAfterRevision: phase.leaseRegistryAfterRevision,
-      leaseRegistryAfterDigest: digest(phase.leaseRegistryAfterDigest, "phase lease registry after") });
+      epoch: phase.epoch, sessionId: text(phase.sessionId, "phase lease session"), disposition: phase.disposition,
+      ...(created ? { leaseCasReceiptDigest: digest(phase.leaseCasReceiptDigest, "phase lease CAS receipt"),
+        leaseRegistryBeforeRevision: phase.leaseRegistryBeforeRevision,
+        leaseRegistryBeforeDigest: digest(phase.leaseRegistryBeforeDigest, "phase lease registry before"),
+        leaseRegistryAfterRevision: phase.leaseRegistryAfterRevision,
+        leaseRegistryAfterDigest: digest(phase.leaseRegistryAfterDigest, "phase lease registry after") }
+        : { leaseProjectionDigest: digest(phase.leaseProjectionDigest, "phase lease projection") }) });
   }
   return freeze(result);
 }
 function exact(value, keys, label) { if (!value || typeof value !== "object" || Array.isArray(value)
   || JSON.stringify(Object.keys(value).sort()) !== JSON.stringify([...keys].sort())) invalid(label); }
 function text(value, label) { if (typeof value !== "string" || !value || value !== value.trim() || value.includes("\0")) invalid(label); return value; }
+function repositoryIdentity(value, label) { const result = text(value, label); if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) invalid(label); return result; }
+function mutationSetFor(evidence) { return freeze(evidence.localProjection.mode === "worktree-only" ? ["registered-worktree"] : ["local-branch", "registered-worktree", "writer-lease-projection"]); }
 function absolute(value, label) { text(value, label); if (!value.startsWith("/")) invalid(label); return value; }
 function sha(value, label) { if (!SHA.test(String(value || ""))) invalid(label); return value; }
 function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(label); return value; }

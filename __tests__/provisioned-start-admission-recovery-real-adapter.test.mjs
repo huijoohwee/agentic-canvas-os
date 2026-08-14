@@ -5,9 +5,13 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { buildProvisionedStartAdmissionRecoveryPlan } from "../scripts/provisioned-start-admission-recovery-contract.mjs";
+import { buildProvisionedStartAdmissionRecoveryPlan, projectProvisionedStartAdmissionRecovery,
+  projectProvisionedStartAdmissionRecoveryStableTerminalEvidence,
+} from "../scripts/provisioned-start-admission-recovery-contract.mjs";
 import { createProvisionedStartAdmissionRecoveryRepositoryAdapter } from "../scripts/provisioned-start-admission-recovery-repository-adapter.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
+import { createTaskAuthorityBinding, createTaskAuthorityCapability } from "../scripts/task-bound-lane-authority-contract.mjs";
+import { updateWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const digest = value => digestValue({ value });
 
@@ -45,23 +49,29 @@ test("real Git adapter produces one plan across fresh cloud observations", t => 
     writeSetDigest: manifest.writeSetDigest, manifestDigest: manifest.manifestDigest,
     planReceiptDigest: digest("plan"), admissionReceiptDigest: digest("admission"),
     existingLaneStateDigest: digest("lanes") };
-  const lease = { schema: "agentic-writer-lease/v2", status: "active", sessionId: "session",
+  const leaseFrame = { schema: "agentic-writer-lease/v2", status: "active", sessionId: "session",
     device: "device", scope: "stable-subject", branch, worktreePath: repository, epoch: 2,
     baseSha: authority.canonicalBaseSha, fenceSha, pullRequestUrl: "https://example.test/pull/1",
-    admission, cloudAuthority: authority, taskAuthority: { digest: digest("task") } };
-  const store = { assertTaskAuthority: () => lease, read: () => lease };
-  const body = "owner\n<!-- writer marker -->";
+    autoDelivery: false, runtimeRequired: false, heartbeatAt: "2026-08-14T00:00:00.000Z",
+    expiresAt: "2026-08-15T00:00:00.000Z", admission, cloudAuthority: authority };
+  const capability = createTaskAuthorityCapability({ generation: 2,
+    issuedAt: "2026-08-14T00:00:00.000Z" });
+  const lease = { ...leaseFrame, taskAuthority: createTaskAuthorityBinding({ capability,
+    lease: leaseFrame, boundAt: "2026-08-14T00:00:00.000Z" }) };
+  let currentLease = lease;
+  const store = { assertTaskAuthority: () => currentLease, read: () => currentLease };
+  let body = updateWriterLeasePullRequestBody("owner", lease);
   const gh = () => JSON.stringify({ id: "PR_1", number: 1, url: lease.pullRequestUrl,
     state: "OPEN", isDraft: true, autoMergeRequest: null, headRefName: branch,
     headRefOid: fenceSha, baseRefOid: authority.canonicalBaseSha, body });
-  let observation = 0;
+  let observation = 0; let heartbeatCounter = 0; let forgedReceipt = false;
   const verifyCloud = () => {
     const current = observation++;
     const claim = { claimId: authority.claimId, actorId: "actor", repositoryId: "repository",
       workItemId: "work-item", canonicalBaseRevision: authority.canonicalBaseSha,
       laneRevision: fenceSha, declaredWriteScope: manifest.declaredWriteSet,
       writeSetDigest: manifest.writeSetDigest, leaseEpoch: 1, transitionCounter: 2,
-      heartbeatCounter: 0, reviewRequestId: authority.reviewRequestId, expiresAt: authority.expiresAt,
+      heartbeatCounter, reviewRequestId: authority.reviewRequestId, expiresAt: authority.expiresAt,
       fenceRevision: authority.claimDigest, transitionDigest: authority.claimLedgerRevision,
       state: "active", writeAuthority: true, scopeReserved: true };
     return { authority, verification: { schema: "agentic-lane-cloud-verification/v1", status: "ready",
@@ -70,7 +80,7 @@ test("real Git adapter produces one plan across fresh cloud observations", t => 
       canonicalBaseSha: authority.canonicalBaseSha, laneRevision: fenceSha,
       writeSetDigest: manifest.writeSetDigest, reviewRequestId: authority.reviewRequestId,
       remoteClaimInventoryDigest: digest(`volatile inventory ${current}`), inventory: { claims: [claim] },
-      receiptDigest: digest(`fresh receipt ${current}`),
+      receiptDigest: forgedReceipt ? "forged" : digest(`fresh receipt ${current}`),
       verifiedAt: `2026-08-14T00:00:0${current}.000Z` } };
   };
   const adapter = createProvisionedStartAdmissionRecoveryRepositoryAdapter({ repository,
@@ -81,6 +91,30 @@ test("real Git adapter produces one plan across fresh cloud observations", t => 
   assert.equal(first.planDigest, second.planDigest);
   assert.equal(first.evidence.cloud.verifier.subjectDigest, second.evidence.cloud.verifier.subjectDigest);
   assert.doesNotThrow(() => adapter.assertFreshVerification(first, "real-adapter-recheck"));
+
+  const mutationReceiptDigests = ["source-local-cas", "target-local-cas"].map(operation => digestValue({
+    schema: "agentic-task-authority-mutation-proof/v1", operation,
+    taskAuthorityDigest: first.evidence.lease.taskAuthorityDigest,
+    leaseDigest: first.evidence.lease.leaseDigest,
+  }));
+  const projection = projectProvisionedStartAdmissionRecovery({ plan: first,
+    projectedAt: "2026-08-14T00:00:00.000Z", mutationReceiptDigests });
+  currentLease = { ...lease, integration: projection.integration, admission: projection.admission,
+    provisionedStartAdmissionRecovery: projection.preservation };
+  body = updateWriterLeasePullRequestBody(body, currentLease);
+  const expectedBodyDigest = digestValue(body);
+  const firstTerminal = adapter.verifyTerminal({ plan: first, expectedBodyDigest });
+  const secondTerminal = adapter.verifyTerminal({ plan: first, expectedBodyDigest });
+  assert.deepEqual(projectProvisionedStartAdmissionRecoveryStableTerminalEvidence({
+    plan: first, terminalEvidence: firstTerminal }),
+  projectProvisionedStartAdmissionRecoveryStableTerminalEvidence({
+    plan: first, terminalEvidence: secondTerminal }));
+  assert.notEqual(firstTerminal.cloudVerificationReceiptDigest,
+    secondTerminal.cloudVerificationReceiptDigest);
+  heartbeatCounter = 1;
+  assert.throws(() => adapter.verifyTerminal({ plan: first, expectedBodyDigest }), /Cloud authority drifted/u);
+  heartbeatCounter = 0; forgedReceipt = true;
+  assert.throws(() => adapter.verifyTerminal({ plan: first, expectedBodyDigest }), /receipt is invalid/u);
 });
 
 function git(repository, argumentsList) {

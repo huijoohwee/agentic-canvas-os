@@ -35,14 +35,14 @@ test("controller replays response loss while fresh verifier receipts change for 
     projectLocal: () => { localCalls += 1; if (loseOnce) { loseOnce = false; localMutations += 1;
       throw new Error("simulated response loss"); } return { lease: { value: 1 }, projection: { value: 1 }, adopted: true }; },
     projectMarker: () => ({ bodyDigest: d("body"), markerDigest: d("marker"), adopted: markerCalls++ > 0 }),
-    verifyTerminal: () => ({ terminal: ++terminalCalls > 0 }) };
+    verifyTerminal: () => terminalEvidence(plan, ++terminalCalls) };
   const store = { read: () => intent, begin({ plan: input, authorization, startedAt }) { if (!intent) intent = { phase: "intent", phases: { intent: phaseReceipt("intent", {}) },
       planDigest: input.planDigest, evidenceDigest: digestValue(input.evidence), authorizationDigest: authorization.authorizationDigest,
       startedAt }; return intent; }, advance({ expectedPhase, phase, values }) { if (phase === "local-projected" && loseOnce) {
       throw new Error("unexpected pre-effect state"); }
     assert.equal(intent.phase, expectedPhase); intent = { ...intent, phase, phases: { ...intent.phases,
       [phase]: phaseReceipt(phase, values) } }; return intent; } };
-  const times = [0, 1, 2, 3, 4, 5].map(second => new Date(`2026-08-14T00:00:0${second}.000Z`));
+  const times = [0, 1, 2, 3, 4, 5, 6].map(second => new Date(`2026-08-14T00:00:0${second}.000Z`));
   const controller = createProvisionedStartAdmissionRecoveryController({ adapter, intentStore: store, clock: () => times.shift() });
   const authorization = `authorize provisioned-start-admission-recovery ${plan.planDigest}`;
   assert.throws(() => controller.execute({ sealedPlan: plan, authorization }), /response loss/u);
@@ -53,6 +53,50 @@ test("controller replays response loss while fresh verifier receipts change for 
   assert.equal(markerCalls, 1);
   assert.equal(terminalCalls, 2);
   assert.equal(verificationChecks, 5);
+  const replay = controller.execute({ sealedPlan: plan, authorization });
+  assert.equal(replay.receiptDigest, result.receiptDigest);
+  assert.notEqual(replay.executionAttestation.cloudVerificationReceiptDigest,
+    result.executionAttestation.cloudVerificationReceiptDigest);
+  assert.equal(localCalls, 2);
+  assert.equal(markerCalls, 1);
+  assert.equal(terminalCalls, 3);
+  assert.equal(verificationChecks, 6);
+});
+
+test("controller rejects stable authority drift and malformed execution attestations", () => {
+  const plan = buildProvisionedStartAdmissionRecoveryPlan(evidence());
+  let terminalCalls = 0; let intent = null;
+  const adapter = { readEvidence: () => plan.evidence, assertPlanPreimage: () => plan.evidence,
+    assertFreshVerification: () => true,
+    projectLocal: () => ({ lease: { value: 1 }, projection: { value: 1 }, adopted: false }),
+    projectMarker: () => ({ bodyDigest: d("body"), markerDigest: d("marker"), adopted: false }),
+    verifyTerminal: () => terminalEvidence(plan, ++terminalCalls,
+      terminalCalls === 2 ? d("changed authority") : plan.evidence.cloud.verifier.subjectDigest) };
+  const store = intentStore(() => intent, value => { intent = value; });
+  const controller = createProvisionedStartAdmissionRecoveryController({ adapter, intentStore: store,
+    clock: () => new Date("2026-08-14T00:00:00.000Z") });
+  const authorization = `authorize provisioned-start-admission-recovery ${plan.planDigest}`;
+  assert.throws(() => controller.execute({ sealedPlan: plan, authorization }), /authority subject drifted/u);
+
+  terminalCalls = 0; intent = null;
+  adapter.verifyTerminal = () => ({ ...terminalEvidence(plan, ++terminalCalls),
+    cloudVerificationAttestationReceiptDigest: "forged" });
+  assert.throws(() => controller.execute({ sealedPlan: plan, authorization }), /attestation receipt/u);
 });
 
 function phaseReceipt(phase, values) { return { phase, values, receiptDigest: d(phase) }; }
+function terminalEvidence(plan, call, subjectDigest = plan.evidence.cloud.verifier.subjectDigest) {
+  return { leaseDigest: d("lease"), bodyDigest: d("body"), cloudAuthoritySubjectDigest: subjectDigest,
+    cloudVerificationReceiptDigest: d(`fresh verifier ${call}`),
+    cloudVerificationAttestationReceiptDigest: d(`fresh attestation ${call}`),
+    descendantDigest: d("descendant") };
+}
+function intentStore(readIntent, writeIntent) {
+  return { read: readIntent, begin({ plan, authorization, startedAt }) { const current = readIntent();
+    if (current) return current; const next = { phase: "intent", phases: { intent: phaseReceipt("intent", {}) },
+      planDigest: plan.planDigest, evidenceDigest: digestValue(plan.evidence),
+      authorizationDigest: authorization.authorizationDigest, startedAt }; writeIntent(next); return next; },
+  advance({ expectedPhase, phase, values }) { const current = readIntent(); assert.equal(current.phase, expectedPhase);
+    const next = { ...current, phase, phases: { ...current.phases, [phase]: phaseReceipt(phase, values) } };
+    writeIntent(next); return next; } };
+}

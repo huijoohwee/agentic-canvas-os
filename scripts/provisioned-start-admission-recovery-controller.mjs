@@ -4,6 +4,8 @@ import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { buildProvisionedStartAdmissionRecoveryPlan,
   buildProvisionedStartAdmissionRecoveryResult,
   normalizeProvisionedStartAdmissionRecoveryPlan,
+  projectProvisionedStartAdmissionRecoveryExecutionAttestation,
+  projectProvisionedStartAdmissionRecoveryStableTerminalEvidence,
   requireProvisionedStartAdmissionAuthorization } from "./provisioned-start-admission-recovery-contract.mjs";
 
 export function createProvisionedStartAdmissionRecoveryController({ adapter, intentStore, clock = () => new Date() }) {
@@ -42,6 +44,8 @@ export function createProvisionedStartAdmissionRecoveryController({ adapter, int
     if (intent.phase === "marker-projected") {
       const bodyDigest = intent.phases["marker-projected"].values.bodyDigest;
       const terminal = adapter.verifyTerminal({ plan: recoveryPlan, expectedBodyDigest: bodyDigest });
+      projectProvisionedStartAdmissionRecoveryExecutionAttestation({ plan: recoveryPlan,
+        terminalEvidence: terminal });
       adapter.assertFreshVerification(recoveryPlan, "before-complete-journal");
       intent = intentStore.advance({ expectedPhase: "marker-projected", phase: "complete",
         values: terminal, recordedAt: clock().toISOString() });
@@ -49,11 +53,17 @@ export function createProvisionedStartAdmissionRecoveryController({ adapter, int
     if (intent.phase !== "complete") throw new Error("Recovery did not reach its terminal phase.");
     const terminalAgain = adapter.verifyTerminal({ plan: recoveryPlan,
       expectedBodyDigest: intent.phases["marker-projected"].values.bodyDigest });
-    if (digestValue(terminalAgain) !== digestValue(intent.phases.complete.values)) {
+    const storedStable = projectProvisionedStartAdmissionRecoveryStableTerminalEvidence({
+      plan: recoveryPlan, terminalEvidence: intent.phases.complete.values });
+    const currentStable = projectProvisionedStartAdmissionRecoveryStableTerminalEvidence({
+      plan: recoveryPlan, terminalEvidence: terminalAgain });
+    const executionAttestation = projectProvisionedStartAdmissionRecoveryExecutionAttestation({
+      plan: recoveryPlan, terminalEvidence: terminalAgain });
+    if (digestValue(currentStable) !== digestValue(storedStable)) {
       throw new Error("Recovery terminal evidence drifted before result sealing.");
     }
     return buildProvisionedStartAdmissionRecoveryResult({ plan: recoveryPlan,
-      terminalEvidence: terminalAgain, phases: intent.phases });
+      terminalEvidence: currentStable, phases: intent.phases, executionAttestation });
   }
 
   return Object.freeze({ execute, plan });

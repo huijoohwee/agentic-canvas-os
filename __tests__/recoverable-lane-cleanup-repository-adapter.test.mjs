@@ -1,22 +1,15 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
-  existsSync,
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
+  existsSync, mkdtempSync, mkdirSync, readFileSync, readlinkSync,
+  realpathSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { createRecoverableLaneCleanupController } from "../scripts/recoverable-lane-cleanup-controller.mjs";
 import { createRecoverableLaneCleanupRepositoryAdapter } from "../scripts/recoverable-lane-cleanup-repository-adapter.mjs";
-
 test("repository adapter captures one exact clean attached noncanonical lane", () => {
   withFixture(fixture => {
     const adapter = createAdapter(fixture);
@@ -26,16 +19,66 @@ test("repository adapter captures one exact clean attached noncanonical lane", (
     assert.equal(evidence.target.branch, "refs/heads/agent/device/cleanup-lane");
     assert.equal(evidence.authority.currentLocalWriter, false);
     assert.equal(evidence.authority.disposition, "unowned-terminal");
+    assert.equal(evidence.target.generatedResidue.mode, "none");
   });
 });
-
+test("repository adapter content-binds only the exact generated residue roots", () => {
+  withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    const visited = [];
+    const evidence = createAdapter(fixture, {
+      observeGeneratedResidueEntry: entry => visited.push(entry),
+    }).captureEvidence({});
+    assert.equal(evidence.target.generatedResidue.mode, "preserve-exact-generated-roots");
+    assert.deepEqual(evidence.target.generatedResidue.roots, ["node_modules/", "web/dist/"]);
+    assert.equal(evidence.target.generatedResidue.entryCount >= 4, true);
+    assert.equal(evidence.target.generatedResidue.totalBytes > 0, true);
+    assert.equal(new Set(visited).size, visited.length);
+  });
+  withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    writeFileSync(path.join(fixture.worktree, "late-ignored.txt"), "outside profile\n");
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /outside the generated residue profile/);
+  });
+  withFixture(fixture => {
+    mkdirSync(path.join(fixture.worktree, "node_modules"));
+    mkdirSync(path.join(fixture.worktree, "web", "dist"), { recursive: true });
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /at least one ignored entry/);
+  });
+  for (const relative of ["empty-cache", "web/cache", "ordinary-empty"]) withFixture(fixture => {
+    mkdirSync(path.join(fixture.worktree, relative), { recursive: true });
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /outside the generated residue profile/);
+  });
+  withFixture(fixture => {
+    mkdirSync(path.join(fixture.worktree, "node_modules"));
+    mkdirSync(path.join(fixture.worktree, "web", "dist"), { recursive: true });
+    writeFileSync(path.join(fixture.worktree, "node_modules", "one.js"), "one\n");
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /at least one ignored entry/);
+  });
+  withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    mkdirSync(path.join(fixture.worktree, "node_modules", ".bin"));
+    symlinkSync("../package/index.js", path.join(
+      fixture.worktree, "node_modules", ".bin", "package-tool",
+    ));
+    assert.doesNotThrow(() => createAdapter(fixture).captureEvidence({}));
+  });
+  for (const [name, target, pattern] of [
+    ["escaping-link", "../../../../outside", /escapes its relocated checkout/],
+    ["absolute-link", "/private/tmp/outside", /escapes its relocated checkout/],
+    ["indirect-link", "../tracked-link", /traverses another link/], ["dangling-link", "../missing", /does not resolve/],
+  ]) withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    symlinkSync(target, path.join(fixture.worktree, "node_modules", name));
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), pattern);
+  });
+});
 test("canonical ignored residue is not part of the removed-lane cleanliness gate", () => {
   withFixture(fixture => {
     writeFileSync(path.join(fixture.repo, "late-ignored.txt"), "canonical ignored residue\n");
     assert.doesNotThrow(() => createAdapter(fixture).captureEvidence({}));
   });
 });
-
 test("repository adapter binds every observed preservation receipt", () => {
   withFixture(fixture => {
     const receiptDigest = "8".repeat(64);
@@ -51,7 +94,6 @@ test("repository adapter binds every observed preservation receipt", () => {
     assert.deepEqual(planned.plan.supersededPreservationDigests, [receiptDigest]);
   });
 });
-
 test("repository adapter discovers a completed dormant-preservation journal", () => {
   withFixture(fixture => {
     const receiptDigest = "9".repeat(64);
@@ -182,26 +224,26 @@ test("repository adapter still validates a journal with an ambiguous subject", (
   });
 });
 
-test("repository adapter refuses tracked, untracked, ignored, unmerged, and operation residue", () => {
+test("repository adapter refuses tracked, untracked, non-profile ignored, unmerged, and operation residue", () => {
   withFixture(fixture => {
     writeFileSync(path.join(fixture.worktree, "README.md"), "tracked dirt\n");
-    assert.throws(() => createAdapter(fixture).captureEvidence({}), /clean/);
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /tracked|untracked|residue/);
   });
   withFixture(fixture => {
     writeFileSync(path.join(fixture.worktree, "README.md"), "staged dirt\n");
     git(fixture.worktree, ["add", "README.md"]);
-    assert.throws(() => createAdapter(fixture).captureEvidence({}), /clean/);
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /tracked|untracked|residue/);
   });
   withFixture(fixture => {
     writeFileSync(path.join(fixture.worktree, "dirty.txt"), "dirty\n");
-    assert.throws(() => createAdapter(fixture).captureEvidence({}), /clean/);
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /tracked|untracked|residue/);
   });
   withFixture(fixture => {
     writeFileSync(path.join(fixture.worktree, ".gitignore"), "ignored.txt\n");
     git(fixture.worktree, ["add", ".gitignore"]);
     git(fixture.worktree, ["commit", "-m", "test: ignore residue"]);
     writeFileSync(path.join(fixture.worktree, "ignored.txt"), "ignored\n");
-    assert.throws(() => createAdapter(fixture).captureEvidence({}), /clean/);
+    assert.throws(() => createAdapter(fixture).captureEvidence({}), /tracked|untracked|residue/);
   });
   withFixture(fixture => {
     const mergeHeadPath = git(fixture.worktree, ["rev-parse", "--git-path", "MERGE_HEAD"]).trim();
@@ -214,15 +256,9 @@ test("controller with repository adapter bundles, verifies, removes non-force, a
   withFixture(fixture => {
     const invocations = [];
     const adapter = createAdapter(fixture, {
-      git(cwd, args) {
+      git(cwd, args, options) {
         invocations.push([...args]);
-        return git(cwd, args);
-      },
-      checkpoint(name) {
-        if (name === "after-worktree-move") writeFileSync(
-          path.join(fixture.recovery, "worktree-staging", "late-ignored.txt"),
-          "late but preserved\n",
-        );
+        return git(cwd, args, options);
       },
     });
     const controller = createRecoverableLaneCleanupController({ adapter });
@@ -244,10 +280,6 @@ test("controller with repository adapter bundles, verifies, removes non-force, a
     assert.equal(existsSync(path.join(fixture.recovery, "worktree-snapshot", "lane.txt")), true);
     assert.equal(git(path.join(fixture.recovery, "worktree-snapshot"), ["status", "--porcelain"]), "");
     assert.equal(existsSync(path.join(fixture.recovery, "worktree-gitdir-snapshot", "HEAD")), true);
-    assert.equal(
-      readFileSync(path.join(fixture.recovery, "worktree-snapshot", "late-ignored.txt"), "utf8"),
-      "late but preserved\n",
-    );
     const receipt = JSON.parse(readFileSync(path.join(fixture.recovery, "cleanup-receipt.json"), "utf8"));
     assert.equal(receipt.effects.localBranch, "preserve");
     assert.deepEqual(
@@ -270,15 +302,15 @@ test("controller with repository adapter bundles, verifies, removes non-force, a
       authorization: planned.exactAuthorization,
     });
     assert.equal(replay.receipt.receiptDigest, result.receipt.receiptDigest);
-    const latePath = path.join(fixture.recovery, "worktree-snapshot", "late-ignored.txt");
-    writeFileSync(latePath, "tampered snapshot\n");
+    const lanePath = path.join(fixture.recovery, "worktree-snapshot", "lane.txt");
+    writeFileSync(lanePath, "tampered snapshot\n");
     assert.throws(() => controller.run({
       ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
     }), /snapshot|drifted/i);
     assert.throws(() => controller.observe({
       ...input, planDigest: planned.planDigest,
     }), /snapshot|drifted/i);
-    writeFileSync(latePath, "late but preserved\n");
+    writeFileSync(lanePath, "lane\n");
     assert.equal(controller.run({
       ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
     }).status, "complete");
@@ -304,6 +336,88 @@ test("controller with repository adapter bundles, verifies, removes non-force, a
     assert.throws(() => controller.run({
       ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
     }), /snapshot|drifted/i);
+  });
+});
+
+test("cleanup preserves exact generated residue and rejects pre-quarantine byte drift", () => {
+  withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    mkdirSync(path.join(fixture.worktree, "node_modules", ".bin"));
+    symlinkSync("../package/index.js", path.join(
+      fixture.worktree, "node_modules", ".bin", "package-tool",
+    ));
+    const controller = createRecoverableLaneCleanupController({ adapter: createAdapter(fixture) });
+    const input = request(fixture);
+    const planned = controller.plan(input);
+    const result = controller.run({
+      ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
+    });
+    assert.equal(result.status, "complete");
+    assert.equal(readFileSync(path.join(
+      fixture.recovery, "worktree-snapshot", "node_modules", "package", "index.js",
+    ), "utf8"), "generated dependency\n");
+    assert.equal(readFileSync(path.join(
+      fixture.recovery, "worktree-snapshot", "web", "dist", "bundle.js",
+    ), "utf8"), "generated bundle\n");
+    assert.equal(readlinkSync(path.join(
+      fixture.recovery, "worktree-snapshot", "node_modules", ".bin", "package-tool",
+    )), "../package/index.js");
+  });
+  withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    const invocations = [];
+    const controller = createRecoverableLaneCleanupController({ adapter: createAdapter(fixture, {
+      git(cwd, args, options) {
+        invocations.push([...args]);
+        return git(cwd, args, options);
+      },
+      checkpoint(name) {
+        if (name === "before-worktree-remove") writeFileSync(path.join(
+          fixture.recovery, "worktree-snapshot", "web", "dist", "late.js",
+        ), "late drift\n");
+      },
+    }) });
+    const input = request(fixture);
+    const planned = controller.plan(input);
+    assert.throws(() => controller.run({
+      ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
+    }), /snapshot|drifted/i);
+    assert.equal(invocations.some(args => args[0] === "worktree" && args[1] === "remove"), false);
+    const intent = JSON.parse(readFileSync(path.join(
+      fixture.recovery, "cleanup-intent.json",
+    ), "utf8"));
+    assert.equal(intent.status, "worktree_quarantined");
+    assert.throws(() => controller.run({
+      ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
+    }), /snapshot|drifted/i);
+  });
+  withFixture(fixture => {
+    addGeneratedResidue(fixture);
+    let instant = Date.parse("2026-08-15T00:00:00.000Z"), loseAbortResponse = true;
+    const controller = createRecoverableLaneCleanupController({ adapter: createAdapter(fixture, {
+      now: () => new Date(instant),
+      checkpoint(name) {
+        if (name === "after-worktree-move") writeFileSync(path.join(fixture.recovery,
+          "worktree-staging", "web", "dist", "late.js"), "post-move drift\n");
+        if (name === "after-drift-abort-release" && loseAbortResponse) {
+          loseAbortResponse = false;
+          instant += 11 * 60_000;
+          throw new Error("lost drift-abort response");
+        }
+      },
+    }) });
+    const input = request(fixture);
+    const planned = controller.plan(input);
+    assert.throws(() => controller.run({
+      ...input, planDigest: planned.planDigest, authorization: planned.exactAuthorization,
+    }), /lost drift-abort response/);
+    assert.equal(existsSync(fixture.worktree), true);
+    assert.equal(git(fixture.worktree, ["rev-parse", "HEAD"]).trim(), fixture.laneSha);
+    const run = () => controller.run({ ...input, planDigest: planned.planDigest,
+      authorization: planned.exactAuthorization });
+    const result = run();
+    assert.equal(result.status, "drift_aborted");
+    assert.equal(run().status, "drift_aborted");
   });
 });
 
@@ -438,8 +552,11 @@ function withFixture(action) {
     git(repo, ["config", "user.name", "Cleanup Test"]);
     git(repo, ["config", "user.email", "cleanup@example.test"]);
     writeFileSync(path.join(repo, "README.md"), "main\n");
-    writeFileSync(path.join(repo, ".gitignore"), "late-ignored.txt\n");
-    git(repo, ["add", "README.md", ".gitignore"]);
+    symlinkSync("/private/tmp/outside", path.join(repo, "tracked-link"));
+    writeFileSync(path.join(repo, ".gitignore"), [
+      "late-ignored.txt", "node_modules/", "web/dist/", "empty-cache/", "",
+    ].join("\n"));
+    git(repo, ["add", "README.md", ".gitignore", "tracked-link"]);
     git(repo, ["commit", "-m", "initial"]);
     git(repo, ["remote", "add", "origin", remote]);
     git(repo, ["push", "-u", "origin", "main"]);
@@ -463,10 +580,20 @@ function withFixture(action) {
   }
 }
 
-function git(cwd, args) {
+function addGeneratedResidue(fixture) {
+  mkdirSync(path.join(fixture.worktree, "node_modules", "package"), { recursive: true });
+  mkdirSync(path.join(fixture.worktree, "web", "dist"), { recursive: true });
+  writeFileSync(path.join(
+    fixture.worktree, "node_modules", "package", "index.js",
+  ), "generated dependency\n");
+  writeFileSync(path.join(fixture.worktree, "web", "dist", "bundle.js"), "generated bundle\n");
+}
+
+function git(cwd, args, { input } = {}) {
   return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
+    input,
+    stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
   });
 }

@@ -2,11 +2,18 @@
 import { execFileSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { closeSync, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync,
-  readdirSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+  realpathSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { canonicalJson, digestValue } from "./cloud-collaboration-primitives.mjs";
+import { buildRecoverableLaneCleanupDriftAbort as abortProjection, buildRecoverableLaneCleanupReservationMarker as reservationMarker,
+  buildRecoverableLaneCleanupReservationRelease as releaseProjection,
+  projectRecoverableLaneCleanupReservation as reservationProjection } from "./recoverable-lane-cleanup-contract.mjs";
+import { assertRecoverableLaneGeneratedResidueSnapshot, inspectRecoverableLaneCleanupTree as inspectTree,
+  recoverableLaneDirectoryGenerationDigest as directoryGenerationDigest,
+  recoverableLanePathExists as directoryEntryExists,
+  syncRecoverableLaneDirectory as syncDirectory, syncRecoverableLaneFile as syncFile } from "./recoverable-lane-cleanup-generated-residue.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
-const REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2", LEASE_SCHEMA = "agentic-writer-lease/v2", RESERVATION_SCHEMA = "agentic-recoverable-lane-cleanup-reservation/v1";
+const REGISTRY_SCHEMA = "agentic-writer-lease-registry/v2", LEASE_SCHEMA = "agentic-writer-lease/v2";
 const OPERATION_MARKERS = Object.freeze(["MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD", "BISECT_LOG", "sequencer", "index.lock"]);
 export function createRecoverableLaneCleanupRecoveryStore({
   root, target, recovery, commonDir, leaseStore, git = runGit,
@@ -53,6 +60,17 @@ export function createRecoverableLaneCleanupRecoveryStore({
       leaseStore, registryLockPath, plan,
       action: registry => releaseReservation({ registry, plan, reservation, finalObservation }),
     }),
+    abortReservation: (plan, reservation, restoredStateDigest, verifyRestored) =>
+      withWriterRegistry({ leaseStore, registryLockPath, plan,
+        action: registry => abortReservation({ registry, plan, reservation,
+          restoredStateDigest, verifyRestored, checkpoint }) }),
+    observeAbortRelease: (plan, reservation, restoredStateDigest) => {
+      const lease = leaseStore.readRegistry().leases?.[branchName(plan)] ?? null;
+      if (digestNullable(lease) !== plan.evidence.authority.priorLeaseDigest) {
+        throw new Error("Cleanup drift-abort reservation is not exactly released.");
+      }
+      return abortProjection(plan, reservation, restoredStateDigest);
+    },
   });
 }
 function beginReservation({ registry, plan, authorizationDigest, now }) {
@@ -144,6 +162,21 @@ function releaseReservation({ registry, plan, reservation, finalObservation }) {
   });
   return { registry: next, result: releaseProjection(plan), changed: true };
 }
+function abortReservation({ registry, plan, reservation, restoredStateDigest, verifyRestored, checkpoint }) {
+  if (verifyRestored() !== restoredStateDigest) throw new Error(
+    "Cleanup restored target drifted before abort reservation CAS.");
+  const branch = branchName(plan), lease = registry.leases?.[branch] ?? null;
+  const receipt = abortProjection(plan, reservation, restoredStateDigest);
+  if (digestNullable(lease) === plan.evidence.authority.priorLeaseDigest)
+    return { registry, result: receipt, changed: false };
+  assertReservation(lease, plan, reservation);
+  const leases = { ...(registry.leases || {}) };
+  if (plan.evidence.authority.priorLease === null) delete leases[branch]; else leases[branch] = plan.evidence.authority.priorLease;
+  const next = writeRegistry(leaseStorePath(registry), { ...registry,
+    revision: Number(registry.revision || 0) + 1, leases });
+  checkpoint("after-drift-abort-release");
+  return { registry: next, result: receipt, changed: true };
+}
 function withWriterRegistry({ leaseStore, registryLockPath, plan, action }) {
   recoverDeadWriterLock(registryLockPath, plan);
   let result;
@@ -160,6 +193,8 @@ function quarantine({ root, plan, git, checkpoint }) {
   let state = inspectState({ root, plan, git });
   if (state.targetExists) {
     assertInitialGeneration(plan);
+    assertRecoverableLaneGeneratedResidueSnapshot({ root: targetPath,
+      expected: plan.evidence.target.generatedResidue });
     git(root, ["worktree", "move", "--", targetPath, staging]);
     syncDirectory(path.dirname(targetPath));
     syncDirectory(path.dirname(staging));
@@ -172,6 +207,7 @@ function quarantine({ root, plan, git, checkpoint }) {
     checkpoint("after-checkout-snapshot");
     state = inspectState({ root, plan, git });
   }
+  assertResidueOrRestore({ root, plan, git, snapshot });
   const originalGitDir = plan.evidence.target.gitDir;
   if (directoryEntryExists(originalGitDir) && !state.gitDirSnapshotExists) {
     if (directoryGenerationDigest(originalGitDir)
@@ -193,6 +229,7 @@ function quarantine({ root, plan, git, checkpoint }) {
   const checkout = inspectTree(snapshot, { durable: true });
   const linkedGit = inspectTree(gitSnapshot, { durable: true });
   checkpoint("after-snapshot-seal");
+  assertResidueOrRestore({ root, plan, git, snapshot });
   if (!directoryEntryExists(originalGitDir)) {
     if (directoryEntryExists(disposableStaging)) {
       assertDisposableCopy(plan, disposableStaging, linkedGit);
@@ -231,6 +268,35 @@ function quarantine({ root, plan, git, checkpoint }) {
     disposableGitDirGenerationDigest: state.disposableGitDirGenerationDigest,
   });
 }
+function assertResidueOrRestore({ root, plan, git, snapshot }) {
+  try {
+    assertRecoverableLaneGeneratedResidueSnapshot({
+      root: snapshot, expected: plan.evidence.target.generatedResidue,
+    });
+  } catch (error) {
+    restorePreDisposableQuarantine({ root, plan, git });
+    throw error;
+  }
+}
+function restorePreDisposableQuarantine({ root, plan, git }) {
+  const { target, recovery } = paths(plan);
+  const { quarantine: staging, snapshot, gitSnapshot } = recovery;
+  const originalGitDir = plan.evidence.target.gitDir;
+  if (!directoryEntryExists(originalGitDir) && directoryEntryExists(gitSnapshot)) {
+    rewriteGitFile(path.join(snapshot, ".git"), originalGitDir);
+    rewritePlainFile(path.join(gitSnapshot, "gitdir"), path.join(staging, ".git"));
+    renameSync(gitSnapshot, originalGitDir);
+    syncDirectory(path.dirname(originalGitDir));
+  }
+  if (directoryEntryExists(snapshot) && !directoryEntryExists(staging)) {
+    renameSync(snapshot, staging);
+    syncDirectory(path.dirname(staging));
+  }
+  if (!directoryEntryExists(target) && directoryEntryExists(staging)) {
+    git(root, ["worktree", "move", "--", staging, target]);
+    syncDirectory(path.dirname(target));
+  }
+}
 function remove({ root, plan, git, checkpoint, quarantined }) {
   const state = inspectState({ root, plan, git });
   assertSnapshotState(state, quarantined);
@@ -242,6 +308,9 @@ function remove({ root, plan, git, checkpoint, quarantined }) {
   }
   assertStagingRegistration({ root, plan, git });
   checkpoint("before-worktree-remove");
+  assertRecoverableLaneGeneratedResidueSnapshot({ root: plan.recovery.snapshotPath, expected: plan.evidence.target.generatedResidue });
+  assertSnapshotState(inspectState({ root, plan, git }), quarantined);
+  assertFrozenLane(plan);
   git(root, ["worktree", "remove", "--", plan.recovery.quarantinePath]);
   checkpoint("after-worktree-remove");
   const final = inspectState({ root, plan, git });
@@ -352,22 +421,6 @@ function snapshotProjection(state) {
     gitDirSnapshotGenerationDigest: state.gitDirSnapshotGenerationDigest,
     disposableGitDirExists: state.disposableGitDirExists,
   };
-}
-function reservationMarker(plan, authorizationDigest, priorLeaseDigest) {
-  const core = { schema: RESERVATION_SCHEMA, planDigest: plan.planDigest,
-    subjectKey: plan.subjectKey, authorizationDigest, priorLeaseDigest };
-  return Object.freeze({ ...core, reservationDigest: digestValue(core) });
-}
-function reservationProjection(lease) {
-  return Object.freeze({
-    schema: RESERVATION_SCHEMA, branch: lease.branch, epoch: lease.epoch, sessionId: lease.sessionId,
-    reservationDigest: lease.cleanupReservation.reservationDigest,
-  });
-}
-function releaseProjection(plan) {
-  const core = { schema: "agentic-recoverable-lane-cleanup-reservation-release/v1",
-    planDigest: plan.planDigest, priorLeaseDigest: plan.evidence.authority.priorLeaseDigest };
-  return Object.freeze({ ...core, receiptDigest: digestValue(core) });
 }
 function isExactReservation(lease, plan, authorizationDigest) {
   if (lease?.status !== "active" || lease?.branch !== branchName(plan)) return false;
@@ -537,63 +590,10 @@ function rewritePlainFile(filePath, value) {
   renameSync(temporary, filePath); syncDirectory(path.dirname(filePath));
 }
 function plainFileTarget(filePath) { const metadata = lstatSync(filePath);
-  if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error("Cleanup Git backlink is unsafe.");
-  return path.normalize(readFileSync(filePath, "utf8").trim().replace(/^gitdir:\s*/u, "")); }
+  if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error("Cleanup Git backlink is unsafe."); return path.normalize(readFileSync(filePath, "utf8").trim().replace(/^gitdir:\s*/u, "")); }
 function normalizedGitDirDigest(root) { return inspectTree(root, { normalizeGitdir: true }).digest; }
-function inspectTree(root, { durable = false, normalizeGitdir = false } = {}) {
-  if (!directoryEntryExists(root)) return { exists: false, digest: null, generationDigest: null };
-  const rootMetadata = lstatSync(root);
-  if (!rootMetadata.isDirectory() || rootMetadata.isSymbolicLink()) {
-    throw new Error("Cleanup recovery snapshot is not one real directory.");
-  }
-  const entries = [];
-  const walk = (directory, prefix = "") => {
-    for (const name of readdirSync(directory).sort()) {
-      const absolute = path.join(directory, name);
-      const relative = prefix ? `${prefix}/${name}` : name;
-      const metadata = lstatSync(absolute);
-      const mode = metadata.mode & 0o7777;
-      if (metadata.isDirectory() && !metadata.isSymbolicLink()) {
-        entries.push({ path: relative, type: "directory", mode });
-        walk(absolute, relative); if (durable) syncDirectory(absolute);
-      } else if (metadata.isFile() && !metadata.isSymbolicLink()) {
-        if (durable) syncFile(absolute);
-        entries.push({
-          path: relative, type: "file", mode,
-          sizeBytes: normalizeGitdir && relative === "gitdir" ? 0 : metadata.size,
-          sha256: normalizeGitdir && relative === "gitdir"
-            ? digestValue("normalized-gitdir-backlink") : sha256File(absolute),
-        });
-      } else if (metadata.isSymbolicLink()) {
-        entries.push({ path: relative, type: "symlink", mode, target: readlinkSync(absolute) });
-      } else throw new Error(`Cleanup snapshot contains unsupported entry: ${relative}`);
-    }
-  };
-  walk(root); if (durable) syncDirectory(root);
-  return {
-    exists: true,
-    generationDigest: directoryGenerationDigest(root),
-    digest: digestValue({ schema: "agentic-recoverable-lane-cleanup-tree/v1", entries }),
-  };
-}
-function directoryGenerationDigest(directory) {
-  const metadata = statSync(directory);
-  return digestValue({ device: String(metadata.dev), inode: String(metadata.ino),
-    birthtimeMs: String(metadata.birthtimeMs) });
-}
-function directoryEntryExists(filePath) {
-  try { lstatSync(filePath); return true; }
-  catch (error) { if (["ENOENT", "ENOTDIR"].includes(error?.code)) return false; throw error; }
-}
 function sameOrContains(parent, candidate) {
   const relative = path.relative(parent, candidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
-function sha256File(filePath) { return createHash("sha256").update(readFileSync(filePath)).digest("hex"); }
-function syncFile(filePath) { const descriptor = openSync(filePath, "r"); try { fsyncSync(descriptor); } finally { closeSync(descriptor); } }
-function syncDirectory(directory) { const descriptor = openSync(directory, "r"); try { fsyncSync(descriptor); } finally { closeSync(descriptor); } }
-function runGit(cwd, args) {
-  return execFileSync("git", args, {
-    cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }, encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"] });
-}
+function runGit(cwd, args) { return execFileSync("git", args, { cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); }

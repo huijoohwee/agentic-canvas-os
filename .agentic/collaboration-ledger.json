@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2873,
-  "headDigest": "2b1846076ac3419b85ef76b611d3197b1b0e275406c5212250c3bfed90019c6e",
+  "sequence": 2874,
+  "headDigest": "d77cdac38e81054c26e8329d7831137f547adc5c90ace9a96e74122bf317e460",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -141998,6 +141998,71 @@
       },
       "claimDigest": "057c35e9fa09964bf945933b8f297c4181ac36076d488297532096fdac843a58",
       "digest": "2b1846076ac3419b85ef76b611d3197b1b0e275406c5212250c3bfed90019c6e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2874,
+      "parentDigest": "2b1846076ac3419b85ef76b611d3197b1b0e275406c5212250c3bfed90019c6e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "6d493f1d09b5f274dba528611c9aec7047343f6116cd406225f343325077b621",
+      "idempotencyKey": "15ece05b90b6f213c2e90405cfb42fdb9e3b3c7dda8edb3c854d0d268ab697fe",
+      "requestDigest": "b6ece323d6cc02608bb63e3eca00bb96ec75dcc3681e315bb64af7c9c4322c54",
+      "evaluationTime": "2026-08-14T04:15:29.000Z",
+      "claimCore": {
+        "claimId": "6d493f1d09b5f274dba528611c9aec7047343f6116cd406225f343325077b621",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:6da86260868ab4e88c281e6c92de3617f31ad7d16fd7a1aecf6e5ea6659c012f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:90c82127fe1ed700b4db38b24a377e13c083b557b5074f85c06a8b16a452f745",
+        "canonicalBaseRevision": "294c0bbf2bcd348cad80d60f2ccfb7116eb1fed7",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:__tests__/canvas-room.test.mjs",
+          "path:__tests__/collab-metrics.test.mjs",
+          "path:__tests__/fail-soft-fan-out.test.mjs",
+          "path:__tests__/programmatic-tool-calling.test.mjs",
+          "path:agent-api/src/programmatic-tool-calling.js",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/HARNESS-CONTRACTS.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MEMORY.md",
+          "path:docs/PROGRAMMATIC-TOOL-CALLING.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:src/collab-metrics.js",
+          "path:src/fail-soft-fan-out.js",
+          "path:worker/canvas-room.js",
+          "semantic:fail-soft-fan-out-recovery"
+        ],
+        "writeSetDigest": "382bbec4e8498a2597832c78eed1ae940ef790713f5087536ba08a5122f5595d",
+        "laneRevision": "bc386c98338b96ff80cc009c9822830293940fa9",
+        "leaseEpoch": 2,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-13T06:00:27.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-Z0DQ",
+        "predecessorClaimId": "56eb968a39cfeefe8259040a0b8daf252fad03058346608692e8d4e06a713b1a",
+        "eligibleSince": "2026-08-13T05:29:39.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-13T05:30:27.000Z",
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "bc386c98338b96ff80cc009c9822830293940fa9",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-Z0DQ",
+          "bytesDigest": "a624a5f09da1971fa55d6be6b26a935789eac1ac0ce257c2e380f57bae2fdd11",
+          "namedChecksDigest": "c61f0cd6196770c9b6ca1c3eb0bd718d27d8231f56579ba3379232686e51cf32",
+          "handoffEvidenceDigest": "cc2d35501ac71b3155e095fa4dca5d2b9a69d2277ce383de3e22a7d64d2de092",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-14T04:15:29.000Z"
+        }
+      },
+      "claimDigest": "8a875161ffee79accc8b98747eab332d54e4048d2248e41b0af786fa45e4ceec",
+      "digest": "d77cdac38e81054c26e8329d7831137f547adc5c90ace9a96e74122bf317e460"
     }
   ]
 }

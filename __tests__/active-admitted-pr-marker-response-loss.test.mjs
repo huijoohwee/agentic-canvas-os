@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
@@ -13,6 +16,12 @@ import {
 } from "../scripts/active-admitted-pr-marker-response-loss-contract.mjs";
 import { createActiveAdmittedPrMarkerResponseLossController }
   from "../scripts/active-admitted-pr-marker-response-loss-controller.mjs";
+import { createRepositoryActiveAdmittedPrMarkerResponseLossAdapter }
+  from "../scripts/active-admitted-pr-marker-response-loss-repository-adapter.mjs";
+import { createTaskAuthorityBinding, createTaskAuthorityCapability }
+  from "../scripts/task-bound-lane-authority-contract.mjs";
+import { updateWriterLeasePullRequestBody }
+  from "../scripts/writer-lease-lib.mjs";
 
 const DIGEST = value => digestValue({ value });
 const SHA = value => value.repeat(40);
@@ -227,6 +236,97 @@ function fakeAdapter({ projection = "source", initialIntent = null } = {}) {
   return { adapter, calls, intent: () => intent };
 }
 
+function repositoryAdapterFixture() {
+  const input = evidenceInput();
+  const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "marker-response-loss-")));
+  const repository = path.join(root, "repository"), gitDirectory = path.join(repository, ".git");
+  mkdirSync(gitDirectory, { recursive: true });
+  const taskAuthorityFile = path.join(root, "task-authority.json");
+  writeFileSync(taskAuthorityFile, "{}\n", { mode: 0o600 });
+  const admission = { schema: "agentic-lane-admission-lease/v1", status: "admitted",
+    semanticScope: "marker-response-loss", declaredWriteSet: WRITE_SCOPE,
+    writeSetDigest: input.targetAuthority.writeSetDigest, manifestDigest: DIGEST("manifest"),
+    planReceiptDigest: DIGEST("plan-receipt"), admissionReceiptDigest: DIGEST("admission-receipt"),
+    existingLaneStateDigest: DIGEST("existing-lanes"), admittedReportDigest: DIGEST("admitted-report"),
+    preservationReceiptDigest: DIGEST("preservation") };
+  const leaseCore = { schema: "agentic-writer-lease/v2", status: "active", epoch: 7,
+    sessionId: ACTOR.sessionId, device: ACTOR.deviceId, scope: "marker-response-loss", branch: BRANCH,
+    worktreePath: repository, baseSha: BASE_SHA, fenceSha: HEAD_SHA, pullRequestUrl: REVIEW_URL,
+    autoDelivery: false, runtimeRequired: false, heartbeatAt: TIMES.target,
+    expiresAt: TIMES.targetExpiry, admission, cloudAuthority: input.targetAuthority };
+  const capability = createTaskAuthorityCapability({ issuedAt: "2026-08-13T00:00:00.000Z" });
+  const taskAuthority = createTaskAuthorityBinding({ capability, lease: leaseCore,
+    boundAt: "2026-08-13T00:01:00.000Z" });
+  const currentLease = { ...leaseCore, taskAuthority };
+  const sourceLease = { ...currentLease, heartbeatAt: TIMES.source, expiresAt: TIMES.sourceExpiry,
+    cloudAuthority: input.sourceAuthority };
+  const sourceBody = updateWriterLeasePullRequestBody("Review body", sourceLease);
+  const targetBody = updateWriterLeasePullRequestBody(sourceBody, currentLease);
+  const thirdBody = updateWriterLeasePullRequestBody(sourceBody,
+    { ...currentLease, heartbeatAt: "2026-08-14T00:03:30.000Z" });
+  let providerBody = sourceBody, editMode = "success";
+  const edits = [], taskAuthorizations = [];
+  const review = () => ({ number: 19, id: "R_19", url: REVIEW_URL, state: "OPEN", isDraft: true,
+    headRefName: BRANCH, headRefOid: HEAD_SHA,
+    headRepository: { nameWithOwner: "example/repository" }, baseRefName: "main",
+    baseRefOid: BASE_SHA, autoMergeRequest: null, body: providerBody });
+  const snapshots = new Map([
+    [input.sourceLedgerSnapshot.revision, input.sourceLedgerSnapshot],
+    [input.targetLedgerSnapshot.revision, input.targetLedgerSnapshot],
+    [input.currentLedgerSnapshot.revision, input.currentLedgerSnapshot],
+  ]);
+  const dependencies = {
+    git(argumentsList) {
+      const command = argumentsList.join(" ");
+      if (command === "branch --show-current") return BRANCH;
+      if (command === "rev-parse --git-common-dir") return ".git";
+      if (command === "worktree list --porcelain -z") {
+        return `worktree ${repository}\0HEAD ${HEAD_SHA}\0branch refs/heads/${BRANCH}\0`;
+      }
+      if (command === "rev-parse HEAD") return HEAD_SHA;
+      if (command === "rev-parse HEAD^{tree}") return TREE_SHA;
+      if (command === "rev-parse origin/main") return BASE_SHA;
+      if (command === "status --porcelain=v1 --untracked-files=all") return "";
+      if (command === `ls-remote --heads origin refs/heads/${BRANCH}`) {
+        return `${HEAD_SHA}\trefs/heads/${BRANCH}`;
+      }
+      throw new Error(`Unexpected git call: ${command}`);
+    },
+    gh(argumentsList) {
+      if (argumentsList[0] === "pr") return JSON.stringify(review());
+      if (argumentsList[0] === "repo") return "example/repository";
+      throw new Error(`Unexpected provider read: ${argumentsList.join(" ")}`);
+    },
+    execute(command, argumentsList) {
+      assert.equal(command, "gh");
+      edits.push([...argumentsList]);
+      const body = argumentsList[argumentsList.indexOf("--body") + 1];
+      providerBody = editMode === "error-third" ? thirdBody : body;
+      if (editMode.startsWith("error-")) throw new Error("provider response lost");
+      return "";
+    },
+    leaseStore: { read: () => currentLease },
+    readLedgerSnapshot: ({ revision }) => snapshots.get(revision),
+    verifyCloud: () => ({ verification: { status: "ready",
+      ledgerRevision: input.currentLedgerSnapshot.revision,
+      ledgerDigest: input.currentLedgerSnapshot.ledger.headDigest,
+      remoteClaimInventoryDigest: DIGEST("inventory"), receiptDigest: DIGEST("verification"),
+      verifiedAt: TIMES.observed, inventory: { claims: [input.liveCloud.claim] } } }),
+    authorizeTaskMutation(values) {
+      taskAuthorizations.push(values);
+      return { receiptDigest: DIGEST("task-authorization") };
+    },
+    now: () => new Date(TIMES.observed),
+  };
+  const adapter = createRepositoryActiveAdmittedPrMarkerResponseLossAdapter({ repository,
+    pullRequestNumber: 19, taskAuthorityFile }, dependencies);
+  return { adapter, edits, taskAuthorizations, sourceBody, targetBody,
+    body: () => providerBody,
+    setBody(value) { providerBody = value; },
+    setEditMode(value) { editMode = value; },
+    cleanup() { rmSync(root, { recursive: true, force: true }); } };
+}
+
 test("evidence proves exactly one renewal and permits only an unrelated ledger suffix", () => {
   const observed = evidence();
   assert.deepEqual([
@@ -249,6 +349,67 @@ test("evidence rejects later same-claim renewal, malformed ledger, and joined-su
   mismatchedHead.providerReview.headSha = SHA("f");
   assert.throws(() => buildActiveAdmittedPrMarkerResponseLossEvidence(mismatchedHead),
     /marker-only recovery boundary/u);
+});
+
+test("repository adapter plans from the exact source, proves task authority, and projects only the body", () => {
+  const fixture = repositoryAdapterFixture();
+  try {
+    const plan = buildActiveAdmittedPrMarkerResponseLossPlan({
+      evidence: fixture.adapter.readPlanEvidence(),
+    });
+    const authority = fixture.adapter.authorizeTask(plan);
+    assert.equal(authority.taskAuthorityReceiptDigest, DIGEST("task-authorization"));
+    assert.equal(fixture.taskAuthorizations[0].operation, plan.taskAuthorityOperation);
+    assert.equal(fixture.adapter.revalidate(plan, "before-provider").providerState, "source");
+    const projected = fixture.adapter.projectProviderBody(plan);
+    assert.deepEqual([projected.disposition, projected.providerMutation], ["projected", true]);
+    assert.equal(fixture.body(), fixture.targetBody);
+    assert.equal(fixture.edits.length, 1);
+    assert.match(fixture.adapter.verifyTerminal(plan).verificationDigest, /^[0-9a-f]{64}$/u);
+  } finally { fixture.cleanup(); }
+});
+
+test("repository adapter adopts an exact target body without a second provider write", () => {
+  const fixture = repositoryAdapterFixture();
+  try {
+    const plan = buildActiveAdmittedPrMarkerResponseLossPlan({
+      evidence: fixture.adapter.readPlanEvidence(),
+    });
+    fixture.setBody(fixture.targetBody);
+    assert.equal(fixture.adapter.revalidate(plan, "before-provider").providerState, "target");
+    const projected = fixture.adapter.projectProviderBody(plan);
+    assert.deepEqual([projected.disposition, projected.providerMutation],
+      ["adopted-response-loss", false]);
+    assert.equal(fixture.edits.length, 0);
+  } finally { fixture.cleanup(); }
+});
+
+test("repository adapter reconciles a lost response only when the post-read is the exact target", () => {
+  const fixture = repositoryAdapterFixture();
+  try {
+    const plan = buildActiveAdmittedPrMarkerResponseLossPlan({
+      evidence: fixture.adapter.readPlanEvidence(),
+    });
+    fixture.setEditMode("error-target");
+    assert.throws(() => fixture.adapter.projectProviderBody(plan), /provider response lost/u);
+    const reconciled = fixture.adapter.revalidate(plan, "after-provider-error");
+    assert.deepEqual([reconciled.providerProjected, reconciled.disposition,
+      reconciled.providerMutation], [true, "adopted-response-loss", false]);
+  } finally { fixture.cleanup(); }
+});
+
+test("repository adapter never overwrites or adopts a third provider body after response loss", () => {
+  const fixture = repositoryAdapterFixture();
+  try {
+    const plan = buildActiveAdmittedPrMarkerResponseLossPlan({
+      evidence: fixture.adapter.readPlanEvidence(),
+    });
+    fixture.setEditMode("error-third");
+    assert.throws(() => fixture.adapter.projectProviderBody(plan), /provider response lost/u);
+    assert.throws(() => fixture.adapter.revalidate(plan, "after-provider-error"),
+      /neither the sealed source nor target/u);
+    assert.equal(fixture.edits.length, 1);
+  } finally { fixture.cleanup(); }
 });
 
 test("plan is read-only and seals capability proof to its digest without a human token", async () => {

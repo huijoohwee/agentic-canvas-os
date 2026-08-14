@@ -6,6 +6,7 @@ import {
   createRecoverableLaneCleanupController,
 } from "../scripts/recoverable-lane-cleanup-controller.mjs";
 import { RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA } from "../scripts/recoverable-lane-cleanup-contract.mjs";
+import { GENERATED_RESIDUE_SCHEMA } from "../scripts/recoverable-lane-cleanup-generated-residue.mjs";
 
 test("controller plans with two stable read-only captures", () => {
   const harness = fakeAdapter();
@@ -146,8 +147,30 @@ test("controller fails closed on evidence drift or bundle failure", () => {
   assert.equal(failing.intent.status, "prepared");
 });
 
+test("controller terminalizes restored drift after abort response loss and expiry", () => {
+  const state = fakeAdapter({ generatedDrift: true, failAfterAbortOnce: true });
+  const planned = state.controller.plan(input());
+  const request = { ...input(), planDigest: planned.planDigest,
+    authorization: planned.exactAuthorization };
+  assert.throws(() => state.controller.run(request), /lost abort response/);
+  assert.equal(state.intent.status, "drift_aborting");
+  assert.equal(state.reservation, null);
+  assert.equal(state.removals, 0);
+  state.reservationExpired = true;
+  const completed = state.controller.run(request);
+  assert.equal(completed.status, "drift_aborted");
+  assert.equal(state.controller.run(request).status, "drift_aborted");
+  assert.equal(state.removals, 0);
+  state.restoredDrift = true;
+  assert.throws(() => state.controller.run(request), /restored target changed/);
+  state.restoredDrift = false;
+  state.priorLeaseRestored = false;
+  assert.throws(() => state.controller.run(request), /reservation is not exactly released/);
+});
+
 function fakeAdapter({
   driftCapture = 0, failBundle = false, failAfterRemovalOnce = false,
+  generatedDrift = false, failAfterAbortOnce = false,
 } = {}) {
   const stableEvidence = evidence();
   const state = {
@@ -168,6 +191,7 @@ function fakeAdapter({
     reservation: null,
     priorLeaseRestored: true,
     finalBranchHead: null,
+    aborts: 0,
   };
   const adapter = {
     captureEvidence() {
@@ -226,6 +250,11 @@ function fakeAdapter({
     quarantineWorktree(_plan, reservation) {
       state.calls.push("quarantine-worktree");
       assert.deepEqual(reservation, state.reservation);
+      if (generatedDrift) {
+        const error = new Error("generated residue drifted");
+        error.code = "RECOVERABLE_GENERATED_RESIDUE_DRIFT";
+        throw error;
+      }
       state.target.present = false;
       state.staging.registered = true;
       state.staging.present = false;
@@ -284,6 +313,27 @@ function fakeAdapter({
       state.reservation = null;
       state.priorLeaseRestored = true;
       state.calls.push("release-reservation");
+      return { ...core, receiptDigest: digestValue(core) };
+    },
+    observeRestored(plan) {
+      return { restoredStateDigest: digestValue({ planDigest: plan.planDigest,
+        restored: !state.restoredDrift }) };
+    },
+    abortReservation(plan, reservation, restoredStateDigest) {
+      const core = { schema: "agentic-recoverable-lane-cleanup-drift-abort/v1",
+        planDigest: plan.planDigest, reservationDigest: reservation.reservationDigest,
+        restoredStateDigest };
+      state.reservation = null;
+      state.priorLeaseRestored = true;
+      state.aborts += 1;
+      if (failAfterAbortOnce && state.aborts === 1) throw new Error("lost abort response");
+      return { ...core, receiptDigest: digestValue(core) };
+    },
+    observeAbortRelease(plan, reservation, restoredStateDigest) {
+      if (!state.priorLeaseRestored) throw new Error("reservation is not exactly released");
+      const core = { schema: "agentic-recoverable-lane-cleanup-drift-abort/v1",
+        planDigest: plan.planDigest, reservationDigest: reservation.reservationDigest,
+        restoredStateDigest };
       return { ...core, receiptDigest: digestValue(core) };
     },
     observeFinal(plan) {
@@ -351,12 +401,23 @@ function evidence({ targetHead = "c".repeat(40) } = {}) {
       worktreeGenerationDigest: "3".repeat(64),
       gitDir: "/repo/.git/worktrees/lane-a", gitDirIdentityDigest: "4".repeat(64),
       gitDirGenerationDigest: "5".repeat(64),
+      generatedResidue: generatedResidue(),
       unmergedEntries: 0, operationMarkers: [], stateDigest: "2".repeat(64),
     },
     authority: { ...authorityCore, authorityDigest: digestValue(authorityCore) },
     remoteBranch: { ref: "refs/heads/agent/device/lane-a", sha: targetHead },
   };
   return { ...core, evidenceDigest: digestValue(core) };
+}
+
+function generatedResidue() {
+  const core = {
+    schema: GENERATED_RESIDUE_SCHEMA, mode: "none", roots: [], ignoredPathCount: 0,
+    ignoredPathsDigest: digestValue([]), entryCount: 0, totalBytes: 0,
+    inventoryDigest: digestValue([]), checkoutEntryCount: 2,
+    checkoutInventoryDigest: "6".repeat(64),
+  };
+  return { ...core, profileDigest: digestValue(core) };
 }
 
 function bundle(plan) {

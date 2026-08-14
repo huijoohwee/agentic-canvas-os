@@ -1,10 +1,16 @@
 // Responsibility: seal provider-neutral evidence and authority for one recoverable clean-lane removal.
 import path from "node:path";
 import { canonicalJson, digestValue } from "./cloud-collaboration-primitives.mjs";
-export const RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA = "agentic-recoverable-lane-cleanup-evidence/v1";
-export const RECOVERABLE_LANE_CLEANUP_PLAN_SCHEMA = "agentic-recoverable-lane-cleanup-plan/v1";
+import {
+  normalizeRecoverableLaneCleanupEvidence,
+  RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA,
+} from "./recoverable-lane-cleanup-evidence.mjs";
+export { normalizeRecoverableLaneCleanupEvidence, RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA };
+export const RECOVERABLE_LANE_CLEANUP_PLAN_SCHEMA = "agentic-recoverable-lane-cleanup-plan/v2";
+const LEGACY_PLAN_SCHEMA = "agentic-recoverable-lane-cleanup-plan/v1";
 export const RECOVERABLE_LANE_CLEANUP_AUTHORIZATION_SCHEMA = "agentic-recoverable-lane-cleanup-authorization/v1";
-export const RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA = "agentic-recoverable-lane-cleanup-intent/v1";
+export const RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA = "agentic-recoverable-lane-cleanup-intent/v2";
+const LEGACY_INTENT_SCHEMA = "agentic-recoverable-lane-cleanup-intent/v1";
 export const RECOVERABLE_LANE_CLEANUP_RECEIPT_SCHEMA = "agentic-recoverable-lane-cleanup-receipt/v1";
 const SHA = /^[0-9a-f]{40}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
@@ -12,6 +18,7 @@ const PHASES = Object.freeze([
   "prepared", "bundle_verified", "worktree_quarantined", "worktree_removed",
   "reservation_released", "complete",
 ]);
+const ABORT_PHASES = Object.freeze(["drift_aborting", "drift_aborted"]);
 const EFFECTS = Object.freeze({
   worktree: "quarantine-then-remove-non-force",
   worktreeSnapshot: "preserve",
@@ -22,56 +29,50 @@ const EFFECTS = Object.freeze({
   objectPruning: "forbid",
   globalWorktreePrune: "forbid",
 });
-export function normalizeRecoverableLaneCleanupEvidence(value) {
-  exactObject(value, "Cleanup evidence", [
-    "schema", "repository", "canonical", "target", "authority",
-    "remoteBranch", "evidenceDigest",
-  ]);
-  const core = {
-    schema: requiredText(value.schema, "evidence schema"),
-    repository: normalizeRepository(value.repository),
-    canonical: normalizeCanonical(value.canonical),
-    target: normalizeTarget(value.target),
-    authority: normalizeAuthority(value.authority),
-    remoteBranch: normalizeRemoteBranch(value.remoteBranch),
-  };
-  if (core.schema !== RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA) {
-    throw new Error(`Cleanup evidence schema must be ${RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA}.`);
-  }
-  if (core.repository.root === core.target.worktreePath
-    || core.canonical.worktreePath === core.target.worktreePath
-    || core.target.branch === "refs/heads/main") {
-    throw new Error("Recoverable cleanup cannot target the canonical worktree or main branch.");
-  }
-  if (core.canonical.headSha !== core.canonical.originMainSha
-    || core.canonical.headSha !== core.canonical.remoteMainSha) {
-    throw new Error("Recoverable cleanup requires exact canonical origin/main parity.");
-  }
-  if (core.target.headSha !== core.target.branchHeadSha) {
-    throw new Error("Cleanup target branch and worktree HEAD must be identical.");
-  }
-  if (!core.target.clean || core.target.unmergedEntries
-    || core.target.operationMarkers.length) {
-    throw new Error("Recoverable cleanup requires a clean target with no operation state.");
-  }
-  if (core.authority.currentLocalWriter
-    || core.authority.remoteAuthority.currentRemoteWriter
-    || core.authority.remoteAuthority.waitingSuccessors > 0
-    || !["unowned-terminal", "released-terminal", "retired-preserved-terminal"]
-      .includes(core.authority.disposition)) {
-    throw new Error("Recoverable cleanup requires terminal local and remote authority.");
-  }
-  if (core.remoteBranch.ref !== core.target.branch) {
-    throw new Error("Remote branch observation must name the exact target branch.");
-  }
-  if (value.evidenceDigest !== digestValue(core)) throw new Error("Cleanup evidence digest is invalid.");
-  return deepFreeze({ ...core, evidenceDigest: value.evidenceDigest });
+export function buildRecoverableLaneCleanupReservationMarker(
+  plan, authorizationDigest, priorLeaseDigest,
+) {
+  const core = { schema: "agentic-recoverable-lane-cleanup-reservation/v1",
+    planDigest: plan.planDigest, subjectKey: plan.subjectKey,
+    authorizationDigest, priorLeaseDigest };
+  return Object.freeze({ ...core, reservationDigest: digestValue(core) });
+}
+export function projectRecoverableLaneCleanupReservation(lease) {
+  return Object.freeze({ schema: "agentic-recoverable-lane-cleanup-reservation/v1",
+    branch: lease.branch, epoch: lease.epoch, sessionId: lease.sessionId,
+    reservationDigest: lease.cleanupReservation.reservationDigest });
+}
+export function buildRecoverableLaneCleanupReservationRelease(plan) {
+  const core = { schema: "agentic-recoverable-lane-cleanup-reservation-release/v1",
+    planDigest: plan.planDigest, priorLeaseDigest: plan.evidence.authority.priorLeaseDigest };
+  return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+}
+export function buildRecoverableLaneCleanupDriftAbort(
+  plan, reservation, restoredStateDigest,
+) {
+  const core = { schema: "agentic-recoverable-lane-cleanup-drift-abort/v1",
+    planDigest: plan.planDigest, reservationDigest: reservation.reservationDigest,
+    restoredStateDigest };
+  return Object.freeze({ ...core, receiptDigest: digestValue(core) });
 }
 export function buildRecoverableLaneCleanupPlan({
   evidence, recoveryDirectory, sessionId, operatorDecisionDigest,
   supersededPreservationDigests = [],
 }) {
+  return buildPlan({ evidence, recoveryDirectory, sessionId, operatorDecisionDigest,
+    supersededPreservationDigests });
+}
+function buildPlan({
+  evidence, recoveryDirectory, sessionId, operatorDecisionDigest,
+  supersededPreservationDigests = [],
+}, { allowLegacy = false, schema = RECOVERABLE_LANE_CLEANUP_PLAN_SCHEMA } = {}) {
   const normalizedEvidence = normalizeRecoverableLaneCleanupEvidence(evidence);
+  if (!allowLegacy) assertCurrentEvidence(normalizedEvidence);
+  const legacy = schema === LEGACY_PLAN_SCHEMA;
+  if (![LEGACY_PLAN_SCHEMA, RECOVERABLE_LANE_CLEANUP_PLAN_SCHEMA].includes(schema)
+    || legacy !== (normalizedEvidence.schema !== RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA)) {
+    throw new Error("Cleanup plan and evidence versions are incompatible.");
+  }
   const recovery = normalizeRecovery(recoveryDirectory);
   assertRecoveryIsolation(normalizedEvidence, recovery);
   const superseded = normalizeDigests(
@@ -88,7 +89,7 @@ export function buildRecoverableLaneCleanupPlan({
     branch: normalizedEvidence.target.branch,
   });
   const core = {
-    schema: RECOVERABLE_LANE_CLEANUP_PLAN_SCHEMA,
+    schema,
     subjectKey,
     evidence: normalizedEvidence,
     evidenceDigest: normalizedEvidence.evidenceDigest,
@@ -98,7 +99,7 @@ export function buildRecoverableLaneCleanupPlan({
     disposition: "drop-with-durable-recovery",
     supersededPreservationDigests: superseded,
     effects: EFFECTS,
-    phases: PHASES,
+    phases: legacy ? PHASES : [...PHASES, ...ABORT_PHASES],
   };
   const planDigest = digestValue(core);
   return deepFreeze({
@@ -114,13 +115,13 @@ export function normalizeRecoverableLaneCleanupPlan(value) {
     "supersededPreservationDigests", "effects", "phases",
     "exactAuthorization", "planDigest",
   ]);
-  const rebuilt = buildRecoverableLaneCleanupPlan({
+  const rebuilt = buildPlan({
     evidence: value.evidence,
     recoveryDirectory: value.recovery?.directory,
     sessionId: value.sessionId,
     operatorDecisionDigest: value.operatorDecisionDigest,
     supersededPreservationDigests: value.supersededPreservationDigests,
-  });
+  }, { allowLegacy: true, schema: value.schema });
   if (canonicalJson(value) !== canonicalJson(rebuilt)) {
     throw new Error("Cleanup plan is malformed, incomplete, or drifted.");
   }
@@ -128,6 +129,7 @@ export function normalizeRecoverableLaneCleanupPlan(value) {
 }
 export function authorizeRecoverableLaneCleanup({ plan, authorization }) {
   const normalized = normalizeRecoverableLaneCleanupPlan(plan);
+  assertCurrentEvidence(normalized.evidence);
   if (authorization !== normalized.exactAuthorization) {
     throw new Error(`Cleanup requires exact authorization: ${normalized.exactAuthorization}`);
   }
@@ -147,6 +149,7 @@ export function authorizeRecoverableLaneCleanup({ plan, authorization }) {
 }
 export function createRecoverableLaneCleanupIntent({ plan, authorization }) {
   const normalized = normalizeRecoverableLaneCleanupPlan(plan);
+  assertCurrentEvidence(normalized.evidence);
   const authorized = normalizeAuthorization(authorization, normalized);
   return sealIntent({
     schema: RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA,
@@ -160,7 +163,10 @@ export function createRecoverableLaneCleanupIntent({ plan, authorization }) {
 }
 export function advanceRecoverableLaneCleanupIntent(intentValue, { status, evidence }) {
   const intent = normalizeRecoverableLaneCleanupIntent(intentValue);
-  if (PHASES[PHASES.indexOf(intent.status) + 1] !== status) {
+  const ordinary = PHASES[PHASES.indexOf(intent.status) + 1] === status;
+  const abort = (intent.status === "bundle_verified" && status === "drift_aborting")
+    || (intent.status === "drift_aborting" && status === "drift_aborted");
+  if (!ordinary && !abort) {
     throw new Error(`Cleanup intent cannot advance from ${intent.status} to ${status}.`);
   }
   const entry = normalizePhase(status, {
@@ -171,7 +177,7 @@ export function advanceRecoverableLaneCleanupIntent(intentValue, { status, evide
     entry, intent.phases.worktree_quarantined,
   );
   return sealIntent({
-    schema: RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA,
+    schema: intent.schema,
     status,
     plan: intent.plan,
     planDigest: intent.planDigest,
@@ -187,15 +193,23 @@ export function normalizeRecoverableLaneCleanupIntent(value) {
   ]);
   const plan = normalizeRecoverableLaneCleanupPlan(value.plan);
   const status = requiredText(value.status, "intent status");
+  const schema = requiredText(value.schema, "intent schema");
   const index = PHASES.indexOf(status);
-  if (index < 0) throw new Error(`Unsupported cleanup intent status: ${status}.`);
-  const expected = PHASES.slice(0, index + 1);
+  const abortIndex = ABORT_PHASES.indexOf(status);
+  if (index < 0 && abortIndex < 0) throw new Error(`Unsupported cleanup intent status: ${status}.`);
+  const legacy = plan.schema === LEGACY_PLAN_SCHEMA;
+  if ((legacy && (schema !== LEGACY_INTENT_SCHEMA || status !== "complete"))
+    || (!legacy && schema !== RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA)) {
+    throw new Error("Legacy cleanup intent is complete-observation-only and versions must match.");
+  }
+  const expected = abortIndex < 0 ? PHASES.slice(0, index + 1)
+    : [...PHASES.slice(0, 2), ...ABORT_PHASES.slice(0, abortIndex + 1)];
   if (canonicalJson(Object.keys(requiredObject(value.phases, "intent phases")))
     !== canonicalJson(expected)) {
     throw new Error("Cleanup intent phases are incomplete or out of order.");
   }
   const core = {
-    schema: requiredText(value.schema, "intent schema"),
+    schema,
     status,
     plan,
     planDigest: requiredDigest(value.planDigest, "intent plan digest"),
@@ -205,7 +219,7 @@ export function normalizeRecoverableLaneCleanupIntent(value) {
       phase, normalizePhase(phase, value.phases[phase], plan),
     ])),
   };
-  if (core.schema !== RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA
+  if (![LEGACY_INTENT_SCHEMA, RECOVERABLE_LANE_CLEANUP_INTENT_SCHEMA].includes(core.schema)
     || core.planDigest !== plan.planDigest || core.subjectKey !== plan.subjectKey
     || value.intentDigest !== digestValue(core)) {
     throw new Error("Cleanup intent schema, binding, or digest is invalid.");
@@ -259,113 +273,10 @@ export function normalizeRecoverableLaneCleanupReceipt(value) {
   return deepFreeze({ ...core, receiptDigest: value.receiptDigest });
 }
 export function recoverableLaneCleanupEffects() { return EFFECTS; }
-function normalizeRepository(value) {
-  exactObject(value, "Repository evidence", ["root", "gitCommonDir", "identityDigest"]);
-  return {
-    root: absolutePath(value.root, "repository root"),
-    gitCommonDir: absolutePath(value.gitCommonDir, "Git common directory"),
-    identityDigest: requiredDigest(value.identityDigest, "repository identity digest"),
-  };
-}
-function normalizeCanonical(value) {
-  exactObject(value, "Canonical evidence", [
-    "worktreePath", "headSha", "treeSha", "originMainSha", "remoteMainSha", "clean",
-  ]);
-  if (value.clean !== true) throw new Error("Canonical worktree must be clean.");
-  return {
-    worktreePath: absolutePath(value.worktreePath, "canonical worktree"),
-    headSha: requiredSha(value.headSha, "canonical HEAD"),
-    treeSha: requiredSha(value.treeSha, "canonical tree"),
-    originMainSha: requiredSha(value.originMainSha, "origin/main"),
-    remoteMainSha: requiredSha(value.remoteMainSha, "remote main"),
-    clean: true,
-  };
-}
-function normalizeTarget(value) {
-  exactObject(value, "Target evidence", [
-    "worktreePath", "branch", "headSha", "branchHeadSha", "treeSha",
-    "worktreeGenerationDigest", "gitDir", "gitDirIdentityDigest",
-    "gitDirGenerationDigest", "clean", "unmergedEntries", "operationMarkers", "stateDigest",
-  ]);
-  return {
-    worktreePath: absolutePath(value.worktreePath, "target worktree"),
-    branch: requiredBranch(value.branch),
-    headSha: requiredSha(value.headSha, "target HEAD"),
-    branchHeadSha: requiredSha(value.branchHeadSha, "target branch HEAD"),
-    treeSha: requiredSha(value.treeSha, "target tree"),
-    worktreeGenerationDigest: requiredDigest(value.worktreeGenerationDigest, "worktree generation"),
-    gitDir: absolutePath(value.gitDir, "target Git directory"),
-    gitDirIdentityDigest: requiredDigest(value.gitDirIdentityDigest, "Git-directory identity"),
-    gitDirGenerationDigest: requiredDigest(value.gitDirGenerationDigest, "Git-directory generation"),
-    clean: requiredBoolean(value.clean, "target clean flag"),
-    unmergedEntries: nonNegativeInteger(value.unmergedEntries, "unmerged entry count"),
-    operationMarkers: normalizeTextList(value.operationMarkers, "operation marker"),
-    stateDigest: requiredDigest(value.stateDigest, "target state digest"),
-  };
-}
-function normalizeAuthority(value) {
-  exactObject(value, "Authority evidence", [
-    "lifecycleState", "leaseStatus", "currentLocalWriter", "disposition",
-    "priorLease", "priorLeaseDigest", "preservationReceiptDigests",
-    "remoteAuthority", "authorityDigest",
-  ]);
-  const priorLease = value.priorLease === null
-    ? null : requiredObject(value.priorLease, "prior writer lease");
-  const core = {
-    lifecycleState: requiredText(value.lifecycleState, "lifecycle state"),
-    leaseStatus: value.leaseStatus === null ? null : requiredText(value.leaseStatus, "lease status"),
-    currentLocalWriter: requiredBoolean(value.currentLocalWriter, "current local writer flag"),
-    disposition: requiredText(value.disposition, "authority disposition"),
-    priorLease,
-    priorLeaseDigest: value.priorLeaseDigest === null
-      ? null : requiredDigest(value.priorLeaseDigest, "prior lease digest"),
-    preservationReceiptDigests: normalizeDigests(value.preservationReceiptDigests, "preservation receipt"),
-    remoteAuthority: normalizeRemoteAuthority(value.remoteAuthority),
-  };
-  if ((priorLease === null) !== (core.priorLeaseDigest === null)
-    || (priorLease && digestValue(priorLease) !== core.priorLeaseDigest)
-    || value.authorityDigest !== digestValue(core)) {
-    throw new Error("Authority evidence digest or prior lease is invalid.");
+function assertCurrentEvidence(evidence) {
+  if (evidence.schema !== RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA) {
+    throw new Error("New cleanup planning and execution require generated-residue evidence v2.");
   }
-  return { ...core, authorityDigest: value.authorityDigest };
-}
-function normalizeRemoteAuthority(value) {
-  exactObject(value, "Remote authority", [
-    "provider", "ledgerRepository", "targetRepository", "targetClaims",
-    "currentRemoteWriter", "waitingSuccessors", "verificationReceiptDigest",
-  ]);
-  const targetClaims = value.targetClaims.map(claim => {
-    exactObject(claim, "Remote claim", [
-      "claimId", "state", "laneRevision", "transitionCounter",
-      "writeAuthority", "scopeReserved",
-    ]);
-    return {
-      claimId: requiredDigest(claim.claimId, "claim ID"),
-      state: requiredText(claim.state, "claim state"),
-      laneRevision: requiredSha(claim.laneRevision, "claim lane revision"),
-      transitionCounter: positiveInteger(claim.transitionCounter, "claim counter"),
-      writeAuthority: requiredBoolean(claim.writeAuthority, "claim write authority"),
-      scopeReserved: requiredBoolean(claim.scopeReserved, "claim scope reservation"),
-    };
-  }).sort((left, right) => left.claimId.localeCompare(right.claimId));
-  const core = {
-    provider: requiredText(value.provider, "authority provider"),
-    ledgerRepository: requiredText(value.ledgerRepository, "ledger repository"),
-    targetRepository: requiredText(value.targetRepository, "target repository"),
-    targetClaims,
-    currentRemoteWriter: requiredBoolean(value.currentRemoteWriter, "remote writer flag"),
-    waitingSuccessors: nonNegativeInteger(value.waitingSuccessors, "waiting successor count"),
-  };
-  if (core.currentRemoteWriter !== targetClaims.some(claim => claim.writeAuthority)
-    || core.waitingSuccessors !== targetClaims.filter(claim => claim.state === "waiting-successor").length
-    || value.verificationReceiptDigest !== digestValue(core)) {
-    throw new Error("Remote authority verification is invalid.");
-  }
-  return { ...core, verificationReceiptDigest: value.verificationReceiptDigest };
-}
-function normalizeRemoteBranch(value) {
-  exactObject(value, "Remote branch evidence", ["ref", "sha"]);
-  return { ref: requiredBranch(value.ref), sha: value.sha === null ? null : requiredSha(value.sha, "remote branch SHA") };
 }
 function normalizeRecovery(directory) {
   const value = absolutePath(directory, "recovery directory");
@@ -441,6 +352,16 @@ function normalizePhase(phase, value, plan) {
     exactObject(value, "reservation-released phase", ["operationKey", "release"]);
     return phaseOperation(value, operation, { release: normalizeRelease(value.release) });
   }
+  if (phase === "drift_aborting") {
+    exactObject(value, "drift-aborting phase", ["operationKey", "restoredStateDigest"]);
+    return phaseOperation(value, operation, {
+      restoredStateDigest: requiredDigest(value.restoredStateDigest, "restored state digest"),
+    });
+  }
+  if (phase === "drift_aborted") {
+    exactObject(value, "drift-aborted phase", ["operationKey", "release"]);
+    return phaseOperation(value, operation, { release: normalizeAbortRelease(value.release) });
+  }
   if (phase === "complete") {
     exactObject(value, "complete phase", ["operationKey", "receiptDigest"]);
     return phaseOperation(value, operation, { receiptDigest: requiredDigest(value.receiptDigest, "receipt digest") });
@@ -466,6 +387,18 @@ function normalizeRelease(value) {
   };
   if (core.schema !== "agentic-recoverable-lane-cleanup-reservation-release/v1"
     || value.receiptDigest !== digestValue(core)) throw new Error("Reservation release receipt is invalid.");
+  return { ...core, receiptDigest: value.receiptDigest };
+}
+function normalizeAbortRelease(value) {
+  exactObject(value, "Drift abort release", [
+    "schema", "planDigest", "reservationDigest", "restoredStateDigest", "receiptDigest",
+  ]);
+  const core = { schema: requiredText(value.schema, "abort release schema"),
+    planDigest: requiredDigest(value.planDigest, "abort release plan digest"),
+    reservationDigest: requiredDigest(value.reservationDigest, "abort reservation digest"),
+    restoredStateDigest: requiredDigest(value.restoredStateDigest, "abort restored state digest") };
+  if (core.schema !== "agentic-recoverable-lane-cleanup-drift-abort/v1"
+    || value.receiptDigest !== digestValue(core)) throw new Error("Drift abort receipt is invalid.");
   return { ...core, receiptDigest: value.receiptDigest };
 }
 function normalizeArtifact(value, label, disposable) {

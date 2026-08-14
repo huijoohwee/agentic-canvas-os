@@ -28,6 +28,9 @@ const REQUIRED_ADAPTER_METHODS = Object.freeze([
   "quarantineWorktree",
   "removeWorktree",
   "releaseReservation",
+  "observeRestored",
+  "abortReservation",
+  "observeAbortRelease",
   "observeFinal",
   "readReceipt",
   "writeReceipt",
@@ -112,7 +115,7 @@ export function observeRecoverableLaneCleanup(input = {}, { adapter } = {}) {
   assertReceiptBound(intent, normalizedReceipt);
   if ([
     "bundle_verified", "worktree_quarantined", "worktree_removed",
-    "reservation_released", "complete",
+    "reservation_released", "complete", "drift_aborting", "drift_aborted",
   ].includes(intent.status)) {
     runtime.verifyBundle(intent.plan, intent.phases.bundle_verified.bundle);
   }
@@ -126,6 +129,7 @@ export function observeRecoverableLaneCleanup(input = {}, { adapter } = {}) {
   if (intent.status === "complete") {
     verifyCompletedState(runtime, intent.plan, normalizedReceipt);
   }
+  if (intent.status === "drift_aborted") verifyDriftAborted(runtime, intent);
   return result(intent, normalizedReceipt);
 }
 
@@ -171,17 +175,39 @@ function executeCleanup({ adapter, authorization, input, plan }) {
     const bundle = intent.phases.bundle_verified.bundle;
     adapter.verifyBundle(plan, bundle);
     adapter.verifyBundle(plan, bundle);
-    const quarantine = adapter.quarantineWorktree(
-      plan, intent.phases.bundle_verified.reservation,
-    );
+    try {
+      const quarantine = adapter.quarantineWorktree(
+        plan, intent.phases.bundle_verified.reservation,
+      );
+      const next = advanceRecoverableLaneCleanupIntent(intent, {
+        status: "worktree_quarantined",
+        evidence: { ...quarantine, removalStateDigest: digestValue(quarantine) },
+      });
+      intent = persistIntent(adapter, intent, next);
+    } catch (error) {
+      if (error?.code !== "RECOVERABLE_GENERATED_RESIDUE_DRIFT") throw error;
+      const restored = adapter.observeRestored(plan);
+      const next = advanceRecoverableLaneCleanupIntent(intent, {
+        status: "drift_aborting",
+        evidence: { restoredStateDigest: restored.restoredStateDigest },
+      });
+      intent = persistIntent(adapter, intent, next);
+    }
+  }
+
+  if (intent.status === "drift_aborting") {
+    const release = adapter.abortReservation(plan,
+      intent.phases.bundle_verified.reservation,
+      intent.phases.drift_aborting.restoredStateDigest);
     const next = advanceRecoverableLaneCleanupIntent(intent, {
-      status: "worktree_quarantined",
-      evidence: {
-        ...quarantine,
-        removalStateDigest: digestValue(quarantine),
-      },
+      status: "drift_aborted", evidence: { release },
     });
     intent = persistIntent(adapter, intent, next);
+  }
+
+  if (intent.status === "drift_aborted") {
+    verifyDriftAborted(adapter, intent);
+    return result(intent, null);
   }
 
   if (intent.status === "worktree_quarantined") {
@@ -254,6 +280,17 @@ function verifyCompletedState(adapter, plan, receipt) {
   );
   if (canonicalJson(finalObservation) !== canonicalJson(receipt.finalObservation)) {
     throw new Error("Live cleanup state differs from its completion receipt.");
+  }
+}
+function verifyDriftAborted(adapter, intent) {
+  const restored = adapter.observeRestored(intent.plan);
+  if (restored.restoredStateDigest !== intent.phases.drift_aborting.restoredStateDigest) {
+    throw new Error("Cleanup drift-abort restored target changed after terminalization.");
+  }
+  const observedRelease = adapter.observeAbortRelease(intent.plan,
+    intent.phases.bundle_verified.reservation, restored.restoredStateDigest);
+  if (canonicalJson(observedRelease) !== canonicalJson(intent.phases.drift_aborted.release)) {
+    throw new Error("Cleanup drift-abort reservation release changed after terminalization.");
   }
 }
 

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2886,
-  "headDigest": "2f14c019ba7d518d83b4ef825b4d1600ff2943774327de8f113ce536dbee56f2",
+  "sequence": 2887,
+  "headDigest": "125cba476acf3935416fb6a6d71e91a1cd000fea8558b50ebfa2ddc2e0b3e9a0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -142649,6 +142649,50 @@
       },
       "claimDigest": "cc72085279a3e7b565106d49460cd43ad1f85790349d397dd2ff272e81205f72",
       "digest": "2f14c019ba7d518d83b4ef825b4d1600ff2943774327de8f113ce536dbee56f2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2887,
+      "parentDigest": "2f14c019ba7d518d83b4ef825b4d1600ff2943774327de8f113ce536dbee56f2",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d1488fafb2b258a1a6e9e5950c72caea694dd058f485535ca5a1d52190f21454",
+      "idempotencyKey": "84b5a79c34ce12a66a9f72d338463797a0cb3f6bb2e7c0e0685d252c2bfb5d52",
+      "requestDigest": "8c8e85babc45456816adfe1c9f2e0627b8b050d4e320443ab24134bc6c7ecd2a",
+      "evaluationTime": "2026-08-14T04:50:17.000Z",
+      "claimCore": {
+        "claimId": "d1488fafb2b258a1a6e9e5950c72caea694dd058f485535ca5a1d52190f21454",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b5b5c3a3105cc762304c4b285d7221e578915fbf1014d9f813c5b7f4ac025301",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:7617274286caf2dc292ed5553087e8e266bcc159f038bc40584e8fe1c43a9e4d",
+        "canonicalBaseRevision": "b2e256841ff8777ff2c6d3d98dda875febff2931",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-lifecycle.test.mjs",
+          "path:docs/CANONICAL-LIFECYCLE.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:todo/2026-08/release-contract-universality.md",
+          "semantic:remote-invoke-release-guidelines"
+        ],
+        "writeSetDigest": "c3a81d7ca6dfc3e55a82f6fcedcb7ad609e315e94ff5a61da3a33709914438ce",
+        "laneRevision": "74ec96767040dcca1c8057d538411a20581b9b36",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-14T06:50:17.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM79_qug",
+        "predecessorClaimId": "279d36e51cb9d698b9d177bf46eeda4ba779fb29fb51ae7f8710226763f61e56",
+        "eligibleSince": "2026-08-14T04:34:50.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-14T04:35:31.000Z"
+      },
+      "claimDigest": "dac22e5cf239dad175dd6364d5ca027681ba656665d773f4535c1caaf178be37",
+      "digest": "125cba476acf3935416fb6a6d71e91a1cd000fea8558b50ebfa2ddc2e0b3e9a0"
     }
   ]
 }

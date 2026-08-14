@@ -7,11 +7,8 @@ import path from "node:path";
 import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import {
-  buildOpenReviewedLaneRehydrationPlan,
-  createOpenReviewedLaneRehydrationIntent,
-  normalizeOpenReviewedLaneRehydrationIntent,
-} from "../scripts/open-reviewed-lane-rehydration-contract.mjs";
+import { buildOpenReviewedLaneRehydrationPlan, createOpenReviewedLaneRehydrationIntent,
+  normalizeOpenReviewedLaneRehydrationIntent } from "../scripts/open-reviewed-lane-rehydration-contract.mjs";
 import { createOpenReviewedLaneRehydrationController } from "../scripts/open-reviewed-lane-rehydration-controller.mjs";
 import { createRepositoryOpenReviewedLaneRehydrationAdapter } from "../scripts/open-reviewed-lane-rehydration-repository-adapter.mjs";
 import { updateWriterLeasePullRequestBody, WRITER_LEASE_REGISTRY_SCHEMA,
@@ -37,7 +34,7 @@ function evidence() {
       existingLaneStateDigest: digest("c"), admittedReportDigest: digest("5"),
       preservationReceiptDigest: digest("d") },
     cloudAuthority: { schema: "agentic-lane-cloud-authority/v1", provider: "github",
-      ledgerRepository: "owner/repo", targetRepository: "owner/repo", claimId,
+      ledgerRepository: "coordination/ledger", targetRepository: "owner/repo", claimId,
       claimDigest: digest("7"), ledgerRevision: sha("8"), ledgerDigest: digest("8"),
       claimLedgerRevision: digest("9"), entrySchema: "agentic-cloud-collaboration-entry/v2",
       claimIdentitySchema: "agentic-cloud-collaboration-entry/v2", operationReceiptDigest: digest("a"),
@@ -84,7 +81,7 @@ function evidence() {
       mergeQueueEntry: null,
       bodyDigest: digest("3"), markerDigest: marker.markerDigest },
     marker, claim, refresh: null,
-    localAbsence: { targetAbsent: true, branchAbsent: true, worktreeAbsent: true, leaseAbsent: true },
+    localProjection: { mode: "all-absent", branch: null, lease: null, worktreeAbsent: true },
   };
 }
 
@@ -108,10 +105,10 @@ function fakeAdapter({ loseLeaseResponse = false, failWorktree = false } = {}) {
     reconcile({ phase }) {
       const item = evidence();
       if (phase === "branch-created" && state.branch) return { branch: item.branch,
-        headSha: item.remoteHeadSha, refDigest: digestValue({ branch: item.branch, head: item.remoteHeadSha }) };
+        headSha: item.remoteHeadSha, refDigest: digestValue({ branch: item.branch, head: item.remoteHeadSha }), disposition: "created" };
       if (phase === "worktree-created" && state.worktree) return { targetPath: item.target.path,
-        headSha: item.remoteHeadSha, registrationDigest: digest("9") };
-      if (phase === "lease-recovered" && state.lease) return { leaseDigest: digest("a"),
+        headSha: item.remoteHeadSha, registrationDigest: digest("9"), disposition: "created" };
+      if (phase === "lease-recovered" && state.lease) return { disposition: "created", leaseDigest: digest("a"),
         epoch: item.marker.epoch, sessionId: item.marker.sessionId,
         leaseCasReceiptDigest: digest("b"),
         leaseRegistryBeforeRevision: 8, leaseRegistryBeforeDigest: digest("7"),
@@ -127,7 +124,7 @@ function fakeAdapter({ loseLeaseResponse = false, failWorktree = false } = {}) {
   return { adapter, state };
 }
 
-function repositoryFixture() {
+function repositoryFixture({ preexistingProjection = false } = {}) {
   const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "open-reviewed-rehydration-")));
   const repository = path.join(root, "repo"), remote = path.join(root, "remote.git");
   runGit(root, ["init", "--bare", remote]);
@@ -148,6 +145,12 @@ function repositoryFixture() {
   runGit(repository, ["branch", "-D", branch]);
   const targetPath = path.join(root, ".worktrees", "repo", "reviewed-recovery");
   const subject = providerFixtureSubject({ mainSha, headSha, branch });
+  if (preexistingProjection) {
+    runGit(repository, ["branch", branch, headSha]);
+    const lease = { ...subject.marker, worktreePath: targetPath, pullRequestUrl: subject.pull.url };
+    writeRegistry(repository, { schema: WRITER_LEASE_REGISTRY_SCHEMA, revision: 1,
+      leases: { [branch]: lease } });
+  }
   const ghCalls = [], cloudCalls = [];
   const dependencies = {
     gh(args) {
@@ -211,7 +214,6 @@ function peerLease(root, suffix = "one") {
   return { schema: WRITER_LEASE_SCHEMA, status: "active", branch: `agent/peer.local/${suffix}`,
     worktreePath: path.join(root, "peer", suffix), sessionId: `peer-${suffix}` };
 }
-
 test("plan is read-only and binds exact authorization", () => {
   const { adapter, state } = fakeAdapter();
   const plan = createOpenReviewedLaneRehydrationController({ adapter }).plan();
@@ -219,13 +221,11 @@ test("plan is read-only and binds exact authorization", () => {
   assert.equal(state.journal, null);
   assert.deepEqual([state.branch, state.worktree, state.lease, state.providerMutations], [false, false, false, 0]);
 });
-
 test("public claim rejects producer-inexpressible fields", () => {
   const input = evidence();
   input.claim.recordedState = "integrated-preserved";
   assert.throws(() => buildOpenReviewedLaneRehydrationPlan(input), /public claim/u);
 });
-
 test("integrated dormant claim identity and operation receipt are independently recomputed", () => {
   const wrongIdentity = evidence(); wrongIdentity.claim.claimId = digest("9");
   wrongIdentity.marker.cloudAuthority.claimId = wrongIdentity.claim.claimId;
@@ -233,21 +233,22 @@ test("integrated dormant claim identity and operation receipt are independently 
   const wrongReceipt = evidence(); wrongReceipt.claim.integrationReceiptDigest = digest("8");
   assert.throws(() => buildOpenReviewedLaneRehydrationPlan(wrongReceipt), /joined subject/u);
 });
-
 test("plan requires no auto-merge request and no merge-queue entry", () => {
   for (const key of ["autoMergeRequest", "mergeQueueEntry"]) {
     const input = evidence(); input.pullRequest[key] = { id: "armed" };
     assert.throws(() => buildOpenReviewedLaneRehydrationPlan(input), /pull request state/u);
   }
 });
-
 test("marker branch identity and expiry join its device, scope, and cloud authority", () => {
   const wrongDevice = evidence(); wrongDevice.marker.device = "different-device";
   assert.throws(() => buildOpenReviewedLaneRehydrationPlan(wrongDevice), /joined subject/u);
   const wrongExpiry = evidence(); wrongExpiry.marker.expiresAt = "2026-08-10T05:25:21.000Z";
   assert.throws(() => buildOpenReviewedLaneRehydrationPlan(wrongExpiry), /joined subject/u);
+  const wrongTarget = evidence(); wrongTarget.marker.cloudAuthority.targetRepository = "other/repo";
+  assert.throws(() => buildOpenReviewedLaneRehydrationPlan(wrongTarget), /joined subject/u);
+  const malformedLedger = evidence(); malformedLedger.marker.cloudAuthority.ledgerRepository = "not-a-repository";
+  assert.throws(() => buildOpenReviewedLaneRehydrationPlan(malformedLedger), /ledger repository/u);
 });
-
 test("run creates only local projections and returns a typed receipt", () => {
   const { adapter, state } = fakeAdapter();
   const controller = createOpenReviewedLaneRehydrationController({ adapter });
@@ -256,35 +257,29 @@ test("run creates only local projections and returns a typed receipt", () => {
   assert.deepEqual([state.branch, state.worktree, state.lease, state.providerMutations], [true, true, true, 0]);
   assert.equal(state.journal.status, "complete");
 });
-
 test("lost response after lease insertion is adopted on replay without rollback", () => {
   const { adapter, state } = fakeAdapter({ loseLeaseResponse: true });
-  const controller = createOpenReviewedLaneRehydrationController({ adapter });
-  const plan = controller.plan();
+  const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
   assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /lost journal response/u);
   assert.equal(state.lease, true); assert.equal(state.rollback, 0);
   const receipt = controller.run({ plan, authorization: plan.exactAuthorization });
   assert.equal(receipt.status, "rehydrated"); assert.equal(state.rollback, 0);
 });
-
 test("pre-lease failure rolls back only exact created local state", () => {
   const { adapter, state } = fakeAdapter({ failWorktree: true });
-  const controller = createOpenReviewedLaneRehydrationController({ adapter });
-  const plan = controller.plan();
+  const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
   assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /worktree failed/u);
   assert.deepEqual([state.branch, state.worktree, state.lease, state.rollback], [false, false, false, 1]);
 });
-
 test("intent operation identity is stable", () => {
   const plan = buildOpenReviewedLaneRehydrationPlan(evidence());
   assert.equal(createOpenReviewedLaneRehydrationIntent(plan).operationId,
     createOpenReviewedLaneRehydrationIntent(plan).operationId);
 });
-
 test("recomputed journal phase and receipt tampering cannot detach from the plan", () => {
   const { adapter, state } = fakeAdapter();
-  const controller = createOpenReviewedLaneRehydrationController({ adapter });
-  const plan = controller.plan(); controller.run({ plan, authorization: plan.exactAuthorization });
+  const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
+  controller.run({ plan, authorization: plan.exactAuthorization });
   const tampered = JSON.parse(JSON.stringify(state.journal));
   tampered.phases["branch-created"].branch = "agent/other-device/other-scope";
   tampered.phases["branch-created"].refDigest = digestValue({ branch: tampered.phases["branch-created"].branch,
@@ -294,7 +289,6 @@ test("recomputed journal phase and receipt tampering cannot detach from the plan
   tampered.receipt.receiptDigest = digestValue(receiptCore);
   assert.throws(() => normalizeOpenReviewedLaneRehydrationIntent(tampered), /phase plan join/u);
 });
-
 test("repository adapter preserves a disjoint peer update while creating only local projections", () => {
   const fixture = repositoryFixture();
   try {
@@ -309,6 +303,7 @@ test("repository adapter preserves a disjoint peer update while creating only lo
     const registry = JSON.parse(readFileSync(path.join(fixture.repository, ".git", "agentic-canvas-os",
       "writer-leases.json"), "utf8"));
     assert.equal(receipt.status, "rehydrated");
+    assert.deepEqual(receipt.mutationSet, ["local-branch", "registered-worktree", "writer-lease-projection"]);
     assert.deepEqual(registry.leases[peer.branch], peer);
     assert.equal(registry.leases[fixture.branch].worktreePath, fixture.targetPath);
     const operationId = createOpenReviewedLaneRehydrationIntent(plan).operationId;
@@ -316,11 +311,36 @@ test("repository adapter preserves a disjoint peer update while creating only lo
     assert.equal(statSync(path.join(journalRoot, `${operationId}.json`)).mode & 0o777, 0o600);
     assert.equal(statSync(path.join(journalRoot, `${operationId}.lease-cas.json`)).mode & 0o777, 0o600);
     assert.equal(runGit(fixture.repository, ["ls-remote", "origin"]), remoteBefore);
-    assert.ok(fixture.cloudCalls.every(call => call.action === "status"));
+    assert.ok(fixture.cloudCalls.every(call => call.action === "status"
+      && call.ledgerRepository === "coordination/ledger" && call.request.targetRepository === "owner/repo"));
     assert.ok(fixture.ghCalls.every(args => args[0] === "repo" || args[0] === "api"));
   } finally { fixture.cleanup(); }
 });
-
+test("repository adapter adopts exact branch and lease while creating only the missing worktree", () => {
+  const fixture = repositoryFixture({ preexistingProjection: true });
+  try {
+    const registryFile = path.join(fixture.repository, ".git", "agentic-canvas-os", "writer-leases.json");
+    const registryBefore = readFileSync(registryFile, "utf8");
+    const controller = createOpenReviewedLaneRehydrationController({ adapter: fixture.createAdapter() }); const plan = controller.plan();
+    assert.equal(plan.evidence.localProjection.mode, "worktree-only");
+    const receipt = controller.run({ plan, authorization: plan.exactAuthorization });
+    assert.deepEqual(receipt.mutationSet, ["registered-worktree"]);
+    assert.deepEqual([receipt.phases["branch-created"].disposition,
+      receipt.phases["lease-recovered"].disposition], ["adopted", "adopted"]);
+    assert.equal(readFileSync(registryFile, "utf8"), registryBefore);
+    assert.equal(runGit(fixture.targetPath, ["rev-parse", "HEAD"]), fixture.headSha);
+  } finally { fixture.cleanup(); }
+});
+test("partial projection rejects a branch lease that differs from the reviewed marker", () => {
+  const fixture = repositoryFixture({ preexistingProjection: true });
+  try {
+    const registryFile = path.join(fixture.repository, ".git", "agentic-canvas-os", "writer-leases.json");
+    const registry = JSON.parse(readFileSync(registryFile, "utf8"));
+    registry.leases[fixture.branch].sessionId = "different-session"; writeRegistry(fixture.repository, registry);
+    const controller = createOpenReviewedLaneRehydrationController({ adapter: fixture.createAdapter() });
+    assert.throws(() => controller.plan(), /writer lease collision/u);
+  } finally { fixture.cleanup(); }
+});
 test("lease CAS response loss replays after an unrelated peer registry update", () => {
   const fixture = repositoryFixture();
   try {
@@ -331,8 +351,7 @@ test("lease CAS response loss replays after an unrelated peer registry update", 
       }
       return base.writeIntent(input);
     } };
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
     assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /lost lease phase response/u);
     const registryFile = path.join(fixture.repository, ".git", "agentic-canvas-os", "writer-leases.json");
     const current = JSON.parse(readFileSync(registryFile, "utf8")), peer = peerLease(fixture.root, "after");
@@ -345,7 +364,6 @@ test("lease CAS response loss replays after an unrelated peer registry update", 
     assert.equal(receipt.phases["lease-recovered"].leaseRegistryAfterRevision, 1);
   } finally { fixture.cleanup(); }
 });
-
 test("a disjoint Git worktree added after lease insertion does not strand verification or completed replay", () => {
   const fixture = repositoryFixture();
   try {
@@ -359,8 +377,7 @@ test("a disjoint Git worktree added after lease insertion does not strand verifi
       }
       return base.verify(input);
     } };
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
     const receipt = controller.run({ plan, authorization: plan.exactAuthorization });
     const replayed = controller.run({ plan, authorization: plan.exactAuthorization });
     assert.equal(receipt.status, "rehydrated");
@@ -369,7 +386,6 @@ test("a disjoint Git worktree added after lease insertion does not strand verifi
       new RegExp(peerPath.replaceAll("/", "\\/"), "u"));
   } finally { fixture.cleanup(); }
 });
-
 test("writer registry symlinks block planning and final CAS without branch, worktree, or lease effects", () => {
   const fixture = repositoryFixture();
   try {
@@ -393,7 +409,6 @@ test("writer registry symlinks block planning and final CAS without branch, work
     assert.throws(() => runGit(fixture.repository, ["show-ref", "--verify", `refs/heads/${fixture.branch}`]));
   } finally { fixture.cleanup(); }
 });
-
 test("repository plan rejects target and local branch collisions without mutation", () => {
   const fixture = repositoryFixture();
   try {
@@ -416,14 +431,12 @@ test("repository plan rejects target and local branch collisions without mutatio
     assert.equal(fixture.cloudCalls.filter(call => call.action !== "status").length, 0);
   } finally { fixture.cleanup(); }
 });
-
 test("pre-lease adapter failure rolls back only its exact ref and worktree under the registry lock", () => {
   const fixture = repositoryFixture();
   try {
     const base = fixture.createAdapter();
     const adapter = { ...base, recoverLease() { throw new Error("injected pre-lease stop"); } };
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
     assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /injected pre-lease stop/u);
     assert.equal(existsSync(fixture.targetPath), false);
     assert.throws(() => runGit(fixture.repository, ["show-ref", "--verify", `refs/heads/${fixture.branch}`]));
@@ -432,7 +445,6 @@ test("pre-lease adapter failure rolls back only its exact ref and worktree under
     assert.equal(journal.status, "prepared"); assert.deepEqual(journal.attempts, []);
   } finally { fixture.cleanup(); }
 });
-
 test("an exact branch won by a concurrent Git command is not adopted or deleted", () => {
   const fixture = repositoryFixture();
   try {
@@ -441,8 +453,7 @@ test("an exact branch won by a concurrent Git command is not adopted or deleted"
       runGit(fixture.repository, ["update-ref", `refs/heads/${fixture.branch}`, fixture.headSha]);
       return base.createBranch(input);
     } };
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
     assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }),
       /unattributed rollback branch retained/u);
     assert.equal(runGit(fixture.repository, ["show-ref", "--hash", "--verify", `refs/heads/${fixture.branch}`]),
@@ -450,7 +461,6 @@ test("an exact branch won by a concurrent Git command is not adopted or deleted"
     assert.equal(existsSync(fixture.targetPath), false);
   } finally { fixture.cleanup(); }
 });
-
 test("an exact worktree won by a concurrent Git command is not adopted or removed", () => {
   const fixture = repositoryFixture();
   try {
@@ -460,8 +470,7 @@ test("an exact worktree won by a concurrent Git command is not adopted or remove
       runGit(fixture.repository, ["worktree", "add", "--", fixture.targetPath, fixture.branch]);
       return base.createWorktree(input);
     } };
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
     assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }),
       /unattributed rollback target retained/u);
     assert.equal(runGit(fixture.targetPath, ["rev-parse", "HEAD"]), fixture.headSha);
@@ -469,7 +478,6 @@ test("an exact worktree won by a concurrent Git command is not adopted or remove
       fixture.headSha);
   } finally { fixture.cleanup(); }
 });
-
 test("a prepared lease sidecar never adopts an exact lease after registry response loss and peer advance", () => {
   const fixture = repositoryFixture();
   try {
@@ -480,8 +488,8 @@ test("a prepared lease sidecar never adopts an exact lease after registry respon
       writeRegistry(fixture.repository, value);
       throw new Error("lost registry provenance");
     } });
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan(), operationId = createOpenReviewedLaneRehydrationIntent(plan).operationId;
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
+    const operationId = createOpenReviewedLaneRehydrationIntent(plan).operationId;
     assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /lost registry provenance/u);
     const sidecarFile = path.join(fixture.repository, ".git", "agentic-canvas-os",
       "open-reviewed-lane-rehydration", `${operationId}.lease-cas.json`);
@@ -499,7 +507,6 @@ test("a prepared lease sidecar never adopts an exact lease after registry respon
     assert.equal(JSON.parse(readFileSync(sidecarFile, "utf8")).status, "prepared");
   } finally { fixture.cleanup(); }
 });
-
 test("a non-absence ref read failure retains the attributed ref and does not reset rollback intent", () => {
   const fixture = repositoryFixture();
   try {
@@ -516,8 +523,7 @@ test("a non-absence ref read failure retains the attributed ref and does not res
         rejectRefRead = true;
         try { return base.rollback(input); } finally { rejectRefRead = false; }
       } };
-    const controller = createOpenReviewedLaneRehydrationController({ adapter });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
     assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }),
       /exact local rollback failed closed: injected ref read failure/u);
     assert.equal(existsSync(fixture.targetPath), false);
@@ -529,7 +535,6 @@ test("a non-absence ref read failure retains the attributed ref and does not res
     assert.ok(journal.attempts.some(item => item.phase === "lease-recovered"));
   } finally { fixture.cleanup(); }
 });
-
 test("substrate removal at the final registry-lock boundary prevents lease insertion", () => {
   const fixture = repositoryFixture();
   try {
@@ -551,7 +556,6 @@ test("substrate removal at the final registry-lock boundary prevents lease inser
     assert.throws(() => runGit(fixture.repository, ["show-ref", "--verify", `refs/heads/${fixture.branch}`]));
   } finally { fixture.cleanup(); }
 });
-
 test("existing operation lock is never auto-taken-over or unlinked", () => {
   const fixture = repositoryFixture();
   try {
@@ -567,12 +571,10 @@ test("existing operation lock is never auto-taken-over or unlinked", () => {
     assert.equal(existsSync(fixture.targetPath), false);
   } finally { fixture.cleanup(); }
 });
-
 test("negative and maximum-safe writer registry revisions block before local effects", () => {
   const fixture = repositoryFixture();
   try {
-    const controller = createOpenReviewedLaneRehydrationController({ adapter: fixture.createAdapter() });
-    const plan = controller.plan();
+    const controller = createOpenReviewedLaneRehydrationController({ adapter: fixture.createAdapter() }); const plan = controller.plan();
     for (const revision of [-1, Number.MAX_SAFE_INTEGER]) {
       writeRegistry(fixture.repository, { schema: WRITER_LEASE_REGISTRY_SCHEMA, revision, leases: {} });
       assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /writer registry/u);
@@ -581,17 +583,14 @@ test("negative and maximum-safe writer registry revisions block before local eff
     }
   } finally { fixture.cleanup(); }
 });
-
 test("authorized evidence drift fails before branch, worktree, or lease effects", () => {
   const { adapter, state } = fakeAdapter();
   adapter.revalidate = () => { throw new Error("authorized evidence drift"); };
-  const controller = createOpenReviewedLaneRehydrationController({ adapter });
-  const plan = controller.plan();
+  const controller = createOpenReviewedLaneRehydrationController({ adapter }); const plan = controller.plan();
   assert.throws(() => controller.run({ plan, authorization: plan.exactAuthorization }), /authorized evidence drift/u);
   assert.deepEqual([state.branch, state.worktree, state.lease], [false, false, false]);
   assert.equal(state.journal.status, "prepared");
 });
-
 test("repository adapter contains no force or broad prune lifecycle command", () => {
   const source = readFileSync(new URL("../scripts/open-reviewed-lane-rehydration-repository-adapter.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(source, /worktree[^\n]*(?:--force|\bprune\b)/u);

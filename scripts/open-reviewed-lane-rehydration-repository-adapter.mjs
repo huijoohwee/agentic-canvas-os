@@ -19,6 +19,7 @@ import {
 import {
   buildOpenReviewedLaneRehydrationPlan,
   createOpenReviewedLaneRehydrationIntent,
+  EVIDENCE_SCHEMA,
   normalizeOpenReviewedLaneRehydrationIntent,
 } from "./open-reviewed-lane-rehydration-contract.mjs";
 
@@ -65,17 +66,18 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
         claimActorId: `github-user:${viewer.databaseId}` }, pull };
   }
 
-  function capture(phase = "prepared", lockedRegistry = null) {
+  function capture(phase = "prepared", lockedRegistry = null, plannedProjection = null) {
     const provider = providerSubject(), pull = provider.pull;
     const markerSource = parseWriterLeasePullRequestBody(pull.body);
     if (!markerSource) fail("pull-request writer marker");
     const branch = markerSource.branch;
     if (!parseDeviceBranch(branch)) fail("agent branch identity");
     const authority = markerSource.cloudAuthority;
-    if (authority?.ledgerRepository !== provider.repository.nameWithOwner
-      || authority?.targetRepository !== provider.repository.nameWithOwner) fail("cloud repository identity");
-    const status = cloud({ action: "status", ledgerRepository: authority?.ledgerRepository,
-      request: { targetRepository: authority?.targetRepository }, environment });
+    const ledgerRepository = repositoryIdentity(authority?.ledgerRepository, "ledger repository identity");
+    const targetRepository = repositoryIdentity(authority?.targetRepository, "target repository identity");
+    if (targetRepository !== provider.repository.nameWithOwner) fail("cloud target repository identity");
+    const status = cloud({ action: "status", ledgerRepository,
+      request: { targetRepository }, environment });
     if (status?.schema !== "agentic-cloud-collaboration-result/v1" || status.ok !== true
       || status.action !== "status" || !Array.isArray(status.claims)) fail("cloud status");
     const claims = status.claims.filter(item => item?.claimId === authority?.claimId);
@@ -104,13 +106,13 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
     const ownership = deriveTaskWorktreeContainers({ repoRoot: repository, gitCommonDir: commonDir, targetPath });
     requireTarget(ownership, { allowTarget: phaseIndex(phase) >= phaseIndex("worktree-created") });
     const effects = inspectLocalEffects({ phase, branch, headSha: remoteHeadSha, records, markerSource,
-      pullUrl: pull.url, lockedRegistry });
+      pullUrl: pull.url, lockedRegistry, plannedProjection });
     const registrationDigest = digestValue(registrationProjection(records, branch, false));
     const observationDigest = digestValue({ targetPath, managedRoot: ownership.managedContainer.root,
       sharedRoot: ownership.sharedContainer.root, registrationDigest, absentBefore: true });
     currentBody = pull.body;
     return {
-      schema: "agentic-open-reviewed-lane-rehydration-evidence/v1",
+      schema: EVIDENCE_SCHEMA,
       repository: provider.repository,
       actor: provider.actor,
       canonical: { repoRoot: repository, gitCommonDir: commonDir, headSha, currentMainSha,
@@ -130,16 +132,13 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
       marker: markerProjection(markerSource),
       claim,
       refresh,
-      localAbsence: { targetAbsent: true, branchAbsent: true, worktreeAbsent: true, leaseAbsent: true },
+      localProjection: effects.localProjection,
     };
   }
 
-  function inspectLocalEffects({ phase, branch, headSha, records, markerSource, pullUrl, lockedRegistry }) {
-    const branchExpected = phaseIndex(phase) >= phaseIndex("branch-created");
+  function inspectLocalEffects({ phase, branch, headSha, records, markerSource, pullUrl, lockedRegistry, plannedProjection }) {
     const worktreeExpected = phaseIndex(phase) >= phaseIndex("worktree-created");
-    const leaseExpected = phaseIndex(phase) >= phaseIndex("lease-recovered");
     const ref = readLocalRef(branch);
-    if ((branchExpected && ref !== headSha) || (!branchExpected && ref)) fail("local branch collision");
     const targets = records.filter(item => samePath(item.path, targetPath));
     const owners = records.filter(item => item.branch === `refs/heads/${branch}`);
     if (worktreeExpected) requireExactWorktree({ targets, owners, branch, headSha });
@@ -153,16 +152,34 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
       .filter(([, item]) => samePath(item?.worktreePath, targetPath));
     const expectedLease = { ...markerSource, schema: "agentic-writer-lease/v2",
       worktreePath: targetPath, pullRequestUrl: pullUrl };
+    const exactLease = digestValue(lease) === digestValue(expectedLease) && targetLeases.length === 1
+      && targetLeases[0][0] === branch;
+    const observedPartial = ref === headSha && exactLease;
+    const observedAbsent = !ref && !lease && targetLeases.length === 0;
+    let mode = plannedProjection?.mode;
+    if (!mode) {
+      if (observedPartial) mode = "worktree-only";
+      else if (observedAbsent) mode = "all-absent";
+      else if (lease || targetLeases.length) fail("writer lease collision");
+      else fail("local branch collision");
+    }
+    const partial = mode === "worktree-only";
+    const branchExpected = partial || phaseIndex(phase) >= phaseIndex("branch-created");
+    const leaseExpected = partial || phaseIndex(phase) >= phaseIndex("lease-recovered");
+    if ((branchExpected && ref !== headSha) || (!branchExpected && ref)) fail("local branch collision");
     if (leaseExpected) {
-      if (digestValue(lease) !== digestValue(expectedLease) || targetLeases.length !== 1
-        || targetLeases[0][0] !== branch) fail("rehydrated lease drift");
+      if (!exactLease) fail("rehydrated lease drift");
     } else if (lease || targetLeases.length) {
       fail("writer lease collision");
     }
-    const leaseProjectionDigest = digestValue({ schema: WRITER_LEASE_REGISTRY_SCHEMA,
-      branch, branchLease: null, targetPath, targetOwners: [] });
-    return { worktree: worktreeExpected, lease: leaseExpected ? lease : null,
-      leaseProjectionDigest };
+    const leaseProjectionDigest = digestValue({ schema: WRITER_LEASE_REGISTRY_SCHEMA, branch,
+      branchLeaseDigest: partial ? digestValue(lease) : null, targetPath,
+      targetOwners: partial ? targetLeases.map(([owner, item]) => ({ owner, leaseDigest: digestValue(item) })) : [] });
+    const localProjection = partial ? { mode, branch: { headSha, refDigest: digestValue({ branch, head: headSha }) },
+      lease: { leaseDigest: digestValue(lease), projectionDigest: leaseProjectionDigest }, worktreeAbsent: true }
+      : { mode, branch: null, lease: null, worktreeAbsent: true };
+    if (plannedProjection && digestValue(localProjection) !== digestValue(plannedProjection)) fail("planned local projection drift");
+    return { localProjection, leaseProjectionDigest };
   }
 
   function requireExactWorktree({ targets, owners, branch, headSha }) {
@@ -187,12 +204,17 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
     }
   }
 
-  function reconcile({ plan, phase }) {
+  function reconcile({ plan, intent = null, phase }) {
     const evidence = plan.evidence, branch = evidence.branch, head = evidence.remoteHeadSha;
+    const adopted = evidence.localProjection.mode === "worktree-only";
+    const attempted = intent?.attempts?.some(item => item.phase === phase);
+    if (adopted && phase === "branch-created" && !attempted) return null;
+    if (adopted && phase === "lease-recovered" && intent?.status === "worktree-created" && !attempted) return null;
     if (phase === "branch-created") {
       const ref = readLocalRef(branch);
       if (!ref) return null; if (ref !== head) fail("branch response");
-      return { branch, headSha: head, refDigest: digestValue({ branch, head }) };
+      return { branch, headSha: head, refDigest: digestValue({ branch, head }),
+        disposition: adopted ? "adopted" : "created" };
     }
     if (phase === "worktree-created") {
       const records = parseWorktreeRecords(gitRaw(["worktree", "list", "--porcelain", "-z"]));
@@ -201,7 +223,7 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
       if (!targets.length && !owners.length) return null;
       requireExactWorktree({ targets, owners, branch, headSha: head });
       return { targetPath, headSha: head,
-        registrationDigest: digestValue(registrationProjection(records, branch, true)) };
+        registrationDigest: digestValue(registrationProjection(records, branch, true)), disposition: "created" };
     }
     if (phase === "lease-recovered") {
       const registry = readWriterRegistry();
@@ -210,11 +232,14 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
       const expected = { ...marker, schema: "agentic-writer-lease/v2", worktreePath: targetPath,
         pullRequestUrl: evidence.pullRequest.url };
       if (digestValue(lease) !== digestValue(expected)) fail("lease response");
+      if (adopted) return { disposition: "adopted", leaseDigest: digestValue(lease),
+        epoch: lease.epoch, sessionId: lease.sessionId,
+        leaseProjectionDigest: evidence.localProjection.lease.projectionDigest };
       const receipt = readLeaseCasReceipt(plan);
       if (!receipt || receipt.status !== "committed" || receipt.leaseDigest !== digestValue(lease)) {
         fail("committed lease CAS receipt");
       }
-      return { leaseDigest: digestValue(lease), epoch: lease.epoch, sessionId: lease.sessionId,
+      return { disposition: "created", leaseDigest: digestValue(lease), epoch: lease.epoch, sessionId: lease.sessionId,
         leaseCasReceiptDigest: receipt.receiptDigest,
         leaseRegistryBeforeRevision: receipt.beforeRevision, leaseRegistryBeforeDigest: receipt.beforeDigest,
         leaseRegistryAfterRevision: receipt.afterRevision, leaseRegistryAfterDigest: receipt.afterDigest };
@@ -235,7 +260,13 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
       requireExactEvidence(plan, phase);
     },
     reconcile,
-    createBranch({ plan }) { git(["update-ref", `refs/heads/${plan.evidence.branch}`, plan.evidence.remoteHeadSha, ZERO_SHA]); },
+    createBranch({ plan }) {
+      if (plan.evidence.localProjection.mode === "worktree-only") {
+        if (readLocalRef(plan.evidence.branch) !== plan.evidence.remoteHeadSha) fail("adopted branch drift");
+        return;
+      }
+      git(["update-ref", `refs/heads/${plan.evidence.branch}`, plan.evidence.remoteHeadSha, ZERO_SHA]);
+    },
     createWorktree({ plan }) {
       ensureTargetParents(plan.evidence.target);
       requireTargetForCreation(plan.evidence.target);
@@ -244,7 +275,7 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
     recoverLease({ plan, intent }) {
       withWriterRegistryLock(registry => {
         requireExactEvidence(plan, intent.status, registry);
-        recoverLeaseExactly(plan, registry);
+        if (plan.evidence.localProjection.mode !== "worktree-only") recoverLeaseExactly(plan, registry);
       });
     },
     verify({ plan, intent }) {
@@ -369,7 +400,7 @@ export function createRepositoryOpenReviewedLaneRehydrationAdapter(options = {},
   }
 
   function requireExactEvidence(plan, phase, lockedRegistry = null) {
-    const observed = buildOpenReviewedLaneRehydrationPlan(capture(phase, lockedRegistry));
+    const observed = buildOpenReviewedLaneRehydrationPlan(capture(phase, lockedRegistry, plan.evidence.localProjection));
     if (observed.planDigest !== plan.planDigest) fail("authorized plan drift");
     return observed.evidence;
   }
@@ -536,5 +567,6 @@ function registrationRecord(value) {
     locked: value.locked === true, prunable: value.prunable === true };
 }
 function required(value, label) { if (typeof value !== "string" || !value || value !== value.trim()) fail(label); return value; }
+function repositoryIdentity(value, label) { const result = required(value, label); if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) fail(label); return result; }
 function positive(value, label) { const number = Number(value); if (!Number.isSafeInteger(number) || number < 1) fail(label); return number; }
 function fail(label) { throw new Error(`Open reviewed lane rehydration ${label} is invalid.`); }

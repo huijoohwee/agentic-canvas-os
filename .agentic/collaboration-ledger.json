@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2930,
-  "headDigest": "3632b5eef7c14310449abd5cbfbf43ef2d964b4b07b8a3b37b5d2aa7f39e9326",
+  "sequence": 2931,
+  "headDigest": "54e5245fba3de584ad7948cf0fe24612c6dd5bc984ca106fb7cc63957cd0a524",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -144721,6 +144721,51 @@
       },
       "claimDigest": "8e82eb7e8ef6550675e55f2828f0e2634d1e8a731ec91419480a319b8ddd0add",
       "digest": "3632b5eef7c14310449abd5cbfbf43ef2d964b4b07b8a3b37b5d2aa7f39e9326"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2931,
+      "parentDigest": "3632b5eef7c14310449abd5cbfbf43ef2d964b4b07b8a3b37b5d2aa7f39e9326",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cc6c9257ebe1d06c26e3da9bf639d8c16b225e4c5fa7cb336d74c6395399da20",
+      "idempotencyKey": "b6a1a0efafa18d26388d653d0b5afbdb8c6be633dee923fac78cff05f7ef5842",
+      "requestDigest": "da1bdfb1b3b533aad263afc4244c1aad021f34d245045f93990ca9a2837790fc",
+      "evaluationTime": "2026-08-14T08:10:35.000Z",
+      "claimCore": {
+        "claimId": "cc6c9257ebe1d06c26e3da9bf639d8c16b225e4c5fa7cb336d74c6395399da20",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:59dd48ffb913fe9668b39fcd4c6b51d528c4441e37c516baec383421eeb5250d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4fcfdeedcb04fc2da35940cfd661b22bca712c0219a00a25168473fa1224d230",
+        "canonicalBaseRevision": "a87c7e5d18999204050e88c15cfde746a8246335",
+        "declaredWriteScope": [
+          "path:__tests__/active-admitted-pr-marker-response-loss.test.mjs",
+          "path:docs/ACTIVE-ADMITTED-PR-MARKER-RESPONSE-LOSS.md",
+          "path:scripts/active-admitted-pr-marker-response-loss-contract.mjs",
+          "path:scripts/active-admitted-pr-marker-response-loss-controller.mjs",
+          "path:scripts/active-admitted-pr-marker-response-loss-evidence.mjs",
+          "path:scripts/active-admitted-pr-marker-response-loss-repository-adapter.mjs",
+          "path:scripts/active-admitted-pr-marker-response-loss.mjs",
+          "semantic:active-admitted-pr-marker-response-loss"
+        ],
+        "writeSetDigest": "70b0176c22aaed30a5ed6b5a07beadfe440c7aa42bd190eed871b89f4ab8eb18",
+        "laneRevision": "dac31940c57c6ab2e558d8ebc3b09571e328c7f5",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-14T11:34:08.000Z",
+        "evidenceDigest": "e0c5cda7e93d33dce2207c0239d15e8b24bf81478cc7df4681c222f15c975afe",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7--_4n",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e8da9c0a06cf3c978d6e6cf3a39b211102fcf9b08746c8e3d82037fe2435cbf8",
+      "digest": "54e5245fba3de584ad7948cf0fe24612c6dd5bc984ca106fb7cc63957cd0a524"
     }
   ]
 }

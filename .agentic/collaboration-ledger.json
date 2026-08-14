@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2966,
-  "headDigest": "198d36075372dde2bb8edcaa0ad0e13961c6956f086f6023e9e194b686eda6df",
+  "sequence": 2967,
+  "headDigest": "a4ce6527f47fc41647ea49fab0eda27d78c0be606e8e405a5b52ef35b763ded4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -146564,6 +146564,47 @@
       },
       "claimDigest": "27c59ee3541a179d0c86758c38adf5a48d768cfc80a97cbad2254a37c6d824fd",
       "digest": "198d36075372dde2bb8edcaa0ad0e13961c6956f086f6023e9e194b686eda6df"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2967,
+      "parentDigest": "198d36075372dde2bb8edcaa0ad0e13961c6956f086f6023e9e194b686eda6df",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "efec212416330e60961b3796ac85253c77ca80a71458fb742320aa0cb2f72f69",
+      "idempotencyKey": "78ad339589a46054ae8a091c65d972e3d76ac207e25e770fda72cad8bd55d473",
+      "requestDigest": "79e9f10eff7e8f9ae6ff7690f968b8a225e01569719498e5469a7154fb0dbc13",
+      "evaluationTime": "2026-08-14T14:44:01.000Z",
+      "claimCore": {
+        "claimId": "efec212416330e60961b3796ac85253c77ca80a71458fb742320aa0cb2f72f69",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5264e97353ec181b2a054124120106595ffc921770b54262520350d50deb841b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2ddb5a5fbb5dbb9db671e9f43a229ea81a7ebd5327d8393220477e89d45359a2",
+        "canonicalBaseRevision": "db8c6bc86ff2261916129c0d9bffe11b3384b715",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-admission-continuation-peer-authority.test.mjs",
+          "path:docs/SCOPED-LANE-CONTINUATION-PEER-AUTHORITY.md",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "semantic:scoped-lane-continuation-peer-authority"
+        ],
+        "writeSetDigest": "031b9f86e57d88e1dad947d9750941c6ce2f62680fe10835a56f591cb83a9cf1",
+        "laneRevision": "e0cb0b885b8ec6df95bf546e64e6f94e4b59d99b",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 1,
+        "state": "reviewed",
+        "expiresAt": "2026-08-14T16:17:46.000Z",
+        "evidenceDigest": "161155dcb0eef7208e69cf17af74dac1d5c2a08d033c11478c2f82f549bca34b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_InUy",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "406f2386a0fbe157b35a9428a50beb2ef3c01b1b23f8f3034692679461629ee3",
+      "digest": "a4ce6527f47fc41647ea49fab0eda27d78c0be606e8e405a5b52ef35b763ded4"
     }
   ]
 }

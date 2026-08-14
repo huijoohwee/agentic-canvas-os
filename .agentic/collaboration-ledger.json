@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2960,
-  "headDigest": "2dd795ab5fd4adedc743ebde1c08a3b6a91e3c0eec2bdaa0905fd9ac3a429d57",
+  "sequence": 2961,
+  "headDigest": "0d9c9fefe85f5b8698742e13d2cb382a09ae476f8a9ba5af594574fb993a039f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -146323,6 +146323,46 @@
       },
       "claimDigest": "627c602b163e91595ed34a8ad17094270f2875a133bc1bcd145db2921f7822cc",
       "digest": "2dd795ab5fd4adedc743ebde1c08a3b6a91e3c0eec2bdaa0905fd9ac3a429d57"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2961,
+      "parentDigest": "2dd795ab5fd4adedc743ebde1c08a3b6a91e3c0eec2bdaa0905fd9ac3a429d57",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9f9359506e20d20fe32b7db354a724f9d288f07429f0df40b9c5ad0827400e32",
+      "idempotencyKey": "f3c9d162b769d18e2664ae90668b936f35952325410a010b2bbcafc6e15bea80",
+      "requestDigest": "d6d5c8c9daf4ac76ec647f35bc77fb294bc24c8bf2f04bde68d2c6eac5266d5d",
+      "evaluationTime": "2026-08-14T14:27:04.000Z",
+      "claimCore": {
+        "claimId": "9f9359506e20d20fe32b7db354a724f9d288f07429f0df40b9c5ad0827400e32",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:09975467e40f04ebaa992c0a017908774dc8b24e75fae11be6b217068473c584",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0abf5c7890cd030d2f67cc3299c02aa91d6465939b869860f199910982abeb15",
+        "canonicalBaseRevision": "db8c6bc86ff2261916129c0d9bffe11b3384b715",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "semantic:committed-heartbeat-current-renewal-continuation"
+        ],
+        "writeSetDigest": "c587fe5d2b2f6fac44be599a1c52c93d92c6090f4127830bf84ae0b09ae76282",
+        "laneRevision": "deab9f2c61388817319a73e9c44a6b09ebad7cd9",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-14T14:56:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "42fd9639e5f9d8fef832369dbfefffb0d587bf1dcfca1afaa3e61ac6e524ac82",
+      "digest": "0d9c9fefe85f5b8698742e13d2cb382a09ae476f8a9ba5af594574fb993a039f"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2914,
-  "headDigest": "af4a71379bf6a7f37d03f46a1f3781e5e8502784f354843a1d7eb600bc6efd34",
+  "sequence": 2915,
+  "headDigest": "3ee9c3f24d04825d45ce150d6e134bfeecdad01bb069edd9d8ceb848969935f1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -143933,6 +143933,50 @@
       },
       "claimDigest": "0d46a38bc269f659ae3ce9a78b0d409ee6bd3824382cebcf78c03c0cfb503402",
       "digest": "af4a71379bf6a7f37d03f46a1f3781e5e8502784f354843a1d7eb600bc6efd34"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2915,
+      "parentDigest": "af4a71379bf6a7f37d03f46a1f3781e5e8502784f354843a1d7eb600bc6efd34",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9e41af1aa9a40edf85f340e68f647a44ba0c06cbfa59a4ee3c0d99bf6dea5bdc",
+      "idempotencyKey": "fd7c34d22ae359168f94962fd7e3376bd74f1ca270627542cb15167ec42726ec",
+      "requestDigest": "ee4dffe16176d1d0830aca9daba91bc702972f65eed0caac8eebd1ec841852c8",
+      "evaluationTime": "2026-08-14T06:34:42.000Z",
+      "claimCore": {
+        "claimId": "9e41af1aa9a40edf85f340e68f647a44ba0c06cbfa59a4ee3c0d99bf6dea5bdc",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8f0eea320bfb22e2eb8c6efe587b9762ebc16535e4db843c698e689446ea3c1c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ba6f1af0e57bf36767f777b5503592b79dfecedca67dfc74f3d2eea07223c6a6",
+        "canonicalBaseRevision": "415ecba5c6bb3d7174deca491f4bfcf5b09ba415",
+        "declaredWriteScope": [
+          "path:__tests__/open-reviewed-lane-queue-preservation.test.mjs",
+          "path:docs/OPEN-REVIEWED-LANE-QUEUE-PRESERVATION.md",
+          "path:scripts/open-reviewed-lane-queue-preservation-contract.mjs",
+          "path:scripts/open-reviewed-lane-queue-preservation-controller.mjs",
+          "path:scripts/open-reviewed-lane-queue-preservation-repository-adapter.mjs",
+          "path:scripts/open-reviewed-lane-queue-preservation.mjs",
+          "semantic:open-reviewed-lane-queue-preservation"
+        ],
+        "writeSetDigest": "f6b23df77f8d00c3007e0260482c0610e343a3a2d534402fd77461c3ecd03a31",
+        "laneRevision": "0bd49a448e48fe6049e9c8b1256495a72e823bf5",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-14T10:33:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-9ocS",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "629eceaafb4aff2c3707ff129d3ab7fb3514747b883df58d96617f43d583ba40",
+      "digest": "3ee9c3f24d04825d45ce150d6e134bfeecdad01bb069edd9d8ceb848969935f1"
     }
   ]
 }

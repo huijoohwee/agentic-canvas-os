@@ -45,3 +45,15 @@ test("plan rejects out-of-scope and non-linear authored bytes", () => {
   const merge = evidence(); merge.descendant.commits[0].parentSha = sha("9");
   assert.throws(() => buildProvisionedStartAdmissionRecoveryPlan(merge), /commit inventory/u);
 });
+
+test("plan accepts only current write authority for the exact claim", () => {
+  const current = evidence();
+  assert.equal(buildProvisionedStartAdmissionRecoveryPlan(current).evidence.cloud.writeAuthority, true);
+  const dormant = evidence(); dormant.cloud.state = "parked"; dormant.cloud.writeAuthority = false;
+  assert.throws(() => buildProvisionedStartAdmissionRecoveryPlan(dormant), /current cloud write authority/u);
+  const foreign = evidence(); foreign.cloud.claimId = d("foreign claim");
+  assert.throws(() => buildProvisionedStartAdmissionRecoveryPlan(foreign), /current cloud write authority/u);
+  const advanced = evidence(); advanced.cloud.transitionCounter += 1;
+  assert.notEqual(buildProvisionedStartAdmissionRecoveryPlan(advanced).planDigest,
+    buildProvisionedStartAdmissionRecoveryPlan(current).planDigest);
+});

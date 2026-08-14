@@ -48,10 +48,10 @@ three response-loss observations explicitly:
 
 The provider adapter observes the body immediately before and after an update and rejects unexpected
 drift. This is detection around a read/write/read transport, not a claim that the provider offers an
-atomic compare-and-swap for body edits. For example, GitHub's REST guidance does not define general
-conditional semantics for unsafe requests unless an endpoint documents them explicitly. A concurrent
-write outside those observations may still win; terminal replay must therefore re-read and require the
-exact target body before returning its receipt.
+atomic compare-and-swap for body edits. For example, [GitHub's REST guidance](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api?apiVersion=2022-11-28)
+does not define general conditional semantics for unsafe requests unless an endpoint documents them
+explicitly. A concurrent write outside those observations may still win; terminal replay must therefore
+re-read and require the exact target body before returning its receipt.
 
 The receipt grants no authoring, cloud-transition, integration, merge, deployment, source/worktree,
 writer-registry, remote-Git, or general provider authority. The private digest-bound CAS journal is the

@@ -21,3 +21,12 @@ export function rootStateForProjection(value) {
     released: "retired",
   })[state] || value;
 }
+
+export function projectRootAuthorityState(value) {
+  const state = projectRootState(value);
+  return Object.freeze({
+    state,
+    writeAuthority: state === "active",
+    scopeReserved: ["active", "review_ready", "delivery_authorized", "parked"].includes(state),
+  });
+}

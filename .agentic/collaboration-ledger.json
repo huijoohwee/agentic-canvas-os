@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 2953,
-  "headDigest": "aed406d1d2e6e91b31d27ab3e96952de1a0787c0afc99934ec5d7788f335dadd",
+  "sequence": 2954,
+  "headDigest": "b096cd722c88650f173b4f24e9a5839de093e13ccd636aa9a8336451d91098ae",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -145996,6 +145996,47 @@
       },
       "claimDigest": "054ec865c338cf873964c7040b257240f3441cc7004fd59827cea273019c629f",
       "digest": "aed406d1d2e6e91b31d27ab3e96952de1a0787c0afc99934ec5d7788f335dadd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 2954,
+      "parentDigest": "aed406d1d2e6e91b31d27ab3e96952de1a0787c0afc99934ec5d7788f335dadd",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "6d73c8a03c0ab1a9cd287530455bcd2db62dc1ba799aeaed4d004fbf799ed9a9",
+      "idempotencyKey": "93153174f9f02d39ca1173f63c8f69b059428d2329a9979761f57f33ee365d1a",
+      "requestDigest": "8ffa7165880a53e6f7944a04f695a70867e497e1af590814a191a39a545fd43a",
+      "evaluationTime": "2026-08-14T14:13:25.000Z",
+      "claimCore": {
+        "claimId": "6d73c8a03c0ab1a9cd287530455bcd2db62dc1ba799aeaed4d004fbf799ed9a9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:073a7450d514e2e6863556731d3efb89ae2866a5413aab813a9496582504d146",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b4b438a4ead8b08e3a7a1c9c1da3a9fdce1685e4094066b62769f4904a4f69c7",
+        "canonicalBaseRevision": "db8c6bc86ff2261916129c0d9bffe11b3384b715",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-pull-request-state.mjs",
+          "semantic:pr-bound-base-refresh-continuation"
+        ],
+        "writeSetDigest": "9d1c4e2a5302e045aac45b75cbc3fa8bd0726314e83ee1314acbf9ed31c623e0",
+        "laneRevision": "db8c6bc86ff2261916129c0d9bffe11b3384b715",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-14T14:43:06.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cea7ff4d8e0cc55f0174e74a9c5df8d3f4caf1acb5d3c8a9c8e65e5a9392a78f",
+      "digest": "b096cd722c88650f173b4f24e9a5839de093e13ccd636aa9a8336451d91098ae"
     }
   ]
 }

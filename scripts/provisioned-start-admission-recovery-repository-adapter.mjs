@@ -9,9 +9,12 @@ import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
   projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
 import { projectProvisionedStartAdmissionRecovery } from "./provisioned-start-admission-recovery-contract.mjs";
-
-const CLOUD_VERIFIER_ADAPTER_ID = "agentic-admission-cloud-authority-verifier";
-const CLOUD_VERIFIER_VERSION = 1;
+import { attestProvisionedStartCloudAuthoritySubject,
+  PROVISIONED_START_CLOUD_AUTHORITY_SUBJECT_SCHEMA,
+  PROVISIONED_START_CLOUD_VERIFIER_ADAPTER_ID, PROVISIONED_START_CLOUD_VERIFIER_VERSION,
+  projectProvisionedStartCloudAuthoritySubject,
+  requireProvisionedStartCloudAuthorityAttestation,
+} from "./provisioned-start-cloud-authority-subject.mjs";
 
 export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
   repository,
@@ -45,7 +48,7 @@ export function createProvisionedStartAdmissionRecoveryRepositoryAdapter({
     const manifest = manifestFromLease(lease);
     const verified = verifyCloud({ authority: lease.cloudAuthority, manifest,
       canonicalBaseSha: lease.baseSha, environment });
-    const cloud = cloudEvidence(verified, lease);
+    const cloud = cloudEvidence(verified, lease, manifest).cloud;
     return Object.freeze({ lease, descendant, pullRequest: provider.evidence, cloud,
       privateState: Object.freeze({ manifest, pullRequestBody: provider.body }) });
   }
@@ -175,28 +178,23 @@ function readPullRequest({ lease, gh }) {
     bodyDigest: digestValue(value.body || "") }) };
 }
 
-function cloudEvidence(verified, lease) {
+function cloudEvidence(verified, lease, manifest) {
   const claim = verified.verification.inventory.claims.find(item => item.claimId === lease.cloudAuthority.claimId);
   if (!claim) throw new Error("Cloud verification omitted the exact claim.");
-  const subject = { schema: verified.verification.schema, status: verified.verification.status,
-    claimId: verified.verification.claimId || verified.authority.claimId,
-    claimDigest: verified.verification.claimDigest || verified.authority.claimDigest,
-    ledgerRevision: verified.verification.ledgerRevision || verified.authority.ledgerRevision,
-    ledgerDigest: verified.verification.ledgerDigest, canonicalBaseSha: verified.verification.canonicalBaseSha,
-    laneRevision: verified.verification.laneRevision || verified.authority.laneRevision,
-    writeSetDigest: verified.verification.writeSetDigest,
-    reviewRequestId: verified.verification.reviewRequestId ?? verified.authority.reviewRequestId ?? null,
-    remoteClaimInventoryDigest: verified.verification.remoteClaimInventoryDigest };
-  requireVerificationReceipt(verified.verification.receiptDigest);
-  return Object.freeze({ status: verified.verification.status, state: verified.authority.state,
+  const subject = projectProvisionedStartCloudAuthoritySubject({ verified, lease, manifest });
+  const attestation = attestProvisionedStartCloudAuthoritySubject({ verified, subject });
+  const cloud = Object.freeze({ status: verified.verification.status, state: verified.authority.state,
     writeAuthority: claim.writeAuthority, scopeReserved: claim.scopeReserved,
     claimId: verified.authority.claimId, claimDigest: verified.authority.claimDigest,
     laneRevision: verified.authority.laneRevision, transitionCounter: verified.authority.transitionCounter,
     heartbeatCounter: claim.heartbeatCounter, ledgerRevision: verified.authority.ledgerRevision,
     ledgerDigest: verified.verification.ledgerDigest,
-    verifier: Object.freeze({ adapterId: CLOUD_VERIFIER_ADAPTER_ID,
-      schema: verified.verification.schema, version: CLOUD_VERIFIER_VERSION,
+    verifier: Object.freeze({ adapterId: PROVISIONED_START_CLOUD_VERIFIER_ADAPTER_ID,
+      schema: PROVISIONED_START_CLOUD_AUTHORITY_SUBJECT_SCHEMA,
+      version: PROVISIONED_START_CLOUD_VERIFIER_VERSION,
       subjectDigest: digestValue(subject) }) });
+  requireProvisionedStartCloudAuthorityAttestation(attestation, cloud.verifier.subjectDigest);
+  return Object.freeze({ cloud, attestation });
 }
 
 function manifestFromLease(lease) {
@@ -230,13 +228,14 @@ function requireOwner(lease, sessionId, repo) {
   }
 }
 function requireProviderFrame(actual, expected) { if (digestValue(actual) !== digestValue(expected)) throw new Error("Pull-request identity or frame drifted."); }
-function requireCloudFrame({ lease, plan, verifyCloud, environment }) { const verified = verifyCloud({
-  authority: lease.cloudAuthority, manifest: manifestFromLease(lease), canonicalBaseSha: lease.baseSha, environment });
-  const cloud = cloudEvidence(verified, lease); if (digestValue(cloud) !== digestValue(plan.evidence.cloud)) {
+function requireCloudFrame({ lease, plan, verifyCloud, environment }) { const manifest = manifestFromLease(lease);
+  const verified = verifyCloud({ authority: lease.cloudAuthority, manifest, canonicalBaseSha: lease.baseSha, environment });
+  const { cloud, attestation } = cloudEvidence(verified, lease, manifest);
+  if (digestValue(cloud) !== digestValue(plan.evidence.cloud)) {
     throw new Error("Cloud authority drifted from the sealed recovery plan."); }
-  return { ...cloud, verificationReceiptDigest: requireVerificationReceipt(verified.verification.receiptDigest) }; }
-function requireVerificationReceipt(value) { if (!/^[0-9a-f]{64}$/u.test(String(value || ""))) {
-  throw new Error("Cloud verifier returned an invalid fresh receipt digest."); } return value; }
+  requireProvisionedStartCloudAuthorityAttestation(attestation, plan.evidence.cloud.verifier.subjectDigest);
+  return { ...cloud, verificationReceiptDigest: attestation.sourceReceiptDigest,
+    verificationAttestationReceiptDigest: attestation.receiptDigest }; }
 function assertRepositoryFrame({ repo, plan, git }) { if (digestValue(readDescendant({ repo, lease: { fenceSha: plan.evidence.descendant.fenceSha }, git })) !== digestValue(plan.evidence.descendant)) throw new Error("Authored descendant drifted."); }
 function capabilityReceipt(lease, operation) { return digestValue({ schema: "agentic-task-authority-mutation-proof/v1", operation,
   taskAuthorityDigest: lease.taskAuthorityDigest, leaseDigest: lease.leaseDigest }); }

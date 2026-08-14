@@ -36,6 +36,10 @@ Planning is read-only and returns this exact operator boundary:
 authorize provisioned-start-admission-recovery <plan-digest>
 ```
 
+The plan binds a canonical cloud-authority subject rather than a verifier response envelope. The subject contains the claim identity and digest, state and counters, repository, branch, review, manifest, write-scope, base, fence, actor, device, and session identities required by this contract. Canonical ordering makes identical authority produce an identical subject digest. Verification timestamps, nonces, receipt identifiers, and global ledger observation metadata are excluded because they describe the observation, not the authority.
+
+Every execution boundary performs a fresh verification. Its adapter-issued attestation must name the verifier schema and version, reproduce the sealed subject digest from the current authoritative fields, and bind the fresh verifier receipt. A changed authority field changes or invalidates the subject; a forged or mismatched attestation fails closed. The fresh receipt is execution evidence and does not alter the human-authorized plan digest.
+
 Execution requires the sealed external plan and that exact authorization. It records an external Git-common-directory intent, atomically projects the integration evidence and admitted receipt into the writer registry, then replaces only the deterministic writer marker in the review body. It never pushes the authored descendant. Each phase is replay-safe: an exact completed local or provider effect is adopted, while any third state fails closed.
 
 Use the device entry point from a protected controller checkout:

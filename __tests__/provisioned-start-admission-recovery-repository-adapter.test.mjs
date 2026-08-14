@@ -3,17 +3,27 @@ import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { buildProvisionedStartAdmissionRecoveryPlan } from "../scripts/provisioned-start-admission-recovery-contract.mjs";
 import { createProvisionedStartAdmissionRecoveryRepositoryAdapter } from "../scripts/provisioned-start-admission-recovery-repository-adapter.mjs";
+import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
 
 const d = value => digestValue({ value });
 const sha = character => character.repeat(40);
 
 test("adapter reads a content-bound planned descendant and fails closed on provider drift", () => {
   const fence = sha("a"); const head = sha("b"); const tree = sha("c");
+  const manifest = normalizeDeclaredWriteScopeManifest({ schema: "agentic-declared-write-scope/v1",
+    semanticScope: "scope", paths: ["docs/a.md"] }, { expectedScope: "scope" });
   const admission = { schema: "agentic-lane-admission-lease/v1", status: "planned", semanticScope: "scope",
-    declaredWriteSet: ["path:docs/a.md", "semantic:scope"], writeSetDigest: d(1), manifestDigest: d(2),
+    declaredWriteSet: manifest.declaredWriteSet, writeSetDigest: manifest.writeSetDigest, manifestDigest: manifest.manifestDigest,
     planReceiptDigest: d(3), admissionReceiptDigest: d(4), existingLaneStateDigest: d(5) };
   const authority = { schema: "agentic-lane-cloud-authority/v1", state: "active", claimId: d(6), claimDigest: d(7),
-    ledgerRevision: sha("d"), laneRevision: fence, transitionCounter: 2 };
+    provider: "provider", ledgerRepository: "owner/ledger", targetRepository: "owner/target",
+    ledgerRevision: sha("d"), ledgerDigest: d("ledger"), claimLedgerRevision: d("transition"),
+    entrySchema: "claim-entry/v1", claimIdentitySchema: "claim-identity/v1",
+    operationReceiptDigest: d("operation"), mutationAuthorityEligible: true,
+    canonicalBaseSha: sha("0"), laneRevision: fence, cloudDeclaredWriteScope: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest, deviceId: "device", sessionId: "session",
+    reviewRequestId: null, leaseEpoch: 1, transitionCounter: 2,
+    expiresAt: "2026-08-15T00:00:00.000Z", manifestDigest: manifest.manifestDigest };
   const lease = { schema: "agentic-writer-lease/v2", status: "active", sessionId: "session", device: "device",
     scope: "scope", branch: "agent/device/scope", worktreePath: "/tmp/repo", epoch: 2, baseSha: sha("0"),
     fenceSha: fence, pullRequestUrl: "https://example.test/pull/1", admission, cloudAuthority: authority,
@@ -45,10 +55,16 @@ test("adapter reads a content-bound planned descendant and fails closed on provi
     status: "ready", claimId: authority.claimId, claimDigest: authority.claimDigest,
     ledgerRevision: authority.ledgerRevision, ledgerDigest: d(9), canonicalBaseSha: lease.baseSha,
     laneRevision: authority.laneRevision, writeSetDigest: admission.writeSetDigest, reviewRequestId: null,
-    remoteClaimInventoryDigest: subjectDrift ? d("drift") : d("inventory"),
+    remoteClaimInventoryDigest: d(`inventory ${receipt}`), verifiedAt: `2026-08-14T00:00:0${receipt}.000Z`,
     receiptDigest: forgedReceipt ? "forged" : d(`receipt ${receipt++}`),
-    inventory: { claims: [{ claimId: authority.claimId, writeAuthority: true,
-      scopeReserved: true, heartbeatCounter: 0 }] } } });
+    inventory: { claims: [{ claimId: authority.claimId, claimIdentitySchema: authority.claimIdentitySchema,
+      entrySchema: authority.entrySchema, actorId: "actor", repositoryId: "repository", workItemId: "work-item",
+      canonicalBaseRevision: authority.canonicalBaseSha, laneRevision: authority.laneRevision,
+      declaredWriteScope: manifest.declaredWriteSet, writeSetDigest: manifest.writeSetDigest,
+      leaseEpoch: authority.leaseEpoch, transitionCounter: authority.transitionCounter,
+      heartbeatCounter: subjectDrift ? 1 : 0, reviewRequestId: null, expiresAt: authority.expiresAt,
+      fenceRevision: authority.claimDigest, transitionDigest: authority.claimLedgerRevision,
+      state: authority.state, writeAuthority: true, scopeReserved: true }] } } });
   const adapter = createProvisionedStartAdmissionRecoveryRepositoryAdapter({ repository: "/tmp/repo",
     sessionId: "session", taskAuthorityFile: "/tmp/capability", git, gh, verifyCloud,
     createLeaseStore: () => store });
@@ -59,12 +75,14 @@ test("adapter reads a content-bound planned descendant and fails closed on provi
     writeAuthority: plan.evidence.cloud.writeAuthority,
     scopeReserved: plan.evidence.cloud.scopeReserved,
   }, { state: "active", writeAuthority: true, scopeReserved: true });
+  const repeated = buildProvisionedStartAdmissionRecoveryPlan(adapter.readEvidence());
+  assert.equal(repeated.planDigest, plan.planDigest);
   assert.doesNotThrow(() => adapter.assertPlanPreimage(plan, "fresh-receipt"));
   subjectDrift = true;
   assert.throws(() => adapter.assertPlanPreimage(plan, "subject-drift"), /preimage drifted/u);
   subjectDrift = false;
   forgedReceipt = true;
-  assert.throws(() => adapter.assertFreshVerification(plan, "forged-receipt"), /invalid fresh receipt/u);
+  assert.throws(() => adapter.assertFreshVerification(plan, "forged-receipt"), /receipt is invalid/u);
   forgedReceipt = false;
   body = "concurrent body drift";
   assert.throws(() => adapter.assertPlanPreimage(plan, "before-intent"), /preimage drifted/u);

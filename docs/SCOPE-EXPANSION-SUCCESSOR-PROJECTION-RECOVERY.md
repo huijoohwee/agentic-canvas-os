@@ -21,7 +21,8 @@ This controller repairs one narrow interruption after an active dirty scope expa
 
 The sealed decision subject joins:
 
-- the clean protected controller revision and implementation digest;
+- the clean protected controller revision and implementation digest, plus exact no-replace
+  merge-base and changed-path proofs that the protected advance is ancestral and disjoint;
 - the original source-retired intent and plan;
 - the exact local predecessor lease, task binding, admission, and expired or live historical expiry;
 - the draft pull request identity, head, body, and predecessor writer marker;
@@ -70,3 +71,8 @@ The durable journal advances through `prepared`, `task-authority-verified`, `pro
 Promotion adoption is observation-only. Successor binding uses the repository cloud controller. The shared atomic successor projector then replaces the predecessor admission, claim, and task binding under one writer-registry CAS while moving the original scope-expansion intent to `local-cas`. The pull-request marker and the original intent advance only after that atomic projection. Terminal proof revalidates the current cloud claim, mutation authority, unchanged bytes, task continuation, pull-request marker, and completed original intent.
 
 Completion reports recovery receipts only. It grants no authority to commit, push, merge, clean a worktree, integrate a pull request, or deploy.
+The recovered successor and source pull request remain anchored to the original canonical base;
+the newer protected controller revision supplies recovery code, not refreshed integration authority.
+NUL-delimited path and status evidence bypasses scalar-output trimming. The full decision subject is
+rechecked immediately before cloud binding, and local plus pull-request subjects are rechecked after
+the pull-request edit and immediately before the local intent CAS.

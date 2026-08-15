@@ -9,8 +9,12 @@ import {
   normalizeWriteSet,
   writeSetsOverlap,
 } from "./cloud-collaboration-primitives.mjs";
-import { isRetiredPreservedLane } from "./legacy-review-ready-retirement-lib.mjs";
+import {
+  isRetiredPreservedLane,
+  normalizeLocalReviewRetirementReceipt,
+} from "./legacy-review-ready-retirement-lib.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
+import { normalizeRetiredPlannedAdmissionOwnerReceipt } from "./retired-planned-admission-owner-lib.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
 
 export const ROOT_SOURCE_BOOTSTRAP_OPERATOR_DECISION_SCHEMA =
@@ -219,7 +223,7 @@ export function inspectRootSourceMaintenance({ lanePath, manifestPath, expectedM
   const contentDigest = maintenanceContentDigest({
     lane,
     retirementReceiptDigest: retiredPreserved
-      ? matchingLeases[0].localReviewRetirement.receiptDigest
+      ? normalizeBootstrapRetirementReceiptDigest(matchingLeases[0])
       : null,
   });
   const core = {
@@ -240,6 +244,21 @@ export function inspectRootSourceMaintenance({ lanePath, manifestPath, expectedM
     contentDigest,
   };
   return Object.freeze({ ...core, stateDigest: digestValue(core) });
+}
+
+export function normalizeBootstrapRetirementReceiptDigest(lease) {
+  const receiptOwners = [
+    lease?.localReviewRetirement
+      ? () => normalizeLocalReviewRetirementReceipt(lease.localReviewRetirement)
+      : null,
+    lease?.admissionOwnerRetirement
+      ? () => normalizeRetiredPlannedAdmissionOwnerReceipt(lease.admissionOwnerRetirement)
+      : null,
+  ].filter(Boolean);
+  if (receiptOwners.length !== 1) {
+    throw new Error("Root-source bootstrap maintenance requires one exact retirement receipt owner.");
+  }
+  return receiptOwners[0]().receiptDigest;
 }
 
 export function normalizeRootSourceMaintenanceProof(source, { expectedManifestDigest }) {

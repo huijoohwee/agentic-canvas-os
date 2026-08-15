@@ -10,6 +10,11 @@ import {
   verifyPromotedSuccessor,
   verifyWaitingSuccessor,
 } from "./active-dirty-scope-expansion-contract.mjs";
+import {
+  assertActiveDirtyScopeExpansionTaskSuccessorPreflight,
+  projectActiveDirtyScopeExpansionSuccessor,
+}
+  from "./active-dirty-scope-expansion-successor-projection.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
@@ -29,7 +34,6 @@ import {
   advanceScopeExpansionIntent,
   assertExpansionIntentCurrent,
   beginScopeExpansionIntent,
-  casWriterLeaseProjection,
   readScopeExpansionIntent,
   withHeartbeatProjectionFence,
   writerLeaseDigest,
@@ -74,6 +78,11 @@ export async function runActiveDirtyScopeExpansion({
   if (!adapter) throw new Error("Scope-expansion controller adapter is required.");
   const first = await adapter.readState();
   const plan = resolvePlan({ state: first, targetManifest });
+  assertActiveDirtyScopeExpansionTaskSuccessorPreflight({
+    lease: first?.source?.lease,
+    plan,
+    requireTaskAuthority: first?.requireTaskAuthoritySuccessor === true,
+  });
   const existingIntent = first.intent || null;
   const receipts = [
     buildExpansionReceipt({
@@ -218,19 +227,16 @@ export async function runActiveDirtyScopeExpansion({
   let localProjection = intent.localProjection || null;
   if (!atLeast(intent.status, "local-cas")) {
     const localResult = await adapter.projectLocal({ plan, intent, authority: bound });
-    localProjection = localResult?.projection || localResult;
-    const localProjectionReceiptDigest = requiredDigest(
-      localResult?.receiptDigest,
-      "local projection receipt digest",
-    );
-    intent = await adapter.markIntent({
-      plan,
-      intent,
-      status: "local-cas",
-      localProjection,
-      localProjectionReceiptDigest,
-    });
-    intent = normalizeIntentProjection(intent);
+    intent = normalizeIntentProjection(localResult?.intent);
+    requirePlanIntent(intent, plan);
+    if (intent.status !== "local-cas") {
+      throw new Error("Local successor projection did not atomically persist its intent.");
+    }
+    localProjection = intent.localProjection;
+    requiredDigest(localResult?.receiptDigest, "local projection receipt digest");
+    if (localResult.receiptDigest !== intent.localProjectionReceiptDigest) {
+      throw new Error("Local successor projection receipt drifted from its durable intent.");
+    }
   }
   receipts.push(buildExpansionReceipt({
     phase: "local-cas",
@@ -317,6 +323,7 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
     stdio: ["ignore", "pipe", "pipe"],
   }),
   leaseStore = null,
+  taskAuthorityFile = environment.AGENTIC_TASK_AUTHORITY_FILE || null,
   invoke = invokeRepositoryCloudAction,
   verify = invokeRepositoryCloudVerifier,
 } = {}) {
@@ -325,6 +332,7 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
   const normalizedTtl = positiveInteger(ttlSeconds, "TTL seconds");
   const store = leaseStore || createWriterLeaseStore({
     gitCommonDir: path.resolve(repository, gitText(["rev-parse", "--git-common-dir"])),
+    taskAuthorityFile,
   });
 
   const sourceSnapshot = () => {
@@ -379,6 +387,7 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
       authority,
       intent,
       source,
+      requireTaskAuthoritySuccessor: true,
       reviewRequestId: authority.reviewRequestId,
       targetCanonicalBaseSha,
       sourceStateDigest: digestValue({ source, leaseDigest: writerLeaseDigest(lease) }),
@@ -575,31 +584,6 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
     projectLocal({ plan, authority }) {
       const current = sourceSnapshot();
       const manifest = manifestFromPlan(plan);
-      let updated = current.lease;
-      if (current.authority.claimId === authority.claimId) {
-        assertExpandedLease({ lease: current.lease, plan, authority });
-      } else {
-        assertSourceLeaseMatchesPlan({ current, plan });
-        const projectedAdmission = admissionFromExpansion({
-          sourceAdmission: current.lease.admission,
-          plan,
-          authority,
-        });
-        updated = casWriterLeaseProjection({
-          leaseStore: store,
-          branch: current.branch,
-          expectedLeaseDigest: plan.sourceLeaseDigest,
-          expectedClaimId: plan.sourceClaimId,
-          requireNoActiveIntent: false,
-          values: {
-            baseSha: plan.targetCanonicalBaseSha,
-            admission: projectedAdmission,
-            cloudAuthority: authority,
-            heartbeatAt: authority.expiresAt,
-            expiresAt: authority.expiresAt,
-          },
-        }).lease;
-      }
       const verification = verifyAdmissionCloudAuthority({
         authority,
         manifest,
@@ -608,18 +592,19 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
         inspect: invoke,
         invoke: verify,
       });
-      const receipt = assertAdmissionMutationAuthority({
-        lease: updated,
-        cloudAuthority: verification.authority,
-        remoteAuthorityVerification: verification.verification,
-      });
-      return Object.freeze({
-        projection: {
-          leaseDigest: writerLeaseDigest(updated),
-          claimId: verification.authority.claimId,
-          receiptDigest: receipt.receiptDigest,
-        },
-        receiptDigest: receipt.receiptDigest,
+      return projectActiveDirtyScopeExpansionSuccessor({
+        leaseStore: store,
+        branch: current.branch,
+        expectedLeaseDigest: plan.sourceLeaseDigest,
+        expectedClaimId: plan.sourceClaimId,
+        plan,
+        authority: verification.authority,
+        taskAuthorityFile,
+        validateLease: updated => assertAdmissionMutationAuthority({
+          lease: updated,
+          cloudAuthority: verification.authority,
+          remoteAuthorityVerification: verification.verification,
+        }),
       });
     },
 
@@ -776,36 +761,6 @@ function manifestFromPlan(plan) {
     declaredWriteSet: normalized.targetDeclaredWriteSet,
     writeSetDigest: normalized.targetWriteSetDigest,
     manifestDigest: normalized.targetManifestDigest,
-  });
-}
-
-function admissionFromExpansion({ sourceAdmission, plan, authority }) {
-  const normalized = normalizeActiveDirtyScopeExpansionPlan(plan);
-  return Object.freeze({
-    schema: "agentic-lane-admission-lease/v1",
-    status: "admitted",
-    semanticScope: manifestFromPlan(normalized).semanticScope,
-    declaredWriteSet: normalized.targetDeclaredWriteSet,
-    writeSetDigest: normalized.targetWriteSetDigest,
-    manifestDigest: normalized.targetManifestDigest,
-    planReceiptDigest: normalized.planDigest,
-    admissionReceiptDigest: requiredDigest(authority.operationReceiptDigest, "successor operation receipt digest"),
-    existingLaneStateDigest: requiredDigest(
-      sourceAdmission?.existingLaneStateDigest,
-      "source admission lane-state digest",
-    ),
-    admittedReportDigest: digestValue({
-      schema: "agentic-active-dirty-scope-expansion-admitted-report/v1",
-      planDigest: normalized.planDigest,
-      claimId: authority.claimId,
-      claimDigest: authority.claimDigest,
-    }),
-    preservationReceiptDigest: digestValue({
-      schema: "agentic-active-dirty-scope-expansion-preservation/v1",
-      planDigest: normalized.planDigest,
-      sourceAdmissionDigest: digestValue(sourceAdmission),
-      successorClaimId: authority.claimId,
-    }),
   });
 }
 

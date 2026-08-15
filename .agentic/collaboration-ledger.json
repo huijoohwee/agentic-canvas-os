@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3075,
-  "headDigest": "ac899f119d3237148c5e8d64c3d6ec350c78c0f7ffd2b0b4b6d1b8091c292d6d",
+  "sequence": 3076,
+  "headDigest": "031229f026fed3dc224887b31a5f75bc4a57dc0120cb0a372cda83ffffbc9813",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -152261,6 +152261,46 @@
       },
       "claimDigest": "f580853875da8e23f45aed5c56a50411458e7ed1e5e8dd4afda4a24f21b9f2d6",
       "digest": "ac899f119d3237148c5e8d64c3d6ec350c78c0f7ffd2b0b4b6d1b8091c292d6d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3076,
+      "parentDigest": "ac899f119d3237148c5e8d64c3d6ec350c78c0f7ffd2b0b4b6d1b8091c292d6d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "220a33e3344c11f6598646c9b65f2c24cb0cc96b92a57124bfe044084254f031",
+      "idempotencyKey": "fbbb0ebfe1fcf46d207f2838ffb1b18240ae673c5c1172eb80870e7e7eb6f8e4",
+      "requestDigest": "389733e0446d3af933854701edbebf3a04295435ff133a7021d23e9eae3b9c7f",
+      "evaluationTime": "2026-08-15T22:17:54.000Z",
+      "claimCore": {
+        "claimId": "220a33e3344c11f6598646c9b65f2c24cb0cc96b92a57124bfe044084254f031",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c6663e1914969cad8d5598b6731445be081c718a5926c516bb30128b2329e04d",
+        "canonicalBaseRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "declaredWriteScope": [
+          "path:__tests__/provisioned-start-cloud-authority-subject.test.mjs",
+          "path:scripts/provisioned-start-cloud-authority-subject.mjs",
+          "semantic:provisioned-start-cloud-authority-manifest-source"
+        ],
+        "writeSetDigest": "0cccfca93cf37751ac9f4cc7e9c0693bb45a8bb07fe884b98e4e458ce02599ba",
+        "laneRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T22:17:54.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3c331c57492876ab3532d67e593de13793efdbed1de0ea0441adfc9ca4eb6fb6",
+      "digest": "031229f026fed3dc224887b31a5f75bc4a57dc0120cb0a372cda83ffffbc9813"
     }
   ]
 }

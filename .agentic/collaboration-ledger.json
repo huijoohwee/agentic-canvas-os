@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3070,
-  "headDigest": "f48909f4d4e53c46533166c3320f332354d5f68659d20fe415322260f42ba467",
+  "sequence": 3071,
+  "headDigest": "1a119669918b1f5a98d3fa3d9836954829d6492d3b3a1002758f59d51f6127ce",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -152041,6 +152041,51 @@
       },
       "claimDigest": "bf01a7ec254f06e08d3e4468ee5dd6d39db950dd0236c3a1a1d1f2264e9a0026",
       "digest": "f48909f4d4e53c46533166c3320f332354d5f68659d20fe415322260f42ba467"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3071,
+      "parentDigest": "f48909f4d4e53c46533166c3320f332354d5f68659d20fe415322260f42ba467",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e7baf66a7ddf2dc7ddf43b85daa7a654e842ecd6d4aaabf21a3d98dd8d0e3600",
+      "idempotencyKey": "c03b3a9ae48f6174e7c70aec6dd9353c38a4818d35a4e735f32650d76b6ed9dd",
+      "requestDigest": "46973007b4815c9bcbd50c0d841f119ffa2f4c9edccc49a8ab0f7636eaa8625b",
+      "evaluationTime": "2026-08-15T16:14:37.000Z",
+      "claimCore": {
+        "claimId": "e7baf66a7ddf2dc7ddf43b85daa7a654e842ecd6d4aaabf21a3d98dd8d0e3600",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:351569e8dad7f18da41bed6022e141dcc7790dd1ab79caa3af516efa37a6144a",
+        "canonicalBaseRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "declaredWriteScope": [
+          "path:__tests__/current-cloud-expired-local-owned-dirt-continuation.test.mjs",
+          "path:docs/CURRENT-CLOUD-EXPIRED-LOCAL-OWNED-DIRT-CONTINUATION.md",
+          "path:scripts/current-cloud-expired-local-owned-dirt-continuation-contract.mjs",
+          "path:scripts/current-cloud-expired-local-owned-dirt-continuation-controller.mjs",
+          "path:scripts/current-cloud-expired-local-owned-dirt-continuation-evidence.mjs",
+          "path:scripts/current-cloud-expired-local-owned-dirt-continuation-repository-adapter.mjs",
+          "path:scripts/current-cloud-expired-local-owned-dirt-continuation.mjs",
+          "semantic:current-cloud-local-lease-continuation"
+        ],
+        "writeSetDigest": "231581a691dd5e7f7857c9c7c7adb60187e1d2661d2e6520b072d1bedf43a714",
+        "laneRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T16:14:37.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "90792354bf15a207430e88c4cc7af5796dd91edda5bf0017c8a099fad30ad418",
+      "digest": "1a119669918b1f5a98d3fa3d9836954829d6492d3b3a1002758f59d51f6127ce"
     }
   ]
 }

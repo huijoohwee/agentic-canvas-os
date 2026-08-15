@@ -19,7 +19,7 @@ function fixture({ heartbeatCounter = 0, receipt = "one", verifiedAt = "2026-08-
     operationReceiptDigest: digest("operation"), state: "active", transitionCounter: 2, leaseEpoch: 1,
     mutationAuthorityEligible: true, deviceId: "device", sessionId: "session",
     canonicalBaseSha: sha("a"), laneRevision: sha("b"), reviewRequestId: "provider-review:1",
-    writeSetDigest: manifest.writeSetDigest, manifestDigest: manifest.manifestDigest,
+    writeSetDigest: manifest.writeSetDigest,
     expiresAt: "2026-08-15T00:00:00.000Z" };
   const claim = { claimId: authority.claimId, actorId: "actor", repositoryId: "repository",
     workItemId: "work-item", canonicalBaseRevision: authority.canonicalBaseSha,
@@ -45,6 +45,19 @@ test("stable subject excludes fresh verifier metadata and canonicalizes write sc
   assert.notEqual(firstAttestation.receiptDigest, secondAttestation.receiptDigest);
   assert.doesNotThrow(() => requireProvisionedStartCloudAuthorityAttestation(
     secondAttestation, digestValue(firstSubject)));
+});
+
+test("manifest owns its digest when transport omits it and rejects transport drift", () => {
+  const current = fixture();
+  const subject = projectProvisionedStartCloudAuthoritySubject(current);
+  assert.equal(subject.scope.manifestDigest, current.manifest.manifestDigest);
+  assert.throws(() => projectProvisionedStartCloudAuthoritySubject({
+    ...current,
+    verified: {
+      ...current.verified,
+      authority: { ...current.verified.authority, manifestDigest: digest("different-manifest") },
+    },
+  }), /manifest digest drifted/u);
 });
 
 test("authority drift changes the subject and forged attestations fail closed", () => {

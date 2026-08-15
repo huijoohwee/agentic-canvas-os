@@ -35,12 +35,13 @@ one closed mode:
 | Mode | Required evidence |
 |---|---|
 | Dirty maintenance | Dirty, unleased, nonempty changed paths, and every changed path inside the exact maintenance manifest. |
-| Clean retired preservation | Clean, zero changed paths, exactly one matching lease, and a valid `agentic-local-review-retirement-receipt/v1` proving `retired-preserved`. |
+| Clean retired preservation | Clean, zero changed paths, exactly one matching lease, and exactly one normalized `agentic-local-review-retirement-receipt/v1` or `agentic-retired-planned-admission-owner-receipt/v1` proving `retired-preserved`. |
 
-The clean mode binds the retirement receipt digest into the maintenance content
-and state digests. The inspector rereads registration, branch, HEAD, status,
-manifest, lease registry, and retirement receipt from the actual source. A
-caller-provided boolean is not authority.
+The clean mode normalizes the single applicable retirement receipt owner, then
+binds its receipt digest into the maintenance content and state digests. The
+inspector rereads registration, branch, HEAD, status, manifest, lease registry,
+and retirement receipt from the actual source. Conflicting receipt owners and
+caller-provided booleans are not authority.
 
 The normalizer accepts historical dirty-maintenance proofs whose digest predates
 the `retiredPreserved` field only after recomputing their exact historical

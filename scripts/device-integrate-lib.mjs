@@ -23,6 +23,8 @@ import {
   projectRootState,
 } from "./scoped-lane-cloud-reconciliation.mjs";
 import { assertActivePublishPathsAdmitted } from "./active-publish-write-scope.mjs";
+import { continueActivePublishTaskAuthoritySuccessor }
+  from "./active-publish-task-authority-successor.mjs";
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
 import {
   appendProtectedMainRefresh,
@@ -1257,22 +1259,40 @@ function refreshActivePublishSuccessor({
   if (Date.parse(successor.authority.expiresAt) <= Date.parse(completedAt)) {
     throw new Error("Active publish successor expired before its local projection CAS.");
   }
+  const admissionProjection = projectActivePublishSuccessorAdmission({
+    lease, admission, manifest, successor, predecessor, headSha,
+  });
+  const successorValues = {
+    status: "active",
+    baseSha: subject.canonicalBaseSha,
+    fenceSha: headSha,
+    heartbeatAt: completedAt,
+    expiresAt: successor.authority.expiresAt,
+    admission: admissionProjection,
+    cloudAuthority: successor.authority,
+    activePublishSuccessorIntent: null,
+  };
+  const targetLease = { ...current, ...successorValues };
+  const taskAuthoritySuccessor = current.taskAuthority
+    ? continueActivePublishTaskAuthoritySuccessor({
+      sourceLease: current,
+      targetLease,
+      cloudOperationReceiptDigest: successor.authority.operationReceiptDigest,
+      cloudVerificationReceiptDigest: successor.verification.receiptDigest,
+      boundAt: completedAt,
+    })
+    : null;
   return casActiveLeaseProjection({
     leaseStore,
     branch,
     expectedLeaseDigest: digestValue(current),
     expectedClaimId: source.claimId,
     values: {
-      status: "active",
-      baseSha: subject.canonicalBaseSha,
-      fenceSha: headSha,
-      heartbeatAt: completedAt,
-      expiresAt: successor.authority.expiresAt,
-      admission: projectActivePublishSuccessorAdmission({
-        lease, admission, manifest, successor, predecessor, headSha,
-      }),
-      cloudAuthority: successor.authority,
-      activePublishSuccessorIntent: null,
+      ...successorValues,
+      ...(taskAuthoritySuccessor ? {
+        taskAuthority: taskAuthoritySuccessor.binding,
+        activePublishTaskAuthoritySuccessor: taskAuthoritySuccessor.receipt,
+      } : {}),
     },
   });
 }

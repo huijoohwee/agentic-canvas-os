@@ -16,6 +16,8 @@ import {
   RECOVERABLE_LANE_CLEANUP_EVIDENCE_SCHEMA,
 } from "./recoverable-lane-cleanup-contract.mjs";
 import { createRecoverableLaneCleanupRecoveryStore } from "./recoverable-lane-cleanup-recovery-store.mjs";
+import { captureRecoverableLaneGeneratedResidue,
+  inspectRecoverableLaneCleanupTree } from "./recoverable-lane-cleanup-generated-residue.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { buildLifecycleReport } from "./worktree-lifecycle-lib.mjs";
@@ -34,6 +36,7 @@ export function createRecoverableLaneCleanupRepositoryAdapter({
   normalizeDormantIntent = normalizeDormantPreservationAdmissionIntent,
   readRemoteAuthority = inspectRemoteAuthority,
   invokeCloudAction = invokeRepositoryCloudAction,
+  observeGeneratedResidueEntry,
 } = {}) {
   const root = realDirectory(repository, "canonical repository");
   const target = normalizedAbsolute(worktree, "target worktree");
@@ -50,7 +53,7 @@ export function createRecoverableLaneCleanupRepositoryAdapter({
   const capture = input => captureEvidence({
     root, target, recovery, commonDir, git, leaseStore, store, input,
     readPreservationReceipts, normalizeDormantIntent, readRemoteAuthority,
-    invokeCloudAction,
+    invokeCloudAction, observeGeneratedResidueEntry,
   });
   return Object.freeze({
     captureEvidence: capture,
@@ -65,11 +68,37 @@ export function createRecoverableLaneCleanupRepositoryAdapter({
     quarantineWorktree: store.quarantine,
     removeWorktree: store.remove,
     releaseReservation: store.releaseReservation,
+    observeRestored: plan => observeRestored({ root, plan, git }),
+    abortReservation: (plan, reservation, restoredStateDigest) => store.abortReservation(
+      plan, reservation, restoredStateDigest,
+      () => observeRestored({ root, plan, git }).restoredStateDigest,
+    ),
+    observeAbortRelease: store.observeAbortRelease,
     observeFinal: plan => observeFinal({ root, plan, git, leaseStore, store }),
     readReceipt: store.readReceipt,
     writeReceipt: store.writeReceipt,
   });
 }
+
+function observeRestored({ root, plan, git }) {
+  const target = plan.evidence.target.worktreePath;
+  const records = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]));
+  const matches = records.filter(record => path.resolve(record.path) === target);
+  if (matches.length !== 1 || matches[0].branch !== plan.evidence.target.branch
+    || matches[0].head !== plan.evidence.target.headSha || matches[0].bare
+    || matches[0].detached || matches[0].locked || !existsSync(target)
+    || git(target, ["status", "--porcelain=v2", "-z", "--untracked-files=all"])
+    || git(target, ["rev-parse", "HEAD"]).trim() !== plan.evidence.target.headSha
+    || git(target, ["rev-parse", "HEAD^{tree}"]).trim() !== plan.evidence.target.treeSha) {
+    throw new Error("Cleanup drift rollback did not restore the exact attached lane frame.");
+  }
+  const tree = inspectRecoverableLaneCleanupTree(target);
+  const core = { schema: "agentic-recoverable-lane-cleanup-restored-drift/v1",
+    planDigest: plan.planDigest, targetRegistered: true, targetExists: true,
+    checkoutDigest: tree.digest, checkoutGenerationDigest: tree.generationDigest };
+  return Object.freeze({ ...core, restoredStateDigest: digestValue(core) });
+}
+
 
 export function captureRecoverableLaneCleanupEvidence({
   repository, worktree, recoveryDirectory, git = runGit,
@@ -82,7 +111,7 @@ export function captureRecoverableLaneCleanupEvidence({
 function captureEvidence({
   root, target, recovery, commonDir, git, leaseStore, store,
   readPreservationReceipts, normalizeDormantIntent, readRemoteAuthority,
-  invokeCloudAction,
+  invokeCloudAction, observeGeneratedResidueEntry,
 }) {
   const records = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]));
   store.assertInitialLocation(records);
@@ -105,9 +134,12 @@ function captureEvidence({
   ]);
   if (canonicalStatus) throw new Error("Canonical worktree must be clean.");
   const targetStatus = git(target, [
-    "status", "--porcelain=v2", "-z", "--untracked-files=all", "--ignored=matching",
+    "status", "--porcelain=v2", "-z", "--untracked-files=all",
   ]);
-  if (targetStatus) throw new Error("Cleanup target must be clean, including ignored residue.");
+  if (targetStatus) throw new Error("Cleanup target must have no tracked or ordinary untracked residue.");
+  const generatedResidue = captureRecoverableLaneGeneratedResidue({
+    root: target, git, observeEntry: observeGeneratedResidueEntry,
+  });
   const unmerged = git(target, ["ls-files", "-u", "-z"]);
   const unmergedEntries = unmerged.split("\0").filter(Boolean).length;
   if (unmergedEntries) throw new Error("Cleanup target contains unmerged index entries.");
@@ -182,8 +214,10 @@ function captureEvidence({
       worktreeGenerationDigest: directoryGenerationDigest(target),
       gitDirIdentityDigest: gitDirectoryIdentityDigest(gitDir),
       gitDirGenerationDigest: directoryGenerationDigest(gitDir),
-      clean: true, unmergedEntries, operationMarkers,
-      stateDigest: digestValue({ targetStatus, unmerged, operationMarkers, submodules }),
+      clean: true, generatedResidue, unmergedEntries, operationMarkers,
+      stateDigest: digestValue({
+        targetStatus, generatedResidue, unmerged, operationMarkers, submodules,
+      }),
     },
     authority: { ...authorityCore, authorityDigest: digestValue(authorityCore) },
     remoteBranch: { ref: branch, sha: remoteSha(root, branch, git) },
@@ -397,9 +431,10 @@ function positiveInteger(value, label) {
   return value;
 }
 function exactBoolean(value, label) { if (typeof value !== "boolean") throw new Error(`${label} must be a boolean.`); return value; }
-function runGit(cwd, args) {
+function runGit(cwd, args, { input } = {}) {
   return execFileSync("git", args, {
     cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-    encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8", input,
+    stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
   });
 }

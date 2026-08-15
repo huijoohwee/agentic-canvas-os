@@ -6,6 +6,7 @@ import {
   writeSetsOverlap,
 } from "./cloud-collaboration-primitives.mjs";
 import {
+  bindOperationDerivedDeliveryPeerLaneStates,
   isOperationDerivedCloudVerification,
   normalizeDeclaredWriteScopeManifest,
 } from "./scoped-lane-admission-lib.mjs";
@@ -15,9 +16,14 @@ import {
   collectScopedLaneState,
 } from "./scoped-lane-admission-state.mjs";
 import {
+  classifyExistingLane,
   isOperationDerivedDormantPreservation,
   verifyDormantPreservation,
 } from "./scoped-lane-authority-state.mjs";
+import {
+  isOperationDerivedDeliveryPeerVerification,
+  verifyDeliveryAuthorizedPeerAuthorities,
+} from "./scoped-lane-delivery-peer-authority.mjs";
 
 export const ADMISSION_CONTINUATION_RECEIPT_SCHEMA =
   "agentic-lane-admission-continuation-receipt/v1";
@@ -119,6 +125,7 @@ export function continuePlannedScopedLaneAdmission({
   dormantPreservationReceipt,
   operatorDecisionDigest,
   continuedAt = remoteAuthorityVerification?.verifiedAt,
+  verifyDeliveryPeers = verifyDeliveryAuthorizedPeerAuthorities,
 } = {}) {
   requirePlannedLease({ lease, cloudAuthority, manifest });
   requireCurrentVerification(remoteAuthorityVerification);
@@ -131,10 +138,12 @@ export function continuePlannedScopedLaneAdmission({
   });
   const peers = verifyLocalPeers({
     lease,
+    manifest,
     lanes,
     dormantPreservationReceipt,
     operatorDecisionDigest,
     remoteAuthorityVerification,
+    verifyDeliveryPeers,
   });
   const remotePeers = verifyRemotePeers({
     lease,
@@ -157,6 +166,8 @@ export function continuePlannedScopedLaneAdmission({
     candidateTreeSha: candidate.treeSha,
     preparedIntegrationReceiptDigest: candidate.preparedIntegrationReceiptDigest,
     peerLaneStateDigest: peers.peerLaneStateDigest,
+    deliveryPeerAuthorityReceiptDigest:
+      peers.deliveryPeerAuthorityReceiptDigest,
     dormantPreservationReceiptDigest: dormantPreservationReceipt.receiptDigest,
     remotePeerSetDigest: remotePeers.peerSetDigest,
     protectedAdvanceReceiptDigest: protectedAdvance.receiptDigest,
@@ -193,6 +204,8 @@ export function continuePlannedScopedLaneAdmission({
     candidateTreeSha: candidate.treeSha,
     preparedIntegrationReceiptDigest: candidate.preparedIntegrationReceiptDigest,
     peerLaneStateDigest: peers.peerLaneStateDigest,
+    deliveryPeerAuthorityReceiptDigest:
+      peers.deliveryPeerAuthorityReceiptDigest,
     peerOperationReceiptDigests: remotePeers.operationReceiptDigests,
     dormantPreservationReceiptDigest: dormantPreservationReceipt.receiptDigest,
     protectedAdvanceReceiptDigest: protectedAdvance.receiptDigest,
@@ -214,6 +227,8 @@ export function continuePlannedScopedLaneAdmission({
     continuationReceipt,
     mutationAuthorityReceipt,
     protectedAdvance,
+    deliveryPeerAuthorityReceiptDigest:
+      peers.deliveryPeerAuthorityReceiptDigest,
     peerOperationReceipts: remotePeers.receipts,
   });
 }
@@ -316,10 +331,12 @@ function verifyProtectedAdvance({ lease, manifest, protectedRevision, protectedD
 
 function verifyLocalPeers({
   lease,
+  manifest,
   lanes,
   dormantPreservationReceipt,
   operatorDecisionDigest,
   remoteAuthorityVerification,
+  verifyDeliveryPeers,
 }) {
   if (
     !isOperationDerivedDormantPreservation(dormantPreservationReceipt)
@@ -344,16 +361,114 @@ function verifyLocalPeers({
   if (canonical.length !== 1 || canonical[0].dirty || canonical[0].head !== lease.baseSha) {
     throw new Error("Admission continuation requires the clean original canonical lane.");
   }
-  const uncovered = peerLanes.filter(lane => (
-    lane.branch !== "refs/heads/main" && !preservedPaths.has(path.resolve(lane.path))
+  const evaluationTime = new Date(remoteAuthorityVerification.verifiedAt);
+  const classifiedPeers = peerLanes.map(lane => (
+    lane.branch === "refs/heads/main"
+      ? {
+        ...lane,
+        classification: "canonical",
+        authorityState: "canonical",
+        dormantPreservationReceiptDigest: null,
+        overlapReasons: [],
+      }
+      : classifyExistingLane({
+        lane,
+        branch: lease.branch,
+        semanticScope: lease.scope,
+        declaredWriteSet: manifest.declaredWriteSet,
+        evaluatedAt: evaluationTime,
+        currentRemoteClaims: remoteAuthorityVerification.inventory.claims,
+        dormantPreservationReceipt,
+      })
   ));
-  if (uncovered.length > 0) {
-    throw new Error(`Admission continuation has unattributed peer lanes: ${uncovered.map(item => item.path).join(", ")}`);
+  const deliveryVerification = verifyDeliveryPeers({
+    lanes: peerLanes,
+    remoteAuthorityVerification,
+    evaluatedAt: remoteAuthorityVerification.verifiedAt,
+  });
+  if (!isOperationDerivedDeliveryPeerVerification(deliveryVerification)) {
+    throw new Error(
+      "Admission continuation requires operation-derived delivery peer authority.",
+    );
+  }
+  const deliveryBoundPeers = bindOperationDerivedDeliveryPeerLaneStates(
+    classifiedPeers,
+    deliveryVerification,
+  );
+  const classifiedByPath = new Map(classifiedPeers.map(
+    lane => [path.resolve(lane.path), lane],
+  ));
+  const authorityBoundPeers = deliveryBoundPeers.map(lane => {
+    const classified = classifiedByPath.get(path.resolve(lane.path));
+    return classified?.classification === "disjoint-attributed"
+      ? lane
+      : classified;
+  });
+  const authorityByPath = new Map(authorityBoundPeers.map(
+    lane => [path.resolve(lane.path), lane],
+  ));
+  const noncanonicalPeers = peerLanes.filter(lane => lane.branch !== "refs/heads/main");
+  for (const rawLane of noncanonicalPeers) {
+    const lane = authorityByPath.get(path.resolve(rawLane.path));
+    const reasons = lane?.overlapReasons?.length > 0
+      ? lane.overlapReasons.join(",")
+      : "none";
+    if (lane?.classification !== "disjoint-attributed") {
+      const disposition = lane?.classification === "ambiguous"
+        ? "has unattributed peer lanes"
+        : "peer authority rejected";
+      throw new Error(
+        `Admission continuation ${disposition}: ${rawLane.path}; `
+        + `classification=${lane?.classification || "missing"}; reasons=${reasons}.`,
+      );
+    }
+    const selected = preservedPaths.has(path.resolve(rawLane.path));
+    if (selected && (
+      lane.authorityState !== "dormant-preserved"
+      || lane.dormantPreservationReceiptDigest
+        !== dormantPreservationReceipt.receiptDigest
+    )) {
+      throw new Error(
+        `Admission continuation selected dormant peer drifted: ${rawLane.path}.`,
+      );
+    }
+    if (!selected && lane.dormantPreservationReceiptDigest !== null) {
+      throw new Error(
+        `Admission continuation broadened dormant peer selection: ${rawLane.path}.`,
+      );
+    }
+    if (lane.authorityState === "review-ready-projected") {
+      throw new Error(
+        `Admission continuation delivery peer lacks operation-derived authority: ${rawLane.path}.`,
+      );
+    }
+  }
+  const observedSelectedPaths = new Set(noncanonicalPeers
+    .filter(lane => preservedPaths.has(path.resolve(lane.path)))
+    .map(lane => path.resolve(lane.path)));
+  if (
+    observedSelectedPaths.size !== preservedPaths.size
+    || [...preservedPaths].some(lanePath => !observedSelectedPaths.has(lanePath))
+  ) {
+    throw new Error("Admission continuation dormant peer selection drifted.");
   }
   const state = peerLanes
-    .map(lane => ({ path: path.resolve(lane.path), stateDigest: lane.stateDigest }))
+    .map(lane => {
+      const authority = authorityByPath.get(path.resolve(lane.path));
+      return {
+        path: path.resolve(lane.path),
+        stateDigest: lane.stateDigest,
+        authorityState: authority.authorityState,
+        dormantPreservationReceiptDigest:
+          authority.dormantPreservationReceiptDigest,
+      };
+    })
     .sort((left, right) => left.path.localeCompare(right.path));
-  return { peerLaneStateDigest: digestValue(state) };
+  return {
+    peerLaneStateDigest: digestValue(state),
+    deliveryPeerAuthorityReceiptDigest:
+      deliveryVerification.operationReceiptDigest,
+  };
 }
 
 function requireStableLocalSnapshot(initial, final) {

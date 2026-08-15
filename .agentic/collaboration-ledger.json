@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3035,
-  "headDigest": "1f605adcc4618c4de1899d7478ac34eac0935fe9e818881174f79118cc481e5e",
+  "sequence": 3036,
+  "headDigest": "172b129d6d982bd9375b2c742a36706062c09fb35e3115acd7dda9b19a861fde",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -150135,6 +150135,68 @@
       },
       "claimDigest": "688d4480d48ae7f2562819dbbb487533bd86258a08462c7a7c462578b519f00e",
       "digest": "1f605adcc4618c4de1899d7478ac34eac0935fe9e818881174f79118cc481e5e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3036,
+      "parentDigest": "1f605adcc4618c4de1899d7478ac34eac0935fe9e818881174f79118cc481e5e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d3709a177a9e741904906a62a30f9672fc00d6e8390b18fec20659f62f2368d7",
+      "idempotencyKey": "2ef4b24e697496c8b4a30d0b7adbbfe15f884a4bab3c692d1e2c87d85c4ae313",
+      "requestDigest": "8bd5b5686df3fa1715067769b7a9b65a14dac2845df824c6cadc3c606f9ae3fc",
+      "evaluationTime": "2026-08-15T07:43:51.000Z",
+      "claimCore": {
+        "claimId": "d3709a177a9e741904906a62a30f9672fc00d6e8390b18fec20659f62f2368d7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:699ddd635e717a3dc56a9839fd2a7c423b4d8389764660754b908b190c167310",
+        "canonicalBaseRevision": "5caea817ab3dea5d6d8a76070f58c6a2dc9bf146",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-successor-binding.test.mjs",
+          "path:__tests__/scope-expansion-successor-projection-recovery.test.mjs",
+          "path:docs/SCOPE-EXPANSION-SUCCESSOR-PROJECTION-RECOVERY.md",
+          "path:scripts/active-dirty-scope-expansion-controller.mjs",
+          "path:scripts/active-dirty-scope-expansion-repository-adapter.mjs",
+          "path:scripts/scope-expansion-successor-projection-recovery-contract.mjs",
+          "path:scripts/scope-expansion-successor-projection-recovery-controller.mjs",
+          "path:scripts/scope-expansion-successor-projection-recovery-evidence.mjs",
+          "path:scripts/scope-expansion-successor-projection-recovery-repository-adapter.mjs",
+          "path:scripts/scope-expansion-successor-projection-recovery.mjs",
+          "semantic:scope-expansion-successor-projection-recovery-v2"
+        ],
+        "writeSetDigest": "4874515e5c458a77364870f3f3d5b47adcba659c67c46c168e71b0e97645fec2",
+        "laneRevision": "a4c4a07b31c54d8196da562e5ac0bcbbf26b0b5c",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-13T23:15:50.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-jA5p",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "d49fc55c403f6ebfda29ef352f3ed1602613465258554459eb11e62612e4d490",
+          "recoveredAt": "2026-08-13T22:45:50.000Z"
+        },
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "a4c4a07b31c54d8196da562e5ac0bcbbf26b0b5c",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7-jA5p",
+          "bytesDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "namedChecksDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "handoffEvidenceDigest": "d49fc55c403f6ebfda29ef352f3ed1602613465258554459eb11e62612e4d490",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-15T07:43:51.000Z"
+        }
+      },
+      "claimDigest": "694b26c836a3721fd55ba53e3e60a31e5f3cd86c2f38a58338d39269c94af491",
+      "digest": "172b129d6d982bd9375b2c742a36706062c09fb35e3115acd7dda9b19a861fde"
     }
   ]
 }

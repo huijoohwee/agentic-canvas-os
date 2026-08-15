@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3060,
-  "headDigest": "2ef3f9464222701a88f764c89f68926f48f2e5d757d8d679e89c668344296306",
+  "sequence": 3061,
+  "headDigest": "cd69f2392cba8981532c1db08acaa5f1dee6cf1d331e608a2a1568e05b7cf606",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -151390,6 +151390,53 @@
       },
       "claimDigest": "a542acb7ee143aa3e3f5fa9da1cfcf925243c6ff4ad556653d1d8399c1bc7f46",
       "digest": "2ef3f9464222701a88f764c89f68926f48f2e5d757d8d679e89c668344296306"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3061,
+      "parentDigest": "2ef3f9464222701a88f764c89f68926f48f2e5d757d8d679e89c668344296306",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "3bc88996cfa2c3ca86277387d4385d84fc52225412db4bdd373b85dbf2a2f349",
+      "idempotencyKey": "09b1d70fd6dbe67b6879138e83075662bfad136e7a87c3cc4ec23a1611a2643e",
+      "requestDigest": "90e1bfe221cae2c2471f5b2caa79090da2f5d3fe0a007c9eb6eaf23dbe296a4a",
+      "evaluationTime": "2026-08-15T12:47:54.000Z",
+      "claimCore": {
+        "claimId": "3bc88996cfa2c3ca86277387d4385d84fc52225412db4bdd373b85dbf2a2f349",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:748f13d88a4ac3457c3e686be2398c0bd9c13791b48adff31efb6d649f3ebdb6",
+        "canonicalBaseRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "declaredWriteScope": [
+          "path:__tests__/active-publish-successor-dormant-recovery.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-SUCCESSOR-DORMANT-RECOVERY.md",
+          "path:scripts/active-publish-successor-dormant-recovery-cloud-adapter.mjs",
+          "path:scripts/active-publish-successor-dormant-recovery-contract.mjs",
+          "path:scripts/active-publish-successor-dormant-recovery-controller.mjs",
+          "path:scripts/active-publish-successor-dormant-recovery-evidence.mjs",
+          "path:scripts/active-publish-successor-dormant-recovery-repository-adapter.mjs",
+          "path:scripts/active-publish-successor-dormant-recovery-store.mjs",
+          "path:scripts/active-publish-successor-dormant-recovery.mjs",
+          "semantic:active-publish-successor-dormant-recovery"
+        ],
+        "writeSetDigest": "084a3a66d6d7182b088eb50c2c46cc97515e0ab8b7728640406225f7dc6414a8",
+        "laneRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T12:47:54.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ed2e5bd9ca90758043065d79e9e5bcceb598f7a9e7ed478ce5b02c26d838c4c6",
+      "digest": "cd69f2392cba8981532c1db08acaa5f1dee6cf1d331e608a2a1568e05b7cf606"
     }
   ]
 }

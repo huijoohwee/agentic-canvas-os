@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3022,
-  "headDigest": "e2d782abfd7cbc44831641092c03156fe55a09d9ce12bb316d02cc1f5b9409af",
+  "sequence": 3023,
+  "headDigest": "e1dd06db12ea45de102bcea89f703e620f8ab81bfaea21cf96955d89a08785f5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -149494,6 +149494,53 @@
       },
       "claimDigest": "a8a1d0c14d02fcf6e5cff455c6a30bb44ed777712db8ee4a4e5df36c3d0ca7cb",
       "digest": "e2d782abfd7cbc44831641092c03156fe55a09d9ce12bb316d02cc1f5b9409af"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3023,
+      "parentDigest": "e2d782abfd7cbc44831641092c03156fe55a09d9ce12bb316d02cc1f5b9409af",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "92f8bc34a2f6e07b34a7c0ec95935f180dac7aa4b457941cdefb36c8927a53b0",
+      "idempotencyKey": "c1ca14b423e940a3b32e8458c47f8c2909d0843d4971bdf268592cbf97ac4097",
+      "requestDigest": "7c0cb1b63d758b70be3f12645bca129d1fd986e5f5f4138b98b2155dc262b693",
+      "evaluationTime": "2026-08-15T06:11:22.000Z",
+      "claimCore": {
+        "claimId": "92f8bc34a2f6e07b34a7c0ec95935f180dac7aa4b457941cdefb36c8927a53b0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:730ba067dfa184c5e41f4610441b73d760760df80429b226e470c709b65e16c1",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:bf1020f2a6e8420ed328f176b8c7686b005211da56a985e8b8ccf21a4f685c63",
+        "canonicalBaseRevision": "9653fafb22bad3133726391d5285d151bedd8e17",
+        "declaredWriteScope": [
+          "path:__tests__/active-publish-task-authority-successor-reconciliation.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-TASK-AUTHORITY-SUCCESSOR-RECONCILIATION.md",
+          "path:scripts/active-publish-task-authority-successor-reconciliation-cloud-adapter.mjs",
+          "path:scripts/active-publish-task-authority-successor-reconciliation-contract.mjs",
+          "path:scripts/active-publish-task-authority-successor-reconciliation-controller.mjs",
+          "path:scripts/active-publish-task-authority-successor-reconciliation-evidence.mjs",
+          "path:scripts/active-publish-task-authority-successor-reconciliation-repository-adapter.mjs",
+          "path:scripts/active-publish-task-authority-successor-reconciliation-store.mjs",
+          "path:scripts/active-publish-task-authority-successor-reconciliation.mjs",
+          "semantic:active-publish-task-authority-successor-reconciliation"
+        ],
+        "writeSetDigest": "225eaec7a4aa1aa88d8f1cbac73989c77b00694628658c4b4614197fd6f938de",
+        "laneRevision": "9653fafb22bad3133726391d5285d151bedd8e17",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-15T08:11:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d1e1c1353052fc2da519c545969ff83fd700c3e71987fa4eceae80030b5536cc",
+      "digest": "e1dd06db12ea45de102bcea89f703e620f8ab81bfaea21cf96955d89a08785f5"
     }
   ]
 }

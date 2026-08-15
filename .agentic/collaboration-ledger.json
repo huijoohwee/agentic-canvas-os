@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3001,
-  "headDigest": "523b0e34eaff668cd6a4c991278af65aaccf2442cffd622908a34f45056a1a28",
+  "sequence": 3002,
+  "headDigest": "c3fcf49fe7a02914dca3dc2fd4f719b54e3bd99bbe3b656d0fc72acf697f510f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -148459,6 +148459,53 @@
       },
       "claimDigest": "b153a627e373090225a53b400f774c2215428c014260f1ba7497541e5a1e1cfc",
       "digest": "523b0e34eaff668cd6a4c991278af65aaccf2442cffd622908a34f45056a1a28"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3002,
+      "parentDigest": "523b0e34eaff668cd6a4c991278af65aaccf2442cffd622908a34f45056a1a28",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "524651be64290018e45352a829d0f9985f918eb45108d128f4a9a5e7915c9343",
+      "idempotencyKey": "7ed67fbfbb142f4e3c59394f5bf74134e2aa4710f8fd533215a08636e0234196",
+      "requestDigest": "a99cfbad16d20ad50265c0a190d3e212c54385948971c03ef19c66984ab6dbf6",
+      "evaluationTime": "2026-08-15T02:11:05.000Z",
+      "claimCore": {
+        "claimId": "524651be64290018e45352a829d0f9985f918eb45108d128f4a9a5e7915c9343",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:6c1ac63520471531619fbab9f6f6a3ea170d9d27ad99650bc2591531afdc0b9f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:52916063d0f6477949ac4c2328d95934635e7812707119123212dff98381c28b",
+        "canonicalBaseRevision": "148a3ccc687b3a43a7e5519ed00545550dbbb2ef",
+        "declaredWriteScope": [
+          "path:__tests__/independent-common-directory-loss-recovery.test.mjs",
+          "path:docs/INDEPENDENT-COMMON-DIRECTORY-LOSS-RECOVERY.md",
+          "path:scripts/independent-common-directory-loss-recovery-contract.mjs",
+          "path:scripts/independent-common-directory-loss-recovery-controller.mjs",
+          "path:scripts/independent-common-directory-loss-recovery-evidence.mjs",
+          "path:scripts/independent-common-directory-loss-recovery-object-store.mjs",
+          "path:scripts/independent-common-directory-loss-recovery-repository-adapter.mjs",
+          "path:scripts/independent-common-directory-loss-recovery-store.mjs",
+          "path:scripts/independent-common-directory-loss-recovery.mjs",
+          "semantic:independent-common-directory-loss-recovery"
+        ],
+        "writeSetDigest": "80eac22949a5a6facf7b4402afdd9aac7a2291140bf4b604bcb0e94d6f8c0456",
+        "laneRevision": "148a3ccc687b3a43a7e5519ed00545550dbbb2ef",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-15T04:11:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d92f5a27f32caa3e83b058818c5f4b9b880c261ebd3a1e636572a676e9152a1e",
+      "digest": "c3fcf49fe7a02914dca3dc2fd4f719b54e3bd99bbe3b656d0fc72acf697f510f"
     }
   ]
 }

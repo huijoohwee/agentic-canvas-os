@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3010,
-  "headDigest": "2e087dfe0cc5e08034967a261e4cc50bdc47bc824f5e308e5218924b5df47ce7",
+  "sequence": 3011,
+  "headDigest": "7ee9d9b57d2277c35251a57571d99418ea21f7c5d2842836f25e3176aac08777",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -148911,6 +148911,67 @@
       },
       "claimDigest": "30b34ddb84d04e5235993918e0222fd2448a7e9a03010691624dc7a356c1e907",
       "digest": "2e087dfe0cc5e08034967a261e4cc50bdc47bc824f5e308e5218924b5df47ce7"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3011,
+      "parentDigest": "2e087dfe0cc5e08034967a261e4cc50bdc47bc824f5e308e5218924b5df47ce7",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "96d2c6aba5712112ba956e9d3cd6bfbfab39562bc21fa37664a2e2e9651ea7e3",
+      "idempotencyKey": "b1b96e5c249c18dd1c44c45d5f8ed5c5ce209b29f5ed843bef327a7e66b59cf3",
+      "requestDigest": "28ea4ec59bb7d8b17518753efdde67e0a5d1f0d0e2f294e3bff8ac66a6e6df3f",
+      "evaluationTime": "2026-08-15T04:56:18.000Z",
+      "claimCore": {
+        "claimId": "96d2c6aba5712112ba956e9d3cd6bfbfab39562bc21fa37664a2e2e9651ea7e3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ed46aa4f5d0c61d9228dc7565602ea59f11a8afedf0627751da0dbe46aac955c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:33af912f09f1091afa551923718ec6bd480d75fc2dc9a55748cdbf460de97a7f",
+        "canonicalBaseRevision": "74c5f1c99fd839dfca1a5ae29e4d68c7935f71d4",
+        "declaredWriteScope": [
+          "path:__tests__/planned-fence-only-admission-recovery.test.mjs",
+          "path:docs/PLANNED-FENCE-ONLY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-fence-only-admission-recovery-cloud-adapter.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-contract.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-controller.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-evidence.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-repository-adapter.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-store.mjs",
+          "path:scripts/planned-fence-only-admission-recovery.mjs",
+          "semantic:planned-fence-only-admission-recovery"
+        ],
+        "writeSetDigest": "26a53c1c5a16f3d394056d0d9db6519f0c518b6cf8a80a35b6015a64e2ad6d19",
+        "laneRevision": "2588ddcf82e5f1dd6cf6f1a8502bfea3679eec5d",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 2,
+        "state": "retired",
+        "expiresAt": "2026-08-15T05:17:17.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_KWOC",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "cecd88d39bf21d05ff5c67955adad3d7b89d13ceaf22643d763010fa6ea13bc1",
+          "recoveredAt": "2026-08-15T04:31:39.000Z"
+        },
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "2588ddcf82e5f1dd6cf6f1a8502bfea3679eec5d",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_KWOC",
+          "bytesDigest": "6e9591b0554b66aa00c85acb8e272b1b02ffe77e63862215fdfd5e96a87693b3",
+          "namedChecksDigest": "b2572d21e44f50944cb66ecdc613e45f527e132973ba1a3bd42628152dd9c981",
+          "handoffEvidenceDigest": "2708c20341a7e1463a73c8610714899060b027b10b92049b913955626a9049d2",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-15T04:56:18.000Z"
+        }
+      },
+      "claimDigest": "a8147b589c19d2a03cdd076b344f44847ec7aec938f2f8ba170dad0b061acafb",
+      "digest": "7ee9d9b57d2277c35251a57571d99418ea21f7c5d2842836f25e3176aac08777"
     }
   ]
 }

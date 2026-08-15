@@ -8,10 +8,10 @@ schema: "agentic-task-bound-lane-authority-contract/v1"
 frontmatter_contract: "required"
 status: "focused-tested"
 authority: "proof-of-possession binding for one writer lane"
-runtime_scope: "capability issuance, public lease projection, mutation proof, clean migration, and two-party handoff"
+runtime_scope: "capability issuance, public lease projection, mutation proof, active-publish continuation, clean migration, and two-party handoff"
 runtime_claim: "local Dev authority proof only; cloud claims, review, integration, release, and deployment remain separately gated"
-runtime_owner: "../scripts/task-bound-lane-authority-contract.mjs; ../scripts/task-bound-lane-authority-store.mjs; ../scripts/task-bound-lane-authority-cli.mjs; ../scripts/writer-lease-lib.mjs; ../scripts/device-branch.mjs; ../scripts/device-child-process-policy.mjs"
-runtime_proof: "../__tests__/task-bound-lane-authority.test.mjs; ../__tests__/writer-lease-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-child-process-policy.test.mjs"
+runtime_owner: "../scripts/task-bound-lane-authority-contract.mjs; ../scripts/task-bound-lane-authority-store.mjs; ../scripts/task-bound-lane-authority-cli.mjs; ../scripts/active-publish-task-authority-successor.mjs; ../scripts/writer-lease-lib.mjs; ../scripts/device-branch.mjs; ../scripts/device-child-process-policy.mjs"
+runtime_proof: "../__tests__/task-bound-lane-authority.test.mjs; ../__tests__/active-publish-task-authority-successor.test.mjs; ../__tests__/writer-lease-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-child-process-policy.test.mjs"
 report_schema: "schemas/task-bound-lane-authority.v1.schema.json"
 publish_policy: "Dev-only; no integration, Production, publication, or deployment authority"
 ---
@@ -162,6 +162,23 @@ handoff or continuation when their subjects change. A dirty lane is
 non-transferable: preserve its bytes under the current binding, finish or park
 through repository-owned lifecycle, and hand off only from a clean exact
 state.
+
+## Active-publish cloud successors
+
+Publishing an admitted active lane after protected main advances can require a
+new cloud claim whose canonical base, lane revision, and claim identity differ
+from the source lease. Those changes also change the task-authority lane
+identity. The active-publish controller therefore creates one `continuation`
+binding in the same writer-registry CAS that projects the verified successor
+claim. It preserves the authority subject, key, generation, session, device,
+branch, scope, epoch, worktree, pull request, manifest, and write set while
+joining the exact cloud operation and verification receipts.
+
+The registry authorizes that CAS with proof from the source binding. A copied
+public key, session identifier, or successor claim is insufficient. Owner,
+scope, epoch, review, receipt, or claim drift fails before local projection.
+The resulting receipt is audit evidence only: it grants neither review,
+integration, release, nor deployment authority.
 
 ## Observer and supervisor boundary
 

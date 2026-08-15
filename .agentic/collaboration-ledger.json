@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3072,
-  "headDigest": "13e50ef4077221f1ebe0eb5fc1021e84b8a1168453c8527863348f33c2f266d8",
+  "sequence": 3073,
+  "headDigest": "b7b73d1a1b9d633858f237511b0900c2b4102dc6aaf0e3c7c0c0260c42508d94",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -152131,6 +152131,51 @@
       },
       "claimDigest": "e1f88449c2003c80ae0c62825a4d69aa44ec375f812ed37280324e3d1dcbaf8d",
       "digest": "13e50ef4077221f1ebe0eb5fc1021e84b8a1168453c8527863348f33c2f266d8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3073,
+      "parentDigest": "13e50ef4077221f1ebe0eb5fc1021e84b8a1168453c8527863348f33c2f266d8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e5f192ee0d0e95b5872c35e259bdf3499169bc0775c2016c2da422d0e32923e8",
+      "idempotencyKey": "09041fdf6ad312dd61a89d52fbe2b301a06ff447ce0539e928228dd5596b54df",
+      "requestDigest": "79b989519303e4a26ab6232e3d089182e761f1770ccb5047506d08584877d305",
+      "evaluationTime": "2026-08-15T16:55:43.000Z",
+      "claimCore": {
+        "claimId": "e5f192ee0d0e95b5872c35e259bdf3499169bc0775c2016c2da422d0e32923e8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:55bba1c177bbd97ac907698519ade250ecbc450e0a7fcf08f4920554f4401416",
+        "canonicalBaseRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "declaredWriteScope": [
+          "path:__tests__/planned-start-fence-projection-recovery.test.mjs",
+          "path:docs/PLANNED-START-FENCE-PROJECTION-RECOVERY.md",
+          "path:scripts/planned-start-fence-projection-recovery-contract.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-controller.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-evidence.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-repository-adapter.mjs",
+          "path:scripts/planned-start-fence-projection-recovery.mjs",
+          "semantic:planned-start-fence-projection-recovery"
+        ],
+        "writeSetDigest": "55eb0e70a023004870d274d934dbbefad7f2ddcbd2fb328d91b65329c4a0dd02",
+        "laneRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T16:55:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "30e1420e33b44c64f1127dbce14a8c1ddae9e628ea355e5adfc54d43ec5aa75c",
+      "digest": "b7b73d1a1b9d633858f237511b0900c2b4102dc6aaf0e3c7c0c0260c42508d94"
     }
   ]
 }

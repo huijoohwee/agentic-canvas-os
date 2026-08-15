@@ -17,4 +17,10 @@ export function buildReconciliationEvidence(input) {
   return normalizeEvidence({ ...core, evidenceDigest: digestValue(core) });
 }
 
+export function reconciliationEvidenceReplaySubjectDigest(value) {
+  const evidence = normalizeEvidence(value);
+  const { observedAt, evidenceDigest, ...stableSubject } = evidence;
+  return digestValue(stableSubject);
+}
+
 export { normalizeEvidence as normalizeReconciliationEvidence };

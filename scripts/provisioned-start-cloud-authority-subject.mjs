@@ -60,7 +60,7 @@ export function projectProvisionedStartCloudAuthoritySubject({
       semanticScope: text(manifest?.semanticScope, "semantic scope"),
       declaredWriteSet,
       writeSetDigest: digest(authority.writeSetDigest, "write-set digest"),
-      manifestDigest: digest(authority.manifestDigest, "manifest digest"),
+      manifestDigest: digest(manifest?.manifestDigest, "manifest digest"),
     },
   };
   requireEqual(subject.claim.claimId, claim.claimId, "claim identity");
@@ -75,7 +75,10 @@ export function projectProvisionedStartCloudAuthoritySubject({
   requireEqual(subject.lane.reviewRequestId, claim.reviewRequestId, "claim review request");
   requireEqual(subject.scope.writeSetDigest, claim.writeSetDigest, "claim write set");
   requireEqual(subject.scope.writeSetDigest, manifest?.writeSetDigest, "manifest write set");
-  requireEqual(subject.scope.manifestDigest, manifest?.manifestDigest, "manifest digest");
+  if (authority.manifestDigest !== null && authority.manifestDigest !== undefined) {
+    requireEqual(subject.scope.manifestDigest,
+      digest(authority.manifestDigest, "authority manifest digest"), "manifest digest");
+  }
   requireEqual(subject.scope.writeSetDigest, digestValue(declaredWriteSet), "declared write set");
   return Object.freeze(subject);
 }

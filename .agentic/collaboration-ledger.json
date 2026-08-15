@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3061,
-  "headDigest": "cd69f2392cba8981532c1db08acaa5f1dee6cf1d331e608a2a1568e05b7cf606",
+  "sequence": 3062,
+  "headDigest": "e93cbd979169fad1d3ad6775468a76f01aece5f1369f3dec59d9265146b85fbd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -151437,6 +151437,66 @@
       },
       "claimDigest": "ed2e5bd9ca90758043065d79e9e5bcceb598f7a9e7ed478ce5b02c26d838c4c6",
       "digest": "cd69f2392cba8981532c1db08acaa5f1dee6cf1d331e608a2a1568e05b7cf606"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3062,
+      "parentDigest": "cd69f2392cba8981532c1db08acaa5f1dee6cf1d331e608a2a1568e05b7cf606",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c8f7ac54a99b3626cbe8fc0a3aaa40c32f12836b83b691c5c418837d123a1186",
+      "idempotencyKey": "b392ddc165f325f745b035e574ecbc46ccde7540c14028898f803a8b051fde9d",
+      "requestDigest": "25f93277e29dcba7f30f82ea15c7c74be6dbc072757e3c8d08671e0c2d23aff2",
+      "evaluationTime": "2026-08-15T14:14:40.000Z",
+      "claimCore": {
+        "claimId": "c8f7ac54a99b3626cbe8fc0a3aaa40c32f12836b83b691c5c418837d123a1186",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:3f393700d34ec243def9c7696782c7e3e77913a1abfd35bd5b1c22df991d8e3d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:96586b851e368f4c2fd43355bcf73cf29f1cdb3620071b1abe8c94a93af59566",
+        "canonicalBaseRevision": "9ed2ea42eb02a45ba1407c6611a21b82c2f9f148",
+        "declaredWriteScope": [
+          "path:__tests__/provisioned-start-admission-recovery-cli.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-contract.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-controller.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-repository-adapter.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-store.test.mjs",
+          "path:docs/PROVISIONED-START-ADMISSION-RECOVERY.md",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/provisioned-start-admission-recovery-contract.mjs",
+          "path:scripts/provisioned-start-admission-recovery-controller.mjs",
+          "path:scripts/provisioned-start-admission-recovery-repository-adapter.mjs",
+          "path:scripts/provisioned-start-admission-recovery-store.mjs",
+          "path:scripts/provisioned-start-admission-recovery.mjs",
+          "semantic:provisioned-start-admission-recovery"
+        ],
+        "writeSetDigest": "97ad11ed48a06f9cb87172362479223220b7cf6edcf94e414d28c7de41bd903b",
+        "laneRevision": "9ed2ea42eb02a45ba1407c6611a21b82c2f9f148",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-14T03:25:49.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "9ed2ea42eb02a45ba1407c6611a21b82c2f9f148",
+          "reviewRequestId": null,
+          "bytesDigest": "061297754c9fbc221668dc223a31da1040b03352ea25a4ce8839d1a2d460f6bf",
+          "namedChecksDigest": "90a98465c503bd837a0e1d8080bece2898f8670380b560fa45621f88c84404ba",
+          "handoffEvidenceDigest": "afdf5d8386ed21f7935a2315adfb59826e2f8e42a1f9df6752db8ea851676c19",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-15T14:14:40.000Z"
+        }
+      },
+      "claimDigest": "8ad81abc61f9b64f9afcaaf6c7fd45ecf22a90fcc535845045816b85d1adc79b",
+      "digest": "e93cbd979169fad1d3ad6775468a76f01aece5f1369f3dec59d9265146b85fbd"
     }
   ]
 }

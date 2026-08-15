@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3046,
-  "headDigest": "2b5fe8264bd78485d4a6c19cab5fdc944f589141aea85e97d205574f59799ce3",
+  "sequence": 3047,
+  "headDigest": "b52ad34c33e6de9f37fa8e0578a20b7837f32800c16583cdd1bc042fcd924f3b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -150711,6 +150711,48 @@
       },
       "claimDigest": "204e462d9eec00f957b829fb54dc547d95324f00125b40040bf405cdb22085ad",
       "digest": "2b5fe8264bd78485d4a6c19cab5fdc944f589141aea85e97d205574f59799ce3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3047,
+      "parentDigest": "2b5fe8264bd78485d4a6c19cab5fdc944f589141aea85e97d205574f59799ce3",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "3d58f8a0ee881354f00221ed77a7ea90abbbebfd0d9a76cee91ae66608f048c8",
+      "idempotencyKey": "679ecbeda77acb834060e3686a4a7d9fb8bca86455e3498784fe754e5bf0e7c2",
+      "requestDigest": "dbb0c2ad67b0680213a1f42739973cd20ffe937e003f46e644edd0d09b6494c6",
+      "evaluationTime": "2026-08-15T09:16:32.000Z",
+      "claimCore": {
+        "claimId": "3d58f8a0ee881354f00221ed77a7ea90abbbebfd0d9a76cee91ae66608f048c8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:6682ced17e15d85dbf3daf591c87e43fdd1282efc9b006236f65f7a8a0481e2f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:48de6d6bee240172b273a1f31f4ee9572d6a2e1a759192c2c1970305012b03de",
+        "canonicalBaseRevision": "3daa2713866bbbc5bc25da8cfbc12e88a2a29e04",
+        "declaredWriteScope": [
+          "path:__tests__/scope-expansion-successor-projection-recovery.test.mjs",
+          "path:docs/SCOPE-EXPANSION-SUCCESSOR-PROJECTION-RECOVERY.md",
+          "path:scripts/scope-expansion-successor-projection-recovery-evidence.mjs",
+          "path:scripts/scope-expansion-successor-projection-recovery-repository-adapter.mjs",
+          "semantic:scope-expansion-recovery-base-lineage"
+        ],
+        "writeSetDigest": "33f5180e8616febf8dd952c8880aba5bc6a6e4ca79c57e019eb4f607eceaa94a",
+        "laneRevision": "3dedc45bc813beeaf5bc786a805bfffd9ed7065f",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T09:10:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_cgjy",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "60c322c5903c23211b175289a273cfb6d959643c14a726c5d8fa92d59df5b541",
+      "digest": "b52ad34c33e6de9f37fa8e0578a20b7837f32800c16583cdd1bc042fcd924f3b"
     }
   ]
 }

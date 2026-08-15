@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { canonicalJson, digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { normalizeActiveDirtyScopeExpansionPlan } from "./active-dirty-scope-expansion-contract.mjs";
 import { assertTaskAuthorityBinding } from "./task-bound-lane-authority-contract.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
@@ -67,17 +67,22 @@ export function scopeExpansionSuccessorProjectionRecoveryDecisionSubject(value) 
     successor: source.successor,
     sourceLineageDigest: source.cloud.sourceLineageDigest,
     successorLineageDigest: source.cloud.successorLineageDigest,
+    validatedCloudHead: {
+      ledgerRevision: source.cloud.observedLedgerRevision, ledgerDigest: source.cloud.observedLedgerDigest,
+      ledgerSequence: source.cloud.observedLedgerSequence,
+      validatedLedgerDigest: source.cloud.validatedLedgerDigest,
+    },
   });
 }
 
-export function readScopeExpansionSuccessorProjectionRecoveryLane({ repository, git }) {
+export function readScopeExpansionSuccessorProjectionRecoveryLane({ repository, git, gitRaw }) {
   const branch = git(["branch", "--show-current"]);
-  const changedPaths = splitNul(git(["diff", "--name-only", "-z", "HEAD", "--"])).sort();
-  const untrackedPaths = splitNul(git(["ls-files", "--others", "--exclude-standard", "-z"])).sort();
+  const changedPaths = splitNul(gitRaw(["diff", "--name-only", "-z", "HEAD", "--"])).sort();
+  const untrackedPaths = splitNul(gitRaw(["ls-files", "--others", "--exclude-standard", "-z"])).sort();
   const stagedPatch = git(["diff", "--cached", "--binary"]);
   const unstagedPatch = git(["diff", "--binary"]);
   const entries = changedPaths.map(relativePath => fileEntry(repository, git, relativePath));
-  const status = git(["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+  const status = gitRaw(["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
   const subject = { statusDigest: digestValue(status), stagedPatchDigest: digestValue(stagedPatch),
     unstagedPatchDigest: digestValue(unstagedPatch), changedPaths, untrackedPaths, entries };
   return { branch, headSha: git(["rev-parse", "HEAD"]), remoteHeadSha: firstSha(git([
@@ -88,16 +93,25 @@ export function readScopeExpansionSuccessorProjectionRecoveryLane({ repository, 
 }
 
 export function readScopeExpansionSuccessorProjectionRecoveryController({
-  controllerRoot, git, repository, implementation,
+  controllerRoot, git, gitRaw, repository, implementation, targetCanonicalBaseSha,
 }) {
-  const headSha = git(["rev-parse", "HEAD"], controllerRoot);
-  return { repository, origin: git(["config", "--get", "remote.origin.url"], controllerRoot),
-    headSha, originMainSha: git(["rev-parse", "origin/main"], controllerRoot),
-    remoteMainSha: firstSha(git(["ls-remote", "origin", "refs/heads/main"], controllerRoot)),
-    treeSha: git(["rev-parse", "HEAD^{tree}"], controllerRoot),
-    clean: git(["status", "--porcelain=v1"], controllerRoot) === "",
-    implementationDigest: digestValue(implementation.map(name => ({ name,
-      digest: createHash("sha256").update(readFileSync(path.join(controllerRoot, "scripts", name))).digest("hex") }))) };
+  const headSha = sha(git(["rev-parse", "HEAD"], controllerRoot), "controller HEAD");
+  const ancestorSha = sha(targetCanonicalBaseSha, "controller canonical base ancestor");
+  const origin = git(["config", "--get", "remote.origin.url"], controllerRoot);
+  const originMainSha = git(["rev-parse", "origin/main"], controllerRoot);
+  const treeSha = git(["rev-parse", "HEAD^{tree}"], controllerRoot);
+  const clean = git(["status", "--porcelain=v1"], controllerRoot) === "";
+  const implementationDigest = digestValue(implementation.map(name => ({ name,
+    digest: createHash("sha256").update(readFileSync(path.join(controllerRoot, "scripts", name))).digest("hex") })));
+  const mergeBaseSha = sha(git(["--no-replace-objects", "merge-base", ancestorSha, headSha], controllerRoot),
+    "controller canonical base merge base");
+  const protectedChangedPaths = splitNul(gitRaw(["--no-replace-objects", "diff", "--no-ext-diff",
+    "--no-renames", "--name-only", "-z", ancestorSha, headSha, "--"], controllerRoot)).sort();
+  const canonicalBaseLineage = { ancestorSha, descendantSha: headSha, mergeBaseSha,
+    protectedChangedPaths };
+  const remoteMainSha = firstSha(git(["ls-remote", "origin", "refs/heads/main"], controllerRoot));
+  return { repository, origin, headSha, originMainSha, remoteMainSha, treeSha, clean,
+    implementationDigest, canonicalBaseLineage };
 }
 
 export function assertScopeExpansionSuccessorRecoveryProtectedFrame({
@@ -140,7 +154,7 @@ export function assertScopeExpansionRecoverySuccessorUnexpired(expiresAt, now = 
 }
 
 export function assertScopeExpansionSuccessorRecoveryBoundTransition({
-  sealed, current, entry, reviewRequestId, now = new Date(),
+  sealed, current, entry, reviewRequestId, expectedParentDigest, expectedSequence, now = new Date(),
 }) {
   const core = object(entry?.claimCore, "bound C2 ledger core");
   const stable = ["actorId", "deviceId", "sessionId", "repositoryId", "workItemId",
@@ -150,6 +164,7 @@ export function assertScopeExpansionSuccessorRecoveryBoundTransition({
     "laneRevision", "writeSetDigest", "leaseEpoch", "heartbeatCounter",
     "predecessorClaimId", "expiresAt"];
   if (entry.action !== "continue" || entry.claimId !== sealed.claimId
+    || entry.parentDigest !== expectedParentDigest || entry.sequence !== expectedSequence
     || entry.claimDigest !== digestValue(core) || current.claimId !== sealed.claimId
     || current.fenceRevision !== entry.claimDigest || current.transitionDigest !== entry.digest
     || current.entrySchema !== entry.schema
@@ -187,13 +202,20 @@ function assertController(value) {
   for (const key of ["headSha", "originMainSha", "remoteMainSha", "treeSha"]) {
     sha(value[key], `controller ${key}`);
   }
+  const lineage = object(value.canonicalBaseLineage, "controller canonical base lineage");
+  for (const key of ["ancestorSha", "descendantSha", "mergeBaseSha"]) {
+    sha(lineage[key], `controller canonical base lineage ${key}`);
+  }
+  const protectedChangedPaths = paths(lineage.protectedChangedPaths, "controller protected changed paths");
   digest(value.implementationDigest, "controller implementation digest");
   text(value.origin, "controller origin");
   text(value.repository, "controller repository");
   if (repositoryFromOrigin(value.origin) !== value.repository
     || value.clean !== true || value.headSha !== value.originMainSha
-    || value.headSha !== value.remoteMainSha) {
-    throw new Error("Recovery requires one clean exact protected controller revision.");
+    || value.headSha !== value.remoteMainSha || lineage.descendantSha !== value.headSha
+    || lineage.mergeBaseSha !== lineage.ancestorSha
+    || canonicalJson(protectedChangedPaths) !== canonicalJson(lineage.protectedChangedPaths)) {
+    throw new Error("Recovery requires one clean exact protected controller revision and canonical-base lineage.");
   }
 }
 
@@ -212,6 +234,7 @@ function assertCheckpoint({ controller, lane, lease, intent, plan, pullRequest }
   }
   if (lease.schema !== "agentic-writer-lease/v2" || lease.status !== "active"
     || lease.branch !== plan.sourceBranch || lease.fenceSha !== plan.sourceFenceSha
+    || lease.baseSha !== plan.targetCanonicalBaseSha
     || writerLeaseDigest(lease) !== plan.sourceLeaseDigest
     || lease.cloudAuthority?.claimId !== plan.sourceClaimId
     || lease.cloudAuthority?.claimDigest !== plan.sourceClaimDigest
@@ -220,6 +243,10 @@ function assertCheckpoint({ controller, lane, lease, intent, plan, pullRequest }
     throw new Error("Local C1 lease changed from the original scope-expansion plan.");
   }
   assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
+  if (controller.canonicalBaseLineage.protectedChangedPaths.some(changed =>
+    writeSetsOverlap(plan.targetDeclaredWriteSet, [`path:${changed}`]))) {
+    throw new Error("Protected-main advance overlaps the successor write authority.");
+  }
   const changedPaths = paths(lane.changedPaths, "changed paths");
   if (lane.branch !== plan.sourceBranch || lane.headSha !== plan.sourceFenceSha
     || lane.remoteHeadSha !== plan.sourceFenceSha || lane.dirty !== true
@@ -243,7 +270,8 @@ function assertCheckpoint({ controller, lane, lease, intent, plan, pullRequest }
     || pullRequest.headRefOid !== plan.sourceFenceSha
     || pullRequest.url !== lease.pullRequestUrl
     || pullRequest.headRepository !== controller.repository
-    || pullRequest.baseRefName !== "main" || pullRequest.baseRefOid !== controller.headSha
+    || pullRequest.baseRefName !== "main" || pullRequest.baseRefOid !== lease.baseSha
+    || controller.canonicalBaseLineage.ancestorSha !== plan.targetCanonicalBaseSha
     || lease.cloudAuthority.reviewRequestId !== `github-pull-request:${pullRequest.nodeId}`
     || !/^[0-9a-f]{64}$/u.test(String(pullRequest.bodyDigest || ""))
     || !/^[0-9a-f]{64}$/u.test(String(pullRequest.bodyWithoutMarkerDigest || ""))

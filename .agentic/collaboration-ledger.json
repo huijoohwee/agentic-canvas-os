@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3304,
-  "headDigest": "0169edea5dbdd60bbd6fa7757102f7faffe81f60bc7b21bb4fe34afba83da3c1",
+  "sequence": 3305,
+  "headDigest": "ca4168c7b4274e95551490aa8bbab2a8fd38c6b44a8ab09d40b073e7983816a7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -163707,6 +163707,46 @@
       },
       "claimDigest": "21658c554bf9e0cb8ddf2330c39a85f8e678ead66763909f0b5beb0c9174e0c4",
       "digest": "0169edea5dbdd60bbd6fa7757102f7faffe81f60bc7b21bb4fe34afba83da3c1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3305,
+      "parentDigest": "0169edea5dbdd60bbd6fa7757102f7faffe81f60bc7b21bb4fe34afba83da3c1",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1f89d57820d6ac1e34b7005a27d91a6ba49e51390cb2a3590a9d228e1cf88f67",
+      "idempotencyKey": "4c0a4c88c56f6012d1dad86496bcb81500ca5e455e6713d48f297f5dc8645fbb",
+      "requestDigest": "1bfae816626233a12d0f769ce943b1368a570c94204fbc7644df7bfcc14a4c5c",
+      "evaluationTime": "2026-08-16T21:27:24.000Z",
+      "claimCore": {
+        "claimId": "1f89d57820d6ac1e34b7005a27d91a6ba49e51390cb2a3590a9d228e1cf88f67",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f40f71f366d6c625a8989edd7745a001c70953d9915dd28ef1efe5aca49e3cfb",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8457d461af92b2485338ada8a9c78a89e8f78a85e6d5f12949330411f23fffef",
+        "canonicalBaseRevision": "60250498a2851edde4a3b8038af548ce32617966",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-replay-evidence.test.mjs",
+          "path:scripts/expired-committed-heartbeat-replay-evidence.mjs",
+          "semantic:expired-heartbeat-replay-resolver-v3"
+        ],
+        "writeSetDigest": "d7bd1837b2fcea4c180e59d5edf7928f6f9bdbd3b111e0c59dd8e7dd31ae2c17",
+        "laneRevision": "1494b7397ea3fccd7dd764d7a459e9387c38e20d",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-16T21:38:35.000Z",
+        "evidenceDigest": "2c7580202ec22bd6647cc3b7fcb02f15d78809f0b45b99203f520f4ff3e5f88d",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_zkuX",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "70a2092906da86001a832a06bf2592158e0a1d5bc7739804904dc3ff121ca0dc",
+      "digest": "ca4168c7b4274e95551490aa8bbab2a8fd38c6b44a8ab09d40b073e7983816a7"
     }
   ]
 }

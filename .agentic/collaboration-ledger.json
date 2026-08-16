@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3253,
-  "headDigest": "c952848039397c4667c99a65aae490e2a564ff56fab5f83ec05631e3293dcb10",
+  "sequence": 3254,
+  "headDigest": "9fb8a13f9ea727fa716e2c4350e9fba62ff88a3bbdacfdb13c789a033444bf6c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -161289,6 +161289,51 @@
       },
       "claimDigest": "a3de953a5c87dfd7b2431aebd34ebd365a1a6b5ee74f8db3effe7a47a271aa09",
       "digest": "c952848039397c4667c99a65aae490e2a564ff56fab5f83ec05631e3293dcb10"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3254,
+      "parentDigest": "c952848039397c4667c99a65aae490e2a564ff56fab5f83ec05631e3293dcb10",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "72454ecb8468d465edf8ff322f08f73eef148a1b457c36d51dcb65a1d59c4cc0",
+      "idempotencyKey": "119c09eff6fdc1125531a40fae131c67778d9d76444d84ab2d47be10830775fa",
+      "requestDigest": "2b41983a28edb5ca7a2606a3edc9ffc45f4f49baa34dc8382ecc452b60383c2d",
+      "evaluationTime": "2026-08-16T15:38:22.000Z",
+      "claimCore": {
+        "claimId": "72454ecb8468d465edf8ff322f08f73eef148a1b457c36d51dcb65a1d59c4cc0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:a854dcb7bff35ed03fe3d6db3dc94036cd731ddb7bde3d0a8a7178aced1992c0",
+        "canonicalBaseRevision": "52185bd7905ee4109d4fb65a95a0924af1ef5401",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/mainPanelCommerce.test.tsx",
+          "path:canvas/src/features/panels/views/CommerceHubView.tsx",
+          "path:mcp/__tests__/payment-runtime.test.mjs",
+          "path:mcp/__tests__/payment-stdio-e2e.test.mjs",
+          "path:mcp/__tests__/payment-tool-contract.test.mjs",
+          "path:mcp/payment-runtime.js",
+          "path:mcp/payment-tool-contract.js",
+          "semantic:purchase-lifecycle-commerce-mcp-adapter"
+        ],
+        "writeSetDigest": "52e7cf9be0b11ce961a0c4ab59a848e8ba2ffd15e0e2de3a1fff07f9c4605680",
+        "laneRevision": "52185bd7905ee4109d4fb65a95a0924af1ef5401",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T17:37:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "00335bcf8c74c3707c30bdb91736165dd259e37a03bad95a650c469b969cad6f",
+      "digest": "9fb8a13f9ea727fa716e2c4350e9fba62ff88a3bbdacfdb13c789a033444bf6c"
     }
   ]
 }

@@ -93,7 +93,7 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
     const expectedMarkerLeaseEpoch = absentPredecessor
       ? lane.authority.leaseEpoch
       : successor.leaseEpoch;
-    const markerHeadSha = absentPredecessor ? marker?.reviewHeadSha : marker?.fenceSha;
+    const markerHeadSha = reviewedSuccessorMarkerHeadSha(marker);
     if (!marker || marker.cloudAuthority?.claimId !== expectedMarkerClaimId
       || marker.cloudAuthority?.leaseEpoch !== expectedMarkerLeaseEpoch
       || marker.epoch !== actualLease.epoch || markerHeadSha !== lane.headSha) {
@@ -429,6 +429,10 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
     });
   }
   return Object.freeze({ inspect, project, verify });
+}
+
+export function reviewedSuccessorMarkerHeadSha(marker) {
+  return marker?.status === "review_ready" ? marker?.reviewHeadSha : marker?.fenceSha;
 }
 
 function exactSuccessor({ claim, lane, actorId }) {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3129,
-  "headDigest": "4e78f99b749b2118812e4b3f3e81324c6ba541f0668b0e57a13f63fe81e085f0",
+  "sequence": 3130,
+  "headDigest": "58810fa3ed11661dfa5590d1c87db49671217a9f788c12789a114647aeef252b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -154955,6 +154955,54 @@
       },
       "claimDigest": "a6233e8a915294d1966aebefc461751f0c7490266aaa9322206b10b4a557d889",
       "digest": "4e78f99b749b2118812e4b3f3e81324c6ba541f0668b0e57a13f63fe81e085f0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3130,
+      "parentDigest": "4e78f99b749b2118812e4b3f3e81324c6ba541f0668b0e57a13f63fe81e085f0",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "23a35af88709443c9dbcb056511ca1f0b196091fd2a233ec529f2348d6fd6ae2",
+      "idempotencyKey": "9868c249633467e20ad4f9b0d2917c3ed8a5289c8915fe074155eadd5382753b",
+      "requestDigest": "38d5dc0fdad16e0f9b5078bcf014df0fd7e2ce9d44ab05ab2d97c656f94ae3fc",
+      "evaluationTime": "2026-08-16T04:12:45.000Z",
+      "claimCore": {
+        "claimId": "23a35af88709443c9dbcb056511ca1f0b196091fd2a233ec529f2348d6fd6ae2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:73b94ad68ca38377d23d76bd5265e85ae8414df2adb11c11a4a62ae5238a2d87",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:__tests__/planned-admission-owner-release-cli.test.mjs",
+          "path:__tests__/planned-admission-owner-release-contract.test.mjs",
+          "path:__tests__/planned-admission-owner-release-controller.test.mjs",
+          "path:__tests__/planned-admission-owner-release-repository-adapter.test.mjs",
+          "path:docs/PLANNED-ADMISSION-OWNER-RELEASE.md",
+          "path:scripts/planned-admission-owner-release-contract.mjs",
+          "path:scripts/planned-admission-owner-release-controller.mjs",
+          "path:scripts/planned-admission-owner-release-repository-adapter.mjs",
+          "path:scripts/planned-admission-owner-release-store.mjs",
+          "path:scripts/planned-admission-owner-release.mjs",
+          "semantic:planned-admission-owner-release"
+        ],
+        "writeSetDigest": "5506dfce0bff4b6832c7ad19a8518382348d30652266789ed12e3cd1c1f09393",
+        "laneRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T04:42:11.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7293ec6abb2545dd74775ca031f82fe3ab179afd2cbe18a241480ae2cb0acd5f",
+      "digest": "58810fa3ed11661dfa5590d1c87db49671217a9f788c12789a114647aeef252b"
     }
   ]
 }

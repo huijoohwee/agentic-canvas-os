@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3143,
-  "headDigest": "6322325ad3a07eceeb9ae6b64ce97019254dae95c8efdda966efa63efd745fda",
+  "sequence": 3144,
+  "headDigest": "59f7e442aa66cf77a16c8b4f0d1abf5b58f978955d2779fec001b0af72175294",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -155709,6 +155709,50 @@
       },
       "claimDigest": "b14a6ad966fca576c1e681330052f6b3545e7cc1e7d1b808cbc2a9cfb51b5871",
       "digest": "6322325ad3a07eceeb9ae6b64ce97019254dae95c8efdda966efa63efd745fda"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3144,
+      "parentDigest": "6322325ad3a07eceeb9ae6b64ce97019254dae95c8efdda966efa63efd745fda",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "66b130acddb80ae03bf2980ef6e78ab32f3b49100656f4de448efb05154c0623",
+      "idempotencyKey": "8a6b39f5272793bff0110cf2d08971ee2dc0cbc26a1b682d596d72c6aeead304",
+      "requestDigest": "0846619cb736ab799efbec94a74aae7e0444c1c79816c8dab56dcb8717f55438",
+      "evaluationTime": "2026-08-16T05:29:40.000Z",
+      "claimCore": {
+        "claimId": "66b130acddb80ae03bf2980ef6e78ab32f3b49100656f4de448efb05154c0623",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:654df092868a3367509ccf771ec50205e36757f8f4e5db8c2e2814eeb6731244",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:__tests__/expired-planned-committed-pr-marker-response-loss.test.mjs",
+          "path:docs/EXPIRED-PLANNED-COMMITTED-PR-MARKER-RESPONSE-LOSS.md",
+          "path:scripts/expired-planned-committed-pr-marker-response-loss-contract.mjs",
+          "path:scripts/expired-planned-committed-pr-marker-response-loss-controller.mjs",
+          "path:scripts/expired-planned-committed-pr-marker-response-loss-repository-adapter.mjs",
+          "path:scripts/expired-planned-committed-pr-marker-response-loss.mjs",
+          "semantic:expired-planned-committed-pr-marker-response-loss"
+        ],
+        "writeSetDigest": "aae58d546ac8fd75f224beec526d95a303e53dfff4a8a849ab9ad4246a16b2a0",
+        "laneRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T05:59:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e0149512c8752d3eeb2fbba50605e1410e4c1c9fc4e509b76e3abd5551ef861b",
+      "digest": "59f7e442aa66cf77a16c8b4f0d1abf5b58f978955d2779fec001b0af72175294"
     }
   ]
 }

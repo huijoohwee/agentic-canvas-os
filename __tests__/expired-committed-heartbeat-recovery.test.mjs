@@ -8,6 +8,9 @@ import {
   recoverExpiredCommittedHeartbeat,
   requireChangedPathsWithinScope,
 } from "../scripts/expired-committed-heartbeat-recovery-lib.mjs";
+import {
+  continueExpiredCommittedHeartbeatCloudAuthority,
+} from "../scripts/expired-committed-heartbeat-cloud-authority.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 import {
   createTaskAuthorityBinding,
@@ -647,6 +650,79 @@ test("expired-source replay requires a newer cloud transition", () => {
   assert.equal(harness.markerWrites(), 0);
 });
 
+test("expired-source replay adopts repeated current response-loss with stable heartbeat", () => {
+  const source = liveManifestLease();
+  source.cloudAuthority.heartbeatCounter = 1;
+  const recoveryEvidenceDigest = "d".repeat(64);
+  const claim = {
+    claimId: source.cloudAuthority.claimId,
+    entrySchema: source.cloudAuthority.entrySchema,
+    claimIdentitySchema: source.cloudAuthority.claimIdentitySchema,
+    state: "current",
+    writeAuthority: true,
+    scopeReserved: true,
+    canonicalBaseRevision: source.cloudAuthority.canonicalBaseSha,
+    laneRevision: source.cloudAuthority.laneRevision,
+    declaredWriteScope: source.cloudAuthority.cloudDeclaredWriteScope,
+    writeSetDigest: source.cloudAuthority.writeSetDigest,
+    leaseEpoch: source.cloudAuthority.leaseEpoch,
+    transitionCounter: source.cloudAuthority.transitionCounter + 2,
+    heartbeatCounter: source.cloudAuthority.heartbeatCounter,
+    reviewRequestId: source.cloudAuthority.reviewRequestId,
+    expiresAt: "2026-08-30T13:30:00.000Z",
+    fenceRevision: "e".repeat(64),
+    transitionDigest: "f".repeat(64),
+    operationReceiptDigest: "1".repeat(64),
+  };
+  const status = {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "status",
+    ledgerRevision: "2".repeat(40),
+    ledgerDigest: "3".repeat(64),
+    claims: [claim],
+  };
+  let renewCalls = 0;
+  let invokeCalls = 0;
+  let replayCalls = 0;
+
+  const result = continueExpiredCommittedHeartbeatCloudAuthority({
+    authority: source.cloudAuthority,
+    manifest: {
+      declaredWriteSet: source.cloudAuthority.cloudDeclaredWriteScope,
+      writeSetDigest: source.cloudAuthority.writeSetDigest,
+    },
+    recoveryEvidenceDigest,
+    ttlSeconds: 1800,
+    inspect: () => status,
+    invoke: () => {
+      invokeCalls += 1;
+      throw new Error("unexpected cloud mutation");
+    },
+    renew: () => {
+      renewCalls += 1;
+      throw new Error("unexpected renewal");
+    },
+    resolveReplayEvidence: ({ liveClaim }) => {
+      replayCalls += 1;
+      assert.equal(liveClaim, claim);
+      return recoveryEvidenceDigest;
+    },
+    verify: ({ authority }) => ({
+      authority,
+      verification: operationVerification(authority),
+    }),
+  });
+
+  assert.equal(result.authority.transitionCounter, claim.transitionCounter);
+  assert.equal(result.authority.claimDigest, claim.fenceRevision);
+  assert.equal(result.authority.operationReceiptDigest, claim.operationReceiptDigest);
+  assert.equal(result.authority.heartbeatCounter, claim.heartbeatCounter);
+  assert.equal(replayCalls, 1);
+  assert.equal(renewCalls, 0);
+  assert.equal(invokeCalls, 0);
+});
+
 test("oversized recovered marker fails before local CAS or marker publication", () => {
   const source = liveManifestLease();
   const harness = recoveryHarness({
@@ -1084,6 +1160,7 @@ function operationVerification(authority) {
         writeSetDigest: authority.writeSetDigest,
         leaseEpoch: authority.leaseEpoch,
         transitionCounter: authority.transitionCounter,
+        heartbeatCounter: authority.heartbeatCounter,
         reviewRequestId: authority.reviewRequestId,
         expiresAt: authority.expiresAt,
         fenceRevision: authority.claimDigest,

@@ -124,6 +124,14 @@ responses can adopt only the same plan-derived successor or projection. Source
 retirement precedes successor promotion, so the operation never creates two
 current writers.
 
+Completed journals replay only when the caller presents the original exact
+authorization. If the same branch later returns to a fresh reviewed source state
+and the current read-only evidence produces a different plan, the controller may
+supersede the completed journal only after validating the new exact
+authorization inside the same fence. This prevents stale branch-keyed completion
+from masking a later same-lane source-correction cycle while preserving terminal
+replay for the original plan.
+
 ## Evidence boundary
 
 Focused tests prove exact authorization, strict identity joins, path redaction,

@@ -49,14 +49,12 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
         let intent = await effects.readIntent();
         if (intent) {
           intent = normalizeReviewedLaneSourceCorrectionIntent(intent);
-          authorizeReviewedLaneSourceCorrection({
-            plan: intent.planSnapshot,
+          intent = await resolveRunnableIntent({
+            effects,
+            intent,
+            operatorSessionId,
             authorization,
           });
-          if (intent.planSnapshot.operatorSessionId !== operatorSessionId
-            || intent.authorization.statement !== authorization) {
-            throw new Error("Stored source correction intent differs from current exact authority.");
-          }
         } else {
           const currentPlan = buildReviewedLaneSourceCorrectionPlan({
             source: await readStableSource(effects),
@@ -70,6 +68,39 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
       });
     },
   });
+}
+
+async function resolveRunnableIntent({
+  effects,
+  intent,
+  operatorSessionId,
+  authorization,
+}) {
+  try {
+    authorizeReviewedLaneSourceCorrection({
+      plan: intent.planSnapshot,
+      authorization,
+    });
+    if (intent.planSnapshot.operatorSessionId !== operatorSessionId
+      || intent.authorization.statement !== authorization) {
+      throw new Error("Stored source correction intent differs from current exact authority.");
+    }
+    return intent;
+  } catch (error) {
+    if (intent.status !== "complete") throw error;
+  }
+
+  const currentPlan = buildReviewedLaneSourceCorrectionPlan({
+    source: await readStableSource(effects),
+    operatorSessionId,
+  });
+  authorizeReviewedLaneSourceCorrection({ plan: currentPlan, authorization });
+  if (currentPlan.planDigest === intent.planSnapshot.planDigest) {
+    throw new Error("Completed source correction journal authorization does not match its plan.");
+  }
+  const next = createReviewedLaneSourceCorrectionIntent(currentPlan, authorization);
+  await effects.writeIntent({ expected: intent, value: next });
+  return next;
 }
 
 async function readStableSource(adapter) {

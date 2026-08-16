@@ -33,6 +33,8 @@ head drift, integration authority, or non-successor lineage blocks read-only.
 Provider marker head selection follows marker status rather than recovery mode:
 `review_ready` markers seal `reviewHeadSha`, while active markers seal
 `fenceSha`. A stale or changed status-specific head therefore fails closed.
+Replay identity excludes both the fresh `observedAt` value and its derived
+`evidenceDigest`; every authority-bearing field remains digest-fenced.
 
 Run requires both the plan's literal authorization and the existing external
 task capability. In absent-predecessor mode it proves possession, creates the

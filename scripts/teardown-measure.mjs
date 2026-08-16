@@ -101,6 +101,14 @@ export function reductionPercentage(before, after) {
   return ((before - after) / before) * 100;
 }
 
+export function baselineReductionPercentage(before, after) {
+  if (!Number.isSafeInteger(before) || before < 1
+    || !Number.isSafeInteger(after) || after < 0) {
+    throw new Error("Baseline measurement counts are invalid.");
+  }
+  return ((before - after) / before) * 100;
+}
+
 export function validateStageSequence(stages) {
   if (!Array.isArray(stages) || stages.some(stage => !Number.isSafeInteger(stage))) {
     return false;
@@ -210,7 +218,7 @@ function surfaceFiles(surface, commit, gitText) {
 }
 function listFiles(commit, paths, gitText) { return lines(gitText(["ls-tree", "-r", "--name-only", commit, "--", ...paths])); }
 function lineCount(value) { if (!value) return 0; return value.split("\n").length - (value.endsWith("\n") ? 1 : 0); }
-function percentage(before, after) { return before ? Number(reductionPercentage(before, after).toFixed(2)) : 0; }
+function percentage(before, after) { return Number(baselineReductionPercentage(before, after).toFixed(2)); }
 function lines(value) { return String(value || "").split("\n").filter(Boolean); }
 function porcelainCount(value, prefix) { return lines(value).filter(line => line.startsWith(prefix)).length; }
 function countRow(metric, current, initial) { return { metric, baseline: initial, current }; }

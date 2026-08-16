@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { externalStateMoveDecision, finalEvidenceBreaches, renderReport, thresholdBreaches } from "../scripts/teardown-measure.mjs";
+import {
+  baselineReductionPercentage,
+  externalStateMoveDecision,
+  finalEvidenceBreaches,
+  reductionPercentage,
+  renderReport,
+  thresholdBreaches,
+} from "../scripts/teardown-measure.mjs";
 
 test("threshold reporting emits one row per breach", () => {
   const measured = new Map([["scripts/.files", 16], ["scripts/.lines", 3001], ["combinedLifecycleLines", 32597]]);
@@ -30,4 +37,9 @@ test("a non-zero state move retains the source and stops teardown", () => {
     removable: false, stop: true, retentionReason: "state move exited 1",
   });
   assert.deepEqual(externalStateMoveDecision(0), { removable: true, stop: false });
+});
+
+test("baseline drift reports signed growth without weakening reduction arithmetic", () => {
+  assert.equal(baselineReductionPercentage(100, 125), -25);
+  assert.throws(() => reductionPercentage(100, 125), /Reduction counts are invalid/u);
 });

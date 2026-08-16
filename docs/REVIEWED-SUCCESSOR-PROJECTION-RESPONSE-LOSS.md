@@ -35,6 +35,9 @@ Provider marker head selection follows marker status rather than recovery mode:
 `fenceSha`. A stale or changed status-specific head therefore fails closed.
 Replay identity excludes both the fresh `observedAt` value and its derived
 `evidenceDigest`; every authority-bearing field remains digest-fenced.
+The repository adapter uses that same replay identity immediately before its
+lease CAS, so a fresh observation timestamp cannot reject an otherwise exact
+plan while any authority-bearing drift still fails before mutation.
 
 Run requires both the plan's literal authorization and the existing external
 task capability. In absent-predecessor mode it proves possession, creates the

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3087,
-  "headDigest": "fc20ac6f3405f087047268344cb0255ce4a623633f8691e72c42b9a0930acb98",
+  "sequence": 3088,
+  "headDigest": "8c586a30e186ad9233f5a583e27f78c2194288933aafce3f79e64412d5718fb1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -152801,6 +152801,52 @@
       },
       "claimDigest": "902c65c35144b17d65067af945e2195290815ad4554d7c25638e0828def4e3a8",
       "digest": "fc20ac6f3405f087047268344cb0255ce4a623633f8691e72c42b9a0930acb98"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3088,
+      "parentDigest": "fc20ac6f3405f087047268344cb0255ce4a623633f8691e72c42b9a0930acb98",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "44d96933a9b8181787c314a984b125c0fe174b27f31a3a41796fca00e66a8287",
+      "idempotencyKey": "0a4276f1571b2930458ad2f535566c9bbb336e177a52f55b7b24593c97491355",
+      "requestDigest": "2ca5fa5647344a89e20401ad3f3f92ee14c05d1594a96af4e16a806f90c8d071",
+      "evaluationTime": "2026-08-16T00:26:49.000Z",
+      "claimCore": {
+        "claimId": "44d96933a9b8181787c314a984b125c0fe174b27f31a3a41796fca00e66a8287",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:828d9527cc3e5ae55614fa42110505eb81d66c9aec78436df88373051ed711e0",
+        "canonicalBaseRevision": "e776a2044c7324cf7e6e0d9f3dd14d6dccd4019f",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-empty-coordination-retirement.test.mjs",
+          "path:docs/DORMANT-EMPTY-COORDINATION-RETIREMENT.md",
+          "path:scripts/dormant-empty-coordination-retirement-contract.mjs",
+          "path:scripts/dormant-empty-coordination-retirement-controller.mjs",
+          "path:scripts/dormant-empty-coordination-retirement-evidence.mjs",
+          "path:scripts/dormant-empty-coordination-retirement-repository-adapter.mjs",
+          "path:scripts/dormant-empty-coordination-retirement-store.mjs",
+          "path:scripts/dormant-empty-coordination-retirement.mjs",
+          "semantic:dormant-empty-coordination-retirement"
+        ],
+        "writeSetDigest": "7beda830e33d63da2eea901db641c9afc2a92daeda45b8349dc624274aefad33",
+        "laneRevision": "c82e921a6b82145bad3abbfde9ccff7bd79946b6",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-17T00:20:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_mWSl",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "79e0cdd6fd7f3fec33622d90cdfe805d483299a2b707435589b0e0e7624fb404",
+      "digest": "8c586a30e186ad9233f5a583e27f78c2194288933aafce3f79e64412d5718fb1"
     }
   ]
 }

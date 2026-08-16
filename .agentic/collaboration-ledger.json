@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3154,
-  "headDigest": "1cb8fd327d2063932cfdcd88f1b040592982b1f70e3185772815027c4fe63271",
+  "sequence": 3155,
+  "headDigest": "bed54f86db10119b72aebf977ecd9f8abfac255c7d885ab101c38774f8f07fa8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -156215,6 +156215,47 @@
       },
       "claimDigest": "19178410fc711aea2cae74ff0233e777f2874e23bb366a6b31c33cac76e79fc4",
       "digest": "1cb8fd327d2063932cfdcd88f1b040592982b1f70e3185772815027c4fe63271"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3155,
+      "parentDigest": "1cb8fd327d2063932cfdcd88f1b040592982b1f70e3185772815027c4fe63271",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "68dd7379aa2a314c28dc6667abe3a0aecf85c5247a3589e272e4e4378aea779f",
+      "idempotencyKey": "dc1b26f4d809084b9f2403d76403397153c8dcbc9c8b4ebe81c3f2bcc7aa5b7e",
+      "requestDigest": "2aaa8e0c8ad66d9b41b8e64d6570081e2220fd1120c9ba0171925d3fa20a7793",
+      "evaluationTime": "2026-08-16T06:21:39.000Z",
+      "claimCore": {
+        "claimId": "68dd7379aa2a314c28dc6667abe3a0aecf85c5247a3589e272e4e4378aea779f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ae34cf3337a24af481b938d1d90770a7c80be76e968ed820f11ef8df7ed972f4",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF-SUCCESSOR-RESPONSE-LOSS.md",
+          "path:scripts/cloud-authority-handoff-lineage.mjs",
+          "semantic:handoff-successor-response-loss"
+        ],
+        "writeSetDigest": "c8f7e70c2a8c59baff3e8813ce1d2b16282bc56d6b47880f92d1801919ebd638",
+        "laneRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-16T06:51:39.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "00142e87e499a663227dd1bee1c23b482b2da7ae4aae48b1cc36fa141e1f0688",
+        "eligibleSince": "2026-08-16T06:21:39.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9ba4e64ab8c8fff1df124c9bc0ec1092ee625c05b82d2ea3be5dee1ba7630ef0",
+      "digest": "bed54f86db10119b72aebf977ecd9f8abfac255c7d885ab101c38774f8f07fa8"
     }
   ]
 }

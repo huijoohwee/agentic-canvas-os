@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "focused-tested"
 authority: "exact task-capability-bound local and PR projection repair"
 runtime_owner: "../scripts/reviewed-successor-projection-response-loss.mjs"
-runtime_proof: "../__tests__/reviewed-successor-projection-response-loss.test.mjs"
+runtime_proof: "../__tests__/reviewed-successor-projection-response-loss.test.mjs; ../__tests__/reviewed-successor-projection-response-loss-repository-adapter.test.mjs"
 publish_policy: "No source, cloud, ref, integration, release, cleanup, runtime, or deployment mutation"
 ---
 
@@ -30,6 +30,9 @@ branch/base/head/tree/write set, pull request and review request, source and
 successor claims, lease epochs, transition evidence, local registry revision,
 provider body digest, and task-authority binding. Any dirt, competing overlap,
 head drift, integration authority, or non-successor lineage blocks read-only.
+Provider marker head selection follows marker status rather than recovery mode:
+`review_ready` markers seal `reviewHeadSha`, while active markers seal
+`fenceSha`. A stale or changed status-specific head therefore fails closed.
 
 Run requires both the plan's literal authorization and the existing external
 task capability. In absent-predecessor mode it proves possession, creates the

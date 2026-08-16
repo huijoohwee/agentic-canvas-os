@@ -15,7 +15,7 @@ if (isDirect && command === "run") {
     process.stdout.write(`${JSON.stringify({ status: "ok", trialId: result.trialId, runs: result.runs.length })}\n`);
   } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }
 } else if (isDirect) {
-  process.stderr.write("Usage: teardown-concurrency-trial.mjs run --trial-id=<id> --worktree-a=<path> --worktree-b=<path> --writer=<script> --resource=<path> --out=<path>\n");
+  process.stderr.write("Usage: teardown-concurrency-trial.mjs run --trial-id=<id> --entry=<inventory-path> --worktree-a=<path> --worktree-b=<path> --writer=<script> --resource=<path> --out=<path>\n");
   process.exitCode = 1;
 }
 
@@ -45,8 +45,8 @@ export async function runTrial(options, { runsPerMode = 3, now = () => performan
   if (runs.some(run => run.startSkewMs > 5000)) throw new Error("Writer start skew exceeded 5000 ms.");
   const activeRuns = runs.filter(run => run.mechanism === "active");
   const bypassedRuns = runs.filter(run => run.mechanism === "bypassed");
-  const activeStates = activeRuns.map(observationKey);
-  const bypassedStates = bypassedRuns.map(observationKey);
+  const activeStates = activeRuns.map(observationKey).sort();
+  const bypassedStates = bypassedRuns.map(observationKey).sort();
   const differs = JSON.stringify(activeStates) !== JSON.stringify(bypassedStates);
   return {
     schema: "agentic-teardown-concurrency-trial/v1", trialId,
@@ -59,5 +59,22 @@ export async function runTrial(options, { runsPerMode = 3, now = () => performan
 function collect(child) { return new Promise(resolve => { let stdout = ""; let stderr = ""; child.stdout.on("data", chunk => { stdout += chunk; }); child.stderr.on("data", chunk => { stderr += chunk; }); child.on("close", exitStatus => resolve({ exitStatus, stdout, stderr })); }); }
 function observationKey(run) { return JSON.stringify([run.exitStatusA, run.exitStatusB, run.protectedResourceState]); }
 async function serializeResource(resource) { try { const info = await stat(resource); return info.isFile() ? { kind: "file", bytesBase64: (await readFile(resource)).toString("base64") } : { kind: "other", mode: info.mode }; } catch (error) { if (error.code === "ENOENT") return { kind: "absent" }; throw error; } }
-function parseOptions(args) { return Object.fromEntries(args.map(arg => { const match = arg.match(/^--([^=]+)=(.*)$/u); if (!match) throw new Error(`Unsupported argument ${arg}.`); return [match[1], match[2]]; })); }
+export function parseOptions(args) {
+  const options = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    const inline = argument.match(/^--([^=]+)=(.*)$/u);
+    if (inline) {
+      options[inline[1]] = inline[2];
+      continue;
+    }
+    if (!argument.startsWith("--") || index + 1 >= args.length
+      || args[index + 1].startsWith("--")) {
+      throw new Error(`Unsupported argument ${argument}.`);
+    }
+    options[argument.slice(2)] = args[index + 1];
+    index += 1;
+  }
+  return options;
+}
 function required(value, label) { if (!String(value || "").trim()) throw new Error(`${label} is required.`); return String(value); }

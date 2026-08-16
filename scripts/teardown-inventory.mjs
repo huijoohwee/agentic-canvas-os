@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const inventoryRoots = ["scripts", "__tests__", "docs", "agent-api/src"];
 const evidenceKeys = ["packageScripts", "staticImports", "workflowSteps", "githooks", "markdownReferences"];
-const routePaths = ["/", "/api/auth/session", "/auth/session", "/api/invoke", "/invoke", "/api/run", "/run", "/api/ready", "/ready", "/api/canvas/room", "/canvas/room", "/api/function-call", "/function-call", "/api/function-call/recover", "/function-call/recover", "/api/function-call/resume", "/function-call/resume"];
+const staticImportRouteHandler = "POST /api/auth/session";
 
 const isDirect = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isDirect) {
@@ -22,7 +22,10 @@ if (isDirect) {
   } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }
 }
 
-export function buildInventory({ commit, gitText = defaultGitText, now = () => new Date() }) {
+export function buildInventory({
+  commit, gitText = defaultGitText, now = () => new Date(),
+  siblingInspector = inspectSiblingRepository,
+}) {
   const preTeardownCommit = gitText(["rev-parse", `${commit}^{commit}`]);
   const tracked = gitLines(gitText, ["ls-tree", "-r", "--name-only", preTeardownCommit]);
   const inventoryPaths = tracked.filter(file => inventoryRoots.some(root => file === root || file.startsWith(`${root}/`)));
@@ -49,10 +52,11 @@ export function buildInventory({ commit, gitText = defaultGitText, now = () => n
     schema: "agentic-teardown-capability-inventory/v1", preTeardownCommit,
     generatedAt: now().toISOString(), entries: [...entries.values()].sort(byPath),
     countsByDirectory: countDirectories(entries.values()),
-    refs: enumerateRefs(gitText), siblingRepository: inspectSibling(source),
+    refs: enumerateRefs(gitText), siblingRepository: siblingInspector(),
     agentRunRouteClassification: {
-      route: "POST /api/agent/run", classification: "retained",
-      citation: "worker/index.js route inspection; explicit operator decision remains required by stage 5",
+      route: "POST /api/agent/run", classification: null,
+      operatorDecisionRequired: true,
+      citation: "worker/index.js; docs/LIVE-AGENT-PROVIDER-PROOF.md; README.md",
     },
   };
   assertTotality(inventory);
@@ -104,6 +108,32 @@ export function assertTotality(inventory) {
   }
 }
 
+export function deletionDecision(entry, { archiveCovered = true } = {}) {
+  if (!entry || !archiveCovered) return Object.freeze({ removable: false, reason: !entry ? "missing-inventory" : "missing-archive" });
+  if (entry.unresolvedReferences?.length) return Object.freeze({ removable: false, reason: "unresolved-reference" });
+  if (entry.classification === "dead") return Object.freeze({ removable: true, reason: "dead" });
+  if (entry.classification === "redundant" && entry.gitOrGithubReplacement
+    && (entry.gitOrGithubReplacement.gitCommand || entry.gitOrGithubReplacement.githubFeature)) {
+    return Object.freeze({ removable: true, reason: "redundant-with-replacement" });
+  }
+  return Object.freeze({ removable: false, reason: entry.classification || "invalid-classification" });
+}
+
+export function validateLifecycleKeyTransition({ before, after, assignedStageReached }) {
+  const pattern = /^(?:device:|runtime:session:|turn:end$|canonical:main:|workspace:legacy-|worktree:lifecycle:|lifecycle:conformance|history:lifecycle|alignment-audit:|agentic-sdlc:)/u;
+  const beforeKeys = Object.keys(before).filter(key => pattern.test(key)).sort();
+  const afterKeys = Object.keys(after).filter(key => pattern.test(key)).sort();
+  return assignedStageReached
+    ? afterKeys.length === 0
+    : JSON.stringify(beforeKeys.map(key => [key, before[key]]))
+      === JSON.stringify(afterKeys.map(key => [key, after[key]]));
+}
+
+export function validateSurvivingSetDisjointness({ survivingPaths, lifecyclePaths }) {
+  const lifecycle = new Set(lifecyclePaths);
+  return survivingPaths.every(file => !lifecycle.has(file));
+}
+
 function addPackageEvidence(entries, tracked, packageSource) {
   let packageJson; try { packageJson = JSON.parse(packageSource); } catch { return; }
   for (const [name, command] of Object.entries(packageJson.scripts || {})) {
@@ -132,14 +162,29 @@ function addWorkflowEvidence(entries, tracked, source) {
   for (const [file, body] of source) {
     if (!/^\.github\/workflows\/.*\.ya?ml$/u.test(file)) continue;
     let job = "unknown"; let step = 0;
-    body.split("\n").forEach(line => {
+    const workflowLines = body.split("\n");
+    for (let index = 0; index < workflowLines.length; index += 1) {
+      const line = workflowLines[index];
       const jobMatch = line.match(/^  ([\w-]+):\s*$/u); if (jobMatch) job = jobMatch[1];
-      if (/^\s*-\s+(?:name:|run:)/u.test(line)) step += 1;
-      if (!/\brun:\s*/u.test(line)) return;
-      for (const token of tokenizeCommand(line.replace(/^.*?run:\s*/u, ""))) {
+      if (/^\s*-\s+(?:name:|run:|uses:)/u.test(line)) step += 1;
+      const run = line.match(/^(\s*)(?:-\s*)?run:\s*(.*)$/u);
+      if (!run) continue;
+      const commandLines = [];
+      if (!["|", ">", "|-", ">-"].includes(run[2].trim())) {
+        commandLines.push(run[2]);
+      } else {
+        const runIndent = run[1].length;
+        while (index + 1 < workflowLines.length) {
+          const candidate = workflowLines[index + 1];
+          if (candidate.trim() && candidate.match(/^\s*/u)[0].length <= runIndent) break;
+          commandLines.push(candidate.trim());
+          index += 1;
+        }
+      }
+      for (const token of tokenizeCommand(commandLines.join("\n"))) {
         for (const match of matchToken(token, tracked)) if (entries.has(match)) entries.get(match).evidence.workflowSteps.push(`${file}:${job}:${step}`);
       }
-    });
+    }
   }
 }
 
@@ -169,7 +214,7 @@ function provenPaths({ tracked, source, importGraph }) {
     const current = queue.shift();
     if (result.has(current)) continue;
     const chain = []; let cursor = current; while (cursor) { chain.unshift(cursor); cursor = previous.get(cursor); }
-    result.set(current, { isProvenPath: true, routeHandlerPath: routePaths.find(route => (source.get("worker/index.js") || "").includes(route)) || "/", importChain: chain, liveProofRecord: null, liveProofFrontmatterKey: null });
+    result.set(current, { isProvenPath: true, routeHandlerPath: staticImportRouteHandler, importChain: chain, liveProofRecord: null, liveProofFrontmatterKey: null });
     for (const target of importGraph.get(current) || []) if (!result.has(target)) { if (!previous.has(target)) previous.set(target, current); queue.push(target); }
   }
   for (const proof of ["docs/LIVE-REVIEWED-FUNCTION-PROOF.md", "docs/LIVE-AGENT-PROVIDER-PROOF.md"]) {
@@ -189,11 +234,14 @@ function lifecycleEvidence(file, source) {
     if (/releas|unlock|unclaim|unpark/iu.test(line)) releases.push({ file, line: index + 1 });
   });
   const mechanism = acquires.length || releases.length;
+  const mechanismKind = /park/iu.test(source) ? "parking"
+    : /claim/iu.test(source) ? "claim"
+      : /lock/iu.test(source) ? "lock" : "lease";
   return {
     isLaneLifecycleLayer: true,
     outOfRoot: { outsideRepositoryRoot: outsideSites.length > 0, sites: outsideSites },
     knowgrph: { invokesKnowgrph: knowgrphSites.length > 0, sites: knowgrphSites },
-    protectedResource: mechanism ? { operatesMechanism: true, resource: "repository lane state", mechanism: "lease", acquires, releases, gitOrGithubEquivalent: null, concurrencyTrialId: null } : { operatesMechanism: false, statement: "No protected-resource mechanism detected textually." },
+    protectedResource: mechanism ? { operatesMechanism: true, resource: "repository lane state", mechanism: mechanismKind, acquires, releases, gitOrGithubEquivalent: null, concurrencyTrialId: null } : { operatesMechanism: false, statement: "No protected-resource mechanism detected textually." },
   };
 }
 
@@ -201,16 +249,64 @@ function baseEntry(file) { return { path: file, directory: directoryOf(file), cl
 function emptyProvenPath() { return { isProvenPath: false, routeHandlerPath: null, importChain: [], liveProofRecord: null, liveProofFrontmatterKey: null }; }
 function directoryOf(file) { return file.startsWith("scripts/") ? "scripts/" : file.startsWith("__tests__/") ? "__tests__/" : file.startsWith("docs/") ? "docs/" : "agent-api/src/"; }
 function countDirectories(entries) { const result = Object.fromEntries(["scripts/", "__tests__/", "docs/", "agent-api/src/"].map(directory => [directory, { redundant: 0, constrained: 0, dead: 0, retained: 0, trackedFileCount: 0 }])); for (const entry of entries) { result[entry.directory][entry.classification] += 1; result[entry.directory].trackedFileCount += 1; } return result; }
-function enumerateRefs(gitText) { const worktrees = new Map(parseWorktrees(gitText(["worktree", "list", "--porcelain"])).filter(item => item.branch).map(item => [item.branch, item.path])); return gitLines(gitText, ["for-each-ref", "--format=%(refname) %(objectname)", "refs/heads", "refs/remotes"]).map(line => { const [name, tipSha] = line.split(" "); return { name, tipSha, containedInOriginMain: isAncestor(tipSha, "origin/main"), checkedOutInWorktree: worktrees.get(name) || null }; }); }
-function inspectSibling(source) { const checkedPath = path.resolve(repositoryRoot, "../knowgrph"); if (!existsSync(checkedPath)) return { checkedPath, repositoryPresent: false, readsExternalStateDirectory: null, determination: "undetermined", readingFileCount: 0, readingFiles: [] }; const readingFiles = [...source].filter(([, body]) => /\.agentic-|external.state/iu.test(body)).map(([file]) => ({ path: file, externalStatePath: "undetermined", replacementSource: null })); return { checkedPath, repositoryPresent: true, readsExternalStateDirectory: readingFiles.length > 0, determination: "determined", readingFileCount: readingFiles.length, readingFiles }; }
+function enumerateRefs(gitText) {
+  const worktrees = new Map(parseWorktrees(
+    gitText(["worktree", "list", "--porcelain"]),
+  ).filter(item => item.branch).map(item => [item.branch, item.path]));
+  return gitLines(gitText, [
+    "for-each-ref", "--format=%(refname) %(objectname)", "refs/heads", "refs/remotes",
+  ]).map(line => {
+    const [name, tipSha] = line.split(" ");
+    const containingOriginMain = gitLines(gitText, [
+      "for-each-ref", `--contains=${tipSha}`, "--format=%(refname)",
+      "refs/remotes/origin/main",
+    ]);
+    return {
+      name, tipSha,
+      containedInOriginMain: containingOriginMain.includes("refs/remotes/origin/main"),
+      checkedOutInWorktree: worktrees.get(name) || null,
+    };
+  });
+}
+export function inspectSiblingRepository({
+  checkedPath = defaultSiblingRepositoryPath(),
+  pathExists = existsSync,
+  listTracked = repository => execFileSync(
+    "git", ["ls-files"], { cwd: repository, encoding: "utf8" },
+  ).trim().split("\n").filter(Boolean),
+  read = file => readFileSync(file, "utf8"),
+} = {}) {
+  if (!pathExists(checkedPath)) return { checkedPath, repositoryPresent: false, readsExternalStateDirectory: null, determination: "undetermined", readingFileCount: 0, readingFiles: [] };
+  const siblingFiles = listTracked(checkedPath);
+  const readingFiles = siblingFiles.flatMap(file => {
+    let body = "";
+    try { body = read(path.join(checkedPath, file)); } catch { return []; }
+    const matches = [...body.matchAll(/(?:\.agentic-[\w./-]+|AGENTIC_[A-Z_]*STATE[A-Z_]*)/gu)];
+    return matches.map(match => ({ path: file, externalStatePath: match[0], replacementSource: null }));
+  });
+  return { checkedPath, repositoryPresent: true, readsExternalStateDirectory: readingFiles.length > 0, determination: "determined", readingFileCount: new Set(readingFiles.map(item => item.path)).size, readingFiles };
+}
+function defaultSiblingRepositoryPath() {
+  const commonDirectory = defaultGitText(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  const canonicalRepository = path.dirname(commonDirectory);
+  return path.resolve(canonicalRepository, "..", "knowgrph");
+}
 function gitReplacement(source) { if (/git\s+worktree/iu.test(source)) return { gitCommand: "git worktree", githubFeature: null }; if (/git\s+(?:branch|status|rev-parse|merge-base)/iu.test(source)) return { gitCommand: "git branch/status/rev-parse/merge-base", githubFeature: null }; if (/pull request|github api|gh\s+pr/iu.test(source)) return { gitCommand: null, githubFeature: "GitHub pull requests" }; return { gitCommand: null, githubFeature: null }; }
 function retained(retentionReason) { return { classification: "retained", retentionReason }; }
-function constrained(kind, constraint = {}) { const reducedForm = constraint.reducedForm || null; return { classification: "constrained", constraint: { statement: constraint.statement || "Observed repository constraint.", kind, evidenceGitCannotExpress: constraint.evidenceGitCannotExpress || "Requires recorded runtime evidence.", observableFailureWhenUnenforced: constraint.observableFailureWhenUnenforced || "Not yet observed.", reducedForm }, retentionReason: reducedForm ? null : "Constrained entry has no recorded reduced form." }; }
+function constrained(kind, constraint = {}) { constraint ||= {}; const reducedForm = constraint.reducedForm || null; return { classification: "constrained", constraint: { statement: constraint.statement || "Observed repository constraint.", kind, evidenceGitCannotExpress: constraint.evidenceGitCannotExpress || "Requires recorded runtime evidence.", observableFailureWhenUnenforced: constraint.observableFailureWhenUnenforced || "Not yet observed.", reducedForm }, retentionReason: reducedForm ? null : "Constrained entry has no recorded reduced form." }; }
 function isLaneLifecycle(file, source) { return /lane|lifecycle|worktree|lease|claim|parking|cloud-admission/iu.test(`${file}\n${source.slice(0, 1000)}`); }
-function matchToken(token, tracked) { const normalized = token.replace(/^\.\//u, "").replace(/[;,)]$/u, ""); if (/[*?]/u.test(normalized)) { const regex = new RegExp(`^${escapeRegex(normalized).replace(/\\\*/gu, ".*").replace(/\\\?/gu, ".")}$`, "u"); return tracked.filter(file => regex.test(file)); } return tracked.includes(normalized) ? [normalized] : []; }
+function matchToken(token, tracked) {
+  const normalized = token.replace(/^\.\//u, "").replace(/[;,)]$/u, "");
+  if (["*", "?"].includes(normalized)) return [];
+  if (/[*?]/u.test(normalized)) {
+    const regex = new RegExp(`^${escapeRegex(normalized)
+      .replace(/\\\*/gu, ".*").replace(/\\\?/gu, ".")}$`, "u");
+    return tracked.filter(file => regex.test(file));
+  }
+  return tracked.includes(normalized) ? [normalized] : [];
+}
 function parseWorktrees(value) { const output = []; let current; for (const line of value.split("\n")) { if (line.startsWith("worktree ")) { current = { path: line.slice(9), branch: null }; output.push(current); } else if (current && line.startsWith("branch ")) current.branch = line.slice(7); } return output; }
 function readAt(commit, file, gitText) { try { return gitText(["show", `${commit}:${file}`], false); } catch { return ""; } }
-function isAncestor(ancestor, descendant) { try { execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: repositoryRoot }); return true; } catch { return false; } }
 function gitLines(gitText, args) { return String(gitText(args) || "").split("\n").filter(Boolean); }
 function lineAt(source, index) { return source.slice(0, index).split("\n").length; }
 function byPath(left, right) { return left.path.localeCompare(right.path); }

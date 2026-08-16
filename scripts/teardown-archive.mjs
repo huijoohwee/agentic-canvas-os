@@ -66,6 +66,17 @@ export function verifyArchive(options, dependencies) {
   }
   const manifest = JSON.parse(readFileSync(`${bundle}.json`, "utf8"));
   if (manifest.refs.length !== EXPECTED_REF_COUNT) throw new Error("Archive manifest ref count drifted.");
+  if (manifest.tag !== tag || manifest.preTeardownCommit !== dependencies.gitText(["rev-parse", `${tag}^{commit}`])) {
+    throw new Error("Archive manifest tag subject drifted.");
+  }
+  const bundleHeads = new Map(parseBundleHeads(
+    dependencies.gitText(["bundle", "list-heads", bundle]),
+  ).map(item => [item.ref, item.sha]));
+  for (const ref of manifest.refs) {
+    if (bundleHeads.get(ref.fullName) !== ref.tipSha) {
+      throw new Error(`Archive bundle omits exact ref ${ref.fullName}.`);
+    }
+  }
   return { status: "ok", tag, bundle, localTagSha, refCount: manifest.refs.length };
 }
 
@@ -79,6 +90,30 @@ export function containsArchive(options, dependencies) {
   const sha = required(options.sha, "--sha");
   const contained = heads.some(head => dependencies.isAncestor(sha, head.sha));
   return { status: contained ? "ok" : "missing", query: { sha } };
+}
+
+export function validateArchiveCoverage({ targets, coveredRefs, coveredShas }) {
+  const refs = new Set(coveredRefs);
+  const shas = new Set(coveredShas);
+  return targets.map(target => Object.freeze({
+    ...target,
+    covered: refs.has(target.ref) && shas.has(target.sha),
+  }));
+}
+
+export function validateRemovalManifest({ deletedPaths, rows, stage, stageCommit }) {
+  const deleted = [...new Set(deletedPaths)];
+  if (deleted.length !== deletedPaths.length || rows.length !== deleted.length) return false;
+  const byPath = new Map();
+  for (const row of rows) {
+    if (!row || byPath.has(row.path) || row.stage !== stage
+      || row.stageCommit !== stageCommit
+      || !/^[0-9a-f]{40}$/u.test(row.preTeardownBlobSha || "")
+      || !new Set(["redundant", "constrained", "dead", "retained"])
+        .has(row.classification)) return false;
+    byPath.set(row.path, row);
+  }
+  return deleted.every(file => byPath.has(file));
 }
 
 export function enumerateRefs(gitText) {
@@ -100,7 +135,24 @@ function parseWorktrees(value) {
   return results;
 }
 function parseBundleHeads(value) { return value.split("\n").filter(Boolean).map(line => { const [sha, ref] = line.split(/\s+/u); return { sha, ref }; }); }
-function parseOptions(args) { return Object.fromEntries(args.map(arg => { const match = arg.match(/^--([^=]+)=(.+)$/u); if (!match) throw new Error(`Unsupported argument ${arg}.`); return [match[1], match[2]]; })); }
+export function parseOptions(args) {
+  const options = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    const inline = argument.match(/^--([^=]+)=(.+)$/u);
+    if (inline) {
+      options[inline[1]] = inline[2];
+      continue;
+    }
+    if (!argument.startsWith("--") || index + 1 >= args.length
+      || args[index + 1].startsWith("--")) {
+      throw new Error(`Unsupported argument ${argument}.`);
+    }
+    options[argument.slice(2)] = args[index + 1];
+    index += 1;
+  }
+  return options;
+}
 function required(value, label) { if (!String(value || "").trim()) throw new Error(`${label} is required.`); return String(value); }
 function defaultDependencies() {
   const execute = (args, allowFailure = false) => { const result = spawnSync("git", args, { cwd: repositoryRoot, encoding: "utf8" }); if (!allowFailure && result.status !== 0) throw new Error(result.stderr.trim() || `git ${args[0]} failed.`); return result; };

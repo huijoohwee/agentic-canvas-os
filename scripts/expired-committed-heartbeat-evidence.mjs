@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 
 import {
   digestValue,
@@ -16,6 +18,9 @@ import {
 } from "./protected-main-path-equivalence-lib.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 import { buildReviewedForwardChildCandidate } from "./reviewed-forward-child-recovery-evidence.mjs";
+import {
+  normalizeReviewedLaneSourceCorrectionIntent,
+} from "./reviewed-lane-source-correction-contract.mjs";
 import {
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
@@ -408,6 +413,9 @@ function requireExactRecoverableFence({ lease, gitText }) {
   ) {
     return;
   }
+  if (isCompletedSourceCorrectionFence({ fenceParents, lease, gitText })) {
+    return;
+  }
   if (
     fenceParents.length !== 2 ||
     fenceParents[0] !== lease.fenceSha ||
@@ -461,6 +469,76 @@ function requireExactRecoverableFence({ lease, gitText }) {
       "Expired committed recovery requires the exact single-parent fence over its source base.",
     );
   }
+}
+
+function isCompletedSourceCorrectionFence({ fenceParents, lease, gitText }) {
+  if (
+    fenceParents.length !== 2 ||
+    fenceParents[0] !== lease.fenceSha ||
+    !lease?.cloudAuthority?.claimId
+  ) {
+    return false;
+  }
+  const completed = matchingCompletedSourceCorrections({ lease, gitText });
+  return completed.length === 1 &&
+    completed[0].plan.source.lease.fenceSha === fenceParents[1];
+}
+
+function matchingCompletedSourceCorrections({ lease, gitText }) {
+  let directory;
+  try {
+    directory = path.resolve(
+      gitText(["rev-parse", "--git-common-dir"]).trim(),
+      "agentic-canvas-os",
+      "reviewed-lane-source-correction",
+    );
+  } catch {
+    return [];
+  }
+  if (!existsSync(directory)) return [];
+  const matches = [];
+  for (const name of readdirSync(directory)) {
+    if (!name.endsWith(".json")) continue;
+    let intent;
+    try {
+      intent = normalizeReviewedLaneSourceCorrectionIntent(
+        JSON.parse(readFileSync(path.join(directory, name), "utf8")),
+      );
+    } catch {
+      continue;
+    }
+    const plan = intent.planSnapshot;
+    const source = plan.source;
+    const sourceLease = source.lease;
+    const completion = intent.completion;
+    if (
+      intent.status === "complete" &&
+      completion?.status === "authoring-restored" &&
+      completion.sourceHeadSha === lease.fenceSha &&
+      completion.successorClaimId === lease.cloudAuthority.claimId &&
+      plan.sourceHeadSha === lease.fenceSha &&
+      source.localHeadSha === lease.fenceSha &&
+      source.remoteHeadSha === lease.fenceSha &&
+      sourceLease.reviewHeadSha === lease.fenceSha &&
+      sourceLease.baseSha === lease.baseSha &&
+      sourceLease.branch === lease.branch &&
+      sourceLease.sessionId === lease.sessionId &&
+      sourceLease.device === lease.device &&
+      sourceLease.scope === lease.scope &&
+      sourceLease.pullRequestUrl === lease.pullRequestUrl &&
+      source.authority?.claimId === completion.sourceClaimId &&
+      source.authority?.laneRevision === lease.fenceSha &&
+      source.authority?.canonicalBaseSha === lease.baseSha &&
+      source.authority?.writeSetDigest === lease.admission?.writeSetDigest &&
+      source.claim?.claimId === completion.sourceClaimId &&
+      source.claim?.laneRevision === lease.fenceSha &&
+      source.claim?.canonicalBaseRevision === lease.baseSha &&
+      source.claim?.writeSetDigest === lease.admission?.writeSetDigest
+    ) {
+      matches.push({ intent, plan, completion });
+    }
+  }
+  return matches;
 }
 
 function requireExactRecoverableRefreshParent({

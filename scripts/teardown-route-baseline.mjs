@@ -143,7 +143,7 @@ export function buildRecord({ environmentName, baseUrl, corpus, observations }) 
     const payload = JSON.parse(Buffer.from(readinessObservation.responseBodyBase64, "base64"));
     readiness = Object.fromEntries(
       ["configured", "auth", "controlPlane", "modelProviders", "functionCalling"]
-        .map(key => [key, payload[key]]),
+        .map(key => [key, readinessBoolean(payload[key])]),
     );
   } catch { readiness = null; }
   return {
@@ -157,6 +157,11 @@ export function buildRecord({ environmentName, baseUrl, corpus, observations }) 
       status: observation.status,
     })),
   };
+}
+
+function readinessBoolean(value) {
+  if (typeof value === "boolean") return value;
+  return typeof value?.configured === "boolean" ? value.configured : null;
 }
 
 export function validateRecord(record, corpus) {

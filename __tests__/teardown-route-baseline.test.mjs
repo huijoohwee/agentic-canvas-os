@@ -30,11 +30,18 @@ test("executes exact request body bytes and records response evidence for readin
 test("baseline rejects corpus drift", () => {
   const observations = corpus.requests.map(request => ({ id: request.id, status: 200,
     responseBodyBase64: request.path === "/api/ready"
-      ? Buffer.from('{"configured":true,"auth":false,"controlPlane":false,"modelProviders":false,"functionCalling":false}').toString("base64")
+      ? Buffer.from('{"configured":false,"auth":{"configured":true},"controlPlane":{"configured":true},"modelProviders":{"configured":false},"functionCalling":{"configured":false}}').toString("base64")
       : "",
     responseHeaders: { "content-type": "application/json" } }));
   const record = buildRecord({ environmentName: "local-dev", baseUrl: "http://127.0.0.1:8787", corpus, observations });
   assert.deepEqual(record.results[0], { id: "root", status: 200 });
+  assert.deepEqual(record.readiness, {
+    configured: false,
+    auth: true,
+    controlPlane: true,
+    modelProviders: false,
+    functionCalling: false,
+  });
   assert.equal(validateRecord(record, corpus), record);
   assert.throws(() => validateRecord({ ...record, corpusDigest: "drift" }, corpus), /differs/u);
 });

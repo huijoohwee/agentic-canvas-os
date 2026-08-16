@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3284,
-  "headDigest": "fb79421dfee0d2f8d555aa6c4ffe04d9e38b957d4f65347c8f5e6560c1e16f87",
+  "sequence": 3285,
+  "headDigest": "8632814d02dee41265ab1aa914a86f8902dab8f2f90d0afe446799ec48806357",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -162805,6 +162805,46 @@
       },
       "claimDigest": "e14da8723d1764239938fe028ee41e515973be54f62e6f78f8f894b202419fe3",
       "digest": "fb79421dfee0d2f8d555aa6c4ffe04d9e38b957d4f65347c8f5e6560c1e16f87"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3285,
+      "parentDigest": "fb79421dfee0d2f8d555aa6c4ffe04d9e38b957d4f65347c8f5e6560c1e16f87",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "dd0d39dc722ae9041d7d5aa5b846c64daf758513abc3a80921fbad4ba8297dbf",
+      "idempotencyKey": "1ab5fa589c45b05983555ca54941cdd2b82c18e490a6d7b936846619633b6562",
+      "requestDigest": "d55929f91fab5445bf34dc7de556fdd904487d0061319a99f77c34d7fb16781f",
+      "evaluationTime": "2026-08-16T18:58:02.000Z",
+      "claimCore": {
+        "claimId": "dd0d39dc722ae9041d7d5aa5b846c64daf758513abc3a80921fbad4ba8297dbf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1ab8e9069528bac5a4970f4791420b81c2a3c21820f220f97cfe232f873e2e4d",
+        "canonicalBaseRevision": "b981645ab62f98d046817ebd9ea0f1a889191521",
+        "declaredWriteScope": [
+          "path:__tests__/device-expired-committed-heartbeat.test.mjs",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "semantic:expired-committed-heartbeat-source-correction-lineage"
+        ],
+        "writeSetDigest": "ef77a91cc7b241c2dee401ccd45475c132a9c7be74606e521c8e81b00a0298f0",
+        "laneRevision": "b981645ab62f98d046817ebd9ea0f1a889191521",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T19:58:02.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7964e9e27151a2b29a0b6bdb7421454287e6ec943e27267d5228de56f01445d9",
+      "digest": "8632814d02dee41265ab1aa914a86f8902dab8f2f90d0afe446799ec48806357"
     }
   ]
 }

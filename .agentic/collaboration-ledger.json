@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3171,
-  "headDigest": "4c5aac15d8cfe0b91eccad90f0c283d9ad9711a38b5e1bf79bdfd1e428fd1721",
+  "sequence": 3172,
+  "headDigest": "4fa410ebb8c8163e955655505506df355684e288b7615d07b0fce5ce697dd607",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -156984,6 +156984,62 @@
       },
       "claimDigest": "9f98398cb22b8381d139cc08dd37880b9c0353d2f924d574441a59d53dd5e3c8",
       "digest": "4c5aac15d8cfe0b91eccad90f0c283d9ad9711a38b5e1bf79bdfd1e428fd1721"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3172,
+      "parentDigest": "4c5aac15d8cfe0b91eccad90f0c283d9ad9711a38b5e1bf79bdfd1e428fd1721",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "df296e74db303d5fb54a18340af20d58d1b5a2e2c432a8ce756523b079b55f71",
+      "idempotencyKey": "91bbcb2cf92ee51344f4d93c48265222bcd6e431cd182fc2052d11749f51baaf",
+      "requestDigest": "ce436a2bcef5984c5f1941a8f8c7ac19c33ec54045c3564abb0a0cabc8a97274",
+      "evaluationTime": "2026-08-16T09:14:38.000Z",
+      "claimCore": {
+        "claimId": "df296e74db303d5fb54a18340af20d58d1b5a2e2c432a8ce756523b079b55f71",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:440b6ab7a9fe4f97fe993aee205b51a130449a522c8be958284d3368ab8bf825",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-successor-projection-response-loss.test.mjs",
+          "path:docs/REVIEWED-SUCCESSOR-PROJECTION-RESPONSE-LOSS.md",
+          "path:scripts/reviewed-successor-projection-response-loss-contract.mjs",
+          "path:scripts/reviewed-successor-projection-response-loss-controller.mjs",
+          "path:scripts/reviewed-successor-projection-response-loss-repository-adapter.mjs",
+          "path:scripts/reviewed-successor-projection-response-loss.mjs",
+          "semantic:handoff-successor-response-loss"
+        ],
+        "writeSetDigest": "bae633c6e62604c5ab7abfe0f84d5929395adcc4a643757274925a0ff3b2c0ae",
+        "laneRevision": "7a1a4b9fda1c43f6ad3d88f38800bd65fd12415e",
+        "leaseEpoch": 2,
+        "transitionCounter": 7,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-16T10:43:06.000Z",
+        "evidenceDigest": "6f624096185cf6b9bbe57b0460166b72e52ac4c1f9c476b99eb1315978a0ce7c",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_pnHe",
+        "predecessorClaimId": "d304f9775cf9ffaf5f70a82347262e21f20379ba45943d262d6ae1f6bdaa677e",
+        "eligibleSince": "2026-08-16T07:36:55.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-16T08:24:34.000Z",
+        "integration": {
+          "candidateRevision": "7a1a4b9fda1c43f6ad3d88f38800bd65fd12415e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_pnHe",
+          "focusedEvidenceDigest": "6f624096185cf6b9bbe57b0460166b72e52ac4c1f9c476b99eb1315978a0ce7c",
+          "dependencyClosureDigest": "ccb98d21cee7e5e8d54fa4b1e725ad5411a2573c05014b13c4867bb337077375",
+          "namedChecksDigest": "d5edf3e4a5d6adcb4216c17fac5bc4208e3987fe0844117c28f013d69dca70f3",
+          "handoffEvidenceDigest": "ab0d995841638280bd4b341ebca097aaeeb7bbf946a96ee09a192aef90eb88fe",
+          "operatorDecisionDigest": "6be4bfa8f2059c455f9677d7b3823d7d5acc4381bdac69c2c57607c108698a8a",
+          "integrationIntentDigest": "c8eef37fb05340e517339276a943c3d5466ceb463469818b36d563d9eeff6cf0",
+          "integratedAt": "2026-08-16T09:14:38.000Z"
+        }
+      },
+      "claimDigest": "a5264b50a3c6cb8608c2d6402efe08b8420e663831dac43900223b8f24b2e4f2",
+      "digest": "4fa410ebb8c8163e955655505506df355684e288b7615d07b0fce5ce697dd607"
     }
   ]
 }

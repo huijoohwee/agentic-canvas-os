@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3180,
-  "headDigest": "b8b11ea45d7984a1cd76bd8c551c3c6aaf39fb16610179239c8edc7029c521dc",
+  "sequence": 3181,
+  "headDigest": "b2b088bc28bd7a96bc6eddfc95e020dff6c6169a50e4bae4923f576101a0e5ae",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -157425,6 +157425,47 @@
       },
       "claimDigest": "4f4256c4e575fd92fcb7c472011b71c4e3cffb88819e84b09b3171469fb5d9f2",
       "digest": "b8b11ea45d7984a1cd76bd8c551c3c6aaf39fb16610179239c8edc7029c521dc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3181,
+      "parentDigest": "b8b11ea45d7984a1cd76bd8c551c3c6aaf39fb16610179239c8edc7029c521dc",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bcc349b58d535b13ea68746c1468a452675c6943186b4500addde04def44ffaf",
+      "idempotencyKey": "356e1e61de5d7bd0f234fcb3bb247651e68d38e1a87453c8d4f72dde2c4b5413",
+      "requestDigest": "561a7bd5a4650ad7e854194ec4b391ee8048217ce43e3677f2b5130c70395420",
+      "evaluationTime": "2026-08-16T10:04:46.000Z",
+      "claimCore": {
+        "claimId": "bcc349b58d535b13ea68746c1468a452675c6943186b4500addde04def44ffaf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e47f4d7fa5485408d550886e384c8c3f26352209135237291ea6db16e365d16d",
+        "canonicalBaseRevision": "45b317cb2c6e277b4c6c8290431a5932fe270d7e",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-successor-projection-response-loss.test.mjs",
+          "path:docs/REVIEWED-SUCCESSOR-PROJECTION-RESPONSE-LOSS.md",
+          "path:scripts/reviewed-successor-projection-response-loss-contract.mjs",
+          "semantic:reviewed-successor-replay-observation-correction"
+        ],
+        "writeSetDigest": "4393d7ecf815e16f817a6812e645ef6ea1a9f9695402a1490f3b3cdfbd6e962f",
+        "laneRevision": "45b317cb2c6e277b4c6c8290431a5932fe270d7e",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T10:34:46.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "4d333d95678dda55e3eb946fdc46a497878164c5d95c393cf946ed4138c0a563",
+      "digest": "b2b088bc28bd7a96bc6eddfc95e020dff6c6169a50e4bae4923f576101a0e5ae"
     }
   ]
 }

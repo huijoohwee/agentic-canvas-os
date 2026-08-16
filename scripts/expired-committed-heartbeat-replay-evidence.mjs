@@ -10,7 +10,6 @@ import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs
 
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
-const MAX_LEDGER_BYTES = 8 * 1024 * 1024;
 const MAX_GITHUB_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 export function resolveExpiredCommittedRecoveryReplayEvidence({
@@ -77,9 +76,7 @@ export function readGitHubLedger({ repository, environment, execFile = execFileS
   if (blob.encoding !== "base64") throw new Error("Dormant recovery replay ledger blob must use base64 encoding.");
   if (!content) throw new Error("Dormant recovery replay ledger content is unavailable.");
   const bytes = Buffer.from(String(content).replaceAll("\n", ""), "base64");
-  if (bytes.length < 1 || bytes.length > MAX_LEDGER_BYTES) {
-    throw new Error("Dormant recovery replay ledger exceeds its byte bound.");
-  }
+  if (bytes.length < 1) throw new Error("Dormant recovery replay ledger content is unavailable.");
   return {
     ledger: JSON.parse(bytes.toString("utf8")),
     revision,

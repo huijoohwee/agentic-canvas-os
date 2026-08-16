@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3257,
-  "headDigest": "9e6dc3c81c4fbd392ea336e3065f47e79934fcd684f372e68338f01982b650f4",
+  "sequence": 3258,
+  "headDigest": "db331bacb810924baf1de648f7a151fa0a31f07f76846c1ae14104c3d6ae6cdd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -161466,6 +161466,61 @@
       },
       "claimDigest": "2c8963e57f8f96b7b8bb57514e46c848f17935d9b567df2d3293b969c2df2c4b",
       "digest": "9e6dc3c81c4fbd392ea336e3065f47e79934fcd684f372e68338f01982b650f4"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3258,
+      "parentDigest": "9e6dc3c81c4fbd392ea336e3065f47e79934fcd684f372e68338f01982b650f4",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "74bbcb03e476571d45b7630abab57886182344b71320e87fa34806c6fd47c9b3",
+      "idempotencyKey": "c1ad17dfd1acc6882cc761a6dc4c72e735e7a35912767141e2416858d5c58905",
+      "requestDigest": "d4d268e8a55213227ab8d0eb0049b7ef63ab39cfb2e34a3f13dc0d05e87a0404",
+      "evaluationTime": "2026-08-16T16:01:08.000Z",
+      "claimCore": {
+        "claimId": "74bbcb03e476571d45b7630abab57886182344b71320e87fa34806c6fd47c9b3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:709047d54e0f98799979cba9535555ae455d18fbc69dda970d8b7fa9699da450",
+        "canonicalBaseRevision": "2da02b51a48067e2195d995fd75d8de87658071e",
+        "declaredWriteScope": [
+          "path:__tests__/source-correction-successor-task-binding-reconciliation.test.mjs",
+          "path:docs/SOURCE-CORRECTION-SUCCESSOR-TASK-BINDING-RECONCILIATION.md",
+          "path:scripts/source-correction-successor-task-binding-reconciliation-contract.mjs",
+          "path:scripts/source-correction-successor-task-binding-reconciliation-controller.mjs",
+          "path:scripts/source-correction-successor-task-binding-reconciliation-repository-adapter.mjs",
+          "path:scripts/source-correction-successor-task-binding-reconciliation.mjs",
+          "semantic:source-correction-task-binding-reconcile"
+        ],
+        "writeSetDigest": "823772deec92408259841e358b447ac17467a8c351608de99bf0e0230741b393",
+        "laneRevision": "bf49948b98fc0e4a0d8bdb0969894b4e9f7643f3",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-16T17:18:33.000Z",
+        "evidenceDigest": "f26be2bc7d75446590256805406039dfc03313137772c7cc1e1702818189c8f6",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_vZQB",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "bf49948b98fc0e4a0d8bdb0969894b4e9f7643f3",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_vZQB",
+          "focusedEvidenceDigest": "f26be2bc7d75446590256805406039dfc03313137772c7cc1e1702818189c8f6",
+          "dependencyClosureDigest": "42329293468ba99531f6e49ae1f071caacf2a9ed555a2ba14cede30a849cf1c7",
+          "namedChecksDigest": "e5a6b7b8ee6c78d020f9bda4c13ffadc12f2185d097466fe823a90a5d2b34eeb",
+          "handoffEvidenceDigest": "800918003d497c4404a51052e6c1fd16ca4ebb43ddb1db213851bee32fb5eb5a",
+          "operatorDecisionDigest": "d2f000e634f8e8f6503cfb4a3084905505973ace87991f553e0497584b64ddb6",
+          "integrationIntentDigest": "0688d3baee5d8a0c25b91433875617690cc454bb1d0f32cb5fa91954b58cb0b5",
+          "integratedAt": "2026-08-16T16:01:08.000Z"
+        }
+      },
+      "claimDigest": "4e476f2305693f02e0c58311d206d6d808e64136e09a0b4f960ccc9dd876bba9",
+      "digest": "db331bacb810924baf1de648f7a151fa0a31f07f76846c1ae14104c3d6ae6cdd"
     }
   ]
 }

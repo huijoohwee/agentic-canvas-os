@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { digestValue as D } from "../scripts/cloud-collaboration-primitives.mjs";
 import { AUTHORIZATION_PREFIX, LOCAL_REPAIR_SCHEMA, POLICY, buildSameClaimDormantReviewedPlan, buildSameClaimDormantReviewedReceipt, normalizeSameClaimDormantReviewedEvidence } from "../scripts/same-claim-dormant-reviewed-continuation-contract.mjs";
 import { createSameClaimDormantReviewedContinuationController } from "../scripts/same-claim-dormant-reviewed-continuation-controller.mjs";
-import { projectRenewedReviewedLeaseSubject, projectReviewedAuthorityForSameClaimRecovery } from "../scripts/same-claim-dormant-reviewed-continuation-repository-adapter.mjs";
+import { adoptReviewedResponseLossCloudRecovery, projectRenewedReviewedLeaseSubject, projectReviewedAuthorityForSameClaimRecovery } from "../scripts/same-claim-dormant-reviewed-continuation-repository-adapter.mjs";
 
 const SHA = value => value.repeat(40);
 function fixture({ complete = false } = {}) {
@@ -86,4 +86,17 @@ test("reviewed authority adapter restores cloud current while local reviewed sem
   const sourceLease = { status: "review_ready", reviewHeadSha: SHA("a"), taskAuthority: { bindingDigest: D("binding") }, cloudAuthority: authority, heartbeatAt: "2026-08-16T11:00:00.000Z", expiresAt: "2026-08-16T11:00:00.000Z" };
   const activeAuthority = projectReviewedAuthorityForSameClaimRecovery(authority); const projected = projectRenewedReviewedLeaseSubject(sourceLease, activeAuthority);
   assert.equal(activeAuthority.state, "active"); assert.equal(projected.status, "review_ready"); assert.equal(projected.reviewHeadSha, sourceLease.reviewHeadSha); assert.equal(projected.taskAuthority, sourceLease.taskAuthority); assert.equal(projected.cloudAuthority, activeAuthority); assert.equal(POLICY.authoringAuthorityGranted, false); assert.equal(POLICY.pullRequestMutation, false);
+});
+
+test("reviewed response-loss adoption reconstructs the exact landed transition without authoring authority", () => {
+  const sourceAuthority = { schema: "agentic-lane-cloud-authority/v1", provider: "github", ledgerRepository: "o/ledger", targetRepository: "o/r", claimId: D("claim"), claimDigest: D("old-fence"), ledgerRevision: SHA("1"), ledgerDigest: D("old-ledger"), claimLedgerRevision: D("old-transition"), entrySchema: "agentic-cloud-collaboration-entry/v2", claimIdentitySchema: "agentic-cloud-collaboration-entry/v2", operationReceiptDigest: D("old-operation"), mutationAuthorityEligible: true, canonicalBaseSha: SHA("b"), laneRevision: SHA("a"), cloudDeclaredWriteScope: ["path:docs/a.md", "semantic:test"], writeSetDigest: D("write-set"), deviceId: "device", sessionId: "target-session", reviewRequestId: "github-pull-request:PR519", leaseEpoch: 2, transitionCounter: 3, state: "review_ready", expiresAt: "2026-08-16T11:00:00.000Z", integrationReceiptDigest: null, integration: null, manifestDigest: D("manifest") };
+  const claim = { claimId: sourceAuthority.claimId, entrySchema: sourceAuthority.entrySchema, claimIdentitySchema: sourceAuthority.claimIdentitySchema, state: "reviewed", writeAuthority: false, scopeReserved: true, actorId: "actor", repositoryId: "repository", workItemId: "work-item", canonicalBaseRevision: sourceAuthority.canonicalBaseSha, laneRevision: sourceAuthority.laneRevision, declaredWriteScope: sourceAuthority.cloudDeclaredWriteScope, writeSetDigest: sourceAuthority.writeSetDigest, leaseEpoch: 2, transitionCounter: 4, heartbeatCounter: 0, reviewRequestId: sourceAuthority.reviewRequestId, predecessorClaimId: D("predecessor"), expiresAt: "2026-08-16T12:32:53.000Z", fenceRevision: D("new-fence"), transitionDigest: D("new-transition"), operationReceiptDigest: D("new-operation"), integrationReceiptDigest: null, integration: null };
+  const recovery = adoptReviewedResponseLossCloudRecovery({ sourceAuthority, claim, status: { ledgerRevision: SHA("2"), ledgerDigest: D("ledger") }, manifest: { manifestDigest: D("manifest"), declaredWriteSet: sourceAuthority.cloudDeclaredWriteScope, writeSetDigest: sourceAuthority.writeSetDigest }, recoveredAt: "2026-08-16T12:33:00.000Z" });
+  assert.equal(recovery.authority.state, "review_ready"); assert.equal(recovery.authority.claimDigest, claim.fenceRevision); assert.equal(recovery.authority.transitionCounter, 4); assert.equal(recovery.authority.expiresAt, claim.expiresAt); assert.equal(recovery.cloudOperationReceiptDigest, claim.operationReceiptDigest);
+  const projected = projectRenewedReviewedLeaseSubject({ status: "review_ready", cloudAuthority: sourceAuthority }, recovery.authority); assert.equal(projected.status, "review_ready"); assert.equal(POLICY.authoringAuthorityGranted, false);
+});
+
+test("cloud contract accepts provider reviewed as non-authoring terminal evidence", () => {
+  const subject = fixture(); const { evidenceDigest: _evidenceDigest, ...evidence } = subject.evidence; const core = { ...evidence, cloud: { ...subject.evidence.cloud, state: "reviewed", writeAuthority: false, claimDigest: D("reviewed-fence"), transitionCounter: 4, operationReceiptDigest: D("reviewed-operation") } };
+  assert.equal(normalizeSameClaimDormantReviewedEvidence({ ...core, evidenceDigest: D(core) }).cloud.state, "reviewed");
 });

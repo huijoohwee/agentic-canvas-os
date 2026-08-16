@@ -35,7 +35,11 @@ the local writer lease.
 The cloud primitive requires an active source projection, so the adapter
 projects the sealed reviewed authority to `state: active` for that invocation
 only. The primitive then verifies that the same claim, not a successor, returns
-as cloud `current`. Local projection deliberately retains lease status
+from the continuation. If provider classification immediately projects the
+landed transition as non-authoring `reviewed`, a durable `cloud-attempted`
+journal may adopt only its exact next transition, fence, operation receipt,
+review request, head, write set, and ledger evidence. Local projection retains
+the provider-reviewed authority and lease status
 `review_ready`, `reviewHeadSha`, the current task binding, and the non-draft PR
 preimage. This split restores cloud liveness without granting authoring
 authority or weakening reviewed-state integration gates.

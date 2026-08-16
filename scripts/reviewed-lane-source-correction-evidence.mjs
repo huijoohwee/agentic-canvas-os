@@ -41,6 +41,7 @@ export function buildReviewedLaneSourceCorrectionEvidence(input = {}) {
 export function buildSameClaimRecoverySplitEvidence({ lease, marker, journal }) {
   const repair = lease?.sameClaimDormantReviewedContinuation;
   if (!repair) return null;
+  if (completedSuccessorProjectionAlreadyJoined({ lease, marker, repair })) return null;
   const predecessor = { ...lease, cloudAuthority: marker?.cloudAuthority,
     heartbeatAt: marker?.heartbeatAt, expiresAt: marker?.expiresAt };
   const targetSubject = { ...lease };
@@ -113,6 +114,38 @@ export function buildSameClaimRecoverySplitEvidence({ lease, marker, journal }) 
     journalDigest: journal.journalDigest,
     zeroEffectsDigest: digestValue(effects),
   });
+}
+
+function completedSuccessorProjectionAlreadyJoined({ lease, marker, repair }) {
+  const successorRepair = lease?.sourceCorrectionSuccessorTaskBindingReconciliation;
+  if (!successorRepair) return false;
+  const successorCore = without(successorRepair, "receiptDigest");
+  const effects = {
+    cloud: successorRepair.cloudEffect,
+    pullRequest: successorRepair.pullRequestEffect,
+    source: successorRepair.sourceEffect,
+    git: successorRepair.gitEffect,
+    merge: successorRepair.mergeEffect,
+    integration: successorRepair.integrationEffect,
+    deployment: successorRepair.deploymentEffect,
+  };
+  return (
+    successorRepair.schema
+      === "agentic-source-correction-successor-task-binding-reconciliation-local-repair/v1"
+    && successorRepair.status === "reconciled"
+    && successorRepair.receiptDigest === digestValue(successorCore)
+    && successorRepair.predecessorClaimId === repair.claimId
+    && successorRepair.successorClaimId === lease?.cloudAuthority?.claimId
+    && successorRepair.targetBindingDigest === lease?.taskAuthority?.bindingDigest
+    && successorRepair.targetBindingDigest === marker?.taskAuthority?.bindingDigest
+    && marker?.cloudAuthority?.claimId === lease?.cloudAuthority?.claimId
+    && marker?.cloudAuthority?.claimDigest === lease?.cloudAuthority?.claimDigest
+    && marker?.cloudAuthority?.transitionCounter === lease?.cloudAuthority?.transitionCounter
+    && marker?.cloudAuthority?.operationReceiptDigest
+      === lease?.cloudAuthority?.operationReceiptDigest
+    && successorRepair.authoringAuthorityGranted === false
+    && Object.values(effects).every(value => value === false)
+  );
 }
 
 export function normalizeReviewedLaneSourceCorrectionEvidence(value) {

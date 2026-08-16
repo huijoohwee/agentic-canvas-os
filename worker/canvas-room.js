@@ -23,9 +23,23 @@ import {
   rosterFromAttachments,
   serializeSnapshot,
 } from "../src/collab-room.js";
-import { createRoomMetrics, metricsSummary, recordRoomEvent, roomLogRecord } from "../src/collab-metrics.js";
+import {
+  createRoomMetrics,
+  metricsSummary,
+  normalizeRoomMetrics,
+  recordRoomEvent,
+  recordRoomFanOut,
+  recordRoomObservabilityFailure,
+  roomLogRecord,
+} from "../src/collab-metrics.js";
+import {
+  failSoftBranchFailure,
+  failSoftFanOut,
+  fanOutUnavailableResult,
+} from "../src/fail-soft-fan-out.js";
 
 const STORAGE_KEY = "room-state-v1";
+const FAN_OUT_AUDIT_KEY = "room-fanout-audit-v1";
 const MAX_MESSAGE_BYTES = 65536; // generous bound; well under the 32 MiB DO WS limit
 const MAX_RECENT_OP_IDS = 512;
 // Garbage-collect a room after this much idle time with no live connections.
@@ -57,7 +71,8 @@ export class CanvasRoom {
     // In-memory only. After hibernation eviction a reconnect safely falls back
     // to a full snapshot because this bounded replay window starts empty.
     this.eventLog = [];
-    // Per-instance cumulative counters for observability (reset on eviction).
+    // Cumulative counters are restored from storage; degraded delivery writes
+    // them again so hibernation cannot erase the failure evidence.
     this.metrics = createRoomMetrics();
     this.lastActivityAt = Date.now();
     /** @type {{nodes: object, links: object, rev: number} | null} */
@@ -65,6 +80,8 @@ export class CanvasRoom {
     this.loaded = this.ctx.blockConcurrencyWhile(async () => {
       const stored = await this.ctx.storage.get(STORAGE_KEY);
       this.persisted = stored !== undefined && stored !== null;
+      const storedAudit = await this.ctx.storage.get(FAN_OUT_AUDIT_KEY);
+      this.metrics = normalizeRoomMetrics(storedAudit?.cumulative);
       if (stored && typeof stored === "object" && stored.graph) {
         this.state = stored.graph;
         this.recentOpIds = Array.isArray(stored.recentOpIds) ? stored.recentOpIds.slice(-MAX_RECENT_OP_IDS) : [];
@@ -125,40 +142,113 @@ export class CanvasRoom {
     }
   }
 
-  broadcast(payload, exclude) {
-    const text = JSON.stringify(payload);
-    for (const ws of this.ctx.getWebSockets()) {
-      if (ws === exclude) continue;
-      try {
-        ws.send(text);
-      } catch {
-        // Best-effort; a broken socket will be reaped by the runtime.
-      }
+  safeLog(event, fields = {}, level = "info") {
+    try {
+      this.log(event, fields, level);
+      return true;
+    } catch {
+      this.metrics = recordRoomObservabilityFailure(this.metrics);
+      return false;
     }
   }
 
-  broadcastPresence(exclude) {
-    const sockets = this.ctx.getWebSockets();
-    const attachments = [];
-    for (const ws of sockets) {
-      if (ws === exclude) continue;
-      let attachment = null;
-      try {
-        attachment = ws.deserializeAttachment();
-      } catch {
-        attachment = null;
-      }
-      attachments.push(attachment || {});
+  async persistFailureMetrics(deliveryType, result) {
+    const audit = {
+      schema: "canvas-room-fanout-audit/v1",
+      room: this.roomLogId,
+      recordedAt: new Date().toISOString(),
+      deliveryType,
+      status: result.status,
+      attempted: result.attempted,
+      dispatched: result.dispatched,
+      succeeded: result.succeeded,
+      failed: result.failed,
+      timedOut: result.timedOut,
+      canceled: result.canceled,
+      setupFailures: result.setupFailures,
+      reasonCodes: [...new Set(result.auditTrail
+        .filter((entry) => entry.status === "failed")
+        .map((entry) => entry.reasonCode))].sort(),
+      cumulative: this.metrics,
+    };
+    try {
+      await this.ctx.storage.put(FAN_OUT_AUDIT_KEY, audit, { allowUnconfirmed: true });
+    } catch {
+      this.metrics = recordRoomObservabilityFailure(this.metrics, { auditPersistence: true });
+      this.safeLog("fanout_audit_persist_failed", { deliveryType }, "error");
     }
-    const payload = JSON.stringify(rosterFromAttachments(attachments));
-    for (const ws of sockets) {
-      if (ws === exclude) continue;
-      try {
-        ws.send(payload);
-      } catch {
-        // Best-effort; a broken socket is reaped by the runtime.
-      }
+  }
+
+  async recordFanOut(deliveryType, result) {
+    this.metrics = recordRoomFanOut(this.metrics, result);
+    if (result.failed === 0 && result.setupFailures === 0) return;
+    const reasonCodes = [...new Set(
+      result.auditTrail
+        .filter((entry) => entry.status === "failed")
+        .map((entry) => entry.reasonCode),
+    )].sort();
+    this.safeLog("fanout_degraded", {
+      deliveryType,
+      fanOutStatus: result.status,
+      attempted: result.attempted,
+      succeeded: result.succeeded,
+      failed: result.failed,
+      timedOut: result.timedOut,
+      canceled: result.canceled,
+      setupFailures: result.setupFailures,
+      reasonCodes,
+    }, "warn");
+    await this.persistFailureMetrics(deliveryType, result);
+  }
+
+  async broadcast(payload, exclude) {
+    let result;
+    try {
+      const text = JSON.stringify(payload);
+      const recipients = this.ctx.getWebSockets().filter((ws) => ws !== exclude);
+      result = await failSoftFanOut(recipients, (ws) => {
+        try {
+          ws.send(text);
+        } catch {
+          throw failSoftBranchFailure("branch_unavailable", { retryable: true });
+        }
+      });
+    } catch {
+      result = fanOutUnavailableResult("fanout_setup_failed", { retryable: true });
     }
+    await this.recordFanOut(typeof payload?.type === "string" ? payload.type : "room_event", result);
+    return result;
+  }
+
+  async broadcastPresence(exclude) {
+    let result;
+    try {
+      const sockets = this.ctx.getWebSockets();
+      const attachments = [];
+      for (const ws of sockets) {
+        if (ws === exclude) continue;
+        let attachment = null;
+        try {
+          attachment = ws.deserializeAttachment();
+        } catch {
+          attachment = null;
+        }
+        attachments.push(attachment || {});
+      }
+      const payload = JSON.stringify(rosterFromAttachments(attachments));
+      const recipients = sockets.filter((ws) => ws !== exclude);
+      result = await failSoftFanOut(recipients, (ws) => {
+        try {
+          ws.send(payload);
+        } catch {
+          throw failSoftBranchFailure("branch_unavailable", { retryable: true });
+        }
+      });
+    } catch {
+      result = fanOutUnavailableResult("fanout_setup_failed", { retryable: true });
+    }
+    await this.recordFanOut("presence", result);
+    return result;
   }
 
   liveConnections() {
@@ -257,7 +347,7 @@ export class CanvasRoom {
       }
     }
     if (!sentInitial) this.send(server, serializeSnapshot(this.state));
-    this.broadcastPresence();
+    await this.broadcastPresence();
 
     this.metrics = recordRoomEvent(this.metrics, "join");
     this.log("join", { subject: verdict.claims.sub || "anonymous", init: sentInitial ? "catchup" : "snapshot", rev: this.state.rev });
@@ -321,7 +411,7 @@ export class CanvasRoom {
     this.recentOpIds = [...this.recentOpIds, op.opId].slice(-MAX_RECENT_OP_IDS);
     this.eventLog = appendEventLog(this.eventLog, event);
     await this.persist();
-    this.broadcast({ ...event, opId: op.opId }, ws);
+    await this.broadcast({ ...event, opId: op.opId }, ws);
     this.send(ws, { type: "ack", opType: op.type, opId: op.opId, rev: event.rev });
   }
 
@@ -329,7 +419,7 @@ export class CanvasRoom {
     this.restoreRoomLogId(ws);
     // The runtime may still list a mid-close socket, so explicitly exclude it
     // while deriving the new live roster.
-    this.broadcastPresence(ws);
+    await this.broadcastPresence(ws);
     const remaining = Math.max(0, this.liveConnections() - 1);
     this.log("leave", { code, wasClean: Boolean(wasClean), connections: remaining });
     // Emit a metrics summary as the room drains so a Tail query can chart
@@ -340,9 +430,12 @@ export class CanvasRoom {
   }
 
   async webSocketError(ws, error) {
-    // Swallow: the Hibernation API will close/reap the socket; no shared
-    // state to roll back since each op is applied and persisted atomically
-    // above before broadcast.
+    // The Hibernation API will close/reap the socket; no shared state rolls
+    // back, but the sanitized failure metric survives eviction when possible.
+    this.restoreRoomLogId(ws);
+    this.metrics = recordRoomEvent(this.metrics, "socketError");
+    this.safeLog("websocket_error", {}, "warn");
+    await this.persistFailureMetrics("websocket_error", fanOutUnavailableResult("fanout_unavailable"));
   }
 
   async alarm() {

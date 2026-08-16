@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3290,
-  "headDigest": "03c7ddfee9319da1176ef594d81eb1904bdb06ba9a606f612b9b4da6ae0aac59",
+  "sequence": 3291,
+  "headDigest": "2535bda76661c26719dc76d47d4df4434d8301aa9c93a6c5eea81b0539fd41ce",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -163055,6 +163055,57 @@
       },
       "claimDigest": "a837117f904d3f4295afec752fd761fe14995983577c96263936f4e205431a46",
       "digest": "03c7ddfee9319da1176ef594d81eb1904bdb06ba9a606f612b9b4da6ae0aac59"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3291,
+      "parentDigest": "03c7ddfee9319da1176ef594d81eb1904bdb06ba9a606f612b9b4da6ae0aac59",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "06eb2511abb8d6b68a9d4b5988a10821c83b01080c24a4a1629731e6563467ec",
+      "idempotencyKey": "a070f3d601664a02fc56aaa735ec2068e3b917fb1c3e0049a71a41387af31deb",
+      "requestDigest": "1f81daf8b94f5702d6d5da031fc1664c128eca08bb8f6e296e30f97ff3169598",
+      "evaluationTime": "2026-08-16T19:37:21.000Z",
+      "claimCore": {
+        "claimId": "06eb2511abb8d6b68a9d4b5988a10821c83b01080c24a4a1629731e6563467ec",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:acbcd71fff6c8dce0393ee502ddbd19faf33d3d765e2fa99fa2ae3304cc1f043",
+        "canonicalBaseRevision": "b981645ab62f98d046817ebd9ea0f1a889191521",
+        "declaredWriteScope": [
+          "path:__tests__/device-expired-committed-heartbeat.test.mjs",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "semantic:expired-heartbeat-source-lineage"
+        ],
+        "writeSetDigest": "aa2defec86f4d9edc4db9ed896836162cc2ea13034104188b01d136a3e093951",
+        "laneRevision": "580975e5bdf1c4ef6d64b22af80132f460477748",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-16T20:00:20.000Z",
+        "evidenceDigest": "9c6ab72650aeb71097e55d530630bd6f3f3f7ac106eb274e2130cf65bfbedbe4",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_yIS8",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "580975e5bdf1c4ef6d64b22af80132f460477748",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_yIS8",
+          "focusedEvidenceDigest": "9c6ab72650aeb71097e55d530630bd6f3f3f7ac106eb274e2130cf65bfbedbe4",
+          "dependencyClosureDigest": "9609200937a1671afe3d1affde8f6426c4f75563e117d8ea56a7210ef8db8d80",
+          "namedChecksDigest": "d228617728b99408b6763d69309ae9125860310c090cfbd16fafd8210017ba32",
+          "handoffEvidenceDigest": "e375d31a441ec37633304944bd1a765bf0ec74096b38bcb207bfa9bff36b4298",
+          "operatorDecisionDigest": "82fc4665f10df60eba7881c0faa146360546c62c0d00f134357f8296d30a09b6",
+          "integrationIntentDigest": "dbe6ab381e5fe8bc5c2a880b3615574e41383728db670bdcb93686c8fd91b10f",
+          "integratedAt": "2026-08-16T19:37:21.000Z"
+        }
+      },
+      "claimDigest": "d43e519143869280b06a5a8237405cac63d8eb244bffc136d49c87ef4f9c2c11",
+      "digest": "2535bda76661c26719dc76d47d4df4434d8301aa9c93a6c5eea81b0539fd41ce"
     }
   ]
 }

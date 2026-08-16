@@ -46,6 +46,12 @@ Planning is read-only and requires all of the following:
 - the same integrated split may be wrapped by exactly one authenticated recovery
   transition at N+2 when its recovery evidence is present and the integration
   receipt remains unchanged; any additional or foreign progress is rejected;
+- one completed same-claim reviewed recovery may instead leave the untouched PR
+  marker at transition N while the local lease and provider claim are transition
+  N+1. Admission requires the typed zero-effect local repair, reconstruction of
+  the marker-bound predecessor lease digest, and the content-digested completed
+  recovery journal whose terminal receipt names the same claim, local repair,
+  cloud recovery, task proof, target lease, and registry revision;
 - a separately fetched protected `main` head that is either the source base or
   a descendant whose intervening changed path scope is proven disjoint from the
   lane's admitted write set; the PR `baseRefOid` remains independently bound to
@@ -59,6 +65,8 @@ raw pull-request body. It binds stable repository identities, the body digest,
 the `v2` source evidence and protected-advance receipts (including source, PR,
 and current protected base), and a path-free writer-marker projection instead.
 Planning creates no journal, lock, claim, lease, or provider mutation.
+The controller reads the complete source evidence twice and requires an
+identical evidence digest before emitting a plan.
 
 ## Commands
 

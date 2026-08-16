@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3157,
-  "headDigest": "ce180da5b590db101a551489051546591d0ac11309b76fbaf99b13a7505172ef",
+  "sequence": 3158,
+  "headDigest": "9a7180259bf9bf2c743645936de1ede3e19246e9fbbf37eeee6b63c0b6254236",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -156351,6 +156351,50 @@
       },
       "claimDigest": "9ea3ab16f8cff9ba0edb90cfc40455fc69f2293b548b3f4a230e6aec054bdf1c",
       "digest": "ce180da5b590db101a551489051546591d0ac11309b76fbaf99b13a7505172ef"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3158,
+      "parentDigest": "ce180da5b590db101a551489051546591d0ac11309b76fbaf99b13a7505172ef",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d304f9775cf9ffaf5f70a82347262e21f20379ba45943d262d6ae1f6bdaa677e",
+      "idempotencyKey": "12aa93e4d47b3f0de06a9bd3e0eac6b1846323c545760c2c1231f5914c46dcf2",
+      "requestDigest": "9ad0b03df6d134ca4a7a6be887ad436c68a468aa0e0b8a965edc247742f219c2",
+      "evaluationTime": "2026-08-16T06:29:58.000Z",
+      "claimCore": {
+        "claimId": "d304f9775cf9ffaf5f70a82347262e21f20379ba45943d262d6ae1f6bdaa677e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:440b6ab7a9fe4f97fe993aee205b51a130449a522c8be958284d3368ab8bf825",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-successor-projection-response-loss.test.mjs",
+          "path:docs/REVIEWED-SUCCESSOR-PROJECTION-RESPONSE-LOSS.md",
+          "path:scripts/reviewed-successor-projection-response-loss-contract.mjs",
+          "path:scripts/reviewed-successor-projection-response-loss-controller.mjs",
+          "path:scripts/reviewed-successor-projection-response-loss-repository-adapter.mjs",
+          "path:scripts/reviewed-successor-projection-response-loss.mjs",
+          "semantic:handoff-successor-response-loss"
+        ],
+        "writeSetDigest": "bae633c6e62604c5ab7abfe0f84d5929395adcc4a643757274925a0ff3b2c0ae",
+        "laneRevision": "767396333a6ef84542ad2e04bfedafae90886b50",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T06:53:34.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_pnHe",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "4c26232dc7207d4bef6a7d31c19f260dad61473599596b56efd7b3d633e3cebd",
+      "digest": "9a7180259bf9bf2c743645936de1ede3e19246e9fbbf37eeee6b63c0b6254236"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3243,
-  "headDigest": "9d2d19aa6c38d6815ca409d2c4094b1600845a179ac2ea28fc6aac5011cf0774",
+  "sequence": 3244,
+  "headDigest": "ef3e463fcf76691c59fefc695df0ec5d251d64e85a1f5c39b4b3a4080943a732",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -160769,6 +160769,62 @@
       },
       "claimDigest": "541972517655b67973905b65396731f23278d6ffa5f2fde582052caa153d9873",
       "digest": "9d2d19aa6c38d6815ca409d2c4094b1600845a179ac2ea28fc6aac5011cf0774"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3244,
+      "parentDigest": "9d2d19aa6c38d6815ca409d2c4094b1600845a179ac2ea28fc6aac5011cf0774",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "789e96cba5542a1dc1bff9e9b913c0781c70339ccdefc6b78a73d351d2aae228",
+      "idempotencyKey": "1349c45441cb60feb5135027f1fb1b04c94dadfc6a6b22ff6f3749b091d1df4b",
+      "requestDigest": "8397ef55cfc68487892b3dd2c40c0df8af3f721be71ecfd80384762db2e4a057",
+      "evaluationTime": "2026-08-16T14:39:33.000Z",
+      "claimCore": {
+        "claimId": "789e96cba5542a1dc1bff9e9b913c0781c70339ccdefc6b78a73d351d2aae228",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ffc216b7d96b4f7ead26276c7b49b0870766fc7ba0c79fb0d23c27e1c10d71d8",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repository-teardown",
+          "path:__tests__/teardown-archive.test.mjs",
+          "path:__tests__/teardown-concurrency-trial.test.mjs",
+          "path:__tests__/teardown-inventory.test.mjs",
+          "path:__tests__/teardown-measure.test.mjs",
+          "path:__tests__/teardown-properties-01-10.test.mjs",
+          "path:__tests__/teardown-properties-11-20.test.mjs",
+          "path:__tests__/teardown-route-baseline.test.mjs",
+          "path:__tests__/teardown-state-path-check.test.mjs",
+          "path:__tests__/teardown-worker-contract.test.mjs",
+          "path:docs/repository-teardown",
+          "path:scripts/state-path-check.mjs",
+          "path:scripts/teardown-archive.mjs",
+          "path:scripts/teardown-concurrency-trial.mjs",
+          "path:scripts/teardown-inventory.mjs",
+          "path:scripts/teardown-measure.mjs",
+          "path:scripts/teardown-route-baseline.mjs",
+          "semantic:repository-teardown"
+        ],
+        "writeSetDigest": "81353acfb6b85b5e3e1dcac7b1022b884fe7df9faadae51f14af812ed94b4b53",
+        "laneRevision": "c266341508d0fe8528ad441aa501922d3bd15227",
+        "leaseEpoch": 3,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T15:39:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "5ebe99902186de964c2f95ade664a58bfda29b6b04b1157cd117cbe0c31f210c",
+        "eligibleSince": "2026-08-16T14:33:25.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-16T14:39:33.000Z"
+      },
+      "claimDigest": "04afeea8a769ce26d8d424e3d3937d1dfca7919befbd95c8198fe8efc498abae",
+      "digest": "ef3e463fcf76691c59fefc695df0ec5d251d64e85a1f5c39b4b3a4080943a732"
     }
   ]
 }

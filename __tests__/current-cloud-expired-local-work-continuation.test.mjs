@@ -66,8 +66,8 @@ test("evidence rejects controller, review, identity, task, authority, and work d
     ["actor", input => { input.cloudClaim.actorId = "provider-user:foreign"; }],
     ["repository", input => { input.cloudClaim.repositoryId = "repository:foreign"; }],
     ["work item", input => { input.cloudClaim.workItemId = "work-item:foreign"; }],
-    ["session", input => { input.cloudClaim.sessionId = "session:foreign"; }],
-    ["device", input => { input.cloudClaim.deviceId = "device:foreign"; }],
+    ["session", input => { input.claimOwner.sessionId = "session:foreign"; }],
+    ["device", input => { input.claimOwner.deviceId = "device:foreign"; }],
     ["task binding", input => { input.taskCapabilityDigest = D("foreign-task"); }],
     ["claim", input => { input.cloudClaim.claimId = D("foreign-claim"); }],
     ["claim transition", input => { input.cloudClaim.transitionCounter += 1; }],
@@ -90,6 +90,24 @@ test("evidence rejects controller, review, identity, task, authority, and work d
     assert.throws(() => buildCurrentCloudExpiredLocalWorkContinuationEvidence(input),
       undefined, name);
   }
+});
+
+test("evidence seals the normalized inventory projection and owner authority join", () => {
+  const input = evidenceInput("admitted-committed-descendant-dirty");
+  Object.assign(input.cloudClaim, {
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    operationReceiptDigest: D("operation"),
+    sessionId: input.claimOwner.sessionId,
+    deviceId: input.claimOwner.deviceId,
+  });
+  const evidence = buildCurrentCloudExpiredLocalWorkContinuationEvidence(input);
+  for (const field of ["entrySchema", "claimIdentitySchema", "operationReceiptDigest",
+    "sessionId", "deviceId"]) assert.equal(field in evidence.cloudClaim, false, field);
+  assert.equal(evidence.claimOwner.sessionId,
+    pseudonymousIdentifier("session", evidence.lease.cloudAuthority.sessionId));
+  assert.equal(evidence.claimOwner.deviceId,
+    pseudonymousIdentifier("device", evidence.lease.cloudAuthority.deviceId));
 });
 
 test("both modes accept every nonempty in-scope dirt classification", () => {
@@ -238,19 +256,20 @@ function evidenceInput(mode) {
       deviceId: "owner-device", actorId: "provider-user:owner",
       targetRepository: "example/repository" } };
   const claimOwner = { actorId: "actor:owner", repositoryId: "repository:owner",
-    workItemId: "work-item:owner", sessionId: "session:owner", deviceId: "device:owner" };
-  const claim = { entrySchema: "agentic-cloud-collaboration-entry/v2",
-    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
-    claimId: lease.cloudAuthority.claimId, fenceRevision: lease.cloudAuthority.claimDigest,
+    workItemId: "work-item:owner",
+    sessionId: pseudonymousIdentifier("session", lease.cloudAuthority.sessionId),
+    deviceId: pseudonymousIdentifier("device", lease.cloudAuthority.deviceId) };
+  const claim = { claimId: lease.cloudAuthority.claimId,
+    fenceRevision: lease.cloudAuthority.claimDigest,
     transitionDigest: D("transition"),
-    operationReceiptDigest: lease.cloudAuthority.operationReceiptDigest,
     state: "current", writeAuthority: true, scopeReserved: true,
     canonicalBaseRevision: lease.baseSha, laneRevision: lease.fenceSha,
     leaseEpoch: lease.cloudAuthority.leaseEpoch,
     transitionCounter: lease.cloudAuthority.transitionCounter, heartbeatCounter: 0,
     expiresAt: CLOUD_EXPIRY, declaredWriteScope: writeSet,
     writeSetDigest: lease.admission.writeSetDigest,
-    ...claimOwner };
+    actorId: claimOwner.actorId, repositoryId: claimOwner.repositoryId,
+    workItemId: claimOwner.workItemId, reviewRequestId: null };
   const planned = mode === "planned-fence-dirty";
   const dirtCore = { schema: "agentic-active-owned-dirt-evidence/v1", headSha,
     entries: [{ path: "runtime.mjs", staged: !planned, unstaged: !planned, untracked: planned,
@@ -319,9 +338,7 @@ function repositoryAdapterFixture({ controllerDriftAt = 0, remoteDriftAt = 0,
   const input = evidenceInput(mode);
   const { lease, cloudClaim: claim } = input;
   const providerOwner = { actorId: "github-user:42", repositoryId: "github-repository:repo-node",
-    workItemId: pseudonymousIdentifier("work-item", lease.scope),
-    sessionId: pseudonymousIdentifier("session", lease.sessionId),
-    deviceId: pseudonymousIdentifier("device", lease.device) };
+    workItemId: pseudonymousIdentifier("work-item", lease.scope) };
   Object.assign(claim, providerOwner);
   lease.worktreePath = repository;
   const branch = lease.branch;

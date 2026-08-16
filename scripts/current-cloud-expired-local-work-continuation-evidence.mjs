@@ -115,27 +115,33 @@ function normalizeLease(value) {
 }
 
 function normalizeCloudClaim(value) {
-  const source = structuredClone(record(value, "current cloud claim"));
-  if (source.entrySchema !== "agentic-cloud-collaboration-entry/v2"
-    || source.claimIdentitySchema !== "agentic-cloud-collaboration-entry/v2"
-    || source.state !== "current" || source.writeAuthority !== true
+  const source = record(value, "current cloud claim");
+  if (source.state !== "current" || source.writeAuthority !== true
     || source.scopeReserved !== true) invalid("current cloud authority");
-  digest(source.claimId, "cloud claim ID");
-  digest(source.fenceRevision, "cloud claim digest");
-  digest(source.transitionDigest, "cloud transition digest");
-  digest(source.operationReceiptDigest, "cloud operation receipt digest");
-  sha(source.canonicalBaseRevision, "cloud base SHA");
-  sha(source.laneRevision, "cloud lane SHA");
-  positiveInteger(source.leaseEpoch, "cloud lease epoch");
-  nonnegativeInteger(source.transitionCounter, "cloud transition counter");
-  nonnegativeInteger(source.heartbeatCounter ?? 0, "cloud heartbeat counter");
-  instant(source.expiresAt, "cloud expiry");
-  for (const key of ["actorId", "repositoryId", "workItemId", "sessionId", "deviceId"]) {
-    text(source[key], `cloud ${key}`);
-  }
-  source.declaredWriteScope = normalizeWriteSet(source.declaredWriteScope);
-  if (source.writeSetDigest !== digestValue(source.declaredWriteScope)) invalid("cloud write set");
-  return deepFreeze(source);
+  const declaredWriteScope = normalizeWriteSet(source.declaredWriteScope);
+  const core = {
+    claimId: digest(source.claimId, "cloud claim ID"),
+    state: source.state,
+    writeAuthority: true,
+    scopeReserved: true,
+    actorId: text(source.actorId, "cloud actorId"),
+    repositoryId: text(source.repositoryId, "cloud repositoryId"),
+    workItemId: text(source.workItemId, "cloud workItemId"),
+    canonicalBaseRevision: sha(source.canonicalBaseRevision, "cloud base SHA"),
+    laneRevision: sha(source.laneRevision, "cloud lane SHA"),
+    declaredWriteScope,
+    writeSetDigest: digest(source.writeSetDigest, "cloud write-set digest"),
+    leaseEpoch: positiveInteger(source.leaseEpoch, "cloud lease epoch"),
+    transitionCounter: nonnegativeInteger(source.transitionCounter, "cloud transition counter"),
+    heartbeatCounter: nonnegativeInteger(source.heartbeatCounter ?? 0, "cloud heartbeat counter"),
+    reviewRequestId: source.reviewRequestId === null ? null
+      : text(source.reviewRequestId, "cloud review request"),
+    expiresAt: instant(source.expiresAt, "cloud expiry"),
+    fenceRevision: digest(source.fenceRevision, "cloud claim digest"),
+    transitionDigest: digest(source.transitionDigest, "cloud transition digest"),
+  };
+  if (core.writeSetDigest !== digestValue(declaredWriteScope)) invalid("cloud write set");
+  return deepFreeze(core);
 }
 
 function normalizeCloudObservation(value) {
@@ -179,8 +185,8 @@ function assertJoinedSubject(subject) {
     || subject.repository !== authority.targetRepository
     || authority.sessionId !== lease.sessionId
     || authority.deviceId !== lease.device
-    || claim.sessionId !== claimOwner.sessionId
-    || claim.deviceId !== claimOwner.deviceId
+    || claimOwner.sessionId !== ownerIdentity("session", authority.sessionId)
+    || claimOwner.deviceId !== ownerIdentity("device", authority.deviceId)
     || claim.workItemId !== claimOwner.workItemId
     || claim.repositoryId !== claimOwner.repositoryId
     || claim.fenceRevision !== authority.claimDigest
@@ -218,6 +224,14 @@ function assertJoinedSubject(subject) {
       invalid("nonlinear admitted descendant");
     }
   }
+}
+
+function ownerIdentity(namespace, value) {
+  const owner = text(value, `lease cloud ${namespace}`);
+  const prefix = `${namespace}:`;
+  return owner.startsWith(prefix) && /^[0-9a-f]{64}$/u.test(owner.slice(prefix.length))
+    ? owner
+    : `${prefix}${digestValue({ namespace, value: owner })}`;
 }
 
 function normalizeController(value) {

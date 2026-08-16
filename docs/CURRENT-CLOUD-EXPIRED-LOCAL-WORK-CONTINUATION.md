@@ -52,11 +52,17 @@ may be observed through any conforming provider adapter, but it must remain
 current and unexpired throughout execution. Unrelated disjoint cloud activity
 may advance; target-claim drift, overlapping authority, identity changes,
 expiry, malformed inventory, or a later target transition blocks.
-The core contract accepts one normalized `claimOwner` containing actor,
-repository, work-item, session, and device identities and joins it exactly to
-the claim; swapping any one blocks. Provider-specific identity lookup and
-mapping occur only in the repository adapter. No provider vocabulary or raw
-identity lookup is required by the evidence or controller contract.
+The evidence seals only the normalized current-inventory claim projection. It
+does not copy entry-schema provenance, claim-identity schema, operation-receipt
+identity, session identity, or device identity from a provider's raw claim.
+Those transport fields cannot become a second authority surface.
+
+The core contract accepts one normalized `claimOwner`. Actor, repository, and
+work-item identities join that owner to the projected claim. Session and device
+identities instead join the owner to the lease's cloud-authority projection
+through the provider-neutral namespaced digest rule. Swapping either side
+blocks. Provider-specific identity lookup remains in the repository adapter;
+the evidence owns only deterministic identity normalization and comparison.
 
 Every authored path must be covered by the declared write set. Symlink changes,
 unmerged paths, mode or blob drift, out-of-scope work, dirty-state changes,

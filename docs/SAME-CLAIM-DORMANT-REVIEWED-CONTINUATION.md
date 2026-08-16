@@ -44,6 +44,13 @@ the provider-reviewed authority and lease status
 preimage. This split restores cloud liveness without granting authoring
 authority or weakening reviewed-state integration gates.
 
+If provider time classification has since exposed that same landed transition
+as `dormant-preserved`, response-loss adoption accepts only the identical claim,
+transition, fence, operation receipt, review request, head, write set, and
+non-authoring flags. It projects the recorded authority as `review_ready`; it
+does not invoke another cloud transition or widen the existing 8 MiB ledger
+read limit.
+
 The operation does not edit the pull-request body or state, source bytes, Git
 refs, merge state, integration state, or deployment state. The embedded local
 repair records zero external effects; its separately sealed cloud-recovery

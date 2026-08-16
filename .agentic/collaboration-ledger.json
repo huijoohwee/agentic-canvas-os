@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3098,
-  "headDigest": "11aa0831a8e36c133849b1daa76722d529df257633b202304e22c9308b7c8c5a",
+  "sequence": 3099,
+  "headDigest": "535f73ee3840ba70c5713feb1d5d35532f2feae85c6276f964d0d0e34d938515",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -153378,6 +153378,53 @@
       },
       "claimDigest": "705acf9cde4a75ff134d836b59ec5b334008932e0f10a053c5d4b84853a88dca",
       "digest": "11aa0831a8e36c133849b1daa76722d529df257633b202304e22c9308b7c8c5a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3099,
+      "parentDigest": "11aa0831a8e36c133849b1daa76722d529df257633b202304e22c9308b7c8c5a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "507463b049f8a2a05d315c8aa0f9d1e37ca4b77b394bd3acc11309c985a0b427",
+      "idempotencyKey": "9226635915e379fae5dc1a4cea679553ad6312db7620da53f73645369855bc2f",
+      "requestDigest": "870ebe590b0f4d03573ebf0234e842b0665c0b66cfa10575fee89f864542de6a",
+      "evaluationTime": "2026-08-16T01:45:45.000Z",
+      "claimCore": {
+        "claimId": "507463b049f8a2a05d315c8aa0f9d1e37ca4b77b394bd3acc11309c985a0b427",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:481e82fd6caae160014a0f6ed66c04ad2cafc5b496426332872b231170186153",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:6503d6bc9e04683be501886a75fdf04d38c6c372a7d717884349459d333d8dd7",
+        "canonicalBaseRevision": "e776a2044c7324cf7e6e0d9f3dd14d6dccd4019f",
+        "declaredWriteScope": [
+          "path:__tests__/coordination-scheduler.test.mjs",
+          "path:docs/COORDINATION-SCHEDULER.md",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/schemas/coordination-scheduler-report.v1.schema.json",
+          "path:package.json",
+          "path:scripts/coordination-scheduler-contract.mjs",
+          "path:scripts/coordination-scheduler.mjs",
+          "semantic:coordination-scheduler-runtime"
+        ],
+        "writeSetDigest": "2ba4f001f5ec98e09065800ac19d33f11eddff227e3cda6098177e41913af264",
+        "laneRevision": "e776a2044c7324cf7e6e0d9f3dd14d6dccd4019f",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T02:45:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "bcc2f582112a0044d68bd8bd710893d63a9339a769c1c30c60c3b83564bad490",
+      "digest": "535f73ee3840ba70c5713feb1d5d35532f2feae85c6276f964d0d0e34d938515"
     }
   ]
 }

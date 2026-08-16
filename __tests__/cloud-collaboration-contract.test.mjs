@@ -276,6 +276,25 @@ test("overlapping claims wait and only the deterministic successor can promote",
   }), "overlap_still_reserved");
 });
 
+test("an actor can retire its orphaned waiting successor without the expired device lease", () => {
+  const current = claim(createEmptyLedger("ledger:repository"), { workItemId: "work:current" });
+  const waiting = claim(current.ledger, {
+    workItemId: "work:waiting",
+    time: T1,
+    idempotencyKey: "claim:orphaned-waiting",
+  });
+  assert.equal(waiting.claim.state, "waiting-successor");
+  throwsCode(() => retire(waiting.ledger, waiting.claim, {
+    identity: actor("intruder", "device-recovered", "session-recovered"),
+    time: T2,
+  }), "claim_owner_mismatch");
+  const retired = retire(waiting.ledger, waiting.claim, {
+    identity: actor("owner", "device-recovered", "session-recovered"),
+    time: T2,
+  });
+  assert.equal(retired.claim.state, "retired");
+});
+
 test("a named predecessor must resolve to the exact preserved matching authority", () => {
   const initial = createEmptyLedger("ledger:repository");
   throwsCode(() => claim(initial, {

@@ -102,6 +102,8 @@
     "worktree:lifecycle:cleanup-empty": "node ./scripts/worktree-lifecycle.mjs cleanup-empty",
     "worktree:lifecycle:recoverable-cleanup": "node ./scripts/recoverable-lane-cleanup.mjs",
     "worktree:lifecycle:recoverable-cleanup:check": "node --test __tests__/recoverable-lane-cleanup-contract.test.mjs __tests__/recoverable-lane-cleanup-controller.test.mjs __tests__/recoverable-lane-cleanup-repository-adapter.test.mjs __tests__/recoverable-lane-cleanup-cli.test.mjs",
+    "recovery:artifact:retirement": "node ./scripts/recovery-artifact-retirement.mjs",
+    "recovery:artifact:retirement:check": "node --test __tests__/recovery-artifact-retirement-contract.test.mjs __tests__/recovery-artifact-retirement-controller.test.mjs __tests__/recovery-artifact-retirement-repository-adapter.test.mjs __tests__/recovery-artifact-retirement-cli.test.mjs",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",

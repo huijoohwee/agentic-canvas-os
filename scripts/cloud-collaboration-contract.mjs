@@ -140,8 +140,13 @@ function requireOwnedClaim(ledger, intent, evaluationTime) {
   if (!entry) fail("claim_not_found", `claim ${intent.claimId} does not exist`);
   const claim = hydrate(entry, evaluationTime);
   if (TERMINAL_STATES.has(claim.state)) fail("claim_not_active", `claim is ${claim.state}`);
-  const leaseIndependent = claim.state === "dormant-preserved"
-    && (intent.mode === "recovery" || intent.reason);
+  const leaseIndependent = (
+    claim.state === "dormant-preserved"
+    && (intent.mode === "recovery" || intent.reason)
+  ) || (
+    claim.state === "waiting-successor"
+    && Boolean(intent.reason)
+  );
   if (claim.actorId !== intent.actorId || (!leaseIndependent && (
     claim.deviceId !== intent.deviceId || claim.sessionId !== intent.sessionId
   ))) fail("claim_owner_mismatch", "authenticated claim authority does not match");

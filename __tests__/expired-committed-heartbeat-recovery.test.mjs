@@ -10,6 +10,10 @@ import {
 } from "../scripts/expired-committed-heartbeat-recovery-lib.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 import {
+  createTaskAuthorityBinding,
+  createTaskAuthorityCapability,
+} from "../scripts/task-bound-lane-authority-contract.mjs";
+import {
   parseWriterLeasePullRequestBody,
   projectExpiredCommittedHeartbeatLease,
   renderWriterLeasePullRequestBody,
@@ -28,6 +32,10 @@ const protectedMainSha = "1".repeat(40);
 const protectedMainTreeSha = "2".repeat(40);
 const sharedAncestorSha = "6".repeat(40);
 const sharedAncestorTreeSha = "5".repeat(40);
+const refreshedFenceParentSha = "f".repeat(40);
+const refreshedDeliveredHeadSha = "9".repeat(40);
+const refreshedMainParentSha = "4".repeat(40);
+const refreshedFenceTreeSha = "3".repeat(40);
 
 test("captures one exact clean committed descendant inside declared path scope", () => {
   const lease = expiredCloudLease();
@@ -83,6 +91,88 @@ test("captures mixed authored and protected-main-equivalent descendant paths", (
   assert.equal(snapshot.recoveryEvidence.protectedEquivalentPathCount, 1);
   assert.equal(snapshot.recoveryEvidence.protectedMainEquivalenceDigest,
     digestValue(snapshot.protectedMainEquivalence));
+});
+
+test("captures a descendant when the fence is an exact refresh parent plus empty resume-authoring child", () => {
+  const lease = expiredCloudLease();
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({
+      fenceParentSha: refreshedFenceParentSha,
+      remoteTreeSha: refreshedFenceTreeSha,
+      refreshFenceParentSha: refreshedFenceParentSha,
+      refreshDeliveredHeadSha: refreshedDeliveredHeadSha,
+      refreshMainParentSha: refreshedMainParentSha,
+      refreshFenceTreeSha: refreshedFenceTreeSha,
+      fenceSubject: "chore(reviewed-forward-child-recovery): resume authoring",
+    }),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.equal(snapshot.headSha, headSha);
+  assert.equal(snapshot.remoteHeadSha, fenceSha);
+  assert.equal(snapshot.sourceRemotePrefix.treeSha, refreshedFenceTreeSha);
+  assert.deepEqual(snapshot.changedPaths,
+    ["docs/runtime.md", "scripts/recovery/check.mjs"]);
+});
+
+test("captures a descendant when the fence is an authored child over an exact refresh parent", () => {
+  const lease = expiredCloudLease();
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({
+      fenceParentSha: refreshedFenceParentSha,
+      remoteTreeSha: refreshedFenceTreeSha,
+      refreshFenceParentSha: refreshedFenceParentSha,
+      refreshDeliveredHeadSha: refreshedDeliveredHeadSha,
+      refreshMainParentSha: refreshedMainParentSha,
+      refreshFenceTreeSha: "8".repeat(40),
+    }),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.equal(snapshot.headSha, headSha);
+  assert.equal(snapshot.remoteHeadSha, fenceSha);
+  assert.equal(snapshot.sourceRemotePrefix.treeSha, refreshedFenceTreeSha);
+  assert.deepEqual(snapshot.changedPaths,
+    ["docs/runtime.md", "scripts/recovery/check.mjs"]);
+});
+
+test("captures a descendant when the refresh target is the exact source base", () => {
+  const lease = expiredCloudLease();
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({
+      fenceParentSha: refreshedFenceParentSha,
+      remoteTreeSha: refreshedFenceTreeSha,
+      refreshFenceParentSha: refreshedFenceParentSha,
+      refreshDeliveredHeadSha: "8".repeat(40),
+      refreshMainParentSha: baseSha,
+      refreshFenceTreeSha: "7".repeat(40),
+    }),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.equal(snapshot.headSha, headSha);
+  assert.equal(snapshot.remoteHeadSha, fenceSha);
+  assert.equal(snapshot.sourceRemotePrefix.treeSha, refreshedFenceTreeSha);
+  assert.deepEqual(snapshot.changedPaths,
+    ["docs/runtime.md", "scripts/recovery/check.mjs"]);
 });
 
 test("captures the real XR-shaped shared-history prefix and current-main suffix", () => {
@@ -353,6 +443,18 @@ test("snapshot fails closed on marker, remote, dirt, ancestry, and path drift", 
   }), /single-parent fence/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
     ...base,
+    gitText: recoveryGitText({
+      fenceParentSha: refreshedFenceParentSha,
+      remoteTreeSha: refreshedFenceTreeSha,
+      refreshFenceParentSha: refreshedFenceParentSha,
+      refreshDeliveredHeadSha: refreshedDeliveredHeadSha,
+      refreshMainParentSha: refreshedMainParentSha,
+      refreshFenceTreeSha: refreshedFenceTreeSha,
+      fenceSubject: "chore(reviewed-forward-child-recovery): wrong subject",
+    }),
+  }), /single-parent fence/);
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    ...base,
     gitText: recoveryGitText({ paths: ["outside.txt"] }),
   }), /does not contain exactly one tracked blob/);
   assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
@@ -426,6 +528,29 @@ test("recovery projects a repeated response-loss transition chain", () => {
     source.cloudAuthority.transitionCounter + 3);
   assert.equal(harness.localWrites(), 1);
   assert.equal(harness.markerWrites(), 1);
+});
+
+test("recovery accepts a stale marker one task-authority continuation behind", () => {
+  const { currentLease, markerLease } =
+    leaseWithTaskAuthorityContinuation(liveManifestLease());
+  const harness = recoveryHarness({
+    source: currentLease,
+    renewedManifestDigest: currentLease.cloudAuthority.manifestDigest,
+  });
+  harness.input.ghText = () => pullRequestBodyJson(
+    harness.markerWrites() > 0
+      ? harness.remoteBody()
+      : renderWriterLeasePullRequestBody(markerLease),
+  );
+
+  const result = recoverExpiredCommittedHeartbeat(harness.input);
+
+  assert.equal(result.lease.taskAuthority.bindingDigest,
+    currentLease.taskAuthority.bindingDigest);
+  assert.equal(harness.localWrites(), 1);
+  assert.equal(harness.markerWrites(), 1);
+  assert.equal(parseWriterLeasePullRequestBody(harness.remoteBody())
+    .taskAuthority.bindingDigest, currentLease.taskAuthority.bindingDigest);
 });
 
 test("recovery rejects arbitrary renewed manifest drift before local CAS or marker mutation", () => {
@@ -810,6 +935,40 @@ function leaseWithHistory(lease, { sourceBaseSha, sourceFenceSha }) {
   };
 }
 
+function leaseWithTaskAuthorityContinuation(lease) {
+  const capability = createTaskAuthorityCapability({
+    authoritySubjectId: `urn:agentic-task:${"f".repeat(64)}`,
+    issuedAt: "2026-08-04T09:59:00.000Z",
+  });
+  const markerBinding = createTaskAuthorityBinding({
+    capability,
+    lease,
+    boundAt: "2026-08-04T10:00:00.000Z",
+  });
+  const markerLease = { ...lease, taskAuthority: markerBinding };
+  const continuedLease = {
+    ...markerLease,
+    cloudAuthority: {
+      ...markerLease.cloudAuthority,
+      ledgerRevision: "c".repeat(40),
+      ledgerDigest: "d".repeat(64),
+    },
+  };
+  return {
+    markerLease,
+    currentLease: {
+      ...continuedLease,
+      taskAuthority: createTaskAuthorityBinding({
+        capability,
+        lease: continuedLease,
+        bindingMode: "continuation",
+        boundAt: "2026-08-04T10:05:00.000Z",
+        priorBindingDigest: markerBinding.bindingDigest,
+      }),
+    },
+  };
+}
+
 function recoveryHarness({
   source,
   renewedManifestDigest,
@@ -1026,6 +1185,11 @@ function recoveryGitText({
   sharedAncestorMergeBases = [sharedAncestorRevision],
   remoteFenceAncestryError = false,
   remoteHeadAncestryError = false,
+  refreshFenceParentSha = null,
+  refreshDeliveredHeadSha = null,
+  refreshMainParentSha = null,
+  refreshFenceTreeSha = null,
+  fenceSubject = "",
   headEntries = {},
   protectedEntries = {},
 } = {}) {
@@ -1047,12 +1211,31 @@ function recoveryGitText({
     if (key === `rev-parse ${sharedAncestorRevision}^{tree}`) {
       return sharedAncestorTree;
     }
+    if (
+      refreshFenceParentSha &&
+      key === `rev-parse ${refreshFenceParentSha}^{tree}`
+    ) {
+      return refreshFenceTreeSha;
+    }
     if (key === `rev-list --parents -n 1 ${sourceFenceRevision}`) {
       return `${sourceFenceRevision} ${fenceParentSha}`;
+    }
+    if (
+      refreshFenceParentSha &&
+      key === `rev-list --parents -n 1 ${refreshFenceParentSha}`
+    ) {
+      return `${refreshFenceParentSha} ${refreshDeliveredHeadSha} ${refreshMainParentSha}`;
     }
     if (key ===
       `merge-base --is-ancestor ${sourceFenceRevision} ${headSha}`) {
       if (ancestryError) throw new Error("fatal: not an ancestor");
+      return "";
+    }
+    if (
+      refreshDeliveredHeadSha &&
+      key ===
+        `merge-base --is-ancestor ${sourceBaseRevision} ${refreshDeliveredHeadSha}`
+    ) {
       return "";
     }
     if (
@@ -1108,6 +1291,23 @@ function recoveryGitText({
     }
     if (key === `rev-parse ${protectedRevision}^{tree}`) {
       return protectedTree;
+    }
+    if (
+      refreshFenceParentSha &&
+      key ===
+        `merge-base --is-ancestor ${refreshMainParentSha} refs/remotes/origin/main`
+    ) {
+      return "";
+    }
+    if (
+      refreshFenceParentSha &&
+      key ===
+        `merge-tree --write-tree --no-messages ${refreshDeliveredHeadSha} ${refreshMainParentSha}`
+    ) {
+      return `${refreshFenceTreeSha}\n`;
+    }
+    if (fenceSubject && key === `show -s --format=%s ${sourceFenceRevision}`) {
+      return fenceSubject;
     }
     if (args[0] === "ls-tree" && args[1] === "-z") {
       const treeish = args[2];

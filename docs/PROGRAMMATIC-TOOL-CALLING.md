@@ -41,7 +41,7 @@ A normalized hosted turn contains a response id, completed status, actual cost l
 
 Stored continuation sends only new function outputs plus the previous response id. Stateless continuation retains the initial request and every returned program, opaque reasoning, function-call, function-output, and program-output item in order for the active run, then replays that sequence without a previous response id. Neither mode persists or returns generated source, reasoning items, fingerprints, or intermediate payloads after finalization.
 
-The completed result contains final output, aggregate cost, and compact evidence: model turns, tool count, tool names, hosted-program count, execution boundary, context-isolation attestation, and the fact that intermediate results were not returned. It contains no generated source or intermediate tool payloads.
+The completed result contains final output, aggregate cost, and compact evidence: model turns, tool count, tool names, hosted-program count, execution boundary, context-isolation attestation, fail-soft tool-settlement totals, and the fact that intermediate results were not returned. Each independently dispatched tool call settles into an input-ordered success or sanitized typed failure output, so one unavailable, invalid, oversized, or timed-out read cannot erase successful siblings. It contains no generated source or intermediate tool payloads.
 
 ## Predictable Stages
 
@@ -50,7 +50,7 @@ The completed result contains final output, aggregate cost, and compact evidence
 | Validate | Run, capabilities, tools, schemas, validators | Normalized immutable request or typed rejection | Missing hosted sandbox, continuation, lineage, adapter, or gateway blocks before spend. |
 | Advance | Initial request, stored response identity plus new outputs, or full stateless replay | Provider-normalized hosted turn | Provider error, incomplete response, missing cost, missing continuation capability, or missing attestation blocks. |
 | Authorize | Program lineage and requested tool identity | Eligible read-only idempotent call or direct-route requirement | Unknown, direct-only, mutating, approval-sensitive, or non-idempotent tools block. |
-| Execute tools | Schema-valid arguments through the injected gateway | Schema-valid bounded results | Tool failure, invalid output, abort, timeout, or result overflow blocks. |
+| Execute tools | Schema-valid arguments through the injected gateway | Input-ordered bounded results or sanitized typed failure outputs plus settlement totals | Invalid arguments or abort block; unavailable, invalid, oversized, or timed-out tool results settle fail-soft without erasing successful siblings. |
 | Continue | Stored response identity or ordered replay plus caller-preserving results | Next hosted turn | Repeated call id, missing fingerprint, turn limit, call limit, or program-size limit blocks. |
 | Finalize | Final message from a provider-attested turn | Output, evidence, and cost log | No source or intermediate result crosses the final result boundary. |
 
@@ -62,7 +62,7 @@ Parallel execution is allowed only inside the configured batch width and only fo
 
 ## Cost And Context Evidence
 
-Every hosted turn must report `model`, `prompt_tokens`, `completion_tokens`, `cache_hits`, and `estimated_cost_usd`. The controller aggregates returned values without converting missing evidence to zero. A blocked preflight uses the explicit `not-run` zero-cost state; a failed provider attempt without returned usage reports nullable `unreported` fields instead of a zero-spend claim.
+Every hosted turn must report `model`, `prompt_tokens`, `completion_tokens`, `cache_hits`, and `estimated_cost_usd`. The controller aggregates returned values without converting missing evidence to zero. A blocked preflight uses the explicit `not-run` zero-cost state; a failed provider attempt without any returned usage reports nullable `unreported` fields, while mixed reported and missing turns preserve known totals as `partial` with explicit reported and unreported turn counts.
 
 `providerContextIsolation` remains `unverified` in `/api/ready`. A successful injected run may report `provider-attested` only when every turn states that execution was hosted, isolation was fresh, intermediate results remained sandbox-only, and local code execution was false. Offline tests prove enforcement of this evidence contract; they do not prove any live provider environment.
 
@@ -73,7 +73,7 @@ Every hosted turn must report `model`, `prompt_tokens`, `completion_tokens`, `ca
 ## VCCs
 
 - Given two eligible read-only tools, when a provider-attested hosted program requests both, then the gateway validates and runs them within bounds, stored continuation preserves the prior response identity, stateless continuation replays every opaque item in order, and both preserve exact caller identity while returning only final output and compact evidence.
-- Given missing hosted execution evidence, continuation capability, fingerprint, lineage, a mutating or approval-sensitive tool, malformed arguments, invalid output, excess turns or calls, duplicate work, timeout, or oversized data, when the controller evaluates the run, then it returns a typed blocked result without local JavaScript execution.
+- Given an independently dispatched tool is unavailable, returns invalid or oversized output, or times out, when sibling calls settle, then successful values remain available and the failed call continues as a sanitized typed output with compact settlement evidence; malformed arguments, missing hosted execution evidence, continuation capability, fingerprint, lineage, a mutating or approval-sensitive tool, excess turns or calls, duplicate work, or run abort still returns a typed block without local JavaScript execution.
 - Given an unconfigured Worker, when `/api/ready` is read, then the contract is visible as ready while execution and provider context isolation remain explicitly unverified.
 - Given a task-shape packet, when route selection runs, then only predictable multi-call structured reductions select programmatic execution; all authorization, semantic, citation, native-artifact, or single-call cases stay direct.
 

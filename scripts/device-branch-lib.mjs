@@ -138,6 +138,12 @@ function reviewUnfenced({
         sessionId,
         branch,
       })
+      && !isExpiredAdmittedActiveReviewRecoveryLease({
+        error,
+        lease: recoverableLease,
+        sessionId,
+        branch,
+      })
       && !isExpiredCurrentCloudAdoptionLease({
         error,
         lease: recoverableLease,
@@ -293,6 +299,9 @@ function reviewUnfenced({
     ghText,
     ...(wait ? { wait } : {}),
   });
+  const reviewRequestId = typeof pullRequest?.id === "string" && pullRequest.id.length > 0
+    ? `github-pull-request:${pullRequest.id}`
+    : null;
   if (cloud && !cloudReady) {
     cloudReady = reviewReadyCloudAuthority({
       authority: lease.cloudAuthority,
@@ -300,6 +309,7 @@ function reviewUnfenced({
       branch,
       headSha: reviewHeadSha,
       pullRequestNumber: pullRequestNumber(url),
+      reviewRequestId,
       deviceId: lease.device,
       sessionId,
     });
@@ -322,13 +332,19 @@ function reviewUnfenced({
     lease = leaseStore.annotate({
       sessionId,
       branch,
+      allowExpired: hasExpired(lease.expiresAt),
       values: {
         reviewHeadSha,
         cloudAuthority: cloudReady.authority,
       },
     });
   } else {
-    lease = leaseStore.annotate({ sessionId, branch, values: { reviewHeadSha } });
+    lease = leaseStore.annotate({
+      sessionId,
+      branch,
+      allowExpired: hasExpired(lease.expiresAt),
+      values: { reviewHeadSha },
+    });
   }
   if (pullRequest.isDraft) run("gh", ["pr", "ready", url]);
   const readyPullRequest = requireOwnershipPullRequestDraft({ url, branch, ghText, expectedDraft: false });
@@ -1283,6 +1299,7 @@ function maybeRefreshLegacyRootSourceReviewAdmission({
   claimLegacyReviewCloudAuthority,
 }) {
   if (typeof claimLegacyReviewCloudAuthority !== "function") return null;
+  if (lease?.taskAuthority) return null;
   if (resolveOriginRepositoryName(gitOptional) !== "agentic-canvas-os") return null;
   if (lease?.admission?.status !== "admitted") return null;
   if (lease?.cloudAuthority?.state !== "active") return null;
@@ -1326,6 +1343,7 @@ function maybeRefreshLegacyRootSourceReviewAdmission({
   const annotated = leaseStore.annotate({
     sessionId,
     branch,
+    allowExpired: hasExpired(lease.expiresAt),
     values: {
       admission,
       cloudAuthority: refreshed.authority,
@@ -1556,6 +1574,7 @@ function acceptReviewCloudReconciliation({
     lease: leaseStore.annotate({
       sessionId,
       branch,
+      allowExpired: hasExpired(lease.expiresAt),
       values: { cloudAuthority: reconciled.authority },
     }),
     cloudReady: null,
@@ -1599,6 +1618,23 @@ function isExpiredPlannedReviewRecoveryLease({
     && lease.branch === branch
     && lease.admission?.status === "planned"
     && lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1";
+}
+
+function isExpiredAdmittedActiveReviewRecoveryLease({
+  error,
+  lease,
+  sessionId,
+  branch,
+}) {
+  return String(error?.message || "").startsWith("Writer lease expired at ")
+    && lease?.schema === "agentic-writer-lease/v2"
+    && lease.status === "active"
+    && lease.sessionId === sessionId
+    && lease.branch === branch
+    && lease.admission?.schema === "agentic-lane-admission-lease/v1"
+    && lease.admission?.status === "admitted"
+    && lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1"
+    && lease.cloudAuthority?.state === "active";
 }
 
 function isExpiredCurrentCloudAdoptionLease({

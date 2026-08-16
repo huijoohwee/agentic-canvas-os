@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3244,
-  "headDigest": "ef3e463fcf76691c59fefc695df0ec5d251d64e85a1f5c39b4b3a4080943a732",
+  "sequence": 3245,
+  "headDigest": "0eabafb5466680d65da6d6a1a18fb2655ef1d1d8c7d934d8349680943008a8a7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -160825,6 +160825,62 @@
       },
       "claimDigest": "04afeea8a769ce26d8d424e3d3937d1dfca7919befbd95c8198fe8efc498abae",
       "digest": "ef3e463fcf76691c59fefc695df0ec5d251d64e85a1f5c39b4b3a4080943a732"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3245,
+      "parentDigest": "ef3e463fcf76691c59fefc695df0ec5d251d64e85a1f5c39b4b3a4080943a732",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "789e96cba5542a1dc1bff9e9b913c0781c70339ccdefc6b78a73d351d2aae228",
+      "idempotencyKey": "1da045c362f31d20aefd9075783e437faeed5b27cda93fcc16d219516e6ee4de",
+      "requestDigest": "fc361052a35fbdb1dd014d16a87e2d4d8e309e25acfe7923f3a1575c6c656451",
+      "evaluationTime": "2026-08-16T14:42:18.000Z",
+      "claimCore": {
+        "claimId": "789e96cba5542a1dc1bff9e9b913c0781c70339ccdefc6b78a73d351d2aae228",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ffc216b7d96b4f7ead26276c7b49b0870766fc7ba0c79fb0d23c27e1c10d71d8",
+        "canonicalBaseRevision": "92a0104096959486177d9813734b2eeb843aae6d",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repository-teardown",
+          "path:__tests__/teardown-archive.test.mjs",
+          "path:__tests__/teardown-concurrency-trial.test.mjs",
+          "path:__tests__/teardown-inventory.test.mjs",
+          "path:__tests__/teardown-measure.test.mjs",
+          "path:__tests__/teardown-properties-01-10.test.mjs",
+          "path:__tests__/teardown-properties-11-20.test.mjs",
+          "path:__tests__/teardown-route-baseline.test.mjs",
+          "path:__tests__/teardown-state-path-check.test.mjs",
+          "path:__tests__/teardown-worker-contract.test.mjs",
+          "path:docs/repository-teardown",
+          "path:scripts/state-path-check.mjs",
+          "path:scripts/teardown-archive.mjs",
+          "path:scripts/teardown-concurrency-trial.mjs",
+          "path:scripts/teardown-inventory.mjs",
+          "path:scripts/teardown-measure.mjs",
+          "path:scripts/teardown-route-baseline.mjs",
+          "semantic:repository-teardown"
+        ],
+        "writeSetDigest": "81353acfb6b85b5e3e1dcac7b1022b884fe7df9faadae51f14af812ed94b4b53",
+        "laneRevision": "c266341508d0fe8528ad441aa501922d3bd15227",
+        "leaseEpoch": 3,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T15:39:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_oaYl",
+        "predecessorClaimId": "5ebe99902186de964c2f95ade664a58bfda29b6b04b1157cd117cbe0c31f210c",
+        "eligibleSince": "2026-08-16T14:33:25.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-16T14:39:33.000Z"
+      },
+      "claimDigest": "27e8d9003ec3afa9d8788b925d49608531e524e15bb3ec4fb34f38684ce332fb",
+      "digest": "0eabafb5466680d65da6d6a1a18fb2655ef1d1d8c7d934d8349680943008a8a7"
     }
   ]
 }

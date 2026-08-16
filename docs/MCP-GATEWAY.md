@@ -187,7 +187,7 @@ MoA capabilities are discoverable without model spend. Runtime execution can fan
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `knowgrph.moa.run` | Resolve local MoA preset, run bounded no-tool references, and return aggregator-owned response. | Discovery is zero-token; execution is approval-gated when paid calls are possible. |
+| `knowgrph.moa.run` | Resolve local MoA preset, settle bounded no-tool references fail-soft with typed branch audit and aggregate failure totals, and return the aggregator-owned response or typed fallback. | Discovery is zero-token; execution is approval-gated when paid calls are possible. |
 | `knowgrph.moa.presets` | List local neutral MoA preset metadata without provider secrets or copied external examples. | Read-only; provider ids and credentials are not exposed. |
 | `knowgrph.moa.cost` | Report reference token caps, aggregator tokens, cache hits, failures, and estimated cost. | Read-only cost view; no model calls. |
 

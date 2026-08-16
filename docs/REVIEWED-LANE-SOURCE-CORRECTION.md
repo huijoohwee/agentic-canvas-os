@@ -52,6 +52,13 @@ Planning is read-only and requires all of the following:
   the marker-bound predecessor lease digest, and the content-digested completed
   recovery journal whose terminal receipt names the same claim, local repair,
   cloud recovery, task proof, target lease, and registry revision;
+- if a later source-correction successor task-binding reconciliation has already
+  repaired that lane, the same-claim split proof is no longer reconstructed from
+  the current marker. Admission accepts only the exact joined successor state:
+  the PR marker and local lease name the same cloud claim, digest, transition,
+  operation receipt, and task-authority binding, while the typed reconciliation
+  receipt proves predecessor claim, successor claim, target binding, and zero
+  cloud, PR, source, Git, merge, integration, and deployment effects;
 - a separately fetched protected `main` head that is either the source base or
   a descendant whose intervening changed path scope is proven disjoint from the
   lane's admitted write set; the PR `baseRefOid` remains independently bound to

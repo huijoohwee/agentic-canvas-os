@@ -123,3 +123,50 @@ test("same-claim split requires the exact completed zero-effect journal", () => 
   assert.throws(() => buildSameClaimRecoverySplitEvidence(tampered),
     /same-claim recovery proof/);
 });
+
+test("same-claim split is skipped after exact source-correction successor binding join", () => {
+  const fixture = completedRecoveryFixture();
+  const successorAuthority = {
+    claimId: hex("9"),
+    claimDigest: hex("a"),
+    transitionCounter: 6,
+    operationReceiptDigest: hex("b"),
+  };
+  const taskAuthority = { bindingDigest: hex("c") };
+  const successorCore = {
+    schema: "agentic-source-correction-successor-task-binding-reconciliation-local-repair/v1",
+    status: "reconciled",
+    planDigest: hex("d"),
+    branch: fixture.lease.branch,
+    predecessorClaimId: fixture.lease.cloudAuthority.claimId,
+    successorClaimId: successorAuthority.claimId,
+    sourceBindingDigest: hex("e"),
+    targetBindingDigest: taskAuthority.bindingDigest,
+    sourceLeaseDigest: writerLeaseDigest(fixture.lease),
+    taskAuthorityReceiptDigest: hex("f"),
+    reconciledAt: "2026-08-16T15:22:06.835Z",
+    cloudEffect: false,
+    pullRequestEffect: false,
+    sourceEffect: false,
+    gitEffect: false,
+    mergeEffect: false,
+    integrationEffect: false,
+    deploymentEffect: false,
+    authoringAuthorityGranted: false,
+  };
+  const successor = { ...successorCore, receiptDigest: digestValue(successorCore) };
+  const lease = {
+    ...fixture.lease,
+    cloudAuthority: successorAuthority,
+    taskAuthority,
+    sourceCorrectionSuccessorTaskBindingReconciliation: successor,
+  };
+  const marker = { ...fixture.marker, cloudAuthority: successorAuthority, taskAuthority };
+
+  assert.equal(buildSameClaimRecoverySplitEvidence({ lease, marker, journal: fixture.journal }), null);
+
+  const tampered = structuredClone({ lease, marker, journal: fixture.journal });
+  tampered.marker.taskAuthority.bindingDigest = hex("0");
+  assert.throws(() => buildSameClaimRecoverySplitEvidence(tampered),
+    /same-claim recovery proof/);
+});

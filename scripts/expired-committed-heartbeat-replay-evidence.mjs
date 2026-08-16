@@ -56,22 +56,25 @@ function ownerMatches(recorded, namespace, source) {
   return recorded === source || recorded === pseudonymousIdentifier(namespace, source);
 }
 
-function readGitHubLedger({ repository, environment }) {
-  const reference = JSON.parse(execFileSync("gh", [
+export function readGitHubLedger({ repository, environment, execFile = execFileSync }) {
+  const reference = JSON.parse(execFile("gh", [
     "api", `repos/${repository}/git/ref/heads/${encodeURIComponent(DEFAULT_LEDGER_REF)}`,
   ], { encoding: "utf8", env: environment, maxBuffer: MAX_GITHUB_RESPONSE_BYTES }));
   const revision = requiredSha(reference.object?.sha, "replay ledger revision");
-  const metadata = JSON.parse(execFileSync("gh", [
-    "api",
-    `repos/${repository}/contents/${DEFAULT_LEDGER_PATH}?ref=${revision}`,
+  const commit = JSON.parse(execFile("gh", [
+    "api", `repos/${repository}/git/commits/${revision}`,
   ], { encoding: "utf8", env: environment, maxBuffer: MAX_GITHUB_RESPONSE_BYTES }));
-  let content = metadata.content;
-  if (!content) {
-    const blob = JSON.parse(execFileSync("gh", [
-      "api", `repos/${repository}/git/blobs/${requiredSha(metadata.sha, "replay ledger blob SHA")}`,
-    ], { encoding: "utf8", env: environment, maxBuffer: MAX_GITHUB_RESPONSE_BYTES }));
-    content = blob.content;
-  }
+  const blobSha = resolveLedgerBlobSha({
+    repository,
+    treeSha: requiredSha(commit.tree?.sha, "replay ledger tree SHA"),
+    execFile,
+    environment,
+  });
+  const blob = JSON.parse(execFile("gh", [
+    "api", `repos/${repository}/git/blobs/${blobSha}`,
+  ], { encoding: "utf8", env: environment, maxBuffer: MAX_GITHUB_RESPONSE_BYTES }));
+  const content = blob.content;
+  if (blob.encoding !== "base64") throw new Error("Dormant recovery replay ledger blob must use base64 encoding.");
   if (!content) throw new Error("Dormant recovery replay ledger content is unavailable.");
   const bytes = Buffer.from(String(content).replaceAll("\n", ""), "base64");
   if (bytes.length < 1 || bytes.length > MAX_LEDGER_BYTES) {
@@ -81,6 +84,26 @@ function readGitHubLedger({ repository, environment }) {
     ledger: JSON.parse(bytes.toString("utf8")),
     revision,
   };
+}
+
+function resolveLedgerBlobSha({ repository, treeSha, execFile, environment }) {
+  const segments = DEFAULT_LEDGER_PATH.split("/").filter(Boolean);
+  let currentTreeSha = treeSha;
+  for (const [index, segment] of segments.entries()) {
+    const tree = JSON.parse(execFile("gh", [
+      "api", `repos/${repository}/git/trees/${currentTreeSha}`,
+    ], { encoding: "utf8", env: environment, maxBuffer: MAX_GITHUB_RESPONSE_BYTES }));
+    const entry = (Array.isArray(tree.tree) ? tree.tree : []).find(candidate => candidate.path === segment);
+    if (!entry?.sha) throw new Error("Dormant recovery replay ledger path was not present in the Git tree.");
+    const leaf = index === segments.length - 1;
+    if (leaf) {
+      if (entry.type !== "blob") throw new Error("Dormant recovery replay ledger path must resolve to a blob.");
+      return requiredSha(entry.sha, "replay ledger blob SHA");
+    }
+    if (entry.type !== "tree") throw new Error("Dormant recovery replay ledger path must resolve through Git trees.");
+    currentTreeSha = requiredSha(entry.sha, "replay ledger subtree SHA");
+  }
+  throw new Error("Dormant recovery replay ledger path is invalid.");
 }
 
 function requiredRepository(value) {

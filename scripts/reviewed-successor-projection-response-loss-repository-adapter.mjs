@@ -11,6 +11,8 @@ import { continueTaskAuthorityCloudSuccessorBinding }
   from "./task-bound-lane-authority-store.mjs";
 import { assertTaskAuthorityBinding }
   from "./task-bound-lane-authority-contract.mjs";
+import { reviewedSuccessorProjectionResponseLossReplayDigest }
+  from "./reviewed-successor-projection-response-loss-contract.mjs";
 import {
   createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
@@ -227,7 +229,7 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
 
   function project({ plan, taskAuthorityFile }) {
     const frame = inspectFrame();
-    if (frame.evidence.evidenceDigest !== plan.evidence.evidenceDigest) {
+    if (!reviewedSuccessorEvidenceMatchesPlan(frame.evidence, plan.evidence)) {
       throw new Error("Reviewed-successor response-loss evidence changed before projection.");
     }
     if (frame.mode === "partial-local-successor") {
@@ -433,6 +435,11 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
 
 export function reviewedSuccessorMarkerHeadSha(marker) {
   return marker?.status === "review_ready" ? marker?.reviewHeadSha : marker?.fenceSha;
+}
+
+export function reviewedSuccessorEvidenceMatchesPlan(liveEvidence, plannedEvidence) {
+  return reviewedSuccessorProjectionResponseLossReplayDigest(liveEvidence)
+    === reviewedSuccessorProjectionResponseLossReplayDigest(plannedEvidence);
 }
 
 function exactSuccessor({ claim, lane, actorId }) {

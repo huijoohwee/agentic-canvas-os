@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
@@ -13,6 +15,14 @@ import {
   parseWriterLeasePullRequestBody,
   renderWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
+import {
+  advanceReviewedLaneSourceCorrectionIntent,
+  buildReviewedLaneSourceCorrectionPlan,
+  createReviewedLaneSourceCorrectionIntent,
+} from "../scripts/reviewed-lane-source-correction-contract.mjs";
+import {
+  buildReviewedLaneSourceCorrectionEvidence,
+} from "../scripts/reviewed-lane-source-correction-evidence.mjs";
 
 const repo = process.cwd();
 const branch = "agent/device/expired-heartbeat";
@@ -339,6 +349,115 @@ test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
       headRefOid: driftedRemoteHeadSha,
     }),
   }), /exact open draft ownership pull request/);
+});
+
+test("v3 accepts only a completed source-correction fence lineage", () => {
+  const priorFenceSha = "8".repeat(40);
+  const source = expiredCloudLease();
+  const renewedAuthority = renewedAuthorityFor(source);
+  let saved = source;
+  let remoteBody = renderWriterLeasePullRequestBody(source);
+  let markerWrites = 0;
+  const gitCommonDir = mkdtempSync(path.join(
+    tmpdir(),
+    "acos-source-correction-lineage-",
+  ));
+  writeSourceCorrectionJournal({
+    gitCommonDir,
+    source,
+    priorFenceSha,
+  });
+
+  const result = recoverExpiredCommittedHeartbeat({
+    invocationPath: repo,
+    repo,
+    gitText: recoveryGitText({
+      gitCommonDir,
+      fenceParentSha: priorFenceSha,
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      sourceRemotePaths: ["scripts/recovery/check.mjs"],
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(remoteBody, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+    leaseStore: {
+      read: () => saved,
+      recoverExpiredCommittedHeartbeat: input => {
+        saved = recoveredLease({
+          source,
+          renewedAuthority,
+          evidence: input.recoveryEvidence,
+          recoveredAt: input.recoveredAt,
+        });
+        return saved;
+      },
+    },
+    sessionId: source.sessionId,
+    leaseTtlMs: 1_800_000,
+    heartbeatCloudAuthority: () => ({
+      authority: renewedAuthority,
+      verification: { status: "ready" },
+    }),
+    verifyActiveCloudAuthority: () => ({
+      authority: saved.cloudAuthority,
+      verification: { status: "ready" },
+    }),
+    assertMutationAuthority: () => ({ status: "ready" }),
+    run: (command, args) => {
+      if (command === "git") return;
+      markerWrites += 1;
+      remoteBody = args[args.indexOf("--body") + 1];
+    },
+    log: () => {},
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.equal(result.status, "recovered");
+  assert.equal(result.recovery.sourceRemoteHeadSha, pushedRemoteHeadSha);
+  assert.equal(markerWrites, 1);
+
+  const mismatchedGitCommonDir = mkdtempSync(path.join(
+    tmpdir(),
+    "acos-source-correction-lineage-mismatch-",
+  ));
+  writeSourceCorrectionJournal({
+    gitCommonDir: mismatchedGitCommonDir,
+    source: {
+      ...source,
+      cloudAuthority: {
+        ...source.cloudAuthority,
+        claimId: "0".repeat(64),
+      },
+    },
+    priorFenceSha,
+  });
+  assert.throws(() => recoverExpiredCommittedHeartbeat({
+    invocationPath: repo,
+    repo,
+    gitText: recoveryGitText({
+      gitCommonDir: mismatchedGitCommonDir,
+      fenceParentSha: priorFenceSha,
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      sourceRemotePaths: ["scripts/recovery/check.mjs"],
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(renderWriterLeasePullRequestBody(source), {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+    leaseStore: { read: () => source },
+    sessionId: source.sessionId,
+    leaseTtlMs: 1_800_000,
+    heartbeatCloudAuthority: () => {
+      throw new Error("mismatched source-correction receipt must not CAS cloud");
+    },
+    assertMutationAuthority: () => ({ status: "ready" }),
+    run: () => {},
+    log: () => {},
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  }), /exact single-parent fence/);
 });
 
 test("cloud or post-cloud snapshot failure cannot mutate the local lease or marker", () => {
@@ -823,6 +942,8 @@ function renewedAuthorityFor(source) {
 
 function recoveryGitText({
   paths = ["docs/runtime.md", "scripts/recovery/check.mjs"],
+  fenceParentSha = baseSha,
+  gitCommonDir = repo,
   sourceRemoteHeadSha = fenceSha,
   remoteTreeSha = sourceRemoteTreeSha,
   sourceRemotePaths = [],
@@ -837,12 +958,13 @@ function recoveryGitText({
       "status --porcelain=v1 -z --untracked-files=all": "",
       "branch --show-current": branch,
       "rev-parse HEAD": headSha,
+      "rev-parse --git-common-dir": gitCommonDir,
       [`rev-parse ${headSha}^{tree}`]: treeSha,
       [`rev-parse ${sourceRemoteHeadSha}^{tree}`]: remoteTreeSha,
       [`rev-parse ${sharedAncestorSha}^{tree}`]: sharedAncestorTreeSha,
       "rev-parse refs/remotes/origin/main": protectedMainSha,
       [`rev-parse ${protectedMainSha}^{tree}`]: protectedMainTreeSha,
-      [`rev-list --parents -n 1 ${fenceSha}`]: `${fenceSha} ${baseSha}`,
+      [`rev-list --parents -n 1 ${fenceSha}`]: `${fenceSha} ${fenceParentSha}`,
       [`merge-base --is-ancestor ${fenceSha} ${headSha}`]: "",
       [`merge-base --is-ancestor ${baseSha} ${protectedMainSha}`]: "",
       [`merge-base --all ${sourceRemoteHeadSha} ${protectedMainSha}`]:
@@ -872,6 +994,138 @@ function recoveryGitText({
     if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
     return values[key];
   };
+}
+
+function writeSourceCorrectionJournal({ gitCommonDir, source, priorFenceSha }) {
+  const directory = path.join(
+    gitCommonDir,
+    "agentic-canvas-os",
+    "reviewed-lane-source-correction",
+  );
+  mkdirSync(directory, { recursive: true });
+  const sourceEvidence = sourceCorrectionEvidence({ source, priorFenceSha });
+  const plan = buildReviewedLaneSourceCorrectionPlan({
+    source: sourceEvidence,
+    operatorSessionId: "operator-session",
+  });
+  let current = createReviewedLaneSourceCorrectionIntent(
+    plan,
+    plan.exactAuthorization,
+  );
+  for (const status of [
+    "successor_waiting",
+    "source_retired",
+    "successor_current",
+    "lease_activated",
+    "pr_drafted",
+    "verified",
+  ]) {
+    current = advanceReviewedLaneSourceCorrectionIntent(current, {
+      status,
+      values: { status },
+    });
+  }
+  current = advanceReviewedLaneSourceCorrectionIntent(current, {
+    status: "complete",
+    values: {
+      receipt: {
+        successorClaimId: source.cloudAuthority.claimId,
+        successorClaimDigest: "a".repeat(64),
+        leaseDigest: "b".repeat(64),
+        pullRequestDigest: "c".repeat(64),
+        verificationDigest: "d".repeat(64),
+      },
+    },
+  });
+  writeFileSync(
+    path.join(directory, `${current.intentDigest}.json`),
+    JSON.stringify(current, null, 2),
+  );
+}
+
+function sourceCorrectionEvidence({ source, priorFenceSha }) {
+  const sourceLease = {
+    ...source,
+    status: "review_ready",
+    fenceSha: priorFenceSha,
+    reviewHeadSha: source.fenceSha,
+  };
+  const authority = {
+    ...source.cloudAuthority,
+    operationReceiptDigest: "e".repeat(64),
+    laneRevision: source.fenceSha,
+    state: "review_ready",
+    reviewRequestId: "github-pull-request:PR_kwDOTest81",
+    focusedEvidenceDigest: "f".repeat(64),
+  };
+  const pullRequest = {
+    number: 81,
+    nodeId: "PR_kwDOTest81",
+    url: source.pullRequestUrl,
+    state: "OPEN",
+    isDraft: false,
+    headBranch: source.branch,
+    headSha: source.fenceSha,
+    baseBranch: "main",
+    baseSha: protectedMainSha,
+    headRepository: "org/repo",
+    baseRepository: "org/repo",
+    authorLogin: "device-user",
+    body: renderWriterLeasePullRequestBody({
+      ...sourceLease,
+      cloudAuthority: authority,
+    }),
+    autoMergeRequest: null,
+    mergeQueueEntry: null,
+  };
+  const protectedAdvance = {
+    schema: "agentic-reviewed-lane-protected-advance/v2",
+    sourceBaseSha: source.baseSha,
+    pullRequestBaseSha: protectedMainSha,
+    currentBaseSha: source.baseSha,
+    changedWriteScope: [],
+    changedWriteScopeDigest: digestValue([]),
+    disposition: "unchanged",
+  };
+  return buildReviewedLaneSourceCorrectionEvidence({
+    repository: { fullName: "org/repo", nodeId: "R_test" },
+    actor: { id: "123", login: "device-user" },
+    localHeadSha: source.fenceSha,
+    remoteHeadSha: source.fenceSha,
+    clean: true,
+    lease: sourceLease,
+    authority,
+    claim: {
+      claimId: authority.claimId,
+      state: "reviewed",
+      recordedState: "reviewed",
+      writeAuthority: false,
+      scopeReserved: true,
+      actorId: "github-user:123",
+      repositoryId: "github-repository:R_test",
+      workItemId: "github-pull-request:PR_kwDOTest81",
+      canonicalBaseRevision: source.baseSha,
+      laneRevision: source.fenceSha,
+      declaredWriteScope: source.admission.declaredWriteSet,
+      writeSetDigest: source.admission.writeSetDigest,
+      leaseEpoch: authority.leaseEpoch,
+      transitionCounter: authority.transitionCounter,
+      reviewRequestId: "github-pull-request:PR_kwDOTest81",
+      fenceRevision: authority.claimDigest,
+      transitionDigest: authority.claimLedgerRevision,
+      operationReceiptDigest: authority.operationReceiptDigest,
+      integrationReceiptDigest: null,
+      integration: null,
+      recovery: null,
+      deviceId: "device:28d199ac79168e492c4fe9e97101b214905f0cab712f574913c37beac373c43f",
+      sessionId: "session:769de96255c8bf13e8338edf82dcde7e7456cab405c5f9ee91ead15baff336e8",
+    },
+    pullRequest,
+    protectedAdvance: {
+      ...protectedAdvance,
+      receiptDigest: digestValue(protectedAdvance),
+    },
+  });
 }
 
 function pullRequestJson(body, { headRefOid = fenceSha } = {}) {

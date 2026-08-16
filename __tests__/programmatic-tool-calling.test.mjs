@@ -107,6 +107,17 @@ test("orchestrates hosted programs and returns only final output plus compact ev
   assert.deepEqual(toolCalls[0].caller, { type: "program", callerId: "program-1", resumeToken: "opaque-caller-state" });
   assert.equal(toolCalls.every((call) => !("code" in call)), true);
   assert.equal(JSON.stringify(result).includes("opaque generated source"), false);
+  assert.deepEqual(
+    {
+      toolCalls: runtime.stats().toolCalls,
+      succeeded: runtime.stats().toolCallsSucceeded,
+      failed: runtime.stats().toolCallsFailed,
+      batches: runtime.stats().toolBatches,
+      partialBatches: runtime.stats().partialToolBatches,
+      exhaustedBatches: runtime.stats().exhaustedToolBatches,
+    },
+    { toolCalls: 2, succeeded: 2, failed: 0, batches: 1, partialBatches: 0, exhaustedBatches: 0 },
+  );
 });
 
 test("replays every opaque response item and caller-linked output for stateless continuation", async () => {
@@ -280,15 +291,38 @@ test("enforces program, tool-call, and result bounds", async () => {
   });
   assert.equal((await tooManyCalls.run(request())).reasonCode, "tool_call_limit");
 
-  const oversizedResult = createProgrammaticToolCallingRuntime({
-    maxToolResultChars: 5,
-    advanceHostedProgram: async () => response("response-1", [
+  const oversizedAdapterCalls = [];
+  const oversizedResponses = [
+    response("response-1", [
       { type: "program", callId: "program-1", code: "opaque", fingerprint: "opaque-fingerprint-1" },
       { type: "function_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-1" } },
     ]),
+    response("response-2", [{ type: "message", output: { available: false } }]),
+  ];
+  const oversizedResult = createProgrammaticToolCallingRuntime({
+    maxToolResultChars: 5,
+    advanceHostedProgram: async (call) => {
+      oversizedAdapterCalls.push(call);
+      return oversizedResponses.shift();
+    },
     callTool: async () => ({ value: "too-large" }),
   });
-  assert.equal((await oversizedResult.run(request())).reasonCode, "tool_result_limit");
+  const oversized = await oversizedResult.run(request());
+  assert.equal(oversized.status, "completed");
+  assert.deepEqual(oversizedAdapterCalls[1].input[0].output, {
+    schema: "programmatic-tool-call-failure/v1",
+    status: "failed",
+    reasonCode: "tool_result_limit",
+    retryable: false,
+  });
+  assert.deepEqual(
+    {
+      attempted: oversized.evidence.toolSettlement.attempted,
+      failed: oversized.evidence.toolSettlement.failed,
+      exhaustedBatches: oversized.evidence.toolSettlement.exhaustedBatches,
+    },
+    { attempted: 1, failed: 1, exhaustedBatches: 1 },
+  );
 });
 
 test("validates tool arguments and outputs at the application gateway", async () => {
@@ -305,18 +339,31 @@ test("validates tool arguments and outputs at the application gateway", async ()
 
   assert.equal(result.reasonCode, "tool_arguments_invalid");
 
-  const invalidOutput = createProgrammaticToolCallingRuntime({
-    advanceHostedProgram: async () => response("response-output", [
+  const invalidOutputAdapterCalls = [];
+  const invalidOutputResponses = [
+    response("response-output", [
       { type: "program", callId: "program-output", code: "opaque", fingerprint: "opaque-fingerprint-output" },
       { type: "function_call", callId: "call-output", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-output" } },
     ]),
+    response("response-output-final", [{ type: "message", output: { available: false } }]),
+  ];
+  const invalidOutput = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async (call) => {
+      invalidOutputAdapterCalls.push(call);
+      return invalidOutputResponses.shift();
+    },
     callTool: async () => ({ unexpected: true }),
   });
   const outputResult = await invalidOutput.run(request({
     runId: "run-output",
     tools: [tool("read_alpha", { validateOutput: () => false })],
   }));
-  assert.equal(outputResult.reasonCode, "tool_output_invalid");
+  assert.equal(outputResult.status, "completed");
+  assert.equal(invalidOutputAdapterCalls[1].input[0].output.reasonCode, "tool_output_invalid");
+  assert.equal(outputResult.evidence.toolSettlement.failed, 1);
+  assert.equal(outputResult.evidence.toolSettlement.exhaustedBatches, 1);
+  assert.equal(invalidOutput.stats().toolCallsFailed, 1);
+  assert.equal(invalidOutput.stats().exhaustedToolBatches, 1);
 
   await assert.rejects(
     () => runtime.run(request({
@@ -325,6 +372,49 @@ test("validates tool arguments and outputs at the application gateway", async ()
     })),
     /outputSchema/,
   );
+});
+
+test("continues a mixed tool batch with successful values and typed failure evidence", async () => {
+  const adapterCalls = [];
+  const responses = [
+    response("response-mixed", [
+      { type: "program", callId: "program-mixed", code: "opaque", fingerprint: "opaque-fingerprint-mixed" },
+      { type: "function_call", callId: "call-a", name: "read_alpha", arguments: {}, caller: { type: "program", callerId: "program-mixed" } },
+      { type: "function_call", callId: "call-b", name: "read_beta", arguments: {}, caller: { type: "program", callerId: "program-mixed" } },
+    ]),
+    response("response-mixed-final", [{ type: "message", output: { available: 1 } }]),
+  ];
+  const runtime = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async (call) => {
+      adapterCalls.push(call);
+      return responses.shift();
+    },
+    callTool: async ({ name }) => {
+      if (name === "read_beta") throw new Error("private adapter failure");
+      return { value: 1 };
+    },
+  });
+
+  const result = await runtime.run(request({ runId: "run-mixed" }));
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(adapterCalls[1].input[0].output, { value: 1 });
+  assert.deepEqual(adapterCalls[1].input[1].output, {
+    schema: "programmatic-tool-call-failure/v1",
+    status: "failed",
+    reasonCode: "tool_failed",
+    retryable: false,
+  });
+  assert.deepEqual(
+    {
+      attempted: result.evidence.toolSettlement.attempted,
+      succeeded: result.evidence.toolSettlement.succeeded,
+      failed: result.evidence.toolSettlement.failed,
+      partialBatches: result.evidence.toolSettlement.partialBatches,
+    },
+    { attempted: 2, succeeded: 1, failed: 1, partialBatches: 1 },
+  );
+  assert.equal(runtime.stats().partialToolBatches, 1);
 });
 
 test("serializes duplicate run ids while allowing a later completion", async () => {
@@ -369,4 +459,41 @@ test("uses a bounded timeout and reports actual cost before later failure", asyn
   assert.equal(limited.reasonCode, "model_turn_limit");
   assert.equal(limited.costLog.prompt_tokens, 11);
   assert.equal(limited.costLog.estimated_cost_usd, 0.01);
+});
+
+test("preserves reported cost when a later provider attempt has no usage", async () => {
+  let attempts = 0;
+  const runtime = createProgrammaticToolCallingRuntime({
+    advanceHostedProgram: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return response("response-costed", [], {
+          costLog: {
+            ...COST,
+            model: "provider-model",
+            prompt_tokens: 11,
+            completion_tokens: 2,
+            cache_hits: 1,
+            estimated_cost_usd: 0.01,
+          },
+        });
+      }
+      throw new Error("provider unavailable");
+    },
+    callTool: async () => ({}),
+  });
+
+  const result = await runtime.run(request({ runId: "run-partial-cost" }));
+
+  assert.equal(result.reasonCode, "provider_failed");
+  assert.deepEqual(result.costLog, {
+    model: "provider-model",
+    prompt_tokens: 11,
+    completion_tokens: 2,
+    cache_hits: 1,
+    estimated_cost_usd: 0.01,
+    status: "partial",
+    reportedTurns: 1,
+    unreportedTurns: 1,
+  });
 });

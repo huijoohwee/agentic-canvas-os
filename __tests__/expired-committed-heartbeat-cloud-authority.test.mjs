@@ -12,7 +12,7 @@ import {
   expiredCommittedCloudRecoveryEvidenceDigest,
   preserveSourceManifestProjection,
 } from "../scripts/expired-committed-heartbeat-cloud-authority.mjs";
-import { resolveExpiredCommittedRecoveryReplayEvidence } from
+import { resolveExpiredCommittedRecoveryReplayEvidenceChain } from
   "../scripts/expired-committed-heartbeat-replay-evidence.mjs";
 
 const digest = character => character.repeat(64);
@@ -81,7 +81,7 @@ test("an exact dormant claim uses authenticated recovery and seals its operation
   assert.equal(result.authority.heartbeatCounter, 9);
 });
 
-test("a lost dormant-recovery response replays the exact recovery key without renewal", () => {
+test("a lost dormant-recovery response replays the exact key before fresh renewal", () => {
   const source = authority();
   const advanced = { ...recoveryClaim(source), state: "dormant-preserved",
     writeAuthority: false };
@@ -90,25 +90,34 @@ test("a lost dormant-recovery response replays the exact recovery key without re
   const result = continueExpiredCommittedHeartbeatCloudAuthority({
     ...common(source, advanced),
     recoveryEvidenceDigest: digest("2"),
-    resolveReplayEvidence: input => {
+    resolveReplayEvidenceChain: input => {
       resolutions += 1;
       assert.equal(input.source, source);
       assert.equal(input.liveClaim, advanced);
-      return evidenceDigest;
+      return [evidenceDigest];
     },
     invoke: input => {
       recoveries += 1;
       assert.equal(input.request.mode, "recovery");
-      return recoveryResult(source, { replayed: true });
+      if (recoveries === 1) return recoveryResult(source, { replayed: true });
+      const intermediate = { ...source, claimDigest: digest("b"),
+        claimLedgerRevision: digest("c"), operationReceiptDigest: digest("d"),
+        transitionCounter: 12 };
+      return recoveryResult(intermediate, { replayed: false,
+        recoveryEvidence: digest("2"),
+        claimOverride: publicClaim(intermediate, { state: "current",
+          writeAuthority: true, scopeReserved: true, transitionCounter: 13,
+          heartbeatCounter: 9, fenceRevision: digest("5"),
+          transitionDigest: digest("6"), operationReceiptDigest: digest("7") }) });
     },
     renew: () => {
       throw new Error("recovered authority must replay recovery, not renew");
     },
     verify: ({ authority: projected }) => verifiedResult(projected, 9),
   });
-  assert.equal(recoveries, 1);
+  assert.equal(recoveries, 2);
   assert.equal(resolutions, 1);
-  assert.equal(result.authority.claimDigest, digest("b"));
+  assert.equal(result.authority.claimDigest, digest("5"));
   assert.equal(result.authority.heartbeatCounter, 9);
 });
 
@@ -121,7 +130,7 @@ test("an expired replay transition recovers once more from current evidence", ()
   const result = continueExpiredCommittedHeartbeatCloudAuthority({
     ...common(source, advanced),
     recoveryEvidenceDigest: currentEvidence,
-    resolveReplayEvidence: () => evidenceDigest,
+    resolveReplayEvidenceChain: () => [evidenceDigest],
     invoke: input => {
       recoveries += 1;
       if (recoveries === 1) {
@@ -205,7 +214,7 @@ test("ambiguous response loss probes only exact replay keys and rejects foreign 
   let renewals = 0;
   assert.throws(() => continueExpiredCommittedHeartbeatCloudAuthority({
     ...common(source, advanced),
-    resolveReplayEvidence: () => evidenceDigest,
+    resolveReplayEvidenceChain: () => [evidenceDigest],
     invoke: () => {
       recoveries += 1;
       throw new Error("expectedFenceRevision is stale");
@@ -219,7 +228,7 @@ test("ambiguous response loss probes only exact replay keys and rejects foreign 
   assert.equal(renewals, 1);
 });
 
-test("sealed ledger evidence resolves the original recovery key after later snapshot drift", () => {
+test("sealed ledger evidence resolves every ordered recovery key after snapshot drift", () => {
   const repository = { repositoryId: "repository:one",
     canonicalRevision: sha("a") };
   const actor = { actorId: "actor:one", deviceId: "device", sessionId: "session" };
@@ -241,21 +250,34 @@ test("sealed ledger evidence resolves the original recovery key after later snap
       expiresAt: "2026-08-12T09:03:00.000Z",
       recoveryEvidenceDigest: evidenceDigest, idempotencyKey: "recover:one" },
   });
+  const laterEvidenceDigest = digest("4");
+  const recoveredAgain = applyCloudTransition({
+    ledger: recovered.ledger, action: "continue", actor, repository,
+    evaluationTime: "2026-08-12T09:04:00.000Z",
+    request: { claimId: recovered.claim.claimId,
+      expectedFenceRevision: recovered.claim.fenceRevision,
+      expectedTransitionCounter: recovered.claim.transitionCounter,
+      expectedLedgerDigest: recovered.ledger.headDigest, mode: "recovery",
+      expiresAt: "2026-08-12T09:05:00.000Z",
+      recoveryEvidenceDigest: laterEvidenceDigest, idempotencyKey: "recover:two" },
+  });
   const source = { ...authority(), claimId: claimed.claim.claimId,
     laneRevision: claimed.claim.laneRevision, leaseEpoch: claimed.claim.leaseEpoch,
+    transitionCounter: claimed.claim.transitionCounter,
+    heartbeatCounter: claimed.claim.heartbeatCounter,
     deviceId: actor.deviceId, sessionId: actor.sessionId, reviewRequestId: null };
-  const liveClaim = { ...recovered.claim,
-    transitionDigest: recovered.claim.ledgerRevision };
+  const liveClaim = { ...recoveredAgain.claim,
+    transitionDigest: recoveredAgain.claim.ledgerRevision };
   const revision = sha("f");
-  assert.equal(resolveExpiredCommittedRecoveryReplayEvidence({
+  assert.deepEqual(resolveExpiredCommittedRecoveryReplayEvidenceChain({
     source, liveClaim,
-    status: { ledgerRevision: revision, ledgerDigest: recovered.ledger.headDigest },
-    readLedger: () => ({ ledger: recovered.ledger, revision }),
-  }), evidenceDigest);
-  assert.throws(() => resolveExpiredCommittedRecoveryReplayEvidence({
+    status: { ledgerRevision: revision, ledgerDigest: recoveredAgain.ledger.headDigest },
+    readLedger: () => ({ ledger: recoveredAgain.ledger, revision }),
+  }), [evidenceDigest, laterEvidenceDigest]);
+  assert.throws(() => resolveExpiredCommittedRecoveryReplayEvidenceChain({
     source, liveClaim: { ...liveClaim, fenceRevision: digest("9") },
-    status: { ledgerRevision: revision, ledgerDigest: recovered.ledger.headDigest },
-    readLedger: () => ({ ledger: recovered.ledger, revision }),
+    status: { ledgerRevision: revision, ledgerDigest: recoveredAgain.ledger.headDigest },
+    readLedger: () => ({ ledger: recoveredAgain.ledger, revision }),
   }), /does not match the live claim/u);
 });
 

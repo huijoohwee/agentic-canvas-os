@@ -190,7 +190,7 @@ function fixture({ currentBaseSha, changedWriteScope = [], integratedReplay = fa
 }
 
 function adapterFixture({ reconciliation = {} } = {}) {
-  const source = fixture().source;
+  let source = fixture().source;
   const log = [];
   let intent = null;
   const digest = character => hex(character, 64);
@@ -235,7 +235,13 @@ function adapterFixture({ reconciliation = {} } = {}) {
       return complete(phaseValues[phase]);
     };
   }
-  return { adapter, log, source, getIntent: () => intent };
+  return {
+    adapter,
+    log,
+    source,
+    getIntent: () => intent,
+    setSource(nextSource) { source = nextSource; },
+  };
 }
 
 test("plan is exact, closed, and excludes machine paths and raw PR body", () => {
@@ -358,7 +364,39 @@ test("replay returns the durable receipt without repeating effects", async () =>
     authorization: plan.exactAuthorization });
   assert.deepEqual(second, first);
   assert.equal(state.log.filter(item => item.startsWith("effect:")).length, effectCount);
-  assert.equal(state.log.filter(item => item === "read-source").length, 2);
+  assert.equal(state.log.filter(item => item === "read-source").length, 4);
+});
+
+test("completed journal can be superseded only by exact current source authorization", async () => {
+  const state = adapterFixture();
+  const controller = createReviewedLaneSourceCorrectionController({ adapter: state.adapter });
+  const firstPlan = await controller.plan({ operatorSessionId: operatorSession });
+  const first = await controller.run({
+    operatorSessionId: operatorSession,
+    authorization: firstPlan.exactAuthorization,
+  });
+  const effectCount = state.log.filter(item => item.startsWith("effect:")).length;
+  const currentSource = fixture({
+    currentBaseSha: hex("e", 40),
+    changedWriteScope: ["path:docs/disjoint.md"],
+  }).source;
+  state.setSource(currentSource);
+  const currentPlan = await controller.plan({ operatorSessionId: operatorSession });
+
+  await assert.rejects(controller.run({
+    operatorSessionId: operatorSession,
+    authorization: `${currentPlan.exactAuthorization}-wrong`,
+  }), /requires exact authorization/);
+  assert.equal(state.log.filter(item => item.startsWith("effect:")).length, effectCount);
+
+  const second = await controller.run({
+    operatorSessionId: operatorSession,
+    authorization: currentPlan.exactAuthorization,
+  });
+  assert.notDeepEqual(second, first);
+  assert.equal(state.getIntent().planSnapshot.planDigest, currentPlan.planDigest);
+  assert.equal(state.getIntent().status, "complete");
+  assert.equal(state.log.filter(item => item.startsWith("effect:")).length, effectCount * 2);
 });
 
 test("response-ahead reconciliation skips the duplicate remote effect", async () => {

@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 
 import {
   digestValue,
@@ -14,6 +16,11 @@ import {
   RECOVERY_PATH_EVIDENCE_MAX_BYTES,
   RECOVERY_PATH_EVIDENCE_MAX_PATHS,
 } from "./protected-main-path-equivalence-lib.mjs";
+import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
+import { buildReviewedForwardChildCandidate } from "./reviewed-forward-child-recovery-evidence.mjs";
+import {
+  normalizeReviewedLaneSourceCorrectionIntent,
+} from "./reviewed-lane-source-correction-contract.mjs";
 import {
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
@@ -21,6 +28,8 @@ import {
 } from "./writer-lease-lib.mjs";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
+const REVIEWED_FORWARD_CHILD_SUBJECT =
+  "chore(reviewed-forward-child-recovery): resume authoring";
 export function captureCommittedDescendantEvidence({
   lease,
   gitText,
@@ -34,22 +43,7 @@ export function captureCommittedDescendantEvidence({
       "Expired committed recovery requires a strict committed descendant of the fence.",
     );
   }
-  const fenceParents = gitText([
-    "rev-list",
-    "--parents",
-    "-n",
-    "1",
-    lease.fenceSha,
-  ]).trim().split(/\s+/);
-  if (
-    fenceParents.length !== 2 ||
-    fenceParents[0] !== lease.fenceSha ||
-    fenceParents[1] !== lease.baseSha
-  ) {
-    throw new Error(
-      "Expired committed recovery requires the exact single-parent fence over its source base.",
-    );
-  }
+  requireExactRecoverableFence({ lease, gitText });
   gitText(["merge-base", "--is-ancestor", lease.fenceSha, headSha]);
   requireSourceRemotePrefix({
     sourceFenceSha: lease.fenceSha,
@@ -393,12 +387,196 @@ export function readExactPullRequestProjection({
     expectedHeadSha,
   });
   const expectedMarker = projectWriterLeasePullRequestMarker(lease);
-  if (projection.markerDigest !== digestValue(expectedMarker)) {
+  if (!matchesRecoverablePullRequestMarker({
+    marker: parseWriterLeasePullRequestBody(projection.pullRequest.body),
+    expectedMarker,
+  })) {
     throw new Error(
       "Expired committed recovery pull-request marker differs from the local lease.",
     );
   }
   return projection;
+}
+
+function requireExactRecoverableFence({ lease, gitText }) {
+  const fenceParents = gitText([
+    "rev-list",
+    "--parents",
+    "-n",
+    "1",
+    lease.fenceSha,
+  ]).trim().split(/\s+/);
+  if (
+    fenceParents.length === 2 &&
+    fenceParents[0] === lease.fenceSha &&
+    fenceParents[1] === lease.baseSha
+  ) {
+    return;
+  }
+  if (isCompletedSourceCorrectionFence({ fenceParents, lease, gitText })) {
+    return;
+  }
+  if (
+    fenceParents.length !== 2 ||
+    fenceParents[0] !== lease.fenceSha ||
+    !SHA_PATTERN.test(fenceParents[1])
+  ) {
+    throw new Error(
+      "Expired committed recovery requires the exact single-parent fence over its source base.",
+    );
+  }
+  const fenceParentSha = fenceParents[1];
+  try {
+    const fenceTreeSha = exactSha(
+      gitText(["rev-parse", `${lease.fenceSha}^{tree}`]).trim(),
+      "Expired committed recovery fence tree",
+    );
+    const parentTreeSha = exactSha(
+      gitText(["rev-parse", `${fenceParentSha}^{tree}`]).trim(),
+      "Expired committed recovery fence parent tree",
+    );
+    const deliveredHeadSha = requireExactRecoverableRefreshParent({
+      lease,
+      fenceParentSha,
+      gitText,
+    });
+    if (fenceTreeSha !== parentTreeSha) {
+      return;
+    }
+    const fenceSubject = String(gitText([
+      "show",
+      "-s",
+      "--format=%s",
+      lease.fenceSha,
+    ])).trim();
+    if (fenceSubject !== REVIEWED_FORWARD_CHILD_SUBJECT) {
+      throw new Error("fence subject");
+    }
+    buildReviewedForwardChildCandidate({
+      sourceHeadSha: fenceParentSha,
+      sourceTreeSha: parentTreeSha,
+      childHeadSha: lease.fenceSha,
+      childTreeSha: fenceTreeSha,
+      parentShas: [fenceParentSha],
+      subject: fenceSubject,
+    });
+    if (!deliveredHeadSha) {
+      throw new Error("refresh parent");
+    }
+    return;
+  } catch {
+    throw new Error(
+      "Expired committed recovery requires the exact single-parent fence over its source base.",
+    );
+  }
+}
+
+function isCompletedSourceCorrectionFence({ fenceParents, lease, gitText }) {
+  if (
+    fenceParents.length !== 2 ||
+    fenceParents[0] !== lease.fenceSha ||
+    !lease?.cloudAuthority?.claimId
+  ) {
+    return false;
+  }
+  const completed = matchingCompletedSourceCorrections({ lease, gitText });
+  return completed.length === 1 &&
+    completed[0].plan.source.lease.fenceSha === fenceParents[1];
+}
+
+function matchingCompletedSourceCorrections({ lease, gitText }) {
+  let directory;
+  try {
+    directory = path.resolve(
+      gitText(["rev-parse", "--git-common-dir"]).trim(),
+      "agentic-canvas-os",
+      "reviewed-lane-source-correction",
+    );
+  } catch {
+    return [];
+  }
+  if (!existsSync(directory)) return [];
+  const matches = [];
+  for (const name of readdirSync(directory)) {
+    if (!name.endsWith(".json")) continue;
+    let intent;
+    try {
+      intent = normalizeReviewedLaneSourceCorrectionIntent(
+        JSON.parse(readFileSync(path.join(directory, name), "utf8")),
+      );
+    } catch {
+      continue;
+    }
+    const plan = intent.planSnapshot;
+    const source = plan.source;
+    const sourceLease = source.lease;
+    const completion = intent.completion;
+    if (
+      intent.status === "complete" &&
+      completion?.status === "authoring-restored" &&
+      completion.sourceHeadSha === lease.fenceSha &&
+      completion.successorClaimId === lease.cloudAuthority.claimId &&
+      plan.sourceHeadSha === lease.fenceSha &&
+      source.localHeadSha === lease.fenceSha &&
+      source.remoteHeadSha === lease.fenceSha &&
+      sourceLease.reviewHeadSha === lease.fenceSha &&
+      sourceLease.baseSha === lease.baseSha &&
+      sourceLease.branch === lease.branch &&
+      sourceLease.sessionId === lease.sessionId &&
+      sourceLease.device === lease.device &&
+      sourceLease.scope === lease.scope &&
+      sourceLease.pullRequestUrl === lease.pullRequestUrl &&
+      source.authority?.claimId === completion.sourceClaimId &&
+      source.authority?.laneRevision === lease.fenceSha &&
+      source.authority?.canonicalBaseSha === lease.baseSha &&
+      source.authority?.writeSetDigest === lease.admission?.writeSetDigest &&
+      source.claim?.claimId === completion.sourceClaimId &&
+      source.claim?.laneRevision === lease.fenceSha &&
+      source.claim?.canonicalBaseRevision === lease.baseSha &&
+      source.claim?.writeSetDigest === lease.admission?.writeSetDigest
+    ) {
+      matches.push({ intent, plan, completion });
+    }
+  }
+  return matches;
+}
+
+function requireExactRecoverableRefreshParent({
+  lease,
+  fenceParentSha,
+  gitText,
+}) {
+  const refreshParents = gitText([
+    "rev-list",
+    "--parents",
+    "-n",
+    "1",
+    fenceParentSha,
+  ]).trim().split(/\s+/);
+  if (
+    refreshParents.length !== 3 ||
+    refreshParents[0] !== fenceParentSha
+  ) {
+    throw new Error("refresh parent");
+  }
+  const deliveredHeadSha = exactSha(
+    refreshParents[1],
+    "Expired committed recovery refreshed prior head",
+  );
+  const refreshedMainParentSha = exactSha(
+    refreshParents[2],
+    "Expired committed recovery refreshed main parent",
+  );
+  if (refreshedMainParentSha !== lease.baseSha) {
+    gitText(["merge-base", "--is-ancestor", lease.baseSha, deliveredHeadSha]);
+  }
+  verifyProtectedMainRefreshChain({
+    expectedHeadSha: deliveredHeadSha,
+    observedHeadSha: fenceParentSha,
+    gitText,
+    mainRef: "refs/remotes/origin/main",
+  });
+  return deliveredHeadSha;
 }
 
 export function readPullRequestProjection({
@@ -436,6 +614,43 @@ export function readPullRequestProjection({
     markerDigest: digestValue(marker),
     bodyDigest: sha256(pullRequest.body),
   });
+}
+
+function matchesRecoverablePullRequestMarker({
+  marker,
+  expectedMarker,
+}) {
+  if (!marker || !expectedMarker) return false;
+  if (digestValue(marker) === digestValue(expectedMarker)) return true;
+  if (
+    !marker.cloudAuthority ||
+    !expectedMarker.cloudAuthority ||
+    !marker.taskAuthority ||
+    !expectedMarker.taskAuthority ||
+    !isTaskAuthorityContinuation(marker.taskAuthority, expectedMarker.taskAuthority)
+  ) {
+    return false;
+  }
+  const recoverableMarker = {
+    ...expectedMarker,
+    cloudAuthority: {
+      ...expectedMarker.cloudAuthority,
+      ledgerRevision: marker.cloudAuthority.ledgerRevision,
+      ledgerDigest: marker.cloudAuthority.ledgerDigest,
+    },
+    taskAuthority: marker.taskAuthority,
+  };
+  return digestValue(marker) === digestValue(recoverableMarker);
+}
+
+function isTaskAuthorityContinuation(previousBinding, nextBinding) {
+  return nextBinding.bindingMode === "continuation"
+    && nextBinding.priorBindingDigest === previousBinding.bindingDigest
+    && nextBinding.authoritySubjectId === previousBinding.authoritySubjectId
+    && nextBinding.proofAdapterId === previousBinding.proofAdapterId
+    && nextBinding.generation === previousBinding.generation
+    && nextBinding.publicKey === previousBinding.publicKey
+    && nextBinding.publicKeyDigest === previousBinding.publicKeyDigest;
 }
 
 function requireSourceRemotePrefix({
@@ -578,4 +793,11 @@ function repositoryFromPullRequestUrl(url) {
 
 function sha256(value) {
   return createHash("sha256").update(String(value || "")).digest("hex");
+}
+
+function exactSha(value, label) {
+  if (!SHA_PATTERN.test(String(value || ""))) {
+    throw new Error(`${label} must be an exact SHA.`);
+  }
+  return value;
 }

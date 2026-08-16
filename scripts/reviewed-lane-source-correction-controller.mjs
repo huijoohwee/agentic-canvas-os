@@ -39,7 +39,7 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
   return Object.freeze({
     async plan({ operatorSessionId } = {}) {
       return buildReviewedLaneSourceCorrectionPlan({
-        source: await effects.readSource(),
+        source: await readStableSource(effects),
         operatorSessionId,
       });
     },
@@ -49,17 +49,15 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
         let intent = await effects.readIntent();
         if (intent) {
           intent = normalizeReviewedLaneSourceCorrectionIntent(intent);
-          authorizeReviewedLaneSourceCorrection({
-            plan: intent.planSnapshot,
+          intent = await resolveRunnableIntent({
+            effects,
+            intent,
+            operatorSessionId,
             authorization,
           });
-          if (intent.planSnapshot.operatorSessionId !== operatorSessionId
-            || intent.authorization.statement !== authorization) {
-            throw new Error("Stored source correction intent differs from current exact authority.");
-          }
         } else {
           const currentPlan = buildReviewedLaneSourceCorrectionPlan({
-            source: await effects.readSource(),
+            source: await readStableSource(effects),
             operatorSessionId,
           });
           authorizeReviewedLaneSourceCorrection({ plan: currentPlan, authorization });
@@ -70,6 +68,48 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
       });
     },
   });
+}
+
+async function resolveRunnableIntent({
+  effects,
+  intent,
+  operatorSessionId,
+  authorization,
+}) {
+  try {
+    authorizeReviewedLaneSourceCorrection({
+      plan: intent.planSnapshot,
+      authorization,
+    });
+    if (intent.planSnapshot.operatorSessionId !== operatorSessionId
+      || intent.authorization.statement !== authorization) {
+      throw new Error("Stored source correction intent differs from current exact authority.");
+    }
+    return intent;
+  } catch (error) {
+    if (intent.status !== "complete") throw error;
+  }
+
+  const currentPlan = buildReviewedLaneSourceCorrectionPlan({
+    source: await readStableSource(effects),
+    operatorSessionId,
+  });
+  authorizeReviewedLaneSourceCorrection({ plan: currentPlan, authorization });
+  if (currentPlan.planDigest === intent.planSnapshot.planDigest) {
+    throw new Error("Completed source correction journal authorization does not match its plan.");
+  }
+  const next = createReviewedLaneSourceCorrectionIntent(currentPlan, authorization);
+  await effects.writeIntent({ expected: intent, value: next });
+  return next;
+}
+
+async function readStableSource(adapter) {
+  const first = await adapter.readSource();
+  const second = await adapter.readSource();
+  if (first?.evidenceDigest !== second?.evidenceDigest) {
+    throw new Error("Reviewed-lane source correction evidence changed during read-only planning.");
+  }
+  return second;
 }
 
 async function executeIntent({ adapter, intent: initial }) {

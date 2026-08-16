@@ -64,7 +64,7 @@ export function validateTaskPlan(context) {
     if (!text(task?.wave)) {
       collector.add("ungrounded-task", {
         taskId,
-        ruleId: "task-model#15",
+        ruleId: "task-model#17",
         artifactReference: "wave",
         evidenceExcerpt: "Every task must declare its graph wave so write conflicts cannot evade comparison.",
       });
@@ -148,14 +148,14 @@ export function validateTaskPlan(context) {
   for (const taskId of graph.cycleNodes) {
     collector.add("task-cycle", {
       taskId,
-      ruleId: "task-model#13",
+      ruleId: "task-model#15",
       evidenceExcerpt: "Task dependency graph contains a directed cycle.",
     });
   }
   for (const unknown of graph.unknownDependencies) {
     collector.add("ungrounded-task", {
       taskId: unknown.taskId,
-      ruleId: "task-model#13",
+      ruleId: "task-model#15",
       artifactReference: unknown.dependency,
       evidenceExcerpt: "Task dependency does not resolve to a Task ID.",
     });
@@ -163,7 +163,7 @@ export function validateTaskPlan(context) {
   for (const conflict of graph.writeConflicts) {
     collector.add("concurrent-write-conflict", {
       taskId: conflict.leftTaskId,
-      ruleId: "task-model#15",
+      ruleId: "task-model#17",
       artifactReference: `${conflict.wave}:${conflict.rightTaskId}`,
       evidenceExcerpt: `Concurrent wave writes overlap: ${conflict.artifacts.join(", ")}.`,
     });
@@ -192,7 +192,7 @@ function validateSizing(task, collector) {
   ) {
     collector.add("oversized-task", {
       taskId,
-      ruleId: "task-model#10",
+      ruleId: "task-model#12",
       evidenceExcerpt: "Task must fit one budget and one coherent verifiable outcome.",
     });
   }
@@ -386,7 +386,7 @@ function validateDependencyReadiness(tasks, taskById, collector) {
     if (sameWaveDependencies.length > 0) {
       collector.add("state-without-reason", {
         taskId,
-        ruleId: "task-model#14",
+        ruleId: "task-model#16",
         artifactReference: `wave:${text(task?.wave)}`,
         evidenceExcerpt:
           `A task cannot share a concurrent wave with its dependencies: ${sameWaveDependencies.join(", ")}.`,
@@ -410,7 +410,7 @@ function validateDependencyReadiness(tasks, taskById, collector) {
       if (unmet.length > 0) {
         collector.add("state-without-reason", {
           taskId,
-          ruleId: "task-model#14",
+          ruleId: "task-model#16",
           artifactReference: `${String(readySequence)}:${unmet.join(",")}`,
           evidenceExcerpt:
             "Task became ready while a dependency's latest causal state was not verified.",
@@ -480,16 +480,16 @@ function transitionViolationRuleId(kind) {
     "invalid-ordinal": "checkpoint--recovery#7",
     "missing-task-id": "task-model#3",
     "missing-transition-metadata": "checkpoint--recovery#7",
-    "unknown-state": "task-model#17",
-    "terminal-transition": "task-model#19",
-    "invalid-rederivation": "task-model#19",
-    "invalid-transition": "task-model#17",
+    "unknown-state": "task-model#19",
+    "terminal-transition": "task-model#21",
+    "invalid-rederivation": "task-model#21",
+    "invalid-transition": "task-model#19",
     "invalid-verifier": "agent-roles--independence#8",
     "invalid-role": "agent-roles--independence#9",
-    "missing-reason": "task-model#18",
-    "unknown-declared-state": "task-model#17",
-    "state-without-transition": "task-model#20",
-    "state-mismatch": "task-model#20",
+    "missing-reason": "task-model#20",
+    "unknown-declared-state": "task-model#19",
+    "state-without-transition": "task-model#22",
+    "state-mismatch": "task-model#22",
   };
   return rules[kind] ?? "checkpoint--recovery#7";
 }

@@ -432,8 +432,8 @@ MoA memory records the local one-shot deliberation contract. It does not switch 
 
 | Stage | Command | Memory role | Guard |
 |---|---|---|---|
-| Preset | `/moa` | Remember local preset identity, reference roles, aggregator role, caps, and failure policy. | Reject recursive MoA aggregators and copied external preset examples. |
-| References | `/moa` | Remember advisory reference outputs as private context for the run. | No tools, no mutation, capped output, typed failure, and cost logging. |
+| Preset | `/moa` | Remember local preset identity, reference roles, aggregator role, caps, and fail-soft failure policy. | Reject recursive MoA aggregators and copied external preset examples. |
+| References | `/moa` | Remember advisory reference outcomes as private context for the run. | No tools, no mutation, capped output, input-ordered all-settled success or typed failure, aggregate counts, and cost logging. |
 | Aggregator | `/moa` | Remember that one acting agent produced the final response or tool request. | Normal approval gates, transcript persistence, and follow-up iteration apply. |
 | Cost | `/moa` | Remember reference tokens, aggregator tokens, cache hits, failures, and estimated cost. | Missing budget or approval blocks before paid calls. |
 
@@ -558,7 +558,7 @@ Good VCCs name an exit code, parsed field, file count, response shape, latency t
 | `@soul-profile` | Durable identity source from `SOUL.md`. | Identity only; no project operations, secrets, or deploy approvals. |
 | `@identity-slot` | Prompt slot 1 identity position. | Source-backed identity or typed fallback; no silent hardcode. |
 | `@personality-overlay` | Session-level style overlay. | Temporary and subordinate to facts, roles, memory, safety, and gates. |
-| `@moa-preset` | Local MoA preset for reference roles, aggregator, caps, and failover. | No copied external preset examples, provider names, or recursive aggregator. |
+| `@moa-preset` | Local MoA preset for reference roles, aggregator, caps, and fail-soft failure classification. | No copied external preset examples, provider names, or recursive aggregator. |
 | `@reference-agents` | Bounded advisory agents in `/moa`. | No tools, no mutation, capped output, private context only. |
 | `@aggregator-agent` | Acting agent that produces the `/moa` response. | Owns final answer, tool calls, approvals, and transcript persistence. |
 | `@operator` | Human approval authority. | Required before paid, mutating, Prod, or Cloudflare actions. |

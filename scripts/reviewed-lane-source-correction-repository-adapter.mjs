@@ -16,6 +16,7 @@ import { createGitHubCloudCollaborationAdapter } from "./github-cloud-collaborat
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import {
   buildReviewedLaneSourceCorrectionEvidence,
+  buildSameClaimRecoverySplitEvidence,
 } from "./reviewed-lane-source-correction-evidence.mjs";
 import {
   complete,
@@ -140,6 +141,7 @@ function createRuntime(options, dependencies) {
       focusedEvidenceDigest: lease.cloudAuthority.focusedEvidenceDigest,
     });
     const advance = protectedAdvance(lease, provider.pullRequest.baseSha, protectedMainHead());
+    const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     return buildReviewedLaneSourceCorrectionEvidence({
       repository: provider.repository,
       actor: provider.actor,
@@ -152,8 +154,12 @@ function createRuntime(options, dependencies) {
       remoteHeadSha,
       clean,
       protectedAdvance: advance,
+      sameClaimRecovery: buildSameClaimRecoverySplitEvidence({ lease, marker,
+        journal: readSameClaimRecoveryJournal() }),
     });
   }
+
+  function readSameClaimRecoveryJournal() { const file = path.join(commonDirectory, "agentic-canvas-os", "recoveries", `same-claim-dormant-reviewed-${digestValue({ targetRepository: repository, targetBranch: branch, pullRequestNumber: expectedPullRequest })}.json`); return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null; }
 
   function protectedMainHead() {
     git(["fetch", "--quiet", "--no-tags", "origin", "refs/heads/main"]);

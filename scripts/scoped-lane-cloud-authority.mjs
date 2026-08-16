@@ -197,6 +197,7 @@ export function bindAdmissionCloudAuthority({
   verify = invokeRepositoryCloudVerifier,
 } = {}) {
   requireAuthority(authority);
+  const resolvedPullRequestNumber = reviewRequestId ? null : pullRequestNumber;
   const request = {
     targetRepository: authority.targetRepository,
     branch: requiredText(branch, "branch"),
@@ -208,8 +209,8 @@ export function bindAdmissionCloudAuthority({
     expectedFenceRevision: authority.claimDigest,
     expectedTransitionCounter: authority.transitionCounter,
     idempotencyKey: requiredText(idempotencyKey, "idempotencyKey"),
-    ...(pullRequestNumber
-      ? { pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber") }
+    ...(resolvedPullRequestNumber
+      ? { pullRequestNumber: positiveInteger(resolvedPullRequestNumber, "pullRequestNumber") }
       : {}),
     ...(reviewRequestId
       ? { reviewRequestId: requiredText(reviewRequestId, "reviewRequestId") }
@@ -1743,12 +1744,13 @@ export function reviewReadyAdmissionCloudAuthority({
       pullRequestNumber: positiveInteger(pullRequestNumber, "pullRequestNumber"),
       admittedReportDigest: requiredDigest(manifest?.admittedReportDigest, "admittedReportDigest"),
     });
+  const resolvedPullRequestNumber = reviewRequestId ? null : pullRequestNumber;
   let current = reconcileAdmissionCloudAuthority({
     authority,
     manifest,
     branch,
     headSha,
-    pullRequestNumber,
+    pullRequestNumber: resolvedPullRequestNumber,
     allowPriorLaneRevision: true, environment, inspect, verify,
   });
   if (current.authority.state === "review_ready") return current;
@@ -1758,7 +1760,7 @@ export function reviewReadyAdmissionCloudAuthority({
       manifest,
       branch,
       headSha,
-      pullRequestNumber,
+      pullRequestNumber: resolvedPullRequestNumber,
       reviewRequestId,
       deviceId,
       sessionId,
@@ -1784,8 +1786,8 @@ export function reviewReadyAdmissionCloudAuthority({
     expectedFenceRevision: active.claimDigest,
     expectedTransitionCounter: active.transitionCounter,
     focusedEvidenceDigest: evidenceDigest,
-    ...(pullRequestNumber
-      ? { pullRequestNumber }
+    ...(resolvedPullRequestNumber
+      ? { pullRequestNumber: resolvedPullRequestNumber }
       : {}),
     ...(reviewRequestId
       ? { reviewRequestId: requiredText(reviewRequestId, "reviewRequestId") }
@@ -1806,7 +1808,11 @@ export function reviewReadyAdmissionCloudAuthority({
   } catch (originalError) {
     try {
       const recovered = reconcileAdmissionCloudAuthority({
-        authority: active, manifest, branch, headSha, pullRequestNumber,
+        authority: active,
+        manifest,
+        branch,
+        headSha,
+        pullRequestNumber: resolvedPullRequestNumber,
         environment, inspect, verify,
       });
       if (recovered.authority.state !== "review_ready") {

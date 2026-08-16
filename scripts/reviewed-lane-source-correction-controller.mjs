@@ -39,7 +39,7 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
   return Object.freeze({
     async plan({ operatorSessionId } = {}) {
       return buildReviewedLaneSourceCorrectionPlan({
-        source: await effects.readSource(),
+        source: await readStableSource(effects),
         operatorSessionId,
       });
     },
@@ -59,7 +59,7 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
           }
         } else {
           const currentPlan = buildReviewedLaneSourceCorrectionPlan({
-            source: await effects.readSource(),
+            source: await readStableSource(effects),
             operatorSessionId,
           });
           authorizeReviewedLaneSourceCorrection({ plan: currentPlan, authorization });
@@ -70,6 +70,15 @@ export function createReviewedLaneSourceCorrectionController({ adapter } = {}) {
       });
     },
   });
+}
+
+async function readStableSource(adapter) {
+  const first = await adapter.readSource();
+  const second = await adapter.readSource();
+  if (first?.evidenceDigest !== second?.evidenceDigest) {
+    throw new Error("Reviewed-lane source correction evidence changed during read-only planning.");
+  }
+  return second;
 }
 
 async function executeIntent({ adapter, intent: initial }) {

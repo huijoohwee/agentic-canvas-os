@@ -358,7 +358,7 @@ test("replay returns the durable receipt without repeating effects", async () =>
     authorization: plan.exactAuthorization });
   assert.deepEqual(second, first);
   assert.equal(state.log.filter(item => item.startsWith("effect:")).length, effectCount);
-  assert.equal(state.log.filter(item => item === "read-source").length, 2);
+  assert.equal(state.log.filter(item => item === "read-source").length, 4);
 });
 
 test("response-ahead reconciliation skips the duplicate remote effect", async () => {

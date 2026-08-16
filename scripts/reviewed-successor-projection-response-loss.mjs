@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Responsibility: Expose sealed planning and capability-bound projection recovery.
+// Responsibility: Expose sealed planning and capability-bound recovery for both exact successor projection modes.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

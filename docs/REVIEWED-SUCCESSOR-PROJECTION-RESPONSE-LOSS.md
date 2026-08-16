@@ -15,10 +15,15 @@ publish_policy: "No source, cloud, ref, integration, release, cleanup, runtime, 
 
 # Reviewed successor projection response-loss recovery
 
-This controller closes one interrupted cloud handoff boundary. The local clean
-`review_ready` lease and pull-request marker still name an expired predecessor,
-while the cloud ledger contains exactly one `reviewed` successor created from
-that predecessor. The predecessor is absent from the live inventory.
+This controller closes either of two exact interrupted cloud-handoff boundaries.
+In `absent-predecessor` mode, the local clean `review_ready` lease and
+pull-request marker still name an expired predecessor while the cloud ledger
+contains exactly one `reviewed` successor created from it. In
+`partial-local-successor` mode, the actual local lease and cloud inventory
+already name that unique current or time-derived dormant successor, but the
+task-authority binding still belongs to a reconstructed source lease made by
+replacing only `cloudAuthority.claimId` with the successor's retained
+`predecessorClaimId`.
 
 Planning seals the authenticated repository and work-item identities, exact
 branch/base/head/tree/write set, pull request and review request, source and
@@ -27,10 +32,15 @@ provider body digest, and task-authority binding. Any dirt, competing overlap,
 head drift, integration authority, or non-successor lineage blocks read-only.
 
 Run requires both the plan's literal authorization and the existing external
-task capability. It proves possession, creates the continuation binding, then
-CAS-projects the already-reviewed successor into the local lease and replaces
-only the pull-request ownership marker. Replays accept only the identical
-terminal projection.
+task capability. In absent-predecessor mode it proves possession, creates the
+continuation binding, CAS-projects the already-reviewed successor into the
+local lease, and replaces only the pull-request ownership marker. In
+partial-local-successor mode it atomically CAS-projects only the continued
+`taskAuthority` and the typed
+`agentic-reviewed-successor-partial-local-projection-repair/v1` receipt onto
+the otherwise identical current lease. That second mode has no pull-request,
+cloud, source, or Git effect. Replays accept only the identical terminal
+projection and receipt.
 
 ```sh
 node scripts/reviewed-successor-projection-response-loss.mjs plan \

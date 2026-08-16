@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3208,
-  "headDigest": "df922d127fcc452e724195f7be21f3cfbe62b423b6735fa363a97febe06c69ec",
+  "sequence": 3209,
+  "headDigest": "44d02376fd60eae4de04663502da837f04bfaa3f73fab98a6dee674aa1e83637",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -158744,6 +158744,67 @@
       },
       "claimDigest": "22394c15267cf6d335165f2c136b3d16debb0324a087481f0768830cd6855e6a",
       "digest": "df922d127fcc452e724195f7be21f3cfbe62b423b6735fa363a97febe06c69ec"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3209,
+      "parentDigest": "df922d127fcc452e724195f7be21f3cfbe62b423b6735fa363a97febe06c69ec",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "dceffee6bdb52a976c7a2fd45a7270945bb5d31419ea29aedba38f175c7f1864",
+      "idempotencyKey": "00a2c1c8dbad466050f0d8408f04d8192691bfa6079b06d3b232b195147ad6d7",
+      "requestDigest": "77a5ed6c71e5537dcdee35bccc131a8b9fe98f2ae9c64bd083e913414dcdf731",
+      "evaluationTime": "2026-08-16T12:09:21.000Z",
+      "claimCore": {
+        "claimId": "dceffee6bdb52a976c7a2fd45a7270945bb5d31419ea29aedba38f175c7f1864",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:fe477a141f43c7d4a2bdcd2049b5f55296364703d1332a08302a3b88ee4b8a99",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:fbc9ce4b3a7dbcf070030dfc71f05874354b0ff451250ec20026b8bc1babf9f6",
+        "canonicalBaseRevision": "8f6d1ac1bcd65cc6a13da741bc2951e9124e0539",
+        "declaredWriteScope": [
+          "path:__tests__/retired-dirty-same-lane-successor-recovery-cli.test.mjs",
+          "path:__tests__/retired-dirty-same-lane-successor-recovery-contract.test.mjs",
+          "path:__tests__/retired-dirty-same-lane-successor-recovery-controller.test.mjs",
+          "path:__tests__/retired-dirty-same-lane-successor-recovery-evidence.test.mjs",
+          "path:__tests__/retired-dirty-same-lane-successor-recovery-repository-adapter.test.mjs",
+          "path:docs/RETIRED-DIRTY-SAME-LANE-SUCCESSOR-RECOVERY.md",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:package.json",
+          "path:scripts/retired-dirty-same-lane-successor-recovery-contract.mjs",
+          "path:scripts/retired-dirty-same-lane-successor-recovery-controller.mjs",
+          "path:scripts/retired-dirty-same-lane-successor-recovery-evidence.mjs",
+          "path:scripts/retired-dirty-same-lane-successor-recovery-repository-adapter.mjs",
+          "path:scripts/retired-dirty-same-lane-successor-recovery.mjs",
+          "semantic:retired-dirty-same-lane-successor-recovery"
+        ],
+        "writeSetDigest": "c5baf1aaa8a3f485a7385e34af5735914c3d7a57d249dde2af38523eef0eb2f2",
+        "laneRevision": "6df0504c23b2dfefdac293a728ea6cfac2968bab",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-17T11:52:50.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_s0GI",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "6df0504c23b2dfefdac293a728ea6cfac2968bab",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_s0GI",
+          "bytesDigest": "b1123c68e7af6e5bfc92a30fc96f95f3d0c172b78db56b1464a4b00415b3ef2b",
+          "namedChecksDigest": "b1036b2e1a02074d09d4eda3432f48c7c5acc475ecfc34bbe4521d9f2cdc9b5e",
+          "handoffEvidenceDigest": "d457e964ee4094fa1aa8a7d01fc4f77617b57620da68c3b8aa43a71d2bc3383a",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-16T12:09:21.000Z"
+        }
+      },
+      "claimDigest": "5785fa6e01a60ef60043c07975c415c65db6061eecd19f7ad4f9e586cb7ea818",
+      "digest": "44d02376fd60eae4de04663502da837f04bfaa3f73fab98a6dee674aa1e83637"
     }
   ]
 }

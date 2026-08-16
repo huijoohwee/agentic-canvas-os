@@ -49,7 +49,7 @@ export function reviewedSuccessorProjectionResponseLossOperation(plan) {
 
 export function reviewedSuccessorProjectionResponseLossReplayDigest(value) {
   const evidence = normalizeReviewedSuccessorProjectionResponseLossEvidence(value);
-  const { observedAt: _observedAt, ...subject } = evidence;
+  const { observedAt: _observedAt, evidenceDigest: _evidenceDigest, ...subject } = evidence;
   return digestValue(subject);
 }
 

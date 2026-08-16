@@ -115,6 +115,26 @@ test("a changed live subject fails before capability proof", () => {
   assert.deepEqual(changed.effects, { projection: 0, verifies: 0 });
 });
 
+test("fresh observation metadata preserves the exact replay subject", () => {
+  const runtime = adapter();
+  const controller = createReviewedSuccessorProjectionResponseLossController(runtime);
+  const plan = controller.plan();
+  const freshEvidence = structuredClone(fixture().evidence);
+  freshEvidence.observedAt = "2026-08-16T06:05:00.000Z";
+  delete freshEvidence.evidenceDigest;
+  freshEvidence.evidenceDigest = D(freshEvidence);
+  runtime.inspect = () => freshEvidence;
+
+  const receipt = controller.run({
+    plan,
+    authorization: `${AUTHORIZATION_PREFIX} ${plan.planDigest}`,
+    taskAuthorityFile: "/capability.json",
+  });
+
+  assert.equal(receipt.successorClaimId, fixture().evidence.successor.claimId);
+  assert.deepEqual(runtime.effects, { projection: 1, verifies: 1 });
+});
+
 test("atomic projection result and terminal verification remain digest-fenced", () => {
   const runtime = adapter();
   const controller = createReviewedSuccessorProjectionResponseLossController(runtime);

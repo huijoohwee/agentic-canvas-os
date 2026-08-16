@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3206,
-  "headDigest": "ded1d2c526ffff530844909cf8eaf75a583288898ecd700da815d2dff1199eb1",
+  "sequence": 3207,
+  "headDigest": "6d9d75c5619be842355a0c7ace49712a6b92f8585cb4b7519ade6538eef4f24a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -158647,6 +158647,50 @@
       },
       "claimDigest": "e3c179a179158120af2e97c0066ed2fbaa063896c71e2c0506d387a2fdaa5737",
       "digest": "ded1d2c526ffff530844909cf8eaf75a583288898ecd700da815d2dff1199eb1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3207,
+      "parentDigest": "ded1d2c526ffff530844909cf8eaf75a583288898ecd700da815d2dff1199eb1",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "866c94ae4500b5a69aa1a6ab1aec80c3bd6501f0ad581d3bfe974965c648abe3",
+      "idempotencyKey": "a8d6c2284740f1b39df0c778fa7498b6da86c81fd4e992e844f8c809858baf5d",
+      "requestDigest": "5cfb0d90ca81668c73d7cf87b6132ed1a1138cca69b05d96a2fa78b051cdf89c",
+      "evaluationTime": "2026-08-16T12:06:31.000Z",
+      "claimCore": {
+        "claimId": "866c94ae4500b5a69aa1a6ab1aec80c3bd6501f0ad581d3bfe974965c648abe3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:7b0d500d5cb70ff3249595c939b31dc42687ed648ef80b65fa87adc9d563186f",
+        "canonicalBaseRevision": "8f6d1ac1bcd65cc6a13da741bc2951e9124e0539",
+        "declaredWriteScope": [
+          "path:__tests__/same-claim-dormant-reviewed-continuation.test.mjs",
+          "path:docs/SAME-CLAIM-DORMANT-REVIEWED-CONTINUATION.md",
+          "path:scripts/same-claim-dormant-reviewed-continuation-contract.mjs",
+          "path:scripts/same-claim-dormant-reviewed-continuation-controller.mjs",
+          "path:scripts/same-claim-dormant-reviewed-continuation-repository-adapter.mjs",
+          "path:scripts/same-claim-dormant-reviewed-continuation.mjs",
+          "semantic:same-claim-reviewed-response-loss-adoption"
+        ],
+        "writeSetDigest": "55419eca748445b3d6e04ca7eaf85572ba8c7080f30f5075f7aec0d77b59cb11",
+        "laneRevision": "8f6d1ac1bcd65cc6a13da741bc2951e9124e0539",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-16T13:06:31.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1f4352b3635daa59b0b0e6c67cfec6c55e7886964bebca1c881340f79ac856ce",
+      "digest": "6d9d75c5619be842355a0c7ace49712a6b92f8585cb4b7519ade6538eef4f24a"
     }
   ]
 }

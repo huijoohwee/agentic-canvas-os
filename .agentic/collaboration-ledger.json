@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3121,
-  "headDigest": "900241c454b55c343d186da4679554f0ea6d6172d93c172937f369b66a46b590",
+  "sequence": 3122,
+  "headDigest": "667f91e1af3ca799cf5c77319f477783c9a1b51bab9c60a44a5bc14936e63705",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -154528,6 +154528,62 @@
       },
       "claimDigest": "23a5dddbb93d87dbf794ea8c2d429216a0fcd39bd6aef5b9652e189c6fb15558",
       "digest": "900241c454b55c343d186da4679554f0ea6d6172d93c172937f369b66a46b590"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3122,
+      "parentDigest": "900241c454b55c343d186da4679554f0ea6d6172d93c172937f369b66a46b590",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "3ba624e516d326517bd95035d1d1bbb48626b12fb23f6d85f942460aa2c70885",
+      "idempotencyKey": "034eafe6d0e956c40ccb2064b9444fa46286f858ada971951705cbfebfd34c98",
+      "requestDigest": "ef7b942c9e23b3ebab64bf46ece804051446e8d94696309bd8f0a5ee3f60b3c8",
+      "evaluationTime": "2026-08-16T03:58:58.000Z",
+      "claimCore": {
+        "claimId": "3ba624e516d326517bd95035d1d1bbb48626b12fb23f6d85f942460aa2c70885",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:517d5e434fb85c2f9196ff7b5dc180e10c8e2193daa6afb52b07ae02a42a2ce7",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:4c3e2bc04935538447afba8c7dca883f53f1f1948502e742a955f6f6d33edfc3",
+        "canonicalBaseRevision": "dffed24e68a7446673a58227f67d02f21e3adb1a",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/mainPanelCommerce.test.tsx",
+          "path:canvas/src/features/agent-ready/knowgrphLocalMcpToolNames.mjs",
+          "path:canvas/src/features/panels/views/CommerceHubView.tsx",
+          "path:mcp/__tests__/payment-runtime.test.mjs",
+          "path:mcp/__tests__/payment-stdio-e2e.test.mjs",
+          "path:mcp/__tests__/payment-tool-contract.test.mjs",
+          "path:mcp/payment-runtime.js",
+          "path:mcp/payment-tool-contract.js",
+          "semantic:purchase-lifecycle-commerce-mcp-projection"
+        ],
+        "writeSetDigest": "42688b3b800f9311866892a8a10761e7fb3ff6f09ca3ab94c77705342e0af0c3",
+        "laneRevision": "dffed24e68a7446673a58227f67d02f21e3adb1a",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-16T04:25:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "5ef044ffa5aca3e5d75374a7008335bd4b406e68d90454468ac869d93956814a",
+        "eligibleSince": "2026-08-16T03:55:52.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "dffed24e68a7446673a58227f67d02f21e3adb1a",
+          "reviewRequestId": null,
+          "bytesDigest": "a38670f9a626e6802851fe04779d84a3c171c1c54720a03f9b8526927bfff83c",
+          "namedChecksDigest": "a7ca5bdf02d32d63943e0ff0e47c05496e8f88ee31c9c6debfe955416e78aa5c",
+          "handoffEvidenceDigest": "82628edca34808fa764d9904ff59e4804e5571d4cea6205026e0199676ff64f7",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-16T03:58:58.000Z"
+        }
+      },
+      "claimDigest": "9cfd2c4c480377b7121041ed78b68750ccbfc99661e92138cbccfc729b09f97a",
+      "digest": "667f91e1af3ca799cf5c77319f477783c9a1b51bab9c60a44a5bc14936e63705"
     }
   ]
 }

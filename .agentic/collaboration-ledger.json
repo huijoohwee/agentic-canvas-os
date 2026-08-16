@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3112,
-  "headDigest": "2ff3f463384876e817b78d482d8de14f4d04bf0e08a80041cdf320bbb2bbba7a",
+  "sequence": 3113,
+  "headDigest": "24baaf1e6476bcf7af3f4f6b2ac3878e7c98f3dba9c4dc8a061fc435fa19ecc2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -154100,6 +154100,47 @@
       },
       "claimDigest": "ad9dac3389e1c74c4b219b41910bd54e5b9a5f11483e1eeca12b8cade6f9917f",
       "digest": "2ff3f463384876e817b78d482d8de14f4d04bf0e08a80041cdf320bbb2bbba7a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3113,
+      "parentDigest": "2ff3f463384876e817b78d482d8de14f4d04bf0e08a80041cdf320bbb2bbba7a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9f5944eaa3c945194e2d3f43eb1f8920edd08f4887aeb4bbc02c6205f3862331",
+      "idempotencyKey": "1c24d12c3928b13777c2ab15387f645bd7f00d6b0e7b32aa71120bcb9d326af9",
+      "requestDigest": "8c7364401c63da87363a87696ef3dcd036579d58cc6c683f0da13da4f66592e2",
+      "evaluationTime": "2026-08-16T02:29:39.000Z",
+      "claimCore": {
+        "claimId": "9f5944eaa3c945194e2d3f43eb1f8920edd08f4887aeb4bbc02c6205f3862331",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a1dca422132b6d50222f849b2d14fc670e5ea25bc42de26ebf1c632b9b27350c",
+        "canonicalBaseRevision": "145a63ecdafc366e301e10b3c45d817e9b8fd85f",
+        "declaredWriteScope": [
+          "path:__tests__/current-cloud-expired-local-work-continuation.test.mjs",
+          "path:docs/CURRENT-CLOUD-EXPIRED-LOCAL-WORK-CONTINUATION.md",
+          "path:scripts/current-cloud-expired-local-work-continuation-evidence.mjs",
+          "semantic:current-cloud-work-inventory-projection-fix"
+        ],
+        "writeSetDigest": "d5be7f753832fc03a783e25e90ab1026bbad06320667a429ba59739ee816c37e",
+        "laneRevision": "145a63ecdafc366e301e10b3c45d817e9b8fd85f",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-17T02:29:39.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "11e9dad6c3f1ce660b64fd6427dc0211de24e67037a7e25527fb1850e47eb851",
+      "digest": "24baaf1e6476bcf7af3f4f6b2ac3878e7c98f3dba9c4dc8a061fc435fa19ecc2"
     }
   ]
 }

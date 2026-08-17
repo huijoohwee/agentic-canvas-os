@@ -32,6 +32,7 @@ const EXECUTION_FINDINGS = [
   "self-graded-verdict", "unnamed-evaluator", "ungrounded-task",
   "unexecuted-condition", "task-cycle", "concurrent-write-conflict",
   "parallel-scope-collision", "stale-collaboration-fence",
+  "delivery-authority-unjoined",
   "canonical-base-drift", "scope-admission-collision",
   "unattributed-lane-ambiguity", "admission-snapshot-stale",
   "unsafe-candidate-target", "local-only-cross-device-lease",
@@ -53,6 +54,9 @@ const EXECUTION_FINDINGS = [
   "integration-order-cycle", "integration-before-dependency",
   "canonical-frontier-unverified", "duplicate-change-reintegrated",
   "stale-candidate-frontier", "runtime-readiness-unproven",
+  "undesigned-criterion", "ungrounded-design-element",
+  "requirement-introduced-downstream", "stale-downstream-artifact",
+  "phase-advanced-without-approval", "seam-elided",
 ];
 
 const frontmatter = [
@@ -213,7 +217,7 @@ test("bold phase gates coexist with structured gate declarations", () => {
 
 test("finding vocabulary is the exact authoring and execution union", () => {
   assert.deepEqual(FINDING_TYPES, [...AUTHORING_FINDINGS, ...EXECUTION_FINDINGS]);
-  assert.equal(new Set(FINDING_TYPES).size, 83);
+  assert.equal(new Set(FINDING_TYPES).size, 90);
   assert.deepEqual(Object.keys(DEFAULT_SEVERITY), FINDING_TYPES);
   assert.equal(DEFAULT_SEVERITY["missing-frontmatter-key"], "minor");
   assert.equal(DEFAULT_SEVERITY["missing-lane"], "blocker");

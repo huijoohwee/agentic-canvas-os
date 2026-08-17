@@ -139,7 +139,7 @@ export function validateTaskReturns(context) {
     ) {
       context.collector.add("unsurfaced-result", {
         taskId,
-        ruleId: "task-model#12",
+        ruleId: "task-model#14",
         artifactReference: "documentation-artifact",
         evidenceExcerpt: "Documentation work must predeclare and return the exact nonempty artifact set proven by its named check.",
       });

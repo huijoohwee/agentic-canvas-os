@@ -240,7 +240,7 @@ test("dependency readiness uses the latest causal state after re-derivation", ()
 
   assert.ok(findings.some((finding) =>
     finding.findingType === "state-without-reason"
-    && finding.ruleId === "task-model#14"
+    && finding.ruleId === "task-model#16"
       && finding.artifactReference === "10:1"));
 });
 

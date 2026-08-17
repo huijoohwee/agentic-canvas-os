@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3369,
-  "headDigest": "5f07055c739237b382bd77529ab2a2401175028ae155904058eb46678963c693",
+  "sequence": 3370,
+  "headDigest": "4536a03f951a5fbe038c7f30aad8791022e46d638a0f24c15600fc80f531cda4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -166733,6 +166733,56 @@
       },
       "claimDigest": "6e5e13ac55e09dd5c01c62d36493cb345034f6da9467df9ec12f1fdab5528fcd",
       "digest": "5f07055c739237b382bd77529ab2a2401175028ae155904058eb46678963c693"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3370,
+      "parentDigest": "5f07055c739237b382bd77529ab2a2401175028ae155904058eb46678963c693",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d7f1270e87ee74f83735707a0c62c0f5ba84d98503a4e2c3d3cd20ff83cb2283",
+      "idempotencyKey": "b9f66e35a1d0f62f27e84221adedb1ad4480c0c2c2a496c54ed268e5f2160744",
+      "requestDigest": "91c618b19fc52f1c8254ec246f73a183380701c900b2e1d9e49536e0803449a4",
+      "evaluationTime": "2026-08-17T02:06:49.000Z",
+      "claimCore": {
+        "claimId": "d7f1270e87ee74f83735707a0c62c0f5ba84d98503a4e2c3d3cd20ff83cb2283",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a38089ffaa3087bc2a48944e3c7928397d64cd863327cc4190ded9fad7c2624a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8a8db4c721b8ce7224a6a5608d3a8bd53869ea2c905075039247e486374408cf",
+        "canonicalBaseRevision": "04fd6ad666cd0082507963c6820f1dd81e59907f",
+        "declaredWriteScope": [
+          "path:__tests__/agentic-sdlc-runtime-adversarial.test.mjs",
+          "path:__tests__/agentic-sdlc-source-contract.test.mjs",
+          "path:__tests__/agentic-sdlc-task-plan-hardening.test.mjs",
+          "path:__tests__/alignment-audit-guideline-v17-contract.test.mjs",
+          "path:docs/schemas/agentic-sdlc-guideline-baseline.v1.json",
+          "path:docs/schemas/agentic-sdlc-run.v1.schema.json",
+          "path:scripts/agentic-sdlc/admission-findings.mjs",
+          "path:scripts/agentic-sdlc/constants.mjs",
+          "path:scripts/agentic-sdlc/finding-rules.mjs",
+          "path:scripts/agentic-sdlc/task-plan.mjs",
+          "path:scripts/agentic-sdlc/verification.mjs",
+          "path:scripts/alignment-audit/finding.mjs",
+          "semantic:recoverable-cleanup-baseline"
+        ],
+        "writeSetDigest": "ed37930fbae7a5d64f28d886290378d07b0e8dc00b0529052190a8fdcb6a03a5",
+        "laneRevision": "58ac9011bda476bb06ff42dbd80616a4c4f039bf",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-17T02:43:36.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_2xoc",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9c39feaa1ee0e1d1e9f5ca9b6a5c840461c405c3bf3ed4800e1a08f8edb9dbf3",
+      "digest": "4536a03f951a5fbe038c7f30aad8791022e46d638a0f24c15600fc80f531cda4"
     }
   ]
 }

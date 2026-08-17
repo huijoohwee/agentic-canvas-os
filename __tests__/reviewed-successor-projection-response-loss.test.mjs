@@ -32,7 +32,7 @@ function fixture() {
   return { evidence, prepared, projected, terminal };
 }
 
-function partialFixture({ repaired = false } = {}) {
+function partialFixture({ repaired = false, reviewRequestId = "github-pull-request:PR519" } = {}) {
   const subject = fixture();
   const { evidence } = subject;
   const predecessorClaimId = evidence.predecessor.claimId;
@@ -53,9 +53,10 @@ function partialFixture({ repaired = false } = {}) {
   }
   const { taskAuthority: _taskAuthority, reviewedSuccessorPartialLocalProjectionRepair: _repair, ...stableLease } = actualLease;
   const partialLocal = { projectionState: repaired ? "repaired" : "pending", stableLeaseDigest: D(stableLease), actualLease, bindingSourceLease: repaired ? null : bindingSourceLease, sourceBindingDigest: retainedTaskAuthority.bindingDigest, repair };
-  const local = { ...evidence.local, status: "active", claimId: successorClaimId, leaseEpoch: 2, taskBindingDigest: actualLease.taskAuthority.bindingDigest, leaseDigest: D(actualLease) };
+  const local = { ...evidence.local, status: "active", claimId: successorClaimId, reviewRequestId, leaseEpoch: 2, taskBindingDigest: actualLease.taskAuthority.bindingDigest, leaseDigest: D(actualLease) };
   const pullRequest = { ...evidence.pullRequest, markerClaimId: successorClaimId, markerLeaseEpoch: 2 };
-  const core = { ...evidence, mode: "partial-local-successor", local, pullRequest, partialLocal };
+  const successor = { ...evidence.successor, reviewRequestId };
+  const core = { ...evidence, mode: "partial-local-successor", local, pullRequest, successor, partialLocal };
   delete core.evidenceDigest;
   const partialEvidence = { ...core, evidenceDigest: D(core) };
   return { ...subject, evidence: partialEvidence, bindingSourceLease, actualLease, repair };
@@ -162,6 +163,23 @@ test("partial-local plan seals exact reconstructed predecessor binding source an
     ...reviewedCore,
     evidenceDigest: digest(reviewedCore),
   }));
+});
+
+test("active partial-local successors may remain pre-review while provider PR identity stays exact", () => {
+  const partial = partialFixture({ reviewRequestId: null });
+  const plan = buildReviewedSuccessorProjectionResponseLossPlan(partial.evidence);
+  assert.equal(plan.evidence.local.reviewRequestId, null);
+  assert.equal(plan.evidence.successor.reviewRequestId, null);
+  assert.equal(plan.evidence.pullRequest.id, "PR519");
+
+  const reviewed = structuredClone(partial.evidence);
+  reviewed.local.status = "review_ready";
+  delete reviewed.evidenceDigest;
+  reviewed.evidenceDigest = D(reviewed);
+  assert.throws(
+    () => buildReviewedSuccessorProjectionResponseLossPlan(reviewed),
+    /local review request/u,
+  );
 });
 
 test("partial-local mode rejects any reconstructed source change beyond claim identity", () => {

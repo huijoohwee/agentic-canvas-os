@@ -25,6 +25,13 @@ task-authority binding still belongs to a reconstructed source lease made by
 replacing only `cloudAuthority.claimId` with the successor's retained
 `predecessorClaimId`.
 
+An active partial-local successor may still be pre-review, with a null cloud
+`reviewRequestId`, after a reviewed forward-child transaction intentionally
+demotes the existing provider pull request back to draft. The controller binds
+the provider pull request's node identity independently, requires the active
+lease and successor to agree on the absent cloud review identity, and still
+permits only the registry-local task-authority continuation repair.
+
 Planning seals the authenticated repository and work-item identities, exact
 branch/base/head/tree/write set, pull request and review request, source and
 successor claims, lease epochs, transition evidence, local registry revision,

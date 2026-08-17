@@ -96,6 +96,7 @@ export function buildReviewedSuccessorProjectionResponseLossReceipt({ plan, task
 export function normalizeReviewedSuccessorProjectionResponseLossEvidence(value) {
   exactKeys(value, ["mode", "observedAt", "repository", "actorId", "workItemId", "branch", "sessionId", "local", "remoteHeadSha", "pullRequest", "predecessor", "successor", "partialLocal", "evidenceDigest"], "evidence");
   if (!new Set(["absent-predecessor", "partial-local-successor"]).has(value.mode)) invalid("mode");
+  const local = normalizeLocal(value.local, value.mode);
   const core = {
     mode: value.mode,
     observedAt: instant(value.observedAt, "observed at"),
@@ -104,11 +105,14 @@ export function normalizeReviewedSuccessorProjectionResponseLossEvidence(value) 
     workItemId: text(value.workItemId, "work item"),
     branch: text(value.branch, "branch"),
     sessionId: text(value.sessionId, "session"),
-    local: normalizeLocal(value.local, value.mode),
+    local,
     remoteHeadSha: sha(value.remoteHeadSha, "remote head"),
     pullRequest: normalizePullRequest(value.pullRequest),
     predecessor: normalizePredecessor(value.predecessor),
-    successor: normalizeSuccessor(value.successor),
+    successor: normalizeSuccessor(value.successor, {
+      allowMissingReviewRequest: value.mode === "partial-local-successor"
+        && local.reviewRequestId === null,
+    }),
     partialLocal: normalizePartialLocal(value.partialLocal, value.mode),
   };
   assertExactSubject(core);
@@ -146,7 +150,9 @@ function normalizeLocal(value, mode) {
     ? new Set(["active", "review_ready"])
     : new Set(["review_ready"]);
   if (!allowedStatuses.has(value.status) || value.admissionStatus !== "admitted" || value.clean !== true) invalid("clean local lease state");
-  return Object.freeze({ status: value.status, admissionStatus: value.admissionStatus, clean: true, baseSha: sha(value.baseSha, "local base"), headSha: sha(value.headSha, "local head"), writeSetDigest: digest(value.writeSetDigest, "local write set"), reviewRequestId: text(value.reviewRequestId, "local review request"), leaseEpoch: positive(value.leaseEpoch, "local lease epoch"), claimId: digest(value.claimId, "local claim"), taskBindingDigest: digest(value.taskBindingDigest, "local task binding"), leaseDigest: digest(value.leaseDigest, "local lease digest"), markerDigest: digest(value.markerDigest, "local marker digest") });
+  const allowMissingReviewRequest = mode === "partial-local-successor"
+    && value.status === "active";
+  return Object.freeze({ status: value.status, admissionStatus: value.admissionStatus, clean: true, baseSha: sha(value.baseSha, "local base"), headSha: sha(value.headSha, "local head"), writeSetDigest: digest(value.writeSetDigest, "local write set"), reviewRequestId: allowMissingReviewRequest ? optionalText(value.reviewRequestId, "local review request") : text(value.reviewRequestId, "local review request"), leaseEpoch: positive(value.leaseEpoch, "local lease epoch"), claimId: digest(value.claimId, "local claim"), taskBindingDigest: digest(value.taskBindingDigest, "local task binding"), leaseDigest: digest(value.leaseDigest, "local lease digest"), markerDigest: digest(value.markerDigest, "local marker digest") });
 }
 
 function normalizePullRequest(value) {
@@ -161,10 +167,10 @@ function normalizePredecessor(value) {
   return Object.freeze({ claimId: digest(value.claimId, "predecessor claim"), cloudInventoryMatches: 0, leaseEpoch: positive(value.leaseEpoch, "predecessor lease epoch") });
 }
 
-function normalizeSuccessor(value) {
+function normalizeSuccessor(value, { allowMissingReviewRequest = false } = {}) {
   exactKeys(value, ["cloudInventoryMatches", "claimId", "predecessorClaimId", "state", "actorId", "repository", "workItemId", "canonicalBaseSha", "laneRevision", "writeSetDigest", "reviewRequestId", "leaseEpoch", "integrationState", "operationReceiptDigest", "verificationReceiptDigest", "authorityDigest"], "successor");
   if (value.cloudInventoryMatches !== 1 || !new Set(["active", "reviewed", "dormant-preserved"]).has(value.state) || value.integrationState !== "not-integrated") invalid("unique reviewed successor cloud claim");
-  return Object.freeze({ cloudInventoryMatches: 1, claimId: digest(value.claimId, "successor claim"), predecessorClaimId: digest(value.predecessorClaimId, "successor predecessor"), state: value.state, actorId: text(value.actorId, "successor actor"), repository: text(value.repository, "successor repository"), workItemId: text(value.workItemId, "successor work item"), canonicalBaseSha: sha(value.canonicalBaseSha, "successor base"), laneRevision: sha(value.laneRevision, "successor head"), writeSetDigest: digest(value.writeSetDigest, "successor write set"), reviewRequestId: text(value.reviewRequestId, "successor review request"), leaseEpoch: positive(value.leaseEpoch, "successor lease epoch"), integrationState: value.integrationState, operationReceiptDigest: digest(value.operationReceiptDigest, "successor operation receipt"), verificationReceiptDigest: digest(value.verificationReceiptDigest, "successor verification receipt"), authorityDigest: digest(value.authorityDigest, "successor authority digest") });
+  return Object.freeze({ cloudInventoryMatches: 1, claimId: digest(value.claimId, "successor claim"), predecessorClaimId: digest(value.predecessorClaimId, "successor predecessor"), state: value.state, actorId: text(value.actorId, "successor actor"), repository: text(value.repository, "successor repository"), workItemId: text(value.workItemId, "successor work item"), canonicalBaseSha: sha(value.canonicalBaseSha, "successor base"), laneRevision: sha(value.laneRevision, "successor head"), writeSetDigest: digest(value.writeSetDigest, "successor write set"), reviewRequestId: allowMissingReviewRequest ? optionalText(value.reviewRequestId, "successor review request") : text(value.reviewRequestId, "successor review request"), leaseEpoch: positive(value.leaseEpoch, "successor lease epoch"), integrationState: value.integrationState, operationReceiptDigest: digest(value.operationReceiptDigest, "successor operation receipt"), verificationReceiptDigest: digest(value.verificationReceiptDigest, "successor verification receipt"), authorityDigest: digest(value.authorityDigest, "successor authority digest") });
 }
 
 function normalizePartialLocal(value, mode) {
@@ -223,6 +229,7 @@ function pick(value, keys) { return Object.fromEntries(keys.map(key => [key, val
 function exactKeys(value, keys, label) { record(value, label); if (Object.keys(value).sort().join("\0") !== [...keys].sort().join("\0")) invalid(label); }
 function record(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) invalid(label); digestValue(value); return value; }
 function text(value, label) { if (typeof value !== "string" || !value.trim()) invalid(label); return value; }
+function optionalText(value, label) { return value === null ? null : text(value, label); }
 function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(label); return value; }
 function sha(value, label) { if (!SHA.test(String(value || ""))) invalid(label); return value; }
 function positive(value, label) { if (!Number.isSafeInteger(value) || value < 1) invalid(label); return value; }

@@ -1,4 +1,4 @@
-// Responsibility: Resolve one exact dormant-recovery replay key from the sealed ledger.
+// Responsibility: Resolve an exact dormant-recovery replay chain from the sealed ledger.
 import { execFileSync } from "node:child_process";
 
 import { validateLedger } from "./cloud-collaboration-contract.mjs";
@@ -12,7 +12,7 @@ const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const MAX_GITHUB_RESPONSE_BYTES = 16 * 1024 * 1024;
 
-export function resolveExpiredCommittedRecoveryReplayEvidence({
+export function resolveExpiredCommittedRecoveryReplayEvidenceChain({
   source,
   liveClaim,
   status,
@@ -31,24 +31,45 @@ export function resolveExpiredCommittedRecoveryReplayEvidence({
     revision !== requiredSha(status?.ledgerRevision, "status ledger revision")
     || ledger.headDigest !== requiredDigest(status?.ledgerDigest, "status ledger digest")
   ) drift();
-  const entries = ledger.entries.filter(entry => entry.claimId === source?.claimId);
+  const sourceTransitionCounter = positiveInteger(
+    source?.transitionCounter,
+    "source transition counter",
+  );
+  const liveTransitionCounter = positiveInteger(
+    liveClaim?.transitionCounter,
+    "live transition counter",
+  );
+  const entries = ledger.entries.filter(entry => (
+    entry.claimId === source?.claimId
+    && entry.claimCore.transitionCounter > sourceTransitionCounter
+    && entry.claimCore.transitionCounter <= liveTransitionCounter
+  ));
   const entry = entries.at(-1);
-  const recovery = entry?.claimCore?.recovery;
   if (
     !entry
-    || entry.action !== "continue"
+    || entries.length !== liveTransitionCounter - sourceTransitionCounter
     || entry.digest !== liveClaim?.transitionDigest
     || entry.claimDigest !== liveClaim?.fenceRevision
-    || entry.claimCore.transitionCounter !== liveClaim?.transitionCounter
+    || entry.claimCore.transitionCounter !== liveTransitionCounter
     || entry.claimCore.heartbeatCounter !== liveClaim?.heartbeatCounter
-    || entry.claimCore.laneRevision !== source?.laneRevision
-    || entry.claimCore.leaseEpoch !== source?.leaseEpoch
-    || !ownerMatches(entry.claimCore.deviceId, "device", source?.deviceId)
-    || !ownerMatches(entry.claimCore.sessionId, "session", source?.sessionId)
-    || entry.claimCore.reviewRequestId !== source?.reviewRequestId
-    || !DIGEST_PATTERN.test(String(recovery?.evidenceDigest || ""))
+    || entries.some((candidate, index) => !replayEntryMatches({
+      entry: candidate,
+      source,
+      transitionCounter: sourceTransitionCounter + index + 1,
+    }))
   ) drift();
-  return recovery.evidenceDigest;
+  return Object.freeze(entries.map(candidate => candidate.claimCore.recovery.evidenceDigest));
+}
+
+function replayEntryMatches({ entry, source, transitionCounter }) {
+  return entry.action === "continue"
+    && entry.claimCore.transitionCounter === transitionCounter
+    && entry.claimCore.laneRevision === source?.laneRevision
+    && entry.claimCore.leaseEpoch === source?.leaseEpoch
+    && ownerMatches(entry.claimCore.deviceId, "device", source?.deviceId)
+    && ownerMatches(entry.claimCore.sessionId, "session", source?.sessionId)
+    && entry.claimCore.reviewRequestId === source?.reviewRequestId
+    && DIGEST_PATTERN.test(String(entry.claimCore.recovery?.evidenceDigest || ""));
 }
 
 function ownerMatches(recorded, namespace, source) {
@@ -118,6 +139,11 @@ function requiredDigest(value, label) {
 
 function requiredSha(value, label) {
   if (!SHA_PATTERN.test(String(value || ""))) throw new Error(`${label} is invalid.`);
+  return value;
+}
+
+function positiveInteger(value, label) {
+  if (!Number.isInteger(value) || value < 1) throw new Error(`${label} is invalid.`);
   return value;
 }
 

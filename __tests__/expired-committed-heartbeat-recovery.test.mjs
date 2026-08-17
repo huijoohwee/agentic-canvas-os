@@ -703,10 +703,10 @@ test("expired-source replay adopts repeated current response-loss with stable he
       renewCalls += 1;
       throw new Error("unexpected renewal");
     },
-    resolveReplayEvidence: ({ liveClaim }) => {
+    resolveReplayEvidenceChain: ({ liveClaim }) => {
       replayCalls += 1;
       assert.equal(liveClaim, claim);
-      return recoveryEvidenceDigest;
+      return ["c".repeat(64), recoveryEvidenceDigest];
     },
     verify: ({ authority }) => ({
       authority,
@@ -726,10 +726,10 @@ test("expired-source replay adopts repeated current response-loss with stable he
   assert.equal(invokeCalls, 0);
 });
 
-test("expired-source replay renews repeated dormant response-loss with stable heartbeat", () => {
+test("expired-source replay renews an ordered dormant response-loss chain", () => {
   const source = liveManifestLease();
   source.cloudAuthority.heartbeatCounter = 1;
-  const historicalRecoveryEvidenceDigest = "d".repeat(64);
+  const historicalRecoveryEvidenceDigests = ["d".repeat(64), "b".repeat(64)];
   const recoveryEvidenceDigest = "a".repeat(64);
   const liveClaim = cloudClaim({
     source: source.cloudAuthority,
@@ -760,15 +760,15 @@ test("expired-source replay renews repeated dormant response-loss with stable he
     recoveryEvidenceDigest,
     ttlSeconds: 1800,
     inspect: () => status,
-    resolveReplayEvidence: () => historicalRecoveryEvidenceDigest,
+    resolveReplayEvidenceChain: () => historicalRecoveryEvidenceDigests,
     invoke: ({ request }) => {
       invocations.push(request);
-      const replay = invocations.length === 1;
+      const replay = invocations.length < 3;
       const transitionCounter = source.cloudAuthority.transitionCounter
-        + (replay ? 1 : 2);
-      const operationReceiptDigest = (replay ? "4" : "5").repeat(64);
-      const transitionDigest = (replay ? "6" : "7").repeat(64);
-      const claimDigest = (replay ? "8" : "9").repeat(64);
+        + invocations.length;
+      const operationReceiptDigest = ["4", "5", "6"][invocations.length - 1].repeat(64);
+      const transitionDigest = ["6", "7", "8"][invocations.length - 1].repeat(64);
+      const claimDigest = ["8", "9", "a"][invocations.length - 1].repeat(64);
       return recoveryContinuationResult({
         source: source.cloudAuthority,
         transitionCounter,
@@ -796,17 +796,21 @@ test("expired-source replay renews repeated dormant response-loss with stable he
   });
 
   assert.equal(result.authority.transitionCounter,
-    source.cloudAuthority.transitionCounter + 2);
+    source.cloudAuthority.transitionCounter + 3);
   assert.equal(result.authority.heartbeatCounter,
     source.cloudAuthority.heartbeatCounter);
-  assert.equal(invocations.length, 2);
+  assert.equal(invocations.length, 3);
   assert.equal(invocations[0].expectedTransitionCounter,
     source.cloudAuthority.transitionCounter);
   assert.equal(invocations[1].expectedTransitionCounter,
     source.cloudAuthority.transitionCounter + 1);
+  assert.equal(invocations[2].expectedTransitionCounter,
+    source.cloudAuthority.transitionCounter + 2);
   assert.equal(invocations[0].recoveryEvidenceDigest,
-    historicalRecoveryEvidenceDigest);
+    historicalRecoveryEvidenceDigests[0]);
   assert.equal(invocations[1].recoveryEvidenceDigest,
+    historicalRecoveryEvidenceDigests[1]);
+  assert.equal(invocations[2].recoveryEvidenceDigest,
     recoveryEvidenceDigest);
 });
 

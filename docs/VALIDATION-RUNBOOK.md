@@ -113,6 +113,23 @@ Expected:
 - Runtime artifact scan returns no copied local provider/media artifacts.
 - External-copy scans cover docs, dedicated Swarm and Agent Toolkit runtimes/tests, and added integration lines; they return no imported code, prompt, API, schema, test, fixture, prose, dependency-field, or lockfile delta from referenced systems.
 
+## Lifecycle Monitoring Checks
+
+Run the focused model-free monitor proof:
+
+```bash
+node --test \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-contract.test.mjs" \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-controller.test.mjs" \
+  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-cli.test.mjs"
+```
+
+The suite must prove exact target binding, deterministic adaptive scheduling,
+monotonic evidence, replay integrity, bounded attempts/time/read units,
+sequential observation, cancellation, regular-file JSON input, and
+`mutationAuthority: false`. No test may treat silence, expiry, timeout, or a
+successful adapter call as target evidence.
+
 ## Repository-Owned Collaboration Gate
 
 First run `node --test __tests__/workspace-sync.test.mjs __tests__/production-runtime-readiness-contract.test.mjs __tests__/github-lifecycle-policy.test.mjs`.

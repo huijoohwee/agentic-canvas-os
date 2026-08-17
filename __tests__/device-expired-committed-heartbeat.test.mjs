@@ -351,6 +351,85 @@ test("v3 recovers and replays one exact pushed remote/PR prefix", () => {
   }), /exact open draft ownership pull request/);
 });
 
+test("v3 accepts an exact one-transition stale pull-request marker", () => {
+  const publicKey = "MCowBQYDK2VwAyEACSrUbV3AI2B2uelp0lzOksMlP46mRe78kmyFteCHu6E=";
+  const taskAuthorityCore = {
+    schema: "agentic-task-authority-binding/v1",
+    authoritySubjectId: `urn:agentic-task:${"4".repeat(64)}`,
+    proofAdapterId: "urn:agentic-proof:ed25519-file:v1",
+    generation: 1,
+    publicKey,
+    publicKeyDigest: digestValue(publicKey),
+    laneBindingDigest: "2".repeat(64),
+    bindingMode: "claim",
+    boundAt: "2026-08-04T10:00:00.000Z",
+    transitionPlanDigest: null,
+    priorBindingDigest: null,
+  };
+  const taskAuthority = {
+    ...taskAuthorityCore,
+    bindingDigest: digestValue(taskAuthorityCore),
+  };
+  const sourceMarker = { ...expiredCloudLease(), taskAuthority };
+  const source = {
+    ...sourceMarker,
+    cloudAuthority: renewedAuthorityFor(sourceMarker),
+  };
+  const renewedAuthority = renewedAuthorityFor(source);
+  let saved = source;
+  let remoteBody = renderWriterLeasePullRequestBody(sourceMarker);
+  let markerWrites = 0;
+
+  const result = recoverExpiredCommittedHeartbeat({
+    invocationPath: repo,
+    repo,
+    gitText: recoveryGitText({
+      sourceRemoteHeadSha: pushedRemoteHeadSha,
+      sourceRemotePaths: ["scripts/recovery/check.mjs"],
+    }),
+    gitOptional: () =>
+      `${pushedRemoteHeadSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(remoteBody, {
+      headRefOid: pushedRemoteHeadSha,
+    }),
+    leaseStore: {
+      read: () => saved,
+      recoverExpiredCommittedHeartbeat: input => {
+        saved = recoveredLease({
+          source,
+          renewedAuthority,
+          evidence: input.recoveryEvidence,
+          recoveredAt: input.recoveredAt,
+        });
+        return saved;
+      },
+    },
+    sessionId: source.sessionId,
+    leaseTtlMs: 1_800_000,
+    heartbeatCloudAuthority: () => ({
+      authority: renewedAuthority,
+      verification: { status: "ready" },
+    }),
+    verifyActiveCloudAuthority: () => ({
+      authority: saved.cloudAuthority,
+      verification: { status: "ready" },
+    }),
+    assertMutationAuthority: () => ({ status: "ready" }),
+    run: (command, args) => {
+      if (command === "git") return;
+      markerWrites += 1;
+      remoteBody = args[args.indexOf("--body") + 1];
+    },
+    log: () => {},
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.equal(result.status, "recovered");
+  assert.equal(result.lease.cloudAuthority.transitionCounter, 4);
+  assert.equal(result.recovery.sourceCloudTransitionCounter, 3);
+  assert.equal(markerWrites, 1);
+});
+
 test("v3 accepts only a completed source-correction fence lineage", () => {
   const priorFenceSha = "8".repeat(40);
   const source = expiredCloudLease();
@@ -1008,10 +1087,11 @@ function writeSourceCorrectionJournal({ gitCommonDir, source, priorFenceSha }) {
     source: sourceEvidence,
     operatorSessionId: "operator-session",
   });
-  let current = createReviewedLaneSourceCorrectionIntent(
+  const intent = createReviewedLaneSourceCorrectionIntent(
     plan,
     plan.exactAuthorization,
   );
+  let current = intent;
   for (const status of [
     "successor_waiting",
     "source_retired",

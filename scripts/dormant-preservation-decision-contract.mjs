@@ -9,7 +9,7 @@ import {
 } from "./dormant-preservation-decision-evidence.mjs";
 
 export const DORMANT_PRESERVATION_ADMISSION_PLAN_SCHEMA =
-  "agentic-dormant-preservation-admission-plan/v1";
+  "agentic-dormant-preservation-admission-plan/v2";
 export const DORMANT_PRESERVATION_ADMISSION_AUTHORIZATION_SCHEMA =
   "agentic-dormant-preservation-admission-authorization/v1";
 export const DORMANT_PRESERVATION_ADMISSION_INTENT_SCHEMA =

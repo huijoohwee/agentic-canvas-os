@@ -9,6 +9,7 @@ import {
   canonicalJson,
   createEmptyLedger,
   digestValue,
+  findUncoveredPathScopes,
   listCurrentClaims,
   normalizeWriteSet,
   validateLedger,
@@ -166,6 +167,10 @@ test("canonical scope logic is deterministic and bounded per claim", () => {
   assert.equal(canonicalJson({ z: 1, a: -0 }), '{"a":0,"z":1}');
   assert.deepEqual(normalizeWriteSet(["docs/a.md", "path:docs/a.md"]), ["path:docs/a.md"]);
   assert.equal(writeSetsOverlap(["path:docs"], ["path:docs/a.md"]), true);
+  assert.deepEqual(
+    findUncoveredPathScopes(["path:docs", "path:scripts/cloud"], ["docs/a.md", "__tests__/escaped.test.mjs"]),
+    ["path:__tests__/escaped.test.mjs"],
+  );
   assert.deepEqual(CLOUD_COLLABORATION_BOUNDS, { writeScopeItems: 128, textCharacters: 512 });
   throwsCode(() => normalizeWriteSet(Array.from({ length: 129 }, (_, index) => `path:${index}`)), "bound_exceeded");
 });
@@ -461,6 +466,47 @@ test("verification can recover one exact integrated entry followed by its valid 
     });
     assert.equal(blocked.ok, false);
   }
+});
+
+test("verification blocks a reviewed claim whose observed pull-request paths escape its declared scope", () => {
+  const claimed = claim(createEmptyLedger("ledger:repository"), {
+    scope: ["path:docs", "path:scripts/cloud"],
+  });
+  const projected = continueClaim(claimed.ledger, claimed.claim, {
+    mode: "projection",
+    laneRevision: revision("scope-reviewed"),
+    reviewRequestId: "review:scope-reviewed",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review",
+    time: T2,
+    laneRevision: projected.claim.laneRevision,
+    reviewRequestId: projected.claim.reviewRequestId,
+    focusedEvidenceDigest: evidence("scope-reviewed"),
+  });
+  const blocked = verifyCloudClaim({
+    ledger: reviewed.ledger,
+    request: {
+      claimId: reviewed.claim.claimId,
+      requiredState: "reviewed",
+      reviewRequestId: reviewed.claim.reviewRequestId,
+      focusedEvidenceDigest: reviewed.claim.evidenceDigest,
+      observedChangedPaths: [
+        "docs/ACTIVE-PUBLISH-SUCCESSOR-DORMANT-RECOVERY.md",
+        "__tests__/expired-committed-heartbeat-recovery.test.mjs",
+      ],
+    },
+    evaluationTime: T2,
+  });
+  assert.equal(blocked.ok, false);
+  assert.equal(
+    blocked.findings.some((finding) => finding.type === "declared-write-scope-unproven"),
+    true,
+  );
+  assert.deepEqual(
+    blocked.findings.find((finding) => finding.type === "declared-write-scope-unproven")?.scope,
+    ["path:__tests__/expired-committed-heartbeat-recovery.test.mjs"],
+  );
 });
 
 test("ledger validation rejects hash-consistent forged authority semantics", () => {

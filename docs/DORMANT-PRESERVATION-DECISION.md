@@ -2,9 +2,9 @@
 title: "Dormant-preservation Admission Decision Runtime"
 graphId: "md:agentic-dormant-preservation-admission-decision"
 doc_type: "Runtime Contract"
-date: "2026-08-10"
+date: "2026-08-12"
 lang: "en-US"
-schema: "agentic-dormant-preservation-admission-decision/v1"
+schema: "agentic-dormant-preservation-admission-decision/v2"
 frontmatter_contract: "required"
 status: "focused-tested"
 authority: "receipt-bound admission of one candidate while preserving an exact dormant-lane selection"
@@ -61,13 +61,25 @@ node scripts/dormant-preservation-decision.mjs plan \
   --controller-root=/absolute/path/to/controller
 ```
 
-The one-line JSON result contains `planDigest`, `exactAuthorization`, and the complete plan. The plan binds:
+The one-line JSON result contains `planDigest`, `exactAuthorization`, and the complete plan. The v2 plan binds:
 
 - clean exact controller and canonical Git revisions, trees, and GitHub origin identity;
-- every registered pre-existing lane and every cloud claim;
+- every registered pre-existing lane and the complete claim-local decision set;
 - candidate scope, branch, target observation, manifest, authority, selection, and file digests;
 - the journal path and exact `device:start --provision` executable, working directory, and argv;
 - the authenticated owner, repository, selected worktrees, and selected pull requests.
+
+Cloud verification and operator authorization have deliberately different
+projections. Verification returns one complete, bounded current-claim inventory
+from the same immutable ledger snapshot as the verified candidate and seals that
+inventory into its receipt. The operator decision retains the candidate, claims
+in the candidate's work-item or review lineage, claims named by selected
+preserved lanes, and every claim whose normalized write set overlaps the
+candidate. It excludes the global ledger head, observation time, verification
+receipt, and unrelated disjoint claims. An unrelated ledger append therefore
+cannot invalidate exact authorization, while candidate-lineage, selected-peer,
+or overlapping-claim drift still fails closed. Final execution evidence retains
+the complete observed ledger and inventory for audit.
 
 The default journal is in the repository Git common directory at `agentic-canvas-os/dormant-preservation-admission/<claim-id>.json`. `--state-path=/absolute/path.json` selects another path, and that exact path is included in the plan digest.
 
@@ -90,7 +102,14 @@ node scripts/dormant-preservation-decision.mjs run \
   --authorize='authorize dormant-preservation-admission <planDigest>'
 ```
 
-Before candidate mutation, the controller rebuilds the source evidence and exact nested argv. `device:start` independently rebuilds them twice, including once while holding the repository registry lock. Any controller, canonical, lane, pull-request, cloud, file, target, identity, argv, or authorization drift blocks before provisioning.
+Before candidate mutation, the controller rebuilds the source evidence and exact nested argv. `device:start` independently rebuilds them twice, including once while holding the repository registry lock. Any controller, canonical, lane, pull-request, relevant cloud claim, file, target, identity, argv, or authorization drift blocks before provisioning. A different global ledger head is accepted only when the fresh same-snapshot verification proves the decision claim set is byte-identical.
+
+Plans and source evidence issued by this runtime use v2. A v1 plan cannot receive
+new v2 authority. Completed v1 journals remain immutable historical evidence;
+an effect-absent authorized v1 journal must be superseded by a fresh v2 plan and
+authorization. A v1 journal with a planned or admitted effect requires its
+repository-owned recovery or one-way migration contract and is never
+reinterpreted by the v2 normalizer.
 
 ## Crash and replay behavior
 
@@ -110,4 +129,4 @@ The candidate pull request must be an open draft in the canonical target reposit
 
 Focused tests cover deterministic planning, byte-exact authorization, two pre-provision drift gates, full post-state evidence, candidate ancestry and no-force semantics, strict subprocess joins, journal CAS, lost-response recovery, planned continuation, authorized-intent refresh, and admitted/complete replay.
 
-A complete receipt proves repository-local and cloud-inventory admission evidence for this operation. It does not by itself prove protected integration, deployment, a physical Apple device run, or production availability.
+A complete receipt proves repository-local and cloud-inventory admission evidence for this operation. The immutable v1 schema remains historical; new plans validate against [`dormant-preservation-decision-plan.v2.schema.json`](./schemas/dormant-preservation-decision-plan.v2.schema.json). It does not by itself prove protected integration, deployment, a physical Apple device run, or production availability.

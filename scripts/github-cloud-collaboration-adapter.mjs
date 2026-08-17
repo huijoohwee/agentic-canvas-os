@@ -6,6 +6,8 @@ export const DEFAULT_LEDGER_REF = "agentic/collaboration-ledger";
 export const DEFAULT_LEDGER_PATH = ".agentic/collaboration-ledger.json";
 export { CLOUD_RESULT_SCHEMA } from "./github-cloud-collaboration-mapping.mjs";
 const MUTATING_ACTIONS = new Set(["claim", "continue", "integrate", "retire"]);
+const PULL_REQUEST_FILES_PAGE_SIZE = 100;
+const PULL_REQUEST_FILES_PAGE_LIMIT = 100;
 export function createGitHubCloudCollaborationAdapter({ ledgerRepository, token = "", request = null,
   ledgerRef = DEFAULT_LEDGER_REF, ledgerPath = DEFAULT_LEDGER_PATH, maxAttempts = 4,
   workflowContext = null } = {}) {
@@ -125,6 +127,27 @@ async function resolveRepository(send, fullName, label) {
     throw new Error(`${label} identity changed during resolution.`);
   }
   return repository;
+}
+async function listPullRequestChangedPaths({ send, repository, pullRequestNumber }) {
+  const changedPaths = [];
+  for (let page = 1; page <= PULL_REQUEST_FILES_PAGE_LIMIT; page += 1) {
+    const response = await send({
+      path: `/repos/${repository.fullName}/pulls/${pullRequestNumber}/files?per_page=${PULL_REQUEST_FILES_PAGE_SIZE}&page=${page}`,
+    });
+    requireStatus(response, [200], "list pull request files");
+    const files = Array.isArray(response.value) ? response.value : [];
+    for (const file of files) {
+      const filename = String(file?.filename || "").trim();
+      if (!filename) throw new Error("Pull request file entries must include filename.");
+      changedPaths.push(filename);
+      const previousFilename = String(file?.previous_filename || "").trim();
+      if (previousFilename) changedPaths.push(previousFilename);
+    }
+    if (files.length < PULL_REQUEST_FILES_PAGE_SIZE) {
+      return [...new Set(changedPaths)].sort();
+    }
+  }
+  throw new Error("Pull request file listing exceeded the supported pagination bound.");
 }
 async function resolveActor({ input, send, workflowContext }) {
   const userResponse = await send({ path: "/user" });
@@ -335,8 +358,15 @@ async function readOnlyResult({
       claims: selected.map(projectPublicClaim),
     };
   }
+  const observedChangedPaths = action === "verify" && context.pullRequest
+    ? await listPullRequestChangedPaths({
+      send,
+      repository: context.repository,
+      pullRequestNumber: context.pullRequest.number,
+    })
+    : undefined;
   const request = prepareReadRequest({
-    input: context.input,
+    input: { ...context.input, observedChangedPaths },
     repository: context.repository,
     pullRequest: context.pullRequest,
   });
@@ -361,6 +391,7 @@ async function readOnlyResult({
     snapshot,
     evaluationTime,
     context,
+    claims,
   });
 }
 async function readLedger({

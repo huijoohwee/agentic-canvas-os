@@ -13,6 +13,20 @@ const GUARDRAIL_STAGES = new Set(["input", "output", "tool-input", "tool-output"
 const OUTPUT_MODES = new Set(["text", "structured"]);
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
+// Lifecycle statuses for the native skill creation harness. A definition
+// without a status keeps the pre-feature behavior and is "active", so every
+// caller registered before this feature stays dispatchable unchanged.
+export const AGENT_DEFINITION_STATUSES = Object.freeze(["proposed", "active", "deprecated"]);
+export const ACTIVE_REGISTRY_SNAPSHOT_SCHEMA = "acos-active-registry-snapshot/v1";
+
+function normalizeStatus(value) {
+  if (value === undefined) return "active";
+  if (!AGENT_DEFINITION_STATUSES.includes(value)) {
+    throw new TypeError("definition.status is unsupported.");
+  }
+  return value;
+}
+
 export class AgentDefinitionBlock extends Error {
   constructor(reasonCode, message, details = {}) {
     super(message);
@@ -136,7 +150,7 @@ function normalizeOutput(value) {
 function normalizeDefinition(value, limits) {
   assertExactKeys(
     value,
-    ["id", "revision", "name", "source", "model", "instructions", "tools", "guardrails", "mcpServers", "handoffs", "output"],
+    ["id", "revision", "name", "source", "model", "instructions", "tools", "guardrails", "mcpServers", "handoffs", "output", "status"],
     "definition",
   );
   const id = assertIdentifier(value.id, "definition.id");
@@ -152,6 +166,7 @@ function normalizeDefinition(value, limits) {
     mcpServers: normalizeReferences(value.mcpServers, "mcpServers", limits.maxReferences, normalizeMcpServer),
     handoffs: normalizeReferences(value.handoffs, "handoffs", limits.maxReferences, normalizeHandoff),
     output: normalizeOutput(value.output),
+    status: normalizeStatus(value.status),
   }, "definition");
   if (definition.handoffs.some((handoff) => handoff.targetAgentId === id)) {
     throw new TypeError("An agent definition cannot hand off to itself.");
@@ -202,6 +217,39 @@ function capabilityReferences(definition) {
 function assertUniqueReferenceNames(references, field) {
   const names = references.map((reference) => reference.name);
   if (new Set(names).size !== names.length) throw new TypeError(`${field} contains a duplicate name.`);
+}
+
+// Active_Registry_Snapshot entry, written by explicit projection so the byte
+// layout never depends on object insertion order. Array member order is
+// preserved because instruction and tool order is semantically meaningful.
+function projectSnapshotEntry(definition) {
+  return {
+    id: definition.id,
+    revision: definition.revision,
+    name: definition.name,
+    source: { uri: definition.source.uri, digest: definition.source.digest },
+    model: { providerId: definition.model.providerId, modelId: definition.model.modelId },
+    instructions: definition.instructions.map((instruction) => ({ name: instruction.name, content: instruction.content })),
+    tools: definition.tools.map((tool) => ({ name: tool.name, loading: tool.loading })),
+    guardrails: definition.guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage })),
+    mcpServers: definition.mcpServers.map((server) => ({ name: server.name })),
+    handoffs: definition.handoffs.map((handoff) => ({ targetAgentId: handoff.targetAgentId, summary: handoff.summary })),
+    output: definition.output.mode === "structured"
+      ? { mode: "structured", schemaId: definition.output.schemaId }
+      : { mode: "text" },
+    status: definition.status,
+  };
+}
+
+function serializeActiveRegistry(activeDefinitions) {
+  // Default string sort (UTF-16 code-unit order), never localeCompare, so the
+  // serialization is host-independent and byte-comparable.
+  const entries = [...activeDefinitions].sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  return JSON.stringify({
+    schema: ACTIVE_REGISTRY_SNAPSHOT_SCHEMA,
+    agents: entries.length,
+    definitions: entries.map(projectSnapshotEntry),
+  });
 }
 
 export function createAgentDefinitionRegistry({
@@ -269,6 +317,12 @@ export function createAgentDefinitionRegistry({
     let record;
     try {
       record = requireRecord(definitions, agentId, revision);
+      if (record.status !== "active") {
+        throw new AgentDefinitionBlock(
+          "agent_not_active",
+          `Agent ${record.id} has status ${record.status} and is not dispatchable.`,
+        );
+      }
       if (typeof verifyDefinitionSource !== "function") {
         throw new AgentDefinitionBlock("source_verifier_unconfigured", "Agent definitions require an application source verifier.");
       }
@@ -426,7 +480,24 @@ export function createAgentDefinitionRegistry({
     return definitions.delete(record.id);
   }
 
+  function snapshot() {
+    const activeDefinitions = [...definitions.values()].filter((definition) => definition.status === "active");
+    return Object.freeze({
+      schema: ACTIVE_REGISTRY_SNAPSHOT_SCHEMA,
+      agents: activeDefinitions.length,
+      serialization: serializeActiveRegistry(activeDefinitions),
+    });
+  }
+
+  async function snapshotDigest() {
+    const bytes = new TextEncoder().encode(snapshot().serialization);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
   function stats() {
+    const statusCounts = { proposed: 0, active: 0, deprecated: 0 };
+    for (const definition of definitions.values()) statusCounts[definition.status] += 1;
     return Object.freeze({
       agents: definitions.size,
       registrationCount,
@@ -438,11 +509,13 @@ export function createAgentDefinitionRegistry({
       sourceVerifierConfigured: typeof verifyDefinitionSource === "function",
       capabilityAuthorizerConfigured: typeof authorizeCapability === "function",
       outputValidatorConfigured: typeof validateStructuredOutput === "function",
+      statusCounts: Object.freeze(statusCounts),
+      snapshotDigestAlgorithm: "sha-256",
       ...limits,
     });
   }
 
-  return Object.freeze({ register, prepare, validateOutput, remove, stats });
+  return Object.freeze({ register, prepare, validateOutput, remove, snapshot, snapshotDigest, stats });
 }
 
 export const AGENT_DEFINITION_DEFAULTS = Object.freeze({

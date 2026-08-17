@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3413,
-  "headDigest": "e374061cec6cc39442c543c5f206895666bfa4c5f491d4f8fafc13ac1d876021",
+  "sequence": 3414,
+  "headDigest": "444b5d72c620a4201179c3cf96f3fc4fc0d2dfa4512574ce436ab6b46dd7b47b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -169242,6 +169242,64 @@
       },
       "claimDigest": "a07ff40e58599dfe6d700e90f6a78f2bc0f5ad7050a68c1330b3b89fc73b77da",
       "digest": "e374061cec6cc39442c543c5f206895666bfa4c5f491d4f8fafc13ac1d876021"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3414,
+      "parentDigest": "e374061cec6cc39442c543c5f206895666bfa4c5f491d4f8fafc13ac1d876021",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9a863701a21c5753355e8d103cf8dd3656befec67378c0d7213df37b455be92b",
+      "idempotencyKey": "ad556d60175ba552a96a91943ba90f63c930a67c5d701d3a03355d092cc52fd0",
+      "requestDigest": "8bb2ffc13294be2bbfdc887aee51ad9e664479ce41b9be84901c5f540f2f5db0",
+      "evaluationTime": "2026-08-17T07:33:04.000Z",
+      "claimCore": {
+        "claimId": "9a863701a21c5753355e8d103cf8dd3656befec67378c0d7213df37b455be92b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ed46aa4f5d0c61d9228dc7565602ea59f11a8afedf0627751da0dbe46aac955c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:33af912f09f1091afa551923718ec6bd480d75fc2dc9a55748cdbf460de97a7f",
+        "canonicalBaseRevision": "d05f1ab1c898a567197c7105df8006addabb57c4",
+        "declaredWriteScope": [
+          "path:__tests__/planned-fence-only-admission-recovery.test.mjs",
+          "path:docs/PLANNED-FENCE-ONLY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-fence-only-admission-recovery-cloud-adapter.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-contract.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-controller.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-evidence.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-repository-adapter.mjs",
+          "path:scripts/planned-fence-only-admission-recovery-store.mjs",
+          "path:scripts/planned-fence-only-admission-recovery.mjs",
+          "semantic:planned-fence-only-admission-recovery"
+        ],
+        "writeSetDigest": "26a53c1c5a16f3d394056d0d9db6519f0c518b6cf8a80a35b6015a64e2ad6d19",
+        "laneRevision": "a9f515022fab6f88d8d3fe0fe6f9069c3c1198ce",
+        "leaseEpoch": 2,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-15T05:27:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_KWOC",
+        "predecessorClaimId": "96d2c6aba5712112ba956e9d3cd6bfbfab39562bc21fa37664a2e2e9651ea7e3",
+        "eligibleSince": "2026-08-15T04:55:26.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-15T04:57:07.000Z",
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "a9f515022fab6f88d8d3fe0fe6f9069c3c1198ce",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_KWOC",
+          "bytesDigest": "93daac89b8bbba4a7be0443e2288d1cdc5fb5666e4c6ba7c44481321323c60eb",
+          "namedChecksDigest": "ed1dbb0750b0a79fa9b1435aa9608889769d7815bdbf547c57ae34d0d2a8f9db",
+          "handoffEvidenceDigest": "9f8f5c771955ecca84a877efbd8a5c62a885aa7c2c46c46e8c6d5ffdfa63c6b7",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-17T07:33:04.000Z"
+        }
+      },
+      "claimDigest": "9b71882b03cbf73dc923f800c225423e4cbfdbf17323d5347ac60bd488bc69ca",
+      "digest": "444b5d72c620a4201179c3cf96f3fc4fc0d2dfa4512574ce436ab6b46dd7b47b"
     }
   ]
 }

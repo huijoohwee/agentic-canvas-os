@@ -15,7 +15,7 @@ import {
   requiredSha,
   requiredText,
 } from "./scoped-lane-cloud-reconciliation.mjs";
-import { resolveExpiredCommittedRecoveryReplayEvidence } from
+import { resolveExpiredCommittedRecoveryReplayEvidenceChain } from
   "./expired-committed-heartbeat-replay-evidence.mjs";
 
 export const EXPIRED_COMMITTED_CLOUD_RECOVERY_EVIDENCE_SCHEMA =
@@ -49,7 +49,7 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
   invoke = invokeRepositoryCloudAction,
   renew = heartbeatAdmissionCloudAuthority,
   verify = verifyAdmissionCloudAuthority,
-  resolveReplayEvidence = resolveExpiredCommittedRecoveryReplayEvidence,
+  resolveReplayEvidenceChain = resolveExpiredCommittedRecoveryReplayEvidenceChain,
 } = {}) {
   const admittedManifest = normalizeManifest(manifest);
   const source = normalizeSourceAuthority(authority, admittedManifest);
@@ -101,20 +101,18 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
       return recoverDormant({
         ...common,
         claim,
-        evidenceDigest: resolveReplayEvidence({
+        steps: replaySteps(resolveReplayEvidenceChain({
           source,
           liveClaim: claim,
           status,
           environment,
-        }),
-        followupEvidenceDigest: evidenceDigest,
-        expectedReplay: true,
+        }), evidenceDigest),
         invoke,
         verify,
       });
     }
-    const replayEvidenceDigest = resolveReplayEvidenceOrDrift({
-      resolveReplayEvidence,
+    const replayEvidenceChain = resolveReplayEvidenceChainOrDrift({
+      resolveReplayEvidenceChain,
       source,
       liveClaim: claim,
       status,
@@ -124,14 +122,12 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
       return recoverDormant({
         ...common,
         claim,
-        evidenceDigest: replayEvidenceDigest,
-        followupEvidenceDigest: evidenceDigest,
-        expectedReplay: true,
+        steps: replaySteps(replayEvidenceChain, evidenceDigest),
         invoke,
         verify,
       });
     }
-    if (replayEvidenceDigest !== evidenceDigest) drift();
+    if (replayEvidenceChain.at(-1) !== evidenceDigest) drift();
     return adoptCurrentResponseLoss({
       source,
       claim,
@@ -142,14 +138,14 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     });
   }
   if (claim.transitionCounter !== source.transitionCounter + 1) {
-    const replayEvidenceDigest = resolveReplayEvidenceOrDrift({
-      resolveReplayEvidence,
+    const replayEvidenceChain = resolveReplayEvidenceChainOrDrift({
+      resolveReplayEvidenceChain,
       source,
       liveClaim: claim,
       status,
       environment,
     });
-    if (replayEvidenceDigest !== evidenceDigest) drift();
+    if (replayEvidenceChain.at(-1) !== evidenceDigest) drift();
     return adoptCurrentResponseLoss({
       source,
       claim,
@@ -164,14 +160,12 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     return recoverDormant({
       ...common,
       claim,
-      evidenceDigest: resolveReplayEvidence({
+      steps: replaySteps(resolveReplayEvidenceChain({
         source,
         liveClaim: claim,
         status,
         environment,
-      }),
-      followupEvidenceDigest: evidenceDigest,
-      expectedReplay: true,
+      }), evidenceDigest),
       invoke,
       verify,
     });
@@ -263,9 +257,9 @@ function recoverDormant({
   authority,
   manifest,
   claim,
-  evidenceDigest,
-  followupEvidenceDigest = null,
-  expectedReplay,
+  evidenceDigest = null,
+  expectedReplay = false,
+  steps = null,
   deviceId,
   sessionId,
   ttlSeconds,
@@ -273,12 +267,19 @@ function recoverDormant({
   invoke,
   verify,
 }) {
+  const [step, ...remainingSteps] = steps || [{ evidenceDigest, expectedReplay }];
+  if (!step) drift();
+  const selectedEvidenceDigest = requiredDigest(
+    step.evidenceDigest,
+    "recovery replay evidence digest",
+  );
+  const selectedExpectedReplay = step.expectedReplay === true;
   const operationKey = [
     "device-expired-committed-recovery",
     authority.claimId,
     authority.transitionCounter,
     authority.claimDigest,
-    evidenceDigest,
+    selectedEvidenceDigest,
   ].join(":");
   const result = invoke({
     action: "continue",
@@ -290,7 +291,7 @@ function recoverDormant({
       expectedTransitionCounter: authority.transitionCounter,
       mode: "recovery",
       ttlSeconds,
-      recoveryEvidenceDigest: evidenceDigest,
+      recoveryEvidenceDigest: selectedEvidenceDigest,
       deviceId,
       sessionId,
       idempotencyKey: operationKey,
@@ -303,7 +304,7 @@ function recoverDormant({
     claim,
     manifest,
     operationKey,
-    expectedReplay,
+    expectedReplay: selectedExpectedReplay,
   });
   const projected = normalizeBoundAuthority({
     result: result.ledgerDigest ? result : {
@@ -318,14 +319,12 @@ function recoverDormant({
     deviceId,
     sessionId,
   });
-  if (Date.parse(projected.expiresAt) <= Date.now()) {
-    if (!followupEvidenceDigest) drift();
+  if (remainingSteps.length > 0) {
     return recoverDormant({
       authority: Object.freeze({ ...projected, state: "active" }),
       manifest,
       claim: result.claim,
-      evidenceDigest: followupEvidenceDigest,
-      expectedReplay: false,
+      steps: remainingSteps,
       deviceId,
       sessionId,
       ttlSeconds,
@@ -334,6 +333,7 @@ function recoverDormant({
       verify,
     });
   }
+  if (Date.parse(projected.expiresAt) <= Date.now()) drift();
   const verified = verify({
     authority: projected,
     manifest,
@@ -514,18 +514,34 @@ function optionalCounter(value) {
   return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
-function resolveReplayEvidenceOrDrift({
-  resolveReplayEvidence,
+function resolveReplayEvidenceChainOrDrift({
+  resolveReplayEvidenceChain,
   source,
   liveClaim,
   status,
   environment,
 }) {
   try {
-    return resolveReplayEvidence({ source, liveClaim, status, environment });
+    const chain = resolveReplayEvidenceChain({ source, liveClaim, status, environment });
+    if (!Array.isArray(chain) || chain.length < 1) drift();
+    return chain.map(item => requiredDigest(item, "recovery replay evidence digest"));
   } catch {
     drift();
   }
+}
+
+function replaySteps(evidenceChain, currentEvidenceDigest) {
+  if (!Array.isArray(evidenceChain) || evidenceChain.length < 1) drift();
+  return Object.freeze([
+    ...evidenceChain.map(evidenceDigest => Object.freeze({
+      evidenceDigest: requiredDigest(evidenceDigest, "recovery replay evidence digest"),
+      expectedReplay: true,
+    })),
+    Object.freeze({
+      evidenceDigest: requiredDigest(currentEvidenceDigest, "recovery evidence digest"),
+      expectedReplay: false,
+    }),
+  ]);
 }
 
 function positiveInteger(value, label) {

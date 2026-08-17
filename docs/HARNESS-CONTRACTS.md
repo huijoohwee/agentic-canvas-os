@@ -257,7 +257,7 @@ MoA harnesses are one-shot deliberation contracts. External MoA systems may info
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
 | Preset resolution | `{ presetRef, prompt, contextRef }` | Resolved local preset, usage response, or typed missing-preset error. | Bare `/moa` returns usage; recursive MoA aggregator is rejected before spend. |
-| Reference fan-out | `{ references[], prompt, trimmedContext, caps }` | Advisory reference outputs or typed reference failures. | No tools, no mutation, max tokens, timeout, and cost logging are required. |
+| Reference fan-out | `{ references[], prompt, trimmedContext, caps }` | Input-ordered advisory outcomes plus attempted, succeeded, failed, and setup-failure totals. | Every independent reference settles fail-soft; sibling failure cannot erase a success; raw adapter errors stay out of the audit ledger; no tools, mutation, uncapped tokens, or unbounded time are allowed. |
 | Private context assembly | `{ referenceLedger, prompt, contextRef }` | Aggregator context packet. | Advisory outputs are private context, not source truth or generated docs. |
 | Aggregation | `{ aggregator, contextPacket, toolSchemas, approvals[] }` | User-visible response, tool request, or typed fallback. | Aggregator owns final answer and normal approval gates. |
 | Restore | `{ priorModelContext, runId, costLog }` | Restored model or agent context and proof ledger. | `/moa` does not globally switch models or persist copied presets. |
@@ -266,7 +266,7 @@ MoA harnesses are one-shot deliberation contracts. External MoA systems may info
 
 | Guardrail | Requirement |
 |---|---|
-| Reference cap | Every reference call names max tokens, timeout, and failover policy. |
+| Reference cap | Every reference call names max tokens, timeout, and fail-soft settlement policy. |
 | Aggregator-only action | Tool calls, mutation, and transcript persistence are aggregator-owned. |
 | Cost separation | Cost log separates reference and aggregator token counts, cache hits, failures, and estimated cost. |
 | Prompt cache | Stable prompt prefixes and cached context should be reused; advisory tails stay bounded. |

@@ -230,6 +230,7 @@ run-scoped canvas embed URL.
 | `src/agent-api-endpoints.js` | Same-origin browser request helper for Cloudflare API routes. |
 | `src/knowgrph-mcp-client.js` | Keyless MCP Streamable HTTP client. |
 | `src/canvas-embed.js` | Run-scoped knowgrph canvas doc-view URL + embed descriptor. |
+| `src/fail-soft-fan-out.js` | Provider- and transport-neutral all-branch settlement with successful values, sanitized audit records, and explicit partial or exhausted totals. |
 | `agent-api/src/app.js` | Platform-neutral Agent-API core: auth, MCP forward, readiness. |
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
 | `agent-api/src/cache-context.js` | Bounded stable-prefix registry, revision invalidation, prompt assembly, and provider cache telemetry normalization. |

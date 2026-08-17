@@ -547,13 +547,13 @@ messages, and missing upstreams never prove retirement; mutation must recapture 
 | Verify a captured legacy recovery package | `npm run workspace:legacy-adoption -- verify --recovery="[directory]"` |
 | Adopt under an exact live registry lease fence | `npm run workspace:legacy-adoption -- adopt --source="[legacy worktree]" --recovery="[directory]" --target="[clean leased worktree]" --session="[same operator session]" [--reconcile="[tracked/path,tracked/path]"]` |
 | Plan or run one exact recoverable clean-lane removal | `npm run worktree:lifecycle:recoverable-cleanup -- <plan|run> ...` |
+| Archive one verified recovery package without purging evidence | `npm run recovery:artifact:retirement -- <plan|run|observe> ...` |
 | Remove managed empty-container residue after a legacy cleanup | `npm run worktree:lifecycle:cleanup-empty -- --repository="[canonical repository root]"` |
 | Review one operation before running it | `npm run workspace:parallelism:check -- --operation "git reset --hard"` |
 | Install or preview enforcement surfaces | `npm run workspace:guards:install [-- --dry-run]` |
 
-Environment inputs: `AGENTIC_WORKSPACE_ROOT` overrides the discovered workspace root,
-and `AGENTIC_SESSION_ID` names the acting session. Both default without failing so an
-audit is always runnable.
+Environment inputs: `AGENTIC_WORKSPACE_ROOT` overrides the discovered workspace root, and
+`AGENTIC_SESSION_ID` names the acting session. Both default so an audit is always runnable.
 
 ## Boundaries
 

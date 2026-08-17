@@ -85,7 +85,7 @@ test("real source binds all execution findings to artifact-bearing rules", {
     currentDirectory: process.cwd(),
     environment: process.env,
   });
-  assert.equal(result.totals.executionRuleBindings, 51);
+  assert.equal(result.totals.executionRuleBindings, 58);
 });
 
 test("baseline proof fails closed on source drift", async () => {

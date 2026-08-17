@@ -39,6 +39,7 @@ export const DEFAULT_SEVERITY = Object.freeze({
   "concurrent-write-conflict": "major",
   "parallel-scope-collision": "blocker",
   "stale-collaboration-fence": "blocker",
+  "delivery-authority-unjoined": "blocker",
   "canonical-base-drift": "blocker",
   "scope-admission-collision": "blocker",
   "unattributed-lane-ambiguity": "blocker",
@@ -82,6 +83,12 @@ export const DEFAULT_SEVERITY = Object.freeze({
   "duplicate-change-reintegrated": "major",
   "stale-candidate-frontier": "blocker",
   "runtime-readiness-unproven": "blocker",
+  "undesigned-criterion": "major",
+  "ungrounded-design-element": "minor",
+  "requirement-introduced-downstream": "blocker",
+  "stale-downstream-artifact": "major",
+  "phase-advanced-without-approval": "blocker",
+  "seam-elided": "blocker",
 });
 
 export const FINDING_TYPES = Object.freeze(Object.keys(DEFAULT_SEVERITY));

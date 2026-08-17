@@ -368,6 +368,7 @@ test("repository adapter preserves CAS and no-force invariants", () => {
   assert.match(source, /RECOVERABLE_SOURCE_STATUSES/u);
   assert.match(source, /const canonicalBaseSha = protectedSource\(plan\)/u);
   assert.match(source, /baseSha: authority\.canonicalBaseSha/u);
+  assert.match(source, /taskAuthority:\s*current\.taskAuthority\s*\?\s*continueTaskAuthorityBinding/u);
   assert.match(source, /merge-base", "--is-ancestor", plan\.evidence\.protectedMainSha, selected/u);
   assert.match(source, /writeSetsOverlap\(changed, plan\.evidence\.declaredWriteSet\)/u);
   assert.match(source, /pull\.baseRefOid !== plan\.evidence\.deliveryBaseSha/u);

@@ -27,6 +27,7 @@ import {
   normalizeBoundAuthority,
   projectRootState,
 } from "./scoped-lane-cloud-reconciliation.mjs";
+import { continueTaskAuthorityBinding } from "./task-bound-lane-authority-store.mjs";
 import {
   createWriterLeaseStore,
   parseDeviceBranch,
@@ -387,6 +388,17 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
       successorClaimId: authority.claimId,
       effects: EFFECTS,
     });
+    const nextLease = {
+      ...current,
+      status: "active",
+      baseSha: authority.canonicalBaseSha,
+      fenceSha: plan.evidence.headSha,
+      cloudAuthority: authority,
+      reviewHeadSha: null,
+      heartbeatAt: new Date().toISOString(),
+      expiresAt: authority.expiresAt,
+      deliveryBaseRecovery: recovery,
+    };
     const projected = current.baseSha === authority.canonicalBaseSha
       && current.cloudAuthority?.claimId === authority.claimId
       && current.deliveryBaseRecovery?.planDigest === plan.planDigest
@@ -398,14 +410,15 @@ export function createRepositoryDeliveryAuthorizedBaseRecoveryAdapter(
         expectedClaimId: current.cloudAuthority?.claimId,
         requireNoActiveIntent: true,
         values: {
-          status: "active",
-          baseSha: authority.canonicalBaseSha,
-          fenceSha: plan.evidence.headSha,
-          cloudAuthority: authority,
-          reviewHeadSha: null,
-          heartbeatAt: new Date().toISOString(),
-          expiresAt: authority.expiresAt,
-          deliveryBaseRecovery: recovery,
+          ...nextLease,
+          taskAuthority: current.taskAuthority
+            ? continueTaskAuthorityBinding({
+              sourceLease: current,
+              nextLease,
+              capabilityPath: environment.AGENTIC_TASK_AUTHORITY_FILE,
+              boundAt: nextLease.heartbeatAt,
+            })
+            : null,
         },
       }).lease;
     return complete({ leaseDigest: writerLeaseDigest(projected) });

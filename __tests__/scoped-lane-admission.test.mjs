@@ -189,6 +189,52 @@ function cloudResult(manifest, overrides = {}) {
       receiptDigest: overrides.receiptDigest || "5".repeat(64), evaluationTime },
   };
 }
+function verificationResult({
+  claim,
+  claims,
+  ledgerRevision: resultLedgerRevision = ledgerRevision,
+  ledgerDigest: resultLedgerDigest = ledgerDigest,
+  evaluationTime: resultEvaluationTime = evaluationTime,
+  contractReceiptDigest = "5".repeat(64),
+  subject = undefined,
+} = {}) {
+  const currentClaimInventoryCore = {
+    schema: "agentic-cloud-collaboration-current-claim-inventory/v1",
+    ledgerRevision: resultLedgerRevision,
+    ledgerDigest: resultLedgerDigest,
+    evaluationTime: resultEvaluationTime,
+    claims,
+  };
+  const currentClaimInventory = {
+    ...currentClaimInventoryCore,
+    claimInventoryDigest: digestValue(currentClaimInventoryCore),
+  };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision: resultLedgerRevision,
+    ledgerDigest: resultLedgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
+    evaluationTime: resultEvaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision: resultLedgerRevision,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory,
+    ...(subject ? { subject } : {}),
+    findings: [],
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
+  };
+}
 function authorityFor(manifest, overrides = {}) {
   return Object.freeze({
     ...normalizeCloudAuthority(cloudResult(manifest), {
@@ -209,7 +255,11 @@ function verifiedBundle(authority, manifest, claims = null) {
     fenceRevision: authority.claimDigest,
     transitionDigest: authority.claimLedgerRevision,
   });
-  const inventoryClaims = claims || [candidate];
+    const inventoryClaims = (claims || [candidate]).map((claim) => {
+      if (claim.claimId === candidate.claimId) return candidate;
+      const { recordDigest, ...publicClaimShape } = claim;
+      return publicClaimShape;
+    });
   return verifyAdmissionCloudAuthority({
     authority,
     manifest,
@@ -217,8 +267,11 @@ function verifiedBundle(authority, manifest, claims = null) {
     inspect: () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
       action: "status", status: "ready", ledgerRevision: authority.ledgerRevision,
       ledgerDigest, claims: inventoryClaims }),
-    invoke: () => cloudResult(manifest, {
-      action: "verify", ledgerRevision: authority.ledgerRevision, claim: candidate,
+      invoke: () => verificationResult({
+        claim: candidate,
+        claims: inventoryClaims,
+        ledgerRevision: authority.ledgerRevision,
+        contractReceiptDigest: "5".repeat(64),
     }),
   });
 }
@@ -539,20 +592,22 @@ function deliveryVerifiedBundle(authority, manifest, fixture) {
       ledgerDigest,
       claims: [candidate, fixture.deliveryPeer],
     }),
-    invoke: () => cloudResult(manifest, {
-      action: "verify",
-      ledgerRevision: authority.ledgerRevision,
-      ledgerDigest,
-      claim: {
-        claimId: candidate.claimId,
-        laneRevision: candidate.laneRevision,
-        leaseEpoch: candidate.leaseEpoch,
-        transitionCounter: candidate.transitionCounter,
-        reviewRequestId: candidate.reviewRequestId,
-        expiresAt: candidate.expiresAt,
-        fenceRevision: candidate.fenceRevision,
-        transitionDigest: candidate.transitionDigest,
-      },
+      invoke: () => verificationResult({
+        claim: {
+          ...candidate,
+          claimId: candidate.claimId,
+          laneRevision: candidate.laneRevision,
+          leaseEpoch: candidate.leaseEpoch,
+          transitionCounter: candidate.transitionCounter,
+          reviewRequestId: candidate.reviewRequestId,
+          expiresAt: candidate.expiresAt,
+          fenceRevision: candidate.fenceRevision,
+          transitionDigest: candidate.transitionDigest,
+        },
+        claims: [candidate, fixture.deliveryPeer],
+        ledgerRevision: authority.ledgerRevision,
+        ledgerDigest,
+        contractReceiptDigest: "5".repeat(64),
     }),
   });
 }
@@ -603,14 +658,12 @@ function installDeliveryPeerProcessMocks(t, fixture) {
     );
     return {
       status: 0,
-      stdout: JSON.stringify({
-        schema: "agentic-cloud-collaboration-result/v1",
-        ok: true,
-        action: "verify",
-        status: "ready",
+        stdout: JSON.stringify(verificationResult({
+          claim: fixture.deliveryPeer,
+          claims: [fixture.deliveryPeer],
         ledgerRevision: request.expectedLedgerRevision,
-        claimDigest: fixture.deliveryPeer.fenceRevision,
-        claim: fixture.deliveryPeer,
+          ledgerDigest: fixture.currentLedger.headDigest,
+          contractReceiptDigest: "8".repeat(64),
         subject: {
           repository: fixture.lease.cloudAuthority.targetRepository,
           pullRequestNumber: 9,
@@ -618,8 +671,7 @@ function installDeliveryPeerProcessMocks(t, fixture) {
           headSha: fixture.pullRequest.headRefOid,
           canonicalBaseSha: fixture.pullRequest.baseRefOid,
         },
-        receipt: { ledgerDigest: fixture.currentLedger.headDigest },
-      }),
+        })),
       stderr: "",
     };
   });

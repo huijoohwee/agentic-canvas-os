@@ -158,6 +158,23 @@ export function writeSetsOverlap(leftValues, rightValues) {
     return leftScope === rightScope;
   }));
 }
+export function findUncoveredPathScopes(declaredWriteScope, changedPaths) {
+  const declared = normalizeWriteSet(declaredWriteScope);
+  if (!Array.isArray(changedPaths)) {
+    fail("invalid_request", "observedChangedPaths must be an array");
+  }
+  if (changedPaths.length === 0) return [];
+  if (changedPaths.length > 100_000) {
+    fail("bound_exceeded", "observedChangedPaths exceeds 100000 items");
+  }
+  const observed = [...new Set(changedPaths.map((value, index) => {
+    const normalized = text(value, `observedChangedPaths[${index}]`);
+    return normalized.startsWith("path:")
+      ? normalizePathScope(normalized.slice("path:".length))
+      : normalizePathScope(normalized);
+  }))].sort();
+  return observed.filter((scope) => !writeSetsOverlap(declared, [scope]));
+}
 export function normalizeRepository(repository) {
   if (typeof repository === "string") {
     return { repositoryId: text(repository, "repositoryId"), canonicalRevision: null };
@@ -271,6 +288,7 @@ function normalizeRetirementIntent(request, common, expected) {
   };
 }
 export const FINDING_TYPES = Object.freeze([
+  "declared-write-scope-unproven",
   "parallel-scope-collision",
   "stale-collaboration-fence",
   "delivery-authority-unjoined",

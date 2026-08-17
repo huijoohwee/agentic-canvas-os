@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
-import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import {
+  CURRENT_CLAIM_INVENTORY_SCHEMA,
+  pseudonymousIdentifier,
+} from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
   attachCloudHeartbeatMachineEvidence,
   authorizeDeliveryAdmissionCloudAuthority,
@@ -13,6 +16,7 @@ import {
   heartbeatAdmissionCloudAuthority,
   recoverIntegratedPreservedCloudAuthority,
   reviewReadyAdmissionCloudAuthority,
+  verifyAdmissionCloudAuthority,
 } from "../scripts/scoped-lane-cloud-authority.mjs";
 import {
   normalizeCurrentClaimInventory,
@@ -191,7 +195,33 @@ function statusResult(claim, ledgerRevision = NEXT_LEDGER_SHA) {
   };
 }
 
-function verificationResult(claim, ledgerRevision = NEXT_LEDGER_SHA) {
+function verificationResult(
+  claim,
+  ledgerRevision = NEXT_LEDGER_SHA,
+  claims = [claim],
+  { ledgerDigest = "2".repeat(64), evaluationTime = EVALUATED_AT } = {},
+) {
+  const inventoryCore = {
+    schema: CURRENT_CLAIM_INVENTORY_SCHEMA,
+    ledgerRevision,
+    ledgerDigest,
+    evaluationTime,
+    claims: claims.map(value => structuredClone(value))
+      .sort((left, right) => left.claimId.localeCompare(right.claimId)),
+  };
+  const claimInventoryDigest = digestValue(inventoryCore);
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision,
+    ledgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest: "4".repeat(64),
+    claimInventoryDigest,
+    evaluationTime,
+    findings: [],
+  };
   return {
     schema: "agentic-cloud-collaboration-result/v1",
     ok: true,
@@ -200,12 +230,9 @@ function verificationResult(claim, ledgerRevision = NEXT_LEDGER_SHA) {
     ledgerRevision,
     claimDigest: claim.fenceRevision,
     claim,
+    currentClaimInventory: { ...inventoryCore, claimInventoryDigest },
     findings: [],
-    receipt: {
-      receiptDigest: "3".repeat(64),
-      ledgerDigest: "2".repeat(64),
-      evaluationTime: EVALUATED_AT,
-    },
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
   };
 }
 
@@ -531,15 +558,12 @@ function integratedReplayHarness({
     },
     verify: () => {
       events.push(["verify", null, integrated.claimId]);
-      const result = verificationResult(integrated, ledgerRevision);
-      return {
-        ...result,
-        receipt: {
-          ...result.receipt,
-          ledgerDigest,
-          evaluationTime: verificationTime,
-        },
-      };
+      return verificationResult(
+        integrated,
+        ledgerRevision,
+        [integrated, ...finalInventoryClaims],
+        { ledgerDigest, evaluationTime: verificationTime },
+      );
     },
   };
 }
@@ -646,12 +670,88 @@ test("current-claim inventory preserves an expired non-writing waiting successor
     expiresAt: "2026-08-04T07:00:00.000Z",
   };
   const inventory = normalizeCurrentClaimInventory({
-    inventoryResult: { ...statusResult(incumbent), claims: [incumbent, waiting] },
-    verificationResult: verificationResult(incumbent),
+    verificationResult: verificationResult(
+      incumbent,
+      NEXT_LEDGER_SHA,
+      [incumbent, waiting],
+    ),
     authority: localAuthority({ claimDigest: incumbent.fenceRevision, claimLedgerRevision: incumbent.transitionDigest, laneRevision: HEAD_SHA, transitionCounter: 2 }),
   });
   assert.deepEqual(inventory.claims.map((claim) => claim.state).sort(), ["active", "waiting-successor"]);
 });
+
+test("cloud verification derives its complete inventory from one verifier operation", () => {
+  const claim = rootClaim();
+  let inspectCalls = 0;
+  const verified = verifyAdmissionCloudAuthority({
+    authority: localAuthority({
+      claimDigest: claim.fenceRevision,
+      claimLedgerRevision: claim.transitionDigest,
+      laneRevision: HEAD_SHA,
+      transitionCounter: claim.transitionCounter,
+    }),
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    inspect: () => {
+      inspectCalls += 1;
+      throw new Error("status must not run");
+    },
+    invoke: () => verificationResult(claim),
+  });
+  assert.equal(inspectCalls, 0);
+  assert.equal(verified.verification.inventory.claims.length, 1);
+  assert.equal(
+    verified.verification.remoteClaimInventoryDigest,
+    verified.verification.inventory.inventoryDigest,
+  );
+});
+
+test("same-snapshot current-claim inventory rejects seal, bound, and candidate drift", () => {
+  const claim = rootClaim();
+  const authority = localAuthority({
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    laneRevision: HEAD_SHA,
+    transitionCounter: claim.transitionCounter,
+  });
+  const normalize = result => normalizeCurrentClaimInventory({
+    verificationResult: result,
+    authority,
+  });
+
+  const unsealed = structuredClone(verificationResult(claim));
+  unsealed.currentClaimInventory.claimInventoryDigest = "9".repeat(64);
+  assert.throws(() => normalize(unsealed), /seal or observation metadata drifted/u);
+
+  const mismatchedLedger = structuredClone(verificationResult(claim));
+  mismatchedLedger.currentClaimInventory.ledgerRevision = "8".repeat(40);
+  resealCurrentClaimInventory(mismatchedLedger);
+  assert.throws(() => normalize(mismatchedLedger), /seal or observation metadata drifted/u);
+
+  const duplicate = structuredClone(verificationResult(claim));
+  duplicate.currentClaimInventory.claims.push(structuredClone(claim));
+  resealCurrentClaimInventory(duplicate);
+  assert.throws(() => normalize(duplicate), /duplicate claim identities/u);
+
+  const oversized = structuredClone(verificationResult(claim));
+  oversized.currentClaimInventory.claims = Array.from({ length: 129 }, () => claim);
+  resealCurrentClaimInventory(oversized);
+  assert.throws(() => normalize(oversized), /complete bounded current-claim inventory/u);
+
+  const candidateDrift = structuredClone(verificationResult(claim));
+  candidateDrift.currentClaimInventory.claims[0].transitionCounter += 1;
+  resealCurrentClaimInventory(candidateDrift);
+  assert.throws(() => normalize(candidateDrift), /exact verified candidate claim/u);
+});
+
+function resealCurrentClaimInventory(result) {
+  const { claimInventoryDigest: ignored, ...core } = result.currentClaimInventory;
+  const claimInventoryDigest = digestValue(core);
+  result.currentClaimInventory.claimInventoryDigest = claimInventoryDigest;
+  result.receipt.claimInventoryDigest = claimInventoryDigest;
+  const { receiptDigest: ignoredReceipt, ...receiptCore } = result.receipt;
+  result.receipt.receiptDigest = digestValue(receiptCore);
+}
 
 test("bind and heartbeat helpers are explicit continue projections", () => {
   const bindHarness = projectionHarness(rootClaim({ laneRevision: BASE_SHA, transitionCounter: 1 }));
@@ -1439,40 +1539,6 @@ test("review helper records continue(review) without changing candidate identity
   assert.equal(harness.calls.at(-1).request.mode, "review");
   assert.equal(ready.authority.state, "review_ready");
   assert.equal(ready.authority.laneRevision, HEAD_SHA);
-  assert.equal(ready.authority.reviewRequestId, REVIEW_REQUEST_ID);
-});
-
-test("review helper prefers explicit review request identity over pull request projection", () => {
-  const initial = rootClaim({ laneRevision: BASE_SHA, transitionCounter: 1 });
-  const harness = projectionHarness(initial);
-  const ready = reviewReadyAdmissionCloudAuthority({
-    authority: localAuthority({
-      claimDigest: initial.fenceRevision,
-      claimLedgerRevision: initial.transitionDigest,
-    }),
-    manifest: MANIFEST,
-    branch: BRANCH,
-    headSha: HEAD_SHA,
-    pullRequestNumber: PULL_REQUEST_NUMBER,
-    reviewRequestId: REVIEW_REQUEST_ID,
-    focusedEvidenceDigest: focusedEvidenceDigest(),
-    deviceId: DEVICE_ID,
-    sessionId: SESSION_ID,
-    invoke: harness.invoke,
-    inspect: harness.inspect,
-    verify: harness.verify,
-  });
-
-  assert.deepEqual(
-    harness.calls.map(call => [call.action, call.request.mode || null, call.request.pullRequestNumber]),
-    [
-      ["continue", "projection", undefined],
-      ["continue", "review", undefined],
-    ],
-  );
-  assert.equal(harness.calls[0].request.reviewRequestId, REVIEW_REQUEST_ID);
-  assert.equal(harness.calls[1].request.reviewRequestId, REVIEW_REQUEST_ID);
-  assert.equal(ready.authority.state, "review_ready");
   assert.equal(ready.authority.reviewRequestId, REVIEW_REQUEST_ID);
 });
 

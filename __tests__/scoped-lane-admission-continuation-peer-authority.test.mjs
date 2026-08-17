@@ -104,6 +104,52 @@ function peerClaim({
     transitionDigest: "7".repeat(64),
   };
 }
+function verificationResult({
+  claim,
+  claims,
+  ledgerRevision = LEDGER_SHA,
+  ledgerDigest = LEDGER_DIGEST,
+  evaluationTime = EVALUATED_AT,
+  contractReceiptDigest = "8".repeat(64),
+  subject = undefined,
+} = {}) {
+  const currentClaimInventoryCore = {
+    schema: "agentic-cloud-collaboration-current-claim-inventory/v1",
+    ledgerRevision,
+    ledgerDigest,
+    evaluationTime,
+    claims,
+  };
+  const currentClaimInventory = {
+    ...currentClaimInventoryCore,
+    claimInventoryDigest: digestValue(currentClaimInventoryCore),
+  };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision,
+    ledgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
+    evaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory,
+    ...(subject ? { subject } : {}),
+    findings: [],
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
+  };
+}
 
 function verifiedAuthority(manifest, peerClaims, ledgerDigest = LEDGER_DIGEST) {
   const claim = candidateClaim(manifest);
@@ -144,20 +190,10 @@ function verifiedAuthority(manifest, peerClaims, ledgerDigest = LEDGER_DIGEST) {
       ledgerDigest,
       claims: [claim, ...peerClaims],
     }),
-    invoke: () => ({
-      schema: "agentic-cloud-collaboration-result/v1",
-      ok: true,
-      action: "verify",
-      status: "ready",
-      ledgerRevision: LEDGER_SHA,
-      claimDigest: claim.fenceRevision,
-      claim,
-      findings: [],
-      receipt: {
+      invoke: () => verificationResult({
+        claim,
+        claims: [claim, ...peerClaims],
         ledgerDigest,
-        receiptDigest: "8".repeat(64),
-        evaluationTime: EVALUATED_AT,
-      },
     }),
   });
 }
@@ -457,16 +493,15 @@ function operationProvenOverlappingDeliveryPeer() {
     readLedger: ({ revision }) => structuredClone(
       revision === cloudAuthority.ledgerRevision ? historicalLedger : currentLedger,
     ),
-    invokeCloudVerifier: ({ request }) => ({
-      schema: "agentic-cloud-collaboration-result/v1", ok: true,
-      action: "verify", status: "ready",
+      invokeCloudVerifier: ({ request }) => verificationResult({
+        claim: currentClaim,
+        claims: [currentClaim],
       ledgerRevision: request.expectedLedgerRevision,
-      claimDigest: currentClaim.fenceRevision, claim: currentClaim,
+        ledgerDigest: currentLedger.headDigest,
       subject: {
         repository: TARGET_REPOSITORY, pullRequestNumber: 98,
         branch: lease.branch, headSha: PEER_SHA, canonicalBaseSha: BASE_SHA,
       },
-      receipt: { ledgerDigest: currentLedger.headDigest },
     }),
   });
   return { currentClaim, currentLedger, peerLane, verifyDeliveryPeers };

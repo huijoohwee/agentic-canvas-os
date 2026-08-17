@@ -224,10 +224,19 @@ function driftedPlanInput(input) {
 function sourceEvidenceFixture() {
   const candidateCore = { claimId: digest("candidate claim"), state: "active" };
   const candidateClaim = { ...candidateCore, recordDigest: digestValue(candidateCore) };
-  const inventoryCore = {
-    schema: "agentic-dormant-preservation-admission-cloud-inventory/v1",
-    ledgerRevision: sha("ledger"), ledgerDigest: digest("ledger"), claims: [candidateClaim],
+  const decisionCore = {
+    schema: "agentic-dormant-preservation-admission-cloud-decision/v2",
+    candidateClaimId: candidateClaim.claimId,
+    candidateWriteSetDigest: digest("candidate write set"),
+    selectedClaimIds: [],
+    claims: [{ ...candidateClaim, writeSetDigest: digest("candidate write set") }],
   };
+  decisionCore.claims[0].recordDigest = digestValue({
+    claimId: decisionCore.claims[0].claimId,
+    state: decisionCore.claims[0].state,
+    writeSetDigest: decisionCore.claims[0].writeSetDigest,
+  });
+  const decisionClaim = decisionCore.claims[0];
   const worktree = {
     path: "/workspace/worktrees/legacy", branch: "refs/heads/agent/old/old-scope",
     headSha: sha("legacy head"), treeSha: sha("legacy tree"),
@@ -247,7 +256,7 @@ function sourceEvidenceFixture() {
     { path: worktree.path, stateDigest: worktree.stateDigest },
   ].sort((left, right) => left.path.localeCompare(right.path));
   const core = {
-    schema: "agentic-dormant-preservation-admission-source-evidence/v1",
+    schema: "agentic-dormant-preservation-admission-source-evidence/v2",
     controller: {
       path: "/workspace/controller", origin: "git@github.com:owner/controller.git",
       headSha: sha("controller"), originMainSha: sha("controller"),
@@ -272,10 +281,10 @@ function sourceEvidenceFixture() {
       manifest: { semanticScope: "new-scope" },
       cloudAuthorityPath: "/workspace/cloud-authority.json",
       cloudAuthorityFileDigest: digest("authority file"),
-      cloudAuthority: { claimId: candidateClaim.claimId, sessionId: "decision-session" },
-      candidateClaim, candidateClaimRecordDigest: candidateClaim.recordDigest,
+      cloudAuthority: { claimId: decisionClaim.claimId, sessionId: "decision-session" },
+      candidateClaim: decisionClaim, candidateClaimRecordDigest: decisionClaim.recordDigest,
     },
-    cloudInventory: { ...inventoryCore, inventoryStateDigest: digestValue(inventoryCore) },
+    cloudDecision: { ...decisionCore, decisionStateDigest: digestValue(decisionCore) },
     preservation: {
       authenticatedActor: { actorId: "github-user:42", login: "owner" },
       repository: { id: "R_repo", nameWithOwner: "owner/repository",

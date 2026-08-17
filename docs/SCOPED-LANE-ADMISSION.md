@@ -201,10 +201,11 @@ node scripts/scoped-lane-admission.mjs check \
 An eligible `check` remains `authoringAdmission.status: planned` and attaches an
 accepted Admission Receipt; it grants only the exact candidate provisioning
 envelope and no source mutation. The cloud adapter derives its complete current
-claim inventory by running `status` and `verify`, then requires the same
-protected ledger revision and digest, the exact current unexpired claim, and no
-remote semantic or path overlap. A caller-supplied completeness assertion is
-never accepted. A fresh claim remains a separate explicit CAS mutation under
+claim inventory from the same immutable snapshot used by `verify`, seals the
+bounded inventory into the verification receipt, and requires the exact current
+unexpired claim plus no remote semantic or path overlap. It does not join two
+independent live `status` and `verify` reads. A caller-supplied completeness
+assertion is never accepted. A fresh claim remains a separate explicit CAS mutation under
 `CLOUD-COLLABORATION.md`.
 
 ## Provisioning
@@ -239,8 +240,8 @@ The command:
 4. claims the local branch and lease, creates the fence and draft ownership pull
    request, binds the exact head and PR through the cloud CAS owner, and caps
    local expiry at the accepted cloud expiry;
-5. performs a final cloud `status` plus `verify`, proves every pre-existing local
-   lane and peer claim unchanged, emits the Preservation Receipt, and joins both
+5. performs a final atomic cloud verification, proves every pre-existing local
+   lane and relevant peer claim unchanged, emits the Preservation Receipt, and joins both
    receipts to derive `authoringAdmission.status: admitted`; and
 6. immediately revalidates the exact current cloud claim, protected ledger,
    local lease, epoch, fence, and both expiries before returning mutation
@@ -383,7 +384,8 @@ Focused proof must show:
 - ambiguous legacy leases, PRs, expiry, branch/path identity, canonical drift,
   and torn snapshots fail before candidate mutation;
 - live cloud verification consumes the complete peer inventory rather than a
-  caller boolean;
+  caller boolean, and the inventory is sealed from the verified snapshot rather
+  than assembled across two moving ledger heads;
 - Admission and Preservation Receipts join the target observation, typed
   candidate result, final protected-ledger refresh, exact claim, local lease,
   epoch, fence, and expiry;

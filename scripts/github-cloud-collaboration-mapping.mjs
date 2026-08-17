@@ -1,8 +1,11 @@
 import { digestValue, listCurrentClaims } from "./cloud-collaboration-contract.mjs";
 
 export const CLOUD_RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
+export const CURRENT_CLAIM_INVENTORY_SCHEMA =
+  "agentic-cloud-collaboration-current-claim-inventory/v1";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+const MAX_CURRENT_CLAIMS = 128;
 const MAX_TTL_SECONDS = 86_400;
 const MIN_TTL_SECONDS = 60;
 const DEFAULT_TTL_SECONDS = 1_800;
@@ -184,6 +187,7 @@ export function prepareReadRequest({ input, repository, pullRequest }) {
     transitionCounter: input.transitionCounter === undefined
       ? undefined
       : boundedInteger(input.transitionCounter, "transitionCounter", 1),
+    observedChangedPaths: input.observedChangedPaths,
   };
   return removeUndefined(request);
 }
@@ -259,8 +263,19 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
   };
 }
 
-export function verificationResult({ verification, snapshot, evaluationTime, context }) {
+export function verificationResult({
+  verification,
+  snapshot,
+  evaluationTime,
+  context,
+  claims,
+}) {
   const claimDigest = verification.claimDigest || verification.claim?.fenceRevision || null;
+  const currentClaimInventory = buildCurrentClaimInventory({
+    claims,
+    snapshot,
+    evaluationTime,
+  });
   const receipt = {
     schema: "agentic-cloud-collaboration-github-verification/v1",
     ok: verification.ok,
@@ -269,6 +284,7 @@ export function verificationResult({ verification, snapshot, evaluationTime, con
     claimId: verification.claimId,
     claimDigest,
     contractReceiptDigest: verification.receiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
     evaluationTime,
     findings: verification.findings,
   };
@@ -280,6 +296,7 @@ export function verificationResult({ verification, snapshot, evaluationTime, con
     ledgerRevision: snapshot.revision,
     claimDigest,
     claim: verification.claim ? projectPublicClaim(verification.claim) : null,
+    currentClaimInventory,
     ...(context.pullRequest ? {
       subject: {
         repository: context.repository.fullName,
@@ -291,6 +308,30 @@ export function verificationResult({ verification, snapshot, evaluationTime, con
     } : {}),
     findings: verification.findings,
     receipt: { ...receipt, receiptDigest: digestValue(receipt) },
+  };
+}
+
+function buildCurrentClaimInventory({ claims, snapshot, evaluationTime }) {
+  if (!Array.isArray(claims) || claims.length > MAX_CURRENT_CLAIMS) {
+    throw new Error(
+      `Cloud verification current-claim inventory must contain 0 to ${MAX_CURRENT_CLAIMS} claims.`,
+    );
+  }
+  const projectedClaims = claims.map(projectPublicClaim)
+    .sort((left, right) => left.claimId.localeCompare(right.claimId));
+  if (new Set(projectedClaims.map((claim) => claim.claimId)).size !== projectedClaims.length) {
+    throw new Error("Cloud verification current-claim inventory contains duplicate claim identities.");
+  }
+  const core = {
+    schema: CURRENT_CLAIM_INVENTORY_SCHEMA,
+    ledgerRevision: snapshot.revision,
+    ledgerDigest: snapshot.ledger.headDigest,
+    evaluationTime,
+    claims: projectedClaims,
+  };
+  return {
+    ...core,
+    claimInventoryDigest: digestValue(core),
   };
 }
 

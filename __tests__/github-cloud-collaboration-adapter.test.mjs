@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { createGitHubCloudCollaborationAdapter } from "../scripts/github-cloud-collaboration-adapter.mjs";
-import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import {
+  CURRENT_CLAIM_INVENTORY_SCHEMA,
+  pseudonymousIdentifier,
+} from "../scripts/github-cloud-collaboration-mapping.mjs";
 const ledgerRepository = "owner/ledger";
 const targetRepository = "owner/target";
 const targetMainSha = "3".repeat(40);
@@ -158,6 +162,13 @@ test("adapter continues and verifies one exact reviewed PR without mutation", as
   const adapter = createAdapter(github);
   const ready = await reviewClaim(adapter, "1");
   assert.equal(ready.status, "reviewed");
+  const peer = await adapter.execute("claim", claimInput({
+    workItemId: "disjoint cloud collaboration peer",
+    scopeId: "disjoint-cloud-collaboration-peer",
+    branch: "agent/device/disjoint-cloud-peer",
+    declaredWriteScope: ["scripts/disjoint-peer/", "docs/disjoint-peer.md"],
+    idempotencyKey: "claim-disjoint-peer-run-1",
+  }));
   const writesBeforeVerify = github.mutationCount();
   const verification = await adapter.execute("verify", {
     targetRepository,
@@ -173,11 +184,48 @@ test("adapter continues and verifies one exact reviewed PR without mutation", as
   assert.equal(verification.status, "ready");
   assert.equal(verification.claim.state, "reviewed");
   assert.equal(verification.claim.laneRevision, pullHeadSha);
+  const { claimInventoryDigest, ...inventoryCore } = verification.currentClaimInventory;
+  assert.equal(inventoryCore.schema, CURRENT_CLAIM_INVENTORY_SCHEMA);
+  assert.equal(inventoryCore.ledgerRevision, verification.ledgerRevision);
+  assert.equal(inventoryCore.ledgerDigest, verification.receipt.ledgerDigest);
+  assert.equal(inventoryCore.evaluationTime, verification.receipt.evaluationTime);
+  assert.deepEqual(
+    inventoryCore.claims.map((claim) => claim.claimId),
+    [ready.claim.claimId, peer.claim.claimId].sort(),
+  );
+  assert.equal(claimInventoryDigest, digestValue(inventoryCore));
+  assert.equal(verification.receipt.claimInventoryDigest, claimInventoryDigest);
   assert.deepEqual(verification.subject, {
     repository: targetRepository, pullRequestNumber: 17, branch: "agent/device/cloud-scope",
     headSha: pullHeadSha, canonicalBaseSha: targetMainSha,
   });
   assert.equal(github.mutationCount(), writesBeforeVerify);
+});
+test("adapter blocks verification when the live pull-request file set escapes the reviewed scope", async () => {
+  const github = createFakeGitHub();
+  github.setPullRequestFiles([
+    { filename: "scripts/cloud/example.mjs", status: "modified" },
+    { filename: "docs/cloud.md", status: "modified" },
+    { filename: "__tests__/expired-committed-heartbeat-recovery.test.mjs", status: "modified" },
+  ]);
+  const adapter = createAdapter(github);
+  const ready = await reviewClaim(adapter, "scope-mismatch");
+  const verification = await adapter.execute("verify", {
+    targetRepository,
+    pullRequestNumber: 17,
+    branch: "agent/device/cloud-scope",
+    headSha: pullHeadSha,
+    canonicalBaseSha: targetMainSha,
+    requiredState: "reviewed",
+    expectedClaimDigest: ready.claimDigest,
+    expectedLedgerRevision: ready.ledgerRevision,
+  });
+  assert.equal(verification.ok, false);
+  assert.equal(verification.status, "blocked");
+  assert.equal(
+    verification.findings.some((finding) => finding.type === "declared-write-scope-unproven"),
+    true,
+  );
 });
 test("adapter reads large ledgers through Git trees and blobs instead of contents transport", async () => {
   const github = createFakeGitHub();
@@ -398,6 +446,7 @@ function createFakeGitHub({
 } = {}) {
   const calls = [];
   let pullRequest = pullRequestValue();
+  let pullRequestFiles = pullRequestFilesValue();
   const repositories = {
     [ledgerRepository]: repositoryValue(1, "L_ledger", ledgerRepository),
     [targetRepository]: repositoryValue(2, "R_target", targetRepository),
@@ -479,6 +528,15 @@ function createFakeGitHub({
     }
     if (method === "GET" && path === `/repos/${targetRepository}/pulls/17`) {
       return response(200, pullRequest, date);
+    }
+    const pullFilesMatch = path.match(
+      /^\/repos\/([^/]+\/[^/]+)\/pulls\/([1-9]\d*)\/files\?per_page=(\d+)&page=(\d+)$/u,
+    );
+    if (method === "GET" && pullFilesMatch && pullFilesMatch[1] === targetRepository && Number(pullFilesMatch[2]) === 17) {
+      const perPage = Number(pullFilesMatch[3]);
+      const page = Number(pullFilesMatch[4]);
+      const start = (page - 1) * perPage;
+      return response(200, pullRequestFiles.slice(start, start + perPage), date);
     }
     const commitPullsMatch = path.match(/^\/repos\/([^/]+\/[^/]+)\/commits\/([0-9a-f]{40})\/pulls$/u);
     if (method === "GET" && commitPullsMatch && commitPullsMatch[1] === targetRepository) {
@@ -585,6 +643,9 @@ function createFakeGitHub({
     setPullRequestValue(overrides = {}) {
       pullRequest = pullRequestValue(overrides);
     },
+    setPullRequestFiles(files) {
+      pullRequestFiles = pullRequestFilesValue(files);
+    },
     currentLedgerBytes() {
       const revision = refs.get(`${ledgerRepository}:agentic/collaboration-ledger`);
       const content = ledgerContentForRevision(revision);
@@ -629,5 +690,12 @@ function pullRequestValue(overrides = {}) {
     head: { ref: "agent/device/cloud-scope", sha: pullHeadSha, repo: { full_name: targetRepository } },
     base: { ref: "main", sha: targetMainSha, repo: { full_name: targetRepository } }, ...overrides,
   };
+}
+function pullRequestFilesValue(overrides = null) {
+  if (Array.isArray(overrides)) return overrides.map((value) => ({ ...value }));
+  return [
+    { filename: "scripts/cloud/example.mjs", status: "modified" },
+    { filename: "docs/cloud.md", status: "modified" },
+  ];
 }
 function response(status, value, date) { return { status, value, date }; }

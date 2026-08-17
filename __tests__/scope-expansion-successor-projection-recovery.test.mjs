@@ -22,6 +22,50 @@ const CONTROLLER_ROOT = path.resolve(import.meta.dirname, "..");
 const CONTROLLER_IMPLEMENTATION = ["active-dirty-scope-expansion-controller.mjs", "active-dirty-scope-expansion-successor-projection.mjs", "scope-expansion-successor-projection-recovery-evidence.mjs",
   "scope-expansion-successor-projection-recovery-contract.mjs", "scope-expansion-successor-projection-recovery-controller.mjs",
   "scope-expansion-successor-projection-recovery-repository-adapter.mjs", "scope-expansion-successor-projection-recovery.mjs"];
+function verificationResult({
+  claim,
+  claims,
+  ledgerRevision,
+  ledgerDigest,
+  evaluationTime,
+  contractReceiptDigest,
+} = {}) {
+  const currentClaimInventoryCore = {
+    schema: "agentic-cloud-collaboration-current-claim-inventory/v1",
+    ledgerRevision,
+    ledgerDigest,
+    evaluationTime,
+    claims,
+  };
+  const currentClaimInventory = {
+    ...currentClaimInventoryCore,
+    claimInventoryDigest: digestValue(currentClaimInventoryCore),
+  };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision,
+    ledgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
+    evaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory,
+    findings: [],
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
+  };
+}
 function fixture({ worktreePath = "/workspace/source", implementationDigest = digest("b"),
   targetWriteSet = ["path:one.txt", "path:two.txt", "semantic:successor-projection"],
   protectedChangedPaths = [" leading-controller.mjs", "line\nbreak.mjs"] } = {}) {
@@ -540,9 +584,14 @@ function projectedState(source, plan, bound) { const claim = bound.claim, origin
     boundReceiptDigest: authority.operationReceiptDigest, targetClaimId: authority.claimId,
     targetClaimDigest: authority.claimDigest, targetReviewRequestId: authority.reviewRequestId,
     localProjection: { claimId: authority.claimId, leaseDigest }, localProjectionReceiptDigest: digest("4") };
-  const verification = { ...bound.status, action: "verify", claimDigest: claim.fenceRevision, claim,
-    findings: [], receipt: { ledgerDigest: bound.status.ledgerDigest, receiptDigest: digest("3"),
-      evaluationTime: "2026-08-15T03:00:00.000Z" } };
+    const verification = verificationResult({
+      claim,
+      claims: [claim],
+      ledgerRevision: bound.status.ledgerRevision,
+      ledgerDigest: bound.status.ledgerDigest,
+      evaluationTime: "2026-08-15T03:00:00.000Z",
+      contractReceiptDigest: digest("3"),
+    });
   return { lease, intent, verification }; }
 function pullRequestView(source, body = source.pullRequestBody) { const pull = source.evidence.pullRequest; return {
   url: pull.url, number: pull.number, id: pull.nodeId, state: pull.state, isDraft: pull.isDraft,

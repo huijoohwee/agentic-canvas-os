@@ -2,6 +2,7 @@ import {
   digestValue,
   normalizeWriteSet,
 } from "./cloud-collaboration-primitives.mjs";
+import { CURRENT_CLAIM_INVENTORY_SCHEMA } from "./github-cloud-collaboration-mapping.mjs";
 import {
   LANE_CLOUD_AUTHORITY_SCHEMA,
   normalizeCloudAuthority,
@@ -11,7 +12,6 @@ import {
   normalizeClaimProvenance,
 } from "./scoped-lane-claim-provenance.mjs";
 import {
-  projectRootAuthorityState,
   projectRootState,
   rootStateForProjection,
 } from "./cloud-collaboration-state-projection.mjs";
@@ -164,101 +164,82 @@ export function reconcileCloudAuthorityProjection({
 }
 
 export function normalizeCurrentClaimInventory({
-  inventoryResult,
   verificationResult,
   authority,
 }) {
+  const source = verificationResult?.currentClaimInventory;
   if (
-    inventoryResult?.schema !== RESULT_SCHEMA
-    || inventoryResult.ok !== true
-    || inventoryResult.action !== "status"
-    || inventoryResult.status !== "ready"
-    || !Array.isArray(inventoryResult.claims)
+    verificationResult?.schema !== RESULT_SCHEMA
+    || verificationResult.ok !== true
+    || verificationResult.action !== "verify"
+    || verificationResult.status !== "ready"
+    || source?.schema !== CURRENT_CLAIM_INVENTORY_SCHEMA
+    || !hasExactKeys(source, [
+      "claimInventoryDigest",
+      "claims",
+      "evaluationTime",
+      "ledgerDigest",
+      "ledgerRevision",
+      "schema",
+    ])
+    || !Array.isArray(source.claims)
+    || source.claims.length > 128
   ) {
-    throw new Error("Cloud status did not return a complete current-claim inventory.");
+    throw new Error("Cloud verification did not return one complete bounded current-claim inventory.");
   }
   const ledgerRevision = requiredSha(
-    inventoryResult.ledgerRevision,
+    source.ledgerRevision,
     "inventory ledger revision",
   );
   const ledgerDigest = requiredDigest(
-    inventoryResult.ledgerDigest,
+    source.ledgerDigest,
     "inventory ledger digest",
   );
-  if (
-    verificationResult?.ledgerRevision !== ledgerRevision
-    || verificationResult.receipt?.ledgerDigest !== ledgerDigest
-  ) {
-    throw new Error("Cloud status and verification did not observe one ledger revision and digest.");
-  }
   const evaluationTime = requiredInstant(
-    verificationResult.receipt?.evaluationTime,
+    source.evaluationTime,
     "inventory evaluation time",
   );
-  const claims = inventoryResult.claims.map(source => {
-    const provenance = normalizeClaimProvenance(source, "inventory claim");
-    const projectedAuthority = projectRootAuthorityState(requiredCurrentState(source.state));
-    if (
-      (source.writeAuthority !== undefined && source.writeAuthority !== projectedAuthority.writeAuthority)
-      || (source.scopeReserved !== undefined && source.scopeReserved !== projectedAuthority.scopeReserved)
-    ) {
-      throw new Error("Cloud inventory claim authority flags disagree with its canonical state projection.");
-    }
-    const core = {
-      claimId: requiredDigest(source.claimId, "inventory claimId"),
-      ...provenance,
-      ...projectedAuthority,
-      actorId: requiredText(source.actorId, "inventory actorId"),
-      repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
-      workItemId: requiredText(source.workItemId, "inventory workItemId"),
-      canonicalBaseRevision: requiredSha(
-        source.canonicalBaseRevision,
-        "inventory canonicalBaseRevision",
-      ),
-      laneRevision: requiredSha(source.laneRevision, "inventory laneRevision"),
-      declaredWriteScope: normalizeWriteSet(source.declaredWriteScope),
-      writeSetDigest: requiredDigest(
-        source.writeSetDigest,
-        "inventory writeSetDigest",
-      ),
-      leaseEpoch: positiveInteger(source.leaseEpoch, "inventory leaseEpoch"),
-      transitionCounter: positiveInteger(
-        source.transitionCounter,
-        "inventory transitionCounter",
-      ),
-      heartbeatCounter: nonnegativeInteger(
-        source.heartbeatCounter,
-        "inventory heartbeatCounter",
-      ),
-      reviewRequestId: source.reviewRequestId
-        ? requiredText(source.reviewRequestId, "inventory reviewRequestId")
-        : null,
-      expiresAt: requiredInstant(source.expiresAt, "inventory expiresAt"),
-      fenceRevision: requiredDigest(
-        source.fenceRevision,
-        "inventory fenceRevision",
-      ),
-      transitionDigest: requiredDigest(
-        source.transitionDigest,
-        "inventory transitionDigest",
-      ),
-    };
-    if (
-      digestValue(core.declaredWriteScope) !== core.writeSetDigest
-      || (!["parked", "waiting-successor"].includes(core.state) && Date.parse(core.expiresAt) <= Date.parse(evaluationTime))
-    ) {
-      throw new Error(`Cloud inventory claim ${core.claimId} is stale or has an invalid write-set digest.`);
-    }
-    return Object.freeze({ ...core, recordDigest: digestValue(core) });
-  }).sort((left, right) => left.claimId.localeCompare(right.claimId));
+  const claimInventoryDigest = requiredDigest(
+    source.claimInventoryDigest,
+    "current-claim inventory digest",
+  );
+  const receipt = normalizeVerificationReceipt(verificationResult.receipt);
+  const sealedInventory = {
+    schema: CURRENT_CLAIM_INVENTORY_SCHEMA,
+    ledgerRevision,
+    ledgerDigest,
+    evaluationTime,
+    claims: source.claims,
+  };
+  if (
+    verificationResult?.ledgerRevision !== ledgerRevision
+    || receipt.ledgerRevision !== ledgerRevision
+    || receipt.ledgerDigest !== ledgerDigest
+    || receipt.evaluationTime !== evaluationTime
+    || receipt.claimInventoryDigest !== claimInventoryDigest
+    || receipt.claimId !== authority.claimId
+    || receipt.claimDigest !== verificationResult.claimDigest
+    || digestValue(sealedInventory) !== claimInventoryDigest
+  ) {
+    throw new Error("Cloud verification current-claim inventory seal or observation metadata drifted.");
+  }
+  const claims = source.claims.map(claim => normalizeInventoryClaim(claim, evaluationTime))
+    .sort((left, right) => left.claimId.localeCompare(right.claimId));
   if (new Set(claims.map(claim => claim.claimId)).size !== claims.length) {
     throw new Error("Cloud current-claim inventory contains duplicate claim identities.");
   }
+  const sourceCandidate = source.claims.filter(claim => claim?.claimId === authority.claimId);
   const candidate = claims.filter(claim => claim.claimId === authority.claimId);
+  const verifiedCandidate = normalizeInventoryClaim(
+    verificationResult.claim,
+    evaluationTime,
+  );
   if (
-    candidate.length !== 1
+    sourceCandidate.length !== 1
+    || candidate.length !== 1
     || candidate[0].fenceRevision !== verificationResult.claimDigest
-    || candidate[0].transitionDigest !== verificationResult.claim.transitionDigest
+    || candidate[0].recordDigest !== verifiedCandidate.recordDigest
+    || digestValue(sourceCandidate[0]) !== digestValue(verificationResult.claim)
   ) {
     throw new Error("Cloud current-claim inventory does not contain the exact verified candidate claim.");
   }
@@ -270,6 +251,106 @@ export function normalizeCurrentClaimInventory({
     claims,
   };
   return Object.freeze({ ...inventory, inventoryDigest: digestValue(inventory) });
+}
+
+function normalizeVerificationReceipt(value) {
+  if (!hasExactKeys(value, [
+    "claimDigest",
+    "claimId",
+    "claimInventoryDigest",
+    "contractReceiptDigest",
+    "evaluationTime",
+    "findings",
+    "ledgerDigest",
+    "ledgerRevision",
+    "ok",
+    "receiptDigest",
+    "schema",
+  ]) || value.ok !== true || !Array.isArray(value.findings)) {
+    throw new Error("Cloud verification receipt is incomplete or malformed.");
+  }
+  const core = {
+    schema: requiredText(value.schema, "verification receipt schema"),
+    ok: value.ok,
+    ledgerRevision: requiredSha(value.ledgerRevision, "verification receipt ledger revision"),
+    ledgerDigest: requiredDigest(value.ledgerDigest, "verification receipt ledger digest"),
+    claimId: requiredDigest(value.claimId, "verification receipt claim ID"),
+    claimDigest: requiredDigest(value.claimDigest, "verification receipt claim digest"),
+    contractReceiptDigest: requiredDigest(
+      value.contractReceiptDigest,
+      "verification contract receipt digest",
+    ),
+    claimInventoryDigest: requiredDigest(
+      value.claimInventoryDigest,
+      "verification claim inventory digest",
+    ),
+    evaluationTime: requiredInstant(value.evaluationTime, "verification receipt time"),
+    findings: value.findings,
+  };
+  if (core.schema !== "agentic-cloud-collaboration-github-verification/v1"
+    || value.receiptDigest !== digestValue(core)) {
+    throw new Error("Cloud verification receipt seal drifted.");
+  }
+  return Object.freeze({ ...core, receiptDigest: value.receiptDigest });
+}
+
+function normalizeInventoryClaim(source, evaluationTime) {
+  const provenance = normalizeClaimProvenance(source, "inventory claim");
+  const core = {
+    claimId: requiredDigest(source.claimId, "inventory claimId"),
+    ...provenance,
+    state: requiredCurrentState(source.state),
+    actorId: requiredText(source.actorId, "inventory actorId"),
+    repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
+    workItemId: requiredText(source.workItemId, "inventory workItemId"),
+    canonicalBaseRevision: requiredSha(
+      source.canonicalBaseRevision,
+      "inventory canonicalBaseRevision",
+    ),
+    laneRevision: requiredSha(source.laneRevision, "inventory laneRevision"),
+    declaredWriteScope: normalizeWriteSet(source.declaredWriteScope),
+    writeSetDigest: requiredDigest(
+      source.writeSetDigest,
+      "inventory writeSetDigest",
+    ),
+    leaseEpoch: positiveInteger(source.leaseEpoch, "inventory leaseEpoch"),
+    transitionCounter: positiveInteger(
+      source.transitionCounter,
+      "inventory transitionCounter",
+    ),
+    heartbeatCounter: nonnegativeInteger(
+      source.heartbeatCounter,
+      "inventory heartbeatCounter",
+    ),
+    reviewRequestId: source.reviewRequestId
+      ? requiredText(source.reviewRequestId, "inventory reviewRequestId")
+      : null,
+    expiresAt: requiredInstant(source.expiresAt, "inventory expiresAt"),
+    fenceRevision: requiredDigest(
+      source.fenceRevision,
+      "inventory fenceRevision",
+    ),
+    transitionDigest: requiredDigest(
+      source.transitionDigest,
+      "inventory transitionDigest",
+    ),
+  };
+  if (
+    digestValue(core.declaredWriteScope) !== core.writeSetDigest
+    || (!["parked", "waiting-successor"].includes(core.state)
+      && Date.parse(core.expiresAt) <= Date.parse(evaluationTime))
+  ) {
+    throw new Error(`Cloud inventory claim ${core.claimId} is stale or has an invalid write-set digest.`);
+  }
+  return Object.freeze({ ...core, recordDigest: digestValue(core) });
+}
+
+function hasExactKeys(value, expectedKeys) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  return actual.length === expected.length
+    && actual.every((key, index) => key === expected[index]);
 }
 
 export function normalizeBoundAuthority({
@@ -475,9 +556,20 @@ function requiredState(value) {
 }
 
 function requiredCurrentState(value) {
-  const state = projectRootAuthorityState(requiredText(value, "inventory state")).state;
-  if (!["active", "waiting-successor", "review_ready", "delivery_authorized", "parked"].includes(state)) {
+  const state = requiredText(value, "inventory state").replaceAll("-", "_");
+  const projected = {
+    active: "active",
+    current: "active",
+    waiting_successor: "waiting-successor",
+    review_ready: "review_ready",
+    reviewed: "review_ready",
+    delivery_authorized: "delivery_authorized",
+    integrated_preserved: "delivery_authorized",
+    parked: "parked",
+    dormant_preserved: "parked",
+  }[state];
+  if (!projected) {
     throw new Error(`Cloud inventory claim state ${state} is not current.`);
   }
-  return state;
+  return projected;
 }

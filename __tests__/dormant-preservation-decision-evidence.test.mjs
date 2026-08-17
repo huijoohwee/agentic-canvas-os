@@ -8,6 +8,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   DORMANT_PRESERVATION_ADMISSION_SELECTION_SCHEMA,
+  DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA,
   assertDormantPreservationAdmissionPlannedContinuation,
   assertDormantPreservationAdmissionSourceEvidence,
   buildDormantPreservationAdmissionExecutionEvidence,
@@ -15,6 +16,7 @@ import {
   classifyDormantPreservationAdmissionExecution,
   normalizeDormantPreservationAdmissionSelection,
   normalizeDormantPreservationAdmissionSourceEvidence,
+  projectDormantPreservationAdmissionCloudDecision,
   projectDormantPreservationAdmissionCloudInventory,
   projectDormantPreservationAdmissionReceipt,
 } from "../scripts/dormant-preservation-decision-evidence.mjs";
@@ -84,6 +86,91 @@ test("cloud inventory projection binds every claim while excluding observation m
   );
 });
 
+test("v2 source evidence is stable across an unrelated disjoint ledger append", () => {
+  const candidate = claimFixture("candidate");
+  const before = operationFixture({
+    remoteInventory: inventoryVerification([candidate], { ledgerLabel: "before append" }),
+  });
+  const after = operationFixture({
+    remoteInventory: inventoryVerification(
+      [candidate, claimFixture("unrelated")],
+      { ledgerLabel: "after append" },
+    ),
+  });
+  const beforeSource = buildDormantPreservationAdmissionSourceEvidence(before.sourceInput);
+  const afterSource = buildDormantPreservationAdmissionSourceEvidence(after.sourceInput);
+
+  assert.equal(beforeSource.schema, DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA);
+  assert.equal(beforeSource.cloudDecision.schema,
+    "agentic-dormant-preservation-admission-cloud-decision/v2");
+  assert.equal(Object.hasOwn(beforeSource, "cloudInventory"), false);
+  assert.deepEqual(afterSource.cloudDecision, beforeSource.cloudDecision);
+  assert.equal(afterSource.sourceEvidenceDigest, beforeSource.sourceEvidenceDigest);
+  assert.deepEqual(afterSource, beforeSource);
+});
+
+test("v2 cloud decision fails closed on overlap, candidate lineage, and candidate identity drift", () => {
+  const candidate = claimFixture("candidate");
+  const operation = operationFixture({
+    remoteInventory: inventoryVerification([candidate], { ledgerLabel: "planned" }),
+  });
+  const sourceEvidence = buildDormantPreservationAdmissionSourceEvidence(operation.sourceInput);
+  const plan = {
+    sourceEvidence,
+    sourceEvidenceDigest: sourceEvidence.sourceEvidenceDigest,
+    planDigest: digest("planned plan"),
+    deviceStartArgvDigest: digest("planned argv"),
+  };
+  const input = executionInput(plan, operation);
+  const overlappingInventory = inventoryVerification([
+    candidate,
+    claimFixture("overlapping", {
+      declaredWriteScope: ["path:docs/candidate/child", "semantic:overlapping"],
+    }),
+  ], { ledgerLabel: "overlapping append" });
+  const overlappingDecision = projectDormantPreservationAdmissionCloudDecision(
+    overlappingInventory,
+    sourceEvidence.candidate,
+    sourceEvidence.preservation,
+  );
+
+  assert.equal(overlappingDecision.claims.length, 2);
+  assert.notEqual(overlappingDecision.decisionStateDigest,
+    sourceEvidence.cloudDecision.decisionStateDigest);
+  assert.throws(() => buildDormantPreservationAdmissionExecutionEvidence({
+    ...input,
+    postCloudInventory: overlappingInventory,
+  }), /relevant cloud records changed/);
+
+  const candidateLineageInventory = inventoryVerification([
+    candidate,
+    claimFixture("candidate successor", {
+      workItemId: candidate.workItemId,
+      declaredWriteScope: ["path:docs/disjoint", "semantic:disjoint-successor"],
+    }),
+  ], { ledgerLabel: "candidate-lineage append" });
+  const candidateLineageDecision = projectDormantPreservationAdmissionCloudDecision(
+    candidateLineageInventory,
+    sourceEvidence.candidate,
+    sourceEvidence.preservation,
+  );
+  assert.equal(candidateLineageDecision.claims.length, 2);
+  assert.notEqual(candidateLineageDecision.decisionStateDigest,
+    sourceEvidence.cloudDecision.decisionStateDigest);
+  assert.throws(() => buildDormantPreservationAdmissionExecutionEvidence({
+    ...input,
+    postCloudInventory: candidateLineageInventory,
+  }), /relevant cloud records changed/);
+
+  const candidateDriftInventory = inventoryVerification([
+    claimFixture("candidate", { leaseEpoch: 2 }),
+  ], { ledgerLabel: "candidate drift" });
+  assert.throws(() => buildDormantPreservationAdmissionExecutionEvidence({
+    ...input,
+    postCloudInventory: candidateDriftInventory,
+  }), /relevant cloud records changed/);
+});
+
 test("dormant receipt projection ignores only circular and observation fields", () => {
   const { dormantReceipt } = operationFixture();
   const changedObservation = structuredClone(dormantReceipt);
@@ -131,7 +218,7 @@ test("detached worktrees bind a null branch and reject contradictory or pull-req
   }), /absent or mismatched/);
 
   const schema = JSON.parse(readFileSync(new URL(
-    "../docs/schemas/dormant-preservation-decision-plan.v1.schema.json", import.meta.url,
+    "../docs/schemas/dormant-preservation-decision-plan.v2.schema.json", import.meta.url,
   ), "utf8"));
   const validate = new Ajv2020({ strict: false }).compile({
     $schema: schema.$schema, $ref: "#/$defs/selectedLane", $defs: schema.$defs,
@@ -173,7 +260,7 @@ test("selected pull request must exactly pair repository, branch, and head with 
   assert.throws(() => projectDormantPreservationAdmissionReceipt(malformedRepository), /owner\/repository/);
 });
 
-test("source evidence binds protected heads, candidate files, complete inventory, and selected lane state", () => {
+test("source evidence binds protected heads, candidate files, relevant cloud decision, and selected lane state", () => {
   const fixture = operationFixture();
   const source = buildDormantPreservationAdmissionSourceEvidence(fixture.sourceInput);
   assert.deepEqual(normalizeDormantPreservationAdmissionSourceEvidence(source), source);
@@ -290,9 +377,15 @@ test("planned continuation requires the exact one-parent same-tree fence child",
   }), /lease, manifest, or source files drifted/);
 });
 
-function operationFixture({ dormantLane = laneFixture() } = {}) {
-  const remoteInventory = inventoryVerification([claimFixture("candidate")]);
-  const candidateClaim = remoteInventory.inventory.claims[0];
+function operationFixture({
+  dormantLane = laneFixture(),
+  remoteInventory = inventoryVerification([claimFixture("candidate")]),
+} = {}) {
+  const candidateClaimId = claimFixture("candidate").claimId;
+  const candidateClaim = remoteInventory.inventory.claims.find(
+    claim => claim.claimId === candidateClaimId,
+  );
+  assert.ok(candidateClaim, "operation fixture requires the candidate claim");
   const dormantReceipt = verifyDormantPreservation({
     repository: REPOSITORY_PATH,
     targetRepository: "owner/repository",
@@ -335,7 +428,7 @@ function operationFixture({ dormantLane = laneFixture() } = {}) {
       selectionPath: "/workspace/selection.json", selectionFileDigest: digest("selection file"),
       manifestPath: "/workspace/manifest.json", manifestFileDigest: digest("manifest file"),
       manifest: { schema: "agentic-declared-write-scope/v1", semanticScope: "new-scope",
-        manifestDigest: digest("manifest"), writeSetDigest: digest("write set") },
+        manifestDigest: digest("manifest"), writeSetDigest: candidateClaim.writeSetDigest },
       cloudAuthorityPath: "/workspace/cloud-authority.json",
       cloudAuthorityFileDigest: digest("cloud authority file"),
       cloudAuthority: { claimId: candidateClaim.claimId, sessionId: SESSION_ID },
@@ -351,20 +444,21 @@ function operationFixture({ dormantLane = laneFixture() } = {}) {
   return { sourceInput, remoteInventory, dormantReceipt, candidateClaim, dormantLane };
 }
 
-function inventoryVerification(claims) {
+function inventoryVerification(claims, { ledgerLabel = "ledger" } = {}) {
   return verifyCurrentCloudInventory({
     ledgerRepository: "owner/ledger",
     targetRepository: "owner/repository",
     inspect: () => ({
       schema: "agentic-cloud-collaboration-result/v1", ok: true,
-      action: "status", status: "ready", ledgerRevision: sha("ledger revision"),
-      ledgerDigest: digest("ledger digest"), claims,
+      action: "status", status: "ready", ledgerRevision: sha(`${ledgerLabel} revision`),
+      ledgerDigest: digest(`${ledgerLabel} digest`), claims,
     }),
   });
 }
 
-function claimFixture(label) {
-  const declaredWriteScope = [`path:docs/${label}`, `semantic:${label}`];
+function claimFixture(label, overrides = {}) {
+  const declaredWriteScope = overrides.declaredWriteScope
+    || [`path:docs/${label}`, `semantic:${label}`];
   return {
     claimId: digest(`${label} claim`), state: "current", actorId: "github-user:42",
     repositoryId: "github-repository:R_repo", workItemId: `work-item:${label}`,
@@ -373,6 +467,9 @@ function claimFixture(label) {
     transitionCounter: 1, heartbeatCounter: 0, reviewRequestId: null,
     expiresAt: "2099-08-10T00:00:00.000Z", fenceRevision: digest(`${label} fence`),
     transitionDigest: digest(`${label} transition`),
+    ...overrides,
+    declaredWriteScope,
+    writeSetDigest: digestValue(declaredWriteScope),
   };
 }
 

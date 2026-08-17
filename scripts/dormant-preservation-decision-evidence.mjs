@@ -1,12 +1,20 @@
 // Responsibility: Canonicalize complete dormant-preservation admission evidence and reject identity drift.
 import path from "node:path";
-import { canonicalJson, digestValue } from "./cloud-collaboration-primitives.mjs";
+import {
+  canonicalJson,
+  digestValue,
+  normalizeWriteSet,
+  writeSetsOverlap,
+} from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { isOperationDerivedDormantPreservation, isReadyRemoteInventory } from "./scoped-lane-authority-state.mjs";
+import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 export const DORMANT_PRESERVATION_ADMISSION_SELECTION_SCHEMA = "agentic-dormant-preservation-admission-selection/v1";
-export const DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA = "agentic-dormant-preservation-admission-source-evidence/v1";
+export const DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA = "agentic-dormant-preservation-admission-source-evidence/v2";
 export const DORMANT_PRESERVATION_ADMISSION_EXECUTION_EVIDENCE_SCHEMA = "agentic-dormant-preservation-admission-execution-evidence/v1";
 const CLOUD_INVENTORY_SCHEMA = "agentic-dormant-preservation-admission-cloud-inventory/v1";
-const PRESERVATION_PROJECTION_SCHEMA = "agentic-dormant-preservation-admission-preservation-projection/v1";
+const CLOUD_DECISION_SCHEMA = "agentic-dormant-preservation-admission-cloud-decision/v2";
+const PRESERVATION_PROJECTION_SCHEMA = "agentic-dormant-preservation-admission-preservation-projection/v2";
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 export function normalizeDormantPreservationAdmissionSelection(value) {
@@ -45,13 +53,48 @@ export function projectDormantPreservationAdmissionCloudInventory(value) {
   };
   return deepFreeze({ ...core, inventoryStateDigest: digestValue(core) });
 }
+export function projectDormantPreservationAdmissionCloudDecision(
+  value,
+  candidate,
+  preservation,
+) {
+  const inventory = projectDormantPreservationAdmissionCloudInventory(value);
+  const normalizedCandidate = normalizeCandidate(candidate);
+  const normalizedPreservation = normalizePreservation(preservation);
+  const candidateClaim = inventory.claims.find(
+    claim => claim.claimId === normalizedCandidate.candidateClaim.claimId,
+  );
+  if (!candidateClaim) {
+    throw new Error("Cloud decision is missing its candidate claim.");
+  }
+  const candidateWriteSet = normalizeWriteSet(candidateClaim.declaredWriteScope);
+  const selectedAuthority = selectedAuthorityIdentity(normalizedPreservation);
+  const selectedClaims = inventory.claims.filter(
+    claim => claim.claimId !== candidateClaim.claimId
+      && claimMatchesSelectedAuthority(claim, selectedAuthority),
+  );
+  const relevantClaims = inventory.claims.filter(claim => (
+    claim.claimId === candidateClaim.claimId
+    || claimMatchesCandidateLineage(claim, candidateClaim)
+    || selectedClaims.some(selected => selected.claimId === claim.claimId)
+    || writeSetsOverlap(candidateWriteSet, normalizeWriteSet(claim.declaredWriteScope))
+  )).sort((left, right) => left.claimId.localeCompare(right.claimId));
+  const core = {
+    schema: CLOUD_DECISION_SCHEMA,
+    candidateClaimId: candidateClaim.claimId,
+    candidateWriteSetDigest: candidateClaim.writeSetDigest,
+    selectedClaimIds: selectedClaims.map(claim => claim.claimId).sort(),
+    claims: relevantClaims,
+  };
+  return deepFreeze({ ...core, decisionStateDigest: digestValue(core) });
+}
 export function projectDormantPreservationAdmissionReceipt(receipt) {
   requireObject(receipt, "Dormant-preservation receipt");
+  normalizeReceiptCloudObservation(receipt.cloudInventory);
   const { receiptDigest: ignoredDigest, verifiedAt: ignoredInstant,
-    operatorDecisionDigest: ignoredDecision, ...withoutOuterVolatile } = receipt;
-  const cloudInventory = { ...withoutOuterVolatile.cloudInventory };
-  delete cloudInventory.verificationReceiptDigest;
-  const projected = canonicalClone({ ...withoutOuterVolatile, cloudInventory });
+    operatorDecisionDigest: ignoredDecision, cloudInventory: ignoredInventory,
+    ...withoutObservation } = receipt;
+  const projected = canonicalClone(withoutObservation);
   if (projected.schema !== "agentic-dormant-preservation-receipt/v1"
     || projected.status !== "dormant-preserved"
     || projected.authorityState !== "dormant-preserved") {
@@ -66,10 +109,6 @@ export function projectDormantPreservationAdmissionReceipt(receipt) {
   projected.repository.ownerLogin = text(projected.repository.ownerLogin, "Dormant owner login");
   projected.repository.path = absolutePath(projected.repository.path, "Dormant repository path");
   projected.sessionId = text(projected.sessionId, "Dormant session ID");
-  requireObject(projected.cloudInventory, "Dormant cloud inventory");
-  projected.cloudInventory.ledgerRevision = sha(projected.cloudInventory.ledgerRevision, "Dormant ledger revision");
-  projected.cloudInventory.ledgerDigest = digest(projected.cloudInventory.ledgerDigest, "Dormant ledger digest");
-  projected.cloudInventory.inventoryDigest = digest(projected.cloudInventory.inventoryDigest, "Dormant inventory digest");
   projected.worktrees = boundedArray(projected.worktrees, "Dormant worktrees")
     .map((worktree, index) => normalizeWorktree(worktree, index))
     .sort((left, right) => left.path.localeCompare(right.path));
@@ -92,11 +131,17 @@ export function buildDormantPreservationAdmissionSourceEvidence({
   }
   const normalizedSelection = normalizeDormantPreservationAdmissionSelection(selection);
   const cloudInventory = projectDormantPreservationAdmissionCloudInventory(remoteInventory);
+  assertReceiptInventoryJoin(dormantReceipt, remoteInventory, cloudInventory);
   const receiptProjection = projectDormantPreservationAdmissionReceipt(dormantReceipt);
-  assertReceiptInventoryJoin(receiptProjection.receipt, remoteInventory, cloudInventory);
+  const preservation = buildPreservation(receiptProjection, normalizedSelection);
+  const normalizedCandidate = normalizeCandidate(candidate);
+  const cloudDecision = projectDormantPreservationAdmissionCloudDecision(
+    cloudInventory,
+    normalizedCandidate,
+    preservation,
+  );
   const core = normalizeSourceCore({ schema: DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA,
-    controller, canonical, candidate, cloudInventory,
-    preservation: buildPreservation(receiptProjection, normalizedSelection) });
+    controller, canonical, candidate: normalizedCandidate, cloudDecision, preservation });
   assertSourceJoins(core);
   return deepFreeze({ ...core, sourceEvidenceDigest: digestValue(core) });
 }
@@ -214,7 +259,7 @@ function normalizeSourceCore(value) {
   const core = {
     schema: text(value.schema, "Source evidence schema"), controller: normalizeController(value.controller),
     canonical: normalizeCanonical(value.canonical), candidate: normalizeCandidate(value.candidate),
-    cloudInventory: normalizeProjectedInventory(value.cloudInventory), preservation: normalizePreservation(value.preservation),
+    cloudDecision: normalizeCloudDecision(value.cloudDecision), preservation: normalizePreservation(value.preservation),
   };
   if (core.schema !== DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA) {
     throw new Error("Dormant-preservation source evidence schema is unsupported.");
@@ -261,7 +306,7 @@ function normalizeCanonical(value) {
 function normalizeCandidate(value) {
   requireObject(value, "Candidate evidence");
   const manifest = canonicalObject(value.manifest, "Candidate manifest");
-  const cloudAuthority = canonicalObject(value.cloudAuthority, "Candidate cloud authority");
+  const cloudAuthority = stableCandidateCloudAuthority(value.cloudAuthority);
   const candidateClaim = normalizeCloudClaim(value.candidateClaim, "candidate");
   const result = {
     semanticScope: text(value.semanticScope, "Candidate semantic scope"), deviceId: text(value.deviceId, "Candidate device ID"),
@@ -277,7 +322,21 @@ function normalizeCandidate(value) {
     || result.branch !== `agent/${result.deviceId}/${result.semanticScope}`
     || (manifest.semanticScope && manifest.semanticScope !== result.semanticScope)
     || (cloudAuthority.claimId && cloudAuthority.claimId !== candidateClaim.claimId)
-    || (cloudAuthority.sessionId && cloudAuthority.sessionId !== result.sessionId)) {
+    || (cloudAuthority.sessionId && cloudAuthority.sessionId !== result.sessionId)
+    || (manifest.writeSetDigest && manifest.writeSetDigest !== candidateClaim.writeSetDigest)
+    || (cloudAuthority.writeSetDigest && cloudAuthority.writeSetDigest !== candidateClaim.writeSetDigest)
+    || (cloudAuthority.claimDigest && cloudAuthority.claimDigest !== candidateClaim.fenceRevision)
+    || (cloudAuthority.claimLedgerRevision
+      && cloudAuthority.claimLedgerRevision !== candidateClaim.transitionDigest)
+    || (cloudAuthority.canonicalBaseSha
+      && cloudAuthority.canonicalBaseSha !== candidateClaim.canonicalBaseRevision)
+    || (cloudAuthority.laneRevision && cloudAuthority.laneRevision !== candidateClaim.laneRevision)
+    || (cloudAuthority.leaseEpoch && cloudAuthority.leaseEpoch !== candidateClaim.leaseEpoch)
+    || (cloudAuthority.transitionCounter
+      && cloudAuthority.transitionCounter !== candidateClaim.transitionCounter)
+    || (cloudAuthority.expiresAt && cloudAuthority.expiresAt !== candidateClaim.expiresAt)
+    || (Object.hasOwn(cloudAuthority, "reviewRequestId")
+      && (cloudAuthority.reviewRequestId ?? null) !== (candidateClaim.reviewRequestId ?? null))) {
     throw new Error("Candidate files and claim do not describe one exact admission candidate.");
   }
   return deepFreeze(result);
@@ -314,6 +373,7 @@ function buildPreservation(projection, selection) {
   return deepFreeze(core);
 }
 function assertReceiptInventoryJoin(receipt, remoteInventory, projectedInventory) {
+  normalizeReceiptCloudObservation(receipt.cloudInventory);
   const source = remoteInventory.inventory || remoteInventory;
   if (receipt.cloudInventory.ledgerRevision !== projectedInventory.ledgerRevision
     || receipt.cloudInventory.ledgerDigest !== projectedInventory.ledgerDigest
@@ -354,10 +414,10 @@ function normalizePreservation(value) {
 }
 function assertSourceJoins(source) {
   const candidate = source.candidate;
-  const matches = source.cloudInventory.claims.filter(claim => claim.claimId === candidate.candidateClaim.claimId);
+  const matches = source.cloudDecision.claims.filter(claim => claim.claimId === candidate.candidateClaim.claimId);
   if (matches.length !== 1 || matches[0].recordDigest !== candidate.candidateClaimRecordDigest
-    || source.cloudInventory.ledgerDigest !== source.preservation.selectedLanes[0]?.worktree.cloudLedgerDigest
-      && source.preservation.selectedLanes[0]?.worktree.cloudLedgerDigest != null
+    || source.cloudDecision.candidateClaimId !== candidate.candidateClaim.claimId
+    || source.cloudDecision.candidateWriteSetDigest !== candidate.candidateClaim.writeSetDigest
     || source.canonical.targetRepository !== source.preservation.repository.nameWithOwner
     || source.canonical.repositoryPath !== source.preservation.repository.path
     || source.candidate.sessionId !== source.preservation.sessionId) {
@@ -373,6 +433,118 @@ function assertSourceJoins(source) {
       throw new Error(`Selected dormant lane state is absent or drifted: ${selected.path}`);
     }
   }
+}
+function normalizeCloudDecision(value) {
+  requireObject(value, "Cloud decision");
+  const core = {
+    schema: text(value.schema, "Cloud decision schema"),
+    candidateClaimId: digest(value.candidateClaimId, "Cloud decision candidate claim ID"),
+    candidateWriteSetDigest: digest(
+      value.candidateWriteSetDigest,
+      "Cloud decision candidate write-set digest",
+    ),
+    selectedClaimIds: boundedArray(
+      value.selectedClaimIds,
+      "Cloud decision selected claim IDs",
+      true,
+    ).map((claimId, index) => digest(claimId, `Cloud decision selected claim ${index}`))
+      .sort(),
+    claims: boundedArray(value.claims, "Cloud decision claims")
+      .map((claim, index) => normalizeCloudClaim(claim, index))
+      .sort((left, right) => left.claimId.localeCompare(right.claimId)),
+  };
+  unique(core.selectedClaimIds, "Cloud decision selected claim ID");
+  unique(core.claims.map(claim => claim.claimId), "Cloud decision claim identity");
+  const candidate = core.claims.filter(claim => claim.claimId === core.candidateClaimId);
+  if (core.schema !== CLOUD_DECISION_SCHEMA
+    || candidate.length !== 1
+    || candidate[0].writeSetDigest !== core.candidateWriteSetDigest
+    || core.selectedClaimIds.some(claimId => !core.claims.some(claim => claim.claimId === claimId))
+    || value.decisionStateDigest !== digestValue(core)) {
+    throw new Error("Cloud decision drifted from its relevant claim records.");
+  }
+  return deepFreeze({ ...core, decisionStateDigest: value.decisionStateDigest });
+}
+function stableCandidateCloudAuthority(value) {
+  const authority = canonicalObject(value, "Candidate cloud authority");
+  delete authority.ledgerRevision;
+  delete authority.ledgerDigest;
+  return deepFreeze(authority);
+}
+function normalizeReceiptCloudObservation(value) {
+  requireObject(value, "Dormant receipt cloud inventory");
+  const observation = {
+    ledgerRevision: sha(value.ledgerRevision, "Dormant ledger revision"),
+    ledgerDigest: digest(value.ledgerDigest, "Dormant ledger digest"),
+    inventoryDigest: digest(value.inventoryDigest, "Dormant inventory digest"),
+    verificationReceiptDigest: digest(
+      value.verificationReceiptDigest,
+      "Dormant verification receipt digest",
+    ),
+  };
+  if (canonicalJson(value) !== canonicalJson(observation)) {
+    throw new Error("Dormant receipt cloud inventory has unexpected fields.");
+  }
+  return Object.freeze(observation);
+}
+function selectedAuthorityIdentity(preservation) {
+  const claimIds = new Set();
+  const reviewRequestIds = new Set();
+  const workItemIds = new Set();
+  for (const selected of preservation.selectedLanes) {
+    if (selected.worktree.projectedClaimId) {
+      claimIds.add(selected.worktree.projectedClaimId);
+    }
+    if (selected.pullRequest?.reviewRequestId) {
+      reviewRequestIds.add(selected.pullRequest.reviewRequestId);
+    }
+    for (const branchValue of [selected.worktree.branch, selected.pullRequest?.branch]) {
+      if (!branchValue) continue;
+      const branch = branchValue.replace(/^refs\/heads\//u, "");
+      workItemIds.add(pseudonymousIdentifier("work-item", branch));
+      const identity = parseDeviceBranch(branch);
+      if (identity?.scope) {
+        workItemIds.add(pseudonymousIdentifier("work-item", identity.scope));
+      }
+    }
+  }
+  return Object.freeze({
+    repositoryId: `github-repository:${preservation.repository.id}`,
+    claimIds,
+    reviewRequestIds,
+    workItemIds,
+  });
+}
+function claimMatchesSelectedAuthority(claim, identity) {
+  return claim.repositoryId === identity.repositoryId && (
+    identity.claimIds.has(claim.claimId)
+    || identity.reviewRequestIds.has(claim.reviewRequestId)
+    || identity.workItemIds.has(claim.workItemId)
+  );
+}
+function claimMatchesCandidateLineage(claim, candidate) {
+  return claim.repositoryId === candidate.repositoryId && (
+    claim.workItemId === candidate.workItemId
+    || (candidate.reviewRequestId != null
+      && claim.reviewRequestId === candidate.reviewRequestId)
+  );
+}
+function candidateIdentity(claim) {
+  const identity = {
+    claimId: claim.claimId,
+    actorId: claim.actorId,
+    repositoryId: claim.repositoryId,
+    workItemId: claim.workItemId,
+    canonicalBaseRevision: claim.canonicalBaseRevision,
+    declaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
+    writeSetDigest: claim.writeSetDigest,
+    leaseEpoch: claim.leaseEpoch,
+  };
+  if (claim.entrySchema !== undefined) identity.entrySchema = claim.entrySchema;
+  if (claim.claimIdentitySchema !== undefined) {
+    identity.claimIdentitySchema = claim.claimIdentitySchema;
+  }
+  return deepFreeze(identity);
 }
 function normalizeProjectedInventory(value) {
   requireObject(value, "Projected cloud inventory");
@@ -456,12 +628,22 @@ function assertPostCloudInventory(value, source) {
   const inventory = projectDormantPreservationAdmissionCloudInventory(value);
   const claimId = source.candidate.candidateClaim.claimId;
   const candidate = inventory.claims.find(claim => claim.claimId === claimId);
-  const peers = inventory.claims.filter(claim => claim.claimId !== claimId)
+  const decision = projectDormantPreservationAdmissionCloudDecision(
+    inventory,
+    source.candidate,
+    source.preservation,
+  );
+  const peers = decision.claims.filter(claim => claim.claimId !== claimId)
     .map(claim => ({ claimId: claim.claimId, recordDigest: claim.recordDigest }));
-  const expectedPeers = source.cloudInventory.claims.filter(claim => claim.claimId !== claimId)
+  const expectedPeers = source.cloudDecision.claims.filter(claim => claim.claimId !== claimId)
     .map(claim => ({ claimId: claim.claimId, recordDigest: claim.recordDigest }));
-  if (!candidate || canonicalJson(peers) !== canonicalJson(expectedPeers)) {
-    throw new Error("Post-admission peer cloud records changed.");
+  if (!candidate
+    || canonicalJson(candidateIdentity(candidate))
+      !== canonicalJson(candidateIdentity(source.candidate.candidateClaim))
+    || canonicalJson(decision.selectedClaimIds)
+      !== canonicalJson(source.cloudDecision.selectedClaimIds)
+    || canonicalJson(peers) !== canonicalJson(expectedPeers)) {
+    throw new Error("Post-admission relevant cloud records changed.");
   }
   return { inventory, evidence: normalizeFinalCloud({
     claimId, claimDigest: candidate.fenceRevision,
@@ -477,8 +659,8 @@ function assertPostDormantReceipt(value, remoteInventory, inventory, source, pla
   if (value.operatorDecisionDigest !== planDigest) {
     throw new Error("Post-admission dormant receipt changed its plan decision.");
   }
+  assertReceiptInventoryJoin(value, remoteInventory, inventory);
   const projection = projectDormantPreservationAdmissionReceipt(value), receipt = projection.receipt;
-  assertReceiptInventoryJoin(receipt, remoteInventory, inventory);
   const expectedWorktrees = source.preservation.selectedLanes.map(lane => lane.worktree);
   const expectedPullRequests = source.preservation.selectedLanes
     .map(lane => lane.pullRequest).filter(Boolean).sort((left, right) => left.number - right.number);

@@ -81,6 +81,54 @@ function authorityFor(manifest) {
   }));
 }
 
+function verificationResult({
+  claim,
+  claims,
+  resultLedgerRevision,
+  resultLedgerDigest = ledgerDigest,
+  resultEvaluationTime = evaluationTime,
+  contractReceiptDigest = "7".repeat(64),
+} = {}) {
+  const currentClaimInventoryCore = {
+    schema: "agentic-cloud-collaboration-current-claim-inventory/v1",
+    ledgerRevision: resultLedgerRevision,
+    ledgerDigest: resultLedgerDigest,
+    evaluationTime: resultEvaluationTime,
+    claims,
+  };
+  const currentClaimInventory = {
+    ...currentClaimInventoryCore,
+    claimInventoryDigest: digestValue(currentClaimInventoryCore),
+  };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision: resultLedgerRevision,
+    ledgerDigest: resultLedgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
+    evaluationTime: resultEvaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision: resultLedgerRevision,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory,
+    findings: [],
+    receipt: {
+      ...receiptCore,
+      receiptDigest: digestValue(receiptCore),
+    },
+  };
+}
+
 function verifiedBundle(authority, manifest) {
   const candidate = publicClaim(manifest, {
     claimId: authority.claimId,
@@ -105,21 +153,10 @@ function verifiedBundle(authority, manifest) {
       ledgerDigest,
       claims: [candidate],
     }),
-    invoke: () => ({
-      schema: "agentic-cloud-collaboration-result/v1",
-      ok: true,
-      action: "verify",
-      status: "active",
-      ledgerRevision: authority.ledgerRevision,
-      ledgerDigest,
-      claimDigest: candidate.fenceRevision,
+    invoke: () => verificationResult({
       claim: candidate,
-      findings: [],
-      receipt: {
-        ledgerDigest,
-        receiptDigest: "7".repeat(64),
-        evaluationTime,
-      },
+      claims: [candidate],
+      resultLedgerRevision: authority.ledgerRevision,
     }),
   });
 }

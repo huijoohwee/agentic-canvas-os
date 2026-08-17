@@ -5,6 +5,7 @@ import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
+  DORMANT_PRESERVATION_ADMISSION_PLAN_SCHEMA,
   DORMANT_PRESERVATION_ADMISSION_PHASES,
   advanceDormantPreservationAdmissionIntent,
   assertDormantPreservationAdmissionPreProvision,
@@ -22,7 +23,7 @@ import {
   buildDormantPreservationAdmissionExecutionEvidence,
 } from "../scripts/dormant-preservation-decision-evidence.mjs";
 import {
-  verifyCurrentCloudInventory, verifyDormantPreservation,
+  markOperationDerivedCloudVerification, verifyDormantPreservation,
 } from "../scripts/scoped-lane-authority-state.mjs";
 
 const digest = label => digestValue({ label });
@@ -32,6 +33,12 @@ const TARGET_PATH = "/workspace/worktrees/candidate";
 test("plan deterministically binds source evidence and one materialized device:start argv", () => {
   const plan = planFixture();
   assert.deepEqual(normalizeDormantPreservationAdmissionPlan(plan), plan);
+  assert.equal(plan.schema, DORMANT_PRESERVATION_ADMISSION_PLAN_SCHEMA);
+  assert.equal(
+    plan.sourceEvidence.cloudDecision.schema,
+    "agentic-dormant-preservation-admission-cloud-decision/v2",
+  );
+  assert.equal(Object.hasOwn(plan.sourceEvidence, "cloudInventory"), false);
   assert.deepEqual(materializeDormantPreservationDeviceStartArgv(plan), plan.deviceStartArgv);
   assert.deepEqual(DORMANT_PRESERVATION_ADMISSION_PHASES, ["admitted", "complete"]);
   assert.equal(
@@ -143,7 +150,7 @@ test("plan and receipt JSON schemas declare exact top-level artifacts and reject
   const fixture = admittedFixture();
   const receipt = buildDormantPreservationAdmissionReceipt(fixture.admitted);
   const planSchema = JSON.parse(readFileSync(
-    new URL("../docs/schemas/dormant-preservation-decision-plan.v1.schema.json", import.meta.url),
+    new URL("../docs/schemas/dormant-preservation-decision-plan.v2.schema.json", import.meta.url),
     "utf8",
   ));
   const receiptSchema = JSON.parse(readFileSync(
@@ -186,13 +193,26 @@ function planFixture() {
 }
 
 function sourceEvidenceFixture() {
+  const declaredWriteScope = ["path:docs/new-scope", "semantic:new-scope"];
   const claimCore = {
     claimId: digest("candidate claim"), state: "active",
+    entrySchema: "agentic-cloud-collaboration-entry/v1",
+    claimIdentitySchema: "agentic-cloud-collaboration-claim-identity/v1",
+    actorId: "github-user:42", repositoryId: "github-repository:R_repo",
+    workItemId: "work-item:new-scope", canonicalBaseRevision: sha("canonical"),
+    laneRevision: sha("canonical"), declaredWriteScope,
+    writeSetDigest: digestValue(declaredWriteScope), leaseEpoch: 1,
+    transitionCounter: 1, heartbeatCounter: 0, reviewRequestId: null,
+    expiresAt: "2099-08-10T00:00:00.000Z",
+    fenceRevision: digest("initial claim fence"),
+    transitionDigest: digest("initial claim transition"),
   };
   const candidateClaim = { ...claimCore, recordDigest: digestValue(claimCore) };
-  const inventoryCore = {
-    schema: "agentic-dormant-preservation-admission-cloud-inventory/v1",
-    ledgerRevision: sha("ledger"), ledgerDigest: digest("ledger"), claims: [candidateClaim],
+  const cloudDecisionCore = {
+    schema: "agentic-dormant-preservation-admission-cloud-decision/v2",
+    candidateClaimId: candidateClaim.claimId,
+    candidateWriteSetDigest: candidateClaim.writeSetDigest,
+    selectedClaimIds: [], claims: [candidateClaim],
   };
   const worktree = {
     path: "/workspace/worktrees/legacy", branch: "refs/heads/agent/old/old-scope",
@@ -213,7 +233,7 @@ function sourceEvidenceFixture() {
     }],
   });
   const core = {
-    schema: "agentic-dormant-preservation-admission-source-evidence/v1",
+    schema: "agentic-dormant-preservation-admission-source-evidence/v2",
     controller: {
       path: "/workspace/controller", origin: "git@github.com:owner/controller.git",
       headSha: sha("controller"), originMainSha: sha("controller"),
@@ -241,13 +261,17 @@ function sourceEvidenceFixture() {
       targetObservationDigest: digest("target observation"), ttlSeconds: 3600,
       selectionPath: "/workspace/selection.json", selectionFileDigest: digest("selection file"),
       manifestPath: "/workspace/manifest.json", manifestFileDigest: digest("manifest file"),
-      manifest: { semanticScope: "new-scope" },
+      manifest: {
+        semanticScope: "new-scope", writeSetDigest: candidateClaim.writeSetDigest,
+      },
       cloudAuthorityPath: "/workspace/cloud-authority.json",
       cloudAuthorityFileDigest: digest("authority file"),
       cloudAuthority: { claimId: candidateClaim.claimId, sessionId: "decision-session" },
       candidateClaim, candidateClaimRecordDigest: candidateClaim.recordDigest,
     },
-    cloudInventory: { ...inventoryCore, inventoryStateDigest: digestValue(inventoryCore) },
+    cloudDecision: {
+      ...cloudDecisionCore, decisionStateDigest: digestValue(cloudDecisionCore),
+    },
     preservation: {
       authenticatedActor: { actorId: "github-user:42", login: "owner" },
       repository: {
@@ -264,21 +288,33 @@ function sourceEvidenceFixture() {
 
 function executionFixture(plan) {
   const source = plan.sourceEvidence, claimId = source.candidate.candidateClaim.claimId;
-  const declaredWriteScope = ["path:docs/new-scope", "semantic:new-scope"];
-  const postCloudInventory = verifyCurrentCloudInventory({
+  const declaredWriteScope = source.candidate.candidateClaim.declaredWriteScope;
+  const { recordDigest: ignoredRecordDigest, ...sourceClaimCore } =
+    source.candidate.candidateClaim;
+  const postClaimCore = {
+    ...sourceClaimCore, claimId, state: "active", declaredWriteScope,
+    laneRevision: sha("post lane"), transitionCounter: 2,
+    fenceRevision: digest("claim fence"), transitionDigest: digest("claim transition"),
+  };
+  const postClaim = { ...postClaimCore, recordDigest: digestValue(postClaimCore) };
+  const cloudInventoryCore = {
+    schema: "agentic-cloud-claim-inventory/v1",
+    observedLedgerHeadRevision: sha("post ledger"),
+    ledgerDigest: digest("post ledger"),
+    evaluationTime: "2026-08-10T00:00:00.000Z", claims: [postClaim],
+  };
+  const cloudInventory = {
+    ...cloudInventoryCore, inventoryDigest: digestValue(cloudInventoryCore),
+  };
+  const postCloudInventory = markOperationDerivedCloudVerification(Object.freeze({
+    schema: "agentic-lane-cloud-verification/v1", status: "ready",
     ledgerRepository: "owner/ledger", targetRepository: "owner/repository",
-    inspect: () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
-      action: "status", status: "ready", ledgerRevision: sha("post ledger"),
-      ledgerDigest: digest("post ledger"), claims: [{
-        claimId, state: "current", actorId: "github-user:42",
-        repositoryId: "github-repository:R_repo", workItemId: "work-item:new-scope",
-        canonicalBaseRevision: source.canonical.headSha, laneRevision: source.canonical.headSha,
-        declaredWriteScope, writeSetDigest: digestValue(declaredWriteScope), leaseEpoch: 1,
-        transitionCounter: 1, heartbeatCounter: 0, reviewRequestId: null,
-        expiresAt: "2099-08-10T00:00:00.000Z", fenceRevision: digest("claim fence"),
-        transitionDigest: digest("claim transition"),
-      }] }),
-  });
+    ledgerRevision: cloudInventory.observedLedgerHeadRevision,
+    ledgerDigest: cloudInventory.ledgerDigest,
+    verifiedAt: cloudInventory.evaluationTime,
+    remoteClaimInventoryDigest: cloudInventory.inventoryDigest,
+    inventory: cloudInventory, receiptDigest: digest("cloud verification receipt"),
+  }));
   const dormant = source.preservation.selectedLanes[0].worktree;
   const dormantLane = { path: dormant.path, head: dormant.headSha, treeSha: dormant.treeSha,
     branch: dormant.branch, detached: dormant.detached, dirty: dormant.dirty,

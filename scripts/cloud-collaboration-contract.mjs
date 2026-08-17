@@ -1,11 +1,12 @@
 import { CLOUD_COLLABORATION_BOUNDS, ENTRY_SCHEMA, LEGACY_ENTRY_SCHEMA, LEDGER_SCHEMA,
   MUTATING_ACTIONS, RECEIPT_SCHEMA, FINDING_TYPES, canonicalJson, collaborationFinding,
-  createEmptyLedger, digest, digestValue, fail, instant, normalizeActor, normalizeRepository,
-  normalizeRootIntent, normalizeWriteSet, text, validateLedger, writeSetsOverlap,
+  createEmptyLedger, digest, digestValue, fail, findUncoveredPathScopes, instant,
+  normalizeActor, normalizeRepository, normalizeRootIntent, normalizeWriteSet, text,
+  validateLedger, writeSetsOverlap,
 } from "./cloud-collaboration-primitives.mjs";
 export { CLOUD_COLLABORATION_BOUNDS, CloudCollaborationError, ENTRY_SCHEMA, LEGACY_ENTRY_SCHEMA,
   LEDGER_SCHEMA, RECEIPT_SCHEMA, canonicalJson, createEmptyLedger, digestValue,
-  normalizeWriteSet, validateLedger, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+  findUncoveredPathScopes, normalizeWriteSet, validateLedger, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 const TERMINAL_STATES = new Set(["retired", "released", "revoked"]);
 const WRITE_AUTHORITY_STATES = new Set(["current"]);
 const SCOPE_RESERVATION_STATES = new Set([
@@ -556,6 +557,25 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
       : null;
     if (suppliedEvidence && !claim.evidenceDigest) {
       findings.push(collaborationFinding("evidence-without-run", ledger, claim, request, suppliedEvidence, "join-evidence-to-review-ready"));
+    }
+    if (request.observedChangedPaths !== undefined) {
+      const uncoveredPaths = findUncoveredPathScopes(
+        claim.declaredWriteScope,
+        request.observedChangedPaths,
+      );
+      if (uncoveredPaths.length > 0) {
+        findings.push({
+          ...collaborationFinding(
+            "declared-write-scope-unproven",
+            ledger,
+            claim,
+            request,
+            claim.evidenceDigest,
+            "reconcile-reviewed-scope",
+          ),
+          scope: uncoveredPaths,
+        });
+      }
     }
     const requiredState = projectAuthorityState(request.requiredState ?? "current");
     const stateReady = requiredState === "current"

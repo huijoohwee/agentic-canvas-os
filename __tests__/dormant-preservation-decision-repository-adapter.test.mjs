@@ -29,7 +29,10 @@ import {
   createDormantPreservationAdmissionIntentStore,
   parseDormantPreservationDeviceResult, projectExistingPlannedTarget,
 } from "../scripts/dormant-preservation-decision-repository-adapter.mjs";
-import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
+import {
+  markOperationDerivedCloudVerification,
+  normalizeDeclaredWriteScopeManifest,
+} from "../scripts/scoped-lane-admission-lib.mjs";
 import { continuePlannedAdmissionFromRepository } from "../scripts/scoped-lane-admission-continuation.mjs";
 import {
   verifyCurrentCloudInventory, verifyDormantPreservation,
@@ -202,7 +205,7 @@ test("planned heartbeat binds the authorized journal and materializes every deci
   }
 });
 
-test("final planned verification rejects peer cloud drift before continuation mutation", (context) => {
+test("final planned verification rejects relevant cloud drift before continuation mutation", (context) => {
   const fixture = createGateFixture(context);
   const source = fixture.plan.sourceEvidence;
   const store = createDormantPreservationAdmissionIntentStore({ statePath: fixture.statePath });
@@ -226,14 +229,18 @@ test("final planned verification rejects peer cloud drift before continuation mu
     laneStateDigest: digestValue(lanes.map(lane => ({ path: path.resolve(lane.path),
       stateDigest: lane.stateDigest })).sort((left, right) => left.path.localeCompare(right.path))) };
   const lease = {
+    schema: "agentic-writer-lease/v2", status: "active", epoch: 7,
     worktreePath: source.candidate.targetPath, branch, sessionId: source.candidate.sessionId,
     scope: source.candidate.semanticScope, baseSha: source.canonical.headSha,
     fenceSha: candidateHead, cloudAuthority: { ...fixture.authority,
       targetRepository: source.canonical.targetRepository },
-    admission: { status: "planned", semanticScope: source.candidate.semanticScope,
+    admission: { schema: "agentic-lane-admission-lease/v1", status: "planned",
+      semanticScope: source.candidate.semanticScope,
       manifestDigest: source.candidate.manifest.manifestDigest,
-      writeSetDigest: source.candidate.manifest.writeSetDigest },
+      writeSetDigest: source.candidate.manifest.writeSetDigest,
+      declaredWriteSet: source.candidate.manifest.declaredWriteSet },
   };
+  candidateLane.lease = lease;
   let cloudVerifications = 0;
   let continuationMutations = 0;
   const leaseStore = { verify: () => lease,
@@ -256,7 +263,7 @@ test("final planned verification rejects peer cloud drift before continuation mu
     operatorDecisionDigest: fixture.plan.planDigest,
     gitText: () => "", collectLaneState: () => postLaneState,
     verifyDormant: gate.verifyDormant, verifyCloudAuthority: gate.verifyCloudAuthority,
-  }), /peer cloud records changed/u);
+  }), /relevant cloud records changed/u);
   assert.equal(cloudVerifications, 2);
   assert.equal(continuationMutations, 0);
 });
@@ -338,9 +345,12 @@ function createGateFixture(context) {
     ledgerRepository: "owner/ledger", targetRepository: "owner/repository",
     inspect: () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
       action: "status", status: "ready", ledgerRevision: sha("drifted ledger revision"),
-      ledgerDigest: digest("drifted ledger digest"), claims: [claimSource,
-        { ...peerClaimSource, heartbeatCounter: peerClaimSource.heartbeatCounter + 1 }] }),
+      ledgerDigest: digest("drifted ledger digest"), claims: [
+        { ...claimSource, leaseEpoch: claimSource.leaseEpoch + 1 }, peerClaimSource,
+      ] }),
   });
+  const continuationVerification = continuationCloudVerification(verification);
+  const driftedContinuationVerification = continuationCloudVerification(driftedVerification);
 
   const headSha = git(repository, ["rev-parse", "HEAD"]).trim();
   const treeSha = git(repository, ["rev-parse", "HEAD^{tree}"]).trim();
@@ -433,10 +443,29 @@ function createGateFixture(context) {
     worktreePaths: [dormantPath], pullRequestReferences: [],
     gitText: argumentsValue => git(repository, argumentsValue),
     collectLaneState: () => snapshot, inspectTarget: () => target,
-    verifyCloud: () => ({ authority, verification }), verifyDormant,
+    verifyCloud: () => ({ authority, verification: continuationVerification }), verifyDormant,
   });
-  return { authority, dormantPath, driftedVerification, gate, plan, repository, snapshot,
-    statePath, target, temporaryRoot, verification, verifyDormant };
+  return { authority, dormantPath, driftedVerification: driftedContinuationVerification,
+    gate, plan, repository, snapshot,
+    statePath, target, temporaryRoot, verification: continuationVerification, verifyDormant };
+}
+
+function continuationCloudVerification(source) {
+  const inventoryCore = {
+    schema: "agentic-cloud-claim-inventory/v1",
+    observedLedgerHeadRevision: source.ledgerRevision,
+    ledgerDigest: source.ledgerDigest,
+    evaluationTime: "2026-08-10T00:00:00.000Z",
+    claims: source.inventory.claims,
+  };
+  const inventory = { ...inventoryCore, inventoryDigest: digestValue(inventoryCore) };
+  return markOperationDerivedCloudVerification(Object.freeze({
+    schema: "agentic-lane-cloud-verification/v1", status: "ready",
+    ledgerRevision: source.ledgerRevision, ledgerDigest: source.ledgerDigest,
+    verifiedAt: inventory.evaluationTime, inventory,
+    remoteClaimInventoryDigest: inventory.inventoryDigest,
+    receiptDigest: digest("continuation verification receipt"),
+  }));
 }
 
 function repositoryProjection(repository, headSha, treeSha) {

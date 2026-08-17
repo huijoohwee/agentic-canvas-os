@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3344,
-  "headDigest": "e532cf37a8e459607e64263b18c48e6514af815d72e3539f53f08d5b390bf768",
+  "sequence": 3345,
+  "headDigest": "2dbeb6638c627efe0d9cd24809103b8bdd499ff8b4fb0729b4838b82bdce0128",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -165591,6 +165591,63 @@
       },
       "claimDigest": "277937c19e98423f8913a5bae14292a3760d6156f0a836e667673a2abaacff72",
       "digest": "e532cf37a8e459607e64263b18c48e6514af815d72e3539f53f08d5b390bf768"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3345,
+      "parentDigest": "e532cf37a8e459607e64263b18c48e6514af815d72e3539f53f08d5b390bf768",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "cac1609644d075e7b0a0a5d26d2df5a1e371b0cc512b5df15981dc3233e8527e",
+      "idempotencyKey": "8cef723723898cb96e58640b63437d76fe22fa255fb898c318acf8bd9f20bf00",
+      "requestDigest": "87fedff31d6831c3ff21d4043231b8a3c0dbd1655653489db43f811d6941fa80",
+      "evaluationTime": "2026-08-17T01:10:46.000Z",
+      "claimCore": {
+        "claimId": "cac1609644d075e7b0a0a5d26d2df5a1e371b0cc512b5df15981dc3233e8527e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:292920e38a8faf2f740acf9101e7eb0586a13f9eb676a2301c84c19e498dff85",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:210dfecea4e4f985cdc509fbf76975cd0aff74f348d13d7db4da669ec7f9b2d3",
+        "canonicalBaseRevision": "8c833f544e1bdebdb22d2e22df520f35a281c6a3",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:docs/documents/agentic-game-os-prd-tad-adr.md",
+          "path:docs/documents/hjh-topology-document.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/agentic-sdlc-specification-chain.md",
+          "path:scripts/__tests__/git-guidelines-review-authority.test.mjs",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "path:scripts/lib/git-guidelines/review-authority.mjs",
+          "semantic:release-convergence-squashed-20260814"
+        ],
+        "writeSetDigest": "91e81813fb6f5822c241c7275cf675b37b4bc1f36c94104c17b40b6eae75feda",
+        "laneRevision": "61ae11cf368f0a42857450e098afefc445e0aec5",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-14T10:06:19.000Z",
+        "evidenceDigest": "1567771d0ac33c0a8cbeb05310e3126fb85ac8c2fb14e4b686b40f5a69c3640f",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc7_BkuR",
+        "predecessorClaimId": "4990f9ce763946f1749f511af752cf644c3c52b2fa13adb2a86bdf66714fe4c5",
+        "eligibleSince": "2026-08-14T09:28:45.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-14T09:36:19.000Z",
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "61ae11cf368f0a42857450e098afefc445e0aec5",
+          "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc7_BkuR",
+          "bytesDigest": "7e645b7bdca2d74bc3c4c8ecba6c10047cdb7d89b971904ed1275029b0c1fe23",
+          "namedChecksDigest": "7442fb7ec75bd003e3666012c54d57bc787170d0df4915bf6532dda15c66a398",
+          "handoffEvidenceDigest": "9cb05d5196bb005655fc6b6e4aa81d27172d62b7e6ca5141067c64b93ceef3e2",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-17T01:10:46.000Z"
+        }
+      },
+      "claimDigest": "28c0d976cbd708da13447fa7c662d8b543031dfc71de1f6df5fc7851c985de38",
+      "digest": "2dbeb6638c627efe0d9cd24809103b8bdd499ff8b4fb0729b4838b82bdce0128"
     }
   ]
 }

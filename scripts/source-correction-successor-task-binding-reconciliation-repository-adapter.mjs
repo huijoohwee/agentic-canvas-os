@@ -54,11 +54,8 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
       || lease.cloudAuthority?.state !== "active") {
       throw new Error("Source-correction successor binding requires its active admitted source lane.");
     }
-    const storedRepair = lease.sourceCorrectionSuccessorTaskBindingReconciliation
+    const repair = lease.sourceCorrectionSuccessorTaskBindingReconciliation
       ? normalizeRepair(lease.sourceCorrectionSuccessorTaskBindingReconciliation)
-      : null;
-    const repair = storedRepair?.successorClaimId === lease.cloudAuthority.claimId
-      ? storedRepair
       : null;
     const localHeadSha = git(["rev-parse", "HEAD"]);
     const remoteHeadSha = remoteHead(git(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]));
@@ -68,7 +65,7 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
       "url,state,isDraft,headRefName,headRefOid,body",
     ]));
     const marker = parseWriterLeasePullRequestBody(review.body);
-    if (!clean
+    if (!clean || localHeadSha === remoteHeadSha
       || review.state !== "OPEN" || review.isDraft !== true
       || review.headRefName !== branch || review.headRefOid !== remoteHeadSha
       || marker?.status !== "active"

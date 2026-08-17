@@ -116,39 +116,6 @@ test("rejects source or provider drift before registry CAS", () => {
   );
 });
 
-test("admits post-source-correction equal local remote and pull request heads", () => {
-  const head = S("b");
-  const source = evidence({
-    localHeadSha: head,
-    remoteHeadSha: head,
-    pullRequest: {
-      ...evidence().pullRequest,
-      headSha: head,
-    },
-  });
-  const plan = buildPlan(source);
-  assert.equal(plan.evidence.localHeadSha, head);
-  assert.equal(plan.evidence.remoteHeadSha, head);
-  assert.equal(plan.evidence.pullRequest.headSha, head);
-});
-
-test("rejects stale terminal repair evidence from a previous successor", () => {
-  const source = evidence();
-  const otherPlan = buildPlan(evidence({
-    predecessorClaimId: D("older-predecessor"),
-    successorClaimId: D("older-successor"),
-    sourceCorrection: {
-      ...source.sourceCorrection,
-      sourceClaimId: D("older-predecessor"),
-      successorClaimId: D("older-successor"),
-    },
-  }));
-  assert.throws(
-    () => buildPlan(evidence({ terminalRepair: repair(otherPlan) })),
-    /terminal repair subject/u,
-  );
-});
-
 test("projects one registry-only successor binding and returns a terminal receipt", () => {
   const source = evidence();
   const plan = buildPlan(source);

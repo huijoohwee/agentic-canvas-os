@@ -1,3 +1,14 @@
+---
+title: "Repository Teardown Reduction Report"
+graphId: "md:repository-teardown-reduction-report"
+doc_type: "Status Report"
+date: "2026-08-17"
+lang: "en-US"
+schema: "agentic-repository-teardown-reduction-report/v1"
+frontmatter_contract: "required"
+status: "in-progress"
+---
+
 # Repository teardown reduction report
 
 Status: **in-progress**

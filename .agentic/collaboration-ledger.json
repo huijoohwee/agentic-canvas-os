@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3379,
-  "headDigest": "f51129dc4c7c733113fd02a23c3de49f2e1d0264b775bc8836a9b7b49607e78b",
+  "sequence": 3380,
+  "headDigest": "f747a30ff1085b05a962230c9fdd5e3dcfd530b2e2fa0cf01417533f62698dd1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -167221,6 +167221,47 @@
       },
       "claimDigest": "b0ebbbda6943f502edca8c5e7761c33f1e7f7d6874a45c5ddbbdb7a49abd60e6",
       "digest": "f51129dc4c7c733113fd02a23c3de49f2e1d0264b775bc8836a9b7b49607e78b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3380,
+      "parentDigest": "f51129dc4c7c733113fd02a23c3de49f2e1d0264b775bc8836a9b7b49607e78b",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bdd8f48a1d8a121c4fe3c391ca2ea991732a7e3c4ad629df4342a1d70907f824",
+      "idempotencyKey": "698904b9fccecde8f6af3a2cb030ffa32a6e482fac7e006a1dfacf0156245b7e",
+      "requestDigest": "3f06992e366470bb1635ed2ca215a75d1979157ef119388a5c253b8cb9ed163d",
+      "evaluationTime": "2026-08-17T03:03:29.000Z",
+      "claimCore": {
+        "claimId": "bdd8f48a1d8a121c4fe3c391ca2ea991732a7e3c4ad629df4342a1d70907f824",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2d2d5e935fed19e211c3ab2681e453f10ea5e428190b5c7a7ef790cddba460d5",
+        "canonicalBaseRevision": "2d165a37eeb0691c6c3ae91acb3ff510abd81ba7",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/CURRENT-CLOUD-EXPIRED-LOCAL-WORK-CONTINUATION.md",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "semantic:expired-heartbeat-replay-evidence-v10"
+        ],
+        "writeSetDigest": "978cd432981796fda459b02e0908bc6f8a088a7947bf06f98d85932f7a15205c",
+        "laneRevision": "eb34cb94d25c89f670c12dcd3d4bffdf02afc454",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-17T04:47:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_3jge",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "48dc5667176b9088a2a17ad362dc8242e31e911f1f87ce1119f74f7a5c1ddb59",
+      "digest": "f747a30ff1085b05a962230c9fdd5e3dcfd530b2e2fa0cf01417533f62698dd1"
     }
   ]
 }

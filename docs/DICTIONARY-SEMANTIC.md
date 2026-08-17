@@ -174,6 +174,7 @@ dictionary_entries:
   - "#text-to-speech"
   - "#cloud-browser"
   - "#skill-evolution"
+  - "#skill-candidate"
   - "#memory-search"
   - "#identity-model"
   - "#orchestration-graph"
@@ -342,6 +343,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#text-to-speech` | Text-to-speech tool category, including the `/voice.studio` `create` route. | A task requests narration, voice note, or disclosed audio output from bounded text and, for Voice Studio, one exact active `@voice-profile` revision. | Voice/provider or profile authorization, text bounds, disclosure, output manifest, approval, cost, provenance, and revocation checks are present. |
 | `#cloud-browser` | Cloud browser automation tool category. | A task requires remote browser navigation, click, type, vision, or screenshot actions. | Isolated session, action schema, redaction, approval gate, and trace proof are present. |
 | `#skill-evolution` | Bounded improvement of reusable skill contracts. | Skill text is proposed or optimized through source-fenced epochs, mini-batches, and disjoint held-out validation. | Learning rate limits text mutation rather than model weights; every accepted candidate passes required gates and remains review-pending until separately managed. |
+| `#skill-candidate` | An Agent Definition draft with `status: proposed` awaiting operator-gated promotion. | A Draft_Definition produced by the ACOS Skill_Proposer harness from a capability-gap signal is inspected. | Read-only inspection; the draft never enters the active registry or the tool allowlist, and promotion occurs only through the skill registry promotion gate with a resolvable operator instruction reference. |
 | `#memory-search` | Scoped retrieval from local memory or past conversation indexes. | An agent needs prior decisions, proof, or preferences before acting. | Ranked sources cite local storage scope and return typed empty results when no match exists. |
 | `#identity-model` | Stable, source-backed operator and project preference model. | A repeated preference or boundary should persist across sessions. | Store only non-secret, operator-relevant, source-backed facts; reject unsupported personal inference. |
 | `#orchestration-graph` | State, node, edge, and compile-check contract for agent workflows. | A workflow needs explicit topology, conditional routing, parallel branches, or bounded loops. | State schema, node ids, edge rules, entry/exit nodes, stop condition, and orphan-node check are present. |

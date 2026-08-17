@@ -181,6 +181,16 @@ Learning-loop tools are discoverable like other capabilities, but mutation remai
 | `knowgrph.skill.evolve` | Run source-fenced `plan/start/step/status/cancel` skill-text optimization with epochs, mini-batches, learning-rate mutation budgets, and held-out gates. | Resumable revisions and explicit bounds are required; output stays review-pending with no apply, model-weight mutation, merge, or deploy. |
 | `knowgrph.identity.reflect` | Persist stable non-secret operator and project facts. | Operator authority required; unsupported inference rejected. |
 
+## Native Skill Creation Capabilities
+
+ACOS-owned tool identities for the native skill creation harness. They are distinct from the knowgrph skill-text tools above by ownership column, typed arguments, and artifact type. Every promotion to an `active` Agent Definition is approval-gated behind a resolvable operator instruction reference; the boundaries stay closed without one.
+
+| Capability | MCP role | Default boundary |
+|---|---|---|
+| `acos.skill_proposer.propose` | Run the bounded Skill_Proposer loop over typed arguments `{ gap_signal }` and write at most one Agent Definition draft with `status: proposed`. | Approval-gated; drafts never enter the active registry or the tool allowlist, the loop is bounded at 5 iterations with a 2-strike circuit breaker, and cost is logged per model call. |
+| `acos.skill_registry.promote` | Promote one existing draft into the active registry plus its tool allowlist entry, over typed arguments `{ draft_id, operator_instruction_ref }`. | Approval-gated; closed by default, rejects an absent, empty, or unresolved operator instruction reference inertly, and is the sole owner of the proposed-to-active transition. |
+| `acos.adapter.register` | Register an Agent Definition plus a tool allowlist entry through the adapter registration interface, over typed arguments `{ agent_definition, tool_allowlist_entry }` with a required Invocation Register entry. | Approval-gated for any `active` outcome; a malformed registration surfaces as a typed `unfederated-tool` or `uncatalogued-tool` finding and never as a core routing bug. |
+
 ## Mixture Of Agents Capabilities
 
 MoA capabilities are discoverable without model spend. Runtime execution can fan out to multiple reference calls, so paid calls require approval and cost bounds before execution.

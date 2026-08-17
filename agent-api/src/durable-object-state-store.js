@@ -311,4 +311,113 @@ export function createDurableObjectAgentToolkitStore({ namespace, maxRecordChars
   });
 }
 
+// Skill draft store for the native skill creation harness. Reuses the AGENT_STATE
+// Durable Object with the reserved key namespaces skill-draft:{draft_id} and
+// skill-draft-index:{adapter_id}; adds no Cloudflare binding. Draft lifetime is
+// capped at 30 days because worker/agent-state.js enforces MAX_RECORD_TTL_MS.
+export const SKILL_DRAFT_STORE_DEFAULTS = Object.freeze({
+  maxDraftsPerAdapter: 64,
+  maxIndexTtlMs: 30 * 24 * 60 * 60 * 1000,
+});
+
+export function createDurableObjectSkillDraftStore({
+  namespace,
+  maxRecordChars = MAX_RECORD_CHARS,
+  maxDraftsPerAdapter = SKILL_DRAFT_STORE_DEFAULTS.maxDraftsPerAdapter,
+} = {}) {
+  const owner = requireNamespace(namespace);
+  const draftScope = (draftId) => `skill-draft:${identifier(draftId, "draftId")}`;
+  const indexScope = (adapterId) => `skill-draft-index:${identifier(adapterId, "adapterId")}`;
+
+  // One atomic claim-then-replace cycle is the only multi-step mutation; both
+  // steps run inside the Durable Object transaction boundary.
+  async function upsertIndexed(scope, claimId, buildRecord) {
+    const claimed = await operate(owner, scope, "claim", {
+      claimId,
+      claimExpiresAt: Date.now() + 60_000,
+    });
+    if (claimed.record) {
+      let replacement;
+      try {
+        replacement = boundedRecord(buildRecord(claimed.record), "skillDraftRecord", maxRecordChars);
+      } catch (error) {
+        // Release the claim so an invalid consume does not wedge the record
+        // until the claim lease expires.
+        await operate(owner, scope, "release", { claimId });
+        throw error;
+      }
+      const replaced = await operate(owner, scope, "replace", { claimId, record: replacement });
+      if (!replaced.replaced) {
+        await operate(owner, scope, "release", { claimId });
+        throw new TypeError("Durable state skill draft replace failed.");
+      }
+      return true;
+    }
+    const record = boundedRecord(buildRecord(null), "skillDraftRecord", maxRecordChars);
+    const result = await operate(owner, scope, "put", { record });
+    if (!result.stored) throw new TypeError("Durable state skill draft put failed.");
+    return true;
+  }
+
+  return Object.freeze({
+    // Exactly one put per draft write: physical atomicity is inherited from the
+    // Durable Object transact boundary, not rebuilt here.
+    async put(value) {
+      if (!value || typeof value !== "object") throw new TypeError("skillDraftRecord must be an object.");
+      const draftId = identifier(value.draft_id, "skillDraftRecord.draft_id");
+      if (value.status !== "proposed") throw new TypeError("skillDraftRecord.status must be proposed.");
+      if (value.consumed !== false) throw new TypeError("skillDraftRecord.consumed must start false.");
+      const expiresAt = Number.isFinite(value.expires_at_ms)
+        ? value.expires_at_ms
+        : Date.now() + SKILL_DRAFT_STORE_DEFAULTS.maxIndexTtlMs;
+      const record = boundedRecord({ ...value, draft_id: draftId, expiresAt }, "skillDraftRecord", maxRecordChars);
+      const result = await operate(owner, draftScope(draftId), "put", { record });
+      return result.stored === true;
+    },
+    async peek(draftId) {
+      const result = await operate(owner, draftScope(draftId), "get", {});
+      const record = result.record ?? null;
+      // The Durable Object already drops expired records; the guard keeps the
+      // contract local so a stale read can never reach the promotion gate.
+      return record && Number.isFinite(record.expiresAt) && record.expiresAt > Date.now() ? record : null;
+    },
+    // The only mutation the promotion gate needs: an atomic consume that moves
+    // consumed to true under a claim, so a retry cannot double-promote.
+    async markConsumed(draftId) {
+      const claimId = `skill-draft-consume:${draftId}:${Date.now()}`;
+      return upsertIndexed(draftScope(draftId), claimId, (existing) => {
+        if (!existing || existing.consumed) throw new TypeError("Durable state skill draft is not consumable.");
+        return { ...existing, consumed: true, expiresAt: existing.expiresAt };
+      });
+    },
+    async indexAppend(adapterId, draftId) {
+      return upsertIndexed(indexScope(adapterId), `skill-draft-index:${adapterId}:${Date.now()}`, (existing) => {
+        const draftIds = existing?.draftIds ? [...existing.draftIds] : [];
+        if (!draftIds.includes(draftId)) draftIds.push(draftId);
+        if (draftIds.length > maxDraftsPerAdapter) {
+          throw new RangeError(`skill draft index is limited to ${maxDraftsPerAdapter} drafts per adapter.`);
+        }
+        return {
+          adapterId: identifier(adapterId, "adapterId"),
+          draftIds,
+          expiresAt: Date.now() + SKILL_DRAFT_STORE_DEFAULTS.maxIndexTtlMs,
+        };
+      });
+    },
+    async indexList(adapterId) {
+      const result = await operate(owner, indexScope(adapterId), "get", {});
+      const record = result.record ?? null;
+      return record && Array.isArray(record.draftIds) ? [...record.draftIds] : [];
+    },
+    stats: () => Object.freeze({
+      persistence: "durable-object",
+      atomicConsume: true,
+      owner: "native-skill-harness",
+      keyNamespace: "skill-draft:",
+      bindingsAdded: 0,
+      drafts: null,
+    }),
+  });
+}
+
 export const DURABLE_OBJECT_STATE_DEFAULTS = Object.freeze({ maxRecordChars: MAX_RECORD_CHARS });

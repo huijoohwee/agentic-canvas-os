@@ -3,6 +3,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 import { mintSessionToken, verifySessionToken } from "../agent-api/src/auth.js";
 import { createAgentToolkitHandlers } from "../agent-api/src/agent-toolkit-handler.js";
@@ -22,6 +23,53 @@ const ENV = Object.freeze({
   AGENT_MODEL_TRANSPORT_CONNECTION: "reusable",
   AGENT_MODEL_FEATURES: "tool-calling,structured-output",
   WORKSPACE_MODEL_KEY: "server-side-model-key",
+});
+
+const UPSTREAM_RUNTIME_SOURCE = JSON.stringify({
+  name: "Operator Runtime Agent",
+  instructions: [{ name: "purpose", content: "Return one bounded answer for the authenticated caller." }],
+});
+const UPSTREAM_RUNTIME_SOURCE_DIGEST = createHash("sha256").update(UPSTREAM_RUNTIME_SOURCE).digest("hex");
+
+const UPSTREAM_RUNTIME_ENV = Object.freeze({
+  AGENT_API_JWT_SECRET: "server-side-secret",
+  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
+  KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
+  KNOWGRPH_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
+  OPENAI_FUNCTION_CALLING_ENDPOINT: "https://api.openai.com/v1/responses",
+  OPENAI_FUNCTION_CALLING_API_KEY_ENV: "OPENAI_API_KEY",
+  OPENAI_FUNCTION_CALLING_MODEL: "gpt-5.6-luna",
+  OPENAI_FUNCTION_CALLING_INPUT_USD_PER_MILLION: "1",
+  OPENAI_FUNCTION_CALLING_CACHED_INPUT_USD_PER_MILLION: "0.1",
+  OPENAI_FUNCTION_CALLING_CACHE_WRITE_USD_PER_MILLION: "1.25",
+  OPENAI_FUNCTION_CALLING_OUTPUT_USD_PER_MILLION: "2",
+  OPENAI_FUNCTION_CALLING_REASONING_EFFORT: "low",
+  OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS: "256",
+  AGENT_MODEL_PROVIDER: "openai",
+  AGENT_MODEL_PROVIDER_REVISION: "openai-agent-v1",
+  AGENT_MODEL_ADAPTER: "openai-responses-agent",
+  AGENT_MODEL_ENDPOINT: "https://api.openai.com/v1/responses",
+  AGENT_MODEL_ID: "gpt-5.6-sol",
+  AGENT_MODEL_API_KEY_ENV: "OPENAI_API_KEY",
+  AGENT_MODEL_TRANSPORT: "responses-http",
+  AGENT_MODEL_TRANSPORT_DELIVERY: "complete",
+  AGENT_MODEL_TRANSPORT_CONNECTION: "per-run",
+  AGENT_MODEL_FEATURES: "tool-calling,structured-output",
+  OPENAI_API_KEY: "server-side-openai-key",
+  OPENAI_AGENT_MODEL: "gpt-5.6-sol",
+  OPENAI_AGENT_ENDPOINT: "https://api.openai.com/v1/responses",
+  OPENAI_AGENT_INPUT_USD_PER_MILLION: "5",
+  OPENAI_AGENT_CACHED_INPUT_USD_PER_MILLION: "0.5",
+  OPENAI_AGENT_OUTPUT_USD_PER_MILLION: "30",
+  OPENAI_AGENT_MAX_OUTPUT_TOKENS: "128",
+  AGENT_RUNTIME_ENABLED: "true",
+  AGENT_RUNTIME_SPEND_APPROVED: "true",
+  AGENT_RUNTIME_AGENT_ID: "operator-runtime-agent",
+  AGENT_RUNTIME_AGENT_REVISION: "operator-runtime-agent-v1",
+  AGENT_RUNTIME_AGENT_SOURCE_URI: "operator-source:/agent/runtime.json",
+  AGENT_RUNTIME_AGENT_SOURCE_SHA256: UPSTREAM_RUNTIME_SOURCE_DIGEST,
+  AGENT_RUNTIME_AGENT_SOURCE: UPSTREAM_RUNTIME_SOURCE,
+  AGENT_RUNTIME_MAX_PROVIDER_CALLS: "4",
 });
 
 const DURABLE_ENV = Object.freeze({
@@ -147,6 +195,18 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
   assert.equal(body.agentDefinitions.executionOwner, "running-agents-adapter");
   assert.equal(body.agentDefinitions.providerExecutionStatus, "unverified");
+  assert.deepEqual(body.agentDefinitions.statusCounts, {
+    proposed: 0,
+    active: 0,
+    deprecated: 0,
+  });
+  assert.equal(body.agentDefinitions.snapshotDigestAlgorithm, "sha-256");
+  assert.equal(
+    body.agentDefinitions.statusCounts.proposed
+      + body.agentDefinitions.statusCounts.active
+      + body.agentDefinitions.statusCounts.deprecated,
+    body.agentDefinitions.agents,
+  );
   assert.equal(body.guardrailsHumanReview.contractReady, true);
   assert.equal(body.guardrailsHumanReview.configured, false);
   assert.equal(body.guardrailsHumanReview.reviewStoreConfigured, true);
@@ -293,7 +353,60 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.toolSearch.loadedDefinitionPlacement, "append-only-search-output");
   assert.equal(body.toolSearch.programSearchPolicy, "top-level-before-hosted-program");
   assert.equal(body.toolSearch.providerContextReduction, "unverified");
+  assert.equal(body.skillProposer.contractReady, true);
+  assert.equal(body.skillProposer.configured, false);
+  assert.equal(body.skillProposer.proposalOwner, "acos-skill-proposer");
+  assert.equal(body.skillProposer.registryWriteCapability, false);
+  assert.equal(body.skillProposer.iterationBound, 5);
+  assert.equal(body.skillProposer.circuitBreakerConsecutiveNoCandidate, 2);
+  assert.equal(body.skillProposer.p95GapToDraftMs, 12000);
+  assert.equal(body.skillProposer.providerExecutionStatus, "unverified");
+  assert.equal(body.skillRegistryGate.contractReady, true);
+  assert.equal(body.skillRegistryGate.configured, false);
+  assert.equal(body.skillRegistryGate.boundaryState, "closed");
+  assert.equal(body.skillRegistryGate.promotionOwner, "acos-skill-registry-gate");
+  assert.equal(body.skillRegistryGate.artifactType, "agent-definition");
+  assert.equal(body.skillRegistryGate.modelCallCapability, false);
+  assert.equal(body.skillRegistryGate.registryConfigured, true);
+  assert.equal(body.skillRegistryGate.providerExecutionStatus, "unverified");
+  assert.equal(body.adapterRegistration.contractReady, true);
+  assert.equal(body.adapterRegistration.configured, false);
+  assert.equal(body.adapterRegistration.registrationOwner, "acos-adapter-registration");
+  assert.equal(body.adapterRegistration.sharedEntrypointAdapterNames, 0);
+  assert.equal(body.adapterRegistration.requestScopedState, false);
+  assert.equal(body.adapterRegistration.registryConfigured, true);
+  assert.equal(body.adapterRegistration.providerExecutionStatus, "unverified");
   assert.equal(JSON.stringify(body).includes("server-side-model-key"), false);
+});
+
+test("GET /api/ready reports configured upstream runtime surfaces when the full env is present", async () => {
+  const res = await handleCloudflareRequest(request("/api/ready"), UPSTREAM_RUNTIME_ENV);
+  assert.equal(res.status, 200);
+  const body = await json(res);
+  assert.equal(body.configured, true);
+  assert.equal(body.modelProviders.configured, true);
+  assert.equal(body.modelProviders.environment.providerId, "openai");
+  assert.equal(body.agentDefinitions.configured, true);
+  assert.deepEqual(body.agentDefinitions.statusCounts, {
+    proposed: 0,
+    active: 1,
+    deprecated: 0,
+  });
+  assert.equal(body.functionCalling.configured, true);
+  assert.equal(body.functionCalling.adapter.configured, true);
+  assert.equal(body.functionCalling.adapter.apiKeyPresent, true);
+  assert.equal(body.functionCalling.gateway.configured, true);
+  assert.equal(body.toolSearch.configured, true);
+  assert.equal(body.toolSearch.clientSearchConfigured, true);
+  assert.equal(body.autonomousRuntime.configured, true);
+  assert.equal(body.agentRuntimeComposition.configured, true);
+  assert.equal(body.runningAgents.configured, true);
+  assert.equal(body.progressiveAgents.configured, true);
+  assert.equal(body.functionCalling.providerExecutionStatus, "unverified");
+  assert.equal(body.agentDefinitions.providerExecutionStatus, "unverified");
+  assert.equal(body.autonomousRuntime.providerExecutionStatus, "unverified");
+  assert.equal(JSON.stringify(body).includes("server-side-openai-key"), false);
+  assert.equal(JSON.stringify(body).includes(UPSTREAM_RUNTIME_SOURCE), false);
 });
 
 test("GET /api/ready exposes durable review and paused-turn recovery bindings", async () => {
@@ -322,6 +435,8 @@ test("GET /api/ready exposes durable review and paused-turn recovery bindings", 
   assert.equal(body.agentToolkit.stateStore.atomicClaims, true);
   assert.equal(body.agentToolkit.stateStore.horizontalRecovery, true);
   assert.equal(body.agentToolkit.stateStore.owner, "agent-toolkit");
+  assert.equal(body.skillProposer.draftStoreConfigured, true);
+  assert.equal(body.skillRegistryGate.draftStoreConfigured, true);
 });
 
 test("POST /api/auth/session mints a session token", async () => {

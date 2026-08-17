@@ -109,6 +109,49 @@ function peerClaim({ overlapping = false, heartbeatCounter = 3 } = {}) {
     transitionDigest: "7".repeat(64),
   };
 }
+function verificationResult({
+  claim,
+  claims,
+  ledgerDigest = LEDGER_DIGEST,
+  evaluationTime = EVALUATED_AT,
+  contractReceiptDigest = VERIFICATION_RECEIPT,
+} = {}) {
+  const currentClaimInventoryCore = {
+    schema: "agentic-cloud-collaboration-current-claim-inventory/v1",
+    ledgerRevision: LEDGER_SHA,
+    ledgerDigest,
+    evaluationTime,
+    claims,
+  };
+  const currentClaimInventory = {
+    ...currentClaimInventoryCore,
+    claimInventoryDigest: digestValue(currentClaimInventoryCore),
+  };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision: LEDGER_SHA,
+    ledgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
+    evaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision: LEDGER_SHA,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory,
+    findings: [],
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
+  };
+}
 
 function verifiedAuthority(manifest, peer = peerClaim(), {
   evaluationTime = EVALUATED_AT,
@@ -152,20 +195,11 @@ function verifiedAuthority(manifest, peer = peerClaim(), {
       ledgerDigest: LEDGER_DIGEST,
       claims: [claim, peer],
     }),
-    invoke: () => ({
-      schema: "agentic-cloud-collaboration-result/v1",
-      ok: true,
-      action: "verify",
-      status: "ready",
-      ledgerRevision: LEDGER_SHA,
-      claimDigest: claim.fenceRevision,
-      claim,
-      findings: [],
-      receipt: {
-        ledgerDigest: LEDGER_DIGEST,
-        receiptDigest: verificationReceipt,
+      invoke: () => verificationResult({
+        claim,
+        claims: [claim, peer],
         evaluationTime,
-      },
+        contractReceiptDigest: verificationReceipt,
     }),
   });
 }

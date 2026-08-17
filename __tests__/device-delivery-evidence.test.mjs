@@ -91,6 +91,50 @@ function input(overrides = {}) {
     ...overrides,
   };
 }
+function verificationResult({
+  claim,
+  claims,
+  ledgerRevision,
+  ledgerDigest,
+  evaluationTime,
+  contractReceiptDigest,
+} = {}) {
+  const currentClaimInventoryCore = {
+    schema: "agentic-cloud-collaboration-current-claim-inventory/v1",
+    ledgerRevision,
+    ledgerDigest,
+    evaluationTime,
+    claims,
+  };
+  const currentClaimInventory = {
+    ...currentClaimInventoryCore,
+    claimInventoryDigest: digestValue(currentClaimInventoryCore),
+  };
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision,
+    ledgerDigest,
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest,
+    claimInventoryDigest: currentClaimInventory.claimInventoryDigest,
+    evaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory,
+    findings: [],
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
+  };
+}
 
 function changedDigests(left, right) {
   return DIGEST_FIELDS.filter(field => left[field] !== right[field]);
@@ -382,20 +426,13 @@ test("real delivery authorization compacts its replay key before cloud transport
     ledgerDigest,
     claims: [currentClaim],
   });
-  const verify = () => ({
-    schema: "agentic-cloud-collaboration-result/v1",
-    ok: true,
-    action: "verify",
-    status: "ready",
+    const verify = () => verificationResult({
+      claim: currentClaim,
+      claims: [currentClaim],
     ledgerRevision,
-    claimDigest: currentClaim.fenceRevision,
-    claim: currentClaim,
-    findings: [],
-    receipt: {
-      receiptDigest: "8".repeat(64),
       ledgerDigest,
       evaluationTime: evaluatedAt,
-    },
+      contractReceiptDigest: "8".repeat(64),
   });
   const transport = inputValue => {
     transportedMutation = inputValue;

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3381,
-  "headDigest": "bdd9e28ae9bfba4b439b86459a24cd2d6fe96b2f481f5d7fc589124f22339f88",
+  "sequence": 3382,
+  "headDigest": "0f043bb3a072a4d2d7db2807b81a75cb26432aa42761b959ac1dcba97712c6b7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -167303,6 +167303,58 @@
       },
       "claimDigest": "9f43e65d4b144006cb587d816a12175f62ff45f33cec99ce0bfe6601745bbc5a",
       "digest": "bdd9e28ae9bfba4b439b86459a24cd2d6fe96b2f481f5d7fc589124f22339f88"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3382,
+      "parentDigest": "bdd9e28ae9bfba4b439b86459a24cd2d6fe96b2f481f5d7fc589124f22339f88",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bdd8f48a1d8a121c4fe3c391ca2ea991732a7e3c4ad629df4342a1d70907f824",
+      "idempotencyKey": "b6037ca72265e8ff9485f7b6d292df1bab018682e2a732a8bea112f5f0bea9f6",
+      "requestDigest": "7948e8c075459508303fa6df9d84be3b40b3f0965eaaa031b55e24e25bfbc6ef",
+      "evaluationTime": "2026-08-17T03:13:04.000Z",
+      "claimCore": {
+        "claimId": "bdd8f48a1d8a121c4fe3c391ca2ea991732a7e3c4ad629df4342a1d70907f824",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2d2d5e935fed19e211c3ab2681e453f10ea5e428190b5c7a7ef790cddba460d5",
+        "canonicalBaseRevision": "2d165a37eeb0691c6c3ae91acb3ff510abd81ba7",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/CURRENT-CLOUD-EXPIRED-LOCAL-WORK-CONTINUATION.md",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "semantic:expired-heartbeat-replay-evidence-v10"
+        ],
+        "writeSetDigest": "978cd432981796fda459b02e0908bc6f8a088a7947bf06f98d85932f7a15205c",
+        "laneRevision": "eb34cb94d25c89f670c12dcd3d4bffdf02afc454",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-17T04:47:45.000Z",
+        "evidenceDigest": "b4dbf5030b3a34a68e56f7428fde1fcc496b7d94f089806f7871c60a704f45fd",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_3jge",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "eb34cb94d25c89f670c12dcd3d4bffdf02afc454",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_3jge",
+          "focusedEvidenceDigest": "b4dbf5030b3a34a68e56f7428fde1fcc496b7d94f089806f7871c60a704f45fd",
+          "dependencyClosureDigest": "82fd3d34bb74512c8bc2d420ab92e18189cb43754bab80aad1fbc64714f84bab",
+          "namedChecksDigest": "42cdfb653c04f989ce0e61d9833317d3a0f58e5205a28c65c3d569698657c5ad",
+          "handoffEvidenceDigest": "b01803e7d1849eb02f6813b94db6706adb09cb9a177c9bf433460e4936316459",
+          "operatorDecisionDigest": "e14f16bae48690a577264df1f2031ed425b1e51fd0c918696c64803b9bbd765c",
+          "integrationIntentDigest": "bd42ea458549e30dd5725fac6ecb1a9967a91c8d63d5bcaa2f6312197f711ddc",
+          "integratedAt": "2026-08-17T03:13:04.000Z"
+        }
+      },
+      "claimDigest": "a1d19dac184f7969b969a098ec55c1af129a3d866172e5e7bcf927c1f59e6fe2",
+      "digest": "0f043bb3a072a4d2d7db2807b81a75cb26432aa42761b959ac1dcba97712c6b7"
     }
   ]
 }

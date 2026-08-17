@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3414,
-  "headDigest": "444b5d72c620a4201179c3cf96f3fc4fc0d2dfa4512574ce436ab6b46dd7b47b",
+  "sequence": 3415,
+  "headDigest": "926e8edf9c886768879c80a59075f27c148392ea68fcf5e880ca5953f6479613",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -169300,6 +169300,61 @@
       },
       "claimDigest": "9b71882b03cbf73dc923f800c225423e4cbfdbf17323d5347ac60bd488bc69ca",
       "digest": "444b5d72c620a4201179c3cf96f3fc4fc0d2dfa4512574ce436ab6b46dd7b47b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3415,
+      "parentDigest": "444b5d72c620a4201179c3cf96f3fc4fc0d2dfa4512574ce436ab6b46dd7b47b",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e5f192ee0d0e95b5872c35e259bdf3499169bc0775c2016c2da422d0e32923e8",
+      "idempotencyKey": "e079fc9f9cca4c1e67684ff9454b15b2a7fd7d23b98f4bdc4d0c9635a187389e",
+      "requestDigest": "ef60b161cd7dffcbbeffac10a4ff5d99236425a99e7be075057e3ad33416ddc1",
+      "evaluationTime": "2026-08-17T07:33:36.000Z",
+      "claimCore": {
+        "claimId": "e5f192ee0d0e95b5872c35e259bdf3499169bc0775c2016c2da422d0e32923e8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:492d7ff3c1ce5a8afb93342ba7d7a697b90361c7ea3fd7fe4fd2fdfe834c7070",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:55bba1c177bbd97ac907698519ade250ecbc450e0a7fcf08f4920554f4401416",
+        "canonicalBaseRevision": "7b460d4548cd045b672bb531fbfc3566b93abfba",
+        "declaredWriteScope": [
+          "path:__tests__/planned-start-fence-projection-recovery.test.mjs",
+          "path:docs/PLANNED-START-FENCE-PROJECTION-RECOVERY.md",
+          "path:scripts/planned-start-fence-projection-recovery-contract.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-controller.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-evidence.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-repository-adapter.mjs",
+          "path:scripts/planned-start-fence-projection-recovery.mjs",
+          "semantic:planned-start-fence-projection-recovery"
+        ],
+        "writeSetDigest": "55eb0e70a023004870d274d934dbbefad7f2ddcbd2fb328d91b65329c4a0dd02",
+        "laneRevision": "e910c1829a482fd22c8e973fe5448b3e7a277b5f",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-16T16:55:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_hzkH",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "e910c1829a482fd22c8e973fe5448b3e7a277b5f",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_hzkH",
+          "bytesDigest": "c603b3d27c45d1b7cf472735ea3b9b535406edc01307d9caef9b971a5af48cb9",
+          "namedChecksDigest": "0cc16c757dd1a6722102aa050d560136667d66d35eedac69b8ebdb32a89af844",
+          "handoffEvidenceDigest": "2f18255f76aaec8ce6d375e007054136e4cdc4d63954ed03c450f45aa78ab96b",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-17T07:33:36.000Z"
+        }
+      },
+      "claimDigest": "3bbecf700b0df60e78aada2b152ea220bfba1399ea7daef9f9326c454062e813",
+      "digest": "926e8edf9c886768879c80a59075f27c148392ea68fcf5e880ca5953f6479613"
     }
   ]
 }

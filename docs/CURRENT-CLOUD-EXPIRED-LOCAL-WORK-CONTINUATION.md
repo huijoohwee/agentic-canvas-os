@@ -96,6 +96,9 @@ The registry has exactly three admissible observations:
 
 - Exact source: perform the compare-and-swap once.
 - Exact target plus the operation receipt: adopt after response loss.
+- A repeated response-loss suffix that has since become dormant is replayed
+  from its ledger-bound recovery evidence, then renewed from the resulting
+  exact intermediate transition; it is never adopted as current authority.
 - Any third state: reject without overwrite or repair.
 
 The append-only receipt carries the phase values needed to hydrate a process

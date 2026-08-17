@@ -121,6 +121,17 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
       environment,
     });
     if (replayEvidenceDigest !== evidenceDigest) drift();
+    if (claim.state === "dormant-preserved") {
+      return recoverDormant({
+        ...common,
+        claim,
+        evidenceDigest: replayEvidenceDigest,
+        followupEvidenceDigest: evidenceDigest,
+        expectedReplay: true,
+        invoke,
+        verify,
+      });
+    }
     return adoptCurrentResponseLoss({
       source,
       claim,

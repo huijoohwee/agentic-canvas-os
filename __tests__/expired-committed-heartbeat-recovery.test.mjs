@@ -710,7 +710,10 @@ test("expired-source replay adopts repeated current response-loss with stable he
     },
     verify: ({ authority }) => ({
       authority,
-      verification: operationVerification(authority),
+      verification: operationVerification({
+        ...authority,
+        heartbeatCounter: source.cloudAuthority.heartbeatCounter,
+      }),
     }),
   });
 
@@ -721,6 +724,85 @@ test("expired-source replay adopts repeated current response-loss with stable he
   assert.equal(replayCalls, 1);
   assert.equal(renewCalls, 0);
   assert.equal(invokeCalls, 0);
+});
+
+test("expired-source replay renews repeated dormant response-loss with stable heartbeat", () => {
+  const source = liveManifestLease();
+  source.cloudAuthority.heartbeatCounter = 1;
+  const recoveryEvidenceDigest = "d".repeat(64);
+  const liveClaim = cloudClaim({
+    source: source.cloudAuthority,
+    state: "dormant-preserved",
+    transitionCounter: source.cloudAuthority.transitionCounter + 2,
+    heartbeatCounter: source.cloudAuthority.heartbeatCounter,
+    expiresAt: "2026-08-01T13:30:00.000Z",
+    fenceRevision: "e".repeat(64),
+    transitionDigest: "f".repeat(64),
+    operationReceiptDigest: "1".repeat(64),
+  });
+  const status = {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "status",
+    ledgerRevision: "2".repeat(40),
+    ledgerDigest: "3".repeat(64),
+    claims: [liveClaim],
+  };
+  const invocations = [];
+
+  const result = continueExpiredCommittedHeartbeatCloudAuthority({
+    authority: source.cloudAuthority,
+    manifest: {
+      declaredWriteSet: source.cloudAuthority.cloudDeclaredWriteScope,
+      writeSetDigest: source.cloudAuthority.writeSetDigest,
+    },
+    recoveryEvidenceDigest,
+    ttlSeconds: 1800,
+    inspect: () => status,
+    resolveReplayEvidence: () => recoveryEvidenceDigest,
+    invoke: ({ request }) => {
+      invocations.push(request);
+      const replay = invocations.length === 1;
+      const transitionCounter = source.cloudAuthority.transitionCounter
+        + (replay ? 1 : 2);
+      const operationReceiptDigest = (replay ? "4" : "5").repeat(64);
+      const transitionDigest = (replay ? "6" : "7").repeat(64);
+      const claimDigest = (replay ? "8" : "9").repeat(64);
+      return recoveryContinuationResult({
+        source: source.cloudAuthority,
+        transitionCounter,
+        heartbeatCounter: source.cloudAuthority.heartbeatCounter,
+        expiresAt: replay
+          ? "2026-08-01T13:30:00.000Z"
+          : "2026-08-30T13:30:00.000Z",
+        claimDigest,
+        transitionDigest,
+        operationReceiptDigest,
+        replayed: replay,
+        operationKey: request.idempotencyKey,
+      });
+    },
+    renew: () => {
+      throw new Error("unexpected renewal");
+    },
+    verify: ({ authority }) => ({
+      authority,
+      verification: operationVerification({
+        ...authority,
+        heartbeatCounter: source.cloudAuthority.heartbeatCounter,
+      }),
+    }),
+  });
+
+  assert.equal(result.authority.transitionCounter,
+    source.cloudAuthority.transitionCounter + 2);
+  assert.equal(result.authority.heartbeatCounter,
+    source.cloudAuthority.heartbeatCounter);
+  assert.equal(invocations.length, 2);
+  assert.equal(invocations[0].expectedTransitionCounter,
+    source.cloudAuthority.transitionCounter);
+  assert.equal(invocations[1].expectedTransitionCounter,
+    source.cloudAuthority.transitionCounter + 1);
 });
 
 test("oversized recovered marker fails before local CAS or marker publication", () => {
@@ -1170,6 +1252,70 @@ function operationVerification(authority) {
     receiptDigest: "e".repeat(64),
     verifiedAt: "2026-08-04T12:00:01.000Z",
   });
+}
+
+function cloudClaim({
+  source, state, transitionCounter, heartbeatCounter, expiresAt,
+  fenceRevision, transitionDigest, operationReceiptDigest,
+}) {
+  return {
+    claimId: source.claimId,
+    entrySchema: source.entrySchema,
+    claimIdentitySchema: source.claimIdentitySchema,
+    state,
+    writeAuthority: state === "current",
+    scopeReserved: true,
+    canonicalBaseRevision: source.canonicalBaseSha,
+    laneRevision: source.laneRevision,
+    declaredWriteScope: source.cloudDeclaredWriteScope,
+    writeSetDigest: source.writeSetDigest,
+    leaseEpoch: source.leaseEpoch,
+    transitionCounter,
+    heartbeatCounter,
+    reviewRequestId: source.reviewRequestId,
+    expiresAt,
+    fenceRevision,
+    transitionDigest,
+    operationReceiptDigest,
+  };
+}
+
+function recoveryContinuationResult({
+  source, transitionCounter, heartbeatCounter, expiresAt, claimDigest,
+  transitionDigest, operationReceiptDigest, replayed, operationKey,
+}) {
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "continue",
+    status: "current",
+    replayed,
+    ledgerRevision: "a".repeat(40),
+    ledgerDigest: "b".repeat(64),
+    claimDigest,
+    findings: [],
+    claim: cloudClaim({
+      source,
+      state: "current",
+      transitionCounter,
+      heartbeatCounter,
+      expiresAt,
+      fenceRevision: claimDigest,
+      transitionDigest,
+      operationReceiptDigest,
+    }),
+    operationReceipt: {
+      schema: "agentic-collaboration-continuation-receipt/v1",
+      operation: "continue",
+      status: "current",
+      claimId: source.claimId,
+      claimDigest,
+      ledgerRevision: transitionDigest,
+      idempotencyKey: digestValue(operationKey),
+      requestDigest: "c".repeat(64),
+      receiptDigest: operationReceiptDigest,
+    },
+  };
 }
 
 function expiredCloudLease() {

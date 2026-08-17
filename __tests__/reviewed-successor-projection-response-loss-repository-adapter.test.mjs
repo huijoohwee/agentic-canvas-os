@@ -69,6 +69,16 @@ test("active markers continue to use their fencing head", () => {
   assert.equal(reviewedSuccessorMarkerHeadSha(marker), fenceSha);
 });
 
+test("an active successor marker does not depend on reviewed-head metadata", () => {
+  const fenceSha = SHA("8");
+  assert.equal(reviewedSuccessorMarkerHeadSha({
+    status: "active",
+    fenceSha,
+    reviewHeadSha: null,
+    cloudAuthority: { reviewRequestId: null },
+  }), fenceSha);
+});
+
 test("adapter replay validation ignores fresh observation metadata only", () => {
   const planned = evidence("2026-08-16T06:00:00.000Z");
   const live = evidence("2026-08-16T06:05:00.000Z");

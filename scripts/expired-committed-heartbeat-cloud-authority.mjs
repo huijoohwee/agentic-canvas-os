@@ -88,7 +88,7 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     return finalizeContinuation(renew(common), source, admittedManifest);
   }
   if (!["current", "dormant-preserved"].includes(claim.state)) drift();
-  if (claim.transitionCounter !== source.transitionCounter + 1) drift();
+  if (claim.transitionCounter <= source.transitionCounter) drift();
 
   const sourceHeartbeat = optionalCounter(source.heartbeatCounter);
   const liveHeartbeat = optionalCounter(claim.heartbeatCounter);
@@ -97,19 +97,55 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
       return finalizeContinuation(renew(common), source, admittedManifest);
     }
     if (liveHeartbeat !== sourceHeartbeat) drift();
-    return recoverDormant({
-      ...common,
+    if (claim.transitionCounter === source.transitionCounter + 1) {
+      return recoverDormant({
+        ...common,
+        claim,
+        evidenceDigest: resolveReplayEvidence({
+          source,
+          liveClaim: claim,
+          status,
+          environment,
+        }),
+        followupEvidenceDigest: evidenceDigest,
+        expectedReplay: true,
+        invoke,
+        verify,
+      });
+    }
+    const replayEvidenceDigest = resolveReplayEvidenceOrDrift({
+      resolveReplayEvidence,
+      source,
+      liveClaim: claim,
+      status,
+      environment,
+    });
+    if (replayEvidenceDigest !== evidenceDigest) drift();
+    return adoptCurrentResponseLoss({
+      source,
       claim,
-      evidenceDigest: resolveReplayEvidence({
-        source,
-        liveClaim: claim,
-        status,
-        environment,
-      }),
-      followupEvidenceDigest: evidenceDigest,
-      expectedReplay: true,
-      invoke,
+      status,
+      manifest: admittedManifest,
       verify,
+      environment,
+    });
+  }
+  if (claim.transitionCounter !== source.transitionCounter + 1) {
+    const replayEvidenceDigest = resolveReplayEvidenceOrDrift({
+      resolveReplayEvidence,
+      source,
+      liveClaim: claim,
+      status,
+      environment,
+    });
+    if (replayEvidenceDigest !== evidenceDigest) drift();
+    return adoptCurrentResponseLoss({
+      source,
+      claim,
+      status,
+      manifest: admittedManifest,
+      verify,
+      environment,
     });
   }
 
@@ -132,6 +168,84 @@ export function continueExpiredCommittedHeartbeatCloudAuthority({
     if (!isRecoveryReplayMiss(error)) throw error;
     return finalizeContinuation(renew(common), source, admittedManifest);
   }
+}
+
+function adoptCurrentResponseLoss({
+  source,
+  claim,
+  status,
+  manifest,
+  verify,
+  environment,
+}) {
+  if (claim.state !== "current" || claim.writeAuthority !== true) drift();
+  const authority = Object.freeze({
+    ...source,
+    claimDigest: requiredDigest(claim.fenceRevision, "live claim fence"),
+    ledgerRevision: requiredSha(status.ledgerRevision, "live ledger revision"),
+    ledgerDigest: requiredDigest(status.ledgerDigest, "live ledger digest"),
+    claimLedgerRevision: requiredDigest(claim.transitionDigest, "live transition digest"),
+    operationReceiptDigest: requiredDigest(
+      claim.operationReceiptDigest,
+      "live operation receipt digest",
+    ),
+    laneRevision: requiredSha(claim.laneRevision, "live lane revision"),
+    canonicalBaseSha: requiredSha(
+      claim.canonicalBaseRevision,
+      "live canonical base revision",
+    ),
+    cloudDeclaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
+    writeSetDigest: requiredDigest(claim.writeSetDigest, "live write-set digest"),
+    leaseEpoch: positiveInteger(claim.leaseEpoch, "live lease epoch"),
+    transitionCounter: positiveInteger(
+      claim.transitionCounter,
+      "live transition counter",
+    ),
+    state: "active",
+    expiresAt: requiredText(claim.expiresAt, "live expiresAt"),
+    heartbeatCounter: optionalCounter(claim.heartbeatCounter),
+  });
+  const verified = verify({
+    authority,
+    manifest,
+    canonicalBaseSha: source.canonicalBaseSha,
+    environment,
+  });
+  return finalizeAdoptedContinuation(verified, source, manifest);
+}
+
+function finalizeAdoptedContinuation(result, source, manifest) {
+  const authority = result?.authority;
+  const verification = result?.verification;
+  const inventoryClaim = verification?.inventory?.claims?.find(
+    candidate => candidate.claimId === source.claimId,
+  );
+  if (
+    !authority
+    || verification?.status !== "ready"
+    || verification.claimId !== source.claimId
+    || verification.claimDigest !== authority.claimDigest
+    || inventoryClaim?.claimId !== source.claimId
+    || inventoryClaim.state !== "active"
+    || inventoryClaim.fenceRevision !== authority.claimDigest
+    || inventoryClaim.transitionCounter !== authority.transitionCounter
+    || authority.claimId !== source.claimId
+    || authority.canonicalBaseSha !== source.canonicalBaseSha
+    || authority.laneRevision !== source.laneRevision
+    || authority.writeSetDigest !== manifest.writeSetDigest
+    || authority.leaseEpoch !== source.leaseEpoch
+    || authority.reviewRequestId !== source.reviewRequestId
+    || authority.transitionCounter <= source.transitionCounter
+    || authority.state !== "active"
+    || Date.parse(authority.expiresAt) <= Date.now()
+  ) drift();
+  return Object.freeze({
+    ...result,
+    authority: Object.freeze({
+      ...authority,
+      heartbeatCounter: inventoryClaim.heartbeatCounter,
+    }),
+  });
 }
 
 function recoverDormant({
@@ -387,6 +501,20 @@ function isRecoveryReplayMiss(error) {
 
 function optionalCounter(value) {
   return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function resolveReplayEvidenceOrDrift({
+  resolveReplayEvidence,
+  source,
+  liveClaim,
+  status,
+  environment,
+}) {
+  try {
+    return resolveReplayEvidence({ source, liveClaim, status, environment });
+  } catch {
+    drift();
+  }
 }
 
 function positiveInteger(value, label) {

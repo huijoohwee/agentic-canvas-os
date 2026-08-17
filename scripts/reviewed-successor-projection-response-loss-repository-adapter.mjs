@@ -91,6 +91,14 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
       throw new Error("Reviewed-successor response-loss predecessor remains in cloud inventory.");
     }
     const marker = lane.remoteLease;
+    const providerReviewRequestId = `github-pull-request:${required(
+      lane.pullRequest.id,
+      "provider review request ID",
+    )}`;
+    if (lane.authority.reviewRequestId !== null
+      && lane.authority.reviewRequestId !== providerReviewRequestId) {
+      throw new Error("Reviewed-successor response-loss review identity changed.");
+    }
     const expectedMarkerClaimId = absentPredecessor ? predecessorClaimId : successor.claimId;
     const expectedMarkerLeaseEpoch = absentPredecessor
       ? lane.authority.leaseEpoch
@@ -134,7 +142,7 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
       remoteHeadSha: lane.remoteHeadSha,
       pullRequest: {
         number: pullRequestNumber,
-        id: lane.authority.reviewRequestId,
+        id: providerReviewRequestId,
         url: lane.pullRequest.url,
         state: lane.pullRequest.state,
         isDraft: lane.pullRequest.isDraft,
@@ -199,7 +207,7 @@ export function createRepositoryReviewedSuccessorProjectionResponseLossAdapter(
     }
     const review = JSON.parse(gh([
       "pr", "view", String(pullRequestNumber), "--json",
-      "url,state,isDraft,headRefName,headRefOid,baseRefName,body",
+      "id,url,state,isDraft,headRefName,headRefOid,baseRefName,body",
     ]));
     const remoteLine = git(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
     const remoteHeadSha = remoteLine.split(/\s+/u)[0];

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3389,
-  "headDigest": "3ee6359e93f4a346298eedae6ad62cb6e767d5a38bdf0b5de31c03caf88b9081",
+  "sequence": 3390,
+  "headDigest": "2b25a4f6853e16d093dd248d321ccbd6a9c1c4c99e35fec5456742ddf2a0a262",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -167686,6 +167686,70 @@
       },
       "claimDigest": "30b37fb8bf2e9f08712a87f31795dbb173575b8f2aba3c05fa0c869feda6624c",
       "digest": "3ee6359e93f4a346298eedae6ad62cb6e767d5a38bdf0b5de31c03caf88b9081"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3390,
+      "parentDigest": "3ee6359e93f4a346298eedae6ad62cb6e767d5a38bdf0b5de31c03caf88b9081",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e4d8a9ca357939178d600c3b6cb38e0732d05480b5520391aafe08f92b412c1f",
+      "idempotencyKey": "7bb39f21de5f97703c4b9f0b1d6f6225c8675e2b5b6662ad9b47918868cbd566",
+      "requestDigest": "d27e6aa50a69c8a8012b807c847a6cd5a85715fcd4cdfeabc4f95c26c4e635a8",
+      "evaluationTime": "2026-08-17T03:52:27.000Z",
+      "claimCore": {
+        "claimId": "e4d8a9ca357939178d600c3b6cb38e0732d05480b5520391aafe08f92b412c1f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0d4c917e086943021bb160b194e61bf57c069dee7c25778d59453fbdeb1275df",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1c4306633920b24ff430210e0f37d10a8619ca7ab357beb68ad7ee2149679c29",
+        "canonicalBaseRevision": "47e9c71a1b8097c644ee715dc74ac63ecc052033",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-cloud-authority.test.mjs",
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/CURRENT-CLOUD-EXPIRED-LOCAL-WORK-CONTINUATION.md",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "path:scripts/expired-committed-heartbeat-replay-evidence.mjs",
+          "semantic:expired-heartbeat-replay-chain-v11"
+        ],
+        "writeSetDigest": "835b3cec8222b9a4b0747a1acf6bc0bb55f53e9eca7816419fed6042faa376d5",
+        "laneRevision": "eb38f21892d40651f5f8dc225698c217e43ff013",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 1,
+        "state": "retired",
+        "expiresAt": "2026-08-17T05:32:11.000Z",
+        "evidenceDigest": "50ae10b0faaaf52ab7fb3f9efd693429fec9461d7fbbf6d5e4c65453c6355bb3",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_4RgZ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "eb38f21892d40651f5f8dc225698c217e43ff013",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_4RgZ",
+          "focusedEvidenceDigest": "50ae10b0faaaf52ab7fb3f9efd693429fec9461d7fbbf6d5e4c65453c6355bb3",
+          "dependencyClosureDigest": "28d72a30e60c48af8dd9cac9e580dc216a259539eb3481125cfbbd3310260d5b",
+          "namedChecksDigest": "98d84b7d881c32cb3a1bdf3a42f898185d456cabe8820abf5cb64fe66296cdb1",
+          "handoffEvidenceDigest": "d7b76034cde588944b7f0071bf07c51902565f01f260a71b709a381f2216eb77",
+          "operatorDecisionDigest": "3852e4c916ee7486a1e19c53c454d0ce5f296e28e18fb21aaedf72d0f7735be4",
+          "integrationIntentDigest": "6e85809f9e10c31eab516ab9a83e9de3355681c2b14a1c343e9130b02a347573",
+          "integratedAt": "2026-08-17T03:50:29.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "eb38f21892d40651f5f8dc225698c217e43ff013",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM7_4RgZ",
+          "bytesDigest": "dd4c6840b582a7f274473839afa2936131ae20684cc80ef1a1c697d3e05f957e",
+          "namedChecksDigest": "98d84b7d881c32cb3a1bdf3a42f898185d456cabe8820abf5cb64fe66296cdb1",
+          "handoffEvidenceDigest": "d7b76034cde588944b7f0071bf07c51902565f01f260a71b709a381f2216eb77",
+          "integrationReceiptDigest": "8785066b24134cdaeee6537a4976f3a0e61bb9d0f776af020ef953a8170a99a5",
+          "retiredAt": "2026-08-17T03:52:27.000Z"
+        }
+      },
+      "claimDigest": "813c01ffe1dea9bae7d0e796cb998d98102d2b1a7b71df6e24a38c1230edcb99",
+      "digest": "2b25a4f6853e16d093dd248d321ccbd6a9c1c4c99e35fec5456742ddf2a0a262"
     }
   ]
 }

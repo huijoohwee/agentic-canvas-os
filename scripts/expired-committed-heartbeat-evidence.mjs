@@ -651,17 +651,35 @@ function isImmediateCloudAuthorityRenewalMarker({ marker, expectedMarker }) {
     !marker?.cloudAuthority ||
     !expectedMarker?.cloudAuthority ||
     !marker?.taskAuthority ||
-    !expectedMarker?.taskAuthority ||
-    digestValue(marker.taskAuthority) !== digestValue(expectedMarker.taskAuthority)
+    !expectedMarker?.taskAuthority
   ) {
+    return false;
+  }
+  const sameTaskAuthority =
+    digestValue(marker.taskAuthority) === digestValue(expectedMarker.taskAuthority);
+  const taskAuthorityContinuation = isImmediateTaskAuthorityContinuation({
+    previous: marker.taskAuthority,
+    next: expectedMarker.taskAuthority,
+  });
+  if (!sameTaskAuthority && !taskAuthorityContinuation) {
     return false;
   }
   const sourceProjection = {
     ...expectedMarker,
     cloudAuthority: marker.cloudAuthority,
+    ...(sameTaskAuthority ? null : { taskAuthority: marker.taskAuthority }),
   };
-  return digestValue(marker) === digestValue(sourceProjection)
-    && isImmediateCloudAuthorityRenewal(
+  if (digestValue(marker) !== digestValue(sourceProjection)) {
+    return false;
+  }
+  return digestValue(marker.cloudAuthority)
+      === digestValue(expectedMarker.cloudAuthority)
+    || (taskAuthorityContinuation
+      && isEquivalentCloudAuthorityLedgerObservation(
+        marker.cloudAuthority,
+        expectedMarker.cloudAuthority,
+      ))
+    || isImmediateCloudAuthorityRenewal(
       marker.cloudAuthority,
       expectedMarker.cloudAuthority,
     );
@@ -702,6 +720,27 @@ function isImmediateCloudAuthorityRenewal(source, target) {
       && targetHeartbeat === sourceHeartbeat + 1;
   }
   return true;
+}
+
+function isEquivalentCloudAuthorityLedgerObservation(source, target) {
+  const omitLedgerObservation = value => Object.fromEntries(
+    Object.entries(value || {}).filter(([key]) =>
+      key !== "ledgerRevision" && key !== "ledgerDigest"),
+  );
+  return digestValue(omitLedgerObservation(source))
+    === digestValue(omitLedgerObservation(target));
+}
+
+function isImmediateTaskAuthorityContinuation({ previous, next }) {
+  if (!previous || !next || next.bindingMode !== "continuation") {
+    return false;
+  }
+  return next.priorBindingDigest === previous.bindingDigest &&
+    next.authoritySubjectId === previous.authoritySubjectId &&
+    next.proofAdapterId === previous.proofAdapterId &&
+    next.generation === previous.generation &&
+    next.publicKey === previous.publicKey &&
+    next.publicKeyDigest === previous.publicKeyDigest;
 }
 
 function repositoryFromPullRequestUrl(url) {

@@ -200,6 +200,6 @@ test("execution results report zero counts for the complete finding union", () =
     }),
   );
   assert.deepEqual(Object.keys(result.findingCounts), FINDING_TYPES);
-  assert.equal(FINDING_TYPES.length, 83);
+  assert.equal(FINDING_TYPES.length, 90);
   assert.ok(Object.values(result.findingCounts).every((count) => count === 0));
 });

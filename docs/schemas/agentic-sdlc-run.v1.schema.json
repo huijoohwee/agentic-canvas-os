@@ -205,6 +205,7 @@
         "concurrent-write-conflict",
         "parallel-scope-collision",
         "stale-collaboration-fence",
+        "delivery-authority-unjoined",
         "canonical-base-drift",
         "scope-admission-collision",
         "unattributed-lane-ambiguity",
@@ -247,7 +248,13 @@
         "canonical-frontier-unverified",
         "duplicate-change-reintegrated",
         "stale-candidate-frontier",
-        "runtime-readiness-unproven"
+        "runtime-readiness-unproven",
+        "undesigned-criterion",
+        "ungrounded-design-element",
+        "requirement-introduced-downstream",
+        "stale-downstream-artifact",
+        "phase-advanced-without-approval",
+        "seam-elided"
       ],
       "properties": {
         "self-graded-verdict": {
@@ -272,6 +279,9 @@
           "$ref": "#/$defs/ruleBinding"
         },
         "stale-collaboration-fence": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "delivery-authority-unjoined": {
           "$ref": "#/$defs/ruleBinding"
         },
         "canonical-base-drift": {
@@ -401,6 +411,24 @@
           "$ref": "#/$defs/ruleBinding"
         },
         "runtime-readiness-unproven": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "undesigned-criterion": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "ungrounded-design-element": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "requirement-introduced-downstream": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "stale-downstream-artifact": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "phase-advanced-without-approval": {
+          "$ref": "#/$defs/ruleBinding"
+        },
+        "seam-elided": {
           "$ref": "#/$defs/ruleBinding"
         }
       }

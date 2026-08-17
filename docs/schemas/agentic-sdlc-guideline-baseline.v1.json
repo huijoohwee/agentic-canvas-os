@@ -3,7 +3,7 @@
   "repository": {
     "locator": "${GITHUB_ROOT}/huijoohwee.github.io",
     "identity": "huijoohwee/huijoohwee.github.io",
-    "revision": "50a6135ee3ba952f3961a5cab6bd23227499d925"
+    "revision": "4eb8cf0eebcb064f3a93952f1bb6726e43f7f257"
   },
   "documents": [
     {
@@ -15,8 +15,8 @@
     {
       "role": "execution",
       "locator": "${GITHUB_ROOT}/huijoohwee.github.io/guidelines/agentic-sdlc-guidelines.md",
-      "version": "1.12.2",
-      "sha256": "27b04a1941b7ea536a0d7c6aa3d3f88beef6b87348f35ecf578de9e9ba0c9fb6"
+      "version": "1.16.0",
+      "sha256": "4a3036b321d6d26cee43d29a1aff1be4a849baac737a812671e4a2d4af7e9093"
     }
   ],
   "requiredFrontmatterKeys": [
@@ -39,7 +39,8 @@
       "specification-to-task-bridge",
       "task-model",
       "per-task-budgets",
-      "execution-conformance-findings"
+      "execution-conformance-findings",
+      "canonical-integration--recoverable-cleanup"
     ]
   },
   "guidelineLoadProfiles": {
@@ -104,6 +105,7 @@
       "release-handoff": [
         "dependency-ordered-integration",
         "end-to-end-release-lifecycle-protocol",
+        "canonical-integration--recoverable-cleanup",
         "human-in-the-loop-gates",
         "scope--neutrality-contract",
         "module-index"
@@ -128,11 +130,11 @@
       "ruleText": "Ensure every VCC is covered by at least one task; a VCC with no task is an `unexecuted-condition`"
     },
     "task-cycle": {
-      "ruleId": "task-model#13",
+      "ruleId": "task-model#15",
       "ruleText": "Express dependencies as a directed acyclic graph over Task IDs; a cycle is a `task-cycle` finding at `blocker` severity"
     },
     "concurrent-write-conflict": {
-      "ruleId": "task-model#15",
+      "ruleId": "task-model#17",
       "ruleText": "Group ready tasks into waves for concurrent dispatch; forbid two tasks in one wave writing the same artifact, which is a `concurrent-write-conflict`"
     },
     "parallel-scope-collision": {
@@ -143,12 +145,16 @@
       "ruleId": "validation-checklist#6",
       "ruleText": "**Collaboration identity complete when concurrent mutation applies**; authoritative future write scopes, distinct lanes, and exact fences are present without path inference; current local leases are required only for local mutation-capable projections"
     },
+    "delivery-authority-unjoined": {
+      "ruleId": "validation-checklist#9",
+      "ruleText": "**Reviewed delivery authority is exact when protected integration applies**; one current `delivery-authorized` receipt binds the unchanged reviewed revision, scope, claim, lease epoch, fence, ledger revision, and review/check evidence without reopening authoring or granting deployment authority"
+    },
     "canonical-base-drift": {
-      "ruleId": "validation-checklist#7",
+      "ruleId": "validation-checklist#8",
       "ruleText": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption"
     },
     "scope-admission-collision": {
-      "ruleId": "validation-checklist#7",
+      "ruleId": "validation-checklist#8",
       "ruleText": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption"
     },
     "unattributed-lane-ambiguity": {
@@ -156,11 +162,11 @@
       "ruleText": "**Collaboration identity complete when concurrent mutation applies**; authoritative future write scopes, distinct lanes, and exact fences are present without path inference; current local leases are required only for local mutation-capable projections"
     },
     "admission-snapshot-stale": {
-      "ruleId": "validation-checklist#7",
+      "ruleId": "validation-checklist#8",
       "ruleText": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption"
     },
     "unsafe-candidate-target": {
-      "ruleId": "validation-checklist#7",
+      "ruleId": "validation-checklist#8",
       "ruleText": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption"
     },
     "local-only-cross-device-lease": {
@@ -168,7 +174,7 @@
       "ruleText": "**Collaboration identity complete when concurrent mutation applies**; authoritative future write scopes, distinct lanes, and exact fences are present without path inference; current local leases are required only for local mutation-capable projections"
     },
     "collateral-lane-mutation": {
-      "ruleId": "validation-checklist#7",
+      "ruleId": "validation-checklist#8",
       "ruleText": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption"
     },
     "admission-runtime-conflation": {
@@ -176,15 +182,15 @@
       "ruleText": "Keep scoped authoring admission, runtime readiness, and lifecycle readiness as independent results; never turn preserved disjoint work or an occupied runtime into a false global verdict"
     },
     "candidate-lane-orphaned": {
-      "ruleId": "validation-checklist#7",
+      "ruleId": "validation-checklist#8",
       "ruleText": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption"
     },
     "state-without-reason": {
-      "ruleId": "task-model#18",
+      "ruleId": "task-model#20",
       "ruleText": "Record a reason on every transition to `failed`, `blocked`, or `abandoned`; an unexplained terminal state is a `state-without-reason` finding"
     },
     "oversized-task": {
-      "ruleId": "task-model#11",
+      "ruleId": "task-model#13",
       "ruleText": "Split a task that exceeds its budget rather than raising the budget; a persistent overrun is a decomposition defect, and raising the bound hides it"
     },
     "unsurfaced-result": {
@@ -240,55 +246,55 @@
       "ruleText": "Forbid inferring, defaulting, scheduling, or simulating an Operator decision; an absent decision is a `blocked` state, never an assumed yes"
     },
     "unreviewed-release-candidate": {
-      "ruleId": "end-to-end-release-lifecycle-protocol#5",
+      "ruleId": "end-to-end-release-lifecycle-protocol#6",
       "ruleText": "Require a current Runtime Review Receipt before prompting and a separate authenticated human decision for the exact candidate and target before deployment"
     },
     "dependency-closure-drift": {
-      "ruleId": "validation-checklist#37",
+      "ruleId": "validation-checklist#39",
       "ruleText": "**Candidate closure exact**: canonical source, all transitive dependencies, policy, target, review, artifact, manifest, and candidate digests agree"
     },
     "authorization-evidence-unjoined": {
-      "ruleId": "validation-checklist#33",
+      "ruleId": "validation-checklist#35",
       "ruleText": "**Receipt chain joined**: Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Deployment, State Reconciliation, Live Verification, Publication, and Rollback receipts join by exact digest where each stage applies"
     },
     "authorization-interaction-unjoined": {
-      "ruleId": "validation-checklist#38",
+      "ruleId": "validation-checklist#40",
       "ruleText": "**Human authorization exact**: the interaction receipt proves the configured transport, browser dependency, exact challenge response, and authenticated actor; the authority adapter records the same human decision for that candidate and target"
     },
     "duplicate-release-controller": {
-      "ruleId": "validation-checklist#40",
+      "ruleId": "validation-checklist#42",
       "ruleText": "**Controller singular and idempotent**: one target-scoped controller owns deployment; duplicate dispatch resolves to the same result or fails closed"
     },
     "production-authorization-drift": {
-      "ruleId": "end-to-end-release-lifecycle-protocol#9",
+      "ruleId": "end-to-end-release-lifecycle-protocol#10",
       "ruleText": "Invalidate the affected receipt chain on any identity movement; cancel or retire stale unapproved runs rather than retargeting, rebuilding, or reusing authorization"
     },
     "post-authorization-rebuild": {
-      "ruleId": "validation-checklist#41",
+      "ruleId": "validation-checklist#43",
       "ruleText": "**No drift or rebuild**: current evidence still matches the authorized candidate byte-for-byte; otherwise authorization is invalid and forward deployment remains blocked"
     },
     "state-reconciliation-unverified": {
-      "ruleId": "validation-checklist#42",
+      "ruleId": "validation-checklist#44",
       "ruleText": "**State reconciled**: state changes are bounded and idempotent, direct readback matches expected counts and content, and code and state rollback dispositions remain separate"
     },
     "immutable-origin-unverified": {
-      "ruleId": "validation-checklist#43",
+      "ruleId": "validation-checklist#45",
       "ruleText": "**Transports proven separately**: immutable origin, required public routes, authoritative state readback, browser behavior, client-cache convergence, and publication each carry their own evidence where applicable"
     },
     "public-route-unverified": {
-      "ruleId": "validation-checklist#43",
+      "ruleId": "validation-checklist#45",
       "ruleText": "**Transports proven separately**: immutable origin, required public routes, authoritative state readback, browser behavior, client-cache convergence, and publication each carry their own evidence where applicable"
     },
     "client-cache-convergence-unverified": {
-      "ruleId": "validation-checklist#43",
+      "ruleId": "validation-checklist#45",
       "ruleText": "**Transports proven separately**: immutable origin, required public routes, authoritative state readback, browser behavior, client-cache convergence, and publication each carry their own evidence where applicable"
     },
     "publication-before-live-verification": {
-      "ruleId": "end-to-end-release-lifecycle-protocol#11",
+      "ruleId": "end-to-end-release-lifecycle-protocol#12",
       "ruleText": "Publish mirrors only after the Live Verification Receipt exists; remove only clean, integrated, completion-proven task lanes and preserve all unrelated work"
     },
     "cleanup-ownership-unproven": {
-      "ruleId": "validation-checklist#35",
+      "ruleId": "validation-checklist#37",
       "ruleText": "**Keep / port / drop inventory closed**: every pre-existing non-canonical lane or worktree is classified by exact identity; `keep` items remain preserved, `port` items integrate before candidate sealing, and `drop` items are removed only with value-closure proof plus cleanup authority"
     },
     "integration-order-cycle": {
@@ -300,7 +306,7 @@
       "ruleText": "Build a directed acyclic graph from declared unit dependencies; a cycle is an `integration-order-cycle`, and integrating a unit before a dependency is `integration-before-dependency`"
     },
     "canonical-frontier-unverified": {
-      "ruleId": "dependency-ordered-integration#9",
+      "ruleId": "dependency-ordered-integration#10",
       "ruleText": "Require the protected merge revision and its exact-canonical checks before advancing the frontier; a green task head alone is `canonical-frontier-unverified`"
     },
     "duplicate-change-reintegrated": {
@@ -308,12 +314,36 @@
       "ruleText": "Classify each unit as `pending`, `already-integrated`, `superseded`, `integrated`, or `blocked`; forbid reintegrating an equivalent change or replacing newer canonical behavior with an older unit"
     },
     "stale-candidate-frontier": {
-      "ruleId": "validation-checklist#37",
+      "ruleId": "validation-checklist#39",
       "ruleText": "**Candidate closure exact**: canonical source, all transitive dependencies, policy, target, review, artifact, manifest, and candidate digests agree"
     },
     "runtime-readiness-unproven": {
       "ruleId": "runtime-readiness-enforcement#5",
       "ruleText": "Emit `runtime-readiness-unproven` at `blocker` severity when a required receipt, join, budget, check, evaluator, dependency, or boundary proof is absent or stale"
+    },
+    "undesigned-criterion": {
+      "ruleId": "specification-chain-phases#1",
+      "ruleText": "Verify both chain seams are closed before dispatching any task derived from them; an uncovered criterion is an `undesigned-criterion` and an ungrounded design element is an `ungrounded-design-element`"
+    },
+    "ungrounded-design-element": {
+      "ruleId": "specification-chain-phases#1",
+      "ruleText": "Verify both chain seams are closed before dispatching any task derived from them; an uncovered criterion is an `undesigned-criterion` and an ungrounded design element is an `ungrounded-design-element`"
+    },
+    "requirement-introduced-downstream": {
+      "ruleId": "specification-chain-phases#3",
+      "ruleText": "Forbid an execution task deciding structure or introducing behaviour absent upstream; either is a `requirement-introduced-downstream` at `blocker` severity and returns to the owning phase"
+    },
+    "stale-downstream-artifact": {
+      "ruleId": "specification-chain-phases#2",
+      "ruleText": "Reject a task list whose upstream artifact revision no longer matches the artifact it was derived from; a stale downstream artifact is a `stale-downstream-artifact` and re-derivation precedes dispatch"
+    },
+    "phase-advanced-without-approval": {
+      "ruleId": "specification-chain-phases#4",
+      "ruleText": "Require a recorded Operator decision for each seam crossing before execution starts; an unapproved crossing is a `phase-advanced-without-approval` and an absent decision is a `blocked` state"
+    },
+    "seam-elided": {
+      "ruleId": "specification-chain-phases#5",
+      "ruleText": "Permit a collapsed or reordered chain only where both seams still carry joins; a missing coverage obligation is a `seam-elided` at `blocker` severity, however small the change"
     }
   },
   "executionRuleCatalog": {
@@ -334,6 +364,11 @@
     "agent-roles--independence#7": "Name the mechanism that discharges the Evaluator role before execution starts; forbid execution with an unnamed evaluator",
     "agent-roles--independence#8": "Route every completion verdict through the Evaluator; forbid a task transitioning to a terminal success state on the Implementer's assertion alone",
     "agent-roles--independence#9": "Record which role produced every state transition, so a self-graded verdict is detectable after the fact rather than only in the moment",
+    "specification-chain-phases#1": "Verify both chain seams are closed before dispatching any task derived from them; an uncovered criterion is an `undesigned-criterion` and an ungrounded design element is an `ungrounded-design-element`",
+    "specification-chain-phases#2": "Reject a task list whose upstream artifact revision no longer matches the artifact it was derived from; a stale downstream artifact is a `stale-downstream-artifact` and re-derivation precedes dispatch",
+    "specification-chain-phases#3": "Forbid an execution task deciding structure or introducing behaviour absent upstream; either is a `requirement-introduced-downstream` at `blocker` severity and returns to the owning phase",
+    "specification-chain-phases#4": "Require a recorded Operator decision for each seam crossing before execution starts; an unapproved crossing is a `phase-advanced-without-approval` and an absent decision is a `blocked` state",
+    "specification-chain-phases#5": "Permit a collapsed or reordered chain only where both seams still carry joins; a missing coverage obligation is a `seam-elided` at `blocker` severity, however small the change",
     "specification-to-task-bridge#1": "Derive every task from at least one VCC; a task tracing to no VCC is an `ungrounded-task`",
     "specification-to-task-bridge#2": "Ensure every VCC is covered by at least one task; a VCC with no task is an `unexecuted-condition`",
     "specification-to-task-bridge#3": "Record the source criterion and VCC identifiers on each task; forbid a task list that cannot be joined back to the specification",
@@ -343,21 +378,21 @@
     "task-model#1": "Assign each task exactly one Task ID, stable while the task's own text is unchanged",
     "task-model#2": "Limit hierarchy to two levels: a task and its sub-tasks; forbid a third level, which trades comprehensibility for the illusion of precision",
     "task-model#3": "Record the Task ID on every state transition, every Evidence Reference, and every finding raised during that task",
-    "task-model#4": "Treat multi-device concurrent cloud collaboration semantics as a root, source-owned rule set defined by the canonical collaboration modules; device-specific tooling, repository-local wrappers, and downstream mirrors may project or enforce that rule set but must not redefine claim identity, authority order, scope comparison, fence meaning, or handoff semantics",
-    "task-model#5": "Classify every lane as `canonical`, `overlapping`, `disjoint-attributed`, or `ambiguous` from content-bound state and authoritative declared future write scope; observed current paths never prove an active writer's future scope, and missing authority is ambiguous",
-    "task-model#8": "Hand off only an immutable, remotely addressable revision plus its evidence; forbid copying mutable working state between users or devices as coordination",
-    "task-model#9": "If the protected canonical source advances after review or candidate preparation, treat the waiting run as stale, retire it, refresh the canonical lane to the new exact protected revision, and reseal a fresh candidate from that revision; reuse of stale review, candidate, or authorization evidence is forbidden",
-    "task-model#10": "Size every task so its completion is verifiable by a check named in advance; forbid a task whose completion is judged by inspection",
-    "task-model#11": "Split a task that exceeds its budget rather than raising the budget; a persistent overrun is a decomposition defect, and raising the bound hides it",
-    "task-model#12": "Forbid a task with no verifiable outcome; documentation-only tasks state the artifact and the check that confirms it exists and conforms",
-    "task-model#13": "Express dependencies as a directed acyclic graph over Task IDs; a cycle is a `task-cycle` finding at `blocker` severity",
-    "task-model#14": "Derive readiness from the graph: a task is ready when every dependency is in a terminal success state",
-    "task-model#15": "Group ready tasks into waves for concurrent dispatch; forbid two tasks in one wave writing the same artifact, which is a `concurrent-write-conflict`",
-    "task-model#16": "State the graph explicitly; forbid inferring order from list position alone, which silently couples ordering to formatting",
-    "task-model#17": "Forbid any state named `done`, `complete`, or equivalent that an Implementer may set; `verified` is the only success state and only the Evaluator sets it",
-    "task-model#18": "Record a reason on every transition to `failed`, `blocked`, or `abandoned`; an unexplained terminal state is a `state-without-reason` finding",
-    "task-model#19": "Forbid transitioning out of a terminal state except by an explicit re-derivation that resets the task to `not-started` and records why",
-    "task-model#20": "Never infer a state from an artifact's existence; a file appearing on disk is not a verdict",
+    "task-model#4": "Expose exactly four provider-neutral root operations: `claim(scope)`, `continue(claim)`, `integrate(candidate)`, and `retire(claim)`; each emits a typed digest-bound receipt, and adapters must not add authority-bearing aliases or compatibility operations",
+    "task-model#5": "Treat dependency edges as the group's only ordering authority; a shared task identity or semantic label never creates a shared branch, worktree, lease, claim, fence, review identity, or handoff",
+    "task-model#8": "Require admission and every later mutation batch to preserve pre-existing lanes and join current cloud and local authority with joined Admission and Preservation Receipts plus operation receipts; these receipts grant no cleanup, runtime, release, deployment, or authority outside their exact work unit",
+    "task-model#9": "Keep authoring ownership, review readiness, and delivery authorization as separate capabilities: `review-ready` closes source mutation, while a later explicit `delivery-authorized` compare-and-swap transition may authorize protected integration of only the unchanged reviewed revision and write scope; it must bind the current claim, lease epoch, fence, ledger revision, review and check evidence, emit an idempotent receipt, never reactivate authoring or grant deployment authority, and isolate provider-specific review and integration behavior behind replaceable adapters",
+    "task-model#12": "Size every task so its completion is verifiable by a check named in advance; forbid a task whose completion is judged by inspection",
+    "task-model#13": "Split a task that exceeds its budget rather than raising the budget; a persistent overrun is a decomposition defect, and raising the bound hides it",
+    "task-model#14": "Forbid a task with no verifiable outcome; documentation-only tasks state the artifact and the check that confirms it exists and conforms",
+    "task-model#15": "Express dependencies as a directed acyclic graph over Task IDs; a cycle is a `task-cycle` finding at `blocker` severity",
+    "task-model#16": "Derive readiness from the graph: a task is ready when every dependency is in a terminal success state",
+    "task-model#17": "Group ready tasks into waves for concurrent dispatch; forbid two tasks in one wave writing the same artifact, which is a `concurrent-write-conflict`",
+    "task-model#18": "State the graph explicitly; forbid inferring order from list position alone, which silently couples ordering to formatting",
+    "task-model#19": "Forbid any state named `done`, `complete`, or equivalent that an Implementer may set; `verified` is the only success state and only the Evaluator sets it",
+    "task-model#20": "Record a reason on every transition to `failed`, `blocked`, or `abandoned`; an unexplained terminal state is a `state-without-reason` finding",
+    "task-model#21": "Forbid transitioning out of a terminal state except by an explicit re-derivation that resets the task to `not-started` and records why",
+    "task-model#22": "Never infer a state from an artifact's existence; a file appearing on disk is not a verdict",
     "execution-contract#1": "What an Implementer receives, and what it must return.",
     "execution-contract#2": "An Implementer must surface, in its own output, everything the Evaluator needs:",
     "execution-contract#3": "Forbid a return that asserts success without a named check and a recorded result; the Evaluator judges surfaced output only, so an unsurfaced pass is indistinguishable from no pass",
@@ -402,22 +437,30 @@
     "dependency-ordered-integration#2": "Classify each unit as `pending`, `already-integrated`, `superseded`, `integrated`, or `blocked`; forbid reintegrating an equivalent change or replacing newer canonical behavior with an older unit",
     "dependency-ordered-integration#3": "Build a directed acyclic graph from declared unit dependencies; a cycle is an `integration-order-cycle`, and integrating a unit before a dependency is `integration-before-dependency`",
     "dependency-ordered-integration#4": "Dispatch ready units in deterministic waves only when their write scopes are disjoint; serialize overlapping source owners even when their dependency sets differ",
-    "dependency-ordered-integration#5": "Integrate shared control, contract, and source owners before consumers, generated projections, mirrors, or release candidates; source ownership, not repository or list position, determines order",
-    "dependency-ordered-integration#6": "Rebase or merge the current canonical frontier into the owned mutation lane, resolve conflicts at the source owner, run named checks, and enter through protected integration without bypass",
-    "dependency-ordered-integration#7": "Require every review-request or equivalent protected-integration record to be rendered from the repository-owned template, to bind the current canonical base revision at creation or update time, and to declare a scope token exactly equal to the admitted semantic scope; when a branch-segment projection exists, that scope token must equal the projected branch-scope segment as well",
-    "dependency-ordered-integration#8": "When a commit push succeeds but the review-ready boundary fails closed because a cloud verifier momentarily resolves a different protected-review head, solve that drift only in the authority-owning source module by revalidating the unchanged claim, review-request, and intended reviewed head, then rerunning the same bounded verifier-and-transition path; downstream fence rewrites, projection patches, synthetic rebases, or alternate transition selection are forbidden",
-    "dependency-ordered-integration#9": "Require the protected merge revision and its exact-canonical checks before advancing the frontier; a green task head alone is `canonical-frontier-unverified`",
-    "dependency-ordered-integration#11": "Require runtime convergence when a unit declares runtime impact; keep source, exact-canonical, runtime, and delivery evidence as separate receipts",
+    "dependency-ordered-integration#6": "Integrate shared control, contract, and source owners before consumers, generated projections, mirrors, or release candidates; source ownership, not repository or list position, determines order",
+    "dependency-ordered-integration#7": "Rebase or merge the current canonical frontier into the owned mutation lane, resolve conflicts at the source owner, run named checks, and enter through protected integration without bypass",
+    "dependency-ordered-integration#8": "Require every review-request or equivalent protected-integration record to be rendered from the repository-owned template, to bind the current canonical base revision at creation or update time, and to declare a scope token exactly equal to the admitted semantic scope; when a branch-segment projection exists, that scope token must equal the projected branch-scope segment as well",
+    "dependency-ordered-integration#9": "When a commit push succeeds but the review-ready boundary fails closed because a cloud verifier momentarily resolves a different protected-review head, solve that drift only in the authority-owning source module by revalidating the unchanged claim, review-request, and intended reviewed head, then rerunning the same bounded verifier-and-transition path; downstream fence rewrites, projection patches, synthetic rebases, or alternate transition selection are forbidden",
+    "dependency-ordered-integration#10": "Require the protected merge revision and its exact-canonical checks before advancing the frontier; a green task head alone is `canonical-frontier-unverified`",
+    "dependency-ordered-integration#12": "Require runtime convergence when a unit declares runtime impact; keep source, exact-canonical, runtime, and delivery evidence as separate receipts",
+    "canonical-integration--recoverable-cleanup#2": "Classify the candidate as `delta`, `already-integrated`, `superseded-with-value`, or `blocked`: compute file delta against the current canonical tree and separately prove commit reachability or semantic supersession, because zero file diff alone does not prove that unique history is disposable",
+    "canonical-integration--recoverable-cleanup#3": "Route every `delta` candidate through the repository's protected review and integration adapter; forbid direct canonical mutation, protection bypass, history rewrite, or substituting a local merge result for the protected integration receipt",
+    "canonical-integration--recoverable-cleanup#4": "After protected integration, refetch the canonical remote ref, attach or fast-forward the canonical local ref to that exact revision, and require a clean status plus zero file diff between their trees; a stale remote-tracking projection, merely green candidate check, or matching commit message is not canonical closure",
+    "canonical-integration--recoverable-cleanup#5": "Before removing a worktree or deleting a ref, prove either that its complete value is reachable from the canonical remote ref or that an immutable recovery object contains its exact revision, tree, local-only commits, index state, and ordinary untracked bytes and has passed an independent restore or integrity check",
+    "canonical-integration--recoverable-cleanup#6": "Forbid unrecoverable discard: do not force-remove a dirty worktree, delete an unpreserved unique ref, drop a stash, erase an untracked artifact, reset away authored state, expire a recovery object, or prune unreachable objects when the preservation proof is absent, stale, ambiguous, or unverifiable",
+    "canonical-integration--recoverable-cleanup#8": "Delete a stale local candidate ref only after canonical inclusion is proven or after its verified recovery locator and digest are recorded in the cleanup receipt; keep every unrelated, active, ambiguous, open-review, or value-bearing ref unchanged",
+    "canonical-integration--recoverable-cleanup#9": "Make cleanup adaptive to the observed inventory: a no-worktree lane closes as a ref-only operation, an already-integrated zero-delta lane closes without a synthetic merge, and a value-bearing lane remains preserved until its own protected integration or explicit recoverable retirement completes",
+    "canonical-integration--recoverable-cleanup#10": "Emit one terminal receipt that binds the canonical remote and local revisions, zero file delta, clean status, removed worktree identities, deleted local refs, pruned metadata, retained recovery locators, and untouched out-of-scope inventory; forbid reporting closure unless the canonical local ref equals the canonical remote ref and every requested effect is evidenced",
     "end-to-end-release-lifecycle-protocol#2": "Seal one immutable candidate from the exact final Release Frontier, including source, transitive dependencies, policy, schema, catalog, generated projections, state contract, target, review, artifact, manifest, and rollback identities",
     "end-to-end-release-lifecycle-protocol#3": "Inventory every pre-existing non-canonical lane or worktree before candidate sealing and classify each exact item as `keep`, `port`, or `drop`, with its identity, scope, evidence, and rationale recorded",
     "end-to-end-release-lifecycle-protocol#4": "Preserve every `keep` item untouched, require every `port` item to reach protected integration before the candidate can claim frontier closure, and allow `drop` only after exact no-remaining-value proof plus the cleanup authority that removes it",
-    "end-to-end-release-lifecycle-protocol#5": "Require a current Runtime Review Receipt before prompting and a separate authenticated human decision for the exact candidate and target before deployment",
-    "end-to-end-release-lifecycle-protocol#6": "Fence one canonical release-owner checkout per repository from candidate sealing until the authorization interaction terminates or the run is retired; it must stay attached to the exact protected revision used for review, and branch switching, repurposing, or local-ref drift in that owner invalidates prompt readiness until the owner is reattached, refetched, and revalidated",
-    "end-to-end-release-lifecycle-protocol#7": "Require terminal authorization automation to follow a sequential prompt handshake: capture the exact candidate-bound reply emitted by the prompt formatter, wait for the live input prompt, then send that exact reply; precomputed, reordered, promptless, or partially matched input creates no authorization evidence",
-    "end-to-end-release-lifecycle-protocol#8": "Keep interaction, authority, deployment, state reconciliation, verification, publication, rollback, and cleanup as replaceable adapter ports with typed inputs and receipts",
-    "end-to-end-release-lifecycle-protocol#9": "Invalidate the affected receipt chain on any identity movement; cancel or retire stale unapproved runs rather than retargeting, rebuilding, or reusing authorization",
-    "end-to-end-release-lifecycle-protocol#10": "Verify immutable deployment identity, authoritative state readback, public transports, browser behavior, and client-cache convergence as separate claims where the target profile requires them",
-    "end-to-end-release-lifecycle-protocol#11": "Publish mirrors only after the Live Verification Receipt exists; remove only clean, integrated, completion-proven task lanes and preserve all unrelated work",
+    "end-to-end-release-lifecycle-protocol#6": "Require a current Runtime Review Receipt before prompting and a separate authenticated human decision for the exact candidate and target before deployment",
+    "end-to-end-release-lifecycle-protocol#7": "Fence one canonical release-owner checkout per repository from candidate sealing until the authorization interaction terminates or the run is retired; it must stay attached to the exact protected revision used for review, and branch switching, repurposing, or local-ref drift in that owner invalidates prompt readiness until the owner is reattached, refetched, and revalidated",
+    "end-to-end-release-lifecycle-protocol#8": "Require terminal authorization automation to follow a sequential prompt handshake: capture the exact candidate-bound reply emitted by the prompt formatter, wait for the live input prompt, then send that exact reply; precomputed, reordered, promptless, or partially matched input creates no authorization evidence",
+    "end-to-end-release-lifecycle-protocol#9": "Keep interaction, authority, deployment, state reconciliation, verification, publication, rollback, and cleanup as replaceable adapter ports with typed inputs and receipts",
+    "end-to-end-release-lifecycle-protocol#10": "Invalidate the affected receipt chain on any identity movement; cancel or retire stale unapproved runs rather than retargeting, rebuilding, or reusing authorization",
+    "end-to-end-release-lifecycle-protocol#11": "Verify immutable deployment identity, authoritative state readback, public transports, browser behavior, and client-cache convergence as separate claims where the target profile requires them",
+    "end-to-end-release-lifecycle-protocol#12": "Publish mirrors only after the Live Verification Receipt exists; remove only clean, integrated, completion-proven task lanes and preserve all unrelated work",
     "runtime-readiness-enforcement#1": "Runtime readiness is a derived claim over one immutable execution input and its joined evidence; never infer it from document status, source existence, review labels, or delivery state. The separately loadable [Behavioral Conformance Runtime Module](./agentic-sdlc-conformance-runtime.md) owns the stage-gate evidence and receipt contract; the [Repository Runtime Readiness Module](./agentic-sdlc-repository-runtime-readiness.md) owns the bounded local-first repository audit profile.",
     "runtime-readiness-enforcement#2": "Require typed inputs and outputs, bounded orchestration, independent evaluation, named checks with recorded results, cost and fallback evidence, and closed mutation and deployment gates before deriving `runtime-ready`",
     "runtime-readiness-enforcement#3": "Keep source validation, canonical runtime, protected integration, and deployed proof as separate claims; forbid one green layer from promoting another",
@@ -434,40 +477,41 @@
     "validation-checklist#4": "**Every task traced** to at least one VCC; every VCC covered by at least one task; bridge coverage ratio reported",
     "validation-checklist#5": "**Dependency graph acyclic**; waves contain no two tasks writing the same artifact",
     "validation-checklist#6": "**Collaboration identity complete when concurrent mutation applies**; authoritative future write scopes, distinct lanes, and exact fences are present without path inference; current local leases are required only for local mutation-capable projections",
-    "validation-checklist#7": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption",
-    "validation-checklist#8": "**All four budgets stated** per task, with a circuit-breaker condition",
-    "validation-checklist#9": "**Capability grants stated** per task at the narrowest sufficient class; write scope declared",
-    "validation-checklist#10": "**Named check stated** per task before dispatch",
-    "validation-checklist#11": "**Property obligations identified** per stated correctness property, with class named",
-    "validation-checklist#12": "Named check run and its recorded result surfaced",
-    "validation-checklist#13": "Existing verification lane run, not only the task's own check",
-    "validation-checklist#14": "Artifacts changed enumerated, including incidental changes",
-    "validation-checklist#15": "Budget consumption recorded against all four bounds",
-    "validation-checklist#16": "Verdict issued by the Evaluator, never the Implementer",
-    "validation-checklist#17": "Evidence Reference emitted per satisfied VCC, with surface recorded",
-    "validation-checklist#18": "State transition recorded with the role that made it and a reason where terminal",
-    "validation-checklist#19": "**Runtime readiness derived** by the deterministic evaluator from one immutable input and joined, layer-specific proof; every missing or stale obligation fails closed",
-    "validation-checklist#20": "**Every task in a terminal state**; no task left `in-progress`",
-    "validation-checklist#21": "Every `failed`, `blocked`, and `abandoned` task carries a reason",
-    "validation-checklist#22": "**Rungs re-derived** from the emitted Evidence References; no rung authored by hand",
-    "validation-checklist#23": "**Finding set emitted** across both domains, deduplicated, ordered, with zero counts reported",
-    "validation-checklist#24": "**Finding set compared** to the prior run; any new `blocker` treated as a regression",
-    "validation-checklist#25": "**Run state persisted** such that an independent reader can reconstruct the run",
-    "validation-checklist#26": "**Per-run consumption compared** to the specification's token budget",
-    "validation-checklist#27": "**No boundary crossed**: every task ran in the `authoring` lane; every Deploy Boundary still reads `closed` absent an Operator instruction",
-    "validation-checklist#28": "**Integration order closed**: every unit is terminal, dependencies preceded consumers, no equivalent or superseded unit was re-merged, and exact-canonical checks advanced each frontier",
-    "validation-checklist#29": "**Protected review metadata exact**: the repository-owned review-request template is instantiated, the current canonical base revision is recorded, and the declared scope token equals the admitted semantic scope and any projected branch-scope segment",
-    "validation-checklist#31": "**Authorization prompt runtime-ready**: candidate, source, release run, and controlled review-surface locator are revalidated from the current Runtime Review Receipt before the prompt is emitted; the prompt identifies its canonical portable formatter as `agentic-canvas-os/scripts/production-release-authorization-contract.mjs` and, directly after its loopback locator, prints the runtime-resolved local formatter source path",
-    "validation-checklist#32": "**Canonical release owner stable**: from candidate sealing through authorization interaction, one canonical release-owner checkout stays on the exact protected revision used for review; any branch flip or local-ref drift retires or blocks the run until the owner is restored and the receipt chain is refreshed",
-    "validation-checklist#33": "**Receipt chain joined**: Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Deployment, State Reconciliation, Live Verification, Publication, and Rollback receipts join by exact digest where each stage applies",
-    "validation-checklist#34": "**Overlapping work preserved**: every pre-existing non-canonical work item is content-bound and accounted for; overlapping items remain retained with recovery handles, while any restored disjoint item matches its captured state exactly",
-    "validation-checklist#35": "**Keep / port / drop inventory closed**: every pre-existing non-canonical lane or worktree is classified by exact identity; `keep` items remain preserved, `port` items integrate before candidate sealing, and `drop` items are removed only with value-closure proof plus cleanup authority",
-    "validation-checklist#37": "**Candidate closure exact**: canonical source, all transitive dependencies, policy, target, review, artifact, manifest, and candidate digests agree",
-    "validation-checklist#38": "**Human authorization exact**: the interaction receipt proves the configured transport, browser dependency, exact challenge response, and authenticated actor; the authority adapter records the same human decision for that candidate and target",
-    "validation-checklist#40": "**Controller singular and idempotent**: one target-scoped controller owns deployment; duplicate dispatch resolves to the same result or fails closed",
-    "validation-checklist#41": "**No drift or rebuild**: current evidence still matches the authorized candidate byte-for-byte; otherwise authorization is invalid and forward deployment remains blocked",
-    "validation-checklist#42": "**State reconciled**: state changes are bounded and idempotent, direct readback matches expected counts and content, and code and state rollback dispositions remain separate",
-    "validation-checklist#43": "**Transports proven separately**: immutable origin, required public routes, authoritative state readback, browser behavior, client-cache convergence, and publication each carry their own evidence where applicable",
+    "validation-checklist#8": "**When additive concurrent authoring is requested, scoped lane admitted and preserved**; joined receipts bind exact source/scope, cloud/local/shared-state digests, target/atomic result, final active claim evidence, zero candidate-caused collateral mutation, `authoringAdmission: admitted`, and claim-plus-local-lease revalidation at first consumption",
+    "validation-checklist#9": "**Reviewed delivery authority is exact when protected integration applies**; one current `delivery-authorized` receipt binds the unchanged reviewed revision, scope, claim, lease epoch, fence, ledger revision, and review/check evidence without reopening authoring or granting deployment authority",
+    "validation-checklist#10": "**All four budgets stated** per task, with a circuit-breaker condition",
+    "validation-checklist#11": "**Capability grants stated** per task at the narrowest sufficient class; write scope declared",
+    "validation-checklist#12": "**Named check stated** per task before dispatch",
+    "validation-checklist#13": "**Property obligations identified** per stated correctness property, with class named",
+    "validation-checklist#14": "Named check run and its recorded result surfaced",
+    "validation-checklist#15": "Existing verification lane run, not only the task's own check",
+    "validation-checklist#16": "Artifacts changed enumerated, including incidental changes",
+    "validation-checklist#17": "Budget consumption recorded against all four bounds",
+    "validation-checklist#18": "Verdict issued by the Evaluator, never the Implementer",
+    "validation-checklist#19": "Evidence Reference emitted per satisfied VCC, with surface recorded",
+    "validation-checklist#20": "State transition recorded with the role that made it and a reason where terminal",
+    "validation-checklist#21": "**Runtime readiness derived** by the deterministic evaluator from one immutable input and joined, layer-specific proof; every missing or stale obligation fails closed",
+    "validation-checklist#22": "**Every task in a terminal state**; no task left `in-progress`",
+    "validation-checklist#23": "Every `failed`, `blocked`, and `abandoned` task carries a reason",
+    "validation-checklist#24": "**Rungs re-derived** from the emitted Evidence References; no rung authored by hand",
+    "validation-checklist#25": "**Finding set emitted** across both domains, deduplicated, ordered, with zero counts reported",
+    "validation-checklist#26": "**Finding set compared** to the prior run; any new `blocker` treated as a regression",
+    "validation-checklist#27": "**Run state persisted** such that an independent reader can reconstruct the run",
+    "validation-checklist#28": "**Per-run consumption compared** to the specification's token budget",
+    "validation-checklist#29": "**No boundary crossed**: every task ran in the `authoring` lane; every Deploy Boundary still reads `closed` absent an Operator instruction",
+    "validation-checklist#30": "**Integration order closed**: every unit is terminal, dependencies preceded consumers, no equivalent or superseded unit was re-merged, and exact-canonical checks advanced each frontier",
+    "validation-checklist#31": "**Protected review metadata exact**: the repository-owned review-request template is instantiated, the current canonical base revision is recorded, and the declared scope token equals the admitted semantic scope and any projected branch-scope segment",
+    "validation-checklist#33": "**Authorization prompt runtime-ready**: candidate, source, release run, and controlled review-surface locator are revalidated from the current Runtime Review Receipt before the prompt is emitted; the prompt identifies its canonical portable formatter as `agentic-canvas-os/scripts/production-release-authorization-contract.mjs` and, directly after its loopback locator, prints the runtime-resolved local formatter source path",
+    "validation-checklist#34": "**Canonical release owner stable**: from candidate sealing through authorization interaction, one canonical release-owner checkout stays on the exact protected revision used for review; any branch flip or local-ref drift retires or blocks the run until the owner is restored and the receipt chain is refreshed",
+    "validation-checklist#35": "**Receipt chain joined**: Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Deployment, State Reconciliation, Live Verification, Publication, and Rollback receipts join by exact digest where each stage applies",
+    "validation-checklist#36": "**Overlapping work preserved**: every pre-existing non-canonical work item is content-bound and accounted for; overlapping items remain retained with recovery handles, while any restored disjoint item matches its captured state exactly",
+    "validation-checklist#37": "**Keep / port / drop inventory closed**: every pre-existing non-canonical lane or worktree is classified by exact identity; `keep` items remain preserved, `port` items integrate before candidate sealing, and `drop` items are removed only with value-closure proof plus cleanup authority",
+    "validation-checklist#39": "**Candidate closure exact**: canonical source, all transitive dependencies, policy, target, review, artifact, manifest, and candidate digests agree",
+    "validation-checklist#40": "**Human authorization exact**: the interaction receipt proves the configured transport, browser dependency, exact challenge response, and authenticated actor; the authority adapter records the same human decision for that candidate and target",
+    "validation-checklist#42": "**Controller singular and idempotent**: one target-scoped controller owns deployment; duplicate dispatch resolves to the same result or fails closed",
+    "validation-checklist#43": "**No drift or rebuild**: current evidence still matches the authorized candidate byte-for-byte; otherwise authorization is invalid and forward deployment remains blocked",
+    "validation-checklist#44": "**State reconciled**: state changes are bounded and idempotent, direct readback matches expected counts and content, and code and state rollback dispositions remain separate",
+    "validation-checklist#45": "**Transports proven separately**: immutable origin, required public routes, authoritative state readback, browser behavior, client-cache convergence, and publication each carry their own evidence where applicable",
     "anti-pattern-guards#1": "❌ Tasks invented at task-authoring time to cover behaviour the specification never stated → ✅ Every task derived from a VCC; a behaviour gap returned to the authoring loop as a specification defect",
     "anti-pattern-guards#2": "→ ✅ Execution confined to the authoring lane; promotion is the Deploy Boundary's job and never a task",
     "mantra-application#1": "**Specification grounds**: a task with no VCC behind it is work no rung will credit, so the bridge is a derivation and never a fresh authoring act"

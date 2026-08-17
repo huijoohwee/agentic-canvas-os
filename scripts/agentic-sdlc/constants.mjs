@@ -9,6 +9,7 @@ export const EXECUTION_FINDING_TYPES = Object.freeze([
   "concurrent-write-conflict",
   "parallel-scope-collision",
   "stale-collaboration-fence",
+  "delivery-authority-unjoined",
   "canonical-base-drift",
   "scope-admission-collision",
   "unattributed-lane-ambiguity",
@@ -52,6 +53,12 @@ export const EXECUTION_FINDING_TYPES = Object.freeze([
   "duplicate-change-reintegrated",
   "stale-candidate-frontier",
   "runtime-readiness-unproven",
+  "undesigned-criterion",
+  "ungrounded-design-element",
+  "requirement-introduced-downstream",
+  "stale-downstream-artifact",
+  "phase-advanced-without-approval",
+  "seam-elided",
 ]);
 
 export const EXECUTION_FINDING_SEVERITIES = Object.freeze({
@@ -63,6 +70,7 @@ export const EXECUTION_FINDING_SEVERITIES = Object.freeze({
   "concurrent-write-conflict": "major",
   "parallel-scope-collision": "blocker",
   "stale-collaboration-fence": "blocker",
+  "delivery-authority-unjoined": "blocker",
   "canonical-base-drift": "blocker",
   "scope-admission-collision": "blocker",
   "unattributed-lane-ambiguity": "blocker",
@@ -106,6 +114,12 @@ export const EXECUTION_FINDING_SEVERITIES = Object.freeze({
   "duplicate-change-reintegrated": "major",
   "stale-candidate-frontier": "blocker",
   "runtime-readiness-unproven": "blocker",
+  "undesigned-criterion": "major",
+  "ungrounded-design-element": "minor",
+  "requirement-introduced-downstream": "blocker",
+  "stale-downstream-artifact": "major",
+  "phase-advanced-without-approval": "blocker",
+  "seam-elided": "blocker",
 });
 
 export const SEVERITY_RANK = Object.freeze({

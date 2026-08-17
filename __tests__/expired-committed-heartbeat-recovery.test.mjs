@@ -729,7 +729,8 @@ test("expired-source replay adopts repeated current response-loss with stable he
 test("expired-source replay renews repeated dormant response-loss with stable heartbeat", () => {
   const source = liveManifestLease();
   source.cloudAuthority.heartbeatCounter = 1;
-  const recoveryEvidenceDigest = "d".repeat(64);
+  const historicalRecoveryEvidenceDigest = "d".repeat(64);
+  const recoveryEvidenceDigest = "a".repeat(64);
   const liveClaim = cloudClaim({
     source: source.cloudAuthority,
     state: "dormant-preserved",
@@ -759,7 +760,7 @@ test("expired-source replay renews repeated dormant response-loss with stable he
     recoveryEvidenceDigest,
     ttlSeconds: 1800,
     inspect: () => status,
-    resolveReplayEvidence: () => recoveryEvidenceDigest,
+    resolveReplayEvidence: () => historicalRecoveryEvidenceDigest,
     invoke: ({ request }) => {
       invocations.push(request);
       const replay = invocations.length === 1;
@@ -803,6 +804,10 @@ test("expired-source replay renews repeated dormant response-loss with stable he
     source.cloudAuthority.transitionCounter);
   assert.equal(invocations[1].expectedTransitionCounter,
     source.cloudAuthority.transitionCounter + 1);
+  assert.equal(invocations[0].recoveryEvidenceDigest,
+    historicalRecoveryEvidenceDigest);
+  assert.equal(invocations[1].recoveryEvidenceDigest,
+    recoveryEvidenceDigest);
 });
 
 test("oversized recovered marker fails before local CAS or marker publication", () => {

@@ -67,10 +67,6 @@ second semantic transition vocabulary.
 - Review request identity, reviewed revision, candidate revision, check
   evidence, and receipt digests are immutable once recorded. Changed evidence
   requires a new admissible operation, never a downstream rewrite.
-- Reviewed verification must also join the live pull-request file set to the
-  claim's declared write scope. A reviewed claim is blocked when the exact PR
-  bytes touch any repository-relative path outside that preserved scope, even
-  if the claim identity and head SHA still match.
 
 `dormant-preserved` deliberately retains overlap. Operator-led continuation or
 retirement is required before a waiting successor may receive write authority.

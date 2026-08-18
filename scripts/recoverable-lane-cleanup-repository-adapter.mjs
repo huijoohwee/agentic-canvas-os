@@ -225,14 +225,15 @@ function captureEvidence({
   return Object.freeze({ ...core, evidenceDigest: digestValue(core) });
 }
 
-function inspectRemoteAuthority({ originUrl, headSha, claimId, invokeCloudAction }) {
+export function inspectRemoteAuthority({ originUrl, headSha, claimId, invokeCloudAction }) {
   const repository = githubRepository(originUrl);
   const result = invokeCloudAction({
     action: "status", ledgerRepository: repository,
     request: { targetRepository: repository },
   });
+  const freshInventoryStatus = result?.status === "ready" || result?.status === "empty";
   if (result?.schema !== "agentic-cloud-collaboration-result/v1"
-    || result.ok !== true || result.action !== "status" || result.status !== "ready"
+    || result.ok !== true || result.action !== "status" || !freshInventoryStatus
     || !Array.isArray(result.claims)) {
     throw new Error("Recoverable cleanup requires fresh provider inventory.");
   }

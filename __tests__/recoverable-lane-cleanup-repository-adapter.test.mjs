@@ -9,7 +9,8 @@ import path from "node:path";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { createRecoverableLaneCleanupController } from "../scripts/recoverable-lane-cleanup-controller.mjs";
-import { createRecoverableLaneCleanupRepositoryAdapter } from "../scripts/recoverable-lane-cleanup-repository-adapter.mjs";
+import { createRecoverableLaneCleanupRepositoryAdapter,
+  inspectRemoteAuthority } from "../scripts/recoverable-lane-cleanup-repository-adapter.mjs";
 test("repository adapter captures one exact clean attached noncanonical lane", () => {
   withFixture(fixture => {
     const adapter = createAdapter(fixture);
@@ -21,6 +22,22 @@ test("repository adapter captures one exact clean attached noncanonical lane", (
     assert.equal(evidence.authority.disposition, "unowned-terminal");
     assert.equal(evidence.target.generatedResidue.mode, "none");
   });
+});
+test("repository adapter accepts a fresh empty provider inventory", () => {
+  const evidence = inspectRemoteAuthority({
+    originUrl: "https://github.com/owner/repo.git",
+    headSha: "1".repeat(40),
+    claimId: null,
+    invokeCloudAction: () => ({
+      schema: "agentic-cloud-collaboration-result/v1",
+      ok: true,
+      action: "status",
+      status: "empty",
+      claims: [],
+    }),
+  });
+  assert.equal(evidence.currentRemoteWriter, false);
+  assert.equal(evidence.targetClaims.length, 0);
 });
 test("repository adapter content-binds only the exact generated residue roots", () => {
   withFixture(fixture => {

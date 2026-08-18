@@ -152,12 +152,13 @@ async function listPullRequestChangedPaths({ send, repository, pullRequestNumber
 async function resolveActor({ input, send, workflowContext }) {
   const userResponse = await send({ path: "/user" });
   if (userResponse.status === 200) {
-    const authenticated = projectActor(userResponse.value);
-    if ((input.actorId !== undefined && Number(input.actorId) !== authenticated.id)
-      || (input.actorLogin && String(input.actorLogin).trim() !== authenticated.login)) {
-      throw new Error("Actor metadata does not match the authenticated GitHub token identity.");
+    return requireAuthenticatedActorIdentity(projectActor(userResponse.value), input);
+  }
+  if (userResponse.status >= 500) {
+    const authenticated = await resolveActorViaGraphQl(send);
+    if (authenticated) {
+      return requireAuthenticatedActorIdentity(authenticated, input);
     }
-    return authenticated;
   }
   if (userResponse.status !== 403) requireStatus(userResponse, [200], "resolve authenticated actor");
   if (workflowContext?.trustedSource !== "github-actions") {
@@ -176,12 +177,35 @@ async function resolveActor({ input, send, workflowContext }) {
       || response.value?.head_sha !== workflowContext.revision
       || response.value?.status !== "in_progress"
       || Number(response.value?.run_attempt) !== Number(workflowContext.runAttempt)
-      || (input.actorId !== undefined && Number(input.actorId) !== authenticated.id)
-      || (input.actorLogin && String(input.actorLogin).trim() !== authenticated.login)) {
+      || !actorIdentityMatchesInput(authenticated, input)) {
       throw new Error("Workflow actor metadata does not match the authenticated GitHub run identity.");
     }
     return authenticated;
   }
+}
+async function resolveActorViaGraphQl(send) {
+  const response = await send({
+    method: "POST",
+    path: "/graphql",
+    body: {
+      query: "query { viewer { login databaseId } }",
+    },
+  });
+  if (response.status !== 200) return null;
+  const login = String(response.value?.data?.viewer?.login || "").trim();
+  const id = Number(response.value?.data?.viewer?.databaseId);
+  if (!login || !Number.isInteger(id) || id < 1) return null;
+  return projectActor({ login, id });
+}
+function requireAuthenticatedActorIdentity(authenticated, input) {
+  if (!actorIdentityMatchesInput(authenticated, input)) {
+    throw new Error("Actor metadata does not match the authenticated GitHub token identity.");
+  }
+  return authenticated;
+}
+function actorIdentityMatchesInput(authenticated, input) {
+  return (input.actorId === undefined || Number(input.actorId) === authenticated.id)
+    && (!input.actorLogin || String(input.actorLogin).trim() === authenticated.login);
 }
 async function resolveMutationSubject({ action, context, send }) {
   let pullRequest = null;

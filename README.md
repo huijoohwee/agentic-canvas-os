@@ -336,6 +336,17 @@ injected. Generated JavaScript is never executed locally; programmatic calls
 are limited to validated read-only idempotent tools, while writes, approvals,
 semantic judgment, citations, and native-artifact validation stay direct.
 
+The native skill harness is also surfaced but shipped blocked by default:
+
+| Readiness key | Shipped state | Why |
+|---|---|---|
+| `skillProposer` | `configured: false` | No live model adapter is attached. |
+| `skillRegistryGate` | `configured: false` | No resolving operator-instruction owner is attached. |
+| `adapterRegistration` | `configured: false` | No approval-resolving registration path is attached. |
+
+See [`docs/NATIVE-SKILL-HARNESS.md`](./docs/NATIVE-SKILL-HARNESS.md) for the
+recorded draft-store, allowlist, boundary, rollback, and rung decisions.
+
 Running Agents readiness exposes a provider-neutral application-turn
 controller. It sequences bounded model, tool, and handoff transitions, locks a
 conversation to one of four continuation strategies, resumes pauses within the

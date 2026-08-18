@@ -166,6 +166,7 @@ dictionary_entries:
   - "@browser-tool"
   - "@tool-policy"
   - "@skill-catalog"
+  - "@skill-registry"
   - "@identity-model"
   - "@orchestration-graph"
   - "@swarm-run"
@@ -328,6 +329,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@browser-tool` | Cloud browser automation capability. | Approved browser automation harness. | Requires isolated session, action schema, redaction, screenshots or vision bounds, and approval. |
 | `@tool-policy` | Tool approval, egress, secret, cost, and fallback policy. | `FACTS.md`, `MCP-GATEWAY.md`, `HARNESS-CONTRACTS.md`, and approved runtime owner. | Paid, mutating, browser-auth, generated-media, and deploy actions fail closed without approval. |
 | `@skill-catalog` | Reusable skill contract catalog. | `SKILLS.md` plus existing shared skill registry owner when present. | Skill changes are proposals until reviewed; direct auto-commit and external copying are forbidden. |
+| `@skill-registry` | In-Worker Agent Definition registry created by `createAgentDefinitionRegistry` plus its `Active_Registry_Snapshot` projection. | `agent-api/src/agent-definitions.js` inside the Cloudflare Worker declared in `wrangler.jsonc`. | Distinct from `@skill-catalog`, which resolves to skill text contracts; this binding is read-only from the invocation surface, dispatches only `status: active` definitions, and promotion to active requires the operator-gated skill registry promotion gate. |
 | `@identity-model` | Stable model of operator preferences, project boundaries, and agent operating rules. | `FACTS.md`, `MEMORY.md`, and operator-approved memory. | Stores non-secret, source-backed facts only; no sensitive profiling or unsupported personal inference. |
 | `@orchestration-graph` | Source-backed state, node, edge, and stop-condition topology. | `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing Canvas/KGC graph owners. | No external graph runtime import, hidden node registry, or direct graph-store mutation. |
 | `@agent-team` | Exact source URI and digest, team revision, participant-to-Agent-Definition revisions, registered workflow revision and branches, role metadata, review policy, and hard bounds. | `AGENT-TEAM.md` defines the source contract; Knowgrph local stdio MCP owns durable lifecycle state; existing agent owners retain execution authority. | Roles, goals, personas, membership, and MCP requests cannot grant facts, instructions, models, tools, credentials, approval, routing, final-answer ownership, Prod, or Cloudflare authority; drift and mutable aliases fail closed. |

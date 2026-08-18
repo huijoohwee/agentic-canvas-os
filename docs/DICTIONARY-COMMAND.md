@@ -10,7 +10,7 @@ status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
 catalog_digest: "e127aeff89d632efc02b5adabfd666d3e0642ffdbf4d5335a3e623a705123e62"
-catalog_entry_count: 414
+catalog_entry_count: 415
 source_docs:
   - "FACTS.md"
   - "MEMORY.md"
@@ -101,6 +101,7 @@ dictionary_entries:
   - "/experience.capture"
   - "/skill.propose"
   - "/skill.evolve"
+  - "/propose-skill"
   - "/identity.reflect"
   - "/application.compose"
   - "/knowledge.graph.ingest"
@@ -270,6 +271,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/experience.capture` | Convert an observed run, failure, proof packet, or operator correction into a typed experience record. | `@experience`, `@source.body`, `@runtime-proof` | `#learning-loop`, `#vcc`, `#no-hardcode` | Experience record names source, lesson, applicability, cost, expiry risk, and approval state before persistence. |
 | `/skill.propose` | Propose a new reusable skill from repeated experience without directly modifying runtime code. | `@experience`, `@skill-catalog`, `@operator` | `#skill-evolution`, `#harness`, `#vcc` | Proposal includes intent, schemas, bounds, cost fields, source evidence, and review status. |
 | `/skill.evolve` | Optimize existing skill text through resumable bounded epochs, batches, and mini-batches. | `@skill-catalog`, `@skill-policy`, `@runtime-proof`, `@operator` | `#skill-evolution`, `#learning-loop`, `#vcc` | A source-revision-fenced `knowgrph.skill.evolve` run applies a text-mutation learning-rate schedule and held-out gates; output is review-pending only, with no skill apply or model-weight change. |
+| `/propose-skill` | Draft a candidate Agent Definition with `status: proposed` from a typed capability-gap signal; owned by the ACOS Skill_Proposer harness and distinct from `/skill.propose` by owner, typed arguments `{ gap_signal }`, and artifact type. | `@skill-registry`, `@operator` | `#skill-candidate`, `#approval-gate` | One `status: proposed` Draft_Definition exists in the draft store together with one trace entry carrying the iteration count, or a typed no-draft result returns; the Active_Registry_Snapshot stays byte-identical and promotion happens only through the separate operator-gated gate. |
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/application.compose` | Compile or execute one version-locked agent or LLM application from interoperable component and integration interfaces. | `@application-manifest`, `@component-catalog`, `@integration-profile`, `@runtime-proof`, and `@operator` only for live or mutating execution | `#application-composition`, `#runtime-ready`, `#no-hardcode` | Plan returns one immutable digest over exact revisions, schema digests, owners, bounds, and a deterministic dependency DAG; execute delegates bounded ready steps without silent upgrade, retry, migration, or deploy. |
 | `/knowledge.graph.ingest` | Compile one bounded local workspace containing parser-supported code, docs, SQL, configs, and text-bearing PDFs into one digest-fenced explained-edge graph snapshot. | `@working-directory`, `@knowledge-graph`, `@operator`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#runtime-ready` | `knowgrph.knowledge_graph.ingest` returns opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection; Agentic Canvas OS supplies invocation policy and typed forwarding only. |

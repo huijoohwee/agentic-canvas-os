@@ -60,6 +60,15 @@ test("adapter rejects actor metadata that does not match the authenticated token
   await assert.rejects(createAdapter(github).execute("claim", claimInput({ actorId: 999, actorLogin: "impersonated" })), /authenticated GitHub token identity/u);
   assert.equal(github.mutationCount(), 0);
 });
+test("adapter falls back to GraphQL viewer when REST actor resolution is temporarily unavailable", async () => {
+  const github = createFakeGitHub({ userStatus: 503 });
+  const result = await createAdapter(github).execute("claim", claimInput({ actorId: 7, actorLogin: "operator" }));
+  assert.equal(result.ok, true);
+  assert.equal(
+    github.calls.some((call) => call.method === "POST" && call.path === "/graphql"),
+    true,
+  );
+});
 test("workflow actor is joined to the authenticated in-progress run", async () => {
   const github = createFakeGitHub({ userStatus: 403 });
   assert.equal((await createAdapter(github, { workflowContext }).execute("claim", claimInput({ actorId: 7, actorLogin: "operator" }))).ok, true);
@@ -441,7 +450,7 @@ function fencedInput(result, overrides) {
 }
 function createFakeGitHub({
   conflicts = [], hiddenLedgerRefReadsAfterCreate = 0, advanceSeconds = 0,
-  lostPatchResponses = 0, userStatus = 200,
+  lostPatchResponses = 0, userStatus = 200, graphQlViewerStatus = 200,
   advanceMainOnConflict = false, advancePullOnConflict = false,
 } = {}) {
   const calls = [];
@@ -476,6 +485,11 @@ function createFakeGitHub({
       return userStatus === 200
         ? response(200, { id: 7, login: "operator" }, date)
         : response(userStatus, { message: "Resource not accessible by integration" }, date);
+    }
+    if (method === "POST" && path === "/graphql") {
+      return graphQlViewerStatus === 200
+        ? response(200, { data: { viewer: { login: "operator", databaseId: 7 } } }, date)
+        : response(graphQlViewerStatus, { message: "GraphQL viewer unavailable" }, date);
     }
     if (method === "GET" && path === `/repos/${targetRepository}/actions/runs/17`) {
       return response(200, { actor: { id: 7, login: "operator" }, repository: repositoryIdentityValue(2, "R_target", targetRepository), head_sha: targetMainSha, status: "in_progress", run_attempt: 1 }, date);

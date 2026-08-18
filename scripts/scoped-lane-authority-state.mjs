@@ -532,7 +532,7 @@ function rejectCurrentDormantAuthority({ receipt, claims }) {
 }
 
 function resolveGitHubIdentity({ targetRepository, ghJson }) {
-  const actor = ghJson(["api", "user", "--jq", "{id,login}"]);
+  const actor = resolveAuthenticatedActor(ghJson);
   const repositoryValue = ghJson([
     "repo", "view", requiredRepository(targetRepository, "targetRepository"),
     "--json", "id,nameWithOwner,owner",
@@ -547,6 +547,21 @@ function resolveGitHubIdentity({ targetRepository, ghJson }) {
       nameWithOwner: requiredRepository(repositoryValue?.nameWithOwner, "repository name"),
       ownerLogin: requiredText(repositoryValue?.owner?.login, "repository owner login"),
     },
+  };
+}
+function resolveAuthenticatedActor(ghJson) {
+  try {
+    return ghJson(["api", "user", "--jq", "{id,login}"]);
+  } catch (error) {
+    const message = String(error?.message || error);
+    if (!/\b503\b/u.test(message)) throw error;
+  }
+  const response = ghJson([
+    "api", "graphql", "-f", "query=query { viewer { login databaseId } }",
+  ]);
+  return {
+    id: positiveInteger(response?.data?.viewer?.databaseId, "authenticated actor id"),
+    login: requiredText(response?.data?.viewer?.login, "authenticated actor login"),
   };
 }
 

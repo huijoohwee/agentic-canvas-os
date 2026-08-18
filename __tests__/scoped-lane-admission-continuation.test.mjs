@@ -487,6 +487,108 @@ test("continuation accepts the exact clean controller-prepared integration commi
   );
 });
 
+test("continuation accepts prepared integration files under a declared directory scope", () => {
+  const manifest = normalizeDeclaredWriteScopeManifest({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: "continuation",
+    paths: [".kiro/specs/native-skill-creation-harness"],
+  });
+  const verified = verifiedAuthority(manifest, peerClaim());
+  const dormantLane = lane({
+    lanePath: DORMANT_PATH,
+    branch: "refs/heads/agent/old-device/dormant",
+    dirty: true,
+    stateDigest: "9".repeat(64),
+  });
+  const dormantPreservationReceipt = verifyDormantPreservation({
+    repository: REPOSITORY,
+    targetRepository: TARGET_REPOSITORY,
+    lanes: [dormantLane],
+    worktreePaths: [DORMANT_PATH],
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+    sessionId: SESSION_ID,
+    remoteAuthorityVerification: verified.verification,
+    ghJson: githubIdentity,
+    verifiedAt: EVALUATED_AT,
+  });
+  const integration = {
+    schema: "agentic-integration-commit/v1",
+    commitSha: INTEGRATION_SHA,
+    treeSha: INTEGRATION_TREE_SHA,
+    commitMessage: "fix(continuation): preserve directory scoped integration",
+    manifestDigest: "a".repeat(64),
+    stagedDiffDigest: "b".repeat(64),
+    paths: [
+      ".kiro/specs/native-skill-creation-harness/design.md",
+      ".kiro/specs/native-skill-creation-harness/requirements.md",
+      ".kiro/specs/native-skill-creation-harness/tasks.md",
+    ],
+    recordedAt: EVALUATED_AT,
+  };
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 23,
+    sessionId: SESSION_ID,
+    device: DEVICE_ID,
+    scope: manifest.semanticScope,
+    branch: BRANCH,
+    worktreePath: CANDIDATE_PATH,
+    baseSha: BASE_SHA,
+    fenceSha: FENCE_SHA,
+    pullRequestUrl: "https://github.test/owner/repository/pull/97",
+    expiresAt: LOCAL_EXPIRY,
+    admission: {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "planned",
+      semanticScope: manifest.semanticScope,
+      declaredWriteSet: manifest.declaredWriteSet,
+      writeSetDigest: manifest.writeSetDigest,
+      manifestDigest: manifest.manifestDigest,
+      planReceiptDigest: "a".repeat(64),
+      admissionReceiptDigest: "b".repeat(64),
+      existingLaneStateDigest: "c".repeat(64),
+    },
+    cloudAuthority: verified.authority,
+    integration,
+  };
+  const lanes = [
+    lane({
+      lanePath: REPOSITORY,
+      branch: "refs/heads/main",
+      stateDigest: "d".repeat(64),
+    }),
+    {
+      ...lane({
+        lanePath: CANDIDATE_PATH,
+        branch: `refs/heads/${BRANCH}`,
+        head: INTEGRATION_SHA,
+        lease,
+        stateDigest: "e".repeat(64),
+      }),
+      treeSha: INTEGRATION_TREE_SHA,
+    },
+    dormantLane,
+  ];
+  const continued = continuePlannedScopedLaneAdmission({
+    lease,
+    cloudAuthority: verified.authority,
+    remoteAuthorityVerification: verified.verification,
+    manifest,
+    lanes,
+    protectedRevision: BASE_SHA,
+    protectedDeltaPaths: [],
+    dormantPreservationReceipt,
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+  });
+
+  assert.equal(continued.continuationReceipt.candidateRevision, INTEGRATION_SHA);
+  assert.equal(
+    continued.continuationReceipt.preparedIntegrationReceiptDigest,
+    digestValue(integration),
+  );
+});
+
 test("continuation rejects prepared integration identity or declared-path drift", () => {
   const source = fixture();
   for (const integration of [

@@ -52,9 +52,25 @@ function lane({
     invalid: false, leaseAmbiguous: false, indexDigest: "1".repeat(64),
     workingTreeDigest: "2".repeat(64), stateDigest: "3".repeat(64), lease };
 }
-function githubJson({ actorLogin = "owner", pullRequestHead = HEAD_SHA } = {}) {
+function githubJson({
+  actorLogin = "owner",
+  actorStatus = 200,
+  graphQlActorStatus = 200,
+  pullRequestHead = HEAD_SHA,
+} = {}) {
   return argumentsList => {
-    if (argumentsList[0] === "api") return { id: 42, login: actorLogin };
+    if (argumentsList[0] === "api" && argumentsList[1] === "user") {
+      if (actorStatus !== 200) {
+        throw new Error(`gh api user failed with HTTP 503`);
+      }
+      return { id: 42, login: actorLogin };
+    }
+    if (argumentsList[0] === "api" && argumentsList[1] === "graphql") {
+      if (graphQlActorStatus !== 200) {
+        throw new Error(`gh api graphql failed with HTTP ${graphQlActorStatus}`);
+      }
+      return { data: { viewer: { login: actorLogin, databaseId: 42 } } };
+    }
     if (argumentsList[0] === "repo") {
       return {
         id: "R_repo",
@@ -195,6 +211,14 @@ test("dormant preservation binds dirty worktree and pull-request bytes", () => {
     projectedClaimId: null,
   });
   assert.equal(receipt.pullRequests[0].reviewRequestId, "github-pull-request:PR_90");
+});
+
+test("dormant preservation falls back to GraphQL actor identity on REST 503", () => {
+  const receipt = dormantReceipt({
+    ghJson: githubJson({ actorStatus: 503 }),
+  });
+  assert.equal(receipt.authenticatedActor.actorId, "github-user:42");
+  assert.equal(receipt.authenticatedActor.login, "owner");
 });
 
 test("verified dormant authority admits a same-scope successor but never the same branch", () => {

@@ -215,6 +215,8 @@ export function projectPublicClaim(claim) {
     writeAuthority: claim.writeAuthority,
     scopeReserved: claim.scopeReserved,
     actorId: claim.actorId,
+    deviceId: claim.deviceId,
+    sessionId: claim.sessionId,
     repositoryId: claim.repositoryId,
     workItemId: claim.workItemId,
     canonicalBaseRevision: claim.canonicalBaseRevision,

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { recoverPlannedAdmissionCloudAuthority } from "../scripts/planned-clean-committed-recovery-lib.mjs";
+import {
+  recoverPlannedAdmissionCloudAuthority,
+  shouldReconcileRecoveredPlannedLease,
+} from "../scripts/planned-clean-committed-recovery-lib.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -120,4 +123,19 @@ test("planned clean recovery rejects non-dormant or drifted subjects before muta
     }), /exact dormant cloud claim/u);
     assert.equal(invoked, false);
   }
+});
+
+test("planned clean recovery only replays while the recovered lease is still live", () => {
+  const instant = new Date("2026-08-17T14:20:00.000Z");
+  assert.equal(shouldReconcileRecoveredPlannedLease({
+    expiresAt: "2026-08-17T14:30:00.000Z",
+    expiredCommittedHeartbeatRecovery: { schema: "agentic-expired-committed-heartbeat-recovery/v3" },
+  }, instant), true);
+  assert.equal(shouldReconcileRecoveredPlannedLease({
+    expiresAt: "2026-08-17T14:13:09.000Z",
+    expiredCommittedHeartbeatRecovery: { schema: "agentic-expired-committed-heartbeat-recovery/v3" },
+  }, instant), false);
+  assert.equal(shouldReconcileRecoveredPlannedLease({
+    expiresAt: "2026-08-17T14:30:00.000Z",
+  }, instant), false);
 });

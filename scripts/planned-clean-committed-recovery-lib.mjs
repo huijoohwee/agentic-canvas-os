@@ -17,7 +17,7 @@ export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gi
   requireClean({ gitText });
   const branch = gitText(["branch", "--show-current"]).trim();
   const existing = leaseStore.read(branch);
-  if (existing?.expiredCommittedHeartbeatRecovery) {
+  if (shouldReconcileRecoveredPlannedLease(existing, now())) {
     return reconcileExisting({ repo, branch, gitText, gitOptional, ghText, leaseStore,
       sessionId, run, now, verifyCloud });
   }
@@ -101,6 +101,12 @@ export function recoverPlannedAdmissionCloudAuthority({ authority, manifest, bra
   });
   return verify({ authority: projected, manifest, canonicalBaseSha: authority.canonicalBaseSha,
     branch });
+}
+
+export function shouldReconcileRecoveredPlannedLease(lease, instant = new Date()) {
+  if (!lease?.expiredCommittedHeartbeatRecovery) return false;
+  const expiresAt = Date.parse(lease.expiresAt || "");
+  return Number.isFinite(expiresAt) && expiresAt > instant.getTime();
 }
 
 function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore, sessionId, now }) {

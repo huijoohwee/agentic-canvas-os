@@ -284,11 +284,10 @@ function requireCandidateLane({ lease, lanes }) {
 function requirePreparedIntegrationCandidate({ lease, candidate }) {
   if (candidate.head === lease.fenceSha && !lease.integration) return null;
   const integration = lease.integration;
-  const declaredPaths = lease.admission?.declaredWriteSet
-    ?.filter(item => item.startsWith("path:"))
-    .map(item => item.slice("path:".length));
-  const exactPaths = Array.isArray(integration?.paths)
-    && JSON.stringify(integration.paths) === JSON.stringify(declaredPaths);
+  const exactPaths = preparedIntegrationPathsMatchAuthorizedScope({
+    integrationPaths: integration?.paths,
+    declaredWriteSet: lease.admission?.declaredWriteSet,
+  });
   if (
     integration?.schema !== "agentic-integration-commit/v1"
     || !SHA_PATTERN.test(String(integration.commitSha || ""))
@@ -306,6 +305,26 @@ function requirePreparedIntegrationCandidate({ lease, candidate }) {
     );
   }
   return integration;
+}
+
+function preparedIntegrationPathsMatchAuthorizedScope({
+  integrationPaths,
+  declaredWriteSet,
+}) {
+  if (!Array.isArray(integrationPaths) || integrationPaths.length === 0) return false;
+  const declaredPaths = normalizeWriteSet(declaredWriteSet)
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
+  if (declaredPaths.length === 0) return false;
+  return integrationPaths.every(item => {
+    const normalized = String(item || "").trim();
+    if (!normalized) return false;
+    return declaredPaths.some(declared => (
+      declared === "."
+      || normalized === declared
+      || normalized.startsWith(`${declared}/`)
+    ));
+  });
 }
 
 function verifyProtectedAdvance({ lease, manifest, protectedRevision, protectedDeltaPaths }) {

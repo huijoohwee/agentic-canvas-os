@@ -4,6 +4,7 @@ import test from "node:test";
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   CURRENT_CLAIM_INVENTORY_SCHEMA,
+  projectPublicClaim,
   pseudonymousIdentifier,
 } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
@@ -92,6 +93,8 @@ function rootClaim({
   leaseEpoch = 1,
   predecessorClaimId = null,
   operationReceiptDigest = "d".repeat(64),
+  deviceId = null,
+  sessionId = null,
   integration = null,
   integrationReceiptDigest = null,
 } = {}) {
@@ -103,6 +106,8 @@ function rootClaim({
     writeAuthority: state === "current",
     scopeReserved: state !== "waiting-successor",
     actorId: ACTOR_ID,
+    ...(deviceId ? { deviceId } : {}),
+    ...(sessionId ? { sessionId } : {}),
     repositoryId: REPOSITORY_ID,
     workItemId: WORK_ITEM_ID,
     canonicalBaseRevision: BASE_SHA,
@@ -811,6 +816,15 @@ test("legacy review bootstrap claims at base and binds the exact reviewed head",
   assert.equal(harness.calls[1].request.mode, "projection");
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("public claim projection preserves pseudonymous owner identity", () => {
+  const projected = projectPublicClaim(rootClaim({
+    deviceId: pseudonymousIdentifier("device", DEVICE_ID),
+    sessionId: pseudonymousIdentifier("session", SESSION_ID),
+  }));
+  assert.equal(projected.deviceId, pseudonymousIdentifier("device", DEVICE_ID));
+  assert.equal(projected.sessionId, pseudonymousIdentifier("session", SESSION_ID));
 });
 
 test("legacy review bootstrap retries claim with the required lease epoch", () => {

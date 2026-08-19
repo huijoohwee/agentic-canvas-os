@@ -35,7 +35,7 @@ export function analyzeSource({ source, file, repositoryRoot: root }) {
       if (!expression) return;
       const target = resolveExpression(expression, { constants, root })
         || resolveShellLiteral(expression, root);
-      if (target && escapes(root, target)) findings.push({
+      if (target && escapes(root, target) && !isDiscardSink(target)) findings.push({
         file, line: index + 1, target, expression,
       });
     });
@@ -110,6 +110,10 @@ function resolveShellLiteral(expression, root) {
   if (/[`$*?{}()[\]]/u.test(expression)) return null;
   const unquoted = expression.replace(/^(["'])(.*)\1$/u, "$2");
   return path.resolve(root, unquoted);
+}
+export function isDiscardSink(target) {
+  const normalized = path.posix.normalize(String(target || "").replace(/[;,.]+$/u, ""));
+  return /^\/dev\/(?:null|stdout|stderr|fd\/[0-9]+)$/u.test(normalized);
 }
 function escapes(root, target) { const relative = path.relative(path.resolve(root), path.resolve(target)); return relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative); }
 function trackedFiles(root) { return execFileSync("git", ["ls-files", "--", "scripts", ".githooks"], { cwd: root, encoding: "utf8" }).trim().split("\n").filter(Boolean); }

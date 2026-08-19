@@ -67,7 +67,7 @@
         "knowgrph": { "$ref": "#/$defs/checks" }
       }
     },
-    "ownershipTokenDigest": { "$ref": "#/$defs/sha256" },
+    "ownershipTokenDigest": { "const": "[redacted]" },
     "startedAt": { "type": "string", "format": "date-time" },
     "verifiedAt": { "type": "string", "format": "date-time" }
   },

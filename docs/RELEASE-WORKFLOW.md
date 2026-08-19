@@ -264,6 +264,8 @@ Separate unrelated scopes into branch-exclusive leased task worktrees. Commit in
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
 
+If local `main` already contains unpublished commits, preserve them before cleaning the canonical checkout: create or verify a distinct PR branch at the exact local `main` revision, push it, open or update the pull request, and confirm the PR branch contains the local-only commits. Only after that preservation proof exists, switch back to `main`, refresh `origin/main`, and reset local `main` to `origin/main` so the canonical checkout is clean and not ahead. The PR branch keeps the commits; the reset must not delete the preserved branch, bypass the protected Integration Gate, or imply deployment authority.
+
 If attributed tracked bytes remain in canonical `main` after their exact task
 change has passed protected integration, use only the
 `canonical:main:fast-forward-equivalence` adapter described in

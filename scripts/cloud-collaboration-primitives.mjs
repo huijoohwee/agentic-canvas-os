@@ -158,6 +158,47 @@ export function writeSetsOverlap(leftValues, rightValues) {
     return leftScope === rightScope;
   }));
 }
+export function normalizeCanonicalDescendantProof({ value, sourceBaseSha, protectedRevision = null }) {
+  if (value == null) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail("invalid_request", "canonicalDescendantProof must be an object");
+  }
+  const expectedKeys = ["ancestry", "canonicalChangedPaths", "canonicalChangedPathsDigest",
+    "evidenceDigest", "overlap", "preservedChangedPaths", "preservedChangedPathsDigest",
+    "protectedMainSha", "schema", "sourceBaseSha", "targetBaseSha"];
+  if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(expectedKeys.sort())) {
+    fail("invalid_request", "canonicalDescendantProof has unexpected fields");
+  }
+  const canonicalChangedPaths = normalizeProofPaths(value.canonicalChangedPaths, "canonical changed paths");
+  const preservedChangedPaths = normalizeProofPaths(value.preservedChangedPaths, "preserved changed paths");
+  const core = { schema: value.schema, sourceBaseSha: value.sourceBaseSha,
+    targetBaseSha: value.targetBaseSha, protectedMainSha: value.protectedMainSha,
+    canonicalChangedPaths, canonicalChangedPathsDigest: value.canonicalChangedPathsDigest,
+    preservedChangedPaths, preservedChangedPathsDigest: value.preservedChangedPathsDigest,
+    ancestry: value.ancestry, overlap: value.overlap };
+  const validSha = candidate => /^[0-9a-f]{40}$/u.test(String(candidate || ""));
+  if (core.schema !== "agentic-legacy-review-current-base-disjoint-proof/v1"
+    || !validSha(core.sourceBaseSha) || !validSha(core.targetBaseSha)
+    || core.sourceBaseSha !== sourceBaseSha || core.targetBaseSha !== core.protectedMainSha
+    || (protectedRevision && core.targetBaseSha !== protectedRevision)
+    || core.sourceBaseSha === core.targetBaseSha
+    || core.ancestry !== "source-base-to-current-protected-main" || core.overlap !== "none"
+    || core.canonicalChangedPathsDigest !== digestValue(canonicalChangedPaths)
+    || core.preservedChangedPathsDigest !== digestValue(preservedChangedPaths)
+    || writeSetsOverlap(canonicalChangedPaths.map(path => `path:${path}`),
+      preservedChangedPaths.map(path => `path:${path}`))
+    || value.evidenceDigest !== digestValue(core)) {
+    fail("invalid_request", "canonicalDescendantProof is not an exact disjoint protected descendant proof");
+  }
+  return Object.freeze({ ...core, evidenceDigest: value.evidenceDigest });
+}
+function normalizeProofPaths(value, label) {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail("invalid_request", `${label} must be a non-empty array`);
+  }
+  return normalizeWriteSet(value.map(path => `path:${text(path, label)}`))
+    .map(scope => scope.slice("path:".length));
+}
 export function findUncoveredPathScopes(declaredWriteScope, changedPaths) {
   const declared = normalizeWriteSet(declaredWriteScope);
   if (!Array.isArray(changedPaths)) {
@@ -224,6 +265,7 @@ function normalizeClaimIntent(request, common) {
     laneRevision: text(request.laneRevision ?? request.canonicalBaseRevision, "laneRevision"),
     leaseEpoch: integer(request.leaseEpoch, "leaseEpoch", { minimum: 1 }),
     predecessorClaimId: digest(request.predecessorClaimId, "predecessorClaimId", { optional: true }),
+    canonicalDescendantProof: request.canonicalDescendantProof ?? null,
     expiresAt: instant(request.expiresAt, "expiresAt"),
     expectedLedgerDigest: request.expectedLedgerDigest === null
       ? null
@@ -315,10 +357,10 @@ export function createEmptyLedger(ledgerRepository) {
   return { schema: LEDGER_SCHEMA, ledgerRepositoryId, sequence: 0, headDigest: null, entries: [] };
 }
 const CURRENT_CORE_REQUIRED = ["claimId", "actorId", "deviceId", "sessionId", "repositoryId", "workItemId", "canonicalBaseRevision", "declaredWriteScope", "writeSetDigest", "laneRevision", "leaseEpoch", "transitionCounter", "heartbeatCounter", "state", "expiresAt", "evidenceDigest", "reviewRequestId", "predecessorClaimId", "eligibleSince", "handoff", "release"];
-const CURRENT_CORE_OPTIONAL = ["handoffEvidenceDigest", "promotedAt", "recovery", "integration", "retirement"];
+const CURRENT_CORE_OPTIONAL = ["canonicalDescendantProof", "handoffEvidenceDigest", "promotedAt", "recovery", "integration", "retirement"];
 const RESERVATION_STATES = new Set(["current", "reviewed", "integrated-preserved", "dormant-preserved"]);
 const LEGACY_STATES = Object.freeze({ active: "current", "review-ready": "reviewed", "delivery-authorized": "reviewed", parked: "dormant-preserved", released: "retired" });
-const IDENTITY_FIELDS = ["actorId", "repositoryId", "workItemId", "canonicalBaseRevision", "declaredWriteScope", "writeSetDigest", "leaseEpoch", "predecessorClaimId"];
+const IDENTITY_FIELDS = ["actorId", "repositoryId", "workItemId", "canonicalBaseRevision", "canonicalDescendantProof", "declaredWriteScope", "writeSetDigest", "leaseEpoch", "predecessorClaimId"];
 const REVIEW_FIELDS = ["laneRevision", "reviewRequestId", "evidenceDigest"];
 const PROJECTION_FIELDS = ["deviceId", "sessionId", "eligibleSince", "handoffEvidenceDigest", "promotedAt", "recovery"];
 const OVERLAP_CACHE = new Map(), OVERLAP_CACHE_LIMIT = 4096;
@@ -413,13 +455,24 @@ function checkClaim(entry, records, latest, failures, label) {
   if (queued && core.predecessorClaimId !== predecessor) failures.push(`${label} claim predecessor priority is invalid`);
   if (!queued && core.predecessorClaimId) {
     const prior = latest.get(core.predecessorClaimId), priorCore = prior?.claimCore;
+    const divergentBase = priorCore?.canonicalBaseRevision !== core.canonicalBaseRevision;
+    let validDescendantProof = false;
+    if (divergentBase && core.canonicalDescendantProof) {
+      try {
+        validDescendantProof = Boolean(normalizeCanonicalDescendantProof({
+          value: core.canonicalDescendantProof,
+          sourceBaseSha: core.canonicalBaseRevision,
+        }));
+      } catch {}
+    }
     if (!prior || !["dormant-preserved", "retired"].includes(effectiveState(prior, entry.evaluationTime))
-      || changed(core, priorCore, ["repositoryId", "workItemId", "writeSetDigest", "laneRevision", "canonicalBaseRevision"])) {
+      || changed(core, priorCore, ["repositoryId", "workItemId", "writeSetDigest", "laneRevision"])
+      || (divergentBase && !validDescendantProof) || (!divergentBase && core.canonicalDescendantProof)) {
       failures.push(`${label} claim predecessor identity is invalid`);
     }
   }
   if (evaluatedAt >= Date.parse(core.expiresAt) || core.heartbeatCounter !== 0 || core.evidenceDigest !== null || core.reviewRequestId !== null
-    || CURRENT_CORE_OPTIONAL.some((field) => Object.hasOwn(core, field))) failures.push(`${label} claim evidence is invalid`);
+    || CURRENT_CORE_OPTIONAL.some((field) => field !== "canonicalDescendantProof" && Object.hasOwn(core, field))) failures.push(`${label} claim evidence is invalid`);
 }
 function checkPromotion(entry, previous, records, latest, failures, label) {
   const core = entry.claimCore, prior = previous.claimCore;

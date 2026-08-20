@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import Ajv2020 from "ajv/dist/2020.js";
 
 import {
   CLOUD_COLLABORATION_BOUNDS,
@@ -43,6 +45,24 @@ function evidence(label) {
   return digestValue({ evidence: label });
 }
 
+function canonicalDescendantProof({ sourceBaseSha, targetBaseSha,
+  canonicalChangedPaths = ["docs/current.md"],
+  preservedChangedPaths = ["scripts/preserved.mjs"] }) {
+  const core = {
+    schema: "agentic-legacy-review-current-base-disjoint-proof/v1",
+    sourceBaseSha,
+    targetBaseSha,
+    protectedMainSha: targetBaseSha,
+    canonicalChangedPaths,
+    canonicalChangedPathsDigest: digestValue(canonicalChangedPaths),
+    preservedChangedPaths,
+    preservedChangedPathsDigest: digestValue(preservedChangedPaths),
+    ancestry: "source-base-to-current-protected-main",
+    overlap: "none",
+  };
+  return { ...core, evidenceDigest: digestValue(core) };
+}
+
 function claim(ledger, {
   identity = owner,
   targetRepository = repository,
@@ -50,9 +70,11 @@ function claim(ledger, {
   scope = ["path:docs/a.md"],
   leaseEpoch = 1,
   predecessorClaimId = null,
+  canonicalBaseRevision = targetRepository.canonicalRevision,
+  canonicalDescendantProof = null,
   time = T0,
   expiresAt = T4,
-  laneRevision = targetRepository.canonicalRevision,
+  laneRevision = canonicalBaseRevision,
   idempotencyKey = `claim:${workItemId}:${leaseEpoch}`,
   expectedLedgerDigest = ledger.headDigest,
 } = {}) {
@@ -64,11 +86,12 @@ function claim(ledger, {
     evaluationTime: time,
     request: {
       workItemId,
-      canonicalBaseRevision: targetRepository.canonicalRevision,
+      canonicalBaseRevision,
       declaredWriteScope: scope,
       laneRevision,
       leaseEpoch,
       ...(predecessorClaimId ? { predecessorClaimId } : {}),
+      ...(canonicalDescendantProof ? { canonicalDescendantProof } : {}),
       expiresAt,
       expectedLedgerDigest,
       idempotencyKey,
@@ -317,6 +340,56 @@ test("a named predecessor must resolve to the exact preserved matching authority
   });
   assert.equal(successor.claim.state, "current");
   assert.equal(successor.claim.predecessorClaimId, first.claim.claimId);
+});
+
+test("a terminal matching subject admits its historical PR base only with exact disjoint descendant proof", async () => {
+  const predecessorBase = revision("predecessor-base");
+  const historicalBase = revision("historical-pr-base");
+  const laneRevision = revision("preserved-head");
+  const predecessorRepository = { ...repository, canonicalRevision: predecessorBase };
+  const first = claim(createEmptyLedger("ledger:repository"), {
+    targetRepository: predecessorRepository,
+    laneRevision,
+  });
+  const retired = retire(first.ledger, first.claim, { time: T1 });
+  const proof = canonicalDescendantProof({ sourceBaseSha: historicalBase,
+    targetBaseSha: repository.canonicalRevision });
+  const successor = claim(retired.ledger, {
+    canonicalBaseRevision: historicalBase,
+    canonicalDescendantProof: proof,
+    predecessorClaimId: first.claim.claimId,
+    laneRevision,
+    leaseEpoch: 2,
+    time: T2,
+    expiresAt: T6,
+    idempotencyKey: "claim:historical-pr-base",
+  });
+  assert.equal(successor.claim.state, "current");
+  assert.equal(successor.claim.canonicalBaseRevision, historicalBase);
+  const schema = JSON.parse(await readFile(new URL(
+    "../docs/schemas/cloud-collaboration-ledger.v1.schema.json", import.meta.url,
+  ), "utf8"));
+  const validate = new Ajv2020({ strict: false, formats: { "date-time": true } }).compile(schema);
+  assert.equal(validate(successor.ledger), true, JSON.stringify(validate.errors));
+
+  for (const invalidProof of [
+    { ...proof, targetBaseSha: revision("foreign-protected") },
+    canonicalDescendantProof({ sourceBaseSha: historicalBase,
+      targetBaseSha: repository.canonicalRevision,
+      canonicalChangedPaths: ["scripts/preserved.mjs"] }),
+    { ...proof, evidenceDigest: evidence("forged-proof") },
+  ]) {
+    assert.throws(() => claim(retired.ledger, {
+      canonicalBaseRevision: historicalBase,
+      canonicalDescendantProof: invalidProof,
+      predecessorClaimId: first.claim.claimId,
+      laneRevision,
+      leaseEpoch: 2,
+      time: T2,
+      expiresAt: T6,
+      idempotencyKey: `claim:invalid-proof:${invalidProof.evidenceDigest}`,
+    }), error => error?.code === "invalid_request");
+  }
 });
 
 test("expiry is dormant-preserved and recovery ignores the expired device lease", () => {

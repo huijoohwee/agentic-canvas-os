@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3483,
-  "headDigest": "1cf385b032fdbc70af42d9a5d6f2f429c2ce25f14bf597da47d4b79842595e0d",
+  "sequence": 3484,
+  "headDigest": "43902e98e5bbb4eca6030ebefa1b11c2c8eb6891c6e25105cd6246b849c30eec",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -173797,6 +173797,47 @@
       },
       "claimDigest": "ebaa57b788208ed71f3a62fda4b05e11c7232276172f490126c91901ae07c5a6",
       "digest": "1cf385b032fdbc70af42d9a5d6f2f429c2ce25f14bf597da47d4b79842595e0d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3484,
+      "parentDigest": "1cf385b032fdbc70af42d9a5d6f2f429c2ce25f14bf597da47d4b79842595e0d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9b42e1878966d6ce1bcd391baf38a1011a3217dfa35822e0aec7a6b7e53adfa2",
+      "idempotencyKey": "2733c3d2186afaaa94e86031aadc707a315a4b4ae228697e4bc2961f996d49cc",
+      "requestDigest": "ebf1d5e196ea7fe0c7c71cb0598d02d5d2cfbaafaa05c2acd955ee3ee0fe522a",
+      "evaluationTime": "2026-08-20T06:22:01.000Z",
+      "claimCore": {
+        "claimId": "9b42e1878966d6ce1bcd391baf38a1011a3217dfa35822e0aec7a6b7e53adfa2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:fa2bc907f16b8e109bba01098313fc3e95ad08340858f1423d90e278657ac4e8",
+        "canonicalBaseRevision": "8ee93d7baa43764ef447f820bd823aac238e2add",
+        "declaredWriteScope": [
+          "path:__tests__/planned-device-projection-recovery.test.mjs",
+          "path:docs/PLANNED-DEVICE-PROJECTION-RECOVERY.md",
+          "path:scripts/planned-device-projection-recovery-cloud-adapter.mjs",
+          "semantic:planned-device-projection-expired-replay"
+        ],
+        "writeSetDigest": "c03752ae8c3e404a5708d12d52e11fe99890c028d660f36266c420f246aad1b2",
+        "laneRevision": "602128a4651ad06c6133cbcd41c847d7f8031195",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-20T06:39:00.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAYCmtw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "11dc412a8dfbee99146b7aa2618e2e86151361e1767b0d1c1bdb296e63551b93",
+      "digest": "43902e98e5bbb4eca6030ebefa1b11c2c8eb6891c6e25105cd6246b849c30eec"
     }
   ]
 }

@@ -304,7 +304,7 @@ test("legacy admission manifest binds normalized source paths", () => {
   }));
 });
 
-test("initial cloud projection atomically continues the task binding", () => {
+test("initial and replacement cloud projections atomically continue the task binding", () => {
   const branch = REQUEST.branch;
   const sourceClaimId = "3".repeat(64);
   const targetClaimId = "4".repeat(64);
@@ -315,36 +315,40 @@ test("initial cloud projection atomically continues the task binding", () => {
   };
   const values = { cloudAuthority: { claimId: targetClaimId }, baseSha: BASE_SHA };
   const targetBinding = { bindingDigest: "6".repeat(64) };
-  let mutationCount = 0;
-  const result = projectCloudAuthorityAndTaskBinding({
-    leaseStore: {}, lease, request: REQUEST, values,
-    repairProof: { evidenceDigest: "7".repeat(64) },
-  }, {
-    authorize: ({ lease: source, operation }) => {
-      assert.equal(source.cloudAuthority, null);
-      assert.equal(operation, "legacy-bootstrap-cloud-claim-task-binding-continuation");
-      return { receiptDigest: "8".repeat(64) };
-    },
-    createBinding: ({ lease: target, bindingMode, priorBindingDigest }) => {
-      assert.equal(target.cloudAuthority.claimId, targetClaimId);
-      assert.equal(bindingMode, "continuation");
-      assert.equal(priorBindingDigest, lease.taskAuthority.bindingDigest);
-      return targetBinding;
-    },
-    mutate: ({ expectedClaimId, action }) => {
-      mutationCount += 1;
-      assert.equal(expectedClaimId, sourceClaimId);
-      const mutation = action({ registry: { leases: { [branch]: lease } } });
-      assert.equal(mutation.registry.leases[branch].cloudAuthority.claimId, targetClaimId);
-      assert.equal(mutation.registry.leases[branch].taskAuthority, targetBinding);
-      return { lease: mutation.lease, registryRevision: 2 };
-    },
-    leaseDigest: value => digestValue(value),
-  });
-  assert.equal(mutationCount, 1);
-  assert.equal(result.lease.cloudAuthority.claimId, targetClaimId);
-  assert.equal(result.lease.taskAuthority, targetBinding);
-  assert.match(result.continuationReceipt.receiptDigest, /^[0-9a-f]{64}$/u);
+  for (const sourceWithoutCloud of [true, false]) {
+    let mutationCount = 0;
+    const result = projectCloudAuthorityAndTaskBinding({
+      leaseStore: {}, lease, request: REQUEST, values, sourceWithoutCloud,
+      repairProof: { evidenceDigest: "7".repeat(64) },
+    }, {
+      authorize: ({ lease: source, operation }) => {
+        assert.equal(source.cloudAuthority, sourceWithoutCloud ? null : lease.cloudAuthority);
+        assert.equal(operation, sourceWithoutCloud
+          ? "legacy-bootstrap-cloud-claim-task-binding-continuation"
+          : "legacy-bootstrap-current-base-task-binding-continuation");
+        return { receiptDigest: "8".repeat(64) };
+      },
+      createBinding: ({ lease: target, bindingMode, priorBindingDigest }) => {
+        assert.equal(target.cloudAuthority.claimId, targetClaimId);
+        assert.equal(bindingMode, "continuation");
+        assert.equal(priorBindingDigest, lease.taskAuthority.bindingDigest);
+        return targetBinding;
+      },
+      mutate: ({ expectedClaimId, action }) => {
+        mutationCount += 1;
+        assert.equal(expectedClaimId, sourceClaimId);
+        const mutation = action({ registry: { leases: { [branch]: lease } } });
+        assert.equal(mutation.registry.leases[branch].cloudAuthority.claimId, targetClaimId);
+        assert.equal(mutation.registry.leases[branch].taskAuthority, targetBinding);
+        return { lease: mutation.lease, registryRevision: 2 };
+      },
+      leaseDigest: value => digestValue(value),
+    });
+    assert.equal(mutationCount, 1);
+    assert.equal(result.lease.cloudAuthority.claimId, targetClaimId);
+    assert.equal(result.lease.taskAuthority, targetBinding);
+    assert.match(result.continuationReceipt.receiptDigest, /^[0-9a-f]{64}$/u);
+  }
 });
 
 test("phase inspection attributes both initial and bound successor claims", () => {

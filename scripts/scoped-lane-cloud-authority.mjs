@@ -582,6 +582,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   deviceId,
   sessionId,
   workItemId = branch,
+  predecessorClaimId = null,
   leaseEpoch = 1,
   ttlSeconds = 1_800,
   environment = process.env,
@@ -603,12 +604,15 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   );
   const resolvedHeadSha = requiredSha(headSha, "headSha");
   const resolvedBranch = requiredText(branch, "branch");
+  const resolvedPredecessorClaimId = predecessorClaimId
+    ? requiredDigest(predecessorClaimId, "predecessorClaimId") : null;
   const requestForLeaseEpoch = claimLeaseEpoch => ({
     targetRepository: resolvedTargetRepository,
     branch: resolvedBranch,
     workItemId: requiredText(workItemId, "workItemId"),
     canonicalBaseSha: resolvedCanonicalBaseSha,
     headSha: resolvedCanonicalBaseSha,
+    predecessorClaimId: resolvedPredecessorClaimId,
     declaredWriteScope: manifest?.declaredWriteSet,
     leaseEpoch: positiveInteger(claimLeaseEpoch, "leaseEpoch"),
     deviceId: requiredText(deviceId, "deviceId"),
@@ -621,6 +625,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       resolvedCanonicalBaseSha,
       resolvedHeadSha,
       manifest?.writeSetDigest,
+      ...(resolvedPredecessorClaimId ? [resolvedPredecessorClaimId] : []),
       claimLeaseEpoch,
     ].join(":"),
   });

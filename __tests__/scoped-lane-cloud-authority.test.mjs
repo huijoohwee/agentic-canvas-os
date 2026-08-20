@@ -832,10 +832,26 @@ test("legacy review bootstrap claims at base and binds the exact reviewed head",
   });
   assert.equal(harness.calls[0].action, "claim");
   assert.equal(harness.calls[0].request.headSha, BASE_SHA);
+  assert.equal(harness.calls[0].request.idempotencyKey,
+    ["legacy-review-claim", "owner/target", BRANCH, BASE_SHA, HEAD_SHA, WRITE_SET_DIGEST, 1].join(":"));
   assert.equal(harness.calls[1].action, "continue");
   assert.equal(harness.calls[1].request.mode, "projection");
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap carries an exact retired predecessor for a historical PR base", () => {
+  const predecessorClaimId = "e".repeat(64);
+  const harness = projectionHarness(rootClaim({ laneRevision: BASE_SHA, transitionCounter: 1 }));
+  claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger", targetRepository: "owner/target", manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA, branch: BRANCH, headSha: HEAD_SHA, predecessorClaimId,
+    deviceId: DEVICE_ID, sessionId: SESSION_ID,
+    invoke: harness.invoke, inspect: harness.inspect, verify: harness.verify,
+  });
+  assert.equal(harness.calls[0].action, "claim");
+  assert.equal(harness.calls[0].request.predecessorClaimId, predecessorClaimId);
+  assert.match(harness.calls[0].request.idempotencyKey, new RegExp(predecessorClaimId, "u"));
 });
 
 test("public claim projection preserves pseudonymous owner identity", () => {

@@ -490,6 +490,7 @@ function resolveReviewBoundAuthority({ request, lease, review }) {
     ledgerRepository: request.ledgerRepository, targetRepository: request.targetRepository, manifest,
     canonicalBaseSha: review.baseRefOid, branch: request.branch, headSha: request.expectedHeadSha,
     deviceId: request.deviceId, sessionId: request.sessionId,
+    predecessorClaimId: lease.cloudAuthority?.claimId || null,
     leaseEpoch: (lease.cloudAuthority?.leaseEpoch || 0) + 1 });
   if (current.authority.reviewRequestId === reviewRequestId
     && current.authority.laneRevision === request.expectedHeadSha) {

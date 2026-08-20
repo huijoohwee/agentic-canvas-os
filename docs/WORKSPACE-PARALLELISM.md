@@ -290,8 +290,8 @@ repository-owned adoption controller provides a bounded two-phase recovery path:
    commit to be already present. A second evidence read must match before capture
    succeeds.
 2. `adopt` revalidates every package byte and the still-unchanged legacy source. It
-   accepts only a clean registered target whose exact live writer-lease digest
-   belongs to the capturing session and started at the captured protected tip.
+   accepts only a clean registered target whose exact live writer-lease digest belongs to the capturing session and whose base equals the captured protected tip or descends from it through a complete protected-tip-to-base changed-path set disjoint from every recovered path.
+   Non-ancestry or any path overlap fails before target mutation.
    The repository registry lock and digest compare-and-swap fence remain held from
    target preflight through patch/copy and receipt publication; expiry or lease
    replacement fails before target mutation. It rejects divergent untracked-path

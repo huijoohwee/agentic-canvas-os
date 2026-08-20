@@ -1,7 +1,7 @@
 import { CLOUD_COLLABORATION_BOUNDS, ENTRY_SCHEMA, LEGACY_ENTRY_SCHEMA, LEDGER_SCHEMA,
   MUTATING_ACTIONS, RECEIPT_SCHEMA, FINDING_TYPES, canonicalJson, collaborationFinding,
   createEmptyLedger, digest, digestValue, fail, findUncoveredPathScopes, instant,
-  normalizeActor, normalizeRepository, normalizeRootIntent, normalizeWriteSet, text,
+  normalizeActor, normalizeCanonicalDescendantProof, normalizeRepository, normalizeRootIntent, normalizeWriteSet, text,
   validateLedger, writeSetsOverlap,
 } from "./cloud-collaboration-primitives.mjs";
 export { CLOUD_COLLABORATION_BOUNDS, CloudCollaborationError, ENTRY_SCHEMA, LEGACY_ENTRY_SCHEMA,
@@ -379,23 +379,30 @@ function buildClaimCore(intent, ledger, evaluationTime) {
     evidenceDigest: null,
     reviewRequestId: null,
     predecessorClaimId: predecessorClaimId ?? null,
+    ...(intent.canonicalDescendantProof
+      ? { canonicalDescendantProof: intent.canonicalDescendantProof }
+      : {}),
     eligibleSince: overlapping.length + queued.length === 0 ? null : evaluationTime,
     handoff: null,
     release: null,
   };
 }
-function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime }) {
+function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime, protectedRevision = null }) {
   if (!intent.predecessorClaimId) return false;
   const predecessor = hydrate(findClaimEntry(ledger, intent.predecessorClaimId), evaluationTime);
-  return Boolean(
-    predecessor
+  const subjectMatches = predecessor
     && ["dormant-preserved", "retired"].includes(predecessor.state)
     && predecessor.repositoryId === intent.repositoryId
     && predecessor.workItemId === intent.workItemId
     && predecessor.writeSetDigest === intent.writeSetDigest
-    && predecessor.laneRevision === intent.laneRevision
-    && predecessor.canonicalBaseRevision === intent.canonicalBaseRevision,
-  );
+    && predecessor.laneRevision === intent.laneRevision;
+  if (!subjectMatches) return false;
+  if (predecessor.canonicalBaseRevision === intent.canonicalBaseRevision) return true;
+  return Boolean(normalizeCanonicalDescendantProof({
+    value: intent.canonicalDescendantProof,
+    sourceBaseSha: intent.canonicalBaseRevision,
+    protectedRevision,
+  }));
 }
 function appendEntry(ledger, action, intent, requestDigest, idempotencyKey, evaluationTime) {
   const claimCore = claimCoreForAction(action, intent, ledger, evaluationTime);
@@ -471,7 +478,17 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
   if (!MUTATING_ACTIONS.has(normalizedAction)) fail("invalid_action", `unsupported action: ${normalizedAction}`);
   const repositoryValue = normalizeRepository(repository);
   const actorValue = normalizeActor(actor, request);
-  const intent = normalizeRootIntent(normalizedAction, request, actorValue, repositoryValue.repositoryId);
+  const rawIntent = normalizeRootIntent(normalizedAction, request, actorValue, repositoryValue.repositoryId);
+  const canonicalDescendantProof = normalizedAction === "claim" && rawIntent.canonicalDescendantProof
+    ? normalizeCanonicalDescendantProof({ value: rawIntent.canonicalDescendantProof,
+      sourceBaseSha: rawIntent.canonicalBaseRevision, protectedRevision: repositoryValue.canonicalRevision })
+    : null;
+  if (canonicalDescendantProof && !rawIntent.predecessorClaimId) {
+    fail("invalid_request", "canonicalDescendantProof requires predecessorClaimId");
+  }
+  const intent = canonicalDescendantProof
+    ? { ...rawIntent, canonicalDescendantProof }
+    : rawIntent;
   if (
     repositoryValue.canonicalRevision
     && normalizedAction === "claim"
@@ -480,6 +497,7 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
       ledger,
       intent,
       evaluationTime: evaluatedAt,
+      protectedRevision: repositoryValue.canonicalRevision,
     })
   ) {
     fail("stale_canonical_base", "canonicalBaseRevision does not match protected source");

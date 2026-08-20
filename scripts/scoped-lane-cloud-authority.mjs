@@ -583,6 +583,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   sessionId,
   workItemId = branch,
   predecessorClaimId = null,
+  canonicalDescendantProof = null,
   leaseEpoch = 1,
   ttlSeconds = 1_800,
   environment = process.env,
@@ -613,6 +614,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
     canonicalBaseSha: resolvedCanonicalBaseSha,
     headSha: resolvedCanonicalBaseSha,
     predecessorClaimId: resolvedPredecessorClaimId,
+    canonicalDescendantProof,
     declaredWriteScope: manifest?.declaredWriteSet,
     leaseEpoch: positiveInteger(claimLeaseEpoch, "leaseEpoch"),
     deviceId: requiredText(deviceId, "deviceId"),
@@ -626,6 +628,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       resolvedHeadSha,
       manifest?.writeSetDigest,
       ...(resolvedPredecessorClaimId ? [resolvedPredecessorClaimId] : []),
+      ...(canonicalDescendantProof?.evidenceDigest ? [canonicalDescendantProof.evidenceDigest] : []),
       claimLeaseEpoch,
     ].join(":"),
   });

@@ -446,7 +446,7 @@ function reconcileFinalCurrentBaseAuthority({ context, repository, leaseStore })
   const review = readOwnershipPullRequest({ url: lease.pullRequestUrl, branch: request.branch,
     ghText: args => ghText(args, { cwd: repository }) });
   const proof = currentProtectedBaseProof({ request, sourceBaseSha: review.baseRefOid });
-  const replacement = resolveReviewBoundAuthority({ request, lease, review });
+  const replacement = resolveReviewBoundAuthority({ request, lease, review, proof });
   if (replacement.authority.claimId === lease.cloudAuthority?.claimId
     && !taskBindingMatchesNullCloud(lease)) return restoreReviewMarker({ lease, review, repository });
   const admission = createAdmissionProjection({ request, lease,
@@ -473,7 +473,7 @@ function initialCloudProjectionTaskBindingRepair({ lease, request, repository })
   }
   return { proof: currentProtectedBaseProof({ request, sourceBaseSha: review.baseRefOid }) };
 }
-function resolveReviewBoundAuthority({ request, lease, review }) {
+function resolveReviewBoundAuthority({ request, lease, review, proof }) {
   const manifest = admissionManifest(request);
   const inventory = readCurrentClaimInventory({ request });
   const reviewRequestId = `github-pull-request:${review.id}`;
@@ -491,6 +491,8 @@ function resolveReviewBoundAuthority({ request, lease, review }) {
     canonicalBaseSha: review.baseRefOid, branch: request.branch, headSha: request.expectedHeadSha,
     deviceId: request.deviceId, sessionId: request.sessionId,
     predecessorClaimId: lease.cloudAuthority?.claimId || null,
+    canonicalDescendantProof: proof.schema === "agentic-legacy-review-current-base-disjoint-proof/v1"
+      ? proof : null,
     leaseEpoch: (lease.cloudAuthority?.leaseEpoch || 0) + 1 });
   if (current.authority.reviewRequestId === reviewRequestId
     && current.authority.laneRevision === request.expectedHeadSha) {

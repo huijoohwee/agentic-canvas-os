@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3592,
-  "headDigest": "4a1b96e525d610786b0a569d0fa9db2a8b685cf2bbe267caee6ac9bddaba42f9",
+  "sequence": 3593,
+  "headDigest": "195d32b3483e62fef77c0a3d998248ea18f3f4c5f2a2cfcb1e4a89ca90998ba4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -180355,6 +180355,45 @@
       },
       "claimDigest": "1392dfd17c9d531bff5dfa6ea851d3d81c216162c9970be9affef09a7d7088fa",
       "digest": "4a1b96e525d610786b0a569d0fa9db2a8b685cf2bbe267caee6ac9bddaba42f9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3593,
+      "parentDigest": "4a1b96e525d610786b0a569d0fa9db2a8b685cf2bbe267caee6ac9bddaba42f9",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a52b55c7295ba4cbbe936df5422852b3c0daedc75218bcb6d5e2ca57436d5926",
+      "idempotencyKey": "6738e30ad748147883fc272cfe06af99b3145679cca0e2a163465aa7f4cadaac",
+      "requestDigest": "701504fbde1448f3a20212e2fa4eeba0af1f539913eae1a3d5b499c44a68ca4b",
+      "evaluationTime": "2026-08-20T12:34:23.000Z",
+      "claimCore": {
+        "claimId": "a52b55c7295ba4cbbe936df5422852b3c0daedc75218bcb6d5e2ca57436d5926",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2b65d4a6108ae574631673837b0f719b30cfab11edcc5ba6bc88cc1c9b95579b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d2a74ee3c2576c014ab4c0540d7614fdc8d5d7bcbf48e340279c73b43c7fb5ab",
+        "canonicalBaseRevision": "8b128a5c23fc9acbf003f3126de711e93952c0a2",
+        "declaredWriteScope": [
+          "path:docs/RELEASE-WORKFLOW.md",
+          "semantic:release-control"
+        ],
+        "writeSetDigest": "6361e08134006a76d1a0e75a81f898e9fcbdf2a0941d7650894859aa17b9b57f",
+        "laneRevision": "7439e17678674b0831868d6f7011e2ad61fbcda0",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-20T13:01:32.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAalYwA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cf371e7c3629e515498b036f40e9e1ef8354e80a707afc0341ff5c90c0a68bc0",
+      "digest": "195d32b3483e62fef77c0a3d998248ea18f3f4c5f2a2cfcb1e4a89ca90998ba4"
     }
   ]
 }

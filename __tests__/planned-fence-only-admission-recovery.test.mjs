@@ -46,7 +46,8 @@ const DEVICE = "test-device.local";
 const CLOUD_SESSION = pseudonymousIdentifier("session", SESSION);
 const CLOUD_DEVICE = pseudonymousIdentifier("device", DEVICE);
 const REPOSITORY = "owner/repository";
-const REVIEW = "provider-review:R_1";
+const REVIEW = "PR_fixture";
+const CLOUD_REVIEW = `github-pull-request:${REVIEW}`;
 const EXPIRED = "2026-08-14T01:00:00.000Z";
 const OBSERVED = "2026-08-14T02:00:00.000Z";
 const RECOVERED = "2026-08-14T03:00:00.000Z";
@@ -75,8 +76,8 @@ function fixture() {
     writeSetDigest: manifest.writeSetDigest,
     leaseEpoch: 1,
     transitionCounter: 3,
-    heartbeatCounter: 1,
-    reviewRequestId: REVIEW,
+    heartbeatCounter: 0,
+    reviewRequestId: CLOUD_REVIEW,
     expiresAt: EXPIRED,
     fenceRevision: D("source-fence"),
     transitionDigest: D("source-transition"),
@@ -104,10 +105,9 @@ function fixture() {
     manifestDigest: manifest.manifestDigest,
     deviceId: CLOUD_DEVICE,
     sessionId: CLOUD_SESSION,
-    reviewRequestId: REVIEW,
+    reviewRequestId: CLOUD_REVIEW,
     leaseEpoch: 1,
     transitionCounter: 3,
-    heartbeatCounter: 1,
     state: "active",
     expiresAt: EXPIRED,
   };
@@ -197,6 +197,7 @@ function targetAuthority(source) {
     claimLedgerRevision: D("target-transition"),
     operationReceiptDigest: D("target-operation"),
     transitionCounter: source.transitionCounter + 1,
+    heartbeatCounter: source.heartbeatCounter ?? 0,
     expiresAt: TARGET_EXPIRY,
     state: "active",
   };
@@ -317,6 +318,48 @@ test("evidence seals only an expired clean fence-only planned subject", () => {
     mutate(changed);
     assert.throws(() => buildPlannedFenceOnlyAdmissionRecoveryEvidence(changed));
   }
+});
+
+test("legacy source heartbeat omission means zero and rejects nonzero drift", () => {
+  const { input } = fixture();
+  assert.equal(Object.hasOwn(input.sourceLease.cloudAuthority, "heartbeatCounter"), false);
+  assert.equal(buildPlannedFenceOnlyAdmissionRecoveryEvidence(input)
+    .sourceLease.cloudAuthority.heartbeatCounter, undefined);
+
+  const nonzeroCloud = structuredClone(input);
+  nonzeroCloud.cloud.claim.heartbeatCounter = 1;
+  assert.throws(() => buildPlannedFenceOnlyAdmissionRecoveryEvidence(nonzeroCloud));
+
+  const explicitCounter = structuredClone(input);
+  explicitCounter.sourceLease.cloudAuthority.heartbeatCounter = 4;
+  explicitCounter.cloud.claim.heartbeatCounter = 4;
+  explicitCounter.review.body = updateWriterLeasePullRequestBody(
+    "## Coordination\n", explicitCounter.sourceLease,
+  );
+  explicitCounter.review.bodyDigest = digestValue(explicitCounter.review.body);
+  explicitCounter.review.visibleBodyDigest = visibleReviewBodyDigest(explicitCounter.review.body);
+  explicitCounter.review.markerDigest = digestValue(
+    parseWriterLeasePullRequestBody(explicitCounter.review.body),
+  );
+  assert.equal(buildPlannedFenceOnlyAdmissionRecoveryEvidence(explicitCounter)
+    .cloud.claim.heartbeatCounter, 4);
+
+  explicitCounter.cloud.claim.heartbeatCounter = 5;
+  assert.throws(() => buildPlannedFenceOnlyAdmissionRecoveryEvidence(explicitCounter));
+});
+
+test("raw GitHub review identities normalize only for the repository adapter", () => {
+  const { input } = fixture();
+  assert.equal(buildPlannedFenceOnlyAdmissionRecoveryEvidence(input)
+    .sourceLease.cloudAuthority.reviewRequestId, CLOUD_REVIEW);
+
+  const wrongIdentity = structuredClone(input);
+  wrongIdentity.review.id = "PR_foreign";
+  assert.throws(() => buildPlannedFenceOnlyAdmissionRecoveryEvidence(wrongIdentity));
+
+  const foreignAdapter = structuredClone(input);
+  foreignAdapter.review.adapterId = "fixture-review-adapter/v1";
+  assert.throws(() => buildPlannedFenceOnlyAdmissionRecoveryEvidence(foreignAdapter));
 });
 
 test("controller completes once, denies authority, and replays durable completion", async () => {

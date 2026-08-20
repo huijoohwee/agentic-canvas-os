@@ -328,7 +328,7 @@ function assertLease({ sourceLease: lease, manifest, repository, fence, localPro
     || canonical.branch !== "main" || review.headRepository !== repository.id
     || review.headSha !== lease.fenceSha || review.baseSha !== lease.baseSha
     || review.url !== lease.pullRequestUrl || !review.draft || !review.autoMergeAbsent
-    || review.id !== authority.reviewRequestId
+    || normalizeReviewRequestId(review.adapterId, review.id) !== authority.reviewRequestId
     || canonicalJson(observedMarker) !== canonicalJson(projectedMarker)
     || review.markerDigest !== digestValue(projectedMarker)
     || authority.targetRepository !== repository.id || authority.claimId !== claim.claimId
@@ -337,7 +337,7 @@ function assertLease({ sourceLease: lease, manifest, repository, fence, localPro
     || authority.manifestDigest !== manifest.manifestDigest
     || authority.leaseEpoch !== claim.leaseEpoch
     || authority.transitionCounter !== claim.transitionCounter
-    || authority.heartbeatCounter !== claim.heartbeatCounter
+    || normalizeHeartbeatCounter(authority.heartbeatCounter) !== claim.heartbeatCounter
     || authority.claimDigest !== claim.fenceRevision
     || authority.claimLedgerRevision !== claim.transitionDigest
     || authority.operationReceiptDigest !== claim.operationReceiptDigest
@@ -395,6 +395,18 @@ function normalizeOwnerIdentifier(namespace, value) {
   return candidate.startsWith(prefix) && /^[0-9a-f]{64}$/u.test(candidate.slice(prefix.length))
     ? candidate
     : `${namespace}:${digestValue({ namespace, value: candidate })}`;
+}
+function normalizeHeartbeatCounter(value) {
+  return value === null || value === undefined
+    ? 0
+    : nonnegative(value, "source heartbeat counter");
+}
+function normalizeReviewRequestId(adapterId, value) {
+  const identity = text(value, "review identity");
+  if (identity.startsWith("github-pull-request:")) return identity;
+  return adapterId === "github-cli-hidden-writer-marker/v1" && identity.startsWith("PR_")
+    ? `github-pull-request:${identity}`
+    : identity;
 }
 function record(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) invalid(label); return value; }
 function text(value, label) { if (typeof value !== "string" || !value || value !== value.trim() || value.includes("\0")) invalid(label); return value; }

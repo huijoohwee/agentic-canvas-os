@@ -208,7 +208,7 @@ function assertSourceClaim({ claim, sourceAuthority, sourceLease, manifest }) {
     || claim.fenceRevision !== sourceAuthority.claimDigest
     || claim.transitionDigest !== sourceAuthority.claimLedgerRevision
     || claim.transitionCounter !== sourceAuthority.transitionCounter
-    || claim.heartbeatCounter !== sourceAuthority.heartbeatCounter
+    || claim.heartbeatCounter !== normalizeHeartbeatCounter(sourceAuthority.heartbeatCounter)
     || claim.operationReceiptDigest !== sourceAuthority.operationReceiptDigest
     || claim.entrySchema !== sourceAuthority.entrySchema
     || claim.claimIdentitySchema !== sourceAuthority.claimIdentitySchema
@@ -399,6 +399,12 @@ function normalizeOwnerIdentifier(namespace, value) {
   return candidate.startsWith(prefix) && /^[0-9a-f]{64}$/u.test(candidate.slice(prefix.length))
     ? candidate
     : pseudonymousIdentifier(namespace, candidate);
+}
+
+function normalizeHeartbeatCounter(value) {
+  return value === null || value === undefined
+    ? 0
+    : nonnegative(value, "source heartbeat counter");
 }
 
 function projectInventoryClaim(value) {

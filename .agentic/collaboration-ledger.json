@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3546,
-  "headDigest": "d86509c600d5a138a787bf486e1738dea82f18c05692ca28c2cb7f87bc1eb9e2",
+  "sequence": 3547,
+  "headDigest": "97447bf4db3f6bc28809379244bfdbcc0adb9ad9923fe84d0ae6bf4473ab097c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -176556,6 +176556,50 @@
       },
       "claimDigest": "29459a8bc148f9e58122bf6ca9ae47dd358e27edccebc220d2a11e886f1c43c9",
       "digest": "d86509c600d5a138a787bf486e1738dea82f18c05692ca28c2cb7f87bc1eb9e2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3547,
+      "parentDigest": "d86509c600d5a138a787bf486e1738dea82f18c05692ca28c2cb7f87bc1eb9e2",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b618163186ecfa387770c8f59ac24849db614f6e607485ab56e51169c69bd424",
+      "idempotencyKey": "62ca28c86af77d42106f742bc729fabedace95e51b1e54aac126bd6fc5d58d90",
+      "requestDigest": "945844063812bb265d78ae426ee20258f791e5e0a3a8d44b01438667f83379be",
+      "evaluationTime": "2026-08-20T09:36:27.000Z",
+      "claimCore": {
+        "claimId": "b618163186ecfa387770c8f59ac24849db614f6e607485ab56e51169c69bd424",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:5953ae2b32b4cddcdf6040dff6441176a04bfd6c45c1e93151181b4af9aabfc8",
+        "sessionId": "session:164abcaa58bd0206a782e32c0f1303b7bedf645b640e11584fcee034d1435e86",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:5e2820b04fbbe3fdd1faf200609f9417e65301bb7c267e6302e61c5e787dd795",
+        "canonicalBaseRevision": "870add2cb27b2ec46f9d9eb9a304b47bab2ba7aa",
+        "declaredWriteScope": [
+          "path:docs/GUARDRAILS-HUMAN-REVIEW.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MEMORY-LOG.md",
+          "path:docs/PRD-TAD.md",
+          "path:docs/README.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "semantic:docs-canvas-diagrams"
+        ],
+        "writeSetDigest": "07d2d0e89fe19448d5489927ac67e45134a55e62f9071ec7089ac95ca9dadba0",
+        "laneRevision": "870add2cb27b2ec46f9d9eb9a304b47bab2ba7aa",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-20T10:06:27.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "95b5c822f44a4781cf12dae04957cb642626043518299144a024a573978362a6",
+      "digest": "97447bf4db3f6bc28809379244bfdbcc0adb9ad9923fe84d0ae6bf4473ab097c"
     }
   ]
 }

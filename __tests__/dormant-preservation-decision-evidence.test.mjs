@@ -6,6 +6,7 @@ import test from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
   DORMANT_PRESERVATION_ADMISSION_SELECTION_SCHEMA,
   DORMANT_PRESERVATION_ADMISSION_SOURCE_EVIDENCE_SCHEMA,
@@ -268,6 +269,16 @@ test("source evidence binds protected heads, candidate files, relevant cloud dec
   assert.equal(source.candidate.candidateClaimRecordDigest, fixture.candidateClaim.recordDigest);
   assert.equal(source.preservation.selectedLanes[0].stateDigest, digest("dormant state"));
   assert.throws(() => buildDormantPreservationAdmissionSourceEvidence({
+    ...fixture.sourceInput,
+    candidate: {
+      ...fixture.sourceInput.candidate,
+      cloudAuthority: {
+        ...fixture.sourceInput.candidate.cloudAuthority,
+        deviceId: pseudonymousIdentifier("device", "different-device"),
+      },
+    },
+  }), /one exact admission candidate/);
+  assert.throws(() => buildDormantPreservationAdmissionSourceEvidence({
     ...fixture.sourceInput, canonical: { ...fixture.sourceInput.canonical,
       origin: "https://github.com/other/repository.git" },
   }), /clean current protected-main checkout/);
@@ -431,7 +442,9 @@ function operationFixture({
         manifestDigest: digest("manifest"), writeSetDigest: candidateClaim.writeSetDigest },
       cloudAuthorityPath: "/workspace/cloud-authority.json",
       cloudAuthorityFileDigest: digest("cloud authority file"),
-      cloudAuthority: { claimId: candidateClaim.claimId, sessionId: SESSION_ID },
+      cloudAuthority: { claimId: candidateClaim.claimId,
+        deviceId: pseudonymousIdentifier("device", "device"),
+        sessionId: pseudonymousIdentifier("session", SESSION_ID) },
       candidateClaim, candidateClaimRecordDigest: candidateClaim.recordDigest,
     },
     remoteInventory,
@@ -461,6 +474,8 @@ function claimFixture(label, overrides = {}) {
     || [`path:docs/${label}`, `semantic:${label}`];
   return {
     claimId: digest(`${label} claim`), state: "current", actorId: "github-user:42",
+    deviceId: pseudonymousIdentifier("device", "device"),
+    sessionId: pseudonymousIdentifier("session", SESSION_ID),
     repositoryId: "github-repository:R_repo", workItemId: `work-item:${label}`,
     canonicalBaseRevision: sha(`${label} base`), laneRevision: sha(`${label} lane`),
     declaredWriteScope, writeSetDigest: digestValue(declaredWriteScope), leaseEpoch: 1,

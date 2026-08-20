@@ -31,6 +31,8 @@ import { createTaskAuthorityBinding, createTaskAuthorityCapability }
   from "../scripts/task-bound-lane-authority-contract.mjs";
 import { parseWriterLeasePullRequestBody, updateWriterLeasePullRequestBody }
   from "../scripts/writer-lease-lib.mjs";
+import { pseudonymousIdentifier }
+  from "../scripts/github-cloud-collaboration-mapping.mjs";
 
 const D = value => digestValue({ value });
 const S = value => value.repeat(40);
@@ -41,6 +43,8 @@ const BRANCH = "agent/test-device.local/planned-fence-only-admission-recovery";
 const SCOPE = "planned-fence-only-admission-recovery";
 const SESSION = "test-session";
 const DEVICE = "test-device.local";
+const CLOUD_SESSION = pseudonymousIdentifier("session", SESSION);
+const CLOUD_DEVICE = pseudonymousIdentifier("device", DEVICE);
 const REPOSITORY = "owner/repository";
 const REVIEW = "provider-review:R_1";
 const EXPIRED = "2026-08-14T01:00:00.000Z";
@@ -63,8 +67,8 @@ function fixture() {
     actorId: "provider-user:A",
     repositoryId: "provider-repository:R",
     workItemId: "work-item:recovery",
-    deviceId: DEVICE,
-    sessionId: SESSION,
+    deviceId: CLOUD_DEVICE,
+    sessionId: CLOUD_SESSION,
     canonicalBaseRevision: BASE,
     laneRevision: FENCE,
     declaredWriteScope: manifest.declaredWriteSet,
@@ -98,8 +102,8 @@ function fixture() {
     cloudDeclaredWriteScope: manifest.declaredWriteSet,
     writeSetDigest: manifest.writeSetDigest,
     manifestDigest: manifest.manifestDigest,
-    deviceId: DEVICE,
-    sessionId: SESSION,
+    deviceId: CLOUD_DEVICE,
+    sessionId: CLOUD_SESSION,
     reviewRequestId: REVIEW,
     leaseEpoch: 1,
     transitionCounter: 3,
@@ -404,6 +408,24 @@ test("same-review competitor blocks even when its write set is disjoint", () => 
   assert.throws(() => createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({ inspect })
     .inspectDormant({ sourceAuthority: lease.cloudAuthority, sourceLease: lease, manifest }),
   /overlapping cloud reservation/u);
+});
+
+test("dormant inspection joins opaque cloud owners to local lease labels", () => {
+  const { lease, manifest, claim } = fixture();
+  const opaqueDevice = pseudonymousIdentifier("device", lease.device);
+  const opaqueSession = pseudonymousIdentifier("session", lease.sessionId);
+  const projectedClaim = { ...claim, deviceId: opaqueDevice, sessionId: opaqueSession };
+  const projectedLease = structuredClone(lease);
+  projectedLease.cloudAuthority.deviceId = opaqueDevice;
+  projectedLease.cloudAuthority.sessionId = opaqueSession;
+  const inspect = () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
+    action: "status", status: "ready", ledgerRevision: S("8"), ledgerDigest: D("ledger"),
+    claims: [projectedClaim] });
+  const evidence = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({ inspect })
+    .inspectDormant({ sourceAuthority: projectedLease.cloudAuthority,
+      sourceLease: projectedLease, manifest });
+  assert.equal(evidence.claim.deviceId, opaqueDevice);
+  assert.equal(evidence.claim.sessionId, opaqueSession);
 });
 
 test("lease projection preserves lane identity and changes only recovery fields", () => {

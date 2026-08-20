@@ -343,8 +343,14 @@ function assertLease({ sourceLease: lease, manifest, repository, fence, localPro
     || authority.operationReceiptDigest !== claim.operationReceiptDigest
     || authority.entrySchema !== claim.entrySchema
     || authority.claimIdentitySchema !== claim.claimIdentitySchema
-    || authority.deviceId !== lease.device || authority.sessionId !== lease.sessionId
-    || claim.deviceId !== lease.device || claim.sessionId !== lease.sessionId
+    || normalizeOwnerIdentifier("device", authority.deviceId)
+      !== normalizeOwnerIdentifier("device", lease.device)
+    || normalizeOwnerIdentifier("session", authority.sessionId)
+      !== normalizeOwnerIdentifier("session", lease.sessionId)
+    || normalizeOwnerIdentifier("device", claim.deviceId)
+      !== normalizeOwnerIdentifier("device", lease.device)
+    || normalizeOwnerIdentifier("session", claim.sessionId)
+      !== normalizeOwnerIdentifier("session", lease.sessionId)
     || claim.canonicalBaseRevision !== lease.baseSha || claim.laneRevision !== lease.fenceSha
     || claim.writeSetDigest !== manifest.writeSetDigest
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
@@ -383,6 +389,13 @@ function normalizeClaimIds(value) {
   return identities;
 }
 function cloneRecord(value, label) { return structuredClone(record(value, label)); }
+function normalizeOwnerIdentifier(namespace, value) {
+  const candidate = text(value, `${namespace} identity`);
+  const prefix = `${namespace}:`;
+  return candidate.startsWith(prefix) && /^[0-9a-f]{64}$/u.test(candidate.slice(prefix.length))
+    ? candidate
+    : `${namespace}:${digestValue({ namespace, value: candidate })}`;
+}
 function record(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) invalid(label); return value; }
 function text(value, label) { if (typeof value !== "string" || !value || value !== value.trim() || value.includes("\0")) invalid(label); return value; }
 function absolutePath(value, label) { const candidate = text(value, label); if (!candidate.startsWith("/")) invalid(label); return candidate; }

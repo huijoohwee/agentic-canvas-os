@@ -107,6 +107,13 @@ transition, fence, scope, expiry, review, and operation receipt. The terminal
 receipt records whether effects were
 projected or adopted and explicitly returns:
 
+If that exact recovery result expires before its local lease and marker are
+projected, replay adopts the historical idempotent operation receipt and checks
+the same transition in its live `dormant-preserved` projection. This path makes
+no second cloud transition: it projects the authorized expired authority into
+the lease and marker so the ordinary planned fence-only recovery controller can
+subsequently renew the same claim under its own exact authorization.
+
 - `admissionStatus: planned`;
 - `mutationAuthorityGranted: false`;
 - `authoringAuthority: false`;

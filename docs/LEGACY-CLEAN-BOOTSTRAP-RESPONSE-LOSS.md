@@ -32,8 +32,8 @@ The only accepted cloud states are:
 
 - the initial `current` claim at transition 1;
 - that same claim after expiry as `dormant-preserved`; or
-- its exact transition-2 recovery carrying the content-bound bootstrap
-  recovery evidence digest.
+- any later current or dormant recovery carrying the same content-bound
+  bootstrap recovery evidence digest.
 
 Any second match, phase output, different owner projection, advanced heartbeat,
 review identity, predecessor, integration evidence, path set, or revision fails
@@ -42,16 +42,19 @@ closed as an ordinary overlap.
 ## Recovery and replay
 
 A current transition-1 claim replays the existing idempotent claim-and-bind
-operation. A dormant claim advances once through `continue(claim)` recovery,
-using an idempotency key and evidence digest bound to the immutable bootstrap
-identity. Recovery must preserve the claim, base, write set, lease epoch,
-heartbeat, and owner identity while advancing exactly one transition and
-restoring a future expiry.
+operation. A dormant claim advances through `continue(claim)` recovery using
+an evidence digest bound to the immutable bootstrap identity and an idempotency
+key bound to the exact source counter and fence. Recovery must preserve the
+claim, base, write set, lease epoch, heartbeat, and owner identity while
+advancing exactly one transition and restoring a future expiry.
 
-If the recovery response is lost, a fresh complete status read may adopt only
-that exact counter-plus-one result. The recovered authority is independently
-verified before binding the committed head. Normal phase checkpointing then
-resumes; no ledger or local registry file is edited directly.
+If a recovery response is lost, a fresh complete status read may adopt only
+that exact counter-plus-one result. If it later expires before the local phase
+checkpoint is written, replay may recover that same immutable subject again;
+the new source counter and fence produce a distinct idempotency key. The
+recovered authority is independently verified before binding the committed
+head. Normal phase checkpointing then resumes; no ledger or local registry file
+is edited directly.
 
 This contract grants no authority to merge, clean another lane, close a pull
 request, publish a release, or deploy.

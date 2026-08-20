@@ -105,7 +105,7 @@ test("dormant response-ahead recovery request is content-bound and stable", () =
   assert.equal(request.recoveryEvidenceDigest,
     legacyBootstrapRecoveryEvidenceDigest({ request: REQUEST, identity: IDENTITY }));
   assert.match(request.idempotencyKey,
-    /^legacy-bootstrap-response-loss-recovery:[0-9a-f]{64}:[0-9a-f]{64}$/u);
+    /^legacy-bootstrap-response-loss-recovery:[0-9a-f]{64}:[0-9a-f]{64}:1:[0-9a-f]{64}$/u);
 });
 
 test("recovery adoption accepts only the exact counter-plus-one authority", () => {
@@ -158,7 +158,7 @@ test("recovery adoption accepts only the exact counter-plus-one authority", () =
 
 test("recovered response-ahead authority remains attributable on replay", () => {
   const recovered = claim({
-    transitionCounter: 2,
+    transitionCounter: 3,
     fenceRevision: "2".repeat(64),
     transitionDigest: "3".repeat(64),
     recovery: {
@@ -175,4 +175,65 @@ test("recovered response-ahead authority remains attributable on replay", () => 
     identity: IDENTITY,
     canonicalBaseSha: BASE_SHA,
   }), recovered);
+});
+
+test("expired recovered authority can renew again from its exact source transition", () => {
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({
+    request: REQUEST,
+    identity: IDENTITY,
+  });
+  const dormantRecovered = claim({
+    state: "dormant-preserved",
+    writeAuthority: false,
+    transitionCounter: 2,
+    fenceRevision: "2".repeat(64),
+    transitionDigest: "3".repeat(64),
+    recovery: { evidenceDigest: recoveryEvidenceDigest },
+  });
+  assert.equal(findRecoverableLegacyBootstrapClaim({
+    claims: [dormantRecovered],
+    request: REQUEST,
+    checkpoint: CHECKPOINT,
+    identity: IDENTITY,
+    canonicalBaseSha: BASE_SHA,
+  }), dormantRecovered);
+
+  const recoveryRequest = createLegacyBootstrapRecoveryRequest({
+    claim: dormantRecovered,
+    request: REQUEST,
+    identity: IDENTITY,
+  });
+  assert.equal(recoveryRequest.expectedTransitionCounter, 2);
+  assert.match(recoveryRequest.idempotencyKey,
+    /^legacy-bootstrap-response-loss-recovery:[0-9a-f]{64}:[0-9a-f]{64}:2:2{64}$/u);
+
+  const renewed = claim({
+    transitionCounter: 3,
+    fenceRevision: "4".repeat(64),
+    transitionDigest: "5".repeat(64),
+    recovery: { evidenceDigest: recoveryEvidenceDigest },
+  });
+  assert.equal(requireRecoveredLegacyBootstrapClaim({
+    claim: renewed,
+    sourceClaim: dormantRecovered,
+    request: REQUEST,
+    identity: IDENTITY,
+    canonicalBaseSha: BASE_SHA,
+  }), renewed);
+});
+
+test("dormant recovered authority rejects a different recovery subject", () => {
+  const mismatched = claim({
+    state: "dormant-preserved",
+    writeAuthority: false,
+    transitionCounter: 2,
+    recovery: { evidenceDigest: "0".repeat(64) },
+  });
+  assert.equal(findRecoverableLegacyBootstrapClaim({
+    claims: [mismatched],
+    request: REQUEST,
+    checkpoint: CHECKPOINT,
+    identity: IDENTITY,
+    canonicalBaseSha: BASE_SHA,
+  }), null);
 });

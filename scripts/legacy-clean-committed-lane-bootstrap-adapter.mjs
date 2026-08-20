@@ -249,7 +249,7 @@ function adoptRecoverableCloudClaim({
       identity,
       canonicalBaseSha,
     });
-  } else if (recoverableClaim.transitionCounter === 2) {
+  } else if (recoverableClaim.transitionCounter >= 2) {
     recoveredResult = projectRecoveredLegacyBootstrapResult({
       statusResult: inventory.result,
       claim: recoverableClaim,

@@ -234,6 +234,7 @@ export function projectPublicClaim(claim) {
     operationReceiptDigest: claim.operationReceiptDigest,
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration ?? null,
+    recovery: claim.recovery ?? null,
   };
 }
 

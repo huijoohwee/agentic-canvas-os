@@ -5,6 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { ROOT_OPERATIONS } from "../scripts/cloud-collaboration-primitives.mjs";
+import { projectPublicClaim } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
   projectRootState,
   rootStateForProjection,
@@ -46,6 +47,16 @@ async function filesBelow(directory) {
   }));
   return nested.flat();
 }
+
+test("public claim projection preserves bounded recovery evidence", () => {
+  const recovery = {
+    evidenceDigest: "a".repeat(64),
+    recoveredAt: "2026-08-20T11:00:00.000Z",
+  };
+
+  assert.deepEqual(projectPublicClaim({ recovery }).recovery, recovery);
+  assert.equal(projectPublicClaim({}).recovery, null);
+});
 
 test("public mutation projections expose exactly the four provider-neutral root operations", async () => {
   assert.deepEqual([...ROOT_OPERATIONS], rootOperations);

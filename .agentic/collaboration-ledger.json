@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3651,
-  "headDigest": "0f48b0020333eeb21dfe9577d88002d993e04f86bef3cd139e5826dc7122872d",
+  "sequence": 3652,
+  "headDigest": "f24a471bf11096825861147379beacb99e7ee1ba87c87895b09799a200a11714",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -183195,6 +183195,47 @@
       },
       "claimDigest": "6f6201e42843b9c69f5082cf9e4ca427a11d1cfb5fc2e001223990fab04d4841",
       "digest": "0f48b0020333eeb21dfe9577d88002d993e04f86bef3cd139e5826dc7122872d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3652,
+      "parentDigest": "0f48b0020333eeb21dfe9577d88002d993e04f86bef3cd139e5826dc7122872d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "ddec16a1eb8f4d0eb239a5fefd33effedac4174dbdc25bbc199e5887990e32c1",
+      "idempotencyKey": "952e82571380dc28ee46bfeebe5f3514dd979d657232e181c9e0b6177c86c527",
+      "requestDigest": "321b5d158704a6f7f919994f739425aad175a477e9438fe2eba70654a2a3c3d6",
+      "evaluationTime": "2026-08-20T18:36:46.000Z",
+      "claimCore": {
+        "claimId": "ddec16a1eb8f4d0eb239a5fefd33effedac4174dbdc25bbc199e5887990e32c1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8fca54f79632c46a02f9b9b3d298b4ce88bcab966b2331149edd40a5054c31ab",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4dd1822da7a8cf87c0707e366fbe58ef5595cb209c403faa8217698d01dddfc6",
+        "canonicalBaseRevision": "68df286fce268e21b78cd1bbbdca56bb9c595265",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-dirty-lane-adoption.test.mjs",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:scripts/legacy-dirty-lane-adoption-lib.mjs",
+          "semantic:legacy-dirty-adoption-descendant-base-recovery"
+        ],
+        "writeSetDigest": "deef89c41f0bd6f32fed851516ff1bd144cc3ddf8a892c0a2ba1bc1e86f6dd2f",
+        "laneRevision": "fd4c7556fb6a275f61c6cd32ed93623f351359ad",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-20T20:13:29.000Z",
+        "evidenceDigest": "f3f7c15433e8c04116445350c85d0d78ed5bbdd894f733549412ec64d138f53f",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAdGMrg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "02e6b42e38667e8433921a638bf7f703ed5d25713f49e2fcc5dc5a1d0d12c552",
+      "digest": "f24a471bf11096825861147379beacb99e7ee1ba87c87895b09799a200a11714"
     }
   ]
 }

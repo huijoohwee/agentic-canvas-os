@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3702,
-  "headDigest": "19667116ef9c504fd47564395a16d7fafdcfc7c8dce3a29c63a3a9445df6ba2b",
+  "sequence": 3703,
+  "headDigest": "630f903763d3892861f00f61dd5a223f013b14f0bf98b0b4eb057b0b2ced557c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -185627,6 +185627,53 @@
       },
       "claimDigest": "c3937284ad7bae197a3231bda6d09d6e79b0bcacd2235264890c5651e9c1ee6d",
       "digest": "19667116ef9c504fd47564395a16d7fafdcfc7c8dce3a29c63a3a9445df6ba2b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3703,
+      "parentDigest": "19667116ef9c504fd47564395a16d7fafdcfc7c8dce3a29c63a3a9445df6ba2b",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "256e4237b3cf36cc5d93794944020fe07c229bed4e8bddf92f1fbe57677e5916",
+      "idempotencyKey": "59c1be3ecb883842c9ddae683045a77ee17832e3820a10702ebd053ff69c8755",
+      "requestDigest": "01c310cb5e11e2128ff483e224053bf0ad93b1afcac10af90e9899defbd768bd",
+      "evaluationTime": "2026-08-20T22:42:44.000Z",
+      "claimCore": {
+        "claimId": "256e4237b3cf36cc5d93794944020fe07c229bed4e8bddf92f1fbe57677e5916",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8fca54f79632c46a02f9b9b3d298b4ce88bcab966b2331149edd40a5054c31ab",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1573867a8c187b35c6e72de96a8a0fd9c15762531f8dda9faf7fe9e8260eddb1",
+        "canonicalBaseRevision": "5d169bf5ac7e392fd8ffe0b32d047f78fc2465b5",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:__tests__/github-cloud-collaboration-mapping.test.mjs",
+          "path:__tests__/legacy-clean-committed-lane-bootstrap-adapter.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "path:scripts/cloud-collaboration-primitives.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "semantic:legacy-review-historical-base-proof"
+        ],
+        "writeSetDigest": "f0d1524380e0c86ead3aa10526ccec69e83634b6e7aeabe5b3498381061aa6ba",
+        "laneRevision": "5d169bf5ac7e392fd8ffe0b32d047f78fc2465b5",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T00:42:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c8e27d37be1ea54ecec09b561acd0fa08736aa8a66e92e3d65228dc17d44a352",
+      "digest": "630f903763d3892861f00f61dd5a223f013b14f0bf98b0b4eb057b0b2ced557c"
     }
   ]
 }

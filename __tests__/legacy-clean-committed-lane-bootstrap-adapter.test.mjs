@@ -304,7 +304,7 @@ test("legacy admission manifest binds normalized source paths", () => {
   }));
 });
 
-test("initial and replacement cloud projections atomically continue the task binding", () => {
+test("same PR-bound claim and later replacement atomically continue the task binding", () => {
   const branch = REQUEST.branch;
   const sourceClaimId = "3".repeat(64);
   const targetClaimId = "4".repeat(64);
@@ -313,9 +313,10 @@ test("initial and replacement cloud projections atomically continue the task bin
     cloudAuthority: { claimId: sourceClaimId },
     taskAuthority: { bindingDigest: "5".repeat(64) },
   };
-  const values = { cloudAuthority: { claimId: targetClaimId }, baseSha: BASE_SHA };
   const targetBinding = { bindingDigest: "6".repeat(64) };
   for (const sourceWithoutCloud of [true, false]) {
+    const projectedClaimId = sourceWithoutCloud ? sourceClaimId : targetClaimId;
+    const values = { cloudAuthority: { claimId: projectedClaimId }, baseSha: BASE_SHA };
     let mutationCount = 0;
     const result = projectCloudAuthorityAndTaskBinding({
       leaseStore: {}, lease, request: REQUEST, values, sourceWithoutCloud,
@@ -329,7 +330,7 @@ test("initial and replacement cloud projections atomically continue the task bin
         return { receiptDigest: "8".repeat(64) };
       },
       createBinding: ({ lease: target, bindingMode, priorBindingDigest }) => {
-        assert.equal(target.cloudAuthority.claimId, targetClaimId);
+        assert.equal(target.cloudAuthority.claimId, projectedClaimId);
         assert.equal(bindingMode, "continuation");
         assert.equal(priorBindingDigest, lease.taskAuthority.bindingDigest);
         return targetBinding;
@@ -338,15 +339,17 @@ test("initial and replacement cloud projections atomically continue the task bin
         mutationCount += 1;
         assert.equal(expectedClaimId, sourceClaimId);
         const mutation = action({ registry: { leases: { [branch]: lease } } });
-        assert.equal(mutation.registry.leases[branch].cloudAuthority.claimId, targetClaimId);
+        assert.equal(mutation.registry.leases[branch].cloudAuthority.claimId, projectedClaimId);
         assert.equal(mutation.registry.leases[branch].taskAuthority, targetBinding);
         return { lease: mutation.lease, registryRevision: 2 };
       },
       leaseDigest: value => digestValue(value),
     });
     assert.equal(mutationCount, 1);
-    assert.equal(result.lease.cloudAuthority.claimId, targetClaimId);
+    assert.equal(result.lease.cloudAuthority.claimId, projectedClaimId);
     assert.equal(result.lease.taskAuthority, targetBinding);
+    assert.equal(result.continuationReceipt.sourceClaimId, sourceClaimId);
+    assert.equal(result.continuationReceipt.targetClaimId, projectedClaimId);
     assert.match(result.continuationReceipt.receiptDigest, /^[0-9a-f]{64}$/u);
   }
 });

@@ -9,6 +9,8 @@ import {
 } from "../scripts/planned-device-projection-recovery-contract.mjs";
 import { createPlannedDeviceProjectionRecoveryController }
   from "../scripts/planned-device-projection-recovery-controller.mjs";
+import { createPlannedDeviceProjectionRecoveryCloudAdapter }
+  from "../scripts/planned-device-projection-recovery-cloud-adapter.mjs";
 import { buildPlannedDeviceProjectionRecoveryEvidence }
   from "../scripts/planned-device-projection-recovery-evidence.mjs";
 import { pseudonymousIdentifier }
@@ -71,7 +73,7 @@ test("controller projects only cloud, lease, and draft marker receipts", async (
     reviewRequestId: evidence.cloud.claim.reviewRequestId,
     transitionCounter: evidence.cloud.claim.transitionCounter + 1,
     state: "active",
-    expiresAt: "2026-08-20T06:00:00.000Z",
+    expiresAt: "2099-08-20T06:00:00.000Z",
   };
   const targetLease = {
     ...evidence.sourceLease,
@@ -115,6 +117,98 @@ test("controller projects only cloud, lease, and draft marker receipts", async (
   assert.equal(receipt.admissionStatus, "planned");
   assert.equal(receipt.mutationAuthorityGranted, false);
   assert.equal(receipt.recoveredTransitionCounter, 3);
+});
+
+test("cloud recovery accepts the verifier's normalized active claim projection", () => {
+  const evidence = evidenceFixture();
+  const plan = buildPlannedDeviceProjectionRecoveryPlan({ evidence });
+  const sourceClaim = evidence.cloud.claim;
+  const recoveredClaim = {
+    ...sourceClaim,
+    state: "current",
+    writeAuthority: true,
+    scopeReserved: true,
+    deviceId: TARGET_DEVICE,
+    transitionCounter: sourceClaim.transitionCounter + 1,
+    expiresAt: "2099-08-20T06:00:00.000Z",
+    fenceRevision: hash("recovered claim"),
+    transitionDigest: hash("recovered transition"),
+    operationReceiptDigest: hash("recovered operation"),
+  };
+  const verifiedClaim = {
+    claimId: recoveredClaim.claimId,
+    entrySchema: recoveredClaim.entrySchema,
+    claimIdentitySchema: recoveredClaim.claimIdentitySchema,
+    operationReceiptDigest: recoveredClaim.operationReceiptDigest,
+    state: "active",
+    actorId: recoveredClaim.actorId,
+    repositoryId: recoveredClaim.repositoryId,
+    workItemId: recoveredClaim.workItemId,
+    canonicalBaseRevision: recoveredClaim.canonicalBaseRevision,
+    laneRevision: recoveredClaim.laneRevision,
+    declaredWriteScope: recoveredClaim.declaredWriteScope,
+    writeSetDigest: recoveredClaim.writeSetDigest,
+    leaseEpoch: recoveredClaim.leaseEpoch,
+    transitionCounter: recoveredClaim.transitionCounter,
+    heartbeatCounter: recoveredClaim.heartbeatCounter,
+    reviewRequestId: recoveredClaim.reviewRequestId,
+    expiresAt: recoveredClaim.expiresAt,
+    fenceRevision: recoveredClaim.fenceRevision,
+    transitionDigest: recoveredClaim.transitionDigest,
+  };
+  let verificationClaims = [verifiedClaim];
+  const adapter = createPlannedDeviceProjectionRecoveryCloudAdapter({
+    inspect: () => ({
+      schema: "agentic-cloud-collaboration-result/v1",
+      ok: true,
+      action: "status",
+      claims: [sourceClaim],
+    }),
+    invoke: ({ request }) => ({
+      schema: "agentic-cloud-collaboration-result/v1",
+      ok: true,
+      action: "continue",
+      status: "current",
+      replayed: false,
+      ledgerRevision: sha("recovered ledger revision"),
+      ledgerDigest: recoveredClaim.transitionDigest,
+      claim: recoveredClaim,
+      claimDigest: recoveredClaim.fenceRevision,
+      operationReceipt: {
+        schema: "agentic-collaboration-continuation-receipt/v1",
+        operation: "continue",
+        status: "current",
+        claimId: sourceClaim.claimId,
+        claimDigest: recoveredClaim.fenceRevision,
+        ledgerRevision: recoveredClaim.transitionDigest,
+        idempotencyKey: digestValue(request.idempotencyKey),
+        requestDigest: hash("recovered request"),
+        evaluationTime: "2026-08-20T05:30:00.000Z",
+        receiptDigest: recoveredClaim.operationReceiptDigest,
+      },
+    }),
+    verify: ({ authority }) => ({
+      authority,
+      verification: {
+        status: "ready",
+        receiptDigest: hash("verification receipt"),
+        inventory: {
+          claims: verificationClaims,
+        },
+      },
+    }),
+  });
+
+  const recovery = adapter.recover(plan);
+  assert.equal(recovery.authority.deviceId, TARGET_DEVICE);
+  assert.equal(recovery.authority.claimDigest, recoveredClaim.fenceRevision);
+
+  verificationClaims = [verifiedClaim, {
+    ...verifiedClaim,
+    claimId: hash("competing claim"),
+    reviewRequestId: "github-pull-request:PR_competing",
+  }];
+  assert.throws(() => adapter.recover(plan), /overlapping cloud reservation/);
 });
 
 function evidenceFixture() {
@@ -195,6 +289,8 @@ function evidenceInput() {
   };
   const claim = {
     claimId: sourceLease.cloudAuthority.claimId,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
     state: "dormant-preserved",
     writeAuthority: false,
     scopeReserved: true,

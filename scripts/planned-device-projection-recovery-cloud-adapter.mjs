@@ -89,7 +89,12 @@ export function createPlannedDeviceProjectionRecoveryCloudAdapter({
     const claims = verification?.inventory?.claims;
     if (verification?.status !== "ready" || !Array.isArray(claims)) invalid("cloud verification");
     const claim = exactClaim({ claims }, authority.claimId);
-    assertRecoveredClaim(claim, sealed.evidence.cloud.claim, sealed);
+    assertVerifiedRecoveredClaim(
+      claim,
+      sealed.evidence.cloud.claim,
+      sealed,
+      result.authority,
+    );
     assertNoCompetitors(claims, claim, sealed.evidence.manifest);
     if (result.authority?.claimDigest !== claim.fenceRevision
       || result.authority?.deviceId !== sealed.evidence.cloud.expectedDeviceId
@@ -191,12 +196,39 @@ function assertRecoveredClaim(claim, sourceClaim, plan) {
   }
 }
 
+function assertVerifiedRecoveredClaim(claim, sourceClaim, plan, authority) {
+  const stableFields = [
+    "claimId", "entrySchema", "claimIdentitySchema", "actorId", "repositoryId",
+    "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
+    "leaseEpoch", "reviewRequestId",
+  ];
+  if (claim?.state !== "active"
+    || stableFields.some(field => claim[field] !== sourceClaim[field])
+    || claim.transitionCounter !== sourceClaim.transitionCounter + 1
+    || claim.heartbeatCounter !== sourceClaim.heartbeatCounter
+    || canonicalJson(normalizeWriteSet(claim.declaredWriteScope))
+      !== canonicalJson(plan.evidence.manifest.declaredWriteSet)
+    || claim.fenceRevision !== authority.claimDigest
+    || claim.transitionDigest !== authority.claimLedgerRevision
+    || claim.operationReceiptDigest !== authority.operationReceiptDigest
+    || claim.expiresAt !== authority.expiresAt
+    || Date.parse(claim.expiresAt) <= Date.now()) {
+    invalid("verified recovered same-claim projection");
+  }
+}
+
 function assertNoCompetitors(claims, source, manifest) {
   const competitors = claims.filter(claim => claim.claimId !== source.claimId
-    && claim.repositoryId === source.repositoryId && claim.scopeReserved === true
+    && claim.repositoryId === source.repositoryId && reservesScope(claim)
     && (claim.reviewRequestId === source.reviewRequestId
       || writeSetsOverlap(claim.declaredWriteScope, manifest.declaredWriteSet)));
   if (competitors.length) invalid("overlapping cloud reservation");
+}
+
+function reservesScope(claim) {
+  if (typeof claim?.scopeReserved === "boolean") return claim.scopeReserved;
+  return ["active", "review_ready", "delivery_authorized", "parked"]
+    .includes(claim?.state);
 }
 
 function exactClaim(status, claimId) {

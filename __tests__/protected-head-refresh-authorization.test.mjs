@@ -48,6 +48,10 @@ test("workflow encodes recovery without exceeding the 25-input provider cap", ()
   assert.match(adapter, /allowRetiredIntegratedPreserved: true/u);
   assert.match(adapter, /integrationReceiptDigest: projection\.integration_receipt_digest/u);
   assert.match(adapter, /transitionCounter: projection\.transition_counter/u);
+  assert.ok(
+    adapter.indexOf("integrationReceiptDigest: projection.integration_receipt_digest")
+      < adapter.indexOf("pullRequest.merged && allowAbsentMergedAuthorizationRecovery"),
+  );
 });
 
 test("absent merged recovery token binds exact operation and human actor", () => {

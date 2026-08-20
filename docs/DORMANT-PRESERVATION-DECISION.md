@@ -104,6 +104,14 @@ node scripts/dormant-preservation-decision.mjs run \
 
 Before candidate mutation, the controller rebuilds the source evidence and exact nested argv. `device:start` independently rebuilds them twice, including once while holding the repository registry lock. Any controller, canonical, lane, pull-request, relevant cloud claim, file, target, identity, argv, or authorization drift blocks before provisioning. A different global ledger head is accepted only when the fresh same-snapshot verification proves the decision claim set is byte-identical.
 
+Candidate identity includes the normalized device and session subjects carried by
+the cloud-authority receipt. They must equal the candidate branch device and
+requested session before provisioning starts. A raw hostname alias, such as a
+`.local` suffix that hashes to a different cloud subject, is identity drift even
+when the repository, session, write set, and authenticated actor otherwise
+match. This guard prevents a successful cloud bind from leaving a local
+`planned` lease with a different owner projection.
+
 Plans and source evidence issued by this runtime use v2. A v1 plan cannot receive
 new v2 authority. Completed v1 journals remain immutable historical evidence;
 an effect-absent authorized v1 journal must be superseded by a fresh v2 plan and

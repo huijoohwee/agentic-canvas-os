@@ -322,7 +322,14 @@ function normalizeCandidate(value) {
     || result.branch !== `agent/${result.deviceId}/${result.semanticScope}`
     || (manifest.semanticScope && manifest.semanticScope !== result.semanticScope)
     || (cloudAuthority.claimId && cloudAuthority.claimId !== candidateClaim.claimId)
-    || (cloudAuthority.sessionId && cloudAuthority.sessionId !== result.sessionId)
+    || !ownerIdentifierMatches("device", candidateClaim.deviceId, result.deviceId)
+    || !ownerIdentifierMatches("session", candidateClaim.sessionId, result.sessionId)
+    || !ownerIdentifierMatches("device", cloudAuthority.deviceId, result.deviceId)
+    || !ownerIdentifierMatches("session", cloudAuthority.sessionId, result.sessionId)
+    || (candidateClaim.deviceId && cloudAuthority.deviceId
+      && cloudAuthority.deviceId !== candidateClaim.deviceId)
+    || (candidateClaim.sessionId && cloudAuthority.sessionId
+      && cloudAuthority.sessionId !== candidateClaim.sessionId)
     || (manifest.writeSetDigest && manifest.writeSetDigest !== candidateClaim.writeSetDigest)
     || (cloudAuthority.writeSetDigest && cloudAuthority.writeSetDigest !== candidateClaim.writeSetDigest)
     || (cloudAuthority.claimDigest && cloudAuthority.claimDigest !== candidateClaim.fenceRevision)
@@ -340,6 +347,19 @@ function normalizeCandidate(value) {
     throw new Error("Candidate files and claim do not describe one exact admission candidate.");
   }
   return deepFreeze(result);
+}
+function canonicalOwnerIdentifier(namespace, value) {
+  const source = text(value, `Candidate ${namespace} identity`);
+  const prefix = `${namespace}:`;
+  return source.startsWith(prefix) && DIGEST_PATTERN.test(source.slice(prefix.length))
+    ? source : pseudonymousIdentifier(namespace, source);
+}
+function ownerIdentifierMatches(namespace, projected, raw) {
+  if (!projected) return true;
+  const value = text(projected, `Candidate ${namespace} projection`);
+  return value.startsWith(`${namespace}:`)
+    ? value === canonicalOwnerIdentifier(namespace, raw)
+    : value === raw;
 }
 function buildPreservation(projection, selection) {
   const receipt = projection.receipt;

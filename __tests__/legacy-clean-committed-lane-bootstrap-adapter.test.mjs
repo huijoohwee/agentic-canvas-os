@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { normalizeCloudAuthority } from "../scripts/scoped-lane-admission-lib.mjs";
-import { projectCloudAuthorityAndTaskBinding }
+import { projectCloudAuthorityAndTaskBinding, projectedLegacyBootstrapClaimIds }
   from "../scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs";
 import {
   createLegacyBootstrapRecoveryRequest,
@@ -345,4 +345,14 @@ test("initial cloud projection atomically continues the task binding", () => {
   assert.equal(result.lease.cloudAuthority.claimId, targetClaimId);
   assert.equal(result.lease.taskAuthority, targetBinding);
   assert.match(result.continuationReceipt.receiptDigest, /^[0-9a-f]{64}$/u);
+});
+
+test("phase inspection attributes both initial and bound successor claims", () => {
+  const initialClaimId = "9".repeat(64);
+  const successorClaimId = "a".repeat(64);
+  const projected = projectedLegacyBootstrapClaimIds({ outputs: {
+    cloudClaim: { authority: { claimId: initialClaimId } },
+    boundAuthority: { authority: { claimId: successorClaimId } },
+  } });
+  assert.deepEqual([...projected], [initialClaimId, successorClaimId]);
 });

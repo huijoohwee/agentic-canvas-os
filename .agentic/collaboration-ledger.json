@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3514,
-  "headDigest": "8c3dd98a1a9f9dbd9aedc9db793fb1227a7bf2601575f238d24f4cfce300bcb1",
+  "sequence": 3515,
+  "headDigest": "5b5944abbe2f8f16d13ec10c843e639fec8dfa70e2cd2c8af9b5ca02d3357f08",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -175203,6 +175203,47 @@
       },
       "claimDigest": "15df40359f81c354d9fa8480e4fb2b7568dcb7b2eae1838913b99035f6b114ee",
       "digest": "8c3dd98a1a9f9dbd9aedc9db793fb1227a7bf2601575f238d24f4cfce300bcb1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3515,
+      "parentDigest": "8c3dd98a1a9f9dbd9aedc9db793fb1227a7bf2601575f238d24f4cfce300bcb1",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e5b11b8d37ba7b2599cc6cab522740d0af1bda9bf0d5bf02af8fb8a09ceb84c1",
+      "idempotencyKey": "01b9524d4f6dcf16c11eb3910425de69a71fc12e948299c70c98aca341c60681",
+      "requestDigest": "d91d1569dc1e4fca0895aa965596111ad6cefad21ce10acfa03239b5c89b6ba0",
+      "evaluationTime": "2026-08-20T08:28:01.000Z",
+      "claimCore": {
+        "claimId": "e5b11b8d37ba7b2599cc6cab522740d0af1bda9bf0d5bf02af8fb8a09ceb84c1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e56ee5a393d7e679995fc388816bad22dec626dbe16279146647d77bc0340af7",
+        "canonicalBaseRevision": "870add2cb27b2ec46f9d9eb9a304b47bab2ba7aa",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-main-recovery.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:scripts/canonical-main-recovery-lib.mjs",
+          "semantic:canonical-one-sided-dirty-preservation"
+        ],
+        "writeSetDigest": "9cadc1a59cdcbacdc1868ebb7e7691d3b66a56e5a122b6bdfe6dcea3f64e3f18",
+        "laneRevision": "870add2cb27b2ec46f9d9eb9a304b47bab2ba7aa",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-20T08:58:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5705da9c79dec6071c2b1936857d910ff3a2d1e4270bb95b4f73fcdca302a644",
+      "digest": "5b5944abbe2f8f16d13ec10c843e639fec8dfa70e2cd2c8af9b5ca02d3357f08"
     }
   ]
 }

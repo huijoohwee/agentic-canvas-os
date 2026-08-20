@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3636,
-  "headDigest": "61f8318f6e55f0ea589d3a1ebfe8f77f4a6f70f096e9691b9988cf4417543a49",
+  "sequence": 3637,
+  "headDigest": "487865605a6bde845d85af99b11a4186cf724612f9c7e70bfe07fb86cb65444a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -182491,6 +182491,47 @@
       },
       "claimDigest": "ba2be37115bdc1ad3c38f8da757535c83bc230937eb2ff281b7945a518e9bcda",
       "digest": "61f8318f6e55f0ea589d3a1ebfe8f77f4a6f70f096e9691b9988cf4417543a49"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3637,
+      "parentDigest": "61f8318f6e55f0ea589d3a1ebfe8f77f4a6f70f096e9691b9988cf4417543a49",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c8b9a48f2a1961ff44216589effbe97b9bdefad5d96b4d02b4fd5f259fe080c6",
+      "idempotencyKey": "b0a6b2cbbd0513baf3db7c0179e817d51eacc0cdffba0d24d62014abec99943d",
+      "requestDigest": "fa1a5393de913b3f9a4d7b2fd7e06cbfcd032f993b832e979442eff0f5194fad",
+      "evaluationTime": "2026-08-20T16:23:56.000Z",
+      "claimCore": {
+        "claimId": "c8b9a48f2a1961ff44216589effbe97b9bdefad5d96b4d02b4fd5f259fe080c6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d98cc542681293e066c8155754f99c42a195513125c8bd2daf2b80a94003eb37",
+        "canonicalBaseRevision": "c05d46dd9ae69ba75a574c50e5f3c02e9ba34cce",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:scripts/device-branch-lib.mjs",
+          "semantic:legacy-review-divergent-base-manifest"
+        ],
+        "writeSetDigest": "713598e256a9d541276642146cbc233d128cd3069e8c74c864c12a16e5ad205e",
+        "laneRevision": "c05d46dd9ae69ba75a574c50e5f3c02e9ba34cce",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-20T17:23:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c38bd398105f5986e913740c68ea9dde34031056282c9f981eefafee73354aa2",
+      "digest": "487865605a6bde845d85af99b11a4186cf724612f9c7e70bfe07fb86cb65444a"
     }
   ]
 }

@@ -663,8 +663,17 @@ test("review reconciliation preserves exact v1 claim identity after a v2 continu
   }), /recoverable admission subject/u);
 });
 
-test("current-claim inventory preserves an expired non-writing waiting successor", () => {
+test("current-claim inventory preserves effective authority flags", () => {
   const incumbent = rootClaim();
+  const parked = {
+    ...rootClaim({ fenceRevision: "6".repeat(64), transitionDigest: "5".repeat(64) }),
+    claimId: "6".repeat(64),
+    state: "dormant-preserved",
+    writeAuthority: false,
+    scopeReserved: true,
+    workItemId: "work-item:dormant-preserved",
+    expiresAt: "2026-08-04T07:00:00.000Z",
+  };
   const waiting = {
     ...rootClaim({ fenceRevision: "8".repeat(64), transitionDigest: "9".repeat(64) }),
     claimId: "7".repeat(64),
@@ -678,11 +687,22 @@ test("current-claim inventory preserves an expired non-writing waiting successor
     verificationResult: verificationResult(
       incumbent,
       NEXT_LEDGER_SHA,
-      [incumbent, waiting],
+      [incumbent, parked, waiting],
     ),
     authority: localAuthority({ claimDigest: incumbent.fenceRevision, claimLedgerRevision: incumbent.transitionDigest, laneRevision: HEAD_SHA, transitionCounter: 2 }),
   });
-  assert.deepEqual(inventory.claims.map((claim) => claim.state).sort(), ["active", "waiting-successor"]);
+  assert.deepEqual(
+    inventory.claims.map(({ state, writeAuthority, scopeReserved }) => ({
+      state,
+      writeAuthority,
+      scopeReserved,
+    })).sort((left, right) => left.state.localeCompare(right.state)),
+    [
+      { state: "active", writeAuthority: true, scopeReserved: true },
+      { state: "parked", writeAuthority: false, scopeReserved: true },
+      { state: "waiting-successor", writeAuthority: false, scopeReserved: false },
+    ],
+  );
 });
 
 test("cloud verification derives its complete inventory from one verifier operation", () => {

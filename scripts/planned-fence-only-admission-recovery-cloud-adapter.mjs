@@ -4,6 +4,7 @@ import { canonicalJson, digestValue, writeSetsOverlap }
 import { normalizePlannedFenceOnlyAdmissionRecoveryPlan }
   from "./planned-fence-only-admission-recovery-contract.mjs";
 import { normalizeClaimProvenance } from "./scoped-lane-claim-provenance.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority }
   from "./scoped-lane-cloud-authority.mjs";
 
@@ -200,6 +201,8 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
 }
 
 function assertSourceClaim({ claim, sourceAuthority, sourceLease, manifest }) {
+  const expectedDeviceId = normalizeOwnerIdentifier("device", sourceLease.device);
+  const expectedSessionId = normalizeOwnerIdentifier("session", sourceLease.sessionId);
   if (claim.state !== "dormant-preserved" || claim.writeAuthority !== false
     || claim.scopeReserved !== true || claim.claimId !== sourceAuthority.claimId
     || claim.fenceRevision !== sourceAuthority.claimDigest
@@ -214,7 +217,10 @@ function assertSourceClaim({ claim, sourceAuthority, sourceLease, manifest }) {
     || claim.writeSetDigest !== manifest.writeSetDigest
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
     || claim.leaseEpoch !== sourceAuthority.leaseEpoch
-    || claim.deviceId !== sourceLease.device || claim.sessionId !== sourceLease.sessionId
+    || normalizeOwnerIdentifier("device", claim.deviceId) !== expectedDeviceId
+    || normalizeOwnerIdentifier("session", claim.sessionId) !== expectedSessionId
+    || normalizeOwnerIdentifier("device", sourceAuthority.deviceId) !== expectedDeviceId
+    || normalizeOwnerIdentifier("session", sourceAuthority.sessionId) !== expectedSessionId
     || claim.reviewRequestId !== sourceAuthority.reviewRequestId) invalid("exact dormant claim subject");
 }
 
@@ -248,7 +254,10 @@ function assertRecoveredClaim({ claim, sourceClaim, sourceLease, manifest, resul
     || stableFields.some(field => claim[field] !== sourceClaim[field])
     || claim.transitionCounter !== sourceClaim.transitionCounter + 1
     || claim.heartbeatCounter !== sourceClaim.heartbeatCounter
-    || claim.deviceId !== sourceLease.device || claim.sessionId !== sourceLease.sessionId
+    || normalizeOwnerIdentifier("device", claim.deviceId)
+      !== normalizeOwnerIdentifier("device", sourceLease.device)
+    || normalizeOwnerIdentifier("session", claim.sessionId)
+      !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
     || result.claimDigest !== claim.fenceRevision
     || operation?.schema !== "agentic-collaboration-continuation-receipt/v1"
@@ -285,7 +294,10 @@ function assertRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, man
     || stableFields.some(field => claim[field] !== sourceClaim[field])
     || claim.transitionCounter !== sourceClaim.transitionCounter + 1
     || claim.heartbeatCounter !== sourceClaim.heartbeatCounter
-    || claim.deviceId !== sourceLease.device || claim.sessionId !== sourceLease.sessionId
+    || normalizeOwnerIdentifier("device", claim.deviceId)
+      !== normalizeOwnerIdentifier("device", sourceLease.device)
+    || normalizeOwnerIdentifier("session", claim.sessionId)
+      !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)) {
     invalid("exact response-loss recovery claim");
   }
@@ -379,6 +391,14 @@ function projectClaim(value) {
     transitionDigest: requiredDigest(source.transitionDigest, "claim transition digest"),
     operationReceiptDigest: requiredDigest(source.operationReceiptDigest, "claim operation receipt"),
   });
+}
+
+function normalizeOwnerIdentifier(namespace, value) {
+  const candidate = requiredText(value, `${namespace} identity`);
+  const prefix = `${namespace}:`;
+  return candidate.startsWith(prefix) && /^[0-9a-f]{64}$/u.test(candidate.slice(prefix.length))
+    ? candidate
+    : pseudonymousIdentifier(namespace, candidate);
 }
 
 function projectInventoryClaim(value) {

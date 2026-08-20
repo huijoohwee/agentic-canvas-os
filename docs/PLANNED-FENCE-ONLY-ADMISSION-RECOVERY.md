@@ -147,3 +147,8 @@ The terminal receipt explicitly reports `admissionStatus: "planned"`,
 `authoringAuthority: false`, `mutationAuthorityGranted: false`, and
 `deploymentAuthority: false`. Run a fresh repository-owned scoped admission
 before any source edit or later lifecycle transition.
+
+Provider claims use opaque device and session subjects. Source and recovered
+verification normalize the local lease labels before joining those subjects;
+an already-opaque recovered authority is accepted only when it resolves to the
+same exact device and session, while either owner mismatch still fails closed.

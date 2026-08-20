@@ -149,12 +149,12 @@ flowchart LR
   harnesses["Existing harnesses"]
   proof["Runtime-ready proof"]
 
-  soul --> gateway
-  local --> gateway
-  canvas --> gateway
-  mcp --> gateway
-  gateway --> harnesses
-  harnesses --> proof
+  soul -->|"identity - read"| gateway
+  local -->|"catalog - read"| gateway
+  canvas -->|"surface - read"| gateway
+  mcp -->|"remote catalog - read"| gateway
+  gateway -->|"dispatch - gated"| harnesses
+  harnesses -->|"evidence - recorded"| proof
 ```
 
 Superseded Vercel/AWS connector lanes are historical reference only unless a later ADR reopens them with a separate TCO and deployment-model comparison. The active runtime-ready path is `knowgrph` local + Cloudflare control-plane owners.

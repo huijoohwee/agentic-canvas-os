@@ -193,8 +193,12 @@ flowchart LR
   docs["Docs runtime-ready"]
   external["External runtime gates"]
 
-  source --> parse --> route --> harness --> proof --> docs
-  docs --> external
+  source -->|"parse"| parse
+  parse -->|"resolve routes"| route
+  route -->|"validate contracts"| harness
+  harness -->|"record evidence"| proof
+  proof -->|"derive rung"| docs
+  docs -->|"gated - blocked"| external
 ```
 
 ## Status Rules

@@ -91,9 +91,14 @@ flowchart LR
   outputGuard["Output guardrails"]
   final["Validated final output"]
 
-  input --> inputGuard --> agent --> toolGuard
-  toolGuard --> review --> gateway --> agent
-  agent --> outputGuard --> final
+  input -->|"bounded payload"| inputGuard
+  inputGuard -->|"validated input"| agent
+  agent -->|"tool intent"| toolGuard
+  toolGuard -->|"approval required"| review
+  review -->|"human decision"| gateway
+  gateway -->|"tool result"| agent
+  agent -->|"draft output"| outputGuard
+  outputGuard -->|"validated output"| final
 ```
 
 An adapter requesting review returns the runtime's paused packet directly to Running Agents. On resume it resolves the decision, revalidates any edited action, and only then calls the real gateway. Streaming uses the same pause state and settlement path; it does not create a second approval registry.

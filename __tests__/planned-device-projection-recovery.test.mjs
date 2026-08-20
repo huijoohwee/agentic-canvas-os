@@ -211,6 +211,73 @@ test("cloud recovery accepts the verifier's normalized active claim projection",
   assert.throws(() => adapter.recover(plan), /overlapping cloud reservation/);
 });
 
+test("cloud recovery adopts its exact expired response-loss result without another transition", () => {
+  const evidence = evidenceFixture();
+  const plan = buildPlannedDeviceProjectionRecoveryPlan({ evidence });
+  const sourceClaim = evidence.cloud.claim;
+  const historicalClaim = {
+    ...sourceClaim,
+    state: "current",
+    writeAuthority: true,
+    scopeReserved: true,
+    deviceId: TARGET_DEVICE,
+    transitionCounter: sourceClaim.transitionCounter + 1,
+    expiresAt: "2026-08-20T05:30:00.000Z",
+    fenceRevision: hash("expired recovered claim"),
+    transitionDigest: hash("expired recovered transition"),
+    operationReceiptDigest: hash("expired recovered operation"),
+  };
+  const dormantClaim = {
+    ...historicalClaim,
+    state: "dormant-preserved",
+    writeAuthority: false,
+  };
+  let statusReads = 0;
+  const adapter = createPlannedDeviceProjectionRecoveryCloudAdapter({
+    inspect: () => {
+      statusReads += 1;
+      return {
+        schema: "agentic-cloud-collaboration-result/v1",
+        ok: true,
+        action: "status",
+        ledgerRevision: sha(`expired status ${statusReads}`),
+        ledgerDigest: hash(`expired status ${statusReads}`),
+        claims: [dormantClaim],
+      };
+    },
+    invoke: ({ request }) => ({
+      schema: "agentic-cloud-collaboration-result/v1",
+      ok: true,
+      action: "continue",
+      status: "current",
+      replayed: true,
+      ledgerRevision: sha("expired recovered ledger revision"),
+      ledgerDigest: historicalClaim.transitionDigest,
+      claim: historicalClaim,
+      claimDigest: historicalClaim.fenceRevision,
+      operationReceipt: {
+        schema: "agentic-collaboration-continuation-receipt/v1",
+        operation: "continue",
+        status: "current",
+        claimId: sourceClaim.claimId,
+        claimDigest: historicalClaim.fenceRevision,
+        ledgerRevision: historicalClaim.transitionDigest,
+        idempotencyKey: digestValue(request.idempotencyKey),
+        requestDigest: hash("expired recovered request"),
+        evaluationTime: "2026-08-20T05:15:00.000Z",
+        receiptDigest: historicalClaim.operationReceiptDigest,
+      },
+    }),
+    verify: () => assert.fail("expired replay must use the dormant status verifier"),
+  });
+
+  const recovery = adapter.recover(plan);
+  assert.equal(recovery.disposition, "adopted");
+  assert.equal(recovery.authority.claimDigest, historicalClaim.fenceRevision);
+  assert.equal(recovery.authority.expiresAt, historicalClaim.expiresAt);
+  assert.equal(statusReads, 2);
+});
+
 function evidenceFixture() {
   const input = evidenceInput();
   assert.deepEqual(

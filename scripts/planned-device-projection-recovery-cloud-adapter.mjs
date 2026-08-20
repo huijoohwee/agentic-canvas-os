@@ -40,6 +40,8 @@ export function createPlannedDeviceProjectionRecoveryCloudAdapter({
     const status = readStatus(sourceAuthority);
     const current = exactClaim(status, sourceClaim.claimId);
     assertNoCompetitors(status.claims, current, sealed.evidence.manifest);
+    const adoptsExpiredRecovery = current.transitionCounter === sourceClaim.transitionCounter + 1
+      && current.state === "dormant-preserved";
     if (current.transitionCounter === sourceClaim.transitionCounter) {
       assertPartialAdmissionClaim({
         claim: current,
@@ -47,6 +49,8 @@ export function createPlannedDeviceProjectionRecoveryCloudAdapter({
         sourceLease: sealed.evidence.sourceLease,
         manifest: sealed.evidence.manifest,
       });
+    } else if (adoptsExpiredRecovery) {
+      assertExpiredRecoveredClaim(current, sourceClaim, sealed);
     } else {
       assertRecoveredClaim(current, sourceClaim, sealed);
     }
@@ -57,7 +61,17 @@ export function createPlannedDeviceProjectionRecoveryCloudAdapter({
       environment,
     });
     const claim = result?.claim;
-    assertRecoveryResult({ result, claim, sourceClaim, plan: sealed, request });
+    assertRecoveryResult({
+      result,
+      claim,
+      sourceClaim,
+      plan: sealed,
+      request,
+      allowExpired: adoptsExpiredRecovery,
+    });
+    if (adoptsExpiredRecovery) {
+      assertExpiredRecoveredClaim(current, sourceClaim, sealed, claim);
+    }
     const authority = normalizeBoundAuthority({
       result: result.ledgerDigest ? result : {
         ...result,
@@ -79,6 +93,26 @@ export function createPlannedDeviceProjectionRecoveryCloudAdapter({
 
   function verifyRecovered(plan, authority) {
     const sealed = normalizePlannedDeviceProjectionRecoveryPlan(plan);
+    if (Date.parse(authority.expiresAt) <= Date.now()) {
+      const status = readStatus(authority);
+      const claim = exactClaim(status, authority.claimId);
+      assertExpiredRecoveredClaim(
+        claim,
+        sealed.evidence.cloud.claim,
+        sealed,
+        authority,
+      );
+      assertNoCompetitors(status.claims, claim, sealed.evidence.manifest);
+      return Object.freeze({
+        authority,
+        verificationReceiptDigest: digestValue({
+          schema: "agentic-planned-device-projection-expired-replay-verification/v1",
+          ledgerRevision: status.ledgerRevision,
+          ledgerDigest: status.ledgerDigest,
+          claim: projectInventoryClaim(claim),
+        }),
+      });
+    }
     const result = verify({
       authority,
       manifest: sealed.evidence.manifest,
@@ -158,7 +192,14 @@ function assertPartialAdmissionClaim({ claim, sourceAuthority, sourceLease, mani
   }
 }
 
-function assertRecoveryResult({ result, claim, sourceClaim, plan, request }) {
+function assertRecoveryResult({
+  result,
+  claim,
+  sourceClaim,
+  plan,
+  request,
+  allowExpired = false,
+}) {
   const operation = result?.operationReceipt;
   if (result?.schema !== "agentic-cloud-collaboration-result/v1" || result.ok !== true
     || result.action !== "continue" || result.status !== "current"
@@ -170,13 +211,14 @@ function assertRecoveryResult({ result, claim, sourceClaim, plan, request }) {
     || operation.ledgerRevision !== claim.transitionDigest
     || operation.idempotencyKey !== digestValue(request.idempotencyKey)
     || operation.receiptDigest !== claim.operationReceiptDigest
-    || !/^[0-9a-f]{64}$/u.test(String(operation.requestDigest || ""))) {
+    || !/^[0-9a-f]{64}$/u.test(String(operation.requestDigest || ""))
+    || (allowExpired && result.replayed !== true)) {
     invalid("continuation receipt");
   }
-  assertRecoveredClaim(claim, sourceClaim, plan);
+  assertRecoveredClaim(claim, sourceClaim, plan, { allowExpired });
 }
 
-function assertRecoveredClaim(claim, sourceClaim, plan) {
+function assertRecoveredClaim(claim, sourceClaim, plan, { allowExpired = false } = {}) {
   const stableFields = [
     "claimId", "entrySchema", "claimIdentitySchema", "actorId", "repositoryId",
     "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
@@ -191,8 +233,39 @@ function assertRecoveredClaim(claim, sourceClaim, plan) {
     || claim.sessionId !== plan.evidence.cloud.expectedSessionId
     || canonicalJson(normalizeWriteSet(claim.declaredWriteScope))
       !== canonicalJson(plan.evidence.manifest.declaredWriteSet)
-    || Date.parse(claim.expiresAt) <= Date.now()) {
+    || (!allowExpired && Date.parse(claim.expiresAt) <= Date.now())) {
     invalid("recovered same-claim projection");
+  }
+}
+
+function assertExpiredRecoveredClaim(claim, sourceClaim, plan, target = null) {
+  const stableFields = [
+    "claimId", "entrySchema", "claimIdentitySchema", "actorId", "repositoryId",
+    "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
+    "leaseEpoch", "reviewRequestId",
+  ];
+  if (claim?.state !== "dormant-preserved" || claim.writeAuthority !== false
+    || claim.scopeReserved !== true
+    || stableFields.some(field => claim[field] !== sourceClaim[field])
+    || claim.transitionCounter !== sourceClaim.transitionCounter + 1
+    || claim.heartbeatCounter !== sourceClaim.heartbeatCounter
+    || claim.deviceId !== plan.evidence.cloud.expectedDeviceId
+    || claim.sessionId !== plan.evidence.cloud.expectedSessionId
+    || canonicalJson(normalizeWriteSet(claim.declaredWriteScope))
+      !== canonicalJson(plan.evidence.manifest.declaredWriteSet)
+    || Date.parse(claim.expiresAt) > Date.now()
+    || (target && claim.fenceRevision !== (target.fenceRevision || target.claimDigest))
+    || (target && claim.transitionDigest
+      !== (target.transitionDigest || target.claimLedgerRevision))
+    || (target && claim.operationReceiptDigest !== target.operationReceiptDigest)
+    || (target && claim.expiresAt !== target.expiresAt)
+    || (target && claim.transitionCounter !== target.transitionCounter)
+    || (target && claim.deviceId !== target.deviceId)
+    || (target && claim.sessionId !== target.sessionId)
+    || (target && claim.laneRevision !== target.laneRevision)
+    || (target && claim.canonicalBaseRevision
+      !== (target.canonicalBaseRevision || target.canonicalBaseSha))) {
+    invalid("expired recovered same-claim projection");
   }
 }
 

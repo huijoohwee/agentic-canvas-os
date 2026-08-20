@@ -100,7 +100,11 @@ The exact authorized effect set is:
 
 The cloud request uses a plan-derived idempotency key. A rerun after response
 loss replays that request, adopts an already-projected exact lease or marker,
-and rejects any third state. The terminal receipt records whether effects were
+and rejects any third state. Cloud status is checked in its public `current`
+projection, while the independent admission verifier is checked in its
+normalized `active` inventory projection; both must bind the same claim,
+transition, fence, scope, expiry, review, and operation receipt. The terminal
+receipt records whether effects were
 projected or adopted and explicitly returns:
 
 - `admissionStatus: planned`;

@@ -180,6 +180,16 @@ predecessors.
 
 ## Operating Model
 
+### Global Release-Control Rule
+
+This workflow enforces the global release-control rule for every enrolled source repository, mirror, generated projection, and delivery target: only the policy-selected protected integration controller may advance that target's canonical release frontier, and only the target-scoped delivery controller may deploy its immutable authorized candidate. The rule is functional and adapter-based; `main`, `origin/main`, GitHub, pull requests, and Cloudflare are this workflow's mappings, not universal requirements.
+
+- Maintain an explicit, versioned enrollment inventory that maps each target to its canonical-remote, canonical-local, protected-integration, delivery, and deterministic-evaluator adapters. A target may use a different control boundary only through an auditable exception record that names the alternate controller and evaluator.
+- Reject direct canonical writes, force pushes, raw refspec publication, merge-triggered deployment, and deployment from a branch, label, or local checkout alone. They are control-bypass failures, not recovery shortcuts.
+- Before an integration or deployment decision, the evaluator must prove the current remote frontier, exact candidate, policy revision, independent checks, ownership/fence, and required receipts. A remote advance invalidates pending candidates and authorizations rather than being silently retargeted.
+- A canonical local mirror may fast-forward only when it is clean, exclusively owned, and its adapter proves the fetched canonical remote descendant or exact authorized tree-equivalence. A dirty, diverged, stale, or ambiguous mirror remains blocked.
+- The global evaluator reports each enrolled target's coverage, adapter identities, policy revision, and terminal result. Missing enrollment, missing exception evidence, or a nonconforming target is fail-closed for that target and does not authorize changes to any other target.
+
 - Complete `START-WORKFLOW.md` before build work: fetch first, preserve one clean registered `main` worktree, inspect every registered worktree, and activate the task branch only in its leased task worktree; pull only on a clean, exclusively owned branch when updating it intentionally.
 - Require the current worktree-bound session lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope worktrees and pull requests may coexist, but duplicate active scope ownership blocks release.
 - Use one task, semantic scope, registered task worktree, branch, and active writer. Parallel users, devices, sessions, and worktrees are valid only for disjoint scopes with distinct remote ownership records and current fences. Keep normal runtime and synchronization on the registered `main` worktree.

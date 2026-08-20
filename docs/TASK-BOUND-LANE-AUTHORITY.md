@@ -219,3 +219,9 @@ public observation, and required writer-lease enforcement.
 These tests do not prove a protected merge, cloud handoff, release candidate,
 Production deployment, or physical-device execution. Those remain separate
 receipt and authorization boundaries.
+
+When a legacy root-source review refresh observes a pull-request base that is
+not an ancestor of the preserved review head, the admission manifest derives
+its authored paths from the preserved lease base. The refreshed cloud review
+identity may still bind the provider's current pull-request base, but a
+divergent live base cannot widen or replace the lane's source manifest.

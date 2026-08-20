@@ -1109,7 +1109,7 @@ test("review upgrades a resumed legacy root-source ready lane using authored pat
   assert.equal(annotatedLease.cloudAuthority.state, "review_ready");
 });
 
-test("review refreshes a stale legacy cloud base from the live pull request", () => {
+test("review refreshes a stale cloud base while deriving scope from the preserved base when live base diverges", () => {
   const branch = "agent/device/merged-no-lease-completion";
   const pullRequestUrl = "https://github.test/pull/288";
   const staleCanonicalBaseSha = "a".repeat(40);
@@ -1194,7 +1194,8 @@ test("review refreshes a stale legacy cloud base from the live pull request", ()
     },
   };
   let refreshedCanonicalBaseSha = null;
-  const gitText = createGitText({
+  const gitCalls = [];
+  const fixtureGitText = createGitText({
     "worktree list --porcelain -z": branchWorktree(branch),
     "diff --name-only --diff-filter=U": "",
     "ls-files -u": "",
@@ -1204,11 +1205,16 @@ test("review refreshes a stale legacy cloud base from the live pull request", ()
     "rev-parse origin/main": staleCanonicalBaseSha,
     [`diff --name-only ${"9".repeat(40)}..${reviewHeadSha} --`]:
       "scripts/device-branch-lib.mjs\n__tests__/device-branch-lib.test.mjs\n",
-    [`diff --name-only ${livePullRequestBaseSha}..${reviewHeadSha} --`]:
-      "scripts/device-branch-lib.mjs\n__tests__/device-branch-lib.test.mjs\n",
     [`merge-base --is-ancestor ${fenceSha} HEAD`]: "",
     "log -1 --pretty=%s": "fix: bind legacy review admission to live PR base\n",
   });
+  const gitText = args => {
+    gitCalls.push(args.join(" "));
+    if (args.join(" ") === `merge-base --is-ancestor ${livePullRequestBaseSha} ${reviewHeadSha}`) {
+      throw new Error("live pull-request base is not an ancestor of the preserved review head");
+    }
+    return fixtureGitText(args);
+  };
 
   const result = review({
     invocationPath: repo,
@@ -1287,6 +1293,12 @@ test("review refreshes a stale legacy cloud base from the live pull request", ()
 
   assert.equal(result, pullRequestUrl);
   assert.equal(refreshedCanonicalBaseSha, livePullRequestBaseSha);
+  assert.ok(gitCalls.includes(
+    `diff --name-only ${"9".repeat(40)}..${reviewHeadSha} --`,
+  ));
+  assert.ok(!gitCalls.includes(
+    `diff --name-only ${livePullRequestBaseSha}..${reviewHeadSha} --`,
+  ));
   assert.equal(lease.cloudAuthority.canonicalBaseSha, livePullRequestBaseSha);
   assert.equal(lease.cloudAuthority.state, "review_ready");
 });

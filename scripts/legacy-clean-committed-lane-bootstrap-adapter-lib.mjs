@@ -6,6 +6,7 @@ import {
   digestValue,
   normalizeWriteSet,
 } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 import {
@@ -42,6 +43,10 @@ export function listScopeOwners({ branch, semanticScope, repository }) {
 }
 
 export function readCurrentClaims({ request }) {
+  return readCurrentClaimInventory({ request }).claims;
+}
+
+export function readCurrentClaimInventory({ request }) {
   const result = invokeRepositoryCloudAction({
     action: "status",
     ledgerRepository: request.ledgerRepository,
@@ -49,14 +54,163 @@ export function readCurrentClaims({ request }) {
       targetRepository: request.targetRepository,
     },
   });
-  return Array.isArray(result?.claims)
-    ? result.claims.map(claim => ({
-      claimId: claim.claimId,
-      branch: claim.workItemId,
-      state: claim.state,
+  const claims = Array.isArray(result?.claims)
+    ? result.claims.map(claim => Object.freeze({
+      ...claim,
       declaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
     }))
     : [];
+  return Object.freeze({ result, claims: Object.freeze(claims) });
+}
+
+export function findRecoverableLegacyBootstrapClaim({
+  claims,
+  request,
+  checkpoint,
+  identity,
+  canonicalBaseSha,
+} = {}) {
+  if (
+    checkpoint?.schema !== "agentic-legacy-clean-committed-lane-bootstrap-checkpoint/v1"
+    || checkpoint.status !== "prepared"
+    || checkpoint.identity?.identityDigest !== identity?.identityDigest
+    || Object.keys(checkpoint.outputs || {}).length !== 0
+  ) return null;
+  const declaredWriteScope = normalizeWriteSet(request?.declaredWriteScope);
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({
+    request,
+    identity,
+  });
+  const matches = (Array.isArray(claims) ? claims : []).filter(claim => {
+    const initial = claim.state === "current"
+      && claim.transitionCounter === 1
+      && claim.heartbeatCounter === 0
+      && !claim.recovery;
+    const dormant = claim.state === "dormant-preserved"
+      && claim.transitionCounter === 1
+      && claim.heartbeatCounter === 0
+      && !claim.recovery;
+    const recovered = claim.state === "current"
+      && claim.transitionCounter === 2
+      && claim.heartbeatCounter === 0
+      && claim.recovery?.evidenceDigest === recoveryEvidenceDigest;
+    return (initial || dormant || recovered)
+      && claim.writeAuthority === (claim.state === "current")
+      && claim.entrySchema === "agentic-cloud-collaboration-entry/v2"
+      && claim.claimIdentitySchema === "agentic-cloud-collaboration-entry/v2"
+      && /^[0-9a-f]{64}$/u.test(String(claim.claimId || ""))
+      && /^[0-9a-f]{64}$/u.test(String(claim.operationReceiptDigest || ""))
+      && claim.scopeReserved === true
+      && claim.workItemId === pseudonymousIdentifier("work-item", request.branch)
+      && claim.deviceId === pseudonymousIdentifier("device", request.deviceId)
+      && claim.sessionId === pseudonymousIdentifier("session", request.sessionId)
+      && claim.canonicalBaseRevision === canonicalBaseSha
+      && claim.laneRevision === canonicalBaseSha
+      && claim.writeSetDigest === request.writeSetDigest
+      && JSON.stringify(claim.declaredWriteScope) === JSON.stringify(declaredWriteScope)
+      && claim.leaseEpoch === 1
+      && claim.reviewRequestId === null
+      && claim.predecessorClaimId === null
+      && claim.integrationReceiptDigest === null
+      && claim.integration === null;
+  });
+  if (matches.length > 1) {
+    throw new Error("Legacy bootstrap response-loss recovery found multiple exact candidate claims.");
+  }
+  return matches[0] || null;
+}
+
+export function legacyBootstrapRecoveryEvidenceDigest({ request, identity } = {}) {
+  return digestValue({
+    schema: "agentic-legacy-clean-committed-lane-bootstrap-response-loss-evidence/v1",
+    identityDigest: identity?.identityDigest,
+    targetRepository: request?.targetRepository,
+    branch: request?.branch,
+    baseSha: request?.expectedBaseSha,
+    headSha: request?.expectedHeadSha,
+    writeSetDigest: request?.writeSetDigest,
+  });
+}
+
+export function createLegacyBootstrapRecoveryRequest({
+  claim,
+  request,
+  identity,
+  ttlSeconds = 1_800,
+} = {}) {
+  if (claim?.state !== "dormant-preserved") {
+    throw new Error("Legacy bootstrap response-loss recovery requires dormant authority.");
+  }
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({ request, identity });
+  return Object.freeze({
+    targetRepository: request.targetRepository,
+    claimId: claim.claimId,
+    expectedFenceRevision: claim.fenceRevision,
+    expectedTransitionCounter: claim.transitionCounter,
+    mode: "recovery",
+    ttlSeconds,
+    recoveryEvidenceDigest,
+    deviceId: request.deviceId,
+    sessionId: request.sessionId,
+    idempotencyKey: `legacy-bootstrap-response-loss-recovery:${claim.claimId}:${recoveryEvidenceDigest}`,
+  });
+}
+
+export function requireRecoveredLegacyBootstrapClaim({
+  claim,
+  sourceClaim,
+  request,
+  identity,
+  canonicalBaseSha,
+  now = new Date(),
+} = {}) {
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({ request, identity });
+  if (
+    claim?.claimId !== sourceClaim?.claimId
+    || claim?.entrySchema !== sourceClaim?.entrySchema
+    || claim?.claimIdentitySchema !== sourceClaim?.claimIdentitySchema
+    || !/^[0-9a-f]{64}$/u.test(String(claim?.operationReceiptDigest || ""))
+    || claim?.state !== "current"
+    || claim?.writeAuthority !== true
+    || claim?.scopeReserved !== true
+    || claim?.transitionCounter !== sourceClaim.transitionCounter + 1
+    || claim?.heartbeatCounter !== sourceClaim.heartbeatCounter
+    || claim?.fenceRevision === sourceClaim.fenceRevision
+    || claim?.transitionDigest === sourceClaim.transitionDigest
+    || claim?.actorId !== sourceClaim.actorId
+    || claim?.repositoryId !== sourceClaim.repositoryId
+    || claim?.workItemId !== sourceClaim.workItemId
+    || claim?.deviceId !== sourceClaim.deviceId
+    || claim?.sessionId !== sourceClaim.sessionId
+    || claim?.recovery?.evidenceDigest !== recoveryEvidenceDigest
+    || claim?.canonicalBaseRevision !== canonicalBaseSha
+    || claim?.laneRevision !== canonicalBaseSha
+    || claim?.writeSetDigest !== request.writeSetDigest
+    || JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope))
+      !== JSON.stringify(normalizeWriteSet(request.declaredWriteScope))
+    || claim?.leaseEpoch !== sourceClaim.leaseEpoch
+    || claim?.reviewRequestId !== null
+    || claim?.predecessorClaimId !== null
+    || claim?.integrationReceiptDigest !== null
+    || claim?.integration !== null
+    || Date.parse(claim?.expiresAt || "") <= now.getTime()
+  ) {
+    throw new Error("Recovered legacy bootstrap claim changed its exact response-loss subject.");
+  }
+  return claim;
+}
+
+export function projectRecoveredLegacyBootstrapResult({ statusResult, claim } = {}) {
+  return Object.freeze({
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "continue",
+    status: "current",
+    ledgerRevision: statusResult?.ledgerRevision,
+    ledgerDigest: statusResult?.ledgerDigest,
+    claim,
+    claimDigest: claim?.fenceRevision,
+  });
 }
 
 export function requireLease({ branch, leaseStore }) {

@@ -9,8 +9,10 @@ import {
 import {
   bindAdmissionCloudAuthority,
   claimLegacyReviewAdmissionCloudAuthority,
+  invokeRepositoryCloudAction,
   verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
+import { normalizeCloudAuthority } from "./scoped-lane-admission-lib.mjs";
 import {
   createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
@@ -20,6 +22,7 @@ import {
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import {
   checkpointPath,
+  createLegacyBootstrapRecoveryRequest,
   createDraftPullRequest,
   createIdentity,
   diffPaths,
@@ -35,10 +38,13 @@ import {
   nextLeaseEpoch,
   persistProjectedOutput,
   phaseOutput,
+  findRecoverableLegacyBootstrapClaim,
+  projectRecoveredLegacyBootstrapResult,
   projectionBaseSha,
   pullRequestNumber,
-  readCurrentClaims,
+  readCurrentClaimInventory,
   readJson,
+  requireRecoveredLegacyBootstrapClaim,
   requireLease,
   resolveAuthoredHeadSha,
   updatePullRequestBody,
@@ -89,8 +95,20 @@ function inspectLane({ request, repository, leaseStore, stateDir }) {
   const identity = createIdentity({ request, headSha, treeSha, changedPaths });
   const checkpoint = readCheckpoint({ identityDigest: identity.identityDigest, stateDir });
   const pullRequest = findOpenPullRequest({ branch: request.branch, repository });
-  const claimInventory = readCurrentClaims({ request });
+  const { claims: claimInventory } = readCurrentClaimInventory({ request });
   const projectedClaimId = checkpoint?.outputs?.cloudClaim?.authority?.claimId || null;
+  const canonicalBaseSha = projectionBaseSha({
+    headSha: request.expectedHeadSha,
+    requestBaseSha: request.expectedBaseSha,
+    worktreePath: request.worktreePath,
+  });
+  const recoverableClaim = findRecoverableLegacyBootstrapClaim({
+    claims: claimInventory,
+    request,
+    checkpoint,
+    identity,
+    canonicalBaseSha,
+  });
   return {
     clean: gitText(["status", "--short"], { cwd: worktreePath }) === "",
     registeredWorktree: listedWorktrees(repository).includes(worktreePath),
@@ -108,6 +126,7 @@ function inspectLane({ request, repository, leaseStore, stateDir }) {
     }),
     overlappingClaims: claimInventory
       .filter(claim => claim.claimId !== projectedClaimId)
+      .filter(claim => claim.claimId !== recoverableClaim?.claimId)
       .filter(claim => claim.state !== "parked" && claim.state !== "waiting-successor")
       .filter(claim => writeSetsOverlap(claim.declaredWriteScope, request.declaredWriteScope))
       .map(claim => claim.claimId),
@@ -139,17 +158,35 @@ function claimCloudAuthority({ context, leaseStore, stateDir }) {
     requestBaseSha: request.expectedBaseSha,
     worktreePath: request.worktreePath,
   });
-  const claim = claimLegacyReviewAdmissionCloudAuthority({
-    ledgerRepository: request.ledgerRepository,
-    targetRepository: request.targetRepository,
-    manifest: admissionManifest(request),
+  const manifest = admissionManifest(request);
+  const inventory = readCurrentClaimInventory({ request });
+  const recoverableClaim = findRecoverableLegacyBootstrapClaim({
+    claims: inventory.claims,
+    request,
+    checkpoint: context.checkpoint,
+    identity: context.identity,
     canonicalBaseSha,
-    branch: request.branch,
-    headSha: request.expectedHeadSha,
-    deviceId: request.deviceId,
-    sessionId: request.sessionId,
-    leaseEpoch,
   });
+  const claim = recoverableClaim
+    ? adoptRecoverableCloudClaim({
+      recoverableClaim,
+      inventory,
+      request,
+      identity: context.identity,
+      manifest,
+      canonicalBaseSha,
+    })
+    : claimLegacyReviewAdmissionCloudAuthority({
+      ledgerRepository: request.ledgerRepository,
+      targetRepository: request.targetRepository,
+      manifest,
+      canonicalBaseSha,
+      branch: request.branch,
+      headSha: request.expectedHeadSha,
+      deviceId: request.deviceId,
+      sessionId: request.sessionId,
+      leaseEpoch,
+    });
   const output = phaseOutput("cloudClaim", context.identity.identityDigest, {
     branch: request.branch,
     leaseEpoch,
@@ -158,6 +195,97 @@ function claimCloudAuthority({ context, leaseStore, stateDir }) {
   });
   persistProjectedOutput({ context, output, stateDir });
   return output;
+}
+
+function adoptRecoverableCloudClaim({
+  recoverableClaim,
+  inventory,
+  request,
+  identity,
+  manifest,
+  canonicalBaseSha,
+}) {
+  let recoveredResult;
+  if (recoverableClaim.state === "dormant-preserved") {
+    const recoveryRequest = createLegacyBootstrapRecoveryRequest({
+      claim: recoverableClaim,
+      request,
+      identity,
+    });
+    try {
+      recoveredResult = invokeRepositoryCloudAction({
+        action: "continue",
+        ledgerRepository: request.ledgerRepository,
+        request: recoveryRequest,
+      });
+    } catch (originalError) {
+      try {
+        const observed = readCurrentClaimInventory({ request });
+        const recoveredClaim = observed.claims.find(
+          claim => claim.claimId === recoverableClaim.claimId,
+        );
+        requireRecoveredLegacyBootstrapClaim({
+          claim: recoveredClaim,
+          sourceClaim: recoverableClaim,
+          request,
+          identity,
+          canonicalBaseSha,
+        });
+        recoveredResult = projectRecoveredLegacyBootstrapResult({
+          statusResult: observed.result,
+          claim: recoveredClaim,
+        });
+      } catch (recoveryError) {
+        throw new Error(
+          `${originalError.message}; exact legacy bootstrap response-loss adoption failed: ${recoveryError.message}`,
+          { cause: originalError },
+        );
+      }
+    }
+    requireRecoveredLegacyBootstrapClaim({
+      claim: recoveredResult.claim,
+      sourceClaim: recoverableClaim,
+      request,
+      identity,
+      canonicalBaseSha,
+    });
+  } else if (recoverableClaim.transitionCounter === 2) {
+    recoveredResult = projectRecoveredLegacyBootstrapResult({
+      statusResult: inventory.result,
+      claim: recoverableClaim,
+    });
+  } else {
+    return claimLegacyReviewAdmissionCloudAuthority({
+      ledgerRepository: request.ledgerRepository,
+      targetRepository: request.targetRepository,
+      manifest,
+      canonicalBaseSha,
+      branch: request.branch,
+      headSha: request.expectedHeadSha,
+      deviceId: request.deviceId,
+      sessionId: request.sessionId,
+      leaseEpoch: 1,
+    });
+  }
+  const recoveredAuthority = normalizeCloudAuthority({
+    ledgerRepository: request.ledgerRepository,
+    targetRepository: request.targetRepository,
+    result: recoveredResult,
+  }, { manifest, canonicalBaseSha });
+  const verified = verifyAdmissionCloudAuthority({
+    authority: recoveredAuthority,
+    manifest,
+    canonicalBaseSha,
+  });
+  return bindAdmissionCloudAuthority({
+    authority: verified.authority,
+    manifest,
+    branch: request.branch,
+    headSha: request.expectedHeadSha,
+    deviceId: request.deviceId,
+    sessionId: request.sessionId,
+    returnVerification: true,
+  });
 }
 
 function claimLocalLease({ context, leaseStore, stateDir }) {

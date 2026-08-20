@@ -1,15 +1,12 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { digestValue, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
-import { bindAdmissionCloudAuthority, claimLegacyReviewAdmissionCloudAuthority,
-  invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { bindAdmissionCloudAuthority, claimLegacyReviewAdmissionCloudAuthority, invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeCloudAuthority } from "./scoped-lane-admission-lib.mjs";
-import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
-  projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
+import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { assertTaskAuthorityBinding } from "./task-bound-lane-authority-contract.mjs";
-import { authorizeTaskBoundLeaseMutation,
-  createTaskAuthorityLeaseBinding } from "./task-bound-lane-authority-store.mjs";
+import { authorizeTaskBoundLeaseMutation, createTaskAuthorityLeaseBinding } from "./task-bound-lane-authority-store.mjs";
 import { mutateWriterLeaseRegistry, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 import { checkpointPath, createLegacyBootstrapRecoveryRequest, createDraftPullRequest,
   createIdentity, diffPaths, ensureDraftOwnershipPullRequest, findOpenPullRequest, git,
@@ -20,7 +17,6 @@ import { checkpointPath, createLegacyBootstrapRecoveryRequest, createDraftPullRe
   pullRequestNumber, readCurrentClaimInventory, readJson, requireRecoveredLegacyBootstrapClaim,
   requireLease, resolveAuthoredHeadSha, updatePullRequestBody,
   writeJson } from "./legacy-clean-committed-lane-bootstrap-adapter-lib.mjs";
-
 export async function createLegacyBootstrapAdapter({ requestPath } = {}) {
   const bootstrapRequest = readJson(path.resolve(String(requestPath || "")));
   const worktreePath = path.resolve(String(bootstrapRequest?.worktreePath || ""));
@@ -32,7 +28,6 @@ export async function createLegacyBootstrapAdapter({ requestPath } = {}) {
   const stateDir = path.join(gitCommonDir, "agentic-canvas-os", "legacy-clean-bootstrap");
   mkdirSync(stateDir, { recursive: true });
   const leaseStore = createWriterLeaseStore({ gitCommonDir });
-
   return {
     inspectLane: request => inspectLane({ request, repository, leaseStore, stateDir }),
     readCheckpoint: identityDigest => readCheckpoint({ identityDigest, stateDir }),
@@ -46,7 +41,6 @@ export async function createLegacyBootstrapAdapter({ requestPath } = {}) {
     projectOwnerReceipt: context => projectOwnerReceipt({ context, repository, leaseStore, stateDir }),
   };
 }
-
 function inspectLane({ request, repository, leaseStore, stateDir }) {
   const worktreePath = path.resolve(request.worktreePath);
   const headSha = gitText(["rev-parse", "HEAD"], { cwd: worktreePath });
@@ -106,25 +100,21 @@ function inspectLane({ request, repository, leaseStore, stateDir }) {
     },
   };
 }
-
 export function projectedLegacyBootstrapClaimIds(checkpoint) {
   return new Set([checkpoint?.outputs?.cloudClaim?.authority?.claimId,
     checkpoint?.outputs?.boundAuthority?.authority?.claimId].filter(Boolean));
 }
-
 function readCheckpoint({ identityDigest, stateDir }) {
   const filePath = checkpointPath({ identityDigest, stateDir });
   if (!existsSync(filePath)) return null;
   return readJson(filePath);
 }
-
 function writeCheckpoint({ checkpoint, stateDir }) {
   writeJson(checkpointPath({
     identityDigest: checkpoint?.identity?.identityDigest,
     stateDir,
   }), checkpoint);
 }
-
 function claimCloudAuthority({ context, leaseStore, stateDir }) {
   const request = context.request;
   const leaseEpoch = 1;
@@ -171,7 +161,6 @@ function claimCloudAuthority({ context, leaseStore, stateDir }) {
   persistProjectedOutput({ context, output, stateDir });
   return output;
 }
-
 function adoptRecoverableCloudClaim({
   recoverableClaim,
   inventory,
@@ -262,7 +251,6 @@ function adoptRecoverableCloudClaim({
     returnVerification: true,
   });
 }
-
 function claimLocalLease({ context, leaseStore, stateDir }) {
   const request = context.request;
   const baseSha = projectionBaseSha({
@@ -296,7 +284,6 @@ function claimLocalLease({ context, leaseStore, stateDir }) {
   persistProjectedOutput({ context, output, stateDir });
   return output;
 }
-
 function publishExactBranch({ context, repository, stateDir }) {
   const request = context.request;
   git(["push", "--set-upstream", "origin", request.branch], { cwd: request.worktreePath });
@@ -314,7 +301,6 @@ function publishExactBranch({ context, repository, stateDir }) {
   persistProjectedOutput({ context, output, stateDir });
   return output;
 }
-
 function createDraftOwnershipRequest({ context, repository, leaseStore, stateDir }) {
   const request = context.request;
   const lease = requireLease({ branch: request.branch, leaseStore });
@@ -358,7 +344,6 @@ function createDraftOwnershipRequest({ context, repository, leaseStore, stateDir
   persistProjectedOutput({ context, output, stateDir });
   return output;
 }
-
 function bindCloudAuthority({ context, leaseStore, stateDir }) {
   const request = context.request;
   const lease = requireLease({ branch: request.branch, leaseStore });
@@ -388,7 +373,6 @@ function bindCloudAuthority({ context, leaseStore, stateDir }) {
   persistProjectedOutput({ context, output, stateDir });
   return output;
 }
-
 function projectOwnerReceipt({ context, leaseStore, repository, stateDir }) {
   const request = context.request;
   const lease = requireLease({ branch: request.branch, leaseStore });
@@ -449,10 +433,9 @@ function projectOwnerReceipt({ context, leaseStore, repository, stateDir }) {
   persistProjectedOutput({ context, output, stateDir });
   return output;
 }
-
 function verifyFinal({ context, repository, leaseStore, stateDir }) {
   const request = context.request;
-  const lease = requireLease({ branch: request.branch, leaseStore });
+  const lease = reconcileFinalCurrentBaseAuthority({ context, repository, leaseStore });
   const pullRequest = readOwnershipPullRequest({
     url: lease.pullRequestUrl,
     branch: request.branch,
@@ -472,9 +455,44 @@ function verifyFinal({ context, repository, leaseStore, stateDir }) {
   });
   return inspectLane({ request, repository, leaseStore, stateDir });
 }
-
+function reconcileFinalCurrentBaseAuthority({ context, repository, leaseStore }) {
+  const request = context.request;
+  const lease = requireLease({ branch: request.branch, leaseStore });
+  const projected = context.checkpoint?.outputs?.ownerProjection;
+  if (!projected?.taskAuthorityContinuation) return lease;
+  const targetBaseSha = gitText(["rev-parse", "origin/main"], { cwd: request.worktreePath });
+  if (lease.cloudAuthority.canonicalBaseSha === targetBaseSha) {
+    const review = readOwnershipPullRequest({ url: lease.pullRequestUrl, branch: request.branch,
+      ghText: args => ghText(args, { cwd: repository }) });
+    const marker = parseWriterLeasePullRequestBody(review.body);
+    if (!marker || digestValue(marker) !== digestValue(projectWriterLeasePullRequestMarker(lease))) {
+      updatePullRequestBody({ url: lease.pullRequestUrl,
+        body: updateWriterLeasePullRequestBody(review.body, lease), repository });
+    }
+    return lease;
+  }
+  if (projected.authority?.claimId !== lease.cloudAuthority?.claimId) return lease;
+  const sourceBaseSha = lease.cloudAuthority.canonicalBaseSha;
+  const proof = proveLegacyReviewCanonicalDescendant({ sourceBaseSha, targetBaseSha, protectedMainSha: targetBaseSha,
+    canonicalChangedPaths: diffPaths({ cwd: request.worktreePath, from: sourceBaseSha, to: targetBaseSha }),
+    preservedChangedPaths: request.expectedChangedPaths,
+    sourceIsAncestor: gitExitCode(["merge-base", "--is-ancestor", sourceBaseSha, targetBaseSha],
+      { cwd: request.worktreePath }) === 0,
+    targetIsProtectedAncestor: gitExitCode(["merge-base", "--is-ancestor", targetBaseSha, "origin/main"],
+      { cwd: request.worktreePath }) === 0 });
+  const replacement = claimCurrentBaseAuthority({ repair: { proof }, request });
+  const admission = createAdmissionProjection({ request, lease, authority: replacement.authority,
+    verification: replacement.verification });
+  const continued = projectCloudAuthorityAndTaskBinding({ leaseStore, lease, request, repairProof: proof,
+    sourceWithoutCloud: false, values: { baseSha: targetBaseSha, fenceSha: request.expectedHeadSha,
+      pullRequestUrl: lease.pullRequestUrl, admission, cloudAuthority: replacement.authority } });
+  const pullRequest = readOwnershipPullRequest({ url: lease.pullRequestUrl, branch: request.branch,
+    ghText: args => ghText(args, { cwd: repository }) });
+  updatePullRequestBody({ url: lease.pullRequestUrl,
+    body: updateWriterLeasePullRequestBody(pullRequest.body, continued.lease), repository });
+  return continued.lease;
+}
 const admissionManifest = legacyBootstrapAdmissionManifest;
-
 function initialCloudProjectionTaskBindingRepair({ lease, request }) {
   if (!lease?.taskAuthority || !lease?.cloudAuthority || !taskBindingMatchesNullCloud(lease)) return null;
   const targetBaseSha = gitText(["rev-parse", "origin/main"], { cwd: request.worktreePath });
@@ -490,7 +508,6 @@ function initialCloudProjectionTaskBindingRepair({ lease, request }) {
   });
   return { proof };
 }
-
 function claimCurrentBaseAuthority({ repair, request }) {
   const inventory = readCurrentClaimInventory({ request });
   findLegacyReviewCurrentBaseCandidate({ claims: inventory.claims, request,
@@ -502,16 +519,14 @@ function claimCurrentBaseAuthority({ repair, request }) {
     deviceId: request.deviceId, sessionId: request.sessionId, leaseEpoch: 1,
   });
 }
-
 function taskBindingMatchesNullCloud(lease) {
   try {
     assertTaskAuthorityBinding({ binding: lease?.taskAuthority, lease: { ...lease, cloudAuthority: null } });
     return true;
   } catch { return false; }
 }
-
 export function projectCloudAuthorityAndTaskBinding(
-  { leaseStore, lease, request, values, repairProof },
+  { leaseStore, lease, request, values, repairProof, sourceWithoutCloud = true },
   dependencies = {
     authorize: authorizeTaskBoundLeaseMutation,
     createBinding: createTaskAuthorityLeaseBinding,
@@ -520,9 +535,10 @@ export function projectCloudAuthorityAndTaskBinding(
   },
 ) {
   const capabilityPath = process.env.AGENTIC_TASK_AUTHORITY_FILE;
-  const sourceLease = { ...lease, cloudAuthority: null };
+  const sourceLease = sourceWithoutCloud ? { ...lease, cloudAuthority: null } : lease;
   const taskReceipt = dependencies.authorize({ lease: sourceLease, capabilityPath,
-    operation: "legacy-bootstrap-cloud-claim-task-binding-continuation" });
+    operation: sourceWithoutCloud ? "legacy-bootstrap-cloud-claim-task-binding-continuation"
+      : "legacy-bootstrap-current-base-task-binding-continuation" });
   const core = { ...lease, ...values };
   const taskAuthority = dependencies.createBinding({ lease: core, capabilityPath,
     bindingMode: "continuation", priorBindingDigest: lease.taskAuthority.bindingDigest });
@@ -540,33 +556,23 @@ export function projectCloudAuthorityAndTaskBinding(
   return { lease: mutation.lease, continuationReceipt: Object.freeze({ ...receipt,
     receiptDigest: digestValue(receipt) }) };
 }
-
 function createAdmissionProjection({ request, lease, authority, verification }) {
   const manifest = admissionManifest(request);
   const baseSha = authority.canonicalBaseSha;
   const existingLaneStateDigest = digestValue({
-    schema: "agentic-root-source-legacy-review-state/v1",
-    branch: request.branch,
-    worktreePath: path.resolve(request.worktreePath),
-    baseSha,
-    fenceSha: request.expectedHeadSha,
-    headSha: request.expectedHeadSha,
-    epoch: lease.epoch,
-    pullRequestUrl: lease.pullRequestUrl,
+    schema: "agentic-root-source-legacy-review-state/v1", branch: request.branch,
+    worktreePath: path.resolve(request.worktreePath), baseSha,
+    fenceSha: request.expectedHeadSha, headSha: request.expectedHeadSha,
+    epoch: lease.epoch, pullRequestUrl: lease.pullRequestUrl,
   });
   const planReceiptDigest = digestValue({
-    schema: "agentic-root-source-legacy-review-plan/v1",
-    branch: request.branch,
-    semanticScope: manifest.semanticScope,
-    manifestDigest: manifest.manifestDigest,
-    writeSetDigest: manifest.writeSetDigest,
-    existingLaneStateDigest,
+    schema: "agentic-root-source-legacy-review-plan/v1", branch: request.branch,
+    semanticScope: manifest.semanticScope, manifestDigest: manifest.manifestDigest,
+    writeSetDigest: manifest.writeSetDigest, existingLaneStateDigest,
   });
   const preservationReceiptDigest = digestValue({
-    schema: "agentic-root-source-legacy-review-preservation/v1",
-    branch: request.branch,
-    claimId: authority.claimId,
-    claimDigest: authority.claimDigest,
+    schema: "agentic-root-source-legacy-review-preservation/v1", branch: request.branch,
+    claimId: authority.claimId, claimDigest: authority.claimDigest,
     manifestDigest: manifest.manifestDigest,
     existingLaneStateDigest,
   });
@@ -584,16 +590,10 @@ function createAdmissionProjection({ request, lease, authority, verification }) 
     preservationReceiptDigest,
   });
   return Object.freeze({
-    schema: "agentic-lane-admission-lease/v1",
-    status: "admitted",
-    semanticScope: manifest.semanticScope,
-    declaredWriteSet: manifest.declaredWriteSet,
-    writeSetDigest: manifest.writeSetDigest,
-    manifestDigest: manifest.manifestDigest,
-    planReceiptDigest,
-    admissionReceiptDigest: verification.receiptDigest,
-    existingLaneStateDigest,
-    admittedReportDigest,
-    preservationReceiptDigest,
+    schema: "agentic-lane-admission-lease/v1", status: "admitted",
+    semanticScope: manifest.semanticScope, declaredWriteSet: manifest.declaredWriteSet,
+    writeSetDigest: manifest.writeSetDigest, manifestDigest: manifest.manifestDigest,
+    planReceiptDigest, admissionReceiptDigest: verification.receiptDigest,
+    existingLaneStateDigest, admittedReportDigest, preservationReceiptDigest,
   });
 }

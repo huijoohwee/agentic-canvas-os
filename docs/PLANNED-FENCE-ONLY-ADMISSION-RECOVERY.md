@@ -152,3 +152,9 @@ Provider claims use opaque device and session subjects. Source and recovered
 verification normalize the local lease labels before joining those subjects;
 an already-opaque recovered authority is accepted only when it resolves to the
 same exact device and session, while either owner mismatch still fails closed.
+Legacy recovered projections may omit `heartbeatCounter` only when the exact
+live claim records zero. A present counter is still validated as a nonnegative
+integer and must equal the claim, so nonzero or malformed drift remains blocked.
+GitHub review evidence similarly joins only a raw `PR_` node ID to the cloud
+authority's `github-pull-request:` form. Other review adapters and identities
+remain byte-exact and cannot inherit that provider-specific projection.

@@ -4,10 +4,15 @@ import assert from "node:assert/strict";
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { normalizeCloudAuthority } from "../scripts/scoped-lane-admission-lib.mjs";
+import { projectCloudAuthorityAndTaskBinding }
+  from "../scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs";
 import {
   createLegacyBootstrapRecoveryRequest,
   findRecoverableLegacyBootstrapClaim,
+  findLegacyReviewCurrentBaseCandidate,
+  legacyBootstrapAdmissionManifest,
   legacyBootstrapRecoveryEvidenceDigest,
+  proveLegacyReviewCanonicalDescendant,
   projectRecoveredLegacyBootstrapResult,
   requireRecoveredLegacyBootstrapClaim,
 } from "../scripts/legacy-clean-committed-lane-bootstrap-adapter-lib.mjs";
@@ -236,4 +241,108 @@ test("dormant recovered authority rejects a different recovery subject", () => {
     identity: IDENTITY,
     canonicalBaseSha: BASE_SHA,
   }), null);
+});
+
+test("current canonical descendant requires complete disjoint path proof", () => {
+  const target = "1".repeat(40);
+  const proof = proveLegacyReviewCanonicalDescendant({
+    sourceBaseSha: BASE_SHA,
+    targetBaseSha: target,
+    protectedMainSha: target,
+    canonicalChangedPaths: ["docs/current.md"],
+    preservedChangedPaths: ["scripts/preserved.mjs"],
+    sourceIsAncestor: true,
+    targetIsProtectedAncestor: true,
+  });
+  assert.equal(proof.overlap, "none");
+  assert.equal(proof.targetBaseSha, target);
+  assert.match(proof.evidenceDigest, /^[0-9a-f]{64}$/u);
+  for (const invalid of [
+    { canonicalChangedPaths: ["scripts/preserved.mjs"] },
+    { sourceIsAncestor: false },
+    { targetIsProtectedAncestor: false },
+    { targetBaseSha: "2".repeat(40) },
+  ]) {
+    assert.throws(() => proveLegacyReviewCanonicalDescendant({
+      sourceBaseSha: BASE_SHA,
+      targetBaseSha: target,
+      protectedMainSha: target,
+      canonicalChangedPaths: ["docs/current.md"],
+      preservedChangedPaths: ["scripts/preserved.mjs"],
+      sourceIsAncestor: true,
+      targetIsProtectedAncestor: true,
+      ...invalid,
+    }), /canonical|ancestry|overlaps/u);
+  }
+});
+
+test("current-base candidate selection rejects multiple live subjects", () => {
+  const targetBaseSha = "1".repeat(40);
+  const current = claim({
+    canonicalBaseRevision: targetBaseSha,
+    laneRevision: HEAD_SHA,
+  });
+  assert.equal(findLegacyReviewCurrentBaseCandidate({
+    claims: [current], request: REQUEST, targetBaseSha,
+  }), current);
+  assert.throws(() => findLegacyReviewCurrentBaseCandidate({
+    claims: [current, { ...current, claimId: "2".repeat(64) }],
+    request: REQUEST,
+    targetBaseSha,
+  }), /multiple live current-base candidates/u);
+});
+
+test("legacy admission manifest binds normalized source paths", () => {
+  const manifest = legacyBootstrapAdmissionManifest(REQUEST);
+  assert.deepEqual(manifest.paths, [
+    "scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+  ]);
+  assert.equal(manifest.manifestDigest, digestValue({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: REQUEST.semanticScope,
+    paths: manifest.paths,
+  }));
+});
+
+test("initial cloud projection atomically continues the task binding", () => {
+  const branch = REQUEST.branch;
+  const sourceClaimId = "3".repeat(64);
+  const targetClaimId = "4".repeat(64);
+  const lease = {
+    branch,
+    cloudAuthority: { claimId: sourceClaimId },
+    taskAuthority: { bindingDigest: "5".repeat(64) },
+  };
+  const values = { cloudAuthority: { claimId: targetClaimId }, baseSha: BASE_SHA };
+  const targetBinding = { bindingDigest: "6".repeat(64) };
+  let mutationCount = 0;
+  const result = projectCloudAuthorityAndTaskBinding({
+    leaseStore: {}, lease, request: REQUEST, values,
+    repairProof: { evidenceDigest: "7".repeat(64) },
+  }, {
+    authorize: ({ lease: source, operation }) => {
+      assert.equal(source.cloudAuthority, null);
+      assert.equal(operation, "legacy-bootstrap-cloud-claim-task-binding-continuation");
+      return { receiptDigest: "8".repeat(64) };
+    },
+    createBinding: ({ lease: target, bindingMode, priorBindingDigest }) => {
+      assert.equal(target.cloudAuthority.claimId, targetClaimId);
+      assert.equal(bindingMode, "continuation");
+      assert.equal(priorBindingDigest, lease.taskAuthority.bindingDigest);
+      return targetBinding;
+    },
+    mutate: ({ expectedClaimId, action }) => {
+      mutationCount += 1;
+      assert.equal(expectedClaimId, sourceClaimId);
+      const mutation = action({ registry: { leases: { [branch]: lease } } });
+      assert.equal(mutation.registry.leases[branch].cloudAuthority.claimId, targetClaimId);
+      assert.equal(mutation.registry.leases[branch].taskAuthority, targetBinding);
+      return { lease: mutation.lease, registryRevision: 2 };
+    },
+    leaseDigest: value => digestValue(value),
+  });
+  assert.equal(mutationCount, 1);
+  assert.equal(result.lease.cloudAuthority.claimId, targetClaimId);
+  assert.equal(result.lease.taskAuthority, targetBinding);
+  assert.match(result.continuationReceipt.receiptDigest, /^[0-9a-f]{64}$/u);
 });

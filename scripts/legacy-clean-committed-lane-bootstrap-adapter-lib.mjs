@@ -2,17 +2,13 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import {
-  digestValue,
-  normalizeWriteSet,
-} from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet,
+  writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
-import {
-  readOwnershipPullRequest,
-  waitForOwnershipPullRequestHead,
-} from "./device-pull-request-state.mjs";
+import { readOwnershipPullRequest,
+  waitForOwnershipPullRequestHead } from "./device-pull-request-state.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 
 export function projectionBaseSha({ headSha, requestBaseSha, worktreePath }) {
@@ -21,6 +17,103 @@ export function projectionBaseSha({ headSha, requestBaseSha, worktreePath }) {
     return currentMainSha;
   }
   return requestBaseSha;
+}
+
+export function proveLegacyReviewCanonicalDescendant({ sourceBaseSha, targetBaseSha,
+  protectedMainSha, canonicalChangedPaths, preservedChangedPaths, sourceIsAncestor,
+  targetIsProtectedAncestor } = {}) {
+  for (const [label, value] of [
+    ["source base", sourceBaseSha],
+    ["target base", targetBaseSha],
+    ["protected main", protectedMainSha],
+  ]) {
+    if (!/^[0-9a-f]{40}$/u.test(String(value || ""))) {
+      throw new Error(`Legacy review ${label} must be an exact Git SHA.`);
+    }
+  }
+  if (sourceBaseSha === targetBaseSha || targetBaseSha !== protectedMainSha) {
+    throw new Error("Legacy review recovery requires a strict current canonical descendant.");
+  }
+  if (sourceIsAncestor !== true || targetIsProtectedAncestor !== true) {
+    throw new Error("Legacy review recovery canonical ancestry is incomplete.");
+  }
+  const canonicalPaths = normalizeRecoveryPaths(canonicalChangedPaths, "canonical changed paths");
+  const preservedPaths = normalizeRecoveryPaths(preservedChangedPaths, "preserved changed paths");
+  if (writeSetsOverlap(
+    canonicalPaths.map(value => `path:${value}`),
+    preservedPaths.map(value => `path:${value}`),
+  )) {
+    throw new Error("Legacy review recovery canonical descendant overlaps preserved lane paths.");
+  }
+  const evidence = {
+    schema: "agentic-legacy-review-current-base-disjoint-proof/v1",
+    sourceBaseSha,
+    targetBaseSha,
+    protectedMainSha,
+    canonicalChangedPaths: canonicalPaths,
+    canonicalChangedPathsDigest: digestValue(canonicalPaths),
+    preservedChangedPaths: preservedPaths,
+    preservedChangedPathsDigest: digestValue(preservedPaths),
+    ancestry: "source-base-to-current-protected-main",
+    overlap: "none",
+  };
+  return Object.freeze({ ...evidence, evidenceDigest: digestValue(evidence) });
+}
+
+export function findLegacyReviewCurrentBaseCandidate({ claims, request, targetBaseSha } = {}) {
+  const declaredWriteScope = normalizeWriteSet(request?.declaredWriteScope);
+  const matches = (Array.isArray(claims) ? claims : []).filter(claim => (
+    ["current", "waiting-successor"].includes(claim?.state)
+    && claim?.scopeReserved === true
+    && claim?.workItemId === pseudonymousIdentifier("work-item", request?.branch)
+    && claim?.deviceId === pseudonymousIdentifier("device", request?.deviceId)
+    && claim?.sessionId === pseudonymousIdentifier("session", request?.sessionId)
+    && claim?.canonicalBaseRevision === targetBaseSha
+    && [targetBaseSha, request?.expectedHeadSha].includes(claim?.laneRevision)
+    && claim?.writeSetDigest === request?.writeSetDigest
+    && JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope)) === JSON.stringify(declaredWriteScope)
+    && claim?.reviewRequestId === null
+  ));
+  if (matches.length > 1) {
+    throw new Error("Legacy review recovery found multiple live current-base candidates.");
+  }
+  return matches[0] || null;
+}
+
+export function legacyBootstrapAdmissionManifest(request) {
+  const declaredWriteSet = normalizeWriteSet(request?.declaredWriteScope);
+  const paths = declaredWriteSet
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
+  const source = {
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: request?.semanticScope,
+    paths,
+  };
+  return Object.freeze({
+    ...source,
+    declaredWriteSet,
+    writeSetDigest: request?.writeSetDigest,
+    manifestDigest: digestValue(source),
+    admittedReportDigest: digestValue({
+      schema: "agentic-legacy-bootstrap-admitted-report-input/v1",
+      branch: request?.branch,
+      semanticScope: request?.semanticScope,
+      writeSetDigest: request?.writeSetDigest,
+      headSha: request?.expectedHeadSha,
+    }),
+  });
+}
+
+function normalizeRecoveryPaths(values, label) {
+  if (!Array.isArray(values)) throw new Error(`Legacy review recovery ${label} are incomplete.`);
+  return Object.freeze([...new Set(values.map(value => {
+    const normalized = String(value || "").trim().replaceAll("\\", "/").replace(/^\.\//u, "");
+    if (!normalized || normalized.startsWith("/") || normalized.split("/").includes("..")) {
+      throw new Error(`Legacy review recovery ${label} contain an invalid path.`);
+    }
+    return normalized;
+  }))].sort());
 }
 
 export function listScopeOwners({ branch, semanticScope, repository }) {

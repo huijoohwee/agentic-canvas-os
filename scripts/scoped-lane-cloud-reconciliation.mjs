@@ -296,10 +296,24 @@ function normalizeVerificationReceipt(value) {
 
 function normalizeInventoryClaim(source, evaluationTime) {
   const provenance = normalizeClaimProvenance(source, "inventory claim");
+  const state = requiredCurrentState(source.state);
+  const expectedAuthority = {
+    active: { writeAuthority: true, scopeReserved: true },
+    "waiting-successor": { writeAuthority: false, scopeReserved: false },
+    review_ready: { writeAuthority: false, scopeReserved: true },
+    delivery_authorized: { writeAuthority: false, scopeReserved: true },
+    parked: { writeAuthority: false, scopeReserved: true },
+  }[state];
   const core = {
     claimId: requiredDigest(source.claimId, "inventory claimId"),
     ...provenance,
-    state: requiredCurrentState(source.state),
+    state,
+    writeAuthority: source.writeAuthority === undefined
+      ? expectedAuthority.writeAuthority
+      : requiredBoolean(source.writeAuthority, "inventory writeAuthority"),
+    scopeReserved: source.scopeReserved === undefined
+      ? expectedAuthority.scopeReserved
+      : requiredBoolean(source.scopeReserved, "inventory scopeReserved"),
     actorId: requiredText(source.actorId, "inventory actorId"),
     repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
     workItemId: requiredText(source.workItemId, "inventory workItemId"),
@@ -337,6 +351,8 @@ function normalizeInventoryClaim(source, evaluationTime) {
   };
   if (
     digestValue(core.declaredWriteScope) !== core.writeSetDigest
+    || core.writeAuthority !== expectedAuthority.writeAuthority
+    || core.scopeReserved !== expectedAuthority.scopeReserved
     || (!["parked", "waiting-successor"].includes(core.state)
       && Date.parse(core.expiresAt) <= Date.parse(evaluationTime))
   ) {
@@ -535,6 +551,13 @@ function nonnegativeInteger(value, label) {
     throw new Error(`${label} must be a nonnegative integer.`);
   }
   return normalized;
+}
+
+function requiredBoolean(value, label) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${label} must be a boolean.`);
+  }
+  return value;
 }
 
 function requiredState(value) {

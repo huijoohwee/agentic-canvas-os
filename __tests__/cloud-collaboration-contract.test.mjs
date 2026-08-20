@@ -397,7 +397,7 @@ test("review identity is immutable; integrate preserves; retire joins the typed 
   assert.equal(retired.receipt.schema, "agentic-collaboration-retirement-receipt/v1");
 });
 
-test("verification can recover one exact integrated entry followed by its valid retirement", () => {
+test("verification can recover one exact integrated entry through renewal and valid retirement", () => {
   const claimed = claim(createEmptyLedger("ledger:repository"), { expiresAt: T4 });
   const projected = continueClaim(claimed.ledger, claimed.claim, {
     mode: "projection",
@@ -433,7 +433,12 @@ test("verification can recover one exact integrated entry followed by its valid 
       idempotencyKey: "integrate:historical",
     },
   });
-  const retired = retire(integrated.ledger, integrated.claim, {
+  const renewed = continueClaim(integrated.ledger, integrated.claim, {
+    mode: "renewal",
+    time: "2026-08-04T00:35:00.000Z",
+    expiresAt: T6,
+  });
+  const retired = retire(renewed.ledger, renewed.claim, {
     reason: "integrated",
     integrationReceiptDigest: integrated.receipt.receiptDigest,
   });
@@ -466,6 +471,91 @@ test("verification can recover one exact integrated entry followed by its valid 
     });
     assert.equal(blocked.ok, false);
   }
+});
+
+test("verification accepts only same-identity integrated-preserved continuations", () => {
+  const claimed = claim(createEmptyLedger("ledger:repository"), { expiresAt: T4 });
+  const projected = continueClaim(claimed.ledger, claimed.claim, {
+    mode: "projection",
+    laneRevision: revision("heartbeat-candidate"),
+    reviewRequestId: "review:heartbeat",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review",
+    time: T2,
+    laneRevision: projected.claim.laneRevision,
+    reviewRequestId: projected.claim.reviewRequestId,
+    focusedEvidenceDigest: evidence("heartbeat-focused"),
+  });
+  const integrated = applyCloudTransition({
+    ledger: reviewed.ledger,
+    action: "integrate",
+    actor: owner,
+    repository,
+    evaluationTime: T3,
+    request: {
+      claimId: reviewed.claim.claimId,
+      expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      expectedLedgerDigest: reviewed.ledger.headDigest,
+      candidateRevision: reviewed.claim.laneRevision,
+      reviewRequestId: reviewed.claim.reviewRequestId,
+      focusedEvidenceDigest: reviewed.claim.evidenceDigest,
+      dependencyClosureDigest: evidence("heartbeat-dependencies"),
+      namedChecksDigest: evidence("heartbeat-checks"),
+      handoffEvidenceDigest: evidence("heartbeat-handoff"),
+      operatorDecisionDigest: evidence("heartbeat-operator"),
+      integrationIntentDigest: evidence("heartbeat-intent"),
+      idempotencyKey: "integrate:heartbeat",
+    },
+  });
+  const renewed = continueClaim(integrated.ledger, integrated.claim, {
+    mode: "renewal",
+    time: "2026-08-04T00:35:00.000Z",
+    expiresAt: T6,
+  });
+  const request = {
+    claimId: integrated.claim.claimId,
+    fenceRevision: integrated.claim.fenceRevision,
+    requiredState: "integrated-preserved",
+    integrationReceiptDigest: integrated.receipt.receiptDigest,
+    transitionCounter: integrated.claim.transitionCounter,
+  };
+  const verified = verifyCloudClaim({
+    ledger: renewed.ledger,
+    request,
+    evaluationTime: T5,
+  });
+  assert.equal(verified.ok, true);
+  assert.equal(verified.claim.fenceRevision, integrated.claim.fenceRevision);
+
+  const dormant = listCurrentClaims(integrated.ledger, T5)[0];
+  const recovered = continueClaim(integrated.ledger, dormant, {
+    mode: "recovery",
+    time: T5,
+    expiresAt: "2026-08-04T02:00:00.000Z",
+    recoveryEvidenceDigest: evidence("same-identity-integrated-recovery"),
+  });
+  const recoveredVerification = verifyCloudClaim({
+    ledger: recovered.ledger,
+    request,
+    evaluationTime: T6,
+  });
+  assert.equal(recoveredVerification.ok, true);
+
+  const transferredRecovery = continueClaim(integrated.ledger, dormant, {
+    identity: actor("owner", "device-recovered", "session-recovered"),
+    mode: "recovery",
+    time: T5,
+    expiresAt: "2026-08-04T02:00:00.000Z",
+    recoveryEvidenceDigest: evidence("transferred-integrated-recovery"),
+  });
+  const blocked = verifyCloudClaim({
+    ledger: transferredRecovery.ledger,
+    request,
+    evaluationTime: T6,
+  });
+  assert.equal(blocked.ok, false);
 });
 
 test("verification blocks a reviewed claim whose observed pull-request paths escape its declared scope", () => {

@@ -516,7 +516,7 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
   const currentClaim = claimId
     ? hydrateWithLedger(ledger, findClaimEntry(ledger, claimId), evaluatedAt)
     : null;
-  const historicalClaim = recoverRetiredIntegratedClaim({
+  const historicalClaim = recoverIntegratedPreservedLineageClaim({
     ledger,
     currentClaim,
     request,
@@ -617,34 +617,91 @@ export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
   return { ...draft, receiptDigest: digestValue(draft) };
 }
 
-function recoverRetiredIntegratedClaim({ ledger, currentClaim, request }) {
-  if (request.allowRetiredIntegratedPreserved !== true) return null;
+function recoverIntegratedPreservedLineageClaim({ ledger, currentClaim, request }) {
   if (
     !currentClaim
-    || currentClaim.state !== "retired"
     || request.requiredState !== "integrated-preserved"
     || !request.fenceRevision
     || !request.integrationReceiptDigest
     || !Number.isSafeInteger(request.transitionCounter)
   ) return null;
+  const integratedCurrent = currentClaim.state === "integrated-preserved";
+  const retiredCurrent = currentClaim.state === "retired"
+    && request.allowRetiredIntegratedPreserved === true;
+  if (!integratedCurrent && !retiredCurrent) return null;
   const lineage = ledger.entries.filter(entry => entry.claimId === currentClaim.claimId);
   const historicalIndex = lineage.findIndex(
     entry => entry.claimDigest === request.fenceRevision,
   );
-  if (historicalIndex < 0 || lineage.length !== historicalIndex + 2) return null;
+  if (historicalIndex < 0) return null;
   const historical = hydrateWithLedger(
     ledger,
     lineage[historicalIndex],
     null,
   );
-  const retirement = lineage.at(-1);
   if (
     historical.state !== "integrated-preserved"
     || historical.transitionCounter !== request.transitionCounter
     || historical.integrationReceiptDigest !== request.integrationReceiptDigest
-    || retirement.action !== "retire"
-    || currentClaim.transitionCounter !== request.transitionCounter + 1
     || currentClaim.integrationReceiptDigest !== request.integrationReceiptDigest
   ) return null;
+  const suffix = lineage.slice(historicalIndex + 1);
+  const renewalEntries = retiredCurrent ? suffix.slice(0, -1) : suffix;
+  if (integratedCurrent && renewalEntries.length === 0) return null;
+  let previousEntry = lineage[historicalIndex];
+  for (const entry of renewalEntries) {
+    if (!isIntegratedPreservedContinuation({ previousEntry, entry })) return null;
+    previousEntry = entry;
+  }
+  if (retiredCurrent) {
+    const retirement = suffix.at(-1);
+    if (
+      !retirement
+      || retirement.action !== "retire"
+      || retirement.claimCore?.retirement?.integrationReceiptDigest
+        !== request.integrationReceiptDigest
+    ) return null;
+  }
+  if (currentClaim.transitionCounter !== request.transitionCounter + suffix.length) {
+    return null;
+  }
   return historical;
+}
+
+function isIntegratedPreservedContinuation({ previousEntry, entry }) {
+  if (
+    entry.schema !== ENTRY_SCHEMA
+    || entry.action !== "continue"
+    || entry.claimCore?.state !== "integrated-preserved"
+    || entry.claimCore.transitionCounter !== previousEntry.claimCore.transitionCounter + 1
+    || Date.parse(entry.claimCore.expiresAt) <= Date.parse(previousEntry.claimCore.expiresAt)
+  ) return false;
+  const stableCore = (value, { omitRecovery = false } = {}) => {
+    const {
+      expiresAt: _expiresAt,
+      heartbeatCounter: _heartbeatCounter,
+      transitionCounter: _transitionCounter,
+      recovery: omittedRecovery,
+      ...stable
+    } = value;
+    return omitRecovery ? stable : {
+      ...stable,
+      ...(omittedRecovery === undefined ? {} : { recovery: omittedRecovery }),
+    };
+  };
+  const renewal = (
+    entry.claimCore.heartbeatCounter === previousEntry.claimCore.heartbeatCounter + 1
+    && Date.parse(entry.evaluationTime) < Date.parse(previousEntry.claimCore.expiresAt)
+    && canonicalJson(stableCore(entry.claimCore))
+      === canonicalJson(stableCore(previousEntry.claimCore))
+  );
+  if (renewal) return true;
+  return (
+    entry.claimCore.heartbeatCounter === previousEntry.claimCore.heartbeatCounter
+    && Date.parse(entry.evaluationTime) >= Date.parse(previousEntry.claimCore.expiresAt)
+    && /^[0-9a-f]{64}$/u.test(entry.claimCore.recovery?.evidenceDigest || "")
+    && entry.claimCore.recovery?.recoveredAt === entry.evaluationTime
+    && canonicalJson(stableCore(entry.claimCore, { omitRecovery: true }))
+      === canonicalJson(stableCore(previousEntry.claimCore, { omitRecovery: true }))
+  );
 }

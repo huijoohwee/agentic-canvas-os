@@ -159,7 +159,9 @@ export function adoptLegacyDirtyLane({
 
   return withTargetLeaseFence({
     target, operatorSessionId, leaseStore, expectedLeaseDigest,
-    protectedTipSha: recovery.protectedTipSha, now,
+    protectedTipSha: recovery.protectedTipSha,
+    recoveryPaths: [...recovery.tracked, ...recovery.untracked].map((entry) => entry.path),
+    now,
     action: ({ lease, registryRevision, adoptedAt }) => {
       requireCleanTarget(target);
       const reconciliations = normalizeReconciliationPaths(reconciliationPaths, recovery.tracked);
@@ -303,7 +305,8 @@ function requireRecoverySource(recovery, evidence) {
 }
 
 function withTargetLeaseFence({
-  target, operatorSessionId, leaseStore, expectedLeaseDigest, protectedTipSha, now, action,
+  target, operatorSessionId, leaseStore, expectedLeaseDigest, protectedTipSha,
+  recoveryPaths, now, action,
 }) {
   if (typeof leaseStore?.withRegistryLock !== "function" || !leaseStore.statePath) {
     throw new Error("Adoption requires the repository writer-lease registry lock.");
@@ -326,15 +329,41 @@ function withTargetLeaseFence({
     if (!lease || writerLeaseDigest(lease) !== expectedLeaseDigest || lease.status !== "active" ||
         !Number.isFinite(expiresAt) || expiresAt <= adoptedAt.getTime() || lease.sessionId !== operatorSessionId ||
         lease.branch !== branch || realpathSync(lease.worktreePath) !== target ||
-        lease.baseSha !== protectedTipSha || lease.fenceSha !== headSha) {
-      throw new Error("Adoption requires the exact live target writer lease at the captured protected tip.");
+        lease.fenceSha !== headSha) {
+      throw new Error("Adoption requires the exact live target writer lease.");
     }
+    requireDisjointTargetBaseAdvance({
+      target,
+      protectedTipSha,
+      targetBaseSha: lease.baseSha,
+      targetHeadSha: headSha,
+      recoveryPaths,
+    });
     const registryRevision = Number(registry.revision);
     if (!Number.isSafeInteger(registryRevision) || registryRevision < 1) {
       throw new Error("Adoption requires a revisioned target writer-lease registry.");
     }
     return action({ lease, registryRevision, adoptedAt });
   });
+}
+function requireDisjointTargetBaseAdvance({
+  target, protectedTipSha, targetBaseSha, targetHeadSha, recoveryPaths,
+}) {
+  git(target, ["merge-base", "--is-ancestor", protectedTipSha, targetBaseSha]);
+  git(target, ["merge-base", "--is-ancestor", targetBaseSha, targetHeadSha]);
+  if (targetBaseSha === protectedTipSha) return;
+  const changedPaths = splitNull(gitBuffer(target, [
+    "diff", "--no-ext-diff", "--no-renames", "--name-only", "-z",
+    protectedTipSha, targetBaseSha, "--",
+  ]));
+  if (changedPaths.some((changedPath) => recoveryPaths.some(
+    (recoveryPath) => pathsOverlap(changedPath, recoveryPath),
+  ))) {
+    throw new Error("Adoption target base advance overlaps the recovery package write set.");
+  }
+}
+function pathsOverlap(left, right) {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
 }
 function requireCleanTarget(target) {
   if (gitText(target, ["status", "--porcelain"]).trim()) throw new Error("Adoption target must be clean.");

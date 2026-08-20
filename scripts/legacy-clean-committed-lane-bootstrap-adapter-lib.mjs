@@ -86,15 +86,15 @@ export function findRecoverableLegacyBootstrapClaim({
       && claim.transitionCounter === 1
       && claim.heartbeatCounter === 0
       && !claim.recovery;
-    const dormant = claim.state === "dormant-preserved"
+    const dormantInitial = claim.state === "dormant-preserved"
       && claim.transitionCounter === 1
       && claim.heartbeatCounter === 0
       && !claim.recovery;
-    const recovered = claim.state === "current"
-      && claim.transitionCounter === 2
+    const recovered = ["current", "dormant-preserved"].includes(claim.state)
+      && claim.transitionCounter >= 2
       && claim.heartbeatCounter === 0
       && claim.recovery?.evidenceDigest === recoveryEvidenceDigest;
-    return (initial || dormant || recovered)
+    return (initial || dormantInitial || recovered)
       && claim.writeAuthority === (claim.state === "current")
       && claim.entrySchema === "agentic-cloud-collaboration-entry/v2"
       && claim.claimIdentitySchema === "agentic-cloud-collaboration-entry/v2"
@@ -152,7 +152,13 @@ export function createLegacyBootstrapRecoveryRequest({
     recoveryEvidenceDigest,
     deviceId: request.deviceId,
     sessionId: request.sessionId,
-    idempotencyKey: `legacy-bootstrap-response-loss-recovery:${claim.claimId}:${recoveryEvidenceDigest}`,
+    idempotencyKey: [
+      "legacy-bootstrap-response-loss-recovery",
+      claim.claimId,
+      recoveryEvidenceDigest,
+      claim.transitionCounter,
+      claim.fenceRevision,
+    ].join(":"),
   });
 }
 

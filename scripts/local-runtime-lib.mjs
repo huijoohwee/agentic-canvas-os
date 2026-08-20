@@ -27,6 +27,7 @@ export const STORAGE_PORT = 8787;
 export const DEFAULT_TIMEOUT_MS = 120_000;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const STORAGE_EXPORT_PATH = "/api/storage/export/kgws%3Acanonical-docs";
+const STORAGE_LOCAL_RUNTIME_WRANGLER_VAR = "KNOWGRPH_STORAGE_LOCAL_RUNTIME:true";
 const REQUIRED_CHECKS = Object.freeze({
   "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration"],
   knowgrph: ["Integration Gate"],
@@ -408,7 +409,11 @@ async function startRuntime(candidate, options, locations, deps) {
       name: "storage",
       port: STORAGE_PORT,
       commandMarker: "workerd",
-      command: ["npm", ["run", "storage:worker:dev", "--", "--ip", LOCAL_RUNTIME_HOST, "--port", String(STORAGE_PORT)]],
+      command: ["npm", [
+        "run", "storage:worker:dev", "--", "--local", "--var",
+        STORAGE_LOCAL_RUNTIME_WRANGLER_VAR, "--ip", LOCAL_RUNTIME_HOST,
+        "--port", String(STORAGE_PORT),
+      ]],
       healthUrl: `http://${LOCAL_RUNTIME_HOST}:${STORAGE_PORT}${STORAGE_EXPORT_PATH}`,
       logPath: locations.storageLogPath,
     }, candidate, environment, options.timeoutMs, deps);

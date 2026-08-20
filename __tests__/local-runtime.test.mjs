@@ -278,6 +278,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
   };
   const listeners = new Map();
   const processes = new Map();
+  const launchedCommands = [];
   const stoppedGroups = [];
   let nextGroup = 100;
   const dependencies = {
@@ -286,6 +287,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     openLog: () => 1,
     closeLog: () => {},
     spawnService: ({ cwd, env, args }) => {
+      launchedCommands.push(args);
       const port = args.includes(String(STORAGE_PORT)) ? STORAGE_PORT : APEX_PORT;
       const supervisorPid = nextGroup;
       nextGroup += 100;
@@ -343,6 +345,10 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.ok(stoppedGroups.includes(100));
     assert.equal(listeners.get(STORAGE_PORT), 201);
     assert.equal(listeners.get(APEX_PORT), 301);
+    assert.deepEqual(launchedCommands[1], [
+      "run", "storage:worker:dev", "--", "--local", "--var",
+      "KNOWGRPH_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",
+    ]);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }

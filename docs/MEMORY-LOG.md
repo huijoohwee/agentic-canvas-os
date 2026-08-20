@@ -132,13 +132,13 @@ The baseline executor is deterministic and model-free: `model` is `none`, token 
 
 ```mermaid
 flowchart LR
-  deviceA["Device A canonical checkout"] --> appendA["Append timestamped entry"]
-  deviceB["Device B canonical checkout"] --> appendB["Append timestamped entry"]
-  appendA --> git["Git branch and review"]
-  appendB --> git
-  git --> shard["Monthly append-only shard"]
-  shard --> retrieve["Bounded local retrieval"]
-  retrieve --> session["Frozen session context"]
+  deviceA["Device A canonical checkout"] -->|"append - local write"| appendA["Append timestamped entry"]
+  deviceB["Device B canonical checkout"] -->|"append - local write"| appendB["Append timestamped entry"]
+  appendA -->|"review - gated"| git["Git branch and review"]
+  appendB -->|"review - gated"| git
+  git -->|"merge - append only"| shard["Monthly append-only shard"]
+  shard -->|"read - bounded"| retrieve["Bounded local retrieval"]
+  retrieve -->|"load - frozen"| session["Frozen session context"]
 ```
 
 Each branch has one writer. Session continuity uses committed memory entries and source references, not an implicit process-local state transfer. A handoff names the exact pushed commit SHA when another device or agent continues the same semantic scope.

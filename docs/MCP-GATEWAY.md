@@ -425,16 +425,16 @@ flowchart TB
   union["Capability union"]
   gated["Approval-gated workflows"]
 
-  agent --> card
-  card --> local
-  card --> pages
-  card --> browser
-  card --> control
-  local --> union
-  pages --> union
-  browser --> union
-  control --> union
-  control --> gated
+  agent -->|"discover - read"| card
+  card -->|"route - local"| local
+  card -->|"route - read only"| pages
+  card -->|"route - page local"| browser
+  card -->|"route - approval gated"| control
+  local -->|"contribute catalog"| union
+  pages -->|"contribute catalog"| union
+  browser -->|"contribute catalog"| union
+  control -->|"contribute catalog"| union
+  control -->|"dispatch - approval gated"| gated
 ```
 
 ## Anti-Patterns

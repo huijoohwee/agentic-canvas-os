@@ -23,6 +23,10 @@ kgCanvasSurfaceMode: "2d"
 kgCanvasRenderMode: "2d"
 kgCanvas2dRenderer: "storyboard"
 kgDocumentSemanticMode: "document"
+surfaces:
+  - "2D Renderer: Storyboard"
+  - "2D Renderer: D3 Graph"
+  - "2D Renderer: Multi-dimensional Table"
 kgFrontmatterModeEnabled: true
 kgMultiDimTableModeEnabled: true
 kgDocumentStructureBaselineLock: false
@@ -142,6 +146,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Observe and improve digest-bound agent teams | Given application-authorized caller-declared target, candidate, adapter, evaluator, dataset, and metric revision digests, when `/agent.toolkit` runs, existing owners retain execution while the Toolkit records metadata-only trust labels, evaluates unique opaque evidence, excludes remote-unverified samples, compares one bounded cohort, and emits at most a review-pending proposal. | Must |
 | Run long-horizon SuperAgent work | Given a research, coding, or creation goal, when `/superagent.run` runs, then graph, memory, skills, tools, sandbox workspace, message gateway, artifacts, verification, stop condition, and cost ledger are typed before execution. | Must |
 | Render Canvas dashboards | Given a typed run manifest or source-backed document, when Canvas opens it, then existing Source Files, frontmatter, KGC, and Storyboard owners render the state without a dashboard-only renderer. | Should |
+| Render this contract on Canvas | Given this document, when a declared 2D renderer surface opens it, then every diagram projects the node, edge, and cluster counts recorded in the Diagram Register, with every edge endpoint resolved and zero token spend. | Must |
 | Prove runtime readiness | Given a capability marked runtime-ready, when validation runs, then its VCCs surface parse, route, execute, cost, bound, and deploy-boundary proof. | Must |
 
 ### Success Metrics
@@ -179,13 +184,16 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Unsupported identity-model personal inferences | 0 |
 | Runtime-ready claims without surfaced VCC proof | 0 |
 | Capability catalogs requiring duplicate manual lookup | 0 |
+| Diagrams without a declared registry-resolvable render surface | 0 |
+| Diagrams claiming canvas-renderability without recorded projection counts | 0 |
+| Render or projection paths that spend model tokens | 0 |
 | Files over local hygiene budget in this doc set | 0 |
 
 ### MoSCoW
 
 | Tier | Scope |
 |---|---|
-| Must | MCP discovery, soul identity contract, bounded memory/profile contracts, on-demand skills system contracts, context-file contracts, context-reference contracts, Kanban collaboration contracts, tool/toolset contracts, Tool Gateway contracts, Tool Search contracts, OS status read views, local harness contracts, MoA contracts, dynamic Agent Swarm runtime, metadata-only Agent Toolkit runtime, stateful orchestration contracts, long-horizon SuperAgent contracts, learning-loop contracts, cost logs, approval gates, VCCs, Dev-only deploy guard. |
+| Must | Canvas-renderable diagram contract, MCP discovery, soul identity contract, bounded memory/profile contracts, on-demand skills system contracts, context-file contracts, context-reference contracts, Kanban collaboration contracts, tool/toolset contracts, Tool Gateway contracts, Tool Search contracts, OS status read views, local harness contracts, MoA contracts, dynamic Agent Swarm runtime, metadata-only Agent Toolkit runtime, stateful orchestration contracts, long-horizon SuperAgent contracts, learning-loop contracts, cost logs, approval gates, VCCs, Dev-only deploy guard. |
 | Should | Canvas dashboard projection, live control-plane Worker parity where already deployed, demo pack assembly, operator-friendly validation runbook. |
 | Could | Additional provider adapters, richer run history, dashboard comparison, deploy proof after explicit approval. |
 | Won't | New dashboard datastore, Vercel/AWS product tier, browser-owned secrets, compatibility aliases, unbounded loops, direct downstream patches. |
@@ -194,41 +202,66 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 
 ### Architecture
 
+**Diagram ACOS-TOP-1** - Class: Runtime topology - Notation: `flowchart TB` - Surface: `2D Renderer: Storyboard` (primary), `2D Renderer: D3 Graph` (secondary) - Version: 2 - 2026-08-20
+**Caption**: Local Dev owns authoring and read-time aggregation; Shared Owners hold every contract and catalog; the Cloudflare lane is reachable only where already deployed and never mutated from a developer checkout.
+
 ```mermaid
 flowchart TB
-  subgraph Local["Local Dev"]
-    docs["Source docs + MEMORY.md"]
-    mcp["Local MCP server"]
-    canvas["Canvas + Source Files + KGC"]
+  subgraph local["Local Dev - local residency"]
+    docs["Source docs + MEMORY.md<br/>Producer - Document"]
+    mcp["Local MCP server<br/>Gateway - Service"]
+    canvas["Canvas + Source Files + KGC<br/>Consumer - Service"]
   end
-
-  subgraph Shared["Shared Owners"]
-    contracts["contracts/*.schema.js"]
-    catalog["mcp/local-tool-contract.js"]
-    semantic["semantic-key helpers"]
-    harness["harness runtimes"]
+  subgraph shared["Shared Owners - local residency"]
+    contracts["contracts schemas<br/>Store - Contract"]
+    catalog["local tool contract<br/>Router - Catalog"]
+    semantic["semantic-key helpers<br/>Router - Library"]
+    harness["harness runtimes<br/>Executor - Service"]
   end
-
-  subgraph Edge["Cloudflare where deployed"]
-    worker["McpAgent Worker"]
-    pages["Pages HTTP MCP"]
-    storage["D1/R2/KV/DO existing stores"]
+  subgraph edge["Cloudflare where deployed - provider region"]
+    worker["McpAgent Worker<br/>Gateway - Service"]
+    pages["Pages HTTP MCP<br/>Gateway - Service"]
+    storage["existing D1/R2/KV/DO stores<br/>Store - DB - provider region"]
   end
-
-  docs --> canvas
-  mcp --> catalog
-  catalog --> contracts
-  catalog --> harness
-  canvas --> semantic
-  worker --> catalog
-  worker --> storage
-  pages --> catalog
+  docs -->|"read - sync"| canvas
+  mcp -->|"discover - sync"| catalog
+  catalog -->|"validate - sync"| contracts
+  catalog -->|"dispatch - sync"| harness
+  canvas -->|"resolve keys - sync"| semantic
+  worker -->|"discover - sync"| catalog
+  worker -->|"read/write - sync"| storage
+  pages -->|"discover - sync"| catalog
+  classDef store fill:#0b3a86,stroke:#061f47,color:#ffffff
+  class contracts,storage store
 ```
+
+### Diagram Register
+
+Projected counts are the Evidence Reference for each canvas-renderable claim. A non-projecting class records zero rather than omitting the row, and an empty recorded column is an unproven render claim rather than a pass.
+
+**Named check**: `node scripts/check-diagram-canvas-render.mjs docs/PRD-TAD.md` (guideline-owned; parse-only, zero model calls)
+**Recorded result**: exit 0, no findings, 2 diagrams projecting, 15 nodes / 12 edges / 3 clusters total, cost 0 prompt + 0 completion tokens
+**Surface**: authoring
+
+| Diagram | Class | Notation | Surface | Projects | Expected n/e/c | Recorded n/e/c | Version |
+|---|---|---|---|---|---|---|---|
+| ACOS-TOP-1 | Runtime topology | `flowchart TB` | Storyboard, D3 Graph | yes | 10 / 8 / 3 | 10 / 8 / 3 | 2 |
+| ACOS-FLOW-1 | Lane & deploy boundary | frontmatter graph envelope | Storyboard | yes | 5 / 4 / 0 | 5 / 4 / 0 | 1 |
+
+`ACOS-FLOW-1` is the frontmatter `flow:` envelope in this document: problem and value, requirements, architecture contract, runtime proof, and deploy boundary, connected by typed requirement, architecture, and proof sockets. It is authored in the envelope rather than the body because the Storyboard surface projects lanes and typed ports only from frontmatter.
+
+**Diagram contract** *(this document)*:
+- Every diagram declares its ID, class, notation, target surface, version, and caption; surfaces resolve in the Canvas 2D renderer registry
+- Every node label carries `role - type`; every edge carries a connection type in the canonical inline form; every boundary is a named subgraph so it projects as a cluster element
+- Non-cluster nodes use rectangular or diamond shapes only, because the circle shape projects as a cluster primitive and the hex shape projects as an edge primitive
+- Every connection is authored in source; the renderer projects the connections it is given and never infers one
+- Render and projection paths stay parse-only at zero token cost
 
 ### Component Inventory
 
 | Component | Responsibility | Owner direction |
 |---|---|---|
+| Diagram render contract | Declare render surfaces, keep diagram source portable across the static and Canvas consumers, and record projection counts | This document's Diagram Register, Canvas 2D renderer registry owners, and Markdown/frontmatter ingest owners |
 | Soul identity | Durable agent identity, voice, prompt slot 1 source, and temporary overlay boundary | `docs/SOUL.md`, `FACTS.md`, dictionaries, and prompt-assembly owners |
 | Agentic OS memory | Bounded agent notes, frozen snapshot, memory writes, compaction, and session search | `docs/MEMORY.md`, dictionaries, and memory harness owners |
 | User profile | Explicit operator preferences, communication style, and expectations | `docs/USER.md`, dictionaries, and memory harness owners |
@@ -277,6 +310,7 @@ flowchart TB
 | SuperAgent | `/superagent.run` names goal, graph, sandbox workspace, message gateway, checkpoints, stop condition, artifacts, verification, approvals, and cost ledger. |
 | Learn | Experience capture, memory search, skill proposal, skill evolution, and identity reflection stay source-backed, bounded, no-copy, and review-gated. |
 | Approval | Paid, mutating, payment, and deploy actions require `@operator` approval. |
+| Render | Every diagram declares a registry-resolvable surface, sits in an ingest surface that surface parses, and projects the expected node, edge, and cluster counts at zero token cost. |
 | Proof | Focused tests or checks are surfaced in the agent output. |
 
 ### ADRs
@@ -302,6 +336,7 @@ flowchart TB
 | ADR-AOS-17 | SuperAgent is a bounded harness | Enables long-horizon research, code, and creation while forbidding copied DeerFlow runtime layouts, hidden sandboxes, message side channels, and unbounded loops. |
 | ADR-AOS-18 | Agent Swarm is dynamic, durable, and base-agent-owned | Enables horizontal scaling without predefined roles or handcrafted workflows while forbidding hidden coordination state, recursive fan-out, copied external runtime artifacts, and worker-owned public answers. |
 | ADR-AOS-19 | Agent Toolkit observes but does not execute or apply | Adds framework-neutral trust-labelled metadata, evaluation, and comparison across existing runtimes while requiring application verification of caller-declared digests and forbidding remote evidence promotion, raw payload retention, duplicated orchestration, fabricated improvement, copied external artifacts, and autonomous learning mutation. |
+| ADR-AOS-20 | Diagrams are authored once to the portable intersection | One diagram source must satisfy both the static document renderer and the Canvas projection; a static variant plus a canvas variant of one diagram guarantees drift, and renderability asserted from a visual check is an unproven claim. Projection is proven by recorded element counts at zero token cost. |
 
 ## VCCs
 
@@ -326,4 +361,5 @@ flowchart TB
 | Agent Toolkit improves only through evidence and review | Two runtime instances share principal-derived atomic run/cohort state; one stable-idempotency evaluator fence wins; persisted traces contain no raw payload; reused, remote-unverified, missing-quality, or missing-cost evidence holds; passing trusted cohort thresholds yield only an immutable `review_pending` proposal; no apply method or external dependency exists. |
 | SuperAgent run is bounded | `/superagent.run` reports sandbox workspace, message gateway, checkpoint policy, artifact manifest, verification state, cost log, stop condition, and no-copy boundary. |
 | Canvas dashboard is source-backed | Dashboard opens from Markdown/frontmatter/KGC owners; no dashboard-only graph store exists. |
+| Diagrams are canvas-renderable | Projecting this document reports node, edge, and cluster counts equal to the Diagram Register expectations, resolves every declared surface in the renderer registry, resolves every edge endpoint to a declared node, and records cost fields all `0`. |
 | Deploy boundary is clean | Canonical checkout shows no Prod mirror mutation and no Cloudflare deploy command was run. |

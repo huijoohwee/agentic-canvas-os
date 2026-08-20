@@ -582,6 +582,8 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   deviceId,
   sessionId,
   workItemId = branch,
+  predecessorClaimId = null,
+  canonicalDescendantProof = null,
   leaseEpoch = 1,
   ttlSeconds = 1_800,
   environment = process.env,
@@ -603,12 +605,19 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   );
   const resolvedHeadSha = requiredSha(headSha, "headSha");
   const resolvedBranch = requiredText(branch, "branch");
+  const resolvedPredecessorClaimId = predecessorClaimId
+    ? requiredDigest(predecessorClaimId, "predecessorClaimId") : null;
+  const initialLaneRevision = resolvedPredecessorClaimId
+    ? resolvedHeadSha
+    : resolvedCanonicalBaseSha;
   const requestForLeaseEpoch = claimLeaseEpoch => ({
     targetRepository: resolvedTargetRepository,
     branch: resolvedBranch,
     workItemId: requiredText(workItemId, "workItemId"),
     canonicalBaseSha: resolvedCanonicalBaseSha,
-    headSha: resolvedCanonicalBaseSha,
+    headSha: initialLaneRevision,
+    predecessorClaimId: resolvedPredecessorClaimId,
+    canonicalDescendantProof,
     declaredWriteScope: manifest?.declaredWriteSet,
     leaseEpoch: positiveInteger(claimLeaseEpoch, "leaseEpoch"),
     deviceId: requiredText(deviceId, "deviceId"),
@@ -621,6 +630,8 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       resolvedCanonicalBaseSha,
       resolvedHeadSha,
       manifest?.writeSetDigest,
+      ...(resolvedPredecessorClaimId ? [resolvedPredecessorClaimId] : []),
+      ...(canonicalDescendantProof?.evidenceDigest ? [canonicalDescendantProof.evidenceDigest] : []),
       claimLeaseEpoch,
     ].join(":"),
   });
@@ -662,7 +673,20 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       verify,
     })
     : null;
-  const claimed = claimedContinuation?.authority || cloudAuthorityFromResult({
+  const claimed = claimedContinuation?.authority || (resolvedPredecessorClaimId
+    ? normalizeBoundAuthority({
+      result: projectOperationLedgerDigest(claimResult),
+      authority: {
+        ledgerRepository: resolvedLedgerRepository,
+        targetRepository: resolvedTargetRepository,
+        deviceId,
+        sessionId,
+      },
+      manifest,
+      deviceId,
+      sessionId,
+    })
+    : cloudAuthorityFromResult({
       ledgerRepository: resolvedLedgerRepository,
       targetRepository: resolvedTargetRepository,
       deviceId,
@@ -671,7 +695,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
     }, {
       manifest,
       canonicalBaseSha: resolvedCanonicalBaseSha,
-    });
+    }));
   if (resolvedHeadSha === resolvedCanonicalBaseSha) {
     return claimedContinuation || verifyAdmissionCloudAuthority({
       authority: claimed,

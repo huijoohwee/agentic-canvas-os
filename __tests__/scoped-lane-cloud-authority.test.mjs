@@ -663,8 +663,17 @@ test("review reconciliation preserves exact v1 claim identity after a v2 continu
   }), /recoverable admission subject/u);
 });
 
-test("current-claim inventory preserves an expired non-writing waiting successor", () => {
+test("current-claim inventory preserves effective authority flags", () => {
   const incumbent = rootClaim();
+  const parked = {
+    ...rootClaim({ fenceRevision: "6".repeat(64), transitionDigest: "5".repeat(64) }),
+    claimId: "6".repeat(64),
+    state: "dormant-preserved",
+    writeAuthority: false,
+    scopeReserved: true,
+    workItemId: "work-item:dormant-preserved",
+    expiresAt: "2026-08-04T07:00:00.000Z",
+  };
   const waiting = {
     ...rootClaim({ fenceRevision: "8".repeat(64), transitionDigest: "9".repeat(64) }),
     claimId: "7".repeat(64),
@@ -678,11 +687,22 @@ test("current-claim inventory preserves an expired non-writing waiting successor
     verificationResult: verificationResult(
       incumbent,
       NEXT_LEDGER_SHA,
-      [incumbent, waiting],
+      [incumbent, parked, waiting],
     ),
     authority: localAuthority({ claimDigest: incumbent.fenceRevision, claimLedgerRevision: incumbent.transitionDigest, laneRevision: HEAD_SHA, transitionCounter: 2 }),
   });
-  assert.deepEqual(inventory.claims.map((claim) => claim.state).sort(), ["active", "waiting-successor"]);
+  assert.deepEqual(
+    inventory.claims.map(({ state, writeAuthority, scopeReserved }) => ({
+      state,
+      writeAuthority,
+      scopeReserved,
+    })).sort((left, right) => left.state.localeCompare(right.state)),
+    [
+      { state: "active", writeAuthority: true, scopeReserved: true },
+      { state: "parked", writeAuthority: false, scopeReserved: true },
+      { state: "waiting-successor", writeAuthority: false, scopeReserved: false },
+    ],
+  );
 });
 
 test("cloud verification derives its complete inventory from one verifier operation", () => {
@@ -812,10 +832,47 @@ test("legacy review bootstrap claims at base and binds the exact reviewed head",
   });
   assert.equal(harness.calls[0].action, "claim");
   assert.equal(harness.calls[0].request.headSha, BASE_SHA);
+  assert.equal(harness.calls[0].request.idempotencyKey,
+    ["legacy-review-claim", "owner/target", BRANCH, BASE_SHA, HEAD_SHA, WRITE_SET_DIGEST, 1].join(":"));
   assert.equal(harness.calls[1].action, "continue");
   assert.equal(harness.calls[1].request.mode, "projection");
   assert.equal(bootstrapped.authority.state, "active");
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
+});
+
+test("legacy review bootstrap claims the preserved head for an exact historical-base predecessor", () => {
+  const predecessorClaimId = "e".repeat(64);
+  const canonicalDescendantProof = { evidenceDigest: "d".repeat(64) };
+  const harness = projectionHarness(rootClaim({ laneRevision: HEAD_SHA, transitionCounter: 1 }));
+  claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger", targetRepository: "owner/target", manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA, branch: BRANCH, headSha: HEAD_SHA, predecessorClaimId,
+    canonicalDescendantProof,
+    deviceId: DEVICE_ID, sessionId: SESSION_ID,
+    invoke: harness.invoke, inspect: harness.inspect, verify: harness.verify,
+  });
+  assert.equal(harness.calls[0].action, "claim");
+  assert.equal(harness.calls[0].request.canonicalBaseSha, BASE_SHA);
+  assert.equal(harness.calls[0].request.headSha, HEAD_SHA);
+  assert.equal(harness.calls[0].request.predecessorClaimId, predecessorClaimId);
+  assert.equal(harness.calls[0].request.canonicalDescendantProof, canonicalDescendantProof);
+  assert.match(harness.calls[0].request.idempotencyKey, new RegExp(predecessorClaimId, "u"));
+  assert.match(harness.calls[0].request.idempotencyKey,
+    new RegExp(canonicalDescendantProof.evidenceDigest, "u"));
+});
+
+test("legacy review bootstrap keeps a same-base predecessor on the preserved head without a descendant proof", () => {
+  const predecessorClaimId = "e".repeat(64);
+  const harness = projectionHarness(rootClaim({ laneRevision: HEAD_SHA, transitionCounter: 1 }));
+  claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger", targetRepository: "owner/target", manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA, branch: BRANCH, headSha: HEAD_SHA, predecessorClaimId,
+    deviceId: DEVICE_ID, sessionId: SESSION_ID,
+    invoke: harness.invoke, inspect: harness.inspect, verify: harness.verify,
+  });
+  assert.equal(harness.calls[0].request.headSha, HEAD_SHA);
+  assert.equal(harness.calls[0].request.predecessorClaimId, predecessorClaimId);
+  assert.equal(harness.calls[0].request.canonicalDescendantProof, null);
 });
 
 test("public claim projection preserves pseudonymous owner identity", () => {

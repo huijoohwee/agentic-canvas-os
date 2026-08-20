@@ -83,6 +83,34 @@
         "pattern": "^(?:path:.+|semantic:[a-z0-9][a-z0-9._:/-]*)$"
       }
     },
+    "canonicalDescendantProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "sourceBaseSha", "targetBaseSha", "protectedMainSha",
+        "canonicalChangedPaths", "canonicalChangedPathsDigest", "preservedChangedPaths",
+        "preservedChangedPathsDigest", "ancestry", "overlap", "evidenceDigest"
+      ],
+      "properties": {
+        "schema": { "const": "agentic-legacy-review-current-base-disjoint-proof/v1" },
+        "sourceBaseSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "targetBaseSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "protectedMainSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "canonicalChangedPaths": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        },
+        "canonicalChangedPathsDigest": { "$ref": "#/$defs/sha256" },
+        "preservedChangedPaths": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        },
+        "preservedChangedPathsDigest": { "$ref": "#/$defs/sha256" },
+        "ancestry": { "const": "source-base-to-current-protected-main" },
+        "overlap": { "const": "none" },
+        "evidenceDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
     "handoff": {
       "type": "object",
       "additionalProperties": false,
@@ -234,6 +262,7 @@
         "evidenceDigest": { "$ref": "#/$defs/nullableSha256" },
         "reviewRequestId": { "$ref": "#/$defs/nullableIdentifier" },
         "predecessorClaimId": { "$ref": "#/$defs/nullableSha256" },
+        "canonicalDescendantProof": { "$ref": "#/$defs/canonicalDescendantProof" },
         "eligibleSince": { "$ref": "#/$defs/nullableInstant" },
         "handoff": { "type": "null" },
         "release": { "type": "null" },

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import Ajv2020 from "ajv/dist/2020.js";
 
 import {
   CLOUD_COLLABORATION_BOUNDS,
@@ -43,6 +45,24 @@ function evidence(label) {
   return digestValue({ evidence: label });
 }
 
+function canonicalDescendantProof({ sourceBaseSha, targetBaseSha,
+  canonicalChangedPaths = ["docs/current.md"],
+  preservedChangedPaths = ["scripts/preserved.mjs"] }) {
+  const core = {
+    schema: "agentic-legacy-review-current-base-disjoint-proof/v1",
+    sourceBaseSha,
+    targetBaseSha,
+    protectedMainSha: targetBaseSha,
+    canonicalChangedPaths,
+    canonicalChangedPathsDigest: digestValue(canonicalChangedPaths),
+    preservedChangedPaths,
+    preservedChangedPathsDigest: digestValue(preservedChangedPaths),
+    ancestry: "source-base-to-current-protected-main",
+    overlap: "none",
+  };
+  return { ...core, evidenceDigest: digestValue(core) };
+}
+
 function claim(ledger, {
   identity = owner,
   targetRepository = repository,
@@ -50,9 +70,11 @@ function claim(ledger, {
   scope = ["path:docs/a.md"],
   leaseEpoch = 1,
   predecessorClaimId = null,
+  canonicalBaseRevision = targetRepository.canonicalRevision,
+  canonicalDescendantProof = null,
   time = T0,
   expiresAt = T4,
-  laneRevision = targetRepository.canonicalRevision,
+  laneRevision = canonicalBaseRevision,
   idempotencyKey = `claim:${workItemId}:${leaseEpoch}`,
   expectedLedgerDigest = ledger.headDigest,
 } = {}) {
@@ -64,11 +86,12 @@ function claim(ledger, {
     evaluationTime: time,
     request: {
       workItemId,
-      canonicalBaseRevision: targetRepository.canonicalRevision,
+      canonicalBaseRevision,
       declaredWriteScope: scope,
       laneRevision,
       leaseEpoch,
       ...(predecessorClaimId ? { predecessorClaimId } : {}),
+      ...(canonicalDescendantProof ? { canonicalDescendantProof } : {}),
       expiresAt,
       expectedLedgerDigest,
       idempotencyKey,
@@ -319,6 +342,56 @@ test("a named predecessor must resolve to the exact preserved matching authority
   assert.equal(successor.claim.predecessorClaimId, first.claim.claimId);
 });
 
+test("a terminal matching subject admits its historical PR base only with exact disjoint descendant proof", async () => {
+  const predecessorBase = revision("predecessor-base");
+  const historicalBase = revision("historical-pr-base");
+  const laneRevision = revision("preserved-head");
+  const predecessorRepository = { ...repository, canonicalRevision: predecessorBase };
+  const first = claim(createEmptyLedger("ledger:repository"), {
+    targetRepository: predecessorRepository,
+    laneRevision,
+  });
+  const retired = retire(first.ledger, first.claim, { time: T1 });
+  const proof = canonicalDescendantProof({ sourceBaseSha: historicalBase,
+    targetBaseSha: repository.canonicalRevision });
+  const successor = claim(retired.ledger, {
+    canonicalBaseRevision: historicalBase,
+    canonicalDescendantProof: proof,
+    predecessorClaimId: first.claim.claimId,
+    laneRevision,
+    leaseEpoch: 2,
+    time: T2,
+    expiresAt: T6,
+    idempotencyKey: "claim:historical-pr-base",
+  });
+  assert.equal(successor.claim.state, "current");
+  assert.equal(successor.claim.canonicalBaseRevision, historicalBase);
+  const schema = JSON.parse(await readFile(new URL(
+    "../docs/schemas/cloud-collaboration-ledger.v1.schema.json", import.meta.url,
+  ), "utf8"));
+  const validate = new Ajv2020({ strict: false, formats: { "date-time": true } }).compile(schema);
+  assert.equal(validate(successor.ledger), true, JSON.stringify(validate.errors));
+
+  for (const invalidProof of [
+    { ...proof, targetBaseSha: revision("foreign-protected") },
+    canonicalDescendantProof({ sourceBaseSha: historicalBase,
+      targetBaseSha: repository.canonicalRevision,
+      canonicalChangedPaths: ["scripts/preserved.mjs"] }),
+    { ...proof, evidenceDigest: evidence("forged-proof") },
+  ]) {
+    assert.throws(() => claim(retired.ledger, {
+      canonicalBaseRevision: historicalBase,
+      canonicalDescendantProof: invalidProof,
+      predecessorClaimId: first.claim.claimId,
+      laneRevision,
+      leaseEpoch: 2,
+      time: T2,
+      expiresAt: T6,
+      idempotencyKey: `claim:invalid-proof:${invalidProof.evidenceDigest}`,
+    }), error => error?.code === "invalid_request");
+  }
+});
+
 test("expiry is dormant-preserved and recovery ignores the expired device lease", () => {
   const first = claim(createEmptyLedger("ledger:repository"), { expiresAt: T1 });
   const dormant = listCurrentClaims(first.ledger, T2)[0];
@@ -397,7 +470,7 @@ test("review identity is immutable; integrate preserves; retire joins the typed 
   assert.equal(retired.receipt.schema, "agentic-collaboration-retirement-receipt/v1");
 });
 
-test("verification can recover one exact integrated entry followed by its valid retirement", () => {
+test("verification can recover one exact integrated entry through renewal and valid retirement", () => {
   const claimed = claim(createEmptyLedger("ledger:repository"), { expiresAt: T4 });
   const projected = continueClaim(claimed.ledger, claimed.claim, {
     mode: "projection",
@@ -433,7 +506,12 @@ test("verification can recover one exact integrated entry followed by its valid 
       idempotencyKey: "integrate:historical",
     },
   });
-  const retired = retire(integrated.ledger, integrated.claim, {
+  const renewed = continueClaim(integrated.ledger, integrated.claim, {
+    mode: "renewal",
+    time: "2026-08-04T00:35:00.000Z",
+    expiresAt: T6,
+  });
+  const retired = retire(renewed.ledger, renewed.claim, {
     reason: "integrated",
     integrationReceiptDigest: integrated.receipt.receiptDigest,
   });
@@ -466,6 +544,91 @@ test("verification can recover one exact integrated entry followed by its valid 
     });
     assert.equal(blocked.ok, false);
   }
+});
+
+test("verification accepts only same-identity integrated-preserved continuations", () => {
+  const claimed = claim(createEmptyLedger("ledger:repository"), { expiresAt: T4 });
+  const projected = continueClaim(claimed.ledger, claimed.claim, {
+    mode: "projection",
+    laneRevision: revision("heartbeat-candidate"),
+    reviewRequestId: "review:heartbeat",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review",
+    time: T2,
+    laneRevision: projected.claim.laneRevision,
+    reviewRequestId: projected.claim.reviewRequestId,
+    focusedEvidenceDigest: evidence("heartbeat-focused"),
+  });
+  const integrated = applyCloudTransition({
+    ledger: reviewed.ledger,
+    action: "integrate",
+    actor: owner,
+    repository,
+    evaluationTime: T3,
+    request: {
+      claimId: reviewed.claim.claimId,
+      expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      expectedLedgerDigest: reviewed.ledger.headDigest,
+      candidateRevision: reviewed.claim.laneRevision,
+      reviewRequestId: reviewed.claim.reviewRequestId,
+      focusedEvidenceDigest: reviewed.claim.evidenceDigest,
+      dependencyClosureDigest: evidence("heartbeat-dependencies"),
+      namedChecksDigest: evidence("heartbeat-checks"),
+      handoffEvidenceDigest: evidence("heartbeat-handoff"),
+      operatorDecisionDigest: evidence("heartbeat-operator"),
+      integrationIntentDigest: evidence("heartbeat-intent"),
+      idempotencyKey: "integrate:heartbeat",
+    },
+  });
+  const renewed = continueClaim(integrated.ledger, integrated.claim, {
+    mode: "renewal",
+    time: "2026-08-04T00:35:00.000Z",
+    expiresAt: T6,
+  });
+  const request = {
+    claimId: integrated.claim.claimId,
+    fenceRevision: integrated.claim.fenceRevision,
+    requiredState: "integrated-preserved",
+    integrationReceiptDigest: integrated.receipt.receiptDigest,
+    transitionCounter: integrated.claim.transitionCounter,
+  };
+  const verified = verifyCloudClaim({
+    ledger: renewed.ledger,
+    request,
+    evaluationTime: T5,
+  });
+  assert.equal(verified.ok, true);
+  assert.equal(verified.claim.fenceRevision, integrated.claim.fenceRevision);
+
+  const dormant = listCurrentClaims(integrated.ledger, T5)[0];
+  const recovered = continueClaim(integrated.ledger, dormant, {
+    mode: "recovery",
+    time: T5,
+    expiresAt: "2026-08-04T02:00:00.000Z",
+    recoveryEvidenceDigest: evidence("same-identity-integrated-recovery"),
+  });
+  const recoveredVerification = verifyCloudClaim({
+    ledger: recovered.ledger,
+    request,
+    evaluationTime: T6,
+  });
+  assert.equal(recoveredVerification.ok, true);
+
+  const transferredRecovery = continueClaim(integrated.ledger, dormant, {
+    identity: actor("owner", "device-recovered", "session-recovered"),
+    mode: "recovery",
+    time: T5,
+    expiresAt: "2026-08-04T02:00:00.000Z",
+    recoveryEvidenceDigest: evidence("transferred-integrated-recovery"),
+  });
+  const blocked = verifyCloudClaim({
+    ledger: transferredRecovery.ledger,
+    request,
+    evaluationTime: T6,
+  });
+  assert.equal(blocked.ok, false);
 });
 
 test("verification blocks a reviewed claim whose observed pull-request paths escape its declared scope", () => {

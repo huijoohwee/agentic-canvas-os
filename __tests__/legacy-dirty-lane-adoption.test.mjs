@@ -247,6 +247,53 @@ test("adoption requires the exact live registry lease and imports captured bytes
   assert.deepEqual(receipt.adoptedPaths, ["new.txt", "tracked.txt"]);
   assert.equal(receipt.targetLeaseRegistryRevision, 2);
 });
+test("adoption accepts a target base descended through a disjoint protected advance", () => {
+  const fixture = capturedFixture();
+  writeFileSync(path.join(fixture.repository, "unrelated.txt"), "protected advance\n");
+  git(fixture.repository, ["add", "unrelated.txt"]);
+  git(fixture.repository, ["commit", "-m", "disjoint protected advance"]);
+  const advancedBaseSha = git(fixture.repository, ["rev-parse", "HEAD"]).trim();
+  const target = addTarget(fixture, "descendant-base-adoption", advancedBaseSha);
+  const authority = createTargetLease({
+    target,
+    baseSha: advancedBaseSha,
+    sessionId: "session-a",
+  });
+  const receipt = adoptLegacyDirtyLane({
+    sourceWorktree: fixture.source,
+    recoveryDirectory: fixture.recovery,
+    targetWorktree: target,
+    operatorSessionId: "session-a",
+    ...authority.adoption,
+  });
+  assert.equal(receipt.status, "complete");
+  assert.equal(readFileSync(path.join(target, "tracked.txt"), "utf8"), "changed\n");
+  assert.equal(readFileSync(path.join(target, "new.txt"), "utf8"), "untracked\n");
+  assert.equal(readFileSync(path.join(target, "unrelated.txt"), "utf8"), "protected advance\n");
+});
+test("adoption rejects a target base advance that overlaps recovered paths", () => {
+  const fixture = capturedFixture();
+  writeFileSync(path.join(fixture.repository, "tracked.txt"), "protected advance\n");
+  git(fixture.repository, ["add", "tracked.txt"]);
+  git(fixture.repository, ["commit", "-m", "overlapping protected advance"]);
+  const advancedBaseSha = git(fixture.repository, ["rev-parse", "HEAD"]).trim();
+  const target = addTarget(fixture, "overlapping-base-adoption", advancedBaseSha);
+  const authority = createTargetLease({
+    target,
+    baseSha: advancedBaseSha,
+    sessionId: "session-a",
+  });
+  assert.throws(() => adoptLegacyDirtyLane({
+    sourceWorktree: fixture.source,
+    recoveryDirectory: fixture.recovery,
+    targetWorktree: target,
+    operatorSessionId: "session-a",
+    ...authority.adoption,
+  }), /base advance overlaps/);
+  assert.equal(status(target), "");
+  assert.equal(readFileSync(path.join(target, "tracked.txt"), "utf8"), "protected advance\n");
+  assert.equal(existsSync(path.join(target, "new.txt")), false);
+});
 test("adoption rejects an expired lease before target mutation or receipt", () => {
   const fixture = capturedFixture();
   const target = addTarget(fixture, "expired-adoption");
@@ -511,10 +558,10 @@ function createSquashIntegratedFixture() {
     },
   };
 }
-function addTarget(fixture, scope) {
+function addTarget(fixture, scope, startSha = fixture.protectedTip || fixture.baseSha) {
   const target = path.join(fixture.root, scope);
   git(fixture.repository, [
-    "worktree", "add", "-b", `agent/test/${scope}`, target, fixture.protectedTip || fixture.baseSha,
+    "worktree", "add", "-b", `agent/test/${scope}`, target, startSha,
   ]);
   return target;
 }

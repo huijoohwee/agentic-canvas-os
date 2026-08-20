@@ -71,6 +71,7 @@ export function prepareMutationRequest({
       laneRevision: requiredText(laneRevision, "laneRevision"),
       leaseEpoch: boundedInteger(first(input.leaseEpoch, 1), "leaseEpoch", 1),
       predecessorClaimId: optionalDigest(input.predecessorClaimId, "predecessorClaimId"),
+      canonicalDescendantProof: input.canonicalDescendantProof ?? null,
       expiresAt: fixedExpiresAt || expiryFromServer(evaluationTime, input.ttlSeconds),
       expectedLedgerDigest: input.expectedLedgerDigest ?? null,
       ...(input.claimId ? { claimId: requiredDigest(input.claimId, "claimId") } : {}),
@@ -234,6 +235,7 @@ export function projectPublicClaim(claim) {
     operationReceiptDigest: claim.operationReceiptDigest,
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration ?? null,
+    recovery: claim.recovery ?? null,
   };
 }
 

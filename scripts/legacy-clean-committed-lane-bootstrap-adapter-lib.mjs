@@ -2,16 +2,13 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import {
-  digestValue,
-  normalizeWriteSet,
-} from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet,
+  writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
-import {
-  readOwnershipPullRequest,
-  waitForOwnershipPullRequestHead,
-} from "./device-pull-request-state.mjs";
+import { readOwnershipPullRequest,
+  waitForOwnershipPullRequestHead } from "./device-pull-request-state.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 
 export function projectionBaseSha({ headSha, requestBaseSha, worktreePath }) {
@@ -20,6 +17,103 @@ export function projectionBaseSha({ headSha, requestBaseSha, worktreePath }) {
     return currentMainSha;
   }
   return requestBaseSha;
+}
+
+export function proveLegacyReviewCanonicalDescendant({ sourceBaseSha, targetBaseSha,
+  protectedMainSha, canonicalChangedPaths, preservedChangedPaths, sourceIsAncestor,
+  targetIsProtectedAncestor } = {}) {
+  for (const [label, value] of [
+    ["source base", sourceBaseSha],
+    ["target base", targetBaseSha],
+    ["protected main", protectedMainSha],
+  ]) {
+    if (!/^[0-9a-f]{40}$/u.test(String(value || ""))) {
+      throw new Error(`Legacy review ${label} must be an exact Git SHA.`);
+    }
+  }
+  if (sourceBaseSha === targetBaseSha || targetBaseSha !== protectedMainSha) {
+    throw new Error("Legacy review recovery requires a strict current canonical descendant.");
+  }
+  if (sourceIsAncestor !== true || targetIsProtectedAncestor !== true) {
+    throw new Error("Legacy review recovery canonical ancestry is incomplete.");
+  }
+  const canonicalPaths = normalizeRecoveryPaths(canonicalChangedPaths, "canonical changed paths");
+  const preservedPaths = normalizeRecoveryPaths(preservedChangedPaths, "preserved changed paths");
+  if (writeSetsOverlap(
+    canonicalPaths.map(value => `path:${value}`),
+    preservedPaths.map(value => `path:${value}`),
+  )) {
+    throw new Error("Legacy review recovery canonical descendant overlaps preserved lane paths.");
+  }
+  const evidence = {
+    schema: "agentic-legacy-review-current-base-disjoint-proof/v1",
+    sourceBaseSha,
+    targetBaseSha,
+    protectedMainSha,
+    canonicalChangedPaths: canonicalPaths,
+    canonicalChangedPathsDigest: digestValue(canonicalPaths),
+    preservedChangedPaths: preservedPaths,
+    preservedChangedPathsDigest: digestValue(preservedPaths),
+    ancestry: "source-base-to-current-protected-main",
+    overlap: "none",
+  };
+  return Object.freeze({ ...evidence, evidenceDigest: digestValue(evidence) });
+}
+
+export function findLegacyReviewCurrentBaseCandidate({ claims, request, targetBaseSha } = {}) {
+  const declaredWriteScope = normalizeWriteSet(request?.declaredWriteScope);
+  const matches = (Array.isArray(claims) ? claims : []).filter(claim => (
+    ["current", "waiting-successor"].includes(claim?.state)
+    && claim?.scopeReserved === true
+    && claim?.workItemId === pseudonymousIdentifier("work-item", request?.branch)
+    && claim?.deviceId === pseudonymousIdentifier("device", request?.deviceId)
+    && claim?.sessionId === pseudonymousIdentifier("session", request?.sessionId)
+    && claim?.canonicalBaseRevision === targetBaseSha
+    && [targetBaseSha, request?.expectedHeadSha].includes(claim?.laneRevision)
+    && claim?.writeSetDigest === request?.writeSetDigest
+    && JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope)) === JSON.stringify(declaredWriteScope)
+    && claim?.reviewRequestId === null
+  ));
+  if (matches.length > 1) {
+    throw new Error("Legacy review recovery found multiple live current-base candidates.");
+  }
+  return matches[0] || null;
+}
+
+export function legacyBootstrapAdmissionManifest(request) {
+  const declaredWriteSet = normalizeWriteSet(request?.declaredWriteScope);
+  const paths = declaredWriteSet
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
+  const source = {
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: request?.semanticScope,
+    paths,
+  };
+  return Object.freeze({
+    ...source,
+    declaredWriteSet,
+    writeSetDigest: request?.writeSetDigest,
+    manifestDigest: digestValue(source),
+    admittedReportDigest: digestValue({
+      schema: "agentic-legacy-bootstrap-admitted-report-input/v1",
+      branch: request?.branch,
+      semanticScope: request?.semanticScope,
+      writeSetDigest: request?.writeSetDigest,
+      headSha: request?.expectedHeadSha,
+    }),
+  });
+}
+
+function normalizeRecoveryPaths(values, label) {
+  if (!Array.isArray(values)) throw new Error(`Legacy review recovery ${label} are incomplete.`);
+  return Object.freeze([...new Set(values.map(value => {
+    const normalized = String(value || "").trim().replaceAll("\\", "/").replace(/^\.\//u, "");
+    if (!normalized || normalized.startsWith("/") || normalized.split("/").includes("..")) {
+      throw new Error(`Legacy review recovery ${label} contain an invalid path.`);
+    }
+    return normalized;
+  }))].sort());
 }
 
 export function listScopeOwners({ branch, semanticScope, repository }) {
@@ -42,6 +136,10 @@ export function listScopeOwners({ branch, semanticScope, repository }) {
 }
 
 export function readCurrentClaims({ request }) {
+  return readCurrentClaimInventory({ request }).claims;
+}
+
+export function readCurrentClaimInventory({ request }) {
   const result = invokeRepositoryCloudAction({
     action: "status",
     ledgerRepository: request.ledgerRepository,
@@ -49,14 +147,169 @@ export function readCurrentClaims({ request }) {
       targetRepository: request.targetRepository,
     },
   });
-  return Array.isArray(result?.claims)
-    ? result.claims.map(claim => ({
-      claimId: claim.claimId,
-      branch: claim.workItemId,
-      state: claim.state,
+  const claims = Array.isArray(result?.claims)
+    ? result.claims.map(claim => Object.freeze({
+      ...claim,
       declaredWriteScope: normalizeWriteSet(claim.declaredWriteScope),
     }))
     : [];
+  return Object.freeze({ result, claims: Object.freeze(claims) });
+}
+
+export function findRecoverableLegacyBootstrapClaim({
+  claims,
+  request,
+  checkpoint,
+  identity,
+  canonicalBaseSha,
+} = {}) {
+  if (
+    checkpoint?.schema !== "agentic-legacy-clean-committed-lane-bootstrap-checkpoint/v1"
+    || checkpoint.status !== "prepared"
+    || checkpoint.identity?.identityDigest !== identity?.identityDigest
+    || Object.keys(checkpoint.outputs || {}).length !== 0
+  ) return null;
+  const declaredWriteScope = normalizeWriteSet(request?.declaredWriteScope);
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({
+    request,
+    identity,
+  });
+  const matches = (Array.isArray(claims) ? claims : []).filter(claim => {
+    const initial = claim.state === "current"
+      && claim.transitionCounter === 1
+      && claim.heartbeatCounter === 0
+      && !claim.recovery;
+    const dormantInitial = claim.state === "dormant-preserved"
+      && claim.transitionCounter === 1
+      && claim.heartbeatCounter === 0
+      && !claim.recovery;
+    const recovered = ["current", "dormant-preserved"].includes(claim.state)
+      && claim.transitionCounter >= 2
+      && claim.heartbeatCounter === 0
+      && claim.recovery?.evidenceDigest === recoveryEvidenceDigest;
+    return (initial || dormantInitial || recovered)
+      && claim.writeAuthority === (claim.state === "current")
+      && claim.entrySchema === "agentic-cloud-collaboration-entry/v2"
+      && claim.claimIdentitySchema === "agentic-cloud-collaboration-entry/v2"
+      && /^[0-9a-f]{64}$/u.test(String(claim.claimId || ""))
+      && /^[0-9a-f]{64}$/u.test(String(claim.operationReceiptDigest || ""))
+      && claim.scopeReserved === true
+      && claim.workItemId === pseudonymousIdentifier("work-item", request.branch)
+      && claim.deviceId === pseudonymousIdentifier("device", request.deviceId)
+      && claim.sessionId === pseudonymousIdentifier("session", request.sessionId)
+      && claim.canonicalBaseRevision === canonicalBaseSha
+      && claim.laneRevision === canonicalBaseSha
+      && claim.writeSetDigest === request.writeSetDigest
+      && JSON.stringify(claim.declaredWriteScope) === JSON.stringify(declaredWriteScope)
+      && claim.leaseEpoch === 1
+      && claim.reviewRequestId === null
+      && claim.predecessorClaimId === null
+      && claim.integrationReceiptDigest === null
+      && claim.integration === null;
+  });
+  if (matches.length > 1) {
+    throw new Error("Legacy bootstrap response-loss recovery found multiple exact candidate claims.");
+  }
+  return matches[0] || null;
+}
+
+export function legacyBootstrapRecoveryEvidenceDigest({ request, identity } = {}) {
+  return digestValue({
+    schema: "agentic-legacy-clean-committed-lane-bootstrap-response-loss-evidence/v1",
+    identityDigest: identity?.identityDigest,
+    targetRepository: request?.targetRepository,
+    branch: request?.branch,
+    baseSha: request?.expectedBaseSha,
+    headSha: request?.expectedHeadSha,
+    writeSetDigest: request?.writeSetDigest,
+  });
+}
+
+export function createLegacyBootstrapRecoveryRequest({
+  claim,
+  request,
+  identity,
+  ttlSeconds = 1_800,
+} = {}) {
+  if (claim?.state !== "dormant-preserved") {
+    throw new Error("Legacy bootstrap response-loss recovery requires dormant authority.");
+  }
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({ request, identity });
+  return Object.freeze({
+    targetRepository: request.targetRepository,
+    claimId: claim.claimId,
+    expectedFenceRevision: claim.fenceRevision,
+    expectedTransitionCounter: claim.transitionCounter,
+    mode: "recovery",
+    ttlSeconds,
+    recoveryEvidenceDigest,
+    deviceId: request.deviceId,
+    sessionId: request.sessionId,
+    idempotencyKey: [
+      "legacy-bootstrap-response-loss-recovery",
+      claim.claimId,
+      recoveryEvidenceDigest,
+      claim.transitionCounter,
+      claim.fenceRevision,
+    ].join(":"),
+  });
+}
+
+export function requireRecoveredLegacyBootstrapClaim({
+  claim,
+  sourceClaim,
+  request,
+  identity,
+  canonicalBaseSha,
+  now = new Date(),
+} = {}) {
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({ request, identity });
+  if (
+    claim?.claimId !== sourceClaim?.claimId
+    || claim?.entrySchema !== sourceClaim?.entrySchema
+    || claim?.claimIdentitySchema !== sourceClaim?.claimIdentitySchema
+    || !/^[0-9a-f]{64}$/u.test(String(claim?.operationReceiptDigest || ""))
+    || claim?.state !== "current"
+    || claim?.writeAuthority !== true
+    || claim?.scopeReserved !== true
+    || claim?.transitionCounter !== sourceClaim.transitionCounter + 1
+    || claim?.heartbeatCounter !== sourceClaim.heartbeatCounter
+    || claim?.fenceRevision === sourceClaim.fenceRevision
+    || claim?.transitionDigest === sourceClaim.transitionDigest
+    || claim?.actorId !== sourceClaim.actorId
+    || claim?.repositoryId !== sourceClaim.repositoryId
+    || claim?.workItemId !== sourceClaim.workItemId
+    || claim?.deviceId !== sourceClaim.deviceId
+    || claim?.sessionId !== sourceClaim.sessionId
+    || claim?.recovery?.evidenceDigest !== recoveryEvidenceDigest
+    || claim?.canonicalBaseRevision !== canonicalBaseSha
+    || claim?.laneRevision !== canonicalBaseSha
+    || claim?.writeSetDigest !== request.writeSetDigest
+    || JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope))
+      !== JSON.stringify(normalizeWriteSet(request.declaredWriteScope))
+    || claim?.leaseEpoch !== sourceClaim.leaseEpoch
+    || claim?.reviewRequestId !== null
+    || claim?.predecessorClaimId !== null
+    || claim?.integrationReceiptDigest !== null
+    || claim?.integration !== null
+    || Date.parse(claim?.expiresAt || "") <= now.getTime()
+  ) {
+    throw new Error("Recovered legacy bootstrap claim changed its exact response-loss subject.");
+  }
+  return claim;
+}
+
+export function projectRecoveredLegacyBootstrapResult({ statusResult, claim } = {}) {
+  return Object.freeze({
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "continue",
+    status: "current",
+    ledgerRevision: statusResult?.ledgerRevision,
+    ledgerDigest: statusResult?.ledgerDigest,
+    claim,
+    claimDigest: claim?.fenceRevision,
+  });
 }
 
 export function requireLease({ branch, leaseStore }) {

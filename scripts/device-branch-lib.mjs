@@ -1364,9 +1364,16 @@ function deriveLegacyReviewAdmissionManifest({
   headSha,
   canonicalBaseSha = null,
 }) {
-  const comparisonBaseSha = SHA_PATTERN.test(String(canonicalBaseSha || ""))
-    ? canonicalBaseSha
-    : lease.baseSha;
+  const liveBaseIsAncestor = SHA_PATTERN.test(String(canonicalBaseSha || ""))
+    && (() => {
+      try {
+        gitText(["merge-base", "--is-ancestor", canonicalBaseSha, headSha]);
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+  const comparisonBaseSha = liveBaseIsAncestor ? canonicalBaseSha : lease.baseSha;
   const baseRange = `${comparisonBaseSha}..${headSha}`;
   const fallbackRange = `origin/main...${headSha}`;
   const readPaths = range => {

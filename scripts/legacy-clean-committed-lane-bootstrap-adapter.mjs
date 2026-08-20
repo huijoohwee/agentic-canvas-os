@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
-
 import { digestValue, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { bindAdmissionCloudAuthority, claimLegacyReviewAdmissionCloudAuthority,
   invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
@@ -67,7 +66,7 @@ function inspectLane({ request, repository, leaseStore, stateDir }) {
   const checkpoint = readCheckpoint({ identityDigest: identity.identityDigest, stateDir });
   const pullRequest = findOpenPullRequest({ branch: request.branch, repository });
   const { claims: claimInventory } = readCurrentClaimInventory({ request });
-  const projectedClaimId = checkpoint?.outputs?.cloudClaim?.authority?.claimId || null;
+  const projectedClaimIds = projectedLegacyBootstrapClaimIds(checkpoint);
   const canonicalBaseSha = projectionBaseSha({
     headSha: request.expectedHeadSha,
     requestBaseSha: request.expectedBaseSha,
@@ -96,7 +95,7 @@ function inspectLane({ request, repository, leaseStore, stateDir }) {
       repository,
     }),
     overlappingClaims: claimInventory
-      .filter(claim => claim.claimId !== projectedClaimId)
+      .filter(claim => !projectedClaimIds.has(claim.claimId))
       .filter(claim => claim.claimId !== recoverableClaim?.claimId)
       .filter(claim => claim.state !== "parked" && claim.state !== "waiting-successor")
       .filter(claim => writeSetsOverlap(claim.declaredWriteScope, request.declaredWriteScope))
@@ -106,6 +105,11 @@ function inspectLane({ request, repository, leaseStore, stateDir }) {
       ...(pullRequest ? { pullRequestState: pullRequest } : {}),
     },
   };
+}
+
+export function projectedLegacyBootstrapClaimIds(checkpoint) {
+  return new Set([checkpoint?.outputs?.cloudClaim?.authority?.claimId,
+    checkpoint?.outputs?.boundAuthority?.authority?.claimId].filter(Boolean));
 }
 
 function readCheckpoint({ identityDigest, stateDir }) {

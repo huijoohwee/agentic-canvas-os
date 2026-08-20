@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3653,
-  "headDigest": "1a5ce6e1c586e5f9965b84004e37edb3d418767e231721a61cf54aeefd28d73d",
+  "sequence": 3654,
+  "headDigest": "b9da56e1f95811b50b6d8550ea7ae448c6ec4854c8ab8124346c25c2b2f067af",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -183288,6 +183288,68 @@
       },
       "claimDigest": "10a4e2288f75405aee73206709a09203f0e2454ea890aff4179ba4e4c943d4f6",
       "digest": "1a5ce6e1c586e5f9965b84004e37edb3d418767e231721a61cf54aeefd28d73d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3654,
+      "parentDigest": "1a5ce6e1c586e5f9965b84004e37edb3d418767e231721a61cf54aeefd28d73d",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "ddec16a1eb8f4d0eb239a5fefd33effedac4174dbdc25bbc199e5887990e32c1",
+      "idempotencyKey": "49c5bae8ef242c1444c548ffde1f024fb78712784715d10dd34403c111d6db58",
+      "requestDigest": "118ebb5a0b85e1b2405b731aa699f8cbf338827307c8d17a85850cf6d1ece4b1",
+      "evaluationTime": "2026-08-20T18:44:34.000Z",
+      "claimCore": {
+        "claimId": "ddec16a1eb8f4d0eb239a5fefd33effedac4174dbdc25bbc199e5887990e32c1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8fca54f79632c46a02f9b9b3d298b4ce88bcab966b2331149edd40a5054c31ab",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4dd1822da7a8cf87c0707e366fbe58ef5595cb209c403faa8217698d01dddfc6",
+        "canonicalBaseRevision": "68df286fce268e21b78cd1bbbdca56bb9c595265",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-dirty-lane-adoption.test.mjs",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:scripts/legacy-dirty-lane-adoption-lib.mjs",
+          "semantic:legacy-dirty-adoption-descendant-base-recovery"
+        ],
+        "writeSetDigest": "deef89c41f0bd6f32fed851516ff1bd144cc3ddf8a892c0a2ba1bc1e86f6dd2f",
+        "laneRevision": "fd4c7556fb6a275f61c6cd32ed93623f351359ad",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-20T20:13:29.000Z",
+        "evidenceDigest": "f3f7c15433e8c04116445350c85d0d78ed5bbdd894f733549412ec64d138f53f",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAdGMrg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "fd4c7556fb6a275f61c6cd32ed93623f351359ad",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAdGMrg",
+          "focusedEvidenceDigest": "f3f7c15433e8c04116445350c85d0d78ed5bbdd894f733549412ec64d138f53f",
+          "dependencyClosureDigest": "0a2c00e2a095c66ff28e1494a769f9c5497bc787a6bc4771702c5723bdf2d0aa",
+          "namedChecksDigest": "4b1e6e37dff148e87c5bff4c1c260475474761da6e868abe66a389d085115a69",
+          "handoffEvidenceDigest": "78a1d0de51888411bf7abfbf204e04209c0654c1659681853601526f43ff3a0c",
+          "operatorDecisionDigest": "7b03a45a51e3f1de15b49ce8fd7f42cc0af32311a428bd58f9c744ebf3d0bc8d",
+          "integrationIntentDigest": "5f66c0dde282e3c20bd29a03dd73ec34c40611bf9d4165100d8cb87b4c6e4dd9",
+          "integratedAt": "2026-08-20T18:38:25.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "fd4c7556fb6a275f61c6cd32ed93623f351359ad",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAdGMrg",
+          "bytesDigest": "7aa9eefc86daf72a974cbc2cc163eb2b77b98744f4f82fa26b1c5df2762bad61",
+          "namedChecksDigest": "4b1e6e37dff148e87c5bff4c1c260475474761da6e868abe66a389d085115a69",
+          "handoffEvidenceDigest": "78a1d0de51888411bf7abfbf204e04209c0654c1659681853601526f43ff3a0c",
+          "integrationReceiptDigest": "9ea69f0c7c91eb6afa372099d1992f46b8ac2b4ba16a7c593f770d101770152e",
+          "retiredAt": "2026-08-20T18:44:34.000Z"
+        }
+      },
+      "claimDigest": "bfcc8272bb4942835cc28e990f5a7c2f13e5d2220845a077c45f0d84168ac32e",
+      "digest": "b9da56e1f95811b50b6d8550ea7ae448c6ec4854c8ab8124346c25c2b2f067af"
     }
   ]
 }

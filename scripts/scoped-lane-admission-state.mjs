@@ -506,8 +506,11 @@ function captureScopedLaneState({
 function classifyCanonicalTaskSource({ root, canonicalBaseSha, lanes, git }) {
   const canonical = lanes.filter(lane => lane.branch === "refs/heads/main");
   if (canonical.length !== 1) return "ambiguous";
-  if (canonical[0].dirty || canonical[0].invalid) return "unsafe";
-  if (canonical[0].head === canonicalBaseSha) return "exact";
+  if (canonical[0].invalid) return "unsafe";
+  const dirty = canonical[0].dirty;
+  if (canonical[0].head === canonicalBaseSha) {
+    return dirty ? "root-bootstrap-dirty" : "exact";
+  }
   try {
     git(root, [
       "merge-base",
@@ -515,7 +518,7 @@ function classifyCanonicalTaskSource({ root, canonicalBaseSha, lanes, git }) {
       canonical[0].head,
       canonicalBaseSha,
     ]);
-    return "preserved-behind";
+    return dirty ? "root-bootstrap-dirty" : "preserved-behind";
   } catch {
     return "unsafe";
   }

@@ -30,6 +30,7 @@ export function provisionTaskWorktree({
   expectedBaseSha = "",
   expectedTargetObservationDigest = "",
   fetchBase = true,
+  allowDirtyCanonicalForRootBootstrap = false,
 }) {
   const canonicalRoot = path.resolve(repoRoot);
   if (path.resolve(invocationPath) !== canonicalRoot) {
@@ -65,6 +66,7 @@ export function provisionTaskWorktree({
     status: gitText(["status", "--porcelain"]).trim(),
     headSha,
     baseSha,
+    allowDirtyCanonicalForRootBootstrap,
   });
   const targetObservation = observeTarget({
     target,
@@ -165,6 +167,7 @@ export function inspectTaskWorktreeTarget({
   gitText,
   pathExists = existsSync,
   pathStat = lstatSync,
+  allowDirtyCanonicalForRootBootstrap = false,
 }) {
   const canonicalRoot = path.resolve(repoRoot);
   if (path.resolve(invocationPath) !== canonicalRoot) {
@@ -199,6 +202,7 @@ export function inspectTaskWorktreeTarget({
     status: gitText(["status", "--porcelain"]).trim(),
     headSha: canonicalHeadSha,
     baseSha: canonicalBaseSha,
+    allowDirtyCanonicalForRootBootstrap,
   });
   return {
     ...target,
@@ -584,11 +588,18 @@ function observeTarget({
   };
 }
 
-function requireCanonicalTaskSource({ gitText, status, headSha, baseSha }) {
-  if (status) {
+function requireCanonicalTaskSource({
+  gitText,
+  status,
+  headSha,
+  baseSha,
+  allowDirtyCanonicalForRootBootstrap,
+}) {
+  const dirty = Boolean(status);
+  if (dirty && !allowDirtyCanonicalForRootBootstrap) {
     throw new Error("Canonical main must be clean before task-worktree provisioning.");
   }
-  if (headSha === baseSha) return "exact";
+  if (headSha === baseSha) return dirty ? "root-bootstrap-dirty" : "exact";
   try {
     gitText(["merge-base", "--is-ancestor", headSha, baseSha]);
   } catch {
@@ -596,7 +607,7 @@ function requireCanonicalTaskSource({ gitText, status, headSha, baseSha }) {
       `Canonical main ${headSha} must be an ancestor of fetched origin/main ${baseSha}.`,
     );
   }
-  return "preserved-behind";
+  return dirty ? "root-bootstrap-dirty" : "preserved-behind";
 }
 
 function assertCandidateRegistration({ before, after, target, baseSha }) {

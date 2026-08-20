@@ -35,6 +35,7 @@ one closed mode:
 | Mode | Required evidence |
 |---|---|
 | Dirty maintenance | Dirty, unleased, nonempty changed paths, and every changed path inside the exact maintenance manifest. |
+| Canonical dirty maintenance | The registered primary `main` worktree is dirty and unleased, its HEAD is equal to or an ancestor of fetched `origin/main`, and every changed path remains in the exact maintenance manifest. |
 | Clean retired preservation | Clean, zero changed paths, exactly one matching lease, and exactly one normalized `agentic-local-review-retirement-receipt/v1` or `agentic-retired-planned-admission-owner-receipt/v1` proving `retired-preserved`. |
 
 The clean mode normalizes the single applicable retirement receipt owner, then
@@ -42,6 +43,12 @@ binds its receipt digest into the maintenance content and state digests. The
 inspector rereads registration, branch, HEAD, status, manifest, lease registry,
 and retirement receipt from the actual source. Conflicting receipt owners and
 caller-provided booleans are not authority.
+
+Canonical dirty maintenance is an even narrower bootstrap-only source: the
+authorization derives `canonical-dirty-main` from the actual primary `main`
+worktree and its content-bound state. It creates one clean detached candidate
+without moving or cleaning the canonical changes; a generic dirty-main flag is
+never sufficient.
 
 The normalizer accepts historical dirty-maintenance proofs whose digest predates
 the `retiredPreserved` field only after recomputing their exact historical

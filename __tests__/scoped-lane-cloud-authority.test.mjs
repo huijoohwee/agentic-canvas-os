@@ -861,6 +861,20 @@ test("legacy review bootstrap claims the preserved head for an exact historical-
     new RegExp(canonicalDescendantProof.evidenceDigest, "u"));
 });
 
+test("legacy review bootstrap keeps a same-base predecessor on the preserved head without a descendant proof", () => {
+  const predecessorClaimId = "e".repeat(64);
+  const harness = projectionHarness(rootClaim({ laneRevision: HEAD_SHA, transitionCounter: 1 }));
+  claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger", targetRepository: "owner/target", manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA, branch: BRANCH, headSha: HEAD_SHA, predecessorClaimId,
+    deviceId: DEVICE_ID, sessionId: SESSION_ID,
+    invoke: harness.invoke, inspect: harness.inspect, verify: harness.verify,
+  });
+  assert.equal(harness.calls[0].request.headSha, HEAD_SHA);
+  assert.equal(harness.calls[0].request.predecessorClaimId, predecessorClaimId);
+  assert.equal(harness.calls[0].request.canonicalDescendantProof, null);
+});
+
 test("public claim projection preserves pseudonymous owner identity", () => {
   const projected = projectPublicClaim(rootClaim({
     deviceId: pseudonymousIdentifier("device", DEVICE_ID),

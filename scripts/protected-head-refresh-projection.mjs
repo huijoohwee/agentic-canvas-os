@@ -313,6 +313,7 @@ export function requireProtectedHeadRefreshCiRun({
   branch,
   candidateSha,
   operationId,
+  workflowPath = ".github/workflows/ci.yml",
   requireSuccess = false,
 }) {
   requireRepository(repository, "Protected-head refresh CI repository");
@@ -332,7 +333,7 @@ export function requireProtectedHeadRefreshCiRun({
     || run.head_sha !== candidateSha
     || run.head_branch !== branch
     || run.display_title !== expectedName
-    || run.path !== ".github/workflows/ci.yml"
+    || run.path !== workflowPath
     || run.repository?.full_name !== repository
   ) {
     throw new Error("Protected-head refresh CI run identity drifted.");
@@ -376,6 +377,7 @@ export function reconcileProtectedHeadRefreshCiRuns({
   branch,
   candidateSha,
   operationId,
+  workflowPath = ".github/workflows/ci.yml",
 }) {
   if (!Array.isArray(runs)) {
     throw new Error("Protected-head refresh CI run set is malformed.");
@@ -401,6 +403,7 @@ export function reconcileProtectedHeadRefreshCiRuns({
     branch,
     candidateSha,
     operationId,
+    workflowPath,
   })).sort((left, right) => left.id - right.id);
   const selected = receipts.at(-1);
   if (selected.status === "completed" && selected.conclusion === "success") {

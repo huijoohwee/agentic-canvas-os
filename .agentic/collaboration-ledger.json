@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3801,
-  "headDigest": "cc0090a5959d30870887bfd45cdadbe015643d8e01f9ea5100ae626eb9805559",
+  "sequence": 3802,
+  "headDigest": "a7a5fce81c49f52ba9a4c7d0f4bf63e4a1954d8694179fcaada17b37338122e0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -190518,6 +190518,60 @@
       },
       "claimDigest": "0ffda7f53d253f93bb6b387eb04dbaa222d4022a2bf684e869c3458f4500689f",
       "digest": "cc0090a5959d30870887bfd45cdadbe015643d8e01f9ea5100ae626eb9805559"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3802,
+      "parentDigest": "cc0090a5959d30870887bfd45cdadbe015643d8e01f9ea5100ae626eb9805559",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "4a121d44f291466ea613cb7afb87d03cf5dc166277c0d4a33dbecda4e6c3a2f0",
+      "idempotencyKey": "6dc03e873e922c8b249e05608910040ae06baa185403cf24e26e3202b40c2339",
+      "requestDigest": "ddd53270df46cfe26cf264cbd901660d34662e386ea7173de7fccad99342ba86",
+      "evaluationTime": "2026-08-21T05:56:09.000Z",
+      "claimCore": {
+        "claimId": "4a121d44f291466ea613cb7afb87d03cf5dc166277c0d4a33dbecda4e6c3a2f0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:57d5f385ad0d7c8f59b142c37b344f3010836f0c9317d7243ef8c655f75fbfea",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:cb77b479e2fdf730478f44ab1c60561b00defddd161e3d0b3b8c6859319ef2b7",
+        "canonicalBaseRevision": "ed06fb5d56529a23ea03540ae2f3d4bf85410f1e",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/sourceFileCloudSync.test.tsx",
+          "path:canvas/src/features/markdown-workspace/SourceFileCloudSyncIndicator.tsx",
+          "path:canvas/src/features/source-files/sourceFileCanonicalCloudSync.ts",
+          "path:canvas/src/features/source-files/sourceFilesStorageSync.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageBrowserSession.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageClientTransport.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageRoutePaths.ts",
+          "path:canvas/src/lib/storage/knowgrphStorageWorkerEnvContract.ts",
+          "path:cloudflare/d1/migrations/0016_storage_browser_identity.sql",
+          "path:cloudflare/workers/knowgrph-storage/chatAuth.ts",
+          "path:cloudflare/workers/knowgrph-storage/db.ts",
+          "path:cloudflare/workers/knowgrph-storage/index.ts",
+          "path:cloudflare/workers/knowgrph-storage/storageBrowserSession.test.ts",
+          "path:cloudflare/workers/knowgrph-storage/storageBrowserSession.ts",
+          "path:cloudflare/workers/knowgrph-storage/storageSyncSecurity.ts",
+          "semantic:storage-browser-session-runtime"
+        ],
+        "writeSetDigest": "f8b3a7f37c567dd1d03651b9ba14095eb3132d9bf427354f78778c9098b200ca",
+        "laneRevision": "6327e612b1ba12beed9096b53b7f813e6a577f28",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 2,
+        "state": "current",
+        "expiresAt": "2026-08-21T06:25:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAgSJ-A",
+        "predecessorClaimId": "62972abef5574688e974589021401e8848ea53ed1c6500b101a8bfd4ce78cef3",
+        "eligibleSince": "2026-08-21T05:12:52.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-21T05:14:11.000Z"
+      },
+      "claimDigest": "cfa33f92002399e6702540749cc5d5ce480384947f0d0f9729bcf97a19e3de6d",
+      "digest": "a7a5fce81c49f52ba9a4c7d0f4bf63e4a1954d8694179fcaada17b37338122e0"
     }
   ]
 }

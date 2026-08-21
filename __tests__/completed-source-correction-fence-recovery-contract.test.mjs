@@ -27,3 +27,12 @@ test("plan rejects same-session operator and exact-token drift", () => {
   const plan = buildCompletedSourceCorrectionFenceRecoveryPlan({ evidence: fixture(), operatorSessionId: "operator-session" });
   assert.throws(() => authorizeCompletedSourceCorrectionFenceRecovery({ plan, authorization: "authorize wrong" }), /exact authorization/u);
 });
+
+test("evidence accepts a tree-equivalent empty local descendant", () => {
+  const source = fixture();
+  const evidence = buildCompletedSourceCorrectionFenceRecoveryEvidence({
+    ...source,
+    source: { ...source.source, changedPaths: [] },
+  });
+  assert.deepEqual(evidence.source.changedPaths, []);
+});

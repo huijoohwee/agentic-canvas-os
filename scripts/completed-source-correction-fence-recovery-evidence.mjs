@@ -20,7 +20,7 @@ export function buildCompletedSourceCorrectionFenceRecoveryEvidence(value = {}) 
       remoteHeadSha: sha(source.remoteHeadSha, "remote head"),
       protectedMainSha: sha(source.protectedMainSha, "protected main"),
       clean: source.clean === true,
-      changedPaths: normalizeWriteSet(source.changedPaths),
+      changedPaths: normalizeChangedPaths(source.changedPaths),
     },
     lease: {
       epoch: integer(lease.epoch, "epoch"),
@@ -79,6 +79,11 @@ export function normalizeCompletedSourceCorrectionFenceRecoveryEvidence(value) {
   const rebuilt = buildCompletedSourceCorrectionFenceRecoveryEvidence(value);
   if (JSON.stringify(value) !== JSON.stringify(rebuilt)) invalid("evidence projection");
   return rebuilt;
+}
+
+function normalizeChangedPaths(value) {
+  if (Array.isArray(value) && value.length === 0) return Object.freeze([]);
+  return normalizeWriteSet(value);
 }
 
 function object(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) invalid(label); return value; }

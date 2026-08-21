@@ -176,7 +176,10 @@ function createRuntime(options, dependencies) {
       now: now(),
     });
     await recoverCloud({ plan });
-    if (!cachedCloud || !cloudAuthorityProjectsClaim(cachedCloud.authority, liveClaim)) {
+    const recoveredClaim = cachedCloud
+      ? findExactProjectedClaim(cachedCloud.authority, cloudStatus(cachedCloud.authority))
+      : null;
+    if (!recoveredClaim) {
       invalid("persisted recovered cloud authority");
     }
     const timestamp = now().toISOString();
@@ -220,20 +223,35 @@ export function cloudAuthorityProjectsClaim(authority, claim) {
     && authority.reviewRequestId === claim.reviewRequestId;
 }
 
+export function findExactProjectedClaim(authority, status) {
+  const matches = Array.isArray(status?.claims)
+    ? status.claims.filter(claim => claim?.claimId === authority?.claimId)
+    : [];
+  return matches.length === 1 && cloudAuthorityProjectsClaim(authority, matches[0])
+    ? matches[0]
+    : null;
+}
+
 export function isExactPersistedRecoveryClaim({
   sourceClaim,
   sourceAuthority,
   liveClaim,
   recoveryEvidenceDigest,
 }) {
-  const exactRecoveryState = liveClaim?.state === "current" || (
-    liveClaim?.state === "dormant-preserved"
-    && liveClaim.scopeReserved === true
-    && liveClaim.writeAuthority === false
+  const transitionDelta = liveClaim?.transitionCounter - sourceClaim?.transitionCounter;
+  const exactRecoveryState = transitionDelta === 1 && (
+    liveClaim?.state === "current" || (
+      liveClaim?.state === "dormant-preserved"
+      && liveClaim.scopeReserved === true
+      && liveClaim.writeAuthority === false
+    )
   );
+  const exactResponseAheadState = transitionDelta === 2
+    && liveClaim?.state === "current"
+    && liveClaim.scopeReserved === true
+    && liveClaim.writeAuthority === true;
   return liveClaim?.claimId === sourceClaim?.claimId
-    && exactRecoveryState
-    && liveClaim.transitionCounter === sourceClaim.transitionCounter + 1
+    && (exactRecoveryState || exactResponseAheadState)
     && liveClaim.canonicalBaseRevision === sourceAuthority?.canonicalBaseSha
     && liveClaim.laneRevision === sourceClaim.laneRevision
     && liveClaim.writeSetDigest === sourceClaim.writeSetDigest

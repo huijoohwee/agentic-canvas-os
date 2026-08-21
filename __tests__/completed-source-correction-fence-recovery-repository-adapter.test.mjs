@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import {
   cloudAuthorityProjectsClaim,
+  findExactProjectedClaim,
   isExactPersistedRecoveryClaim,
   recoveredCloudAuthorityAlreadyProjected,
 } from "../scripts/completed-source-correction-fence-recovery-repository-adapter.mjs";
@@ -101,10 +102,28 @@ test("persisted recovery replay accepts only its exact next transition and evide
     liveClaim: { ...liveClaim, state: "parked" },
     recoveryEvidenceDigest,
   }), false);
+  const responseAheadClaim = {
+    ...liveClaim,
+    transitionCounter: 5,
+    scopeReserved: true,
+    writeAuthority: true,
+  };
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
     sourceAuthority,
-    liveClaim: { ...liveClaim, transitionCounter: 5 },
+    liveClaim: responseAheadClaim,
+    recoveryEvidenceDigest,
+  }), true);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    sourceAuthority,
+    liveClaim: { ...responseAheadClaim, writeAuthority: false },
+    recoveryEvidenceDigest,
+  }), false);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    sourceAuthority,
+    liveClaim: { ...responseAheadClaim, transitionCounter: 6 },
     recoveryEvidenceDigest,
   }), false);
   assert.equal(isExactPersistedRecoveryClaim({
@@ -134,4 +153,22 @@ test("persisted recovery replay accepts only its exact next transition and evide
     laneRevision: liveClaim.laneRevision,
     reviewRequestId: liveClaim.reviewRequestId,
   }, liveClaim), true);
+  const recoveredAuthority = {
+    claimId: responseAheadClaim.claimId,
+    claimDigest: responseAheadClaim.fenceRevision,
+    claimLedgerRevision: responseAheadClaim.transitionDigest,
+    operationReceiptDigest: responseAheadClaim.operationReceiptDigest,
+    transitionCounter: responseAheadClaim.transitionCounter,
+    laneRevision: responseAheadClaim.laneRevision,
+    reviewRequestId: responseAheadClaim.reviewRequestId,
+  };
+  assert.equal(findExactProjectedClaim(recoveredAuthority, {
+    claims: [responseAheadClaim],
+  }), responseAheadClaim);
+  assert.equal(findExactProjectedClaim(recoveredAuthority, {
+    claims: [liveClaim],
+  }), null);
+  assert.equal(findExactProjectedClaim(recoveredAuthority, {
+    claims: [responseAheadClaim, responseAheadClaim],
+  }), null);
 });

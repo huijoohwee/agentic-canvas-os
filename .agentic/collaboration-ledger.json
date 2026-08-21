@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3726,
-  "headDigest": "c45832b504daf14207b3608bcec036ba953b772189fcb3f177fe6f6beffd303d",
+  "sequence": 3727,
+  "headDigest": "8ae765c81b81008c325c249867e325a2370905bf99de7f51d8d27a2d7b3effe9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -186988,6 +186988,46 @@
       },
       "claimDigest": "a437d94e1fe3bf42f4d952f5a41886c40155bd20e74d4091cb1a530141165c8b",
       "digest": "c45832b504daf14207b3608bcec036ba953b772189fcb3f177fe6f6beffd303d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3727,
+      "parentDigest": "c45832b504daf14207b3608bcec036ba953b772189fcb3f177fe6f6beffd303d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "66d5e1d3a143a3cce9880a53fdc650c50a1553c8edc61a19eb7f81875a0b980e",
+      "idempotencyKey": "0516f98204c551b0dbde97426ecf53cafd578935b9698bac2320a59a12867947",
+      "requestDigest": "b3c5a7444fe4a6140c4411a72591c2a797d7ece5a1be39d0cc3eb222e0e94201",
+      "evaluationTime": "2026-08-21T00:38:40.000Z",
+      "claimCore": {
+        "claimId": "66d5e1d3a143a3cce9880a53fdc650c50a1553c8edc61a19eb7f81875a0b980e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8fca54f79632c46a02f9b9b3d298b4ce88bcab966b2331149edd40a5054c31ab",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:26f79b6c8097a283a977094fb357e7c3e03401314f30593acd37623cdc5bc417",
+        "canonicalBaseRevision": "c5b66e7e43ca49db6394c4fb8c2b1b20511e425e",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-clean-committed-lane-bootstrap-adapter.test.mjs",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "semantic:legacy-bootstrap-lease-expiry-projection"
+        ],
+        "writeSetDigest": "4f076ce0ca49f932c1774b42aac7103624f9674660180a497003954cf359d874",
+        "laneRevision": "0ffb125d28553374e27230c6ab7aabf1c3cc7be7",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T02:25:09.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAfIrlA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "697d98d356ef3284cfd9bb8caeefcd4c0ff6b905dce4cdb02123b7cf8ca4ae49",
+      "digest": "8ae765c81b81008c325c249867e325a2370905bf99de7f51d8d27a2d7b3effe9"
     }
   ]
 }

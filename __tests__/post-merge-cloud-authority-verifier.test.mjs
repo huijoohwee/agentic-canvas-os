@@ -30,9 +30,11 @@ function authority() {
     leaseEpoch: 1,
     transitionCounter: 7,
     reviewRequestId: "github-pull-request:node",
+    focusedEvidenceDigest: digest("a"),
     integration: {
       candidateRevision: headSha,
       reviewRequestId: "github-pull-request:node",
+      focusedEvidenceDigest: digest("a"),
       namedChecksDigest: digest("6"),
       handoffEvidenceDigest: digest("7"),
     },
@@ -74,6 +76,7 @@ function ledger(source = authority()) {
     transitionCounter: source.transitionCounter,
     state: "integrated-preserved",
     reviewRequestId: source.reviewRequestId,
+    evidenceDigest: source.focusedEvidenceDigest,
     integration: source.integration,
   };
   return {
@@ -110,6 +113,55 @@ function ledger(source = authority()) {
   };
 }
 
+function reviewedAuthority() {
+  const source = authority();
+  return {
+    ...source,
+    state: "review_ready",
+    transitionCounter: source.transitionCounter - 1,
+    claimDigest: digest("b"),
+    claimLedgerRevision: digest("c"),
+    integrationReceiptDigest: null,
+    integration: null,
+  };
+}
+
+function reviewedLedger(source = reviewedAuthority()) {
+  const delivery = authority();
+  delivery.claimId = source.claimId;
+  delivery.canonicalBaseSha = source.canonicalBaseSha;
+  delivery.laneRevision = source.laneRevision;
+  delivery.writeSetDigest = source.writeSetDigest;
+  delivery.cloudDeclaredWriteScope = source.cloudDeclaredWriteScope;
+  delivery.leaseEpoch = source.leaseEpoch;
+  delivery.transitionCounter = source.transitionCounter + 1;
+  delivery.reviewRequestId = source.reviewRequestId;
+  delivery.focusedEvidenceDigest = source.focusedEvidenceDigest;
+  delivery.integration.focusedEvidenceDigest = source.focusedEvidenceDigest;
+  const result = ledger(delivery);
+  result.entries.unshift({
+    schema: "agentic-cloud-collaboration-entry/v2",
+    sequence: 9,
+    action: "continue",
+    claimId: source.claimId,
+    claimDigest: source.claimDigest,
+    digest: source.claimLedgerRevision,
+    claimCore: {
+      claimId: source.claimId,
+      canonicalBaseRevision: source.canonicalBaseSha,
+      laneRevision: source.laneRevision,
+      declaredWriteScope: source.cloudDeclaredWriteScope,
+      writeSetDigest: source.writeSetDigest,
+      leaseEpoch: source.leaseEpoch,
+      transitionCounter: source.transitionCounter,
+      state: "reviewed",
+      reviewRequestId: source.reviewRequestId,
+      evidenceDigest: source.focusedEvidenceDigest,
+    },
+  });
+  return result;
+}
+
 function options(source = authority()) {
   return {
     cloudAuthority: source,
@@ -143,6 +195,35 @@ test("merged replay accepts one exact integrated retirement", () => {
   assert.equal(result.status, "integrated-retired");
   assert.equal(result.claimId, source.claimId);
   assert.equal(result.mergeCommitSha, mergeSha);
+});
+
+test("merged replay recovers an exact reviewed projection from terminal history", () => {
+  const source = reviewedAuthority();
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => reviewedLedger(source),
+    validate: () => {},
+  });
+  const result = verifier(options(source));
+  assert.equal(result.status, "integrated-retired");
+  assert.equal(result.claimId, source.claimId);
+});
+
+test("merged reviewed replay rejects a missing exact reviewed predecessor", () => {
+  const source = reviewedAuthority();
+  const changed = reviewedLedger(source);
+  changed.entries[0].claimDigest = digest("f");
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => changed,
+    validate: () => {},
+  });
+  assert.throws(
+    () => verifier(options(source)),
+    /Historical reviewed entry does not match local reviewed authority/u,
+  );
 });
 
 test("merged replay accepts the exact controller-proven protected refresh head", () => {

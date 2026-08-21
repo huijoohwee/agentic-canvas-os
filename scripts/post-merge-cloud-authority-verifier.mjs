@@ -66,7 +66,7 @@ export function verifyIntegratedRetirementEvidence({
   protectedMainRefresh = null,
   pullRequest,
 }) {
-  requireAuthority(authority, { canonicalBaseSha, headSha });
+  const authorityState = requireAuthority(authority, { canonicalBaseSha, headSha });
   requireMergedPullRequest(pullRequest, { branch, headSha, protectedMainRefresh });
   if (!ledger || !Array.isArray(ledger.entries)) {
     throw new Error("Cloud collaboration ledger has no entries.");
@@ -77,8 +77,14 @@ export function verifyIntegratedRetirementEvidence({
   if (!integration || retirement?.action !== "retire") {
     throw new Error("Claim history does not end in an integrated retirement.");
   }
-  requireIntegratedEntry(integration, authority, headSha);
-  requireRetiredEntry(retirement, integration, authority, headSha);
+  if (authorityState === "review_ready") {
+    const review = history.find(entry =>
+      entry?.digest === authority.claimLedgerRevision
+      && entry?.claimDigest === authority.claimDigest);
+    requireReviewedEntry(review, authority, headSha);
+  }
+  requireIntegratedEntry(integration, authority, headSha, { authorityState });
+  requireRetiredEntry(retirement, integration, authority, headSha, { authorityState });
 
   return Object.freeze({
     schema: POST_MERGE_CLOUD_AUTHORITY_VERIFICATION_SCHEMA,
@@ -99,21 +105,31 @@ export function verifyIntegratedRetirementEvidence({
 }
 
 function requireAuthority(authority, { canonicalBaseSha, headSha }) {
-  if (!authority || authority.state !== "delivery_authorized") {
-    throw new Error("Post-merge verification requires delivery-authorized local authority.");
+  if (!authority || !["review_ready", "delivery_authorized"].includes(authority.state)) {
+    throw new Error(
+      "Post-merge verification requires reviewed or delivery-authorized local authority.",
+    );
   }
   requireRepository(authority.ledgerRepository, "ledger repository");
   requireRepository(authority.targetRepository, "target repository");
   requireDigest(authority.claimId, "claim ID");
   requireDigest(authority.claimDigest, "claim digest");
   requireDigest(authority.claimLedgerRevision, "claim ledger revision");
-  requireDigest(authority.integrationReceiptDigest, "integration receipt digest");
   if (authority.canonicalBaseSha !== canonicalBaseSha || authority.laneRevision !== headSha) {
     throw new Error("Local delivery authority does not match the integration subject.");
   }
-  if (!authority.integration || authority.integration.candidateRevision !== headSha) {
-    throw new Error("Local delivery authority has no exact integration evidence.");
+  if (authority.state === "delivery_authorized") {
+    requireDigest(authority.integrationReceiptDigest, "integration receipt digest");
+    if (!authority.integration || authority.integration.candidateRevision !== headSha) {
+      throw new Error("Local delivery authority has no exact integration evidence.");
+    }
+  } else {
+    requireDigest(authority.focusedEvidenceDigest, "focused evidence digest");
+    if (authority.integrationReceiptDigest !== null || authority.integration !== null) {
+      throw new Error("Reviewed local authority already contains unverified integration evidence.");
+    }
   }
+  return authority.state;
 }
 
 function requireMergedPullRequest(pullRequest, { branch, headSha, protectedMainRefresh }) {
@@ -176,9 +192,26 @@ function requireMergedHead({
   }
 }
 
-function requireIntegratedEntry(entry, authority, headSha) {
+function requireReviewedEntry(entry, authority, headSha) {
+  const core = entry?.claimCore;
+  if (entry?.schema !== "agentic-cloud-collaboration-entry/v2"
+    || core?.state !== "reviewed"
+    || core.claimId !== authority.claimId
+    || core.canonicalBaseRevision !== authority.canonicalBaseSha
+    || core.laneRevision !== headSha
+    || core.writeSetDigest !== authority.writeSetDigest
+    || core.leaseEpoch !== authority.leaseEpoch
+    || core.transitionCounter !== authority.transitionCounter
+    || core.reviewRequestId !== authority.reviewRequestId
+    || core.evidenceDigest !== authority.focusedEvidenceDigest
+    || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope)) {
+    throw new Error("Historical reviewed entry does not match local reviewed authority.");
+  }
+}
+
+function requireIntegratedEntry(entry, authority, headSha, { authorityState }) {
   const core = entry.claimCore;
-  if (entry.schema !== "agentic-cloud-collaboration-entry/v2"
+  const commonMismatch = entry.schema !== "agentic-cloud-collaboration-entry/v2"
     || core?.state !== "integrated-preserved"
     || core.claimId !== authority.claimId
     || core.canonicalBaseRevision !== authority.canonicalBaseSha
@@ -186,18 +219,34 @@ function requireIntegratedEntry(entry, authority, headSha) {
     || core.writeSetDigest !== authority.writeSetDigest
     || core.leaseEpoch !== authority.leaseEpoch
     || core.reviewRequestId !== authority.reviewRequestId
-    || core.transitionCounter !== authority.transitionCounter
+    || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope);
+  const deliveryMismatch = authorityState === "delivery_authorized" && (
+    core.transitionCounter !== authority.transitionCounter
     || entry.claimDigest !== authority.claimDigest
     || entry.digest !== authority.claimLedgerRevision
-    || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope)
-    || !sameValue(core.integration, authority.integration)) {
+    || !sameValue(core.integration, authority.integration)
+  );
+  const reviewedMismatch = authorityState === "review_ready" && (
+    core.transitionCounter !== authority.transitionCounter + 1
+    || core.evidenceDigest !== authority.focusedEvidenceDigest
+    || core.integration?.candidateRevision !== headSha
+    || core.integration?.reviewRequestId !== authority.reviewRequestId
+    || core.integration?.focusedEvidenceDigest !== authority.focusedEvidenceDigest
+  );
+  if (commonMismatch || deliveryMismatch || reviewedMismatch) {
     throw new Error("Historical integration entry does not match local delivery authority.");
   }
 }
 
-function requireRetiredEntry(entry, integration, authority, headSha) {
+function requireRetiredEntry(entry, integration, authority, headSha, { authorityState }) {
   const core = entry.claimCore;
   const retirement = core?.retirement;
+  const expectedIntegration = authorityState === "delivery_authorized"
+    ? authority.integration
+    : integration.claimCore.integration;
+  const integrationReceiptMismatch = authorityState === "delivery_authorized"
+    ? retirement?.integrationReceiptDigest !== authority.integrationReceiptDigest
+    : !DIGEST_PATTERN.test(String(retirement?.integrationReceiptDigest || ""));
   if (entry.schema !== "agentic-cloud-collaboration-entry/v2"
     || core?.state !== "retired"
     || core.claimId !== authority.claimId
@@ -209,13 +258,13 @@ function requireRetiredEntry(entry, integration, authority, headSha) {
     || core.transitionCounter !== integration.claimCore.transitionCounter + 1
     || integration.sequence >= entry.sequence
     || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope)
-    || !sameValue(core.integration, authority.integration)
+    || !sameValue(core.integration, expectedIntegration)
     || retirement?.reason !== "integrated"
     || retirement.finalRevision !== headSha
     || retirement.reviewRequestId !== authority.reviewRequestId
-    || retirement.integrationReceiptDigest !== authority.integrationReceiptDigest
-    || retirement.namedChecksDigest !== authority.integration.namedChecksDigest
-    || retirement.handoffEvidenceDigest !== authority.integration.handoffEvidenceDigest) {
+    || integrationReceiptMismatch
+    || retirement.namedChecksDigest !== expectedIntegration.namedChecksDigest
+    || retirement.handoffEvidenceDigest !== expectedIntegration.handoffEvidenceDigest) {
     throw new Error("Terminal claim entry is not the exact integrated retirement.");
   }
   requireDigest(entry.digest, "retirement entry digest");

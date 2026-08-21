@@ -1172,7 +1172,10 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
           mergeCommit: { oid: mergeSha },
         });
       },
-      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => Object.assign(lease, values),
+      },
       sessionId: "session-a",
       buildDeliveryEvidence: input => {
         assert.deepEqual(input, {
@@ -1937,6 +1940,7 @@ test("review-ready delivery reclaims a dormant preserved review authority before
       }),
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => Object.assign(lease, values),
       },
       sessionId: "session-a",
       buildDeliveryEvidence: ({ authority }) => {
@@ -2206,7 +2210,10 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
           mergeCommit: { oid: mergeSha },
         });
       },
-      leaseStore: { read: requested => requested ? lease : { leases: { [branch]: lease } } },
+      leaseStore: {
+        read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => Object.assign(lease, values),
+      },
       sessionId: "session-a",
       buildDeliveryEvidence: () => deliveryEvidence,
       authorizeCloudDelivery: ({ authority, headSha }) => {
@@ -2312,6 +2319,7 @@ test("review-ready delivery uses the reviewed head after base recovery", () => {
   assert.equal(result.status, "integrated");
   assert.equal(events.includes(`verify:${fenceSha}`), false);
   assert.ok(events.includes(`verify:${commitSha}`));
+  assert.ok(events.includes("annotate:delivery_authorized"));
 });
 
 test("review-ready merged replay verifies terminal cloud authority before completion", () => {
@@ -3097,6 +3105,7 @@ test("authorized and legacy local-only auto-delivery complete only through canon
       }),
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => Object.assign(lease, values),
         complete: values => {
           assert.equal(runtimeProven, true);
           completedAfterRuntime = true;
@@ -3209,6 +3218,7 @@ function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {
       }),
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => Object.assign(lease, values),
         complete: values => {
           assert.equal(runtimeProven, true);
           lease = { ...lease, status: "completed", completion: {
@@ -3506,6 +3516,11 @@ function runProtectedRefreshScenario({
       },
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => {
+          lease = { ...lease, ...values };
+          events.push(`annotate:${values.cloudAuthority?.state || "none"}`);
+          return lease;
+        },
       },
       sessionId: "session-a",
       inspectCloudStatus: input => {

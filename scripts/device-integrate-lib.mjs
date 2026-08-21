@@ -376,8 +376,16 @@ function integrateSessionUnfenced({
           headSha: lease.reviewHeadSha,
           deliveryEvidence,
         });
-        deliveryCloudAuthority = authorized.authority;
         const reviewedDeliveryHeadSha = lease.reviewHeadSha;
+        lease = leaseStore.annotate({
+          sessionId,
+          branch,
+          values: {
+            deliveryHeadSha: reviewedDeliveryHeadSha,
+            cloudAuthority: authorized.authority,
+          },
+        });
+        deliveryCloudAuthority = lease.cloudAuthority;
         const protectedMergeHeadSha = protectedMainAuthorizationRefresh?.refreshedHeadSha
           || reviewedDeliveryHeadSha;
         verifyCloudAuthority({

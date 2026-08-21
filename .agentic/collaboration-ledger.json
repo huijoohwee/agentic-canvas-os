@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3834,
-  "headDigest": "1e55d2ee168b70f155bba17ee3aaa758d354b14d3812554c552899822480970a",
+  "sequence": 3835,
+  "headDigest": "2761aa7e5fc3ba3fbb96e8f2a70183bbb8dba901d2e87b752825ac6e3f53ff75",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -192220,6 +192220,46 @@
       },
       "claimDigest": "428f34c8e6c01067c250977d01545cab6a91b0527285433907d1fed3534888f7",
       "digest": "1e55d2ee168b70f155bba17ee3aaa758d354b14d3812554c552899822480970a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3835,
+      "parentDigest": "1e55d2ee168b70f155bba17ee3aaa758d354b14d3812554c552899822480970a",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9bfcf2463bac48efe0fed6155295c7aaa0af5683fddfbd6f6d42b3d97d7e6775",
+      "idempotencyKey": "89c2d47ddc81043c325e9e228c13a524225a672acca834c0d833368c886d9891",
+      "requestDigest": "0f092921065b97a8247f851138e67e7094872cb5a898fb739bed8316169bc262",
+      "evaluationTime": "2026-08-21T07:45:42.000Z",
+      "claimCore": {
+        "claimId": "9bfcf2463bac48efe0fed6155295c7aaa0af5683fddfbd6f6d42b3d97d7e6775",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1d9ee38b8037a9c8579567f9dbd6761fba6cf578890a2e33f06383bb40b109a4",
+        "canonicalBaseRevision": "2244cded7818705350ba6f7551c44be464f34862",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-repository-adapter.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-repository-adapter.mjs",
+          "semantic:completed-fence-durable-phase-replay"
+        ],
+        "writeSetDigest": "afa1d40c4e7d838001cf364a07cf3a05a0f4e3e61d7f7a7486f88b290e9d221b",
+        "laneRevision": "5c9ec61876875eef7818b707218037fa36987b63",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-21T09:30:55.000Z",
+        "evidenceDigest": "a3dc31c022f18cfd11c81120c349aa649857ee5d9bb22913bf4c5de5ef5a76f8",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAhK-_A",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "943dbc9292ad9bc30cbe68521e5cd21b16aa1a4066565f770c0d4350d2685613",
+      "digest": "2761aa7e5fc3ba3fbb96e8f2a70183bbb8dba901d2e87b752825ac6e3f53ff75"
     }
   ]
 }

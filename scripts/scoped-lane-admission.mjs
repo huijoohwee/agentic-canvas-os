@@ -110,6 +110,7 @@ try {
         repoRoot: canonicalPath,
         targetPath,
         gitText,
+        allowDirtyCanonicalForRootBootstrap: true,
       })
     ));
     const maintenanceSourcePath = path.resolve(requiredOption("maintenance-source"));

@@ -259,6 +259,18 @@ export function evaluateScopedLaneAdmission({
     evaluatedAt: evaluationTime,
     inspectMaintenanceSource: inspectRootSourceMaintenance,
   });
+  const canonicalDirtyBootstrap = rootSourceBootstrap?.maintenanceMode
+    === "canonical-dirty-main"
+    && rootSourceBootstrap.maintenanceSourcePath === normalizedCanonicalPath
+    && canonicalSourceDisposition === "root-bootstrap-dirty"
+    && canonicalLanes.length === 1
+    && canonicalLanes[0].dirty;
+  if (canonicalDirtyBootstrap) {
+    const canonicalFindingIndex = findings.findIndex(candidate => (
+      candidate.type === "canonical-base-drift" && candidate.blockScope === "global"
+    ));
+    if (canonicalFindingIndex >= 0) findings.splice(canonicalFindingIndex, 1);
+  }
   const rootSourceAuthorizations = new Map(
     rootSourceBootstrap?.preservedLanes.map(lane => [lane.path, lane]) || [],
   );

@@ -341,11 +341,18 @@ export function normalizeRootSourceBootstrapAuthorization({
   }), {
     expectedManifestDigest: bindings.maintenanceManifestDigest,
   });
+  const canonicalMaintenance = maintenanceProof.path === path.resolve(canonicalPath);
+  const canonicalDirtyMaintenance = canonicalMaintenance
+    && maintenanceProof.branch === "refs/heads/main"
+    && maintenanceProof.dirty
+    && !maintenanceProof.retiredPreserved
+    && maintenanceProof.leaseCount === 0;
+  const separateMaintenance = !canonicalMaintenance
+    && maintenanceProof.path !== path.resolve(targetPath)
+    && !preservedLanes.some(lane => lane.path === maintenanceProof.path);
   if (
     maintenanceProof.path !== bindings.maintenanceSourcePath
-    || maintenanceProof.path === path.resolve(canonicalPath)
-    || maintenanceProof.path === path.resolve(targetPath)
-    || preservedLanes.some(lane => lane.path === maintenanceProof.path)
+    || (!separateMaintenance && !canonicalDirtyMaintenance)
     || !maintenanceProof.registered
     || maintenanceProof.detached
     || maintenanceProof.invalid
@@ -353,7 +360,7 @@ export function normalizeRootSourceBootstrapAuthorization({
     || hasCurrentRootSourceMaintenanceAuthority(maintenanceProof, currentRemoteClaims)
   ) {
     throw new Error(
-      "Root-source bootstrap requires one separate registered, dirty, unleased maintenance source lane or a registered, clean, retired-preserved maintenance source lane.",
+      "Root-source bootstrap requires one separate registered, dirty, unleased maintenance source lane or the dirty, unleased canonical main source.",
     );
   }
   const maintenanceBranchScope = maintenanceProof.branch.split("/").at(-1);
@@ -383,6 +390,9 @@ export function normalizeRootSourceBootstrapAuthorization({
     maintenanceRepositoryRoot: maintenanceProof.repositoryRoot,
     maintenanceHead: maintenanceProof.head,
     maintenanceBranch: maintenanceProof.branch,
+    maintenanceMode: canonicalDirtyMaintenance
+      ? "canonical-dirty-main"
+      : "separate-root-lane",
     maintenanceContentDigest: maintenanceProof.contentDigest,
     maintenanceStateDigest: maintenanceProof.stateDigest,
     maintenanceChangedPaths: maintenanceProof.changedPaths,
@@ -435,7 +445,17 @@ export function assertRootSourceBootstrapCurrent({
     expectedManifestDigest: authorization.maintenanceManifestDigest,
   });
   if (
-    hasCurrentRootSourceMaintenanceAuthority(
+    (authorization.maintenanceMode === "canonical-dirty-main" && (
+      path.resolve(authorization.maintenanceSourcePath) !== path.resolve(report.repository)
+      || maintenanceProof.branch !== "refs/heads/main"
+      || !maintenanceProof.dirty
+      || maintenanceProof.retiredPreserved
+      || maintenanceProof.leaseCount !== 0
+    ))
+    || (authorization.maintenanceMode === "separate-root-lane" &&
+      path.resolve(authorization.maintenanceSourcePath) === path.resolve(report.repository))
+    || !["canonical-dirty-main", "separate-root-lane"].includes(authorization.maintenanceMode)
+    || hasCurrentRootSourceMaintenanceAuthority(
       maintenanceProof,
       remoteAuthorityVerification.inventory.claims,
     )

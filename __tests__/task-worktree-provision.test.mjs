@@ -150,6 +150,63 @@ test("clean canonical main behind origin is preserved while the candidate starts
   assert.equal(created, true);
 });
 
+test("dirty canonical main is eligible only for the explicit root-bootstrap provisioner", () => {
+  const behindSha = "b".repeat(40);
+  const treeSha = "c".repeat(40);
+  const behindRecord = `worktree ${repoRoot}\0HEAD ${behindSha}\0branch refs/heads/main\0`;
+  const registeredCandidate =
+    `${behindRecord}\0worktree ${target}\0HEAD ${sha}\0detached\0`;
+  let created = false;
+  const gitText = gitTextFor({
+    "worktree list --porcelain -z": behindRecord,
+    "status --porcelain": " M docs/retained.md",
+    "rev-parse HEAD": behindSha,
+    [`merge-base --is-ancestor ${behindSha} ${sha}`]: "",
+  });
+  const targetPlan = inspectTaskWorktreeTarget({
+    invocationPath: repoRoot,
+    repoRoot,
+    targetPath: target,
+    gitText,
+    pathExists: () => false,
+    pathStat: () => ({ isSymbolicLink: () => false }),
+    allowDirtyCanonicalForRootBootstrap: true,
+  });
+  assert.equal(targetPlan.canonicalSourceDisposition, "root-bootstrap-dirty");
+
+  const result = provisionTaskWorktree({
+    invocationPath: repoRoot,
+    repoRoot,
+    targetPath: target,
+    expectedBaseSha: sha,
+    expectedTargetObservationDigest: targetPlan.targetObservationDigest,
+    fetchBase: false,
+    gitText: args => {
+      const key = args.join(" ");
+      if (key === "worktree list --porcelain -z") {
+        return created ? registeredCandidate : behindRecord;
+      }
+      if (key === `rev-parse ${sha}^{tree}`) return treeSha;
+      if (key === `-C ${target} rev-parse HEAD`) return sha;
+      if (key === `-C ${target} rev-parse HEAD^{tree}`) return treeSha;
+      if (key === `-C ${target} status --porcelain=v1 -z --untracked-files=all`) return "";
+      if (key === `-C ${target} rev-parse --show-toplevel`) return target;
+      return gitText(args);
+    },
+    run: (command, args) => {
+      if (command === "git" && args[0] === "worktree" && args[1] === "add") {
+        created = true;
+      }
+    },
+    makeDirectory: () => {},
+    pathExists: candidate => candidate === path.dirname(safeRoot),
+    pathStat: () => ({ isSymbolicLink: () => false }),
+    allowDirtyCanonicalForRootBootstrap: true,
+  });
+  assert.equal(result.baseSha, sha);
+  assert.equal(created, true);
+});
+
 test("provision rejects an unrelated concurrent worktree registration after add", () => {
   const calls = [];
   const unrelatedTarget = path.join(safeRoot, "other-work-item");

@@ -167,6 +167,14 @@ source only as the already-authorized preservation owner for the candidate-bound
 bootstrap decision. See
 [`CLEAN-PRESERVED-BOOTSTRAP.md`](./CLEAN-PRESERVED-BOOTSTRAP.md).
 
+The sole canonical exception is `canonical-dirty-main`: the maintenance source
+must be the registered primary `main` worktree, dirty and unleased, with its
+HEAD equal to or an ancestor of fetched `origin/main`. The content-bound root
+bootstrap authorization must name that exact source and preserve every changed
+path in place. It permits only creation of the clean detached candidate; it
+does not clean, stage, commit, move, or otherwise adopt canonical bytes. A
+dirty canonical source without that authorization remains a global block.
+
 ## Read-Only Commands
 
 Local planning classifies the current registered lanes and target path without

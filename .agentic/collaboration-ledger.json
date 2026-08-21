@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3890,
-  "headDigest": "f24a672209344669062088c5f32a913ddb3fae9f6f52e67df13038e852a7370f",
+  "sequence": 3891,
+  "headDigest": "1d7614393bd4319568ffbd8960a60bdb595f82c6e88e92543b6de57f773c1864",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -194833,6 +194833,63 @@
       },
       "claimDigest": "8484fa15c055214c2b242aff290a0176175da1e2d40e096e6fbd56303dc0f472",
       "digest": "f24a672209344669062088c5f32a913ddb3fae9f6f52e67df13038e852a7370f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3891,
+      "parentDigest": "f24a672209344669062088c5f32a913ddb3fae9f6f52e67df13038e852a7370f",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "b747907039492841ff8f95c24957e03c472fbfd3af3e1d0736c388499aa24fbb",
+      "idempotencyKey": "eb5452a092ebf4bac9c9cf52b27c4137260a07b30867dd6552ac75440ab84dba",
+      "requestDigest": "b2647b19b1c370b8476c4ddc9fc09fb0075db5a0abd2019bfbdb9a427620b53e",
+      "evaluationTime": "2026-08-21T10:07:47.000Z",
+      "claimCore": {
+        "claimId": "b747907039492841ff8f95c24957e03c472fbfd3af3e1d0736c388499aa24fbb",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:51e09ea88bea2e1b8eb198927601909edc3dbb2547f85a3cf43021f9f87394f1",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:85de36e720f42ed17e5ec0372f14c221e1229bcefe918c35fdb5e8c5b45bbf6c",
+        "canonicalBaseRevision": "38bcd5e3906067b1e5af6d60596501e465d08639",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:.github/workflows/integration.yml",
+          "path:scripts/__tests__/integration-build-memory-policy.test.mjs",
+          "semantic:protected-refresh-workflow-enrollment"
+        ],
+        "writeSetDigest": "55e257e841e058a59860d785228bcec8d6efc2273cba4a6c69a1fbde5d13ef23",
+        "laneRevision": "ca42431bf7f5bb53c17f6f48c654eaadbef6aecb",
+        "leaseEpoch": 1,
+        "transitionCounter": 8,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-21T10:37:47.000Z",
+        "evidenceDigest": "018683fee566a1fbfd97d597fd974c1c87b72d760b6c45ae1dfcce463b8c02be",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAhrvJw",
+        "predecessorClaimId": "230bcc7afde430fbb2aca483694aabad55a0374be7f37659532e8f4ce7681fe1",
+        "eligibleSince": "2026-08-21T08:49:04.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-21T08:50:31.000Z",
+        "integration": {
+          "candidateRevision": "ca42431bf7f5bb53c17f6f48c654eaadbef6aecb",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAhrvJw",
+          "focusedEvidenceDigest": "018683fee566a1fbfd97d597fd974c1c87b72d760b6c45ae1dfcce463b8c02be",
+          "dependencyClosureDigest": "ae9ffb739c6cc2642a75419fd802503a15e8563d0524548a16f7da03094a4051",
+          "namedChecksDigest": "1927cb5f0e4c92ded0d8f08b0f0eb29fa5a3d20c98f7650cbb7470e22e9ed1a2",
+          "handoffEvidenceDigest": "850671107666cdff4448ed903b99ce75a512e4539364afe2acd849d3313d3fc8",
+          "operatorDecisionDigest": "f49f45f43f15eca1084e5aae4838e6d16a28922a80634ece325b6534b2a02c47",
+          "integrationIntentDigest": "a8fc1267c2fd5d48aa4e2be052dbe68a6d380784fe76b56b8f8f47765ab855ac",
+          "integratedAt": "2026-08-21T09:32:38.000Z"
+        },
+        "recovery": {
+          "evidenceDigest": "8ca863c63d5201e06dc61397d94883dcf9e56f99d434ba3852375452191aa4c9",
+          "recoveredAt": "2026-08-21T10:07:47.000Z"
+        }
+      },
+      "claimDigest": "4e7669bd733dccd479f602542440d9e262afa2ed8100af6a2b8a55043048b19d",
+      "digest": "1d7614393bd4319568ffbd8960a60bdb595f82c6e88e92543b6de57f773c1864"
     }
   ]
 }

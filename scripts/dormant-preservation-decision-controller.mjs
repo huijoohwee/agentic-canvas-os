@@ -29,12 +29,22 @@ export async function planDormantPreservationAdmission(input = {}, { adapter } =
   const intent = normalizeOptionalIntent(await runtime.readIntent());
   let plan = intent?.planSnapshot || await buildCurrentPlan(runtime, { input });
   if (intent?.status === "authorized") {
-    const operationKey = Contract.dormantPreservationAdmissionOperationKey(
-      plan.planDigest, "admitted",
-    );
-    const live = await classify(runtime, { intent, operationKey, plan });
-    if (live.state === "absent") {
-      plan = await buildCurrentPlan(runtime, { intent, operationKey, plan, refresh: true });
+    if (observedPreExistingPlannedCandidate(plan)) {
+      const current = await buildCurrentPlan(runtime, { intent, plan, refresh: true });
+      assertContinuingCandidate(plan, current);
+      const operationKey = Contract.dormantPreservationAdmissionOperationKey(
+        current.planDigest, "admitted",
+      );
+      const live = await classify(runtime, { intent, operationKey, plan: current });
+      if (live.state === "planned") plan = current;
+    } else {
+      const operationKey = Contract.dormantPreservationAdmissionOperationKey(
+        plan.planDigest, "admitted",
+      );
+      const live = await classify(runtime, { intent, operationKey, plan });
+      if (live.state === "absent") {
+        plan = await buildCurrentPlan(runtime, { intent, operationKey, plan, refresh: true });
+      }
     }
   }
   requireRequestedPlan(input.planDigest, plan);
@@ -205,14 +215,33 @@ async function execute({ adapter, fence, input }) {
     if (intent.status !== "authorized") {
       throw new Error("Only an effect-absent authorized intent can be replaced.");
     }
-    const priorOperationKey = Contract.dormantPreservationAdmissionOperationKey(
-      plan.planDigest, "admitted",
-    );
-    const live = await classify(adapter, { fence, intent, operationKey: priorOperationKey, plan });
-    if (live.state !== "absent") {
-      throw new Error("Authorized intent replacement requires an absent candidate effect.");
+    let current;
+    if (observedPreExistingPlannedCandidate(plan)) {
+      current = await buildCurrentPlan(adapter, { fence, intent, plan, refresh: true });
+      assertContinuingCandidate(plan, current);
+      const currentOperationKey = Contract.dormantPreservationAdmissionOperationKey(
+        current.planDigest, "admitted",
+      );
+      const live = await classify(adapter, {
+        fence, intent, operationKey: currentOperationKey, plan: current,
+      });
+      if (live.state !== "planned") {
+        throw new Error(
+          "Authorized planned-candidate replacement requires the same live planned candidate.",
+        );
+      }
+    } else {
+      const priorOperationKey = Contract.dormantPreservationAdmissionOperationKey(
+        plan.planDigest, "admitted",
+      );
+      const live = await classify(adapter, {
+        fence, intent, operationKey: priorOperationKey, plan,
+      });
+      if (live.state !== "absent") {
+        throw new Error("Authorized intent replacement requires an absent candidate effect.");
+      }
+      current = await buildCurrentPlan(adapter, { fence, intent, plan, refresh: true });
     }
-    const current = await buildCurrentPlan(adapter, { fence, intent, plan, refresh: true });
     requireRequestedPlan(input.planDigest, current);
     const replacementAuthorization = Contract.authorizeDormantPreservationAdmission(
       current, input.authorization,
@@ -271,6 +300,43 @@ async function execute({ adapter, fence, input }) {
   intent = await persist(adapter, { expectedIntent: intent, fence, plan,
     nextIntent: Contract.advanceDormantPreservationAdmissionIntent(intent, "complete", receipt) });
   return completeResult(intent);
+}
+
+function observedPreExistingPlannedCandidate(plan) {
+  const source = plan?.sourceEvidence;
+  const authority = source?.candidate?.cloudAuthority;
+  const claim = source?.candidate?.candidateClaim;
+  return typeof authority?.reviewRequestId === "string"
+    && authority.reviewRequestId.length > 0
+    && authority.reviewRequestId === claim?.reviewRequestId
+    && authority.laneRevision === claim?.laneRevision
+    && authority.laneRevision !== source?.canonical?.headSha
+    && authority.leaseEpoch === claim?.leaseEpoch
+    && Number.isSafeInteger(authority.transitionCounter)
+    && authority.transitionCounter >= 2
+    && authority.transitionCounter === claim?.transitionCounter;
+}
+
+function assertContinuingCandidate(priorPlan, currentPlan) {
+  const project = plan => {
+    const candidate = plan.sourceEvidence.candidate;
+    return {
+      semanticScope: candidate.semanticScope,
+      deviceId: candidate.deviceId,
+      branch: candidate.branch,
+      sessionId: candidate.sessionId,
+      targetPath: candidate.targetPath,
+      targetObservationDigest: candidate.targetObservationDigest,
+      manifestPath: candidate.manifestPath,
+      manifestFileDigest: candidate.manifestFileDigest,
+      cloudAuthorityPath: candidate.cloudAuthorityPath,
+      cloudAuthorityFileDigest: candidate.cloudAuthorityFileDigest,
+      candidateClaimRecordDigest: candidate.candidateClaimRecordDigest,
+    };
+  };
+  if (digestValue(project(priorPlan)) !== digestValue(project(currentPlan))) {
+    throw new Error("Authorized planned-candidate replacement changed candidate identity.");
+  }
 }
 
 function completeResult(intent) {

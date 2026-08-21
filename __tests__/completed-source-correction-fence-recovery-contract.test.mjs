@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCompletedSourceCorrectionFenceRecoveryEvidence } from "../scripts/completed-source-correction-fence-recovery-evidence.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { buildCompletedSourceCorrectionFenceRecoveryEvidence, normalizeCompletedSourceCorrectionFenceRecoveryEvidence } from "../scripts/completed-source-correction-fence-recovery-evidence.mjs";
 import { authorizeCompletedSourceCorrectionFenceRecovery, buildCompletedSourceCorrectionFenceRecoveryPlan, createCompletedSourceCorrectionFenceRecoveryIntent } from "../scripts/completed-source-correction-fence-recovery-contract.mjs";
 
 const A = "a".repeat(40); const B = "b".repeat(40); const C = "c".repeat(40); const D = "d".repeat(64); const E = "e".repeat(64); const F = "f".repeat(64); const G = "1".repeat(64);
@@ -63,4 +64,36 @@ test("evidence rejects a completion lease not bound by the current lease or succ
     ...source,
     correction: { ...source.correction, completionLeaseDigest: G },
   }), /completed lease projection/u);
+});
+
+test("normalization preserves the exact legacy evidence projection for a prepared durable intent", () => {
+  const current = fixture();
+  const { evidenceDigest: _currentEvidenceDigest, ...currentCore } = current;
+  const {
+    successorTaskBindingSourceLeaseDigest: _successorTaskBindingSourceLeaseDigest,
+    ...legacyLease
+  } = currentCore.lease;
+  const legacyCore = { ...currentCore, lease: legacyLease };
+  const legacy = { ...legacyCore, evidenceDigest: digestValue(legacyCore) };
+
+  assert.deepEqual(normalizeCompletedSourceCorrectionFenceRecoveryEvidence(legacy), legacy);
+  const plan = buildCompletedSourceCorrectionFenceRecoveryPlan({
+    evidence: legacy,
+    operatorSessionId: "operator-session",
+  });
+  assert.equal(plan.evidence.evidenceDigest, legacy.evidenceDigest);
+});
+
+test("normalization rejects a tampered legacy evidence projection", () => {
+  const current = fixture();
+  const { evidenceDigest: _currentEvidenceDigest, ...currentCore } = current;
+  const {
+    successorTaskBindingSourceLeaseDigest: _successorTaskBindingSourceLeaseDigest,
+    ...legacyLease
+  } = currentCore.lease;
+  const legacyCore = { ...currentCore, lease: legacyLease };
+  const legacy = { ...legacyCore, evidenceDigest: G };
+
+  assert.throws(() => normalizeCompletedSourceCorrectionFenceRecoveryEvidence(legacy),
+    /evidence projection/u);
 });

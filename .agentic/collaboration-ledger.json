@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3810,
-  "headDigest": "f63e9433c49f6a6ad6a5c7f7f404e5d7b6260cbc87a157677c052f381910668f",
+  "sequence": 3811,
+  "headDigest": "6281279fd33d6f3205fd80577ef117428b3642edc107763d36b04fbda0129662",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -190956,6 +190956,57 @@
       },
       "claimDigest": "1e1c0ec6c44f8e2d8d6940eae27c3aeacd01305c6b9f29abbc11547bb2ce24c7",
       "digest": "f63e9433c49f6a6ad6a5c7f7f404e5d7b6260cbc87a157677c052f381910668f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3811,
+      "parentDigest": "f63e9433c49f6a6ad6a5c7f7f404e5d7b6260cbc87a157677c052f381910668f",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4fabd55e74219ff79608465176fe0a3735f36b4c89b7fb13661e487ddf8412e4",
+      "idempotencyKey": "b8cbdcdb2f84e0631b31de7bb2736912aa368bb3a2554de2773a4bcbccd8a3e0",
+      "requestDigest": "43da2e6f4494215210a8beeb8137964d80e1dd2f1ca217ed9b5bc058884509f4",
+      "evaluationTime": "2026-08-21T06:30:44.000Z",
+      "claimCore": {
+        "claimId": "4fabd55e74219ff79608465176fe0a3735f36b4c89b7fb13661e487ddf8412e4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:23bb7cf89c9d7004c39698ae700d7109382656bebbabcb8ab548ea09ed95d907",
+        "canonicalBaseRevision": "ce61123466a78f30b93b27c5785013af46b27a9a",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-fence-legacy-intent"
+        ],
+        "writeSetDigest": "a191f139493de011ae1a4a9aaa8bf1ebaae667ca62ae2b94fbdebf219a02713b",
+        "laneRevision": "26485435d7e68e53439368d7c6355e37caff9f0f",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-21T08:17:33.000Z",
+        "evidenceDigest": "50914dab91d1b0becd0bfd702bb67ee94ec00c19f29e55a1d34ebd96ef9a2ace",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAgu3xA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "26485435d7e68e53439368d7c6355e37caff9f0f",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAgu3xA",
+          "focusedEvidenceDigest": "50914dab91d1b0becd0bfd702bb67ee94ec00c19f29e55a1d34ebd96ef9a2ace",
+          "dependencyClosureDigest": "725f536a27869935d645eb8745b9f66e91e61839405df5aa0bf497a504c6396b",
+          "namedChecksDigest": "c58a252f0ce78fbd32e96ce7d734200f5286617f6c6204b7d99e44690b177a52",
+          "handoffEvidenceDigest": "0b05e6d4ca180b2f23fd5754beea9662c341471a9ced26e7d4f34eea5db02163",
+          "operatorDecisionDigest": "6d44dcad5bb181a6e5ac5bc6bd6ee497af365a4315b6491bde6992a1fc685f85",
+          "integrationIntentDigest": "2aab5e3843c11e33a2ba15ce235591f5e145bf3c78c5f4a063ceb0fe3eb2e0a8",
+          "integratedAt": "2026-08-21T06:30:44.000Z"
+        }
+      },
+      "claimDigest": "07bbbdcad74269deb10e8519d780c554100b01b8b4125d61103c4aaa4f8974e6",
+      "digest": "6281279fd33d6f3205fd80577ef117428b3642edc107763d36b04fbda0129662"
     }
   ]
 }

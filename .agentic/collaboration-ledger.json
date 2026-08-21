@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3775,
-  "headDigest": "41b5c84765ecc1516fca60b7e5be728c529e123b34631564c83a06d42176ce77",
+  "sequence": 3776,
+  "headDigest": "96470a46c69c02fd445d50b5536e6d618e66861ed6ab54ffab1a0bf54aeb0e00",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -189271,6 +189271,56 @@
       },
       "claimDigest": "d43c3d6c6bf5fc3ffd17f9c5ac95d908b4ceda4c841357a60fdc191981fa91c2",
       "digest": "41b5c84765ecc1516fca60b7e5be728c529e123b34631564c83a06d42176ce77"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3776,
+      "parentDigest": "41b5c84765ecc1516fca60b7e5be728c529e123b34631564c83a06d42176ce77",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7e92d16cf54a96a85037a0f9f196fba7cfb381d70b96d562d037f13c908c5abc",
+      "idempotencyKey": "463d33ea251ac3d1df4ce12febdce15dd292ef5e9f1a9244ce507ae15d22a952",
+      "requestDigest": "768c03ad051bde9c60846f5967cdcca94b045a41e0e4922f75e3f58e3ebadb50",
+      "evaluationTime": "2026-08-21T04:40:12.000Z",
+      "claimCore": {
+        "claimId": "7e92d16cf54a96a85037a0f9f196fba7cfb381d70b96d562d037f13c908c5abc",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:668bbb6853c5ea38dbc853c89460bdf7bf1872d2ced26aeb6b250e8c000f4200",
+        "canonicalBaseRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-source-correction-task-bound-completion"
+        ],
+        "writeSetDigest": "49fe8e64afd330db22526f4acf1b464c5b2da17636ca83997027844abf5fd319",
+        "laneRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-21T06:37:30.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+          "reviewRequestId": null,
+          "bytesDigest": "3c6c15104ac85d312c21f00035c359160b2571b33a305612c6b8cdf0777e8859",
+          "namedChecksDigest": "eeba8314df59fc153f9ca3cb2943f07c4605e16726f656cf2f944b1fd9625df5",
+          "handoffEvidenceDigest": "e3d85d760f764d65bcc4cc6d66ac03a780f08aba162b6cff5634b648692365e2",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-21T04:40:12.000Z"
+        }
+      },
+      "claimDigest": "fb26bdb71b1e657b3d5e00b219fe425b06b3eff44efda577e17d0c7ab4d89cff",
+      "digest": "96470a46c69c02fd445d50b5536e6d618e66861ed6ab54ffab1a0bf54aeb0e00"
     }
   ]
 }

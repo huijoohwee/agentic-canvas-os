@@ -607,7 +607,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   const resolvedBranch = requiredText(branch, "branch");
   const resolvedPredecessorClaimId = predecessorClaimId
     ? requiredDigest(predecessorClaimId, "predecessorClaimId") : null;
-  const initialLaneRevision = canonicalDescendantProof
+  const initialLaneRevision = resolvedPredecessorClaimId
     ? resolvedHeadSha
     : resolvedCanonicalBaseSha;
   const requestForLeaseEpoch = claimLeaseEpoch => ({
@@ -673,7 +673,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
       verify,
     })
     : null;
-  const claimed = claimedContinuation?.authority || (canonicalDescendantProof
+  const claimed = claimedContinuation?.authority || (resolvedPredecessorClaimId
     ? normalizeBoundAuthority({
       result: projectOperationLedgerDigest(claimResult),
       authority: {

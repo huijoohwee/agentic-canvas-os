@@ -123,8 +123,16 @@ function createRuntime(options, dependencies) {
   }
   async function projectLocal({ plan }) {
     const current = lease(); if (!cachedCloud) invalid("recovered cloud authority");
-    if (current.fenceSha === plan.targetFenceSha && current.cloudAuthority.claimDigest === cachedCloud.authority.claimDigest) return { leaseDigest: writerLeaseDigest(current) };
-    if (current.fenceSha !== plan.sourceFenceSha || writerLeaseDigest(current) !== plan.evidence.lease.leaseDigest) invalid("local lease drift");
+    if (current.fenceSha === plan.targetFenceSha
+      && recoveredCloudAuthorityAlreadyProjected(current.cloudAuthority, cachedCloud.authority)) {
+      return { leaseDigest: writerLeaseDigest(current) };
+    }
+    const sourceProjection = current.fenceSha === plan.sourceFenceSha
+      && writerLeaseDigest(current) === plan.evidence.lease.leaseDigest;
+    const targetFenceWithStaleCloud = current.fenceSha === plan.targetFenceSha
+      && current.cloudAuthority.claimId === cachedCloud.authority.claimId
+      && current.cloudAuthority.claimDigest === cachedCloud.authority.claimDigest;
+    if (!sourceProjection && !targetFenceWithStaleCloud) invalid("local lease drift");
     const timestamp = now().toISOString();
     const projected = casWriterLeaseProjection({ leaseStore, branch, expectedLeaseDigest: writerLeaseDigest(current), expectedClaimId: plan.claimId, requireNoActiveIntent: true, values: { fenceSha: plan.targetFenceSha, cloudAuthority: cachedCloud.authority, heartbeatAt: timestamp, expiresAt: cachedCloud.authority.expiresAt } }).lease;
     return { leaseDigest: writerLeaseDigest(projected) };
@@ -154,6 +162,10 @@ function createRuntime(options, dependencies) {
     return null;
   }
   return { withFence, readEvidence, readIntent, writeIntent, reconcilePhase, verifyTaskAuthority, recoverCloud, projectLocal, projectPullRequestMarker, verifyTerminal };
+}
+
+export function recoveredCloudAuthorityAlreadyProjected(current, recovered) {
+  return digestValue(current) === digestValue(recovered);
 }
 
 function text(value, label) { if (typeof value !== "string" || !value || value !== value.trim()) invalid(label); return value; }

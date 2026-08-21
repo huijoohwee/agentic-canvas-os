@@ -85,7 +85,12 @@ export function captureCommittedDescendantEvidence({
     "--",
   ])));
   if (!changedPaths.length) {
-    throw new Error("Expired committed recovery found no committed path changes.");
+    const fenceTreeSha = gitText(["rev-parse", `${lease.fenceSha}^{tree}`]).trim();
+    if (!SHA_PATTERN.test(fenceTreeSha) || fenceTreeSha !== treeSha) {
+      throw new Error(
+        "Expired committed recovery empty descendant does not preserve the exact fence tree.",
+      );
+    }
   }
   requireBoundedChangedPaths(changedPaths);
   const partition = partitionChangedPathsByScope({

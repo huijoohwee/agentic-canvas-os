@@ -78,6 +78,39 @@ test("captures one exact clean committed descendant inside declared path scope",
   assert.equal(snapshot.recoveryEvidence.sourceRemoteHeadSha, fenceSha);
 });
 
+test("captures a tree-equivalent empty committed descendant", () => {
+  const lease = expiredCloudLease();
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({ paths: [], fenceTree: treeSha }),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+
+  assert.deepEqual(snapshot.changedPaths, []);
+  assert.deepEqual(snapshot.declaredChangedPaths, []);
+  assert.deepEqual(snapshot.protectedEquivalentPaths, []);
+  assert.match(snapshot.rangeDiffDigest, /^[0-9a-f]{64}$/u);
+});
+
+test("rejects an empty committed descendant whose tree differs from the fence", () => {
+  const lease = expiredCloudLease();
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText({ paths: [], fenceTree: "0".repeat(40) }),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(lease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  }), /does not preserve the exact fence tree/u);
+});
+
 test("captures mixed authored and protected-main-equivalent descendant paths", () => {
   const lease = expiredCloudLease();
   const protectedBlobSha = "3".repeat(40);
@@ -1466,6 +1499,7 @@ function recoveryGitText({
   fenceSubject = "",
   headEntries = {},
   protectedEntries = {},
+  fenceTree = treeSha,
 } = {}) {
   return args => {
     const key = args.join(" ");
@@ -1480,6 +1514,7 @@ function recoveryGitText({
     if (key === "rev-parse --git-common-dir") return gitCommonDir;
     if (key === "rev-parse HEAD") return headSha;
     if (key === `rev-parse ${headSha}^{tree}`) return treeSha;
+    if (!paths.length && key === `rev-parse ${sourceFenceRevision}^{tree}`) return fenceTree;
     if (key === `rev-parse ${sourceRemoteHeadSha}^{tree}`) {
       return remoteTreeSha;
     }
@@ -1613,7 +1648,7 @@ function recoveryGitText({
     }
     if (key ===
       `diff --binary --no-renames ${sourceFenceRevision} ${headSha} --`) {
-      return "binary committed range";
+      return paths.length ? "binary committed range" : "";
     }
     if (key ===
       `diff --binary --no-renames ${sourceFenceRevision} ${sourceRemoteHeadSha} --`

@@ -132,14 +132,17 @@ Release removes only the caller's token, so a replacement owner cannot be
 unlinked accidentally.
 
 The authorized intent and every phase receipt use a separate atomic file CAS.
-Before recovery, while the intent is only `authorized` or `prepared`, the
-adapter rebuilds the source/provider plan and requires its exact digest to
-match the stored plan. Before and after each cloud effect, and after any thrown
-response-loss error, the controller rehydrates the exact claim from the
-immutable ledger ref/blob. It accepts a phase only when the live actor, owner,
-claim, counter, fence, ledger, recovery, integration, retirement, and operation
-evidence all match the authorized plan. An already-complete effect is replayed
-without a duplicate transition; an ambiguous state remains blocked.
+Before recovery, while the intent is only `authorized` or `prepared` and the
+live claim remains `dormant-preserved`, the adapter rebuilds the source/provider
+plan and requires its exact digest to match the stored plan. Once recovery has
+changed the claim state, the phase observer instead validates the exact
+post-effect claim, counter, fence, ledger, and operation evidence. Before and
+after each cloud effect, and after any thrown response-loss error, the
+controller rehydrates the exact claim from the immutable ledger ref/blob. It
+accepts a phase only when the live actor, owner, claim, counter, fence, ledger,
+recovery, integration, retirement, and operation evidence all match the
+authorized plan. An already-complete effect is replayed without a duplicate
+transition; an ambiguous state remains blocked.
 
 ## Proof Command
 

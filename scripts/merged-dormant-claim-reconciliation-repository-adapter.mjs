@@ -104,6 +104,7 @@ export function createRepositoryMergedDormantClaimReconciliationAdapter({
   }
   async function assertSourcePlanStillCurrent({ context, live }) {
     if (!context?.intent || !["authorized", "prepared"].includes(context.intent.status)) return;
+    if (live.claim.state !== "dormant-preserved") return;
     const current = buildMergedDormantClaimReconciliationPlan(await readFreshSourceEvidence(live));
     if (current.planDigest !== context.plan?.planDigest) {
       throw new Error("Merged dormant reconciliation source evidence drifted before recovery.");

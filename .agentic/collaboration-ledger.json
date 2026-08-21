@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3993,
-  "headDigest": "83b7c047c4891277fb1426eaad8d6467d7ecdb76a43a7213f4ee0864c0cc6be7",
+  "sequence": 3994,
+  "headDigest": "28a66f373ce231f21bb01b93a1802976519df2bf03fea528daea413d9a83ede3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -199976,6 +199976,48 @@
       },
       "claimDigest": "d077f8c5f1448af8409cde2a615e050a74d7058608a880ebd0f5da5828f211ce",
       "digest": "83b7c047c4891277fb1426eaad8d6467d7ecdb76a43a7213f4ee0864c0cc6be7"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3994,
+      "parentDigest": "83b7c047c4891277fb1426eaad8d6467d7ecdb76a43a7213f4ee0864c0cc6be7",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b2942c74ee16ad161e1cb0190407c794f1eb95ea9ef5894550b841a86cc4520d",
+      "idempotencyKey": "3260d98514bffe05d4bb20e67503961f533e29de77d9553a5287c1964d375afa",
+      "requestDigest": "0061616b986f1dede449e335c6ffd8bd69f27490cb662bd1f08f249671e8c53c",
+      "evaluationTime": "2026-08-21T15:42:53.000Z",
+      "claimCore": {
+        "claimId": "b2942c74ee16ad161e1cb0190407c794f1eb95ea9ef5894550b841a86cc4520d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:da581116f8845c25048166658321f10ff8d9dc7f485f3ce0bdc721eda4ea95f4",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:29f2684c85b89435adc8c157f073e4cc1c640873b733de55eccecc025dc76f31",
+        "canonicalBaseRevision": "a0a4d155c81092e558be9eadb5831690d4cff805",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-handoff-controller.test.mjs",
+          "path:__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs",
+          "path:scripts/cloud-authority-handoff-controller.mjs",
+          "path:scripts/recoverable-lane-cleanup-repository-adapter.mjs",
+          "semantic:lifecycle-recovery-adapter-unblock"
+        ],
+        "writeSetDigest": "d414693935859afee23c79b867b95ecf47017452668a9fab4ae7e0c4090c2e19",
+        "laneRevision": "a0a4d155c81092e558be9eadb5831690d4cff805",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-21T16:12:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "00142e87e499a663227dd1bee1c23b482b2da7ae4aae48b1cc36fa141e1f0688",
+        "eligibleSince": "2026-08-21T15:42:53.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "2f1eab82b0652770b0f1c851945c19bf3775c59182392c8b852363b1bbc2212f",
+      "digest": "28a66f373ce231f21bb01b93a1802976519df2bf03fea528daea413d9a83ede3"
     }
   ]
 }

@@ -409,6 +409,7 @@ function createRuntime(options, dependencies) {
         status: "active",
         fenceSha: plan.sourceHeadSha,
         reviewHeadSha: null,
+        sourceCorrectionSuccessorTaskBindingReconciliation: null,
         cloudAuthority: authority,
         heartbeatAt: new Date().toISOString(),
         expiresAt: authority.expiresAt,

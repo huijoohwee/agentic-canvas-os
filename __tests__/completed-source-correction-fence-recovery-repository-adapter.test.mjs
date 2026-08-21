@@ -44,15 +44,17 @@ test("persisted recovery replay accepts only its exact next transition and evide
     writeSetDigest: "d".repeat(64),
     reviewRequestId: "github-pull-request:example",
   };
-  const canonicalBaseRevision = "b".repeat(40);
-  const leaseEpoch = 4;
+  const sourceAuthority = {
+    canonicalBaseSha: "b".repeat(40),
+    leaseEpoch: 4,
+  };
   const recoveryEvidenceDigest = "e".repeat(64);
   const liveClaim = {
     ...sourceClaim,
     state: "current",
     transitionCounter: 4,
-    canonicalBaseRevision,
-    leaseEpoch,
+    canonicalBaseRevision: sourceAuthority.canonicalBaseSha,
+    leaseEpoch: sourceAuthority.leaseEpoch,
     fenceRevision: "f".repeat(64),
     transitionDigest: "1".repeat(64),
     operationReceiptDigest: "2".repeat(64),
@@ -61,37 +63,32 @@ test("persisted recovery replay accepts only its exact next transition and evide
 
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
+    sourceAuthority,
     liveClaim,
-    canonicalBaseRevision,
-    leaseEpoch,
     recoveryEvidenceDigest,
   }), true);
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
+    sourceAuthority,
     liveClaim: { ...liveClaim, transitionCounter: 5 },
-    canonicalBaseRevision,
-    leaseEpoch,
     recoveryEvidenceDigest,
   }), false);
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
+    sourceAuthority,
     liveClaim: { ...liveClaim, recovery: { evidenceDigest: "3".repeat(64) } },
-    canonicalBaseRevision,
-    leaseEpoch,
     recoveryEvidenceDigest,
   }), false);
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
+    sourceAuthority,
     liveClaim: { ...liveClaim, canonicalBaseRevision: "4".repeat(40) },
-    canonicalBaseRevision,
-    leaseEpoch,
     recoveryEvidenceDigest,
   }), false);
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
-    liveClaim: { ...liveClaim, leaseEpoch: leaseEpoch + 1 },
-    canonicalBaseRevision,
-    leaseEpoch,
+    sourceAuthority,
+    liveClaim: { ...liveClaim, leaseEpoch: sourceAuthority.leaseEpoch + 1 },
     recoveryEvidenceDigest,
   }), false);
   assert.equal(cloudAuthorityProjectsClaim({

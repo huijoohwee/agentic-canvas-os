@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3808,
-  "headDigest": "f6d62cb703d555e58e75be87c4e99df7d6927dacc474c5407a1a3585814f4990",
+  "sequence": 3809,
+  "headDigest": "c7b1476d7aee4d0c044410f6c9afe95f51bf621dc0c051784850efdcd3901edc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -190876,6 +190876,46 @@
       },
       "claimDigest": "95354c0868fba8d68b2b5504f75f834e1b4d6157697cf8f54fd0af7122bdf853",
       "digest": "f6d62cb703d555e58e75be87c4e99df7d6927dacc474c5407a1a3585814f4990"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3809,
+      "parentDigest": "f6d62cb703d555e58e75be87c4e99df7d6927dacc474c5407a1a3585814f4990",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4fabd55e74219ff79608465176fe0a3735f36b4c89b7fb13661e487ddf8412e4",
+      "idempotencyKey": "56ac1e592c5f60e39820286379d64d30ac396afbca2354717597b1825d5610c8",
+      "requestDigest": "18a7a021545d41272a817159be501e914ce3ccf02a92a79b5b9d57c991fd4785",
+      "evaluationTime": "2026-08-21T06:29:08.000Z",
+      "claimCore": {
+        "claimId": "4fabd55e74219ff79608465176fe0a3735f36b4c89b7fb13661e487ddf8412e4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:23bb7cf89c9d7004c39698ae700d7109382656bebbabcb8ab548ea09ed95d907",
+        "canonicalBaseRevision": "ce61123466a78f30b93b27c5785013af46b27a9a",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-fence-legacy-intent"
+        ],
+        "writeSetDigest": "a191f139493de011ae1a4a9aaa8bf1ebaae667ca62ae2b94fbdebf219a02713b",
+        "laneRevision": "26485435d7e68e53439368d7c6355e37caff9f0f",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T08:17:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAgu3xA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d3ad3a44b9370cdee468e09b602686b0be203a188e377b5663b0b89d7473a9ed",
+      "digest": "c7b1476d7aee4d0c044410f6c9afe95f51bf621dc0c051784850efdcd3901edc"
     }
   ]
 }

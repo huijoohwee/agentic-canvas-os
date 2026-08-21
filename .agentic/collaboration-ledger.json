@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3777,
-  "headDigest": "b8a6344580e37a8998301b535e55974a581c35a51b261f8d5f2194735e4f9c2b",
+  "sequence": 3778,
+  "headDigest": "ed67c0c5e428027362d1e4a63d6de607d863d48cc436ec9102348d7ae64db163",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -189373,6 +189373,46 @@
       },
       "claimDigest": "5a06d8b32d54743108bf7aa43633405873d3d3db2f8e483b79bf6bee54dbdcfb",
       "digest": "b8a6344580e37a8998301b535e55974a581c35a51b261f8d5f2194735e4f9c2b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3778,
+      "parentDigest": "b8a6344580e37a8998301b535e55974a581c35a51b261f8d5f2194735e4f9c2b",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "851f844c88c04efdce4706e4cda397c5f0408197c0a8c0a611516dca00a1421c",
+      "idempotencyKey": "cd24f7f1ea2640e604aef2aaaa1837b23d72c63de9820afe93025e5cffc74dc0",
+      "requestDigest": "6f93a9bd34563a608db5a7d223a4ecb1deb4fbae5566f2107e9df557d8a6df24",
+      "evaluationTime": "2026-08-21T04:42:24.000Z",
+      "claimCore": {
+        "claimId": "851f844c88c04efdce4706e4cda397c5f0408197c0a8c0a611516dca00a1421c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:07de2e923d5199ceb01a6c87276c48a9d624ff8e635643ef427131af4828c81c",
+        "canonicalBaseRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-correction-task-bound-lease"
+        ],
+        "writeSetDigest": "03c0538e41cf430f6b657261b33377773ebbe95e7cd09d67e9c5057fb0ed3060",
+        "laneRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T06:42:24.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "604c5f86025f449fd8407c0b7d358517e661eebe900ab0df9e4d9bbac42f187c",
+      "digest": "ed67c0c5e428027362d1e4a63d6de607d863d48cc436ec9102348d7ae64db163"
     }
   ]
 }

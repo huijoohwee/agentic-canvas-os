@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3904,
-  "headDigest": "6c38a2a219fa8b8cb9fa9716e68e5b51e9e1f6d8ad2f95c8e68e645eb959eb61",
+  "sequence": 3905,
+  "headDigest": "8e749156aea7e88ab5475938e191f175df3e479dee636d284c7a3257412bf932",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -195564,6 +195564,47 @@
       },
       "claimDigest": "c5fae9a5f2bf663720bce69086da5d13238a45a66f854e409ad3f6ef442e6c10",
       "digest": "6c38a2a219fa8b8cb9fa9716e68e5b51e9e1f6d8ad2f95c8e68e645eb959eb61"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3905,
+      "parentDigest": "6c38a2a219fa8b8cb9fa9716e68e5b51e9e1f6d8ad2f95c8e68e645eb959eb61",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "80ba74d2c231b980438b726f7159588d3f9b1a96c8d44b56c716da9e2e60fd61",
+      "idempotencyKey": "91b5831c8e6b22df128d4bcfdd2cea77b1d00646be2a69d12d427ab4853fbcaf",
+      "requestDigest": "ae346d3ef76f76dbe43c2d5f8a08553ea7d00a1d1e11dfd5c57989c68dc17ac9",
+      "evaluationTime": "2026-08-21T10:44:15.000Z",
+      "claimCore": {
+        "claimId": "80ba74d2c231b980438b726f7159588d3f9b1a96c8d44b56c716da9e2e60fd61",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f1bc2e10c4372ab460e50e6ce369d519712fe80f8bc08dbea0f5fb525f1b8f8d",
+        "canonicalBaseRevision": "405491ef68965979f52d1ed912fde3bbead6588f",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-repository-adapter.test.mjs",
+          "path:docs/COMPLETED-SOURCE-CORRECTION-FENCE-RECOVERY.md",
+          "path:scripts/completed-source-correction-fence-recovery-repository-adapter.mjs",
+          "semantic:completed-fence-recovery-response-ahead"
+        ],
+        "writeSetDigest": "a68a66e3981a0d236c667c33f4431b4628008ec93b80c44e1280914d1385b81c",
+        "laneRevision": "2f6ea3ff7f4d31d6693a7601949d217abb6c8ee4",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-21T12:32:49.000Z",
+        "evidenceDigest": "902832938c05fc49e8906ac182e1df84b59f6d40be221e7cf8452b35f1d87f8e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAiZHwg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "47132d3ab6cd18b37387dddc27f7404a16bc4ffcc753702b9741a7513914fd92",
+      "digest": "8e749156aea7e88ab5475938e191f175df3e479dee636d284c7a3257412bf932"
     }
   ]
 }

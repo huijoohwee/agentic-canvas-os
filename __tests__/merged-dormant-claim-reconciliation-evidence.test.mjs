@@ -80,6 +80,32 @@ test("accepts only an exact reviewed-head squash when no refresh commit exists",
   }
 });
 
+test("joins a completed absent worktree only through its retained local ref and completion chain", () => {
+  const evidence = buildMergedDormantClaimReconciliationSourceEvidence(completedAbsentFixture());
+  assert.equal(evidence.local.mode, "completed-absent");
+  assert.equal(evidence.local.absence.localBranchPresent, true);
+  assert.equal(evidence.preservation.localBranch, "retained-ref");
+  assert.equal(evidence.provider.completion.mainIsAncestorOfProtectedMain, true);
+  const cases = [
+    raw => { delete raw.provider.completion; },
+    raw => { raw.local.absence.localBranchPresent = false; },
+    raw => { raw.local.absence.matchingLeaseCount = 2; },
+    raw => { raw.local.canonicalAnchor.sha = sha("stale-main"); },
+    raw => { raw.local.lease.completion.mainSha = sha("other-completion-main"); },
+  ];
+  for (const corrupt of cases) {
+    const raw = completedAbsentFixture();
+    corrupt(raw);
+    assert.throws(() => buildMergedDormantClaimReconciliationSourceEvidence(raw));
+  }
+  const attached = sourceFixture();
+  attached.provider.completion = {
+    mainSha: sha("unexpected-completion-main"), treeSha: sha("unexpected-completion-tree"),
+    mergeCommitIsAncestor: true, mainIsAncestorOfProtectedMain: true,
+  };
+  assert.throws(() => buildMergedDormantClaimReconciliationSourceEvidence(attached));
+});
+
 test("classifies exact predecessors pending and keeps earlier evidence stable after later transitions", () => {
   const plan = buildMergedDormantClaimReconciliationPlan(
     buildMergedDormantClaimReconciliationSourceEvidence(sourceFixture()),
@@ -262,6 +288,30 @@ function directMergeFixture() {
     checkRun(raw.provider.claimHead.sha, "SUCCESS"),
     checkRun(raw.provider.pullRequest.mergeCommitSha, "SUCCESS"),
   ];
+  return raw;
+}
+
+function completedAbsentFixture() {
+  const raw = sourceFixture();
+  const completedPath = "/missing/completed-game-os";
+  raw.provider.completion = {
+    mainSha: sha("completion-main"), treeSha: sha("completion-main-tree"),
+    mergeCommitIsAncestor: true, mainIsAncestorOfProtectedMain: true,
+  };
+  raw.local = {
+    mode: "completed-absent", worktreePath: completedPath, registered: false, attached: false,
+    branch: raw.local.branch, headSha: raw.local.headSha, treeSha: raw.local.treeSha,
+    canonicalAnchor: { branch: "main", sha: raw.provider.protectedMain.sha,
+      treeSha: raw.provider.protectedMain.treeSha },
+    absence: { pathExists: false, registered: false, branchAttached: false,
+      localBranchPresent: true, localRefName: `refs/heads/${raw.local.branch}`, matchingLeaseCount: 1 },
+    remote: raw.local.remote, lineage: raw.local.lineage,
+    lease: {
+      ...raw.local.lease, status: "completed", worktreePath: completedPath,
+      completion: { mergeCommitSha: raw.provider.pullRequest.mergeCommitSha,
+        mainSha: raw.provider.completion.mainSha },
+    },
+  };
   return raw;
 }
 

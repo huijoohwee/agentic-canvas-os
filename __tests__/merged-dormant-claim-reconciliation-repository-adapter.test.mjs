@@ -8,14 +8,17 @@ import test from "node:test";
 import {
   createMergedDormantClaimReconciliationAdapter,
   createMergedDormantClaimReconciliationIntentStore,
+  createRepositoryMergedDormantClaimReconciliationAdapter,
   createGitHubReader,
   createRepositoryMergedDormantClaimCloudActions,
   mergedDormantReconciliationCheckedRevisions,
+  readCompletedAbsentLocalEvidence,
   readCompleteGitHubChangedPaths,
   readCompleteGitHubCheckRuns,
   readCompleteGitHubCommitPaths,
   readGitHubMergeCommitSha,
 } from "../scripts/merged-dormant-claim-reconciliation-repository-adapter.mjs";
+import { applyCloudTransition, createEmptyLedger } from "../scripts/cloud-collaboration-contract.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -92,6 +95,10 @@ test("entrypoint fences recover dead owners, exclude live owners, and release on
 test("cloud effects use repository CAS actions and exact plan-bound operation values", async () => {
   const calls = [];
   const actions = createRepositoryMergedDormantClaimCloudActions({
+    environment: {
+      AGENTIC_CLOUD_HEAD_SHA: sha("f"), AGENTIC_DEVICE_ID: "ambient-device",
+      AGENTIC_SESSION_ID: "ambient-session", AGENTIC_TARGET_REPOSITORY: "ambient/repository",
+    },
     invokeCloudAction: input => {
       calls.push(input);
       return { ok: true };
@@ -142,6 +149,99 @@ test("cloud effects use repository CAS actions and exact plan-bound operation va
   assert.equal(calls[2].request.reason, "integrated");
   assert.equal(calls[2].request.integrationReceiptDigest, claim.integrationReceiptDigest);
   assert.ok(calls.every(call => call.request.force === undefined));
+  assert.ok(calls.every(call => call.environment.AGENTIC_DEVICE_ID === plan.recoveryDeviceId));
+  assert.ok(calls.every(call => call.environment.AGENTIC_SESSION_ID === plan.recoverySessionId));
+  assert.ok(calls.every(call => call.environment.AGENTIC_CLOUD_HEAD_SHA === undefined));
+  assert.ok(calls.every(call => call.environment.AGENTIC_TARGET_REPOSITORY === undefined));
+});
+
+test("completed absent mode admits only a clean main anchor, retained ref, and one historical lease", t => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "merged-dormant-absent-"));
+  t.after(() => rmSync(directory, { force: true, recursive: true }));
+  const historicalPath = path.join(directory, "removed-worktree");
+  const fixture = completedAbsentLocalFixture({ historicalPath, sourceRoot: directory });
+  const evidence = readCompletedAbsentLocalEvidence(fixture);
+  assert.equal(evidence.mode, "completed-absent");
+  assert.equal(evidence.headSha, fixture.lease.reviewHeadSha);
+  assert.equal(evidence.canonicalAnchor.sha, sha("1"));
+  assert.equal(evidence.absence.localBranchPresent, true);
+  assert.equal(evidence.absence.localRefName, `refs/heads/${fixture.lease.branch}`);
+
+  const attached = completedAbsentLocalFixture({ historicalPath, sourceRoot: directory,
+    worktreeRecords: `worktree ${directory}\0HEAD ${sha("1")}\0branch refs/heads/main\0\0worktree ${historicalPath}\0HEAD ${sha("9")}\0branch refs/heads/${fixture.lease.branch}\0\0` });
+  assert.throws(() => readCompletedAbsentLocalEvidence(attached), /still present or attached/);
+
+  const duplicate = completedAbsentLocalFixture({ historicalPath, sourceRoot: directory });
+  duplicate.leaseStore.read = () => ({ leases: {
+    [duplicate.lease.branch]: duplicate.lease,
+    duplicate: { ...duplicate.lease, branch: "agent/other/duplicate",
+      cloudAuthority: { claimId: digest("d") } },
+  } });
+  assert.throws(() => readCompletedAbsentLocalEvidence(duplicate), /competing historical lease evidence/);
+
+  const competing = completedAbsentLocalFixture({ historicalPath, sourceRoot: directory });
+  competing.claims.push({ claimId: digest("e"), repositoryId: competing.claim.repositoryId,
+    scopeReserved: true, declaredWriteScope: ["path:src"] });
+  assert.throws(() => readCompletedAbsentLocalEvidence(competing), /competing reserved cloud claim/);
+
+  const unregisteredAnchor = completedAbsentLocalFixture({ historicalPath, sourceRoot: directory,
+    worktreeRecords: `worktree ${directory}\0HEAD ${sha("9")}\0detached\0\0` });
+  assert.throws(() => readCompletedAbsentLocalEvidence(unregisteredAnchor), /requires registered main/);
+});
+
+test("pre-recovery observation rejects a stale completed-absent anchor before cloud effects", async () => {
+  const now = "2026-08-10T00:00:00.000Z";
+  const repository = { repositoryId: "github-repository:R_fixture", canonicalRevision: sha("a") };
+  const actor = { actorId: "github-user:1", deviceId: "fixture-device", sessionId: "fixture-session" };
+  const empty = createEmptyLedger(repository);
+  const claimed = applyCloudTransition({
+    ledger: empty, action: "claim", actor, repository, evaluationTime: now,
+    request: {
+      workItemId: "work-item:stale-anchor", canonicalBaseRevision: repository.canonicalRevision,
+      laneRevision: sha("b"), declaredWriteScope: ["path:src"], leaseEpoch: 1,
+      expiresAt: "2026-08-10T01:00:00.000Z", idempotencyKey: "stale-anchor-claim",
+      expectedLedgerDigest: empty.headDigest,
+    },
+  });
+  const ledgerRevision = sha("c");
+  let observed = 0, recovered = 0;
+  const adapter = createRepositoryMergedDormantClaimReconciliationAdapter({
+    sourceRepository: "/fixture/source", targetRepository: "org/product", pullRequestNumber: 1,
+    claimId: claimed.claim.claimId, ledgerRepository: "org/ledger",
+    now: () => new Date(now), resolveRealpath: value => value,
+    gitText: args => ({
+      [["rev-parse", "--git-common-dir"].join("\0")]: ".git\n",
+      [["branch", "--show-current"].join("\0")]: "main\n",
+      [["status", "--porcelain=v1", "--untracked-files=all"].join("\0")]: "",
+      [["rev-parse", "HEAD"].join("\0")]: `${sha("d")}\n`,
+      [["rev-parse", "origin/main"].join("\0")]: `${sha("e")}\n`,
+    })[args.join("\0")] ?? (() => { throw new Error(`Unexpected git call: ${args.join(" ")}`); })(),
+    githubJson: async endpoint => {
+      if (endpoint === "repos/org/ledger/git/ref/heads/agentic%2Fcollaboration-ledger") {
+        return { object: { sha: ledgerRevision } };
+      }
+      if (endpoint === `repos/org/ledger/contents/.agentic/collaboration-ledger.json?ref=${ledgerRevision}`) {
+        return { content: Buffer.from(JSON.stringify(claimed.ledger)).toString("base64") };
+      }
+      throw new Error(`Unexpected GitHub call: ${endpoint}`);
+    },
+    leaseStore: { read: () => ({ leases: {} }) },
+    cloudActions: {
+      observePhase: () => { observed += 1; return null; },
+      recoverDormant: () => { recovered += 1; return null; },
+      integrateReviewed: () => null,
+      retireIntegrated: () => null,
+    },
+  });
+  await assert.rejects(
+    () => adapter.readClaim({
+      intent: { status: "prepared" }, plan: { planDigest: digest("p") },
+      phase: "recovered", operationKey: digest("o"),
+    }),
+    /requires clean current main/,
+  );
+  assert.equal(observed, 0);
+  assert.equal(recovered, 0);
 });
 
 test("GitHub evidence readers paginate paths and fail closed on truncated checks or commits", async () => {
@@ -209,4 +309,44 @@ function readFileIfPresent(filePath) {
     if (error?.code === "ENOENT") return null;
     throw error;
   }
+}
+
+function completedAbsentLocalFixture({ historicalPath, sourceRoot, worktreeRecords = null }) {
+  const branch = "agent/device/completed-source";
+  const claim = {
+    claimId: digest("a"), repositoryId: "github-repository:R_1", laneRevision: sha("b"),
+    declaredWriteScope: ["path:src"],
+  };
+  const lease = {
+    schema: "agentic-writer-lease/v2", status: "completed", epoch: 1,
+    sessionId: "historical-session", device: "historical-device", scope: "completed-source", branch,
+    worktreePath: historicalPath, baseSha: sha("c"), fenceSha: sha("d"),
+    reviewHeadSha: claim.laneRevision, pullRequestUrl: "https://github.com/org/repo/pull/1",
+    completion: { mergeCommitSha: sha("e"), mainSha: sha("f") },
+    cloudAuthority: { claimId: claim.claimId },
+  };
+  const responses = new Map([
+    [["branch", "--show-current"].join("\0"), "main\n"],
+    [["status", "--porcelain=v1", "--untracked-files=all"].join("\0"), ""],
+    [["rev-parse", "HEAD"].join("\0"), `${sha("1")}\n`],
+    [["rev-parse", "HEAD^{tree}"].join("\0"), `${sha("4")}\n`],
+    [["rev-parse", "origin/main"].join("\0"), `${sha("1")}\n`],
+    [["worktree", "list", "--porcelain", "-z"].join("\0"), worktreeRecords || `worktree ${sourceRoot}\0HEAD ${sha("1")}\0branch refs/heads/main\0\0`],
+    [["show-ref", "--verify", "--hash", `refs/heads/${branch}`].join("\0"), `${lease.reviewHeadSha}\n`],
+    [["rev-parse", `${lease.reviewHeadSha}^{tree}`].join("\0"), `${sha("2")}\n`],
+    [["rev-parse", `${lease.fenceSha}^`].join("\0"), `${lease.baseSha}\n`],
+    [["rev-parse", `${lease.fenceSha}^{tree}`].join("\0"), `${sha("3")}\n`],
+    [["rev-parse", `${lease.baseSha}^{tree}`].join("\0"), `${sha("3")}\n`],
+    [["rev-parse", `${lease.reviewHeadSha}^`].join("\0"), `${lease.fenceSha}\n`],
+    [["diff", "--name-only", lease.fenceSha, lease.reviewHeadSha, "--"].join("\0"), "src/file.mjs\n"],
+  ]);
+  return {
+    claim, claims: [claim], lease,
+    git: args => {
+      const result = responses.get(args.join("\0"));
+      if (result === undefined) throw new Error(`Unexpected git call: ${args.join(" ")}`);
+      return result;
+    },
+    leaseStore: { read: () => ({ leases: { [branch]: lease } }) }, sourceRoot,
+  };
 }

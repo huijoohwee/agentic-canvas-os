@@ -2301,6 +2301,19 @@ test("review-ready delivery dispatches one exact protected refresh per accepted 
   assert.equal(events.some(event => event.includes("update-branch")), false);
 });
 
+test("review-ready delivery uses the reviewed head after base recovery", () => {
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    staleDeliveryHeadSha: fenceSha,
+    observations: [mergedPullRequest()],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.includes(`verify:${fenceSha}`), false);
+  assert.ok(events.includes(`verify:${commitSha}`));
+});
+
 test("delivery replay dispatches one protected refresh and continues from the exact refreshed head", () => {
   const events = [];
   const refreshedHeadSha = "2".repeat(40);
@@ -3325,6 +3338,7 @@ function runProtectedRefreshScenario({
   failAutoMerge = false,
   autoMergeReplay = null,
   protectedRefresh = null,
+  staleDeliveryHeadSha = null,
   livePullRequest = protectedRefreshPullRequest(),
   liveMainRef = protectedRefreshMainRef(),
 }) {
@@ -3347,6 +3361,7 @@ function runProtectedRefreshScenario({
     autoDelivery: false,
     runtimeRequired: false,
     reviewHeadSha: commitSha,
+    ...(staleDeliveryHeadSha ? { deliveryHeadSha: staleDeliveryHeadSha } : {}),
     pullRequestUrl: pullUrl,
   });
   const recoveryFixture = deliveryRecovery

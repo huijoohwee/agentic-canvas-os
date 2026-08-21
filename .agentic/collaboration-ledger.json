@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3910,
-  "headDigest": "0565416ae11b11d22e6a5c3d1f631d4823070a0076d53bb04c62b3e6e0f8f856",
+  "sequence": 3911,
+  "headDigest": "bdf167478baf1a85770135163b1b4739bfc735d62b01c406af9af43f045f2ed7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -196058,6 +196058,46 @@
       },
       "claimDigest": "9046dafa62855d10d43595559ca94de645e083f7d14a7d5d439c9fde0ab1ed5d",
       "digest": "0565416ae11b11d22e6a5c3d1f631d4823070a0076d53bb04c62b3e6e0f8f856"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3911,
+      "parentDigest": "0565416ae11b11d22e6a5c3d1f631d4823070a0076d53bb04c62b3e6e0f8f856",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4ad6ad58f5ee349b590e9c2c911b43a443009cb2adb9e096ccdf14c8a1a12347",
+      "idempotencyKey": "31612eb9824e38f031567db375c59818094a950e434d000f7ff070aa75e29887",
+      "requestDigest": "2b7bfb5f251bc23df1b0ce49a9dab4b517faab97dccadd203589123897e62748",
+      "evaluationTime": "2026-08-21T11:00:06.000Z",
+      "claimCore": {
+        "claimId": "4ad6ad58f5ee349b590e9c2c911b43a443009cb2adb9e096ccdf14c8a1a12347",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a5e001ecc13bbe53ba4d23e76608211199361a5ee442525501ae03008cfd6a6e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ba6a992a6154bfd773b490ca4002e307d9e0e376450725a6e297032c7a8c8440",
+        "canonicalBaseRevision": "79e8cd2f1b7c0d5d96ab827ccf3aa92c824d338b",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-base-recovery.test.mjs",
+          "path:scripts/delivery-authorized-base-recovery-repository-adapter.mjs",
+          "semantic:delivery-base-recovery-cloud-contract"
+        ],
+        "writeSetDigest": "2f72b55807e0e3e20d09e101833e15eb161d13d7d858289705976f8a9c65695c",
+        "laneRevision": "79e8cd2f1b7c0d5d96ab827ccf3aa92c824d338b",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T12:00:06.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "217b8dd64dc272c2e3fee1e959f2155cd757ecdbcd9ca1368fe4d02a9464c034",
+      "digest": "bdf167478baf1a85770135163b1b4739bfc735d62b01c406af9af43f045f2ed7"
     }
   ]
 }

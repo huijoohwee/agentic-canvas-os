@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { normalizeCloudAuthority } from "../scripts/scoped-lane-admission-lib.mjs";
-import { projectCloudAuthorityAndTaskBinding, projectedLegacyBootstrapClaimIds }
+import { legacyBootstrapLeaseProjectionValues, projectCloudAuthorityAndTaskBinding,
+  projectedLegacyBootstrapClaimIds }
   from "../scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs";
 import {
   createLegacyBootstrapRecoveryRequest,
@@ -352,6 +353,22 @@ test("same PR-bound claim and later replacement atomically continue the task bin
     assert.equal(result.continuationReceipt.targetClaimId, projectedClaimId);
     assert.match(result.continuationReceipt.receiptDigest, /^[0-9a-f]{64}$/u);
   }
+});
+
+test("legacy bootstrap projects the verified cloud lifetime into the continued local lease", () => {
+  const verifiedAt = "2098-12-31T23:30:00.000Z";
+  const expiresAt = "2099-01-01T00:00:00.000Z";
+  const authority = { claimId: CLAIM_ID, expiresAt };
+  const values = legacyBootstrapLeaseProjectionValues({ baseSha: BASE_SHA,
+    headSha: HEAD_SHA, pullRequestUrl: "https://github.com/owner/repository/pull/573",
+    admission: { status: "admitted" }, authority, verifiedAt });
+  assert.equal(values.heartbeatAt, verifiedAt);
+  assert.equal(values.expiresAt, expiresAt);
+  assert.equal(values.cloudAuthority, authority);
+  assert.throws(() => legacyBootstrapLeaseProjectionValues({ baseSha: BASE_SHA,
+    headSha: HEAD_SHA, pullRequestUrl: "https://github.com/owner/repository/pull/573",
+    admission: { status: "admitted" }, authority, verifiedAt: expiresAt }),
+  /requires current verified cloud expiry/u);
 });
 
 test("phase inspection attributes both initial and bound successor claims", () => {

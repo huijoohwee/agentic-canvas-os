@@ -2314,6 +2314,21 @@ test("review-ready delivery uses the reviewed head after base recovery", () => {
   assert.ok(events.includes(`verify:${commitSha}`));
 });
 
+test("review-ready merged replay verifies terminal cloud authority before completion", () => {
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    initialPullRequest: mergedPullRequest(),
+    terminalMergedReplay: true,
+    observations: [],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.ok(events.includes(`verify:${commitSha}`));
+  assert.ok(events.includes("authorize:delivery"));
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge")), false);
+});
+
 test("delivery replay dispatches one protected refresh and continues from the exact refreshed head", () => {
   const events = [];
   const refreshedHeadSha = "2".repeat(40);
@@ -3339,6 +3354,8 @@ function runProtectedRefreshScenario({
   autoMergeReplay = null,
   protectedRefresh = null,
   staleDeliveryHeadSha = null,
+  initialPullRequest = null,
+  terminalMergedReplay = false,
   livePullRequest = protectedRefreshPullRequest(),
   liveMainRef = protectedRefreshMainRef(),
 }) {
@@ -3468,7 +3485,8 @@ function runProtectedRefreshScenario({
         if (!initialPullRequestRead) {
           initialPullRequestRead = true;
           phase = "initial";
-          pullRequest = openPullRequest({ url: pullUrl, mergeStateStatus: "CLEAN" });
+          pullRequest = initialPullRequest
+            || openPullRequest({ url: pullUrl, mergeStateStatus: "CLEAN" });
         } else if (autoMergeReplayPending) {
           autoMergeReplayPending = false;
           phase = "replay";
@@ -3503,20 +3521,32 @@ function runProtectedRefreshScenario({
         return recoveryFixture.result;
       },
       buildDeliveryEvidence: () => {
+        events.push("build:delivery-evidence");
         if (leaseStatus === "delivery") {
           throw new Error("delivery replay must not rebuild delivery evidence");
         }
         return deliveryEvidence;
       },
       authorizeCloudDelivery: ({ authority, headSha }) => {
+        events.push("authorize:delivery");
         if (leaseStatus === "delivery") {
           throw new Error("delivery replay must not authorize delivery twice");
+        }
+        if (terminalMergedReplay) {
+          throw new Error("Cloud reconciliation requires exactly one live candidate claim.");
         }
         return { authority: deliveryAuthorizedAuthority(authority, headSha) };
       },
       verifyCloudAuthority: ({ headSha }) => {
         events.push(`verify:${headSha}`);
         onVerify?.({ headSha });
+        if (terminalMergedReplay) {
+          return {
+            schema: "agentic-post-merge-cloud-authority-verification/v1",
+            ok: true,
+            status: "integrated-retired",
+          };
+        }
         return { ok: true };
       },
       run: (command, args) => {

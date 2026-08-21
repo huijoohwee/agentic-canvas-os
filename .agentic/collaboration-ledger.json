@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3806,
-  "headDigest": "82b64ca038265630d2e6528eb5db8915eaa9992ef014aca4225491da513809ab",
+  "sequence": 3807,
+  "headDigest": "ec6a6de7112a47ea61c92d0fe6bdf5a713e6e64a0df67516d95b1403445eebb8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -190796,6 +190796,46 @@
       },
       "claimDigest": "032afed60fd7e28c0f59bd72911ed6b807e770cf2d193aa91f43084af2a6df38",
       "digest": "82b64ca038265630d2e6528eb5db8915eaa9992ef014aca4225491da513809ab"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3807,
+      "parentDigest": "82b64ca038265630d2e6528eb5db8915eaa9992ef014aca4225491da513809ab",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4fabd55e74219ff79608465176fe0a3735f36b4c89b7fb13661e487ddf8412e4",
+      "idempotencyKey": "24d2b733fa03b709c73da709ebe1be6389f36ece532ebd3f9e396f58706f3e97",
+      "requestDigest": "e3fb44c2b3f22b9801c2bc0c61459d3b9fe55009aaa8eac1234140e1c4b89ab6",
+      "evaluationTime": "2026-08-21T06:17:33.000Z",
+      "claimCore": {
+        "claimId": "4fabd55e74219ff79608465176fe0a3735f36b4c89b7fb13661e487ddf8412e4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:23bb7cf89c9d7004c39698ae700d7109382656bebbabcb8ab548ea09ed95d907",
+        "canonicalBaseRevision": "ce61123466a78f30b93b27c5785013af46b27a9a",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-fence-legacy-intent"
+        ],
+        "writeSetDigest": "a191f139493de011ae1a4a9aaa8bf1ebaae667ca62ae2b94fbdebf219a02713b",
+        "laneRevision": "ce61123466a78f30b93b27c5785013af46b27a9a",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T08:17:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "841f51094bad53fb6da3f55bf7fa2eeedfe842aee589008f05bc46d79199abc1",
+      "digest": "ec6a6de7112a47ea61c92d0fe6bdf5a713e6e64a0df67516d95b1403445eebb8"
     }
   ]
 }

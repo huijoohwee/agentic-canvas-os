@@ -19,6 +19,9 @@ import {
   createProtectedHeadRefreshGithubProvider,
 } from "../scripts/protected-head-refresh-github-provider.mjs";
 import {
+  readProtectedHeadRefreshRepositoryPolicy,
+} from "../scripts/protected-head-refresh-repository-policy.mjs";
+import {
   branch,
   candidate,
   ciRun,
@@ -97,11 +100,13 @@ function applicableProtectionRules({
 function branchProtectionHarness({
   mainBranch = protectedMainBranch(),
   applicable = applicableProtectionRules(),
+  policy,
 } = {}) {
   const calls = [];
   const provider = createProtectedHeadRefreshGithubProvider({
     repository,
     projection: normalizedProjection(),
+    ...(policy ? { policy } : {}),
     gh: args => {
       throw new Error(`unexpected gh call: ${args.join(" ")}`);
     },
@@ -283,10 +288,32 @@ test("GitHub provider rejects malformed or weakened applicable-rules proof", asy
       const { provider } = branchProtectionHarness({ applicable });
       assert.throws(
         () => provider.verifyBranchProtection(),
-        /applicable ruleset proof is malformed|required agentic-sdlc ruleset context/u,
+        /applicable ruleset proof is malformed|repository-policy ruleset contexts/u,
       );
     });
   }
+});
+
+test("GitHub provider accepts a repository-neutral single-gate policy", () => {
+  const policy = readProtectedHeadRefreshRepositoryPolicy({ environment: {
+    PROTECTED_HEAD_REFRESH_CI_WORKFLOW: "integration.yml",
+    PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: '["Integration Gate"]',
+    PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: '["Integration Gate"]',
+    PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: "[]",
+    PROTECTED_HEAD_REFRESH_AUDITED_WORKFLOWS_JSON: '["auto-delivery.yml"]',
+  } });
+  const { provider } = branchProtectionHarness({
+    policy,
+    mainBranch: protectedMainBranch({
+      contexts: ["Integration Gate"],
+      checks: [{
+        context: "Integration Gate",
+        app_id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
+      }],
+    }),
+    applicable: [],
+  });
+  assert.doesNotThrow(() => provider.verifyBranchProtection());
 });
 
 test("GitHub provider binds synchronize probes and CI dispatch to exact operation argv", () => {

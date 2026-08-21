@@ -82,9 +82,29 @@ export function buildCompletedSourceCorrectionFenceRecoveryEvidence(value = {}) 
 }
 
 export function normalizeCompletedSourceCorrectionFenceRecoveryEvidence(value) {
+  if (hasLegacyLeaseProjection(value)) {
+    const upgraded = buildCompletedSourceCorrectionFenceRecoveryEvidence({
+      ...value,
+      lease: { ...value.lease, successorTaskBindingSourceLeaseDigest: null },
+    });
+    const { evidenceDigest: _upgradedEvidenceDigest, ...upgradedCore } = upgraded;
+    const {
+      successorTaskBindingSourceLeaseDigest: _successorTaskBindingSourceLeaseDigest,
+      ...legacyLease
+    } = upgradedCore.lease;
+    const legacyCore = { ...upgradedCore, lease: legacyLease };
+    const rebuiltLegacy = Object.freeze({ ...legacyCore, evidenceDigest: digestValue(legacyCore) });
+    if (JSON.stringify(value) !== JSON.stringify(rebuiltLegacy)) invalid("evidence projection");
+    return rebuiltLegacy;
+  }
   const rebuilt = buildCompletedSourceCorrectionFenceRecoveryEvidence(value);
   if (JSON.stringify(value) !== JSON.stringify(rebuilt)) invalid("evidence projection");
   return rebuilt;
+}
+
+function hasLegacyLeaseProjection(value) {
+  return value?.lease && typeof value.lease === "object" && !Array.isArray(value.lease)
+    && !Object.hasOwn(value.lease, "successorTaskBindingSourceLeaseDigest");
 }
 
 function normalizeChangedPaths(value) {

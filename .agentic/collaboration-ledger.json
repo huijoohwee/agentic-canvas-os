@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3765,
-  "headDigest": "407742de6c82ff0be5bb6241937099c3e5a04229458a0422a6e1fc3c940c64f8",
+  "sequence": 3766,
+  "headDigest": "55cc994a4d99e199eb7f10c22fd3ad198cbfc290f3c58e5d5cf3781f1579900f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -188831,6 +188831,46 @@
       },
       "claimDigest": "fe6e4b1cf9c12639ed50f5db9f0ca5aeb68ef241b6c40f32cca1e1e20c1edd1c",
       "digest": "407742de6c82ff0be5bb6241937099c3e5a04229458a0422a6e1fc3c940c64f8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3766,
+      "parentDigest": "407742de6c82ff0be5bb6241937099c3e5a04229458a0422a6e1fc3c940c64f8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b8e8c269bf9d6fdc4d996e38e0fed84b25333fd78f2d38d650e89d40cd34fc78",
+      "idempotencyKey": "fd3362b2a01425b7756fd0a719772d4cf83e95d9437e2bd5cb8cc04eeb0ca542",
+      "requestDigest": "65c321d5a7756da7a6b7ab190e6dc10c9ef9524becf348286417e079fc6eb045",
+      "evaluationTime": "2026-08-21T04:02:10.000Z",
+      "claimCore": {
+        "claimId": "b8e8c269bf9d6fdc4d996e38e0fed84b25333fd78f2d38d650e89d40cd34fc78",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1d588764c16e5cde8e9a39e70f38ef8c49cae6d504a058ca0f555d2b35eafc96",
+        "canonicalBaseRevision": "b4e165a4d505eee62bd144dccb59e0a705806ef8",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-source-correction-empty-descendant"
+        ],
+        "writeSetDigest": "721ddecd4686e57fc148de28fe0fecc2a5621b5f28ff13d06550605015eeb25f",
+        "laneRevision": "b4e165a4d505eee62bd144dccb59e0a705806ef8",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T06:02:10.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b1936355c45b7626686b768a2938d0897c4086e87e173f06d0c935c0af3e9285",
+      "digest": "55cc994a4d99e199eb7f10c22fd3ad198cbfc290f3c58e5d5cf3781f1579900f"
     }
   ]
 }

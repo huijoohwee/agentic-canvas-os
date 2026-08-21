@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3764,
-  "headDigest": "b0cbf6a1f3351ce4e402838f61a3f300c40ae07c65fea1d520e28d74a93b9310",
+  "sequence": 3765,
+  "headDigest": "407742de6c82ff0be5bb6241937099c3e5a04229458a0422a6e1fc3c940c64f8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -188787,6 +188787,50 @@
       },
       "claimDigest": "3a1fb188518fe60671e5082b53bfdd5efdd001688d62b66b99dc12f510847415",
       "digest": "b0cbf6a1f3351ce4e402838f61a3f300c40ae07c65fea1d520e28d74a93b9310"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3765,
+      "parentDigest": "b0cbf6a1f3351ce4e402838f61a3f300c40ae07c65fea1d520e28d74a93b9310",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "497497bdff4ec7a5d757b5438ba8a457fd94381edeffbadde4f6e33b15759d38",
+      "idempotencyKey": "afbbed2b75e64b4ac73871551cfedccdd61d0f41dd707ef9d5b4496ba44e78a6",
+      "requestDigest": "195379b501b9dc741b6e253f5201d19000023f126f053f704a95c850d0b1cdf5",
+      "evaluationTime": "2026-08-21T03:51:25.000Z",
+      "claimCore": {
+        "claimId": "497497bdff4ec7a5d757b5438ba8a457fd94381edeffbadde4f6e33b15759d38",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:f0cccf4d0f865e034aff56a9d278b42d121e29bc3a6fcc3795c23747ef6e86c0",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:a14ab72e373c4162465d0e876f7477537fed8145f5ea741ddb1a31fb3e9edd1d",
+        "canonicalBaseRevision": "ed06fb5d56529a23ea03540ae2f3d4bf85410f1e",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/storageArchitectureRegression.test.ts",
+          "path:docs/documents/knowgrph-artifact-media-storage-architecture.md",
+          "path:docs/documents/knowgrph-storage-sync-document.companion.md",
+          "path:docs/documents/knowgrph-storage-sync-document.md",
+          "path:docs/documents/knowgrph-storage-sync-prd-tad-adr.md",
+          "path:scripts/check-storage-docs-runtime.mjs",
+          "semantic:storage-sync-contract"
+        ],
+        "writeSetDigest": "bb0ecc68dedbb8e74adca0b1d1925aa6e591611bd673b63d66cb82aed081bb75",
+        "laneRevision": "ed06fb5d56529a23ea03540ae2f3d4bf85410f1e",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-21T04:21:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "fe6e4b1cf9c12639ed50f5db9f0ca5aeb68ef241b6c40f32cca1e1e20c1edd1c",
+      "digest": "407742de6c82ff0be5bb6241937099c3e5a04229458a0422a6e1fc3c940c64f8"
     }
   ]
 }

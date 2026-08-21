@@ -132,6 +132,7 @@ export function createProtectedHeadRefreshGithubProvider({
       branch: projection.branch,
       candidateSha,
       operationId: projection.operation_id,
+      workflowPath: `.github/workflows/${policy.ciWorkflow}`,
     });
   }
   function dispatchProtectedHeadRefreshCi({ candidateSha, priorRunId }) {

@@ -476,6 +476,21 @@ test("CI replay reconciles duplicate exact-title runs deterministically", async 
     operationId,
   });
 
+  await t.test("repository policy binds a non-default workflow path", () => {
+    const decision = reconcileProtectedHeadRefreshCiRuns({
+      runs: [ciRun({
+        operationId,
+        overrides: { path: ".github/workflows/integration.yml" },
+      })],
+      repository,
+      branch,
+      candidateSha: candidate,
+      operationId,
+      workflowPath: ".github/workflows/integration.yml",
+    });
+    assert.equal(decision.status, "succeeded");
+  });
+
   await t.test("manual duplicate waits while either exact run can succeed", () => {
     const decision = decide([
       ciRun({ operationId, overrides: { id: 124, status: "queued", conclusion: null } }),

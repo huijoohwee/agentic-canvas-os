@@ -5,16 +5,17 @@ import path from "node:path";
 import { applyCloudTransition } from "./cloud-collaboration-contract.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { DEFAULT_LEDGER_PATH, DEFAULT_LEDGER_REF } from "./github-cloud-collaboration-adapter.mjs";
+import { buildMergedDormantClaimReconciliationPlan } from "./merged-dormant-claim-reconciliation-contract.mjs";
 import * as Evidence from "./merged-dormant-claim-reconciliation-evidence.mjs";
+import { readCompletedAbsentLocalEvidence, readMergedDormantClaimReconciliationLocalEvidence } from "./merged-dormant-claim-reconciliation-local-source.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
 const ADAPTER_METHODS = Object.freeze(["withEntrypointFence", "readSourceEvidence", "readIntent", "writeIntent", "readClaim", "recoverDormant", "integrateReviewed", "retireIntegrated"]);
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
+export { readCompletedAbsentLocalEvidence } from "./merged-dormant-claim-reconciliation-local-source.mjs";
 export function createMergedDormantClaimReconciliationAdapter(methods = {}) {
-  const adapter = Object.freeze(Object.fromEntries(
-    ADAPTER_METHODS.map(name => [name, methods[name]]),
-  ));
+  const adapter = Object.freeze(Object.fromEntries(ADAPTER_METHODS.map(name => [name, methods[name]])));
   for (const name of ADAPTER_METHODS) {
     if (typeof adapter[name] !== "function") {
       throw new Error(`Merged dormant claim repository adapter requires ${name}().`);
@@ -56,25 +57,16 @@ export function createRepositoryMergedDormantClaimReconciliationAdapter({
     if (!claim || claim.claimId !== sourceClaimId) {
       throw new Error("Cloud status did not return the exact reconciliation claim.");
     }
-    return Object.freeze({ claim, result });
+    return Object.freeze({ claim, claims: result.claims, result });
   }
   return createMergedDormantClaimReconciliationAdapter({
     withEntrypointFence: (subject, action) => store.withEntrypointFence(subject, action),
     readIntent: () => store.readIntent(),
     writeIntent: input => store.writeIntent(input),
-    async readSourceEvidence() {
-      const live = await readStatus();
-      const local = readLocalEvidence({ git, leaseStore: leases, sourceRoot });
-      const provider = await readProviderEvidence({ claim: live.claim, github, local,
-        pullRequestNumber: pullNumber, targetRepository: target });
-      return evidenceFunction("buildMergedDormantClaimReconciliationSourceEvidence")({
-        claim: projectClaimEvidence(live),
-        local,
-        provider,
-      });
-    },
+    async readSourceEvidence() { return readFreshSourceEvidence(await readStatus()); },
     async readClaim(context) {
       const live = await readStatus();
+      await assertSourcePlanStillCurrent({ context, live });
       return liveActions.observePhase({ ...context, live, sourceClaimId });
     },
     async recoverDormant(context) {
@@ -99,6 +91,24 @@ export function createRepositoryMergedDormantClaimReconciliationAdapter({
       }), context);
     },
   });
+  async function readFreshSourceEvidence(live) {
+    const local = readMergedDormantClaimReconciliationLocalEvidence({
+      claim: live.claim, claims: live.claims, git, leaseStore: leases, sourceRoot,
+    });
+    const provider = await readProviderEvidence({
+      claim: live.claim, github, local, pullRequestNumber: pullNumber, targetRepository: target,
+    });
+    return evidenceFunction("buildMergedDormantClaimReconciliationSourceEvidence")({
+      claim: projectClaimEvidence(live), local, provider,
+    });
+  }
+  async function assertSourcePlanStillCurrent({ context, live }) {
+    if (!context?.intent || !["authorized", "prepared"].includes(context.intent.status)) return;
+    const current = buildMergedDormantClaimReconciliationPlan(await readFreshSourceEvidence(live));
+    if (current.planDigest !== context.plan?.planDigest) {
+      throw new Error("Merged dormant reconciliation source evidence drifted before recovery.");
+    }
+  }
 }
 export function createMergedDormantClaimReconciliationIntentStore({ statePath, now = () => new Date() } = {}) {
   const filePath = path.resolve(requiredText(statePath, "intent state path"));
@@ -167,36 +177,6 @@ export function createRepositoryMergedDormantClaimCloudActions({
     retireIntegrated: effect("retire"),
   });
 }
-function readLocalEvidence({ git, leaseStore, sourceRoot }) {
-  const branch = requiredText(git(["branch", "--show-current"]).trim(), "source branch");
-  const headSha = requiredSha(git(["rev-parse", "HEAD"]).trim(), "source HEAD");
-  const treeSha = requiredSha(git(["rev-parse", "HEAD^{tree}"]).trim(), "source tree");
-  const status = git(["status", "--porcelain=v1", "--untracked-files=all"]);
-  const lease = leaseStore.read(branch);
-  if (!lease || lease.branch !== branch || lease.worktreePath !== sourceRoot) {
-    throw new Error("Source worktree is not the exact locally leased branch.");
-  }
-  const fenceParent = requiredSha(git(["rev-parse", `${lease.fenceSha}^`]).trim(), "fence parent");
-  const changedPaths = git(["diff", "--name-only", lease.fenceSha, headSha, "--"]).trim().split("\n").filter(Boolean);
-  const records = git(["worktree", "list", "--porcelain", "-z"]);
-  const registered = records.includes(`worktree ${sourceRoot}\0`)
-    && records.includes(`branch refs/heads/${branch}\0`);
-  return Object.freeze({
-    worktreePath: sourceRoot,
-    registered,
-    attached: true,
-    clean: status === "",
-    branch,
-    headSha,
-    treeSha,
-    indexDigest: digestValue({ schema: "agentic-index-state/v1", treeSha }),
-    workingTreeDigest: digestValue({ schema: "agentic-working-tree-state/v1", status }),
-    stateDigest: digestValue({ branch, headSha, status, treeSha, worktreePath: sourceRoot }),
-    remote: { name: "origin", branchPresent: null },
-    lease: projectLeaseEvidence(lease),
-    lineage: { fence: { sha: lease.fenceSha, treeSha: requiredSha(git(["rev-parse", `${lease.fenceSha}^{tree}`]).trim(), "fence tree"), parentSha: fenceParent, parentTreeSha: requiredSha(git(["rev-parse", `${fenceParent}^{tree}`]).trim(), "fence parent tree") }, reviewedHead: { sha: headSha, treeSha, parentSha: requiredSha(git(["rev-parse", `${headSha}^`]).trim(), "reviewed parent"), changedPaths } },
-  });
-}
 async function readProviderEvidence({ claim, github, local, pullRequestNumber, targetRepository }) {
   const pull = await github(`repos/${targetRepository}/pulls/${pullRequestNumber}`);
   const mergeCommitSha = await readGitHubMergeCommitSha(github, targetRepository, pullRequestNumber, pull.merge_commit_sha);
@@ -211,6 +191,10 @@ async function readProviderEvidence({ claim, github, local, pullRequestNumber, t
   const mergeAncestry = requireCompleteCompare(await github(
     `repos/${targetRepository}/compare/${mergeCommitSha}...${mainRef.object.sha}`,
   ), "merge-to-main compare");
+  const completion = local.mode === "completed-absent"
+    ? await readProviderCompletion({ github, mergeCommitSha, protectedMainSha: mainCommit.sha,
+      targetRepository, completionMainSha: local.lease.completion.mainSha })
+    : null;
   const required = await github(
     `repos/${targetRepository}/branches/main/protection/required_status_checks`,
   );
@@ -254,6 +238,24 @@ async function readProviderEvidence({ claim, github, local, pullRequestNumber, t
     mergeChangedPaths: mergePaths,
     requiredChecks: projectRequiredChecks(required),
     checkRuns,
+    ...(completion ? { completion } : {}),
+  });
+}
+async function readProviderCompletion({ github, mergeCommitSha, protectedMainSha,
+  targetRepository, completionMainSha }) {
+  const completion = await readCommit(github, targetRepository, completionMainSha);
+  const mergeContainment = requireCompleteCompare(await github(
+    `repos/${targetRepository}/compare/${mergeCommitSha}...${completion.sha}`,
+  ), "merge-to-completion-main compare");
+  const currentContainment = requireCompleteCompare(await github(
+    `repos/${targetRepository}/compare/${completion.sha}...${protectedMainSha}`,
+  ), "completion-main-to-protected-main compare");
+  if (!ancestorStatus(mergeContainment.status) || !ancestorStatus(currentContainment.status)) {
+    throw new Error("Completed source provider proof does not contain merge through protected main.");
+  }
+  return Object.freeze({
+    mainSha: completion.sha, treeSha: completion.treeSha,
+    mergeCommitIsAncestor: true, mainIsAncestorOfProtectedMain: true,
   });
 }
 function projectClaimEvidence({ claim, result }) {
@@ -273,28 +275,17 @@ function projectClaimEvidence({ claim, result }) {
     integrationReceiptDigest: claim.integrationReceiptDigest || null,
   });
 }
-function projectLeaseEvidence(lease) {
-  const authority = lease.cloudAuthority;
-  if (!authority || typeof authority !== "object") {
-    throw new Error("Source writer lease has no stored cloud authority projection.");
-  }
-  return Object.freeze({
-    schema: lease.schema, status: lease.status, epoch: lease.epoch, sessionId: lease.sessionId,
-    device: lease.device, scope: lease.scope, branch: lease.branch, baseSha: lease.baseSha,
-    fenceSha: lease.fenceSha, reviewHeadSha: lease.reviewHeadSha,
-    pullRequestUrl: lease.pullRequestUrl, leaseDigest: digestValue(lease),
-    cloudAuthority: Object.freeze({ ...authority }),
-  });
-}
 async function invokeEffect({ action, context, environment, invokeCloudAction, ledgerRepository,
   targetRepository, ttlSeconds }) {
   const { intent, live, operationKey, plan } = context;
   const claim = live.claim;
+  const recoveryDeviceId = requiredText(plan.recoveryDeviceId, "plan recovery device ID");
+  const recoverySessionId = requiredText(plan.recoverySessionId, "plan recovery session ID");
   const common = {
     targetRepository,
     claimId: claim.claimId,
-    deviceId: requiredText(plan.recoveryDeviceId, "plan recovery device ID"),
-    sessionId: requiredText(plan.recoverySessionId, "plan recovery session ID"),
+    deviceId: recoveryDeviceId,
+    sessionId: recoverySessionId,
     expectedFenceRevision: claim.fenceRevision,
     expectedTransitionCounter: claim.transitionCounter,
     expectedLedgerDigest: live.result.ledgerDigest,
@@ -337,8 +328,18 @@ async function invokeEffect({ action, context, environment, invokeCloudAction, l
       ),
     };
   }
-  await invokeCloudAction({ action, environment, ledgerRepository, request });
+  await invokeCloudAction({ action, environment: effectEnvironmentForPlan({
+    environment, recoveryDeviceId, recoverySessionId,
+  }), ledgerRepository, request });
   return { operationKey };
+}
+function effectEnvironmentForPlan({ environment, recoveryDeviceId, recoverySessionId }) {
+  const sanitized = { ...environment };
+  for (const name of Object.keys(sanitized)) {
+    if (name.startsWith("AGENTIC_CLOUD_") || ["AGENTIC_DEVICE_ID", "AGENTIC_LEDGER_REPOSITORY",
+      "AGENTIC_SESSION_ID", "AGENTIC_TARGET_REPOSITORY"].includes(name)) delete sanitized[name];
+  }
+  return { ...sanitized, AGENTIC_DEVICE_ID: recoveryDeviceId, AGENTIC_SESSION_ID: recoverySessionId };
 }
 export function createGitHubReader({ sourceRoot, execute = execFileSync }) {
   return async endpoint => JSON.parse(execute("gh", ["api",
@@ -359,11 +360,13 @@ async function readLedgerClaim({ claimId, github, ledgerRepository, now }) {
   if (!encoded) throw new Error("Cloud collaboration ledger content is unavailable.");
   const ledger = JSON.parse(Buffer.from(String(encoded).replaceAll("\n", ""), "base64").toString("utf8"));
   const transition = applyCloudTransition({
-    action: "status", evaluationTime: now().toISOString(), ledger, request: { claimId },
+    action: "status", evaluationTime: now().toISOString(), ledger, request: {},
   });
-  if (!transition.claim) throw new Error("Cloud collaboration ledger has no exact reconciliation claim.");
+  const claim = transition.claims.find(candidate => candidate.claimId === claimId);
+  if (!claim) throw new Error("Cloud collaboration ledger has no exact reconciliation claim.");
   return Object.freeze({
-    claim: Object.freeze({ ...transition.claim, transitionDigest: transition.claim.ledgerRevision }),
+    claim: Object.freeze({ ...claim, transitionDigest: claim.ledgerRevision }),
+    claims: Object.freeze(transition.claims),
     ledgerDigest: ledger.headDigest,
     ledgerRevision: revision,
   });

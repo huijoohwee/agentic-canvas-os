@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3877,
-  "headDigest": "29d570e06ae4a641d3ff8358f82e80af6a3dd85f843fe4e2ce7a637ec4bf1ba3",
+  "sequence": 3878,
+  "headDigest": "319375ff7140af9854dc33759812f569878e6ed87cb21823d0a0af96c19e24f3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -194251,6 +194251,48 @@
       },
       "claimDigest": "5f0300bc294797cd551013fbbb45ad13c2a046a56c0e0af0a9b6590ab9d277bf",
       "digest": "29d570e06ae4a641d3ff8358f82e80af6a3dd85f843fe4e2ce7a637ec4bf1ba3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3878,
+      "parentDigest": "29d570e06ae4a641d3ff8358f82e80af6a3dd85f843fe4e2ce7a637ec4bf1ba3",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "b747907039492841ff8f95c24957e03c472fbfd3af3e1d0736c388499aa24fbb",
+      "idempotencyKey": "f3ddd2965a089d26d9b53a2a5e6787e1f8f4e2742ddc381da39b1a43c32c9563",
+      "requestDigest": "ba6f3d867d300dd136d72193d8cf7ea8a16688fb065b2e0b1f1f1ff7ae6d9fca",
+      "evaluationTime": "2026-08-21T09:31:32.000Z",
+      "claimCore": {
+        "claimId": "b747907039492841ff8f95c24957e03c472fbfd3af3e1d0736c388499aa24fbb",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:51e09ea88bea2e1b8eb198927601909edc3dbb2547f85a3cf43021f9f87394f1",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:85de36e720f42ed17e5ec0372f14c221e1229bcefe918c35fdb5e8c5b45bbf6c",
+        "canonicalBaseRevision": "38bcd5e3906067b1e5af6d60596501e465d08639",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:.github/workflows/integration.yml",
+          "path:scripts/__tests__/integration-build-memory-policy.test.mjs",
+          "semantic:protected-refresh-workflow-enrollment"
+        ],
+        "writeSetDigest": "55e257e841e058a59860d785228bcec8d6efc2273cba4a6c69a1fbde5d13ef23",
+        "laneRevision": "ca42431bf7f5bb53c17f6f48c654eaadbef6aecb",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "reviewed",
+        "expiresAt": "2026-08-21T09:48:09.000Z",
+        "evidenceDigest": "018683fee566a1fbfd97d597fd974c1c87b72d760b6c45ae1dfcce463b8c02be",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAhrvJw",
+        "predecessorClaimId": "230bcc7afde430fbb2aca483694aabad55a0374be7f37659532e8f4ce7681fe1",
+        "eligibleSince": "2026-08-21T08:49:04.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-21T08:50:31.000Z"
+      },
+      "claimDigest": "ac01d1a39cbfc0f9bfa7202909ad42b4629c5a229f37494dabcdf9913f3e1b98",
+      "digest": "319375ff7140af9854dc33759812f569878e6ed87cb21823d0a0af96c19e24f3"
     }
   ]
 }

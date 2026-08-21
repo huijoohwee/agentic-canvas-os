@@ -9,8 +9,8 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "e127aeff89d632efc02b5adabfd666d3e0642ffdbf4d5335a3e623a705123e62"
-catalog_entry_count: 415
+catalog_digest: "857d60a7d580e3cb21cdae556160bedadd8d3356a7667dbb6104565c543aad47"
+catalog_entry_count: 420
 source_docs:
   - "FACTS.md"
   - "MEMORY.md"

@@ -483,8 +483,7 @@ function resolveReviewBoundAuthority({ request, lease, review, proof }) {
     canonicalBaseSha: review.baseRefOid, branch: request.branch, headSha: request.expectedHeadSha,
     deviceId: request.deviceId, sessionId: request.sessionId,
     predecessorClaimId: lease.cloudAuthority?.claimId || null,
-    canonicalDescendantProof: proof.schema === "agentic-legacy-review-current-base-disjoint-proof/v1"
-      ? proof : null,
+    canonicalDescendantProof: legacyBootstrapPredecessorDescendantProof({ authority: lease.cloudAuthority, reviewBaseSha: review.baseRefOid, proof }),
     leaseEpoch: (lease.cloudAuthority?.leaseEpoch || 0) + 1 });
   if (current.authority.reviewRequestId === reviewRequestId
     && current.authority.laneRevision === request.expectedHeadSha) {
@@ -494,6 +493,7 @@ function resolveReviewBoundAuthority({ request, lease, review, proof }) {
     headSha: request.expectedHeadSha, pullRequestNumber: pullRequestNumber(lease.pullRequestUrl), deviceId: request.deviceId,
     sessionId: request.sessionId, returnVerification: true });
 }
+export function legacyBootstrapPredecessorDescendantProof({ authority, reviewBaseSha, proof }) { return authority && authority.canonicalBaseSha !== reviewBaseSha && proof.schema === "agentic-legacy-review-current-base-disjoint-proof/v1" ? proof : null; }
 function currentProtectedBaseProof({ request, sourceBaseSha }) {
   const targetBaseSha = gitText(["rev-parse", "origin/main"], { cwd: request.worktreePath });
   if (sourceBaseSha === targetBaseSha) {

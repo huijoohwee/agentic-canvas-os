@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { normalizeCloudAuthority } from "../scripts/scoped-lane-admission-lib.mjs";
-import { legacyBootstrapLeaseProjectionValues, projectCloudAuthorityAndTaskBinding,
+import { legacyBootstrapLeaseProjectionValues, legacyBootstrapPredecessorDescendantProof, projectCloudAuthorityAndTaskBinding,
   projectedLegacyBootstrapClaimIds }
   from "../scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs";
 import {
@@ -291,6 +291,19 @@ test("current-base candidate selection rejects multiple live subjects", () => {
     request: REQUEST,
     targetBaseSha,
   }), /multiple live current-base candidates/u);
+});
+
+test("same-base predecessor omits a descendant proof while a divergent predecessor carries it", () => {
+  const proof = { schema: "agentic-legacy-review-current-base-disjoint-proof/v1" };
+  assert.equal(legacyBootstrapPredecessorDescendantProof({
+    authority: { canonicalBaseSha: BASE_SHA }, reviewBaseSha: BASE_SHA, proof,
+  }), null);
+  assert.equal(legacyBootstrapPredecessorDescendantProof({
+    authority: { canonicalBaseSha: "0".repeat(40) }, reviewBaseSha: BASE_SHA, proof,
+  }), proof);
+  assert.equal(legacyBootstrapPredecessorDescendantProof({
+    authority: null, reviewBaseSha: BASE_SHA, proof,
+  }), null);
 });
 
 test("legacy admission manifest binds normalized source paths", () => {

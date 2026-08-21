@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3967,
-  "headDigest": "1797264e933e9f36dfd17ae8a236e71747f73ad6c15cf90ba944378188ae54e8",
+  "sequence": 3968,
+  "headDigest": "54dea04a38fad6bc7b754358ea15f2acbc42ab104caa22d67a71f8f996dbcde4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -198748,6 +198748,48 @@
       },
       "claimDigest": "c25e200637db5c35ca0281a40634038cfd46c62690ecf48a7947d1f576578886",
       "digest": "1797264e933e9f36dfd17ae8a236e71747f73ad6c15cf90ba944378188ae54e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3968,
+      "parentDigest": "1797264e933e9f36dfd17ae8a236e71747f73ad6c15cf90ba944378188ae54e8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "25081a7ae3e419f3b23b3b66e369e0130e0bdc4e6cdeb181081113135aea4e29",
+      "idempotencyKey": "c574b2b9f37f5cd35f7412ec3550f3762161a64f6a2f66debd1a302a4c7efaf7",
+      "requestDigest": "9e4e1acc70d3a455792184e310152f3da72c2bfc67253040263d250088bbbfa1",
+      "evaluationTime": "2026-08-21T13:44:52.000Z",
+      "claimCore": {
+        "claimId": "25081a7ae3e419f3b23b3b66e369e0130e0bdc4e6cdeb181081113135aea4e29",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8fca54f79632c46a02f9b9b3d298b4ce88bcab966b2331149edd40a5054c31ab",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8b0ab2584eab8f49ea5554eab90dcdc93cfcef53ae8be8de0288e4ba48414694",
+        "canonicalBaseRevision": "368ae52131fc9282bf0958a9f03f617ca679a9fa",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/post-merge-cloud-authority-verifier.test.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/post-merge-cloud-authority-verifier.mjs",
+          "semantic:post-merge-reviewed-terminal-recovery"
+        ],
+        "writeSetDigest": "095c3f2f0da6a4befaf65f68bba143d27dc685ccc4c81ad12be2a4ac3c958a51",
+        "laneRevision": "368ae52131fc9282bf0958a9f03f617ca679a9fa",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T14:14:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e6b68a2b3061228a10b81e97f21c05142d6b151341066338b9124842d0aa5ec3",
+      "digest": "54dea04a38fad6bc7b754358ea15f2acbc42ab104caa22d67a71f8f996dbcde4"
     }
   ]
 }

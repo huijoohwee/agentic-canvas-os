@@ -26,6 +26,10 @@ export function buildCompletedSourceCorrectionFenceRecoveryEvidence(value = {}) 
       epoch: integer(lease.epoch, "epoch"),
       leaseDigest: digest(lease.leaseDigest, "lease digest"),
       leaseWithoutTaskAuthorityDigest: digest(lease.leaseWithoutTaskAuthorityDigest, "lease projection digest"),
+      successorTaskBindingSourceLeaseDigest: nullableDigest(
+        lease.successorTaskBindingSourceLeaseDigest,
+        "successor task-binding source lease digest",
+      ),
       fenceSha: sha(lease.fenceSha, "source fence"),
       declaredWriteSet,
       writeSetDigest: digest(lease.writeSetDigest, "write-set digest"),
@@ -63,7 +67,8 @@ export function buildCompletedSourceCorrectionFenceRecoveryEvidence(value = {}) 
     },
   };
   if (!evidence.source.clean || !evidence.pullRequest.isDraft || !evidence.pullRequest.autoMergeAbsent) invalid("preserved source");
-  if (![evidence.lease.leaseDigest, evidence.lease.leaseWithoutTaskAuthorityDigest]
+  if (![evidence.lease.leaseDigest, evidence.lease.leaseWithoutTaskAuthorityDigest,
+    evidence.lease.successorTaskBindingSourceLeaseDigest].filter(Boolean)
     .includes(evidence.correction.completionLeaseDigest)) invalid("completed lease projection");
   if (evidence.source.remoteHeadSha !== evidence.correction.sourceHeadSha
     || evidence.pullRequest.headSha !== evidence.correction.sourceHeadSha
@@ -92,4 +97,5 @@ function text(value, label) { if (typeof value !== "string" || !value || value !
 function integer(value, label) { if (!Number.isSafeInteger(value) || value < 0) invalid(label); return value; }
 function sha(value, label) { if (!/^[0-9a-f]{40}$/u.test(String(value || ""))) invalid(label); return value; }
 function digest(value, label) { if (!/^[0-9a-f]{64}$/u.test(String(value || ""))) invalid(label); return value; }
+function nullableDigest(value, label) { return value === undefined || value === null ? null : digest(value, label); }
 function invalid(label) { throw new Error(`Completed source-correction fence recovery has invalid ${label}.`); }

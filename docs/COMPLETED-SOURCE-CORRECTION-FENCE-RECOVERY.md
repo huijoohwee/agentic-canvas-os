@@ -47,3 +47,13 @@ transition, with the sealed recovery-evidence digest, canonical base, lane
 revision, write set, lease epoch, and review identity unchanged. The expiry
 projection must remain scope-reserved and non-writing; a parked, writing,
 advanced, or otherwise drifted claim still fails closed.
+
+If that replay's provider recovery succeeds before the local CAS response, the
+same durable subject may also adopt the exact response-ahead current claim. It
+must be precisely the second transition after the original dormant subject,
+remain scope-reserved and writing, and retain the same recovery-evidence
+digest, canonical base, lane revision, write set, lease epoch, and review
+identity. The controller replays the original idempotent recovery request and
+then requires a fresh provider read to match every returned authority field;
+an older snapshot, duplicate claim, third transition, or field drift fails
+before the local projection.

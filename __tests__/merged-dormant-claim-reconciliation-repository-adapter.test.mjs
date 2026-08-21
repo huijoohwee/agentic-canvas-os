@@ -203,11 +203,20 @@ test("pre-recovery observation rejects a stale completed-absent anchor before cl
       expectedLedgerDigest: empty.headDigest,
     },
   });
+  const preserved = applyCloudTransition({
+    ledger: claimed.ledger, action: "continue", actor, repository, evaluationTime: now,
+    request: {
+      claimId: claimed.claim.claimId, expectedFenceRevision: claimed.claim.fenceRevision,
+      expectedTransitionCounter: claimed.claim.transitionCounter,
+      expectedLedgerDigest: claimed.ledger.headDigest, mode: "preserve",
+      handoffEvidenceDigest: digest("d"), idempotencyKey: "stale-anchor-preserve",
+    },
+  });
   const ledgerRevision = sha("c");
   let observed = 0, recovered = 0;
   const adapter = createRepositoryMergedDormantClaimReconciliationAdapter({
     sourceRepository: "/fixture/source", targetRepository: "org/product", pullRequestNumber: 1,
-    claimId: claimed.claim.claimId, ledgerRepository: "org/ledger",
+    claimId: preserved.claim.claimId, ledgerRepository: "org/ledger",
     now: () => new Date(now), resolveRealpath: value => value,
     gitText: args => ({
       [["rev-parse", "--git-common-dir"].join("\0")]: ".git\n",
@@ -221,7 +230,7 @@ test("pre-recovery observation rejects a stale completed-absent anchor before cl
         return { object: { sha: ledgerRevision } };
       }
       if (endpoint === `repos/org/ledger/contents/.agentic/collaboration-ledger.json?ref=${ledgerRevision}`) {
-        return { content: Buffer.from(JSON.stringify(claimed.ledger)).toString("base64") };
+        return { content: Buffer.from(JSON.stringify(preserved.ledger)).toString("base64") };
       }
       throw new Error(`Unexpected GitHub call: ${endpoint}`);
     },
@@ -242,6 +251,82 @@ test("pre-recovery observation rejects a stale completed-absent anchor before cl
   );
   assert.equal(observed, 0);
   assert.equal(recovered, 0);
+});
+
+test("post-recovery observation uses phase evidence without rebuilding dormant source evidence", async () => {
+  const now = "2026-08-10T00:00:00.000Z";
+  const repository = { repositoryId: "github-repository:R_fixture", canonicalRevision: sha("a") };
+  const actor = { actorId: "github-user:1", deviceId: "fixture-device", sessionId: "fixture-session" };
+  const empty = createEmptyLedger(repository);
+  const claimed = applyCloudTransition({
+    ledger: empty, action: "claim", actor, repository, evaluationTime: now,
+    request: {
+      workItemId: "work-item:post-recovery", canonicalBaseRevision: repository.canonicalRevision,
+      laneRevision: sha("b"), declaredWriteScope: ["path:src"], leaseEpoch: 1,
+      expiresAt: "2026-08-10T01:00:00.000Z", idempotencyKey: "post-recovery-claim",
+      expectedLedgerDigest: empty.headDigest,
+    },
+  });
+  const reviewed = applyCloudTransition({
+    ledger: claimed.ledger, action: "continue", actor, repository, evaluationTime: now,
+    request: {
+      claimId: claimed.claim.claimId, expectedFenceRevision: claimed.claim.fenceRevision,
+      expectedTransitionCounter: claimed.claim.transitionCounter,
+      expectedLedgerDigest: claimed.ledger.headDigest, mode: "review",
+      laneRevision: claimed.claim.laneRevision,
+      reviewRequestId: "github-pull-request:PR_fixture",
+      focusedEvidenceDigest: digest("f"), idempotencyKey: "post-recovery-review",
+    },
+  });
+  const recovered = applyCloudTransition({
+    ledger: reviewed.ledger, action: "continue", actor, repository,
+    evaluationTime: "2026-08-10T01:01:00.000Z",
+    request: {
+      claimId: reviewed.claim.claimId, expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      expectedLedgerDigest: reviewed.ledger.headDigest, mode: "recovery",
+      recoveryEvidenceDigest: digest("e"), expiresAt: "2026-08-10T02:00:00.000Z",
+      idempotencyKey: "post-recovery-recover",
+    },
+  });
+  const ledgerRevision = sha("c");
+  let observed = 0;
+  const adapter = createRepositoryMergedDormantClaimReconciliationAdapter({
+    sourceRepository: "/fixture/source", targetRepository: "org/product", pullRequestNumber: 1,
+    claimId: recovered.claim.claimId, ledgerRepository: "org/ledger",
+    now: () => new Date(now), resolveRealpath: value => value,
+    gitText: args => {
+      if (args.join("\0") === ["rev-parse", "--git-common-dir"].join("\0")) return ".git\n";
+      throw new Error("Post-recovery observation must not rebuild dormant source evidence.");
+    },
+    githubJson: async endpoint => {
+      if (endpoint === "repos/org/ledger/git/ref/heads/agentic%2Fcollaboration-ledger") {
+        return { object: { sha: ledgerRevision } };
+      }
+      if (endpoint === `repos/org/ledger/contents/.agentic/collaboration-ledger.json?ref=${ledgerRevision}`) {
+        return { content: Buffer.from(JSON.stringify(recovered.ledger)).toString("base64") };
+      }
+      throw new Error(`Unexpected GitHub call: ${endpoint}`);
+    },
+    leaseStore: { read: () => ({ leases: {} }) },
+    cloudActions: {
+      observePhase: ({ live }) => {
+        observed += 1;
+        assert.equal(live.claim.state, "reviewed");
+        assert.equal(live.claim.recovery.evidenceDigest, digest("e"));
+        return { phase: "recovered" };
+      },
+      recoverDormant: () => null,
+      integrateReviewed: () => null,
+      retireIntegrated: () => null,
+    },
+  });
+
+  assert.deepEqual(await adapter.readClaim({
+    intent: { status: "prepared" }, plan: { planDigest: digest("p") },
+    phase: "recovered", operationKey: digest("o"),
+  }), { phase: "recovered" });
+  assert.equal(observed, 1);
 });
 
 test("GitHub evidence readers paginate paths and fail closed on truncated checks or commits", async () => {

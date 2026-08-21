@@ -63,7 +63,8 @@ export function buildCompletedSourceCorrectionFenceRecoveryEvidence(value = {}) 
     },
   };
   if (!evidence.source.clean || !evidence.pullRequest.isDraft || !evidence.pullRequest.autoMergeAbsent) invalid("preserved source");
-  if (evidence.lease.leaseWithoutTaskAuthorityDigest !== evidence.correction.completionLeaseDigest) invalid("completed lease projection");
+  if (![evidence.lease.leaseDigest, evidence.lease.leaseWithoutTaskAuthorityDigest]
+    .includes(evidence.correction.completionLeaseDigest)) invalid("completed lease projection");
   if (evidence.source.remoteHeadSha !== evidence.correction.sourceHeadSha
     || evidence.pullRequest.headSha !== evidence.correction.sourceHeadSha
     || evidence.claim.laneRevision !== evidence.correction.sourceHeadSha) invalid("corrected source head");

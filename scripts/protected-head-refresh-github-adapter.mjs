@@ -14,6 +14,7 @@ import {
   verifyProtectedMainRefreshChain,
 } from "./protected-main-refresh-lib.mjs";
 import { requireProtectedSquashSubject } from "./protected-squash-subject.mjs";
+import { readProtectedHeadRefreshRepositoryPolicy } from "./protected-head-refresh-repository-policy.mjs";
 
 export function runProtectedHeadRefresh({
   repository,
@@ -110,6 +111,7 @@ export function runProtectedHeadRefresh({
   const provider = createProtectedHeadRefreshGithubProvider({
     repository: repo,
     projection,
+    policy: readProtectedHeadRefreshRepositoryPolicy({ environment }),
     gh,
     ghJson,
     requiredEnv,

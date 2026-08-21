@@ -41,8 +41,11 @@ schema before requiring one exact successful source check per context; the
 commit-wide projection pass still rejects foreign, duplicate, or drifted
 operation projections.
 
-The projected contexts are exactly `test`, `build`, `docs-contract`,
-`collaboration-integration`, and `agentic-sdlc-policy-runtime`. A projection is
+The projected contexts are the exact unique bounded list in the trusted
+repository policy. The Agentic Canvas OS default remains `test`, `build`,
+`docs-contract`, `collaboration-integration`, and
+`agentic-sdlc-policy-runtime`. A consumer may name its own repository-owned
+workflow and check topology without forking the controller. A projection is
 accepted only when its name, candidate, source identity, GitHub Actions app,
 terminal success, details URL, title, and evidence bytes all match. Foreign or
 duplicate operation projections fail closed.

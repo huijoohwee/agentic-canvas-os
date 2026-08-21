@@ -258,7 +258,7 @@ test('auto-delivery revokes stale exact-head authorization without label races',
     controller.indexOf('if (protectedHeadRefreshOnly)') < controller.indexOf('const pulls'),
     'protected refresh must run before label and global PR selection',
   );
-  const [protectedAdapter, protectedProvider] = await Promise.all([
+  const [protectedAdapter, protectedProvider, protectedPolicy] = await Promise.all([
     readFile(
       path.join(repositoryRoot, 'scripts', 'protected-head-refresh-github-adapter.mjs'),
       'utf8',
@@ -267,8 +267,12 @@ test('auto-delivery revokes stale exact-head authorization without label races',
       path.join(repositoryRoot, 'scripts', 'protected-head-refresh-github-provider.mjs'),
       'utf8',
     ),
+    readFile(
+      path.join(repositoryRoot, 'scripts', 'protected-head-refresh-repository-policy.mjs'),
+      'utf8',
+    ),
   ]);
-  const protectedController = `${protectedAdapter}\n${protectedProvider}`;
+  const protectedController = `${protectedAdapter}\n${protectedProvider}\n${protectedPolicy}`;
   assert.match(protectedController, /invokeRepositoryCloudVerifier/);
   assert.match(protectedController, /expectedLedgerRevision: projection\.ledger_revision/);
   assert.match(protectedController, /requiredEnv\("GITHUB_REF"\) !== "refs\/heads\/main"/);
@@ -307,7 +311,7 @@ test('auto-delivery revokes stale exact-head authorization without label races',
     'GIT_CURL_VERBOSE',
   ]) assert.match(protectedPush, new RegExp(`${trace}: "0"`));
   assert.doesNotMatch(protectedController, /\$\{candidateSha\}:refs\/heads\/main/);
-  assert.match(protectedController, /"workflow", "run", "ci\.yml"/);
+  assert.match(protectedController, /"workflow", "run", policy\.ciWorkflow/);
   assert.match(protectedController, /"-f", "operation=protected-head-refresh"/);
   assert.match(protectedController, /`expected_head_sha=\$\{candidateSha\}`/);
   assert.match(protectedController, /verifyCandidateWorkflow/);
@@ -344,7 +348,7 @@ test('auto-delivery revokes stale exact-head authorization without label races',
   assert.match(protectedController, /branchProtectionRule/);
   assert.match(protectedController, /rules\/branches\/main/);
   assert.match(protectedController, /strict_required_status_checks_policy === true/);
-  assert.match(protectedController, /\["auto-delivery\.yml", "cloud-collaboration\.yml"\]/);
+  assert.match(protectedController, /auditedWorkflows: \["auto-delivery\.yml", "cloud-collaboration\.yml"\]/);
   assert.doesNotMatch(protectedController, /enablePullRequestAutoMerge|"--auto"|--disable-auto/);
   assert.doesNotMatch(protectedController, /npm (?:test|run)|node --test/);
   assert.doesNotMatch(controller, /preserveControllerRefreshSynchronize|ProtectedRefreshSynchronize/);

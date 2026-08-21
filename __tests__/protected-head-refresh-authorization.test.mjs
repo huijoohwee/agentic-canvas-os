@@ -12,6 +12,10 @@ import {
   requireProtectedHeadRefreshMergedAuthorizationRecovery,
 } from "../scripts/protected-head-refresh-github-adapter.mjs";
 import {
+  DEFAULT_PROTECTED_HEAD_REFRESH_REPOSITORY_POLICY,
+  readProtectedHeadRefreshRepositoryPolicy,
+} from "../scripts/protected-head-refresh-repository-policy.mjs";
+import {
   autoMergeActor,
   candidate,
   createControllerHarness,
@@ -52,6 +56,35 @@ test("workflow encodes recovery without exceeding the 25-input provider cap", ()
     adapter.indexOf("integrationReceiptDigest: projection.integration_receipt_digest")
       < adapter.indexOf("pullRequest.merged && allowAbsentMergedAuthorizationRecovery"),
   );
+});
+
+test("repository policy keeps defaults and validates adapter overrides", () => {
+  assert.equal(DEFAULT_PROTECTED_HEAD_REFRESH_REPOSITORY_POLICY.ciWorkflow, "ci.yml");
+  const policy = readProtectedHeadRefreshRepositoryPolicy({ environment: {
+    PROTECTED_HEAD_REFRESH_CI_WORKFLOW: "integration.yml",
+    PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: '["Integration Gate"]',
+    PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: '["Integration Gate"]',
+    PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: "[]",
+    PROTECTED_HEAD_REFRESH_AUDITED_WORKFLOWS_JSON: '["auto-delivery.yml"]',
+  } });
+  assert.equal(policy.ciWorkflow, "integration.yml");
+  assert.deepEqual(policy.requiredCiContexts, ["Integration Gate"]);
+  assert.deepEqual(policy.classicRequiredChecks, ["Integration Gate"]);
+  assert.deepEqual(policy.rulesetRequiredChecks, []);
+  assert.deepEqual(policy.auditedWorkflows, ["auto-delivery.yml"]);
+  assert.match(policy.policyDigest, /^[0-9a-f]{64}$/u);
+
+  for (const environment of [
+    { PROTECTED_HEAD_REFRESH_CI_WORKFLOW: "../ci.yml" },
+    { PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: "[]" },
+    { PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: '["x","x"]' },
+    { PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: "not-json" },
+  ]) {
+    assert.throws(
+      () => readProtectedHeadRefreshRepositoryPolicy({ environment }),
+      /Protected-head refresh/u,
+    );
+  }
 });
 
 test("absent merged recovery token binds exact operation and human actor", () => {

@@ -1,9 +1,9 @@
 import {
   PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
-  PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS,
   reconcileProtectedHeadRefreshCiRuns,
   renderProtectedHeadRefreshHandshakeEvidence,
 } from "./protected-main-refresh-lib.mjs";
+import { DEFAULT_PROTECTED_HEAD_REFRESH_REPOSITORY_POLICY } from "./protected-head-refresh-repository-policy.mjs";
 const CI_ROLLUP_PROJECTION_SCHEMA = "agentic-protected-head-refresh-ci-rollup-projection/v1";
 const CI_ROLLUP_EXTERNAL_ID_PREFIX = "agentic-protected-head-refresh-ci:";
 const CI_ROLLUP_TITLE = "Protected refresh CI rollup projection";
@@ -11,6 +11,7 @@ const CI_ROLLUP_TITLE = "Protected refresh CI rollup projection";
 export function createProtectedHeadRefreshGithubProvider({
   repository,
   projection,
+  policy = DEFAULT_PROTECTED_HEAD_REFRESH_REPOSITORY_POLICY,
   gh,
   ghJson,
   requiredEnv,
@@ -34,7 +35,7 @@ export function createProtectedHeadRefreshGithubProvider({
     }
   }
   function verifyNoSynchronizeRun({ candidateSha }) {
-    for (const workflow of ["auto-delivery.yml", "cloud-collaboration.yml"]) {
+    for (const workflow of policy.auditedWorkflows) {
       const response = ghJson([
         "api", "--method", "GET",
         `repos/${repository}/actions/workflows/${workflow}/runs`,
@@ -114,7 +115,7 @@ export function createProtectedHeadRefreshGithubProvider({
   function readProtectedHeadRefreshCiDecision({ candidateSha }) {
     const response = ghJson([
       "api", "--method", "GET",
-      `repos/${repository}/actions/workflows/ci.yml/runs`,
+      `repos/${repository}/actions/workflows/${policy.ciWorkflow}/runs`,
       "-f", `branch=${projection.branch}`,
       "-f", `head_sha=${candidateSha}`,
       "-f", "event=workflow_dispatch",
@@ -139,7 +140,7 @@ export function createProtectedHeadRefreshGithubProvider({
     }
     totalCiDispatchAttempts += 1;
     const dispatched = gh([
-      "workflow", "run", "ci.yml",
+      "workflow", "run", policy.ciWorkflow,
       "--repo", repository,
       "--ref", projection.branch,
       "-f", "operation=protected-head-refresh",
@@ -174,7 +175,7 @@ export function createProtectedHeadRefreshGithubProvider({
       key: "check_runs",
       label: "Protected-head refresh selected check-suite listing",
     });
-    for (const context of PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS) {
+    for (const context of policy.requiredCiContexts) {
       const matches = suiteRuns.filter(run => (
         run?.name === context && !isCiRollupProjection(run)
       ));
@@ -191,7 +192,7 @@ export function createProtectedHeadRefreshGithubProvider({
     }
 
     const allRuns = readCommitCheckRuns(candidateSha);
-    for (const context of PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS) {
+    for (const context of policy.requiredCiContexts) {
       const actionsRuns = allRuns.filter(run => (
         run?.name === context
         && run?.app?.id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
@@ -351,7 +352,7 @@ export function createProtectedHeadRefreshGithubProvider({
     const sources = requireBoundedArrayPage({ response: sourcePage, key: "check_runs",
       label: "Protected-head refresh CI rollup source listing" });
     const ids = [];
-    for (const context of PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS) {
+    for (const context of policy.requiredCiContexts) {
       const matches = sources.filter(run => (
         run?.name === context && !isCiRollupProjection(run)
       ));
@@ -548,9 +549,7 @@ export function createProtectedHeadRefreshGithubProvider({
   }
 
   function verifyBranchProtection() {
-    const classicContexts = [
-      "test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration",
-    ];
+    const classicContexts = policy.classicRequiredChecks;
     const mainBranch = ghJson([
       "api", "--method", "GET", `repos/${repository}/branches/main`,
     ]);
@@ -589,17 +588,17 @@ export function createProtectedHeadRefreshGithubProvider({
     if (!Array.isArray(applicable)) {
       throw new Error("Protected-head refresh applicable ruleset proof is malformed.");
     }
-    const hasAgenticRuntime = applicable.some(rule => (
+    const strictRulesetChecks = new Set(applicable.flatMap(rule => (
       rule?.type === "required_status_checks"
       && rule?.parameters?.strict_required_status_checks_policy === true
       && Array.isArray(rule?.parameters?.required_status_checks)
-      && rule.parameters.required_status_checks.some(check => (
-        check?.context === "agentic-sdlc-policy-runtime"
-        && check?.integration_id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
-      ))
-    ));
-    if (!hasAgenticRuntime) {
-      throw new Error("Protected main lacks the required agentic-sdlc ruleset context.");
+        ? rule.parameters.required_status_checks
+          .filter(check => check?.integration_id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID)
+          .map(check => check?.context)
+        : []
+    )));
+    if (!policy.rulesetRequiredChecks.every(context => strictRulesetChecks.has(context))) {
+      throw new Error("Protected main lacks the repository-policy ruleset contexts.");
     }
   }
 

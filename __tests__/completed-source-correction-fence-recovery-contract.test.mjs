@@ -36,3 +36,12 @@ test("evidence accepts a tree-equivalent empty local descendant", () => {
   });
   assert.deepEqual(evidence.source.changedPaths, []);
 });
+
+test("evidence accepts a correction completed after task authority was already bound", () => {
+  const source = fixture();
+  const evidence = buildCompletedSourceCorrectionFenceRecoveryEvidence({
+    ...source,
+    correction: { ...source.correction, completionLeaseDigest: source.lease.leaseDigest },
+  });
+  assert.equal(evidence.correction.completionLeaseDigest, evidence.lease.leaseDigest);
+});

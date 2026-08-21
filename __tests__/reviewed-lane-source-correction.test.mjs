@@ -420,7 +420,14 @@ test("reviewed lease becomes active through an exact predecessor-fenced registry
   mkdirSync(commonDirectory);
   const statePath = path.join(commonDirectory, "agentic-canvas-os", "writer-leases.json");
   mkdirSync(path.dirname(statePath), { recursive: true });
-  const sourceLease = { ...structuredClone(lease), worktreePath: repository };
+  const sourceLease = {
+    ...structuredClone(lease),
+    worktreePath: repository,
+    sourceCorrectionSuccessorTaskBindingReconciliation: {
+      claimId: hex("6", 64),
+      bindingDigest: hex("7", 64),
+    },
+  };
   const registry = {
     schema: "agentic-writer-lease-registry/v2",
     revision: 12,
@@ -491,6 +498,7 @@ test("reviewed lease becomes active through an exact predecessor-fenced registry
   assert.equal(projected.reviewHeadSha, null);
   assert.equal(projected.cloudAuthority.claimId, successor.claimId);
   assert.equal(projected.cloudAuthority.reviewRequestId, plan.sourceReviewRequestId);
+  assert.equal(projected.sourceCorrectionSuccessorTaskBindingReconciliation, null);
   assert.equal(cloudCalls.filter(item => item.action === "continue").length, 1);
   assert.equal(JSON.parse(readFileSync(statePath, "utf8")).revision, 13);
 

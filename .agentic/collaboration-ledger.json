@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3912,
-  "headDigest": "08e441476317011831c32476130ca6f4243c0f2a5ef692cf1bb2cf03b1a5fde7",
+  "sequence": 3913,
+  "headDigest": "e84dd37b499a26fb25050af70ca69c50e3e81c04c757e402998f41195314c79e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -196258,6 +196258,46 @@
       },
       "claimDigest": "5db27f00f252d54d96d796eda27c6660e44268c2e445c6f34b07dca8a75d4bf7",
       "digest": "08e441476317011831c32476130ca6f4243c0f2a5ef692cf1bb2cf03b1a5fde7"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3913,
+      "parentDigest": "08e441476317011831c32476130ca6f4243c0f2a5ef692cf1bb2cf03b1a5fde7",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4ad6ad58f5ee349b590e9c2c911b43a443009cb2adb9e096ccdf14c8a1a12347",
+      "idempotencyKey": "b8872c70bda64287fc9fcd433cb686b7fba5008456fe2ff7f7fa2aa172af30a2",
+      "requestDigest": "9d71c5c6df85d6de3c380fc162e280c825c7572897b7b6455a16ab448372fd11",
+      "evaluationTime": "2026-08-21T11:06:16.000Z",
+      "claimCore": {
+        "claimId": "4ad6ad58f5ee349b590e9c2c911b43a443009cb2adb9e096ccdf14c8a1a12347",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a5e001ecc13bbe53ba4d23e76608211199361a5ee442525501ae03008cfd6a6e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ba6a992a6154bfd773b490ca4002e307d9e0e376450725a6e297032c7a8c8440",
+        "canonicalBaseRevision": "79e8cd2f1b7c0d5d96ab827ccf3aa92c824d338b",
+        "declaredWriteScope": [
+          "path:__tests__/delivery-authorized-base-recovery.test.mjs",
+          "path:scripts/delivery-authorized-base-recovery-repository-adapter.mjs",
+          "semantic:delivery-base-recovery-cloud-contract"
+        ],
+        "writeSetDigest": "2f72b55807e0e3e20d09e101833e15eb161d13d7d858289705976f8a9c65695c",
+        "laneRevision": "583ae2a5a3dd316b9b11999ddf8e652c09042aa7",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T12:00:06.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAilD7g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ea5a8e2392f3e197cfc5dfd13b1094aed40d9166ec8660b4ebec20d20c7cc1cd",
+      "digest": "e84dd37b499a26fb25050af70ca69c50e3e81c04c757e402998f41195314c79e"
     }
   ]
 }

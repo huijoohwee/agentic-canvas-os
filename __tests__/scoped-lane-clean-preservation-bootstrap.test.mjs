@@ -94,6 +94,20 @@ test("bootstrap maintenance binds the normalized planned-admission retirement re
   }), /one exact retirement receipt owner/);
 });
 
+test("bootstrap maintenance binds the normalized planned-recovery local release receipt owner", () => {
+  const core = {
+    schema: "agentic-planned-recovery-pr-marker-local-release/v1",
+    planDigest: digest("a"),
+    claimId: digest("b"),
+    pullRequestUrl: "https://example.invalid/pull/2",
+    completedAt: "2026-08-15T00:00:00.000Z",
+  };
+  const receipt = { ...core, receiptDigest: digestValue(core) };
+  assert.equal(normalizeBootstrapRetirementReceiptDigest({
+    plannedRecoveryMarkerReconciliation: receipt,
+  }), receipt.receiptDigest);
+});
+
 test("current overlapping cloud authority invalidates clean retirement evidence", () => {
   const source = normalizeRootSourceMaintenanceProof(proof({
     retiredPreserved: true,

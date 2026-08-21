@@ -470,7 +470,7 @@ test("queued waiting-successor projections do not trigger missing-authoritative-
 });
 
 test("retired-preserved receipt schemas release scope but retain live authority conflicts", () => {
-  for (const historical of [retiredPreservedLane(), retiredPlannedAdmissionOwnerLane()]) {
+  for (const historical of [retiredPreservedLane(), retiredPlannedAdmissionOwnerLane(), retiredPlannedRecoveryMarkerLane()]) {
     const common = {
       lane: structuredClone(historical), semanticScope: "retired-scope",
       declaredWriteSet: ["path:docs/retired", "semantic:retired-scope"],
@@ -485,9 +485,10 @@ test("retired-preserved receipt schemas release scope but retain live authority 
     assert.deepEqual(sameBranch.overlapReasons, ["same-branch"]);
     const reviewRequestId = historical.lease.localReviewRetirement?.intent
       ?.source?.pullRequest?.reviewRequestId
-      ?? historical.lease.admissionOwnerRetirement.source.originalLease.cloudAuthority.reviewRequestId;
+      ?? historical.lease.admissionOwnerRetirement?.source.originalLease.cloudAuthority.reviewRequestId
+      ?? null;
     const conflicts = [
-      { reviewRequestId, workItemId: "other" },
+      ...(reviewRequestId ? [{ reviewRequestId, workItemId: "other" }] : []),
       { reviewRequestId: null,
         workItemId: pseudonymousIdentifier("work-item", historical.lease.branch) },
     ];
@@ -616,6 +617,32 @@ function retiredPlannedAdmissionOwnerLane() {
   return { ...sourceLane, lease: { ...originalLease, status: "released",
     heartbeatAt: retiredAt, expiresAt: retiredAt, admission: null, cloudAuthority: null,
     admissionOwnerRetirement: receipt } };
+}
+
+function retiredPlannedRecoveryMarkerLane() {
+  const branch = "agent/old-device/retired-marker-scope";
+  const worktreePath = "/workspace/worktrees/retired-marker-scope";
+  const completedAt = "2026-08-08T12:00:00.000Z";
+  const receiptCore = {
+    schema: "agentic-planned-recovery-pr-marker-local-release/v1",
+    planDigest: "7".repeat(64),
+    claimId: "8".repeat(64),
+    pullRequestUrl: "https://github.com/owner/repository/pull/739",
+    completedAt,
+  };
+  const lease = {
+    schema: WRITER_LEASE_SCHEMA, status: "released", epoch: 13,
+    sessionId: "retired-marker-session", device: "old-device", scope: "retired-marker-scope",
+    branch, worktreePath, baseSha: HEAD_SHA, fenceSha: HEAD_SHA,
+    pullRequestUrl: receiptCore.pullRequestUrl,
+    heartbeatAt: completedAt, expiresAt: completedAt,
+    admission: null, cloudAuthority: null,
+    plannedRecoveryMarkerReconciliation: {
+      ...receiptCore,
+      receiptDigest: digestValue(receiptCore),
+    },
+  };
+  return lane({ lanePath: worktreePath, branch: `refs/heads/${branch}`, dirty: false, lease });
 }
 
 function writerMarker(lease) {

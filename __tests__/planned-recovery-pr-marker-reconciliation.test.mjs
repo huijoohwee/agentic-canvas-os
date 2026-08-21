@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildPlan, authorizePlan, buildReceipt } from "../scripts/planned-recovery-pr-marker-reconciliation-contract.mjs";
+import { buildPlan, authorizePlan, buildReceipt,
+  LOCAL_RELEASE_RECEIPT_SCHEMA, normalizeLocalReleaseReceipt } from "../scripts/planned-recovery-pr-marker-reconciliation-contract.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { runReconciliation } from "../scripts/planned-recovery-pr-marker-reconciliation-controller.mjs";
 
 const D = "a".repeat(64), S = "b".repeat(40);
@@ -24,6 +26,20 @@ test("receipt preserves every recovery surface and forbids deployment", () => {
     targetMarkerDigest: D, completedAt: "2026-08-12T00:00:00.000Z" });
   assert.equal(receipt.deployment, false);
   assert.deepEqual(receipt.preservation, { worktree: true, branch: true, remoteBranch: true, authoredBytes: true });
+});
+
+test("local release receipt is exact and digest-bound", () => {
+  const core = {
+    schema: LOCAL_RELEASE_RECEIPT_SCHEMA,
+    planDigest: D,
+    claimId: D,
+    pullRequestUrl: "https://example.test/pull/1",
+    completedAt: "2026-08-12T00:00:00.000Z",
+  };
+  assert.deepEqual(normalizeLocalReleaseReceipt({ ...core, receiptDigest: digestValue(core) }), {
+    ...core, receiptDigest: digestValue(core),
+  });
+  assert.throws(() => normalizeLocalReleaseReceipt({ ...core, receiptDigest: D }), /digest is invalid/u);
 });
 
 test("controller orders provider close before local CAS and projection", async () => {

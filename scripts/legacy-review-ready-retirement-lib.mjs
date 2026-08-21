@@ -1,6 +1,7 @@
 import path from "node:path";
 import { canonicalJson, digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { projectRootState } from "./cloud-collaboration-state-projection.mjs";
+import { normalizeLocalReleaseReceipt } from "./planned-recovery-pr-marker-reconciliation-contract.mjs";
 import { isRetiredPlannedAdmissionOwnerLane } from "./retired-planned-admission-owner-lib.mjs";
 import { projectWriterLeasePullRequestMarker, WRITER_LEASE_SCHEMA } from "./writer-lease-lib.mjs";
 export const LOCAL_REVIEW_RETIREMENT_INTENT_SCHEMA = "agentic-local-review-retirement-intent/v1";
@@ -114,6 +115,7 @@ export function isRetiredPreservedLane({ lane = null, record = null, lease = nul
   const observed = lane || record;
   const currentLease = lease || lane?.lease || null;
   if (isRetiredPlannedAdmissionOwnerLane({ lane, record, lease })) return true;
+  if (isRetiredPlannedRecoveryMarkerLane({ observed, currentLease })) return true;
   try {
     requireObject(observed, "Retired lane");
     requireObject(currentLease, "Retired lane lease");
@@ -164,6 +166,29 @@ export function isRetiredPreservedLane({ lane = null, record = null, lease = nul
       && observed.workingTreeDigest !== source.workingTreeDigest
     ) return false;
     return true;
+  } catch {
+    return false;
+  }
+}
+function isRetiredPlannedRecoveryMarkerLane({ observed, currentLease }) {
+  try {
+    requireObject(observed, "Retired lane");
+    requireObject(currentLease, "Retired lane lease");
+    const receipt = normalizeLocalReleaseReceipt(
+      currentLease.plannedRecoveryMarkerReconciliation,
+    );
+    const observedBranch = String(observed.branch || "").replace(/^refs\/heads\//u, "");
+    return currentLease.schema === WRITER_LEASE_SCHEMA
+      && currentLease.status === "released"
+      && currentLease.admission == null
+      && currentLease.cloudAuthority == null
+      && currentLease.heartbeatAt === receipt.completedAt
+      && currentLease.expiresAt === receipt.completedAt
+      && currentLease.pullRequestUrl === receipt.pullRequestUrl
+      && path.resolve(currentLease.worktreePath || "") === path.resolve(observed.path || "")
+      && currentLease.branch === observedBranch
+      && currentLease.fenceSha === observed.head
+      && observed.dirty !== true;
   } catch {
     return false;
   }

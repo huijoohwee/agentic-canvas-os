@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3721,
-  "headDigest": "6bcb486aa1319c4a7bd7dbc8eb434d922e7e1108f983eeaad901a5406d3a5e53",
+  "sequence": 3722,
+  "headDigest": "9bd8a5b0981db2464f6609ccd3d2fba2b94a344e4b53793f05d6b79422934425",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -186712,6 +186712,46 @@
       },
       "claimDigest": "6602915fb3927f49394ae620f334b0313614a60eefd3ef9cda5e4b922d663f5d",
       "digest": "6bcb486aa1319c4a7bd7dbc8eb434d922e7e1108f983eeaad901a5406d3a5e53"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3722,
+      "parentDigest": "6bcb486aa1319c4a7bd7dbc8eb434d922e7e1108f983eeaad901a5406d3a5e53",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1b0e5e981700116be47a2140a0d36ce1393e76e00d26b918e31ebe4f0f0ecdff",
+      "idempotencyKey": "29f8c39e90a84a8ef7095da19b8a3bfd9fc80508f50d7c9eaafc22f680b4e77e",
+      "requestDigest": "493f316be52c9455d210ab8bc4dae212c8e39712a3162f98ab2a1797b8dda873",
+      "evaluationTime": "2026-08-21T00:16:24.000Z",
+      "claimCore": {
+        "claimId": "1b0e5e981700116be47a2140a0d36ce1393e76e00d26b918e31ebe4f0f0ecdff",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8fca54f79632c46a02f9b9b3d298b4ce88bcab966b2331149edd40a5054c31ab",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:26f79b6c8097a283a977094fb357e7c3e03401314f30593acd37623cdc5bc417",
+        "canonicalBaseRevision": "c5b66e7e43ca49db6394c4fb8c2b1b20511e425e",
+        "declaredWriteScope": [
+          "path:__tests__/legacy-clean-committed-lane-bootstrap-adapter.test.mjs",
+          "path:scripts/legacy-clean-committed-lane-bootstrap-adapter.mjs",
+          "semantic:legacy-bootstrap-lease-expiry-projection"
+        ],
+        "writeSetDigest": "4f076ce0ca49f932c1774b42aac7103624f9674660180a497003954cf359d874",
+        "laneRevision": "c5b66e7e43ca49db6394c4fb8c2b1b20511e425e",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T02:16:24.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "eb7eaca626bc371aab8b74c614a3051c74455b5b8c69674dbca0b74926a9836b",
+      "digest": "9bd8a5b0981db2464f6609ccd3d2fba2b94a344e4b53793f05d6b79422934425"
     }
   ]
 }

@@ -24,8 +24,12 @@ protected-main push workflow then retires that same claim with reason
 later replay must not require live write authority that has correctly ended.
 
 The CLI dispatcher first runs the ordinary live verifier. A fallback exists
-only when GitHub independently reports the exact source branch and head as a
-merged pull request. It reads and validates the complete collaboration ledger,
+only when GitHub independently reports the exact source branch and either the
+delivered head or the terminal head of the controller-proven protected-main
+refresh receipt as a merged pull request. A refreshed head is accepted only
+when every receipt hop is SHA-bound, continuous from the delivery subject, and
+ends at the live merged head. The fallback reads and validates the complete
+collaboration ledger,
 then requires the local delivery projection's exact integration entry followed
 by the same claim's terminal retirement at counter plus one. Claim identity,
 base, head, write set, epoch, review request, integration evidence, integration

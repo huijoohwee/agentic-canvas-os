@@ -408,6 +408,7 @@ function integrateSessionUnfenced({
       headSha: deliveryAuthorizedHeadSha,
       canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
       cloudAuthority: deliveryCloudAuthority,
+      protectedMainRefresh,
     });
     const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
@@ -478,6 +479,7 @@ function integrateSessionUnfenced({
       headSha: deliveryAuthorizedHeadSha,
       canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
       cloudAuthority: deliveryCloudAuthority,
+      protectedMainRefresh,
     });
     log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);
     completion = completeTask();

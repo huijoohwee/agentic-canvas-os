@@ -11,6 +11,8 @@ const digest = value => value.repeat(64);
 const headSha = sha("a");
 const baseSha = sha("b");
 const mergeSha = sha("c");
+const refreshedHeadSha = sha("d");
+const refreshedMainSha = sha("e");
 
 function authority() {
   return {
@@ -37,13 +39,23 @@ function authority() {
   };
 }
 
-function pullRequest(state = "MERGED") {
+function pullRequest(state = "MERGED", pullRequestHeadSha = headSha) {
   return {
     number: 42,
     state,
     headRefName: "agent/device/source",
-    headRefOid: headSha,
+    headRefOid: pullRequestHeadSha,
     mergeCommit: { oid: mergeSha },
+  };
+}
+
+function protectedMainRefresh(overrides = {}) {
+  return {
+    schema: "agentic-protected-main-refresh/v1",
+    deliveredHeadSha: headSha,
+    refreshedHeadSha,
+    mainParentSha: refreshedMainSha,
+    ...overrides,
   };
 }
 
@@ -131,6 +143,39 @@ test("merged replay accepts one exact integrated retirement", () => {
   assert.equal(result.status, "integrated-retired");
   assert.equal(result.claimId, source.claimId);
   assert.equal(result.mergeCommitSha, mergeSha);
+});
+
+test("merged replay accepts the exact controller-proven protected refresh head", () => {
+  const source = authority();
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest("MERGED", refreshedHeadSha),
+    readLedger: () => ledger(source),
+    validate: () => {},
+  });
+  const result = verifier({
+    ...options(source),
+    protectedMainRefresh: protectedMainRefresh(),
+  });
+  assert.equal(result.status, "integrated-retired");
+  assert.equal(result.headSha, headSha);
+});
+
+test("merged replay rejects a refreshed head without its exact receipt chain", () => {
+  const source = authority();
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest("MERGED", refreshedHeadSha),
+    readLedger: () => ledger(source),
+    validate: () => {},
+  });
+  assert.throws(
+    () => verifier({
+      ...options(source),
+      protectedMainRefresh: protectedMainRefresh({ deliveredHeadSha: sha("f") }),
+    }),
+    /lacks its exact protected-main refresh receipt/u,
+  );
 });
 
 test("open pull requests retain the original live-verification failure", () => {

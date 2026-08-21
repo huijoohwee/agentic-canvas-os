@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4003,
-  "headDigest": "33cf6edcc9815ac93983c3739a6fe1eb8370a70a9a82984459e52873963fb99a",
+  "sequence": 4004,
+  "headDigest": "e1097f62ab7ea494bc9030a7ba0c9cdcaee173707cdf338f98b57c9c838024d8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -200424,6 +200424,59 @@
       },
       "claimDigest": "6a9945861b5067d60734acb230431f3dd3df231fa2dcd460dc55991bf68526d8",
       "digest": "33cf6edcc9815ac93983c3739a6fe1eb8370a70a9a82984459e52873963fb99a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4004,
+      "parentDigest": "33cf6edcc9815ac93983c3739a6fe1eb8370a70a9a82984459e52873963fb99a",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d006db2438b953d2095bd346c85da6b2e86a35a9bcc93b8fe16639cb4bea9109",
+      "idempotencyKey": "f8cfe32d5f7139196ba69975e3a48b24200ab88a8b3ca20a486cc98afac473b0",
+      "requestDigest": "9c20ba86ba0ae1bd3b6a1c33b591b95b78ce57a8d7dfeaee3c624b085ee16644",
+      "evaluationTime": "2026-08-21T16:16:52.000Z",
+      "claimCore": {
+        "claimId": "d006db2438b953d2095bd346c85da6b2e86a35a9bcc93b8fe16639cb4bea9109",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5d8072bf3aa6551bade8bbd905251b2c256ace40e147cf210ee2e2d10297e926",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8505d0cb38e5ed74e9e29271f4f082ca01617f200fd4f5c2e082db45c585cc69",
+        "canonicalBaseRevision": "a0a4d155c81092e558be9eadb5831690d4cff805",
+        "declaredWriteScope": [
+          "path:__tests__/merged-dormant-claim-reconciliation-evidence.test.mjs",
+          "path:__tests__/merged-dormant-claim-reconciliation-repository-adapter.test.mjs",
+          "path:docs/MERGED-DORMANT-CLAIM-RECONCILIATION.md",
+          "path:scripts/merged-dormant-claim-reconciliation-evidence.mjs",
+          "path:scripts/merged-dormant-claim-reconciliation-repository-adapter.mjs",
+          "semantic:merged-dormant-claim-reconciliation-unblock"
+        ],
+        "writeSetDigest": "bfe2c7576e030121deada7fc38252aae72f16265ce46201342fed24e44e95fd3",
+        "laneRevision": "854618f5759d41596791d183c94c1d38fe4a79dc",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "retired",
+        "expiresAt": "2026-08-21T16:40:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAkjefA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "854618f5759d41596791d183c94c1d38fe4a79dc",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAkjefA",
+          "bytesDigest": "34964e8871774efa8fdb39ada3934272656b9bc5371c608ea240a22126ed522b",
+          "namedChecksDigest": "53cf079e6a69e5bf71958ff30231e7f7fc9053d9cb9a88194cd45d9e049c1ab8",
+          "handoffEvidenceDigest": "29532d3ca6fe0c6b2e70b72a1afb0e92ce54ebb303bcd6774e3f9e4ebe843654",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-21T16:16:52.000Z"
+        }
+      },
+      "claimDigest": "4ddcedfdea1da1479d3d123ec3a822ec5ff8c66356015235f0d9aed6cd0d6c3e",
+      "digest": "e1097f62ab7ea494bc9030a7ba0c9cdcaee173707cdf338f98b57c9c838024d8"
     }
   ]
 }

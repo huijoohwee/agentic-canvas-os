@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3783,
-  "headDigest": "fc4989244d596e1f52362236699d5dfe28abc07b6e40eac3e88b144e8abade10",
+  "sequence": 3784,
+  "headDigest": "98603f7883e62631ff384b52eabd89d7a9d5276bdc0246213f669acf016576ce",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -189637,6 +189637,57 @@
       },
       "claimDigest": "f97ff02480aa7ae16feb1c0447e84495fd81b6307cee2a07e1f9cd5e4dfcba5a",
       "digest": "fc4989244d596e1f52362236699d5dfe28abc07b6e40eac3e88b144e8abade10"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3784,
+      "parentDigest": "fc4989244d596e1f52362236699d5dfe28abc07b6e40eac3e88b144e8abade10",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "851f844c88c04efdce4706e4cda397c5f0408197c0a8c0a611516dca00a1421c",
+      "idempotencyKey": "eda96207fcd77f8cee41101beb850b2ed4ab129938a2dd33385187029eea11e8",
+      "requestDigest": "bbd8cdb8ab40f103d42ef9bdb50a36d5a1ecfec7bbe3fdc8401d938880ce539b",
+      "evaluationTime": "2026-08-21T04:55:57.000Z",
+      "claimCore": {
+        "claimId": "851f844c88c04efdce4706e4cda397c5f0408197c0a8c0a611516dca00a1421c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:07de2e923d5199ceb01a6c87276c48a9d624ff8e635643ef427131af4828c81c",
+        "canonicalBaseRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-correction-task-bound-lease"
+        ],
+        "writeSetDigest": "03c0538e41cf430f6b657261b33377773ebbe95e7cd09d67e9c5057fb0ed3060",
+        "laneRevision": "df11437ec2ebc9ecb0609cb568b2e0e850a5102d",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-21T06:42:24.000Z",
+        "evidenceDigest": "5b6618d09508c9984a5c0d0d18a908195bef2feea3ed6f17ea777637b0e6a9ae",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAgSUQg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "df11437ec2ebc9ecb0609cb568b2e0e850a5102d",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAgSUQg",
+          "focusedEvidenceDigest": "5b6618d09508c9984a5c0d0d18a908195bef2feea3ed6f17ea777637b0e6a9ae",
+          "dependencyClosureDigest": "176429420ec0715978df7e5082ef764ba497558896136c49b786351096f49235",
+          "namedChecksDigest": "de1a75f6ff7c44693c62ff0bba3b9b37b51d613ff8124010278c07ecf13b7935",
+          "handoffEvidenceDigest": "cd6fc40e52acbd800acbfef0755cfed4f511c97c8ee012a803c9384e3c2dad18",
+          "operatorDecisionDigest": "c1d0ca4f2e564fda14c665d34eb608de922506d9ad581be2d4f939afd2565962",
+          "integrationIntentDigest": "a6764be8e3d73c067cd843393b4c1539bcbfe68d5243d587ef05976ede70c83e",
+          "integratedAt": "2026-08-21T04:55:57.000Z"
+        }
+      },
+      "claimDigest": "8da52c71a6544bfcbb034dc08e8b69b35aaec5a479f6f0e337ab504e7e98fc89",
+      "digest": "98603f7883e62631ff384b52eabd89d7a9d5276bdc0246213f669acf016576ce"
     }
   ]
 }

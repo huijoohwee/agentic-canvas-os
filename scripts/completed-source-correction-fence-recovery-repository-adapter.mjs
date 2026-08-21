@@ -12,6 +12,7 @@ import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { authorizeTaskBoundLeaseMutation } from "./task-bound-lane-authority-store.mjs";
+import { currentSuccessorRepair } from "./source-correction-successor-task-binding-reconciliation-repository-adapter.mjs";
 import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { casWriterLeaseProjection, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
@@ -77,12 +78,22 @@ function createRuntime(options, dependencies) {
     const claim = cloudStatus(current.cloudAuthority).claims.filter(item => item.claimId === completed.completion.successorClaimId);
     if (claim.length !== 1) invalid("successor claim cardinality");
     const withoutTask = { ...current }; delete withoutTask.taskAuthority;
+    const successorTaskBindingRepair = currentSuccessorRepair(current);
     const changed = git(["diff", "--name-only", `${remote}..HEAD`]).split(/\r?\n/u).filter(Boolean);
     const marker = parseWriterLeasePullRequestBody(pull.body);
     return buildCompletedSourceCorrectionFenceRecoveryEvidence({
       repository: JSON.parse(gh(["repo", "view", "--json", "nameWithOwner"])).nameWithOwner,
       source: { branch, sessionId: sourceSessionId, localHeadSha: git(["rev-parse", "HEAD"]), remoteHeadSha: remote, protectedMainSha: git(["rev-parse", "origin/main"]), clean: git(["status", "--porcelain=v1", "--untracked-files=all"]) === "", changedPaths: changed },
-      lease: { epoch: current.epoch, leaseDigest: writerLeaseDigest(current), leaseWithoutTaskAuthorityDigest: writerLeaseDigest(withoutTask), fenceSha: current.fenceSha, declaredWriteSet: current.admission.declaredWriteSet, writeSetDigest: current.admission.writeSetDigest, taskAuthorityBindingDigest: current.taskAuthority.bindingDigest },
+      lease: {
+        epoch: current.epoch,
+        leaseDigest: writerLeaseDigest(current),
+        leaseWithoutTaskAuthorityDigest: writerLeaseDigest(withoutTask),
+        successorTaskBindingSourceLeaseDigest: successorTaskBindingRepair?.sourceLeaseDigest || null,
+        fenceSha: current.fenceSha,
+        declaredWriteSet: current.admission.declaredWriteSet,
+        writeSetDigest: current.admission.writeSetDigest,
+        taskAuthorityBindingDigest: current.taskAuthority.bindingDigest,
+      },
       correction: { journalDigest: digestValue(completed), planDigest: completed.planDigest, completionReceiptDigest: completed.completion.receiptDigest, completionLeaseDigest: completed.completion.leaseDigest, sourceHeadSha: completed.completion.sourceHeadSha, successorClaimId: completed.completion.successorClaimId, successorClaimDigest: completed.completion.successorClaimDigest },
       pullRequest: { number: pull.number, state: pull.state, isDraft: pull.isDraft, headSha: pull.headRefOid, autoMergeAbsent: pull.autoMergeRequest === null, markerDigest: digestValue(marker) },
       claim: claim[0],

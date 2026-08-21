@@ -165,6 +165,8 @@ function createRuntime(options, dependencies) {
     if (current.fenceSha !== plan.targetFenceSha || !isExactPersistedRecoveryClaim({
       sourceClaim: plan.evidence.claim,
       liveClaim,
+      canonicalBaseRevision: plan.evidence.source.protectedMainSha,
+      leaseEpoch: plan.evidence.lease.epoch,
       recoveryEvidenceDigest: plan.evidence.evidenceDigest,
     })) invalid("persisted recovery claim");
     if (!taskAuthorityFile) throw new Error("Fence recovery replay requires --task-authority.");
@@ -222,15 +224,17 @@ export function cloudAuthorityProjectsClaim(authority, claim) {
 export function isExactPersistedRecoveryClaim({
   sourceClaim,
   liveClaim,
+  canonicalBaseRevision,
+  leaseEpoch,
   recoveryEvidenceDigest,
 }) {
   return liveClaim?.claimId === sourceClaim?.claimId
     && liveClaim.state === "current"
     && liveClaim.transitionCounter === sourceClaim.transitionCounter + 1
-    && liveClaim.canonicalBaseRevision === sourceClaim.canonicalBaseRevision
+    && liveClaim.canonicalBaseRevision === canonicalBaseRevision
     && liveClaim.laneRevision === sourceClaim.laneRevision
     && liveClaim.writeSetDigest === sourceClaim.writeSetDigest
-    && liveClaim.leaseEpoch === sourceClaim.leaseEpoch
+    && liveClaim.leaseEpoch === leaseEpoch
     && liveClaim.reviewRequestId === sourceClaim.reviewRequestId
     && liveClaim.recovery?.evidenceDigest === recoveryEvidenceDigest;
 }

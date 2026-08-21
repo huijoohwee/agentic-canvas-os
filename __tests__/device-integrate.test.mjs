@@ -1201,9 +1201,13 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         cloudMutation = input;
         return { ok: true };
       },
-      verifyCloudAuthority: ({ headSha }) => {
+      verifyCloudAuthority: ({ headSha, protectedMainRefresh }) => {
         verifiedHeads.push(headSha);
         assert.equal(headSha, commitSha);
+        if (protectedMainRefresh) {
+          assert.equal(protectedMainRefresh.deliveredHeadSha, commitSha);
+          assert.equal(protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+        }
         return { ok: true };
       },
       run: (command, args) => {
@@ -2138,6 +2142,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
   let pullRequestRead = 0;
   const commitSubjectReads = [];
   const verifiedHeads = [];
+  const verifiedProtectedRefreshes = [];
   const commands = [];
   const lease = createLease({
     repo,
@@ -2208,9 +2213,14 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
         assert.equal(headSha, commitSha);
         return { authority: deliveryAuthorizedAuthority(authority, headSha) };
       },
-      verifyCloudAuthority: ({ headSha }) => {
+      verifyCloudAuthority: ({ headSha, protectedMainRefresh }) => {
         verifiedHeads.push(headSha);
         assert.equal(headSha, commitSha);
+        if (protectedMainRefresh) {
+          verifiedProtectedRefreshes.push(protectedMainRefresh);
+          assert.equal(protectedMainRefresh.deliveredHeadSha, commitSha);
+          assert.equal(protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+        }
         return { ok: true };
       },
       run: (command, args) => {
@@ -2249,6 +2259,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
     assert.equal(completed, true);
     assert.deepEqual(commitSubjectReads, []);
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha, commitSha]);
+    assert.equal(verifiedProtectedRefreshes.length, 2);
     assert.deepEqual(result.protectedMainRefresh, {
       schema: "agentic-protected-main-refresh/v1",
       deliveredHeadSha: commitSha,

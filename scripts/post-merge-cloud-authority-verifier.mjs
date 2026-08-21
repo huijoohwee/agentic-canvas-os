@@ -1,5 +1,9 @@
 import { validateLedger } from "./cloud-collaboration-contract.mjs";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
+import {
+  PROTECTED_MAIN_REFRESH_CHAIN_SCHEMA,
+  PROTECTED_MAIN_REFRESH_SCHEMA,
+} from "./protected-main-refresh-lib.mjs";
 
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -41,6 +45,7 @@ export function createPostMergeCloudAuthorityVerifier({
           canonicalBaseSha: options.canonicalBaseSha,
           headSha: options.headSha,
           ledger,
+          protectedMainRefresh: options.protectedMainRefresh,
           pullRequest,
         });
       } catch (retirementError) {
@@ -58,10 +63,11 @@ export function verifyIntegratedRetirementEvidence({
   canonicalBaseSha,
   headSha,
   ledger,
+  protectedMainRefresh = null,
   pullRequest,
 }) {
   requireAuthority(authority, { canonicalBaseSha, headSha });
-  requireMergedPullRequest(pullRequest, { branch, headSha });
+  requireMergedPullRequest(pullRequest, { branch, headSha, protectedMainRefresh });
   if (!ledger || !Array.isArray(ledger.entries)) {
     throw new Error("Cloud collaboration ledger has no entries.");
   }
@@ -110,16 +116,63 @@ function requireAuthority(authority, { canonicalBaseSha, headSha }) {
   }
 }
 
-function requireMergedPullRequest(pullRequest, { branch, headSha }) {
+function requireMergedPullRequest(pullRequest, { branch, headSha, protectedMainRefresh }) {
   if (pullRequest?.state !== "MERGED"
     || pullRequest.headRefName !== branch
-    || pullRequest.headRefOid !== headSha
     || !pullRequest.mergeCommit) {
     throw new Error("Pull request is not the exact merged integration subject.");
   }
+  requireMergedHead({
+    deliveredHeadSha: headSha,
+    protectedMainRefresh,
+    pullRequestHeadSha: pullRequest.headRefOid,
+  });
   requireSha(pullRequest.mergeCommit.oid, "merge commit");
   if (!Number.isSafeInteger(pullRequest.number) || pullRequest.number < 1) {
     throw new Error("Merged pull request number is invalid.");
+  }
+}
+
+function requireMergedHead({
+  deliveredHeadSha,
+  protectedMainRefresh,
+  pullRequestHeadSha,
+}) {
+  requireSha(pullRequestHeadSha, "Merged pull-request head");
+  if (pullRequestHeadSha === deliveredHeadSha) return;
+  if (!protectedMainRefresh || protectedMainRefresh.deliveredHeadSha !== deliveredHeadSha) {
+    throw new Error("Merged pull-request head lacks its exact protected-main refresh receipt.");
+  }
+  const steps = protectedMainRefresh.schema === PROTECTED_MAIN_REFRESH_SCHEMA
+    ? [{
+      previousHeadSha: protectedMainRefresh.deliveredHeadSha,
+      refreshedHeadSha: protectedMainRefresh.refreshedHeadSha,
+      mainParentSha: protectedMainRefresh.mainParentSha,
+    }]
+    : protectedMainRefresh.schema === PROTECTED_MAIN_REFRESH_CHAIN_SCHEMA
+      && Array.isArray(protectedMainRefresh.refreshes)
+      && protectedMainRefresh.refreshes.length >= 2
+      && protectedMainRefresh.refreshCount === protectedMainRefresh.refreshes.length
+      ? protectedMainRefresh.refreshes
+      : null;
+  if (!steps) {
+    throw new Error("Merged pull-request protected-main refresh receipt is malformed.");
+  }
+  let expectedPreviousHeadSha = deliveredHeadSha;
+  for (const step of steps) {
+    requireSha(step?.previousHeadSha, "Protected-main refresh previous head");
+    requireSha(step?.refreshedHeadSha, "Protected-main refresh head");
+    requireSha(step?.mainParentSha, "Protected-main refresh main parent");
+    if (step.previousHeadSha !== expectedPreviousHeadSha) {
+      throw new Error("Merged pull-request protected-main refresh chain is discontinuous.");
+    }
+    expectedPreviousHeadSha = step.refreshedHeadSha;
+  }
+  if (
+    protectedMainRefresh.refreshedHeadSha !== expectedPreviousHeadSha
+    || pullRequestHeadSha !== expectedPreviousHeadSha
+  ) {
+    throw new Error("Merged pull-request head does not match its protected-main refresh receipt.");
   }
 }
 

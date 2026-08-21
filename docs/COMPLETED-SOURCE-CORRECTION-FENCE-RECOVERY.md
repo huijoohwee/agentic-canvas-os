@@ -39,3 +39,11 @@ node scripts/completed-source-correction-fence-recovery.mjs run \
 ```
 
 The replay-safe journal advances through task-authority verification, exact dormant-cloud recovery, local lease CAS, PR marker projection, terminal verification, and completion. The completion embeds a current `agentic-admission-mutation-authority/v1` receipt. Normal `device:review` remains responsible for checking and pushing the already-authored descendant.
+
+If the exact recovered claim expires again after its local lease and pull-request
+marker were projected, replay may recover it once more without replacing the
+durable subject. This path accepts only the same claim at the original recovery
+transition, with the sealed recovery-evidence digest, canonical base, lane
+revision, write set, lease epoch, and review identity unchanged. The expiry
+projection must remain scope-reserved and non-writing; a parked, writing,
+advanced, or otherwise drifted claim still fails closed.

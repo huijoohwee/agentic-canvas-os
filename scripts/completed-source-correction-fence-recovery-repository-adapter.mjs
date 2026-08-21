@@ -226,8 +226,13 @@ export function isExactPersistedRecoveryClaim({
   liveClaim,
   recoveryEvidenceDigest,
 }) {
+  const exactRecoveryState = liveClaim?.state === "current" || (
+    liveClaim?.state === "dormant-preserved"
+    && liveClaim.scopeReserved === true
+    && liveClaim.writeAuthority === false
+  );
   return liveClaim?.claimId === sourceClaim?.claimId
-    && liveClaim.state === "current"
+    && exactRecoveryState
     && liveClaim.transitionCounter === sourceClaim.transitionCounter + 1
     && liveClaim.canonicalBaseRevision === sourceAuthority?.canonicalBaseSha
     && liveClaim.laneRevision === sourceClaim.laneRevision

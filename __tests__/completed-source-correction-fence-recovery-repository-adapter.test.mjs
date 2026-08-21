@@ -70,6 +70,40 @@ test("persisted recovery replay accepts only its exact next transition and evide
   assert.equal(isExactPersistedRecoveryClaim({
     sourceClaim,
     sourceAuthority,
+    liveClaim: {
+      ...liveClaim,
+      state: "dormant-preserved",
+      scopeReserved: true,
+      writeAuthority: false,
+    },
+    recoveryEvidenceDigest,
+  }), true);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    sourceAuthority,
+    liveClaim: { ...liveClaim, state: "dormant-preserved" },
+    recoveryEvidenceDigest,
+  }), false);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    sourceAuthority,
+    liveClaim: {
+      ...liveClaim,
+      state: "dormant-preserved",
+      scopeReserved: true,
+      writeAuthority: true,
+    },
+    recoveryEvidenceDigest,
+  }), false);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    sourceAuthority,
+    liveClaim: { ...liveClaim, state: "parked" },
+    recoveryEvidenceDigest,
+  }), false);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    sourceAuthority,
     liveClaim: { ...liveClaim, transitionCounter: 5 },
     recoveryEvidenceDigest,
   }), false);

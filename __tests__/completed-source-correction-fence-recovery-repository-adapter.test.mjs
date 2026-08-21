@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { recoveredCloudAuthorityAlreadyProjected } from "../scripts/completed-source-correction-fence-recovery-repository-adapter.mjs";
+import {
+  cloudAuthorityProjectsClaim,
+  isExactPersistedRecoveryClaim,
+  recoveredCloudAuthorityAlreadyProjected,
+} from "../scripts/completed-source-correction-fence-recovery-repository-adapter.mjs";
 
 test("repository adapter limits its protected effects", () => {
   const source = readFileSync(new URL("../scripts/completed-source-correction-fence-recovery-repository-adapter.mjs", import.meta.url), "utf8");
@@ -29,4 +33,52 @@ test("same-claim recovery requires the complete cloud authority projection", () 
     transitionCounter: 4,
     operationReceiptDigest: "d".repeat(64),
   }), false);
+});
+
+test("persisted recovery replay accepts only its exact next transition and evidence", () => {
+  const sourceClaim = {
+    claimId: "a".repeat(64),
+    state: "dormant-preserved",
+    transitionCounter: 3,
+    canonicalBaseRevision: "b".repeat(40),
+    laneRevision: "c".repeat(40),
+    writeSetDigest: "d".repeat(64),
+    leaseEpoch: 4,
+    reviewRequestId: "github-pull-request:example",
+  };
+  const recoveryEvidenceDigest = "e".repeat(64);
+  const liveClaim = {
+    ...sourceClaim,
+    state: "current",
+    transitionCounter: 4,
+    fenceRevision: "f".repeat(64),
+    transitionDigest: "1".repeat(64),
+    operationReceiptDigest: "2".repeat(64),
+    recovery: { evidenceDigest: recoveryEvidenceDigest },
+  };
+
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    liveClaim,
+    recoveryEvidenceDigest,
+  }), true);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    liveClaim: { ...liveClaim, transitionCounter: 5 },
+    recoveryEvidenceDigest,
+  }), false);
+  assert.equal(isExactPersistedRecoveryClaim({
+    sourceClaim,
+    liveClaim: { ...liveClaim, recovery: { evidenceDigest: "3".repeat(64) } },
+    recoveryEvidenceDigest,
+  }), false);
+  assert.equal(cloudAuthorityProjectsClaim({
+    claimId: liveClaim.claimId,
+    claimDigest: liveClaim.fenceRevision,
+    claimLedgerRevision: liveClaim.transitionDigest,
+    operationReceiptDigest: liveClaim.operationReceiptDigest,
+    transitionCounter: liveClaim.transitionCounter,
+    laneRevision: liveClaim.laneRevision,
+    reviewRequestId: liveClaim.reviewRequestId,
+  }, liveClaim), true);
 });

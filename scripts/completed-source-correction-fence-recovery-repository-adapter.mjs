@@ -144,6 +144,7 @@ function createRuntime(options, dependencies) {
     return { pullRequestMarkerDigest: digestValue(projectWriterLeasePullRequestMarker(current)) };
   }
   async function verifyTerminal({ plan, intent }) {
+    await reconcilePersistedRecoveryProjection({ plan, intent });
     const current = lease(); const pull = provider(); const remote = remoteHead();
     if (git(["status", "--porcelain=v1", "--untracked-files=all"]) !== "" || current.fenceSha !== plan.targetFenceSha
       || remote !== plan.targetFenceSha || pull.headRefOid !== plan.targetFenceSha || !pull.isDraft || pull.autoMergeRequest !== null
@@ -152,6 +153,46 @@ function createRuntime(options, dependencies) {
     const authority = assertAdmissionMutationAuthority({ lease: current, cloudAuthority: verified.authority, remoteAuthorityVerification: verified.verification });
     cachedTerminal = { taskAuthorityReceiptDigest: intent.phases.task_authority_verified.values.taskAuthorityReceiptDigest, cloudAuthorityDigest: digestValue(verified.authority), leaseDigest: writerLeaseDigest(current), pullRequestMarkerDigest: digestValue(projectWriterLeasePullRequestMarker(current)), verificationDigest: digestValue({ head: git(["rev-parse", "HEAD"]), remote, pull: pull.headRefOid, authority }), mutationAuthority: authority };
     return cachedTerminal;
+  }
+  async function reconcilePersistedRecoveryProjection({ plan, intent }) {
+    if (!intent.phases.cloud_recovered || !intent.phases.local_projected) return;
+    const current = lease();
+    const status = cloudStatus(current.cloudAuthority);
+    const matches = status.claims.filter(item => item.claimId === plan.claimId);
+    if (matches.length !== 1) invalid("persisted recovery claim cardinality");
+    const liveClaim = matches[0];
+    if (cloudAuthorityProjectsClaim(current.cloudAuthority, liveClaim)) return;
+    if (current.fenceSha !== plan.targetFenceSha || !isExactPersistedRecoveryClaim({
+      sourceClaim: plan.evidence.claim,
+      liveClaim,
+      recoveryEvidenceDigest: plan.evidence.evidenceDigest,
+    })) invalid("persisted recovery claim");
+    if (!taskAuthorityFile) throw new Error("Fence recovery replay requires --task-authority.");
+    authorizeTaskBoundLeaseMutation({
+      lease: current,
+      capabilityPath: taskAuthorityFile,
+      operation: "completed-source-correction-fence-recovery",
+      now: now(),
+    });
+    await recoverCloud({ plan });
+    if (!cachedCloud || !cloudAuthorityProjectsClaim(cachedCloud.authority, liveClaim)) {
+      invalid("persisted recovered cloud authority");
+    }
+    const timestamp = now().toISOString();
+    casWriterLeaseProjection({
+      leaseStore,
+      branch,
+      expectedLeaseDigest: writerLeaseDigest(current),
+      expectedClaimId: plan.claimId,
+      requireNoActiveIntent: true,
+      values: {
+        fenceSha: plan.targetFenceSha,
+        cloudAuthority: cachedCloud.authority,
+        heartbeatAt: timestamp,
+        expiresAt: cachedCloud.authority.expiresAt,
+      },
+    });
+    await projectPullRequestMarker({ plan });
   }
   async function reconcilePhase({ phase, plan, intent }) {
     if (phase === "task_authority_verified") return intent.phases.task_authority_verified?.values || null;
@@ -166,6 +207,32 @@ function createRuntime(options, dependencies) {
 
 export function recoveredCloudAuthorityAlreadyProjected(current, recovered) {
   return digestValue(current) === digestValue(recovered);
+}
+
+export function cloudAuthorityProjectsClaim(authority, claim) {
+  return authority?.claimId === claim?.claimId
+    && authority.claimDigest === claim.fenceRevision
+    && authority.claimLedgerRevision === claim.transitionDigest
+    && authority.operationReceiptDigest === claim.operationReceiptDigest
+    && authority.transitionCounter === claim.transitionCounter
+    && authority.laneRevision === claim.laneRevision
+    && authority.reviewRequestId === claim.reviewRequestId;
+}
+
+export function isExactPersistedRecoveryClaim({
+  sourceClaim,
+  liveClaim,
+  recoveryEvidenceDigest,
+}) {
+  return liveClaim?.claimId === sourceClaim?.claimId
+    && liveClaim.state === "current"
+    && liveClaim.transitionCounter === sourceClaim.transitionCounter + 1
+    && liveClaim.canonicalBaseRevision === sourceClaim.canonicalBaseRevision
+    && liveClaim.laneRevision === sourceClaim.laneRevision
+    && liveClaim.writeSetDigest === sourceClaim.writeSetDigest
+    && liveClaim.leaseEpoch === sourceClaim.leaseEpoch
+    && liveClaim.reviewRequestId === sourceClaim.reviewRequestId
+    && liveClaim.recovery?.evidenceDigest === recoveryEvidenceDigest;
 }
 
 function text(value, label) { if (typeof value !== "string" || !value || value !== value.trim()) invalid(label); return value; }

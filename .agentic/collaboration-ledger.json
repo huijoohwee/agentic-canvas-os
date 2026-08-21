@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3766,
-  "headDigest": "55cc994a4d99e199eb7f10c22fd3ad198cbfc290f3c58e5d5cf3781f1579900f",
+  "sequence": 3767,
+  "headDigest": "06c288cb338813c4504ff8599f25bb31abff7f4c381527f32aba2b404ba010d6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -188871,6 +188871,46 @@
       },
       "claimDigest": "b1936355c45b7626686b768a2938d0897c4086e87e173f06d0c935c0af3e9285",
       "digest": "55cc994a4d99e199eb7f10c22fd3ad198cbfc290f3c58e5d5cf3781f1579900f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3767,
+      "parentDigest": "55cc994a4d99e199eb7f10c22fd3ad198cbfc290f3c58e5d5cf3781f1579900f",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b8e8c269bf9d6fdc4d996e38e0fed84b25333fd78f2d38d650e89d40cd34fc78",
+      "idempotencyKey": "1979679604e1e464080d7e71836e54155d62e3a3f5962753ee01ef0ec9189bec",
+      "requestDigest": "e321bfa98cbcc5f10183ee940cc37c578a905a83e8dddd04ef88ff3ae44d3e8a",
+      "evaluationTime": "2026-08-21T04:04:29.000Z",
+      "claimCore": {
+        "claimId": "b8e8c269bf9d6fdc4d996e38e0fed84b25333fd78f2d38d650e89d40cd34fc78",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1d588764c16e5cde8e9a39e70f38ef8c49cae6d504a058ca0f555d2b35eafc96",
+        "canonicalBaseRevision": "b4e165a4d505eee62bd144dccb59e0a705806ef8",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-source-correction-empty-descendant"
+        ],
+        "writeSetDigest": "721ddecd4686e57fc148de28fe0fecc2a5621b5f28ff13d06550605015eeb25f",
+        "laneRevision": "80fff5d457d5365bb91d8d698617ee2bc868c214",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T06:02:10.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAgIHqA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b24b462b27d6dcf956d0021488d8f74dde30ea85b241629ee04d192fd44c88af",
+      "digest": "06c288cb338813c4504ff8599f25bb31abff7f4c381527f32aba2b404ba010d6"
     }
   ]
 }

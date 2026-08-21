@@ -123,7 +123,7 @@ reinterpreted by the v2 normalizer.
 
 The journal is compare-and-swap written under an entrypoint fence.
 
-- `authorized` plus an absent candidate may be replaced only by a fresh current plan and its new exact authorization.
+- `authorized` plus an absent candidate may be replaced only by a fresh current plan and its new exact authorization. An authorized plan that already observed a claim-bound, pull-request-bound planned candidate before the journal may refresh only its preservation selection: the candidate observation, manifest, cloud authority, and claim record must remain byte-identical, and fresh repository classification must still prove that same candidate is planned. A planned candidate created by the journal is never eligible for this replacement.
 - `planned` resumes through repository-owned `device:heartbeat --continue-admission`. Planning may observe an already-registered exact clean active planned candidate without reprovisioning it. Its in-command gate loads the bound journal and rechecks the fence child or repository-recorded prepared integration commit, selection, files, all pre-existing lanes, pull requests, controller, canonical source, and exact cloud peers before the continuation mutation.
 - An effect that completed before its subprocess response or journal write is recovered from live repository evidence without starting a second lane.
 - `admitted` replay seals `complete` from the already journaled execution evidence; it does not repeat live verification or the effect.

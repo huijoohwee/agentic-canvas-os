@@ -130,11 +130,75 @@ test("effect-absent stale authorized intent is CAS-replaced only with a fresh ex
     ["authorized", "authorized", "admitted", "complete"]);
 });
 
+test("authorized intent refreshes selection for the same pre-existing planned candidate", async () => {
+  const harness = createHarness({
+    failContinuationOnce: true,
+    initialState: "planned",
+    preExistingCandidate: true,
+    selectionDriftOnRefresh: true,
+  });
+  const stale = await harness.controller.plan();
+  await assert.rejects(harness.controller.run({
+    planDigest: stale.planDigest, authorization: stale.exactAuthorization,
+  }), /simulated continuation failure/u);
+  assert.equal(harness.intent.status, "authorized");
+
+  const fresh = await harness.controller.plan();
+  assert.notEqual(fresh.planDigest, stale.planDigest);
+  const result = await harness.controller.run({
+    planDigest: fresh.planDigest, authorization: fresh.exactAuthorization,
+  });
+  assert.equal(result.status, "complete");
+  assert.equal(result.planDigest, fresh.planDigest);
+  assert.equal(harness.counts.startEffects, 0);
+  assert.equal(harness.counts.continuationEffects, 2);
+  assert.deepEqual(harness.persistedStatuses,
+    ["authorized", "authorized", "admitted", "complete"]);
+});
+
+test("authorized intent cannot refresh a planned candidate created by that intent", async () => {
+  const harness = createHarness({
+    failContinuationOnce: true,
+    initialState: "planned",
+    selectionDriftOnRefresh: true,
+  });
+  const stale = await harness.controller.plan();
+  await assert.rejects(harness.controller.run({
+    planDigest: stale.planDigest, authorization: stale.exactAuthorization,
+  }), /simulated continuation failure/u);
+
+  const differentDigest = digest("unowned planned refresh");
+  await assert.rejects(harness.controller.run({
+    planDigest: differentDigest,
+    authorization: `authorize dormant-preservation-admission ${differentDigest}`,
+  }), /requires an absent candidate effect/u);
+  assert.equal(harness.counts.startEffects, 0);
+  assert.equal(harness.intent.status, "authorized");
+});
+
+test("authorized pre-existing planned refresh rejects candidate identity drift", async () => {
+  const harness = createHarness({
+    driftOnRevalidation: true,
+    failContinuationOnce: true,
+    initialState: "planned",
+    preExistingCandidate: true,
+  });
+  const stale = await harness.controller.plan();
+  await assert.rejects(harness.controller.run({
+    planDigest: stale.planDigest, authorization: stale.exactAuthorization,
+  }), /simulated continuation failure/u);
+
+  await assert.rejects(harness.controller.plan(), /changed candidate identity/u);
+  assert.equal(harness.counts.startEffects, 0);
+  assert.equal(harness.intent.status, "authorized");
+});
+
 function createHarness({
   driftOnRevalidation = false, initialState = "absent", loseEffectResponse = null,
-  failAfterPersist = null,
+  failAfterPersist = null, failContinuationOnce = false, preExistingCandidate = false,
+  selectionDriftOnRefresh = false,
 } = {}) {
-  const planningInput = planInput();
+  const planningInput = planInput({ preExistingCandidate });
   let intent = null;
   let liveState = initialState;
   let lost = false;
@@ -152,6 +216,9 @@ function createHarness({
     async readSourceEvidence() {
       counts.sourceReads += 1;
       if (driftOnRevalidation && counts.sourceReads >= 3) return driftedPlanInput(planningInput);
+      if (selectionDriftOnRefresh && counts.sourceReads >= 3) {
+        return selectionDriftedPlanInput(planningInput);
+      }
       return planningInput;
     },
     async readIntent() { return intent; },
@@ -183,6 +250,9 @@ function createHarness({
     },
     async invokePlannedContinuation({ operationKey }) {
       counts.continuationEffects += 1;
+      if (failContinuationOnce && counts.continuationEffects === 1) {
+        throw new Error("simulated continuation failure");
+      }
       liveState = "complete";
       return { operationKey };
     },
@@ -193,9 +263,9 @@ function createHarness({
   };
 }
 
-function planInput() {
+function planInput({ preExistingCandidate = false } = {}) {
   return {
-    sourceEvidence: sourceEvidenceFixture(),
+    sourceEvidence: sourceEvidenceFixture({ preExistingCandidate }),
     nestedDeviceStart: {
       schema: "agentic-dormant-preservation-device-start-invocation/v1",
       executable: process.execPath, cwd: "/workspace/repository",
@@ -221,8 +291,25 @@ function driftedPlanInput(input) {
     sourceEvidence: { ...sourceCore, sourceEvidenceDigest: digestValue(sourceCore) } };
 }
 
-function sourceEvidenceFixture() {
-  const candidateCore = { claimId: digest("candidate claim"), state: "active" };
+function selectionDriftedPlanInput(input) {
+  const sourceCore = { ...input.sourceEvidence,
+    candidate: { ...input.sourceEvidence.candidate,
+      selectionFileDigest: digest("refreshed selection file") } };
+  delete sourceCore.sourceEvidenceDigest;
+  return { ...input,
+    sourceEvidence: { ...sourceCore, sourceEvidenceDigest: digestValue(sourceCore) } };
+}
+
+function sourceEvidenceFixture({ preExistingCandidate = false } = {}) {
+  const canonicalHead = sha("canonical");
+  const laneRevision = preExistingCandidate ? sha("candidate fence") : canonicalHead;
+  const reviewRequestId = preExistingCandidate ? "github-pull-request:PR_candidate" : null;
+  const transitionCounter = preExistingCandidate ? 2 : 1;
+  const candidateCore = {
+    claimId: digest("candidate claim"), state: "active",
+    canonicalBaseRevision: canonicalHead, laneRevision, reviewRequestId,
+    leaseEpoch: 1, transitionCounter,
+  };
   const candidateClaim = { ...candidateCore, recordDigest: digestValue(candidateCore) };
   const decisionCore = {
     schema: "agentic-dormant-preservation-admission-cloud-decision/v2",
@@ -232,9 +319,8 @@ function sourceEvidenceFixture() {
     claims: [{ ...candidateClaim, writeSetDigest: digest("candidate write set") }],
   };
   decisionCore.claims[0].recordDigest = digestValue({
-    claimId: decisionCore.claims[0].claimId,
-    state: decisionCore.claims[0].state,
-    writeSetDigest: decisionCore.claims[0].writeSetDigest,
+    ...Object.fromEntries(Object.entries(decisionCore.claims[0])
+      .filter(([key]) => key !== "recordDigest")),
   });
   const decisionClaim = decisionCore.claims[0];
   const worktree = {
@@ -266,8 +352,8 @@ function sourceEvidenceFixture() {
     canonical: {
       repositoryPath: "/workspace/repository", canonicalPath: "/workspace/repository",
       origin: "git@github.com:owner/repository.git", targetRepository: "owner/repository",
-      headSha: sha("canonical"), originMainSha: sha("canonical"),
-      remoteMainSha: sha("canonical"), treeSha: sha("canonical tree"),
+      headSha: canonicalHead, originMainSha: canonicalHead,
+      remoteMainSha: canonicalHead, treeSha: sha("canonical tree"),
       clean: true, canonicalSourceDisposition: "exact",
       canonicalLaneStateDigest: digest("canonical state"), registryDigest: digest("registry"),
       laneSetDigest: digestValue(existingLanes), existingLanes,
@@ -281,7 +367,11 @@ function sourceEvidenceFixture() {
       manifest: { semanticScope: "new-scope" },
       cloudAuthorityPath: "/workspace/cloud-authority.json",
       cloudAuthorityFileDigest: digest("authority file"),
-      cloudAuthority: { claimId: decisionClaim.claimId, sessionId: "decision-session" },
+      cloudAuthority: {
+        claimId: decisionClaim.claimId, sessionId: "decision-session",
+        canonicalBaseSha: canonicalHead, laneRevision, reviewRequestId,
+        leaseEpoch: 1, transitionCounter,
+      },
       candidateClaim: decisionClaim, candidateClaimRecordDigest: decisionClaim.recordDigest,
     },
     cloudDecision: { ...decisionCore, decisionStateDigest: digestValue(decisionCore) },

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3820,
-  "headDigest": "aec930d9d011c410d866bd02c136776caab7ca29b18a9d7d76ad880404c23f4b",
+  "sequence": 3821,
+  "headDigest": "58ac3a829771c72b5328bea0462dd40a911bff71ef9b423e1ab98ad61e4f5bdd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -191507,6 +191507,48 @@
       },
       "claimDigest": "762bac2b1568eac3471ee47e07949625266537124703eff026cfeede6eee8a98",
       "digest": "aec930d9d011c410d866bd02c136776caab7ca29b18a9d7d76ad880404c23f4b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3821,
+      "parentDigest": "aec930d9d011c410d866bd02c136776caab7ca29b18a9d7d76ad880404c23f4b",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "69506b4ee9e4c9b89d3d6baf64754dd0a8ac595ad6e7ce6c7d297e7923e40b19",
+      "idempotencyKey": "0ade9b54613c9a39f2d02a0103de815748f1da8f7563fcef7dd9905900991aa8",
+      "requestDigest": "1bb95e5768fb6599ed1a5e2b3a64fb16ffc382424a09bd30203a3cbf3626c808",
+      "evaluationTime": "2026-08-21T07:06:21.000Z",
+      "claimCore": {
+        "claimId": "69506b4ee9e4c9b89d3d6baf64754dd0a8ac595ad6e7ce6c7d297e7923e40b19",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:51a518141f54cc55f7ca7a570c73039fffeef0f37cac12a91c229757532a9b87",
+        "canonicalBaseRevision": "ed6b93ad2fc48f31e5e407d3c1d399bb6a310800",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-repository-adapter.test.mjs",
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-repository-adapter.mjs",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "semantic:empty-descendant-heartbeat-projection"
+        ],
+        "writeSetDigest": "7e8f4d955d76b37b578bba29163ca4c9222d7cbc6804a59c62180656388b29c4",
+        "laneRevision": "452bba5533d306a06dcdf45a4009a86954c1d0cd",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T08:55:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAg8mcQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c192506b816c8cd8c6ace8391600bfb6a38adfc28a9b05fe273027337dfbf94d",
+      "digest": "58ac3a829771c72b5328bea0462dd40a911bff71ef9b423e1ab98ad61e4f5bdd"
     }
   ]
 }

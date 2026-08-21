@@ -13,6 +13,13 @@ const baseSha = sha("b");
 const mergeSha = sha("c");
 const refreshedHeadSha = sha("d");
 const refreshedMainSha = sha("e");
+const deliveryEvidence = Object.freeze({
+  dependencyClosureDigest: digest("6"),
+  namedChecksDigest: digest("7"),
+  handoffEvidenceDigest: digest("8"),
+  operatorDecisionDigest: digest("9"),
+  integrationIntentDigest: digest("a"),
+});
 
 function authority() {
   return {
@@ -30,12 +37,25 @@ function authority() {
     leaseEpoch: 1,
     transitionCounter: 7,
     reviewRequestId: "github-pull-request:node",
+    focusedEvidenceDigest: digest("b"),
     integration: {
       candidateRevision: headSha,
       reviewRequestId: "github-pull-request:node",
-      namedChecksDigest: digest("6"),
-      handoffEvidenceDigest: digest("7"),
+      focusedEvidenceDigest: digest("b"),
+      ...deliveryEvidence,
     },
+  };
+}
+
+function reviewReadyAuthority(source = authority()) {
+  return {
+    ...source,
+    state: "review_ready",
+    transitionCounter: source.transitionCounter - 1,
+    claimDigest: digest("c"),
+    claimLedgerRevision: digest("d"),
+    integrationReceiptDigest: null,
+    integration: null,
   };
 }
 
@@ -73,6 +93,7 @@ function ledger(source = authority()) {
     leaseEpoch: source.leaseEpoch,
     transitionCounter: source.transitionCounter,
     state: "integrated-preserved",
+    evidenceDigest: source.focusedEvidenceDigest,
     reviewRequestId: source.reviewRequestId,
     integration: source.integration,
   };
@@ -143,6 +164,65 @@ test("merged replay accepts one exact integrated retirement", () => {
   assert.equal(result.status, "integrated-retired");
   assert.equal(result.claimId, source.claimId);
   assert.equal(result.mergeCommitSha, mergeSha);
+});
+
+test("merged replay accepts exact review-ready response loss with derived delivery evidence", () => {
+  const integrated = authority();
+  const reviewed = reviewReadyAuthority(integrated);
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => ledger(integrated),
+    validate: () => {},
+  });
+  const result = verifier({
+    ...options(reviewed),
+    deliveryEvidence,
+  });
+  assert.equal(result.status, "integrated-retired");
+  assert.equal(result.integrationEntryDigest, integrated.claimLedgerRevision);
+});
+
+test("merged replay rejects review-ready response loss without exact derived evidence", () => {
+  const integrated = authority();
+  const reviewed = reviewReadyAuthority(integrated);
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => ledger(integrated),
+    validate: () => {},
+  });
+  assert.throws(
+    () => verifier({
+      ...options(reviewed),
+      deliveryEvidence: {
+        ...deliveryEvidence,
+        integrationIntentDigest: digest("f"),
+      },
+    }),
+    /does not match local review-ready delivery evidence/u,
+  );
+});
+
+test("merged replay rejects a noncontiguous review-ready terminal history", () => {
+  const integrated = authority();
+  const reviewed = reviewReadyAuthority(integrated);
+  const changed = ledger(integrated);
+  changed.entries[0].claimCore.transitionCounter += 1;
+  changed.entries[1].claimCore.transitionCounter += 1;
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => changed,
+    validate: () => {},
+  });
+  assert.throws(
+    () => verifier({
+      ...options(reviewed),
+      deliveryEvidence,
+    }),
+    /Historical integration entry does not match local delivery authority/u,
+  );
 });
 
 test("merged replay accepts the exact controller-proven protected refresh head", () => {

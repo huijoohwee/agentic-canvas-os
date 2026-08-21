@@ -2320,6 +2320,9 @@ test("review-ready merged replay verifies terminal cloud authority before comple
     events,
     initialPullRequest: mergedPullRequest(),
     terminalMergedReplay: true,
+    onVerify: input => {
+      assert.deepEqual(input.deliveryEvidence, deliveryEvidence);
+    },
     observations: [],
   });
 
@@ -3537,9 +3540,10 @@ function runProtectedRefreshScenario({
         }
         return { authority: deliveryAuthorizedAuthority(authority, headSha) };
       },
-      verifyCloudAuthority: ({ headSha }) => {
+      verifyCloudAuthority: input => {
+        const { headSha } = input;
         events.push(`verify:${headSha}`);
-        onVerify?.({ headSha });
+        onVerify?.(input);
         if (terminalMergedReplay) {
           return {
             schema: "agentic-post-merge-cloud-authority-verification/v1",

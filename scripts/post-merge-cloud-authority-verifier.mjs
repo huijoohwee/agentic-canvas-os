@@ -10,6 +10,13 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
 const LEDGER_REF = "agentic/collaboration-ledger";
 const LEDGER_PATH = [".agentic", "collaboration-ledger.json"];
+const DELIVERY_EVIDENCE_FIELDS = Object.freeze([
+  "dependencyClosureDigest",
+  "namedChecksDigest",
+  "handoffEvidenceDigest",
+  "operatorDecisionDigest",
+  "integrationIntentDigest",
+]);
 
 export const POST_MERGE_CLOUD_AUTHORITY_VERIFICATION_SCHEMA =
   "agentic-post-merge-cloud-authority-verification/v1";
@@ -43,6 +50,7 @@ export function createPostMergeCloudAuthorityVerifier({
           authority: options.cloudAuthority,
           branch: options.branch,
           canonicalBaseSha: options.canonicalBaseSha,
+          deliveryEvidence: options.deliveryEvidence,
           headSha: options.headSha,
           ledger,
           protectedMainRefresh: options.protectedMainRefresh,
@@ -61,6 +69,7 @@ export function verifyIntegratedRetirementEvidence({
   authority,
   branch,
   canonicalBaseSha,
+  deliveryEvidence = null,
   headSha,
   ledger,
   protectedMainRefresh = null,
@@ -77,7 +86,7 @@ export function verifyIntegratedRetirementEvidence({
   if (!integration || retirement?.action !== "retire") {
     throw new Error("Claim history does not end in an integrated retirement.");
   }
-  requireIntegratedEntry(integration, authority, headSha);
+  requireIntegratedEntry(integration, authority, deliveryEvidence, headSha);
   requireRetiredEntry(retirement, integration, authority, headSha);
 
   return Object.freeze({
@@ -99,20 +108,29 @@ export function verifyIntegratedRetirementEvidence({
 }
 
 function requireAuthority(authority, { canonicalBaseSha, headSha }) {
-  if (!authority || authority.state !== "delivery_authorized") {
-    throw new Error("Post-merge verification requires delivery-authorized local authority.");
+  if (!authority || !["delivery_authorized", "review_ready"].includes(authority.state)) {
+    throw new Error("Post-merge verification requires review-ready or delivery-authorized local authority.");
   }
   requireRepository(authority.ledgerRepository, "ledger repository");
   requireRepository(authority.targetRepository, "target repository");
   requireDigest(authority.claimId, "claim ID");
   requireDigest(authority.claimDigest, "claim digest");
   requireDigest(authority.claimLedgerRevision, "claim ledger revision");
-  requireDigest(authority.integrationReceiptDigest, "integration receipt digest");
   if (authority.canonicalBaseSha !== canonicalBaseSha || authority.laneRevision !== headSha) {
     throw new Error("Local delivery authority does not match the integration subject.");
   }
-  if (!authority.integration || authority.integration.candidateRevision !== headSha) {
+  if (authority.state === "delivery_authorized") {
+    requireDigest(authority.integrationReceiptDigest, "integration receipt digest");
+  }
+  if (authority.state === "delivery_authorized"
+    && (!authority.integration || authority.integration.candidateRevision !== headSha)) {
     throw new Error("Local delivery authority has no exact integration evidence.");
+  }
+  if (authority.state === "review_ready") {
+    requireDigest(authority.focusedEvidenceDigest, "review-ready focused evidence digest");
+    if (authority.integration !== null || authority.integrationReceiptDigest !== null) {
+      throw new Error("Review-ready local authority already contains terminal integration evidence.");
+    }
   }
 }
 
@@ -176,8 +194,9 @@ function requireMergedHead({
   }
 }
 
-function requireIntegratedEntry(entry, authority, headSha) {
+function requireIntegratedEntry(entry, authority, deliveryEvidence, headSha) {
   const core = entry.claimCore;
+  const reviewReadyResponseLoss = authority.state === "review_ready";
   if (entry.schema !== "agentic-cloud-collaboration-entry/v2"
     || core?.state !== "integrated-preserved"
     || core.claimId !== authority.claimId
@@ -186,17 +205,43 @@ function requireIntegratedEntry(entry, authority, headSha) {
     || core.writeSetDigest !== authority.writeSetDigest
     || core.leaseEpoch !== authority.leaseEpoch
     || core.reviewRequestId !== authority.reviewRequestId
-    || core.transitionCounter !== authority.transitionCounter
-    || entry.claimDigest !== authority.claimDigest
-    || entry.digest !== authority.claimLedgerRevision
+    || core.transitionCounter !== authority.transitionCounter + (reviewReadyResponseLoss ? 1 : 0)
     || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope)
-    || !sameValue(core.integration, authority.integration)) {
+    || (!reviewReadyResponseLoss && entry.claimDigest !== authority.claimDigest)
+    || (!reviewReadyResponseLoss && entry.digest !== authority.claimLedgerRevision)
+    || (!reviewReadyResponseLoss && !sameValue(core.integration, authority.integration))) {
     throw new Error("Historical integration entry does not match local delivery authority.");
+  }
+  if (reviewReadyResponseLoss) {
+    requireReviewReadyIntegration(core, authority, deliveryEvidence, headSha);
+  }
+}
+
+function requireReviewReadyIntegration(core, authority, deliveryEvidence, headSha) {
+  const integration = core.integration;
+  if (!deliveryEvidence || typeof deliveryEvidence !== "object" || Array.isArray(deliveryEvidence)) {
+    throw new Error("Review-ready terminal recovery requires exact local delivery evidence.");
+  }
+  for (const field of DELIVERY_EVIDENCE_FIELDS) {
+    requireDigest(deliveryEvidence[field], `review-ready delivery evidence ${field}`);
+  }
+  if (!integration
+    || integration.candidateRevision !== headSha
+    || integration.reviewRequestId !== authority.reviewRequestId
+    || integration.focusedEvidenceDigest !== authority.focusedEvidenceDigest
+    || core.evidenceDigest !== authority.focusedEvidenceDigest
+    || integration.dependencyClosureDigest !== deliveryEvidence.dependencyClosureDigest
+    || integration.namedChecksDigest !== deliveryEvidence.namedChecksDigest
+    || integration.handoffEvidenceDigest !== deliveryEvidence.handoffEvidenceDigest
+    || integration.operatorDecisionDigest !== deliveryEvidence.operatorDecisionDigest
+    || integration.integrationIntentDigest !== deliveryEvidence.integrationIntentDigest) {
+    throw new Error("Historical integration entry does not match local review-ready delivery evidence.");
   }
 }
 
 function requireRetiredEntry(entry, integration, authority, headSha) {
   const core = entry.claimCore;
+  const integratedEvidence = integration.claimCore?.integration;
   const retirement = core?.retirement;
   if (entry.schema !== "agentic-cloud-collaboration-entry/v2"
     || core?.state !== "retired"
@@ -209,15 +254,17 @@ function requireRetiredEntry(entry, integration, authority, headSha) {
     || core.transitionCounter !== integration.claimCore.transitionCounter + 1
     || integration.sequence >= entry.sequence
     || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope)
-    || !sameValue(core.integration, authority.integration)
+    || !sameValue(core.integration, integratedEvidence)
     || retirement?.reason !== "integrated"
     || retirement.finalRevision !== headSha
     || retirement.reviewRequestId !== authority.reviewRequestId
-    || retirement.integrationReceiptDigest !== authority.integrationReceiptDigest
-    || retirement.namedChecksDigest !== authority.integration.namedChecksDigest
-    || retirement.handoffEvidenceDigest !== authority.integration.handoffEvidenceDigest) {
+    || (authority.state === "delivery_authorized"
+      && retirement.integrationReceiptDigest !== authority.integrationReceiptDigest)
+    || retirement.namedChecksDigest !== integratedEvidence?.namedChecksDigest
+    || retirement.handoffEvidenceDigest !== integratedEvidence?.handoffEvidenceDigest) {
     throw new Error("Terminal claim entry is not the exact integrated retirement.");
   }
+  requireDigest(retirement.integrationReceiptDigest, "retirement integration receipt digest");
   requireDigest(entry.digest, "retirement entry digest");
 }
 

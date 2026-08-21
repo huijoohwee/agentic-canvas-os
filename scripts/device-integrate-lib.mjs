@@ -246,6 +246,7 @@ function integrateSessionUnfenced({
     let squashSubject = null;
     let currentPullRequest = null;
     let terminalReviewReadyCompletion = false;
+    let attemptedReviewReadyDeliveryEvidence = null;
     if (reviewReadyDelivery) {
       currentPullRequest = JSON.parse(ghText([
         "pr", "view", lease.pullRequestUrl, "--json", "state,baseRefName,url,headRefOid,mergeCommit",
@@ -301,6 +302,7 @@ function integrateSessionUnfenced({
           manifest: lease.admission,
           authority: reviewedCloudAuthority,
         }));
+        attemptedReviewReadyDeliveryEvidence = deliveryEvidence;
         const authorized = authorizeCloudDelivery({
           authority: reviewedCloudAuthority,
           manifest: lease.admission,
@@ -339,6 +341,7 @@ function integrateSessionUnfenced({
             headSha: lease.reviewHeadSha,
             canonicalBaseSha: reviewedCloudAuthority?.canonicalBaseSha || lease.baseSha,
             cloudAuthority: reviewedCloudAuthority,
+            deliveryEvidence: attemptedReviewReadyDeliveryEvidence,
             ...(protectedMainAuthorizationRefresh
               ? { protectedMainRefresh: protectedMainAuthorizationRefresh }
               : {}),

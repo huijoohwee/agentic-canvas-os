@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3884,
-  "headDigest": "bbfa95c847094a94f103f764f601d89303d3f20f8b106b02d9d183d1af43d523",
+  "sequence": 3885,
+  "headDigest": "e76cb4720e238ade4ac7b69741a0ffa41590edcaacea1d12d95f25a19eefbc28",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -194580,6 +194580,47 @@
       },
       "claimDigest": "d0ebae2b70bcd9847d172fbd8ed5260f4162cf495532571405c870a66f06949b",
       "digest": "bbfa95c847094a94f103f764f601d89303d3f20f8b106b02d9d183d1af43d523"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3885,
+      "parentDigest": "bbfa95c847094a94f103f764f601d89303d3f20f8b106b02d9d183d1af43d523",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "173811d20f049b2807f037aeddcc51c641f4b7e3cb7760b4abb7a02dbbad9a13",
+      "idempotencyKey": "f1e95091fd436a566521289577631351e6957eb1b656c341c9b85239c848a938",
+      "requestDigest": "2ca495f309828e362076a7e5aeeb62d7f9b0ff6ec8e7516717eb7ef1ce06857a",
+      "evaluationTime": "2026-08-21T09:49:03.000Z",
+      "claimCore": {
+        "claimId": "173811d20f049b2807f037aeddcc51c641f4b7e3cb7760b4abb7a02dbbad9a13",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:804be34d8754a82e7afc1145585a4d7f37aa866c954a33fac59f4f27b7b8cee4",
+        "canonicalBaseRevision": "56a865b42a403fb4dde1efe200e0e0080a5b4b75",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-repository-adapter.test.mjs",
+          "path:docs/COMPLETED-SOURCE-CORRECTION-FENCE-RECOVERY.md",
+          "path:scripts/completed-source-correction-fence-recovery-repository-adapter.mjs",
+          "semantic:completed-fence-recovery-redormancy"
+        ],
+        "writeSetDigest": "5711bb987ec27ee8c4ef3cfb6f59ce6b5f782698e38b5670a92843bb8befd42a",
+        "laneRevision": "56a865b42a403fb4dde1efe200e0e0080a5b4b75",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T11:49:03.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3bedec25928d40a279f3e8d466ddf5843a198d6064c5ed352d1b462432b310ae",
+      "digest": "e76cb4720e238ade4ac7b69741a0ffa41590edcaacea1d12d95f25a19eefbc28"
     }
   ]
 }

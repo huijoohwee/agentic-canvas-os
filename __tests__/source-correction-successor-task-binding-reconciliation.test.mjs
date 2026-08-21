@@ -7,6 +7,8 @@ import {
 } from "../scripts/source-correction-successor-task-binding-reconciliation-contract.mjs";
 import { createSourceCorrectionSuccessorTaskBindingReconciliationController }
   from "../scripts/source-correction-successor-task-binding-reconciliation-controller.mjs";
+import { currentSuccessorRepair }
+  from "../scripts/source-correction-successor-task-binding-reconciliation-repository-adapter.mjs";
 
 const D = value => digestValue({ value });
 const S = value => String(value).repeat(40).slice(0, 40);
@@ -176,4 +178,18 @@ test("rejects cross-plan terminal repair adoption", () => {
     }),
     /terminal receipt join/u,
   );
+});
+
+test("ignores a valid terminal repair retained from a predecessor successor", () => {
+  const plan = buildPlan(evidence());
+  const previous = repair(plan, { successorClaimId: D("previous-successor") });
+  const lease = {
+    cloudAuthority: { claimId: plan.evidence.successorClaimId },
+    sourceCorrectionSuccessorTaskBindingReconciliation: previous,
+  };
+  assert.equal(currentSuccessorRepair(lease), null);
+  assert.equal(currentSuccessorRepair({
+    ...lease,
+    cloudAuthority: { claimId: previous.successorClaimId },
+  }).receiptDigest, previous.receiptDigest);
 });

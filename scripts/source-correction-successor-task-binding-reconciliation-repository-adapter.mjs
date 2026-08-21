@@ -54,9 +54,7 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
       || lease.cloudAuthority?.state !== "active") {
       throw new Error("Source-correction successor binding requires its active admitted source lane.");
     }
-    const repair = lease.sourceCorrectionSuccessorTaskBindingReconciliation
-      ? normalizeRepair(lease.sourceCorrectionSuccessorTaskBindingReconciliation)
-      : null;
+    const repair = currentSuccessorRepair(lease);
     const localHeadSha = git(["rev-parse", "HEAD"]);
     const remoteHeadSha = remoteHead(git(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]));
     const clean = git(["status", "--porcelain"]) === "";
@@ -241,6 +239,12 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
   }
 
   return Object.freeze({ inspect, project, verify });
+}
+
+export function currentSuccessorRepair(lease) {
+  if (!lease?.sourceCorrectionSuccessorTaskBindingReconciliation) return null;
+  const repair = normalizeRepair(lease.sourceCorrectionSuccessorTaskBindingReconciliation);
+  return repair.successorClaimId === lease.cloudAuthority?.claimId ? repair : null;
 }
 
 function assertExactRegisteredLane({ repository, branch, git }) {

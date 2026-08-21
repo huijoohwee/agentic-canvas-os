@@ -381,9 +381,9 @@ function integrateSessionUnfenced({
     }
     const allowProtectedMainRefresh = lease.sessionId === sessionId &&
       (lease.status === "delivery" || reviewReadyDelivery);
-    const deliveryAuthorizedHeadSha = lease.deliveryHeadSha
-      || commitEvidence?.commitSha
-      || (reviewReadyDelivery ? lease.reviewHeadSha : null);
+    const deliveryAuthorizedHeadSha = reviewReadyDelivery
+      ? lease.reviewHeadSha
+      : lease.deliveryHeadSha || commitEvidence?.commitSha;
     const expiredDeliveryRecovery = recoverExpiredDeliveryCloudAuthority({
       lease, authority: deliveryCloudAuthority, branch,
       headSha: deliveryAuthorizedHeadSha, gitText, ghText, run, inspectCloudStatus,

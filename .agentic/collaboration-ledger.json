@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 3774,
-  "headDigest": "912b92a8bf478e4c6363e991d0d1bc8175a49110d0a2e4531478dc094fb761a2",
+  "sequence": 3775,
+  "headDigest": "41b5c84765ecc1516fca60b7e5be728c529e123b34631564c83a06d42176ce77",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -189231,6 +189231,46 @@
       },
       "claimDigest": "af2f0257f88e6c3f4aa492ef4c9d91ad7c41a427475d354f32b3c21b0ea2e63f",
       "digest": "912b92a8bf478e4c6363e991d0d1bc8175a49110d0a2e4531478dc094fb761a2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 3775,
+      "parentDigest": "912b92a8bf478e4c6363e991d0d1bc8175a49110d0a2e4531478dc094fb761a2",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7e92d16cf54a96a85037a0f9f196fba7cfb381d70b96d562d037f13c908c5abc",
+      "idempotencyKey": "f12d810f46538005c180b7d43f95018d8035e61634f8fe9961b29043d11cbbed",
+      "requestDigest": "99bcb5aa1463d1c3ab3fe05e8e2f83e7dcef1e8a476efcdc084322cbd713008f",
+      "evaluationTime": "2026-08-21T04:37:30.000Z",
+      "claimCore": {
+        "claimId": "7e92d16cf54a96a85037a0f9f196fba7cfb381d70b96d562d037f13c908c5abc",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c81662233e25480a99b4fe7a96ee5bb8703a98247fec34978c840f5fe38ffd5c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:668bbb6853c5ea38dbc853c89460bdf7bf1872d2ced26aeb6b250e8c000f4200",
+        "canonicalBaseRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "semantic:completed-source-correction-task-bound-completion"
+        ],
+        "writeSetDigest": "49fe8e64afd330db22526f4acf1b464c5b2da17636ca83997027844abf5fd319",
+        "laneRevision": "9c69cb1582d00956a037fdc6288962a3f7448769",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-21T06:37:30.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d43c3d6c6bf5fc3ffd17f9c5ac95d908b4ceda4c841357a60fdc191981fa91c2",
+      "digest": "41b5c84765ecc1516fca60b7e5be728c529e123b34631564c83a06d42176ce77"
     }
   ]
 }

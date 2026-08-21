@@ -145,11 +145,18 @@ try {
     }
     run("git", ["fetch", "origin", "main"]);
     const before = collectScopedLaneState({ repository: canonicalRepo });
+    const rootSourceBootstrapAuthorization = rootSourceBootstrapInput
+      ? parseJsonObject(
+        rootSourceBootstrapInput,
+        "root-source bootstrap authorization",
+      )
+      : null;
     const targetPlan = inspectTaskWorktreeTarget({
       invocationPath,
       repoRoot: canonicalRepo,
       targetPath: requestedWorktreePath,
       gitText,
+      allowDirtyCanonicalForRootBootstrap: Boolean(rootSourceBootstrapAuthorization),
     });
     const normalizedScope = sanitizeScope(rawScope);
     const device = sanitizeDevice(
@@ -162,12 +169,6 @@ try {
       { expectedScope: normalizedScope },
     );
     admissionManifest = manifest;
-    const rootSourceBootstrapAuthorization = rootSourceBootstrapInput
-      ? parseJsonObject(
-        rootSourceBootstrapInput,
-        "root-source bootstrap authorization",
-      )
-      : null;
     const targetRepository = readOption(args, "target-repository")
       || ghText(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim();
     const authority = normalizeCloudAuthority(
@@ -233,6 +234,9 @@ try {
         gitText, run, expectedBaseSha: before.canonicalBaseSha,
         expectedTargetObservationDigest: targetPlan.targetObservationDigest,
         fetchBase: false,
+        allowDirtyCanonicalForRootBootstrap: Boolean(
+          admissionReport.rootSourceBootstrapAuthorization,
+        ),
       });
     });
     activeInvocationPath = provision.target;

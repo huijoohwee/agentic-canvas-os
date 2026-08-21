@@ -240,6 +240,7 @@ function fixture() {
 test("candidate-bound cross-repository bootstrap preserves exact lanes and dormant peers", () => {
   const input = fixture();
   const report = evaluate(input);
+  assert.deepEqual(report.authoringAdmission.findings, []);
   assert.equal(report.authoringAdmission.status, "planned");
   assert.match(
     report.lanes.find(item => item.path === DIRTY_BOOTSTRAP).overlapReasons[0],
@@ -265,6 +266,40 @@ test("candidate-bound cross-repository bootstrap preserves exact lanes and dorma
   assert.equal(
     report.lanes.find(item => item.path === RETIRED).dirty,
     true,
+  );
+});
+
+test("canonical dirty main may be the exact root-bootstrap maintenance source", () => {
+  const input = fixture();
+  input.lanes = input.lanes
+    .filter(item => item.path !== MAINTENANCE)
+    .map(item => (
+      item.path === ROOT
+        ? lane(ROOT, { branch: "refs/heads/main", dirty: true })
+        : item
+    ));
+  input.maintenanceProof = buildMaintenanceProof({
+    path: ROOT,
+    repositoryRoot: ROOT,
+    branch: "refs/heads/main",
+    semanticScope: "main",
+    declaredWriteSet: ["path:docs/retained.md", "semantic:main"],
+    changedPaths: ["docs/retained.md"],
+  });
+  input.authorization = {
+    ...input.authorization,
+    maintenanceSourcePath: ROOT,
+  };
+
+  const report = evaluate({
+    ...input,
+    canonicalSourceDisposition: "root-bootstrap-dirty",
+  });
+  assert.deepEqual(report.authoringAdmission.findings, []);
+  assert.equal(report.authoringAdmission.status, "planned");
+  assert.equal(
+    report.rootSourceBootstrapAuthorization.maintenanceMode,
+    "canonical-dirty-main",
   );
 });
 
@@ -649,12 +684,13 @@ function evaluate({
   verification,
   lanes,
   maintenanceProof,
+  canonicalSourceDisposition = "exact",
 }) {
   return evaluateScopedLaneAdmission({
     repository: ROOT,
     canonicalPath: ROOT,
     canonicalBaseSha: BASE,
-    canonicalSourceDisposition: "exact",
+    canonicalSourceDisposition,
     targetPath: TARGET,
     branch: "agent/operator/core",
     semanticScope: "core",

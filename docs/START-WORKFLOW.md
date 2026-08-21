@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-07-27"
+date: "2026-08-21"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -69,7 +69,6 @@ completion_requires:
   - "memory-log structural compliance"
   - "context-record planning structural compliance"
 ---
-
 # Knowgrph Conflict-Safe Session Start Workflow
 
 ## Authoritative Rule
@@ -80,8 +79,7 @@ The canonical `main` worktree remains the only Dev runtime and synchronization o
 
 GitHub-native protected `main`, remotely addressable task branches, pull-request review, required checks, and merge receipts are the upstream multi-device coordination contract. Leases, worktree registration, `device:*` flows, and runtime receipts are additive orchestration only; they do not replace branch protection or review authority. Treat protected `main` as a remote publication and integration boundary, not as a blanket prohibition on ordinary local commits. A normal local commit on an admitted `agent/<device>/<semantic-scope>` branch records lane-local progress only; it does not challenge protected-branch policy until the lane is published for review or integration.
 
-Parallel users, devices, sessions, and chats may mutate different semantic scopes only through distinct registered worktrees, branches, local lease projections, draft pull requests, and current non-overlapping claims in the cloud collaboration CAS ledger. The authenticated principal supplies Actor ID; the cloud claim and local projection bind device, session, worktree, scope, epochs, declared paths, and fences. A pull request or local lease alone is not cross-device authority. The shared remote pull-request set is the cross-user and cross-device scope registry projection, not the CAS authority. See `CLOUD-COLLABORATION.md` and `SCOPED-LANE-ADMISSION.md`. An active overlapping cloud claim is an upstream blocker, not a downstream cleanup task. Do not start, resume, review, park for handoff, or integrate a lane by relying on local lease expiry, pull-request state, clean mergeability, or protected-source advancement. Continue only after the protected remote ledger records an accepted release, handoff, or reclaim for the exact overlapping scope and fence. Every newly claimed writer lane also requires the external proof-of-possession capability in `TASK-BOUND-LANE-AUTHORITY.md`; pass its absolute external path as `--task-authority=<capability.json>` to each `device:*` command. Session IDs are correlation metadata, not bearer credentials. Existing unbound lanes require an exact clean `plan-migration`/`migrate` transition, while a clean handoff requires both current and next-generation capabilities plus exact plan authorization. Dirty, expired, dormant, or ambiguous lanes preserve their bytes and binding and cannot transfer authority by session reassignment, supervisor takeover, environment replay, or capability reissuance.
-Treat "multiple independent writers can publish different revisions for the same path" as a fail-closed publication boundary. Distinct branch names, sessions, semantic-scope labels, or review requests do not make lanes independent when their declared or generated publish paths can still collide.
+Parallel users, devices, sessions, and chats may mutate different semantic scopes only through distinct registered worktrees, branches, local lease projections, draft pull requests, and current non-overlapping claims in the cloud collaboration CAS ledger. The authenticated principal supplies Actor ID; the cloud claim and local projection bind device, session, worktree, scope, epochs, declared paths, and fences. A pull request or local lease alone is not cross-device authority. The shared remote pull-request set is the cross-user and cross-device scope registry projection, not the CAS authority. See `CLOUD-COLLABORATION.md` and `SCOPED-LANE-ADMISSION.md`. An active overlapping cloud claim is an upstream blocker, not a downstream cleanup task. Do not start, resume, review, park for handoff, or integrate a lane by relying on local lease expiry, pull-request state, clean mergeability, or protected-source advancement. Continue only after the protected remote ledger records an accepted release, handoff, or reclaim for the exact overlapping scope and fence. Every newly claimed writer lane also requires the external proof-of-possession capability in `TASK-BOUND-LANE-AUTHORITY.md`; pass its absolute external path as `--task-authority=<capability.json>` to each `device:*` command. Session IDs are correlation metadata, not bearer credentials. Existing unbound lanes require an exact clean `plan-migration`/`migrate` transition, while a clean handoff requires both current and next-generation capabilities plus exact plan authorization. Dirty, expired, dormant, or ambiguous lanes preserve their bytes and binding and cannot transfer authority by session reassignment, supervisor takeover, environment replay, or capability reissuance. Treat "multiple independent writers can publish different revisions for the same path" as a fail-closed publication boundary. Distinct branch names, sessions, semantic-scope labels, or review requests do not make lanes independent when their declared or generated publish paths can still collide.
 
 The coordination model is one clean registered canonical `main` worktree plus zero or more isolated registered task worktrees. Each lane has one active writer, one current cloud fence, and one declared write scope. A same-scope peer waits for an exact pushed-SHA handoff; a release or review wait does not transfer ownership from an older fence to a newer protected `origin/main` revision.
 
@@ -91,11 +89,14 @@ New or untracked authored paths stay byte-for-byte in their actual owning task w
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
 
-`START-WORKFLOW.md` owns session startup. `CANONICAL-LIFECYCLE.md` owns the
-provider-neutral receipt protocol. `RELEASE-WORKFLOW.md` is its current
-reference implementation for integration and release after development is
-complete. The three invocation dictionaries remain the only `/`, `#`, and `@`
-token authority.
+## Split-Lane Work Groups
+
+A requested outcome spanning repositories or authority domains is a dependency-ordered group of minimal work units, never one shared lane or authority envelope.
+
+- Split at repository, authority-owner, or independently verifiable non-overlapping write-set boundaries; keep one unit when bytes share a source owner, generated publish path, or atomic invariant. A profile may adapt presentation, but never collapse separate authority domains. Give every unit its own repository adapter, canonical base, branch, worktree, semantic scope, declared write set, task capability, claim, epoch, fence, review identity, named checks, and receipts; a shared task, session, label, provider, or operator grants none of these across units.
+- Localize blockers: a dirty, overlapping, or unavailable unit blocks only itself and its dependents, while an independently admitted disjoint unit may proceed. The group remains partial until dependency closure, and no passing unit promotes another unit's readiness. Leave pre-existing bytes with their physical owner: a disjoint unit may record preservation but cannot clean, stash, adopt, move, reconcile, release, retire, or deploy another unit. Integrate only through explicit dependency edges and each repository's protected controller; branch age or list order creates neither ordering nor shared authority.
+
+`START-WORKFLOW.md` owns session startup. `CANONICAL-LIFECYCLE.md` owns the provider-neutral receipt protocol. `RELEASE-WORKFLOW.md` is its current reference implementation for integration and release after development is complete. The three invocation dictionaries remain the only `/`, `#`, and `@` token authority.
 
 ## Session Context Contract
 

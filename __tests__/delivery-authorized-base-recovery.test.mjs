@@ -370,7 +370,12 @@ test("repository adapter preserves CAS and no-force invariants", () => {
   assert.match(source, /baseSha: authority\.canonicalBaseSha/u);
   assert.match(source, /taskAuthority:\s*current\.taskAuthority\s*\?\s*continueTaskAuthorityBinding/u);
   assert.match(source, /merge-base", "--is-ancestor", plan\.evidence\.protectedMainSha, selected/u);
-  assert.match(source, /writeSetsOverlap\(changed, plan\.evidence\.declaredWriteSet\)/u);
+  assert.match(
+    source,
+    /changed\.length > 0 && writeSetsOverlap\(changed, plan\.evidence\.declaredWriteSet\)/u,
+  );
+  assert.match(source, /declaredWriteScope: plan\.evidence\.declaredWriteSet/u);
+  assert.doesNotMatch(source, /declaredWriteSet: plan\.evidence\.declaredWriteSet/u);
   assert.match(source, /pull\.baseRefOid !== plan\.evidence\.deliveryBaseSha/u);
   assert.doesNotMatch(source, /canonicalBaseSha: plan\.evidence\.(?:deliveryBaseSha|protectedMainSha)/u);
   assert.match(source, /openSync\(lockPath, "wx"/u);

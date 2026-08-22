@@ -14,6 +14,14 @@ runtime_proof: "../__tests__/reviewed-lane-source-correction.test.mjs"
 
 # Reviewed Lane Source Correction
 
+An open lane whose protected delivery authorization reached the exact candidate before a
+required check failed is also a correction source. Its clean `delivery` lease, PR marker,
+`deliveryHeadSha`, `delivery_authorized` authority, and live `integrated-preserved` claim
+must join exactly. The controller preserves that failed integration as source evidence,
+retires it through the existing integrated-retirement path, and activates only the
+same-owner successor. Auto-merge or merge-queue state still blocks planning, and the
+terminal projection is an active draft lane rather than a merge or deployment claim.
+
 ## Purpose
 
 This controller reopens one exact reviewed lane for correction by its original

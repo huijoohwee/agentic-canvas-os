@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4243,
-  "headDigest": "1efd4cc078f43426804301d78b434ec5d8a1796f4156e1b642599153fb0264c1",
+  "sequence": 4244,
+  "headDigest": "6c3e436537050b25073f99a0bba81ff82c4f556b533c7f4a044c9c947c3dfc26",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -212666,6 +212666,50 @@
       },
       "claimDigest": "1dd06eb41764fd96a9a4a80fca1cc52ed270fea40256668eaf4297ce0a05eb8f",
       "digest": "1efd4cc078f43426804301d78b434ec5d8a1796f4156e1b642599153fb0264c1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4244,
+      "parentDigest": "1efd4cc078f43426804301d78b434ec5d8a1796f4156e1b642599153fb0264c1",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "928d6f02d63809b6e666c13bf0417b4687f644525b6e6cfd4f27563002472d8b",
+      "idempotencyKey": "6aa5ab5d8f837fc0a9ed0c746fe59726c213165faff5ee42d702ab56dd763380",
+      "requestDigest": "51b7ed1d2e8ee2796356bc0e2041f2579236af913eb7c3928f63be7bd68c050b",
+      "evaluationTime": "2026-08-22T12:06:41.000Z",
+      "claimCore": {
+        "claimId": "928d6f02d63809b6e666c13bf0417b4687f644525b6e6cfd4f27563002472d8b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:dedcf6f8a8762184b70113f625ba6f53bfc99b7c36d0eff3a5d0340f7516815a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0694ab36cd74b55aa5af944650a46130cde7dbd78de4892f5fdd16f22577bef7",
+        "canonicalBaseRevision": "7af30450aa8de499d039a1ddc83e1f5f68cdeca9",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-pr-marker-recovery.test.mjs",
+          "path:docs/PLANNED-OWNED-DIRT-PR-MARKER-RECOVERY.md",
+          "path:scripts/planned-owned-dirt-pr-marker-recovery-contract.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-recovery-controller.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-recovery-repository-adapter.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-recovery.mjs",
+          "semantic:planned-owned-dirt-pr-marker-recovery"
+        ],
+        "writeSetDigest": "962cc3288581cfeadbd29c8fe6f3b4a45a69687d11aa584a389c7a127fafe8a3",
+        "laneRevision": "2794a31d83ca52ea56f822ff69c229ccf9b9aaa7",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T13:05:46.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApMloA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e91dda5ac197d22b1d0c5e3752c4d37319c46ad8f6cd0e8c375620bac87f44ee",
+      "digest": "6c3e436537050b25073f99a0bba81ff82c4f556b533c7f4a044c9c947c3dfc26"
     }
   ]
 }

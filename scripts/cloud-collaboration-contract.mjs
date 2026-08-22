@@ -390,14 +390,24 @@ function buildClaimCore(intent, ledger, evaluationTime) {
 function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime, protectedRevision = null }) {
   if (!intent.predecessorClaimId) return false;
   const predecessor = hydrate(findClaimEntry(ledger, intent.predecessorClaimId), evaluationTime);
+  const predecessorWriteSet = predecessor
+    ? normalizeWriteSet(predecessor.declaredWriteScope) : [];
+  const successorWriteSet = normalizeWriteSet(intent.declaredWriteScope);
+  const sameWriteSet = predecessor?.writeSetDigest === intent.writeSetDigest;
+  const strictSuperset = successorWriteSet.length > predecessorWriteSet.length
+    && predecessorWriteSet.every(value => successorWriteSet.includes(value));
+  const stateAndScopeMatch = (["dormant-preserved", "retired"].includes(predecessor?.state)
+      && sameWriteSet)
+    || (["current", "dormant-preserved", "retired"].includes(predecessor?.state)
+      && strictSuperset);
   const subjectMatches = predecessor
-    && ["dormant-preserved", "retired"].includes(predecessor.state)
+    && stateAndScopeMatch
     && predecessor.repositoryId === intent.repositoryId
     && predecessor.workItemId === intent.workItemId
-    && predecessor.writeSetDigest === intent.writeSetDigest
     && predecessor.laneRevision === intent.laneRevision;
   if (!subjectMatches) return false;
-  if (predecessor.canonicalBaseRevision === intent.canonicalBaseRevision) return true;
+  if (sameWriteSet
+    && predecessor.canonicalBaseRevision === intent.canonicalBaseRevision) return true;
   return Boolean(normalizeCanonicalDescendantProof({
     value: intent.canonicalDescendantProof,
     sourceBaseSha: intent.canonicalBaseRevision,

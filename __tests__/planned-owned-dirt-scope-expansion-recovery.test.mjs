@@ -11,7 +11,8 @@ import {
 } from "../scripts/planned-owned-dirt-scope-expansion-recovery-contract.mjs";
 import { createPlannedOwnedDirtScopeExpansionRecoveryController }
   from "../scripts/planned-owned-dirt-scope-expansion-recovery-controller.mjs";
-import { capturePlannedOwnedDirtProtectedMainAdvance }
+import { capturePlannedOwnedDirtCanonicalDescendantProof,
+  capturePlannedOwnedDirtProtectedMainAdvance }
   from "../scripts/planned-owned-dirt-scope-expansion-recovery-repository-adapter.mjs";
 import { buildPlannedOwnedDirtScopeExpansionRecoveryEvidence }
   from "../scripts/planned-owned-dirt-scope-expansion-recovery-evidence.mjs";
@@ -133,6 +134,34 @@ test("protected main may advance only as a path-disjoint descendant", () => {
       return "";
     },
   }), /not an ancestor/u);
+});
+
+test("scope expansion builds an exact cloud descendant proof", () => {
+  const baseSha = "1".repeat(40);
+  const protectedMainSha = "2".repeat(40);
+  const proof = capturePlannedOwnedDirtCanonicalDescendantProof({
+    baseSha,
+    protectedMainSha,
+    declaredWriteSet: TARGET_WRITE_SET,
+    gitText: argumentsList => argumentsList[0] === "diff"
+      ? "docs/current.md\0" : "",
+  });
+  assert.equal(proof.sourceBaseSha, baseSha);
+  assert.equal(proof.targetBaseSha, protectedMainSha);
+  assert.deepEqual(proof.canonicalChangedPaths, ["docs/current.md"]);
+  assert.deepEqual(proof.preservedChangedPaths, ["src/new-runtime", "src/owned"]);
+  assert.equal(capturePlannedOwnedDirtCanonicalDescendantProof({
+    baseSha,
+    protectedMainSha: baseSha,
+    declaredWriteSet: TARGET_WRITE_SET,
+    gitText: () => { throw new Error("must not run"); },
+  }), null);
+  assert.throws(() => capturePlannedOwnedDirtCanonicalDescendantProof({
+    baseSha,
+    protectedMainSha,
+    declaredWriteSet: TARGET_WRITE_SET,
+    gitText: () => "src/owned/file.mjs\0",
+  }), /overlaps preserved lane paths/u);
 });
 
 function fakeAdapter(state) {

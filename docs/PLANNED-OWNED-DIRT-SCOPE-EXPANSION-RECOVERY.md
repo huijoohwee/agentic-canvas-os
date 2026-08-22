@@ -51,7 +51,11 @@ Planning requires all of the following:
   path-disjoint from the expanded target write set.
 
 The operation seals the pull-request base, protected-main tree, and exact
-changed-path digest into controller evidence. An overlapping path, a
+changed-path digest into controller evidence. When canonical `main` advanced,
+the waiting-successor claim also carries the exact disjoint descendant proof;
+the cloud contract accepts it only for the named current or preserved
+predecessor on the same lane when the successor write set is a strict superset.
+An overlapping path, a
 non-descendant base, or any protected-main identity drift that cannot be
 recaptured fails closed. The task-authority successor contract still keeps the
 lane's base stable, so a permitted disjoint advance cannot disguise a rebase or

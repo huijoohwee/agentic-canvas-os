@@ -2,7 +2,7 @@
 title: "Agentic Software Development Lifecycle Runtime"
 graphId: "md:agentic-software-development-lifecycle-runtime"
 doc_type: "Runtime Contract"
-date: "2026-07-30"
+date: "2026-08-13"
 lang: "en-US"
 schema: "agentic-sdlc-runtime/v1"
 frontmatter_contract: "required"
@@ -79,8 +79,29 @@ The raw current Knowgrph observation is still identity-unavailable and unevaluat
 |---|---|---|
 | PRD, TAD & ADR Guidelines | Rule identity, rule classification, frontmatter, VCC and Evidence Reference shapes, readiness ladder, lanes, authoring findings, finding recording, and deterministic comparison. | Task scheduling, agent roles, task state, grants, budgets, or run recovery. |
 | Agentic SDLC Guidelines | Task derivation, roles, state machine, capability grants, four budgets, verification, evidence production, persistence, and Operator gates. | Authoring vocabulary, readiness redefinition, delivery, or deployment. |
+| Specification Chain Module | Artifact-role identity, the requirements-to-design and design-to-tasks coverage seams, the re-derivation cascade, phase-advance authority, and seam-preserving adaptation. | Document contents, task state, budgets, evidence shape, or any release stage. |
 | Agentic Canvas OS | Fence-aware guideline parser, exact Rule IDs, unified finding registry, pure execution-run evaluator, report normalization, and local CLI. | Durable runner supervision, production release, or an alternate work-item ledger. |
 | Knowgrph managed implementation runs | Durable operational run, verifier execution, changed-path evidence, recovery, and `delivery_ready` handoff. | Canonical `agentic-sdlc-run/v1` readiness until pre-dispatch VCCs, grants, bounds, roles, transitions, consumption, and stable receipts are durably recorded. |
+
+## Specification Chain Conformance
+
+The pinned execution set now carries a `specification-chain-phases` seam over a three-role artifact chain: a requirements artifact owning normative behaviour and correctness properties, a design artifact owning structure, and a task list owning work. Two coverage seams join them, and the separately loadable Specification Chain module owns the complete protocol.
+
+The runtime consumes the chain as an admission precondition, not as a new stage. A task list is admissible only when both seams are closed against the exact upstream revisions it was derived from, so the existing `admission:authoring-baseline` and `admission:task-plan` producer contracts gain seam evidence rather than a new operation:
+
+| Seam evidence | Joined to | Fails closed as |
+|---|---|---|
+| Every requirement criterion covered by at least one design element, and every design element citing at least one criterion | `admission:authoring-baseline` | `undesigned-criterion`, `ungrounded-design-element` |
+| Every task citing its criterion, condition, and design-element joins | `admission:task-plan` | `ungrounded-task`, and the chain's structural join |
+| Each downstream artifact recording the exact upstream revision it was derived from, and that revision being current | `admission:authoring-baseline` | `stale-downstream-artifact` |
+| A recorded Operator decision for each seam crossing, produced by a party that did not author the artifact | `admission:collaboration` plus the Operator authority | `phase-advanced-without-approval` |
+| Both seams carrying joins even where the chain is collapsed or entered at design | `admission:task-plan` | `seam-elided` |
+
+Behaviour and correctness properties originate only in the requirements role. Structure originates only in the design role. A property or behaviour first appearing downstream is `requirement-introduced-downstream` at `blocker` severity, and an execution task that decides structure has removed a seam rather than saved a step.
+
+Adaptation is bounded the same way the rest of this runtime is bounded: the chain may collapse roles into one document, reorder its entry point so the requirements artifact is derived from an existing design, or carry a reproduction-condition artifact in the requirements role for a corrective change. None of those removes a seam. Scaling seam evidence to change size is conformant; presenting zero joins as a satisfied seam is not.
+
+This section is **not yet evaluated by the pinned baseline**. The `guideline_source` pin above resolves the execution set at `1.12.2`, which predates the `specification-chain-phases` section and the six chain finding types. Until a deliberate re-pin lands, `npm run agentic-sdlc:source:check` reads the pinned historical bytes and reports the earlier vocabulary, and no chain finding can be raised by this repository. The re-pin is a separate authored act requiring, in order: a committed guideline revision, recomputed document digests over those committed bytes, a regenerated execution rule catalog and finding-rule binding set, and the added `specification-chain-phases` anchor in `requiredSectionAnchors.execution` plus a `chain-seam-check` load profile. Adding the anchor before the pin advances would fail the source check, because the pinned revision does not contain the section.
 
 ## Source Contract
 
@@ -265,6 +286,7 @@ The first command runs the source/parser, state-machine, negative finding, deter
 | VCC | Named check | Constraint |
 |---|---|---|
 | Source bytes are the admitted baseline | `npm run agentic-sdlc:source:check` | Explicit locators and digests only; no path-derived semantic claim. |
+| Specification chain seams are closed before dispatch | Admission suites over `admission:authoring-baseline` and `admission:task-plan` | Both seams carry joins against the exact recorded upstream revisions; behaviour and structure originate only in their owning roles; each crossing carries an independent Operator decision. Unevaluated until the guideline baseline is re-pinned. |
 | Rule identity is executable | Focused v1.7 parser tests | Real headings only; every extracted rule has text, class, and one-based Rule ID. |
 | Finding vocabulary is closed | Unified registry tests | Exact authoring plus execution enumeration and canonical severities; zero counts retained. |
 | Tasks are grounded and bounded | Agentic SDLC runtime tests | Every VCC covered; DAG, grants, four budgets, and circuit breaker valid. |

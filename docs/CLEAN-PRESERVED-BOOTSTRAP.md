@@ -36,7 +36,7 @@ one closed mode:
 |---|---|
 | Dirty maintenance | Dirty, unleased, nonempty changed paths, and every changed path inside the exact maintenance manifest. |
 | Canonical dirty maintenance | The registered primary `main` worktree is dirty and unleased, its HEAD is equal to or an ancestor of fetched `origin/main`, and every changed path remains in the exact maintenance manifest. |
-| Clean retired preservation | Clean, zero changed paths, exactly one matching lease, and exactly one normalized `agentic-local-review-retirement-receipt/v1` or `agentic-retired-planned-admission-owner-receipt/v1` proving `retired-preserved`. |
+| Clean retired preservation | Clean, zero changed paths, exactly one matching lease, and exactly one normalized `agentic-local-review-retirement-receipt/v1`, `agentic-retired-planned-admission-owner-receipt/v1`, or `agentic-planned-recovery-pr-marker-local-release/v1` proving `retired-preserved`. |
 
 The clean mode normalizes the single applicable retirement receipt owner, then
 binds its receipt digest into the maintenance content and state digests. The

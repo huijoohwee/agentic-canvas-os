@@ -31,6 +31,10 @@ changes the existing pull request back to draft, and projects the matching
 active writer lease. The source owner can then make a normal scoped correction
 and return through `device:review`.
 
+Activating that successor clears the prior `reviewHeadSha`, `deliveryHeadSha`,
+and integration commit projection together. A corrected head must therefore
+earn a new review and delivery authorization instead of replaying stale publish state.
+
 This operation does not merge, integrate, deploy, close a pull request, delete
 a ref, remove a worktree, acquire another semantic scope, or grant the operator
 session source-write authority.

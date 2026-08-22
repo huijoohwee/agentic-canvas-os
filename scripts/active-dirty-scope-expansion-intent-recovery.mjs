@@ -15,6 +15,7 @@ const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const OPTIONS = new Set([
   "authorize",
   "json",
+  "ledger-repository",
   "plan-digest",
   "pull-request",
   "session",
@@ -39,6 +40,7 @@ export async function main(argumentsList = process.argv.slice(2), {
   }
   const adapter = createAdapter({
     sourceRepository: required(options, "source-repository"),
+    ledgerRepository: required(options, "ledger-repository"),
     targetRepository: required(options, "target-repository"),
     pullRequestNumber: positiveInteger(
       required(options, "pull-request"),
@@ -123,7 +125,8 @@ function publicMessage(error) {
 function usage() {
   return "Usage: active-dirty-scope-expansion-intent-recovery.mjs plan|run "
     + "--source-repository=<preserved-dirty-worktree> --session=<source-session> "
-    + "--target-repository=<owner/name> --pull-request=<number> "
+    + "--ledger-repository=<owner/name> --target-repository=<owner/name> "
+    + "--pull-request=<number> "
     + "[--plan-digest=<digest> --authorize=<exact text>] [--json]";
 }
 

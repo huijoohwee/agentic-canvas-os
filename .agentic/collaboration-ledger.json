@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4105,
-  "headDigest": "331f3a35523620c12cef4370d6a2eb5ebb70adcfd5ad32033f603fb074610a3e",
+  "sequence": 4106,
+  "headDigest": "d3d234781547a86838d76f62e84d2473c4c5dbdc3ebb0f41e6539e5daf047a35",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -205541,6 +205541,68 @@
       },
       "claimDigest": "a748901e214013c24af8b4c4fac3e0fc37eea09ed02486ab6978eb9f05941505",
       "digest": "331f3a35523620c12cef4370d6a2eb5ebb70adcfd5ad32033f603fb074610a3e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4106,
+      "parentDigest": "331f3a35523620c12cef4370d6a2eb5ebb70adcfd5ad32033f603fb074610a3e",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "2f986c44fcc6476c3c7cfcbbb18fa4e7f0c3d621dd80fa8bbe4967d0ca1d36c9",
+      "idempotencyKey": "024d8d31633583706710294dd1012978ffdd38d5b391d55e8456529c6244c711",
+      "requestDigest": "61e5416fd204e91dbcbc7086cd6d5dffe3b5734e42179d697bc6981b12b2ec10",
+      "evaluationTime": "2026-08-22T05:21:40.000Z",
+      "claimCore": {
+        "claimId": "2f986c44fcc6476c3c7cfcbbb18fa4e7f0c3d621dd80fa8bbe4967d0ca1d36c9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:9d0fed643f9b80c324c094c918fbc9d25983a5e37b4e5ae244fecf65f58d95c2",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:c0088d6e3a9f457e285874153eda6707572620f902fe0b0dccf6fbe5b88afd90",
+        "canonicalBaseRevision": "2749c850480bc41259edffa893af45c4145ea388",
+        "declaredWriteScope": [
+          "path:.github/workflows/release.yml",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:docs/documents/knowgrph-cloudflare-document.md",
+          "path:docs/documents/knowgrph-cross-repo-publish-topology.md",
+          "path:docs/knowgrph-acos-deploy-runbook.md",
+          "path:package.json",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/__tests__/production-release-lifecycle.test.mjs",
+          "path:scripts/__tests__/seed-storage-documents-d1.test.mjs",
+          "path:scripts/lib/production-release-lifecycle-evidence.mjs",
+          "path:scripts/lib/seed-storage-documents-d1.mjs",
+          "path:scripts/production-release-lifecycle.mjs",
+          "path:scripts/seed-storage-docs-to-cloudflare.mjs",
+          "path:scripts/verify-production-release-transports.mjs",
+          "semantic:production-release-terminal-receipts-v3"
+        ],
+        "writeSetDigest": "f0061d9fdcaedfe91b9b8e67faf0eab446fbcb1351466afdc231d14745e1a648",
+        "laneRevision": "2749c850480bc41259edffa893af45c4145ea388",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-14T02:34:39.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "cf3ffec6eb2e5f541f263b0ad0db278eb5502c8e5a1ef45e1da0eecdc5061d1e",
+        "eligibleSince": "2026-08-14T02:04:39.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "2749c850480bc41259edffa893af45c4145ea388",
+          "reviewRequestId": null,
+          "bytesDigest": "ce0106fb18701595631a1860ab1a848023f8bcecdf215275a23c4a209881c867",
+          "namedChecksDigest": "f61177d1191ced18e6b18988fc8011ef260165694204840fc3e869ba6179815e",
+          "handoffEvidenceDigest": "066697cffeb25b9ccaa999757213bd38c2287ee3b9ab7e679aeb7d10394d8c41",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-22T05:21:40.000Z"
+        }
+      },
+      "claimDigest": "aebd93fd59b88723c2c367ee856d17b213bfb44b8509be374a24b58fba9f564f",
+      "digest": "d3d234781547a86838d76f62e84d2473c4c5dbdc3ebb0f41e6539e5daf047a35"
     }
   ]
 }

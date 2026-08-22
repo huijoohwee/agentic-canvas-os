@@ -18,6 +18,11 @@ publish_policy: "protected Dev integration only; no Production or Cloudflare aut
 
 # Post-merge cloud authority verification
 
+Review-ready delivery verification carries the same bounded protected-main
+refresh receipt both before auto-merge and after merge. A refreshed provider
+head without that receipt is never treated as the cloud-authoritative reviewed
+head, including during response-loss replay.
+
 `device:integrate` normally verifies the live `integrated-preserved` claim. The
 protected-main push workflow then retires that same claim with reason
 `integrated`. If the retirement wins the race with the integrating process, a

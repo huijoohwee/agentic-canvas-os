@@ -1641,7 +1641,7 @@ function isExpiredAdmittedActiveReviewRecoveryLease({
     && lease.admission?.schema === "agentic-lane-admission-lease/v1"
     && lease.admission?.status === "admitted"
     && lease.cloudAuthority?.schema === "agentic-lane-cloud-authority/v1"
-    && lease.cloudAuthority?.state === "active";
+    && ["active", "review_ready"].includes(lease.cloudAuthority?.state);
 }
 
 function isExpiredCurrentCloudAdoptionLease({

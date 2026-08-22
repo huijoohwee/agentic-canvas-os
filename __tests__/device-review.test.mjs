@@ -612,6 +612,31 @@ test("cloud transition crash reconciles the exact pushed review-ready head befor
   assert.ok(events.indexOf(finalVerification) < events.indexOf("lease:release:review_ready"));
 });
 
+test("expired local review replay adopts an exact live review-ready cloud projection", () => {
+  const events = [];
+  const initial = cloudLease({ state: "review_ready", laneRevision: headSha });
+  const outcome = runCloudReview({
+    initial,
+    events,
+    verifyLease: () => {
+      throw new Error(`Writer lease expired at ${initial.expiresAt}.`);
+    },
+    reconcileCloudAuthority: ({ authority }) => ({
+      authority,
+      verification: operationVerification(authority),
+    }),
+    reviewReadyCloudAuthority: () => {
+      throw new Error("review-ready recovery must not transition twice");
+    },
+    verifyReviewReadyCloudAuthority: ({ authority }) => ({ authority }),
+  });
+
+  assert.equal(outcome.saved.status, "review_ready");
+  assert.equal(outcome.saved.reviewHeadSha, headSha);
+  assert.equal(outcome.saved.cloudAuthority.state, "review_ready");
+  assert.ok(events.includes("lease:release:review_ready"));
+});
+
 test("cloud-backed resume fails closed before any mutation", () => {
   const mutations = [];
   assert.throws(() => resume({
@@ -769,6 +794,7 @@ function operationClaim(authority) {
 function runCloudReview({
   initial, events, reconcileCloudAuthority,
   reviewReadyCloudAuthority, verifyReviewReadyCloudAuthority,
+  verifyLease,
 }) {
   let saved = initial;
   let isDraft = true;
@@ -785,7 +811,7 @@ function runCloudReview({
     ghOptional: () => pullRequestUrl,
     leaseStore: {
       read: () => saved,
-      verify: () => saved,
+      verify: verifyLease || (() => saved),
       annotate: ({ values }) => {
         events.push(`lease:annotate:${values.cloudAuthority?.state || "local"}`);
         saved = { ...saved, ...values };

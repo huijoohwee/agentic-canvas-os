@@ -389,6 +389,9 @@ function integrateSessionUnfenced({
           headSha: reviewedDeliveryHeadSha,
           canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
           cloudAuthority: deliveryCloudAuthority,
+          ...(protectedMainAuthorizationRefresh
+            ? { protectedMainRefresh: protectedMainAuthorizationRefresh }
+            : {}),
         });
         const autoMergeArgs = [
           "pr", "merge", "--auto", "--squash", "--subject", squashSubject,

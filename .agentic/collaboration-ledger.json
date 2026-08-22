@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4216,
-  "headDigest": "2f4f19100e231497b3cb3208fa8d64a0f6df0727e2ba8d5543ccec3e93cea557",
+  "sequence": 4217,
+  "headDigest": "23bdf37d76780e1e0594cf76b2c0a563914077c1c68f4dd846f49aecb6942574",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -211318,6 +211318,47 @@
       },
       "claimDigest": "3fc3b90b13eabdb6a6ddf3f29f3785d1be306f569a365480c60c16499d5977ba",
       "digest": "2f4f19100e231497b3cb3208fa8d64a0f6df0727e2ba8d5543ccec3e93cea557"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4217,
+      "parentDigest": "2f4f19100e231497b3cb3208fa8d64a0f6df0727e2ba8d5543ccec3e93cea557",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2638b9d252ba2baafcf11d1726a592ed6b872425f8825709739ca2afefcadf69",
+      "idempotencyKey": "9540f3dd95a8df3aef78e3a05304915408d3547030e74567b90c299da7d4229a",
+      "requestDigest": "c59a1a6e15611833e91e5c8c598f50aa364a83ad886cabfa4023f724d18c2fed",
+      "evaluationTime": "2026-08-22T09:59:56.000Z",
+      "claimCore": {
+        "claimId": "2638b9d252ba2baafcf11d1726a592ed6b872425f8825709739ca2afefcadf69",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b4a7541d4ac4d60346fb1d108a674844c6cb9893b2b884428df81a04c2e35adf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:5e95e5b6ca786b2682984ca55a5e8c2c3510250d998a10d1640e1baa752236b9",
+        "canonicalBaseRevision": "c96f37ab3972385580627d387724e148edfc5680",
+        "declaredWriteScope": [
+          "path:__tests__/current-cloud-expired-local-work-continuation.test.mjs",
+          "path:docs/CURRENT-CLOUD-EXPIRED-LOCAL-WORK-CONTINUATION.md",
+          "path:scripts/current-cloud-expired-local-work-continuation-repository-adapter.mjs",
+          "semantic:current-cloud-state-normalization"
+        ],
+        "writeSetDigest": "21a8311e087555721e525d3c47ade722ac35e24e9dbf6d05ab488612513ec6aa",
+        "laneRevision": "eb8ed1144d6d9675d74630cee02f4cb5c9614134",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T10:58:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAo3VxQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a498c5d19cd118cc216d9142c8f678346150267a9a9184a0ccfaa19c00e1db46",
+      "digest": "23bdf37d76780e1e0594cf76b2c0a563914077c1c68f4dd846f49aecb6942574"
     }
   ]
 }

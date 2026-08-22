@@ -364,20 +364,14 @@ function discoverPreservationReceiptDigests({
   return [...new Set(values)].sort();
 }
 
-function journalIsProvenUnrelated(journal, { target, branch, headSha, treeSha }) {
+function journalIsProvenUnrelated(journal, { target }) {
   const selected = journal?.intent?.planSnapshot?.sourceEvidence
     ?.preservation?.selectedLanes;
   if (!Array.isArray(selected)) return false;
   const subjects = selected.map(item => item?.worktree);
   if (!subjects.every(subject => typeof subject?.path === "string"
-    && path.isAbsolute(subject.path) && path.normalize(subject.path) === subject.path
-    && typeof subject.branch === "string" && subject.branch.startsWith("refs/heads/")
-    && /^[0-9a-f]{40}$/u.test(subject.headSha)
-    && /^[0-9a-f]{40}$/u.test(subject.treeSha))) return false;
-  return !subjects.some(subject => subject.path === target
-    && subject.branch === branch
-    && subject.headSha === headSha
-    && subject.treeSha === treeSha);
+    && path.isAbsolute(subject.path) && path.normalize(subject.path) === subject.path)) return false;
+  return !subjects.some(subject => subject.path === target);
 }
 
 function githubRepository(originUrl) {

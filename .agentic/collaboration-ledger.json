@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4067,
-  "headDigest": "ed4847781e5b7292683ebda67386d0db28661af2455a1aaffd582aa16435b0fd",
+  "sequence": 4068,
+  "headDigest": "c8a39324991ae529a805f747f33d04a5a74655984a98325cc8036c6df55afe79",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -203596,6 +203596,49 @@
       },
       "claimDigest": "ba5e7aad2c6a327eafa17df01dd1852a85d48a8508da74dbbea1a2d3ade4f1b9",
       "digest": "ed4847781e5b7292683ebda67386d0db28661af2455a1aaffd582aa16435b0fd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4068,
+      "parentDigest": "ed4847781e5b7292683ebda67386d0db28661af2455a1aaffd582aa16435b0fd",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "92bbfa07b4b8a57e22650224222307507d739b3615d093ce38f24aa18e6037d7",
+      "idempotencyKey": "68528a260a3c1b56bd109115e1d8b098c2c2b706a1bded74af738650f6fd886b",
+      "requestDigest": "c108cd4b63c82e50390e198de5ce84a95e9b4d0ef9a924ab970cf492d3fd745e",
+      "evaluationTime": "2026-08-22T03:25:02.000Z",
+      "claimCore": {
+        "claimId": "92bbfa07b4b8a57e22650224222307507d739b3615d093ce38f24aa18e6037d7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:fd75a1e04ddbab8bd795a1fd1b08971d4bbe4d1a30c3e4fd53abc0485ed3e8f9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:153dac5488187a832f681b0949f9f2e299ee932362af3a659a70027c30fc338c",
+        "canonicalBaseRevision": "22b942c504b4b9bc68ba970d5f1e783f22c82d0b",
+        "declaredWriteScope": [
+          "path:__tests__/completed-source-correction-fence-recovery-contract.test.mjs",
+          "path:__tests__/source-correction-successor-task-binding-reconciliation.test.mjs",
+          "path:scripts/completed-source-correction-fence-recovery-evidence.mjs",
+          "path:scripts/source-correction-successor-task-binding-reconciliation-repository-adapter.mjs",
+          "semantic:completed-source-correction-adoption-replay"
+        ],
+        "writeSetDigest": "a07d0944caf5f248c2ae005dc8b4a373300945bea634206caa21bb1189cda3ac",
+        "laneRevision": "cfecf4a1e4090a20ab2a236cf9d4edabe18e7088",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T05:22:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAnsXXA",
+        "predecessorClaimId": "f0b9d748fc4d3ebafbedefe97b7a984c4e672d45851449aa75a9dd8767143691",
+        "eligibleSince": "2026-08-22T03:21:02.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-22T03:23:17.000Z"
+      },
+      "claimDigest": "3352ad88f67cd07ac4e471c748ec9a2daeecebcf260697a4b918fe27b9044b37",
+      "digest": "c8a39324991ae529a805f747f33d04a5a74655984a98325cc8036c6df55afe79"
     }
   ]
 }

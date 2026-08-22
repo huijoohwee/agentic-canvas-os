@@ -10,7 +10,11 @@ import {
 
 const hex = (character, length) => character.repeat(length);
 
-function deliveryFixture({ claimTransitionOffset = 0 } = {}) {
+function deliveryFixture({
+  authorityState = "delivery_authorized",
+  claimState = "integrated-preserved",
+  claimTransitionOffset = 0,
+} = {}) {
   const branch = "agent/huis-macbook-pro-3.local/source-owner";
   const headSha = hex("a", 40);
   const baseSha = hex("b", 40);
@@ -53,7 +57,7 @@ function deliveryFixture({ claimTransitionOffset = 0 } = {}) {
     reviewRequestId: integration.reviewRequestId,
     leaseEpoch: 7,
     transitionCounter: 11,
-    state: "delivery_authorized",
+    state: authorityState,
     expiresAt: "2026-08-22T08:00:00.000Z",
     integrationReceiptDigest: hex("f", 64),
     integration,
@@ -96,7 +100,7 @@ function deliveryFixture({ claimTransitionOffset = 0 } = {}) {
   };
   const claim = {
     claimId: authority.claimId,
-    state: "integrated-preserved",
+    state: claimState,
     recordedState: "integrated-preserved",
     writeAuthority: false,
     scopeReserved: true,
@@ -172,6 +176,28 @@ test("delivery-authorized source rejects claim transition drift", () => {
     () => buildReviewedLaneSourceCorrectionEvidence(
       deliveryFixture({ claimTransitionOffset: 1 }),
     ),
+    /reviewed lane identity join is invalid/u,
+  );
+});
+
+test("expired delivery source accepts the exact dormant projection without a ledger transition", () => {
+  const evidence = buildReviewedLaneSourceCorrectionEvidence(deliveryFixture({
+    authorityState: "parked",
+    claimState: "dormant-preserved",
+  }));
+  assert.equal(evidence.authority.state, "parked");
+  assert.equal(evidence.claim.recordedState, "integrated-preserved");
+  assert.equal(evidence.claim.state, "dormant-preserved");
+  assert.equal(evidence.claim.transitionCounter, evidence.authority.transitionCounter);
+});
+
+test("expired delivery source rejects a dormant projection with transition drift", () => {
+  assert.throws(
+    () => buildReviewedLaneSourceCorrectionEvidence(deliveryFixture({
+      authorityState: "parked",
+      claimState: "dormant-preserved",
+      claimTransitionOffset: 1,
+    })),
     /reviewed lane identity join is invalid/u,
   );
 });

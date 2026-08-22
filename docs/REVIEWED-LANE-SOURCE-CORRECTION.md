@@ -73,6 +73,10 @@ Planning is read-only and requires all of the following:
   the source base and is not treated as the current protected head;
 - an open, non-draft, unqueued pull request with exactly one matching writer
   marker and no auto-merge request; and
+- for an expired delivery authorization, the live integrated-preserved claim may
+  project as dormant only when its claim, counter, fence, ledger transition,
+  operation and integration receipts, reviewed head, review request, and focused
+  evidence remain byte-exact with the marker-bound delivery authority; and
 - a distinct operator session and byte-exact authorization statement.
 
 The public plan is path-portable. It contains neither the worktree path nor the

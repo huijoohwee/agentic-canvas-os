@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4156,
-  "headDigest": "58becf4c386816d1c298622cb6468d94f0698ed42810fcd00f373f9bb538d49c",
+  "sequence": 4157,
+  "headDigest": "e46118e51c671e6baf8a47d2d086a713aee49e47b1d89513cbade2973869f79a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -208193,6 +208193,61 @@
       },
       "claimDigest": "ec02bc118a2dc598d15c139d88bdcbf26a24e196681f448000a561a27d206731",
       "digest": "58becf4c386816d1c298622cb6468d94f0698ed42810fcd00f373f9bb538d49c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4157,
+      "parentDigest": "58becf4c386816d1c298622cb6468d94f0698ed42810fcd00f373f9bb538d49c",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "9d7172bad0633001d09baac00dc6782ddc1ae87e6e6aa073392e6ce67acfa564",
+      "idempotencyKey": "3ba02993355d3e5449cf4e77a9ca2cfd322982de4fd8be82e43bbbc55459c39e",
+      "requestDigest": "31a4ae165d2806a132a8ace2f6f265be0d28496cc364d5388078e6b55084deaf",
+      "evaluationTime": "2026-08-22T07:16:55.000Z",
+      "claimCore": {
+        "claimId": "9d7172bad0633001d09baac00dc6782ddc1ae87e6e6aa073392e6ce67acfa564",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:97d2cbd466139698c0eefd62e80775b5fdcb3cd62a3bdd33d3c0f0cd61a213d3",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:e56ff8f36351cbb225f0c10e5b6780d4952ee523869b4fe8f4b21edeedbd622e",
+        "canonicalBaseRevision": "c1db64c084260066d676953a1e6b3ef04f173136",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/chatEndpointProviders.test.ts",
+          "path:canvas/src/__tests__/chatSubmitTransportTimeout.test.ts",
+          "path:canvas/src/features/chat/ChatModelCredentialControls.tsx",
+          "path:canvas/src/features/chat/FloatingPanelChat.tsx",
+          "path:canvas/src/features/chat/FloatingPanelChatSections.tsx",
+          "path:canvas/src/features/chat/floatingPanelChat/floatingPanelChatCredentialContext.ts",
+          "path:canvas/src/features/chat/floatingPanelChat/floatingPanelChatSubmitErrors.ts",
+          "path:canvas/src/features/panels/views/geminiApiDocs.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.ts",
+          "path:canvas/src/lib/chatEndpoint.ts",
+          "path:canvas/src/tests/registry/postParserCases0.ts",
+          "path:canvas/src/tests/registry/postParserCases1.ts",
+          "path:canvas/src/tests/registry/postParserCases5.ts",
+          "path:canvas/vite.config.ts",
+          "path:canvas/viteChatProxyEnv.ts",
+          "path:docs/documents/knowgrph-api-document.md",
+          "semantic:gemini-api-mainpanel-integration"
+        ],
+        "writeSetDigest": "43203a67e2b51631efadbef5b0a2aeabfb3efaa2ba0088909ecfb09e01dd8087",
+        "laneRevision": "970952067d35b5f76fd638cb70b5409cbbaf8c91",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T08:14:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAoPpIw",
+        "predecessorClaimId": "ee08be4cb21eec3c0cafdfcd180d861206ff343721d0b812e1f4ba6e011cee0a",
+        "eligibleSince": "2026-08-22T07:05:05.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-22T07:14:56.000Z"
+      },
+      "claimDigest": "92f53126711564d1bf1da6cbd07e0d2cace05e5d3286000eb6596ddf2bd9d830",
+      "digest": "e46118e51c671e6baf8a47d2d086a713aee49e47b1d89513cbade2973869f79a"
     }
   ]
 }

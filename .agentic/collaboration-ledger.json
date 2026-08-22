@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4111,
-  "headDigest": "09367c2268e15de220361604df69c087ee22fb8d6d860fcdd9c355fef9a6cf1d",
+  "sequence": 4112,
+  "headDigest": "3b9ab9e7d113ec16cdb682268a736e31b9ed9f87ce78831b8dc6e2251ecccb93",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -205830,6 +205830,54 @@
       },
       "claimDigest": "f48e764796999582a8dbe0582f7d5c0cc6d60dff8a099dbb78527e38c0012ac2",
       "digest": "09367c2268e15de220361604df69c087ee22fb8d6d860fcdd9c355fef9a6cf1d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4112,
+      "parentDigest": "09367c2268e15de220361604df69c087ee22fb8d6d860fcdd9c355fef9a6cf1d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "beeded1d03209848ffa3942fb3f2a20f065b1737a24fcbee2e0971f252e08da5",
+      "idempotencyKey": "79c5c0a3026b5581b9aa852289291c8e38f7c58f5a040bfc0ea0f1b6d96d5ce3",
+      "requestDigest": "7d705c1429ef6509bf35dcb4fbdeafc0857185de31f2511bfd01287fd4b01142",
+      "evaluationTime": "2026-08-22T05:35:32.000Z",
+      "claimCore": {
+        "claimId": "beeded1d03209848ffa3942fb3f2a20f065b1737a24fcbee2e0971f252e08da5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:3727ac3fdf9a9ba83d57b28f1370b9e13bcdbfb24bc75a6b4a384ffdff26ce83",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3efe68cb502d1e68eff7317830cc63bc52150ff3c2baa416c84551cdf31bf230",
+        "canonicalBaseRevision": "4554ed8965cb0c99f5d292c56eba489b77ae8be9",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-scope-expansion-recovery.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-contract.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-controller.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-evidence.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-repository-adapter.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-store.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery.mjs",
+          "semantic:planned-owned-dirt-scope-expansion-recovery"
+        ],
+        "writeSetDigest": "543757b691c73dd8644e56540b64235056154a8200e586c42660bf937c17be2a",
+        "laneRevision": "4554ed8965cb0c99f5d292c56eba489b77ae8be9",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T13:35:32.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "55e1c3ab9ba3b23124c74c3b3cdf8b30027cdcfd04ef1871b243fa6af8c924e5",
+      "digest": "3b9ab9e7d113ec16cdb682268a736e31b9ed9f87ce78831b8dc6e2251ecccb93"
     }
   ]
 }

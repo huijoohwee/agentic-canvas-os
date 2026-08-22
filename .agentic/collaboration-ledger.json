@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4128,
-  "headDigest": "946a0e464b0402d5482e6644ff937336ff85bd302dbe07748196717fd52cc181",
+  "sequence": 4129,
+  "headDigest": "592f5ce583acd5999c28d47d154c21db5f557d11011d13fa889f6236db798917",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -206595,6 +206595,65 @@
       },
       "claimDigest": "62c6e92eb8ff67d1b713fa7dbeb3e0a512d7d5e01688ce23d03489d4beb6cdbb",
       "digest": "946a0e464b0402d5482e6644ff937336ff85bd302dbe07748196717fd52cc181"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4129,
+      "parentDigest": "946a0e464b0402d5482e6644ff937336ff85bd302dbe07748196717fd52cc181",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "74e4faae9281c86e0d61428fe9cca2fb8b2b6211c6fc0066d03dc69ed79e6f3c",
+      "idempotencyKey": "9771b92d700e7bf6fcc3d4dd94c42314237677ac460d91ebfe362a4b5d11a567",
+      "requestDigest": "f10a3cbbc89c54ac88026a176cbb3cc0311bb2a7641b889c929395b8f4a36493",
+      "evaluationTime": "2026-08-22T06:18:26.000Z",
+      "claimCore": {
+        "claimId": "74e4faae9281c86e0d61428fe9cca2fb8b2b6211c6fc0066d03dc69ed79e6f3c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:488ce048ce85b79183553264e6e07a83bba551ff8cd0537ab957646aaebc8e91",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:bbd19fd53316a52dbdfc53a58b886712eb68d93f7da35113cb8db11ee39da5a7",
+        "canonicalBaseRevision": "4554ed8965cb0c99f5d292c56eba489b77ae8be9",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-scope-expansion-recovery.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-contract.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-controller.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-evidence.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-repository-adapter.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-store.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery.mjs",
+          "semantic:planned-owned-dirt-scope-expansion-recovery-v2"
+        ],
+        "writeSetDigest": "1fd21e4c1fe8f70db1fd73e97b9f0fe406a732c6c2f1edfae9e7d6013dd2557d",
+        "laneRevision": "3c5fda44990c20845ad20d5c0089eef67862f333",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-22T13:49:27.000Z",
+        "evidenceDigest": "7c6ce52abf206c25fd7044478a14fa6d7a20487e5744586798ee47cabc830cad",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAoHwjw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "3c5fda44990c20845ad20d5c0089eef67862f333",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAoHwjw",
+          "focusedEvidenceDigest": "7c6ce52abf206c25fd7044478a14fa6d7a20487e5744586798ee47cabc830cad",
+          "dependencyClosureDigest": "fb3f98d77d4d5870664a2db980bd70fa187b569a5265c0255153ef7006043ebc",
+          "namedChecksDigest": "2b2434a05e34def96550295281d660a85aabb52e05dca5d3090e335f298ca077",
+          "handoffEvidenceDigest": "14fa4c83bc686a7c2a60d9ba9cc514b037382bef1ae509c0e4492e9797082902",
+          "operatorDecisionDigest": "5f11b283368a4970ac5a9767bad59a793b66e1f12a4c7105c366dde2c3399158",
+          "integrationIntentDigest": "d2d3993aeb0481886936f176095a5d63dedadbb3020f4cb68ab8e9b06debea7c",
+          "integratedAt": "2026-08-22T06:18:26.000Z"
+        }
+      },
+      "claimDigest": "71692e3e1ea01aaad7690c792e3e042a907453222190bbc7148a16d898cb769f",
+      "digest": "592f5ce583acd5999c28d47d154c21db5f557d11011d13fa889f6236db798917"
     }
   ]
 }

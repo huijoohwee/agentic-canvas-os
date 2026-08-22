@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4034,
-  "headDigest": "8f622155105741d0831d52ad99b6ae4b168ca11faf6d85db27a148ef533bfd6e",
+  "sequence": 4035,
+  "headDigest": "046cd2de2d2ad88b5554fba426ec56d368f9123c8de409fb3fae5277ac4eff36",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -201917,6 +201917,46 @@
       },
       "claimDigest": "2c349c49b249aea6ba9d859e8e8246ff5cb9aefbeb2948f0ab628a82b5a9043f",
       "digest": "8f622155105741d0831d52ad99b6ae4b168ca11faf6d85db27a148ef533bfd6e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4035,
+      "parentDigest": "8f622155105741d0831d52ad99b6ae4b168ca11faf6d85db27a148ef533bfd6e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "aab31a35061a9fb9af05558da935b61e932059e6c9648d77cc601cd9c192ebca",
+      "idempotencyKey": "87a4cd9baec139d7bb186d3229f29cdcc3e0c19bedd2bc74746a01f216c0869b",
+      "requestDigest": "f8f0072ef9d374168de8fda4e2de3643383da4d39e8280748064cab09c06350f",
+      "evaluationTime": "2026-08-22T01:38:07.000Z",
+      "claimCore": {
+        "claimId": "aab31a35061a9fb9af05558da935b61e932059e6c9648d77cc601cd9c192ebca",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f1eab806fa554d60631923b6751073068a8248a54992e3022c18a8ff44c58f37",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:07ac613aae1fd2252c2c6bf3da89405358759921b5cb54095ec7cce3217bb06c",
+        "canonicalBaseRevision": "9483ee165dbef24a37c14358b40b47f9d199214c",
+        "declaredWriteScope": [
+          "path:__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs",
+          "path:scripts/recoverable-lane-cleanup-repository-adapter.mjs",
+          "semantic:recoverable-cleanup-journal-unblock"
+        ],
+        "writeSetDigest": "730f10e12c7047a5eb188ff2bcb37a1f471194d56a79c8edf18c54d8cb83a316",
+        "laneRevision": "9483ee165dbef24a37c14358b40b47f9d199214c",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T02:08:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "264b2145ffb2b46348c52290ca8e7b1ca1e572358f851caa34538beb3978abfb",
+      "digest": "046cd2de2d2ad88b5554fba426ec56d368f9123c8de409fb3fae5277ac4eff36"
     }
   ]
 }

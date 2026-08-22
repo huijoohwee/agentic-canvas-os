@@ -6,6 +6,7 @@ import { digestValue, normalizeWriteSet } from "../scripts/cloud-collaboration-p
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import {
   buildReviewedLaneSourceCorrectionEvidence,
+  normalizeReviewedLaneSourceCorrectionEvidence,
 } from "../scripts/reviewed-lane-source-correction-evidence.mjs";
 
 const hex = (character, length) => character.repeat(length);
@@ -189,6 +190,14 @@ test("expired delivery source accepts the exact dormant projection without a led
   assert.equal(evidence.claim.recordedState, "integrated-preserved");
   assert.equal(evidence.claim.state, "dormant-preserved");
   assert.equal(evidence.claim.transitionCounter, evidence.authority.transitionCounter);
+});
+
+test("normalized expired delivery evidence is an idempotent public plan input", () => {
+  const evidence = buildReviewedLaneSourceCorrectionEvidence(deliveryFixture({
+    authorityState: "parked",
+    claimState: "dormant-preserved",
+  }));
+  assert.deepEqual(normalizeReviewedLaneSourceCorrectionEvidence(evidence), evidence);
 });
 
 test("expired delivery source rejects a dormant projection with transition drift", () => {

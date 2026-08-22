@@ -215,7 +215,10 @@ function lease(value) {
     branch: text(value?.branch, "source branch"),
     baseSha: sha(value?.baseSha, "lease base"),
     fenceSha: sha(value?.fenceSha, "lease fence"),
-    reviewHeadSha: sha(delivery ? value?.deliveryHeadSha : value?.reviewHeadSha, "review head"),
+    reviewHeadSha: sha(
+      delivery ? value?.deliveryHeadSha ?? value?.reviewHeadSha : value?.reviewHeadSha,
+      "review head",
+    ),
     pullRequestUrl: text(value?.pullRequestUrl, "pull-request URL"),
     admission: {
       schema: admission?.schema === "agentic-lane-admission-lease/v1"
@@ -429,7 +432,8 @@ function writerMarker(value) {
     ];
     exactKeys(value, keys, "writer marker");
     return freeze({
-      status: value.status === "review_ready" ? value.status : invalid("marker status"),
+      status: ["review_ready", "delivery"].includes(value.status)
+        ? value.status : invalid("marker status"),
       epoch: integer(value.epoch, "marker epoch"),
       sessionId: text(value.sessionId, "marker session"),
       device: text(value.device, "marker device"),

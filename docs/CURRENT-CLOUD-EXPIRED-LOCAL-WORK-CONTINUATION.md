@@ -56,6 +56,9 @@ The evidence seals only the normalized current-inventory claim projection. It
 does not copy entry-schema provenance, claim-identity schema, operation-receipt
 identity, session identity, or device identity from a provider's raw claim.
 Those transport fields cannot become a second authority surface.
+The repository adapter maps the provider-neutral root state `active` back to
+the contract's ledger state `current` before sealing evidence; every other
+state remains unchanged and is rejected by the current-authority invariant.
 
 The core contract accepts one normalized `claimOwner`. Actor, repository, and
 work-item identities join that owner to the projected claim. Session and device

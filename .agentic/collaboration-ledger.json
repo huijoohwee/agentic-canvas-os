@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4176,
-  "headDigest": "ac3e2131443b6ada79477c3eebab2ccff2bb57af09dedcbe90dfe46c754600bc",
+  "sequence": 4177,
+  "headDigest": "e63cf3dcfffb3fbe334897616b8ab255c8b92cd03981111a9b94a152c77a82c0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -209521,6 +209521,48 @@
       },
       "claimDigest": "0b50cf1e30c025684175330610c26103ee492a5dd2ab7a899de0ec9128b76fe4",
       "digest": "ac3e2131443b6ada79477c3eebab2ccff2bb57af09dedcbe90dfe46c754600bc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4177,
+      "parentDigest": "ac3e2131443b6ada79477c3eebab2ccff2bb57af09dedcbe90dfe46c754600bc",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d2feff83e929d190abbf4cc7361822da72a36914cc55c0d007eb6e8981c07f48",
+      "idempotencyKey": "450ce64509099c501cd96f3118400dcb76029f7900c232847cf4f1a55c1265b1",
+      "requestDigest": "8d45b2edc7ad4350b8328083968428aae1e1ec2fc7c839ee1e2059acbc63f0a7",
+      "evaluationTime": "2026-08-22T08:06:27.000Z",
+      "claimCore": {
+        "claimId": "d2feff83e929d190abbf4cc7361822da72a36914cc55c0d007eb6e8981c07f48",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:0716d7c0ebbc13614d2fc5d22a54836312aa8f53e3c5a8f379b57c9938486d6a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3d224526e093a47ebfcdb8b41320d243724788926a505cb56af94bf43929f109",
+        "canonicalBaseRevision": "3ecd6d4c55a8f9d245cc4e41ca755489673d2cb4",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-intent-recovery-cli.test.mjs",
+          "path:__tests__/active-dirty-scope-expansion-intent-recovery-repository-adapter.test.mjs",
+          "path:scripts/active-dirty-scope-expansion-intent-recovery-repository-adapter.mjs",
+          "path:scripts/active-dirty-scope-expansion-intent-recovery.mjs",
+          "semantic:active-dirty-ledger-bound-recovery"
+        ],
+        "writeSetDigest": "e87f9be6803491823fd2ff46573a149ca090a6df788b76d17f2237ce7dc1a251",
+        "laneRevision": "3ecd6d4c55a8f9d245cc4e41ca755489673d2cb4",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T08:36:03.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "22a6b4bc0fcc918976d45be9e04069dac35ce0112609d680fc7523cc5bc82510",
+      "digest": "e63cf3dcfffb3fbe334897616b8ab255c8b92cd03981111a9b94a152c77a82c0"
     }
   ]
 }

@@ -147,6 +147,7 @@ dictionary_entries:
   - "/payment.refund"
   - "/payment.readiness"
   - "/workspace.parallelism.check"
+  - "/coordination.schedule"
   - "/workspace.operation.review"
   - "/workspace.guards.install"
   - "/canvas.project"

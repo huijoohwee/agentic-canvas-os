@@ -11,6 +11,8 @@ import {
 } from "../scripts/planned-owned-dirt-scope-expansion-recovery-contract.mjs";
 import { createPlannedOwnedDirtScopeExpansionRecoveryController }
   from "../scripts/planned-owned-dirt-scope-expansion-recovery-controller.mjs";
+import { capturePlannedOwnedDirtProtectedMainAdvance }
+  from "../scripts/planned-owned-dirt-scope-expansion-recovery-repository-adapter.mjs";
 import { buildPlannedOwnedDirtScopeExpansionRecoveryEvidence }
   from "../scripts/planned-owned-dirt-scope-expansion-recovery-evidence.mjs";
 import { parsePlannedOwnedDirtScopeExpansionRecoveryArguments }
@@ -93,6 +95,44 @@ test("CLI parser keeps planning read-only and run task-authorized", () => {
   assert.throws(() => parsePlannedOwnedDirtScopeExpansionRecoveryArguments([
     "run", "--repository=/repo", "--session=s", "--target-manifest=/tmp/scope.json",
   ]), /plan-file/u);
+});
+
+test("protected main may advance only as a path-disjoint descendant", () => {
+  const baseSha = "1".repeat(40);
+  const pullRequestBaseSha = "2".repeat(40);
+  const protectedMainSha = "3".repeat(40);
+  const calls = [];
+  const gitText = argumentsList => {
+    calls.push(argumentsList);
+    if (argumentsList[0] === "diff") return "docs/unrelated.md\0";
+    if (argumentsList[0] === "rev-parse") return "4".repeat(40);
+    return "";
+  };
+  const proof = capturePlannedOwnedDirtProtectedMainAdvance({
+    baseSha, pullRequestBaseSha, protectedMainSha,
+    declaredWriteSet: TARGET_WRITE_SET, gitText,
+  });
+  assert.equal(proof.protectedMainSha, protectedMainSha);
+  assert.equal(proof.changedPathCount, 1);
+  assert.deepEqual(calls.slice(0, 2), [
+    ["merge-base", "--is-ancestor", baseSha, pullRequestBaseSha],
+    ["merge-base", "--is-ancestor", pullRequestBaseSha, protectedMainSha],
+  ]);
+
+  assert.throws(() => capturePlannedOwnedDirtProtectedMainAdvance({
+    baseSha, pullRequestBaseSha, protectedMainSha,
+    declaredWriteSet: TARGET_WRITE_SET,
+    gitText: argumentsList => argumentsList[0] === "diff" ? "src/owned/file.mjs\0" : "4".repeat(40),
+  }), /advanced within the admitted recovery write set/u);
+
+  assert.throws(() => capturePlannedOwnedDirtProtectedMainAdvance({
+    baseSha, pullRequestBaseSha, protectedMainSha,
+    declaredWriteSet: TARGET_WRITE_SET,
+    gitText: argumentsList => {
+      if (argumentsList[0] === "merge-base") throw new Error("not an ancestor");
+      return "";
+    },
+  }), /not an ancestor/u);
 });
 
 function fakeAdapter(state) {

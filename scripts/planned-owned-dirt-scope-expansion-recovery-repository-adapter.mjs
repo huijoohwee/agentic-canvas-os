@@ -12,6 +12,8 @@ import { digestValue, normalizeWriteSet, writeSetsOverlap }
 import { invokeRepositoryCloudVerifier }
   from "./cloud-collaboration-delivery-verifier.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
+import { captureProtectedMainAdvance }
+  from "./device-branch-ownership-lib.mjs";
 import { assertAdmissionMutationAuthority }
   from "./scoped-lane-admission-state.mjs";
 import {
@@ -57,6 +59,10 @@ const IMPLEMENTATION_FILES = Object.freeze([
   "scripts/planned-owned-dirt-scope-expansion-recovery-store.mjs",
   "scripts/planned-owned-dirt-scope-expansion-recovery.mjs",
 ]);
+
+export function capturePlannedOwnedDirtProtectedMainAdvance(values) {
+  return captureProtectedMainAdvance(values);
+}
 
 export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
   options = {}, dependencies = {},
@@ -169,11 +175,17 @@ export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
     const lease = sourceLease();
     if (remoteHead() !== lease.fenceSha) invalid("source remote fence");
     const remoteMain = firstSha(git(["ls-remote", "--heads", "origin", "refs/heads/main"]));
-    if (remoteMain !== lease.baseSha) invalid("source canonical base drift");
-    readPullRequest(lease);
-    const inventory = status(lease);
     const targetWriteSet = targetManifest?.declaredWriteSet || targetManifest?.paths
       ?.map(item => `path:${item}`).concat(`semantic:${targetManifest.semanticScope}`);
+    const pullRequest = readPullRequest(lease);
+    const protectedMainAdvance = capturePlannedOwnedDirtProtectedMainAdvance({
+      baseSha: lease.baseSha,
+      pullRequestBaseSha: pullRequest.baseRefOid,
+      protectedMainSha: remoteMain,
+      declaredWriteSet: targetWriteSet,
+      gitText: git,
+    });
+    const inventory = status(lease);
     const claim = sourceCloud(lease, inventory, targetWriteSet);
     const dirt = captureActiveOwnedDirtEvidence({ repository });
     if (dirt.headSha !== lease.fenceSha) invalid("source dirt fence");
@@ -196,7 +208,7 @@ export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
       ownedDirt: dirt, taskAuthorityBindingDigest: lease.taskAuthority.bindingDigest,
       cloudLedgerRevision: inventory.ledgerRevision,
       cloudLedgerDigest: inventory.ledgerDigest,
-      controllerDigest: digestValue(controller), observedAt,
+      controllerDigest: digestValue({ controller, protectedMainAdvance }), observedAt,
     });
   }
 

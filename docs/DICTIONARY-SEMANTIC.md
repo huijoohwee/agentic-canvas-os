@@ -153,6 +153,7 @@ dictionary_entries:
   - "#worker-process"
   - "#multi-agent-collaboration"
   - "#cloud-collaboration"
+  - "#coordination-scheduler"
   - "#managed-implementation-run"
   - "#agentic-sdlc-observability"
   - "#application-composition"

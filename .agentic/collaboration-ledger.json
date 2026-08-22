@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4303,
-  "headDigest": "d915549102e4e228f4dacfbfaaa7a92592696e0b4c070cd53e41826cc3c848ec",
+  "sequence": 4304,
+  "headDigest": "15cb4c08b0a2a84812885904814cf20032bed412856a5b0dc37c67e8818a31bb",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -216612,6 +216612,48 @@
       },
       "claimDigest": "e882f48028ba5f580950cf33193135e8d6e3593aad9c226d9fff3919389f9714",
       "digest": "d915549102e4e228f4dacfbfaaa7a92592696e0b4c070cd53e41826cc3c848ec"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4304,
+      "parentDigest": "d915549102e4e228f4dacfbfaaa7a92592696e0b4c070cd53e41826cc3c848ec",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "096f02675fa8cf419dd6bb2b194fed16c0eaa2ae48ef86b180f2132fc138ca21",
+      "idempotencyKey": "218fc6f32e0b79bd7b7e049b5eae4a6034e6b45d7b0211e1b3c1901b0cd91e5f",
+      "requestDigest": "4750dd4d0f848677cf0d6f1a86a806dae73ce0c3fe9b4e3d978b6c48a0ddefd6",
+      "evaluationTime": "2026-08-22T16:45:23.000Z",
+      "claimCore": {
+        "claimId": "096f02675fa8cf419dd6bb2b194fed16c0eaa2ae48ef86b180f2132fc138ca21",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:d70e461b211d30243c339f0d09f7dc9d11678e33d660da6c20f86d04fdb1d455",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:adedf3fbc8060af8e7c75be9b3b5e3d6c1ade2bd0c76f11f59df54c0b6b3bdef",
+        "canonicalBaseRevision": "4a9d6a83bf549873db8ae2e42111bffb4e9fefee",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-artifact-continuity.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/prd-tad-adr-guidelines.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:agentic-sdlc-artifact-continuity"
+        ],
+        "writeSetDigest": "0f36a9d8874e3c614727691ad01b287a16cb20f1b0d4804d2e3e67d418f41897",
+        "laneRevision": "4a9d6a83bf549873db8ae2e42111bffb4e9fefee",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T17:15:23.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "48b9773cb311cb237b41678901abc8c82981833e3525b3328b497acda8043d22",
+      "digest": "15cb4c08b0a2a84812885904814cf20032bed412856a5b0dc37c67e8818a31bb"
     }
   ]
 }

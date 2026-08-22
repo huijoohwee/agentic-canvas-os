@@ -13,6 +13,7 @@ import {
   isRetiredPreservedLane,
   normalizeLocalReviewRetirementReceipt,
 } from "./legacy-review-ready-retirement-lib.mjs";
+import { normalizeLocalReleaseReceipt } from "./planned-recovery-pr-marker-reconciliation-contract.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import { normalizeRetiredPlannedAdmissionOwnerReceipt } from "./retired-planned-admission-owner-lib.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
@@ -253,6 +254,9 @@ export function normalizeBootstrapRetirementReceiptDigest(lease) {
       : null,
     lease?.admissionOwnerRetirement
       ? () => normalizeRetiredPlannedAdmissionOwnerReceipt(lease.admissionOwnerRetirement)
+      : null,
+    lease?.plannedRecoveryMarkerReconciliation
+      ? () => normalizeLocalReleaseReceipt(lease.plannedRecoveryMarkerReconciliation)
       : null,
   ].filter(Boolean);
   if (receiptOwners.length !== 1) {

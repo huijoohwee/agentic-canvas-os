@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
+  resetReviewedLanePublishCheckpoint,
   sameSourceClaim,
 } from "../scripts/reviewed-lane-source-correction-repository-adapter.mjs";
 import {
@@ -20,6 +21,22 @@ const expected = Object.freeze({
   declaredWriteScope: ["path:scripts/source.mjs", "semantic:source"],
   integration: null,
   recovery: null,
+});
+
+test("source correction clears every stale publish checkpoint", () => {
+  const projected = resetReviewedLanePublishCheckpoint({
+    status: "active",
+    reviewHeadSha: hex("1"),
+    deliveryHeadSha: hex("2"),
+    integration: { commitSha: hex("3") },
+    fenceSha: hex("4"),
+  });
+
+  assert.equal(projected.status, "active");
+  assert.equal(projected.reviewHeadSha, null);
+  assert.equal(projected.deliveryHeadSha, null);
+  assert.equal(projected.integration, null);
+  assert.equal(projected.fenceSha, hex("4"));
 });
 
 test("hydrated claims treat omitted optional recovery as sealed null", () => {

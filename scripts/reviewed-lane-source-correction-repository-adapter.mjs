@@ -7,41 +7,26 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-import {
-  digestValue,
-  normalizeWriteSet,
-  writeSetsOverlap,
-} from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { createGitHubCloudCollaborationAdapter } from "./github-cloud-collaboration-adapter.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import {
   buildReviewedLaneSourceCorrectionEvidence,
   buildSameClaimRecoverySplitEvidence,
 } from "./reviewed-lane-source-correction-evidence.mjs";
-import {
-  complete,
-  createReviewedLaneSourceCorrectionAdapter,
-  pending,
-} from "./reviewed-lane-source-correction-controller.mjs";
+import { complete, createReviewedLaneSourceCorrectionAdapter, pending } from "./reviewed-lane-source-correction-controller.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
-import {
-  normalizeBoundAuthority,
-  projectRootState,
-} from "./scoped-lane-cloud-reconciliation.mjs";
-import {
-  createWriterLeaseStore,
-  parseWriterLeasePullRequestBody,
-  projectWriterLeasePullRequestMarker,
-  updateWriterLeasePullRequestBody,
-} from "./writer-lease-lib.mjs";
-import {
-  casWriterLeaseProjection,
-  writerLeaseDigest,
-} from "./writer-lease-registry-cas.mjs";
+import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
+import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
+import { casWriterLeaseProjection, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 export function createReviewedLaneSourceCorrectionRepositoryAdapter(options = {}, dependencies = {}) {
   const runtime = createRuntime(options, dependencies);
   return createReviewedLaneSourceCorrectionAdapter(runtime);
+}
+
+export function resetReviewedLanePublishCheckpoint(values) {
+  return { ...values, reviewHeadSha: null, deliveryHeadSha: null, integration: null };
 }
 
 function createRuntime(options, dependencies) {
@@ -413,15 +398,14 @@ function createRuntime(options, dependencies) {
       branch,
       expectedLeaseDigest: writerLeaseDigest(sourceLease),
       expectedClaimId: plan.sourceClaimId,
-      values: {
+      values: resetReviewedLanePublishCheckpoint({
         status: "active",
         fenceSha: plan.sourceHeadSha,
-        reviewHeadSha: null,
         sourceCorrectionSuccessorTaskBindingReconciliation: null,
         cloudAuthority: authority,
         heartbeatAt: new Date().toISOString(),
         expiresAt: authority.expiresAt,
-      },
+      }),
     }).lease;
     return complete({ leaseDigest: writerLeaseDigest(updated), authority });
   }
@@ -453,6 +437,7 @@ function createRuntime(options, dependencies) {
     const claim = await successor(plan, new Set(["active"]), cloudStatus);
     const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     if (lease.status !== "active" || lease.reviewHeadSha !== null
+      || lease.deliveryHeadSha !== null || lease.integration !== null
       || lease.fenceSha !== plan.sourceHeadSha
       || lease.cloudAuthority.claimId !== claim?.claimId
       || lease.cloudAuthority.reviewRequestId !== plan.sourceReviewRequestId
@@ -486,6 +471,8 @@ function createRuntime(options, dependencies) {
         && claim.reviewRequestId === plan.sourceReviewRequestId
         && lease.fenceSha === plan.sourceHeadSha
         && lease.reviewHeadSha === null
+        && lease.deliveryHeadSha === null
+        && lease.integration === null
         && lease.cloudAuthority?.claimId === claim.claimId
         && lease.cloudAuthority?.claimDigest === claim.fenceRevision
         && lease.cloudAuthority?.laneRevision === plan.sourceHeadSha

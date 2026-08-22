@@ -116,12 +116,22 @@ function parseInstant(value) {
 }
 
 function createFinding({ level, code, worktree, summary, action }) {
+  const lease = worktree.lease || {};
+  const cloudAuthority = lease.cloudAuthority || {};
   return Object.freeze({
     level,
     code,
     path: worktree.path,
     branch: worktree.branch || null,
-    leaseStatus: worktree.lease?.status || null,
+    leaseStatus: lease.status || null,
+    sessionId: lease.sessionId || null,
+    pullRequestUrl: lease.pullRequestUrl || null,
+    leaseEpoch: Number.isInteger(lease.epoch) ? lease.epoch : null,
+    claimId: cloudAuthority.claimId || null,
+    workItemId: cloudAuthority.workItemId || null,
+    transitionCounter: Number.isInteger(cloudAuthority.transitionCounter)
+      ? cloudAuthority.transitionCounter
+      : null,
     summary,
     action,
   });

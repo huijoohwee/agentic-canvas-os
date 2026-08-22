@@ -139,3 +139,53 @@ test("doctor ignores expiry timestamps on retired preserved lanes", () => {
   assert.equal(result.level, "PASS");
   assert.equal(result.findings.length, 0);
 });
+
+test("doctor includes recovery identity on expired findings", () => {
+  const result = auditLaneLifecycleRisks({
+    report: {
+      schema: "agentic-worktree-lifecycle-report/v1",
+      repository: "/repo",
+      worktrees: [
+        canonical,
+        {
+          path: "/repo/tasks/recovery-target",
+          head: "f".repeat(40),
+          branch: "refs/heads/agent/mac/recovery-target",
+          state: "active",
+          lease: {
+            status: "active",
+            epoch: 256,
+            sessionId: "session-123",
+            branch: "agent/mac/recovery-target",
+            pullRequestUrl: "https://github.com/example/repo/pull/514",
+            expiresAt: "2099-08-06T01:59:00.000Z",
+            cloudAuthority: {
+              claimId: "1".repeat(64),
+              workItemId: "work-item:doctor-recovery",
+              transitionCounter: 4,
+              expiresAt: "2099-08-06T01:59:00.000Z",
+            },
+          },
+        },
+      ],
+    },
+    now: new Date("2099-08-06T02:00:00.000Z"),
+  });
+
+  assert.equal(result.findings.length, 1);
+  assert.deepEqual(result.findings[0], {
+    level: "FAIL",
+    code: "lease-expired",
+    path: "/repo/tasks/recovery-target",
+    branch: "refs/heads/agent/mac/recovery-target",
+    leaseStatus: "active",
+    sessionId: "session-123",
+    pullRequestUrl: "https://github.com/example/repo/pull/514",
+    leaseEpoch: 256,
+    claimId: "1".repeat(64),
+    workItemId: "work-item:doctor-recovery",
+    transitionCounter: 4,
+    summary: "tasks/recovery-target expired at 2099-08-06T01:59:00.000Z",
+    action: "Use the repository recovery path immediately; do not keep mutating this lane.",
+  });
+});

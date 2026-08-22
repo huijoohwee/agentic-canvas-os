@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4028,
-  "headDigest": "d2758d7351dd1c4eef1eb409ce7b8179f4d60f4b1ddc4681cf517a36d5fc4baa",
+  "sequence": 4029,
+  "headDigest": "4301eb8431d1593bda153d7a1f5f004004414d254ef26769b761bce6bf3f1de3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -201609,6 +201609,52 @@
       },
       "claimDigest": "c76c608b1090c09839d24449b850f7d4a0bd6338c065f5020e408825712bce1b",
       "digest": "d2758d7351dd1c4eef1eb409ce7b8179f4d60f4b1ddc4681cf517a36d5fc4baa"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4029,
+      "parentDigest": "d2758d7351dd1c4eef1eb409ce7b8179f4d60f4b1ddc4681cf517a36d5fc4baa",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "93d51fd319b10cc36ce4f740c79baee285b22e4c01be70f9b653cf2b595fbea1",
+      "idempotencyKey": "70397cba4f944315092a197692fca482db6327af5421dcb3138481558e007847",
+      "requestDigest": "aa39e466fd5079a82841f3e286899d68c4b75c2b214b8621c7c2e31fd1f63dae",
+      "evaluationTime": "2026-08-22T00:53:16.000Z",
+      "claimCore": {
+        "claimId": "93d51fd319b10cc36ce4f740c79baee285b22e4c01be70f9b653cf2b595fbea1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:48701bcbd899932780581309b544d1bdef0cbc0bf3fd719f42c2038db38af5eb",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3422152922e0366c8bca6a9cefa97116ff1e5796e96dbcbdbff53810ea82ef99",
+        "canonicalBaseRevision": "aca6131ebe1a067bef584388249fbf1bb92ec8a5",
+        "declaredWriteScope": [
+          "path:__tests__/planned-recovery-pr-marker-reconciliation.test.mjs",
+          "path:__tests__/scoped-lane-authority-state.test.mjs",
+          "path:__tests__/scoped-lane-clean-preservation-bootstrap.test.mjs",
+          "path:docs/CLEAN-PRESERVED-BOOTSTRAP.md",
+          "path:docs/PLANNED-RECOVERY-PR-MARKER-RECONCILIATION.md",
+          "path:scripts/legacy-review-ready-retirement-lib.mjs",
+          "path:scripts/planned-recovery-pr-marker-reconciliation-contract.mjs",
+          "path:scripts/scoped-lane-bootstrap-maintenance.mjs",
+          "semantic:released-recovery-bootstrap-attribution"
+        ],
+        "writeSetDigest": "14fa6a5aad44d75b5292fd90f282fbb0951a04938a9fd6b378c1667d061ba203",
+        "laneRevision": "aca6131ebe1a067bef584388249fbf1bb92ec8a5",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T01:23:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f2211c022df37c66fb77e7d4bcfae56cee57e0798a67b4b166c5015265efb0fb",
+      "digest": "4301eb8431d1593bda153d7a1f5f004004414d254ef26769b761bce6bf3f1de3"
     }
   ]
 }

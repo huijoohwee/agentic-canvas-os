@@ -10,6 +10,9 @@ import {
   activeDirtyScopeExpansionIntentRecoveryDirtDigest,
   buildActiveDirtyScopeExpansionIntentRecoveryMutationAuthority,
   createActiveDirtyScopeExpansionIntentRecoveryAdapter,
+  MAX_RECOVERY_LEDGER_BYTES,
+  parseValidatedRecoveryLedgerSnapshot,
+  requireRecoveryLedgerRepository,
   requireActiveDirtyScopeExpansionIntentRecoveryDeterministicTerminal,
   settleActiveDirtyScopeExpansionIntentRecoveryTerminal,
   withActiveDirtyScopeExpansionIntentRecoveryLock,
@@ -154,6 +157,28 @@ test("dirt evidence reproduces the original trimmed Git patch digest", () => {
       untracked: input.untrackedPaths,
     }),
   );
+});
+
+test("recovery binds its explicit ledger repository to the leased cloud authority", () => {
+  assert.equal(requireRecoveryLedgerRepository({
+    ledgerRepository: "huijoohwee/agentic-canvas-os",
+    authority: { ledgerRepository: "huijoohwee/agentic-canvas-os" },
+  }), "huijoohwee/agentic-canvas-os");
+  assert.throws(() => requireRecoveryLedgerRepository({
+    ledgerRepository: "huijoohwee/knowgrph",
+    authority: { ledgerRepository: "huijoohwee/agentic-canvas-os" },
+  }), /does not match the leased cloud authority/u);
+});
+
+test("production-sized recovery snapshots remain bounded and validated", () => {
+  const productionSizedInvalidLedger = JSON.stringify({
+    padding: "x".repeat(12_000_000),
+  });
+  assert.throws(() => parseValidatedRecoveryLedgerSnapshot(productionSizedInvalidLedger),
+    /Ledger snapshot is invalid/u);
+  assert.throws(() => parseValidatedRecoveryLedgerSnapshot("x".repeat(
+    MAX_RECOVERY_LEDGER_BYTES + 1,
+  )), /exceeds recovery bounds/u);
 });
 
 test("recovery mutation authority admits unrelated global-head drift only", () => {

@@ -12,6 +12,10 @@ import { digestValue, normalizeWriteSet, writeSetsOverlap }
 import { invokeRepositoryCloudVerifier }
   from "./cloud-collaboration-delivery-verifier.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
+import { captureProtectedMainAdvance }
+  from "./device-branch-ownership-lib.mjs";
+import { proveLegacyReviewCanonicalDescendant }
+  from "./legacy-clean-committed-lane-bootstrap-adapter-lib.mjs";
 import { assertAdmissionMutationAuthority }
   from "./scoped-lane-admission-state.mjs";
 import {
@@ -57,6 +61,31 @@ const IMPLEMENTATION_FILES = Object.freeze([
   "scripts/planned-owned-dirt-scope-expansion-recovery-store.mjs",
   "scripts/planned-owned-dirt-scope-expansion-recovery.mjs",
 ]);
+
+export function capturePlannedOwnedDirtProtectedMainAdvance(values) {
+  return captureProtectedMainAdvance(values);
+}
+
+export function capturePlannedOwnedDirtCanonicalDescendantProof({
+  baseSha, protectedMainSha, declaredWriteSet, gitText,
+}) {
+  if (baseSha === protectedMainSha) return null;
+  const canonicalChangedPaths = String(gitText([
+    "diff", "--name-only", "--no-renames", "-z", baseSha, protectedMainSha, "--",
+  ]) || "").split("\0").filter(Boolean);
+  const preservedChangedPaths = normalizeWriteSet(declaredWriteSet)
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
+  return proveLegacyReviewCanonicalDescendant({
+    sourceBaseSha: baseSha,
+    targetBaseSha: protectedMainSha,
+    protectedMainSha,
+    canonicalChangedPaths,
+    preservedChangedPaths,
+    sourceIsAncestor: true,
+    targetIsProtectedAncestor: true,
+  });
+}
 
 export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
   options = {}, dependencies = {},
@@ -165,15 +194,33 @@ export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
     return firstSha(git(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]));
   }
 
+  function protectedMainEvidence({ lease, pullRequest, protectedMainSha, targetWriteSet }) {
+    const protectedMainAdvance = capturePlannedOwnedDirtProtectedMainAdvance({
+      baseSha: lease.baseSha,
+      pullRequestBaseSha: pullRequest.baseRefOid,
+      protectedMainSha,
+      declaredWriteSet: targetWriteSet,
+      gitText: git,
+    });
+    const canonicalDescendantProof = capturePlannedOwnedDirtCanonicalDescendantProof({
+      baseSha: lease.baseSha,
+      protectedMainSha,
+      declaredWriteSet: targetWriteSet,
+      gitText: git,
+    });
+    return Object.freeze({ protectedMainAdvance, canonicalDescendantProof });
+  }
+
   function capture(targetManifest, fixedObservedAt = null) {
     const lease = sourceLease();
     if (remoteHead() !== lease.fenceSha) invalid("source remote fence");
     const remoteMain = firstSha(git(["ls-remote", "--heads", "origin", "refs/heads/main"]));
-    if (remoteMain !== lease.baseSha) invalid("source canonical base drift");
-    readPullRequest(lease);
-    const inventory = status(lease);
     const targetWriteSet = targetManifest?.declaredWriteSet || targetManifest?.paths
       ?.map(item => `path:${item}`).concat(`semantic:${targetManifest.semanticScope}`);
+    const pullRequest = readPullRequest(lease);
+    const protectedMain = protectedMainEvidence({ lease, pullRequest,
+      protectedMainSha: remoteMain, targetWriteSet });
+    const inventory = status(lease);
     const claim = sourceCloud(lease, inventory, targetWriteSet);
     const dirt = captureActiveOwnedDirtEvidence({ repository });
     if (dirt.headSha !== lease.fenceSha) invalid("source dirt fence");
@@ -196,7 +243,7 @@ export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
       ownedDirt: dirt, taskAuthorityBindingDigest: lease.taskAuthority.bindingDigest,
       cloudLedgerRevision: inventory.ledgerRevision,
       cloudLedgerDigest: inventory.ledgerDigest,
-      controllerDigest: digestValue(controller), observedAt,
+      controllerDigest: digestValue({ controller, ...protectedMain }), observedAt,
     });
   }
 
@@ -293,12 +340,23 @@ export function createRepositoryPlannedOwnedDirtScopeExpansionRecoveryAdapter(
     },
     claimWaitingSuccessor({ plan }) {
       const lease = sourceLocalStable(plan);
+      const protectedMainSha = firstSha(git([
+        "ls-remote", "--heads", "origin", "refs/heads/main",
+      ]));
+      const pullRequest = readPullRequest(lease);
+      const protectedMain = protectedMainEvidence({ lease, pullRequest,
+        protectedMainSha, targetWriteSet: plan.target.declaredWriteSet });
+      if (digestValue({ controller: controllerWitness(), ...protectedMain })
+        !== plan.evidence.controllerDigest) invalid("sealed protected-main evidence");
       const result = invoke({ action: "claim",
         ledgerRepository: plan.evidence.ledgerRepository,
         request: { targetRepository: plan.evidence.targetRepository,
           workItemId: plan.evidence.scope, canonicalBaseSha: plan.evidence.baseSha,
           headSha: plan.evidence.fenceSha, declaredWriteSet: plan.target.declaredWriteSet,
           predecessorClaimId: plan.evidence.claimId, leaseEpoch: 1, ttlSeconds,
+          ...(protectedMain.canonicalDescendantProof
+            ? { canonicalDescendantProof: protectedMain.canonicalDescendantProof }
+            : {}),
           deviceId: lease.device, sessionId,
           idempotencyKey: `${OPERATION}:waiting:${plan.planDigest}` }, environment });
       return cloudClaimValues(result, "claim", "waiting-successor", plan,

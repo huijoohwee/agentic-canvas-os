@@ -11,6 +11,7 @@ const digest = character => character.repeat(64);
 const common = [
   "--source-repository=/preserved/source",
   "--session=source-session",
+  "--ledger-repository=owner/ledger",
   "--target-repository=owner/product",
   "--pull-request=436",
 ];
@@ -40,6 +41,7 @@ test("plan constructs the repository adapter from explicit instance identity", a
   assert.deepEqual(adapterOptions, {
     sourceRepository: "/preserved/source",
     sessionId: "source-session",
+    ledgerRepository: "owner/ledger",
     targetRepository: "owner/product",
     pullRequestNumber: 436,
   });
@@ -134,6 +136,11 @@ test("CLI rejects implicit instance identity, duplicates, unknowns, and plan-tim
   await assert.rejects(
     () => main(["plan", ...missingTarget], dependencies),
     /--target-repository/u,
+  );
+  const missingLedger = common.filter(value => !value.startsWith("--ledger-repository="));
+  await assert.rejects(
+    () => main(["plan", ...missingLedger], dependencies),
+    /--ledger-repository/u,
   );
   const missingPullRequest = common.filter(value => !value.startsWith("--pull-request="));
   await assert.rejects(

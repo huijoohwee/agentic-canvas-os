@@ -46,11 +46,20 @@ Planning requires all of the following:
   set that covers every sealed dirty path;
 - no other write-authoritative or scope-reserving claim overlapping the target
   write set; and
-- the installed controller clean and equal to protected `origin/main`.
+- the installed controller clean and equal to protected `origin/main`; and
+- any protected-main advance since the source base is ancestry-valid and
+  path-disjoint from the expanded target write set.
 
-Canonical-main drift is rejected. The task-authority successor contract keeps
-the lane's base stable, so this operation cannot disguise a rebase or import a
-new canonical frontier.
+The operation seals the pull-request base, protected-main tree, and exact
+changed-path digest into controller evidence. When canonical `main` advanced,
+the waiting-successor claim also carries the exact disjoint descendant proof;
+the cloud contract accepts it only for the named current or preserved
+predecessor on the same lane when the successor write set is a strict superset.
+An overlapping path, a
+non-descendant base, or any protected-main identity drift that cannot be
+recaptured fails closed. The task-authority successor contract still keeps the
+lane's base stable, so a permitted disjoint advance cannot disguise a rebase or
+import the new canonical frontier into the preserved source bytes.
 
 ## Plan and authorize
 
@@ -129,6 +138,7 @@ node --test \
   __tests__/planned-owned-dirt-scope-expansion-recovery.test.mjs
 ```
 
-The focused check proves strict-superset and untracked coverage, exact typed
-authorization, ordered journaling, terminal non-mutation flags, idempotent
-replay, journal compare-and-swap behavior, and CLI capability separation.
+The focused check proves strict-superset and untracked coverage, ancestry-valid
+path-disjoint protected-main advance handling, exact typed authorization,
+ordered journaling, terminal non-mutation flags, idempotent replay, journal
+compare-and-swap behavior, and CLI capability separation.

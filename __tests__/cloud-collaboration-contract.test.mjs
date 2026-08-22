@@ -392,6 +392,51 @@ test("a terminal matching subject admits its historical PR base only with exact 
   }
 });
 
+test("a current predecessor admits a stale-base strict-superset waiting successor only with proof", () => {
+  const historicalBase = revision("strict-superset-historical-base");
+  const laneRevision = revision("strict-superset-lane");
+  const historicalRepository = { ...repository, canonicalRevision: historicalBase };
+  const predecessor = claim(createEmptyLedger("ledger:repository"), {
+    targetRepository: historicalRepository,
+    workItemId: "work:scope-expansion",
+    scope: ["path:src/owned", "semantic:scope-expansion"],
+    canonicalBaseRevision: historicalBase,
+    laneRevision,
+  });
+  const expandedScope = [
+    "path:src/new-runtime", "path:src/owned", "semantic:scope-expansion",
+  ];
+  const proof = canonicalDescendantProof({
+    sourceBaseSha: historicalBase,
+    targetBaseSha: repository.canonicalRevision,
+    canonicalChangedPaths: ["docs/current.md"],
+    preservedChangedPaths: ["src/new-runtime", "src/owned"],
+  });
+  const successor = claim(predecessor.ledger, {
+    workItemId: "work:scope-expansion",
+    scope: expandedScope,
+    canonicalBaseRevision: historicalBase,
+    canonicalDescendantProof: proof,
+    predecessorClaimId: predecessor.claim.claimId,
+    laneRevision,
+    time: T1,
+    idempotencyKey: "claim:strict-superset-descendant",
+  });
+  assert.equal(successor.claim.state, "waiting-successor");
+  assert.equal(successor.claim.predecessorClaimId, predecessor.claim.claimId);
+  assert.deepEqual(successor.claim.declaredWriteScope, normalizeWriteSet(expandedScope));
+
+  throwsCode(() => claim(predecessor.ledger, {
+    workItemId: "work:scope-expansion",
+    scope: expandedScope,
+    canonicalBaseRevision: historicalBase,
+    predecessorClaimId: predecessor.claim.claimId,
+    laneRevision,
+    time: T1,
+    idempotencyKey: "claim:strict-superset-without-proof",
+  }), "stale_canonical_base");
+});
+
 test("expiry is dormant-preserved and recovery ignores the expired device lease", () => {
   const first = claim(createEmptyLedger("ledger:repository"), { expiresAt: T1 });
   const dormant = listCurrentClaims(first.ledger, T2)[0];

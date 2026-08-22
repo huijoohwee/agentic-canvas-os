@@ -350,6 +350,20 @@ the older candidate after the newer protected revision exists.
 
 ### 9. Authorize and Deploy Cloudflare
 
+#### Canonical production pipeline
+
+Use one target-scoped production release controller. For this reference profile, the canonical sequence is:
+
+1. Capture the last-known-good rollback identity for the target.
+2. Generate the exact `agentic-local-review-candidate/v1` from the runtime review surface.
+3. Generate `knowgrph-production-release-evidence/v1` that binds the release frontier and rollback identity.
+4. Dispatch the repository-owned Production Release workflow for the exact source SHA and evidence payloads.
+5. Complete protected terminal authorization at the Production gate for the same candidate digest and target.
+
+These are functional steps, not vendor semantics. Alternate repositories, hosts, CI products, approval systems, or deployment providers must map to the same rollback capture, candidate, evidence, protected dispatch, and human authorization receipts. They must not add a second authority path.
+
+Forbid duplicate or conflicting deploy mechanisms for the same target. Do not use local Pages deploys, direct mirror pushes, secondary workflow dispatches, generated-asset patches, or emergency commands as normal release routes. If recovery requires a manual adapter, it must bind the same source revision, candidate digest, rollback identity, target, receipts, protected reviewer decision, immutable verification, and publication rules, then reconcile the canonical controller state before claiming completion.
+
 #### Provider-neutral authorization prompt
 
 Before a non-Knowgrph consumer asks for authorization, pass its canonical

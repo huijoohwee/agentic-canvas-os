@@ -1,6 +1,7 @@
 import { applyCloudTransition, createEmptyLedger, digestValue, listCurrentClaims, validateLedger, verifyCloudClaim } from "./cloud-collaboration-contract.mjs";
 import { CLOUD_RESULT_SCHEMA, contractActor, contractRepository, createPublicResult, emptyResult, prepareMutationRequest, prepareReadRequest, projectPublicClaim, publicSnapshot, selectVerificationClaim, verificationResult } from "./github-cloud-collaboration-mapping.mjs";
 import { createGitHubRequest, positiveInteger, projectActor, projectPullRequest, projectRepository, projectRepositoryIdentity, publicTransportError, requireRepositoryName, requireServerTime, requireSha, requireStatus, resolveGitHubToken } from "./github-cloud-collaboration-api.mjs";
+import { createSmartGitLedgerCommit } from "./github-cloud-collaboration-git-transport.mjs";
 export { createGitHubRequest } from "./github-cloud-collaboration-api.mjs";
 export const DEFAULT_LEDGER_REF = "agentic/collaboration-ledger";
 export const DEFAULT_LEDGER_PATH = ".agentic/collaboration-ledger.json";
@@ -8,14 +9,22 @@ export { CLOUD_RESULT_SCHEMA } from "./github-cloud-collaboration-mapping.mjs";
 const MUTATING_ACTIONS = new Set(["claim", "continue", "integrate", "retire"]);
 const PULL_REQUEST_FILES_PAGE_SIZE = 100;
 const PULL_REQUEST_FILES_PAGE_LIMIT = 100;
+export const SMART_GIT_LEDGER_THRESHOLD_BYTES = 10 * 1024 * 1024;
+export function requiresSmartGitLedgerTransport(response, content, thresholdBytes = SMART_GIT_LEDGER_THRESHOLD_BYTES) {
+  return response?.status === 400
+    && Number.isSafeInteger(thresholdBytes)
+    && thresholdBytes > 0
+    && Buffer.byteLength(String(content || ""), "utf8") >= thresholdBytes;
+}
 export function createGitHubCloudCollaborationAdapter({ ledgerRepository, token = "", request = null,
   ledgerRef = DEFAULT_LEDGER_REF, ledgerPath = DEFAULT_LEDGER_PATH, maxAttempts = 4,
-  workflowContext = null } = {}) {
+  workflowContext = null, smartGitLedgerCommit = createSmartGitLedgerCommit } = {}) {
   requireRepositoryName(ledgerRepository, "ledgerRepository");
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 8) {
     throw new Error("maxAttempts must be an integer from 1 through 8.");
   }
-  const send = request || createGitHubRequest({ token: token || resolveGitHubToken() });
+  const resolvedToken = token || (request ? "" : resolveGitHubToken());
+  const send = request || createGitHubRequest({ token: resolvedToken });
   return Object.freeze({
     async execute(action, input = {}) {
       const ledgerIdentity = await resolveRepository(send, ledgerRepository, "ledger repository");
@@ -43,6 +52,8 @@ export function createGitHubCloudCollaborationAdapter({ ledgerRepository, token 
         ledgerRef,
         ledgerPath,
         maxAttempts,
+        smartGitLedgerCommit,
+        token: resolvedToken,
       });
     },
     async inspect() {
@@ -232,6 +243,8 @@ async function mutateLedger({
   ledgerRef,
   ledgerPath,
   maxAttempts,
+  smartGitLedgerCommit,
+  token,
 }) {
   let lastConflict = null;
   let semanticRequest = null;
@@ -303,10 +316,13 @@ async function mutateLedger({
     const candidate = await createLedgerCommit({
       send,
       ledgerRepository,
+      ledgerRef,
       ledgerPath,
       snapshot,
       ledger: transition.ledger,
       action,
+      smartGitLedgerCommit,
+      token,
     });
     let update;
     try {
@@ -535,8 +551,7 @@ async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerR
   requireSha(treeSha, "ledger bootstrap tree");
   const ledger = createEmptyLedger(contractRepository(ledgerIdentity));
   const candidate = await createLedgerCommit({
-    send,
-    ledgerRepository,
+    send, ledgerRepository, ledgerRef,
     ledgerPath,
     snapshot: { revision: baseSha, treeSha },
     ledger,
@@ -559,10 +574,13 @@ async function bootstrapLedger({ send, ledgerRepository, ledgerIdentity, ledgerR
 async function createLedgerCommit({
   send,
   ledgerRepository,
+  ledgerRef = DEFAULT_LEDGER_REF,
   ledgerPath,
   snapshot,
   ledger,
   action,
+  smartGitLedgerCommit = createSmartGitLedgerCommit,
+  token = "",
 }) {
   requireValidLedger(ledger);
   const content = `${JSON.stringify(ledger, null, 2)}\n`;
@@ -571,6 +589,17 @@ async function createLedgerCommit({
     path: `/repos/${ledgerRepository}/git/blobs`,
     body: { content, encoding: "utf-8" },
   });
+  if (requiresSmartGitLedgerTransport(blobResponse, content)) {
+    return smartGitLedgerCommit({
+      ledgerRepository,
+      ledgerRef,
+      ledgerPath,
+      snapshot,
+      content,
+      action,
+      token,
+    });
+  }
   requireStatus(blobResponse, [201], "create collaboration ledger blob");
   const blobSha = String(blobResponse.value?.sha || "");
   requireSha(blobSha, "ledger blob");

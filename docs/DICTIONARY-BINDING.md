@@ -184,6 +184,7 @@ dictionary_entries:
   - "@payment-record"
   - "@payment-readiness"
   - "@workspace-lane"
+  - "@coordination-plan"
   - "@recovery-reference"
   - "@collaboration-ledger"
   - "@cloud-claim"

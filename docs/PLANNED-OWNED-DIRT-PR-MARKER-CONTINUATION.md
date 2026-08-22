@@ -29,8 +29,9 @@ the predecessor body and intended successor marker.
 
 `run` requires `authorize planned-owned-dirt-pr-marker-continuation <planDigest>` and the original
 external task capability. Under the original journal lock and writer-registry projection fence, it may
-replace only the writer marker. The original controller's terminal verifier then revalidates cloud,
-lease, bytes, ref, and marker evidence before the original journal advances to `complete`.
+replace only the writer marker. Terminal verification joins the current admitted lease and its verified
+heartbeat suffix rather than the older successor-bound authority snapshot, then revalidates bytes, ref,
+and marker evidence before the original journal advances to `complete`.
 
 The command preserves Git HEAD, index, worktree bytes, refs, pull-request state, cloud ledger, and
 writer-registry contents. It grants no merge, deployment, cleanup, or Production authority.

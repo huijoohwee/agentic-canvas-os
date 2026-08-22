@@ -11,6 +11,8 @@ import { buildPlan, OPERATION }
   from "../scripts/planned-owned-dirt-pr-marker-continuation-contract.mjs";
 import { createController }
   from "../scripts/planned-owned-dirt-pr-marker-continuation-controller.mjs";
+import { buildCurrentTerminalValues }
+  from "../scripts/planned-owned-dirt-pr-marker-continuation-repository-adapter.mjs";
 import { parseArguments }
   from "../scripts/planned-owned-dirt-pr-marker-continuation.mjs";
 
@@ -52,6 +54,25 @@ test("CLI parser separates external plan output from exact-authorized run", () =
   assert.equal(run.pullRequestNumber, 629);
   assert.equal(run.authorization, "authorize exact");
   assert.throws(() => parseArguments(["run", ...common]), /plan-file/u);
+});
+
+test("terminal evidence follows the current heartbeat authority", () => {
+  const plan = originalPlan();
+  const marker = { schema: "agentic-writer-lease/v2", heartbeatAt: "2026-08-22T12:49:24.747Z" };
+  const lease = { schema: "agentic-writer-lease/v2", status: "active", epoch: 1,
+    sessionId: "session", device: "device", scope: "scope", branch: "agent/device/scope",
+    worktreePath: "/repo", baseSha: "a".repeat(40), fenceSha: "a".repeat(40),
+    pullRequestUrl: "https://github.com/owner/repository/pull/629", autoDelivery: true,
+    runtimeRequired: true, admission: null, cloudAuthority: null,
+    acquiredAt: "2026-08-22T00:00:00.000Z", heartbeatAt: "2026-08-22T12:49:24.747Z",
+    expiresAt: "2026-08-22T20:48:54.000Z", taskAuthority: null };
+  const values = buildCurrentTerminalValues({ plan, lease, marker,
+    verified: { authority: { claimDigest: "f".repeat(64) } },
+    mutation: { receiptDigest: "e".repeat(64) } });
+  assert.equal(values.mutationAuthorityReceiptDigest, "e".repeat(64));
+  assert.equal(values.terminalEvidenceDigest, digestValue({ planDigest: plan.planDigest,
+    leaseDigest: digestValue(lease), claimDigest: "f".repeat(64),
+    dirtDigest: plan.evidence.dirtDigest, markerDigest: digestValue(marker) }));
 });
 
 function fakeAdapter(state, plan) {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4232,
-  "headDigest": "7d1d2fc4d425a80795bdd64fb026c35926a1ef77b66c42fb1c3a68a10b4bec84",
+  "sequence": 4233,
+  "headDigest": "8c086d658370fac5260eb69467cae24a93b6f84b326ee556cb372707f257452f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -212054,6 +212054,49 @@
       },
       "claimDigest": "b414952294574d97bff3b23557d73f1a8a4f1d59423de4a36e37d73352715651",
       "digest": "7d1d2fc4d425a80795bdd64fb026c35926a1ef77b66c42fb1c3a68a10b4bec84"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4233,
+      "parentDigest": "7d1d2fc4d425a80795bdd64fb026c35926a1ef77b66c42fb1c3a68a10b4bec84",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c07c457d75ab5ddbc7bde61e32359c1dae93034dcde952ecb77d8152bd5e7ecf",
+      "idempotencyKey": "4fb5795eba1efd4923f178e5576159e40605a5927ff6faf4f91752e40c11734c",
+      "requestDigest": "588c01705215d71f68d8c30868cfc51838468da46b6259398ad26a6aa6619f2f",
+      "evaluationTime": "2026-08-22T11:33:33.000Z",
+      "claimCore": {
+        "claimId": "c07c457d75ab5ddbc7bde61e32359c1dae93034dcde952ecb77d8152bd5e7ecf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:244327716f28ac10becaaab00dd6aa8c6a23f3b92a13f2ae97418327a4161d0c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:855542fa034beb0f780456840291b0f321dbfa3444efea403df47ba2398d3f76",
+        "canonicalBaseRevision": "28b6f0aa8ffb0e1c7b5c07675133a14c353f1762",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:__tests__/planned-owned-dirt-scope-expansion-recovery.test.mjs",
+          "path:docs/PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-repository-adapter.mjs",
+          "semantic:planned-dirt-descendant-successor"
+        ],
+        "writeSetDigest": "b48b23a667ba6e92f00009d64c81b98fb4ebb27625f3e2abff66d06fe601eaed",
+        "laneRevision": "7033f623f1903565661a45107932cf828bb18635",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T12:31:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApGO1Q",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "72f942f17bbc4c8996ed0fcebd105a952d1af0dd798a33f61e5fa35bcb82f84d",
+      "digest": "8c086d658370fac5260eb69467cae24a93b6f84b326ee556cb372707f257452f"
     }
   ]
 }

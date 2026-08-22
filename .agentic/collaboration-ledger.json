@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4250,
-  "headDigest": "7be68466e07b709462c651eac290cd9622087b4cfe1dc5d53fecec0fb36a9e6e",
+  "sequence": 4251,
+  "headDigest": "fb3078580ba4c2f5afeedf686886c62d41786ad1b9abf650aa4a22affa57dab1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -213014,6 +213014,61 @@
       },
       "claimDigest": "bffebb166bf179b187b6be5a624cb327693ac78adcae11300c3ffe915d4412f5",
       "digest": "7be68466e07b709462c651eac290cd9622087b4cfe1dc5d53fecec0fb36a9e6e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4251,
+      "parentDigest": "7be68466e07b709462c651eac290cd9622087b4cfe1dc5d53fecec0fb36a9e6e",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "80b98a8fa0be229f27964475971fb57dcbb773644f8d1aa0b0d4a3bf8b42a563",
+      "idempotencyKey": "d65fdd8df69d03bd40afbe1d5508c4a0cae08d16407ec2213126f4c522ec0f8d",
+      "requestDigest": "8e2a1bfefceb56a37a849bb4039fa98f0121e55bbee29aff95bd2abf4db75601",
+      "evaluationTime": "2026-08-22T12:30:58.000Z",
+      "claimCore": {
+        "claimId": "80b98a8fa0be229f27964475971fb57dcbb773644f8d1aa0b0d4a3bf8b42a563",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9d3b4e5682c3bdd6f962d610d29f025b0b37340cf8e427becc72e86485c8903d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a45a73dcf95957c5b90797d7c651d7c45e70ba42c83927a488dd5efbe01f00e0",
+        "canonicalBaseRevision": "7af30450aa8de499d039a1ddc83e1f5f68cdeca9",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-pr-marker-continuation.test.mjs",
+          "path:docs/PLANNED-OWNED-DIRT-PR-MARKER-CONTINUATION.md",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-contract.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-controller.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-repository-adapter.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation.mjs",
+          "semantic:planned-owned-dirt-pr-marker-continuation"
+        ],
+        "writeSetDigest": "7cd54a2f1bfcd0d52a8c695b7c92303af0d95dced178909ab6489ce7633526c3",
+        "laneRevision": "501964fdf33c92dae834078e4e7731a11b81daee",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-22T13:09:52.000Z",
+        "evidenceDigest": "9ef498a9f26a4498d951943124532d90f6c106f61d5dde26d31779b8db0be368",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApN1Kw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "501964fdf33c92dae834078e4e7731a11b81daee",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApN1Kw",
+          "focusedEvidenceDigest": "9ef498a9f26a4498d951943124532d90f6c106f61d5dde26d31779b8db0be368",
+          "dependencyClosureDigest": "8f23368395bf30219dd00874a1236ea6329143d8e10e186f9128623191c0a4b2",
+          "namedChecksDigest": "7dc5abfb060c90b2cc4e1282c8503b79a2956d433e06116dac45ecd9ce363b85",
+          "handoffEvidenceDigest": "6aa1703de0192f7d6ef5a667c9772da664e5abcb92f15848391d05a664196a54",
+          "operatorDecisionDigest": "16358429d886780035b417200729ab272ff488e4a0197bfd96ff265f0f8f13f1",
+          "integrationIntentDigest": "0950f14613d1b8a27ded15fcf33e9d334fc9d1b09ec4483b1508734f4f6f80ca",
+          "integratedAt": "2026-08-22T12:30:58.000Z"
+        }
+      },
+      "claimDigest": "16ad1e16a00a6be77c800a97269a6feea618179d13aa43f9f073fdc474f87d60",
+      "digest": "fb3078580ba4c2f5afeedf686886c62d41786ad1b9abf650aa4a22affa57dab1"
     }
   ]
 }

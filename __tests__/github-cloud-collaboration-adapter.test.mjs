@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { createGitHubCloudCollaborationAdapter } from "../scripts/github-cloud-collaboration-adapter.mjs";
+import {
+  createGitHubCloudCollaborationAdapter,
+  requiresSmartGitLedgerTransport,
+  SMART_GIT_LEDGER_THRESHOLD_BYTES,
+} from "../scripts/github-cloud-collaboration-adapter.mjs";
 import {
   CURRENT_CLAIM_INVENTORY_SCHEMA,
   pseudonymousIdentifier,
@@ -14,6 +18,12 @@ const evidenceDigest = "e".repeat(64), operatorDecisionDigest = "d".repeat(64);
 const integrationIntentDigest = "a".repeat(64);
 const workflowContext = { trustedSource: "github-actions", runId: 17, runAttempt: 1,
   repository: targetRepository, repositoryId: 2, revision: targetMainSha };
+test("adapter selects smart Git transport only for an oversized malformed blob request", () => {
+  const oversized = "x".repeat(SMART_GIT_LEDGER_THRESHOLD_BYTES);
+  assert.equal(requiresSmartGitLedgerTransport({ status: 400 }, oversized), true);
+  assert.equal(requiresSmartGitLedgerTransport({ status: 422 }, oversized), false);
+  assert.equal(requiresSmartGitLedgerTransport({ status: 400 }, "small"), false);
+});
 test("adapter bootstraps the ledger, advances only by non-forced CAS, and replays exactly", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);

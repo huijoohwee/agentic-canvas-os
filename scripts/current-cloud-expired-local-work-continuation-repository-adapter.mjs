@@ -38,6 +38,10 @@ const RUNTIME_FILES = Object.freeze([
   "scripts/current-cloud-expired-local-work-continuation.mjs",
 ]);
 
+export function normalizeCurrentCloudContinuationClaim(claim) {
+  return claim?.state === "active" ? Object.freeze({ ...claim, state: "current" }) : claim;
+}
+
 export function createRepositoryCurrentCloudExpiredLocalWorkContinuationAdapter(
   options = {}, dependencies = {},
 ) {
@@ -141,7 +145,7 @@ export function createRepositoryCurrentCloudExpiredLocalWorkContinuationAdapter(
     if (verification?.status !== "ready" || !Array.isArray(claims)) invalid("cloud verification");
     const matches = claims.filter(claim => claim.claimId === lease.cloudAuthority.claimId);
     if (matches.length !== 1) invalid("current cloud claim cardinality");
-    const claim = matches[0];
+    const claim = normalizeCurrentCloudContinuationClaim(matches[0]);
     const overlappingClaimIds = claims.filter(candidate => candidate.claimId !== claim.claimId
       && (candidate.writeAuthority === true || candidate.scopeReserved === true)
       && writeSetsOverlap(candidate.declaredWriteScope, claim.declaredWriteScope))

@@ -14,13 +14,23 @@ import { buildCurrentCloudExpiredLocalWorkContinuationPlan }
   from "../scripts/current-cloud-expired-local-work-continuation-contract.mjs";
 import { createCurrentCloudExpiredLocalWorkContinuationController }
   from "../scripts/current-cloud-expired-local-work-continuation-controller.mjs";
-import { createRepositoryCurrentCloudExpiredLocalWorkContinuationAdapter }
+import { createRepositoryCurrentCloudExpiredLocalWorkContinuationAdapter,
+  normalizeCurrentCloudContinuationClaim }
   from "../scripts/current-cloud-expired-local-work-continuation-repository-adapter.mjs";
 
 const D = value => digestValue({ value });
 const S = value => value.repeat(40);
 const OBSERVED_AT = "2026-08-16T01:00:00.000Z";
 const CLOUD_EXPIRY = "2026-08-16T03:00:00.000Z";
+
+test("repository adapter maps the provider-neutral active state to current", () => {
+  const claim = { state: "active", claimId: D("claim") };
+  assert.deepEqual(normalizeCurrentCloudContinuationClaim(claim), {
+    state: "current", claimId: claim.claimId,
+  });
+  assert.equal(normalizeCurrentCloudContinuationClaim({ state: "review_ready" }).state,
+    "review_ready");
+});
 
 for (const mode of ["admitted-committed-descendant-dirty", "planned-fence-dirty"]) {
   test(`${mode} restores the exact local projection and preserves owned work`, async () => {

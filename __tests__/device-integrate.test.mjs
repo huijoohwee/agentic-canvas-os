@@ -2259,7 +2259,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
     assert.equal(completed, true);
     assert.deepEqual(commitSubjectReads, []);
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha, commitSha]);
-    assert.equal(verifiedProtectedRefreshes.length, 2);
+    assert.equal(verifiedProtectedRefreshes.length, 3);
     assert.deepEqual(result.protectedMainRefresh, {
       schema: "agentic-protected-main-refresh/v1",
       deliveredHeadSha: commitSha,

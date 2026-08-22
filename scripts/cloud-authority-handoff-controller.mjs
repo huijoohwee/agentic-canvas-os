@@ -266,7 +266,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         "view",
         pullRequest.url,
         "--json",
-        "author,url,state,isDraft,headRefName,headRefOid,baseRefName,body",
+        "id,author,url,state,isDraft,headRefName,headRefOid,baseRefName,body",
       ]));
       const remoteLease = parseWriterLeasePullRequestBody(pullWithAuthor.body);
       const admission = normalizeManifestFromLease(lease.admission);
@@ -295,6 +295,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         authority,
         protectedMainRefresh,
         pullRequest: Object.freeze({
+          id: requiredText(pullWithAuthor.id, "pull request node ID"),
           url: pullWithAuthor.url,
           state: pullWithAuthor.state,
           isDraft: pullWithAuthor.isDraft,

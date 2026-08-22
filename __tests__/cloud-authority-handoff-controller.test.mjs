@@ -9,6 +9,7 @@ import {
   createRepositoryCloudAuthorityHandoffControllerAdapter,
 } from "../scripts/cloud-authority-handoff-controller.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const BASE_SHA = "a".repeat(40);
 const REVIEW_SHA = "b".repeat(40);
@@ -584,4 +585,46 @@ test("repository projection pins non-writer expiry to cloud authority", () => {
   adapter.persistReviewProjection({ lane: source, authority });
   assert.equal(released.timestamp, authority.expiresAt);
   assert.equal(updated.expiresAt, authority.expiresAt);
+});
+
+test("repository reader preserves the provider pull-request node ID", () => {
+  const source = preservedLane();
+  const body = renderWriterLeasePullRequestBody(source.lease);
+  const pullRequest = {
+    id: "PR_238",
+    url: source.pullRequest.url,
+    state: "OPEN",
+    isDraft: false,
+    headRefName: source.branch,
+    headRefOid: REVIEW_SHA,
+    headRepository: { nameWithOwner: "example/repo" },
+    baseRefName: "main",
+    baseRefOid: BASE_SHA,
+    body,
+    author: { login: "owner" },
+  };
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    resolveRealpath: value => value,
+    leaseStore: { read: () => source.lease },
+    run: () => {},
+    gitText: args => {
+      const values = {
+        "worktree list --porcelain -z": `worktree /repo\0HEAD ${REVIEW_SHA}\0branch refs/heads/${source.branch}\0\0`,
+        "rev-parse --show-toplevel": "/repo",
+        "branch --show-current": source.branch,
+        "rev-parse HEAD": REVIEW_SHA,
+        [`rev-parse refs/remotes/origin/${source.branch}`]: REVIEW_SHA,
+        "status --porcelain": "",
+      };
+      const key = args.join(" ");
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    },
+    ghText: () => JSON.stringify(pullRequest),
+  });
+
+  const lane = adapter.readPreservedReviewLane({ branch: source.branch });
+  assert.equal(lane.pullRequest.id, "PR_238");
 });

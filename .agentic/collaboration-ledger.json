@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4257,
-  "headDigest": "ddfe3591932f18c800218caa6b3c16199c272c87e1c2b1d913bd39fe1d013570",
+  "sequence": 4258,
+  "headDigest": "d78b413c5ddeebee9f3a3d7869de1829e9653f46e945b7cca793cd31275e0a01",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -213405,6 +213405,47 @@
       },
       "claimDigest": "d90cea0976e3e3deebe8c88a0cb471091358764609c11adffd2477a00c67fa07",
       "digest": "ddfe3591932f18c800218caa6b3c16199c272c87e1c2b1d913bd39fe1d013570"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4258,
+      "parentDigest": "ddfe3591932f18c800218caa6b3c16199c272c87e1c2b1d913bd39fe1d013570",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "023cf01758e00114272e939f1b6f6abaad5b8a22ba44b12e7e0b5bc953a392e5",
+      "idempotencyKey": "a2fe4e7ce0b7b0f00ee9379b43417f48fe4a22a94087e8543126da59d700bcd6",
+      "requestDigest": "f7d6e0e7a8ff0cb2bf5063ba0e67d46c802a375df5c33efbfb98df8b1b7aed0b",
+      "evaluationTime": "2026-08-22T13:02:05.000Z",
+      "claimCore": {
+        "claimId": "023cf01758e00114272e939f1b6f6abaad5b8a22ba44b12e7e0b5bc953a392e5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:4b61ce6bfaaf80ebb6d02a617d703df379a25208d7241042289ef0d7c64ab6e7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:bfc375530ca96eca7e46411ec519278d86567fb8f778ddb13ae969d0ecffaf3d",
+        "canonicalBaseRevision": "60e8fe5f650bdc7fa777053fb3eb4b8d72055269",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-pr-marker-continuation.test.mjs",
+          "path:docs/PLANNED-OWNED-DIRT-PR-MARKER-CONTINUATION.md",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-repository-adapter.mjs",
+          "semantic:pr-marker-continuation-terminal-authority"
+        ],
+        "writeSetDigest": "0ba5606afc78abf81d04a019623cce4b9238a7d515ec83af44ed773272bec4cf",
+        "laneRevision": "db966570ac330f6e436e1adf85486796b2f05321",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-22T13:53:34.000Z",
+        "evidenceDigest": "2fd4e27ea10f1fd3a49ec8b62609ce25e12204966a9bd668fe587c72b5a4745e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApU6MQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5f6576b35bb87f6298e9c6f024b1fc54ee4398f44eed6fe44a5434ba1417726d",
+      "digest": "d78b413c5ddeebee9f3a3d7869de1829e9653f46e945b7cca793cd31275e0a01"
     }
   ]
 }

@@ -184,6 +184,32 @@ test("repository adapter ignores an unrelated stale dormant-preservation journal
   });
 });
 
+test("repository adapter ignores an unrelated journal with incomplete historical lane identity", () => {
+  withFixture(fixture => {
+    const directory = path.join(
+      fixture.repo, ".git", "agentic-canvas-os", "dormant-preservation-admission",
+    );
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(directory, "unrelated-incomplete.json"), `${JSON.stringify({
+      intent: {
+        planSnapshot: {
+          sourceEvidence: {
+            preservation: {
+              selectedLanes: [{ worktree: { path: path.join(fixture.root, "another-lane") } }],
+            },
+          },
+        },
+      },
+    })}\n`);
+    const adapter = createAdapter(fixture, {
+      normalizeDormantIntent() {
+        throw new Error("unrelated historical journal was normalized");
+      },
+    });
+    assert.doesNotThrow(() => adapter.captureEvidence({}));
+  });
+});
+
 test("repository adapter still validates a stale journal selecting the target lane", () => {
   withFixture(fixture => {
     const directory = path.join(

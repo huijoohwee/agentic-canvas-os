@@ -34,7 +34,7 @@ const IMPLEMENTATION = ["contract", "controller", "evidence", "repository-adapte
   .map(suffix => `active-dirty-scope-expansion-intent-recovery${suffix ? `-${suffix}` : ""}.mjs`);
 const METHODS = ["withEntrypointFence", "readSourceEvidence", "readIntent", "writeIntent",
   "observeTerminal", "executeTerminal"];
-const MAX_LEDGER_BYTES = 8_388_608;
+export const MAX_RECOVERY_LEDGER_BYTES = 16_777_216;
 
 export function createActiveDirtyScopeExpansionIntentRecoveryAdapter(methods = {}) {
   for (const name of METHODS) {
@@ -56,7 +56,7 @@ export function createRepositoryActiveDirtyScopeExpansionIntentRecoveryAdapter({
   if (controller !== resolveRealpath(CONTROLLER_ROOT)) throw new Error("Recovery requires its exact protected controller root.");
   const sourceRoot = resolveRealpath(path.resolve(requiredText(sourceRepository, "source repository")));
   const target = requiredRepository(targetRepository, "target repository");
-  const ledger = requiredRepository(ledgerRepository || target, "ledger repository");
+  const ledger = requiredRepository(ledgerRepository, "ledger repository");
   const pullNumber = positiveInteger(pullRequestNumber, "pull request number");
   const session = requiredText(sessionId, "session ID");
   const command = (program, args, cwd = sourceRoot) => execute(program, args, subprocess(cwd, environment));
@@ -77,6 +77,7 @@ export function createRepositoryActiveDirtyScopeExpansionIntentRecoveryAdapter({
     const branch = requiredText(git(["branch", "--show-current"]).trim(), "source branch");
     const lease = store.verify({ sessionId: session, branch });
     if (path.resolve(lease.worktreePath) !== sourceRoot) throw new Error("Recovery source is not the exact leased worktree.");
+    requireRecoveryLedgerRepository({ ledgerRepository: ledger, authority: lease.cloudAuthority });
     const intent = readScopeExpansionIntent({ leaseStore: store, branch });
     const lane = readLane({ git, sourceRoot, branch });
     if (lane.dirtyDigest !== intent?.planSnapshot?.sourceDirtyDigest
@@ -353,7 +354,22 @@ function parseSingleMarker(body) {
 function readLedger({ gh, ledgerRepository, revision }) {
   const bytes = gh(["api", "--method", "GET", "-H", "Accept: application/vnd.github.raw+json",
     `repos/${ledgerRepository}/contents/.agentic/collaboration-ledger.json`, "-f", `ref=${revision}`]);
-  if (Buffer.byteLength(bytes) < 1 || Buffer.byteLength(bytes) > MAX_LEDGER_BYTES) throw new Error("Ledger snapshot exceeds recovery bounds.");
+  return parseValidatedRecoveryLedgerSnapshot(bytes);
+}
+
+export function requireRecoveryLedgerRepository({ ledgerRepository, authority } = {}) {
+  const ledger = requiredRepository(ledgerRepository, "ledger repository");
+  if (authority?.ledgerRepository !== ledger) {
+    throw new Error("Recovery ledger repository does not match the leased cloud authority.");
+  }
+  return ledger;
+}
+
+export function parseValidatedRecoveryLedgerSnapshot(bytes) {
+  const size = Buffer.byteLength(bytes);
+  if (size < 1 || size > MAX_RECOVERY_LEDGER_BYTES) {
+    throw new Error("Ledger snapshot exceeds recovery bounds.");
+  }
   const ledger = JSON.parse(bytes), failures = validateLedger(ledger);
   if (failures.length) throw new Error(`Ledger snapshot is invalid: ${failures.join("; ")}`);
   return ledger;

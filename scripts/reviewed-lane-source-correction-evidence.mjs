@@ -203,9 +203,11 @@ function actor(value) {
 
 function lease(value) {
   const admission = value?.admission;
+  const delivery = value?.status === "delivery";
   const result = {
     schema: value?.schema === "agentic-writer-lease/v2" ? value.schema : invalid("lease schema"),
-    status: value?.status === "review_ready" ? value.status : invalid("lease status"),
+    status: ["review_ready", "delivery"].includes(value?.status)
+      ? value.status : invalid("lease status"),
     epoch: integer(value?.epoch, "lease epoch"),
     sessionId: text(value?.sessionId, "source session"),
     device: text(value?.device, "source device"),
@@ -213,7 +215,7 @@ function lease(value) {
     branch: text(value?.branch, "source branch"),
     baseSha: sha(value?.baseSha, "lease base"),
     fenceSha: sha(value?.fenceSha, "lease fence"),
-    reviewHeadSha: sha(value?.reviewHeadSha, "review head"),
+    reviewHeadSha: sha(delivery ? value?.deliveryHeadSha : value?.reviewHeadSha, "review head"),
     pullRequestUrl: text(value?.pullRequestUrl, "pull-request URL"),
     admission: {
       schema: admission?.schema === "agentic-lane-admission-lease/v1"
@@ -248,7 +250,7 @@ function authority(value) {
     writeSetDigest: digest(value?.writeSetDigest, "authority write set"),
     leaseEpoch: integer(value?.leaseEpoch, "authority epoch"),
     transitionCounter: integer(value?.transitionCounter, "authority transition"),
-    state: ["review_ready", "parked"].includes(value?.state)
+    state: ["review_ready", "delivery_authorized", "parked"].includes(value?.state)
       ? value.state : invalid("authority state"),
     reviewRequestId: text(value?.reviewRequestId, "authority review request"),
     focusedEvidenceDigest: digest(value?.focusedEvidenceDigest, "focused evidence"),
@@ -448,8 +450,10 @@ function writerMarker(value) {
   }
   const admission = value?.admission;
   const cloud = value?.cloudAuthority;
+  const delivery = value?.status === "delivery";
   return freeze({
-    status: value?.status === "review_ready" ? value.status : invalid("marker status"),
+    status: ["review_ready", "delivery"].includes(value?.status)
+      ? value.status : invalid("marker status"),
     epoch: integer(value?.epoch, "marker epoch"),
     sessionId: text(value?.sessionId, "marker session"),
     device: text(value?.device, "marker device"),
@@ -457,7 +461,8 @@ function writerMarker(value) {
     branch: text(value?.branch, "marker branch"),
     baseSha: sha(value?.baseSha, "marker base"),
     fenceSha: sha(value?.fenceSha, "marker fence"),
-    reviewHeadSha: sha(value?.reviewHeadSha, "marker review head"),
+    reviewHeadSha: sha(delivery ? value?.deliveryHeadSha : value?.reviewHeadSha,
+      "marker review head"),
     admissionWriteSetDigest: digest(admission?.writeSetDigest, "marker write set"),
     admissionManifestDigest: digest(admission?.manifestDigest, "marker manifest"),
     cloudClaimId: digest(cloud?.claimId, "marker claim ID"),
@@ -476,19 +481,30 @@ function assertJoined(source) {
   const marker = pull.writerMarker;
   const recovery = source.sameClaimRecovery;
   const integratedReplay = record.recordedState === "integrated-preserved";
+  const deliveryProjection = integratedReplay && cloud.state === "delivery_authorized";
   const integratedAdvance = record.recovery ? 2 : 1;
   const claimAuthorityJoined = integratedReplay
-    ? ["integrated-preserved", "dormant-preserved"].includes(record.state)
-      && record.transitionCounter === cloud.transitionCounter + integratedAdvance
-      && record.fenceRevision !== cloud.claimDigest
-      && record.transitionDigest !== cloud.claimLedgerRevision
-      && record.operationReceiptDigest !== cloud.operationReceiptDigest
-      && (record.recovery
-        ? record.integrationReceiptDigest !== record.operationReceiptDigest
-        : record.integrationReceiptDigest === record.operationReceiptDigest)
-      && record.integration?.candidateRevision === source.localHeadSha
-      && record.integration?.reviewRequestId === reviewRequestId
-      && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest
+    ? deliveryProjection
+      ? record.state === "integrated-preserved"
+        && record.transitionCounter === cloud.transitionCounter
+        && record.fenceRevision === cloud.claimDigest
+        && record.transitionDigest === cloud.claimLedgerRevision
+        && record.operationReceiptDigest === cloud.operationReceiptDigest
+        && record.integrationReceiptDigest === record.operationReceiptDigest
+        && record.integration?.candidateRevision === source.localHeadSha
+        && record.integration?.reviewRequestId === reviewRequestId
+        && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest
+      : ["integrated-preserved", "dormant-preserved"].includes(record.state)
+        && record.transitionCounter === cloud.transitionCounter + integratedAdvance
+        && record.fenceRevision !== cloud.claimDigest
+        && record.transitionDigest !== cloud.claimLedgerRevision
+        && record.operationReceiptDigest !== cloud.operationReceiptDigest
+        && (record.recovery
+          ? record.integrationReceiptDigest !== record.operationReceiptDigest
+          : record.integrationReceiptDigest === record.operationReceiptDigest)
+        && record.integration?.candidateRevision === source.localHeadSha
+        && record.integration?.reviewRequestId === reviewRequestId
+        && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest
     : record.recordedState === "reviewed"
       && cloud.claimDigest === record.fenceRevision
       && cloud.claimLedgerRevision === record.transitionDigest

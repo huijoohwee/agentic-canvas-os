@@ -77,7 +77,8 @@ function createRuntime(options, dependencies) {
 
   function readLease({ terminal = false } = {}) {
     const lease = leaseStore.read(branch);
-    const allowed = terminal ? ["review_ready", "active"] : ["review_ready"];
+    const allowed = terminal ? ["review_ready", "delivery", "active"]
+      : ["review_ready", "delivery"];
     if (!lease || lease.schema !== "agentic-writer-lease/v2"
       || !allowed.includes(lease.status)
       || lease.sessionId !== sourceSessionId
@@ -147,7 +148,11 @@ function createRuntime(options, dependencies) {
       actor: provider.actor,
       lease,
       authority: { ...authority,
-        state: projectRootState(authority.state) === "parked" ? "parked" : "review_ready" },
+        state: projectRootState(authority.state) === "parked"
+          ? "parked"
+          : projectRootState(authority.state) === "delivery_authorized"
+            ? "delivery_authorized"
+            : "review_ready" },
       claim,
       pullRequest: provider.pullRequest,
       localHeadSha,

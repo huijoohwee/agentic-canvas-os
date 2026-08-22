@@ -287,6 +287,15 @@ node "$AGENTIC_CANVAS_OS_ROOT/scripts/device-branch.mjs" start \
 
 If this combined call is interrupted after the claim, an exact-session retry from the recorded `$TASK_WORKTREE` without `--provision` may reconcile only the activation base, claim subject, fence, remote head, and single draft pull request; it does not reconstruct a missing Preservation Receipt or authorize source edits. Keep a `planned` recovery lane untouched until owner-led lifecycle recovery closes it and a fresh admission completes. An expired same-session planned lane with a clean committed descendant may run `planned-clean-committed-recovery.mjs`; it recovers only the exact dormant cloud claim and local lease projection, preserves `planned` status and every ref and byte, returns no mutation authority, and still requires the exact dormant-preservation admission before review, publication, or integration. The external cloud claim remains its owner's authority: a failed check/start never silently releases or replaces it, so the owner must retry compatibly or explicitly release/reclaim the exact claim through `CLOUD-COLLABORATION.md`. A target, branch, lease, PR, session, ledger, or expiry mismatch fails closed. Before first and every later mutation batch, including heartbeat renewal, revalidate the current cloud claim and local lease/epoch/fence/expiry; local expiry never exceeds cloud expiry.
 
+A task-bound `planned` lane with owned dirt at its unchanged fence may widen
+scope only through `planned-owned-dirt-scope-expansion-recovery.mjs`. Its
+read-only plan requires an exact strict-superset manifest; execution requires
+the returned `authorize planned-owned-dirt-scope-expansion-recovery
+<planDigest>` text and original external task capability. The journaled cloud
+successor and local registry CAS preserve every byte, index entry, ref, draft
+review, and task subject. Success restores scoped mutation authority only; see
+`PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md`.
+
 Heartbeat before the 30-minute default TTL expires:
 
 ```sh

@@ -1613,6 +1613,40 @@ test("review helper records continue(review) without changing candidate identity
   assert.equal(ready.authority.reviewRequestId, REVIEW_REQUEST_ID);
 });
 
+test("review helper prefers explicit review request identity over pull request projection", () => {
+  const initial = rootClaim({ laneRevision: BASE_SHA, transitionCounter: 1 });
+  const harness = projectionHarness(initial);
+  const ready = reviewReadyAdmissionCloudAuthority({
+    authority: localAuthority({
+      claimDigest: initial.fenceRevision,
+      claimLedgerRevision: initial.transitionDigest,
+    }),
+    manifest: MANIFEST,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    pullRequestNumber: PULL_REQUEST_NUMBER,
+    reviewRequestId: REVIEW_REQUEST_ID,
+    focusedEvidenceDigest: focusedEvidenceDigest(),
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  assert.deepEqual(
+    harness.calls.map(call => [call.action, call.request.mode || null, call.request.pullRequestNumber]),
+    [
+      ["continue", "projection", undefined],
+      ["continue", "review", undefined],
+    ],
+  );
+  assert.equal(harness.calls[0].request.reviewRequestId, REVIEW_REQUEST_ID);
+  assert.equal(harness.calls[1].request.reviewRequestId, REVIEW_REQUEST_ID);
+  assert.equal(ready.authority.state, "review_ready");
+  assert.equal(ready.authority.reviewRequestId, REVIEW_REQUEST_ID);
+});
+
 test("integration projection requires explicit operator and joined evidence", () => {
   const evidence = focusedEvidenceDigest();
   const reviewedClaim = rootClaim({

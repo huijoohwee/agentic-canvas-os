@@ -304,6 +304,22 @@ For dirty work, also provide the intentional `--commit-message` and exact
 external `agentic-change-manifest/v1` through `--paths-manifest`. Require its
 commit, manifest/diff digest, pull-request, merge, integrated-source SHA, and
 managed-runtime evidence, then rerun the original acceptance path.
+
+Post-integration canonical runtime convergence is an adaptive reconciliation,
+not an unconditional process restart. The controller consumes the exact
+integrated revision and runtime-impact declaration, fast-forwards only a clean
+canonical owner, verifies runtime ownership, and compares the integrated,
+canonical, and running revisions. It records `no-op` only when the owned runtime
+already proves that revision; otherwise it may use an adapter-attested safe
+`reload`, or replace only the recorded owned process group with `restart`.
+Unmanaged listeners, ambiguous ownership, revision disagreement, or failed
+functional probes produce source status `integrated` with runtime status
+`blocked`; they neither roll back integration nor create deployment authority.
+The Runtime Reconciliation Receipt binds `integratedSourceSha`,
+`canonicalSourceSha`, `runtimeSourceSha`, strategy, ownership evidence, probes,
+and status. Only revision equality plus successful probes may report
+`runtime_ready`.
+
 Branch-only, stashed, pushed, open-pull-request, or auto-merge-pending work
 remains incomplete. `device:park` is only a paused or blocked exit. This Dev
 completion gate does not deploy from the checkout. The protected merge event

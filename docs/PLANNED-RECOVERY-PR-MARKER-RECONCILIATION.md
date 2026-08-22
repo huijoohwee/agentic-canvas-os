@@ -31,3 +31,8 @@ request. Provider closure occurs before local release, making interruption repla
 The operation preserves the worktree, local and remote branches, commit, index, and authored bytes.
 It does not merge, delete, clean up, recover write authority, alter canonical main, deploy, or authorize
 Production. Recoverable cleanup remains a separate exact plan and authorization.
+
+After the released local receipt is digest-validated, the lane may be classified as
+`retired-preserved` only when its clean worktree path, branch, fence HEAD, pull-request URL, and
+terminal timestamps still match the released lease. This releases its historical scope for a different
+successor lane while preserving the original lane; it never makes that preserved lane cleanup-eligible.

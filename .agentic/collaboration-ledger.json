@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4249,
-  "headDigest": "3cdb0741b54bcbe078c767ef563af934607ef10c6d0618edf6ca77a7f6f8d52d",
+  "sequence": 4250,
+  "headDigest": "7be68466e07b709462c651eac290cd9622087b4cfe1dc5d53fecec0fb36a9e6e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -212970,6 +212970,50 @@
       },
       "claimDigest": "a3c7b393f3444af5514b1da8d88fecccbd4f4edb9eed9a9cc0d798492bde8e91",
       "digest": "3cdb0741b54bcbe078c767ef563af934607ef10c6d0618edf6ca77a7f6f8d52d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4250,
+      "parentDigest": "3cdb0741b54bcbe078c767ef563af934607ef10c6d0618edf6ca77a7f6f8d52d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "80b98a8fa0be229f27964475971fb57dcbb773644f8d1aa0b0d4a3bf8b42a563",
+      "idempotencyKey": "3ac8715a7834584c2256385290c112ac0f0b470eabff6fa085a59d014a0238ce",
+      "requestDigest": "8984e214032847f46f80aca2e5dd290d35e34d0a7aee3fce3e18ac5a9fb05213",
+      "evaluationTime": "2026-08-22T12:29:51.000Z",
+      "claimCore": {
+        "claimId": "80b98a8fa0be229f27964475971fb57dcbb773644f8d1aa0b0d4a3bf8b42a563",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9d3b4e5682c3bdd6f962d610d29f025b0b37340cf8e427becc72e86485c8903d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a45a73dcf95957c5b90797d7c651d7c45e70ba42c83927a488dd5efbe01f00e0",
+        "canonicalBaseRevision": "7af30450aa8de499d039a1ddc83e1f5f68cdeca9",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-pr-marker-continuation.test.mjs",
+          "path:docs/PLANNED-OWNED-DIRT-PR-MARKER-CONTINUATION.md",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-contract.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-controller.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation-repository-adapter.mjs",
+          "path:scripts/planned-owned-dirt-pr-marker-continuation.mjs",
+          "semantic:planned-owned-dirt-pr-marker-continuation"
+        ],
+        "writeSetDigest": "7cd54a2f1bfcd0d52a8c695b7c92303af0d95dced178909ab6489ce7633526c3",
+        "laneRevision": "501964fdf33c92dae834078e4e7731a11b81daee",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-22T13:09:52.000Z",
+        "evidenceDigest": "9ef498a9f26a4498d951943124532d90f6c106f61d5dde26d31779b8db0be368",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApN1Kw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "bffebb166bf179b187b6be5a624cb327693ac78adcae11300c3ffe915d4412f5",
+      "digest": "7be68466e07b709462c651eac290cd9622087b4cfe1dc5d53fecec0fb36a9e6e"
     }
   ]
 }

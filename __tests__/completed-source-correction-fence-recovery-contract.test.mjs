@@ -58,6 +58,20 @@ test("evidence accepts the exact lease recorded by the current successor task-bi
     evidence.lease.successorTaskBindingSourceLeaseDigest);
 });
 
+test("evidence joins an empty descendant to the current successor task binding", () => {
+  const source = fixture();
+  const evidence = buildCompletedSourceCorrectionFenceRecoveryEvidence({
+    ...source,
+    source: { ...source.source, changedPaths: [] },
+    lease: { ...source.lease, successorTaskBindingSourceLeaseDigest: G },
+    correction: { ...source.correction, completionLeaseDigest: G },
+  });
+
+  assert.deepEqual(evidence.source.changedPaths, []);
+  assert.equal(evidence.correction.completionLeaseDigest,
+    evidence.lease.successorTaskBindingSourceLeaseDigest);
+});
+
 test("evidence rejects a completion lease not bound by the current lease or successor repair", () => {
   const source = fixture();
   assert.throws(() => buildCompletedSourceCorrectionFenceRecoveryEvidence({

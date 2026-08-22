@@ -482,6 +482,16 @@ function assertJoined(source) {
   const recovery = source.sameClaimRecovery;
   const integratedReplay = record.recordedState === "integrated-preserved";
   const deliveryProjection = integratedReplay && cloud.state === "delivery_authorized";
+  const expiredDeliveryProjection = integratedReplay && cloud.state === "parked"
+    && record.state === "dormant-preserved"
+    && record.transitionCounter === cloud.transitionCounter
+    && record.fenceRevision === cloud.claimDigest
+    && record.transitionDigest === cloud.claimLedgerRevision
+    && record.operationReceiptDigest === cloud.operationReceiptDigest
+    && record.integrationReceiptDigest === record.operationReceiptDigest
+    && record.integration?.candidateRevision === source.localHeadSha
+    && record.integration?.reviewRequestId === reviewRequestId
+    && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest;
   const integratedAdvance = record.recovery ? 2 : 1;
   const claimAuthorityJoined = integratedReplay
     ? deliveryProjection
@@ -494,7 +504,7 @@ function assertJoined(source) {
         && record.integration?.candidateRevision === source.localHeadSha
         && record.integration?.reviewRequestId === reviewRequestId
         && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest
-      : ["integrated-preserved", "dormant-preserved"].includes(record.state)
+      : expiredDeliveryProjection || (["integrated-preserved", "dormant-preserved"].includes(record.state)
         && record.transitionCounter === cloud.transitionCounter + integratedAdvance
         && record.fenceRevision !== cloud.claimDigest
         && record.transitionDigest !== cloud.claimLedgerRevision
@@ -504,7 +514,7 @@ function assertJoined(source) {
           : record.integrationReceiptDigest === record.operationReceiptDigest)
         && record.integration?.candidateRevision === source.localHeadSha
         && record.integration?.reviewRequestId === reviewRequestId
-        && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest
+        && record.integration?.focusedEvidenceDigest === cloud.focusedEvidenceDigest)
     : record.recordedState === "reviewed"
       && cloud.claimDigest === record.fenceRevision
       && cloud.claimLedgerRevision === record.transitionDigest

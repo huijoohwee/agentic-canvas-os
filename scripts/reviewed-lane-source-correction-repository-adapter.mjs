@@ -141,6 +141,9 @@ function createRuntime(options, dependencies) {
       sessionId: lease.sessionId,
       focusedEvidenceDigest: lease.cloudAuthority.focusedEvidenceDigest,
     });
+    const projectedAuthorityState = integratedReplay && lease.status === "delivery"
+      ? projectRootState(joined.state)
+      : projectRootState(authority.state);
     const advance = protectedAdvance(lease, provider.pullRequest.baseSha, protectedMainHead());
     const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     return buildReviewedLaneSourceCorrectionEvidence({
@@ -148,9 +151,9 @@ function createRuntime(options, dependencies) {
       actor: provider.actor,
       lease,
       authority: { ...authority,
-        state: projectRootState(authority.state) === "parked"
+        state: projectedAuthorityState === "parked"
           ? "parked"
-          : projectRootState(authority.state) === "delivery_authorized"
+          : projectedAuthorityState === "delivery_authorized"
             ? "delivery_authorized"
             : "review_ready" },
       claim,

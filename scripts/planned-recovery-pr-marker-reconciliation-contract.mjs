@@ -3,6 +3,7 @@ import { digestValue } from "./cloud-collaboration-primitives.mjs";
 
 export const PLAN_SCHEMA = "agentic-planned-recovery-pr-marker-reconciliation-plan/v1";
 export const RECEIPT_SCHEMA = "agentic-planned-recovery-pr-marker-reconciliation-receipt/v1";
+export const LOCAL_RELEASE_RECEIPT_SCHEMA = "agentic-planned-recovery-pr-marker-local-release/v1";
 
 export function buildPlan(input) {
   const core = {
@@ -70,6 +71,28 @@ export function buildReceipt({ plan, provider, releasedLeaseDigest, targetMarker
     completedAt: instant(completedAt, "completedAt"),
   };
   return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+}
+
+export function normalizeLocalReleaseReceipt(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Planned recovery local release receipt is required.");
+  }
+  const { receiptDigest, ...core } = value;
+  const normalized = {
+    schema: core.schema,
+    planDigest: digest(core.planDigest, "local release plan digest"),
+    claimId: digest(core.claimId, "local release claim ID"),
+    pullRequestUrl: text(core.pullRequestUrl, "local release pull-request URL"),
+    completedAt: instant(core.completedAt, "local release completedAt"),
+  };
+  if (normalized.schema !== LOCAL_RELEASE_RECEIPT_SCHEMA
+    || JSON.stringify(Object.keys(core).sort()) !== JSON.stringify(Object.keys(normalized).sort())) {
+    throw new Error("Planned recovery local release receipt is invalid.");
+  }
+  if (digest(receiptDigest, "local release receipt digest") !== digestValue(normalized)) {
+    throw new Error("Planned recovery local release receipt digest is invalid.");
+  }
+  return Object.freeze({ ...normalized, receiptDigest });
 }
 
 function text(value, label) { if (typeof value !== "string" || !value) throw new Error(`${label} is required.`); return value; }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4227,
-  "headDigest": "fd5b319390ffe31cd8dea1ffca7cf3d2504639e53b0a7df29743e5e98b7a51c4",
+  "sequence": 4228,
+  "headDigest": "ddc0fb11210ebfef87d2de90a9f95ff1cd96fb7ff2aae2b916dcd167b376901a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -211815,6 +211815,47 @@
       },
       "claimDigest": "074591f50b16e243005e08fe1d86167f8c80bbaa8e4316c487c7b0b4e3f47e02",
       "digest": "fd5b319390ffe31cd8dea1ffca7cf3d2504639e53b0a7df29743e5e98b7a51c4"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4228,
+      "parentDigest": "fd5b319390ffe31cd8dea1ffca7cf3d2504639e53b0a7df29743e5e98b7a51c4",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8f72fb560bd04a911d406507a584af63b7a13941c401988efdc2cc8cdcc443c2",
+      "idempotencyKey": "6a6cd07aa530e027ed527b9e5956ad55ab59547e1d20e92e1e18ce0d44d7fa59",
+      "requestDigest": "67a5e4ca2f455a32d5cbdfd81d1440e72f45957754b412d799cd7603e350b6be",
+      "evaluationTime": "2026-08-22T11:17:11.000Z",
+      "claimCore": {
+        "claimId": "8f72fb560bd04a911d406507a584af63b7a13941c401988efdc2cc8cdcc443c2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:7390eb8ce6b0d0a066daeb297e309b27b527480b6c909d28f13aae766385e533",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:aecba9d07dbed20daca333f4adb0bacb47f49f6cba761143798bfcec67414bea",
+        "canonicalBaseRevision": "9fe0d1c6661adeb0db80e8400b20f7a2dd634982",
+        "declaredWriteScope": [
+          "path:__tests__/planned-owned-dirt-scope-expansion-recovery.test.mjs",
+          "path:docs/PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md",
+          "path:scripts/planned-owned-dirt-scope-expansion-recovery-repository-adapter.mjs",
+          "semantic:planned-owned-dirt-canonical-drift-v2"
+        ],
+        "writeSetDigest": "ea692fa8b6c7faef4e52c16c2e86ec1f274efa5a89003db13b58f097f39750de",
+        "laneRevision": "b9e53aa65d1f4a3a00a495747ae89736c39ac8a0",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-22T11:37:56.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABApBn3g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "4ddb348f079516680df1ed3e6f5b7b96a7297f72ca6e3eee75bf62c55b5bb7f3",
+      "digest": "ddc0fb11210ebfef87d2de90a9f95ff1cd96fb7ff2aae2b916dcd167b376901a"
     }
   ]
 }

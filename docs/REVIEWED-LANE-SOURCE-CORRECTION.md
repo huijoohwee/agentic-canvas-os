@@ -83,6 +83,8 @@ The public plan is path-portable. It contains neither the worktree path nor the
 raw pull-request body. It binds stable repository identities, the body digest,
 the `v2` source evidence and protected-advance receipts (including source, PR,
 and current protected base), and a path-free writer-marker projection instead.
+Normalized delivery evidence preserves its canonical reviewed-head projection
+and delivery marker status when the plan validates the evidence a second time.
 Planning creates no journal, lock, claim, lease, or provider mutation.
 The controller reads the complete source evidence twice and requires an
 identical evidence digest before emitting a plan.

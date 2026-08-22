@@ -163,8 +163,14 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
           continuationPlanDigest: plan.planDigest, originalPlanDigest,
           pullRequestUrl: current.pull.url, markerDigest: digestValue(current.marker) }) });
     },
-    verifyTerminal({ plan, intent: value, replay }) {
-      return original.verifyTerminal({ plan, intent: value, replay });
+    verifyTerminal({ plan, intent: value }) {
+      const current = frame(value);
+      if (!current.target || git(["rev-parse", "HEAD"]) !== plan.evidence.fenceSha
+        || remoteHead() !== plan.evidence.fenceSha) {
+        invalid("terminal source or marker");
+      }
+      return buildCurrentTerminalValues({ plan, lease: current.lease,
+        marker: current.marker, verified: current.verified, mutation: current.mutation });
     },
   });
 
@@ -185,6 +191,13 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       invalid("sealed execution frame");
     }
   }
+}
+
+export function buildCurrentTerminalValues({ plan, lease, marker, verified, mutation }) {
+  return Object.freeze({ mutationAuthorityReceiptDigest: mutation.receiptDigest,
+    terminalEvidenceDigest: digestValue({ planDigest: plan.planDigest,
+      leaseDigest: writerLeaseDigest(lease), claimDigest: verified.authority.claimDigest,
+      dirtDigest: plan.evidence.dirtDigest, markerDigest: digestValue(marker) }) });
 }
 
 function sourceMarker(marker, evidence) {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4405,
-  "headDigest": "60287db5986f0706a4892913a5b5ddbe2799099c4116f452b06d099f071e79cd",
+  "sequence": 4406,
+  "headDigest": "e55eeecf46cc990cca96565362ca8adda96dd26caabf3c46a912b8a4abf72d33",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -221408,6 +221408,48 @@
       },
       "claimDigest": "73fd753d7edd3e930d2f3314a0eacfdc7f82e8f5bd0e41df3326be7e8d8556cc",
       "digest": "60287db5986f0706a4892913a5b5ddbe2799099c4116f452b06d099f071e79cd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4406,
+      "parentDigest": "60287db5986f0706a4892913a5b5ddbe2799099c4116f452b06d099f071e79cd",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f0101cf1a8184bbdf5adf440edbfff8972f37ae48a0ecb92e6c5fac20cd88c22",
+      "idempotencyKey": "d5deefef7faee1ed900396943195138056ca92bb8a9d7410861697a67db1d9ec",
+      "requestDigest": "8aa026d1c342aa5326dcfdf03b8bc8d307c73e1317536d411a9563834f745524",
+      "evaluationTime": "2026-08-23T04:04:35.000Z",
+      "claimCore": {
+        "claimId": "f0101cf1a8184bbdf5adf440edbfff8972f37ae48a0ecb92e6c5fac20cd88c22",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:06977fb70b02a880555a78d690f3c7eca1ee27941fcd0e866bcc1c24b46cc7b7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8630beb4ad13807196b4264b1f2026394238a269394bffea5e68c043ee461905",
+        "canonicalBaseRevision": "72252c499474ff2f94c4e27754a177a6f67f4ec1",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "semantic:expired-committed-ledger-observation-repair"
+        ],
+        "writeSetDigest": "48408b1f4ce6f44ece3b3c6fd8272eaf0e7e8c2c8a6b02f325bb22fc3c0f727d",
+        "laneRevision": "72252c499474ff2f94c4e27754a177a6f67f4ec1",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T04:34:35.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "ff19188af229e40f6329966927c6b9b191b76e11c04470899820167649222270",
+        "eligibleSince": "2026-08-23T04:00:51.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-23T04:04:35.000Z"
+      },
+      "claimDigest": "629d51c9147a9ac08cf382b7c8e0752f919904b9f842110d86c4af0935293a93",
+      "digest": "e55eeecf46cc990cca96565362ca8adda96dd26caabf3c46a912b8a4abf72d33"
     }
   ]
 }

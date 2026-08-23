@@ -11,7 +11,10 @@ import {
 } from "../scripts/repeated-expired-committed-heartbeat-recovery-contract.mjs";
 import { createRepeatedRecoveryController }
   from "../scripts/repeated-expired-committed-heartbeat-recovery-controller.mjs";
-import { classifyRepeatedSuccessorBindState }
+import {
+  classifyRepeatedSuccessorBindState,
+  projectRepeatedSuccessorLeaseCore,
+}
   from "../scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs";
 
 const digest = character => character.repeat(64);
@@ -174,6 +177,27 @@ test("successor bind state adopts or recovers only the exact response-loss trans
     promoted,
     plan,
   }), /neither pre-bind nor exact bound response-loss/u);
+});
+
+test("successor lease advances its local fence to the exact reviewed head", () => {
+  const reviewedHeadSha = sha("3");
+  const authority = { laneRevision: reviewedHeadSha, expiresAt: "2026-08-23T13:25:12.000Z" };
+  const projected = projectRepeatedSuccessorLeaseCore({
+    sourceLease: { fenceSha: sha("2"), heartbeatAt: "2026-08-23T07:19:17.515Z" },
+    admission: { status: "admitted" },
+    authority,
+    verifiedAt: "2026-08-23T12:55:45.000Z",
+    reviewedHeadSha,
+  });
+  assert.equal(projected.fenceSha, reviewedHeadSha);
+  assert.equal(projected.cloudAuthority, authority);
+  assert.throws(() => projectRepeatedSuccessorLeaseCore({
+    sourceLease: {},
+    admission: {},
+    authority,
+    verifiedAt: "2026-08-23T12:55:45.000Z",
+    reviewedHeadSha: sha("4"),
+  }), /exact reviewed head fence/u);
 });
 
 test("completion proves successor recovery effects and forbids delivery effects", () => {

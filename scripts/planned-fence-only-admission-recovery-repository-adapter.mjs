@@ -65,10 +65,7 @@ export function createPlannedFenceOnlyAdmissionRecoveryRepositoryAdapter(options
     });
     const expectedLocal = sealed.evidence.localProjection;
     const currentLocal = current.localProjection;
-    const restoredExternalLoss = expectedLocal.mode === "externally-lost"
-      && currentLocal.mode === "attached" && currentLocal.headSha === expectedLocal.headSha;
-    if (!restoredExternalLoss
-      && canonicalJson(currentLocal) !== canonicalJson(expectedLocal)) {
+    if (!plannedFenceOnlyLocalProjectionMatches(expectedLocal, currentLocal)) {
       throw new Error(`Planned fence-only local projection drifted at ${stage}.`);
     }
     return current;
@@ -557,6 +554,14 @@ export function assertPlannedFenceOnlyRecoveryReplay({ sealed, current, isAncest
     throw new Error(`Planned fence-only recovery source drifted at ${stage}.`);
   }
   assertProtectedMainReplay(sealed, current, isAncestor, stage);
+}
+export function plannedFenceOnlyLocalProjectionMatches(expected, current) {
+  if (expected.mode === "externally-lost" && current.mode === "attached"
+    && current.headSha === expected.headSha) return true;
+  const sealed = structuredClone(expected), observed = structuredClone(current);
+  delete sealed.registrationDigest;
+  delete observed.registrationDigest;
+  return canonicalJson(sealed) === canonicalJson(observed);
 }
 function assertProtectedMainReplay(sealed, current, isAncestor, stage) {
   if (canonicalJson(current.canonical) === canonicalJson(sealed.canonical)

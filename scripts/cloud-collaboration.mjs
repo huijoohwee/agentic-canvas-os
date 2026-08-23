@@ -9,6 +9,8 @@ import {
 } from "./github-cloud-collaboration-adapter.mjs";
 import { digestValue } from "./cloud-collaboration-contract.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
+import { captureReviewedHistoricalBaseProof }
+  from "./reviewed-historical-base-cloud-verification.mjs";
 
 const MUTATIONS = new Set([
   "claim",
@@ -92,6 +94,35 @@ async function verifyEvent({ adapter }) {
         claimId: requiredText(reviewedClaim.claimId, "integrated claim id"),
         reviewRequestId,
         allowProtectedMainRefresh: true,
+        actorId: process.env.GITHUB_ACTOR_ID,
+        actorLogin: process.env.GITHUB_ACTOR,
+      });
+    }
+    if (
+      reviewedClaim?.state === "reviewed"
+      && reviewedClaim.canonicalBaseRevision
+        !== requiredSha(pullRequest.base?.sha, "event base SHA")
+    ) {
+      const observedHeadSha = requiredSha(pullRequest.head?.sha, "event head SHA");
+      const observedBaseSha = requiredSha(pullRequest.base?.sha, "event base SHA");
+      const canonicalDescendantProof = captureReviewedHistoricalBaseProof({
+        claim: reviewedClaim,
+        pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
+        observedHeadSha,
+        observedBaseSha,
+        reviewRequestId,
+      });
+      return adapter.execute("verify", {
+        targetRepository,
+        pullRequestNumber: positiveInteger(pullRequest.number, "event pull request"),
+        branch: requiredText(pullRequest.head?.ref, "event head branch"),
+        canonicalBaseSha: requiredSha(reviewedClaim.canonicalBaseRevision, "reviewed claim base"),
+        headSha: requiredSha(reviewedClaim.laneRevision, "reviewed claim head"),
+        requireStatus: "reviewed",
+        claimId: requiredText(reviewedClaim.claimId, "reviewed claim id"),
+        reviewRequestId,
+        allowReviewedHistoricalBase: true,
+        canonicalDescendantProof,
         actorId: process.env.GITHUB_ACTOR_ID,
         actorLogin: process.env.GITHUB_ACTOR,
       });

@@ -300,7 +300,7 @@ function normalizeBundle(value) {
     path: absolutePath(value.path, "bundle path"), sha256: requiredDigest(value.sha256, "bundle digest"),
     sizeBytes: positiveInteger(value.sizeBytes, "bundle size"),
     headSha: requiredSha(value.headSha, "bundle head"), treeSha: requiredSha(value.treeSha, "bundle tree"),
-    headRef: requiredBranch(value.headRef), complete: true,
+    headRef: value.headRef === "HEAD" ? "HEAD" : requiredBranch(value.headRef), complete: true,
   };
 }
 function normalizePhase(phase, value, plan) {
@@ -437,7 +437,8 @@ function normalizeFinalObservation(value, plan = null, expected = null) {
     ...normalizeArtifact(value, "final", false),
     priorLeaseRestored: requiredBoolean(value.priorLeaseRestored, "prior lease restoration"),
     canonicalHeadSha: requiredSha(value.canonicalHeadSha, "final canonical HEAD"),
-    branchHeadSha: requiredSha(value.branchHeadSha, "final branch HEAD"),
+    branchHeadSha: value.branchHeadSha === null
+      ? null : requiredSha(value.branchHeadSha, "final branch HEAD"),
     remoteBranchSha: value.remoteBranchSha === null ? null : requiredSha(value.remoteBranchSha, "final remote branch"),
   };
   if (normalized.targetRegistered || normalized.targetExists || normalized.stagingRegistered

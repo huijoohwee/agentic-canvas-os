@@ -27,6 +27,14 @@ records, and malformed target-matching journals fail closed. Cleanup continues t
 local and remote authority, an exact plan authorization, a verified Git bundle,
 durable worktree and Git-directory snapshots, and non-force removal.
 
+A clean detached worktree is eligible only when it has no local branch, remote
+branch, writer lease, or cloud claim and at least one completed dormant-preservation
+journal selects its exact path, null branch, HEAD, and tree. The cleanup plan must
+supersede every such receipt. Its recovery bundle records `HEAD` as the preserved
+tip, the transient cleanup reservation uses an internal non-ref registry identity,
+and the controller never creates, attaches, updates, or deletes a Git ref. Attached
+lane behavior and historical evidence remain unchanged.
+
 ## Ignored generated residue
 
 A terminal lane may contain ignored generated output only when its complete

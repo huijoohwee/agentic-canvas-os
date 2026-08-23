@@ -349,9 +349,10 @@ function inspectState({ root, plan, git }) {
 function assertStagingRegistration({ root, plan, git }) {
   const matches = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]))
     .filter(record => path.resolve(record.path) === plan.recovery.quarantinePath);
-  if (matches.length !== 1 || matches[0].branch !== plan.evidence.target.branch
+  if (matches.length !== 1 || (matches[0].branch ?? null) !== plan.evidence.target.branch
     || matches[0].head !== plan.evidence.target.headSha || matches[0].bare
-    || matches[0].detached || matches[0].locked) {
+    || Boolean(matches[0].detached) !== (plan.evidence.target.branch === null)
+    || matches[0].locked) {
     throw new Error("Cleanup staging registration differs from the authorized lane generation.");
   }
   const disposable = inspectTree(plan.evidence.target.gitDir);
@@ -376,7 +377,8 @@ function assertFrozenLane(plan) {
   const markers = OPERATION_MARKERS.filter(marker => directoryEntryExists(path.join(gitDir, marker)));
   if (run(["status", "--porcelain=v2", "-z", "--untracked-files=no"])
     || run(["ls-files", "-u", "-z"]) || markers.length
-    || run(["symbolic-ref", "--quiet", "HEAD"]).trim() !== plan.evidence.target.branch
+    || run(["rev-parse", "--symbolic-full-name", "HEAD"]).trim()
+      !== (plan.evidence.target.branch ?? "HEAD")
     || run(["rev-parse", "HEAD"]).trim() !== plan.evidence.target.headSha
     || run(["rev-parse", "HEAD^{tree}"]).trim() !== plan.evidence.target.treeSha) {
     throw new Error("Cleanup lane changed while quarantined.");
@@ -437,7 +439,11 @@ function assertReservation(lease, plan, reservation) {
     throw new Error("Cleanup writer reservation changed before an effect.");
   }
 }
-function branchName(plan) { return plan.evidence.target.branch.replace(/^refs\/heads\//u, ""); }
+function branchName(plan) {
+  return plan.evidence.target.branch === null
+    ? `agent/recoverable-cleanup/detached-${plan.subjectKey.slice(0, 16)}`
+    : plan.evidence.target.branch.replace(/^refs\/heads\//u, "");
+}
 function registryWithLease(registry, branch, lease) {
   return { ...registry, revision: Number(registry.revision || 0) + 1,
     leases: { ...(registry.leases || {}), [branch]: lease } };

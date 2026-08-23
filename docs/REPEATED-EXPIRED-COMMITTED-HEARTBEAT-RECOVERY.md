@@ -62,3 +62,9 @@ Successor binding uses the plan-sealed review request rather than asking the pro
 the pull request's historical base. If the bind succeeds but its response is lost, replay may adopt
 only the same claim in `active` state at exactly transition counter plus one, with the sealed target
 scope, reviewed head, and review request identity. Any other transition or identity fails closed.
+If that exact bound response-loss claim expires before replay, its public state may project only as
+`dormant-preserved` at the same counter. Replay then derives recovery evidence from the authorized
+plan and exact bound claim, performs one idempotent authenticated `recovery` continuation through
+the existing expired-committed-heartbeat authority helper, verifies the renewed active claim, and
+only then projects the successor locally. A different counter, head, review identity, write set, or
+claim still fails closed.

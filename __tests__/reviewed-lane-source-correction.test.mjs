@@ -189,7 +189,7 @@ function fixture({ currentBaseSha, changedWriteScope = [], integratedReplay = fa
   return { source, lease, authority, claim, body };
 }
 
-function adapterFixture({ reconciliation = {} } = {}) {
+function adapterFixture({ reconciliation = {}, effectFailures = {} } = {}) {
   let source = fixture().source;
   const log = [];
   let intent = null;
@@ -231,6 +231,7 @@ function adapterFixture({ reconciliation = {} } = {}) {
     verified: "verifyTerminal",
   })) {
     adapter[method] = async () => {
+      if (effectFailures[phase]) throw new Error(effectFailures[phase]);
       log.push(`effect:${phase}`);
       return complete(phaseValues[phase]);
     };
@@ -397,6 +398,65 @@ test("completed journal can be superseded only by exact current source authoriza
   assert.equal(state.getIntent().planSnapshot.planDigest, currentPlan.planDigest);
   assert.equal(state.getIntent().status, "complete");
   assert.equal(state.log.filter(item => item.startsWith("effect:")).length, effectCount * 2);
+});
+
+test("pristine prepared journal can be superseded only after response-ahead absence", async () => {
+  const reconciliation = {};
+  const effectFailures = { successor_waiting: "stop before first effect" };
+  const state = adapterFixture({ reconciliation, effectFailures });
+  const controller = createReviewedLaneSourceCorrectionController({ adapter: state.adapter });
+  const firstPlan = await controller.plan({ operatorSessionId: operatorSession });
+  await assert.rejects(controller.run({
+    operatorSessionId: operatorSession,
+    authorization: firstPlan.exactAuthorization,
+  }), /stop before first effect/);
+  assert.equal(state.getIntent().status, "prepared");
+
+  const currentSource = fixture({
+    currentBaseSha: hex("e", 40),
+    changedWriteScope: ["path:docs/disjoint.md"],
+  }).source;
+  state.setSource(currentSource);
+  const currentPlan = await controller.plan({ operatorSessionId: operatorSession });
+  await assert.rejects(controller.run({
+    operatorSessionId: operatorSession,
+    authorization: `${currentPlan.exactAuthorization}-wrong`,
+  }), /requires exact authorization/);
+  assert.equal(state.getIntent().planSnapshot.planDigest, firstPlan.planDigest);
+
+  effectFailures.successor_waiting = null;
+  const receipt = await controller.run({
+    operatorSessionId: operatorSession,
+    authorization: currentPlan.exactAuthorization,
+  });
+  assert.equal(receipt.status, "authoring-restored");
+  assert.equal(state.getIntent().planSnapshot.planDigest, currentPlan.planDigest);
+  assert.equal(state.log.includes("reconcile:successor_waiting"), true);
+});
+
+test("prepared journal with a response-ahead successor remains on its original plan", async () => {
+  const reconciliation = {};
+  const effectFailures = { successor_waiting: "lost first-effect response" };
+  const state = adapterFixture({ reconciliation, effectFailures });
+  const controller = createReviewedLaneSourceCorrectionController({ adapter: state.adapter });
+  const firstPlan = await controller.plan({ operatorSessionId: operatorSession });
+  await assert.rejects(controller.run({
+    operatorSessionId: operatorSession,
+    authorization: firstPlan.exactAuthorization,
+  }), /lost first-effect response/);
+  reconciliation.successor_waiting = true;
+  state.setSource(fixture({
+    currentBaseSha: hex("e", 40),
+    changedWriteScope: ["path:docs/disjoint.md"],
+  }).source);
+  const currentPlan = await controller.plan({ operatorSessionId: operatorSession });
+
+  await assert.rejects(controller.run({
+    operatorSessionId: operatorSession,
+    authorization: currentPlan.exactAuthorization,
+  }), /response-ahead successor/);
+  assert.equal(state.getIntent().status, "prepared");
+  assert.equal(state.getIntent().planSnapshot.planDigest, firstPlan.planDigest);
 });
 
 test("response-ahead reconciliation skips the duplicate remote effect", async () => {

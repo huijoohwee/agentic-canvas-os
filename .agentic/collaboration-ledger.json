@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4659,
-  "headDigest": "f1e666e0bed5b279a16be71907ef210d95986c5bc0db69f9daff5d73a5e9f657",
+  "sequence": 4660,
+  "headDigest": "f923fbe0bad2a477a8abc58c817c527c7cdff0b5ff6019e2379bc6685b9f65b5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -234902,6 +234902,47 @@
       },
       "claimDigest": "0b50104adc0baa4b1329788d6d2f38bf4ff28bbcfa4ba3d50b722a24c6ee4c94",
       "digest": "f1e666e0bed5b279a16be71907ef210d95986c5bc0db69f9daff5d73a5e9f657"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4660,
+      "parentDigest": "f1e666e0bed5b279a16be71907ef210d95986c5bc0db69f9daff5d73a5e9f657",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1f64eadf75d83e44506e95d4fef8d06fcc0409e067f14b0cdf7389940d5236a9",
+      "idempotencyKey": "0c7cc94e3ded36e8e7de281dda095c8872ba89dcf997eae26df34c08ba377522",
+      "requestDigest": "d04071a22b9e325ab99bd4f741d2dda826d4d972d6288a12e9655dbc66bda872",
+      "evaluationTime": "2026-08-23T16:42:53.000Z",
+      "claimCore": {
+        "claimId": "1f64eadf75d83e44506e95d4fef8d06fcc0409e067f14b0cdf7389940d5236a9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:a3470b734be77d005448b161da6c7b80257b689bc9cef52303088e24ba6f2818",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c23e71aace59c92ebd107b7f9562849fa876ad56916bc6c211b6badebc3a8344",
+        "canonicalBaseRevision": "cc8e7736c75a0ab1362b1ba27165202f2b1c4236",
+        "declaredWriteScope": [
+          "path:__tests__/protected-head-refresh-provider.test.mjs",
+          "path:docs/PROTECTED-HEAD-REFRESH-CHECK-ROLLUP.md",
+          "path:scripts/protected-head-refresh-github-provider.mjs",
+          "semantic:protected-refresh-pending-gate-rollup-fix"
+        ],
+        "writeSetDigest": "12bf210ccdcc8ce41ec0ed4c462384b5a52a380814720996c365370bfa96f1fe",
+        "laneRevision": "cc8e7736c75a0ab1362b1ba27165202f2b1c4236",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-23T17:42:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "ef814b41a23bd1b4d92426406ae14df9874e87a4a96be5ed522276c3aff94bdc",
+        "eligibleSince": "2026-08-23T16:42:53.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b29e1b318c5320ed2c40fe45b18090a6ac547670aedc662948642a309abb793f",
+      "digest": "f923fbe0bad2a477a8abc58c817c527c7cdff0b5ff6019e2379bc6685b9f65b5"
     }
   ]
 }

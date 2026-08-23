@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4390,
-  "headDigest": "e8cf1bcbad2c2d0fc8281464df9a0072793fbf14d76bf65f486e2a0a99ea3537",
+  "sequence": 4391,
+  "headDigest": "991ffadccadca0fba44c6915583e95059e99876b8a9af50377f994e50c77b4f0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -220705,6 +220705,58 @@
       },
       "claimDigest": "35f93ef0bef522d8b5892f7d3d76eb3092d1473e4eb443f37bd81aaf940d7ae4",
       "digest": "e8cf1bcbad2c2d0fc8281464df9a0072793fbf14d76bf65f486e2a0a99ea3537"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4391,
+      "parentDigest": "e8cf1bcbad2c2d0fc8281464df9a0072793fbf14d76bf65f486e2a0a99ea3537",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "610279dbf0a01059f6deade113d853379a03e3b408cf54091a3a8309881c42b4",
+      "idempotencyKey": "5c57ee02a2e433580124f2b8ef2f5ff01355fa1cf879b520f0031946a0d8ab61",
+      "requestDigest": "9b7684cfbc7a58356c1b2696cdace626c2b82ba067e3ee5bfe938f23ca591830",
+      "evaluationTime": "2026-08-23T03:21:39.000Z",
+      "claimCore": {
+        "claimId": "610279dbf0a01059f6deade113d853379a03e3b408cf54091a3a8309881c42b4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:06977fb70b02a880555a78d690f3c7eca1ee27941fcd0e866bcc1c24b46cc7b7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e524f1078d898f6179e0e90b8e45f1e6a8610d20acce7f50a2485b06a0fed6d7",
+        "canonicalBaseRevision": "7473cf25efe48ae8bc11861ef8b66e3626cf15dd",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:docs/POST-MERGE-CLOUD-AUTHORITY.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:post-merge-expired-delivery-retirement-repair"
+        ],
+        "writeSetDigest": "1a079bb3d67ea14f8ecc3290453c93666f0ae6e677c13aa9eb45fe112ac03541",
+        "laneRevision": "53d4c566550418c4124f9ebae9233f0d50d662b1",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-23T03:46:47.000Z",
+        "evidenceDigest": "905e083e6fd1faa731b464fef7ce170c17271530cce0b56e51d9ccd1cc4b8aa2",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArlWWw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "53d4c566550418c4124f9ebae9233f0d50d662b1",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArlWWw",
+          "focusedEvidenceDigest": "905e083e6fd1faa731b464fef7ce170c17271530cce0b56e51d9ccd1cc4b8aa2",
+          "dependencyClosureDigest": "150f06c3d88e181724b8a8481bbaa58075a0e0beb70ae570f8b9d07ade94d8f6",
+          "namedChecksDigest": "a1bd45be4f79e54755db9e869e0a8b84034e9feee6e38adf9e4b7b25921b3c0b",
+          "handoffEvidenceDigest": "713f910aa8852ebde24fd8a164efa539f9458b354bb37026177b008902f2b426",
+          "operatorDecisionDigest": "9e9cd03dd2d9b90336d98b02333fddd8a0f842ad000ba87e255524f46bf6ec07",
+          "integrationIntentDigest": "620599229a2eaf336257305ceb45056ea79da22caae5920bf234cbf6d69d1363",
+          "integratedAt": "2026-08-23T03:21:39.000Z"
+        }
+      },
+      "claimDigest": "56074091605b1b8bf15c76298bb1fe5f643aa9fd788008252f76605563d66513",
+      "digest": "991ffadccadca0fba44c6915583e95059e99876b8a9af50377f994e50c77b4f0"
     }
   ]
 }

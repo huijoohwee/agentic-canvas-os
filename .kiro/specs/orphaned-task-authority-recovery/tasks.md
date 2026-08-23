@@ -33,6 +33,9 @@
   - _Requirements: 6.3-6.4_
 
 - [ ] 7. Validate and deliver through protected review
-  - Run the focused named check, line-budget check, documentation contracts, and full repository check.
-  - Review, integrate, verify protected `origin/main`, and retain PR #644 as a separately owned lane.
+  - [x] Run the focused named check.
+  - [x] Verify the authored-file line budget.
+  - [x] Run the documentation contracts.
+  - [x] Run the full repository check.
+  - [ ] Review, integrate, verify protected `origin/main`, and retain PR #644 as a separately owned lane.
   - _Requirements: 6.1-6.4_

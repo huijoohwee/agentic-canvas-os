@@ -21,6 +21,7 @@ import { createPlannedFenceOnlyAdmissionRecoveryStore }
   from "../scripts/planned-fence-only-admission-recovery-store.mjs";
 import {
   assertPlannedFenceOnlyRecoveryReplay,
+  plannedFenceOnlyFrameIdentityMatches,
   plannedFenceOnlyLocalProjectionMatches,
   projectPlannedFenceOnlyRecoveryLease,
   visibleReviewBodyDigest,
@@ -400,6 +401,23 @@ test("local replay ignores only unrelated worktree registry movement", () => {
   assert.equal(plannedFenceOnlyLocalProjectionMatches(expected, {
     ...expected, headSha: S("9"),
   }), false);
+});
+
+test("cloud recovery compares one normalized local-frame snapshot", () => {
+  const { input, plan } = fixture();
+  const rawFrame = {
+    repository: input.repository,
+    fence: input.fence,
+    review: input.review,
+  };
+  assert.equal(plannedFenceOnlyFrameIdentityMatches(plan.evidence, rawFrame), true);
+  assert.equal(plannedFenceOnlyFrameIdentityMatches(plan.evidence, {
+    ...rawFrame,
+    fence: { ...rawFrame.fence, headSha: S("9") },
+  }), false);
+
+  const normalized = buildPlannedFenceOnlyAdmissionRecoveryEvidence(input);
+  assert.equal(plannedFenceOnlyFrameIdentityMatches(plan.evidence, normalized), true);
 });
 
 test("raw GitHub review identities normalize only for the repository adapter", () => {

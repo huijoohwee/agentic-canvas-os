@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4512,
-  "headDigest": "5165566da3586e18f1590d581c236b17500e372f5b2cfc6fbaeb652837e5db3d",
+  "sequence": 4513,
+  "headDigest": "79162087e46b8c435ce4e2eefa8f36e5ac2d7090c7fdf17b74512be79043b7c5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -226578,6 +226578,50 @@
       },
       "claimDigest": "70cf9af0b8ad9d11e91e7d86b2ef234b7574f7daccf929e92a3f0007a6eef0db",
       "digest": "5165566da3586e18f1590d581c236b17500e372f5b2cfc6fbaeb652837e5db3d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4513,
+      "parentDigest": "5165566da3586e18f1590d581c236b17500e372f5b2cfc6fbaeb652837e5db3d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8e1dd3e6fc3ef9d544f5ddee9408aef289c1a70fbe1e450e64233757d58a7d2a",
+      "idempotencyKey": "26eb13da18ad53d241bd3a1a3b0bfadc1e3c32601b7d74bb643e8cd8c8a303a8",
+      "requestDigest": "5bdc463c407dbc308588ed3111aaa5f07169f73b622f4a35fc88a0c647cbf2c6",
+      "evaluationTime": "2026-08-23T09:25:15.000Z",
+      "claimCore": {
+        "claimId": "8e1dd3e6fc3ef9d544f5ddee9408aef289c1a70fbe1e450e64233757d58a7d2a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:e02cde6b433892d1e2fa841011f264232a7dcf1a45fe73e6b8e54fae8904e583",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:5e59442e76f42f8add1d8ba992e6e9625c03862932ae4c23fcde091bf53c7343",
+        "canonicalBaseRevision": "545b7168e6eb89008911a4578219c9eb2cd9b4fe",
+        "declaredWriteScope": [
+          "path:.kiro/specs/reviewed-historical-base-cloud-verification",
+          "path:__tests__/reviewed-historical-base-cloud-verification.test.mjs",
+          "path:docs/REVIEWED-HISTORICAL-BASE-CLOUD-VERIFICATION.md",
+          "path:scripts/cloud-collaboration.mjs",
+          "path:scripts/github-cloud-collaboration-mapping.mjs",
+          "path:scripts/reviewed-historical-base-cloud-verification.mjs",
+          "semantic:reviewed-historical-base-cloud-verification"
+        ],
+        "writeSetDigest": "8752be9e882e5fdd500451ea3948ba353e0b1723b699363ef28759e1a4e34916",
+        "laneRevision": "545b7168e6eb89008911a4578219c9eb2cd9b4fe",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T09:55:15.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d0c0f41e9f4aef03d0863fb97d584a174e962a98f25028ac33355783b57112a2",
+      "digest": "79162087e46b8c435ce4e2eefa8f36e5ac2d7090c7fdf17b74512be79043b7c5"
     }
   ]
 }

@@ -362,6 +362,7 @@ test("default GitHub reader pins the current REST version header", async () => {
   assert.equal(invocation.command, "gh");
   assert.ok(invocation.argumentsList.includes("X-GitHub-Api-Version: 2026-03-10"));
   assert.equal(invocation.options.cwd, "/preserved/source");
+  assert.equal(invocation.options.maxBuffer, 64 * 1024 * 1024);
 });
 
 test("provider check revisions support a direct merge without a refresh commit", () => {

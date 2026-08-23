@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4705,
-  "headDigest": "6562adc763daa92967c730d0ee349304d0b99fea7d85a75852de9ff96b45709a",
+  "sequence": 4706,
+  "headDigest": "f85b19aa36f28c7cff9706036937f53f138f27d888437f29644bcaa8aabc4262",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -237095,6 +237095,48 @@
       },
       "claimDigest": "da53bac493798b063a16eb81ecdf036ed225d738df41e17945f73ed66f38572f",
       "digest": "6562adc763daa92967c730d0ee349304d0b99fea7d85a75852de9ff96b45709a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4706,
+      "parentDigest": "6562adc763daa92967c730d0ee349304d0b99fea7d85a75852de9ff96b45709a",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2fed508b8cecb511f4126046116e4746de9299c87c852a0fe093e0d0147a9ba8",
+      "idempotencyKey": "59c28b92b569a559a527e877b08abaad6802039dc9f4fd9c7f3add789acb8721",
+      "requestDigest": "41ed8ddd234e96d94dab1ca9df8a8f08dd72a5f1557d31094f8ac26370a8018e",
+      "evaluationTime": "2026-08-23T23:25:23.000Z",
+      "claimCore": {
+        "claimId": "2fed508b8cecb511f4126046116e4746de9299c87c852a0fe093e0d0147a9ba8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:93b557c98a48561491b0785436540db447a0e49ed535d12b6100644ad902e537",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:aa956897e38f9917f3bf08ec93d074c0023dd27ed89438b13e8fc9527affb7ad",
+        "canonicalBaseRevision": "156033bfb07a073e875227873e1d8b487cc2e391",
+        "declaredWriteScope": [
+          "path:__tests__/knowgrph-lane-convergence-adapter.test.mjs",
+          "path:docs/KNOWGRPH-LANE-CONVERGENCE-ADAPTER.md",
+          "path:scripts/knowgrph-lane-convergence-adapter-contract.mjs",
+          "path:scripts/knowgrph-lane-convergence-adapter.mjs",
+          "semantic:knowgrph-lane-convergence-adapter"
+        ],
+        "writeSetDigest": "ef24662b068297302c56f1718a59a5c4e4cbb1832170aaa1e9ba6f54ae0e729c",
+        "laneRevision": "fa487e51d1fd88a46bf2a4d477465b7d3272bad6",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T00:23:59.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAu9A4g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7db30155021b23776208323e869199d80da238a10d812b3210416214feb2587d",
+      "digest": "f85b19aa36f28c7cff9706036937f53f138f27d888437f29644bcaa8aabc4262"
     }
   ]
 }

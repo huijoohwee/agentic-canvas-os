@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4614,
-  "headDigest": "cfbf8b95501c2a7d9e487b72f5b9a6e2dc6d70b739e0b6ed7ad16e41ff2b9aea",
+  "sequence": 4615,
+  "headDigest": "28eaefd3994ee0095bebd4abbb42e57e35d7330aa1eb8376cd599cb5d8fc4a78",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -232750,6 +232750,59 @@
       },
       "claimDigest": "d94862e3217bd23da35076267a5acae0ea06687088d9edabcaf46e53229dd272",
       "digest": "cfbf8b95501c2a7d9e487b72f5b9a6e2dc6d70b739e0b6ed7ad16e41ff2b9aea"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4615,
+      "parentDigest": "cfbf8b95501c2a7d9e487b72f5b9a6e2dc6d70b739e0b6ed7ad16e41ff2b9aea",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "469a822ae16ef57e6c3c8c940f861e7210e06c9f3812098d23d0b56c06b928b4",
+      "idempotencyKey": "950ba1adf6e5c7e1308cdef255ea1a5a42bed82fecbfde486f6d9c4d639d135f",
+      "requestDigest": "d35128ee4e8dc974bffbe1b525a98d5088547f51d59fa73133cbe062c3283b87",
+      "evaluationTime": "2026-08-23T13:56:07.000Z",
+      "claimCore": {
+        "claimId": "469a822ae16ef57e6c3c8c940f861e7210e06c9f3812098d23d0b56c06b928b4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:9e5d576be7beb7602ca1b87abbec638f363245c85e664d35544dd933660767a5",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1544789c88a840327a0a748f8528c6d0c0769c620eaebbad64d2ca5932d7aa01",
+        "canonicalBaseRevision": "41d9685a536b5a6df72e7b752a9300ebffda8036",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-task-authority-intent-supersession.test.mjs",
+          "path:docs/ACTIVE-OWNED-DIRT-TASK-AUTHORITY-INTENT-SUPERSESSION.md",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession-contract.mjs",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession-repository-adapter.mjs",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession.mjs",
+          "semantic:active-owned-dirt-task-authority-intent-supersession"
+        ],
+        "writeSetDigest": "217451e6a40d1a1d0fadb304b0a9d5734ad81caa9d21c5e8849e5114155d2ae3",
+        "laneRevision": "41d9685a536b5a6df72e7b752a9300ebffda8036",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-23T14:24:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "41d9685a536b5a6df72e7b752a9300ebffda8036",
+          "reviewRequestId": null,
+          "bytesDigest": "1d9815c99984f014f4ab35c5fbdfccf6f026c6137b287b9d63a643d185cc6bba",
+          "namedChecksDigest": "1d9815c99984f014f4ab35c5fbdfccf6f026c6137b287b9d63a643d185cc6bba",
+          "handoffEvidenceDigest": "1d9815c99984f014f4ab35c5fbdfccf6f026c6137b287b9d63a643d185cc6bba",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-23T13:56:07.000Z"
+        }
+      },
+      "claimDigest": "3e5b063bb3ae562d3fcde4fa87db13b0a6a73abb8cb55f5e8f28c3790d988abc",
+      "digest": "28eaefd3994ee0095bebd4abbb42e57e35d7330aa1eb8376cd599cb5d8fc4a78"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4673,
-  "headDigest": "108e20b4f3fc2760e3cfc5006c81e2aa6df7d24e019531848356ae3ed54affa8",
+  "sequence": 4674,
+  "headDigest": "3a2f1a390b3c6dd2e222c420bfee3bcb6c63ff83fc65136e3e31852646da72c9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -235578,6 +235578,47 @@
       },
       "claimDigest": "e5e23a09a633d5517331d3c37c5099f61f9d6bc153bffbca47777b108ec2ae57",
       "digest": "108e20b4f3fc2760e3cfc5006c81e2aa6df7d24e019531848356ae3ed54affa8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4674,
+      "parentDigest": "108e20b4f3fc2760e3cfc5006c81e2aa6df7d24e019531848356ae3ed54affa8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "52056f794c9af3f45ea5ad5601acbb02574f1b791a075c73524e037836f524c7",
+      "idempotencyKey": "0487a95c5ea7eba0e5b71e623f7321dac4e6ed6184c976ed92394c7ccd6db363",
+      "requestDigest": "a4ad18dabd73d086550ad3719cc65523f29db574c636986e908ca8db885bee4d",
+      "evaluationTime": "2026-08-23T17:22:13.000Z",
+      "claimCore": {
+        "claimId": "52056f794c9af3f45ea5ad5601acbb02574f1b791a075c73524e037836f524c7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:936841ecdaa560e58576d1096c211540d1be559354dfbd5606fadc1704fd1220",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d9048c8e3c608a54ac1dff7ba82fc82be974c0eb45f6f26df3535d5d151d2775",
+        "canonicalBaseRevision": "bea0d2ffbc0cb7a57b95c8cb8153673d12390bd0",
+        "declaredWriteScope": [
+          "path:__tests__/planned-fence-only-admission-recovery.test.mjs",
+          "path:docs/PLANNED-FENCE-ONLY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-fence-only-admission-recovery-repository-adapter.mjs",
+          "semantic:planned-fence-disjoint-main-replay-fix"
+        ],
+        "writeSetDigest": "4e686c33385f2b2943150a3dcb9398897a6cae3619ac4f2d33acb662aa68a42f",
+        "laneRevision": "bea0d2ffbc0cb7a57b95c8cb8153673d12390bd0",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T19:22:13.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "736a67f97a450e3a66fd0540ee569438ac308e0fa89af98cc4b98a86ca7c964c",
+      "digest": "3a2f1a390b3c6dd2e222c420bfee3bcb6c63ff83fc65136e3e31852646da72c9"
     }
   ]
 }

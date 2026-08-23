@@ -10,9 +10,8 @@ const MUTATING_ACTIONS = new Set(["claim", "continue", "integrate", "retire"]);
 const PULL_REQUEST_FILES_PAGE_SIZE = 100;
 const PULL_REQUEST_FILES_PAGE_LIMIT = 100;
 export const SMART_GIT_LEDGER_THRESHOLD_BYTES = 10 * 1024 * 1024;
-export function requiresSmartGitLedgerTransport(response, content, thresholdBytes = SMART_GIT_LEDGER_THRESHOLD_BYTES) {
-  return response?.status === 400
-    && Number.isSafeInteger(thresholdBytes)
+export function shouldUseSmartGitLedgerTransport(content, thresholdBytes = SMART_GIT_LEDGER_THRESHOLD_BYTES) {
+  return Number.isSafeInteger(thresholdBytes)
     && thresholdBytes > 0
     && Buffer.byteLength(String(content || ""), "utf8") >= thresholdBytes;
 }
@@ -584,12 +583,7 @@ async function createLedgerCommit({
 }) {
   requireValidLedger(ledger);
   const content = `${JSON.stringify(ledger, null, 2)}\n`;
-  const blobResponse = await send({
-    method: "POST",
-    path: `/repos/${ledgerRepository}/git/blobs`,
-    body: { content, encoding: "utf-8" },
-  });
-  if (requiresSmartGitLedgerTransport(blobResponse, content)) {
+  if (shouldUseSmartGitLedgerTransport(content)) {
     return smartGitLedgerCommit({
       ledgerRepository,
       ledgerRef,
@@ -600,6 +594,11 @@ async function createLedgerCommit({
       token,
     });
   }
+  const blobResponse = await send({
+    method: "POST",
+    path: `/repos/${ledgerRepository}/git/blobs`,
+    body: { content, encoding: "utf-8" },
+  });
   requireStatus(blobResponse, [201], "create collaboration ledger blob");
   const blobSha = String(blobResponse.value?.sha || "");
   requireSha(blobSha, "ledger blob");

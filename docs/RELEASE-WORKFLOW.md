@@ -2,7 +2,7 @@
 title: "Knowgrph Runtime-Ready Release Workflow"
 graphId: "md:knowgrph-runtime-ready-release-workflow"
 doc_type: "Release Workflow Contract"
-date: "2026-08-12"
+date: "2026-08-23"
 lang: "en-US"
 schema: "knowgrph-release-workflow/v4"
 frontmatter_contract: "required"
@@ -56,6 +56,7 @@ completion_requires:
   - "joined Overlap Preservation, Overlap Disposition, Integration, Runtime Review, Candidate, Authorization Interaction, Human Authorization, Deployment, State Reconciliation, Live Verification, Publication, and Rollback receipts for every claimed stage"
   - "runtime-ready authorization prompt bound to the exact candidate, source, release run, and supervised localhost review URL"
   - "one target-and-candidate idempotency key and one target-scoped deployment controller"
+  - "one atomic lane-convergence run with stable plan identity, bounded authorization reuse, authority continuation, minimal active projections, and one terminal receipt"
   - "one exact immutable deployment origin bound to the deployed artifact"
   - "direct D1 readback with document, chunk, graph, content, and path-hash parity"
   - "immutable-origin smoke, public-route smoke, browser fidelity, and returning-user service-worker convergence"
@@ -190,6 +191,17 @@ This workflow enforces the global release-control rule for every enrolled source
 - A canonical local mirror may fast-forward only when it is clean, exclusively owned, and its adapter proves the fetched canonical remote descendant or exact authorized tree-equivalence. A dirty, diverged, stale, or ambiguous mirror remains blocked.
 - The global evaluator reports each enrolled target's coverage, adapter identities, policy revision, and terminal result. Missing enrollment, missing exception evidence, or a nonconforming target is fail-closed for that target and does not authorize changes to any other target.
 
+### Atomic Lane Convergence Rule
+
+For one release-run effect, ACOS exposes one top-level lane-convergence controller from inventory capture through terminal closure. Admission, preservation, review, integration, authority continuation, recovery, retirement, cleanup, and verification remain modular internal adapters; callers do not walk them as separately authorized controllers.
+
+- Bind Stable Plan Identity to the intended effect class, exact subject set, immutable source/value and policy identities, while excluding harmless observation-time, remaining-lease, unrelated-ledger-head, provider-ordering, and retry-counter movement.
+- Consume one exact human authorization for the sealed bounded effect envelope and every idempotent same-effect continuation; request another only if the effect class, subject set, destructive reach, or externally visible consequence expands.
+- Retain or renew the current claim during the authorized run. Any successor claim and its task-authority continuation must commit in one compare-and-swap projection and receipt, so recovery cannot leave a valid successor with a stale writer binding.
+- Derive `keep`, `port`, `drop`, or `ambiguous` from current evidence and keep at most one mutation-capable projection per authority. Use metadata operations for coordination; do not create content revisions solely to renew, wake, fence, or reproject a controller.
+- If a phase produces another projection-only blocker for the same effect, preserve all value, emit `atomic-convergence-controller-defect`, and stop instead of selecting another recovery controller or seeking another same-effect authorization.
+- Completion emits one terminal receipt joining the stable plan, authorization, authority lineage, canonical parity, final minimal inventory, every adapter effect, recovery locators, and untouched out-of-scope work; any pending effect leaves convergence incomplete.
+
 - Complete `START-WORKFLOW.md` before build work: fetch first, preserve one clean registered `main` worktree, inspect every registered worktree, and activate the task branch only in its leased task worktree; pull only on a clean, exclusively owned branch when updating it intentionally.
 - Require the current worktree-bound session lease, scope-owned draft pull request, and ancestral fencing SHA for any source mutation or Dev publication; unrelated semantic-scope worktrees and pull requests may coexist, but duplicate active scope ownership blocks release.
 - Use one task, semantic scope, registered task worktree, branch, and active writer. Parallel users, devices, sessions, and worktrees are valid only for disjoint scopes with distinct remote ownership records and current fences. Keep normal runtime and synchronization on the registered `main` worktree.
@@ -273,6 +285,8 @@ unsealed release frontier blocks candidate preparation.
 Separate unrelated scopes into branch-exclusive leased task worktrees. Commit intentionally, push without force, and open or update a pull request from the repository-owned body template containing action, semantic scope, actor, the current base SHA, validation, cost, immutable manifest digest, and handoff evidence. The pull-request `scope` field must exactly match the branch semantic-scope segment, and any base drift requires rewriting the body before review or merge. Use the repository-owned checkout-free publication command only for a stopped writer's existing commit or recovery path. Merge only after the protected Integration Gate round-trips the exact pair manifest and succeeds. Record the merged Dev SHA as the sole promotion input.
 
 When a direct push to `main` is rejected by protected-branch policy or missing required checks, treat that response as expected integration policy, not as evidence that `pull` is the right next move. Fetch first, inspect `origin/main`, and continue on the task branch through a pull request unless the owned branch intentionally needs a clean upstream update.
+
+If local `main` already contains unpublished commits, first preserve its exact revision on a distinct review branch, publish that branch through the protected adapter, and verify the review record contains every local-only commit. Only then may the canonical-main adapter restore local `main` to exact fetched-remote parity; it must preserve the review branch, never bypass protected integration, and create no deployment authority.
 
 If attributed tracked bytes remain in canonical `main` after their exact task
 change has passed protected integration, use only the

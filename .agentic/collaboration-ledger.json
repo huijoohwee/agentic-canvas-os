@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4534,
-  "headDigest": "ee46e6bde2e146db2f7c5a011d2371965103bb1c647034c4aae5b32be767c8d5",
+  "sequence": 4535,
+  "headDigest": "d139216fb2128c8f38803ae4387cae15134cc033fe835dc21810295df3ab6e13",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -227615,6 +227615,55 @@
       },
       "claimDigest": "eda85eb2c34673aee78bb8613da5ad4f16df2eab0a0e5e809b518536ff23aec0",
       "digest": "ee46e6bde2e146db2f7c5a011d2371965103bb1c647034c4aae5b32be767c8d5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4535,
+      "parentDigest": "ee46e6bde2e146db2f7c5a011d2371965103bb1c647034c4aae5b32be767c8d5",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "420bd0140e39880b22586206c02af10ba63dd7012004d86828144d39de44a3f1",
+      "idempotencyKey": "f5403f9ddb129c45d408fe06bbd984c5fb7146e6a393647fb8ac5ff123e0e4a0",
+      "requestDigest": "04e0a4b5510b51ca0fd49a7b1e413086a974adc5882400ad59abe04cd0f90a77",
+      "evaluationTime": "2026-08-23T10:13:57.000Z",
+      "claimCore": {
+        "claimId": "420bd0140e39880b22586206c02af10ba63dd7012004d86828144d39de44a3f1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:059bb7536798704e014d7f92dcb5dabd6ff42bf6bda618706c81e2f8d067bfd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:7718b373677f21eb85c4c8c117d7fdf53c474806cb3674d0726a9445076630cc",
+        "canonicalBaseRevision": "7473cf25efe48ae8bc11861ef8b66e3626cf15dd",
+        "declaredWriteScope": [
+          "path:.kiro/specs/task-authority-loss-incident-recovery",
+          "path:__tests__/task-authority-loss-incident-recovery-",
+          "path:__tests__/task-bound-lane-authority.test.mjs",
+          "path:docs/TASK-AUTHORITY-LOSS-INCIDENT-RECOVERY.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:package.json",
+          "path:scripts/task-authority-loss-incident-recovery-",
+          "path:scripts/task-bound-lane-authority-cli.mjs",
+          "path:scripts/task-bound-lane-authority-contract.mjs",
+          "path:scripts/task-bound-lane-authority-store.mjs",
+          "semantic:task-authority-loss-incident-recovery"
+        ],
+        "writeSetDigest": "9d496b56c24f8cb78df26f028ababd7fe0245681acab8c7adee7e177bce866ba",
+        "laneRevision": "9515454534b6920ae6212c7cd4ea9bb943aaafaf",
+        "leaseEpoch": 3,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-23T18:13:57.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArnLpw",
+        "predecessorClaimId": "e65c487bf4b2b8002d8ec028527c85d2ca6cd74d7ff73e6cb0e267270656da55",
+        "eligibleSince": "2026-08-23T09:55:12.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-23T09:58:54.000Z"
+      },
+      "claimDigest": "780972c715c2458361937d6cc5f7161ef92c61eb003f6956123eae4a4ec7b3e7",
+      "digest": "d139216fb2128c8f38803ae4387cae15134cc033fe835dc21810295df3ab6e13"
     }
   ]
 }

@@ -113,7 +113,7 @@ test("controller plans read-only and executes only through its adapter", async (
   assert.deepEqual(calls, ["inspect", "manifest", "inspect", "manifest", "execute"]);
 });
 
-test("successor bind state adopts only the exact response-loss transition", () => {
+test("successor bind state adopts or recovers only the exact response-loss transition", () => {
   const plan = buildRepeatedRecoveryPlan({
     evidence: evidence(),
     targetManifest: targetManifest(),
@@ -152,6 +152,17 @@ test("successor bind state adopts only the exact response-loss transition", () =
     promoted,
     plan,
   }), "adopt");
+  assert.equal(classifyRepeatedSuccessorBindState({
+    claim: {
+      ...common,
+      state: "dormant-preserved",
+      transitionCounter: 3,
+      laneRevision: plan.evidence.headSha,
+      reviewRequestId: plan.evidence.reviewRequestId,
+    },
+    promoted,
+    plan,
+  }), "recover-adopt");
   assert.throws(() => classifyRepeatedSuccessorBindState({
     claim: {
       ...common,

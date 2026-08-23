@@ -25,6 +25,8 @@ import {
   invokeRepositoryCloudAction,
   verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
+import { continueExpiredCommittedHeartbeatCloudAuthority }
+  from "./expired-committed-heartbeat-cloud-authority.mjs";
 import { normalizeBoundAuthority } from "./scoped-lane-cloud-reconciliation.mjs";
 import {
   authorizeTaskBoundLeaseMutation,
@@ -79,6 +81,12 @@ export function classifyRepeatedSuccessorBindState({ claim, promoted, plan } = {
     && claim.laneRevision === plan.evidence.headSha
     && claim.reviewRequestId === plan.evidence.reviewRequestId) {
     return "adopt";
+  }
+  if (common && claim.state === "dormant-preserved"
+    && claim.transitionCounter === promoted.transitionCounter + 1
+    && claim.laneRevision === plan.evidence.headSha
+    && claim.reviewRequestId === plan.evidence.reviewRequestId) {
+    return "recover-adopt";
   }
   throw new Error("Repeated recovery promoted successor is neither pre-bind nor exact bound response-loss state.");
 }
@@ -561,8 +569,9 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
         deviceId: source.device,
         sessionId,
       });
-      const bound = bindMode === "bind"
-        ? bindAdmissionCloudAuthority({
+      let bound;
+      if (bindMode === "bind") {
+        bound = bindAdmissionCloudAuthority({
           authority: seed,
           manifest: target,
           branch: plan.evidence.branch,
@@ -575,14 +584,37 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
           environment,
           invoke,
           inspect: invoke,
-        })
-        : verifyCloud({
+        });
+      } else if (bindMode === "adopt") {
+        bound = verifyCloud({
           authority: seed,
           manifest: target,
           canonicalBaseSha: plan.evidence.baseSha,
           environment,
           inspect: invoke,
         });
+      } else {
+        const recoveryEvidenceDigest = digestValue({
+          schema: "agentic-repeated-expired-committed-heartbeat-bound-recovery-evidence/v1",
+          planDigest: plan.planDigest,
+          claimId: claim[0].claimId,
+          claimDigest: claim[0].fenceRevision,
+          transitionCounter: claim[0].transitionCounter,
+          reviewRequestId: claim[0].reviewRequestId,
+        });
+        bound = continueExpiredCommittedHeartbeatCloudAuthority({
+          authority: Object.freeze({ ...seed, state: "active" }),
+          manifest: target,
+          recoveryEvidenceDigest,
+          deviceId: source.device,
+          sessionId,
+          ttlSeconds,
+          environment,
+          inspect: invoke,
+          invoke,
+          verify: input => verifyCloud({ ...input, inspect: invoke }),
+        });
+      }
       intent = writeJournal(intent, {
         ...intent,
         status: "successor-bound",

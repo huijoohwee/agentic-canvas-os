@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4490,
-  "headDigest": "9b4560bdd22a41c16a10a9474979ddea51e324cb00628d92d94f06e0417ab8a3",
+  "sequence": 4491,
+  "headDigest": "3468bdd43d71df6c6b2f43aa1d3fcf6384414ea7da3540a006cceee1128a935a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -225480,6 +225480,64 @@
       },
       "claimDigest": "919e867afc58b9116f31cfa16bd4a44d05dd0fa74e14e67c38313b6f4535bdd4",
       "digest": "9b4560bdd22a41c16a10a9474979ddea51e324cb00628d92d94f06e0417ab8a3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4491,
+      "parentDigest": "9b4560bdd22a41c16a10a9474979ddea51e324cb00628d92d94f06e0417ab8a3",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b2a89f798a9183c05c549fb1995532d6f0a8bf2610901d41b124f3d6756c2433",
+      "idempotencyKey": "7bd1f6064e34c4cf681fa535c0fadeb22eb792c0483eb203cbc3f853b00d826c",
+      "requestDigest": "eacb51f5376ea7d6a2472f7d2b9d52dea18891d1d756bfc3fe946c371393a591",
+      "evaluationTime": "2026-08-23T08:16:59.000Z",
+      "claimCore": {
+        "claimId": "b2a89f798a9183c05c549fb1995532d6f0a8bf2610901d41b124f3d6756c2433",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:ca9f4d1eea41043bf34c5cbf68aa1f1f6e828ebd271007b6d4fe19d767cfa51e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e0bd432f125da33012a019cf93b76a4fcd8cada05edba9683dc964a3457064d8",
+        "canonicalBaseRevision": "0eb9d89e867f269df957186a664291670e5530f3",
+        "declaredWriteScope": [
+          "path:__tests__/protected-head-refresh-authorization.test.mjs",
+          "path:__tests__/protected-head-refresh-controller.test.mjs",
+          "path:__tests__/protected-head-refresh-provider.test.mjs",
+          "path:docs/PROTECTED-HEAD-REFRESH-CHECK-ROLLUP.md",
+          "path:scripts/protected-head-refresh-controller-state.mjs",
+          "path:scripts/protected-head-refresh-controller.mjs",
+          "path:scripts/protected-head-refresh-github-adapter.mjs",
+          "path:scripts/protected-head-refresh-github-provider.mjs",
+          "path:scripts/protected-head-refresh-projection.mjs",
+          "semantic:protected-refresh-reclaimed-fence-repair"
+        ],
+        "writeSetDigest": "8a7165c2275a5082f446a06161ee42bbdfd3b71274a5b28f49957e1d0a4e7f57",
+        "laneRevision": "b26e1ac54c2a55160b8aa7c81cba993fd697a0f0",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-23T08:30:31.000Z",
+        "evidenceDigest": "f42ce8eca770c7184fd59f29fca7a805f55029b330f0c9b355ee040d16e8160a",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAsO0Fg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "b26e1ac54c2a55160b8aa7c81cba993fd697a0f0",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAsO0Fg",
+          "focusedEvidenceDigest": "f42ce8eca770c7184fd59f29fca7a805f55029b330f0c9b355ee040d16e8160a",
+          "dependencyClosureDigest": "b7fa0fc887f202e88a86406c9bcbe2ea724445f3ab342eae6eb8266960d7f750",
+          "namedChecksDigest": "0a014fdd49608fb04df76fedb68a0e29c8148bd40d856400015fa6457c00b81f",
+          "handoffEvidenceDigest": "935a696dd334f7425a98a09b831b32c6493e0600d1585c66eb738c444eb6213b",
+          "operatorDecisionDigest": "84170e4a3db5082eddb5fe2de6264b626b1a03533f58fbde73eee35a54e5c00c",
+          "integrationIntentDigest": "39219a68bcb9e76be4748524b83102f86c0f3f0b54d4c262e07abf874808e0da",
+          "integratedAt": "2026-08-23T08:16:59.000Z"
+        }
+      },
+      "claimDigest": "4970842d4ce6da172748935394376bb5c86bbe5e0954401516b91ebfff1cb51c",
+      "digest": "3468bdd43d71df6c6b2f43aa1d3fcf6384414ea7da3540a006cceee1128a935a"
     }
   ]
 }

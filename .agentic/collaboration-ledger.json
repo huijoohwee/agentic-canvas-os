@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4425,
-  "headDigest": "a95e2d17b89c4f0900645ce615936f42a228ad0c2f86005208ddf1069d460703",
+  "sequence": 4426,
+  "headDigest": "6b24110b4692cecf634f2af8a5795f5770b86f226a668c910d1e94826a24b180",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -222307,6 +222307,49 @@
       },
       "claimDigest": "421a460ca57b56b4f9ae6f9fe380e2d650f3207074e793d6fb8732e2814e2432",
       "digest": "a95e2d17b89c4f0900645ce615936f42a228ad0c2f86005208ddf1069d460703"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4426,
+      "parentDigest": "a95e2d17b89c4f0900645ce615936f42a228ad0c2f86005208ddf1069d460703",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e770e60de1100b4fca7eb2abc02b89719a5955c6d0e709d765e4f964b80cdab5",
+      "idempotencyKey": "eba8dbedff1afd06070597678a65fe95f45afea7b5c791a3890ac92464b956c8",
+      "requestDigest": "c68ec0780f06f021adfedd06a3a7ff2f9982d93e24cf9492286ec08a673d976c",
+      "evaluationTime": "2026-08-23T04:46:59.000Z",
+      "claimCore": {
+        "claimId": "e770e60de1100b4fca7eb2abc02b89719a5955c6d0e709d765e4f964b80cdab5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:71de87debe5ca9c298f390682ec67e7713e67871fd6f2b64a2d971bb3618c35c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a8e5c21b8095aba6c793456e5415a90a2edd849ada2d6c559bbbf09dace09416",
+        "canonicalBaseRevision": "c70d5f7f274e366aa29af9bba4e29b6855083e63",
+        "declaredWriteScope": [
+          "path:.kiro/specs/reviewed-predecessor-base-continuation",
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:docs/REVIEWED-LANE-SOURCE-CORRECTION.md",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "semantic:reviewed-predecessor-base-continuation"
+        ],
+        "writeSetDigest": "cd71e309360675fcfffd8c4e62bc9e9bc8689109bcbca210178ab6c6ef62240c",
+        "laneRevision": "15fc9221121d6a4c4d751c2fd76e9f77e6a845c7",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T05:16:26.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArxXmg",
+        "predecessorClaimId": "0a562af75b087a91537a4005d01328ac4aebe4cf529569e2b83b5db28551d623",
+        "eligibleSince": "2026-08-23T04:45:21.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-23T04:46:26.000Z"
+      },
+      "claimDigest": "ff753afb2b38ed4bfe3f50cc0078f59ac808053013d75923d96747844608bb07",
+      "digest": "6b24110b4692cecf634f2af8a5795f5770b86f226a668c910d1e94826a24b180"
     }
   ]
 }

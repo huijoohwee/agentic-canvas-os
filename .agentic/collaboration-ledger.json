@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4458,
-  "headDigest": "30fd7e34899b0115212d10ad88e252c792efc268b9bd1a8a71886ba226f0c636",
+  "sequence": 4459,
+  "headDigest": "e44c86c5e3db4f7d513128bc8a6b21978c74c7ae5d28b6313f92968885be5ffd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -223926,6 +223926,49 @@
       },
       "claimDigest": "53984ab3d802e00f87de3c75f621430717bdb85f9e7f489705eb9c4cf460252d",
       "digest": "30fd7e34899b0115212d10ad88e252c792efc268b9bd1a8a71886ba226f0c636"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4459,
+      "parentDigest": "30fd7e34899b0115212d10ad88e252c792efc268b9bd1a8a71886ba226f0c636",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b6f54a57e286916fdc2eef598ee9cef66b3311184ea4ddb0c222f0c5e8538e08",
+      "idempotencyKey": "fe6addbf30b23c5f22c5efe6a16f2a50168b4e038a07de8a5b783b8347ca9285",
+      "requestDigest": "c3bf4844b54b057cadf960143b0f87fe125721ecde92b9426c6cab0214894614",
+      "evaluationTime": "2026-08-23T06:11:12.000Z",
+      "claimCore": {
+        "claimId": "b6f54a57e286916fdc2eef598ee9cef66b3311184ea4ddb0c222f0c5e8538e08",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:065480829068fd375c96845cc16e55a1d2601b6e2f15701dc215e3310f6ffa34",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4a4ff93f8648c9bc1ea35e4fdf81b92f390d5faafeacab11602e1cdc6c158832",
+        "canonicalBaseRevision": "40324311ac29a6adb84f1b640695f85a1f724303",
+        "declaredWriteScope": [
+          "path:.kiro/specs/orphaned-task-authority-recovery",
+          "path:__tests__/orphaned-task-authority-recovery-",
+          "path:docs/ORPHANED-TASK-AUTHORITY-RECOVERY.md",
+          "path:scripts/orphaned-task-authority-recovery-",
+          "semantic:orphaned-task-authority-recovery"
+        ],
+        "writeSetDigest": "91f6cab909415e82204ea824f0d760df11d716684c538bd386bf847b16c77ab5",
+        "laneRevision": "bfb69dd579e20895d964bea8684d3dcd4c0dc4c5",
+        "leaseEpoch": 2,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-23T06:41:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArqDKw",
+        "predecessorClaimId": "0a8b99bddcb589f2566bab9f2adcedcf0e681da7720eca333817501a3a7f394a",
+        "eligibleSince": "2026-08-23T05:26:23.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-23T05:30:03.000Z"
+      },
+      "claimDigest": "b817c989f0be232fd6351dea84296a797627bf91029598ed5dab7f965c322ad6",
+      "digest": "e44c86c5e3db4f7d513128bc8a6b21978c74c7ae5d28b6313f92968885be5ffd"
     }
   ]
 }

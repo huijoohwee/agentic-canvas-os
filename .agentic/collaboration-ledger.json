@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4497,
-  "headDigest": "1d0a12cba68adf9b2acf0b9ec85c666bf6ca58a7ecd6cc1654246b3f39cd35f5",
+  "sequence": 4498,
+  "headDigest": "919380406e530abf3e77b33689a852e2fc4ddd80ce4057027662005575d1dd75",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -225819,6 +225819,46 @@
       },
       "claimDigest": "766190e1f23fcf75f41067f3171c608d667327f4f4ea35a57bc641a37c5578a4",
       "digest": "1d0a12cba68adf9b2acf0b9ec85c666bf6ca58a7ecd6cc1654246b3f39cd35f5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4498,
+      "parentDigest": "1d0a12cba68adf9b2acf0b9ec85c666bf6ca58a7ecd6cc1654246b3f39cd35f5",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "48dc9b6eb152192d58106127fdfd21e97beaa872446b7a8e6248324f90130349",
+      "idempotencyKey": "3d1a6aa1ffae4562d7413f3469084b61610886e294da3196d3ff13e7406fafa0",
+      "requestDigest": "92ea4b86a5b80661ac89122e09771ab910159359d3c24603fff1aa843a3f16a5",
+      "evaluationTime": "2026-08-23T08:43:28.000Z",
+      "claimCore": {
+        "claimId": "48dc9b6eb152192d58106127fdfd21e97beaa872446b7a8e6248324f90130349",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:96b9cb296ece26f0413d0a31f5bab729e90db550f95a949164fdd530f31c7978",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cb47fd906ee695a9ab4388c6fe6cf54e50709c323a9ae99d5288cc68b8b1a1f6",
+        "canonicalBaseRevision": "ebd214be0a405f26110bebf6eef4fd7221a4d2ef",
+        "declaredWriteScope": [
+          "path:__tests__/merged-dormant-claim-reconciliation-repository-adapter.test.mjs",
+          "path:scripts/merged-dormant-claim-reconciliation-repository-adapter.mjs",
+          "semantic:merged-dormant-buffer-repair"
+        ],
+        "writeSetDigest": "02443be992a948c9cfaccebd2e848bd3febc7304807180ec9bde838d71f639f4",
+        "laneRevision": "90596f3a5b05730f3b73969e44fb4733b77fc9b0",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-23T09:00:05.000Z",
+        "evidenceDigest": "f7881d63910eaf82a1b10d67f0e9b07c729644aa1cee5811df3831a4527449be",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAsTyqw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1c7432a46eece00959a8702eb2b00bd68704d769f8edc6734e3c3cf0646bb7cd",
+      "digest": "919380406e530abf3e77b33689a852e2fc4ddd80ce4057027662005575d1dd75"
     }
   ]
 }

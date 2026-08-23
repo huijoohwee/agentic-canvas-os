@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4494,
-  "headDigest": "33bec26d3b5e6861b435358ec59e610416eb1d26c51b6bad12fcba99589c23dc",
+  "sequence": 4495,
+  "headDigest": "e0cfcab8afabbbe607831a08a1c920a57f26df297b793738f62f738990767b74",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -225699,6 +225699,46 @@
       },
       "claimDigest": "9a869c76c7dee3ba89b7f7e9965bc3c65379ba31680aa5281e610718459e7d57",
       "digest": "33bec26d3b5e6861b435358ec59e610416eb1d26c51b6bad12fcba99589c23dc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4495,
+      "parentDigest": "33bec26d3b5e6861b435358ec59e610416eb1d26c51b6bad12fcba99589c23dc",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "48dc9b6eb152192d58106127fdfd21e97beaa872446b7a8e6248324f90130349",
+      "idempotencyKey": "555700b7559c77c719c91b4b2161c46cce3a6ba33e006f07fc7db65823f5492d",
+      "requestDigest": "0cedc24f21437983fc78c901eeb561c279b8d9f123362578e1e15342ccf29d7b",
+      "evaluationTime": "2026-08-23T08:30:05.000Z",
+      "claimCore": {
+        "claimId": "48dc9b6eb152192d58106127fdfd21e97beaa872446b7a8e6248324f90130349",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:96b9cb296ece26f0413d0a31f5bab729e90db550f95a949164fdd530f31c7978",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cb47fd906ee695a9ab4388c6fe6cf54e50709c323a9ae99d5288cc68b8b1a1f6",
+        "canonicalBaseRevision": "ebd214be0a405f26110bebf6eef4fd7221a4d2ef",
+        "declaredWriteScope": [
+          "path:__tests__/merged-dormant-claim-reconciliation-repository-adapter.test.mjs",
+          "path:scripts/merged-dormant-claim-reconciliation-repository-adapter.mjs",
+          "semantic:merged-dormant-buffer-repair"
+        ],
+        "writeSetDigest": "02443be992a948c9cfaccebd2e848bd3febc7304807180ec9bde838d71f639f4",
+        "laneRevision": "ebd214be0a405f26110bebf6eef4fd7221a4d2ef",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T09:00:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b184f87b738b91097bf4d20376478467c3d0faec07091f0c83b19162ad1b8db7",
+      "digest": "e0cfcab8afabbbe607831a08a1c920a57f26df297b793738f62f738990767b74"
     }
   ]
 }

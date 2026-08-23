@@ -133,8 +133,8 @@ export function createPlannedFenceOnlyAdmissionRecoveryRepositoryAdapter(options
     const sealed = normalizePlannedFenceOnlyAdmissionRecoveryPlan(plan);
     const current = requireSourceLease(leaseStore.read(branch), sealed);
     requireBoundCapability(current);
-    assertSource(sealed, "before-cloud-recovery");
-    assertLocalFrame(sealed, current, "source");
+    const sourceFrame = assertSource(sealed, "before-cloud-recovery");
+    assertLocalFrame(sealed, current, "source", sourceFrame);
     return cloud.recover({ plan: sealed, sealedRequest });
   }
 
@@ -477,12 +477,10 @@ export function createPlannedFenceOnlyAdmissionRecoveryRepositoryAdapter(options
       throw error;
     }
   }
-  function assertLocalFrame(plan, lease, markerState) {
-    const frame = readFrame(lease, { requireAttached: true });
+  function assertLocalFrame(plan, lease, markerState, sourceFrame = null) {
+    const frame = sourceFrame || readFrame(lease, { requireAttached: true });
     const expected = plan.evidence;
-    if (canonicalJson(frame.repository) !== canonicalJson(expected.repository)
-      || canonicalJson(frame.fence) !== canonicalJson(expected.fence)
-      || canonicalJson(stableReview(frame.review)) !== canonicalJson(stableReview(expected.review))) {
+    if (!plannedFenceOnlyFrameIdentityMatches(expected, frame)) {
       throw new Error("Recovery Git or review identity drifted from the sealed plan.");
     }
     assertProtectedMainReplay(expected, frame, ancestry, "local-frame-verification");
@@ -563,6 +561,12 @@ export function plannedFenceOnlyLocalProjectionMatches(expected, current) {
   delete observed.registrationDigest;
   return canonicalJson(sealed) === canonicalJson(observed);
 }
+export function plannedFenceOnlyFrameIdentityMatches(expected, current) {
+  return canonicalJson(current.repository) === canonicalJson(expected.repository)
+    && canonicalJson(stableFence(current.fence)) === canonicalJson(stableFence(expected.fence))
+    && canonicalJson(stableReview(current.review))
+      === canonicalJson(stableReview(expected.review));
+}
 function assertProtectedMainReplay(sealed, current, isAncestor, stage) {
   if (canonicalJson(current.canonical) === canonicalJson(sealed.canonical)
     && canonicalJson(current.protectedMainAdvance)
@@ -584,6 +588,7 @@ function assertProtectedMainReplay(sealed, current, isAncestor, stage) {
   if (!valid) throw new Error(`Planned fence-only protected main drifted at ${stage}.`);
 }
 function stableEvidence(value) { const copy = structuredClone(value); delete copy.observedAt; delete copy.evidenceDigest; delete copy.localProjection; delete copy.localProjectionDigest; delete copy.canonical; delete copy.protectedMainAdvance; delete copy.cloud.ledgerRevision; delete copy.cloud.ledgerDigest; delete copy.cloud.inventoryDigest; return copy; }
+function stableFence(value) { const copy = structuredClone(value); delete copy.changedPathsDigest; return copy; }
 function stableReview(value) { const copy = structuredClone(value); delete copy.body; delete copy.bodyDigest; delete copy.markerDigest; return copy; }
 function assertRawReviewIdentity(value, expected) { const projection = { adapterId: REVIEW_ADAPTER_ID, id: value.id, number: value.number, url: value.url, state: value.state, draft: value.isDraft, autoMergeAbsent: value.autoMergeRequest === null, headRepository: value.headRepository?.nameWithOwner, headBranch: value.headRefName, headSha: value.headRefOid, baseBranch: value.baseRefName, baseSha: value.baseRefOid, visibleBodyDigest: visibleReviewBodyDigest(value.body) }; if (canonicalJson(projection) !== canonicalJson(stableReview(expected))) throw new Error("Recovery review identity drifted from the sealed plan."); }
 function externalPrivateFile(value, repository, label) { const target = canonicalPath(value, label); if (target === repository || target.startsWith(`${repository}${path.sep}`)) throw new Error(`${label} must remain outside the repository.`); const metadata = lstatSync(target); if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o777) !== 0o600) throw new Error(`${label} must be a private regular file.`); return target; }

@@ -126,6 +126,12 @@ target-observation digest remain exact. A non-descendant or overlapping
 canonical advance, or any claim, lease, fence, manifest, task-binding,
 local-projection, or review-identity drift stops the run.
 
+Immediately before cloud recovery, the repository adapter captures and
+normalizes the complete source frame once. Git, review, marker, and local
+projection checks consume that same snapshot; a second raw observation cannot
+introduce a derived-field mismatch or split one recovery decision across two
+provider observations.
+
 ## CLI
 
 Invoke the direct controller from a protected Agentic Canvas OS checkout. Keep

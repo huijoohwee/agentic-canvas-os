@@ -396,7 +396,7 @@ function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime, pro
   const sameWriteSet = predecessor?.writeSetDigest === intent.writeSetDigest;
   const strictSuperset = successorWriteSet.length > predecessorWriteSet.length
     && predecessorWriteSet.every(value => successorWriteSet.includes(value));
-  const stateAndScopeMatch = (["dormant-preserved", "retired"].includes(predecessor?.state)
+  const stateAndScopeMatch = (["reviewed", "dormant-preserved", "retired"].includes(predecessor?.state)
       && sameWriteSet)
     || (["current", "dormant-preserved", "retired"].includes(predecessor?.state)
       && strictSuperset);

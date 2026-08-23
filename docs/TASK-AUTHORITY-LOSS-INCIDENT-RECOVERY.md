@@ -19,6 +19,15 @@ This lane owns recovery when a task-bound owner capability or its successor proj
 authored work and coordination state must be preserved. Recovery is claim-, lease-, PR-, and
 capability-bound; it does not adopt another owner's bytes or manufacture readiness.
 
+## Declared-scope safety
+
+Declared `path:` entries are exact normalized scopes, not filename-prefix patterns. Admission for
+this capability must therefore enumerate the revision-intent supersession test, contract, repository
+adapter, and CLI paths explicitly. A partial filename such as
+`path:scripts/task-authority-loss-incident-recovery-` does not cover sibling files that merely start
+with that text; review and delivery must fail closed until an exact strict-superset scope successor
+owns every changed path.
+
 ## Prepared reviewed-lane revision-intent supersession
 
 Use this controller only after the same-owner source correction, completed fence recovery, and

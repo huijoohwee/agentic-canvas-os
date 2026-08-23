@@ -571,7 +571,7 @@ function writeJsonAtomic(filePath, value) {
   renameSync(temporary, filePath);
 }
 function subprocess(cwd) {
-  return { cwd, encoding: "utf8", maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] };
+  return { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] };
 }
 function requiredRepository(value, label) {
   const repository = requiredText(value, label);

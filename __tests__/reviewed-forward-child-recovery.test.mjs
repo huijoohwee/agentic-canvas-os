@@ -83,9 +83,15 @@ function sourceEvidence(overrides = {}) {
     },
     protectedMainSha: sha("f"),
     refreshChain: [{ headSha: sha("d"), treeSha: sha("e"), parentShas: [sha("a"), sha("c")] }],
-    ...overrides,
   };
-  return buildReviewedForwardChildEvidence(source);
+  return buildReviewedForwardChildEvidence({
+    ...source,
+    ...overrides,
+    source: { ...source.source, ...overrides.source },
+    lease: { ...source.lease, ...overrides.lease },
+    claim: { ...source.claim, ...overrides.claim },
+    pullRequest: { ...source.pullRequest, ...overrides.pullRequest },
+  });
 }
 
 function childCandidate(overrides = {}) {
@@ -148,6 +154,32 @@ test("evidence binds refreshed source and one empty single-parent child", () => 
   assert.equal(source.source.treeSha, child.childTreeSha);
   assert.throws(() => childCandidate({ childTreeSha: sha("0") }), /single-parent empty forward child/u);
   assert.throws(() => childCandidate({ parentShas: [sha("d"), sha("a")] }), /single-parent/u);
+});
+
+test("evidence joins the pull-request base to the newest protected refresh", () => {
+  const source = sourceEvidence({
+    source: {
+      headSha: sha("0"), remoteHeadSha: sha("0"), providerHeadSha: sha("0"),
+      treeSha: sha("1"), parentShas: [sha("d"), sha("f")],
+    },
+    pullRequest: { headSha: sha("0"), baseSha: sha("f") },
+    refreshChain: [
+      { headSha: sha("d"), treeSha: sha("e"), parentShas: [sha("a"), sha("c")] },
+      { headSha: sha("0"), treeSha: sha("1"), parentShas: [sha("d"), sha("f")] },
+    ],
+  });
+  assert.equal(source.pullRequest.baseSha, source.refreshChain.at(-1).parentShas[1]);
+  assert.throws(() => sourceEvidence({
+    source: {
+      headSha: sha("0"), remoteHeadSha: sha("0"), providerHeadSha: sha("0"),
+      treeSha: sha("1"), parentShas: [sha("d"), sha("f")],
+    },
+    pullRequest: { headSha: sha("0"), baseSha: sha("c") },
+    refreshChain: [
+      { headSha: sha("d"), treeSha: sha("e"), parentShas: [sha("a"), sha("c")] },
+      { headSha: sha("0"), treeSha: sha("1"), parentShas: [sha("d"), sha("f")] },
+    ],
+  }), /joined owner lane/u);
 });
 
 test("integrated-preserved source requires an exact adaptive recovery join", () => {

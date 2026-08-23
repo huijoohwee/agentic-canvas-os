@@ -264,7 +264,7 @@ function assertJoined(value) {
     || lane.branch !== pull.headBranch || lane.sessionId !== writer.sessionId
     || writer.reviewHeadSha !== chain[0].parentShas[0]
     || chain.some((entry, index) => index > 0 && entry.parentShas[0] !== chain[index - 1].headSha)
-    || writer.baseSha !== cloud.canonicalBaseSha || pull.baseSha !== chain[0].parentShas[1]
+    || writer.baseSha !== cloud.canonicalBaseSha || pull.baseSha !== chain.at(-1).parentShas[1]
     || writer.writeSetDigest !== cloud.writeSetDigest
     || JSON.stringify(writer.declaredWriteSet) !== JSON.stringify(cloud.declaredWriteSet)
     || writer.pullRequestUrl !== pull.url

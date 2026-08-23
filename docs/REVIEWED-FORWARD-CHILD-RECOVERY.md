@@ -23,6 +23,8 @@ for a clean, registered `review_ready` lane whose live cloud claim is `dormant-p
 provider PR is open, non-draft, same-repository, outside the merge queue, and still has one exact
 armed SQUASH auto-merge request. The local branch, remote branch, provider head, writer marker,
 reviewed ancestor, refresh chain, cloud claim, and protected main are joined into one path-free plan.
+When the lane has more than one protected refresh merge, the pull request's current base is joined to
+the newest refresh merge's protected-main parent while every earlier refresh remains ancestry-bound.
 
 ## Plan
 

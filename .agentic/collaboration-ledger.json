@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4589,
-  "headDigest": "c60c989f1581438a4ab5f0fe420c3099bc097b3753cf2324eb0c5480df7beec9",
+  "sequence": 4590,
+  "headDigest": "67b31102702b94b936a8d31c14398951ef10497afe0dd96307fdea95c51678be",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -231102,6 +231102,61 @@
       },
       "claimDigest": "5b0914fa6ff58f83849f201ffeded7d8d226941baae2b035649fdb8cf65d1411",
       "digest": "c60c989f1581438a4ab5f0fe420c3099bc097b3753cf2324eb0c5480df7beec9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4590,
+      "parentDigest": "c60c989f1581438a4ab5f0fe420c3099bc097b3753cf2324eb0c5480df7beec9",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f11fee501e73b10439b800a8d1c9e87edce414611808553015f37c2c655be9a4",
+      "idempotencyKey": "5fe336cf912084ea6228552dd34fb5af4ed90cfe93fc1972090dcf71de0c8e4d",
+      "requestDigest": "4cb9bad57370b6fd3487e2d4db299a7c83c814631fd1b7f77e54e4e7fb8a8d11",
+      "evaluationTime": "2026-08-23T12:44:56.000Z",
+      "claimCore": {
+        "claimId": "f11fee501e73b10439b800a8d1c9e87edce414611808553015f37c2c655be9a4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:bc2d3dfa5c830ef019f8fa8d234d74956ba8dcd5d6573f637e8d798020af936f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9d54cc0c55c88ee1dc7d3cd9a4c504ebcdc752363cde7f856b9a9921eb2d7805",
+        "canonicalBaseRevision": "178fbf78176a1dc7e15634ed1aa9a65d4b929c45",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repeated-dormant-bind-recovery/design.md",
+          "path:.kiro/specs/repeated-dormant-bind-recovery/requirements.md",
+          "path:.kiro/specs/repeated-dormant-bind-recovery/tasks.md",
+          "path:__tests__/repeated-expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/REPEATED-EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+          "semantic:repeated-dormant-bind-recovery"
+        ],
+        "writeSetDigest": "14d4a3d4e98f47f11aaf7e20ecbfca3946959e2abc918229d87560e741670445",
+        "laneRevision": "db411d3da2ae4c26c7ef3d41555a1d181bae29d1",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-23T14:28:01.000Z",
+        "evidenceDigest": "c1514b829d00b9ea29fa2b165e525b2df88cc3ee5766afed6c641ffdd00c7b5e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAs6Ssg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "db411d3da2ae4c26c7ef3d41555a1d181bae29d1",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAs6Ssg",
+          "focusedEvidenceDigest": "c1514b829d00b9ea29fa2b165e525b2df88cc3ee5766afed6c641ffdd00c7b5e",
+          "dependencyClosureDigest": "d2172ed9c64d678e9fc62d00cbcc2d6e031b03831410572ba0df7af13e7ca953",
+          "namedChecksDigest": "c2bf3b1e795b6274f21bbe810f770aee1bc28b4b5345f886c0c3419015342845",
+          "handoffEvidenceDigest": "b74bf38308b5627dbe7940e8d64db87d30f8003604546b9a05835a156c79834f",
+          "operatorDecisionDigest": "bd96c0a8b2276246d08e575b40aa33b1e8e572c538aa7bdc7bb620696bab63bc",
+          "integrationIntentDigest": "001b4e648d2b2eca39b78d041fdbd4ceb059419cbcc98f8609bb7ade2bda5cfb",
+          "integratedAt": "2026-08-23T12:44:56.000Z"
+        }
+      },
+      "claimDigest": "18dd424591224fec5f27d01318f6c54b8cfe438d21a8a2864bb022237555b4eb",
+      "digest": "67b31102702b94b936a8d31c14398951ef10497afe0dd96307fdea95c51678be"
     }
   ]
 }

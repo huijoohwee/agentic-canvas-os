@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 
 import { textCommandOptions } from "./command-text-options.mjs";
-import { recoverExpiredCommittedHeartbeat } from "./expired-committed-heartbeat-recovery-lib.mjs";
+import {
+  authorizeExpiredCommittedHeartbeatTaskAuthority,
+  recoverExpiredCommittedHeartbeat,
+} from "./expired-committed-heartbeat-recovery-lib.mjs";
 import {
   createWriterLeaseStore,
   DEFAULT_WRITER_LEASE_TTL_MS,
@@ -24,6 +28,7 @@ const ttlSeconds = Number(
   readOption(args, "ttl-seconds") ||
   DEFAULT_WRITER_LEASE_TTL_MS / 1000,
 );
+let taskAuthorityFile = null;
 
 let repo = null;
 try {
@@ -31,6 +36,7 @@ try {
     value !== "--json" &&
     !value.startsWith("--repository=") &&
     !value.startsWith("--session=") &&
+    !value.startsWith("--task-authority=") &&
     !value.startsWith("--ttl-seconds=")
   ));
   if (unknown.length) {
@@ -46,7 +52,20 @@ try {
     repo,
     gitText(["rev-parse", "--git-common-dir"]).trim(),
   );
-  const leaseStore = createWriterLeaseStore({ gitCommonDir });
+  taskAuthorityFile = externalTaskAuthorityFile(
+    readOption(args, "task-authority"),
+    [repo, path.dirname(gitCommonDir)],
+  );
+  const leaseStore = createWriterLeaseStore({
+    gitCommonDir,
+    taskAuthorityFile,
+    taskAuthorityPolicy: "required",
+  });
+  const branch = gitText(["branch", "--show-current"]).trim();
+  const taskAuthorityReceipt = authorizeExpiredCommittedHeartbeatTaskAuthority({
+    lease: leaseStore.read(branch),
+    taskAuthorityFile,
+  });
   const result = recoverExpiredCommittedHeartbeat({
     invocationPath,
     repo,
@@ -56,6 +75,7 @@ try {
     leaseStore,
     sessionId,
     leaseTtlMs: Math.floor(ttlSeconds * 1000),
+    taskAuthorityReceipt,
     run,
     log: json ? () => {} : console.log,
   });
@@ -81,6 +101,22 @@ function readOption(values, name) {
   const prefix = `--${name}=`;
   const match = values.find(value => value.startsWith(prefix));
   return match ? match.slice(prefix.length).trim() : "";
+}
+
+function externalTaskAuthorityFile(value, repositoryRoots) {
+  if (!value) throw new Error("--task-authority=<absolute external capability> is required.");
+  if (!path.isAbsolute(value)) throw new Error("--task-authority must be absolute.");
+  const resolved = realpathSync(value);
+  if (repositoryRoots.map(root => path.resolve(root)).some(root => (
+    resolved === root || resolved.startsWith(`${root}${path.sep}`)
+  ))) {
+    throw new Error("--task-authority must remain outside the target repository.");
+  }
+  const metadata = lstatSync(resolved);
+  if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o777) !== 0o600) {
+    throw new Error("--task-authority must be a private regular 0600 file.");
+  }
+  return resolved;
 }
 
 function gitText(commandArgs) {

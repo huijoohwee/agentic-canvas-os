@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
+  authorizeExpiredCommittedHeartbeatTaskAuthority,
   captureExpiredCommittedHeartbeatSnapshot,
   GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
   recoverExpiredCommittedHeartbeat,
@@ -577,6 +578,7 @@ test("recovery replays an advanced heartbeat after source expiry and restores it
   });
 
   const result = recoverExpiredCommittedHeartbeat(harness.input);
+  assert.equal(result.taskAuthorityReceipt.status, "verified");
 
   assert.equal(
     result.lease.cloudAuthority.manifestDigest,
@@ -589,6 +591,25 @@ test("recovery replays an advanced heartbeat after source expiry and restores it
   );
   assert.equal(harness.localWrites(), 1);
   assert.equal(harness.markerWrites(), 1);
+});
+
+test("task authority is explicit and verified before cloud, local, or review effects", () => {
+  const harness = recoveryHarness({ source: liveManifestLease() });
+  assert.throws(
+    () => authorizeExpiredCommittedHeartbeatTaskAuthority({
+      lease: harness.input.leaseStore.read(branch),
+      taskAuthorityFile: "/external/wrong-task-authority.json",
+      authorizeTaskAuthority: ({ capabilityPath, operation }) => {
+        assert.equal(capabilityPath, "/external/wrong-task-authority.json");
+        assert.equal(operation, "expired-committed-heartbeat-recovery");
+        throw new Error("task authority mismatch");
+      },
+    }),
+    /task authority mismatch/,
+  );
+  assert.equal(harness.cloudCalls(), 0);
+  assert.equal(harness.localWrites(), 0);
+  assert.equal(harness.markerWrites(), 0);
 });
 
 test("recovery projects a repeated response-loss transition chain", () => {
@@ -1256,6 +1277,11 @@ function recoveryHarness({
       },
       sessionId: source.sessionId,
       leaseTtlMs: 1_800_000,
+      taskAuthorityReceipt: {
+        schema: "agentic-task-authority-verification-receipt/v1",
+        status: "verified",
+        receiptDigest: "a".repeat(64),
+      },
       heartbeatCloudAuthority: () => {
         cloudCalls += 1;
         return { authority: renewedCloudAuthority, verification };

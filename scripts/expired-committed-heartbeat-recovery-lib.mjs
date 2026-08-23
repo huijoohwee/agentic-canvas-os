@@ -9,6 +9,8 @@ import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.
 import { continueExpiredCommittedHeartbeatCloudAuthority, expiredCommittedCloudRecoveryEvidenceDigest, preserveSourceManifestProjection }
   from "./expired-committed-heartbeat-cloud-authority.mjs";
 import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { authorizeTaskBoundLeaseMutation }
+  from "./task-bound-lane-authority-store.mjs";
 import {
   captureCommittedDescendantEvidence,
   captureExpiredCommittedHeartbeatSnapshot,
@@ -43,6 +45,20 @@ export const EXPIRED_COMMITTED_HEARTBEAT_RESULT_SCHEMA = "agentic-expired-commit
 export { assertPullRequestBodyWithinGitHubLimit, GITHUB_PULL_REQUEST_BODY_MAX_BYTES,
   reconcileHeartbeatManifestProjection };
 export { captureExpiredCommittedHeartbeatSnapshot, requireChangedPathsWithinScope };
+export function authorizeExpiredCommittedHeartbeatTaskAuthority({
+  lease,
+  taskAuthorityFile,
+  authorizeTaskAuthority = authorizeTaskBoundLeaseMutation,
+  now = () => new Date(),
+}) {
+  return authorizeTaskAuthority({
+    lease,
+    capabilityPath: taskAuthorityFile,
+    operation: "expired-committed-heartbeat-recovery",
+    now: now(),
+  });
+}
+
 export function recoverExpiredCommittedHeartbeat({
   invocationPath,
   repo,
@@ -52,6 +68,7 @@ export function recoverExpiredCommittedHeartbeat({
   leaseStore,
   sessionId,
   leaseTtlMs,
+  taskAuthorityReceipt = null,
   heartbeatCloudAuthority = continueExpiredCommittedHeartbeatCloudAuthority,
   verifyActiveCloudAuthority = verifyAdmissionCloudAuthority,
   assertMutationAuthority = assertAdmissionMutationAuthority,
@@ -84,6 +101,7 @@ export function recoverExpiredCommittedHeartbeat({
       run,
       log,
       now,
+      taskAuthorityReceipt,
     });
   }
   fetchProtectedMain({ run });
@@ -278,6 +296,7 @@ export function recoverExpiredCommittedHeartbeat({
     headSha: before.headSha,
     mutationAuthorityReceipt,
     replayed: false,
+    taskAuthorityReceipt,
   });
 }
 
@@ -287,6 +306,7 @@ function recoveryResult({
   headSha,
   mutationAuthorityReceipt,
   replayed,
+  taskAuthorityReceipt,
 }) {
   return Object.freeze({
     schema: EXPIRED_COMMITTED_HEARTBEAT_RESULT_SCHEMA,
@@ -294,6 +314,7 @@ function recoveryResult({
     status: "recovered",
     deployment: false,
     replayed,
+    taskAuthorityReceipt,
     branch,
     pullRequestUrl: lease.pullRequestUrl,
     headSha,
@@ -316,6 +337,7 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
   run,
   log,
   now,
+  taskAuthorityReceipt,
 }) {
   const instant = now();
   const lease = leaseStore.read(branch);
@@ -453,6 +475,7 @@ function reconcileRecoveredExpiredCommittedHeartbeat({
     headSha: descendant.headSha,
     mutationAuthorityReceipt,
     replayed: true,
+    taskAuthorityReceipt,
   });
 }
 

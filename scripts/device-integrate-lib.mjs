@@ -244,6 +244,7 @@ function integrateSessionUnfenced({
     let acceptedProtectedRefreshBaseSha = deliveryVerifiedBaseSha;
     let protectedMainAuthorizationRefresh = null;
     let squashSubject = null;
+    let squashBody = null;
     let currentPullRequest = null;
     let terminalReviewReadyCompletion = false;
     let attemptedReviewReadyDeliveryEvidence = null;
@@ -266,6 +267,7 @@ function integrateSessionUnfenced({
         ]).replace(/\r?\n$/u, ""),
         { label: "Reviewed authored commit subject" },
       );
+      squashBody = renderProtectedSquashCommitBody({ branch, lease });
       protectedMainAuthorizationRefresh = (
         lease.reviewHeadSha
         && currentPullRequest.headRefOid !== lease.reviewHeadSha
@@ -395,6 +397,7 @@ function integrateSessionUnfenced({
         });
         const autoMergeArgs = [
           "pr", "merge", "--auto", "--squash", "--subject", squashSubject,
+          "--body", squashBody,
           "--match-head-commit", protectedMergeHeadSha, lease.pullRequestUrl,
         ];
         try {
@@ -2893,13 +2896,7 @@ export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
   if (rawSubject !== subject) {
     throw new Error("Managed integration commit subject must not contain leading or trailing whitespace.");
   }
-  const branchParts = String(branch || "").split("/");
-  const branchScope = branchParts[0] === "agent" && branchParts.length >= 3
-    ? branchParts.slice(2).join("/")
-    : "";
-  if (!branchScope || lease?.branch !== branch || lease?.scope !== branchScope) {
-    throw new Error("Managed integration commit attribution requires the exact leased task-branch scope.");
-  }
+  const { branchScope, claimEpoch } = resolveManagedCommitAttribution({ branch, lease });
   const subjectMatch = subject.match(MANAGED_COMMIT_SUBJECT_PATTERN);
   if (
     !subjectMatch ||
@@ -2911,10 +2908,6 @@ export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
       "Managed integration commit subject must use <type>(<leased-scope>): <summary> with an allowed type, a summary of at most 60 characters, and at most 72 total characters.",
     );
   }
-  const claimEpoch = lease.cloudAuthority ? lease.cloudAuthority.leaseEpoch : lease.epoch;
-  if (!Number.isInteger(claimEpoch) || claimEpoch <= 0) {
-    throw new Error("Managed integration commit attribution requires a positive claim epoch.");
-  }
   return Object.freeze({
     subject,
     body: `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
@@ -2925,6 +2918,42 @@ export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
       "Agentic-Mechanism: Agentic Canvas OS protected integration",
     ]),
   });
+}
+
+export function renderProtectedSquashCommitBody({ branch, lease }) {
+  const { branchScope, claimEpoch } = resolveManagedCommitAttribution(
+    { branch, lease },
+    { allowLocalEpochFallback: true },
+  );
+  return [
+    `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
+    "",
+    `Agentic-Task: ${branchScope}`,
+    `Agentic-Scope: ${branchScope}`,
+    `Agentic-Lease-Epoch: ${claimEpoch}`,
+    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+  ].join("\n");
+}
+
+function resolveManagedCommitAttribution(
+  { branch, lease },
+  { allowLocalEpochFallback = false } = {},
+) {
+  const branchParts = String(branch || "").split("/");
+  const branchScope = branchParts[0] === "agent" && branchParts.length >= 3
+    ? branchParts.slice(2).join("/")
+    : "";
+  if (!branchScope || lease?.branch !== branch || lease?.scope !== branchScope) {
+    throw new Error("Managed integration commit attribution requires the exact leased task-branch scope.");
+  }
+  const cloudEpoch = lease.cloudAuthority?.leaseEpoch;
+  const claimEpoch = Number.isInteger(cloudEpoch) && cloudEpoch > 0
+    ? cloudEpoch
+    : allowLocalEpochFallback ? lease.epoch : lease.cloudAuthority ? cloudEpoch : lease.epoch;
+  if (!Number.isInteger(claimEpoch) || claimEpoch <= 0) {
+    throw new Error("Managed integration commit attribution requires a positive claim epoch.");
+  }
+  return Object.freeze({ branchScope, claimEpoch });
 }
 
 function requireRepositoryRoot({ invocationPath, repo }) {

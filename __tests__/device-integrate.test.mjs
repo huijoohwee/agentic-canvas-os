@@ -12,6 +12,7 @@ import {
   WORKTREE_CLEANUP_RESULT_SCHEMA,
   integrateSession,
   renderManagedCommitMessage,
+  renderProtectedSquashCommitBody,
   resolveRuntimeRepositories,
   validateIntegrationCleanupReceipt,
 } from "../scripts/device-integrate-lib.mjs";
@@ -46,6 +47,14 @@ const autoMergeActorNodeId = "MDQ6VXNlcjg5NDU4MTI=";
 const autoMergeActorLogin = "huijoohwee";
 const autoMergeActorType = "User";
 const protectedSquashSubject = "fix: bind exact protected squash subjects";
+const protectedSquashBody = [
+  "Integrate the declared runtime-integration change through its protected managed task lane so downstream policy can attribute the change to its writer lease.",
+  "",
+  "Agentic-Task: runtime-integration",
+  "Agentic-Scope: runtime-integration",
+  "Agentic-Lease-Epoch: 1",
+  "Agentic-Mechanism: Agentic Canvas OS protected integration",
+].join("\n");
 const oversizedReviewedMergeSubject =
   "Merge remote-tracking branch 'origin/main' into agent/huis-macbook-pro-3/lark-readonly-knowledge-ingestion";
 const oversizedRefreshedMergeSubject =
@@ -690,6 +699,7 @@ test("managed integration commit attribution is bound to the leased branch scope
       "Agentic-Mechanism: Agentic Canvas OS protected integration",
     ],
   });
+  assert.equal(renderProtectedSquashCommitBody({ branch, lease }), protectedSquashBody);
   assert.throws(() => renderManagedCommitMessage({
     branch,
     commitMessage: "fix(other-scope): emit lease attribution",
@@ -1250,7 +1260,7 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
     );
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
     assert.ok(commands.some(call => call.join(" ") ===
-      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --match-head-commit ${commitSha} ${pullRequestUrl}`));
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --body ${protectedSquashBody} --match-head-commit ${commitSha} ${pullRequestUrl}`));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -2267,7 +2277,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       mainParentSha: refreshedMainSha,
     });
     assert.ok(commands.some(call => call.join(" ") ===
-      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --match-head-commit ${refreshedHeadSha} ${pullRequestUrl}`));
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --body ${protectedSquashBody} --match-head-commit ${refreshedHeadSha} ${pullRequestUrl}`));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin refs/pull/42/head"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --ff-only FETCH_HEAD"));
   } finally {

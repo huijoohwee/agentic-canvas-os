@@ -108,10 +108,11 @@ export function runProtectedHeadRefresh({
     targetMainIsAncestor,
     mergeCommitIsAncestor,
   });
+  const policy = readProtectedHeadRefreshRepositoryPolicy({ environment });
   const provider = createProtectedHeadRefreshGithubProvider({
     repository: repo,
     projection,
-    policy: readProtectedHeadRefreshRepositoryPolicy({ environment }),
+    policy,
     gh,
     ghJson,
     requiredEnv,
@@ -273,7 +274,7 @@ export function runProtectedHeadRefresh({
       });
     },
     verifyCandidateWorkflow: ({ candidateSha, targetMainSha }) => {
-      const workflowPath = ".github/workflows/ci.yml";
+      const workflowPath = `.github/workflows/${policy.ciWorkflow}`;
       const candidateBlobSha = requireFullSha(
         gitText(["rev-parse", `${candidateSha}:${workflowPath}`]).trim(),
         "Protected-head refresh candidate CI workflow blob",

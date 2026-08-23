@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4624,
-  "headDigest": "4ad5de36749784679217451e4e5bf916846126b89acae88cceab887be3947698",
+  "sequence": 4625,
+  "headDigest": "0a73bc5747db8dd9fb6a40779d21177777e8ee36f963cd3ef4304b821913536d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -233237,6 +233237,57 @@
       },
       "claimDigest": "9cc9a6c4c3c09a3d63038017481245f8be65426bb4a15ef4fdbb09c6d28463ee",
       "digest": "4ad5de36749784679217451e4e5bf916846126b89acae88cceab887be3947698"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4625,
+      "parentDigest": "4ad5de36749784679217451e4e5bf916846126b89acae88cceab887be3947698",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "40e54d227d2ad0805d6ca2ddefd2d2ce7fcbf79c10246254e3462dbaa6b9ffd3",
+      "idempotencyKey": "caade26fc2f9a92d509df88a63ca22a0c37010d13128ed20c76bc119b506eb6e",
+      "requestDigest": "de718f46d549cc9dfa504e66c7041cfb3dfc96599d3e9b630042ac26f2f9a4cd",
+      "evaluationTime": "2026-08-23T14:35:05.000Z",
+      "claimCore": {
+        "claimId": "40e54d227d2ad0805d6ca2ddefd2d2ce7fcbf79c10246254e3462dbaa6b9ffd3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:a67e839fa96baffde88b3e5e186996f863c1ac9f5306d1415ab5541986270f2a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:13ff783f413eee566ee2303453e7e73cb203b96ff1c9ed0823e2bdc62589cdd6",
+        "canonicalBaseRevision": "41d9685a536b5a6df72e7b752a9300ebffda8036",
+        "declaredWriteScope": [
+          "path:__tests__/device-branch-lib.test.mjs",
+          "path:docs/PLANNED-DEVICE-PROJECTION-RECOVERY.md",
+          "path:scripts/device-branch-lib.mjs",
+          "semantic:planned-review-opaque-owner-fix"
+        ],
+        "writeSetDigest": "aa4844f45dcdc29b37703e1fd6b542333e9cc33530a05fc6f3f8bf3afeef74ed",
+        "laneRevision": "41d9685a536b5a6df72e7b752a9300ebffda8036",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-23T15:04:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "41d9685a536b5a6df72e7b752a9300ebffda8036",
+          "reviewRequestId": null,
+          "bytesDigest": "3e7090c732054dc5e8b25fefb5f77249074f041ac02c7617eb31f5c6ac4feaf6",
+          "namedChecksDigest": "3e7090c732054dc5e8b25fefb5f77249074f041ac02c7617eb31f5c6ac4feaf6",
+          "handoffEvidenceDigest": "3e7090c732054dc5e8b25fefb5f77249074f041ac02c7617eb31f5c6ac4feaf6",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-23T14:35:05.000Z"
+        }
+      },
+      "claimDigest": "df9fe89d9be395364c6490e2537ba96c87b0d791680e57420ddb058bada5dedd",
+      "digest": "0a73bc5747db8dd9fb6a40779d21177777e8ee36f963cd3ef4304b821913536d"
     }
   ]
 }

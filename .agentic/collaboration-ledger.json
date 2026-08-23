@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4575,
-  "headDigest": "3831109b8a4eb989f3c202d9a44eeff0e4fe479dccd021a301fade053b54a641",
+  "sequence": 4576,
+  "headDigest": "8d0122a2f1baa3afb8b053f09a22f24ac17651599fd9abbbb64d1e36f356b135",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -230412,6 +230412,50 @@
       },
       "claimDigest": "e29a0cac2598018a200f52fe75be69558d5a25980ec96b8dd52539d0aeb5bba5",
       "digest": "3831109b8a4eb989f3c202d9a44eeff0e4fe479dccd021a301fade053b54a641"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4576,
+      "parentDigest": "3831109b8a4eb989f3c202d9a44eeff0e4fe479dccd021a301fade053b54a641",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "90b03ec910fe241dc6fddf76b14d055c1fddabca69da4ccc6db90528062e6b29",
+      "idempotencyKey": "620b93b964e1513ed7e5dd73b89a76dbf39ef7ae96e9e173ebaca8d0af0fc6b5",
+      "requestDigest": "d73529cbcff476bc150982384ef40817acc33a322c47c018fb0c69c6ad1bf704",
+      "evaluationTime": "2026-08-23T11:59:26.000Z",
+      "claimCore": {
+        "claimId": "90b03ec910fe241dc6fddf76b14d055c1fddabca69da4ccc6db90528062e6b29",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f135d8f400e59e03825514ec339db6a7056ac99d175fa827731363146d7a6bd7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f6617462a15937178f4cc339ae1659db8ae29b1bb8714cebc5a831d7769eff55",
+        "canonicalBaseRevision": "ef8d34c5afa23357f139a8505e7548e5c6289415",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repeated-heartbeat-bind-recovery/design.md",
+          "path:.kiro/specs/repeated-heartbeat-bind-recovery/requirements.md",
+          "path:.kiro/specs/repeated-heartbeat-bind-recovery/tasks.md",
+          "path:__tests__/repeated-expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/REPEATED-EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+          "semantic:repeated-heartbeat-bind-recovery"
+        ],
+        "writeSetDigest": "b9cbeb8f73a900c84c30262354909d73a978823d4ee1e26b50f1032b0fa48250",
+        "laneRevision": "3d53551ee4e32ec039e5623379c16d64708ac494",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T13:46:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAszFVA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3b7238ead9fac89beb29f4a2bc51e90c281b3e1622852e28a571a3ba6a055bbe",
+      "digest": "8d0122a2f1baa3afb8b053f09a22f24ac17651599fd9abbbb64d1e36f356b135"
     }
   ]
 }

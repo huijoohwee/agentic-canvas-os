@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4398,
-  "headDigest": "38bf5bb4649b2f4b2a948c0e1e15aa710392e5acef9c669195815f9150b22c72",
+  "sequence": 4399,
+  "headDigest": "590446dbb2de2b1e9e5eb3607b10d70924af52ca044dcb92e4778b90cbbacf59",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -221074,6 +221074,47 @@
       },
       "claimDigest": "2921411eafb761a50ebd670c41033d88984f39f3b60d194f632a292c8086e10f",
       "digest": "38bf5bb4649b2f4b2a948c0e1e15aa710392e5acef9c669195815f9150b22c72"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4399,
+      "parentDigest": "38bf5bb4649b2f4b2a948c0e1e15aa710392e5acef9c669195815f9150b22c72",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "3429059bfabcdf579e018ac59e6bf99269ea91443ccfedfb7e9775ecce63d6c7",
+      "idempotencyKey": "20f74e8ab881958b49f7076548c7abcb2ceff41e22d378993e47893889bd6ddb",
+      "requestDigest": "fb073766e9a72b675c1bf87596e2c3d3521971c420e27e3a7b4dd230092a020e",
+      "evaluationTime": "2026-08-23T03:44:25.000Z",
+      "claimCore": {
+        "claimId": "3429059bfabcdf579e018ac59e6bf99269ea91443ccfedfb7e9775ecce63d6c7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:06977fb70b02a880555a78d690f3c7eca1ee27941fcd0e866bcc1c24b46cc7b7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9cedafe4b42beedef8b68169ea7b99d8bb8bf985100dd6e8141f75ae50080e44",
+        "canonicalBaseRevision": "40324311ac29a6adb84f1b640695f85a1f724303",
+        "declaredWriteScope": [
+          "path:__tests__/post-merge-cloud-authority-verifier.test.mjs",
+          "path:docs/POST-MERGE-CLOUD-AUTHORITY.md",
+          "path:scripts/post-merge-cloud-authority-verifier.mjs",
+          "semantic:post-merge-integrated-renewal-retirement-repair"
+        ],
+        "writeSetDigest": "8df7b70f3612558719726ff97638be74e647e64ffe402a4bca39052666bfb6fe",
+        "laneRevision": "7560ac44075b818d2d7331526760d71b0ddf877c",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-23T04:02:12.000Z",
+        "evidenceDigest": "dfcda812614c8be1c2170ebb6d238865b02c3c8618720a204213aa946c8f20ad",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArppSA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c577bdc5df44e369049e3c50bcb621a3aab9906cc418606d6c81629a6e97d7b9",
+      "digest": "590446dbb2de2b1e9e5eb3607b10d70924af52ca044dcb92e4778b90cbbacf59"
     }
   ]
 }

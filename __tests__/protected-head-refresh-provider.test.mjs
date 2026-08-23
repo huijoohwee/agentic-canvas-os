@@ -610,6 +610,7 @@ test("CI completion projects exact source checks into the candidate rollup befor
   }));
   const cloudId = 9_000;
   let rollupAvailable = true;
+  let hiddenRollupId = null;
   const checks = [{ id: cloudId, name: "cloud-collaboration", head_sha: candidate,
     external_id: `agentic-protected-head-refresh:${projection.operation_id}`,
     status: "in_progress", conclusion: null,
@@ -639,8 +640,11 @@ test("CI completion projects exact source checks into the candidate rollup befor
       if (endpoint === `repos/${repository}/check-suites/${workflow.check_suite_id}/check-runs`)
         return { total_count: source.length + checks.length, check_runs: [...source, ...checks] };
       if (endpoint?.includes("/check-runs/")) return checks.find(check => endpoint.endsWith(`/${check.id}`));
+      const rollupChecks = checks.filter(check => (
+        check.id !== cloudId && check.id !== hiddenRollupId
+      ));
       return { data: { repository: { object: { statusCheckRollup: rollupAvailable ? { contexts: {
-        totalCount: checks.length, nodes: checks.map(check => ({ __typename: "CheckRun",
+        totalCount: rollupChecks.length, nodes: rollupChecks.map(check => ({ __typename: "CheckRun",
           databaseId: check.id })) } } : null } } } };
     },
     requiredEnv: () => "unused", sleepSeconds: () => {},
@@ -652,9 +656,15 @@ test("CI completion projects exact source checks into the candidate rollup befor
   assert.deepEqual(mutations.map(item => item.body.name).filter(Boolean),
     PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS);
   assert.equal(mutations.at(-1).endpoint, `repos/${repository}/check-runs/${cloudId}`);
+  assert.equal(checks[0].status, "completed");
+  assert.equal(checks[0].conclusion, "success");
   const mutationCount = mutations.length;
   provider.completeCloudCheck({ candidateSha: candidate, cloudCheck: { checkRunIds: [cloudId] }, ci });
   assert.equal(mutations.length, mutationCount);
+  hiddenRollupId = checks[1].id;
+  assert.throws(() => provider.completeCloudCheck({ candidateSha: candidate,
+    cloudCheck: { checkRunIds: [cloudId] }, ci }), /did not converge/u);
+  hiddenRollupId = null;
   rollupAvailable = false;
   assert.throws(() => provider.completeCloudCheck({ projection, candidateSha: candidate,
     cloudCheck: { checkRunIds: [cloudId] }, ci }), /rollup is malformed/u);

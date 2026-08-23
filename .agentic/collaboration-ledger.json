@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4688,
-  "headDigest": "7ac1a960bbc39379324346cde6c4fccfa8fb45fad2472b2a037c151fbc2e5c6a",
+  "sequence": 4689,
+  "headDigest": "d205251f560272c1f5898307056770dc5916c2add39e40f400e6c20d62caf45a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -236265,6 +236265,54 @@
       },
       "claimDigest": "00464b7a96b6233061cc19a9aa30690ad9310d1da178cbc6e340102466d0c377",
       "digest": "7ac1a960bbc39379324346cde6c4fccfa8fb45fad2472b2a037c151fbc2e5c6a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4689,
+      "parentDigest": "7ac1a960bbc39379324346cde6c4fccfa8fb45fad2472b2a037c151fbc2e5c6a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d96ed582c38db35e8b8e4ebc98b32bd851d81e9ad7797351dd2d16be0803f758",
+      "idempotencyKey": "82d4cd992e2fecba56fddebab0d848541508559c66be17c5c70961ecca2bd795",
+      "requestDigest": "11082ce63ba4790c62f19189cf7f37f976fab5992acf0c1461f675555da2f1be",
+      "evaluationTime": "2026-08-23T22:43:21.000Z",
+      "claimCore": {
+        "claimId": "d96ed582c38db35e8b8e4ebc98b32bd851d81e9ad7797351dd2d16be0803f758",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2ee11fb7e9eb30c8edbc333faa950fcdf099c02f4f86cab89c3fb1513a1756d7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:468a54c1f8af87b439dd3589503d70c731ce096dd203946aed54535f326aceb9",
+        "canonicalBaseRevision": "c17067be489b1f14ef976160afeeb3f2ed522102",
+        "declaredWriteScope": [
+          "path:__tests__/atomic-lane-convergence.test.mjs",
+          "path:docs/ATOMIC-LANE-CONVERGENCE.md",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:package.json",
+          "path:scripts/atomic-lane-convergence-contract.mjs",
+          "path:scripts/atomic-lane-convergence-controller.mjs",
+          "path:scripts/atomic-lane-convergence-journal.mjs",
+          "path:scripts/atomic-lane-convergence.mjs",
+          "path:todo/2026-08/atomic-lane-convergence-controller.md",
+          "semantic:atomic-lane-convergence-runtime"
+        ],
+        "writeSetDigest": "46d40a3e7cb213ad7aa227a0ac501a45938de8d3dd0838addc39effb9c1841e4",
+        "laneRevision": "c17067be489b1f14ef976160afeeb3f2ed522102",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-23T23:13:21.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "7dbb817e3c039e2dbd2f2ac293be151cba87f85d2dbf890afbfced1ea23e31c6",
+        "eligibleSince": "2026-08-23T22:43:21.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cad3d512a5fff681e638aa13b092a912ba4f4cf6b33d9c17f648f2a7ff2992f7",
+      "digest": "d205251f560272c1f5898307056770dc5916c2add39e40f400e6c20d62caf45a"
     }
   ]
 }

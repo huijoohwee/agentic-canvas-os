@@ -45,3 +45,10 @@ ledger validation failure, identity drift, or receipt mismatch preserves the
 original failure. The fallback is read only: it cannot create or renew a claim,
 merge a pull request, edit a lease, reconcile runtime, clean a worktree, or
 authorize Production or Cloudflare deployment.
+
+An expired delivery replay keeps live same-claim recovery as its first path. If
+that recovery fails and the exact delivery pull request is already merged,
+`device:integrate` runs this historical verifier before returning the live
+recovery failure. Only an exact `integrated-retired` receipt may complete the
+local task. A missing or mismatched receipt preserves the original failure;
+the fallback never recreates or revives the retired claim.

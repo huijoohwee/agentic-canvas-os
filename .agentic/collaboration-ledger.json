@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4383,
-  "headDigest": "599b4ba3769a5276065f8d6251d7784450ba3eb0ff379ccd1ee1cc04af1fc44d",
+  "sequence": 4384,
+  "headDigest": "6dff22819c0c6da6b426cd6e8b7ba1c7e85b02904992f294015a0842c636fd7c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -220404,6 +220404,47 @@
       },
       "claimDigest": "607aa3af8be91e45b89fe099fe949050bdb9720dc62a115cdb4bca5eb33c8130",
       "digest": "599b4ba3769a5276065f8d6251d7784450ba3eb0ff379ccd1ee1cc04af1fc44d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4384,
+      "parentDigest": "599b4ba3769a5276065f8d6251d7784450ba3eb0ff379ccd1ee1cc04af1fc44d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "610279dbf0a01059f6deade113d853379a03e3b408cf54091a3a8309881c42b4",
+      "idempotencyKey": "11b2c80167ee9fadc1ebf2eef6cd5558d1b5930290e50912a9da6c9b54d8798d",
+      "requestDigest": "8debe7ba503d004de7f1a1cd31fb27f3eeb31cf97c7767cae3c1b3320011dbf2",
+      "evaluationTime": "2026-08-23T03:01:13.000Z",
+      "claimCore": {
+        "claimId": "610279dbf0a01059f6deade113d853379a03e3b408cf54091a3a8309881c42b4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:06977fb70b02a880555a78d690f3c7eca1ee27941fcd0e866bcc1c24b46cc7b7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e524f1078d898f6179e0e90b8e45f1e6a8610d20acce7f50a2485b06a0fed6d7",
+        "canonicalBaseRevision": "7473cf25efe48ae8bc11861ef8b66e3626cf15dd",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:docs/POST-MERGE-CLOUD-AUTHORITY.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:post-merge-expired-delivery-retirement-repair"
+        ],
+        "writeSetDigest": "1a079bb3d67ea14f8ecc3290453c93666f0ae6e677c13aa9eb45fe112ac03541",
+        "laneRevision": "7473cf25efe48ae8bc11861ef8b66e3626cf15dd",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T03:31:13.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d26aadc55a7225fa1b2ca91a7e02a2ccf8b3450a67c8e1c2dd7ec096153e4e26",
+      "digest": "6dff22819c0c6da6b426cd6e8b7ba1c7e85b02904992f294015a0842c636fd7c"
     }
   ]
 }

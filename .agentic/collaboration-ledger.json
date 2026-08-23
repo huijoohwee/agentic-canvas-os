@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4657,
-  "headDigest": "3027fd213e90bd62418ebecf84b01b0cb7fdde7c5b24afdc685d86a280b474ad",
+  "sequence": 4658,
+  "headDigest": "3c4bd428b6e6157fdcffd6b5f077c9212ed8e66df8e76d36c95bdbb18ce1fa9c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -234809,6 +234809,58 @@
       },
       "claimDigest": "f94691e051b999ccfcbee38cb5074ece87e4c0f20b24f8bccbb2d73576f71ab9",
       "digest": "3027fd213e90bd62418ebecf84b01b0cb7fdde7c5b24afdc685d86a280b474ad"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4658,
+      "parentDigest": "3027fd213e90bd62418ebecf84b01b0cb7fdde7c5b24afdc685d86a280b474ad",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "19df2b36d3e91c123d189e30c25b8a05f83c43608daf0e9635e15968e2d49afe",
+      "idempotencyKey": "d7cb23f7cca7cd24173bc8c29456e80edf637ee52e36edf540b6137d96e4e434",
+      "requestDigest": "815aa9fd01f561cd154217301e2f6ca655152498efc57503c3306b73417e40ba",
+      "evaluationTime": "2026-08-23T16:05:43.000Z",
+      "claimCore": {
+        "claimId": "19df2b36d3e91c123d189e30c25b8a05f83c43608daf0e9635e15968e2d49afe",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:fa74fb2bfcd7fc1408e8ab1a1eb8b75592714371923fc07c7ad4bc491df5908d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ef65f946d169bec58489b78899274297905805902530809208a227f88bae8a3a",
+        "canonicalBaseRevision": "a30f78c2d5c39bb9b95861c909be262794a3bb8a",
+        "declaredWriteScope": [
+          "path:__tests__/planned-fence-only-admission-recovery.test.mjs",
+          "path:docs/PLANNED-FENCE-ONLY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-fence-only-admission-recovery-cloud-adapter.mjs",
+          "semantic:planned-fence-cloud-request-sealing-fix"
+        ],
+        "writeSetDigest": "a1a797321ce5c283f4391214b5ab5094c5ecfc6859a55de30b87dae15a98c102",
+        "laneRevision": "3732febd17d00bcc76d0ff9dd3069a2f300e5b4a",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-23T16:52:09.000Z",
+        "evidenceDigest": "21f6d7530e87547a3e9b37847726f77673fdf1e0c02bc2cdfe7271c802b0803b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAtiaWA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "3732febd17d00bcc76d0ff9dd3069a2f300e5b4a",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAtiaWA",
+          "focusedEvidenceDigest": "21f6d7530e87547a3e9b37847726f77673fdf1e0c02bc2cdfe7271c802b0803b",
+          "dependencyClosureDigest": "8b8ce2e270adb04795ef27f8e3bc4a3d09a05382f1bf3114788edeeb8b6d1a22",
+          "namedChecksDigest": "bb2236b632ff8f8f498475c25c2ea8d8647549ee780a66c231dded5e9d39e69f",
+          "handoffEvidenceDigest": "c25e7253629ba792e4cbbd511c924afeb17d8f2a6d3273679e9a6f465868209a",
+          "operatorDecisionDigest": "131ce9fac867386e717a68aaae9c15deeb8da0d466df818c4e0a2e906c154685",
+          "integrationIntentDigest": "b91f97b5f6c0f2809fbb110baa81207e8b226e3bfd82c6411508cb38778dc242",
+          "integratedAt": "2026-08-23T16:05:43.000Z"
+        }
+      },
+      "claimDigest": "f06aa23e43555dbe8eb0b8e22ed5be527448f0b83abbb167c880f41d5067f5d9",
+      "digest": "3c4bd428b6e6157fdcffd6b5f077c9212ed8e66df8e76d36c95bdbb18ce1fa9c"
     }
   ]
 }

@@ -13,6 +13,13 @@ runtime_proof: "../__tests__/review-ahead-projection-recovery.test.mjs"
 
 # Review-ahead projection recovery
 
+## Execution safety
+
+`execute` requires an explicit `--task-authority=/absolute/external/capability.json`.
+The capability is never read from ambient process state or persisted in a receipt.
+The controller refuses to reclaim a lane while its pull request has auto-merge
+armed; an owner must first make that merge disposition explicit.
+
 This controller repairs one interrupted review boundary: the registered source lane is locally
 `active`, but already carries an exact reviewed head and `review_ready` cloud projection while the
 matching cloud claim has expired into `dormant-preserved`. It never authors source bytes.

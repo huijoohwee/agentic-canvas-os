@@ -81,8 +81,12 @@ export function createReviewAheadProjectionController({
   });
 }
 
-export function createRepositoryReviewAheadProjectionController({ repository, sessionId } = {}) {
-  const base = createRepositoryCloudAuthorityHandoffControllerAdapter({ repository, sessionId });
+export function createRepositoryReviewAheadProjectionController({
+  repository, sessionId, taskAuthorityFile = null,
+} = {}) {
+  const base = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository, sessionId, taskAuthorityFile,
+  });
   const adapter = Object.freeze({
     ...base,
     readLocalHead() {

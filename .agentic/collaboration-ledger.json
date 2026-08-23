@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4569,
-  "headDigest": "3df0b76bd446d454f01cda6e26b97273134c36d32bf3c6dbc715e05328e351df",
+  "sequence": 4570,
+  "headDigest": "59da48801ce209ac43e12831a8143e69ae93b7ef7782141ac388d6144462309d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -230123,6 +230123,60 @@
       },
       "claimDigest": "1dc23d035438e50b9af3d1bbdab02e69e4b1fe0ce0d862ba774b7e3012abaca4",
       "digest": "3df0b76bd446d454f01cda6e26b97273134c36d32bf3c6dbc715e05328e351df"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4570,
+      "parentDigest": "3df0b76bd446d454f01cda6e26b97273134c36d32bf3c6dbc715e05328e351df",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "497497bdff4ec7a5d757b5438ba8a457fd94381edeffbadde4f6e33b15759d38",
+      "idempotencyKey": "fc11dfc61cdfcbea9bda3240570ee39d8df79aac3f9e5e3f4d4b7cc4358703ad",
+      "requestDigest": "4037ec00d27a57b4d0a9a2e34c4432018dfea64d0f5e0e2e02fff27c60a8a034",
+      "evaluationTime": "2026-08-23T11:46:55.000Z",
+      "claimCore": {
+        "claimId": "497497bdff4ec7a5d757b5438ba8a457fd94381edeffbadde4f6e33b15759d38",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:f0cccf4d0f865e034aff56a9d278b42d121e29bc3a6fcc3795c23747ef6e86c0",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:a14ab72e373c4162465d0e876f7477537fed8145f5ea741ddb1a31fb3e9edd1d",
+        "canonicalBaseRevision": "ed06fb5d56529a23ea03540ae2f3d4bf85410f1e",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/storageArchitectureRegression.test.ts",
+          "path:docs/documents/knowgrph-artifact-media-storage-architecture.md",
+          "path:docs/documents/knowgrph-storage-sync-document.companion.md",
+          "path:docs/documents/knowgrph-storage-sync-document.md",
+          "path:docs/documents/knowgrph-storage-sync-prd-tad-adr.md",
+          "path:scripts/check-storage-docs-runtime.mjs",
+          "semantic:storage-sync-contract"
+        ],
+        "writeSetDigest": "bb0ecc68dedbb8e74adca0b1d1925aa6e591611bd673b63d66cb82aed081bb75",
+        "laneRevision": "36b0edc5ccc5bd43a533e19148bc571b138117da",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 2,
+        "state": "retired",
+        "expiresAt": "2026-08-21T04:47:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAgKsTA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "36b0edc5ccc5bd43a533e19148bc571b138117da",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAgKsTA",
+          "bytesDigest": "65cdc80e50792354753c637d553c2bcf3c1506fc1df9677e5e2f5e14407326f0",
+          "namedChecksDigest": "0957b1c3487c6f47c9b0996a83ab54ccbf4b11c1c0f2c552768502bfba358e78",
+          "handoffEvidenceDigest": "03a581cf6b237b4a6efb51ea2151e55efcc9025e17ade8fe30cd6db6d40be138",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-23T11:46:55.000Z"
+        }
+      },
+      "claimDigest": "c121c9b69788a9da25e43ce9e1d3bb6520736e6adda9ece7ae97ee2074790a7f",
+      "digest": "59da48801ce209ac43e12831a8143e69ae93b7ef7782141ac388d6144462309d"
     }
   ]
 }

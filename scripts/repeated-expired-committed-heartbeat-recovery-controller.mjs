@@ -5,21 +5,28 @@ import {
 } from "./repeated-expired-committed-heartbeat-recovery-contract.mjs";
 
 export function createRepeatedRecoveryController({ adapter } = {}) {
-  if (!adapter || typeof adapter.inspect !== "function") {
+  if (!adapter || typeof adapter.inspect !== "function"
+    || typeof adapter.readTargetManifest !== "function") {
     throw new Error("Repeated recovery requires a repository adapter.");
   }
   return Object.freeze({
     async plan() {
       const replay = await optional(adapter.readActiveIntent);
       if (replay) return planResult(replay.planSnapshot);
-      return planResult(buildRepeatedRecoveryPlan({ evidence: await adapter.inspect() }));
+      return planResult(buildRepeatedRecoveryPlan({
+        evidence: await adapter.inspect(),
+        targetManifest: await adapter.readTargetManifest(),
+      }));
     },
     async run({ authorization } = {}) {
       const replay = await optional(adapter.readIntentForAuthorization, authorization);
       const active = replay || await optional(adapter.readActiveIntent);
       const plan = active?.planSnapshot
         ? normalizeRepeatedRecoveryPlan(active.planSnapshot)
-        : buildRepeatedRecoveryPlan({ evidence: await adapter.inspect() });
+        : buildRepeatedRecoveryPlan({
+          evidence: await adapter.inspect(),
+          targetManifest: await adapter.readTargetManifest(),
+        });
       authorizeRepeatedRecovery({ plan, authorization });
       return adapter.execute({ plan, authorization, intent: active || null });
     },

@@ -1,18 +1,16 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync,
-  readdirSync, realpathSync, renameSync, unlinkSync, writeFileSync,
+  readdirSync, realpathSync, renameSync, writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { assertLeaseWorktree } from "./device-branch-ownership-lib.mjs";
+import { proveLegacyReviewCanonicalDescendant }
+  from "./legacy-clean-committed-lane-bootstrap-adapter-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
-import {
-  continueExpiredCommittedHeartbeatCloudAuthority,
-  expiredCommittedCloudRecoveryEvidenceDigest,
-  preserveSourceManifestProjection,
-} from "./expired-committed-heartbeat-cloud-authority.mjs";
 import {
   partitionChangedPathsByScope,
   readPullRequestProjection,
@@ -20,16 +18,18 @@ import {
   requireCloudAdmission,
   requireChangedPathsWithinScope,
 } from "./expired-committed-heartbeat-evidence.mjs";
+import { assertPullRequestBodyWithinGitHubLimit }
+  from "./expired-committed-heartbeat-contract.mjs";
 import {
-  assertPullRequestBodyWithinGitHubLimit,
-  assertSameCloudSubject,
-  reconcileHeartbeatManifestProjection,
-} from "./expired-committed-heartbeat-contract.mjs";
-import {
+  bindAdmissionCloudAuthority,
   invokeRepositoryCloudAction,
   verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
-import { authorizeTaskBoundLeaseMutation } from "./task-bound-lane-authority-store.mjs";
+import { normalizeBoundAuthority } from "./scoped-lane-cloud-reconciliation.mjs";
+import {
+  authorizeTaskBoundLeaseMutation,
+  continueTaskAuthorityCloudSuccessorBinding,
+} from "./task-bound-lane-authority-store.mjs";
 import {
   normalizeProtectedMainPathEquivalenceEvidence,
   normalizeProtectedMainSharedAncestorPathEquivalenceEvidence,
@@ -38,10 +38,11 @@ import {
 import {
   createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
-  projectExpiredCommittedHeartbeatLease,
   projectWriterLeasePullRequestMarker,
   updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
+import { mutateWriterLeaseRegistry, writerLeaseDigest }
+  from "./writer-lease-registry-cas.mjs";
 import {
   authorizeRepeatedRecovery,
   buildRepeatedRecoveryCompletion,
@@ -52,13 +53,24 @@ import {
 
 const RESULT_SCHEMA = "agentic-repeated-expired-committed-heartbeat-recovery-result/v1";
 const DIGEST = /^[0-9a-f]{64}$/u;
+const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const IMPLEMENTATION_FILES = Object.freeze([
+  "scripts/repeated-expired-committed-heartbeat-recovery-contract.mjs",
+  "scripts/repeated-expired-committed-heartbeat-recovery-controller.mjs",
+  "scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+  "scripts/repeated-expired-committed-heartbeat-recovery.mjs",
+]);
 
 export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session");
   const pullRequestNumber = positive(options.pullRequestNumber, "pull request");
   const taskAuthorityFile = options.taskAuthorityFile || null;
+  const targetManifestFile = realpathSync(path.resolve(required(
+    options.targetManifestFile, "target manifest",
+  )));
   const ttlSeconds = positive(options.ttlSeconds || 1800, "TTL seconds");
+  const environment = options.environment || process.env;
   const now = dependencies.now || (() => new Date());
   const execute = dependencies.execute || ((command, argumentsList, settings = {}) => execFileSync(
     command, argumentsList, { cwd: repository, encoding: "utf8", maxBuffer: 16 * 1024 * 1024,
@@ -71,8 +83,9 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
   });
   const gh = dependencies.gh || (argumentsList => String(execute("gh", argumentsList)).trim());
   const run = dependencies.run || ((command, argumentsList) => execute(command, argumentsList));
-  const cloud = dependencies.cloud || continueExpiredCommittedHeartbeatCloudAuthority;
+  const invoke = dependencies.invoke || invokeRepositoryCloudAction;
   const verifyCloud = dependencies.verifyCloud || verifyAdmissionCloudAuthority;
+  const controllerRoot = dependencies.controllerRoot || CONTROLLER_ROOT;
   const commonDirectory = realpathSync(path.resolve(repository, git(["rev-parse", "--git-common-dir"])));
   const leaseStore = dependencies.leaseStore || createWriterLeaseStore({
     gitCommonDir: commonDirectory,
@@ -85,15 +98,49 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     return required(git(["branch", "--show-current"]), "target branch");
   }
 
+  function readTargetManifest() {
+    const metadata = lstatSync(targetManifestFile);
+    if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o777) !== 0o600) {
+      fail("private regular 0600 target manifest");
+    }
+    return readJson(targetManifestFile);
+  }
+
+  function controllerWitness() {
+    const controllerGit = argumentsList => String(execFileSync("git", argumentsList, {
+      cwd: controllerRoot,
+      encoding: "utf8",
+    })).trim();
+    const headSha = controllerGit(["rev-parse", "HEAD"]);
+    const localMainSha = controllerGit(["rev-parse", "refs/remotes/origin/main"]);
+    const remoteMainSha = controllerGit([
+      "ls-remote", "--heads", "origin", "refs/heads/main",
+    ]).split(/\s+/u)[0];
+    if (headSha !== localMainSha || headSha !== remoteMainSha
+      || controllerGit(["status", "--porcelain=v1", "--untracked-files=all"])) {
+      fail("clean protected-main controller");
+    }
+    return Object.freeze({
+      headSha,
+      implementationDigest: digestValue(IMPLEMENTATION_FILES.map(file => ({
+        file,
+        digest: digestValue(readFileSync(path.join(controllerRoot, file))),
+      }))),
+    });
+  }
+
   function capture() {
     assertCanonicalTrackingCurrent();
+    const targetManifest = readTargetManifest();
     const targetBranch = branch();
     const lease = leaseStore.read(targetBranch);
     const previousRecovery = lease?.expiredCommittedHeartbeatRecovery;
     if (!previousRecovery || previousRecovery.status !== "recovered") {
       fail("one exact completed predecessor recovery");
     }
-    const snapshot = captureRepeatedSnapshot({ lease, previousRecovery, targetBranch });
+    const snapshot = captureRepeatedSnapshot({
+      lease, previousRecovery, targetBranch, targetManifest,
+    });
     const pull = JSON.parse(gh([
       "pr", "view", String(pullRequestNumber), "--json",
       "number,state,isDraft,headRefName,headRefOid,baseRefName,url",
@@ -104,10 +151,10 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
       fail("pull-request subject");
     }
     const repo = JSON.parse(gh(["repo", "view", "--json", "id,nameWithOwner"]));
-    return { snapshot, previousRecovery, pull, repo };
+    return { snapshot, previousRecovery, pull, repo, targetManifest };
   }
 
-  function captureRepeatedSnapshot({ lease, previousRecovery, targetBranch }) {
+  function captureRepeatedSnapshot({ lease, previousRecovery, targetBranch, targetManifest }) {
     const instant = now();
     if (!lease || lease.status !== "active" || lease.sessionId !== sessionId
       || lease.branch !== targetBranch || Date.parse(lease.expiresAt) > instant.getTime()) {
@@ -147,13 +194,13 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
       `${protectedParentSha}..${headSha}`]));
     requireChangedPathsWithinScope({
       changedPaths: authoredPaths,
-      declaredWriteSet: lease.admission.declaredWriteSet,
+      declaredWriteSet: targetWriteSet(targetManifest),
     });
     const changedPaths = nulPaths(git(["diff", "--name-only", "-z",
       `${lease.baseSha}..${headSha}`]));
     const partition = partitionChangedPathsByScope({
       changedPaths,
-      declaredWriteSet: lease.admission.declaredWriteSet,
+      declaredWriteSet: targetWriteSet(targetManifest),
     });
     const protectedEntries = partition.protectedEquivalentPaths.map(relativePath => {
       const head = readTreeBlobEntry({ gitText: git, treeish: headSha,
@@ -282,11 +329,14 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
       repositoryId: repo.id,
       branch: snapshot.branch,
       sessionId,
+      semanticScope: snapshot.lease.scope,
       pullRequestNumber: pull.number,
+      reviewRequestId: snapshot.lease.cloudAuthority.reviewRequestId,
       baseSha: snapshot.lease.baseSha,
       fenceSha: snapshot.lease.fenceSha,
       headSha: snapshot.headSha,
       remoteHeadSha: snapshot.remoteHeadSha,
+      protectedParentSha: snapshot.protectedParentSha,
       claimId: snapshot.lease.cloudAuthority.claimId,
       claimDigest: snapshot.lease.cloudAuthority.claimDigest,
       cloudTransitionCounter: snapshot.lease.cloudAuthority.transitionCounter,
@@ -297,7 +347,12 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
       sourceMarkerDigest: snapshot.sourceMarkerDigest,
       pullRequestBodyDigest: snapshot.pullRequestBodyDigest,
       snapshotDigest: snapshot.snapshotDigest,
-      writeSetDigest: snapshot.lease.admission.writeSetDigest,
+      sourceDeclaredWriteSet: snapshot.lease.admission.declaredWriteSet,
+      sourceWriteSetDigest: snapshot.lease.admission.writeSetDigest,
+      sourceManifestDigest: snapshot.lease.admission.manifestDigest,
+      authoredPaths: snapshot.authoredPaths,
+      rangeDiffDigest: snapshot.rangeDiffDigest,
+      controllerDigest: digestValue(controllerWitness()),
       expiresAt: snapshot.lease.expiresAt,
     };
   }
@@ -313,7 +368,10 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
 
     if (!intent) {
       const source = capture();
-      const currentPlan = buildRepeatedRecoveryPlan({ evidence: evidence(source) });
+      const currentPlan = buildRepeatedRecoveryPlan({
+        evidence: evidence(source),
+        targetManifest: source.targetManifest,
+      });
       if (currentPlan.planDigest !== plan.planDigest) fail("source drift after planning");
       authorizeSourceLease(source.snapshot.lease);
       intent = writeJournal(null, {
@@ -330,100 +388,256 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     }
 
     if (intent.status === "prepared") {
-      authorizeSourceLease(intent.sourceLease);
-      const source = capture();
-      if (source.snapshot.snapshotDigest !== plan.evidence.snapshotDigest
-        || digestValue(source.previousRecovery) !== plan.evidence.previousRecoveryDigest) {
-        fail("prepared source drift");
-      }
-      const heartbeat = cloud({
-        authority: source.snapshot.lease.cloudAuthority,
-        manifest: manifest(source.snapshot.lease),
-        recoveryEvidenceDigest: expiredCommittedCloudRecoveryEvidenceDigest({
-          snapshotDigest: source.snapshot.snapshotDigest,
-          recoveryEvidence: source.snapshot.recoveryEvidence,
-        }),
-        deviceId: source.snapshot.lease.device,
-        sessionId,
-        ttlSeconds,
-      });
-      const renewedProjection = reconcileHeartbeatManifestProjection({
-        renewed: heartbeat.authority,
-        admittedManifestDigest: source.snapshot.lease.admission.manifestDigest,
-      });
-      assertSameCloudSubject({
-        source: source.snapshot.lease.cloudAuthority,
-        renewed: renewedProjection,
-        lease: source.snapshot.lease,
-        now: now(),
-      });
-      const renewedAuthority = preserveSourceManifestProjection(
-        source.snapshot.lease.cloudAuthority,
-        renewedProjection,
-      );
-      const recoveredAt = now().toISOString();
-      const projectedLease = projectExpiredCommittedHeartbeatLease({
-        sourceLease: source.snapshot.lease,
-        renewedCloudAuthority: renewedAuthority,
-        recoveryEvidence: source.snapshot.recoveryEvidence,
-        ttlMs: ttlSeconds * 1000,
-        recoveredAt,
-      });
-      assertAdmissionMutationAuthority({
-        lease: projectedLease,
-        cloudAuthority: renewedAuthority,
-        remoteAuthorityVerification: heartbeat.verification,
-        evaluatedAt: recoveredAt,
-      });
-      intent = writeJournal(intent, {
-        ...intent,
-        status: "cloud-renewed",
-        renewedAuthority,
-        recoveredAt,
-        targetLeaseDigest: digestValue(projectedLease),
-        updatedAt: now().toISOString(),
-      });
-    }
-
-    if (intent.status === "cloud-renewed") {
-      const projectedLease = deriveProjectedLease(intent);
-      const current = leaseStore.read(plan.evidence.branch);
-      let lease;
-      if (digestValue(current) === plan.evidence.leaseDigest) {
-        lease = leaseStore.recoverExpiredCommittedHeartbeat({
+      const source = exactSource(plan);
+      authorizeSourceLease(source.snapshot.lease);
+      const proof = canonicalDescendantProof(plan);
+      const result = invoke({
+        action: "claim",
+        ledgerRepository: source.snapshot.lease.cloudAuthority.ledgerRepository,
+        request: {
+          targetRepository: source.snapshot.lease.cloudAuthority.targetRepository,
+          workItemId: source.snapshot.lease.scope,
+          canonicalBaseSha: plan.evidence.baseSha,
+          headSha: plan.evidence.fenceSha,
+          declaredWriteSet: plan.target.declaredWriteSet,
+          predecessorClaimId: plan.evidence.claimId,
+          leaseEpoch: 1,
+          ttlSeconds,
+          ...(proof ? { canonicalDescendantProof: proof } : {}),
+          deviceId: source.snapshot.lease.device,
           sessionId,
-          branch: plan.evidence.branch,
-          expectedLease: current,
-          renewedCloudAuthority: intent.renewedAuthority,
-          recoveryEvidence: intent.recoveryEvidence,
-          ttlMs: ttlSeconds * 1000,
-          recoveredAt: intent.recoveredAt,
-        });
-      } else if (digestValue(current) === intent.targetLeaseDigest) {
-        lease = current;
-      } else {
-        fail("writer-lease CAS subject");
-      }
-      if (digestValue(lease) !== digestValue(projectedLease)) fail("projected writer lease");
-      const verified = verifyCloud({
-        authority: lease.cloudAuthority,
-        manifest: manifest(lease),
-        canonicalBaseSha: lease.baseSha,
+          idempotencyKey: `${OPERATION}:waiting:${plan.planDigest}`,
+        },
+        environment,
       });
-      assertAdmissionMutationAuthority({
-        lease,
-        cloudAuthority: lease.cloudAuthority,
-        remoteAuthorityVerification: verified.verification,
+      const waiting = claimProjection({
+        result,
+        action: "claim",
+        state: "waiting-successor",
+        plan,
+        predecessorClaimId: plan.evidence.claimId,
       });
       intent = writeJournal(intent, {
         ...intent,
-        status: "lease-projected",
+        status: "waiting-successor",
+        waiting,
         updatedAt: now().toISOString(),
       });
     }
 
-    if (intent.status === "lease-projected") {
-      const lease = exactTargetLease(intent);
+    if (intent.status === "waiting-successor") {
+      const source = exactSource(plan);
+      const result = invoke({
+        action: "retire",
+        ledgerRepository: source.snapshot.lease.cloudAuthority.ledgerRepository,
+        request: {
+          targetRepository: source.snapshot.lease.cloudAuthority.targetRepository,
+          claimId: plan.evidence.claimId,
+          expectedFenceRevision: plan.evidence.claimDigest,
+          expectedTransitionCounter: plan.evidence.cloudTransitionCounter,
+          reason: "superseded",
+          finalRevision: plan.evidence.fenceSha,
+          reviewRequestId: plan.evidence.reviewRequestId,
+          bytesDigest: plan.evidence.rangeDiffDigest,
+          namedChecksDigest: digestValue({
+            planDigest: plan.planDigest,
+            kind: "protected-refresh-checks",
+          }),
+          handoffEvidenceDigest: digestValue({
+            planDigest: plan.planDigest,
+            successorClaimId: intent.waiting.claimId,
+          }),
+          deviceId: source.snapshot.lease.device,
+          sessionId,
+          idempotencyKey: `${OPERATION}:retire:${plan.planDigest}`,
+        },
+        environment,
+      });
+      if (result?.schema !== "agentic-cloud-collaboration-result/v1"
+        || result.ok !== true || result.action !== "retire"
+        || result.claim?.claimId !== plan.evidence.claimId
+        || !["retired", "released"].includes(result.claim?.state)) fail("source retirement");
+      intent = writeJournal(intent, {
+        ...intent,
+        status: "source-retired",
+        sourceRetirementReceiptDigest: requiredDigest(
+          result.receipt?.receiptDigest, "source retirement receipt",
+        ),
+        updatedAt: now().toISOString(),
+      });
+    }
+
+    if (intent.status === "source-retired") {
+      const source = intent.sourceLease;
+      const result = invoke({
+        action: "continue",
+        ledgerRepository: source.cloudAuthority.ledgerRepository,
+        request: {
+          targetRepository: source.cloudAuthority.targetRepository,
+          claimId: intent.waiting.claimId,
+          expectedFenceRevision: intent.waiting.claimDigest,
+          expectedTransitionCounter: intent.waiting.transitionCounter,
+          mode: "promote",
+          ttlSeconds,
+          deviceId: source.device,
+          sessionId,
+          idempotencyKey: `${OPERATION}:promote:${plan.planDigest}`,
+        },
+        environment,
+      });
+      const promoted = claimProjection({
+        result,
+        action: "continue",
+        state: "current",
+        plan,
+      });
+      if (promoted.claimId !== intent.waiting.claimId
+        || promoted.transitionCounter !== intent.waiting.transitionCounter + 1) {
+        fail("successor promotion lineage");
+      }
+      intent = writeJournal(intent, {
+        ...intent,
+        status: "successor-promoted",
+        promoted,
+        updatedAt: now().toISOString(),
+      });
+    }
+
+    if (intent.status === "successor-promoted") {
+      const source = intent.sourceLease;
+      const status = cloudStatus(source);
+      const claim = status.claims.filter(candidate => (
+        candidate?.claimId === intent.promoted.claimId
+      ));
+      if (claim.length !== 1 || claim[0].state !== "current"
+        || claim[0].fenceRevision !== intent.promoted.claimDigest
+        || claim[0].transitionCounter !== intent.promoted.transitionCounter) {
+        fail("promoted successor inventory");
+      }
+      const target = manifest(plan);
+      const seed = normalizeBoundAuthority({
+        result: {
+          schema: "agentic-cloud-collaboration-result/v1",
+          ok: true,
+          action: "continue",
+          ledgerRevision: status.ledgerRevision,
+          ledgerDigest: status.ledgerDigest,
+          claimDigest: claim[0].fenceRevision,
+          claim: claim[0],
+        },
+        authority: {
+          ...source.cloudAuthority,
+          canonicalBaseSha: plan.evidence.baseSha,
+          laneRevision: plan.evidence.fenceSha,
+          cloudDeclaredWriteScope: plan.target.declaredWriteSet,
+          writeSetDigest: plan.target.writeSetDigest,
+          leaseEpoch: 1,
+          reviewRequestId: null,
+          state: "active",
+          manifestDigest: plan.target.manifestDigest,
+        },
+        manifest: target,
+        deviceId: source.device,
+        sessionId,
+      });
+      const bound = bindAdmissionCloudAuthority({
+        authority: seed,
+        manifest: target,
+        branch: plan.evidence.branch,
+        headSha: plan.evidence.headSha,
+        pullRequestNumber: plan.evidence.pullRequestNumber,
+        reviewRequestId: plan.evidence.reviewRequestId,
+        deviceId: source.device,
+        sessionId,
+        idempotencyKey: `${OPERATION}:bind:${plan.planDigest}`,
+        returnVerification: true,
+        environment,
+        invoke,
+        inspect: invoke,
+      });
+      intent = writeJournal(intent, {
+        ...intent,
+        status: "successor-bound",
+        boundAuthority: bound.authority,
+        boundVerificationReceiptDigest: bound.verification.receiptDigest,
+        updatedAt: now().toISOString(),
+      });
+    }
+
+    if (intent.status === "successor-bound") {
+      const observed = leaseStore.read(plan.evidence.branch);
+      let lease;
+      if (observed?.cloudAuthority?.claimId === intent.boundAuthority.claimId) {
+        lease = observed;
+      } else {
+        if (digestValue(observed) !== plan.evidence.leaseDigest
+          || observed?.cloudAuthority?.claimId !== plan.evidence.claimId) {
+          fail("writer-lease CAS subject");
+        }
+        authorizeSourceLease(observed);
+        const verified = verifyCloud({
+          authority: intent.boundAuthority,
+          manifest: manifest(plan),
+          canonicalBaseSha: plan.evidence.baseSha,
+          environment,
+          inspect: invoke,
+          invoke,
+        });
+        const admission = successorAdmission({
+          source: observed.admission,
+          plan,
+          authority: verified.authority,
+        });
+        const projectedAt = verified.verification.verifiedAt || now().toISOString();
+        const nextCore = {
+          ...observed,
+          admission,
+          cloudAuthority: verified.authority,
+          heartbeatAt: projectedAt,
+          expiresAt: verified.authority.expiresAt,
+        };
+        const nextLease = {
+          ...nextCore,
+          taskAuthority: continueTaskAuthorityCloudSuccessorBinding({
+            sourceLease: observed,
+            nextLease: nextCore,
+            capabilityPath: taskAuthorityFile,
+            boundAt: projectedAt,
+          }),
+        };
+        assertAdmissionMutationAuthority({
+          lease: nextLease,
+          cloudAuthority: verified.authority,
+          remoteAuthorityVerification: verified.verification,
+        });
+        const result = mutateWriterLeaseRegistry({
+          leaseStore,
+          branch: plan.evidence.branch,
+          expectedLeaseDigest: plan.evidence.leaseDigest,
+          expectedClaimId: plan.evidence.claimId,
+          action: ({ registry }) => ({
+            registry: {
+              ...registry,
+              leases: { ...registry.leases, [plan.evidence.branch]: nextLease },
+            },
+            lease: nextLease,
+            changed: true,
+          }),
+        });
+        lease = result.lease;
+      }
+      requireTargetLease({ lease, plan, authority: intent.boundAuthority });
+      intent = writeJournal(intent, {
+        ...intent,
+        status: "local-projected",
+        targetLeaseDigest: writerLeaseDigest(lease),
+        targetTaskBindingDigest: lease.taskAuthority.bindingDigest,
+        updatedAt: now().toISOString(),
+      });
+    }
+
+    if (intent.status === "local-projected") {
+      const lease = exactTargetLease(intent, plan);
       const projection = readPullRequestProjection({
         lease,
         branch: plan.evidence.branch,
@@ -445,7 +659,7 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
         expectedHeadSha: plan.evidence.remoteHeadSha,
       });
       if (confirmed.markerDigest !== targetMarkerDigest) fail("projected pull-request marker");
-      verifyTerminal({ lease, targetMarkerDigest });
+      verifyTerminal({ lease, plan, targetMarkerDigest });
       intent = writeJournal(intent, {
         ...intent,
         status: "marker-projected",
@@ -455,15 +669,17 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     }
 
     if (intent.status === "marker-projected") {
-      const lease = exactTargetLease(intent);
-      verifyTerminal({ lease, targetMarkerDigest: intent.targetMarkerDigest });
+      const lease = exactTargetLease(intent, plan);
+      verifyTerminal({ lease, plan, targetMarkerDigest: intent.targetMarkerDigest });
       const completion = buildRepeatedRecoveryCompletion({
         plan,
         intent,
         finalEvidence: {
-          renewedClaimDigest: lease.cloudAuthority.claimDigest,
-          renewedTransitionCounter: lease.cloudAuthority.transitionCounter,
+          successorClaimId: lease.cloudAuthority.claimId,
+          successorClaimDigest: lease.cloudAuthority.claimDigest,
+          successorTransitionCounter: lease.cloudAuthority.transitionCounter,
           targetLeaseDigest: digestValue(lease),
+          targetTaskBindingDigest: lease.taskAuthority.bindingDigest,
           targetMarkerDigest: intent.targetMarkerDigest,
           completedAt: now().toISOString(),
         },
@@ -488,44 +704,130 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     });
   }
 
-  function deriveProjectedLease(intent) {
-    return projectExpiredCommittedHeartbeatLease({
-      sourceLease: intent.sourceLease,
-      renewedCloudAuthority: intent.renewedAuthority,
-      recoveryEvidence: intent.recoveryEvidence,
-      ttlMs: ttlSeconds * 1000,
-      recoveredAt: intent.recoveredAt,
-    });
+  function exactSource(plan) {
+    const source = capture();
+    if (source.snapshot.snapshotDigest !== plan.evidence.snapshotDigest
+      || digestValue(source.previousRecovery) !== plan.evidence.previousRecoveryDigest
+      || digestValue(controllerWitness()) !== plan.evidence.controllerDigest) {
+      fail("sealed source drift");
+    }
+    return source;
   }
 
-  function exactTargetLease(intent) {
-    const lease = leaseStore.read(intent.planSnapshot.evidence.branch);
+  function exactTargetLease(intent, plan) {
+    const lease = leaseStore.read(plan.evidence.branch);
     if (digestValue(lease) !== intent.targetLeaseDigest) fail("target writer lease");
+    requireTargetLease({ lease, plan, authority: intent.boundAuthority });
     return lease;
   }
 
-  function verifyTerminal({ lease, targetMarkerDigest }) {
+  function verifyTerminal({ lease, plan, targetMarkerDigest }) {
     if (git(["status", "--porcelain=v1", "-z", "--untracked-files=all"])) fail("clean target");
-    if (git(["rev-parse", "HEAD"]) !== lease.integration?.commitSha
-      && git(["rev-parse", "HEAD"]) !== planHead(lease)) fail("target head");
-    if (remoteBranchHead({ branch: lease.branch, gitOptional }) !== planRemote(lease)) fail("remote head");
+    if (git(["rev-parse", "HEAD"]) !== plan.evidence.headSha) fail("target head");
+    if (remoteBranchHead({ branch: lease.branch, gitOptional })
+      !== plan.evidence.remoteHeadSha) fail("remote head");
+    const verified = verifyCloud({
+      authority: lease.cloudAuthority,
+      manifest: manifest(plan),
+      canonicalBaseSha: plan.evidence.baseSha,
+      environment,
+      inspect: invoke,
+      invoke,
+    });
+    assertAdmissionMutationAuthority({
+      lease,
+      cloudAuthority: verified.authority,
+      remoteAuthorityVerification: verified.verification,
+    });
     const projection = readPullRequestProjection({
       lease,
       branch: lease.branch,
       ghText: gh,
-      expectedHeadSha: planRemote(lease),
+      expectedHeadSha: plan.evidence.remoteHeadSha,
     });
     if (projection.markerDigest !== targetMarkerDigest) fail("terminal marker");
   }
 
-  function planHead(lease) {
-    const intent = readActiveOrCompleteIntent();
-    return intent?.planSnapshot?.evidence.headSha || lease.integration?.commitSha;
+  function canonicalDescendantProof(plan) {
+    const protectedMainSha = git(["rev-parse", "refs/remotes/origin/main"]);
+    if (plan.evidence.baseSha === protectedMainSha) return null;
+    if (!isAncestor(plan.evidence.baseSha, protectedMainSha)) {
+      fail("source base ancestry to protected main");
+    }
+    const canonicalChangedPaths = nulPaths(git([
+      "diff", "--name-only", "--no-renames", "-z",
+      plan.evidence.baseSha, protectedMainSha, "--",
+    ]));
+    const preservedChangedPaths = plan.target.declaredWriteSet
+      .filter(item => item.startsWith("path:"))
+      .map(item => item.slice("path:".length));
+    return proveLegacyReviewCanonicalDescendant({
+      sourceBaseSha: plan.evidence.baseSha,
+      targetBaseSha: protectedMainSha,
+      protectedMainSha,
+      canonicalChangedPaths,
+      preservedChangedPaths,
+      sourceIsAncestor: true,
+      targetIsProtectedAncestor: true,
+    });
   }
 
-  function planRemote(lease) {
-    const intent = readActiveOrCompleteIntent();
-    return intent?.planSnapshot?.evidence.remoteHeadSha || lease.fenceSha;
+  function cloudStatus(lease) {
+    const result = invoke({
+      action: "status",
+      ledgerRepository: lease.cloudAuthority.ledgerRepository,
+      request: { targetRepository: lease.cloudAuthority.targetRepository },
+      environment,
+    });
+    if (result?.schema !== "agentic-cloud-collaboration-result/v1"
+      || result.ok !== true || result.action !== "status"
+      || !Array.isArray(result.claims)) fail("cloud status");
+    return result;
+  }
+
+  function claimProjection({ result, action, state, plan, predecessorClaimId = undefined }) {
+    const claim = result?.claim;
+    if (result?.schema !== "agentic-cloud-collaboration-result/v1"
+      || result.ok !== true || result.action !== action || claim?.state !== state
+      || claim.canonicalBaseRevision !== plan.evidence.baseSha
+      || claim.laneRevision !== plan.evidence.fenceSha
+      || claim.writeSetDigest !== plan.target.writeSetDigest
+      || claim.leaseEpoch !== 1
+      || JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
+        !== JSON.stringify(plan.target.declaredWriteSet)
+      || (predecessorClaimId !== undefined
+        && claim.predecessorClaimId !== predecessorClaimId)) {
+      fail(`${action} successor result`);
+    }
+    return Object.freeze({
+      claimId: requiredDigest(claim.claimId, "successor claim"),
+      claimDigest: requiredDigest(result.claimDigest || claim.fenceRevision,
+        "successor claim digest"),
+      transitionCounter: positive(claim.transitionCounter, "successor transition"),
+      receiptDigest: requiredDigest(result.receipt?.receiptDigest, "successor receipt"),
+      expiresAt: required(claim.expiresAt, "successor expiry"),
+    });
+  }
+
+  function requireTargetLease({ lease, plan, authority }) {
+    if (!lease || lease.status !== "active" || lease.branch !== plan.evidence.branch
+      || lease.sessionId !== plan.evidence.sessionId
+      || lease.baseSha !== plan.evidence.baseSha
+      || lease.fenceSha !== plan.evidence.fenceSha
+      || lease.admission?.status !== "admitted"
+      || lease.admission.manifestDigest !== plan.target.manifestDigest
+      || lease.admission.writeSetDigest !== plan.target.writeSetDigest
+      || JSON.stringify(lease.admission.declaredWriteSet)
+        !== JSON.stringify(plan.target.declaredWriteSet)
+      || lease.cloudAuthority?.claimId !== authority.claimId
+      || lease.cloudAuthority.claimDigest !== authority.claimDigest
+      || lease.cloudAuthority.laneRevision !== plan.evidence.headSha
+      || lease.cloudAuthority.reviewRequestId !== plan.evidence.reviewRequestId
+      || lease.taskAuthority?.priorBindingDigest !== plan.evidence.taskBindingDigest
+      || Date.parse(lease.expiresAt) <= now().getTime()) {
+      fail("exact expanded successor lease");
+    }
+    return lease;
   }
 
   function assertCanonicalTrackingCurrent() {
@@ -616,6 +918,7 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
 
   return Object.freeze({
     inspect,
+    readTargetManifest,
     execute: executeRecovery,
     readActiveIntent,
     readIntentForAuthorization,
@@ -623,11 +926,44 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
 }
 
 function manifest(lease) {
-  return {
-    manifestDigest: lease.admission.manifestDigest,
-    declaredWriteSet: lease.admission.declaredWriteSet,
-    writeSetDigest: lease.admission.writeSetDigest,
-  };
+  return Object.freeze({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: lease.target?.semanticScope,
+    manifestDigest: lease.target?.manifestDigest,
+    declaredWriteSet: lease.target?.declaredWriteSet,
+    writeSetDigest: lease.target?.writeSetDigest,
+  });
+}
+
+function targetWriteSet(targetManifest) {
+  return normalizeWriteSet(targetManifest.declaredWriteSet
+    || (targetManifest.paths || []).map(item => `path:${item}`)
+      .concat(`semantic:${targetManifest.semanticScope}`));
+}
+
+function successorAdmission({ source, plan, authority }) {
+  return Object.freeze({
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: plan.target.semanticScope,
+    declaredWriteSet: plan.target.declaredWriteSet,
+    writeSetDigest: plan.target.writeSetDigest,
+    manifestDigest: plan.target.manifestDigest,
+    planReceiptDigest: plan.planDigest,
+    admissionReceiptDigest: authority.operationReceiptDigest,
+    existingLaneStateDigest: source.existingLaneStateDigest,
+    admittedReportDigest: digestValue({
+      schema: "agentic-repeated-expired-committed-heartbeat-recovery-admission/v1",
+      planDigest: plan.planDigest,
+      claimId: authority.claimId,
+    }),
+    preservationReceiptDigest: digestValue({
+      schema: "agentic-repeated-expired-committed-heartbeat-recovery-preservation/v1",
+      planDigest: plan.planDigest,
+      sourceAdmissionDigest: digestValue(source),
+      successorClaimId: authority.claimId,
+    }),
+  });
 }
 
 function nulPaths(value) {
@@ -650,6 +986,11 @@ function positive(value, label) {
   const normalized = Number(value);
   if (!Number.isSafeInteger(normalized) || normalized < 1) fail(label);
   return normalized;
+}
+
+function requiredDigest(value, label) {
+  if (!DIGEST.test(String(value || ""))) fail(label);
+  return value;
 }
 
 function fail(label) {

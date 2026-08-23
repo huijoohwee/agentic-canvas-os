@@ -14,13 +14,16 @@ const json = argumentsList.includes("--json");
 try {
   if (!["plan", "run"].includes(command)) usage();
   const repository = path.resolve(option("repository"));
+  const targetManifestFile = externalPrivateFile(option("target-manifest"), repository,
+    "target-manifest");
   const taskAuthorityFile = command === "run"
-    ? externalCapability(option("task-authority"), repository)
+    ? externalPrivateFile(option("task-authority"), repository, "task-authority")
     : null;
   const adapter = createRepositoryRepeatedRecoveryAdapter({
     repository,
     sessionId: option("session"),
     pullRequestNumber: Number(option("pull-request")),
+    targetManifestFile,
     taskAuthorityFile,
     ttlSeconds: Number(optional("ttl-seconds") || 1800),
   });
@@ -51,19 +54,19 @@ function option(name) {
   return value;
 }
 
-function externalCapability(value, repository) {
-  if (!path.isAbsolute(value)) throw new Error("--task-authority must be absolute.");
+function externalPrivateFile(value, repository, optionName) {
+  if (!path.isAbsolute(value)) throw new Error(`--${optionName} must be absolute.`);
   const resolved = realpathSync(value);
   if (resolved === repository || resolved.startsWith(`${repository}${path.sep}`)) {
-    throw new Error("--task-authority must remain outside the target repository.");
+    throw new Error(`--${optionName} must remain outside the target repository.`);
   }
   const metadata = lstatSync(resolved);
   if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o777) !== 0o600) {
-    throw new Error("--task-authority must be a private regular 0600 file.");
+    throw new Error(`--${optionName} must be a private regular 0600 file.`);
   }
   return resolved;
 }
 
 function usage() {
-  throw new Error("Usage: repeated-expired-committed-heartbeat-recovery.mjs <plan|run> --repository=<worktree> --session=<id> --pull-request=<number> [--task-authority=<external-0600-file> --authorization=<exact-statement>] [--ttl-seconds=1800] [--json]");
+  throw new Error("Usage: repeated-expired-committed-heartbeat-recovery.mjs <plan|run> --repository=<worktree> --session=<id> --pull-request=<number> --target-manifest=<external-0600-file> [--task-authority=<external-0600-file> --authorization=<exact-statement>] [--ttl-seconds=1800] [--json]");
 }

@@ -47,6 +47,10 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
 
   function sealRequest(plan) {
     const normalizedPlan = normalizePlannedFenceOnlyAdmissionRecoveryPlan(plan);
+    return projectSealedRequest(buildCloudRequest(normalizedPlan));
+  }
+
+  function buildCloudRequest(normalizedPlan) {
     const authority = normalizedPlan.evidence.sourceLease.cloudAuthority;
     const claim = normalizedPlan.evidence.cloud.claim;
     const idempotencyDigest = digestValue({
@@ -77,11 +81,17 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
       ledgerRepository: authority.ledgerRepository,
       request,
       sealedTransportDigest,
-      idempotencyKey: digestValue(request.idempotencyKey),
-      expectedFenceRevision: request.expectedFenceRevision,
-      expectedTransitionCounter: request.expectedTransitionCounter,
-      ttlSeconds: request.ttlSeconds,
-      recoveryEvidenceDigest: request.recoveryEvidenceDigest,
+    });
+  }
+
+  function projectSealedRequest(transport) {
+    return Object.freeze({
+      sealedTransportDigest: transport.sealedTransportDigest,
+      idempotencyKey: digestValue(transport.request.idempotencyKey),
+      expectedFenceRevision: transport.request.expectedFenceRevision,
+      expectedTransitionCounter: transport.request.expectedTransitionCounter,
+      ttlSeconds: transport.request.ttlSeconds,
+      recoveryEvidenceDigest: transport.request.recoveryEvidenceDigest,
     });
   }
 
@@ -89,11 +99,12 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     const normalizedPlan = normalizePlannedFenceOnlyAdmissionRecoveryPlan(plan);
     const expected = sealRequest(normalizedPlan);
     if (canonicalJson(sealedRequest) !== canonicalJson(expected)) invalid("sealed cloud request");
+    const transport = buildCloudRequest(normalizedPlan);
     assertRecoverableCloudState(normalizedPlan);
     const result = invoke({
       action: "continue",
-      ledgerRepository: expected.ledgerRepository,
-      request: expected.request,
+      ledgerRepository: transport.ledgerRepository,
+      request: transport.request,
       environment,
     });
     const claim = projectClaim(result?.claim);

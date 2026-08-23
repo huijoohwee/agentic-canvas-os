@@ -404,6 +404,10 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
     verify,
   });
   const sealed = adapter.sealRequest(plan);
+  assert.deepEqual(Object.keys(sealed).sort(), [
+    "expectedFenceRevision", "expectedTransitionCounter", "idempotencyKey",
+    "recoveryEvidenceDigest", "sealedTransportDigest", "ttlSeconds",
+  ]);
   const expiresAt = new Date(Date.parse(RECOVERED) + plan.ttlSeconds * 1_000).toISOString();
   const requestDigest = digestValue({ action: "continue", intent: {
     repositoryId: claim.repositoryId, actorId: claim.actorId, deviceId: DEVICE,

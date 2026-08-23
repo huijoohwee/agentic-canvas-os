@@ -22,6 +22,12 @@ retires it through the existing integrated-retirement path, and activates only t
 same-owner successor. Auto-merge or merge-queue state still blocks planning, and the
 terminal projection is an active draft lane rather than a merge or deployment claim.
 
+When protected `main` has advanced disjointly, the cloud reducer admits the
+unchanged-scope successor from the exact `reviewed` predecessor on its recorded
+base. Repository, work item, lane revision, write-set digest, and predecessor
+identity must remain exact; a different base still requires the existing
+canonical-descendant proof.
+
 ## Purpose
 
 This controller reopens one exact reviewed lane for correction by its original

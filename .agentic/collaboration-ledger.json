@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4548,
-  "headDigest": "24914f350b2cf2b4615a03e45d9f10ae42ced125f011fe516d5c8ad453e06356",
+  "sequence": 4549,
+  "headDigest": "a8de6c42fe0059c50c59b9dcac1e265cd90d2aebf102bda8abb08bd4cbc09545",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -228756,6 +228756,71 @@
       },
       "claimDigest": "d9fee9ff986fc9d11cfb33fe91ddb4fb0f842b6540d43fc87f763337824311e1",
       "digest": "24914f350b2cf2b4615a03e45d9f10ae42ced125f011fe516d5c8ad453e06356"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4549,
+      "parentDigest": "24914f350b2cf2b4615a03e45d9f10ae42ced125f011fe516d5c8ad453e06356",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "9d7172bad0633001d09baac00dc6782ddc1ae87e6e6aa073392e6ce67acfa564",
+      "idempotencyKey": "25d3e21a16ff292361ef14847a5df37eb5f3e13c0ae7d70d50382d04a1d6a2e0",
+      "requestDigest": "b711fa29e7f19a8c33b7da8965a7280a94447c3753855a346c7655d9fb4b186d",
+      "evaluationTime": "2026-08-23T10:46:58.000Z",
+      "claimCore": {
+        "claimId": "9d7172bad0633001d09baac00dc6782ddc1ae87e6e6aa073392e6ce67acfa564",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:97d2cbd466139698c0eefd62e80775b5fdcb3cd62a3bdd33d3c0f0cd61a213d3",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:e56ff8f36351cbb225f0c10e5b6780d4952ee523869b4fe8f4b21edeedbd622e",
+        "canonicalBaseRevision": "c1db64c084260066d676953a1e6b3ef04f173136",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/chatEndpointProviders.test.ts",
+          "path:canvas/src/__tests__/chatSubmitTransportTimeout.test.ts",
+          "path:canvas/src/features/chat/ChatModelCredentialControls.tsx",
+          "path:canvas/src/features/chat/FloatingPanelChat.tsx",
+          "path:canvas/src/features/chat/FloatingPanelChatSections.tsx",
+          "path:canvas/src/features/chat/floatingPanelChat/floatingPanelChatCredentialContext.ts",
+          "path:canvas/src/features/chat/floatingPanelChat/floatingPanelChatSubmitErrors.ts",
+          "path:canvas/src/features/panels/views/geminiApiDocs.ts",
+          "path:canvas/src/features/panels/views/useSettingsView.ts",
+          "path:canvas/src/lib/chatEndpoint.ts",
+          "path:canvas/src/tests/registry/postParserCases0.ts",
+          "path:canvas/src/tests/registry/postParserCases1.ts",
+          "path:canvas/src/tests/registry/postParserCases5.ts",
+          "path:canvas/vite.config.ts",
+          "path:canvas/viteChatProxyEnv.ts",
+          "path:docs/documents/knowgrph-api-document.md",
+          "semantic:gemini-api-mainpanel-integration"
+        ],
+        "writeSetDigest": "43203a67e2b51631efadbef5b0a2aeabfb3efaa2ba0088909ecfb09e01dd8087",
+        "laneRevision": "6ce11979c0eddf5971579306ae0e3f0259dabff1",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-22T08:14:56.000Z",
+        "evidenceDigest": "6c504212f5f88d0aa374878e4d12978eb82bd9aca15fab30f388a780475f4959",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAoPpIw",
+        "predecessorClaimId": "ee08be4cb21eec3c0cafdfcd180d861206ff343721d0b812e1f4ba6e011cee0a",
+        "eligibleSince": "2026-08-22T07:05:05.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-22T07:14:56.000Z",
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "6ce11979c0eddf5971579306ae0e3f0259dabff1",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABAoPpIw",
+          "bytesDigest": "37f69123f56e606d38d6e02f62dd87216f2df4a3b57ba9a95cc509b0102da2f1",
+          "namedChecksDigest": "c471effaa7efaeae189e2f399f21d6878ac96866411106f9f3ba0d11e830f75a",
+          "handoffEvidenceDigest": "406cc1f34dbb2005cc937a9e6f25b3fa1534c39191c62f3535b147f79a8e62c4",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-23T10:46:58.000Z"
+        }
+      },
+      "claimDigest": "f322811aabdce1d691c6b6b137e629ac40a6608c7a6e37f3485d6e90812a4f96",
+      "digest": "a8de6c42fe0059c50c59b9dcac1e265cd90d2aebf102bda8abb08bd4cbc09545"
     }
   ]
 }

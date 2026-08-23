@@ -63,7 +63,13 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
       "url,state,isDraft,headRefName,headRefOid,body",
     ]));
     const marker = parseWriterLeasePullRequestBody(review.body);
-    if (!clean || localHeadSha === remoteHeadSha
+    const remoteIsLocalAncestor = localHeadSha === remoteHeadSha
+      || isAncestor(remoteHeadSha, localHeadSha);
+    if (!clean || !isSourceCorrectionSuccessorHeadRelationshipExact({
+      localHeadSha,
+      remoteHeadSha,
+      remoteIsLocalAncestor,
+    })
       || review.state !== "OPEN" || review.isDraft !== true
       || review.headRefName !== branch || review.headRefOid !== remoteHeadSha
       || marker?.status !== "active"
@@ -148,6 +154,15 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
   }
 
   function inspect() { return inspectFrame().evidence; }
+
+  function isAncestor(ancestor, descendant) {
+    try {
+      execute("git", ["merge-base", "--is-ancestor", ancestor, descendant]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   function project({ plan, taskAuthorityFile, operation }) {
     const frame = inspectFrame();
@@ -239,6 +254,14 @@ export function createRepositorySourceCorrectionSuccessorTaskBindingReconciliati
   }
 
   return Object.freeze({ inspect, project, verify });
+}
+
+export function isSourceCorrectionSuccessorHeadRelationshipExact({
+  localHeadSha,
+  remoteHeadSha,
+  remoteIsLocalAncestor,
+}) {
+  return localHeadSha === remoteHeadSha || remoteIsLocalAncestor === true;
 }
 
 export function currentSuccessorRepair(lease) {

@@ -1,4 +1,4 @@
-import { validateLedger } from "./cloud-collaboration-contract.mjs";
+import { canonicalJson, validateLedger } from "./cloud-collaboration-contract.mjs";
 import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-verifier.mjs";
 import {
   PROTECTED_MAIN_REFRESH_CHAIN_SCHEMA,
@@ -81,13 +81,20 @@ export function verifyIntegratedRetirementEvidence({
     throw new Error("Cloud collaboration ledger has no entries.");
   }
   const history = ledger.entries.filter(entry => entry?.claimId === authority.claimId);
+  const integrationIndex = history.findLastIndex(entry => entry?.action === "integrate");
+  const integration = history[integrationIndex];
+  const terminalHistory = integrationIndex < 0 ? [] : history.slice(integrationIndex + 1);
   const retirement = history.at(-1);
-  const integration = [...history].reverse().find(entry => entry?.action === "integrate");
   if (!integration || retirement?.action !== "retire") {
     throw new Error("Claim history does not end in an integrated retirement.");
   }
   requireIntegratedEntry(integration, authority, deliveryEvidence, headSha);
-  requireRetiredEntry(retirement, integration, authority, headSha);
+  let previous = integration;
+  for (const renewal of terminalHistory.slice(0, -1)) {
+    requireIntegratedPreservedContinuation(renewal, previous);
+    previous = renewal;
+  }
+  requireRetiredEntry(retirement, previous, integration, authority, headSha);
 
   return Object.freeze({
     schema: POST_MERGE_CLOUD_AUTHORITY_VERIFICATION_SCHEMA,
@@ -239,7 +246,49 @@ function requireReviewReadyIntegration(core, authority, deliveryEvidence, headSh
   }
 }
 
-function requireRetiredEntry(entry, integration, authority, headSha) {
+function requireIntegratedPreservedContinuation(entry, previous) {
+  const core = entry?.claimCore;
+  const previousCore = previous?.claimCore;
+  if (entry?.schema !== "agentic-cloud-collaboration-entry/v2"
+    || entry.action !== "continue"
+    || core?.state !== "integrated-preserved"
+    || core.transitionCounter !== previousCore?.transitionCounter + 1
+    || previous.sequence >= entry.sequence
+    || Date.parse(core.expiresAt) <= Date.parse(previousCore?.expiresAt)) {
+    throw new Error("Integrated retirement history contains an invalid renewal transition.");
+  }
+  const stableCore = (value, { omitRecovery = false } = {}) => {
+    const {
+      expiresAt: _expiresAt,
+      heartbeatCounter: _heartbeatCounter,
+      transitionCounter: _transitionCounter,
+      recovery,
+      ...stable
+    } = value;
+    return omitRecovery ? stable : {
+      ...stable,
+      ...(recovery === undefined ? {} : { recovery }),
+    };
+  };
+  const ordinaryRenewal = (
+    core.heartbeatCounter === previousCore.heartbeatCounter + 1
+    && Date.parse(entry.evaluationTime) < Date.parse(previousCore.expiresAt)
+    && canonicalJson(stableCore(core)) === canonicalJson(stableCore(previousCore))
+  );
+  const expiredRecovery = (
+    core.heartbeatCounter === previousCore.heartbeatCounter
+    && Date.parse(entry.evaluationTime) >= Date.parse(previousCore.expiresAt)
+    && DIGEST_PATTERN.test(core.recovery?.evidenceDigest || "")
+    && core.recovery?.recoveredAt === entry.evaluationTime
+    && canonicalJson(stableCore(core, { omitRecovery: true }))
+      === canonicalJson(stableCore(previousCore, { omitRecovery: true }))
+  );
+  if (!ordinaryRenewal && !expiredRecovery) {
+    throw new Error("Integrated retirement history contains an invalid renewal transition.");
+  }
+}
+
+function requireRetiredEntry(entry, previous, integration, authority, headSha) {
   const core = entry.claimCore;
   const integratedEvidence = integration.claimCore?.integration;
   const retirement = core?.retirement;
@@ -251,8 +300,8 @@ function requireRetiredEntry(entry, integration, authority, headSha) {
     || core.writeSetDigest !== authority.writeSetDigest
     || core.leaseEpoch !== authority.leaseEpoch
     || core.reviewRequestId !== authority.reviewRequestId
-    || core.transitionCounter !== integration.claimCore.transitionCounter + 1
-    || integration.sequence >= entry.sequence
+    || core.transitionCounter !== previous.claimCore.transitionCounter + 1
+    || previous.sequence >= entry.sequence
     || !sameValue(core.declaredWriteScope, authority.cloudDeclaredWriteScope)
     || !sameValue(core.integration, integratedEvidence)
     || retirement?.reason !== "integrated"

@@ -109,8 +109,7 @@ export function normalizeEvidence(value) {
     markerDigest: digest(value.markerDigest, "marker digest"),
     terminalRepair: value.terminalRepair === null ? null : normalizeRepair(value.terminalRepair),
   };
-  if (core.localHeadSha === core.remoteHeadSha
-    || core.pullRequest.headSha !== core.remoteHeadSha
+  if (core.pullRequest.headSha !== core.remoteHeadSha
     || core.pullRequest.state !== "OPEN" || core.pullRequest.isDraft !== true
     || core.sourceCorrection.sourceClaimId !== core.predecessorClaimId
     || core.sourceCorrection.successorClaimId !== core.successorClaimId

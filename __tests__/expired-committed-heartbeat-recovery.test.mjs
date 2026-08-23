@@ -79,6 +79,43 @@ test("captures one exact clean committed descendant inside declared path scope",
   assert.equal(snapshot.recoveryEvidence.sourceRemoteHeadSha, fenceSha);
 });
 
+test("accepts equivalent ledger transport observations under the same task authority", () => {
+  const { markerLease } = leaseWithTaskAuthorityContinuation(expiredCloudLease());
+  const lease = structuredClone(markerLease);
+  lease.cloudAuthority.ledgerRevision = "f".repeat(40);
+  lease.cloudAuthority.ledgerDigest = "e".repeat(64);
+  const snapshot = captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText(),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(markerLease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  });
+  assert.equal(snapshot.headSha, headSha);
+  assert.equal(snapshot.recoveryEvidence.sourceClaimId, lease.cloudAuthority.claimId);
+});
+
+test("equivalent ledger transport observations do not permit claim drift", () => {
+  const { markerLease } = leaseWithTaskAuthorityContinuation(expiredCloudLease());
+  const lease = structuredClone(markerLease);
+  lease.cloudAuthority.ledgerRevision = "f".repeat(40);
+  lease.cloudAuthority.ledgerDigest = "e".repeat(64);
+  markerLease.cloudAuthority.claimDigest = "0".repeat(64);
+  assert.throws(() => captureExpiredCommittedHeartbeatSnapshot({
+    repo,
+    branch,
+    gitText: recoveryGitText(),
+    gitOptional: () => `${fenceSha}\trefs/heads/${branch}`,
+    ghText: () => pullRequestJson(markerLease),
+    leaseStore: { read: () => lease },
+    sessionId: lease.sessionId,
+    now: () => new Date("2026-08-04T12:00:00.000Z"),
+  }), /marker differs/u);
+});
+
 test("captures a tree-equivalent empty committed descendant", () => {
   const lease = expiredCloudLease();
   const snapshot = captureExpiredCommittedHeartbeatSnapshot({

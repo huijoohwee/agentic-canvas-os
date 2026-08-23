@@ -47,6 +47,12 @@ reconciled by the same continuation identity, local-CAS completion is detected
 from the recovery receipt, and marker-only completion performs no second cloud
 or lease transition.
 
+The source marker may carry an older outer ledger transport revision and digest
+when its claim projection and task-authority binding are otherwise byte-exact.
+That transport-only difference is accepted for both an unchanged binding and
+an exact continuation binding. Any claim fence, transition, expiry, review,
+scope, identity, or capability drift still fails before cloud mutation.
+
 ## Invocation
 
 ```sh

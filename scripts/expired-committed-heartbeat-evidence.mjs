@@ -679,7 +679,7 @@ function isImmediateCloudAuthorityRenewalMarker({ marker, expectedMarker }) {
   }
   return digestValue(marker.cloudAuthority)
       === digestValue(expectedMarker.cloudAuthority)
-    || (taskAuthorityContinuation
+    || ((sameTaskAuthority || taskAuthorityContinuation)
       && isEquivalentCloudAuthorityLedgerObservation(
         marker.cloudAuthority,
         expectedMarker.cloudAuthority,

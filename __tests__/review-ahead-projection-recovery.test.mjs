@@ -19,7 +19,7 @@ function fixture(overrides = {}) {
     localHeadSha: sha("a"), refreshedHeadSha: null, localDescendantReceiptDigest: null,
     remoteHeadSha: sha("a"), reviewHeadSha: sha("a"), pullRequestHeadSha: sha("a"),
     pullRequestUrl: "https://github.com/o/r/pull/1", pullRequestAuthorLogin: "owner",
-    pullRequestState: "OPEN", pullRequestDraft: false,
+    pullRequestState: "OPEN", pullRequestDraft: false, pullRequestAutoMergeArmed: false,
     leaseStatus: "active", localExpiresAt: expired, localAuthorityState: "review_ready",
     claimId: digest("1"), authorityLaneRevision: sha("a"), reviewRequestId: "github-pull-request:PR_1",
     writeSetDigest: digest("2"), declaredWriteScope: ["path:a", "semantic:scope"], leaseEpoch: 1,
@@ -43,7 +43,7 @@ test("plan binds the exact expired review-ahead projection", () => {
 test("identity, provider, dirt, and non-expiry drift block before mutation", () => {
   const cases = [
     { clean: false }, { leaseStatus: "delivery" }, { remoteClaimState: "current" },
-    { pullRequestDraft: true }, { pullRequestHeadSha: sha("b") },
+    { pullRequestDraft: true }, { pullRequestAutoMergeArmed: true }, { pullRequestHeadSha: sha("b") },
     { localHeadSha: sha("b"), localDescendantReceiptDigest: null },
     { remoteClaimId: digest("3") }, { remoteRepositoryId: "github-repository:R_other" },
     { localExpiresAt: "2026-08-10T02:00:00.000Z" },

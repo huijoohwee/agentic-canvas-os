@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import path from "node:path";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 import { REVIEW_AHEAD_RESULT_SCHEMA } from "./review-ahead-projection-recovery-contract.mjs";
@@ -15,7 +16,12 @@ try {
   const sessionId = required("session");
   const branch = option("branch") || currentBranch(repository);
   if (!parseDeviceBranch(branch)) throw new Error("Branch must use canonical agent/device/scope identity.");
-  const controller = createRepositoryReviewAheadProjectionController({ repository, sessionId });
+  const taskAuthorityFile = mode === "execute"
+    ? realpathSync(required("task-authority"))
+    : null;
+  const controller = createRepositoryReviewAheadProjectionController({
+    repository, sessionId, taskAuthorityFile,
+  });
   const result = mode === "plan"
     ? await controller.plan({ branch, sessionId })
     : await controller.execute({

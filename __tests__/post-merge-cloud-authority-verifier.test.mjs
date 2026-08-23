@@ -13,6 +13,7 @@ const baseSha = sha("b");
 const mergeSha = sha("c");
 const refreshedHeadSha = sha("d");
 const refreshedMainSha = sha("e");
+const integratedExpiry = "2026-08-23T02:24:06.000Z";
 const deliveryEvidence = Object.freeze({
   dependencyClosureDigest: digest("6"),
   namedChecksDigest: digest("7"),
@@ -92,7 +93,9 @@ function ledger(source = authority()) {
     writeSetDigest: source.writeSetDigest,
     leaseEpoch: source.leaseEpoch,
     transitionCounter: source.transitionCounter,
+    heartbeatCounter: 0,
     state: "integrated-preserved",
+    expiresAt: integratedExpiry,
     evidenceDigest: source.focusedEvidenceDigest,
     reviewRequestId: source.reviewRequestId,
     integration: source.integration,
@@ -104,6 +107,7 @@ function ledger(source = authority()) {
         ...common,
         sequence: 10,
         action: "integrate",
+        evaluationTime: "2026-08-23T02:06:19.000Z",
         claimCore: integratedCore,
         claimDigest: source.claimDigest,
         digest: source.claimLedgerRevision,
@@ -112,6 +116,7 @@ function ledger(source = authority()) {
         ...common,
         sequence: 11,
         action: "retire",
+        evaluationTime: "2026-08-23T02:20:00.000Z",
         claimCore: {
           ...integratedCore,
           transitionCounter: source.transitionCounter + 1,
@@ -129,6 +134,36 @@ function ledger(source = authority()) {
       },
     ],
   };
+}
+
+function insertExpiredIntegratedRenewal(value, overrides = {}) {
+  const integration = value.entries[0];
+  const retirement = value.entries[1];
+  const evaluationTime = "2026-08-23T02:41:18.000Z";
+  const renewal = {
+    ...integration,
+    sequence: integration.sequence + 1,
+    action: "continue",
+    evaluationTime,
+    claimDigest: digest("e"),
+    digest: digest("f"),
+    claimCore: {
+      ...integration.claimCore,
+      transitionCounter: integration.claimCore.transitionCounter + 1,
+      expiresAt: "2026-08-23T03:11:18.000Z",
+      recovery: {
+        evidenceDigest: digest("d"),
+        recoveredAt: evaluationTime,
+      },
+      ...overrides,
+    },
+  };
+  retirement.sequence += 1;
+  retirement.claimCore.transitionCounter += 1;
+  retirement.claimCore.expiresAt = renewal.claimCore.expiresAt;
+  retirement.claimCore.recovery = renewal.claimCore.recovery;
+  value.entries.splice(1, 0, renewal);
+  return renewal;
 }
 
 function options(source = authority()) {
@@ -164,6 +199,52 @@ test("merged replay accepts one exact integrated retirement", () => {
   assert.equal(result.status, "integrated-retired");
   assert.equal(result.claimId, source.claimId);
   assert.equal(result.mergeCommitSha, mergeSha);
+});
+
+test("merged replay accepts an exact expired integrated-preserved renewal before retirement", () => {
+  const source = authority();
+  const renewed = ledger(source);
+  insertExpiredIntegratedRenewal(renewed);
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => renewed,
+    validate: () => {},
+  });
+  assert.equal(verifier(options(source)).status, "integrated-retired");
+});
+
+test("merged replay rejects identity drift in an integrated-preserved renewal", () => {
+  const source = authority();
+  const changed = ledger(source);
+  insertExpiredIntegratedRenewal(changed, { laneRevision: sha("f") });
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => changed,
+    validate: () => {},
+  });
+  assert.throws(
+    () => verifier(options(source)),
+    /invalid renewal transition/u,
+  );
+});
+
+test("merged replay rejects a non-continuation between integration and retirement", () => {
+  const source = authority();
+  const changed = ledger(source);
+  const renewal = insertExpiredIntegratedRenewal(changed);
+  renewal.action = "review";
+  const verifier = createPostMergeCloudAuthorityVerifier({
+    verifyLive: () => { throw new Error("verification was blocked"); },
+    readPullRequest: () => pullRequest(),
+    readLedger: () => changed,
+    validate: () => {},
+  });
+  assert.throws(
+    () => verifier(options(source)),
+    /invalid renewal transition/u,
+  );
 });
 
 test("merged replay accepts exact review-ready response loss with derived delivery evidence", () => {

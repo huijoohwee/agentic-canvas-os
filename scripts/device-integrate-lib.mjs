@@ -244,8 +244,9 @@ function integrateSessionUnfenced({
     let acceptedProtectedRefreshBaseSha = deliveryVerifiedBaseSha;
     let protectedMainAuthorizationRefresh = null;
     let squashSubject = null;
+    let squashBody = null;
     let currentPullRequest = null;
-    let terminalReviewReadyCompletion = false;
+    let terminalMergedCompletion = false;
     let attemptedReviewReadyDeliveryEvidence = null;
     if (reviewReadyDelivery) {
       currentPullRequest = JSON.parse(ghText([
@@ -266,6 +267,7 @@ function integrateSessionUnfenced({
         ]).replace(/\r?\n$/u, ""),
         { label: "Reviewed authored commit subject" },
       );
+      squashBody = renderProtectedSquashCommitBody({ branch, lease });
       protectedMainAuthorizationRefresh = (
         lease.reviewHeadSha
         && currentPullRequest.headRefOid !== lease.reviewHeadSha
@@ -354,10 +356,10 @@ function integrateSessionUnfenced({
             log(`Protected pull request merged at ${currentPullRequest.mergeCommit?.oid?.slice(0, 12) || "unknown"}.`);
             completion = completeTask();
             lease = leaseStore.read(branch);
-            terminalReviewReadyCompletion = true;
+            terminalMergedCompletion = true;
           }
         }
-        if (!terminalReviewReadyCompletion) {
+        if (!terminalMergedCompletion) {
           if (!isDormantPreservedCloudReconciliationError(error)) throw error;
           continueReviewReadyCloudAuthority({
             repo,
@@ -372,7 +374,7 @@ function integrateSessionUnfenced({
           ({ authorized, deliveryEvidence } = authorizeReviewedDelivery(reviewedCloudAuthority));
         }
       }
-      if (!terminalReviewReadyCompletion) {
+      if (!terminalMergedCompletion) {
         requireAuthorizedIntegrationEvidence({
           authority: authorized.authority,
           reviewedAuthority: reviewedCloudAuthority,
@@ -395,6 +397,7 @@ function integrateSessionUnfenced({
         });
         const autoMergeArgs = [
           "pr", "merge", "--auto", "--squash", "--subject", squashSubject,
+          "--body", squashBody,
           "--match-head-commit", protectedMergeHeadSha, lease.pullRequestUrl,
         ];
         try {
@@ -413,17 +416,53 @@ function integrateSessionUnfenced({
         }
       }
     }
-    if (!terminalReviewReadyCompletion) {
+    if (!terminalMergedCompletion) {
       const allowProtectedMainRefresh = lease.sessionId === sessionId &&
         (lease.status === "delivery" || reviewReadyDelivery);
       const deliveryAuthorizedHeadSha = reviewReadyDelivery
         ? lease.reviewHeadSha
         : lease.deliveryHeadSha || commitEvidence?.commitSha;
-      const expiredDeliveryRecovery = recoverExpiredDeliveryCloudAuthority({
-        lease, authority: deliveryCloudAuthority, branch,
-        headSha: deliveryAuthorizedHeadSha, gitText, ghText, run, inspectCloudStatus,
-        recoverIntegratedCloudAuthority, now,
-      });
+      let expiredDeliveryRecovery;
+      try {
+        expiredDeliveryRecovery = recoverExpiredDeliveryCloudAuthority({
+          lease, authority: deliveryCloudAuthority, branch,
+          headSha: deliveryAuthorizedHeadSha, gitText, ghText, run, inspectCloudStatus,
+          recoverIntegratedCloudAuthority, now,
+        });
+      } catch (recoveryError) {
+        let terminalVerification = null;
+        try {
+          terminalVerification = verifyRetiredMergedDeliveryAfterRecoveryFailure({
+            lease,
+            authority: deliveryCloudAuthority,
+            branch,
+            headSha: deliveryAuthorizedHeadSha,
+            ghText,
+            gitText,
+            run,
+            verifyCloudAuthority,
+          });
+        } catch {
+          // Preserve the original live-recovery failure unless the exact historical
+          // integrated-retired proof independently succeeds.
+        }
+        if (!terminalVerification) throw recoveryError;
+        if (terminalVerification.protectedMainRefresh) {
+          protectedMainAuthorizationRefresh = terminalVerification.protectedMainRefresh;
+          protectedMainRefresh = appendProtectedMainRefresh(
+            protectedMainRefresh,
+            protectedMainAuthorizationRefresh,
+          );
+        }
+        log(`Protected pull request merged at ${terminalVerification.mergeCommitSha.slice(0, 12)}.`);
+        completion = completeTask();
+        lease = leaseStore.read(branch);
+        terminalMergedCompletion = true;
+      }
+      if (terminalMergedCompletion) {
+        expiredDeliveryRecovery = null;
+      }
+      if (!terminalMergedCompletion) {
       deliveryCloudAuthority = expiredDeliveryRecovery.authority;
       if (expiredDeliveryRecovery.protectedMainRefresh) {
         protectedMainAuthorizationRefresh = expiredDeliveryRecovery.protectedMainRefresh;
@@ -519,6 +558,7 @@ function integrateSessionUnfenced({
       log(`Protected pull request merged at ${pullRequest.mergeCommitSha.slice(0, 12)}.`);
       completion = completeTask();
       lease = leaseStore.read(branch);
+      }
     }
   } else if (lease.status === "completing") {
     completion = completeTask();
@@ -842,6 +882,55 @@ function recoverExpiredDeliveryCloudAuthority({
     expected: preflight,
   });
   return Object.freeze({ authority: recoveredAuthority, protectedMainRefresh });
+}
+
+function verifyRetiredMergedDeliveryAfterRecoveryFailure({
+  lease,
+  authority,
+  branch,
+  headSha,
+  ghText,
+  gitText,
+  run,
+  verifyCloudAuthority,
+}) {
+  requireExpiredDeliverySubject({ lease, authority, branch, headSha });
+  const pullRequest = requireExactExpiredDeliveryPullRequest({
+    ghText,
+    url: lease.pullRequestUrl,
+    branch,
+    headSha,
+    authority,
+  });
+  if (pullRequest.state !== "MERGED") return null;
+  const protectedMainRefresh = pullRequest.headSha === headSha
+    ? null
+    : reconcileProtectedMainRefresh({
+      url: lease.pullRequestUrl,
+      expectedHeadSha: headSha,
+      observedHeadSha: pullRequest.headSha,
+      gitText,
+      run,
+    });
+  const verification = verifyCloudAuthority({
+    pullRequestUrl: lease.pullRequestUrl,
+    branch,
+    headSha,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    cloudAuthority: authority,
+    ...(protectedMainRefresh ? { protectedMainRefresh } : {}),
+  });
+  if (
+    verification?.schema !== "agentic-post-merge-cloud-authority-verification/v1"
+    || verification.status !== "integrated-retired"
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    mergeCommitSha: pullRequest.mergeCommitSha,
+    protectedMainRefresh,
+    verification,
+  });
 }
 
 function requireExpiredDeliverySubject({ lease, authority, branch, headSha }) {
@@ -2893,13 +2982,7 @@ export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
   if (rawSubject !== subject) {
     throw new Error("Managed integration commit subject must not contain leading or trailing whitespace.");
   }
-  const branchParts = String(branch || "").split("/");
-  const branchScope = branchParts[0] === "agent" && branchParts.length >= 3
-    ? branchParts.slice(2).join("/")
-    : "";
-  if (!branchScope || lease?.branch !== branch || lease?.scope !== branchScope) {
-    throw new Error("Managed integration commit attribution requires the exact leased task-branch scope.");
-  }
+  const { branchScope, claimEpoch } = resolveManagedCommitAttribution({ branch, lease });
   const subjectMatch = subject.match(MANAGED_COMMIT_SUBJECT_PATTERN);
   if (
     !subjectMatch ||
@@ -2911,10 +2994,6 @@ export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
       "Managed integration commit subject must use <type>(<leased-scope>): <summary> with an allowed type, a summary of at most 60 characters, and at most 72 total characters.",
     );
   }
-  const claimEpoch = lease.cloudAuthority ? lease.cloudAuthority.leaseEpoch : lease.epoch;
-  if (!Number.isInteger(claimEpoch) || claimEpoch <= 0) {
-    throw new Error("Managed integration commit attribution requires a positive claim epoch.");
-  }
   return Object.freeze({
     subject,
     body: `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
@@ -2925,6 +3004,42 @@ export function renderManagedCommitMessage({ branch, commitMessage, lease }) {
       "Agentic-Mechanism: Agentic Canvas OS protected integration",
     ]),
   });
+}
+
+export function renderProtectedSquashCommitBody({ branch, lease }) {
+  const { branchScope, claimEpoch } = resolveManagedCommitAttribution(
+    { branch, lease },
+    { allowLocalEpochFallback: true },
+  );
+  return [
+    `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
+    "",
+    `Agentic-Task: ${branchScope}`,
+    `Agentic-Scope: ${branchScope}`,
+    `Agentic-Lease-Epoch: ${claimEpoch}`,
+    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+  ].join("\n");
+}
+
+function resolveManagedCommitAttribution(
+  { branch, lease },
+  { allowLocalEpochFallback = false } = {},
+) {
+  const branchParts = String(branch || "").split("/");
+  const branchScope = branchParts[0] === "agent" && branchParts.length >= 3
+    ? branchParts.slice(2).join("/")
+    : "";
+  if (!branchScope || lease?.branch !== branch || lease?.scope !== branchScope) {
+    throw new Error("Managed integration commit attribution requires the exact leased task-branch scope.");
+  }
+  const cloudEpoch = lease.cloudAuthority?.leaseEpoch;
+  const claimEpoch = Number.isInteger(cloudEpoch) && cloudEpoch > 0
+    ? cloudEpoch
+    : allowLocalEpochFallback ? lease.epoch : lease.cloudAuthority ? cloudEpoch : lease.epoch;
+  if (!Number.isInteger(claimEpoch) || claimEpoch <= 0) {
+    throw new Error("Managed integration commit attribution requires a positive claim epoch.");
+  }
+  return Object.freeze({ branchScope, claimEpoch });
 }
 
 function requireRepositoryRoot({ invocationPath, repo }) {

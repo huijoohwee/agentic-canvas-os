@@ -221,7 +221,7 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter, linea
 }
 export function createRepositoryCloudAuthorityHandoffControllerAdapter({
   repository, sessionId, environment = process.env, gitText = null, ghText = null,
-  run = null, leaseStore = null, resolveRealpath = realpathSync,
+  run = null, leaseStore = null, taskAuthorityFile = null, resolveRealpath = realpathSync,
 } = {}) {
   const repoRoot = resolveRealpath(path.resolve(requiredText(repository, "repository")));
   const subprocess = { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] };
@@ -241,6 +241,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
     }
     store ||= createWriterLeaseStore({
       gitCommonDir: path.resolve(repoRoot, git(["rev-parse", "--git-common-dir"]).trim()),
+      taskAuthorityFile,
     });
     return store;
   }
@@ -266,7 +267,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         "view",
         pullRequest.url,
         "--json",
-        "id,author,url,state,isDraft,headRefName,headRefOid,baseRefName,body",
+        "id,author,url,state,isDraft,autoMergeRequest,headRefName,headRefOid,baseRefName,body",
       ]));
       const remoteLease = parseWriterLeasePullRequestBody(pullWithAuthor.body);
       const admission = normalizeManifestFromLease(lease.admission);
@@ -299,6 +300,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
           url: pullWithAuthor.url,
           state: pullWithAuthor.state,
           isDraft: pullWithAuthor.isDraft,
+          autoMergeRequest: pullWithAuthor.autoMergeRequest,
           headRefName: pullWithAuthor.headRefName,
           headRefOid: pullRequestHeadSha,
           baseRefName: pullWithAuthor.baseRefName,

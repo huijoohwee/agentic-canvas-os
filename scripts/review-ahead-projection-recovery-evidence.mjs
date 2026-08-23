@@ -44,6 +44,7 @@ export async function captureReviewAheadProjectionEvidence({ adapter, branch, se
     pullRequestAuthorLogin: lane.pullRequest.authorLogin,
     pullRequestState: lane.pullRequest.state,
     pullRequestDraft: lane.pullRequest.isDraft,
+    pullRequestAutoMergeArmed: lane.pullRequest.autoMergeRequest != null,
     leaseStatus: lane.lease.status,
     localExpiresAt: lane.lease.expiresAt,
     localAuthorityState: lane.authority.state,

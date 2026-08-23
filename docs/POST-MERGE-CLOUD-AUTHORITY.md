@@ -36,12 +36,22 @@ when every receipt hop is SHA-bound, continuous from the delivery subject, and
 ends at the live merged head. The fallback reads and validates the complete
 collaboration ledger,
 then requires the local delivery projection's exact integration entry followed
-by the same claim's terminal retirement at counter plus one. Claim identity,
-base, head, write set, epoch, review request, integration evidence, integration
-receipt, named checks, and handoff evidence must all remain exact.
+by zero or more contiguous same-claim `integrated-preserved` renewals and the
+same claim's terminal retirement. Each renewal must be either an ordinary
+pre-expiry heartbeat or an evidence-bound expired recovery, advance the counter
+exactly once, extend expiry, and preserve every other claim field. Claim
+identity, base, head, write set, epoch, review request, integration evidence,
+integration receipt, named checks, and handoff evidence must all remain exact.
 
 An open pull request, non-integrated retirement, later same-claim transition,
 ledger validation failure, identity drift, or receipt mismatch preserves the
 original failure. The fallback is read only: it cannot create or renew a claim,
 merge a pull request, edit a lease, reconcile runtime, clean a worktree, or
 authorize Production or Cloudflare deployment.
+
+An expired delivery replay keeps live same-claim recovery as its first path. If
+that recovery fails and the exact delivery pull request is already merged,
+`device:integrate` runs this historical verifier before returning the live
+recovery failure. Only an exact `integrated-retired` receipt may complete the
+local task. A missing or mismatched receipt preserves the original failure;
+the fallback never recreates or revives the retired claim.

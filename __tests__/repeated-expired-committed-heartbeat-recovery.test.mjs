@@ -11,6 +11,8 @@ import {
 } from "../scripts/repeated-expired-committed-heartbeat-recovery-contract.mjs";
 import { createRepeatedRecoveryController }
   from "../scripts/repeated-expired-committed-heartbeat-recovery-controller.mjs";
+import { classifyRepeatedSuccessorBindState }
+  from "../scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -109,6 +111,58 @@ test("controller plans read-only and executes only through its adapter", async (
   const completed = await controller.run({ authorization: planned.exactAuthorization });
   assert.equal(completed.status, "complete");
   assert.deepEqual(calls, ["inspect", "manifest", "inspect", "manifest", "execute"]);
+});
+
+test("successor bind state adopts only the exact response-loss transition", () => {
+  const plan = buildRepeatedRecoveryPlan({
+    evidence: evidence(),
+    targetManifest: targetManifest(),
+  });
+  const promoted = {
+    claimId: digest("3"),
+    claimDigest: digest("4"),
+    transitionCounter: 2,
+  };
+  const common = {
+    claimId: promoted.claimId,
+    canonicalBaseRevision: plan.evidence.baseSha,
+    declaredWriteScope: plan.target.declaredWriteSet,
+    writeSetDigest: plan.target.writeSetDigest,
+  };
+  assert.equal(classifyRepeatedSuccessorBindState({
+    claim: {
+      ...common,
+      state: "current",
+      fenceRevision: promoted.claimDigest,
+      transitionCounter: 2,
+      laneRevision: plan.evidence.fenceSha,
+      reviewRequestId: null,
+    },
+    promoted,
+    plan,
+  }), "bind");
+  assert.equal(classifyRepeatedSuccessorBindState({
+    claim: {
+      ...common,
+      state: "active",
+      transitionCounter: 3,
+      laneRevision: plan.evidence.headSha,
+      reviewRequestId: plan.evidence.reviewRequestId,
+    },
+    promoted,
+    plan,
+  }), "adopt");
+  assert.throws(() => classifyRepeatedSuccessorBindState({
+    claim: {
+      ...common,
+      state: "active",
+      transitionCounter: 4,
+      laneRevision: plan.evidence.headSha,
+      reviewRequestId: plan.evidence.reviewRequestId,
+    },
+    promoted,
+    plan,
+  }), /neither pre-bind nor exact bound response-loss/u);
 });
 
 test("completion proves successor recovery effects and forbids delivery effects", () => {

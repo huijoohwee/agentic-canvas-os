@@ -61,6 +61,28 @@ const IMPLEMENTATION_FILES = Object.freeze([
   "scripts/repeated-expired-committed-heartbeat-recovery.mjs",
 ]);
 
+export function classifyRepeatedSuccessorBindState({ claim, promoted, plan } = {}) {
+  const common = claim?.claimId === promoted?.claimId
+    && claim.canonicalBaseRevision === plan?.evidence?.baseSha
+    && claim.writeSetDigest === plan?.target?.writeSetDigest
+    && JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
+      === JSON.stringify(plan?.target?.declaredWriteSet);
+  if (common && claim.state === "current"
+    && claim.fenceRevision === promoted.claimDigest
+    && claim.transitionCounter === promoted.transitionCounter
+    && claim.laneRevision === plan.evidence.fenceSha
+    && claim.reviewRequestId === null) {
+    return "bind";
+  }
+  if (common && claim.state === "active"
+    && claim.transitionCounter === promoted.transitionCounter + 1
+    && claim.laneRevision === plan.evidence.headSha
+    && claim.reviewRequestId === plan.evidence.reviewRequestId) {
+    return "adopt";
+  }
+  throw new Error("Repeated recovery promoted successor is neither pre-bind nor exact bound response-loss state.");
+}
+
 export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session");
@@ -509,11 +531,10 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
       const claim = status.claims.filter(candidate => (
         candidate?.claimId === intent.promoted.claimId
       ));
-      if (claim.length !== 1 || claim[0].state !== "current"
-        || claim[0].fenceRevision !== intent.promoted.claimDigest
-        || claim[0].transitionCounter !== intent.promoted.transitionCounter) {
-        fail("promoted successor inventory");
-      }
+      if (claim.length !== 1) fail("promoted successor inventory");
+      const bindMode = classifyRepeatedSuccessorBindState({
+        claim: claim[0], promoted: intent.promoted, plan,
+      });
       const target = manifest(plan);
       const seed = normalizeBoundAuthority({
         result: {
@@ -540,21 +561,28 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
         deviceId: source.device,
         sessionId,
       });
-      const bound = bindAdmissionCloudAuthority({
-        authority: seed,
-        manifest: target,
-        branch: plan.evidence.branch,
-        headSha: plan.evidence.headSha,
-        pullRequestNumber: plan.evidence.pullRequestNumber,
-        reviewRequestId: plan.evidence.reviewRequestId,
-        deviceId: source.device,
-        sessionId,
-        idempotencyKey: `${OPERATION}:bind:${plan.planDigest}`,
-        returnVerification: true,
-        environment,
-        invoke,
-        inspect: invoke,
-      });
+      const bound = bindMode === "bind"
+        ? bindAdmissionCloudAuthority({
+          authority: seed,
+          manifest: target,
+          branch: plan.evidence.branch,
+          headSha: plan.evidence.headSha,
+          reviewRequestId: plan.evidence.reviewRequestId,
+          deviceId: source.device,
+          sessionId,
+          idempotencyKey: `${OPERATION}:bind:${plan.planDigest}`,
+          returnVerification: true,
+          environment,
+          invoke,
+          inspect: invoke,
+        })
+        : verifyCloud({
+          authority: seed,
+          manifest: target,
+          canonicalBaseSha: plan.evidence.baseSha,
+          environment,
+          inspect: invoke,
+        });
       intent = writeJournal(intent, {
         ...intent,
         status: "successor-bound",
@@ -581,7 +609,6 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
           canonicalBaseSha: plan.evidence.baseSha,
           environment,
           inspect: invoke,
-          invoke,
         });
         const admission = successorAdmission({
           source: observed.admission,
@@ -732,7 +759,6 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
       canonicalBaseSha: plan.evidence.baseSha,
       environment,
       inspect: invoke,
-      invoke,
     });
     assertAdmissionMutationAuthority({
       lease,

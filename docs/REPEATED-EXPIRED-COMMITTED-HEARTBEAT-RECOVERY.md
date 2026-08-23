@@ -57,3 +57,8 @@ successor promotion and review binding, one writer-registry/task-binding CAS, an
 existing hidden pull-request marker. No incomplete-scope lease is revived locally. The controller
 creates no source change, commit, ref update, pull-request state change, merge, deployment, release,
 or cleanup authority. Normal review and integration remain separate.
+
+Successor binding uses the plan-sealed review request rather than asking the provider to re-resolve
+the pull request's historical base. If the bind succeeds but its response is lost, replay may adopt
+only the same claim in `active` state at exactly transition counter plus one, with the sealed target
+scope, reviewed head, and review request identity. Any other transition or identity fails closed.

@@ -145,6 +145,14 @@ unless the resulting PR head exactly equals the local pushed head.
 
 The dedicated clean committed heartbeat command chooses its cloud continuation from a fresh exact-claim inventory. An unexpired `current` claim uses ordinary `renewal`; an expiry-projected `dormant-preserved` claim uses authenticated `recovery` bound to the complete committed snapshot digest. A lost response is accepted only by replaying the original idempotency key and exact source fence, counter, write set, revision, review request, and operation receipt. Heartbeat-counter evidence distinguishes renewal replay from recovery replay; when older projections lack that counter, both exact keys may be probed fail-closed, and foreign progress satisfies neither. Only after cloud verification does the controller compare the unchanged snapshot, CAS the local lease, and replace its hidden PR marker. Neither path changes HEAD, index, authored bytes, branch refs, PR draft state, auto-merge, integration, release, or deployment authority.
 
+An active admitted lane with tracked in-scope dirt may widen only to an exact
+strict-superset manifest through `active-dirty-scope-expansion.mjs`. The C2
+successor retains the C1 base. If protected `main` advanced, the plan seals the
+complete canonical changed-path set and a disjoint descendant proof against the
+expanded target write set; the cloud claim revalidates that proof against its
+current canonical revision. The proof is part of the exact authorization, so a
+later protected advance requires replanning. See `ACTIVE-DIRTY-SCOPE-EXPANSION.md`.
+
 A planned task-bound lane that already owns dirt at its unchanged fence may
 expand its declared scope only through
 `planned-owned-dirt-scope-expansion-recovery.mjs`. The read-only plan seals the

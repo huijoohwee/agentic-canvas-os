@@ -22,6 +22,12 @@ retires it through the existing integrated-retirement path, and activates only t
 same-owner successor. Auto-merge or merge-queue state still blocks planning, and the
 terminal projection is an active draft lane rather than a merge or deployment claim.
 
+When protected `main` has advanced disjointly, the cloud reducer admits the
+unchanged-scope successor from the exact `reviewed` predecessor on its recorded
+base. Repository, work item, lane revision, write-set digest, and predecessor
+identity must remain exact; a different base still requires the existing
+canonical-descendant proof.
+
 ## Purpose
 
 This controller reopens one exact reviewed lane for correction by its original
@@ -149,6 +155,14 @@ supersede the completed journal only after validating the new exact
 authorization inside the same fence. This prevents stale branch-keyed completion
 from masking a later same-lane source-correction cycle while preserving terminal
 replay for the original plan.
+
+A `prepared` journal may be superseded by a different freshly authorized plan
+only inside that same fence and only after live reconciliation proves the old
+plan has no response-ahead `successor_waiting` claim. The prepared journal is
+otherwise immutable: any observed successor or any later phase requires the
+original authorization and its normal replay path. This admits protected-main
+evidence refresh before the first effect without treating a lost first-effect
+response as zero effect.
 
 ## Evidence boundary
 

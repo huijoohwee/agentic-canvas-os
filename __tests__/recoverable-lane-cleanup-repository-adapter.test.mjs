@@ -382,6 +382,39 @@ test("controller with repository adapter bundles, verifies, removes non-force, a
   });
 });
 
+test("controller preserves and removes one exact detached dormant-preserved worktree", () => {
+  withFixture(fixture => {
+    const preservationReceipt = "8".repeat(64);
+    const detachedHead = fixture.laneSha;
+    git(fixture.worktree, ["switch", "--detach", detachedHead]);
+    const adapter = createAdapter(fixture, {
+      readPreservationReceipts: () => [preservationReceipt],
+    });
+    const controller = createRecoverableLaneCleanupController({ adapter });
+    const input = {
+      ...request(fixture),
+      supersededPreservationDigests: [preservationReceipt],
+    };
+    const planned = controller.plan(input);
+    assert.equal(planned.plan.evidence.target.branch, null);
+    assert.equal(planned.plan.evidence.target.branchHeadSha, null);
+    assert.equal(planned.plan.evidence.remoteBranch.ref, null);
+    const result = controller.run({
+      ...input,
+      planDigest: planned.planDigest,
+      authorization: planned.exactAuthorization,
+    });
+    assert.equal(result.status, "complete");
+    assert.equal(existsSync(fixture.worktree), false);
+    assert.equal(result.receipt.bundle.headRef, "HEAD");
+    assert.equal(result.receipt.bundle.headSha, detachedHead);
+    assert.equal(result.receipt.finalObservation.branchHeadSha, null);
+    assert.equal(result.receipt.finalObservation.remoteBranchSha, null);
+    assert.equal(git(fixture.repo, ["cat-file", "-e", `${detachedHead}^{commit}`]), "");
+    assert.equal(existsSync(path.join(fixture.recovery, "lane.bundle")), true);
+  });
+});
+
 test("cleanup preserves exact generated residue and rejects pre-quarantine byte drift", () => {
   withFixture(fixture => {
     addGeneratedResidue(fixture);

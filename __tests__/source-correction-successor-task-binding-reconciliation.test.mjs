@@ -7,7 +7,10 @@ import {
 } from "../scripts/source-correction-successor-task-binding-reconciliation-contract.mjs";
 import { createSourceCorrectionSuccessorTaskBindingReconciliationController }
   from "../scripts/source-correction-successor-task-binding-reconciliation-controller.mjs";
-import { currentSuccessorRepair }
+import {
+  currentSuccessorRepair,
+  isSourceCorrectionSuccessorHeadRelationshipExact,
+}
   from "../scripts/source-correction-successor-task-binding-reconciliation-repository-adapter.mjs";
 
 const D = value => digestValue({ value });
@@ -80,6 +83,30 @@ function terminal(projected) {
     ...ZERO_EFFECTS,
   };
 }
+
+test("accepts the clean equal-head source-correction state", () => {
+  assert.equal(isSourceCorrectionSuccessorHeadRelationshipExact({
+    localHeadSha: S("a"),
+    remoteHeadSha: S("a"),
+    remoteIsLocalAncestor: false,
+  }), true);
+  assert.doesNotThrow(() => buildPlan(evidence({ localHeadSha: S("b") })));
+});
+
+test("accepts only an ancestry-proved local descendant when heads differ", () => {
+  const frame = {
+    localHeadSha: S("a"),
+    remoteHeadSha: S("b"),
+  };
+  assert.equal(isSourceCorrectionSuccessorHeadRelationshipExact({
+    ...frame,
+    remoteIsLocalAncestor: true,
+  }), true);
+  assert.equal(isSourceCorrectionSuccessorHeadRelationshipExact({
+    ...frame,
+    remoteIsLocalAncestor: false,
+  }), false);
+});
 
 test("requires exact plan authorization before projection", () => {
   const source = evidence();

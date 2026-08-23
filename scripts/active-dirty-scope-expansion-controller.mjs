@@ -10,6 +10,8 @@ import {
   verifyPromotedSuccessor,
   verifyWaitingSuccessor,
 } from "./active-dirty-scope-expansion-contract.mjs";
+import { captureActiveDirtyScopeExpansionProtectedMain }
+  from "./active-dirty-scope-expansion-protected-main.mjs";
 import {
   assertActiveDirtyScopeExpansionTaskSuccessorPreflight,
   projectActiveDirtyScopeExpansionSuccessor,
@@ -306,6 +308,7 @@ export async function runActiveDirtyScopeExpansion({
 export function createRepositoryActiveDirtyScopeExpansionAdapter({
   sourceRepository,
   sessionId,
+  targetManifest = null,
   environment = process.env,
   ttlSeconds = 28_800,
   gitText = (args, options = {}) => execFileSync("git", args, {
@@ -367,10 +370,25 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
       changedPaths,
       untracked,
     });
-    const targetCanonicalBaseSha = firstSha(gitText([
+    const intent = readScopeExpansionIntent({ leaseStore: store, branch });
+    const protectedMainSha = firstSha(gitText([
       "ls-remote", "--heads", "origin", "refs/heads/main",
     ]));
-    const intent = readScopeExpansionIntent({ leaseStore: store, branch });
+    const pullRequest = readOwnershipPullRequest({
+      url: lease.pullRequestUrl,
+      branch,
+      ghText,
+    });
+    const protectedMain = captureActiveDirtyScopeExpansionProtectedMain({
+      sourceBaseSha: lease.baseSha,
+      pullRequestBaseSha: pullRequest.baseRefOid,
+      protectedMainSha,
+      targetDeclaredWriteSet: intent?.planSnapshot?.targetDeclaredWriteSet
+        || targetManifest?.declaredWriteSet
+        || lease.admission.declaredWriteSet,
+      gitText,
+    });
+    const targetCanonicalBaseSha = lease.baseSha;
     const source = {
       lease,
       branch,
@@ -390,8 +408,9 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
       requireTaskAuthoritySuccessor: true,
       reviewRequestId: authority.reviewRequestId,
       targetCanonicalBaseSha,
+      canonicalDescendantProof: protectedMain.canonicalDescendantProof,
       sourceStateDigest: digestValue({ source, leaseDigest: writerLeaseDigest(lease) }),
-      targetObservationDigest: digestValue({ targetCanonicalBaseSha }),
+      targetObservationDigest: digestValue({ targetCanonicalBaseSha, protectedMain }),
     });
   };
 
@@ -436,6 +455,9 @@ export function createRepositoryActiveDirtyScopeExpansionAdapter({
           canonicalBaseSha: plan.targetCanonicalBaseSha,
           headSha: plan.sourceFenceSha,
           declaredWriteSet: plan.targetDeclaredWriteSet,
+          ...(plan.canonicalDescendantProof
+            ? { canonicalDescendantProof: plan.canonicalDescendantProof }
+            : {}),
           predecessorClaimId: plan.sourceClaimId,
           leaseEpoch: 1,
           ttlSeconds: normalizedTtl,
@@ -699,6 +721,7 @@ function resolvePlan({ state, targetManifest }) {
     source: state?.source,
     targetManifest,
     targetCanonicalBaseSha: state?.targetCanonicalBaseSha,
+    canonicalDescendantProof: state?.canonicalDescendantProof,
   });
 }
 

@@ -87,7 +87,7 @@ async function resolveRunnableIntent({
     }
     return intent;
   } catch (error) {
-    if (intent.status !== "complete") throw error;
+    if (!new Set(["prepared", "complete"]).has(intent.status)) throw error;
   }
 
   const currentPlan = buildReviewedLaneSourceCorrectionPlan({
@@ -96,7 +96,18 @@ async function resolveRunnableIntent({
   });
   authorizeReviewedLaneSourceCorrection({ plan: currentPlan, authorization });
   if (currentPlan.planDigest === intent.planSnapshot.planDigest) {
-    throw new Error("Completed source correction journal authorization does not match its plan.");
+    throw new Error(`${intent.status === "complete" ? "Completed" : "Prepared"} source correction journal authorization does not match its plan.`);
+  }
+  if (intent.status === "prepared") {
+    const responseAhead = normalizeResolution(await effects.reconcilePhase({
+      intent,
+      operationKey: operationKey(intent.planSnapshot, "successor_waiting"),
+      phase: "successor_waiting",
+      plan: intent.planSnapshot,
+    }));
+    if (responseAhead.kind === "complete") {
+      throw new Error("Prepared source correction journal has a response-ahead successor and requires its original authorization.");
+    }
   }
   const next = createReviewedLaneSourceCorrectionIntent(currentPlan, authorization);
   await effects.writeIntent({ expected: intent, value: next });

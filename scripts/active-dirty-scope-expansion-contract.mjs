@@ -1,5 +1,7 @@
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
+import { normalizeActiveDirtyScopeExpansionCanonicalDescendantProof }
+  from "./active-dirty-scope-expansion-protected-main.mjs";
 
 export const ACTIVE_DIRTY_SCOPE_EXPANSION_PLAN_SCHEMA =
   "agentic-active-dirty-scope-expansion-plan/v1";
@@ -13,6 +15,7 @@ export function buildActiveDirtyScopeExpansionPlan({
   source,
   targetManifest,
   targetCanonicalBaseSha,
+  canonicalDescendantProof = null,
 }) {
   const normalizedSource = normalizeSource(source);
   const target = normalizeTargetManifest(targetManifest, normalizedSource.scope);
@@ -23,6 +26,13 @@ export function buildActiveDirtyScopeExpansionPlan({
   }
   if (!normalizedSource.changedPaths.every(path => writeSetCoversPath(sourceWriteSet, path))) {
     throw new Error("Source dirty bytes extend outside the currently admitted write set.");
+  }
+  const protectedMain = canonicalDescendantProof
+    ? normalizeActiveDirtyScopeExpansionCanonicalDescendantProof(canonicalDescendantProof)
+    : null;
+  if (protectedMain && (protectedMain.sourceBaseSha !== canonicalBaseSha
+    || normalizedSource.lease.baseSha !== canonicalBaseSha)) {
+    throw new Error("Scope-expansion canonical-descendant proof changed the source base.");
   }
   const core = {
     schema: ACTIVE_DIRTY_SCOPE_EXPANSION_PLAN_SCHEMA,
@@ -42,6 +52,7 @@ export function buildActiveDirtyScopeExpansionPlan({
     targetWriteSetDigest: target.writeSetDigest,
     targetDeclaredWriteSet: target.declaredWriteSet,
     targetCloudLeaseEpoch: 1,
+    ...(protectedMain ? { canonicalDescendantProof: protectedMain } : {}),
   };
   return Object.freeze({ ...core, planDigest: digestValue(core) });
 }
@@ -217,6 +228,9 @@ function normalizePlan(value) {
   if (!value || typeof value !== "object" || value.schema !== ACTIVE_DIRTY_SCOPE_EXPANSION_PLAN_SCHEMA) {
     throw new Error("Scope-expansion plan is malformed.");
   }
+  const protectedMain = value.canonicalDescendantProof
+    ? normalizeActiveDirtyScopeExpansionCanonicalDescendantProof(value.canonicalDescendantProof)
+    : null;
   const core = {
     schema: ACTIVE_DIRTY_SCOPE_EXPANSION_PLAN_SCHEMA,
     sourceBranch: requiredText(value.sourceBranch, "source branch"),
@@ -235,10 +249,12 @@ function normalizePlan(value) {
     targetWriteSetDigest: requiredDigest(value.targetWriteSetDigest, "target write-set digest"),
     targetDeclaredWriteSet: normalizeWriteSet(value.targetDeclaredWriteSet),
     targetCloudLeaseEpoch: positiveInteger(value.targetCloudLeaseEpoch, "target cloud lease epoch"),
+    ...(protectedMain ? { canonicalDescendantProof: protectedMain } : {}),
   };
   if (
     core.targetCloudLeaseEpoch !== 1
     || core.targetWriteSetDigest !== digestValue(core.targetDeclaredWriteSet)
+    || (protectedMain && protectedMain.sourceBaseSha !== core.targetCanonicalBaseSha)
     || value.planDigest !== digestValue(core)
   ) {
     throw new Error("Scope-expansion plan digest or cloud epoch is invalid.");

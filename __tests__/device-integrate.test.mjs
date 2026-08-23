@@ -2342,6 +2342,41 @@ test("review-ready merged replay verifies terminal cloud authority before comple
   assert.equal(events.some(event => event.startsWith("run:gh pr merge")), false);
 });
 
+test("expired delivery merged replay verifies historical retirement after live recovery fails", () => {
+  const events = [];
+  const mergedRecovery = openPullRequest({
+    state: "MERGED",
+    baseRefOid: baseSha,
+    mergeCommit: { oid: mergeSha },
+    mergeStateStatus: "UNKNOWN",
+    autoMergeRequest: null,
+  });
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    terminalMergedReplay: true,
+    deliveryRecovery: {
+      mutateObservedClaim: claim => ({ ...claim, transitionCounter: 4 }),
+      pullRequests: [mergedRecovery, mergedRecovery],
+    },
+    livePullRequest: protectedRefreshPullRequest({
+      state: "closed",
+      merged: true,
+      merged_at: "2026-08-11T09:00:00.000Z",
+      auto_merge: null,
+      mergeable_state: "unknown",
+      merge_commit_sha: mergeSha,
+    }),
+    observations: [],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.filter(event => event === "recover:status").length, 1);
+  assert.equal(events.includes("recover:continue"), false);
+  assert.ok(events.includes(`verify:${commitSha}`));
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
 test("delivery replay dispatches one protected refresh and continues from the exact refreshed head", () => {
   const events = [];
   const refreshedHeadSha = "2".repeat(40);
@@ -2793,7 +2828,8 @@ test("expired delivery recovery rejects a drifted recovered authority before dis
     observations: [],
   }), /exact verified same-claim convergence evidence/u);
   assert.equal(events.filter(event => event === "recover:continue").length, 1);
-  assert.equal(events.filter(event => event.startsWith("read:recovery:")).length, 1);
+  assert.equal(events.filter(event => event.startsWith("read:recovery:")).length, 2);
+  assert.equal(events.includes(`verify:${commitSha}`), false);
   assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
 });
 

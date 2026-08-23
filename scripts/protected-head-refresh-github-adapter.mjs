@@ -108,10 +108,11 @@ export function runProtectedHeadRefresh({
     targetMainIsAncestor,
     mergeCommitIsAncestor,
   });
+  const policy = readProtectedHeadRefreshRepositoryPolicy({ environment });
   const provider = createProtectedHeadRefreshGithubProvider({
     repository: repo,
     projection,
-    policy: readProtectedHeadRefreshRepositoryPolicy({ environment }),
+    policy,
     gh,
     ghJson,
     requiredEnv,
@@ -153,6 +154,13 @@ export function runProtectedHeadRefresh({
       });
     },
     verifyCloudAuthority: ({ pullRequest }) => {
+      // A protected refresh produces a descendant candidate after the source
+      // claim has already been integrated.  If that same claim is lawfully
+      // reclaimed while the candidate gate is pending, its mutable fence and
+      // ledger revision advance.  The candidate remains bound to the original
+      // immutable integration receipt and transition lineage, so rechecking
+      // the superseded mutable fence would make recovery impossible.
+      const refreshedCandidate = pullRequest.headSha !== projection.observed_head_sha;
       const cloud = invokeRepositoryCloudVerifier({
         ledgerRepository,
         environment,
@@ -163,8 +171,10 @@ export function runProtectedHeadRefresh({
           headSha: projection.delivered_head_sha,
           canonicalBaseSha: projection.canonical_base_sha,
           claimId: projection.claim_id,
-          expectedClaimDigest: projection.claim_digest,
-          expectedLedgerRevision: projection.ledger_revision,
+          ...(!refreshedCandidate ? {
+            expectedClaimDigest: projection.claim_digest,
+            expectedLedgerRevision: projection.ledger_revision,
+          } : {}),
           reviewRequestId: projection.review_request_id,
           requireStatus: "integrated-preserved",
           allowProtectedMainRefresh: true,
@@ -273,7 +283,7 @@ export function runProtectedHeadRefresh({
       });
     },
     verifyCandidateWorkflow: ({ candidateSha, targetMainSha }) => {
-      const workflowPath = ".github/workflows/ci.yml";
+      const workflowPath = `.github/workflows/${policy.ciWorkflow}`;
       const candidateBlobSha = requireFullSha(
         gitText(["rev-parse", `${candidateSha}:${workflowPath}`]).trim(),
         "Protected-head refresh candidate CI workflow blob",

@@ -437,6 +437,67 @@ test("a current predecessor admits a stale-base strict-superset waiting successo
   }), "stale_canonical_base");
 });
 
+test("a reviewed predecessor admits only its exact unchanged-scope successor on the recorded base", () => {
+  const historicalBase = revision("reviewed-predecessor-base");
+  const laneRevision = revision("reviewed-predecessor-lane");
+  const historicalRepository = { ...repository, canonicalRevision: historicalBase };
+  const claimed = claim(createEmptyLedger("ledger:repository"), {
+    targetRepository: historicalRepository,
+    workItemId: "work:reviewed-correction",
+    canonicalBaseRevision: historicalBase,
+    laneRevision,
+  });
+  const projected = continueClaim(claimed.ledger, claimed.claim, {
+    mode: "projection",
+    laneRevision,
+    reviewRequestId: "review:reviewed-correction",
+  });
+  const reviewed = continueClaim(projected.ledger, projected.claim, {
+    mode: "review",
+    time: T2,
+    laneRevision,
+    reviewRequestId: projected.claim.reviewRequestId,
+    focusedEvidenceDigest: evidence("reviewed-correction"),
+  });
+  const successor = claim(reviewed.ledger, {
+    workItemId: reviewed.claim.workItemId,
+    scope: reviewed.claim.declaredWriteScope,
+    canonicalBaseRevision: historicalBase,
+    predecessorClaimId: reviewed.claim.claimId,
+    laneRevision,
+    leaseEpoch: 2,
+    time: T3,
+    expiresAt: T6,
+    idempotencyKey: "claim:reviewed-correction-successor",
+  });
+  assert.equal(successor.claim.state, "waiting-successor");
+  assert.equal(successor.claim.predecessorClaimId, reviewed.claim.claimId);
+
+  throwsCode(() => claim(reviewed.ledger, {
+    workItemId: "work:foreign-correction",
+    scope: reviewed.claim.declaredWriteScope,
+    canonicalBaseRevision: historicalBase,
+    predecessorClaimId: reviewed.claim.claimId,
+    laneRevision,
+    leaseEpoch: 2,
+    time: T3,
+    expiresAt: T6,
+    idempotencyKey: "claim:foreign-reviewed-correction",
+  }), "stale_canonical_base");
+
+  throwsCode(() => claim(reviewed.ledger, {
+    workItemId: reviewed.claim.workItemId,
+    scope: [...reviewed.claim.declaredWriteScope, "path:docs/expanded.md"],
+    canonicalBaseRevision: historicalBase,
+    predecessorClaimId: reviewed.claim.claimId,
+    laneRevision,
+    leaseEpoch: 2,
+    time: T3,
+    expiresAt: T6,
+    idempotencyKey: "claim:expanded-reviewed-correction",
+  }), "stale_canonical_base");
+});
+
 test("expiry is dormant-preserved and recovery ignores the expired device lease", () => {
   const first = claim(createEmptyLedger("ledger:repository"), { expiresAt: T1 });
   const dormant = listCurrentClaims(first.ledger, T2)[0];

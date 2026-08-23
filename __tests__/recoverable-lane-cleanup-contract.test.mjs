@@ -92,6 +92,26 @@ test("cleanup evidence rejects canonical, dirty, current-writer, and operation-s
   })));
 });
 
+test("detached cleanup requires exact preservation and no branch or authority projection", () => {
+  const preservationReceipt = "8".repeat(64);
+  const detached = evidence({
+    target: { branch: null, branchHeadSha: null },
+    preservationReceiptDigests: [preservationReceipt],
+  });
+  assert.doesNotThrow(() => normalizeRecoverableLaneCleanupEvidence(detached));
+  assert.throws(() => normalizeRecoverableLaneCleanupEvidence(evidence({
+    target: { branch: null, branchHeadSha: null },
+  })), /exact preservation receipts/);
+  assert.throws(() => normalizeRecoverableLaneCleanupEvidence(evidence({
+    target: { branch: null, branchHeadSha: null },
+    preservationReceiptDigests: [preservationReceipt],
+    authority: { priorLease: { status: "released" } },
+  })), /prior lease|digest|preservation/i);
+  const planned = plan({ evidenceValue: detached,
+    supersededPreservationDigests: [preservationReceipt] });
+  assert.equal(planned.evidence.target.branch, null);
+});
+
 test("cleanup evidence and phases reject coerced or open-shaped values", () => {
   assert.throws(() => normalizeRecoverableLaneCleanupEvidence(evidence({
     authority: { currentLocalWriter: "true" },
@@ -252,8 +272,8 @@ function evidence({ target = {}, authority = {}, preservationReceiptDigests = []
       authorityDigest: digestValue(authorityCore),
     },
     remoteBranch: {
-      ref: target.branch || "refs/heads/agent/device/lane-a",
-      sha: "c".repeat(40),
+      ref: Object.hasOwn(target, "branch") ? target.branch : "refs/heads/agent/device/lane-a",
+      sha: target.branch === null ? null : "c".repeat(40),
     },
   };
   return { ...core, evidenceDigest: digestValue(core) };

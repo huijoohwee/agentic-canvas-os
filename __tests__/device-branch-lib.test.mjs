@@ -24,6 +24,7 @@ import {
   renderWriterLeasePullRequestBody,
 } from "../scripts/writer-lease-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 import {
   createTaskAuthorityBinding,
@@ -662,6 +663,8 @@ test("review recovers an expired planned cloud-bound lane into review-ready auth
       authority: {
         ...authority,
         laneRevision: headSha,
+        deviceId: pseudonymousIdentifier("device", "device"),
+        sessionId: pseudonymousIdentifier("session", "chat-a"),
         reviewRequestId: "github-pull-request:PR_42",
         state: "active",
       },

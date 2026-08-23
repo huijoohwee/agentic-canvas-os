@@ -91,6 +91,23 @@ export function classifyRepeatedSuccessorBindState({ claim, promoted, plan } = {
   throw new Error("Repeated recovery promoted successor is neither pre-bind nor exact bound response-loss state.");
 }
 
+export function projectRepeatedSuccessorLeaseCore({
+  sourceLease, admission, authority, verifiedAt, reviewedHeadSha,
+} = {}) {
+  if (!sourceLease || !admission || !authority || !verifiedAt
+    || authority.laneRevision !== reviewedHeadSha) {
+    throw new Error("Repeated recovery successor lease requires its exact reviewed head fence.");
+  }
+  return Object.freeze({
+    ...sourceLease,
+    fenceSha: reviewedHeadSha,
+    admission,
+    cloudAuthority: authority,
+    heartbeatAt: verifiedAt,
+    expiresAt: authority.expiresAt,
+  });
+}
+
 export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session");
@@ -648,13 +665,13 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
           authority: verified.authority,
         });
         const projectedAt = verified.verification.verifiedAt || now().toISOString();
-        const nextCore = {
-          ...observed,
+        const nextCore = projectRepeatedSuccessorLeaseCore({
+          sourceLease: observed,
+          reviewedHeadSha: plan.evidence.headSha,
           admission,
-          cloudAuthority: verified.authority,
-          heartbeatAt: projectedAt,
-          expiresAt: verified.authority.expiresAt,
-        };
+          authority: verified.authority,
+          verifiedAt: projectedAt,
+        });
         const nextLease = {
           ...nextCore,
           taskAuthority: continueTaskAuthorityCloudSuccessorBinding({
@@ -871,7 +888,7 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     if (!lease || lease.status !== "active" || lease.branch !== plan.evidence.branch
       || lease.sessionId !== plan.evidence.sessionId
       || lease.baseSha !== plan.evidence.baseSha
-      || lease.fenceSha !== plan.evidence.fenceSha
+      || lease.fenceSha !== plan.evidence.headSha
       || lease.admission?.status !== "admitted"
       || lease.admission.manifestDigest !== plan.target.manifestDigest
       || lease.admission.writeSetDigest !== plan.target.writeSetDigest

@@ -68,3 +68,7 @@ plan and exact bound claim, performs one idempotent authenticated `recovery` con
 the existing expired-committed-heartbeat authority helper, verifies the renewed active claim, and
 only then projects the successor locally. A different counter, head, review identity, write set, or
 claim still fails closed.
+
+Local successor projection advances the writer lease fence to the same reviewed head bound by the
+verified cloud successor. Retaining the predecessor's historical fence would make local and cloud
+authoring authority disagree and therefore fails before registry mutation.

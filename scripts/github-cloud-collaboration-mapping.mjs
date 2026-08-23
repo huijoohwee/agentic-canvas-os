@@ -1,4 +1,5 @@
 import { digestValue, listCurrentClaims } from "./cloud-collaboration-contract.mjs";
+import { normalizeCanonicalDescendantProof } from "./cloud-collaboration-primitives.mjs";
 
 export const CLOUD_RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 export const CURRENT_CLAIM_INVENTORY_SCHEMA =
@@ -156,10 +157,12 @@ export function prepareMutationRequest({
 export function prepareReadRequest({ input, repository, pullRequest }) {
   assertPullRequestProjection(input, pullRequest);
   const allowProtectedMainRefresh = input.allowProtectedMainRefresh === true;
-  const resolvedCanonicalBaseRevision = allowProtectedMainRefresh
+  const allowReviewedHistoricalBase = input.allowReviewedHistoricalBase === true;
+  const preserveReviewedSubject = allowProtectedMainRefresh || allowReviewedHistoricalBase;
+  const resolvedCanonicalBaseRevision = preserveReviewedSubject
     ? first(input.canonicalBaseRevision, input.canonicalBaseSha, pullRequest?.baseSha)
     : first(pullRequest?.baseSha, input.canonicalBaseRevision, input.canonicalBaseSha);
-  const resolvedLaneRevision = allowProtectedMainRefresh
+  const resolvedLaneRevision = preserveReviewedSubject
     ? first(input.laneRevision, input.headSha, pullRequest?.headSha)
     : first(pullRequest?.headSha, input.laneRevision, input.headSha);
   const request = {
@@ -386,7 +389,11 @@ function expiryFromServer(evaluationTime, rawTtlSeconds) {
 function assertPullRequestProjection(input, pullRequest) {
   if (!pullRequest) return;
   const allowProtectedMainRefresh = input.allowProtectedMainRefresh === true;
+  const allowReviewedHistoricalBase = input.allowReviewedHistoricalBase === true;
   const requiredState = normalizeRequiredState(first(input.requiredState, input.requireStatus));
+  if (allowProtectedMainRefresh && allowReviewedHistoricalBase) {
+    throw new Error("Pull-request projection cannot combine protected refresh and reviewed historical base modes.");
+  }
   if (allowProtectedMainRefresh) {
     if (requiredState !== "integrated-preserved") {
       throw new Error(
@@ -399,11 +406,29 @@ function assertPullRequestProjection(input, pullRequest) {
       );
     }
   }
+  if (allowReviewedHistoricalBase) {
+    if (requiredState !== "reviewed") {
+      throw new Error("Historical-base projection is limited to reviewed verification.");
+    }
+    if (!input.claimId || !input.reviewRequestId) {
+      throw new Error("Historical-base projection requires exact claim and review request identities.");
+    }
+    if (!input.canonicalDescendantProof) {
+      throw new Error("Historical-base projection requires canonical descendant proof.");
+    }
+    normalizeCanonicalDescendantProof({
+      value: input.canonicalDescendantProof,
+      sourceBaseSha: first(input.canonicalBaseRevision, input.canonicalBaseSha),
+      protectedRevision: pullRequest.baseSha,
+    });
+  }
   const comparisons = [
     ["branch", input.branch, pullRequest.branch],
     ...(
       allowProtectedMainRefresh
         ? []
+        : allowReviewedHistoricalBase
+          ? [["head revision", first(input.laneRevision, input.headSha), pullRequest.headSha]]
         : [
           ["head revision", first(input.laneRevision, input.headSha), pullRequest.headSha],
           ["canonical base", first(input.canonicalBaseRevision, input.canonicalBaseSha), pullRequest.baseSha],

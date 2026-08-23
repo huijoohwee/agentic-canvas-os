@@ -148,6 +148,11 @@ The terminal receipt explicitly reports `admissionStatus: "planned"`,
 `deploymentAuthority: false`. Run a fresh repository-owned scoped admission
 before any source edit or later lifecycle transition.
 
+The durable `cloud_request_sealed` phase stores only the contract-normalized
+request projection and its transport digest. Provider routing fields and the
+full request body are reconstructed from the immutable plan when executing the
+cloud effect; they are not additional journal fields or replay authority.
+
 Provider claims use opaque device and session subjects. Source and recovered
 verification normalize the local lease labels before joining those subjects;
 an already-opaque recovered authority is accepted only when it resolves to the

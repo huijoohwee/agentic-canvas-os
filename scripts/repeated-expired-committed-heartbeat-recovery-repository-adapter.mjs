@@ -6,6 +6,7 @@ import {
 import path from "node:path";
 
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { assertLeaseWorktree } from "./device-branch-ownership-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import {
   continueExpiredCommittedHeartbeatCloudAuthority,
@@ -13,9 +14,11 @@ import {
   preserveSourceManifestProjection,
 } from "./expired-committed-heartbeat-cloud-authority.mjs";
 import {
-  captureExpiredCommittedHeartbeatSnapshot,
+  partitionChangedPathsByScope,
   readPullRequestProjection,
   remoteBranchHead,
+  requireCloudAdmission,
+  requireChangedPathsWithinScope,
 } from "./expired-committed-heartbeat-evidence.mjs";
 import {
   assertPullRequestBodyWithinGitHubLimit,
@@ -27,6 +30,11 @@ import {
   verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
 import { authorizeTaskBoundLeaseMutation } from "./task-bound-lane-authority-store.mjs";
+import {
+  normalizeProtectedMainPathEquivalenceEvidence,
+  normalizeProtectedMainSharedAncestorPathEquivalenceEvidence,
+  readTreeBlobEntry,
+} from "./protected-main-path-equivalence-lib.mjs";
 import {
   createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
@@ -80,20 +88,12 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
   function capture() {
     assertCanonicalTrackingCurrent();
     const targetBranch = branch();
-    const snapshot = captureExpiredCommittedHeartbeatSnapshot({
-      repo: repository,
-      branch: targetBranch,
-      gitText: git,
-      gitOptional,
-      ghText: gh,
-      leaseStore,
-      sessionId,
-      now,
-    });
-    const previousRecovery = snapshot.lease.expiredCommittedHeartbeatRecovery;
+    const lease = leaseStore.read(targetBranch);
+    const previousRecovery = lease?.expiredCommittedHeartbeatRecovery;
     if (!previousRecovery || previousRecovery.status !== "recovered") {
       fail("one exact completed predecessor recovery");
     }
+    const snapshot = captureRepeatedSnapshot({ lease, previousRecovery, targetBranch });
     const pull = JSON.parse(gh([
       "pr", "view", String(pullRequestNumber), "--json",
       "number,state,isDraft,headRefName,headRefOid,baseRefName,url",
@@ -105,6 +105,175 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     }
     const repo = JSON.parse(gh(["repo", "view", "--json", "id,nameWithOwner"]));
     return { snapshot, previousRecovery, pull, repo };
+  }
+
+  function captureRepeatedSnapshot({ lease, previousRecovery, targetBranch }) {
+    const instant = now();
+    if (!lease || lease.status !== "active" || lease.sessionId !== sessionId
+      || lease.branch !== targetBranch || Date.parse(lease.expiresAt) > instant.getTime()) {
+      fail("exact expired active source lease");
+    }
+    assertLeaseWorktree(lease, repository);
+    requireCloudAdmission({ lease, instant, requireLive: false });
+    if (git(["status", "--porcelain=v1", "-z", "--untracked-files=all"])) fail("clean target");
+    if (previousRecovery.renewedClaimDigest !== lease.cloudAuthority.claimDigest
+      || previousRecovery.renewedCloudTransitionCounter !== lease.cloudAuthority.transitionCounter
+      || previousRecovery.sourceClaimId !== lease.cloudAuthority.claimId
+      || previousRecovery.sourceEpoch !== lease.epoch) {
+      fail("unchanged predecessor recovery projection");
+    }
+
+    const headSha = git(["rev-parse", "HEAD"]);
+    const headTreeSha = git(["rev-parse", `${headSha}^{tree}`]);
+    const remoteHeadSha = remoteBranchHead({ branch: targetBranch, gitOptional });
+    if (remoteHeadSha !== headSha) fail("published repeated-recovery head");
+    const projection = readPullRequestProjection({
+      lease,
+      branch: targetBranch,
+      ghText: gh,
+      expectedHeadSha: remoteHeadSha,
+    });
+    const parents = git(["rev-list", "--parents", "-n", "1", headSha]).split(/\s+/u);
+    if (parents.length !== 3 || parents[0] !== headSha
+      || parents[1] !== previousRecovery.headSha) {
+      fail("one exact post-recovery protected-refresh merge");
+    }
+    const protectedParentSha = parents[2];
+    if (!isAncestor(protectedParentSha, "refs/remotes/origin/main")) {
+      fail("historical protected parent ancestry");
+    }
+    const protectedParentTreeSha = git(["rev-parse", `${protectedParentSha}^{tree}`]);
+    const authoredPaths = nulPaths(git(["diff", "--name-only", "-z",
+      `${protectedParentSha}..${headSha}`]));
+    requireChangedPathsWithinScope({
+      changedPaths: authoredPaths,
+      declaredWriteSet: lease.admission.declaredWriteSet,
+    });
+    const changedPaths = nulPaths(git(["diff", "--name-only", "-z",
+      `${lease.baseSha}..${headSha}`]));
+    const partition = partitionChangedPathsByScope({
+      changedPaths,
+      declaredWriteSet: lease.admission.declaredWriteSet,
+    });
+    const protectedEntries = partition.protectedEquivalentPaths.map(relativePath => {
+      const head = readTreeBlobEntry({ gitText: git, treeish: headSha,
+        relativePath, label: "repeated-recovery head" });
+      const protectedParent = readTreeBlobEntry({ gitText: git, treeish: protectedParentSha,
+        relativePath, label: "historical protected parent" });
+      if (head.mode !== protectedParent.mode || head.blobSha !== protectedParent.blobSha) {
+        fail(`historical protected byte equivalence for ${relativePath}`);
+      }
+      return { path: relativePath, headMode: head.mode, headBlobSha: head.blobSha,
+        protectedMode: protectedParent.mode, protectedBlobSha: protectedParent.blobSha };
+    });
+    const protectedMainEquivalence = normalizeProtectedMainPathEquivalenceEvidence({
+      schema: "agentic-protected-main-path-equivalence/v1",
+      baseSha: lease.baseSha,
+      headSha,
+      headTreeSha,
+      protectedMainRef: "refs/remotes/origin/main",
+      protectedMainSha: protectedParentSha,
+      protectedMainTreeSha: protectedParentTreeSha,
+      exemptPathCount: protectedEntries.length,
+      exemptPathsDigest: digestValue(protectedEntries.map(entry => entry.path)),
+      entries: protectedEntries,
+    });
+    const sharedEntries = protectedEntries.map(entry => ({
+      path: entry.path,
+      headMode: entry.headMode,
+      headBlobSha: entry.headBlobSha,
+      sharedAncestorMode: entry.protectedMode,
+      sharedAncestorBlobSha: entry.protectedBlobSha,
+    }));
+    const sharedAncestorEquivalence =
+      normalizeProtectedMainSharedAncestorPathEquivalenceEvidence({
+        schema: "agentic-protected-main-shared-ancestor-path-equivalence/v1",
+        baseSha: lease.baseSha,
+        headSha,
+        headTreeSha,
+        protectedMainRef: "refs/remotes/origin/main",
+        protectedMainSha: protectedParentSha,
+        protectedMainTreeSha: protectedParentTreeSha,
+        sharedAncestorSha: protectedParentSha,
+        sharedAncestorTreeSha: protectedParentTreeSha,
+        exemptPathCount: sharedEntries.length,
+        exemptPathsDigest: digestValue(sharedEntries.map(entry => entry.path)),
+        entries: sharedEntries,
+      });
+    const rangeDiffDigest = digestValue({
+      schema: "agentic-repeated-expired-committed-heartbeat-range/v1",
+      predecessorRecoveryDigest: digestValue(previousRecovery),
+      predecessorHeadSha: previousRecovery.headSha,
+      protectedParentSha,
+      headSha,
+      headTreeSha,
+      authoredPaths,
+      changedPaths,
+    });
+    const recoveryEvidence = {
+      sourceEpoch: lease.epoch,
+      sourceSessionId: lease.sessionId,
+      sourceDevice: lease.device,
+      sourceScope: lease.scope,
+      sourceBranch: lease.branch,
+      sourceBaseSha: lease.baseSha,
+      sourceFenceSha: lease.fenceSha,
+      sourceRemoteHeadSha: remoteHeadSha,
+      sourceRemoteTreeSha: headTreeSha,
+      sourceRemoteChangedPathCount: changedPaths.length,
+      sourceRemoteChangedPathsDigest: digestValue(changedPaths),
+      sourceRemoteDeclaredChangedPathCount: partition.declaredChangedPaths.length,
+      sourceRemoteDeclaredChangedPathsDigest: digestValue(partition.declaredChangedPaths),
+      sourceRemoteProtectedEquivalentPathCount: partition.protectedEquivalentPaths.length,
+      sourceRemoteProtectedEquivalentPathsDigest: digestValue(partition.protectedEquivalentPaths),
+      sourceRemoteSharedAncestorEquivalence: sharedAncestorEquivalence,
+      sourceRemoteSharedAncestorEquivalenceDigest: digestValue(sharedAncestorEquivalence),
+      sourceRemoteRangeDiffDigest: rangeDiffDigest,
+      sourcePullRequestUrl: lease.pullRequestUrl,
+      sourceClaimId: lease.cloudAuthority.claimId,
+      sourceClaimDigest: lease.cloudAuthority.claimDigest,
+      sourceLedgerRevision: lease.cloudAuthority.ledgerRevision,
+      sourceClaimLedgerRevision: lease.cloudAuthority.claimLedgerRevision,
+      sourceCloudTransitionCounter: lease.cloudAuthority.transitionCounter,
+      headSha,
+      treeSha: headTreeSha,
+      changedPathCount: changedPaths.length,
+      changedPathsDigest: digestValue(changedPaths),
+      declaredChangedPathCount: partition.declaredChangedPaths.length,
+      declaredChangedPathsDigest: digestValue(partition.declaredChangedPaths),
+      protectedEquivalentPathCount: partition.protectedEquivalentPaths.length,
+      protectedEquivalentPathsDigest: digestValue(partition.protectedEquivalentPaths),
+      protectedMainEquivalence,
+      protectedMainEquivalenceDigest: digestValue(protectedMainEquivalence),
+      sourceMarkerDigest: projection.markerDigest,
+      pullRequestBodyDigest: projection.bodyDigest,
+      rangeDiffDigest,
+    };
+    const snapshot = {
+      schema: "agentic-repeated-expired-committed-heartbeat-snapshot/v1",
+      branch: targetBranch,
+      sourceLeaseDigest: digestValue(lease),
+      previousRecoveryDigest: digestValue(previousRecovery),
+      sourceMarkerDigest: projection.markerDigest,
+      pullRequestBodyDigest: projection.bodyDigest,
+      remoteHeadSha,
+      pullRequestHeadSha: projection.pullRequest.headRefOid,
+      protectedParentSha,
+      headSha,
+      treeSha: headTreeSha,
+      changedPaths,
+      authoredPaths,
+      declaredChangedPaths: partition.declaredChangedPaths,
+      protectedEquivalentPaths: partition.protectedEquivalentPaths,
+      protectedMainEquivalence,
+      rangeDiffDigest,
+    };
+    return Object.freeze({
+      ...snapshot,
+      snapshotDigest: digestValue(snapshot),
+      lease,
+      recoveryEvidence: Object.freeze(recoveryEvidence),
+    });
   }
 
   function evidence(source) {
@@ -365,6 +534,15 @@ export function createRepositoryRepeatedRecoveryAdapter(options = {}, dependenci
     if (!remote || local !== remote) fail("current protected-main observation");
   }
 
+  function isAncestor(ancestor, descendant) {
+    try {
+      git(["merge-base", "--is-ancestor", ancestor, descendant]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function readActiveIntent() {
     const matches = journalFiles().map(readJson).filter(value => (
       value?.schema === INTENT_SCHEMA
@@ -450,6 +628,10 @@ function manifest(lease) {
     declaredWriteSet: lease.admission.declaredWriteSet,
     writeSetDigest: lease.admission.writeSetDigest,
   };
+}
+
+function nulPaths(value) {
+  return [...new Set(String(value || "").split("\0").filter(Boolean))].sort();
 }
 
 function readJson(file) {

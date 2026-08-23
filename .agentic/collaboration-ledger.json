@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4419,
-  "headDigest": "587a3ef8b2813ea4ac5fb47b356b75d2a7e84ec61edd3dfee8a18dc4df29a81f",
+  "sequence": 4420,
+  "headDigest": "5c469a99d671df8fab840b205819ae725413d31b3ae399fe9062016b3b5dcf28",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -222019,6 +222019,67 @@
       },
       "claimDigest": "a15d5b0923cec7470f9122be3d35228ec3a119539be8af4f4066da1cbcaf1046",
       "digest": "587a3ef8b2813ea4ac5fb47b356b75d2a7e84ec61edd3dfee8a18dc4df29a81f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4420,
+      "parentDigest": "587a3ef8b2813ea4ac5fb47b356b75d2a7e84ec61edd3dfee8a18dc4df29a81f",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "992ad7f8f59e0af466e55e6d90b76f5ee1d070c2c70220187d655c895f901dcb",
+      "idempotencyKey": "6f8fd739b370dac003bf267b6c3025e44b6a7561dda3db69c0959f8b65c4d819",
+      "requestDigest": "1dde611bfc39048db8a232aeec03db49bf1a6793b33a5757042b7a5e382ab92e",
+      "evaluationTime": "2026-08-23T04:38:10.000Z",
+      "claimCore": {
+        "claimId": "992ad7f8f59e0af466e55e6d90b76f5ee1d070c2c70220187d655c895f901dcb",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:06977fb70b02a880555a78d690f3c7eca1ee27941fcd0e866bcc1c24b46cc7b7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:01f30bc352601dde8276eee146b2f143a613df9def249333e410e8eb70a33819",
+        "canonicalBaseRevision": "1cc534b8ff65703d107bcebb9d60a0309665f81f",
+        "declaredWriteScope": [
+          "path:todo/2026-08/knowgrph-travel-commerce-production-gate-status.md",
+          "semantic:knowgrph-travel-commerce-production-gate-status"
+        ],
+        "writeSetDigest": "c709f666ffafe0180d046743bce1c9aee3024b01462fb33ff9133e177189505c",
+        "laneRevision": "b43fe8015572e52648c4593943e89985a90acf3d",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-23T05:00:21.000Z",
+        "evidenceDigest": "c31151097fde0027e594d4438bc4119115d8583d1ab519a9ba6643bd6ee44f3e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArOitQ",
+        "predecessorClaimId": "b740c8c763aea8816727a7df1fd21e8493595b60a514d9633a0a907037dd20fa",
+        "eligibleSince": "2026-08-23T04:29:20.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-23T04:30:21.000Z",
+        "integration": {
+          "candidateRevision": "b43fe8015572e52648c4593943e89985a90acf3d",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArOitQ",
+          "focusedEvidenceDigest": "c31151097fde0027e594d4438bc4119115d8583d1ab519a9ba6643bd6ee44f3e",
+          "dependencyClosureDigest": "1aa58c7bd995c932c59d2e64d345992915172a7e70e7880d31aca25fdcb9ab61",
+          "namedChecksDigest": "32d74fb0e3632a1fbf18cb422819c3035a136b4200b4c2fd68972520c538463e",
+          "handoffEvidenceDigest": "82f4175de980fb4764aafc0aa721e3945802e3d06dcefb9c4ea619ad1741a7d7",
+          "operatorDecisionDigest": "c4425d9f696956c87d0e3f2bcc9515a57cb6703d88654a1aa6f699bebb385dba",
+          "integrationIntentDigest": "8c06de74c25a3cb770ab622b94122261bd041f8cf649334173a7fba73ff177fd",
+          "integratedAt": "2026-08-23T04:34:48.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "b43fe8015572e52648c4593943e89985a90acf3d",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABArOitQ",
+          "bytesDigest": "0111a97cddcd421d7147179e82b250c693fa53af5ba423c0350e0fdcf0ade95d",
+          "namedChecksDigest": "32d74fb0e3632a1fbf18cb422819c3035a136b4200b4c2fd68972520c538463e",
+          "handoffEvidenceDigest": "82f4175de980fb4764aafc0aa721e3945802e3d06dcefb9c4ea619ad1741a7d7",
+          "integrationReceiptDigest": "9290c1eb721a7f3d445f3a08fe4a1635e8bcd4d275c898fa296cd4b7a0f40052",
+          "retiredAt": "2026-08-23T04:38:10.000Z"
+        }
+      },
+      "claimDigest": "b08e8e78d5454dde8e1f4e15d212814c2ee71f7d8d86196c20fabe8da5522426",
+      "digest": "5c469a99d671df8fab840b205819ae725413d31b3ae399fe9062016b3b5dcf28"
     }
   ]
 }

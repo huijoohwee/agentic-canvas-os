@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4556,
-  "headDigest": "ea63a189bcff6ec027b8a30dc40b4db17fed74a619e551e324f333c80cee2b25",
+  "sequence": 4557,
+  "headDigest": "cd202790205fd0236fe461e2e538b3e94e0a85bf3956cf410de0284860521c05",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -229138,6 +229138,62 @@
       },
       "claimDigest": "ef2d7ca60cc7767309cbbaa84288482ddb4c57a8b592be3306614509a2f23675",
       "digest": "ea63a189bcff6ec027b8a30dc40b4db17fed74a619e551e324f333c80cee2b25"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4557,
+      "parentDigest": "ea63a189bcff6ec027b8a30dc40b4db17fed74a619e551e324f333c80cee2b25",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "aeedcf4a8e786eab2204fb87451c9d155549a38f9abde99c57a47298bf76b07a",
+      "idempotencyKey": "d91da786acb47388332c0ecf9f9efe272e23cc35111d652f04e8cc5df74dd552",
+      "requestDigest": "107cd3a90b3dd5cd277970abc843de46b5cb272d7d8c39e3b4634b0423d7bbed",
+      "evaluationTime": "2026-08-23T11:22:48.000Z",
+      "claimCore": {
+        "claimId": "aeedcf4a8e786eab2204fb87451c9d155549a38f9abde99c57a47298bf76b07a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:aabd2323c05a846f358aac0639eb9980eb8f848636ff9fdbf37b919649b50d6d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:810b28c05297612ccc1c65655462d8fa17881bf7235e40600c62ba004062f1f1",
+        "canonicalBaseRevision": "52a6cbe7903b4e7df7f887a0a221ba72b62b3a15",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repeated-expired-committed-heartbeat-recovery",
+          "path:__tests__/repeated-expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/REPEATED-EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-contract.mjs",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-controller.mjs",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery.mjs",
+          "semantic:repeated-expired-committed-heartbeat-recovery"
+        ],
+        "writeSetDigest": "647384b58af96bb7438bae733dd577b9a30a9e4d8406640f08e31a7a63fdf001",
+        "laneRevision": "817876cdfef37fed457327f283c243e1cb784444",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-23T12:57:59.000Z",
+        "evidenceDigest": "02052480304961ba1305a5646669b5be3339eea3e0e4a4fa1df9e0fb924072de",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAsq8fw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "817876cdfef37fed457327f283c243e1cb784444",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAsq8fw",
+          "focusedEvidenceDigest": "02052480304961ba1305a5646669b5be3339eea3e0e4a4fa1df9e0fb924072de",
+          "dependencyClosureDigest": "02084ac2e09d0d9d8f835b1482eb34ec01fd63e74f84f922688a98086f3938a2",
+          "namedChecksDigest": "3cea1b63ff776d479bc2d9ff0b32f844056f2059a1b8150ffbf20517111f4a5e",
+          "handoffEvidenceDigest": "e83ef210977457aa32fd3657d5edefa244a623b3515e2b00e426d6652dc4f192",
+          "operatorDecisionDigest": "e067e62224c4f2c158e6d7f07a76957fe0a70e4ae56ff64a8cbdcebbd3ee6b80",
+          "integrationIntentDigest": "acbf0d90fe794819c9b60f3a93bb7b5d75403c5bc6495d1bd57b3e7fada64226",
+          "integratedAt": "2026-08-23T11:22:48.000Z"
+        }
+      },
+      "claimDigest": "6d920c3c69c7bc15a20c2f5c07b221e381f2f5154b063bb8f367700016f97445",
+      "digest": "cd202790205fd0236fe461e2e538b3e94e0a85bf3956cf410de0284860521c05"
     }
   ]
 }

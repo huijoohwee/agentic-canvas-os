@@ -84,13 +84,14 @@ function observeRestored({ root, plan, git }) {
   const target = plan.evidence.target.worktreePath;
   const records = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]));
   const matches = records.filter(record => path.resolve(record.path) === target);
-  if (matches.length !== 1 || matches[0].branch !== plan.evidence.target.branch
+  if (matches.length !== 1 || (matches[0].branch ?? null) !== plan.evidence.target.branch
     || matches[0].head !== plan.evidence.target.headSha || matches[0].bare
-    || matches[0].detached || matches[0].locked || !existsSync(target)
+    || Boolean(matches[0].detached) !== (plan.evidence.target.branch === null)
+    || matches[0].locked || !existsSync(target)
     || git(target, ["status", "--porcelain=v2", "-z", "--untracked-files=all"])
     || git(target, ["rev-parse", "HEAD"]).trim() !== plan.evidence.target.headSha
     || git(target, ["rev-parse", "HEAD^{tree}"]).trim() !== plan.evidence.target.treeSha) {
-    throw new Error("Cleanup drift rollback did not restore the exact attached lane frame.");
+    throw new Error("Cleanup drift rollback did not restore the exact lane frame.");
   }
   const tree = inspectRecoverableLaneCleanupTree(target);
   const core = { schema: "agentic-recoverable-lane-cleanup-restored-drift/v1",
@@ -123,8 +124,8 @@ function captureEvidence({
   if (canonicalPath !== root) throw new Error("Cleanup must use the registered canonical main worktree.");
   const targetRecord = records.find(record => path.resolve(record.path) === target);
   if (!targetRecord) throw new Error(`Cleanup target is not a registered worktree: ${target}`);
-  if (targetRecord.bare || targetRecord.locked || targetRecord.prunable || !targetRecord.branch) {
-    throw new Error("Cleanup target must be one valid attached task worktree.");
+  if (targetRecord.bare || targetRecord.locked || targetRecord.prunable) {
+    throw new Error("Cleanup target must be one valid task worktree.");
   }
   if (realDirectory(targetRecord.path, "target worktree") !== target) {
     throw new Error("Cleanup target realpath differs from the requested path.");
@@ -151,13 +152,14 @@ function captureEvidence({
   if (operationMarkers.length) throw new Error(
     `Cleanup target has in-progress Git state: ${operationMarkers.join(", ")}`,
   );
-  const branch = git(target, ["symbolic-ref", "--quiet", "HEAD"]).trim();
-  if (!branch.startsWith("refs/heads/") || branch === "refs/heads/main") {
-    throw new Error("Cleanup target must own an attached non-main branch.");
+  const branch = targetRecord.branch ?? null;
+  if (branch !== null && (!branch.startsWith("refs/heads/") || branch === "refs/heads/main")) {
+    throw new Error("Cleanup target branch must be one exact non-main ref.");
   }
   const headSha = exactSha(git(target, ["rev-parse", "HEAD"]).trim(), "target HEAD");
   const treeSha = exactSha(git(target, ["rev-parse", "HEAD^{tree}"]).trim(), "target tree");
-  const branchHeadSha = exactSha(git(root, ["rev-parse", branch]).trim(), "target branch HEAD");
+  const branchHeadSha = branch === null ? null
+    : exactSha(git(root, ["rev-parse", branch]).trim(), "target branch HEAD");
   const gitDir = realDirectory(resolveGitPath(
     target, git(target, ["rev-parse", "--git-dir"]).trim(),
   ), "target Git directory");
@@ -179,8 +181,13 @@ function captureEvidence({
       : ["released", "completed"].includes(leaseStatus)
         ? "released-terminal" : "nonterminal";
   const registry = leaseStore.readRegistry();
-  const registryBranch = branch.replace(/^refs\/heads\//u, "");
-  const priorLease = registry.leases?.[registryBranch] ?? null;
+  const detachedLeases = branch === null ? Object.values(registry.leases || {})
+    .filter(candidate => path.resolve(candidate?.worktreePath || "") === target) : [];
+  if (detachedLeases.length) {
+    throw new Error("Detached cleanup target must have no writer-lease projection.");
+  }
+  const registryBranch = branch === null ? null : branch.replace(/^refs\/heads\//u, "");
+  const priorLease = registryBranch === null ? null : registry.leases?.[registryBranch] ?? null;
   const preservationReceiptDigests = readPreservationReceipts({
     commonDir, lease, target, branch, headSha, treeSha, normalizeDormantIntent,
   });
@@ -220,7 +227,7 @@ function captureEvidence({
       }),
     },
     authority: { ...authorityCore, authorityDigest: digestValue(authorityCore) },
-    remoteBranch: { ref: branch, sha: remoteSha(root, branch, git) },
+    remoteBranch: { ref: branch, sha: branch === null ? null : remoteSha(root, branch, git) },
   };
   return Object.freeze({ ...core, evidenceDigest: digestValue(core) });
 }
@@ -262,11 +269,14 @@ function ensureBundle({ root, recovery, plan, git }) {
   if (!existsSync(recovery)) throw new Error("Cleanup intent must exist before bundle creation.");
   const bundlePath = plan.recovery.bundlePath;
   if (!existsSync(bundlePath)) {
-    const branchHead = exactSha(git(root, ["rev-parse", plan.evidence.target.branch]).trim(), "bundle source branch");
-    if (branchHead !== plan.evidence.target.headSha) throw new Error("Cleanup branch drifted before bundling.");
+    const bundleRef = plan.evidence.target.branch ?? "HEAD";
+    const bundleRoot = plan.evidence.target.branch === null
+      ? plan.evidence.target.worktreePath : root;
+    const branchHead = exactSha(git(bundleRoot, ["rev-parse", bundleRef]).trim(), "bundle source ref");
+    if (branchHead !== plan.evidence.target.headSha) throw new Error("Cleanup source ref drifted before bundling.");
     const temporary = `${bundlePath}.tmp-${process.pid}-${process.hrtime.bigint()}`;
     try {
-      git(root, ["bundle", "create", temporary, plan.evidence.target.branch]);
+      git(bundleRoot, ["bundle", "create", temporary, bundleRef]);
       verifyBundleAtPath({ root, plan, bundlePath: temporary, reportedPath: bundlePath, git });
       renameSync(temporary, bundlePath);
     } finally { if (existsSync(temporary)) unlinkSync(temporary); }
@@ -293,8 +303,9 @@ function verifyBundleAtPath({ root, plan, bundlePath, reportedPath, bundle, git 
     throw new Error("Cleanup recovery bundle is not complete history.");
   }
   const heads = git(root, ["bundle", "list-heads", bundlePath]).trim().split(/\r?\n/u);
-  if (!heads.includes(`${plan.evidence.target.headSha} ${plan.evidence.target.branch}`)) {
-    throw new Error("Cleanup bundle does not preserve the exact branch head.");
+  const expectedHeadRef = plan.evidence.target.branch ?? "HEAD";
+  if (!heads.includes(`${plan.evidence.target.headSha} ${expectedHeadRef}`)) {
+    throw new Error("Cleanup bundle does not preserve the exact source head.");
   }
   const isolated = mkdtempSync(path.join(os.tmpdir(), "acos-cleanup-bundle-"));
   try {
@@ -309,7 +320,7 @@ function verifyBundleAtPath({ root, plan, bundlePath, reportedPath, bundle, git 
     sizeBytes: bytes.length,
     headSha: plan.evidence.target.headSha,
     treeSha: plan.evidence.target.treeSha,
-    headRef: plan.evidence.target.branch,
+    headRef: expectedHeadRef,
     complete: true,
   };
   if (bundle && digestValue(bundle) !== digestValue(result)) throw new Error("Cleanup bundle drifted.");
@@ -318,7 +329,7 @@ function verifyBundleAtPath({ root, plan, bundlePath, reportedPath, bundle, git 
 
 function observeFinal({ root, plan, git, leaseStore, store }) {
   const state = store.inspectState(plan);
-  const branch = plan.evidence.target.branch.replace(/^refs\/heads\//u, "");
+  const branch = cleanupReservationBranch(plan);
   const current = leaseStore.readRegistry().leases?.[branch] ?? null;
   return Object.freeze({
     targetRegistered: state.targetRegistered,
@@ -335,9 +346,17 @@ function observeFinal({ root, plan, git, leaseStore, store }) {
     priorLeaseRestored: (current === null ? null : digestValue(current))
       === plan.evidence.authority.priorLeaseDigest,
     canonicalHeadSha: exactSha(git(root, ["rev-parse", "HEAD"]).trim(), "final canonical HEAD"),
-    branchHeadSha: exactSha(git(root, ["rev-parse", plan.evidence.target.branch]).trim(), "final branch HEAD"),
-    remoteBranchSha: remoteSha(root, plan.evidence.target.branch, git),
+    branchHeadSha: plan.evidence.target.branch === null ? null
+      : exactSha(git(root, ["rev-parse", plan.evidence.target.branch]).trim(), "final branch HEAD"),
+    remoteBranchSha: plan.evidence.target.branch === null
+      ? null : remoteSha(root, plan.evidence.target.branch, git),
   });
+}
+
+function cleanupReservationBranch(plan) {
+  return plan.evidence.target.branch === null
+    ? `agent/recoverable-cleanup/detached-${plan.subjectKey.slice(0, 16)}`
+    : plan.evidence.target.branch.replace(/^refs\/heads\//u, "");
 }
 
 function discoverPreservationReceiptDigests({

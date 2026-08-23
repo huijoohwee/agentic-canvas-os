@@ -36,8 +36,15 @@ export function normalizeRecoverableLaneCleanupEvidence(value) {
     || core.canonical.headSha !== core.canonical.remoteMainSha) {
     throw new Error("Recoverable cleanup requires exact canonical origin/main parity.");
   }
-  if (core.target.headSha !== core.target.branchHeadSha) {
+  if (core.target.branch !== null && core.target.headSha !== core.target.branchHeadSha) {
     throw new Error("Cleanup target branch and worktree HEAD must be identical.");
+  }
+  if (core.target.branch === null && (core.target.branchHeadSha !== null
+    || core.remoteBranch.ref !== null || core.remoteBranch.sha !== null
+    || core.authority.priorLease !== null
+    || core.authority.preservationReceiptDigests.length === 0
+    || core.authority.remoteAuthority.targetClaims.length > 0)) {
+    throw new Error("Detached cleanup requires ref-less terminal authority and exact preservation receipts.");
   }
   if (!core.target.clean || core.target.unmergedEntries
     || core.target.operationMarkers.length) {
@@ -92,9 +99,10 @@ function normalizeTarget(value, schema) {
   exactObject(value, "Target evidence", keys);
   const target = {
     worktreePath: absolutePath(value.worktreePath, "target worktree"),
-    branch: requiredBranch(value.branch),
+    branch: value.branch === null ? null : requiredBranch(value.branch),
     headSha: requiredSha(value.headSha, "target HEAD"),
-    branchHeadSha: requiredSha(value.branchHeadSha, "target branch HEAD"),
+    branchHeadSha: value.branchHeadSha === null
+      ? null : requiredSha(value.branchHeadSha, "target branch HEAD"),
     treeSha: requiredSha(value.treeSha, "target tree"),
     worktreeGenerationDigest: requiredDigest(value.worktreeGenerationDigest, "worktree generation"),
     gitDir: absolutePath(value.gitDir, "target Git directory"),
@@ -170,7 +178,7 @@ function normalizeRemoteAuthority(value) {
 }
 function normalizeRemoteBranch(value) {
   exactObject(value, "Remote branch evidence", ["ref", "sha"]);
-  return { ref: requiredBranch(value.ref),
+  return { ref: value.ref === null ? null : requiredBranch(value.ref),
     sha: value.sha === null ? null : requiredSha(value.sha, "remote branch SHA") };
 }
 

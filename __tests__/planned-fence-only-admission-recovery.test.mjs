@@ -21,6 +21,7 @@ import { createPlannedFenceOnlyAdmissionRecoveryStore }
   from "../scripts/planned-fence-only-admission-recovery-store.mjs";
 import {
   assertPlannedFenceOnlyRecoveryReplay,
+  plannedFenceOnlyLocalProjectionMatches,
   projectPlannedFenceOnlyRecoveryLease,
   visibleReviewBodyDigest,
 } from "../scripts/planned-fence-only-admission-recovery-repository-adapter.mjs";
@@ -385,6 +386,20 @@ test("replay permits only a disjoint descendant canonical advance", () => {
   assert.throws(() => assertPlannedFenceOnlyRecoveryReplay({
     sealed: plan.evidence, current: foreign, isAncestor: () => true, stage: "replay",
   }), /source drifted/u);
+});
+
+test("local replay ignores only unrelated worktree registry movement", () => {
+  const { plan } = fixture();
+  const expected = plan.evidence.localProjection;
+  assert.equal(plannedFenceOnlyLocalProjectionMatches(expected, {
+    ...expected, registrationDigest: D("later-registry"),
+  }), true);
+  assert.equal(plannedFenceOnlyLocalProjectionMatches(expected, {
+    ...expected, targetObservationDigest: D("foreign-target"),
+  }), false);
+  assert.equal(plannedFenceOnlyLocalProjectionMatches(expected, {
+    ...expected, headSha: S("9"),
+  }), false);
 });
 
 test("raw GitHub review identities normalize only for the repository adapter", () => {

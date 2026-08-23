@@ -120,9 +120,11 @@ boundary. A journal may also re-observe a later fetched canonical revision only
 when the sealed canonical head is its ancestor, the lease base and base tree
 remain exact, and every path touched since that base remains disjoint from the
 sealed manifest. This allowance neither rewrites the plan nor broadens its
-authorization. A non-descendant, overlapping canonical advance, or any claim,
-lease, fence, manifest, task-binding, local-projection, or review-identity drift
-stops the run.
+authorization. An unrelated worktree may enter or leave the shared registry;
+the target registration, owner counts, branch, head, tree, cleanliness, and
+target-observation digest remain exact. A non-descendant or overlapping
+canonical advance, or any claim, lease, fence, manifest, task-binding,
+local-projection, or review-identity drift stops the run.
 
 ## CLI
 

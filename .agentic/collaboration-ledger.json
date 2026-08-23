@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4579,
-  "headDigest": "88fdf0224c9234793e26607dc0dbcb0411ff063a4b51511d5d0cb1e93a1e7e94",
+  "sequence": 4580,
+  "headDigest": "555227628cad819330490f07ae3dd41fe8be53bf020b9af75b95bdc086ffc78f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -230596,6 +230596,71 @@
       },
       "claimDigest": "09e7a1e737628c6199a1a440d01e88c6994546d5853e4047c93efe28a3a5c189",
       "digest": "88fdf0224c9234793e26607dc0dbcb0411ff063a4b51511d5d0cb1e93a1e7e94"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4580,
+      "parentDigest": "88fdf0224c9234793e26607dc0dbcb0411ff063a4b51511d5d0cb1e93a1e7e94",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "90b03ec910fe241dc6fddf76b14d055c1fddabca69da4ccc6db90528062e6b29",
+      "idempotencyKey": "55e02cce6720470ea06ec2619a2329b756ebcb62bb539cbf2a81c56648da8f7e",
+      "requestDigest": "c90ba356cd13b29ddd11ad0a6e6e8dcbb7c68bdeffe7935ac0b8c2a97ebd40b3",
+      "evaluationTime": "2026-08-23T12:20:43.000Z",
+      "claimCore": {
+        "claimId": "90b03ec910fe241dc6fddf76b14d055c1fddabca69da4ccc6db90528062e6b29",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f135d8f400e59e03825514ec339db6a7056ac99d175fa827731363146d7a6bd7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f6617462a15937178f4cc339ae1659db8ae29b1bb8714cebc5a831d7769eff55",
+        "canonicalBaseRevision": "ef8d34c5afa23357f139a8505e7548e5c6289415",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repeated-heartbeat-bind-recovery/design.md",
+          "path:.kiro/specs/repeated-heartbeat-bind-recovery/requirements.md",
+          "path:.kiro/specs/repeated-heartbeat-bind-recovery/tasks.md",
+          "path:__tests__/repeated-expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/REPEATED-EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+          "semantic:repeated-heartbeat-bind-recovery"
+        ],
+        "writeSetDigest": "b9cbeb8f73a900c84c30262354909d73a978823d4ee1e26b50f1032b0fa48250",
+        "laneRevision": "3d53551ee4e32ec039e5623379c16d64708ac494",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-23T13:46:16.000Z",
+        "evidenceDigest": "b2750179dde496b4497a148bc2f9421b5105daacfe2599d0434830bded7f6d5a",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAszFVA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "3d53551ee4e32ec039e5623379c16d64708ac494",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAszFVA",
+          "focusedEvidenceDigest": "b2750179dde496b4497a148bc2f9421b5105daacfe2599d0434830bded7f6d5a",
+          "dependencyClosureDigest": "0ef3203e43da08496fb8e17c0134e7975683e31d515161feee12c5a1c3af97f7",
+          "namedChecksDigest": "e0fb7e10aa435bebf12d87787b607ee0a950513c97b0fdc47671a69503aff9b0",
+          "handoffEvidenceDigest": "ec2800b1a2e7376b667411de0c3cb7bd7ab385140c83b74cc34e47ccb7c068aa",
+          "operatorDecisionDigest": "acd1fc59a4d0c37a2e291f3494390d4747c0ac4e895d889727cce2a2bcdf223a",
+          "integrationIntentDigest": "2b52b87654ac7704ae1e93c7031f28a55caad7db2079e884ebbb93e9b5fa92f1",
+          "integratedAt": "2026-08-23T12:05:33.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "3d53551ee4e32ec039e5623379c16d64708ac494",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAszFVA",
+          "bytesDigest": "c32001465863114d4d26d38de63166b0d5e4b35ed0ca671d6837939ddef71104",
+          "namedChecksDigest": "e0fb7e10aa435bebf12d87787b607ee0a950513c97b0fdc47671a69503aff9b0",
+          "handoffEvidenceDigest": "ec2800b1a2e7376b667411de0c3cb7bd7ab385140c83b74cc34e47ccb7c068aa",
+          "integrationReceiptDigest": "1473fec5b0bd73d0a8c98cd03f14d96a0560feddfdb302485079a108b7688aa4",
+          "retiredAt": "2026-08-23T12:20:43.000Z"
+        }
+      },
+      "claimDigest": "3e70a977189728fafaa68ca71b4934e3185141cea761590448a83e1daa529214",
+      "digest": "555227628cad819330490f07ae3dd41fe8be53bf020b9af75b95bdc086ffc78f"
     }
   ]
 }

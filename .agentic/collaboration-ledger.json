@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4592,
-  "headDigest": "b648263c38ef4b3442bc48314147e740272f188de6687c5dba6847ea7af4ef11",
+  "sequence": 4593,
+  "headDigest": "48f49fc587c7a0a5ff52a5d037bfc7b9274f3d598ed4ceace9fe457fa36492c1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -231380,6 +231380,50 @@
       },
       "claimDigest": "4431e6109efdfe1c7882566ad4ac9070f303764684ca56dc3e2660691918c610",
       "digest": "b648263c38ef4b3442bc48314147e740272f188de6687c5dba6847ea7af4ef11"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4593,
+      "parentDigest": "b648263c38ef4b3442bc48314147e740272f188de6687c5dba6847ea7af4ef11",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "74da005eb7265b3cf14521286aae0fbfc3a855c5b16986dc72d435d75ea2a9e2",
+      "idempotencyKey": "3c1412266a14cf1f2fc7dae9535e2af3af1f1a395b142bbcfde05a623e642792",
+      "requestDigest": "4b635aee017434b8303965e6e1ee69bef766720e895222f87b9f3e5eccc3fbe2",
+      "evaluationTime": "2026-08-23T12:57:18.000Z",
+      "claimCore": {
+        "claimId": "74da005eb7265b3cf14521286aae0fbfc3a855c5b16986dc72d435d75ea2a9e2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:7bcccb9e1694e4e29bfd5c38ab304f946e5e002c5a7de7c4b14e9fc719e6d81c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c937cb557bb675cf26dbcc092f72b7f3e70dc61eea315220fb81ee5626b15eec",
+        "canonicalBaseRevision": "a66470469204862ba2a8e00f42e290611edfde2a",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repeated-successor-fence-recovery/design.md",
+          "path:.kiro/specs/repeated-successor-fence-recovery/requirements.md",
+          "path:.kiro/specs/repeated-successor-fence-recovery/tasks.md",
+          "path:__tests__/repeated-expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/REPEATED-EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+          "semantic:repeated-successor-fence-recovery"
+        ],
+        "writeSetDigest": "59702d9be06075c1cbf85904f5f3bda086f25617fff272b45dad7385cbf36b4a",
+        "laneRevision": "a66470469204862ba2a8e00f42e290611edfde2a",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-23T14:57:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "46364de80bbc9e9671ddeccd7274cb0edacb8eb15efbc76b194b7c90d6b22677",
+      "digest": "48f49fc587c7a0a5ff52a5d037bfc7b9274f3d598ed4ceace9fe457fa36492c1"
     }
   ]
 }

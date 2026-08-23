@@ -29,6 +29,12 @@ The controller does not grant authoring or mutation authority. After its
 receipt, the repository-owned dormant-preservation admission must be planned
 and exactly authorized again before source work begins.
 
+The ordinary planned-review recovery joins a recovered cloud owner subject to
+the lease through the same provider normalization boundary. A raw local device
+or session label and its exact `device:` or `session:` pseudonymous subject are
+equivalent only for that label; any other raw or opaque owner still fails
+closed.
+
 ## Source conditions
 
 Planning succeeds only when all of these conditions hold:

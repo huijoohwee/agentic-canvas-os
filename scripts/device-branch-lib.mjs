@@ -14,6 +14,7 @@ import {
   createDeviceDeliveryEvidence,
 } from "./device-delivery-evidence.mjs";
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
   claimLegacyReviewAdmissionCloudAuthority,
@@ -1170,8 +1171,8 @@ function maybeRecoverPlannedReviewAdmission({
   if (
     reconciled.authority?.state !== "active"
     || reconciled.authority.laneRevision !== headSha
-    || reconciled.authority.deviceId !== lease.device
-    || reconciled.authority.sessionId !== sessionId
+    || !ownerSubjectMatches("device", reconciled.authority.deviceId, lease.device)
+    || !ownerSubjectMatches("session", reconciled.authority.sessionId, sessionId)
     || !reconciled.authority.reviewRequestId
   ) {
     throw new Error(
@@ -1540,6 +1541,18 @@ function hasExpired(value) {
   return !Number.isFinite(instant) || instant <= Date.now();
 }
 
+function ownerSubjectMatches(namespace, projected, raw) {
+  return projected === raw || projected === pseudonymousIdentifier(namespace, raw);
+}
+
+function projectLocalOwnerLabels(authority, lease) {
+  if (!ownerSubjectMatches("device", authority?.deviceId, lease.device)
+    || !ownerSubjectMatches("session", authority?.sessionId, lease.sessionId)) {
+    throw new Error("Cloud authority owner does not match the exact local lease.");
+  }
+  return { ...authority, deviceId: lease.device, sessionId: lease.sessionId };
+}
+
 function requireCloudReviewAdapter(adapter, label) {
   if (typeof adapter !== "function") {
     throw new Error(`Cloud-authoritative review requires its repository ${label}.`);
@@ -1569,13 +1582,14 @@ function acceptReviewCloudReconciliation({
     );
   }
   if (laneRevision === lease.fenceSha) {
-      if (reconciled.authority.reviewRequestId) {
-        assertAdmissionMutationAuthority({
-          lease: { ...lease, cloudAuthority: reconciled.authority },
-          cloudAuthority: reconciled.authority,
-          remoteAuthorityVerification: reconciled.verification,
-        });
-      }
+    if (reconciled.authority.reviewRequestId) {
+      const localAuthority = projectLocalOwnerLabels(reconciled.authority, lease);
+      assertAdmissionMutationAuthority({
+        lease: { ...lease, cloudAuthority: localAuthority },
+        cloudAuthority: localAuthority,
+        remoteAuthorityVerification: reconciled.verification,
+      });
+    }
   }
   return {
     lease: leaseStore.annotate({

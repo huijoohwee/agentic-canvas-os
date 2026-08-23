@@ -8,12 +8,33 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workflowPath = path.join(repositoryRoot, ".github", "workflows", "ci.yml");
+const protectedRefreshAdapterPath = path.join(
+  repositoryRoot,
+  "scripts",
+  "protected-head-refresh-github-adapter.mjs",
+);
 const headSha = "a".repeat(40);
 const mainSha = "b".repeat(40);
 const operationId = "c".repeat(64);
 const workflowBlob = "d".repeat(40);
 
 const workflow = await readFile(workflowPath, "utf8");
+const protectedRefreshAdapter = await readFile(protectedRefreshAdapterPath, "utf8");
+
+test("protected refresh verifies the repository-policy workflow bytes", () => {
+  assert.match(
+    protectedRefreshAdapter,
+    /const policy = readProtectedHeadRefreshRepositoryPolicy\(\{ environment \}\);/u,
+  );
+  assert.match(
+    protectedRefreshAdapter,
+    /const workflowPath = `\.github\/workflows\/\$\{policy\.ciWorkflow\}`;/u,
+  );
+  assert.doesNotMatch(
+    protectedRefreshAdapter,
+    /const workflowPath = ["']\.github\/workflows\/ci\.yml["'];/u,
+  );
+});
 
 function jobSource(jobId) {
   const start = workflow.indexOf(`\n  ${jobId}:`);

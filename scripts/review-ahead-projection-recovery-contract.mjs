@@ -28,6 +28,7 @@ export function createReviewAheadPlan(evidence, { now = new Date() } = {}) {
   if (normalized.pullRequestState !== "OPEN" || normalized.pullRequestDraft) {
     findings.push("pull-request-not-open-reviewed");
   }
+  if (normalized.pullRequestAutoMergeArmed) findings.push("pull-request-auto-merge-armed");
   if (normalized.reviewHeadSha !== normalized.authorityLaneRevision) {
     findings.push("review-head-authority-drift");
   }
@@ -113,6 +114,7 @@ function normalizeEvidence(source) {
     pullRequestAuthorLogin: requiredText(source.pullRequestAuthorLogin, "pull request author"),
     pullRequestState: requiredText(source.pullRequestState, "pull request state"),
     pullRequestDraft: source.pullRequestDraft === true,
+    pullRequestAutoMergeArmed: source.pullRequestAutoMergeArmed === true,
     leaseStatus: requiredText(source.leaseStatus, "lease status"),
     localExpiresAt: requiredDate(source.localExpiresAt, "local expiry"),
     localAuthorityState: requiredText(source.localAuthorityState, "local authority state"),

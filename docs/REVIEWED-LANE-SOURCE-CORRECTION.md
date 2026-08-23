@@ -156,6 +156,14 @@ authorization inside the same fence. This prevents stale branch-keyed completion
 from masking a later same-lane source-correction cycle while preserving terminal
 replay for the original plan.
 
+A `prepared` journal may be superseded by a different freshly authorized plan
+only inside that same fence and only after live reconciliation proves the old
+plan has no response-ahead `successor_waiting` claim. The prepared journal is
+otherwise immutable: any observed successor or any later phase requires the
+original authorization and its normal replay path. This admits protected-main
+evidence refresh before the first effect without treating a lost first-effect
+response as zero effect.
+
 ## Evidence boundary
 
 Focused tests prove exact authorization, strict identity joins, path redaction,

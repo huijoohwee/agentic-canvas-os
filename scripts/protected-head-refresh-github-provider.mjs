@@ -400,7 +400,14 @@ export function createProtectedHeadRefreshGithubProvider({
       }
       ids.push(Number(check.id));
     }
-    const expected = [...ids, cloudCheckRunId];
+    // GitHub can omit an in-progress, controller-created check from the
+    // GraphQL status rollup even while the exact check remains observable via
+    // Checks REST. completeCloudCheck already reread and validated that sole
+    // pending gate by ID, candidate, app, external ID, and evidence bytes.
+    // The rollup convergence fence therefore applies to the successful CI
+    // projections that it was created to publish, not to the still-pending
+    // gate whose completion remains the final mutation.
+    const expected = ids;
     const [owner, name] = repository.split("/");
     const query = "query($owner:String!,$name:String!,$oid:GitObjectID!){repository(owner:$owner,name:$name){object(oid:$oid){... on Commit{statusCheckRollup{contexts(first:100){totalCount nodes{__typename ... on CheckRun{databaseId}}}}}}}}";
     for (let attempt = 0; attempt < 12; attempt += 1) {

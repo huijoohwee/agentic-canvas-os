@@ -56,9 +56,12 @@ accepts only the requested URL or that exact repository-and-check-run binding.
 
 Before completing the sole operation-owned `cloud-collaboration` gate, the
 controller queries the candidate's GraphQL status-check rollup and requires the
-exact projected check-run IDs plus the still-pending cloud gate to be visible.
-The cloud gate remains the last success mutation. Interrupted execution is
-idempotent: exact projections are reused; drift is rejected.
+exact projected CI check-run IDs to be visible. GitHub may omit the
+controller-created gate from that rollup while it is still in progress, so the
+gate is fenced separately through its exact Checks REST identity: sole ID,
+candidate SHA, Actions app, operation external ID, pending state, and evidence
+bytes. The cloud gate remains the last success mutation. Interrupted execution
+is idempotent: exact projections are reused; drift is rejected.
 
 The same serialized controller call may observe GitHub merge the candidate and
 remove the just-completed gate before its next pull-request read. That call may

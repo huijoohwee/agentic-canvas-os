@@ -22,9 +22,10 @@ publish_policy: "protected review required; no deployment or authoring authority
 This controller covers one narrow response-loss state. A completed
 reviewed-lane-source-correction transaction has activated a same-owner cloud
 successor, but the writer lease still carries the predecessor-bound task
-authority. The source lane is clean, its local candidate is ahead of the
-unchanged remote and draft pull request, and the provider marker retains the
-same predecessor binding.
+authority. The source lane is clean. Its local candidate either equals the
+unchanged remote and draft pull-request head or is a Git descendant of that
+head, and the provider marker retains the same predecessor binding. A differing
+local head without the exact remote ancestry proof is rejected.
 
 Planning seals the registered worktree, local and remote heads, pull-request
 body and marker, complete source-correction receipt, source lease digest,

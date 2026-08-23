@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4600,
-  "headDigest": "636a1529b411aa451459471f08dad4a1d41bb6d4737a81adfd606adbc0e9dbd6",
+  "sequence": 4601,
+  "headDigest": "36dfe59aa2956abef54023e1c31a50ef9d2a0b2263528ea2ef22ec23fe726184",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -231759,6 +231759,71 @@
       },
       "claimDigest": "10cd24d99fbc1f08244833b4bac2afa8df358d4b628cd1b4e4514b5d7094a700",
       "digest": "636a1529b411aa451459471f08dad4a1d41bb6d4737a81adfd606adbc0e9dbd6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4601,
+      "parentDigest": "636a1529b411aa451459471f08dad4a1d41bb6d4737a81adfd606adbc0e9dbd6",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "74da005eb7265b3cf14521286aae0fbfc3a855c5b16986dc72d435d75ea2a9e2",
+      "idempotencyKey": "f16ae2f70a578130342d4d479925d8a98e088292d6ceb1d3c7ef500509972130",
+      "requestDigest": "ec31e10b7dcc28a288b82db9df43494f82d253785a1c36d7f6698f0421a59d32",
+      "evaluationTime": "2026-08-23T13:13:13.000Z",
+      "claimCore": {
+        "claimId": "74da005eb7265b3cf14521286aae0fbfc3a855c5b16986dc72d435d75ea2a9e2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:7bcccb9e1694e4e29bfd5c38ab304f946e5e002c5a7de7c4b14e9fc719e6d81c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c937cb557bb675cf26dbcc092f72b7f3e70dc61eea315220fb81ee5626b15eec",
+        "canonicalBaseRevision": "a66470469204862ba2a8e00f42e290611edfde2a",
+        "declaredWriteScope": [
+          "path:.kiro/specs/repeated-successor-fence-recovery/design.md",
+          "path:.kiro/specs/repeated-successor-fence-recovery/requirements.md",
+          "path:.kiro/specs/repeated-successor-fence-recovery/tasks.md",
+          "path:__tests__/repeated-expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/REPEATED-EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/repeated-expired-committed-heartbeat-recovery-repository-adapter.mjs",
+          "semantic:repeated-successor-fence-recovery"
+        ],
+        "writeSetDigest": "59702d9be06075c1cbf85904f5f3bda086f25617fff272b45dad7385cbf36b4a",
+        "laneRevision": "df653d79e810ace12d71405e45512d288ec2a4a8",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 1,
+        "state": "retired",
+        "expiresAt": "2026-08-23T15:00:43.000Z",
+        "evidenceDigest": "87f08f62c2bf8dd28586511d73cdee71ab0a631b623f1029813133fd7ed93006",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAs_X3g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "df653d79e810ace12d71405e45512d288ec2a4a8",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAs_X3g",
+          "focusedEvidenceDigest": "87f08f62c2bf8dd28586511d73cdee71ab0a631b623f1029813133fd7ed93006",
+          "dependencyClosureDigest": "02d1a98ad00c9df4c6829de61e5c40083bb699115d92058f4bddb9a9fa552a06",
+          "namedChecksDigest": "59742ec5ebf6c559382ad0ff9c8abef84b7ec11b1361b861725399a1551a7207",
+          "handoffEvidenceDigest": "bf03c9f9e64044628715d578968171179eb49dfabc7fb817a27aae49f57e9d58",
+          "operatorDecisionDigest": "04023e487b341920a59c221ee9628029233f5694b0baf0900f9f9a2f47181139",
+          "integrationIntentDigest": "2c373cb306637fcdca55c72a4bcd97f26be781f5326f9214cc98f07da3c58dc9",
+          "integratedAt": "2026-08-23T13:07:27.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "df653d79e810ace12d71405e45512d288ec2a4a8",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAs_X3g",
+          "bytesDigest": "e02e0750b5a2a25b139db4c0b00674d30ababbb71f142c367a772c8da7f2eaa4",
+          "namedChecksDigest": "59742ec5ebf6c559382ad0ff9c8abef84b7ec11b1361b861725399a1551a7207",
+          "handoffEvidenceDigest": "bf03c9f9e64044628715d578968171179eb49dfabc7fb817a27aae49f57e9d58",
+          "integrationReceiptDigest": "aff36503b2c7fccfad2716b89390ac4c7c07205ba7ad08b03714b8b9968ec57b",
+          "retiredAt": "2026-08-23T13:13:13.000Z"
+        }
+      },
+      "claimDigest": "ebe82e74c79730c723aee7a22d8cea8a170c38c77d30907eda49cda7f85c281b",
+      "digest": "36dfe59aa2956abef54023e1c31a50ef9d2a0b2263528ea2ef22ec23fe726184"
     }
   ]
 }

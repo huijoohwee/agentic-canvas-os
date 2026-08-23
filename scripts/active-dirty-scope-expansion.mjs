@@ -28,6 +28,7 @@ try {
   const adapter = createRepositoryActiveDirtyScopeExpansionAdapter({
     sourceRepository,
     sessionId,
+    targetManifest,
     ttlSeconds,
   });
   const state = await adapter.readState();
@@ -37,6 +38,7 @@ try {
       source: state.source,
       targetManifest,
       targetCanonicalBaseSha: state.targetCanonicalBaseSha,
+      canonicalDescendantProof: state.canonicalDescendantProof,
     });
   if (plan.targetManifestDigest !== targetManifest.manifestDigest
     || plan.targetWriteSetDigest !== targetManifest.writeSetDigest) {

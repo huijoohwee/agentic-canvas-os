@@ -60,9 +60,9 @@ export function createPlannedFenceOnlyAdmissionRecoveryRepositoryAdapter(options
   function assertSource(plan, stage) {
     const sealed = normalizePlannedFenceOnlyAdmissionRecoveryPlan(plan);
     const current = captureSource().evidence;
-    if (canonicalJson(stableEvidence(current)) !== canonicalJson(stableEvidence(sealed.evidence))) {
-      throw new Error(`Planned fence-only recovery source drifted at ${stage}.`);
-    }
+    assertPlannedFenceOnlyRecoveryReplay({
+      sealed: sealed.evidence, current, isAncestor: ancestry, stage,
+    });
     const expectedLocal = sealed.evidence.localProjection;
     const currentLocal = current.localProjection;
     const restoredExternalLoss = expectedLocal.mode === "externally-lost"
@@ -353,8 +353,9 @@ export function createPlannedFenceOnlyAdmissionRecoveryRepositoryAdapter(options
     const canonicalStatus = git(repository, ["status", "--porcelain=v1", "--untracked-files=all"]);
     const canonicalHead = git(repository, ["rev-parse", "HEAD"]);
     const canonicalRemote = remoteHead(repository, "refs/heads/main");
-    const advancePaths = git(repository, ["diff", "--name-only", lease.baseSha, canonicalHead])
-      .split(/\r?\n/u).filter(Boolean).sort();
+    const advancePaths = [...new Set(git(repository,
+      ["log", "--format=", "--name-only", `${lease.baseSha}..${canonicalHead}`])
+      .split(/\r?\n/u).filter(Boolean))].sort();
     const reviewValue = readReview(lease);
     const marker = parseWriterLeasePullRequestBody(reviewValue.body);
     const repositoryId = requiredText(gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]),
@@ -484,11 +485,10 @@ export function createPlannedFenceOnlyAdmissionRecoveryRepositoryAdapter(options
     const expected = plan.evidence;
     if (canonicalJson(frame.repository) !== canonicalJson(expected.repository)
       || canonicalJson(frame.fence) !== canonicalJson(expected.fence)
-      || canonicalJson(frame.canonical) !== canonicalJson(expected.canonical)
-      || canonicalJson(frame.protectedMainAdvance) !== canonicalJson(expected.protectedMainAdvance)
       || canonicalJson(stableReview(frame.review)) !== canonicalJson(stableReview(expected.review))) {
       throw new Error("Recovery Git or review identity drifted from the sealed plan.");
     }
+    assertProtectedMainReplay(expected, frame, ancestry, "local-frame-verification");
     if (frame.localProjection.mode !== "attached"
       || frame.localProjection.headSha !== expected.localProjection.headSha) {
       throw new Error("Recovery local projection is not restored at the sealed fence.");
@@ -552,7 +552,33 @@ function expectedTargetLease(plan, intent) {
 }
 function requireTargetLease(current, expected) { if (!current || writerLeaseDigest(current) !== writerLeaseDigest(expected)) throw new Error("Recovered writer lease drifted from its exact target projection."); return current; }
 function leaseProjectionValues(lease, receipt, disposition) { return Object.freeze({ leaseDigest: writerLeaseDigest(lease), recoveryReceiptDigest: receipt.receiptDigest, heartbeatAt: lease.heartbeatAt, expiresAt: lease.expiresAt, disposition }); }
-function stableEvidence(value) { const copy = structuredClone(value); delete copy.observedAt; delete copy.evidenceDigest; delete copy.localProjection; delete copy.localProjectionDigest; delete copy.cloud.ledgerRevision; delete copy.cloud.ledgerDigest; delete copy.cloud.inventoryDigest; return copy; }
+export function assertPlannedFenceOnlyRecoveryReplay({ sealed, current, isAncestor, stage }) {
+  if (canonicalJson(stableEvidence(current)) !== canonicalJson(stableEvidence(sealed))) {
+    throw new Error(`Planned fence-only recovery source drifted at ${stage}.`);
+  }
+  assertProtectedMainReplay(sealed, current, isAncestor, stage);
+}
+function assertProtectedMainReplay(sealed, current, isAncestor, stage) {
+  if (canonicalJson(current.canonical) === canonicalJson(sealed.canonical)
+    && canonicalJson(current.protectedMainAdvance)
+      === canonicalJson(sealed.protectedMainAdvance)) return;
+  const canonical = current.canonical;
+  const advance = current.protectedMainAdvance;
+  const valid = canonical.registered === sealed.canonical.registered
+    && canonical.clean === sealed.canonical.clean && canonical.branch === sealed.canonical.branch
+    && canonical.statusDigest === sealed.canonical.statusDigest
+    && canonical.headSha !== sealed.canonical.headSha && canonical.remoteHeadSha === canonical.headSha
+    && advance.baseSha === sealed.protectedMainAdvance.baseSha
+    && advance.baseTreeSha === sealed.protectedMainAdvance.baseTreeSha
+    && advance.headSha === canonical.headSha && advance.headTreeSha === canonical.treeSha
+    && advance.baseIsAncestor === true
+    && advance.commitCount > sealed.protectedMainAdvance.commitCount
+    && advance.disjointFromManifest === true
+    && !writeSetsOverlap(advance.changedWriteSet, sealed.manifest.declaredWriteSet)
+    && isAncestor(sealed.canonical.headSha, canonical.headSha);
+  if (!valid) throw new Error(`Planned fence-only protected main drifted at ${stage}.`);
+}
+function stableEvidence(value) { const copy = structuredClone(value); delete copy.observedAt; delete copy.evidenceDigest; delete copy.localProjection; delete copy.localProjectionDigest; delete copy.canonical; delete copy.protectedMainAdvance; delete copy.cloud.ledgerRevision; delete copy.cloud.ledgerDigest; delete copy.cloud.inventoryDigest; return copy; }
 function stableReview(value) { const copy = structuredClone(value); delete copy.body; delete copy.bodyDigest; delete copy.markerDigest; return copy; }
 function assertRawReviewIdentity(value, expected) { const projection = { adapterId: REVIEW_ADAPTER_ID, id: value.id, number: value.number, url: value.url, state: value.state, draft: value.isDraft, autoMergeAbsent: value.autoMergeRequest === null, headRepository: value.headRepository?.nameWithOwner, headBranch: value.headRefName, headSha: value.headRefOid, baseBranch: value.baseRefName, baseSha: value.baseRefOid, visibleBodyDigest: visibleReviewBodyDigest(value.body) }; if (canonicalJson(projection) !== canonicalJson(stableReview(expected))) throw new Error("Recovery review identity drifted from the sealed plan."); }
 function externalPrivateFile(value, repository, label) { const target = canonicalPath(value, label); if (target === repository || target.startsWith(`${repository}${path.sep}`)) throw new Error(`${label} must remain outside the repository.`); const metadata = lstatSync(target); if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o777) !== 0o600) throw new Error(`${label} must be a private regular file.`); return target; }

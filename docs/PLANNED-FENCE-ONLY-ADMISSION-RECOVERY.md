@@ -31,7 +31,9 @@ fresh scoped-admission decision remains mandatory afterward.
 Read-only planning requires all of the following:
 
 - the canonical worktree is registered, clean, on `main`, and exactly at the
-  candidate lease base and fetched protected revision;
+  fetched protected revision; at planning it may equal the candidate lease
+  base or be a descendant whose cumulative touched-path set is disjoint from
+  the candidate manifest;
 - the candidate worktree is registered, attached to the recorded branch, and
   clean including untracked files;
 - candidate HEAD, remote branch, draft review head, and lease fence are equal;
@@ -114,8 +116,13 @@ neutral.
 
 Unrelated global ledger advancement may be re-observed, but the exact source
 claim and absence of overlapping reservations must remain true at every effect
-boundary. Claim, lease, Git, manifest, task binding, canonical base, or review
-identity drift stops the run.
+boundary. A journal may also re-observe a later fetched canonical revision only
+when the sealed canonical head is its ancestor, the lease base and base tree
+remain exact, and every path touched since that base remains disjoint from the
+sealed manifest. This allowance neither rewrites the plan nor broadens its
+authorization. A non-descendant, overlapping canonical advance, or any claim,
+lease, fence, manifest, task-binding, local-projection, or review-identity drift
+stops the run.
 
 ## CLI
 

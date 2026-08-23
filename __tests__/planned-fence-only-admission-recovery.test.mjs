@@ -20,6 +20,7 @@ import { createPlannedFenceOnlyAdmissionRecoveryCloudAdapter }
 import { createPlannedFenceOnlyAdmissionRecoveryStore }
   from "../scripts/planned-fence-only-admission-recovery-store.mjs";
 import {
+  assertPlannedFenceOnlyRecoveryReplay,
   projectPlannedFenceOnlyRecoveryLease,
   visibleReviewBodyDigest,
 } from "../scripts/planned-fence-only-admission-recovery-repository-adapter.mjs";
@@ -346,6 +347,44 @@ test("legacy source heartbeat omission means zero and rejects nonzero drift", ()
 
   explicitCounter.cloud.claim.heartbeatCounter = 5;
   assert.throws(() => buildPlannedFenceOnlyAdmissionRecoveryEvidence(explicitCounter));
+});
+
+test("replay permits only a disjoint descendant canonical advance", () => {
+  const { plan } = fixture();
+  const current = structuredClone(plan.evidence);
+  const headSha = S("9");
+  const headTreeSha = S("8");
+  const changedPaths = ["scripts/disjoint.mjs"];
+  const changedWriteSet = changedPaths.map(candidate => `path:${candidate}`);
+  current.canonical = { ...current.canonical, headSha, treeSha: headTreeSha,
+    remoteHeadSha: headSha };
+  current.protectedMainAdvance = { ...current.protectedMainAdvance,
+    headSha, headTreeSha, commitCount: 1, changedPaths, changedWriteSet,
+    changedPathsDigest: digestValue(changedPaths),
+    changedWriteSetDigest: digestValue(changedWriteSet),
+    disjointFromManifest: true };
+  current.protectedMainAdvance.advanceDigest = digestValue(Object.fromEntries(
+    Object.entries(current.protectedMainAdvance).filter(([key]) => key !== "advanceDigest"),
+  ));
+
+  assert.doesNotThrow(() => assertPlannedFenceOnlyRecoveryReplay({
+    sealed: plan.evidence, current, isAncestor: () => true, stage: "replay",
+  }));
+  assert.throws(() => assertPlannedFenceOnlyRecoveryReplay({
+    sealed: plan.evidence, current, isAncestor: () => false, stage: "replay",
+  }), /protected main drifted/u);
+
+  const overlapping = structuredClone(current);
+  overlapping.protectedMainAdvance.changedWriteSet = plan.evidence.manifest.declaredWriteSet;
+  assert.throws(() => assertPlannedFenceOnlyRecoveryReplay({
+    sealed: plan.evidence, current: overlapping, isAncestor: () => true, stage: "replay",
+  }), /protected main drifted/u);
+
+  const foreign = structuredClone(current);
+  foreign.review.number += 1;
+  assert.throws(() => assertPlannedFenceOnlyRecoveryReplay({
+    sealed: plan.evidence, current: foreign, isAncestor: () => true, stage: "replay",
+  }), /source drifted/u);
 });
 
 test("raw GitHub review identities normalize only for the repository adapter", () => {

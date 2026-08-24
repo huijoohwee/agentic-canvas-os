@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4755,
-  "headDigest": "d7e202e0743ecf954a3b5639bdbe64c7c3e9a1741f416a58386ed7468b95da97",
+  "sequence": 4756,
+  "headDigest": "617299a2c103caae229827050cbb2693c9b64982bbb62553a6206802cba529b5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -239465,6 +239465,47 @@
       },
       "claimDigest": "03ad5a8a4923fd7e974f8cf5d155a94e30784adebf34b52ee06a5bec0c7fa327",
       "digest": "d7e202e0743ecf954a3b5639bdbe64c7c3e9a1741f416a58386ed7468b95da97"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4756,
+      "parentDigest": "d7e202e0743ecf954a3b5639bdbe64c7c3e9a1741f416a58386ed7468b95da97",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "32ff3e927cb17acdb1a8da3ad27a234b608625d1135614c49dc35d81cdffeafa",
+      "idempotencyKey": "9580a7b16ae3084c4f56a6591ea4e0beca6e560a5a36b412fe86d0c2757ac662",
+      "requestDigest": "c5d1c7892ec6aafc140aa2f0d9eec2c77ab8f6d55ebf5a2efcab911bbca63da8",
+      "evaluationTime": "2026-08-24T02:27:04.000Z",
+      "claimCore": {
+        "claimId": "32ff3e927cb17acdb1a8da3ad27a234b608625d1135614c49dc35d81cdffeafa",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:8613cf6c2d1e7c2a42fc49265747e29cc9aae01c1ea78e3c1c5c76bec09c0c4a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:6b4dd0a74bcafa15bd7a3b45fc1b257081eaf9646f58228c87f569c04c186617",
+        "canonicalBaseRevision": "496e35213f96f73f9360f76eb90a156a74e82664",
+        "declaredWriteScope": [
+          "path:__tests__/planned-fence-only-admission-recovery.test.mjs",
+          "path:docs/PLANNED-FENCE-ONLY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-fence-only-admission-recovery-cloud-adapter.mjs",
+          "semantic:planned-fence-provider-request-digest-hotfix"
+        ],
+        "writeSetDigest": "3dffb476d14f1648ebd7b2b7bf059649c64f7879082fcb1747cce259c6530930",
+        "laneRevision": "4b0d1fb3f78a3be9ce6d92f15c3e5d88bf5136fd",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-24T02:41:46.000Z",
+        "evidenceDigest": "34d8ffc57133ddad73331ff73eb43b4b28cce61c32683f7fd1175f9740a4b2f5",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAviFoA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1ae4b59104e53fb3149a74981ce1c99715b0eafd2eea9f0e32209643a23cfde1",
+      "digest": "617299a2c103caae229827050cbb2693c9b64982bbb62553a6206802cba529b5"
     }
   ]
 }

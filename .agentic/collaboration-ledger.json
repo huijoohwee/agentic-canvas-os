@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4887,
-  "headDigest": "2b967dedfb500660a83da4e5272fc40e4627e52e46b78506352cd71e9ba59166",
+  "sequence": 4888,
+  "headDigest": "eff8256d0bd3236f50b3e676b3cffd26e51c19007266fc615271e9609d63d51f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -246220,6 +246220,46 @@
       },
       "claimDigest": "bddcefb99e9f77c47a3a5f2af6a0346f4528bb77485851cabd3828edd5824c94",
       "digest": "2b967dedfb500660a83da4e5272fc40e4627e52e46b78506352cd71e9ba59166"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4888,
+      "parentDigest": "2b967dedfb500660a83da4e5272fc40e4627e52e46b78506352cd71e9ba59166",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "84ad1898ce15a8d06b39307de242d7761a3676490f8303a29fb38de45bf153c1",
+      "idempotencyKey": "b792abe6f5420f093355f0f9e3d988cd3766e139dadda648a6434b7cf57284cd",
+      "requestDigest": "fb1c28536efbe0acdb684904dba1cb47beb2fca0e6c9bb816187ff866e4571ca",
+      "evaluationTime": "2026-08-24T07:07:40.000Z",
+      "claimCore": {
+        "claimId": "84ad1898ce15a8d06b39307de242d7761a3676490f8303a29fb38de45bf153c1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a0c4af5641be68db38b7fc0a974060ee572755599e56a263a5eae54078c5fd1b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2ca16b5d7b88a2833b591bed738963bb1cf8cd13831daae42d9476e600120c39",
+        "canonicalBaseRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-repository-adapter.test.mjs",
+          "path:scripts/active-dirty-scope-expansion-controller.mjs",
+          "semantic:active-dirty-scope-expansion-capacity"
+        ],
+        "writeSetDigest": "93b7ed7178d2853c9f4510835fe03bc7223937ea4a11f4f92f819cfafecf4d99",
+        "laneRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-24T07:37:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "140dc278c829d60f42b152cfd02e425b18b22bd3be1a6ebbd313a9d18ed5cc23",
+        "eligibleSince": "2026-08-24T07:07:40.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e32f5f12d5d3bd5d6bb9bfddf229fbaa9d57344002188169964853555e1d9ffc",
+      "digest": "eff8256d0bd3236f50b3e676b3cffd26e51c19007266fc615271e9609d63d51f"
     }
   ]
 }

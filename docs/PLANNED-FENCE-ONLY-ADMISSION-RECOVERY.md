@@ -183,6 +183,9 @@ live recovery evidence digest before invoking or adopting the idempotent effect.
 
 Provider claims use opaque device and session subjects. Source and recovered
 verification normalize the local lease labels before joining those subjects;
+the semantic request digest applies that same normalization before it is joined
+to the provider's operation receipt, so a raw local label cannot diverge from
+the cloud contract's canonical intent;
 an already-opaque recovered authority is accepted only when it resolves to the
 same exact device and session, while either owner mismatch still fails closed.
 Legacy recovered projections may omit `heartbeatCounter` only when the exact

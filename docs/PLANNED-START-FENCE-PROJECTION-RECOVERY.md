@@ -28,6 +28,10 @@ base, lease epoch, declared write set, task authority, and owner. It may advance
 only the exact lane revision and fence-bound transition fields defined by the
 same-claim `t1` to `t2` projection, or the exact `t1` to `t3` response-ahead
 chain carrying its immutable recovery evidence digest and recovery timestamp.
+When that exact `t3` claim has time-derived to `dormant-preserved`, the same
+local-only projection may seal its expired historical fence without restoring
+write authority. The ordinary planned-clean recovery must then renew that exact
+claim before admission.
 A later transition, unproven response-ahead transition, foreign claim, rewritten
 base, changed scope, identity drift, competing overlap, or ambiguous ledger
 history fails closed.

@@ -31,6 +31,9 @@ export async function createAdapter({ plan, configuration, dependencies } = {}) 
       if (configured.recoveryMode === "planned-start-response-ahead" && !state.projectionAligned) {
         return decision(plan, subject.subjectId, ACTIONS.projectStartAuthority, observation);
       }
+      if (configured.recoveryMode === "planned-start-response-ahead" && !state.leaseLive) {
+        return decision(plan, subject.subjectId, ACTIONS.recoverPlannedClean, observation);
+      }
       if (configured.recoveryMode === "planned-start-response-ahead"
         && state.admissionStatus === "planned") {
         return decision(plan, subject.subjectId, ACTIONS.admitStart, observation);
@@ -53,6 +56,7 @@ export async function createAdapter({ plan, configuration, dependencies } = {}) 
     const observation = await observe();
     const subject = observation.subjects.find(({ subjectId }) => subjectId === transition.subjectId);
     const complete = transition.action === ACTIONS.projectStartAuthority ? subject.projectionAligned
+      : transition.action === ACTIONS.recoverPlannedClean ? subject.leaseLive
       : transition.action === ACTIONS.admitStart ? subject.admissionStatus === "admitted"
         : transition.action === ACTIONS.integrateSource ? mergedAndContained(subject)
           : !subject.worktreePresent;
@@ -64,6 +68,7 @@ export async function createAdapter({ plan, configuration, dependencies } = {}) 
     assertGrant(transition, grant);
     const subject = subjectConfiguration(config, transition.subjectId);
     if (transition.action === ACTIONS.projectStartAuthority) return repository.projectStartAuthority({ subject });
+    if (transition.action === ACTIONS.recoverPlannedClean) return repository.recoverPlannedClean({ subject });
     if (transition.action === ACTIONS.admitStart) return repository.admitStart({ subject });
     if (transition.action === ACTIONS.integrateSource) return repository.integrateSource({ subject });
     return repository.cleanupWorktree({ subject });
@@ -102,6 +107,7 @@ export async function createAdapter({ plan, configuration, dependencies } = {}) 
 function createRepositoryBoundary(config) { return Object.freeze({
   observe: () => observeRepository(config),
   projectStartAuthority: ({ subject }) => projectStartAuthority(config, subject),
+  recoverPlannedClean: ({ subject }) => recoverPlannedClean(config, subject),
   admitStart: ({ subject }) => admitStart(config, subject),
   integrateSource: ({ subject }) => integrateSource(config, subject),
   cleanupWorktree: ({ subject }) => cleanupWorktree(config, subject),
@@ -131,11 +137,18 @@ function observeRepository(config) {
       && authority.reviewRequestId === reviewRequestId && authority.transitionCounter >= 2);
     return { subjectId: subject.subjectId, worktreePresent: Boolean(worktree),
       lifecycleState: worktree?.state || null, admissionStatus: lease?.admission?.status || null,
-      projectionAligned, pullRequestState: review.state,
+      projectionAligned, leaseLive: Boolean(lease && Date.parse(lease.expiresAt) > Date.parse(observedAt)),
+      pullRequestState: review.state,
       headSha: requiredSha(review.headRefOid, "review head"), integrationSha,
       canonicalSha: requiredSha(canonicalSha, "canonical SHA"), contained, merged };
   });
   return { observedAt, subjects };
+}
+function recoverPlannedClean(config, subject) {
+  return runJson(process.execPath, [path.join(config.controllerRoot,
+    "scripts/planned-clean-committed-recovery.mjs"),
+    `--repository=${subject.worktreePath}`, `--session=${subject.sessionId}`,
+    "--ttl-seconds=7200", "--json"], { cwd: subject.worktreePath });
 }
 
 function projectStartAuthority(config, subject) {
@@ -200,12 +213,13 @@ function normalizeSubjectObservation(value, plan) {
     || !["OPEN", "CLOSED", "MERGED"].includes(value.pullRequestState)) {
     throw new Error("Agentic Canvas OS subject observation is malformed.");
   }
-  for (const key of ["worktreePresent", "projectionAligned", "contained", "merged"]) {
+  for (const key of ["worktreePresent", "projectionAligned", "leaseLive", "contained", "merged"]) {
     if (typeof value[key] !== "boolean") throw new Error(`Invalid subject ${key}.`);
   }
   return Object.freeze({ subjectId: value.subjectId, worktreePresent: value.worktreePresent,
     lifecycleState: value.lifecycleState ?? null, admissionStatus: value.admissionStatus ?? null,
-    projectionAligned: value.projectionAligned, pullRequestState: value.pullRequestState,
+    projectionAligned: value.projectionAligned, leaseLive: value.leaseLive,
+    pullRequestState: value.pullRequestState,
     headSha: requiredSha(value.headSha, "subject head"),
     integrationSha: value.integrationSha === null ? null : requiredSha(value.integrationSha, "integration SHA"),
     canonicalSha: requiredSha(value.canonicalSha, "canonical SHA"),

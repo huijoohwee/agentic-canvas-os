@@ -12,6 +12,7 @@ const NO_EFFECTS = Object.freeze({ cloudMutation: false, providerMutation: false
 
 export const ACTIONS = Object.freeze({
   projectStartAuthority: "project-start-authority",
+  recoverPlannedClean: "recover-planned-clean",
   admitStart: "admit-start",
   integrateSource: "integrate-source",
   cleanupWorktree: "cleanup-worktree",
@@ -19,6 +20,8 @@ export const ACTIONS = Object.freeze({
 
 export const ACTION_EFFECTS = Object.freeze({
   [ACTIONS.projectStartAuthority]: effects({ localProjectionMutation: true }),
+  [ACTIONS.recoverPlannedClean]: effects({ cloudMutation: true,
+    providerMutation: true, localProjectionMutation: true }),
   [ACTIONS.admitStart]: effects({ localProjectionMutation: true, providerMutation: true }),
   [ACTIONS.integrateSource]: effects({ cloudMutation: true, providerMutation: true,
     localProjectionMutation: true, gitRefMutation: true, sourceMutation: true,
@@ -46,7 +49,8 @@ export function normalizeAgenticCanvasOsAdapterConfiguration(value, plan) {
   for (const planned of plan.subjects) {
     const configured = subjects.find(({ subjectId }) => subjectId === planned.subjectId);
     const expectedActions = configured?.recoveryMode === "planned-start-response-ahead"
-      ? [ACTIONS.projectStartAuthority, ACTIONS.admitStart, ACTIONS.integrateSource,
+      ? [ACTIONS.projectStartAuthority, ACTIONS.recoverPlannedClean,
+        ACTIONS.admitStart, ACTIONS.integrateSource,
         ACTIONS.cleanupWorktree]
       : [ACTIONS.integrateSource, ACTIONS.cleanupWorktree];
     if (!configured || planned.repository !== value.repository || planned.lane !== configured.branch

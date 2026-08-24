@@ -135,8 +135,11 @@ function normalizeLease(value) {
 function normalizeCloud(value) {
   const source = record(value, "cloud observation");
   const claim = structuredClone(record(source.claim, "cloud claim"));
-  if (source.status !== "ready" || !["current", "active"].includes(claim.state)
-    || claim.writeAuthority !== true || claim.scopeReserved !== true) invalid("current cloud claim");
+  const current = ["current", "active"].includes(claim.state)
+    && claim.writeAuthority === true && claim.scopeReserved === true;
+  const dormant = ["dormant-preserved", "parked"].includes(claim.state)
+    && claim.writeAuthority === false && claim.scopeReserved === true;
+  if (source.status !== "ready" || (!current && !dormant)) invalid("current or dormant cloud claim");
   validateClaim(claim);
   const core = {
     status: "ready",
@@ -225,7 +228,9 @@ function assertJoinedSubject(subject) {
     ["owner", ownerMatches("device", authority.deviceId, lease.device)
       && ownerMatches("session", authority.sessionId, lease.sessionId)],
     ["lease-expiry", Date.parse(lease.expiresAt) <= Date.parse(subject.observedAt)],
-    ["claim-expiry", Date.parse(claim.expiresAt) > Date.parse(subject.observedAt)],
+    ["claim-expiry", ["dormant-preserved", "parked"].includes(claim.state)
+      ? Date.parse(claim.expiresAt) <= Date.parse(subject.observedAt)
+      : Date.parse(claim.expiresAt) > Date.parse(subject.observedAt)],
     ["task", lease.taskAuthority?.bindingDigest === subject.taskCapabilityDigest],
     ["git", git.branch === lease.branch && git.worktreePath === lease.worktreePath
       && git.fenceSha === lease.fenceSha],

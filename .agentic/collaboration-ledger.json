@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5036,
-  "headDigest": "723678b89c4293901739694cd2f437c165312a2da19cc1780ec062abe0fd9399",
+  "sequence": 5037,
+  "headDigest": "4cc96c47ecc732ac3d164133cce2bd6e617b64c196872650d3d13683ffb8e003",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -253937,6 +253937,47 @@
       },
       "claimDigest": "6378869228318c7318d0e9cf2cd84b32725a1aa806eb1dc030e1089604fe9101",
       "digest": "723678b89c4293901739694cd2f437c165312a2da19cc1780ec062abe0fd9399"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5037,
+      "parentDigest": "723678b89c4293901739694cd2f437c165312a2da19cc1780ec062abe0fd9399",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0a826addb3bc3e21bd4b7d2bb38c03298a7ce491b4ddb949cbb66e4850195256",
+      "idempotencyKey": "d1e0deb4946dcc2ffc1efa0afd9b18b9a113834d1bf98f4de2ca9f1d2c7399a3",
+      "requestDigest": "3f59991afe5363e08e8a597b44ed9e1047e963e5e87478e4566a083300cb1e49",
+      "evaluationTime": "2026-08-24T17:44:47.000Z",
+      "claimCore": {
+        "claimId": "0a826addb3bc3e21bd4b7d2bb38c03298a7ce491b4ddb949cbb66e4850195256",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b02ba682173531b7daabe0d0c8fadc5506463db763a5931ec31333a0ac7ef8e3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:eeddf4f31e9574c4013de46bfa5b00121f6b9c6f392760c09a9b92e7e61228c3",
+        "canonicalBaseRevision": "5ca15f8cd48be0388c0e24126ee1c45d88226764",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-clean-owner-identity-canonicalization"
+        ],
+        "writeSetDigest": "06bb5806ca04ceedcd326171245a527ac9850fd91e46ebc32a63e8a87d480b12",
+        "laneRevision": "46e7f2cac282c2285574f82d3076aff1979b8bbb",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-24T19:36:51.000Z",
+        "evidenceDigest": "84c16ebd75ac30a4a404558e5bd2c3b0eec351e48246995b82ac990a71309225",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA1WpTQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "877bad8bc4301229e04fcc780d12d0c49bb6d93277d28cf1f9f6539b947d2970",
+      "digest": "4cc96c47ecc732ac3d164133cce2bd6e617b64c196872650d3d13683ffb8e003"
     }
   ]
 }

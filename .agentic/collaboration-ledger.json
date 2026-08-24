@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5014,
-  "headDigest": "fe3218d1d095f8ba9581c40ae2dd0faac5b3e01908c0b849530579c4be02707b",
+  "sequence": 5015,
+  "headDigest": "f028a3c54342f1ba572bd095d29b4dd419ea17c778bff6b2b11e8ad1cc30f3a6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -252881,6 +252881,47 @@
       },
       "claimDigest": "5e136242a91144dfb36b8081a089bdb96b5bffc362931ffb8803f6f8d22891ab",
       "digest": "fe3218d1d095f8ba9581c40ae2dd0faac5b3e01908c0b849530579c4be02707b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5015,
+      "parentDigest": "fe3218d1d095f8ba9581c40ae2dd0faac5b3e01908c0b849530579c4be02707b",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1727a0958e3550792db08a6054bc24031f25c6cd2a43ee0159993ada9a8187b0",
+      "idempotencyKey": "156e7aee4d293f24e09ebd090dd82bf9575d7c5f0fabce861691b6e62c3cdacd",
+      "requestDigest": "7b96fb9e40f4d103cb632bed3a0ad9da5770786129b50e094510c13bd0b19ba4",
+      "evaluationTime": "2026-08-24T16:48:18.000Z",
+      "claimCore": {
+        "claimId": "1727a0958e3550792db08a6054bc24031f25c6cd2a43ee0159993ada9a8187b0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ce0706d65db4c00aa6ceee3a059849da7ad8ecb52434609fef77397ad7d9b256",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f0b24fb843f73c80e5a3d152ff18d554a2a4459f80188185a49c5e83fd718189",
+        "canonicalBaseRevision": "215a860fbe94f1e2e5dce4c20a0c7e5b7d3121c6",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-clean-marker-projection-reconciliation"
+        ],
+        "writeSetDigest": "102700d448837f9c7b711e7116aafea8866973a9ccaddfbaf2e3c864efcb4279",
+        "laneRevision": "215a860fbe94f1e2e5dce4c20a0c7e5b7d3121c6",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T18:48:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c89d18dd8fb74833d3303e10ea1ebf434cb43856ed0896e701624a569fe308f5",
+      "digest": "f028a3c54342f1ba572bd095d29b4dd419ea17c778bff6b2b11e8ad1cc30f3a6"
     }
   ]
 }

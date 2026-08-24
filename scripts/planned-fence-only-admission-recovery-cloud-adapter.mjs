@@ -401,8 +401,8 @@ function recoveryRequestDigest({ plan, evaluationTime }) {
   const intent = {
     repositoryId: sourceClaim.repositoryId,
     actorId: sourceClaim.actorId,
-    deviceId: lease.device,
-    sessionId: lease.sessionId,
+    deviceId: normalizeOwnerIdentifier("device", lease.device),
+    sessionId: normalizeOwnerIdentifier("session", lease.sessionId),
     claimId: sourceClaim.claimId,
     expectedFenceRevision: sourceClaim.fenceRevision,
     expectedTransitionCounter: sourceClaim.transitionCounter,

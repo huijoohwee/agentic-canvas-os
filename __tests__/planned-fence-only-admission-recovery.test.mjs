@@ -483,8 +483,8 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
   ]);
   const expiresAt = new Date(Date.parse(RECOVERED) + plan.ttlSeconds * 1_000).toISOString();
   const requestDigest = digestValue({ action: "continue", intent: {
-    repositoryId: claim.repositoryId, actorId: claim.actorId, deviceId: DEVICE,
-    sessionId: SESSION, claimId: claim.claimId, expectedFenceRevision: claim.fenceRevision,
+    repositoryId: claim.repositoryId, actorId: claim.actorId, deviceId: CLOUD_DEVICE,
+    sessionId: CLOUD_SESSION, claimId: claim.claimId, expectedFenceRevision: claim.fenceRevision,
     expectedTransitionCounter: claim.transitionCounter, mode: "recovery", laneRevision: null,
     reviewRequestId: null, expiresAt, focusedEvidenceDigest: null, handoffEvidenceDigest: null,
     recoveryEvidenceDigest: plan.evidence.evidenceDigest,

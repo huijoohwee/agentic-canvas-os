@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4717,
-  "headDigest": "28338c0eeae9013c6f9ed980b5018106661094037613e5df0809b285dfb6ca76",
+  "sequence": 4718,
+  "headDigest": "64319171509f60095d168fa5cc9b5f29df370f36c99fb226b00783c3f3c0f071",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -237731,6 +237731,48 @@
       },
       "claimDigest": "d39ae245e3909bcec889318f3e0d147ac9fe05d827493b41e559efd4d47e6e88",
       "digest": "28338c0eeae9013c6f9ed980b5018106661094037613e5df0809b285dfb6ca76"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4718,
+      "parentDigest": "28338c0eeae9013c6f9ed980b5018106661094037613e5df0809b285dfb6ca76",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "343d876efbefe28ccc2a21be883d44c35977a8f1c5309f21ed0cf16d4366a352",
+      "idempotencyKey": "57f9b7c24dd46ce876c23332bd15397c0f387fc7b2205bc2b820bae78862cbed",
+      "requestDigest": "ffc45284b9e241f525f1a14072aef38bfbc39d1ec3134fa72e6ec3a014d62370",
+      "evaluationTime": "2026-08-24T00:07:01.000Z",
+      "claimCore": {
+        "claimId": "343d876efbefe28ccc2a21be883d44c35977a8f1c5309f21ed0cf16d4366a352",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ca42bc530ef10d145482801e8cbe2adb977123bb61e4767facf82c7679e78c2f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9acf52a2dc6d4027f7e80bdbeafb80d875967b0a17928f4e81f27d596340e5e1",
+        "canonicalBaseRevision": "4cb8eb93327c2ed355424bb851c95e7e10b4da74",
+        "declaredWriteScope": [
+          "path:__tests__/orphaned-task-authority-recovery-repository-adapter.test.mjs",
+          "path:docs/ORPHANED-TASK-AUTHORITY-RECOVERY.md",
+          "path:scripts/orphaned-task-authority-recovery-evidence.mjs",
+          "path:scripts/orphaned-task-authority-recovery-repository-adapter.mjs",
+          "semantic:orphaned-task-authority-retired-claim-proof"
+        ],
+        "writeSetDigest": "e1ed93762926f031397ee7b6e7de9b90e504d27e75356c43b404f3594ffa0beb",
+        "laneRevision": "4cb8eb93327c2ed355424bb851c95e7e10b4da74",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T01:07:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c325b5d023ee6cfb88a1b7ee57e25593fbd5c0837e7ac2f3cd2bf6e684e6e4a6",
+      "digest": "64319171509f60095d168fa5cc9b5f29df370f36c99fb226b00783c3f3c0f071"
     }
   ]
 }

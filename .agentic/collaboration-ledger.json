@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5028,
-  "headDigest": "d73cc70fa151ecb7ad69a301a907fa589d12967de01e8ddf7c20d4cb36bbcfc8",
+  "sequence": 5029,
+  "headDigest": "e7d667981e56195d65836c31aff694f18c5435a1dceb4bb80fa87f0e7eaf2a11",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -253548,6 +253548,47 @@
       },
       "claimDigest": "ba3820df7cc16276218238026174eb1e0d65af8539753d40c5ccfdd69bcefc7e",
       "digest": "d73cc70fa151ecb7ad69a301a907fa589d12967de01e8ddf7c20d4cb36bbcfc8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5029,
+      "parentDigest": "d73cc70fa151ecb7ad69a301a907fa589d12967de01e8ddf7c20d4cb36bbcfc8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2fa7ee8b74a716261eb9f298cb9361d0174374a9a27aa8409c7954a6dd8eb204",
+      "idempotencyKey": "4b11e1ce6ca134bd1fbaac856433806c2e66194c0ca18b616d515076a77f74fd",
+      "requestDigest": "55006f5020106a5e2fcd616add0d596bc7b8812696b09579d810a2581693df79",
+      "evaluationTime": "2026-08-24T17:27:09.000Z",
+      "claimCore": {
+        "claimId": "2fa7ee8b74a716261eb9f298cb9361d0174374a9a27aa8409c7954a6dd8eb204",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:96ac4946ec49ad1e1a75e9d83beab891e2f9b90fe46a1cee1cea7ff1fdfc092d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:58cd8b641e598288b6cd80b7a9117aaa669f004e59dba471ea7b56973958007c",
+        "canonicalBaseRevision": "7db55ed0d5f6b0a4ccc7a7f91a6e7b039f4ad6ea",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-clean-receipt-cas-reconciliation"
+        ],
+        "writeSetDigest": "7966804c8696de875dc4d47e71443772933773aeafc8f0e42abbd8029fdc18d7",
+        "laneRevision": "2189b73caadc85efadedf366c5bdfd410e1933f5",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-24T19:13:33.000Z",
+        "evidenceDigest": "ef53ccef62ed5bbbf480bc9ec30a088529156d9da4495aadd4c97710efd46e21",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA1L-Fg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "06324fd97a104df90650fa29888dfefc67f203e9d2abde032fbf52deec7b236b",
+      "digest": "e7d667981e56195d65836c31aff694f18c5435a1dceb4bb80fa87f0e7eaf2a11"
     }
   ]
 }

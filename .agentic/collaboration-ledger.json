@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4978,
-  "headDigest": "ceb252d61c003d641112a01c7f98a9c04797fa7ff5cb7ff8dcd6caf927017f01",
+  "sequence": 4979,
+  "headDigest": "86bba303a6e012e8843ac45e93e615493ef81d658f2f289236d723dbf8d1a061",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -250983,6 +250983,52 @@
       },
       "claimDigest": "bb30aafe8f8df5cb2ae22c0546bc670eb304289d4360a03802e31a7eace74819",
       "digest": "ceb252d61c003d641112a01c7f98a9c04797fa7ff5cb7ff8dcd6caf927017f01"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4979,
+      "parentDigest": "ceb252d61c003d641112a01c7f98a9c04797fa7ff5cb7ff8dcd6caf927017f01",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "34026b908e89160d163d1cfa9e3be2d91805d99c32c12058b251eea607631b31",
+      "idempotencyKey": "a1db8de92eca0f090d15302a1d649d786be5e5f89a14c9957ea09cbc9d884151",
+      "requestDigest": "3e5a4ad79820455d8fd41a6dc9244acfa713b8466106f8e3fbaf180c1cb54982",
+      "evaluationTime": "2026-08-24T14:09:53.000Z",
+      "claimCore": {
+        "claimId": "34026b908e89160d163d1cfa9e3be2d91805d99c32c12058b251eea607631b31",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:97f902cc35b2321a526581996eeb9b05544602ad33eb49b20b3752cf71df1b7a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:fdb0f590fb34adc8bf29a4d2b34978ea982eb25198ef20dd23c01b5980aff50e",
+        "canonicalBaseRevision": "4c7b5450d735a1d3d8d0a0f866c309b5f893ed41",
+        "declaredWriteScope": [
+          "path:__tests__/agentic-canvas-os-lane-convergence-adapter.test.mjs",
+          "path:__tests__/planned-start-fence-projection-recovery.test.mjs",
+          "path:docs/AGENTIC-CANVAS-OS-LANE-CONVERGENCE-ADAPTER.md",
+          "path:docs/PLANNED-START-FENCE-PROJECTION-RECOVERY.md",
+          "path:scripts/agentic-canvas-os-lane-convergence-adapter-contract.mjs",
+          "path:scripts/agentic-canvas-os-lane-convergence-adapter.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-evidence.mjs",
+          "path:scripts/planned-start-fence-projection-recovery-repository-adapter.mjs",
+          "semantic:acos-lane-convergence-adapter"
+        ],
+        "writeSetDigest": "a63da58e98a18d98e8ae87353f511cf5c237b66ae7e48063f83389e2795bc2d6",
+        "laneRevision": "4c7b5450d735a1d3d8d0a0f866c309b5f893ed41",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T16:09:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f41ade31c3808bbdb1f78b211ffebba35cd28cc33939da329808a4635a265e6b",
+      "digest": "86bba303a6e012e8843ac45e93e615493ef81d658f2f289236d723dbf8d1a061"
     }
   ]
 }

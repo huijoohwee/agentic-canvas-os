@@ -160,30 +160,15 @@ export function runProtectedHeadRefresh({
       // ledger revision advance.  The candidate remains bound to the original
       // immutable integration receipt and transition lineage, so rechecking
       // the superseded mutable fence would make recovery impossible.
-      const refreshedCandidate = pullRequest.headSha !== projection.observed_head_sha;
       const cloud = invokeRepositoryCloudVerifier({
         ledgerRepository,
         environment,
-        request: {
-          targetRepository: repo,
-          pullRequestNumber: projection.pullRequestNumber,
-          branch: projection.branch,
-          headSha: projection.delivered_head_sha,
-          canonicalBaseSha: projection.canonical_base_sha,
-          claimId: projection.claim_id,
-          ...(!refreshedCandidate ? {
-            expectedClaimDigest: projection.claim_digest,
-            expectedLedgerRevision: projection.ledger_revision,
-          } : {}),
-          reviewRequestId: projection.review_request_id,
-          requireStatus: "integrated-preserved",
-          allowProtectedMainRefresh: true,
-          integrationReceiptDigest: projection.integration_receipt_digest,
-          transitionCounter: projection.transition_counter,
-          ...(pullRequest.merged && allowAbsentMergedAuthorizationRecovery ? {
-            allowRetiredIntegratedPreserved: true,
-          } : {}),
-        },
+        request: protectedHeadRefreshCloudRequest({
+          repository: repo,
+          projection,
+          pullRequest,
+          allowAbsentMergedAuthorizationRecovery,
+        }),
       });
       requireProtectedHeadRefreshCloudResult({
         result: cloud,
@@ -369,6 +354,37 @@ export function runProtectedHeadRefresh({
       throw new Error("Protected-head refresh fetched protected main drifted.");
     }
   }
+}
+
+export function protectedHeadRefreshCloudRequest({
+  repository,
+  projection,
+  pullRequest,
+  allowAbsentMergedAuthorizationRecovery = false,
+}) {
+  const refreshedCandidate = pullRequest.headSha !== projection.observed_head_sha;
+  const recoverMergedAuthorization = pullRequest.merged
+    && allowAbsentMergedAuthorizationRecovery;
+  return {
+    targetRepository: repository,
+    pullRequestNumber: projection.pullRequestNumber,
+    branch: projection.branch,
+    headSha: projection.delivered_head_sha,
+    canonicalBaseSha: projection.canonical_base_sha,
+    claimId: projection.claim_id,
+    ...(!refreshedCandidate || recoverMergedAuthorization ? {
+      expectedClaimDigest: projection.claim_digest,
+      expectedLedgerRevision: projection.ledger_revision,
+    } : {}),
+    reviewRequestId: projection.review_request_id,
+    requireStatus: "integrated-preserved",
+    allowProtectedMainRefresh: true,
+    integrationReceiptDigest: projection.integration_receipt_digest,
+    transitionCounter: projection.transition_counter,
+    ...(recoverMergedAuthorization ? {
+      allowRetiredIntegratedPreserved: true,
+    } : {}),
+  };
 }
 
 export function requireProtectedHeadRefreshLedgerRepository({

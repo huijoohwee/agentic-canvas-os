@@ -9,6 +9,7 @@ import {
   requireProtectedHeadRefreshPullRequest,
 } from "../scripts/protected-main-refresh-lib.mjs";
 import {
+  protectedHeadRefreshCloudRequest,
   requireProtectedHeadRefreshMergedAuthorizationRecovery,
 } from "../scripts/protected-head-refresh-github-adapter.mjs";
 import {
@@ -52,10 +53,7 @@ test("workflow encodes recovery without exceeding the 25-input provider cap", ()
   assert.match(adapter, /allowRetiredIntegratedPreserved: true/u);
   assert.match(adapter, /integrationReceiptDigest: projection\.integration_receipt_digest/u);
   assert.match(adapter, /transitionCounter: projection\.transition_counter/u);
-  assert.ok(
-    adapter.indexOf("integrationReceiptDigest: projection.integration_receipt_digest")
-      < adapter.indexOf("pullRequest.merged && allowAbsentMergedAuthorizationRecovery"),
-  );
+  assert.match(adapter, /request: protectedHeadRefreshCloudRequest/u);
 });
 
 test("repository policy keeps defaults and validates adapter overrides", () => {
@@ -112,6 +110,28 @@ test("absent merged recovery token binds exact operation and human actor", () =>
       ...overrides,
     }), /recovery identity drifted/u);
   }
+});
+
+test("merged refreshed recovery retains the historical integrated claim fence", () => {
+  const projection = normalizedProjection();
+  const pullRequest = { headSha: candidate, merged: true };
+  const ordinaryRequest = protectedHeadRefreshCloudRequest({
+    repository: "owner/repo",
+    projection,
+    pullRequest,
+  });
+  assert.equal(ordinaryRequest.expectedClaimDigest, undefined);
+  assert.equal(ordinaryRequest.expectedLedgerRevision, undefined);
+
+  const recoveryRequest = protectedHeadRefreshCloudRequest({
+    repository: "owner/repo",
+    projection,
+    pullRequest,
+    allowAbsentMergedAuthorizationRecovery: true,
+  });
+  assert.equal(recoveryRequest.expectedClaimDigest, projection.claim_digest);
+  assert.equal(recoveryRequest.expectedLedgerRevision, projection.ledger_revision);
+  assert.equal(recoveryRequest.allowRetiredIntegratedPreserved, true);
 });
 
 test("binds distinct original and deterministic non-null candidate authorizations", () => {

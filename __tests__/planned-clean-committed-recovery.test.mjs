@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   authorizeProjectedManifestCanonicalization,
+  isProjectedPredecessorPullRequestMarker,
   ownerIdentifierMatches,
   recoverPlannedAdmissionCloudAuthority,
   shouldReconcileRecoveredPlannedLease,
 } from "../scripts/planned-clean-committed-recovery-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { normalizeOwnerIdentifier } from "../scripts/planned-device-projection-recovery-evidence.mjs";
+import { projectWriterLeasePullRequestMarker } from "../scripts/writer-lease-lib.mjs";
 import { writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
 
 const digest = character => character.repeat(64);
@@ -81,17 +83,54 @@ test("planned clean recovery advances only the exact dormant claim", () => {
 
 test("planned clean recovery canonicalizes a missing manifest only from its exact fence-projection receipt", () => {
   const branch = "agent/device/planned-scope";
+  const taskAuthorityCore = {
+    schema: "agentic-task-authority-binding/v1",
+    authoritySubjectId: `urn:agentic-task:${digest("5")}`,
+    proofAdapterId: "urn:agentic-proof:ed25519-file:v1",
+    generation: 1,
+    publicKey: "MCowBQYDK2VwAyEACUyj2+Djg0vdM+PGbZv96+mo10QyALragq2D5Vw86rY=",
+    publicKeyDigest: null,
+    laneBindingDigest: digest("6"),
+    bindingMode: "claim",
+    boundAt: "2026-08-24T01:00:00.000Z",
+    transitionPlanDigest: null,
+    priorBindingDigest: null,
+  };
+  taskAuthorityCore.publicKeyDigest = digestValue(taskAuthorityCore.publicKey);
+  const taskAuthority = {
+    ...taskAuthorityCore,
+    bindingDigest: digestValue(taskAuthorityCore),
+  };
   const lease = {
     schema: "agentic-writer-lease/v2",
     status: "active",
+    epoch: 1,
+    sessionId: "session",
+    device: "device",
+    scope: "planned-scope",
     branch,
-    taskAuthority: { bindingDigest: digest("8") },
-    admission: { manifestDigest: digest("9") },
+    baseSha: sha("b"),
+    fenceSha: sha("c"),
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-24T01:00:00.000Z",
+    expiresAt: "2026-08-24T01:30:00.000Z",
+    taskAuthority,
+    admission: { status: "planned", manifestDigest: digest("9") },
     cloudAuthority: { claimId: digest("a"), transitionCounter: 3 },
+  };
+  const predecessorLease = {
+    ...lease,
+    cloudAuthority: { ...lease.cloudAuthority, transitionCounter: 1 },
+  };
+  const predecessorMarker = {
+    ...projectWriterLeasePullRequestMarker(predecessorLease),
+    heartbeatAt: "2026-08-24T00:55:00.000Z",
+    expiresAt: "2026-08-24T01:25:00.000Z",
   };
   const attempted = {
     idempotencyKey: digest("1"),
-    sourceLeaseDigest: digest("2"),
+    sourceLeaseDigest: writerLeaseDigest(predecessorLease),
     targetLeaseDigest: writerLeaseDigest(lease),
   };
   const core = {
@@ -124,6 +163,16 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
   };
 
   assert.equal(authorizeProjectedManifestCanonicalization({ registry, lease }), receipt);
+  assert.equal(isProjectedPredecessorPullRequestMarker({
+    marker: predecessorMarker,
+    lease,
+    projectionReceipt: receipt,
+  }), true);
+  assert.equal(isProjectedPredecessorPullRequestMarker({
+    marker: { ...predecessorMarker, fenceSha: sha("f") },
+    lease,
+    projectionReceipt: receipt,
+  }), false);
   assert.throws(() => authorizeProjectedManifestCanonicalization({ registry: { revision: 9 }, lease }),
     /exact expired planned cloud-admitted lease/u);
   assert.throws(() => authorizeProjectedManifestCanonicalization({

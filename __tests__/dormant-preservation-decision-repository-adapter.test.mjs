@@ -33,7 +33,7 @@ import {
   markOperationDerivedCloudVerification,
   normalizeDeclaredWriteScopeManifest,
 } from "../scripts/scoped-lane-admission-lib.mjs";
-import { continuePlannedAdmissionFromRepository } from "../scripts/scoped-lane-admission-continuation.mjs";
+import { assertPlannedContinuationIdentity, continuePlannedAdmissionFromRepository } from "../scripts/scoped-lane-admission-continuation.mjs";
 import {
   verifyCurrentCloudInventory, verifyDormantPreservation,
 } from "../scripts/scoped-lane-authority-state.mjs";
@@ -266,6 +266,56 @@ test("final planned verification rejects relevant cloud drift before continuatio
   }), /relevant cloud records changed/u);
   assert.equal(cloudVerifications, 2);
   assert.equal(continuationMutations, 0);
+});
+
+test("protected-descendant adapter preserves immutable planned identity", (context) => {
+  const fixture = createGateFixture(context);
+  const source = fixture.plan.sourceEvidence;
+  const headSha = sha("planned candidate");
+  const lease = {
+    worktreePath: source.candidate.targetPath,
+    branch: source.candidate.branch,
+    sessionId: source.candidate.sessionId,
+    scope: source.candidate.semanticScope,
+    baseSha: source.canonical.headSha,
+    fenceSha: headSha,
+    admission: {
+      status: "planned",
+      manifestDigest: source.candidate.manifest.manifestDigest,
+      writeSetDigest: source.candidate.manifest.writeSetDigest,
+    },
+    cloudAuthority: { claimId: source.candidate.candidateClaim.claimId },
+  };
+  const input = {
+    plan: fixture.plan,
+    controller: source.controller,
+    candidateLease: lease,
+    candidateLineage: {
+      headSha,
+      treeSha: source.canonical.treeSha,
+      parentSha: source.canonical.headSha,
+      parentCount: 1,
+    },
+    manifest: source.candidate.manifest,
+    files: {
+      selectionFileDigest: source.candidate.selectionFileDigest,
+      manifestFileDigest: source.candidate.manifestFileDigest,
+      cloudAuthorityFileDigest: source.candidate.cloudAuthorityFileDigest,
+    },
+  };
+  assert.equal(assertPlannedContinuationIdentity(input), true);
+  for (const drifted of [
+    { ...input, controller: { ...input.controller, headSha: sha("controller drift") } },
+    { ...input, candidateLineage: { ...input.candidateLineage,
+      parentSha: sha("parent drift") } },
+    { ...input, candidateLease: { ...lease,
+      cloudAuthority: { claimId: digest("claim drift") } } },
+  ]) {
+    assert.throws(
+      () => assertPlannedContinuationIdentity(drifted),
+      /immutable planned identity/u,
+    );
+  }
 });
 
 function continuationArguments(fixture) {

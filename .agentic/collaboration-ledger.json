@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4766,
-  "headDigest": "00442a788f9168e95bca97360be6aba5083241b8da50e8e183d35845e8a548f2",
+  "sequence": 4767,
+  "headDigest": "1773c34c2febeddf30947223eaaeecdaabf319eaf6b1d7609c66fb55adac84e8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -239971,6 +239971,47 @@
       },
       "claimDigest": "5f2bfb508832d0015bf7991191db65bfbbc9164feb29e1f8578924b246d6db46",
       "digest": "00442a788f9168e95bca97360be6aba5083241b8da50e8e183d35845e8a548f2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4767,
+      "parentDigest": "00442a788f9168e95bca97360be6aba5083241b8da50e8e183d35845e8a548f2",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "bb12cef4f75d6edf2cd393e7fccf00195f71cac1c66c5d987279852dfff5dd9a",
+      "idempotencyKey": "0a236eeeb063e94f25ee128924a0e7e901fa8412462bd4e49437e6a036350503",
+      "requestDigest": "523582190e9331aa768ac8d786fa9b668ee7eeafb05f08a09370c21c3d276082",
+      "evaluationTime": "2026-08-24T02:47:45.000Z",
+      "claimCore": {
+        "claimId": "bb12cef4f75d6edf2cd393e7fccf00195f71cac1c66c5d987279852dfff5dd9a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:36ed131c11428775a6b3e30519c3a660097a91c9590d7427ef47697cb7a3bea6",
+        "sessionId": "session:875c26c88e925547803ab65c930ae6dae6ef718af92791418ba08dc6e1d59beb",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:2fb03b3e9a06494c5ed279fa0fb73547dc2d7b6d49141504236b84ba2f357f57",
+        "canonicalBaseRevision": "b5c9c4b00220f2864a6c606f9093edee872f8659",
+        "declaredWriteScope": [
+          "path:cookbooks/production-release-cookbook.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:atomic-lane-convergence-v2"
+        ],
+        "writeSetDigest": "74db345c4b0f5ab7639d883c638e8378532ace6496d1450e3fd04e54d674c436",
+        "laneRevision": "6f8d2f3327f2b7f1f18b2a63f6a97ee990fc2193",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-24T03:47:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "c3058a4c9caa1acc1246dab2efee10f52a7c053d8a75cd9bb4d955ecd677fd6a",
+        "eligibleSince": "2026-08-24T02:47:45.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "656bdd01aa4f258854232d243d9a979408a671be86fe9fc334f597e274c8c773",
+      "digest": "1773c34c2febeddf30947223eaaeecdaabf319eaf6b1d7609c66fb55adac84e8"
     }
   ]
 }

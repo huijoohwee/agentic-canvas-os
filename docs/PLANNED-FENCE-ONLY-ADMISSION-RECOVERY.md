@@ -174,7 +174,12 @@ or it may have expired into `dormant-preserved`; the expired form must preserve
 the source identity, scope, review, heartbeat, owner projection, and the exact
 plan evidence digest recorded by the recovery transition. The controller then
 replays the original idempotency key and adopts the provider's original active
-operation receipt before projecting any local lease or review marker. A second
+operation receipt before projecting any local lease or review marker. When the
+ordinary live-authority verifier rejects that expired claim, the adapter derives
+a read-only verification receipt from one exact dormant inventory record and
+joins its fence, transition, operation receipt, expiry, and recovery evidence to
+the historical active result. It never treats dormant state as write authority.
+A second
 transition, foreign evidence digest, or any identity drift remains blocking.
 During repository-source revalidation, the planning inspector may project this
 one verified counter-plus-one expired result back to its sealed source shape;

@@ -7,8 +7,11 @@ import { fetchProtectedMain } from "./protected-main-path-equivalence-lib.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeOwnerIdentifier } from "./planned-device-projection-recovery-evidence.mjs";
 import { parseDeviceBranch, projectWriterLeasePullRequestMarker, projectExpiredCommittedHeartbeatLease, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
+import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 export const PLANNED_CLEAN_COMMITTED_RECOVERY_RESULT_SCHEMA = "agentic-planned-clean-committed-recovery-result/v1";
+const FENCE_PROJECTION_RECEIPTS_FIELD = "plannedStartFenceProjectionRecoveryReceipts";
+const DIGEST = /^[0-9a-f]{64}$/u;
 
 export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gitOptional, ghText,
   leaseStore, sessionId, leaseTtlMs, run, now = () => new Date(),
@@ -99,6 +102,7 @@ export function recoverPlannedAdmissionCloudAuthority({ authority, manifest, bra
     transitionCounter: recoveredClaim.transitionCounter,
     expiresAt: recoveredClaim.expiresAt,
     state: "active",
+    manifestDigest: manifest.manifestDigest,
   });
   return verify({ authority: projected, manifest, canonicalBaseSha: authority.canonicalBaseSha,
     branch });
@@ -111,8 +115,10 @@ export function shouldReconcileRecoveredPlannedLease(lease, instant = new Date()
 }
 
 function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore, sessionId, now }) {
-  const lease = leaseStore.read(branch);
-  requirePlannedLease(lease, repo, branch, sessionId, now(), false);
+  const registry = typeof leaseStore.readRegistry === "function" ? leaseStore.readRegistry() : null;
+  const lease = registry?.leases?.[branch] || leaseStore.read(branch);
+  const projectionReceipt = authorizeProjectedManifestCanonicalization({ registry, lease });
+  requirePlannedLease(lease, repo, branch, sessionId, now(), false, projectionReceipt);
   const remoteHeadSha = remoteBranchHead({ branch, gitOptional });
   const projection = readExactPullRequestProjection({ lease, branch, ghText, expectedHeadSha: remoteHeadSha });
   const descendant = captureCommittedDescendantEvidence({ lease, gitText, bindProtectedMain: true,
@@ -135,6 +141,7 @@ function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore,
     sourceLedgerRevision: lease.cloudAuthority.ledgerRevision,
     sourceClaimLedgerRevision: lease.cloudAuthority.claimLedgerRevision,
     sourceCloudTransitionCounter: lease.cloudAuthority.transitionCounter,
+    plannedFenceProjectionReceiptDigest: projectionReceipt?.receiptDigest || null,
     headSha: descendant.headSha, treeSha: descendant.treeSha,
     changedPathCount: descendant.changedPaths.length, changedPathsDigest: digestValue(descendant.changedPaths),
     declaredChangedPathCount: descendant.declaredChangedPaths.length,
@@ -154,7 +161,8 @@ function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore,
     recoveryEvidence: Object.freeze(recoveryEvidence), evidenceDigest, sourceDigest });
 }
 
-function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLive) {
+function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLive,
+  projectionReceipt = null) {
   if (!lease || lease.status !== "active" || lease.sessionId !== sessionId || lease.branch !== branch
     || lease.admission?.status !== "planned" || lease.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
     || lease.cloudAuthority.state !== "active"
@@ -163,7 +171,7 @@ function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLiv
     || lease.cloudAuthority.canonicalBaseSha !== lease.baseSha
     || lease.cloudAuthority.laneRevision !== lease.fenceSha
     || lease.cloudAuthority.writeSetDigest !== lease.admission.writeSetDigest
-    || lease.cloudAuthority.manifestDigest !== lease.admission.manifestDigest
+    || (lease.cloudAuthority.manifestDigest !== lease.admission.manifestDigest && !projectionReceipt)
     || digestValue(normalizeWriteSet(lease.admission.declaredWriteSet)) !== lease.admission.writeSetDigest
     || (requireLive ? Date.parse(lease.expiresAt) <= instant.getTime() : Date.parse(lease.expiresAt) > instant.getTime())) {
     throw new Error("Recovery requires the exact expired planned cloud-admitted lease.");
@@ -173,6 +181,47 @@ function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLiv
   if (!identity || identity.device !== lease.device || identity.scope !== lease.scope) {
     throw new Error("Recovery branch identity drifted from its planned lease.");
   }
+}
+
+export function authorizeProjectedManifestCanonicalization({ registry, lease } = {}) {
+  const admittedManifestDigest = lease?.admission?.manifestDigest;
+  const projectedManifestDigest = lease?.cloudAuthority?.manifestDigest;
+  if (projectedManifestDigest === admittedManifestDigest) return null;
+  if (projectedManifestDigest !== undefined || !DIGEST.test(String(admittedManifestDigest || ""))) {
+    throw new Error("Recovery requires the exact expired planned cloud-admitted lease.");
+  }
+  const receipts = Object.values(registry?.[FENCE_PROJECTION_RECEIPTS_FIELD] || {})
+    .filter(receipt => isExactFenceProjectionReceipt({ receipt, registry, lease }));
+  if (receipts.length !== 1) {
+    throw new Error("Recovery requires the exact expired planned cloud-admitted lease.");
+  }
+  return receipts[0];
+}
+
+function isExactFenceProjectionReceipt({ receipt, registry, lease }) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return false;
+  const { receiptDigest, ...core } = receipt;
+  const authority = receipt.phaseValues?.authorityVerified;
+  const attempted = receipt.phaseValues?.localAttempted;
+  const operationPrefix = "planned-start-fence-projection-recovery:local-attempted:";
+  return receipt.schema === "agentic-planned-start-fence-projection-recovery-registry-receipt/v1"
+    && DIGEST.test(String(receiptDigest || "")) && receiptDigest === digestValue(core)
+    && DIGEST.test(String(receipt.planDigest || ""))
+    && receipt.targetLeaseDigest === writerLeaseDigest(lease)
+    && receipt.claimId === lease.cloudAuthority.claimId
+    && receipt.sourceTransitionCounter === 1
+    && receipt.targetTransitionCounter === lease.cloudAuthority.transitionCounter
+    && Number.isSafeInteger(receipt.registryRevision) && receipt.registryRevision > 0
+    && Number.isSafeInteger(registry?.revision) && receipt.registryRevision <= registry.revision
+    && receipt.writerRegistryMutation === true && receipt.cloudMutation === false
+    && receipt.providerMutation === false && receipt.gitMutation === false
+    && receipt.sourceMutation === false
+    && DIGEST.test(String(authority?.taskAuthorityReceiptDigest || ""))
+    && authority?.taskAuthorityBindingDigest === lease.taskAuthority?.bindingDigest
+    && DIGEST.test(String(attempted?.sourceLeaseDigest || ""))
+    && attempted?.sourceLeaseDigest === receipt.sourceLeaseDigest
+    && attempted?.targetLeaseDigest === receipt.targetLeaseDigest
+    && receipt.operationKey === `${operationPrefix}${attempted?.idempotencyKey}`;
 }
 
 export function ownerIdentifierMatches(namespace, providerIdentity, localIdentity) {

@@ -176,6 +176,10 @@ plan evidence digest recorded by the recovery transition. The controller then
 replays the original idempotency key and adopts the provider's original active
 operation receipt before projecting any local lease or review marker. A second
 transition, foreign evidence digest, or any identity drift remains blocking.
+During repository-source revalidation, the planning inspector may project this
+one verified counter-plus-one expired result back to its sealed source shape;
+that read model grants no authority, and the effect adapter still validates the
+live recovery evidence digest before invoking or adopting the idempotent effect.
 
 Provider claims use opaque device and session subjects. Source and recovered
 verification normalize the local lease labels before joining those subjects;

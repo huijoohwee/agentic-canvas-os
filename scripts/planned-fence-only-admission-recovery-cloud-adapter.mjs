@@ -24,8 +24,25 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     requireStatus(status);
     const matches = status.claims.filter(claim => claim.claimId === sourceAuthority.claimId);
     if (matches.length !== 1) invalid("dormant claim cardinality");
-    const claim = projectClaim(matches[0]);
-    assertSourceClaim({ claim, sourceAuthority, sourceLease, manifest });
+    const observedClaim = projectClaim(matches[0]);
+    let claim = observedClaim;
+    if (observedClaim.state === "dormant-preserved"
+      && observedClaim.transitionCounter === sourceAuthority.transitionCounter + 1) {
+      const projectedSourceClaim = projectSourceClaimFromExpiredResponseLoss({
+        claim: observedClaim,
+        sourceAuthority,
+      });
+      assertExpiredRecoveredResponseLossClaim({
+        claim: observedClaim,
+        sourceClaim: projectedSourceClaim,
+        sourceLease,
+        manifest,
+        sourceAuthority,
+      });
+      claim = projectedSourceClaim;
+    } else {
+      assertSourceClaim({ claim, sourceAuthority, sourceLease, manifest });
+    }
     const overlappingClaimIds = status.claims
       .filter(candidate => candidate.claimId !== claim.claimId
         && candidate.repositoryId === claim.repositoryId
@@ -324,7 +341,7 @@ function assertRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, man
 }
 
 function assertExpiredRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, manifest,
-  recoveryEvidenceDigest }) {
+  recoveryEvidenceDigest = null, sourceAuthority = null }) {
   const stableFields = [
     "claimId", "entrySchema", "claimIdentitySchema", "actorId", "repositoryId",
     "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
@@ -340,10 +357,41 @@ function assertExpiredRecoveredResponseLossClaim({ claim, sourceClaim, sourceLea
     || normalizeOwnerIdentifier("session", claim.sessionId)
       !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
-    || claim.recovery?.evidenceDigest !== recoveryEvidenceDigest
-    || !claim.recovery?.recoveredAt) {
+    || requiredDigest(claim.recovery?.evidenceDigest, "response-loss recovery evidence")
+      !== (recoveryEvidenceDigest || claim.recovery?.evidenceDigest)
+    || !requiredInstant(claim.recovery?.recoveredAt, "response-loss recovery time")
+    || (sourceAuthority && (claim.claimId !== sourceAuthority.claimId
+      || claim.entrySchema !== sourceAuthority.entrySchema
+      || claim.claimIdentitySchema !== sourceAuthority.claimIdentitySchema
+      || claim.transitionCounter !== sourceAuthority.transitionCounter + 1
+      || claim.heartbeatCounter !== normalizeHeartbeatCounter(sourceAuthority.heartbeatCounter)
+      || claim.canonicalBaseRevision !== sourceAuthority.canonicalBaseSha
+      || claim.laneRevision !== sourceAuthority.laneRevision
+      || claim.writeSetDigest !== sourceAuthority.writeSetDigest
+      || claim.leaseEpoch !== sourceAuthority.leaseEpoch
+      || normalizeOwnerIdentifier("device", sourceAuthority.deviceId)
+        !== normalizeOwnerIdentifier("device", sourceLease.device)
+      || normalizeOwnerIdentifier("session", sourceAuthority.sessionId)
+        !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
+      || claim.reviewRequestId !== sourceAuthority.reviewRequestId))) {
     invalid("exact expired response-loss recovery claim");
   }
+}
+
+function projectSourceClaimFromExpiredResponseLoss({ claim, sourceAuthority }) {
+  const { recovery: _recovery, ...stableClaim } = claim;
+  return Object.freeze({
+    ...stableClaim,
+    state: "dormant-preserved",
+    writeAuthority: false,
+    scopeReserved: true,
+    expiresAt: sourceAuthority.expiresAt,
+    fenceRevision: sourceAuthority.claimDigest,
+    transitionDigest: sourceAuthority.claimLedgerRevision,
+    operationReceiptDigest: sourceAuthority.operationReceiptDigest,
+    transitionCounter: sourceAuthority.transitionCounter,
+    heartbeatCounter: normalizeHeartbeatCounter(sourceAuthority.heartbeatCounter),
+  });
 }
 
 function recoveryRequestDigest({ plan, evaluationTime }) {

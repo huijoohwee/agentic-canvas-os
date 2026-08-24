@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5064,
-  "headDigest": "8eddba2a9d7fa788867a29a01a0b54dbef473e1c05cdde6cd34bbf1098a3c85f",
+  "sequence": 5065,
+  "headDigest": "cc209281f860c5913cc29236040a89ed318b877c09f263cfef5762f0ce824675",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -255483,6 +255483,46 @@
       },
       "claimDigest": "40742ad4b642e64e401a990ff7c19ed2180b8bef097088dd7cd4852006647e87",
       "digest": "8eddba2a9d7fa788867a29a01a0b54dbef473e1c05cdde6cd34bbf1098a3c85f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5065,
+      "parentDigest": "8eddba2a9d7fa788867a29a01a0b54dbef473e1c05cdde6cd34bbf1098a3c85f",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "693ae357a61fe08cf43e604d0df9ba4945b203b1b3cd46c1393ba19e139906a8",
+      "idempotencyKey": "b9e2d97ae57e9f54ecd02b560987e6648a97d3968ac0838a3d1919185938d18f",
+      "requestDigest": "05683e4d8023ac0b174e73d4966d596b5c0b1010bccbf16fc581746f55b586d5",
+      "evaluationTime": "2026-08-24T22:51:12.000Z",
+      "claimCore": {
+        "claimId": "693ae357a61fe08cf43e604d0df9ba4945b203b1b3cd46c1393ba19e139906a8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:e219afe7e649a5541f5745b8ca6d6c4a857bb9074c1a2a640ffea3ef2c32b7e3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:6b244b0f73280baa55d9e503fe0cb6d7173a2e6debdf0653edf455c2aba0f0ed",
+        "canonicalBaseRevision": "e7dfbe442dd554e986daec28c1cd891237da9d1e",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-recovery-evidence.test.mjs",
+          "path:scripts/active-owned-dirt-recovery-evidence.mjs",
+          "semantic:active-owned-dirt-missing-parent-recovery"
+        ],
+        "writeSetDigest": "1e07b83f72042f01a0662776e3040f22a529f3cf074a319b7c40a58ade60ea13",
+        "laneRevision": "e7dfbe442dd554e986daec28c1cd891237da9d1e",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T23:21:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "571c7698625a7ef73ca85cd8aa494c7c951d3f0a40060bdecb7e4f529085a92a",
+      "digest": "cc209281f860c5913cc29236040a89ed318b877c09f263cfef5762f0ce824675"
     }
   ]
 }

@@ -524,9 +524,12 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
   assert.equal(projectedSource.claim.fenceRevision, claim.fenceRevision);
   assert.equal(projectedSource.claim.recovery, undefined);
   const replayed = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
-    inspect, invoke: () => ({ ...result, replayed: true }), verify,
+    inspect, invoke: () => ({ ...result, replayed: true }),
+    verify: () => { throw new Error("verification was blocked"); },
   }).recover({ plan, sealedRequest: sealed });
   assert.equal(replayed.disposition, "replayed");
+  assert.equal(replayed.authority.state, "active");
+  assert.equal(replayed.authority.expiresAt, observedClaim.expiresAt);
 
   observedClaim = { ...observedClaim,
     recovery: { ...observedClaim.recovery, evidenceDigest: D("foreign-recovery") } };

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  ownerIdentifierMatches,
   recoverPlannedAdmissionCloudAuthority,
   shouldReconcileRecoveredPlannedLease,
 } from "../scripts/planned-clean-committed-recovery-lib.mjs";
+import { normalizeOwnerIdentifier } from "../scripts/planned-device-projection-recovery-evidence.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -32,6 +34,24 @@ const dormant = {
   transitionCounter: 7,
   fenceRevision: digest("e"),
 };
+
+test("planned recovery compares provider and local owner identities canonically", () => {
+  assert.equal(ownerIdentifierMatches(
+    "device",
+    normalizeOwnerIdentifier("device", "huis-macbook-pro-3.local"),
+    "huis-macbook-pro-3.local",
+  ), true);
+  assert.equal(ownerIdentifierMatches(
+    "session",
+    normalizeOwnerIdentifier("session", "codex-owned-session"),
+    "codex-owned-session",
+  ), true);
+  assert.equal(ownerIdentifierMatches(
+    "device",
+    normalizeOwnerIdentifier("device", "another-device"),
+    "huis-macbook-pro-3.local",
+  ), false);
+});
 
 test("planned clean recovery advances only the exact dormant claim", () => {
   let request = null;

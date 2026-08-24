@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  authorizeProjectedManifestCanonicalization,
   ownerIdentifierMatches,
   recoverPlannedAdmissionCloudAuthority,
   shouldReconcileRecoveredPlannedLease,
 } from "../scripts/planned-clean-committed-recovery-lib.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { normalizeOwnerIdentifier } from "../scripts/planned-device-projection-recovery-evidence.mjs";
+import { writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -22,7 +25,7 @@ const authority = {
   deviceId: "device",
   sessionId: "session",
 };
-const manifest = { writeSetDigest: authority.writeSetDigest };
+const manifest = { manifestDigest: digest("0"), writeSetDigest: authority.writeSetDigest };
 const dormant = {
   claimId: authority.claimId,
   state: "parked",
@@ -73,6 +76,66 @@ test("planned clean recovery advances only the exact dormant claim", () => {
   assert.equal(request.expectedTransitionCounter, 7);
   assert.equal(request.recoveryEvidenceDigest, digest("f"));
   assert.equal(result.authority.marker, projected);
+  assert.equal(result.authority.manifestDigest, manifest.manifestDigest);
+});
+
+test("planned clean recovery canonicalizes a missing manifest only from its exact fence-projection receipt", () => {
+  const branch = "agent/device/planned-scope";
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    branch,
+    taskAuthority: { bindingDigest: digest("8") },
+    admission: { manifestDigest: digest("9") },
+    cloudAuthority: { claimId: digest("a"), transitionCounter: 3 },
+  };
+  const attempted = {
+    idempotencyKey: digest("1"),
+    sourceLeaseDigest: digest("2"),
+    targetLeaseDigest: writerLeaseDigest(lease),
+  };
+  const core = {
+    schema: "agentic-planned-start-fence-projection-recovery-registry-receipt/v1",
+    operationKey: `planned-start-fence-projection-recovery:local-attempted:${attempted.idempotencyKey}`,
+    planDigest: digest("3"),
+    sourceLeaseDigest: attempted.sourceLeaseDigest,
+    targetLeaseDigest: attempted.targetLeaseDigest,
+    claimId: lease.cloudAuthority.claimId,
+    sourceTransitionCounter: 1,
+    targetTransitionCounter: 3,
+    registryRevision: 9,
+    phaseValues: {
+      authorityVerified: {
+        taskAuthorityReceiptDigest: digest("4"),
+        taskAuthorityBindingDigest: lease.taskAuthority.bindingDigest,
+      },
+      localAttempted: attempted,
+    },
+    writerRegistryMutation: true,
+    cloudMutation: false,
+    providerMutation: false,
+    gitMutation: false,
+    sourceMutation: false,
+  };
+  const receipt = { ...core, receiptDigest: digestValue(core) };
+  const registry = {
+    revision: 9,
+    plannedStartFenceProjectionRecoveryReceipts: { [receipt.operationKey]: receipt },
+  };
+
+  assert.equal(authorizeProjectedManifestCanonicalization({ registry, lease }), receipt);
+  assert.throws(() => authorizeProjectedManifestCanonicalization({ registry: { revision: 9 }, lease }),
+    /exact expired planned cloud-admitted lease/u);
+  assert.throws(() => authorizeProjectedManifestCanonicalization({
+    registry,
+    lease: { ...lease, cloudAuthority: { ...lease.cloudAuthority, manifestDigest: digest("7") } },
+  }), /exact expired planned cloud-admitted lease/u);
+  assert.throws(() => authorizeProjectedManifestCanonicalization({
+    registry: { ...registry, plannedStartFenceProjectionRecoveryReceipts: {
+      [receipt.operationKey]: { ...receipt, targetTransitionCounter: 2 },
+    } },
+    lease,
+  }), /exact expired planned cloud-admitted lease/u);
 });
 
 test("planned clean recovery accepts the provider-neutral dormant state", () => {

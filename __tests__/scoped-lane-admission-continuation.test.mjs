@@ -406,8 +406,10 @@ function defaultRepositoryGitText(argumentsList) {
   throw new Error(`Unexpected git invocation: ${argumentsList.join(" ")}`);
 }
 
-test("same-session planned admission continues with current operation-derived preservation", () => {
+test("same-session planned admission accepts an immutable shorter local TTL", () => {
   const source = fixture();
+  assert.ok(Date.parse(source.lease.expiresAt)
+    < Date.parse(source.verified.authority.expiresAt));
   const continued = continueFixture(source);
 
   assert.equal(continued.admission.status, "admitted");
@@ -428,6 +430,57 @@ test("same-session planned admission continues with current operation-derived pr
     "disjoint-attributed",
   );
   assert.equal(continued.mutationAuthorityReceipt.status, "ready");
+});
+
+test("continuation rejects a local expiry later than authenticated cloud expiry", () => {
+  const source = fixture();
+  const lease = { ...source.lease, expiresAt: "2099-08-05T00:00:00.000Z" };
+  const lanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease }
+    : item);
+  assert.throws(
+    () => continueFixture({ ...source, lease, lanes }),
+    /local lease expiry exceeds authenticated cloud expiry/u,
+  );
+});
+
+test("continuation rejects historical local expiry drift", () => {
+  const source = fixture();
+  const lanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease: { ...item.lease, expiresAt: "2099-08-02T00:00:00.000Z" } }
+    : item);
+  assert.throws(
+    () => continueFixture(source, { lanes }),
+    /changed the historical local lease expiry/u,
+  );
+});
+
+test("continuation rejects invalid local, candidate, or cloud expiry timestamps", () => {
+  const source = fixture();
+  const invalid = "not-a-finite-instant";
+  const invalidLocalLease = { ...source.lease, expiresAt: invalid };
+  const invalidLocalLanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease: invalidLocalLease }
+    : item);
+  assert.throws(
+    () => continueFixture({ ...source, lease: invalidLocalLease, lanes: invalidLocalLanes }),
+    /historical local lease expiry is invalid/u,
+  );
+
+  const invalidCandidateLanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease: { ...item.lease, expiresAt: invalid } }
+    : item);
+  assert.throws(
+    () => continueFixture(source, { lanes: invalidCandidateLanes }),
+    /candidate local lease expiry is invalid/u,
+  );
+
+  assert.throws(
+    () => continueFixture(source, {
+      cloudAuthority: { ...source.verified.authority, expiresAt: invalid },
+    }),
+    /authenticated cloud expiry is invalid/u,
+  );
 });
 
 test("continuation rejects an overlapping protected-source delta", () => {

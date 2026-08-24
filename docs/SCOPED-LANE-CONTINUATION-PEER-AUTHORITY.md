@@ -39,6 +39,12 @@ Continuation uses `classifyExistingLane` from the scoped admission authority
 owner. It does not maintain a second classification table or reimplement lease,
 claim, expiry, semantic-scope, or write-set rules.
 
+The candidate's historical local lease expiry is immutable continuation
+identity. It may be earlier than the authenticated cloud expiry, but it may
+never be later. Both values must be finite canonical instants. Continuation
+rejects local expiry drift instead of extending, heartbeating, or reacquiring
+the claim; equality is not required.
+
 For every registered lane other than the candidate and canonical lane, the
 classifier receives the exact:
 

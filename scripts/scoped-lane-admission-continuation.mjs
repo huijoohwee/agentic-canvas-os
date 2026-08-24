@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import {
@@ -64,12 +65,57 @@ export function assertPlannedContinuationIdentity({
   candidateLineage: lineage,
   manifest,
   files,
+  gitText = null,
 } = {}) {
   const source = plan?.sourceEvidence;
   const candidate = source?.candidate;
+  const historicalController = source?.controller;
+  const controllerStaticIdentityExact = Boolean(historicalController)
+    && controller?.path === historicalController.path
+    && controller?.origin === historicalController.origin
+    && controller?.clean === true
+    && historicalController.clean === true
+    && controller?.deviceBranchScriptDigest
+      === historicalController.deviceBranchScriptDigest;
+  const controllerRevision = controller?.headSha;
+  const controllerFrontierExact = /^[0-9a-f]{40}$/u.test(String(controllerRevision || ""))
+    && controller?.originMainSha === controllerRevision
+    && controller?.remoteMainSha === controllerRevision
+    && /^[0-9a-f]{40}$/u.test(String(controller?.treeSha || ""));
+  let controllerProtectedAdvanceExact = false;
+  if (controllerStaticIdentityExact && controllerFrontierExact) {
+    if (controllerRevision === historicalController.headSha) {
+      controllerProtectedAdvanceExact = controller.treeSha === historicalController.treeSha
+        && controller.originMainSha === historicalController.originMainSha
+        && controller.remoteMainSha === historicalController.remoteMainSha;
+    } else {
+      try {
+        const readGit = gitText || (argumentsList => execFileSync(
+          "git", argumentsList, {
+            cwd: controller.path,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        ).trim());
+        observeProtectedDescendant({
+          baseRevision: historicalController.headSha,
+          protectedRevision: controllerRevision,
+          manifest,
+          gitText: readGit,
+        });
+        controllerProtectedAdvanceExact = String(readGit([
+          "rev-parse", `${controllerRevision}^{tree}`,
+        ])).trim() === controller.treeSha;
+      } catch {
+        controllerProtectedAdvanceExact = false;
+      }
+    }
+  }
   if (!source || !/^[0-9a-f]{64}$/u.test(String(plan?.planDigest || ""))
     || plan.sourceEvidenceDigest !== source.sourceEvidenceDigest
-    || JSON.stringify(controller) !== JSON.stringify(source.controller)
+    || !controllerStaticIdentityExact
+    || !controllerFrontierExact
+    || !controllerProtectedAdvanceExact
     || path.resolve(lease?.worktreePath || "") !== candidate?.targetPath
     || lease?.branch !== candidate?.branch
     || lease?.sessionId !== candidate?.sessionId
@@ -90,6 +136,36 @@ export function assertPlannedContinuationIdentity({
     throw new Error("Protected-descendant continuation changed its immutable planned identity.");
   }
   return true;
+}
+
+export function selectedPreservationMatchesLane({
+  lane,
+  rawLane,
+  dormantPreservationReceipt,
+} = {}) {
+  if (lane?.authorityState === "dormant-preserved") {
+    return lane.dormantPreservationReceiptDigest
+      === dormantPreservationReceipt?.receiptDigest;
+  }
+  if (lane?.classification !== "disjoint-attributed"
+    || lane?.authorityState !== "retired-preserved"
+    || lane?.dormantPreservationReceiptDigest !== null) return false;
+  const selected = dormantPreservationReceipt?.worktrees?.find(
+    item => path.resolve(item.path) === path.resolve(rawLane?.path || ""),
+  );
+  if (!selected) return false;
+  return digestValue(selected) === digestValue({
+    path: path.resolve(rawLane.path),
+    branch: rawLane.branch,
+    detached: rawLane.detached,
+    dirty: rawLane.dirty,
+    headSha: rawLane.head,
+    treeSha: rawLane.treeSha,
+    indexDigest: rawLane.indexDigest,
+    workingTreeDigest: rawLane.workingTreeDigest,
+    stateDigest: rawLane.stateDigest,
+    projectedClaimId: rawLane.projectedClaimId ?? null,
+  });
 }
 
 export function continuePlannedAdmissionFromRepository({
@@ -502,11 +578,11 @@ function verifyLocalPeers({
       );
     }
     const selected = preservedPaths.has(path.resolve(rawLane.path));
-    if (selected && (
-      lane.authorityState !== "dormant-preserved"
-      || lane.dormantPreservationReceiptDigest
-        !== dormantPreservationReceipt.receiptDigest
-    )) {
+    if (selected && !selectedPreservationMatchesLane({
+      lane,
+      rawLane,
+      dormantPreservationReceipt,
+    })) {
       throw new Error(
         `Admission continuation selected dormant peer drifted: ${rawLane.path}.`,
       );

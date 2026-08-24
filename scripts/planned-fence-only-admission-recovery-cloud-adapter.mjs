@@ -194,9 +194,18 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     const matches = status.claims.filter(claim => claim.claimId === authority.claimId);
     if (matches.length !== 1) invalid("recoverable claim cardinality");
     const claim = projectClaim(matches[0]);
-    if (claim.state === "dormant-preserved") {
+    if (claim.state === "dormant-preserved"
+      && claim.transitionCounter === plan.evidence.cloud.claim.transitionCounter) {
       assertSourceClaim({ claim, sourceAuthority: authority,
         sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest });
+    } else if (claim.state === "dormant-preserved") {
+      assertExpiredRecoveredResponseLossClaim({
+        claim,
+        sourceClaim: plan.evidence.cloud.claim,
+        sourceLease: plan.evidence.sourceLease,
+        manifest: plan.evidence.manifest,
+        recoveryEvidenceDigest: plan.evidence.evidenceDigest,
+      });
     } else {
       assertRecoveredResponseLossClaim({ claim, sourceClaim: plan.evidence.cloud.claim,
         sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest });
@@ -311,6 +320,29 @@ function assertRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, man
       !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)) {
     invalid("exact response-loss recovery claim");
+  }
+}
+
+function assertExpiredRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, manifest,
+  recoveryEvidenceDigest }) {
+  const stableFields = [
+    "claimId", "entrySchema", "claimIdentitySchema", "actorId", "repositoryId",
+    "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
+    "leaseEpoch", "reviewRequestId",
+  ];
+  if (claim.state !== "dormant-preserved" || claim.writeAuthority !== false
+    || claim.scopeReserved !== true
+    || stableFields.some(field => claim[field] !== sourceClaim[field])
+    || claim.transitionCounter !== sourceClaim.transitionCounter + 1
+    || claim.heartbeatCounter !== sourceClaim.heartbeatCounter
+    || normalizeOwnerIdentifier("device", claim.deviceId)
+      !== normalizeOwnerIdentifier("device", sourceLease.device)
+    || normalizeOwnerIdentifier("session", claim.sessionId)
+      !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
+    || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
+    || claim.recovery?.evidenceDigest !== recoveryEvidenceDigest
+    || !claim.recovery?.recoveredAt) {
+    invalid("exact expired response-loss recovery claim");
   }
 }
 

@@ -288,8 +288,19 @@ export function inspectSiblingRepository({
 }
 function defaultSiblingRepositoryPath() {
   const commonDirectory = defaultGitText(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
-  const canonicalRepository = path.dirname(commonDirectory);
-  return path.resolve(canonicalRepository, "..", "knowgrph");
+  return resolveSiblingRepositoryPath({ commonDirectory });
+}
+export function resolveSiblingRepositoryPath({ commonDirectory, pathExists = existsSync }) {
+  const canonicalRepository = path.dirname(path.resolve(commonDirectory));
+  const immediateSibling = path.resolve(canonicalRepository, "..", "knowgrph");
+  let ancestor = path.dirname(canonicalRepository);
+  while (true) {
+    const candidate = path.join(ancestor, "knowgrph");
+    if (pathExists(path.join(candidate, ".git"))) return candidate;
+    const parent = path.dirname(ancestor);
+    if (parent === ancestor) return immediateSibling;
+    ancestor = parent;
+  }
 }
 function gitReplacement(source) { if (/git\s+worktree/iu.test(source)) return { gitCommand: "git worktree", githubFeature: null }; if (/git\s+(?:branch|status|rev-parse|merge-base)/iu.test(source)) return { gitCommand: "git branch/status/rev-parse/merge-base", githubFeature: null }; if (/pull request|github api|gh\s+pr/iu.test(source)) return { gitCommand: null, githubFeature: "GitHub pull requests" }; return { gitCommand: null, githubFeature: null }; }
 function retained(retentionReason) { return { classification: "retained", retentionReason }; }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertTotality, buildInventory, classifyEntry, extractImports, inspectSiblingRepository, resolveReference, tokenizeCommand } from "../scripts/teardown-inventory.mjs";
+import { assertTotality, buildInventory, classifyEntry, extractImports, inspectSiblingRepository, resolveReference, resolveSiblingRepositoryPath, tokenizeCommand } from "../scripts/teardown-inventory.mjs";
 
 test("tokenizes chained scripts and preserves glob tokens", () => {
   assert.deepEqual(tokenizeCommand("node ./scripts/x.mjs arg && node --test '__tests__/*.test.mjs'"), ["node", "./scripts/x.mjs", "arg", "&&", "node", "--test", "__tests__/*.test.mjs"]);
@@ -99,4 +99,16 @@ test("an absent sibling repository is explicit and undetermined", () => {
     readsExternalStateDirectory: null, determination: "undetermined",
     readingFileCount: 0, readingFiles: [],
   });
+});
+
+test("sibling resolution escapes nested worktree containers to the canonical workspace", () => {
+  const pathExists = candidate => candidate === "/workspace/knowgrph/.git";
+  assert.equal(resolveSiblingRepositoryPath({
+    commonDirectory: "/workspace/.worktrees/controller/.git",
+    pathExists,
+  }), "/workspace/knowgrph");
+  assert.equal(resolveSiblingRepositoryPath({
+    commonDirectory: "/workspace/agentic-canvas-os/.git",
+    pathExists,
+  }), "/workspace/knowgrph");
 });

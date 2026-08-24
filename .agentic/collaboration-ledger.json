@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4882,
-  "headDigest": "ea4d93dcb205da79730709e52537f0f6b39efc2d3e39e00648c766095d39aef5",
+  "sequence": 4883,
+  "headDigest": "3424032ee10cb9fd17476a997c842130820d188350753ef892e870158dbdef68",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -245971,6 +245971,48 @@
       },
       "claimDigest": "4d3437bfb40bbfa621c240e33b86e25c4d81a99c3be5cf94731d2804a56d110a",
       "digest": "ea4d93dcb205da79730709e52537f0f6b39efc2d3e39e00648c766095d39aef5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4883,
+      "parentDigest": "ea4d93dcb205da79730709e52537f0f6b39efc2d3e39e00648c766095d39aef5",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b88bc039ca6dcf2bad19aa24784dfaaf3f74b650d49ed94aa8986faad34bdf94",
+      "idempotencyKey": "63ad21fc34d07bbe6065a181de4445a0db66f07adc06871b4f2af2135e0db1e4",
+      "requestDigest": "977d608df5b4eface5446147f3778692723f347c81ae41f25aef72b1f5cd0abd",
+      "evaluationTime": "2026-08-24T06:56:08.000Z",
+      "claimCore": {
+        "claimId": "b88bc039ca6dcf2bad19aa24784dfaaf3f74b650d49ed94aa8986faad34bdf94",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:7039ecc36d238aae5e104a1c77df41e7c042ba03cdd71d50106d4dbe7414884f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:373d1809fe5be11522ceefef11def2ba3a4098615795fb767443ca24cae965db",
+        "canonicalBaseRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+        "declaredWriteScope": [
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:docs/DORMANT-PRESERVATION-DECISION.md",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "semantic:planned-continuation-controller-identity"
+        ],
+        "writeSetDigest": "0c586001a038ab54a40f62516026de90df9617827d608a815e748cd9ae22d297",
+        "laneRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T07:26:08.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "fac54f2368e403b35603ba63c595850f6b6f297ce12753c625ea14240120ddcc",
+        "eligibleSince": "2026-08-24T06:54:58.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-24T06:56:08.000Z"
+      },
+      "claimDigest": "aec715328b9d96befb0b78dc2c1877f63ba92801a27148c2b29529e14cfd8977",
+      "digest": "3424032ee10cb9fd17476a997c842130820d188350753ef892e870158dbdef68"
     }
   ]
 }

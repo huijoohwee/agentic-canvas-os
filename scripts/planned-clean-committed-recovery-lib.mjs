@@ -6,7 +6,7 @@ import { assertPullRequestBodyWithinGitHubLimit } from "./expired-committed-hear
 import { fetchProtectedMain } from "./protected-main-path-equivalence-lib.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeOwnerIdentifier } from "./planned-device-projection-recovery-evidence.mjs";
-import { parseDeviceBranch, projectWriterLeasePullRequestMarker, projectExpiredCommittedHeartbeatLease, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
+import { parseDeviceBranch, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, projectExpiredCommittedHeartbeatLease, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 export const PLANNED_CLEAN_COMMITTED_RECOVERY_RESULT_SCHEMA = "agentic-planned-clean-committed-recovery-result/v1";
@@ -120,7 +120,8 @@ function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore,
   const projectionReceipt = authorizeProjectedManifestCanonicalization({ registry, lease });
   requirePlannedLease(lease, repo, branch, sessionId, now(), false, projectionReceipt);
   const remoteHeadSha = remoteBranchHead({ branch, gitOptional });
-  const projection = readExactPullRequestProjection({ lease, branch, ghText, expectedHeadSha: remoteHeadSha });
+  const projection = readPlannedPullRequestProjection({ lease, branch, ghText,
+    expectedHeadSha: remoteHeadSha, projectionReceipt });
   const descendant = captureCommittedDescendantEvidence({ lease, gitText, bindProtectedMain: true,
     sourceRemoteHeadSha: remoteHeadSha });
   const prefix = descendant.sourceRemotePrefix;
@@ -196,6 +197,52 @@ export function authorizeProjectedManifestCanonicalization({ registry, lease } =
     throw new Error("Recovery requires the exact expired planned cloud-admitted lease.");
   }
   return receipts[0];
+}
+
+export function isProjectedPredecessorPullRequestMarker({ marker, lease,
+  projectionReceipt } = {}) {
+  if (!projectionReceipt) return false;
+  try {
+    const reconstructedSourceLease = { ...lease, cloudAuthority: marker.cloudAuthority };
+    return projectionReceipt.targetLeaseDigest === writerLeaseDigest(lease)
+      && projectionReceipt.sourceLeaseDigest === writerLeaseDigest(reconstructedSourceLease)
+      && sameMarkerExceptPriorHeartbeat(marker,
+        projectWriterLeasePullRequestMarker(reconstructedSourceLease));
+  } catch {
+    return false;
+  }
+}
+
+function sameMarkerExceptPriorHeartbeat(marker, expected) {
+  const source = structuredClone(marker);
+  const target = structuredClone(expected);
+  const sourceHeartbeat = Date.parse(source.heartbeatAt || "");
+  const sourceExpiry = Date.parse(source.expiresAt || "");
+  const targetHeartbeat = Date.parse(target.heartbeatAt || "");
+  const targetExpiry = Date.parse(target.expiresAt || "");
+  delete source.heartbeatAt;
+  delete source.expiresAt;
+  delete target.heartbeatAt;
+  delete target.expiresAt;
+  const sourceTtl = sourceExpiry - sourceHeartbeat;
+  return Number.isFinite(sourceHeartbeat) && Number.isFinite(sourceExpiry)
+    && Number.isFinite(targetHeartbeat) && Number.isFinite(targetExpiry)
+    && sourceTtl >= 60_000 && sourceTtl === targetExpiry - targetHeartbeat
+    && sourceHeartbeat <= targetHeartbeat && sourceExpiry <= targetExpiry
+    && targetHeartbeat - sourceHeartbeat <= sourceTtl
+    && digestValue(source) === digestValue(target);
+}
+
+function readPlannedPullRequestProjection({ lease, branch, ghText, expectedHeadSha,
+  projectionReceipt }) {
+  try {
+    return readExactPullRequestProjection({ lease, branch, ghText, expectedHeadSha });
+  } catch (error) {
+    const projection = readPullRequestProjection({ lease, branch, ghText, expectedHeadSha });
+    const marker = parseWriterLeasePullRequestBody(projection.pullRequest.body);
+    if (!isProjectedPredecessorPullRequestMarker({ marker, lease, projectionReceipt })) throw error;
+    return projection;
+  }
 }
 
 function isExactFenceProjectionReceipt({ receipt, registry, lease }) {

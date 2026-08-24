@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4832,
-  "headDigest": "f6e3771e7ac8f197a2948578d300e0b5acc99e0a313c8be81ca11dea5896d3d0",
+  "sequence": 4833,
+  "headDigest": "28597f81c5a81f26d41fa3114f50703fa5af71c62eca8ee96c56a70fbc875140",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -243164,6 +243164,47 @@
       },
       "claimDigest": "591e6e6498f3b9e205df05118466c2797e672d47edd4bfb4651c75d465a177bd",
       "digest": "f6e3771e7ac8f197a2948578d300e0b5acc99e0a313c8be81ca11dea5896d3d0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4833,
+      "parentDigest": "f6e3771e7ac8f197a2948578d300e0b5acc99e0a313c8be81ca11dea5896d3d0",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "21267d917e8683d26f22a1242c2577f38a5c48bffad61489dbcb4cd2942bdf32",
+      "idempotencyKey": "2f44573cfa22dbbb698de80f85366f0e3ae579c9cbe4e2c0fa290477cae8f577",
+      "requestDigest": "c52990814fd7fccf7a7e58df0a5d2336cac3f9c4a8c613dbe35284e27ec1ece3",
+      "evaluationTime": "2026-08-24T05:06:30.000Z",
+      "claimCore": {
+        "claimId": "21267d917e8683d26f22a1242c2577f38a5c48bffad61489dbcb4cd2942bdf32",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c316220db6f1061ecde9398bb6c819b5bcb5c745b35f7ea01d77c6da43b3f46c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:54e6f4919dd75956b4fdff719cdd5bff91ffa34a1ce23b5a8bfce1c8033ef28a",
+        "canonicalBaseRevision": "0a60b64aae2c442415b4277dfabf5b18bf4794a7",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-preservation-decision-repository-adapter.test.mjs",
+          "path:docs/DORMANT-PRESERVATION-DECISION.md",
+          "path:scripts/dormant-preservation-decision-repository-adapter.mjs",
+          "semantic:planned-continuation-protected-advance"
+        ],
+        "writeSetDigest": "2b2696b26f80ec0d29cb473ee99056014ec101166d1618d94b6bf4f530ad4eae",
+        "laneRevision": "0a60b64aae2c442415b4277dfabf5b18bf4794a7",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T07:06:30.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "24692b37e01496c3837f93834c40fce9849a2303f67ab88d39777e812093d7e0",
+      "digest": "28597f81c5a81f26d41fa3114f50703fa5af71c62eca8ee96c56a70fbc875140"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4791,
-  "headDigest": "793417ffac39c3fce115a462bd3ed46031bd546a7fc8a40b898355b56f8a15ab",
+  "sequence": 4792,
+  "headDigest": "de00b1ff6f32ab92657f144c9017b9581dc2a08a1c3fd1e01c37df008d1d3b41",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -241120,6 +241120,49 @@
       },
       "claimDigest": "44e14e832a23b10e79a1e946546509e79e6d9fc040c715ea6ece9786a4a2db7a",
       "digest": "793417ffac39c3fce115a462bd3ed46031bd546a7fc8a40b898355b56f8a15ab"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4792,
+      "parentDigest": "793417ffac39c3fce115a462bd3ed46031bd546a7fc8a40b898355b56f8a15ab",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "09035e6167d65aa0679e5cd3af4c18e008c31ecf5038d60a60f80f47e427b7f1",
+      "idempotencyKey": "7173940602ac3e809517c0b4eeb9c8fc4fa7d6f614e593706aed635e7b8d893c",
+      "requestDigest": "bbf77501621c408e06caf5369ef0d9f8b25afbb53c02cf7d36116f01cb67d83e",
+      "evaluationTime": "2026-08-24T03:37:14.000Z",
+      "claimCore": {
+        "claimId": "09035e6167d65aa0679e5cd3af4c18e008c31ecf5038d60a60f80f47e427b7f1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f79f5cc716df0d9876bc5edcc929d82176bb6e16870ae763d560ef863bb75031",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ca01e70592a2b1ebbdbaad2f3530e8b9c094f20c1f6be56280635cdc7872f3ea",
+        "canonicalBaseRevision": "c702b76a94376d43fb955f6c2cc3959c45b50bd1",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-task-authority-intent-supersession.test.mjs",
+          "path:docs/ACTIVE-OWNED-DIRT-TASK-AUTHORITY-INTENT-SUPERSESSION.md",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession-contract.mjs",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession-repository-adapter.mjs",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession.mjs",
+          "semantic:active-owned-dirt-intent-successor-repair"
+        ],
+        "writeSetDigest": "e2933457b4a6e5db25b69d445029bcf94c6681a23418cc52af895cf4fb2b515b",
+        "laneRevision": "c702b76a94376d43fb955f6c2cc3959c45b50bd1",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T05:37:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "4da904e17ca86ebf1ed972e7093ee312ab7a07324791dfc6c22bec98da2ef391",
+      "digest": "de00b1ff6f32ab92657f144c9017b9581dc2a08a1c3fd1e01c37df008d1d3b41"
     }
   ]
 }

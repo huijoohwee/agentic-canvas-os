@@ -464,9 +464,10 @@ test("verified replay revalidates and rejects terminal drift", async () => {
 test("cloud recovery joins the exact operation and provider receipts", () => {
   const { plan, claim } = fixture();
   let result;
+  let observedClaim = claim;
   const inspect = () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
     action: "status", status: "ready", ledgerRevision: S("5"), ledgerDigest: D("ledger"),
-    claims: [claim] });
+    claims: [observedClaim] });
   const verify = ({ authority }) => ({ authority, verification: { status: "ready",
     inventory: { claims: [result.claim] }, receiptDigest: D("verification"),
     remoteClaimInventoryDigest: D("verified-inventory"), verifiedAt: RECOVERED } });
@@ -513,6 +514,19 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
   assert.throws(() => createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     inspect, invoke: () => forged, verify,
   }).recover({ plan, sealedRequest: sealed }), /same-claim dormant recovery result/u);
+
+  observedClaim = { ...target, state: "dormant-preserved", writeAuthority: false,
+    recovery: { evidenceDigest: plan.evidence.evidenceDigest, recoveredAt: RECOVERED } };
+  const replayed = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
+    inspect, invoke: () => ({ ...result, replayed: true }), verify,
+  }).recover({ plan, sealedRequest: sealed });
+  assert.equal(replayed.disposition, "replayed");
+
+  observedClaim = { ...observedClaim,
+    recovery: { ...observedClaim.recovery, evidenceDigest: D("foreign-recovery") } };
+  assert.throws(() => createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
+    inspect, invoke: () => ({ ...result, replayed: true }), verify,
+  }).recover({ plan, sealedRequest: sealed }), /exact expired response-loss recovery claim/u);
 });
 
 test("same-review competitor blocks even when its write set is disjoint", () => {

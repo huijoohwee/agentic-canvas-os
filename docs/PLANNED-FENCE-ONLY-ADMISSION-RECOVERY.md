@@ -168,6 +168,15 @@ request projection and its transport digest. Provider routing fields and the
 full request body are reconstructed from the immutable plan when executing the
 cloud effect; they are not additional journal fields or replay authority.
 
+If the sealed recovery transition commits but its response is lost, replay
+accepts only that exact counter-plus-one claim. The claim may still be active,
+or it may have expired into `dormant-preserved`; the expired form must preserve
+the source identity, scope, review, heartbeat, owner projection, and the exact
+plan evidence digest recorded by the recovery transition. The controller then
+replays the original idempotency key and adopts the provider's original active
+operation receipt before projecting any local lease or review marker. A second
+transition, foreign evidence digest, or any identity drift remains blocking.
+
 Provider claims use opaque device and session subjects. Source and recovered
 verification normalize the local lease labels before joining those subjects;
 an already-opaque recovered authority is accepted only when it resolves to the

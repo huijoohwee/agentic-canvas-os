@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4819,
-  "headDigest": "b3d0c63e39f87ee142ffc8a951045af0d6137dd6666d360ce5d372fe83a6857d",
+  "sequence": 4820,
+  "headDigest": "fc0bed14843b8196d1c923ad0e4cac486376c8ad8b746d46a76527a803421a9f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -242479,6 +242479,75 @@
       },
       "claimDigest": "332192c405e7812bd911c698b85f92d9833588518d6330070eeaaa18a0acea36",
       "digest": "b3d0c63e39f87ee142ffc8a951045af0d6137dd6666d360ce5d372fe83a6857d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4820,
+      "parentDigest": "b3d0c63e39f87ee142ffc8a951045af0d6137dd6666d360ce5d372fe83a6857d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e41b5c812fc6e07d6decb778e185ddfc0d5d5a288b64d373633950d83598c8e4",
+      "idempotencyKey": "9abb619fcc947d2b2635d9d8efe35348a3c4d1aee3d5f87d21794ceedbd1030f",
+      "requestDigest": "103fc76478594b7ba8801977826092e2b8ca802a2a5a40c58b5131476e1500f6",
+      "evaluationTime": "2026-08-24T04:43:39.000Z",
+      "claimCore": {
+        "claimId": "e41b5c812fc6e07d6decb778e185ddfc0d5d5a288b64d373633950d83598c8e4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:e9dd44fa399d198b2ad6308a99929f980fe7606c9f5a901eec43b6c36704682d",
+        "sessionId": "session:7ad3519050484b6d493ca71e818b91b1b9a216ac99f80ea1d81edc24f337c544",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:126db078d4a6fb10fcc6b74c95efe83134ecb30a74c1f93a6d56ad7b6a8cd477",
+        "canonicalBaseRevision": "310d7efcf75bf2033d5cce03816de291302ce9b5",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-task-authority-intent-supersession.test.mjs",
+          "path:__tests__/teardown-inventory.test.mjs",
+          "path:docs/ACTIVE-OWNED-DIRT-TASK-AUTHORITY-INTENT-SUPERSESSION.md",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession-contract.mjs",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession-repository-adapter.mjs",
+          "path:scripts/active-owned-dirt-task-authority-intent-supersession.mjs",
+          "path:scripts/teardown-inventory.mjs",
+          "semantic:active-owned-dirt-intent-repair-controller"
+        ],
+        "writeSetDigest": "75a77267bd80bc9c4a22dc39e9d8d23dce1939a8f73bd1e0074be895a012a916",
+        "laneRevision": "9be6367f7c54255af1632b848e694d0ac7a4b190",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T12:43:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAwC5kw",
+        "predecessorClaimId": "cc64e9d7bac38cde2a2960e881f33683d995cdf3e98b432a709ae1d76778c761",
+        "canonicalDescendantProof": {
+          "schema": "agentic-legacy-review-current-base-disjoint-proof/v1",
+          "sourceBaseSha": "310d7efcf75bf2033d5cce03816de291302ce9b5",
+          "targetBaseSha": "686ee8fd429dfcc7e41ec5759b139dba7cc69100",
+          "protectedMainSha": "686ee8fd429dfcc7e41ec5759b139dba7cc69100",
+          "canonicalChangedPaths": [
+            "docs/RELEASE-WORKFLOW.md"
+          ],
+          "canonicalChangedPathsDigest": "4078b64f3bf8146e87a10a5ea0cfbbe1cfdf73d14705142f99fb9887928dc6a7",
+          "preservedChangedPaths": [
+            "__tests__/active-owned-dirt-task-authority-intent-supersession.test.mjs",
+            "__tests__/teardown-inventory.test.mjs",
+            "docs/ACTIVE-OWNED-DIRT-TASK-AUTHORITY-INTENT-SUPERSESSION.md",
+            "scripts/active-owned-dirt-task-authority-intent-supersession-contract.mjs",
+            "scripts/active-owned-dirt-task-authority-intent-supersession-repository-adapter.mjs",
+            "scripts/active-owned-dirt-task-authority-intent-supersession.mjs",
+            "scripts/teardown-inventory.mjs"
+          ],
+          "preservedChangedPathsDigest": "c65822869a842c152f02907c98afa2367f4ea1a35c70f6dc7cd3f1a661537527",
+          "ancestry": "source-base-to-current-protected-main",
+          "overlap": "none",
+          "evidenceDigest": "9b2da64c71dba75b111579c7e9c736bc34919654a50c76e7be30e92ae2b52d14"
+        },
+        "eligibleSince": "2026-08-24T04:42:07.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-24T04:43:01.000Z"
+      },
+      "claimDigest": "0552fc8c1e25f850a70e9cb4c0d4927ec39d45a78009109602e345f6a8bd5391",
+      "digest": "fc0bed14843b8196d1c923ad0e4cac486376c8ad8b746d46a76527a803421a9f"
     }
   ]
 }

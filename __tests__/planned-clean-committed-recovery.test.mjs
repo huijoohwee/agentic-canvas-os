@@ -5,6 +5,7 @@ import {
   isProjectedPredecessorPullRequestMarker,
   ownerIdentifierMatches,
   recoverPlannedAdmissionCloudAuthority,
+  recoverReceiptCanonicalizedPlannedLease,
   shouldReconcileRecoveredPlannedLease,
 } from "../scripts/planned-clean-committed-recovery-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
@@ -173,6 +174,45 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
     lease,
     projectionReceipt: receipt,
   }), false);
+  const projectedLease = {
+    ...lease,
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      manifestDigest: lease.admission.manifestDigest,
+      expiresAt: "2026-08-24T03:00:00.000Z",
+    },
+    heartbeatAt: "2026-08-24T02:00:00.000Z",
+    expiresAt: "2026-08-24T02:30:00.000Z",
+    expiredCommittedHeartbeatRecovery: { status: "recovered" },
+  };
+  let canonicalSourceLease = null;
+  const recoveredLease = recoverReceiptCanonicalizedPlannedLease({
+    leaseStore: { statePath: "/unused/writer-leases.json" },
+    branch,
+    expectedLease: lease,
+    renewedCloudAuthority: projectedLease.cloudAuthority,
+    recoveryEvidence: { sourceEpoch: lease.epoch },
+    ttlMs: 1_800_000,
+    recoveredAt: projectedLease.heartbeatAt,
+    projectionReceipt: receipt,
+    instant: new Date("2026-08-24T02:00:01.000Z"),
+  }, {
+    projectLease: ({ sourceLease }) => {
+      canonicalSourceLease = sourceLease;
+      return projectedLease;
+    },
+    mutateRegistry: ({ expectedLeaseDigest, expectedClaimId, action }) => {
+      assert.equal(expectedLeaseDigest, writerLeaseDigest(lease));
+      assert.equal(expectedClaimId, lease.cloudAuthority.claimId);
+      const mutation = action({ registry: { ...registry, leases: { [branch]: lease } }, lease });
+      assert.equal(mutation.registry.plannedStartFenceProjectionRecoveryReceipts,
+        registry.plannedStartFenceProjectionRecoveryReceipts);
+      return { lease: mutation.lease };
+    },
+  });
+  assert.equal(canonicalSourceLease.cloudAuthority.manifestDigest,
+    lease.admission.manifestDigest);
+  assert.equal(recoveredLease, projectedLease);
   assert.throws(() => authorizeProjectedManifestCanonicalization({ registry: { revision: 9 }, lease }),
     /exact expired planned cloud-admitted lease/u);
   assert.throws(() => authorizeProjectedManifestCanonicalization({

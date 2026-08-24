@@ -27,10 +27,19 @@ deployment, or runtime state.
 ## Preconditions
 
 The source must be a registered `agent/<device>/<scope>` worktree with an
-`active`, `review_ready`, `delivery`, or `parked` lease. Its lease, live cloud
-claim, HEAD, Git evidence, open ownership PR, and hidden writer-lease marker must
-join exactly. Dirty paths must remain inside the admitted write set and contain
-no unmerged entries.
+`active`, `review_ready`, `delivery`, or `parked` lease. Its lease, cloud claim
+proof, HEAD, Git evidence, open ownership PR, and hidden writer-lease marker
+must join exactly. Dirty paths must remain inside the admitted write set and
+contain no unmerged entries.
+
+Ordinarily the claim proof is the unique exact claim in the current cloud
+inventory. A narrow fallback is permitted only for a locally `review_ready`
+lease whose exact `claimId` and `claimDigest` identify one validated raw-ledger
+`reviewed` entry and whose next same-claim transition is its terminal
+`retired` fence for the same lane revision and review request. This evidence
+does not reactivate the retired claim and grants no cloud mutation authority.
+Malformed ledgers, duplicate projections, other local states, non-adjacent
+terminal transitions, or any identity drift fail closed.
 
 Create a new task-authority capability outside the source repository. The file
 must be canonical, owner-only, non-symlink, and mode `0600`. Its subject must be
@@ -78,7 +87,9 @@ exact authorization. A dirty lane receives an immutable active-owned-dirt
 snapshot before the writer-registry compare-and-swap. The CAS replaces only
 `lease.taskAuthority`. The controller then journals the provider operation key,
 replaces exactly one PR marker, and verifies unchanged Git evidence and cloud
-claim identity.
+claim identity. When the retired-reviewed fallback is used, replay re-reads the
+ledger and requires the same stable source and terminal transition digests;
+unrelated later ledger entries do not alter that proof.
 
 The CLI always prints one JSON object and redacts local paths from errors. A
 completed journal is immutable; replay returns the original completion receipt

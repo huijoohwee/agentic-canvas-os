@@ -47,7 +47,7 @@ export function captureOrphanedTaskAuthoritySource({
   requireFunction(readCloudClaim, "cloud claim reader");
   const cloudClaim = readCloudClaim(lease);
   if (cloudClaim?.claimId !== lease.cloudAuthority?.claimId) {
-    throw new Error("Source writer lease does not join one live cloud claim.");
+    throw new Error("Source writer lease does not join one exact cloud claim proof.");
   }
   const headSha = requiredSha(gitText(["rev-parse", "HEAD"]), "source HEAD");
   const treeSha = requiredSha(gitText(["show", "-s", "--format=%T", headSha]), "source tree");

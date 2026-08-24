@@ -2,17 +2,17 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-08-21"
+date: "2026-08-24"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "Knowgrph multi-user, multi-device, multi-session, parallel-worktree session-start operating model"
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
-runtime_scope: "remote synchronization, ownership inspection, and isolated task-branch activation in registered worktrees"
+runtime_scope: "remote synchronization, ownership inspection, and policy-selected task-lane activation"
 runtime_claim: "bounded session-start contract; reading or resolving this document performs no Git mutation"
 runtime_proof: "RUNTIME-PROOF.md"
-contradiction_policy: "unregistered, shared-branch, unleased, or runtime-serving task worktrees are invalid and block startup"
+contradiction_policy: "unregistered or policy-invalid workspace topology, shared authority, stale ownership, or task-lane runtime service blocks startup"
 invocation:
   action: "/session.start"
   semantics: ["#multi-agent-collaboration", "#runtime-ready"]
@@ -399,16 +399,19 @@ consumers, serialize overlapping scopes, fetch after every canonical
 advancement, and recompute remaining waves. Branch order, pull-request age, and
 task-branch check completion do not define integration order.
 
-## Updating an Existing Owned Branch
+## Workspace and Integration Profiles
 
-Use pull only when all conditions are true:
+A repository adapter must declare `workspaceTopology` and `integrationMethod` independently before claim or review. Supported topology tokens are `isolated-worktree`, `guarded-single-checkout`, and `provider-managed-queue`; supported method tokens are `squash`, `rebase-linear`, and `merge-commit`. Unsupported tokens, implicit provider defaults, or a method change after review block mutation.
 
-- the branch is intentionally being updated rather than used as a fresh task lane;
-- the owned task worktree is clean;
-- the current branch is not `main`;
-- exactly one active writer owns the branch;
-- its upstream is verified;
-- the chosen merge or rebase behavior is explicit.
+| Method | Integration Receipt proof |
+|---|---|
+| `squash` | Reviewed source tree and exact base map to the declared one-parent canonical result without losing attribution. |
+| `rebase-linear` | An ordered source-to-canonical commit map proves no dropped or duplicated patch, a one-parent advance, and final-tree equivalence. |
+| `merge-commit` | The resulting canonical revision has the exact protected-base and reviewed-source parents and the deterministic merge tree. |
+
+`guarded-single-checkout` is the trunk-based middle ground: admit it only for one clean, exclusively owned checkout with no overlapping writer; create an ephemeral task ref from the exact fetched frontier, keep the canonical ref read-only, freeze one reviewed candidate, serialize protected integration, then restore the checkout to clean exact canonical parity. `provider-managed-queue` must prove the same authority and immutable-candidate invariants without assuming a local worktree. Direct canonical edits or pushes remain forbidden in every topology.
+
+An existing owned branch may be updated only when the update is intentional, its workspace is clean, it is not the canonical branch, exactly one current writer owns it, its upstream is verified, and the merge or rebase behavior is explicit.
 
 ## Mandatory Completion Protocol
 
@@ -436,7 +439,7 @@ Terminal-turn auto-delivery remains an implementation-run completion policy, not
 
 At terminal review, ACOS writes the exact `reviewHeadSha` and stops. The explicit `device:integrate` continuation requires the same cloud-admitted review-ready lease, performs an idempotent compare-and-swap `delivery-authorize` transition over the unchanged reviewed head, scope, epoch, fence, ledger revision, review/check evidence, and operator integration intent, verifies the resulting `delivery_authorized` receipt, and only then asks the provider adapter for protected auto-merge. Every automated squash request must pass an explicit validated subject: `device:integrate` derives it from the original reviewed commit, `device:publish` derives it from the exact delivery head, and workflow synchronization validates the eligible PR title. Subjects must be non-empty, single-line, whitespace-exact, and no longer than 72 Unicode code points; provider-generated title decoration is not an authority source. If the provider refreshes the PR head only by merging newer protected `main` into that same delivery-authorized head, continuation may carry the bounded protected-main refresh chain locally while keeping the cloud delivery subject pinned to the original reviewed head; authored advancement, alternate ancestry, malformed markers, forks, stale evidence, or conflicts still fail closed and require a fresh fenced review handoff. Protected merge is not completion: canonical runtime reconciliation remains mandatory and `--runtime=none` is rejected for pre-authorized terminal delivery. Only the resulting `agentic-device-integration-result/v1` status `runtime_ready` proves completion. While that terminal integration is in flight, admission of a disjoint task may attribute the frozen delivery peer only through the exact live successor and bounded-refresh evidence described above. The admission path cannot mutate, reopen, complete, or deploy the delivery peer; those remain exclusively owned by its already-authorized integration operation. An enrolled repository supplies its own bounded protected-refresh adapter policy. The policy names the repository-owned dispatch workflow, required CI contexts, exact classic protection checks, any additional strict ruleset checks, and the workflow set audited for forbidden provider-triggered synchronization. Agentic Canvas OS provides conservative defaults for its own repository, but a consumer may declare a different exact profile without changing controller logic. Empty required-CI or classic-check sets, malformed workflow names, duplicate contexts, unbounded lists, and policy/protection drift fail before candidate publication. Split delivery lanes remain dependency-ordered: integrate the generic controller policy first, then the repository adapter, and only then replay a preserved delivery-authorized candidate. Never copy controller implementation into a consumer repository merely to rename workflows or checks.
 
-The Agentic Canvas OS adapter is squash-only: protected canonical integration must create one new one-parent canonical integration commit and keep `origin/main` linear. A repository-owned protected-head refresh may merge the current protected `main` into the owned task branch, because that refresh preserves the reviewed subject without rewriting shared history; it does not authorize a canonical rebase or a merge commit on `main`. The Integration Receipt binds the reviewed head and tree, exact protected base, `squash` method, resulting one-parent canonical integration SHA and tree, named checks, and actor attribution. A cloud verification after an exact protected-head refresh may accept a counter-plus-one recovered mutable fence only when the immutable claim identity, delivery subject, integration receipt, recovery evidence, and refreshed provider head all remain exact; before refresh, ordinary authoring, review, or delivery stages still require their current live fence without recovery substitution.
+The Agentic Canvas OS adapter selects `isolated-worktree` plus `squash`: protected canonical integration must create one new one-parent canonical integration commit and keep `origin/main` linear. A repository-owned protected-head refresh may merge the current protected `main` into the owned task branch, because that refresh preserves the reviewed subject without rewriting shared history; it does not authorize a canonical rebase or a merge commit on `main`. The Integration Receipt binds the reviewed head and tree, exact protected base, `squash` method, resulting one-parent canonical integration SHA and tree, named checks, and actor attribution. A cloud verification after an exact protected-head refresh may accept a counter-plus-one recovered mutable fence only when the immutable claim identity, delivery subject, integration receipt, recovery evidence, and refreshed provider head all remain exact; before refresh, ordinary authoring, review, or delivery stages still require their current live fence without recovery substitution.
 
 ### Canonical Local Runtime Handoff
 

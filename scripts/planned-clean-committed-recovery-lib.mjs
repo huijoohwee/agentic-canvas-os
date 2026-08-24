@@ -42,8 +42,9 @@ export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gi
   const projectionAuthority = source.projectionReceipt
     ? canonicalizeProjectedRecoveryAuthority(recovered.authority, source.lease)
     : recovered.authority;
+  const projectionRecoveryEvidence = recoveryEvidenceForLeaseProjection(source.recoveryEvidence);
   const projectedLease = projectExpiredCommittedHeartbeatLease({ sourceLease: projectionSourceLease,
-    renewedCloudAuthority: projectionAuthority, recoveryEvidence: source.recoveryEvidence,
+    renewedCloudAuthority: projectionAuthority, recoveryEvidence: projectionRecoveryEvidence,
     ttlMs: leaseTtlMs, recoveredAt });
   requirePlannedLease(projectedLease, repo, branch, sessionId, now(), true);
   assertPullRequestBodyWithinGitHubLimit(updateWriterLeasePullRequestBody(source.projection.pullRequest.body, projectedLease));
@@ -54,7 +55,7 @@ export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gi
       projectionReceipt: source.projectionReceipt, instant: now() })
     : leaseStore.recoverExpiredCommittedHeartbeat({ sessionId, branch,
       expectedLease: source.lease, renewedCloudAuthority: recovered.authority,
-      recoveryEvidence: source.recoveryEvidence, ttlMs: leaseTtlMs, recoveredAt });
+      recoveryEvidence: projectionRecoveryEvidence, ttlMs: leaseTtlMs, recoveredAt });
   const body = updateWriterLeasePullRequestBody(source.projection.pullRequest.body, lease);
   run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", body]);
   const projected = readExactPullRequestProjection({ lease, branch, ghText, expectedBody: body,
@@ -148,7 +149,9 @@ export function recoverReceiptCanonicalizedPlannedLease({ leaseStore, branch,
       }
       const projectedLease = projectLease({
         sourceLease: canonicalizeProjectedRecoverySource(lease),
-        renewedCloudAuthority, recoveryEvidence, ttlMs, recoveredAt,
+        renewedCloudAuthority,
+        recoveryEvidence: recoveryEvidenceForLeaseProjection(recoveryEvidence),
+        ttlMs, recoveredAt,
       });
       const sourceExpiry = Date.parse(lease.expiresAt);
       const projectedHeartbeat = Date.parse(projectedLease.heartbeatAt);
@@ -166,6 +169,15 @@ export function recoverReceiptCanonicalizedPlannedLease({ leaseStore, branch,
     },
   });
   return result.lease;
+}
+
+export function recoveryEvidenceForLeaseProjection(recoveryEvidence) {
+  const { plannedFenceProjectionReceiptDigest, ...projectable } = recoveryEvidence || {};
+  if (plannedFenceProjectionReceiptDigest !== null
+    && !DIGEST.test(String(plannedFenceProjectionReceiptDigest || ""))) {
+    throw new Error("Planned fence-projection receipt evidence is malformed.");
+  }
+  return Object.freeze(projectable);
 }
 
 function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore, sessionId, now }) {

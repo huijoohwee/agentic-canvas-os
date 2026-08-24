@@ -6,6 +6,7 @@ import {
   ownerIdentifierMatches,
   recoverPlannedAdmissionCloudAuthority,
   recoverReceiptCanonicalizedPlannedLease,
+  recoveryEvidenceForLeaseProjection,
   shouldReconcileRecoveredPlannedLease,
 } from "../scripts/planned-clean-committed-recovery-lib.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
@@ -194,20 +195,26 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
   };
   let canonicalSourceLease = null;
   let canonicalRenewedAuthority = null;
+  let projectedRecoveryEvidence = null;
+  const receiptBoundRecoveryEvidence = {
+    sourceEpoch: lease.epoch,
+    plannedFenceProjectionReceiptDigest: receipt.receiptDigest,
+  };
   const recoveredLease = recoverReceiptCanonicalizedPlannedLease({
     leaseStore: { statePath: "/unused/writer-leases.json" },
     branch,
     expectedLease: lease,
     renewedCloudAuthority: projectedLease.cloudAuthority,
-    recoveryEvidence: { sourceEpoch: lease.epoch },
+    recoveryEvidence: receiptBoundRecoveryEvidence,
     ttlMs: 1_800_000,
     recoveredAt: projectedLease.heartbeatAt,
     projectionReceipt: receipt,
     instant: new Date("2026-08-24T02:00:01.000Z"),
   }, {
-    projectLease: ({ sourceLease, renewedCloudAuthority }) => {
+    projectLease: ({ sourceLease, renewedCloudAuthority, recoveryEvidence }) => {
       canonicalSourceLease = sourceLease;
       canonicalRenewedAuthority = renewedCloudAuthority;
+      projectedRecoveryEvidence = recoveryEvidence;
       return projectedLease;
     },
     mutateRegistry: ({ expectedLeaseDigest, expectedClaimId, action }) => {
@@ -225,6 +232,13 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
   assert.equal(canonicalSourceLease.cloudAuthority.sessionId, lease.sessionId);
   assert.equal(canonicalRenewedAuthority.deviceId, lease.device);
   assert.equal(canonicalRenewedAuthority.sessionId, lease.sessionId);
+  assert.deepEqual(projectedRecoveryEvidence, { sourceEpoch: lease.epoch });
+  assert.deepEqual(recoveryEvidenceForLeaseProjection(receiptBoundRecoveryEvidence),
+    { sourceEpoch: lease.epoch });
+  assert.throws(() => recoveryEvidenceForLeaseProjection({
+    ...receiptBoundRecoveryEvidence,
+    plannedFenceProjectionReceiptDigest: "not-a-digest",
+  }), /receipt evidence is malformed/u);
   assert.equal(recoveredLease, projectedLease);
   assert.throws(() => authorizeProjectedManifestCanonicalization({ registry: { revision: 9 }, lease }),
     /exact expired planned cloud-admitted lease/u);

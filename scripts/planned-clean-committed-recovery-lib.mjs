@@ -5,6 +5,7 @@ import { captureCommittedDescendantEvidence, readExactPullRequestProjection, rea
 import { assertPullRequestBodyWithinGitHubLimit } from "./expired-committed-heartbeat-contract.mjs";
 import { fetchProtectedMain } from "./protected-main-path-equivalence-lib.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { normalizeOwnerIdentifier } from "./planned-device-projection-recovery-evidence.mjs";
 import { parseDeviceBranch, projectWriterLeasePullRequestMarker, projectExpiredCommittedHeartbeatLease, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 
 export const PLANNED_CLEAN_COMMITTED_RECOVERY_RESULT_SCHEMA = "agentic-planned-clean-committed-recovery-result/v1";
@@ -156,8 +157,10 @@ function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore,
 function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLive) {
   if (!lease || lease.status !== "active" || lease.sessionId !== sessionId || lease.branch !== branch
     || lease.admission?.status !== "planned" || lease.cloudAuthority?.schema !== "agentic-lane-cloud-authority/v1"
-    || lease.cloudAuthority.state !== "active" || lease.cloudAuthority.deviceId !== lease.device
-    || lease.cloudAuthority.sessionId !== sessionId || lease.cloudAuthority.canonicalBaseSha !== lease.baseSha
+    || lease.cloudAuthority.state !== "active"
+    || !ownerIdentifierMatches("device", lease.cloudAuthority.deviceId, lease.device)
+    || !ownerIdentifierMatches("session", lease.cloudAuthority.sessionId, sessionId)
+    || lease.cloudAuthority.canonicalBaseSha !== lease.baseSha
     || lease.cloudAuthority.laneRevision !== lease.fenceSha
     || lease.cloudAuthority.writeSetDigest !== lease.admission.writeSetDigest
     || lease.cloudAuthority.manifestDigest !== lease.admission.manifestDigest
@@ -170,6 +173,11 @@ function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLiv
   if (!identity || identity.device !== lease.device || identity.scope !== lease.scope) {
     throw new Error("Recovery branch identity drifted from its planned lease.");
   }
+}
+
+export function ownerIdentifierMatches(namespace, providerIdentity, localIdentity) {
+  return normalizeOwnerIdentifier(namespace, providerIdentity)
+    === normalizeOwnerIdentifier(namespace, localIdentity);
 }
 
 function manifestFromLease(lease) {

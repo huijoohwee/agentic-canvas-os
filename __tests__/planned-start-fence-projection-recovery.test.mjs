@@ -23,6 +23,25 @@ test("exact same-claim t1 base to t2 fence projects locally and preserves the de
   assert.equal(fixture.calls.filter(value => value === "project").length, 1);
 });
 
+test("exact provenance-bound t1 base to t3 response-ahead fence projects locally", async () => {
+  const input = evidenceInput({ responseAhead: true });
+  const evidence = buildPlannedStartFenceProjectionRecoveryEvidence(input);
+  assert.equal(evidence.sourceCloudAuthority.transitionCounter, 1);
+  assert.equal(evidence.targetCloudAuthority.transitionCounter, 3);
+  assert.equal(evidence.targetCloudObservation.claim.recovery.evidenceDigest,
+    D("response-ahead-recovery"));
+});
+
+test("unrelated ledger-head advance preserves the exact subject and overlap join", () => {
+  const input = evidenceInput({ responseAhead: true });
+  input.cloudObservations[1].ledgerRevision = S("7");
+  input.cloudObservations[1].ledgerDigest = D("later-unrelated-ledger");
+  input.cloudObservations[1].inventoryDigest = D("later-nonoverlapping-inventory");
+  const evidence = buildPlannedStartFenceProjectionRecoveryEvidence(input);
+  assert.equal(evidence.targetCloudObservation.claim.claimId, D("claim"));
+  assert.deepEqual(evidence.targetCloudObservation.overlappingClaimIds, []);
+});
+
 test("terminal replay and post-CAS response loss retain cumulative mutation causality", async () => {
   const replay = controllerFixture();
   const first = await replay.controller.run({ plan: replay.plan });
@@ -48,6 +67,15 @@ test("evidence rejects transition, owner, base, scope, descendant, and boundary 
   const cases = [
     ["claim", input => eachCloud(input, item => { item.claim.claimId = D("foreign"); })],
     ["transition", input => eachCloud(input, item => { item.claim.transitionCounter += 1; })],
+    ["response-ahead without provenance", input => eachCloud(input, item => {
+      item.claim.transitionCounter = 3;
+      delete item.claim.recovery;
+    })],
+    ["later response-ahead", input => eachCloud(input, item => {
+      item.claim.transitionCounter = 4;
+      item.claim.recovery = { evidenceDigest: D("response-ahead-recovery"),
+        recoveredAt: "2026-08-16T00:01:30.000Z" };
+    })],
     ["base", input => eachCloud(input,
       item => { item.claim.canonicalBaseRevision = S("9"); })],
     ["scope", input => eachCloud(input, item => {
@@ -123,7 +151,7 @@ function verifiedValues(plan, replay) {
     verificationDigest: D("terminal-verification") };
 }
 
-function evidenceInput() {
+function evidenceInput({ responseAhead = false } = {}) {
   const baseSha = S("a"), fenceSha = S("b"), headSha = S("c");
   const writeSet = ["path:docs/runtime.md", "semantic:planned-fence"];
   const sourceAuthority = { schema: "agentic-lane-cloud-authority/v1", state: "active",
@@ -144,14 +172,15 @@ function evidenceInput() {
       writeSetDigest: digestValue(writeSet), manifestDigest: D("manifest") },
     cloudAuthority: sourceAuthority,
     taskAuthority: { bindingDigest: D("task-binding") } };
+  const targetTransitionCounter = responseAhead ? 3 : 2;
   const targetAuthority = { ...sourceAuthority, claimDigest: D("target-fence"),
-    laneRevision: fenceSha, transitionCounter: 2,
+    laneRevision: fenceSha, transitionCounter: targetTransitionCounter,
     reviewRequestId: "github-pull-request:PR_12",
     operationReceiptDigest: D("target-operation") };
   const claim = { entrySchema: "agentic-cloud-collaboration-entry/v2",
     claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
     claimId: sourceAuthority.claimId, fenceRevision: targetAuthority.claimDigest,
-    transitionDigest: D("transition"), transitionCounter: 2, heartbeatCounter: 0,
+    transitionDigest: D("transition"), transitionCounter: targetTransitionCounter, heartbeatCounter: 0,
     state: "current", writeAuthority: true, scopeReserved: true,
     canonicalBaseRevision: baseSha, laneRevision: fenceSha, leaseEpoch: 3,
     declaredWriteScope: writeSet, writeSetDigest: digestValue(writeSet),
@@ -159,6 +188,8 @@ function evidenceInput() {
     deviceId: "owner-device", sessionId: "owner-session",
     operationReceiptDigest: targetAuthority.operationReceiptDigest,
     expiresAt: "2026-08-16T01:00:00.000Z" };
+  if (responseAhead) claim.recovery = { evidenceDigest: D("response-ahead-recovery"),
+    recoveredAt: "2026-08-16T00:01:30.000Z" };
   const cloud = { status: "ready", evaluatedAt: "2026-08-16T00:02:00.000Z",
     claim, ledgerRevision: S("d"),
     ledgerDigest: D("ledger"), inventoryDigest: D("inventory"),

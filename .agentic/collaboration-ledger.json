@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4987,
-  "headDigest": "51db0848896b94a1035740997c71efc1e4f2fc57260bac5e3811edbaa98baea7",
+  "sequence": 4988,
+  "headDigest": "04ffd30becd728246a17eee23eff499c8a9a4a8424ee3ddb1569f9ff9d1febf7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -251478,6 +251478,47 @@
       },
       "claimDigest": "64c6944ba33a210efa26fc3f8508a5abcd373332d113a868cb47663e77239929",
       "digest": "51db0848896b94a1035740997c71efc1e4f2fc57260bac5e3811edbaa98baea7"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4988,
+      "parentDigest": "51db0848896b94a1035740997c71efc1e4f2fc57260bac5e3811edbaa98baea7",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "29d5cd674b5e2cbdca7ac8acf9f97686597d2f4b9395329e6d127f2899e247a2",
+      "idempotencyKey": "bfd139d04b31f739d219b5a064428e297a5b36d6240c65a867abd7785d5dfd6e",
+      "requestDigest": "8f68561d9a8f71a722e3d135b85ba29190642c01f88be65f8d679d915d4e4186",
+      "evaluationTime": "2026-08-24T15:01:41.000Z",
+      "claimCore": {
+        "claimId": "29d5cd674b5e2cbdca7ac8acf9f97686597d2f4b9395329e6d127f2899e247a2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4f4f7be3e1431a7b94a87e49ad6dbf413ffa7172197e2fec1649f9629b2558a8",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:8852bf7ca1875814ba040084afbf423d2f0fca93483e6a99370a1b7b8990f530",
+        "canonicalBaseRevision": "90020f28de4919a15cc190cd30a1ace9c699f836",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-collaboration-contract.test.mjs",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:scripts/cloud-collaboration-contract.mjs",
+          "semantic:claim-only-successor-base-rollover"
+        ],
+        "writeSetDigest": "0e63056e45eb9c521380cd278584a97a72187ac9b1a6afb807dd4e9486e376a4",
+        "laneRevision": "aef81387ad92480c2d42335e7153c042687e1139",
+        "leaseEpoch": 1,
+        "transitionCounter": 31,
+        "heartbeatCounter": 29,
+        "state": "current",
+        "expiresAt": "2026-08-24T15:31:41.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAxCJlA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "6424eed4c3a4cbf3d9c8d2fd4f30a3c8b9cdc29add393f572473fbee8ef9bbf0",
+      "digest": "04ffd30becd728246a17eee23eff499c8a9a4a8424ee3ddb1569f9ff9d1febf7"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5066,
-  "headDigest": "38dc226b26d497ea631f22fcca62356b2f068bf9364b9cca5b77afa6ad0099c8",
+  "sequence": 5067,
+  "headDigest": "b38bb059a7e3f387ec7dc4de886f62147cfac86d8ce82318ba60188dbf819e67",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -255564,6 +255564,46 @@
       },
       "claimDigest": "3dcd665db52d2c9430fd61e2ab0a656c583c0db4b7e6141d7922b81205651cb1",
       "digest": "38dc226b26d497ea631f22fcca62356b2f068bf9364b9cca5b77afa6ad0099c8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5067,
+      "parentDigest": "38dc226b26d497ea631f22fcca62356b2f068bf9364b9cca5b77afa6ad0099c8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "aefcd5c77975acee2ffe45cd7b59c3b61d1cea391969ca97adb24532cc198220",
+      "idempotencyKey": "8d191de39df1b4f32d6d984ad8ab259f2cc7ef5a38e7ea66d83d32e0aeae933a",
+      "requestDigest": "48a061f0f5cd22b23dbd4dd2c58f371e349eee46a7f3926b453449340b945aea",
+      "evaluationTime": "2026-08-24T22:52:19.000Z",
+      "claimCore": {
+        "claimId": "aefcd5c77975acee2ffe45cd7b59c3b61d1cea391969ca97adb24532cc198220",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:d7f0db875f027ac03e79b6f6a163778d2e7903cceaa922ab7d0e5aa6067e0eb9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2f1cbe15d0ddbc394bae894a3c46df29e3d60d589fd0f7a4403c7cbfeeddd56d",
+        "canonicalBaseRevision": "e7dfbe442dd554e986daec28c1cd891237da9d1e",
+        "declaredWriteScope": [
+          "path:__tests__/orphaned-task-authority-recovery-repository-adapter.test.mjs",
+          "path:scripts/orphaned-task-authority-recovery-repository-adapter.mjs",
+          "semantic:orphaned-task-authority-claim-normalization"
+        ],
+        "writeSetDigest": "fa724377c2a3f38ab45c989f4c624bd090025c71a2c2359f5be76ede53c9b4ac",
+        "laneRevision": "e7dfbe442dd554e986daec28c1cd891237da9d1e",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-25T00:52:19.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "338da2853ffad56f032b2bf488b1dfd74abea69114f3a32782255bf9fc6408cf",
+      "digest": "b38bb059a7e3f387ec7dc4de886f62147cfac86d8ce82318ba60188dbf819e67"
     }
   ]
 }

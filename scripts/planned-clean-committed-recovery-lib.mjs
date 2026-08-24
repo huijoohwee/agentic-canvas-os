@@ -7,7 +7,7 @@ import { fetchProtectedMain } from "./protected-main-path-equivalence-lib.mjs";
 import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeOwnerIdentifier } from "./planned-device-projection-recovery-evidence.mjs";
 import { parseDeviceBranch, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, projectExpiredCommittedHeartbeatLease, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
-import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
+import { mutateWriterLeaseRegistry, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 export const PLANNED_CLEAN_COMMITTED_RECOVERY_RESULT_SCHEMA = "agentic-planned-clean-committed-recovery-result/v1";
 const FENCE_PROJECTION_RECEIPTS_FIELD = "plannedStartFenceProjectionRecoveryReceipts";
@@ -36,14 +36,22 @@ export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gi
     throw new Error("Planned clean committed recovery subject drifted before local CAS.");
   }
   const recoveredAt = now().toISOString();
-  const projectedLease = projectExpiredCommittedHeartbeatLease({ sourceLease: source.lease,
+  const projectionSourceLease = source.projectionReceipt
+    ? canonicalizeProjectedManifestSource(source.lease)
+    : source.lease;
+  const projectedLease = projectExpiredCommittedHeartbeatLease({ sourceLease: projectionSourceLease,
     renewedCloudAuthority: recovered.authority, recoveryEvidence: source.recoveryEvidence,
     ttlMs: leaseTtlMs, recoveredAt });
   requirePlannedLease(projectedLease, repo, branch, sessionId, now(), true);
   assertPullRequestBodyWithinGitHubLimit(updateWriterLeasePullRequestBody(source.projection.pullRequest.body, projectedLease));
-  const lease = leaseStore.recoverExpiredCommittedHeartbeat({ sessionId, branch,
-    expectedLease: source.lease, renewedCloudAuthority: recovered.authority,
-    recoveryEvidence: source.recoveryEvidence, ttlMs: leaseTtlMs, recoveredAt });
+  const lease = source.projectionReceipt
+    ? recoverReceiptCanonicalizedPlannedLease({ leaseStore, branch,
+      expectedLease: source.lease, renewedCloudAuthority: recovered.authority,
+      recoveryEvidence: source.recoveryEvidence, ttlMs: leaseTtlMs, recoveredAt,
+      projectionReceipt: source.projectionReceipt, instant: now() })
+    : leaseStore.recoverExpiredCommittedHeartbeat({ sessionId, branch,
+      expectedLease: source.lease, renewedCloudAuthority: recovered.authority,
+      recoveryEvidence: source.recoveryEvidence, ttlMs: leaseTtlMs, recoveredAt });
   const body = updateWriterLeasePullRequestBody(source.projection.pullRequest.body, lease);
   run("gh", ["pr", "edit", lease.pullRequestUrl, "--body", body]);
   const projected = readExactPullRequestProjection({ lease, branch, ghText, expectedBody: body,
@@ -114,6 +122,49 @@ export function shouldReconcileRecoveredPlannedLease(lease, instant = new Date()
   return Number.isFinite(expiresAt) && expiresAt > instant.getTime();
 }
 
+export function recoverReceiptCanonicalizedPlannedLease({ leaseStore, branch,
+  expectedLease, renewedCloudAuthority, recoveryEvidence, ttlMs, recoveredAt,
+  projectionReceipt, instant = new Date() }, {
+  mutateRegistry = mutateWriterLeaseRegistry,
+  projectLease = projectExpiredCommittedHeartbeatLease,
+} = {}) {
+  const expectedLeaseDigest = writerLeaseDigest(expectedLease);
+  if (projectionReceipt?.targetLeaseDigest !== expectedLeaseDigest) {
+    throw new Error("Planned manifest canonicalization receipt changed before local CAS.");
+  }
+  const evaluationTime = instant instanceof Date ? instant : new Date(instant);
+  if (!Number.isFinite(evaluationTime.getTime())) {
+    throw new Error("Planned manifest canonicalization CAS requires an exact evaluation instant.");
+  }
+  const result = mutateRegistry({ leaseStore, branch, expectedLeaseDigest,
+    expectedClaimId: expectedLease.cloudAuthority.claimId,
+    action: ({ registry, lease }) => {
+      const currentReceipt = authorizeProjectedManifestCanonicalization({ registry, lease });
+      if (currentReceipt?.receiptDigest !== projectionReceipt.receiptDigest) {
+        throw new Error("Planned manifest canonicalization receipt changed before local CAS.");
+      }
+      const projectedLease = projectLease({
+        sourceLease: canonicalizeProjectedManifestSource(lease),
+        renewedCloudAuthority, recoveryEvidence, ttlMs, recoveredAt,
+      });
+      const sourceExpiry = Date.parse(lease.expiresAt);
+      const projectedHeartbeat = Date.parse(projectedLease.heartbeatAt);
+      const projectedExpiry = Date.parse(projectedLease.expiresAt);
+      if (!Number.isFinite(sourceExpiry) || sourceExpiry > evaluationTime.getTime()
+        || !Number.isFinite(projectedHeartbeat) || projectedHeartbeat > evaluationTime.getTime()
+        || !Number.isFinite(projectedExpiry) || projectedExpiry <= evaluationTime.getTime()) {
+        throw new Error("Planned manifest canonicalization projection is not live at the local registry CAS.");
+      }
+      return {
+        registry: { ...registry, leases: { ...registry.leases, [branch]: projectedLease } },
+        lease: projectedLease,
+        changed: true,
+      };
+    },
+  });
+  return result.lease;
+}
+
 function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore, sessionId, now }) {
   const registry = typeof leaseStore.readRegistry === "function" ? leaseStore.readRegistry() : null;
   const lease = registry?.leases?.[branch] || leaseStore.read(branch);
@@ -158,8 +209,18 @@ function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore,
     recoveryEvidence, admissionStatus: lease.admission.status });
   const sourceDigest = digestValue({ lease, remoteHeadSha, projectionDigest: projection.bodyDigest,
     descendant, evidenceDigest });
-  return Object.freeze({ lease, remoteHeadSha, projection, descendant,
+  return Object.freeze({ lease, projectionReceipt, remoteHeadSha, projection, descendant,
     recoveryEvidence: Object.freeze(recoveryEvidence), evidenceDigest, sourceDigest });
+}
+
+function canonicalizeProjectedManifestSource(lease) {
+  return Object.freeze({
+    ...lease,
+    cloudAuthority: Object.freeze({
+      ...lease.cloudAuthority,
+      manifestDigest: lease.admission.manifestDigest,
+    }),
+  });
 }
 
 function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLive,

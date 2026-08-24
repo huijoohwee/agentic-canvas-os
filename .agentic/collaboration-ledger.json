@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4789,
-  "headDigest": "15517a37703ffc0acbf9185be85b5b711c7c16c234dcd4902261746a169e92b2",
+  "sequence": 4790,
+  "headDigest": "61f187b597b796837306aabcf09d5a0d18916f7eb86d0e12ed54874a4a8b465d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -241024,6 +241024,48 @@
       },
       "claimDigest": "15c99c0390838cdeca7bc5ab377fffe06f698ab3ee7d8dcfe72f938955b7fc90",
       "digest": "15517a37703ffc0acbf9185be85b5b711c7c16c234dcd4902261746a169e92b2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4790,
+      "parentDigest": "15517a37703ffc0acbf9185be85b5b711c7c16c234dcd4902261746a169e92b2",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "719d4053330ef40afdc2eb45323375a7048301d8349468472d9631cc2742d69a",
+      "idempotencyKey": "e4ce980d70e836e7acf72a4b3196c097adb24838ca827d3e610214f5c598540b",
+      "requestDigest": "80f17eeaeef681a7bd401c6db8f70eb8e8e5e3816b93d1b1a37d18f7f7e7df05",
+      "evaluationTime": "2026-08-24T03:33:53.000Z",
+      "claimCore": {
+        "claimId": "719d4053330ef40afdc2eb45323375a7048301d8349468472d9631cc2742d69a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:1fa1b84374c4728b4decfe8f17aa2dae3450cb4f4d2475659b879cb3900684bf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2d54cdcfff5a195dcf5f63fa151c7ffd10dab617f8ac261911de9f7b888f6ded",
+        "canonicalBaseRevision": "c702b76a94376d43fb955f6c2cc3959c45b50bd1",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-recovery-identity-normalization"
+        ],
+        "writeSetDigest": "198e3524349e1f438e3e64f6dc9160a0152a27d95c567cbfdf9a93ab0f0a1c25",
+        "laneRevision": "c702b76a94376d43fb955f6c2cc3959c45b50bd1",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-24T04:33:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "78ea2dab88760dd67129b7afbb5ca4157b201502335df6f7839e672540581028",
+        "eligibleSince": "2026-08-24T03:33:53.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "112f277f44068743831950e2c011deeacf006d5f976f245263ff70419cf33d63",
+      "digest": "61f187b597b796837306aabcf09d5a0d18916f7eb86d0e12ed54874a4a8b465d"
     }
   ]
 }

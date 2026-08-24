@@ -118,7 +118,12 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
     expiresAt: "2026-08-24T01:30:00.000Z",
     taskAuthority,
     admission: { status: "planned", manifestDigest: digest("9") },
-    cloudAuthority: { claimId: digest("a"), transitionCounter: 3 },
+    cloudAuthority: {
+      claimId: digest("a"),
+      transitionCounter: 3,
+      deviceId: normalizeOwnerIdentifier("device", "device"),
+      sessionId: normalizeOwnerIdentifier("session", "session"),
+    },
   };
   const predecessorLease = {
     ...lease,
@@ -178,6 +183,8 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
     ...lease,
     cloudAuthority: {
       ...lease.cloudAuthority,
+      deviceId: lease.device,
+      sessionId: lease.sessionId,
       manifestDigest: lease.admission.manifestDigest,
       expiresAt: "2026-08-24T03:00:00.000Z",
     },
@@ -186,6 +193,7 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
     expiredCommittedHeartbeatRecovery: { status: "recovered" },
   };
   let canonicalSourceLease = null;
+  let canonicalRenewedAuthority = null;
   const recoveredLease = recoverReceiptCanonicalizedPlannedLease({
     leaseStore: { statePath: "/unused/writer-leases.json" },
     branch,
@@ -197,8 +205,9 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
     projectionReceipt: receipt,
     instant: new Date("2026-08-24T02:00:01.000Z"),
   }, {
-    projectLease: ({ sourceLease }) => {
+    projectLease: ({ sourceLease, renewedCloudAuthority }) => {
       canonicalSourceLease = sourceLease;
+      canonicalRenewedAuthority = renewedCloudAuthority;
       return projectedLease;
     },
     mutateRegistry: ({ expectedLeaseDigest, expectedClaimId, action }) => {
@@ -212,6 +221,10 @@ test("planned clean recovery canonicalizes a missing manifest only from its exac
   });
   assert.equal(canonicalSourceLease.cloudAuthority.manifestDigest,
     lease.admission.manifestDigest);
+  assert.equal(canonicalSourceLease.cloudAuthority.deviceId, lease.device);
+  assert.equal(canonicalSourceLease.cloudAuthority.sessionId, lease.sessionId);
+  assert.equal(canonicalRenewedAuthority.deviceId, lease.device);
+  assert.equal(canonicalRenewedAuthority.sessionId, lease.sessionId);
   assert.equal(recoveredLease, projectedLease);
   assert.throws(() => authorizeProjectedManifestCanonicalization({ registry: { revision: 9 }, lease }),
     /exact expired planned cloud-admitted lease/u);

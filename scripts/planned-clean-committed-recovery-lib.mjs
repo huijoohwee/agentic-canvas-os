@@ -37,16 +37,19 @@ export function recoverPlannedCleanCommitted({ invocationPath, repo, gitText, gi
   }
   const recoveredAt = now().toISOString();
   const projectionSourceLease = source.projectionReceipt
-    ? canonicalizeProjectedManifestSource(source.lease)
+    ? canonicalizeProjectedRecoverySource(source.lease)
     : source.lease;
+  const projectionAuthority = source.projectionReceipt
+    ? canonicalizeProjectedRecoveryAuthority(recovered.authority, source.lease)
+    : recovered.authority;
   const projectedLease = projectExpiredCommittedHeartbeatLease({ sourceLease: projectionSourceLease,
-    renewedCloudAuthority: recovered.authority, recoveryEvidence: source.recoveryEvidence,
+    renewedCloudAuthority: projectionAuthority, recoveryEvidence: source.recoveryEvidence,
     ttlMs: leaseTtlMs, recoveredAt });
   requirePlannedLease(projectedLease, repo, branch, sessionId, now(), true);
   assertPullRequestBodyWithinGitHubLimit(updateWriterLeasePullRequestBody(source.projection.pullRequest.body, projectedLease));
   const lease = source.projectionReceipt
     ? recoverReceiptCanonicalizedPlannedLease({ leaseStore, branch,
-      expectedLease: source.lease, renewedCloudAuthority: recovered.authority,
+      expectedLease: source.lease, renewedCloudAuthority: projectionAuthority,
       recoveryEvidence: source.recoveryEvidence, ttlMs: leaseTtlMs, recoveredAt,
       projectionReceipt: source.projectionReceipt, instant: now() })
     : leaseStore.recoverExpiredCommittedHeartbeat({ sessionId, branch,
@@ -144,7 +147,7 @@ export function recoverReceiptCanonicalizedPlannedLease({ leaseStore, branch,
         throw new Error("Planned manifest canonicalization receipt changed before local CAS.");
       }
       const projectedLease = projectLease({
-        sourceLease: canonicalizeProjectedManifestSource(lease),
+        sourceLease: canonicalizeProjectedRecoverySource(lease),
         renewedCloudAuthority, recoveryEvidence, ttlMs, recoveredAt,
       });
       const sourceExpiry = Date.parse(lease.expiresAt);
@@ -213,14 +216,29 @@ function captureSource({ repo, branch, gitText, gitOptional, ghText, leaseStore,
     recoveryEvidence: Object.freeze(recoveryEvidence), evidenceDigest, sourceDigest });
 }
 
-function canonicalizeProjectedManifestSource(lease) {
+function canonicalizeProjectedRecoverySource(lease) {
+  requireEquivalentProjectionOwner(lease.cloudAuthority, lease);
   return Object.freeze({
     ...lease,
     cloudAuthority: Object.freeze({
       ...lease.cloudAuthority,
+      deviceId: lease.device,
+      sessionId: lease.sessionId,
       manifestDigest: lease.admission.manifestDigest,
     }),
   });
+}
+
+function canonicalizeProjectedRecoveryAuthority(authority, lease) {
+  requireEquivalentProjectionOwner(authority, lease);
+  return Object.freeze({ ...authority, deviceId: lease.device, sessionId: lease.sessionId });
+}
+
+function requireEquivalentProjectionOwner(authority, lease) {
+  if (!ownerIdentifierMatches("device", authority?.deviceId, lease?.device)
+    || !ownerIdentifierMatches("session", authority?.sessionId, lease?.sessionId)) {
+    throw new Error("Planned manifest canonicalization changed its exact owner identity.");
+  }
 }
 
 function requirePlannedLease(lease, repo, branch, sessionId, instant, requireLive,

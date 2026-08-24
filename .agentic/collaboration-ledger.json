@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4785,
-  "headDigest": "0680fdc9bcf2056eab854652c5b1f7b1ec21fc3d51c3b9efabaa7e15ecba01e3",
+  "sequence": 4786,
+  "headDigest": "13a17a93826baea3c9da96a3cdb9be939513fdae17f39ddda1ce214f198ca820",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -240835,6 +240835,47 @@
       },
       "claimDigest": "fcbbedb8dccd045b0d12aff598902d81eb2eeb36a916f47988cbb284430ae683",
       "digest": "0680fdc9bcf2056eab854652c5b1f7b1ec21fc3d51c3b9efabaa7e15ecba01e3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4786,
+      "parentDigest": "0680fdc9bcf2056eab854652c5b1f7b1ec21fc3d51c3b9efabaa7e15ecba01e3",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1febfd5b96fe953ac1e1de96f6e7c2642b10a9ed9cf946f18f6ec1ef0d7bbe9c",
+      "idempotencyKey": "6addbcedcec49da35046873af816c12b87fcad3c2fd16dd0a96811bf54b72acb",
+      "requestDigest": "b0fa2edbc1bc7b7f95dcfc9fc55a41761fccbfa459634fb397919b217f5c3ab1",
+      "evaluationTime": "2026-08-24T03:23:54.000Z",
+      "claimCore": {
+        "claimId": "1febfd5b96fe953ac1e1de96f6e7c2642b10a9ed9cf946f18f6ec1ef0d7bbe9c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:1fa1b84374c4728b4decfe8f17aa2dae3450cb4f4d2475659b879cb3900684bf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d516cb8721380519aeaae9f8a2a7b4cabf0e1db48a4b073193769bbdd27f1f96",
+        "canonicalBaseRevision": "c702b76a94376d43fb955f6c2cc3959c45b50bd1",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/RELEASE-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-recovery-identity-normalization"
+        ],
+        "writeSetDigest": "05eb192b1223fff787170366ed56c526b91b9920259a7da3f2075f34575a0dbd",
+        "laneRevision": "c702b76a94376d43fb955f6c2cc3959c45b50bd1",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-24T04:23:54.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "78ea2dab88760dd67129b7afbb5ca4157b201502335df6f7839e672540581028",
+        "eligibleSince": "2026-08-24T03:23:54.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "39516254a336bdee67ae76e6806a65aea16aa48809cc68ba667f3aaaaf98920c",
+      "digest": "13a17a93826baea3c9da96a3cdb9be939513fdae17f39ddda1ce214f198ca820"
     }
   ]
 }

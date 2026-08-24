@@ -5,7 +5,12 @@ import path from "node:path";
 
 import { createActiveOwnedDirtSnapshot }
   from "./active-owned-dirt-recovery-evidence.mjs";
+import { validateLedger } from "./cloud-collaboration-contract.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import {
+  DEFAULT_LEDGER_PATH,
+  DEFAULT_LEDGER_REF,
+} from "./github-cloud-collaboration-adapter.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import {
@@ -46,6 +51,9 @@ export function createOrphanedTaskAuthorityRecoveryRepositoryAdapter(options = {
   });
   const gitText = dependencies.gitText || (args => execute("git", args).trim());
   const ghText = dependencies.ghText || (args => execute("gh", args).trim());
+  const ghJson = dependencies.ghJson || (args => JSON.parse(execute("gh", args, {
+    maxBuffer: 64 * 1024 * 1024,
+  })));
   const branch = requiredText(gitText(["branch", "--show-current"]), "branch");
   if (options.branch && options.branch !== branch) {
     throw new Error("Requested branch does not match the registered worktree branch.");
@@ -57,6 +65,8 @@ export function createOrphanedTaskAuthorityRecoveryRepositoryAdapter(options = {
   const leaseStore = dependencies.leaseStore
     || createWriterLeaseStore({ gitCommonDir: commonDirectory });
   const inspectCloud = dependencies.inspectCloud || invokeRepositoryCloudAction;
+  const readRetiredClaimProof = dependencies.readRetiredClaimProof
+    || (lease => readRetiredReviewedClaimProof({ ghJson, lease }));
   const environment = options.environment || process.env;
 
   function readLease() {
@@ -78,8 +88,14 @@ export function createOrphanedTaskAuthorityRecoveryRepositoryAdapter(options = {
       throw new Error("Cloud status did not return an authoritative claim inventory.");
     }
     const matches = status.claims.filter(item => item?.claimId === authority?.claimId);
-    if (matches.length !== 1) throw new Error("Cloud inventory has no unique source claim.");
-    return matches[0];
+    if (matches.length > 1) throw new Error("Cloud inventory has multiple source claims.");
+    if (matches.length === 1) {
+      if (matches[0].claimDigest !== authority?.claimDigest) {
+        throw new Error("Live cloud claim does not match the local claim digest.");
+      }
+      return matches[0];
+    }
+    return readRetiredClaimProof(lease);
   }
 
   function captureSource() {
@@ -325,6 +341,82 @@ export function createOrphanedTaskAuthorityRecoveryRepositoryAdapter(options = {
   });
 }
 
+function readRetiredReviewedClaimProof({ ghJson, lease }) {
+  const authority = lease?.cloudAuthority;
+  const ledgerRepository = requiredText(authority?.ledgerRepository, "ledger repository");
+  const reference = ghJson([
+    "api",
+    `repos/${ledgerRepository}/git/ref/heads/${encodeURIComponent(DEFAULT_LEDGER_REF)}`,
+  ]);
+  const revision = requiredSha(reference?.object?.sha, "ledger ref revision");
+  const metadata = ghJson([
+    "api",
+    `repos/${ledgerRepository}/contents/${DEFAULT_LEDGER_PATH}?ref=${revision}`,
+  ]);
+  const blobSha = requiredSha(metadata?.sha, "ledger blob SHA");
+  const blob = ghJson(["api", `repos/${ledgerRepository}/git/blobs/${blobSha}`]);
+  if (blob?.encoding !== "base64" || !blob.content) {
+    throw new Error("Raw collaboration ledger is not complete base64 content.");
+  }
+  const raw = Buffer.from(String(blob.content).replaceAll("\n", ""), "base64").toString("utf8");
+  const ledger = JSON.parse(raw);
+  const failures = validateLedger(ledger);
+  if (failures.length > 0) {
+    throw new Error(`Raw collaboration ledger is invalid: ${failures.join("; ")}`);
+  }
+  return selectRetiredReviewedCloudClaimProof({ entries: ledger.entries, lease });
+}
+
+export function selectRetiredReviewedCloudClaimProof({ entries, lease } = {}) {
+  if (!Array.isArray(entries)) throw new Error("Raw collaboration ledger entries are required.");
+  const authority = lease?.cloudAuthority;
+  const claimId = requiredDigest(authority?.claimId, "local claim ID");
+  const claimDigest = requiredDigest(authority?.claimDigest, "local claim digest");
+  const claimEntries = entries.filter(entry => entry?.claimId === claimId);
+  const sourceEntries = claimEntries.filter(entry => entry?.claimDigest === claimDigest);
+  if (sourceEntries.length !== 1) {
+    throw new Error("Raw collaboration ledger has no unique local claim projection.");
+  }
+  const source = sourceEntries[0];
+  const sourceCore = source.claimCore;
+  const terminal = claimEntries.at(-1);
+  const terminalCore = terminal?.claimCore;
+  const retirement = terminalCore?.retirement;
+  const sourceCounter = positiveInteger(sourceCore?.transitionCounter, "source transition counter");
+  const terminalCounter = positiveInteger(terminalCore?.transitionCounter, "terminal transition counter");
+  const laneRevision = requiredSha(sourceCore?.laneRevision, "source lane revision");
+  const reviewRequestId = requiredText(sourceCore?.reviewRequestId, "source review request ID");
+  if (lease?.status !== "review_ready" || authority?.state !== "review_ready"
+    || sourceCore?.state !== "reviewed") {
+    throw new Error("Historical fallback requires one locally review-ready reviewed claim.");
+  }
+  if (laneRevision !== requiredSha(lease?.reviewHeadSha, "local review head SHA")
+    || laneRevision !== requiredSha(authority?.laneRevision, "local cloud lane revision")
+    || sourceCore?.writeSetDigest !== authority?.writeSetDigest
+    || reviewRequestId !== authority?.reviewRequestId) {
+    throw new Error("Historical reviewed claim does not join the local lane projection.");
+  }
+  if (terminalCore?.state !== "retired" || terminalCounter !== sourceCounter + 1
+    || retirement?.finalRevision !== laneRevision
+    || retirement?.reviewRequestId !== reviewRequestId) {
+    throw new Error("Historical reviewed claim has no exact terminal retirement fence.");
+  }
+  return Object.freeze({
+    schema: "agentic-orphaned-task-authority-retired-reviewed-cloud-proof/v1",
+    claimId,
+    claimDigest,
+    sourceTransitionDigest: requiredDigest(source.digest, "source transition digest"),
+    sourceTransitionCounter: sourceCounter,
+    sourceState: "reviewed",
+    terminalTransitionDigest: requiredDigest(terminal.digest, "terminal transition digest"),
+    terminalTransitionCounter: terminalCounter,
+    terminalState: "retired",
+    retirementReason: requiredText(retirement.reason, "retirement reason"),
+    finalRevision: laneRevision,
+    reviewRequestId,
+  });
+}
+
 function assertSourceOrTargetLease(plan, lease) {
   const binding = lease.taskAuthority;
   if (binding?.bindingDigest !== plan.source.taskAuthority.bindingDigest
@@ -358,4 +450,13 @@ function requiredSha(value, label) {
   const sha = requiredText(value, label);
   if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error(`${label} is invalid.`);
   return sha;
+}
+function requiredDigest(value, label) {
+  const digest = requiredText(value, label);
+  if (!/^[0-9a-f]{64}$/u.test(digest)) throw new Error(`${label} is invalid.`);
+  return digest;
+}
+function positiveInteger(value, label) {
+  if (!Number.isInteger(value) || value < 1) throw new Error(`${label} is invalid.`);
+  return value;
 }

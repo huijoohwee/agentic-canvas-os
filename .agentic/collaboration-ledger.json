@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5044,
-  "headDigest": "171c4c7e9ea7d8fbc95ee1fa0bb992ca7efa3da5d524dc0be311a96f5d541177",
+  "sequence": 5045,
+  "headDigest": "4e1846a32b61a1b16a90205600f04f800ce2a4be75286b5954b8f3025d377783",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -254326,6 +254326,47 @@
       },
       "claimDigest": "7de0d1049185573ad98eafb3f704efd81cafe225991867345bba1780b196244d",
       "digest": "171c4c7e9ea7d8fbc95ee1fa0bb992ca7efa3da5d524dc0be311a96f5d541177"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5045,
+      "parentDigest": "171c4c7e9ea7d8fbc95ee1fa0bb992ca7efa3da5d524dc0be311a96f5d541177",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "46ff00bf8d3667734aad60461304a4070f6654828e7db9909374a3e425659feb",
+      "idempotencyKey": "4d6d020f09a999b6735870eb705fab7df42ba9b4f3016e184f061094b1e7a78d",
+      "requestDigest": "798286ee169134b05fe0ca6e3a0d201b07b2fab55b6b00ec6f7062e59b312ea8",
+      "evaluationTime": "2026-08-24T18:02:42.000Z",
+      "claimCore": {
+        "claimId": "46ff00bf8d3667734aad60461304a4070f6654828e7db9909374a3e425659feb",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:d32a22f89c91a8b2cbe6d40f6bd30c3d81d59c08115bac73636a5cf82ae9582d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:391f2233a43dd7664904293149e2be35862a11eaeef051c34dc98f18474eef84",
+        "canonicalBaseRevision": "1dbbf5f4dded34f02554416300b8ed4cbc1d7726",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-clean-receipt-evidence-projection"
+        ],
+        "writeSetDigest": "586f052c7aa547ccad3410c481eecd7fe6f428e087796df43a925d97ef1b5c45",
+        "laneRevision": "36f1f32f6f8a28f06e702fef116f04a8c24a7bd1",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-24T19:54:34.000Z",
+        "evidenceDigest": "ae90b0ecfa6d12fa4b14d0e29f4853ef3d6f8f91f50af9d32a33c3cc6cb32ab1",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA1e5MA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "3f26b9d6d5cb6de89652e35f624d36aa9ab704f567c678787fa9df5b083eb98e",
+      "digest": "4e1846a32b61a1b16a90205600f04f800ce2a4be75286b5954b8f3025d377783"
     }
   ]
 }

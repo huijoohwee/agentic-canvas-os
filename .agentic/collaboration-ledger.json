@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5010,
-  "headDigest": "d2053cb3451efb811c7fd00d4907b606866e33ba863d0b28ff5c1ff5d134b111",
+  "sequence": 5011,
+  "headDigest": "905c81a164a9342da5fc9d8b23aa3e27f1aaf56b425dd38b3f2e0ef9a8d34560",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -252656,6 +252656,47 @@
       },
       "claimDigest": "0c694da412a63226c69aed5b539c1f12b1f1e96beb8e478d03d5abab74edfbf4",
       "digest": "d2053cb3451efb811c7fd00d4907b606866e33ba863d0b28ff5c1ff5d134b111"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5011,
+      "parentDigest": "d2053cb3451efb811c7fd00d4907b606866e33ba863d0b28ff5c1ff5d134b111",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "35548d5bc4681d3f4dd3cf2654c00864643a6a363733879ed29e1dca9f0731b6",
+      "idempotencyKey": "538403252dd159ab87a6890d5edd098c9cfb6c58764448f8e47cf7dc0b8e54fb",
+      "requestDigest": "7507cd052a3a8b6d1285a3e4c7e035c1842dee508ad93fcc64cc523f026f1a2d",
+      "evaluationTime": "2026-08-24T16:38:43.000Z",
+      "claimCore": {
+        "claimId": "35548d5bc4681d3f4dd3cf2654c00864643a6a363733879ed29e1dca9f0731b6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ec51fcf0c238740e486b9de3453466c1493fa5a3651cc787e0730a632bf51d76",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:409767ec385e6f843a6dc0ff69954ccad842afad717212a9c4c952ca0a2befe7",
+        "canonicalBaseRevision": "a2d237985c083a6b0fe4ae471fec5a99fbea6234",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-clean-manifest-projection-reconciliation"
+        ],
+        "writeSetDigest": "deea886f0d49f04a8621fb4f0ac290042cda480bf33c9946cecae7e8ac677254",
+        "laneRevision": "2b9a2f1b6e650a5203fe329eb6d58676392d80eb",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-24T18:28:15.000Z",
+        "evidenceDigest": "90e4e26fd4df5c8e80873f9dfdcba8e5eddac8d061a301d6de44d88b0a906e9d",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA04a9g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1ea799084473eea1b03a3891021b9bbb6bceb09b398dc18bb2dd303348e5043e",
+      "digest": "905c81a164a9342da5fc9d8b23aa3e27f1aaf56b425dd38b3f2e0ef9a8d34560"
     }
   ]
 }

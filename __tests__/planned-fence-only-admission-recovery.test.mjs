@@ -517,6 +517,12 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
 
   observedClaim = { ...target, state: "dormant-preserved", writeAuthority: false,
     recovery: { evidenceDigest: plan.evidence.evidenceDigest, recoveredAt: RECOVERED } };
+  const projectedSource = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({ inspect })
+    .inspectDormant({ sourceAuthority: plan.evidence.sourceLease.cloudAuthority,
+      sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest });
+  assert.equal(projectedSource.claim.transitionCounter, claim.transitionCounter);
+  assert.equal(projectedSource.claim.fenceRevision, claim.fenceRevision);
+  assert.equal(projectedSource.claim.recovery, undefined);
   const replayed = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     inspect, invoke: () => ({ ...result, replayed: true }), verify,
   }).recover({ plan, sealedRequest: sealed });

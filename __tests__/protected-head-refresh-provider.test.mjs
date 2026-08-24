@@ -600,6 +600,43 @@ test("cloud authority accepts unrelated ledger advance but rejects claim evidenc
   }), /claim drifted/u);
 });
 
+test("cloud authority accepts only the exact counter-plus-one recovered fence after head refresh", () => {
+  const projection = normalizedProjection();
+  const recoveredFence = "8".repeat(64);
+  const recovery = {
+    evidenceDigest: "9".repeat(64),
+    recoveredAt: "2026-08-24T03:36:00.000Z",
+  };
+  const recovered = cloudResult({
+    claimDigest: recoveredFence,
+    subject: { ...cloudResult().subject, headSha: candidate },
+    claim: {
+      ...cloudResult().claim,
+      transitionCounter: projection.transition_counter + 1,
+      fenceRevision: recoveredFence,
+      recovery,
+    },
+  });
+  assert.equal(requireProtectedHeadRefreshCloudResult({
+    result: recovered,
+    projection,
+    currentHeadSha: candidate,
+  }), recovered);
+
+  for (const result of [
+    { ...recovered, subject: cloudResult().subject },
+    { ...recovered, claim: { ...recovered.claim, recovery: null } },
+    { ...recovered, claim: { ...recovered.claim, transitionCounter: projection.transition_counter + 2 } },
+    { ...recovered, claim: { ...recovered.claim, integrationReceiptDigest: "7".repeat(64) } },
+  ]) {
+    assert.throws(() => requireProtectedHeadRefreshCloudResult({
+      result,
+      projection,
+      currentHeadSha: result.subject.headSha,
+    }), /claim drifted|subject drifted/u);
+  }
+});
+
 test("CI completion projects exact source checks into the candidate rollup before cloud success", () => {
   const projection = normalizedProjection();
   const workflow = ciRun({ operationId: projection.operation_id });

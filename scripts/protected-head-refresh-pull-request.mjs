@@ -1,6 +1,7 @@
 import {
   OPEN_MERGE_STATES,
   requireCanonicalPositiveInteger,
+  requireDigest,
   requireExactText,
   requireSha,
 } from "./protected-head-refresh-shared.mjs";
@@ -207,11 +208,6 @@ export function requireProtectedHeadRefreshCloudResult({
   ) {
     throw new Error("Protected-head refresh cloud verification was not exactly ready.");
   }
-  if (
-    result.claimDigest !== projection.claim_digest
-  ) {
-    throw new Error("Protected-head refresh cloud fence projection drifted.");
-  }
   // The verifier proves projection.ledger_revision is an ancestor containing
   // the same claim fence. Unrelated ledger appends may advance the live head.
   requireSha(result.ledgerRevision, "Protected-head refresh live ledger revision");
@@ -220,6 +216,7 @@ export function requireProtectedHeadRefreshCloudResult({
     throw new Error("Protected-head refresh cloud verification returned no claim.");
   }
   const state = String(claim.state || claim.status || "").replaceAll("-", "_");
+  const recoveredFence = result.claimDigest !== projection.claim_digest;
   if (
     state !== "integrated_preserved"
     || claim.claimId !== projection.claim_id
@@ -227,7 +224,9 @@ export function requireProtectedHeadRefreshCloudResult({
     || claim.laneRevision !== projection.delivered_head_sha
     || claim.reviewRequestId !== projection.review_request_id
     || claim.integrationReceiptDigest !== projection.integration_receipt_digest
-    || claim.transitionCounter !== projection.transition_counter
+    || (recoveredFence
+      ? !isExactProtectedRefreshRecovery({ result, claim, projection, currentHeadSha })
+      : claim.transitionCounter !== projection.transition_counter)
   ) {
     throw new Error("Protected-head refresh cloud claim drifted from delivery authority.");
   }
@@ -242,4 +241,26 @@ export function requireProtectedHeadRefreshCloudResult({
     throw new Error("Protected-head refresh cloud pull-request subject drifted.");
   }
   return result;
+}
+
+function isExactProtectedRefreshRecovery({ result, claim, projection, currentHeadSha }) {
+  const recovery = claim.recovery;
+  if (
+    currentHeadSha === projection.observed_head_sha
+    || claim.transitionCounter !== projection.transition_counter + 1
+    || claim.fenceRevision !== result.claimDigest
+    || !recovery
+    || typeof recovery !== "object"
+    || Array.isArray(recovery)
+  ) {
+    return false;
+  }
+  try {
+    requireDigest(result.claimDigest, "Protected-head refresh recovered cloud fence");
+    requireDigest(recovery.evidenceDigest, "Protected-head refresh recovery evidence");
+    const recoveredAt = String(recovery.recoveredAt || "");
+    return new Date(recoveredAt).toISOString() === recoveredAt;
+  } catch {
+    return false;
+  }
 }

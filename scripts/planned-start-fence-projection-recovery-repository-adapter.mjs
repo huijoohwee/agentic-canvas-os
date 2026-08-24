@@ -132,7 +132,10 @@ export function createRepositoryPlannedStartFenceProjectionRecoveryAdapter(
     if (result?.verification?.status !== "ready" || verifiedMatches.length !== 1) {
       invalid("verified current cloud claim");
     }
-    const claim = verifiedMatches[0];
+    const verifiedClaim = verifiedMatches[0];
+    const claim = matches[0].recovery
+      ? Object.freeze({ ...verifiedClaim, recovery: structuredClone(matches[0].recovery) })
+      : verifiedClaim;
     const overlappingClaimIds = claims.filter(candidate => candidate.claimId !== claim.claimId
       && (candidate.writeAuthority === true || candidate.scopeReserved === true)
       && writeSetsOverlap(candidate.declaredWriteScope, claim.declaredWriteScope))
@@ -323,7 +326,9 @@ function targetCloudObservation(plan) {
 }
 function stableCloud(value) {
   const { evaluatedAt: _evaluatedAt,
-    verificationReceiptDigest: _verificationReceiptDigest, ...stable } = value;
+    verificationReceiptDigest: _verificationReceiptDigest,
+    ledgerRevision: _ledgerRevision, ledgerDigest: _ledgerDigest,
+    inventoryDigest: _inventoryDigest, ...stable } = value;
   return stable;
 }
 function targetCloudAuthority(plan) {
@@ -378,15 +383,32 @@ function projectedValues(plan, state, disposition) {
 }
 function requireRecoverableTransition({ source, target, claim, lease, pullRequest,
   overlappingClaimIds }) {
-  if (source.claimId !== target.claimId || source.transitionCounter + 1 !== target.transitionCounter
-    || source.canonicalBaseSha !== target.canonicalBaseSha
-    || source.canonicalBaseSha !== lease.baseSha || source.laneRevision !== lease.baseSha
-    || target.laneRevision !== lease.fenceSha || target.state !== "active"
-    || source.leaseEpoch !== target.leaseEpoch || source.writeSetDigest !== target.writeSetDigest
-    || canonicalJson(source.cloudDeclaredWriteScope) !== canonicalJson(target.cloudDeclaredWriteScope)
-    || target.reviewRequestId !== pullRequest.reviewRequestId
-    || claim.claimId !== target.claimId
-    || overlappingClaimIds.length > 0) invalid("same-claim next fence transition");
+  const failed = [
+    ["claim", source.claimId === target.claimId && claim.claimId === target.claimId],
+    ["transition", isRecoverableFenceTransition(source, target, claim)],
+    ["base", source.canonicalBaseSha === target.canonicalBaseSha
+      && source.canonicalBaseSha === lease.baseSha && source.laneRevision === lease.baseSha],
+    ["fence", target.laneRevision === lease.fenceSha],
+    ["state", target.state === "active"],
+    ["epoch", source.leaseEpoch === target.leaseEpoch],
+    ["write-set", source.writeSetDigest === target.writeSetDigest
+      && canonicalJson(source.cloudDeclaredWriteScope) === canonicalJson(target.cloudDeclaredWriteScope)],
+    ["review", target.reviewRequestId === pullRequest.reviewRequestId],
+    ["overlap", overlappingClaimIds.length === 0],
+  ].filter(([, satisfied]) => !satisfied).map(([label]) => label);
+  if (failed.length) invalid(`same-claim next fence transition (${failed.join(", ")})`);
+}
+function isRecoverableFenceTransition(source, target, claim) {
+  const delta = target.transitionCounter - source.transitionCounter;
+  if (source.transitionCounter !== 1 || claim.transitionCounter !== target.transitionCounter) {
+    return false;
+  }
+  if (delta === 1) return claim.recovery === undefined;
+  return delta === 2 && claim.recovery && typeof claim.recovery === "object"
+    && !Array.isArray(claim.recovery)
+    && /^[0-9a-f]{64}$/u.test(String(claim.recovery.evidenceDigest || ""))
+    && typeof claim.recovery.recoveredAt === "string"
+    && Number.isFinite(Date.parse(claim.recovery.recoveredAt));
 }
 function requireObservation(expected, actual, label) {
   if (canonicalJson(expected) !== canonicalJson(actual)) invalid(`${label} observation`);

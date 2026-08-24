@@ -5,6 +5,7 @@ import {
   normalizeWriteSet,
 } from "./cloud-collaboration-primitives.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 
 export const PLANNED_START_FENCE_PROJECTION_RECOVERY_EVIDENCE_SCHEMA =
   "agentic-planned-start-fence-projection-recovery-evidence/v1";
@@ -154,7 +155,8 @@ function normalizeCloud(value) {
 
 function stableCloudIdentity(value) {
   const { evaluatedAt: _evaluatedAt, verificationReceiptDigest: _verificationReceiptDigest,
-    ...identity } = value;
+    ledgerRevision: _ledgerRevision, ledgerDigest: _ledgerDigest,
+    inventoryDigest: _inventoryDigest, ...identity } = value;
   return identity;
 }
 
@@ -207,28 +209,50 @@ function assertJoinedSubject(subject) {
   const claim = cloud.claim;
   const git = subject.gitObservations[0];
   const pullRequest = subject.pullRequestObservations[0];
-  if (writerLeaseDigest(lease) !== writerLeaseDigest(subject.leaseObservations[1])
-    || authority.claimId !== claim.claimId
-    || authority.transitionCounter !== 1 || claim.transitionCounter !== 2
-    || authority.laneRevision !== lease.baseSha || claim.laneRevision !== lease.fenceSha
-    || authority.reviewRequestId !== null || claim.reviewRequestId !== pullRequest.reviewRequestId
-    || authority.canonicalBaseSha !== claim.canonicalBaseRevision
-    || authority.canonicalBaseSha !== lease.baseSha
-    || authority.leaseEpoch !== claim.leaseEpoch
-    || authority.writeSetDigest !== claim.writeSetDigest
-    || canonicalJson(authority.cloudDeclaredWriteScope) !== canonicalJson(claim.declaredWriteScope)
-    || canonicalJson(claim.declaredWriteScope) !== canonicalJson(lease.admission.declaredWriteSet)
-    || authority.deviceId !== lease.device || authority.sessionId !== lease.sessionId
-    || Date.parse(lease.expiresAt) > Date.parse(subject.observedAt)
-    || Date.parse(claim.expiresAt) <= Date.parse(subject.observedAt)
-    || lease.taskAuthority?.bindingDigest !== subject.taskCapabilityDigest
-    || git.branch !== lease.branch || git.worktreePath !== lease.worktreePath
-    || git.fenceSha !== lease.fenceSha || pullRequest.headSha !== lease.fenceSha
-    || pullRequest.baseSha !== lease.baseSha || pullRequest.branch !== lease.branch
-    || pullRequest.url !== lease.pullRequestUrl
-    || !git.changedPaths.every((item) => lease.admission.declaredWriteSet.includes(item))) {
-    invalid("lease, cloud, Git, pull-request, or task join");
-  }
+  const failed = [
+    ["stable-lease", writerLeaseDigest(lease) === writerLeaseDigest(subject.leaseObservations[1])],
+    ["claim", authority.claimId === claim.claimId],
+    ["transition", isRecoverableFenceTransition(authority, claim)],
+    ["lane", authority.laneRevision === lease.baseSha && claim.laneRevision === lease.fenceSha],
+    ["review", authority.reviewRequestId === null
+      && claim.reviewRequestId === pullRequest.reviewRequestId],
+    ["base", authority.canonicalBaseSha === claim.canonicalBaseRevision
+      && authority.canonicalBaseSha === lease.baseSha],
+    ["epoch", authority.leaseEpoch === claim.leaseEpoch],
+    ["scope", authority.writeSetDigest === claim.writeSetDigest
+      && canonicalJson(authority.cloudDeclaredWriteScope) === canonicalJson(claim.declaredWriteScope)
+      && canonicalJson(claim.declaredWriteScope) === canonicalJson(lease.admission.declaredWriteSet)],
+    ["owner", ownerMatches("device", authority.deviceId, lease.device)
+      && ownerMatches("session", authority.sessionId, lease.sessionId)],
+    ["lease-expiry", Date.parse(lease.expiresAt) <= Date.parse(subject.observedAt)],
+    ["claim-expiry", Date.parse(claim.expiresAt) > Date.parse(subject.observedAt)],
+    ["task", lease.taskAuthority?.bindingDigest === subject.taskCapabilityDigest],
+    ["git", git.branch === lease.branch && git.worktreePath === lease.worktreePath
+      && git.fenceSha === lease.fenceSha],
+    ["pull-request", pullRequest.headSha === lease.fenceSha
+      && pullRequest.baseSha === lease.baseSha && pullRequest.branch === lease.branch
+      && pullRequest.url === lease.pullRequestUrl],
+    ["descendant-scope", git.changedPaths.every((item) =>
+      lease.admission.declaredWriteSet.includes(item))],
+  ].filter(([, satisfied]) => !satisfied).map(([label]) => label);
+  if (failed.length) invalid(`lease, cloud, Git, pull-request, or task join (${failed.join(", ")})`);
+}
+
+function isRecoverableFenceTransition(authority, claim) {
+  if (authority.transitionCounter !== 1) return false;
+  if (claim.transitionCounter === 2) return claim.recovery === undefined;
+  return claim.transitionCounter === 3 && validResponseAheadRecovery(claim.recovery);
+}
+
+function validResponseAheadRecovery(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value)
+    && /^[0-9a-f]{64}$/u.test(String(value.evidenceDigest || ""))
+    && typeof value.recoveredAt === "string"
+    && Number.isFinite(Date.parse(value.recoveredAt)));
+}
+
+function ownerMatches(namespace, recorded, local) {
+  return recorded === local || recorded === pseudonymousIdentifier(namespace, local);
 }
 
 function validateAuthority(value, label) {

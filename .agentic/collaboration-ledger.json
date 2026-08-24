@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 4867,
-  "headDigest": "05541202986fee8ca4d85d97463e0688fd8ddcc32594a0159fb482f5faaf47a5",
+  "sequence": 4868,
+  "headDigest": "1e90b137174b3e91fe219b7f926533ab9cca0cf1bae7b9969c8053b65e0b2153",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -245183,6 +245183,49 @@
       },
       "claimDigest": "df749dd363582f8cd27b89026eb36319881fbb3fb086e226dda4028439885122",
       "digest": "05541202986fee8ca4d85d97463e0688fd8ddcc32594a0159fb482f5faaf47a5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 4868,
+      "parentDigest": "05541202986fee8ca4d85d97463e0688fd8ddcc32594a0159fb482f5faaf47a5",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8c31547fcfdf34dbbbfe35f47e3fa7e628646c763f7ec05a5b302901f01b1fe8",
+      "idempotencyKey": "a28300364cbaef9f5875d691e54d78ed6a314e27e008d0519708e0f6fe9b6188",
+      "requestDigest": "c1e2a58398f13693696f38a00587e649360ecf0a357e2e1322e88db37f008791",
+      "evaluationTime": "2026-08-24T06:06:47.000Z",
+      "claimCore": {
+        "claimId": "8c31547fcfdf34dbbbfe35f47e3fa7e628646c763f7ec05a5b302901f01b1fe8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:c316220db6f1061ecde9398bb6c819b5bcb5c745b35f7ea01d77c6da43b3f46c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:54e6f4919dd75956b4fdff719cdd5bff91ffa34a1ce23b5a8bfce1c8033ef28a",
+        "canonicalBaseRevision": "cb68fe058e41b701c9c571be665a8275071ab8f0",
+        "declaredWriteScope": [
+          "path:__tests__/dormant-preservation-decision-repository-adapter.test.mjs",
+          "path:__tests__/scoped-lane-admission-continuation.test.mjs",
+          "path:docs/DORMANT-PRESERVATION-DECISION.md",
+          "path:scripts/dormant-preservation-decision-repository-adapter.mjs",
+          "path:scripts/scoped-lane-admission-continuation.mjs",
+          "semantic:planned-continuation-protected-advance"
+        ],
+        "writeSetDigest": "c8426d524b9e7905d30854946415925d2fce3477c9b2edd9d301f5ca1844f633",
+        "laneRevision": "3c4da6e0f542ff57e5336db298832da5ebe980ff",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-24T07:23:50.000Z",
+        "evidenceDigest": "77d1c9b332f5bcc221badf04cc05c4d8256bbabb3bf5a54115f767f019737687",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABAwWn3A",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a463d3a943249be9aae6c356fbd1434f70d4a4ee2a04e2438d8597e9ec041a6f",
+      "digest": "1e90b137174b3e91fe219b7f926533ab9cca0cf1bae7b9969c8053b65e0b2153"
     }
   ]
 }

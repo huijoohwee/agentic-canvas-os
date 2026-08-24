@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5017,
-  "headDigest": "72affe803cba1fc45dc7569a81ca5afb25a32a6c89aecf155f74196d6cef5cbd",
+  "sequence": 5018,
+  "headDigest": "d9688af62071f0e26b4d08fd23a6f8107df69ceb28b02435bbfea56c6fd591f6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -253004,6 +253004,47 @@
       },
       "claimDigest": "14f1275ff43a3328a6a04daf46b78ba3847a5eca2503c42baf6b9a1c7c10a5c2",
       "digest": "72affe803cba1fc45dc7569a81ca5afb25a32a6c89aecf155f74196d6cef5cbd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5018,
+      "parentDigest": "72affe803cba1fc45dc7569a81ca5afb25a32a6c89aecf155f74196d6cef5cbd",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1727a0958e3550792db08a6054bc24031f25c6cd2a43ee0159993ada9a8187b0",
+      "idempotencyKey": "bd3c5fa4e851942721ccbc6e0d16e11fd09fc5f54f8649a70f4580c36b462a60",
+      "requestDigest": "6b76b45ae316d0be201ade7e0312127338210caf03060c61b94f3fac069ee0c8",
+      "evaluationTime": "2026-08-24T16:59:09.000Z",
+      "claimCore": {
+        "claimId": "1727a0958e3550792db08a6054bc24031f25c6cd2a43ee0159993ada9a8187b0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ce0706d65db4c00aa6ceee3a059849da7ad8ecb52434609fef77397ad7d9b256",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f0b24fb843f73c80e5a3d152ff18d554a2a4459f80188185a49c5e83fd718189",
+        "canonicalBaseRevision": "215a860fbe94f1e2e5dce4c20a0c7e5b7d3121c6",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-committed-recovery.test.mjs",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/planned-clean-committed-recovery-lib.mjs",
+          "semantic:planned-clean-marker-projection-reconciliation"
+        ],
+        "writeSetDigest": "102700d448837f9c7b711e7116aafea8866973a9ccaddfbaf2e3c864efcb4279",
+        "laneRevision": "96305996f730ee58f57d1c5e6d7b3fdd54eef815",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-24T18:48:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA1BHAg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "2442badfa6ef8beb509c83039c0ccc45aa320f16a6d76c42a1b23c34748c3f58",
+      "digest": "d9688af62071f0e26b4d08fd23a6f8107df69ceb28b02435bbfea56c6fd591f6"
     }
   ]
 }

@@ -11,7 +11,7 @@ import * as Evidence from "./dormant-preservation-decision-evidence.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { sanitizeDevice } from "./device-branch-lib.mjs";
 import { normalizeCloudAuthority, normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
-import { continuePlannedScopedLaneAdmission } from "./scoped-lane-admission-continuation.mjs";
+import { assertPlannedContinuationIdentity, continuePlannedScopedLaneAdmission, observeProtectedDescendant } from "./scoped-lane-admission-continuation.mjs";
 import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { assertAdmissionMutationAuthority, collectScopedLaneState } from "./scoped-lane-admission-state.mjs";
 import { verifyDormantPreservation } from "./scoped-lane-authority-state.mjs";
@@ -148,20 +148,24 @@ export function createDeviceDormantPreservationPlannedContinuationGate({
   }
   Contract.authorizeDormantPreservationAdmission(plan, plan.exactAuthorization);
   let latestDormantInput = null;
-  function assertCurrent(remoteInventory, receipt, postLaneState = collectLaneState({
-    repository: source.canonical.canonicalPath,
-  })) {
-    Evidence.assertDormantPreservationAdmissionPlannedContinuation(plan, {
-      controller: repositoryProjection(source.controller.path, null, true),
-      canonical: buildCurrentCanonical({ plan, repository: source.canonical.canonicalPath,
-        targetPath: source.candidate.targetPath }, postLaneState),
-      candidateLease: leaseStore.verify({ sessionId, branch }),
-      candidateLineage: readCandidateLineage(source.candidate.targetPath),
-      postLaneState, dormantPreservationReceipt: receipt, postCloudInventory: remoteInventory,
-      manifest, files: { selectionFileDigest: fileDigest(selectionPath),
-        manifestFileDigest: fileDigest(source.candidate.manifestPath),
-        cloudAuthorityFileDigest: fileDigest(source.candidate.cloudAuthorityPath) },
-    });
+  function assertCurrent(remoteInventory, receipt, postLaneState = collectLaneState({ repository: source.canonical.canonicalPath })) {
+    const files = { selectionFileDigest: fileDigest(selectionPath), manifestFileDigest: fileDigest(source.candidate.manifestPath), cloudAuthorityFileDigest: fileDigest(source.candidate.cloudAuthorityPath) };
+    const candidateLease = leaseStore.verify({ sessionId, branch });
+    const candidateLineage = readCandidateLineage(source.candidate.targetPath);
+    const input = { controller: repositoryProjection(source.controller.path, null, true),
+      canonical: buildCurrentCanonical({ plan, repository: source.canonical.canonicalPath, targetPath: source.candidate.targetPath }, postLaneState),
+      candidateLease, candidateLineage, postLaneState, dormantPreservationReceipt: receipt,
+      postCloudInventory: remoteInventory, manifest, files };
+    try { Evidence.assertDormantPreservationAdmissionPlannedContinuation(plan, input); }
+    catch (error) {
+      if (postLaneState.canonicalBaseSha === source.canonical.headSha) throw error;
+      assertPlannedContinuationIdentity({ plan, controller: input.controller, candidateLease, candidateLineage, manifest, files });
+      const protectedDeltaPaths = observeProtectedDescendant({ baseRevision: source.canonical.headSha, protectedRevision: postLaneState.canonicalBaseSha, manifest,
+        gitText: args => runGit(source.canonical.canonicalPath, args) });
+      continuePlannedScopedLaneAdmission({ lease: candidateLease, cloudAuthority: candidateLease.cloudAuthority, remoteAuthorityVerification: remoteInventory,
+        manifest, lanes: postLaneState.lanes, protectedRevision: postLaneState.canonicalBaseSha,
+        protectedDeltaPaths, dormantPreservationReceipt: receipt, operatorDecisionDigest: plan.planDigest });
+    }
     return receipt;
   }
   return Object.freeze({ planDigest: plan.planDigest, sourceEvidenceDigest: plan.sourceEvidenceDigest,
@@ -421,7 +425,6 @@ function observeRepositoryPlan(input) {
     sourceEvidence, nestedDeviceStart: buildNestedDeviceStart(finalContext),
   });
 }
-
 export function projectExistingPlannedTarget({ candidateLane, canonicalSourceDisposition, lease, sessionId, targetPath } = {}) {
   const target = path.resolve(requiredText(targetPath, "target path"));
   if (canonicalSourceDisposition !== "exact" || path.resolve(candidateLane?.path || "") !== target
@@ -487,9 +490,15 @@ function classifyRepositoryStart(input) {
           cloudAuthorityFileDigest: fileDigest(input.cloudAuthorityPath) },
       });
     } catch (error) {
-      if (!lease.integration) throw error;
+      if (postLaneState.canonicalBaseSha === source.canonical.headSha) throw error;
+      const files = { selectionFileDigest: fileDigest(input.selectionPath), manifestFileDigest: fileDigest(input.manifestPath), cloudAuthorityFileDigest: fileDigest(input.cloudAuthorityPath) };
+      assertPlannedContinuationIdentity({ plan: input.plan,
+        controller: repositoryProjection(input.controllerRoot, input.git, true),
+        candidateLease: lease, candidateLineage, manifest: input.manifest, files });
+      const protectedDeltaPaths = observeProtectedDescendant({ baseRevision: source.canonical.headSha, protectedRevision: postLaneState.canonicalBaseSha, manifest: input.manifest,
+        gitText: input.git });
       continuePlannedScopedLaneAdmission({ lease, cloudAuthority: verified.authority, remoteAuthorityVerification: verified.verification,
-        manifest: input.manifest, lanes, protectedRevision: postLaneState.canonicalBaseSha, protectedDeltaPaths: [],
+        manifest: input.manifest, lanes, protectedRevision: postLaneState.canonicalBaseSha, protectedDeltaPaths,
         dormantPreservationReceipt: dormantReceipt, operatorDecisionDigest: input.plan.planDigest });
     }
     return Object.freeze({ state: "planned", evidence: null });

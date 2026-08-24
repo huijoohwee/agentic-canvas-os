@@ -293,6 +293,7 @@ function fixture({ overlappingRemotePeer = false } = {}) {
     lane({
       lanePath: REPOSITORY,
       branch: "refs/heads/main",
+      head: PROTECTED_SHA,
       stateDigest: "d".repeat(64),
     }),
     lane({
@@ -435,6 +436,23 @@ test("continuation rejects an overlapping protected-source delta", () => {
     }),
     /Protected-source advance overlaps/u,
   );
+});
+
+test("continuation rejects protected canonical identity drift", () => {
+  const source = fixture();
+  for (const canonical of [
+    { head: BASE_SHA },
+    { dirty: true },
+    { branch: "refs/heads/not-main" },
+  ]) {
+    const lanes = source.lanes.map(item => item.path === REPOSITORY
+      ? { ...item, ...canonical }
+      : item);
+    assert.throws(
+      () => continueFixture(source, { lanes }),
+      /clean verified protected canonical lane/u,
+    );
+  }
 });
 
 test("continuation rejects an overlapping current remote peer", () => {

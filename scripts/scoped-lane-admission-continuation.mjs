@@ -30,6 +30,68 @@ export const ADMISSION_CONTINUATION_RECEIPT_SCHEMA =
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 
+export function observeProtectedDescendant({
+  baseRevision,
+  protectedRevision,
+  manifest,
+  gitText,
+} = {}) {
+  if (!SHA_PATTERN.test(String(baseRevision || ""))
+    || !SHA_PATTERN.test(String(protectedRevision || ""))
+    || typeof gitText !== "function") {
+    throw new Error("Protected-descendant verification requires exact revisions and gitText().");
+  }
+  if (protectedRevision === baseRevision) return Object.freeze([]);
+  try {
+    gitText(["merge-base", "--is-ancestor", baseRevision, protectedRevision]);
+  } catch {
+    throw new Error("Admission continuation requires a monotonic protected-source descendant.");
+  }
+  const changedPaths = String(gitText([
+    "diff", "--name-only", "-z", "--no-renames", baseRevision, protectedRevision,
+  ])).split("\0").filter(Boolean);
+  const normalized = normalizeWriteSet(changedPaths);
+  if (writeSetsOverlap(normalized, manifest?.declaredWriteSet || [])) {
+    throw new Error("Protected-source advance overlaps the planned write authority.");
+  }
+  return Object.freeze(changedPaths);
+}
+
+export function assertPlannedContinuationIdentity({
+  plan,
+  controller,
+  candidateLease: lease,
+  candidateLineage: lineage,
+  manifest,
+  files,
+} = {}) {
+  const source = plan?.sourceEvidence;
+  const candidate = source?.candidate;
+  if (!source || !/^[0-9a-f]{64}$/u.test(String(plan?.planDigest || ""))
+    || plan.sourceEvidenceDigest !== source.sourceEvidenceDigest
+    || JSON.stringify(controller) !== JSON.stringify(source.controller)
+    || path.resolve(lease?.worktreePath || "") !== candidate?.targetPath
+    || lease?.branch !== candidate?.branch
+    || lease?.sessionId !== candidate?.sessionId
+    || lease?.scope !== candidate?.semanticScope
+    || lease?.baseSha !== source.canonical?.headSha
+    || lease?.fenceSha !== lineage?.headSha
+    || lineage?.parentSha !== source.canonical?.headSha
+    || lineage?.parentCount !== 1
+    || lineage?.treeSha !== source.canonical?.treeSha
+    || lease?.admission?.status !== "planned"
+    || lease.admission.manifestDigest !== candidate?.manifest?.manifestDigest
+    || lease.admission.writeSetDigest !== candidate?.manifest?.writeSetDigest
+    || lease.cloudAuthority?.claimId !== candidate?.candidateClaim?.claimId
+    || JSON.stringify(manifest) !== JSON.stringify(candidate?.manifest)
+    || files?.selectionFileDigest !== candidate?.selectionFileDigest
+    || files?.manifestFileDigest !== candidate?.manifestFileDigest
+    || files?.cloudAuthorityFileDigest !== candidate?.cloudAuthorityFileDigest) {
+    throw new Error("Protected-descendant continuation changed its immutable planned identity.");
+  }
+  return true;
+}
+
 export function continuePlannedAdmissionFromRepository({
   repository,
   branch,
@@ -69,17 +131,12 @@ export function continuePlannedAdmissionFromRepository({
   gitText(["fetch", "origin", "main"]);
   const finalSnapshot = collectLaneState({ repository });
   requireStableLocalSnapshot(initialSnapshot, finalSnapshot);
-  try {
-    gitText(["merge-base", "--is-ancestor", lease.baseSha, finalSnapshot.canonicalBaseSha]);
-  } catch {
-    throw new Error("Admission continuation requires a monotonic protected-source descendant.");
-  }
-  const changedPaths = finalSnapshot.canonicalBaseSha === lease.baseSha
-    ? []
-    : String(gitText([
-      "diff", "--name-only", "-z", "--no-renames", lease.baseSha,
-      finalSnapshot.canonicalBaseSha,
-    ])).split("\0").filter(Boolean);
+  const changedPaths = observeProtectedDescendant({
+    baseRevision: lease.baseSha,
+    protectedRevision: finalSnapshot.canonicalBaseSha,
+    manifest,
+    gitText,
+  });
   const finalVerified = verifyCloudAuthority({
     authority: lease.cloudAuthority,
     manifest,
@@ -140,6 +197,7 @@ export function continuePlannedScopedLaneAdmission({
     lease,
     manifest,
     lanes,
+    protectedRevision,
     dormantPreservationReceipt,
     operatorDecisionDigest,
     remoteAuthorityVerification,
@@ -352,6 +410,7 @@ function verifyLocalPeers({
   lease,
   manifest,
   lanes,
+  protectedRevision,
   dormantPreservationReceipt,
   operatorDecisionDigest,
   remoteAuthorityVerification,
@@ -377,8 +436,9 @@ function verifyLocalPeers({
     dormantPreservationReceipt.worktrees.map(item => path.resolve(item.path)),
   );
   const canonical = peerLanes.filter(lane => lane.branch === "refs/heads/main");
-  if (canonical.length !== 1 || canonical[0].dirty || canonical[0].head !== lease.baseSha) {
-    throw new Error("Admission continuation requires the clean original canonical lane.");
+  if (canonical.length !== 1 || canonical[0].dirty
+    || canonical[0].head !== protectedRevision) {
+    throw new Error("Admission continuation requires the clean verified protected canonical lane.");
   }
   const evaluationTime = new Date(remoteAuthorityVerification.verifiedAt);
   const classifiedPeers = peerLanes.map(lane => (

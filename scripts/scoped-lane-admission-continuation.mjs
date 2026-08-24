@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import {
@@ -29,6 +30,143 @@ export const ADMISSION_CONTINUATION_RECEIPT_SCHEMA =
   "agentic-lane-admission-continuation-receipt/v1";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
+
+export function observeProtectedDescendant({
+  baseRevision,
+  protectedRevision,
+  manifest,
+  gitText,
+} = {}) {
+  if (!SHA_PATTERN.test(String(baseRevision || ""))
+    || !SHA_PATTERN.test(String(protectedRevision || ""))
+    || typeof gitText !== "function") {
+    throw new Error("Protected-descendant verification requires exact revisions and gitText().");
+  }
+  if (protectedRevision === baseRevision) return Object.freeze([]);
+  try {
+    gitText(["merge-base", "--is-ancestor", baseRevision, protectedRevision]);
+  } catch {
+    throw new Error("Admission continuation requires a monotonic protected-source descendant.");
+  }
+  const changedPaths = String(gitText([
+    "diff", "--name-only", "-z", "--no-renames", baseRevision, protectedRevision,
+  ])).split("\0").filter(Boolean);
+  const normalized = normalizeWriteSet(changedPaths);
+  if (writeSetsOverlap(normalized, manifest?.declaredWriteSet || [])) {
+    throw new Error("Protected-source advance overlaps the planned write authority.");
+  }
+  return Object.freeze(changedPaths);
+}
+
+export function assertPlannedContinuationIdentity({
+  plan,
+  controller,
+  candidateLease: lease,
+  candidateLineage: lineage,
+  manifest,
+  files,
+  gitText = null,
+} = {}) {
+  const source = plan?.sourceEvidence;
+  const candidate = source?.candidate;
+  const historicalController = source?.controller;
+  const controllerStaticIdentityExact = Boolean(historicalController)
+    && controller?.path === historicalController.path
+    && controller?.origin === historicalController.origin
+    && controller?.clean === true
+    && historicalController.clean === true
+    && controller?.deviceBranchScriptDigest
+      === historicalController.deviceBranchScriptDigest;
+  const controllerRevision = controller?.headSha;
+  const controllerFrontierExact = /^[0-9a-f]{40}$/u.test(String(controllerRevision || ""))
+    && controller?.originMainSha === controllerRevision
+    && controller?.remoteMainSha === controllerRevision
+    && /^[0-9a-f]{40}$/u.test(String(controller?.treeSha || ""));
+  let controllerProtectedAdvanceExact = false;
+  if (controllerStaticIdentityExact && controllerFrontierExact) {
+    if (controllerRevision === historicalController.headSha) {
+      controllerProtectedAdvanceExact = controller.treeSha === historicalController.treeSha
+        && controller.originMainSha === historicalController.originMainSha
+        && controller.remoteMainSha === historicalController.remoteMainSha;
+    } else {
+      try {
+        const readGit = gitText || (argumentsList => execFileSync(
+          "git", argumentsList, {
+            cwd: controller.path,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        ).trim());
+        observeProtectedDescendant({
+          baseRevision: historicalController.headSha,
+          protectedRevision: controllerRevision,
+          manifest,
+          gitText: readGit,
+        });
+        controllerProtectedAdvanceExact = String(readGit([
+          "rev-parse", `${controllerRevision}^{tree}`,
+        ])).trim() === controller.treeSha;
+      } catch {
+        controllerProtectedAdvanceExact = false;
+      }
+    }
+  }
+  if (!source || !/^[0-9a-f]{64}$/u.test(String(plan?.planDigest || ""))
+    || plan.sourceEvidenceDigest !== source.sourceEvidenceDigest
+    || !controllerStaticIdentityExact
+    || !controllerFrontierExact
+    || !controllerProtectedAdvanceExact
+    || path.resolve(lease?.worktreePath || "") !== candidate?.targetPath
+    || lease?.branch !== candidate?.branch
+    || lease?.sessionId !== candidate?.sessionId
+    || lease?.scope !== candidate?.semanticScope
+    || lease?.baseSha !== source.canonical?.headSha
+    || lease?.fenceSha !== lineage?.headSha
+    || lineage?.parentSha !== source.canonical?.headSha
+    || lineage?.parentCount !== 1
+    || lineage?.treeSha !== source.canonical?.treeSha
+    || lease?.admission?.status !== "planned"
+    || lease.admission.manifestDigest !== candidate?.manifest?.manifestDigest
+    || lease.admission.writeSetDigest !== candidate?.manifest?.writeSetDigest
+    || lease.cloudAuthority?.claimId !== candidate?.candidateClaim?.claimId
+    || JSON.stringify(manifest) !== JSON.stringify(candidate?.manifest)
+    || files?.selectionFileDigest !== candidate?.selectionFileDigest
+    || files?.manifestFileDigest !== candidate?.manifestFileDigest
+    || files?.cloudAuthorityFileDigest !== candidate?.cloudAuthorityFileDigest) {
+    throw new Error("Protected-descendant continuation changed its immutable planned identity.");
+  }
+  return true;
+}
+
+export function selectedPreservationMatchesLane({
+  lane,
+  rawLane,
+  dormantPreservationReceipt,
+} = {}) {
+  if (lane?.authorityState === "dormant-preserved") {
+    return lane.dormantPreservationReceiptDigest
+      === dormantPreservationReceipt?.receiptDigest;
+  }
+  if (lane?.classification !== "disjoint-attributed"
+    || lane?.authorityState !== "retired-preserved"
+    || lane?.dormantPreservationReceiptDigest !== null) return false;
+  const selected = dormantPreservationReceipt?.worktrees?.find(
+    item => path.resolve(item.path) === path.resolve(rawLane?.path || ""),
+  );
+  if (!selected) return false;
+  return digestValue(selected) === digestValue({
+    path: path.resolve(rawLane.path),
+    branch: rawLane.branch,
+    detached: rawLane.detached,
+    dirty: rawLane.dirty,
+    headSha: rawLane.head,
+    treeSha: rawLane.treeSha,
+    indexDigest: rawLane.indexDigest,
+    workingTreeDigest: rawLane.workingTreeDigest,
+    stateDigest: rawLane.stateDigest,
+    projectedClaimId: rawLane.projectedClaimId ?? null,
+  });
+}
 
 export function continuePlannedAdmissionFromRepository({
   repository,
@@ -69,17 +207,12 @@ export function continuePlannedAdmissionFromRepository({
   gitText(["fetch", "origin", "main"]);
   const finalSnapshot = collectLaneState({ repository });
   requireStableLocalSnapshot(initialSnapshot, finalSnapshot);
-  try {
-    gitText(["merge-base", "--is-ancestor", lease.baseSha, finalSnapshot.canonicalBaseSha]);
-  } catch {
-    throw new Error("Admission continuation requires a monotonic protected-source descendant.");
-  }
-  const changedPaths = finalSnapshot.canonicalBaseSha === lease.baseSha
-    ? []
-    : String(gitText([
-      "diff", "--name-only", "-z", "--no-renames", lease.baseSha,
-      finalSnapshot.canonicalBaseSha,
-    ])).split("\0").filter(Boolean);
+  const changedPaths = observeProtectedDescendant({
+    baseRevision: lease.baseSha,
+    protectedRevision: finalSnapshot.canonicalBaseSha,
+    manifest,
+    gitText,
+  });
   const finalVerified = verifyCloudAuthority({
     authority: lease.cloudAuthority,
     manifest,
@@ -129,7 +262,7 @@ export function continuePlannedScopedLaneAdmission({
 } = {}) {
   requirePlannedLease({ lease, cloudAuthority, manifest });
   requireCurrentVerification(remoteAuthorityVerification);
-  const candidate = requireCandidateLane({ lease, lanes });
+  const candidate = requireCandidateLane({ lease, lanes, cloudAuthority });
   const protectedAdvance = verifyProtectedAdvance({
     lease,
     manifest,
@@ -140,6 +273,7 @@ export function continuePlannedScopedLaneAdmission({
     lease,
     manifest,
     lanes,
+    protectedRevision,
     dormantPreservationReceipt,
     operatorDecisionDigest,
     remoteAuthorityVerification,
@@ -255,7 +389,7 @@ function requireCurrentVerification(verification) {
   ) throw new Error("Admission continuation requires operation-derived current cloud verification.");
 }
 
-function requireCandidateLane({ lease, lanes }) {
+function requireCandidateLane({ lease, lanes, cloudAuthority }) {
   const matches = (Array.isArray(lanes) ? lanes : []).filter(
     lane => path.resolve(lane.path) === path.resolve(lease.worktreePath),
   );
@@ -273,12 +407,51 @@ function requireCandidateLane({ lease, lanes }) {
     || candidate.lease?.sessionId !== lease.sessionId
     || candidate.lease?.epoch !== lease.epoch
   ) throw new Error("Admission continuation candidate drifted from its clean registered fence.");
+  requireBoundedHistoricalLeaseExpiry({
+    historicalLease: lease,
+    candidateLease: candidate.lease,
+    cloudAuthority,
+  });
   return Object.freeze({
     ...candidate,
     preparedIntegrationReceiptDigest: preparedIntegration
       ? digestValue(preparedIntegration)
       : null,
   });
+}
+
+function requireBoundedHistoricalLeaseExpiry({
+  historicalLease,
+  candidateLease,
+  cloudAuthority,
+}) {
+  const historicalExpiry = exactInstant(
+    historicalLease?.expiresAt,
+    "historical local lease expiry",
+  );
+  exactInstant(
+    candidateLease?.expiresAt,
+    "candidate local lease expiry",
+  );
+  const cloudExpiry = exactInstant(
+    cloudAuthority?.expiresAt,
+    "authenticated cloud expiry",
+  );
+  if (candidateLease.expiresAt !== historicalLease.expiresAt) {
+    throw new Error("Admission continuation changed the historical local lease expiry.");
+  }
+  if (historicalExpiry > cloudExpiry) {
+    throw new Error("Admission continuation local lease expiry exceeds authenticated cloud expiry.");
+  }
+  return true;
+}
+
+function exactInstant(value, label) {
+  const timestamp = Date.parse(String(value || ""));
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
+    throw new Error(`Admission continuation ${label} is invalid.`);
+  }
+  return timestamp;
 }
 
 function requirePreparedIntegrationCandidate({ lease, candidate }) {
@@ -352,6 +525,7 @@ function verifyLocalPeers({
   lease,
   manifest,
   lanes,
+  protectedRevision,
   dormantPreservationReceipt,
   operatorDecisionDigest,
   remoteAuthorityVerification,
@@ -377,8 +551,9 @@ function verifyLocalPeers({
     dormantPreservationReceipt.worktrees.map(item => path.resolve(item.path)),
   );
   const canonical = peerLanes.filter(lane => lane.branch === "refs/heads/main");
-  if (canonical.length !== 1 || canonical[0].dirty || canonical[0].head !== lease.baseSha) {
-    throw new Error("Admission continuation requires the clean original canonical lane.");
+  if (canonical.length !== 1 || canonical[0].dirty
+    || canonical[0].head !== protectedRevision) {
+    throw new Error("Admission continuation requires the clean verified protected canonical lane.");
   }
   const evaluationTime = new Date(remoteAuthorityVerification.verifiedAt);
   const classifiedPeers = peerLanes.map(lane => (
@@ -442,11 +617,11 @@ function verifyLocalPeers({
       );
     }
     const selected = preservedPaths.has(path.resolve(rawLane.path));
-    if (selected && (
-      lane.authorityState !== "dormant-preserved"
-      || lane.dormantPreservationReceiptDigest
-        !== dormantPreservationReceipt.receiptDigest
-    )) {
+    if (selected && !selectedPreservationMatchesLane({
+      lane,
+      rawLane,
+      dormantPreservationReceipt,
+    })) {
       throw new Error(
         `Admission continuation selected dormant peer drifted: ${rawLane.path}.`,
       );

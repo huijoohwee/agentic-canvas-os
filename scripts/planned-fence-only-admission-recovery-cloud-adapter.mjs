@@ -165,12 +165,21 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
 
   function verifyRecovered({ plan, authority }) {
     const normalizedPlan = normalizePlannedFenceOnlyAdmissionRecoveryPlan(plan);
-    const verified = verify({
-      authority,
-      manifest: normalizedPlan.evidence.manifest,
-      canonicalBaseSha: normalizedPlan.evidence.sourceLease.baseSha,
-      environment,
-    });
+    let verified;
+    try {
+      verified = verify({
+        authority,
+        manifest: normalizedPlan.evidence.manifest,
+        canonicalBaseSha: normalizedPlan.evidence.sourceLease.baseSha,
+        environment,
+      });
+    } catch (error) {
+      return verifyExpiredRecoveredResponseLoss({
+        plan: normalizedPlan,
+        authority,
+        verificationError: error,
+      });
+    }
     const verification = verified?.verification;
     const claims = verification?.inventory?.claims;
     if (verification?.status !== "ready" || !Array.isArray(claims)) {
@@ -196,6 +205,63 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
       inventoryDigest: requiredDigest(verification.remoteClaimInventoryDigest, "verification inventory"),
       targetClaimDigest: digestValue(projectTargetClaim(claim)),
       verifiedAt: requiredInstant(verification.verifiedAt, "verification time"),
+    });
+  }
+
+  function verifyExpiredRecoveredResponseLoss({ plan, authority, verificationError }) {
+    const sourceAuthority = plan.evidence.sourceLease.cloudAuthority;
+    const status = inspect({
+      action: "status",
+      ledgerRepository: sourceAuthority.ledgerRepository,
+      request: { targetRepository: sourceAuthority.targetRepository },
+      environment,
+    });
+    requireStatus(status);
+    const matches = status.claims.filter(claim => claim.claimId === authority.claimId);
+    if (matches.length !== 1) throw verificationError;
+    const claim = projectClaim(matches[0]);
+    assertExpiredRecoveredResponseLossClaim({
+      claim,
+      sourceClaim: plan.evidence.cloud.claim,
+      sourceLease: plan.evidence.sourceLease,
+      manifest: plan.evidence.manifest,
+      recoveryEvidenceDigest: plan.evidence.evidenceDigest,
+      sourceAuthority,
+    });
+    if (claim.fenceRevision !== authority.claimDigest
+      || claim.transitionDigest !== authority.claimLedgerRevision
+      || claim.operationReceiptDigest !== authority.operationReceiptDigest
+      || claim.expiresAt !== authority.expiresAt) {
+      throw verificationError;
+    }
+    const competitors = status.claims.filter(candidate => candidate.claimId !== claim.claimId
+      && candidate.repositoryId === claim.repositoryId && candidate.scopeReserved === true
+      && (candidate.reviewRequestId === claim.reviewRequestId
+        || overlaps(candidate.declaredWriteScope, plan.evidence.manifest.declaredWriteSet)));
+    if (competitors.length) invalid("recovered overlapping cloud reservation");
+    const verificationCore = {
+      schema: "agentic-planned-fence-expired-response-loss-verification/v1",
+      claimId: claim.claimId,
+      transitionDigest: claim.transitionDigest,
+      operationReceiptDigest: claim.operationReceiptDigest,
+      recoveryEvidenceDigest: claim.recovery.evidenceDigest,
+      ledgerRevision: status.ledgerRevision,
+      ledgerDigest: status.ledgerDigest,
+    };
+    const { recovery: _recovery, ...historicalClaim } = claim;
+    return Object.freeze({
+      authority,
+      verificationReceiptDigest: digestValue(verificationCore),
+      inventoryDigest: requiredDigest(
+        status.inventoryDigest || digestValue(status.claims),
+        "verification inventory",
+      ),
+      targetClaimDigest: digestValue(projectTargetClaim({
+        ...historicalClaim,
+        state: "current",
+        writeAuthority: true,
+      })),
+      verifiedAt: requiredInstant(claim.recovery.recoveredAt, "verification time"),
     });
   }
 

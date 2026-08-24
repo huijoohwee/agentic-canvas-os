@@ -26,6 +26,8 @@ test("one authorization recovers the response-ahead lane and defers cleanup", as
     async observe() { return snapshot(state); },
     async projectStartAuthority({ subject }) { calls.push(`project:${subject.subjectId}`);
       state.recovered.projectionAligned = true; },
+    async recoverPlannedClean({ subject }) { calls.push(`recover:${subject.subjectId}`);
+      state.recovered.leaseLive = true; },
     async admitStart({ subject }) { calls.push(`admit:${subject.subjectId}`);
       state.recovered.admissionStatus = "admitted"; },
     async integrateSource({ subject }) { calls.push(`integrate:${subject.subjectId}`);
@@ -39,9 +41,10 @@ test("one authorization recovers the response-ahead lane and defers cleanup", as
   const adapter = await createAdapter({ plan, configuration: configuration(), dependencies });
   const controller = createLaneConvergenceController({ adapter, journal: memoryJournal(), now: clock() });
   const receipt = await controller.run({ plan, authorization: plan.exactAuthorization });
-  assert.equal(receipt.transitionCount, 6);
+  assert.equal(receipt.transitionCount, 7);
   assert.deepEqual(calls, ["integrate:adapter-source", "project:response-ahead-source",
-    "admit:response-ahead-source", "integrate:response-ahead-source",
+    "recover:response-ahead-source", "admit:response-ahead-source",
+    "integrate:response-ahead-source",
     "cleanup:response-ahead-source", "cleanup:adapter-source"]);
 });
 
@@ -88,6 +91,7 @@ function stateFixture() { return {
 }; }
 function lane(subjectId, overrides = {}) { return { subjectId, worktreePresent: true,
   lifecycleState: "review-ready", admissionStatus: "planned", projectionAligned: false,
+  leaseLive: false,
   pullRequestState: "OPEN", headSha: SHA_A, integrationSha: null, canonicalSha: SHA_A,
   contained: false, merged: false, ...overrides }; }
 function snapshot(state) { return { observedAt: "2026-08-24T00:00:00.000Z",

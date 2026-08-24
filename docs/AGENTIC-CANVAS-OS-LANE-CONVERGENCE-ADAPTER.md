@@ -21,13 +21,16 @@ No subject is discovered by prefix, dirt, recency, or inferred ownership.
 The adapter supports ordinary integration and cleanup, plus one narrow
 `planned-start-response-ahead` recovery. That recovery first invokes the
 read-only-planned, task-bound local fence projection, then the provisioned-start
-admission controller. It never edits a lease or ledger directly. Integration
+admission controller. If the exact projected claim is dormant, it first invokes
+the repository-owned planned-clean committed recovery and requires a live lease
+before admission. It never edits a lease or ledger directly. Integration
 continues through `device:integrate`; cleanup continues through the owning
 worktree-lifecycle controller.
 
 Dependencies must be merged and contained before a dependent source advances.
 Cleanup is deferred until every source is merged and contained, so controller
-bytes remain available throughout the atomic transaction. Production deploy is
+bytes remain available throughout the atomic transaction. Controller scripts
+are resolved from canonical main, which survives source-lane cleanup. Production deploy is
 outside the action vocabulary and every action declares
 `deploymentMutation: false`.
 

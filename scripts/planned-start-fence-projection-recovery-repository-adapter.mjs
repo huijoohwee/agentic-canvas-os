@@ -123,6 +123,9 @@ export function createRepositoryPlannedStartFenceProjectionRecoveryAdapter(
       && Array.isArray(status.claims)
       ? status.claims.filter(claim => claim.claimId === lease.cloudAuthority.claimId) : [];
     if (matches.length !== 1) invalid("current cloud status claim");
+    if (["dormant-preserved", "parked"].includes(matches[0].state)) {
+      return dormantCloudObservation({ lease, pullRequest, status, claim: matches[0] });
+    }
     const projectedAuthority = projectCurrentAuthority(lease.cloudAuthority, status, matches[0]);
     const result = verifyCloud({ authority: projectedAuthority, manifest,
       canonicalBaseSha: lease.baseSha, environment });
@@ -150,6 +153,25 @@ export function createRepositoryPlannedStartFenceProjectionRecoveryAdapter(
         ledgerDigest: result.verification.inventory.ledgerDigest,
         claims: result.verification.inventory.claims }),
       verificationReceiptDigest: result.verification.receiptDigest,
+      overlappingClaimIds: Object.freeze(overlappingClaimIds) });
+  }
+
+  function dormantCloudObservation({ lease, pullRequest, status, claim }) {
+    const overlappingClaimIds = (status.claims || []).filter(candidate =>
+      candidate.claimId !== claim.claimId
+      && (candidate.writeAuthority === true || candidate.scopeReserved === true)
+      && writeSetsOverlap(candidate.declaredWriteScope, claim.declaredWriteScope))
+      .map(candidate => candidate.claimId).sort();
+    const target = projectCurrentAuthority(lease.cloudAuthority, status, claim);
+    requireRecoverableTransition({ source: lease.cloudAuthority, target, claim, lease,
+      pullRequest, overlappingClaimIds });
+    return Object.freeze({ status: "ready", evaluatedAt: now().toISOString(), claim,
+      ledgerRevision: status.ledgerRevision, ledgerDigest: status.ledgerDigest,
+      inventoryDigest: digestValue({ schema: "agentic-dormant-claim-inventory/v1",
+        ledgerRevision: status.ledgerRevision, ledgerDigest: status.ledgerDigest,
+        claims: status.claims }),
+      verificationReceiptDigest: digestValue({ schema: "agentic-dormant-status-observation/v1",
+        ledgerRevision: status.ledgerRevision, claim }),
       overlappingClaimIds: Object.freeze(overlappingClaimIds) });
   }
 

@@ -42,6 +42,20 @@ test("unrelated ledger-head advance preserves the exact subject and overlap join
   assert.deepEqual(evidence.targetCloudObservation.overlappingClaimIds, []);
 });
 
+test("exact dormant t3 projects only its expired historical fence", () => {
+  const input = evidenceInput({ responseAhead: true });
+  eachCloud(input, item => {
+    item.claim.state = "dormant-preserved";
+    item.claim.writeAuthority = false;
+    item.claim.expiresAt = "2026-08-16T00:01:30.000Z";
+  });
+  const evidence = buildPlannedStartFenceProjectionRecoveryEvidence(input);
+  assert.equal(evidence.targetCloudObservation.claim.state, "dormant-preserved");
+  assert.equal(evidence.targetCloudAuthority.state, "active");
+  assert.equal(Date.parse(evidence.targetCloudAuthority.expiresAt)
+    < Date.parse(evidence.observedAt), true);
+});
+
 test("terminal replay and post-CAS response loss retain cumulative mutation causality", async () => {
   const replay = controllerFixture();
   const first = await replay.controller.run({ plan: replay.plan });

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5277,
-  "headDigest": "d0ff577f85648dacc878a2df2463b086abe054a70d6f2f96995a0b4eddefed95",
+  "sequence": 5278,
+  "headDigest": "65c88b1ee0098ef9c689a64b1cb4b4eeb4be08c4d1908f55523301bbd8906269",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -267194,6 +267194,65 @@
       },
       "claimDigest": "b8a46a4611cd28d81f26c9ce8e8c341f8eb491e589670d4259da14e31a9f9206",
       "digest": "d0ff577f85648dacc878a2df2463b086abe054a70d6f2f96995a0b4eddefed95"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5278,
+      "parentDigest": "d0ff577f85648dacc878a2df2463b086abe054a70d6f2f96995a0b4eddefed95",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9933d2a0273d631044a63f89bf55fffaea674208c734aa14a12f9e3b63f9c8a3",
+      "idempotencyKey": "fc65a776a2301894c3db52f0adfe553a511493e93136b85d8b2122c56803d367",
+      "requestDigest": "d1432dc51e7ebf3269e788a3d43a4e72bac9e5444bba7ba608b9c98bf6a214a1",
+      "evaluationTime": "2026-08-25T16:17:08.000Z",
+      "claimCore": {
+        "claimId": "9933d2a0273d631044a63f89bf55fffaea674208c734aa14a12f9e3b63f9c8a3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4d0b08589df59f1c8b8a9f4a766b88e80c000fdd4dcf736a8b34cde7ae856b62",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:616844802c9bb8913d0f24e8d1fa40f37ad9cd2d538ce0c90c942bb946f8ec89",
+        "canonicalBaseRevision": "242a2235d0c7940a63f31dcc4ca418a8b3f6f4ca",
+        "declaredWriteScope": [
+          "path:__tests__/retired-abandoned-owned-dirt-successor-recovery.test.mjs",
+          "path:__tests__/terminal-handoff-owned-dirt-successor-recovery.test.mjs",
+          "path:docs/RETIRED-ABANDONED-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TERMINAL-HANDOFF-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-contract.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-controller.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-evidence.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "semantic:retired-abandoned-owned-dirt-recovery"
+        ],
+        "writeSetDigest": "29a424c1e95be83661ed31c4ffe51460e46283a4d2fbf9ea9b60f4dfcca55e90",
+        "laneRevision": "ad55b6b90e4007994eed817f66eac34a72f96bc1",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-26T14:20:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA8uQ3w",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "ad55b6b90e4007994eed817f66eac34a72f96bc1",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA8uQ3w",
+          "bytesDigest": "0ec6b1324d88ffc8c98503f044272ddb2f2834d1b874031cdc4353ca8cf0584a",
+          "namedChecksDigest": "57de47e9e98a291309a2ba0e21cdf3add5075f0cb2ce5ffb32ae3b147584e1ea",
+          "handoffEvidenceDigest": "b8046b922ef9b49107f38ea59653e35c718fac63198ff9c5b0b0e4886bfb8abc",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-25T16:17:08.000Z"
+        }
+      },
+      "claimDigest": "6ef0599f4394270d3b0e2ddcb99c682fdd5628971dfb3ff0dd66cf31a977090b",
+      "digest": "65c88b1ee0098ef9c689a64b1cb4b4eeb4be08c4d1908f55523301bbd8906269"
     }
   ]
 }

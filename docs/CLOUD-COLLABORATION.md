@@ -145,6 +145,27 @@ unchanged and pseudonymizes raw input exactly once. A continuation must never
 retry epoch 1, rederive identity from a branch or scope projection, or weaken
 the cloud contract to make a mismatched tuple admissible.
 
+One claim-only successor rollover may advance its base after protected `main`
+moves. The predecessor must be a v2 epoch claim admitted as a base-equal
+`waiting-successor`, followed immediately by its `superseded` retirement. It
+must have no authored lane revision, heartbeat, review request, focused
+evidence, recovery, integration, or intermediate transition. Its replacement
+must name that exact retired claim, retain the authenticated actor, repository,
+work item, device, session, and normalized write set, and use exactly the next
+lease epoch. Both replacement base and lane revision must equal current
+protected `main`.
+
+That rollover additionally requires the exact disjoint protected-descendant
+proof from the retired predecessor's historical base to current protected
+`main`. Proof normalization uses that historical source only after the complete
+claim-only lineage and successor identity match. A wrong source or target,
+overlapping changed paths, non-current target, non-superseded or live
+predecessor, or any authored, heartbeat, review, evidence, recovery, or
+integration history keeps the ordinary stale-base and predecessor rules in
+force. The exception grants only a new current Dev claim; it does not promote a
+live waiter or confer review, integration, release, Production, deployment, or
+cleanup authority.
+
 One bounded controller migration preserves this invariant for a historical v2
 scope-expansion artifact: an epoch-1 waiting-successor claim whose immutable
 predecessor names the superseded narrower-scope source claim. The standard

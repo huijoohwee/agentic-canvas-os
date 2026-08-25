@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5393,
-  "headDigest": "30924a23488fc3ca8b611d56b72d4d85b2a59eb546945030e3e82de2c6fec71e",
+  "sequence": 5394,
+  "headDigest": "87aaf8a8ded5f76648c0bb42392df11ee1ede96ec793b0132fe11b0ae78230fc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -273519,6 +273519,47 @@
       },
       "claimDigest": "778e370350a3f20de52974baafda2899874a186d9c696bd26a65a7336d8c6bfc",
       "digest": "30924a23488fc3ca8b611d56b72d4d85b2a59eb546945030e3e82de2c6fec71e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5394,
+      "parentDigest": "30924a23488fc3ca8b611d56b72d4d85b2a59eb546945030e3e82de2c6fec71e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e6053d3aa52732bc17b5418de549177747355a85880ba952a69b884fb55d9428",
+      "idempotencyKey": "160ee4698dd830427063045efa68667ea789381d5ebe15e8d7052ec088e7d97d",
+      "requestDigest": "fd269db1e959612476dad859c38ccba047999fb1840bdde9867b8a6227808533",
+      "evaluationTime": "2026-08-25T21:36:48.000Z",
+      "claimCore": {
+        "claimId": "e6053d3aa52732bc17b5418de549177747355a85880ba952a69b884fb55d9428",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:bf32f185a200d2eb304df0b01acc2bb547b77792b2d2550a3f56349ff2f189d6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f2f00b023fc5174e3ddd00e118e9cff65e301ca21a0e8f2cad05d7f3cf383969",
+        "canonicalBaseRevision": "777a80d26dc8f879d02da179922fef72a1b77283",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-scope-expansion-lineage-contract.mjs",
+          "semantic:reviewed-scope-expansion-lineage-migration-contract-defect-repair"
+        ],
+        "writeSetDigest": "d44ebf6b13b76f758a0dd30232f79d3b6ef453b85e050a98f84f82c0b0a9c6d1",
+        "laneRevision": "53b7fb2625c85a3b33d93305205066a8a9737167",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-25T22:06:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "8ce9478f8b06842e5dc111e91e81ba5442ff6da142d6b46cf963bb02fb115784",
+      "digest": "87aaf8a8ded5f76648c0bb42392df11ee1ede96ec793b0132fe11b0ae78230fc"
     }
   ]
 }

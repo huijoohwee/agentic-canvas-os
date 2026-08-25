@@ -14,6 +14,7 @@ import {
 import {
   advanceActiveOwnedDirtRecoveryIntent, beginActiveOwnedDirtRecoveryIntent,
   assertActiveDraftMutationAuthority, assertActiveOwnedDirtPlanSource,
+  buildActiveOwnedDirtRecoveryFinalizeMutationAuthority,
   normalizeActiveOwnedDirtRecoveryIntent, projectActiveOwnedDirtRecoveredLease,
   readActiveOwnedDirtRecoveryIntent, verifiedHeartbeatAuthority,
 } from "./active-owned-dirt-recovery-registry.mjs";
@@ -464,11 +465,11 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
         canonicalBaseSha: plan.sourceBaseSha,
         environment, inspect: invoke, invoke: verify,
       });
-      assertActiveDraftMutationAuthority({
-        lease: current.source.lease,
-        cloudAuthority: verified.authority,
+      buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({
+        lease: current.source.lease, currentAuthority: current.source.lease.cloudAuthority,
+        verifiedAuthority: verified.authority,
         remoteAuthorityVerification: verified.verification,
-        pullRequest: current.source.pullRequest,
+        currentClaim: current.source.claim, pullRequest: current.source.pullRequest,
       });
       return buildActiveOwnedDirtRecoveryReceipt({
         phase: "complete",

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5134,
-  "headDigest": "4752dc27000fa78c3243e5137fb909c1e3078d22b9857eb599b493afa8144145",
+  "sequence": 5135,
+  "headDigest": "2c2e0086a7ea2e628445818d3c61cc8c96062be2cec384cae89621d63a1e89cc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -259583,6 +259583,47 @@
       },
       "claimDigest": "9455eba814915b5340173dc98712e7d470110fb197585978898b0b2ab233b640",
       "digest": "4752dc27000fa78c3243e5137fb909c1e3078d22b9857eb599b493afa8144145"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5135,
+      "parentDigest": "4752dc27000fa78c3243e5137fb909c1e3078d22b9857eb599b493afa8144145",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1d4480676d4cf06c3f9d72c65c08bf2b75017bee0fdd3c89caa6a64a569691e9",
+      "idempotencyKey": "f2d299eb5518e3024138ffcb8fd611a59b463cfa6cbda78895c372114e86f706",
+      "requestDigest": "5f6192ab7505b489d1eab57abc424bf41d6b0c4fd021ca0d1c9c6fd220684ac9",
+      "evaluationTime": "2026-08-25T07:02:30.000Z",
+      "claimCore": {
+        "claimId": "1d4480676d4cf06c3f9d72c65c08bf2b75017bee0fdd3c89caa6a64a569691e9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b324beb903a619f465ba3161a8bc61f96f10136455c399f5e74561105437487e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c0a2c62b48b6e9ba7ef4a8edf56c29f6d12ab45520a77800fc5be4475b82a5d9",
+        "canonicalBaseRevision": "9ab88ca527acbff239eb29237b373c25ad10b4b1",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-scope-expansion.test.mjs",
+          "path:docs/EXPIRED-COMMITTED-SCOPE-EXPANSION.md",
+          "path:scripts/expired-committed-scope-expansion-repository-adapter.mjs",
+          "semantic:expired-scope-expansion-local-cas"
+        ],
+        "writeSetDigest": "1a742ff6dcb5a1bddf05dad3b1b94b7f78bfc33493020fdec19e1fbe807062e1",
+        "laneRevision": "9074a19afdc4e4423b9699494242fa9d9e926bbd",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T08:53:20.000Z",
+        "evidenceDigest": "9519fbc05437db0dee0b6ad44a717475e78eb0f9713ef8e992075c6275c81998",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA5gVBA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0c199364b968369a4d6cc348e011b0b97a89e054c2e5e659964d40a27d0c06b3",
+      "digest": "2c2e0086a7ea2e628445818d3c61cc8c96062be2cec384cae89621d63a1e89cc"
     }
   ]
 }

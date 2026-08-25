@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5291,
-  "headDigest": "7f1e3c48b8aba9ae30f67a41004129144e24302dc2110944b4107d78f3c24307",
+  "sequence": 5292,
+  "headDigest": "492936f17779e20fa264244a55779e3481268c75ce3ad9cd53417c785d11a4ce",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -267982,6 +267982,56 @@
       },
       "claimDigest": "732ac43149a4907b0addfab18da4ea610392c6eceb38ac4e9a560eb0d395fc5b",
       "digest": "7f1e3c48b8aba9ae30f67a41004129144e24302dc2110944b4107d78f3c24307"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5292,
+      "parentDigest": "7f1e3c48b8aba9ae30f67a41004129144e24302dc2110944b4107d78f3c24307",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bda3355c980f495acf90052a6cd1d723452493abacb247b2062e78c3719ece67",
+      "idempotencyKey": "4ef1813932a9b3ef84d05f4e7b03aef2c1db112afdc7bbb47f28c42030d25fc7",
+      "requestDigest": "d7c7f5aa97d4ca1e3ecebd028bf548a702dd5d06c6c7af35e93d1079ccaf580a",
+      "evaluationTime": "2026-08-25T16:34:40.000Z",
+      "claimCore": {
+        "claimId": "bda3355c980f495acf90052a6cd1d723452493abacb247b2062e78c3719ece67",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a0c4af5641be68db38b7fc0a974060ee572755599e56a263a5eae54078c5fd1b",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:95e0d66e02c163e45020edd060616c49e9cf278a62cf9da700660cff642a7480",
+        "canonicalBaseRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-repository-adapter.test.mjs",
+          "path:scripts/active-dirty-scope-expansion-controller.mjs",
+          "semantic:active-dirty-scope-expansion-capacity"
+        ],
+        "writeSetDigest": "93b7ed7178d2853c9f4510835fe03bc7223937ea4a11f4f92f819cfafecf4d99",
+        "laneRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-24T07:39:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "140dc278c829d60f42b152cfd02e425b18b22bd3be1a6ebbd313a9d18ed5cc23",
+        "eligibleSince": "2026-08-24T07:09:18.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "048af37c4ec4c85523ba8b9c00be158a56edec94",
+          "reviewRequestId": null,
+          "bytesDigest": "0c80b1701b353e5e1fa5958c4aa417f3ee2f41b1d52bebc93a481a0c1c3cf229",
+          "namedChecksDigest": "ca68217d45701d56ea8f033ac4b4f8467d4821b68df58862607f04c3acf7286f",
+          "handoffEvidenceDigest": "4458224b270c7b2c450ea4b776c85e14235702a5a78b4e0bca75733810df9bab",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-25T16:34:40.000Z"
+        }
+      },
+      "claimDigest": "caaaf9b09b7fa5c77ba28fb39117930987545972e4021ea8988a5104340e7cc9",
+      "digest": "492936f17779e20fa264244a55779e3481268c75ce3ad9cd53417c785d11a4ce"
     }
   ]
 }

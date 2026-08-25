@@ -58,6 +58,13 @@ it is never passed directly into the cloud digest field. Drift in any bound
 input changes the evidence digest, while malformed plan or claim digests fail
 before a cloud call.
 
+When the reviewed source claim retains a historical canonical base, successor
+claim creation fetches the exact live protected `main`, proves that the source
+base is its ancestor, and computes the intervening canonical changed paths.
+The successor claim carries a canonical-descendant proof only when those paths
+are disjoint from every path in the expanded target manifest. Missing ancestry,
+provider/ref drift, or any overlap blocks before the cloud claim transition.
+
 The result remains review-ready. Normal `RELEASE-WORKFLOW.md` review,
 integration, protected-main proof, runtime proof, deployment, and cleanup gates
 remain independent.

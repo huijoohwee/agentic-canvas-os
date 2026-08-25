@@ -11,7 +11,10 @@ import { createReviewedTerminalHandoffScopeExpansionRecoveryController }
 import {
   buildScopeExpansionTargetAdmission, sealScopeExpansionRecoveryEvidence,
 } from "../scripts/reviewed-terminal-handoff-scope-expansion-recovery-evidence.mjs";
-import { buildScopeExpansionSourceRecoveryEvidenceDigest }
+import {
+  buildScopeExpansionSourceRecoveryEvidenceDigest,
+  captureScopeExpansionCanonicalDescendantProof,
+}
   from "../scripts/reviewed-terminal-handoff-scope-expansion-recovery-repository-adapter.mjs";
 
 const digest = character => character.repeat(64);
@@ -105,6 +108,49 @@ test("source recovery derives a cloud-safe digest from the journaled operation k
     ...input,
     planDigest: "not-a-digest",
   }), /plan digest is invalid/u);
+});
+
+test("successor claim proof admits only a disjoint protected-main descendant", () => {
+  const sourceBaseSha = sha("1"), protectedMainSha = sha("2");
+  const proof = captureScopeExpansionCanonicalDescendantProof({
+    sourceBaseSha,
+    protectedMainSha,
+    declaredWriteSet: ["path:lane.ts", "semantic:scope"],
+    gitText: args => {
+      assert.deepEqual(args, ["diff", "--name-only", "--no-renames", "-z",
+        sourceBaseSha, protectedMainSha, "--"]);
+      return "canonical.ts\0";
+    },
+    gitExitCode: args => {
+      assert.deepEqual(args, ["merge-base", "--is-ancestor", sourceBaseSha, protectedMainSha]);
+      return 0;
+    },
+  });
+  assert.equal(proof.sourceBaseSha, sourceBaseSha);
+  assert.equal(proof.targetBaseSha, protectedMainSha);
+  assert.deepEqual(proof.canonicalChangedPaths, ["canonical.ts"]);
+  assert.deepEqual(proof.preservedChangedPaths, ["lane.ts"]);
+  assert.equal(proof.overlap, "none");
+
+  assert.throws(() => captureScopeExpansionCanonicalDescendantProof({
+    sourceBaseSha,
+    protectedMainSha,
+    declaredWriteSet: ["path:canonical.ts", "semantic:scope"],
+    gitText: () => "canonical.ts\0",
+    gitExitCode: () => 0,
+  }), /overlaps preserved lane paths/u);
+  assert.throws(() => captureScopeExpansionCanonicalDescendantProof({
+    sourceBaseSha,
+    protectedMainSha,
+    declaredWriteSet: ["path:lane.ts", "semantic:scope"],
+    gitText: () => "canonical.ts\0",
+    gitExitCode: () => 1,
+  }), /not an ancestor/u);
+  assert.equal(captureScopeExpansionCanonicalDescendantProof({
+    sourceBaseSha,
+    protectedMainSha: sourceBaseSha,
+    declaredWriteSet: ["path:lane.ts", "semantic:scope"],
+  }), null);
 });
 
 test("controller journals every effect and completes without granting integration", async () => {

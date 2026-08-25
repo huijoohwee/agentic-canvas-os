@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5386,
-  "headDigest": "38782b41d64a1c3423bf4f31863d5836afd3c5491e929a950207b71e1e59359d",
+  "sequence": 5387,
+  "headDigest": "d141e8a726513b3895d2f741a35cf1f100b5de5f0c2f0527bba270f094aaead9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -273182,6 +273182,49 @@
       },
       "claimDigest": "b0fcfac8e94d7d3f2b00ebe47fd71ac96e54965e9fb890f76dd726845d998ad0",
       "digest": "38782b41d64a1c3423bf4f31863d5836afd3c5491e929a950207b71e1e59359d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5387,
+      "parentDigest": "38782b41d64a1c3423bf4f31863d5836afd3c5491e929a950207b71e1e59359d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "2654dd35cb1aa07d43ce05155d00fd4ebe07f5e166cc6a15a163571218dd6a1c",
+      "idempotencyKey": "3c956dcededf759b5838318012d1e5545028ec738decb4dc5ecabb42eb10a5f0",
+      "requestDigest": "a18de3985a944c86590e76f1c40b3397012bf85334ddaa75bce883f5a1fcefd4",
+      "evaluationTime": "2026-08-25T21:10:45.000Z",
+      "claimCore": {
+        "claimId": "2654dd35cb1aa07d43ce05155d00fd4ebe07f5e166cc6a15a163571218dd6a1c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:f6cd8139dc3c6845420d4927269e566fe057fed7e15580375f076e096b688fc6",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:8e022488c6887e3ce9c38f6d8d2ee228b199126f43208b6f8225598bfaeb04f5",
+        "canonicalBaseRevision": "86c3e7b44e15d258cde2a20cf333de30116dae1d",
+        "declaredWriteScope": [
+          "path:.github/workflows/pages.yml",
+          "path:guidelines/commit-push-deploy-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-divergence.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "path:scripts/lib/git-guidelines/divergence.mjs",
+          "semantic:protected-release-guidelines"
+        ],
+        "writeSetDigest": "92b456576da8a221c4af62d0f7e41a14b577202f6f535f3142524465c12c5831",
+        "laneRevision": "86c3e7b44e15d258cde2a20cf333de30116dae1d",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-26T21:10:45.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "bffc6a1dc58deae2cdd4dcaa2f5ace0f2fd27d10a80c6e9be5444c4ad0732964",
+      "digest": "d141e8a726513b3895d2f741a35cf1f100b5de5f0c2f0527bba270f094aaead9"
     }
   ]
 }

@@ -9,6 +9,7 @@ import {
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   initializeExpiredCommittedScopeExpansionIntent,
+  resolveExpiredCommittedSourceRetirementIdentity,
   resolveExpiredCommittedSuccessorCanonicalBase,
 }
   from "../scripts/expired-committed-scope-expansion-repository-adapter.mjs";
@@ -122,6 +123,20 @@ test("binds the successor to incorporated protected main without rewriting the r
   assert.equal(normalizeExpiredCommittedScopeExpansionPlan(plan).planDigest, plan.planDigest);
 });
 
+test("retires the predecessor at its fenced cloud identity, not the unpublished child", () => {
+  const input = fixture();
+  const plan = buildExpiredCommittedScopeExpansionPlan(input);
+  assert.deepEqual(resolveExpiredCommittedSourceRetirementIdentity({
+    plan,
+    sourceAuthority: input.lease.cloudAuthority,
+  }), {
+    finalRevision: fenceSha,
+    reviewRequestId: null,
+  });
+  assert.notEqual(plan.localHeadSha, fenceSha);
+  assert.notEqual(plan.reviewRequestId, null);
+});
+
 function fixture() {
   const admission = {
     schema: "agentic-lane-admission-lease/v1",
@@ -149,6 +164,8 @@ function fixture() {
       schema: "agentic-lane-cloud-authority/v1",
       claimId: sourceClaimId,
       claimDigest: sourceClaimDigest,
+      laneRevision: fenceSha,
+      reviewRequestId: null,
     },
     expiresAt: "2026-01-01T00:00:00.000Z",
   };

@@ -20,6 +20,9 @@ import {
   normalizeReviewedLaneSourceCorrectionIntent,
 } from "./reviewed-lane-source-correction-contract.mjs";
 import {
+  normalizeReviewedForwardChildIntent,
+} from "./reviewed-forward-child-recovery-contract.mjs";
+import {
   parseDeviceBranch,
   parseWriterLeasePullRequestBody,
   projectWriterLeasePullRequestMarker,
@@ -50,6 +53,8 @@ export function captureCommittedDescendantEvidence({
     // Direct authored fence; continue with ordinary descendant evidence.
   } else if (isCompletedSourceCorrectionFence({ fenceParents, lease, gitText })) {
     // Completed source-correction fence; receipt-bound lineage verified.
+  } else if (isCompletedReviewedForwardChildFence({ fenceParents, lease, gitText })) {
+    // Completed reviewed forward-child fence; receipt-bound lineage verified.
   } else {
     throw new Error(
       "Expired committed recovery requires the exact single-parent fence over its source base.",
@@ -159,6 +164,78 @@ export function captureCommittedDescendantEvidence({
     } : {}),
     rangeDiffDigest,
   });
+}
+
+function isCompletedReviewedForwardChildFence({ fenceParents, lease, gitText }) {
+  if (
+    fenceParents.length !== 2 ||
+    fenceParents[0] !== lease.fenceSha ||
+    !lease?.cloudAuthority?.claimId
+  ) {
+    return false;
+  }
+  const directory = path.resolve(
+    gitText(["rev-parse", "--git-common-dir"]).trim(),
+    "agentic-canvas-os",
+    "reviewed-forward-child-recovery",
+  );
+  const matches = [];
+  for (const filePath of recursiveJsonFiles(directory, 2)) {
+    let intent;
+    try {
+      intent = normalizeReviewedForwardChildIntent(
+        JSON.parse(readFileSync(filePath, "utf8")),
+      );
+    } catch {
+      continue;
+    }
+    const plan = intent.planSnapshot;
+    const source = plan.source;
+    const sourceLease = source.lease;
+    const completion = intent.completion;
+    if (
+      intent.status === "complete" &&
+      completion?.status === "authoring-restored" &&
+      completion.childHeadSha === lease.fenceSha &&
+      completion.successorClaimId === lease.cloudAuthority.claimId &&
+      plan.childHeadSha === lease.fenceSha &&
+      plan.sourceHeadSha === fenceParents[1] &&
+      plan.candidate.parentShas.length === 1 &&
+      plan.candidate.parentShas[0] === fenceParents[1] &&
+      source.source.headSha === fenceParents[1] &&
+      sourceLease.baseSha === lease.baseSha &&
+      sourceLease.branch === lease.branch &&
+      sourceLease.sessionId === lease.sessionId &&
+      sourceLease.device === lease.device &&
+      sourceLease.scope === lease.scope &&
+      sourceLease.pullRequestUrl === lease.pullRequestUrl &&
+      sourceLease.manifestDigest === lease.admission?.manifestDigest &&
+      sourceLease.writeSetDigest === lease.admission?.writeSetDigest &&
+      source.claim.claimId === completion.sourceClaimId &&
+      source.claim.canonicalBaseSha === lease.baseSha &&
+      source.claim.writeSetDigest === lease.admission?.writeSetDigest &&
+      lease.cloudAuthority.laneRevision === lease.fenceSha &&
+      lease.cloudAuthority.canonicalBaseSha === lease.baseSha &&
+      lease.cloudAuthority.writeSetDigest === lease.admission?.writeSetDigest
+    ) {
+      matches.push(intent);
+    }
+  }
+  return matches.length === 1;
+}
+
+function recursiveJsonFiles(directory, depth) {
+  if (!existsSync(directory) || depth < 0) return [];
+  const files = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory() && depth > 0) {
+      files.push(...recursiveJsonFiles(target, depth - 1));
+    } else if (entry.isFile() && entry.name.endsWith(".json")) {
+      files.push(target);
+    }
+  }
+  return files;
 }
 
 function isDirectFenceOverBase({ fenceParents, lease }) {

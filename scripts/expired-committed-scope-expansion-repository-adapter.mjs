@@ -41,6 +41,18 @@ export function resolveExpiredCommittedSuccessorCanonicalBase(plan) {
     .protectedMainIncorporationProof.protectedMainSha;
 }
 
+export function resolveExpiredCommittedSourceRetirementIdentity({ plan, sourceAuthority }) {
+  const normalized = normalizeExpiredCommittedScopeExpansionPlan(plan);
+  if (sourceAuthority?.claimId !== normalized.sourceClaimId
+    || sourceAuthority?.laneRevision !== normalized.sourceFenceSha) {
+    throw new Error("Source retirement requires the exact predecessor cloud identity.");
+  }
+  return Object.freeze({
+    finalRevision: normalized.sourceFenceSha,
+    reviewRequestId: sourceAuthority.reviewRequestId ?? null,
+  });
+}
+
 export function createExpiredCommittedScopeExpansionRepositoryAdapter({
   sourceRepository,
   sessionId,
@@ -124,6 +136,10 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
     });
     requireIntent(intent, plan);
     const successorCanonicalBaseSha = resolveExpiredCommittedSuccessorCanonicalBase(plan);
+    const sourceRetirementIdentity = resolveExpiredCommittedSourceRetirementIdentity({
+      plan,
+      sourceAuthority: captured.lease.cloudAuthority,
+    });
 
     if (!atLeast(intent.status, "waiting-successor")) {
       const result = invoke({
@@ -163,8 +179,8 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
           expectedFenceRevision: plan.sourceClaimDigest,
           expectedTransitionCounter: plan.sourceClaimTransitionCounter,
           reason: "superseded",
-          finalRevision: plan.localHeadSha,
-          reviewRequestId: plan.reviewRequestId,
+          finalRevision: sourceRetirementIdentity.finalRevision,
+          reviewRequestId: sourceRetirementIdentity.reviewRequestId,
           bytesDigest: digestValue({ planDigest: plan.planDigest, kind: "committed-bytes" }),
           namedChecksDigest: digestValue({ planDigest: plan.planDigest, kind: "scope-proof" }),
           handoffEvidenceDigest: digestValue({ planDigest: plan.planDigest, kind: "successor" }),

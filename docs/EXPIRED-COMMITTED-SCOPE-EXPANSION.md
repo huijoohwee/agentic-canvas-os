@@ -30,6 +30,11 @@ The source-base fields in the immutable plan and durable intent remain
 unchanged so an interrupted transition can replay the exact authorized plan
 without digest substitution.
 
+Predecessor retirement preserves the source authority's fenced revision and
+its existing cloud review identity. The unpublished child and the draft pull
+request belong to the successor transition; neither may be substituted into
+the predecessor's retirement record.
+
 The only allowed transition is:
 
 1. claim a waiting successor with the expanded scope;

@@ -20,7 +20,9 @@ The controller is fail-closed. Planning proves the exact source lease, dormant
 cloud claim, task capability, commit parent, tree, authored paths, pull request,
 protected-main relationship, and target manifest. Running requires the exact
 plan-digest authorization and persists a scope-expansion intent before any
-cloud mutation.
+cloud mutation. The initial execution uses that persisted intent directly;
+replay reads the same plan snapshot and never creates or unwraps a second
+intent before continuing from the recorded phase.
 
 The only allowed transition is:
 

@@ -53,6 +53,14 @@ That transport-only difference is accepted for both an unchanged binding and
 an exact continuation binding. Any claim fence, transition, expiry, review,
 scope, identity, or capability drift still fails before cloud mutation.
 
+The source fence may also be the exact empty single-parent child created by a
+completed reviewed-forward-child recovery. In that case the controller accepts
+the lineage only from one fully normalized, completed recovery journal whose
+child, parent, successor claim, repository lane, canonical base, manifest, and
+write-set identities all join the current lease. A merge fence without that
+receipt, a malformed or ambiguous journal set, or any successor drift remains
+ineligible.
+
 ## Invocation
 
 ```sh

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5221,
-  "headDigest": "291b36833fd10fe657aebb9bc51ce0a37e9896c1fde6c20a18716c81b4337a11",
+  "sequence": 5222,
+  "headDigest": "90a73993abcdfcc8b7b99058ccc7d07d8869e242fd6fd4a83eaff09caa219a5a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -264240,6 +264240,51 @@
       },
       "claimDigest": "3e45dc0d9d276ab049d00a54ea77227616351665cf3ffe166ed82bd370a24cb7",
       "digest": "291b36833fd10fe657aebb9bc51ce0a37e9896c1fde6c20a18716c81b4337a11"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5222,
+      "parentDigest": "291b36833fd10fe657aebb9bc51ce0a37e9896c1fde6c20a18716c81b4337a11",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9c23533d6d0b0c25d1bd7979af58b097682a481cb4a530f504280a2af8538f6d",
+      "idempotencyKey": "2b20094cc2f1102deac31c00438eafe0336d042f7c7690605743b565b82a21b2",
+      "requestDigest": "07de3b7c441881e1077a74103b3b82e893025c41c4359989633dac0018bb3ddf",
+      "evaluationTime": "2026-08-25T13:45:02.000Z",
+      "claimCore": {
+        "claimId": "9c23533d6d0b0c25d1bd7979af58b097682a481cb4a530f504280a2af8538f6d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b20ef4f4de2f2fa0a40d8999834e5472043e17d95f136556079237f639603b76",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:7335ad2f949d626b18bf3b66024fd599b8bcf2cbda5c7012636b04a2688eed14",
+        "canonicalBaseRevision": "134227155541f50c41061bae47bd059f3b6c81ec",
+        "declaredWriteScope": [
+          "path:__tests__/provisioned-start-descendant-admission-recovery.test.mjs",
+          "path:docs/PROVISIONED-START-DESCENDANT-ADMISSION-RECOVERY.md",
+          "path:scripts/provisioned-start-descendant-admission-recovery-contract.mjs",
+          "path:scripts/provisioned-start-descendant-admission-recovery-controller.mjs",
+          "path:scripts/provisioned-start-descendant-admission-recovery-evidence.mjs",
+          "path:scripts/provisioned-start-descendant-admission-recovery-repository-adapter.mjs",
+          "path:scripts/provisioned-start-descendant-admission-recovery.mjs",
+          "semantic:provisioned-start-descendant-admission-recovery"
+        ],
+        "writeSetDigest": "b7bce6a89115fab1e91a41fb9e1dd2d7742ed57f362fd17760da9d2fc4242f74",
+        "laneRevision": "d8ca83a36f908eb56d45484b3ed00740d8ae5087",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-25T15:44:27.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA8XcEQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "2ad37bfad076629b315521423c98ba29168a80585e1196feb75d8547a682b25c",
+      "digest": "90a73993abcdfcc8b7b99058ccc7d07d8869e242fd6fd4a83eaff09caa219a5a"
     }
   ]
 }

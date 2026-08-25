@@ -26,6 +26,13 @@ controller revision, and a mutation-closed boundary. The pull-request head must
 equal the local authored descendant; a fence-only review belongs to the
 ordinary provisioned-start recovery owner.
 
+Run revalidation preserves that sealed substantive source identity while
+excluding a newly sampled observation time, unrelated global ledger-head
+movement, and the time-derived `current` to `dormant-preserved` projection of
+the same transition-1 reserved claim. Claim fence and transition identity,
+declared scope, overlap inventory, lease, descendant, review, and controller
+revision remain exact and fail closed on drift.
+
 Run requires the exact returned statement:
 
 ```text

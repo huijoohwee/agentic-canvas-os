@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5413,
-  "headDigest": "be7060b63f495a10c9a311516818a28b498db33f9b9f4a1d109224a5ab187c7e",
+  "sequence": 5414,
+  "headDigest": "32d1d1bb375496f0a8891dc0d24c0443f796b0c7683f92da69a6fe3a36d2ada5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -274688,6 +274688,51 @@
       },
       "claimDigest": "5a0e04e2d3b9505793c5a33fa8739f0b54dabb931669ca6f9504adb7d7b2b66f",
       "digest": "be7060b63f495a10c9a311516818a28b498db33f9b9f4a1d109224a5ab187c7e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5414,
+      "parentDigest": "be7060b63f495a10c9a311516818a28b498db33f9b9f4a1d109224a5ab187c7e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "ea7cc04459709076cebefe1a64b9a1c20b00cd6ee9e456215b588c50a90eae16",
+      "idempotencyKey": "8225ee23b7e66128f1a05575660bdb94e246d14fd93df36fc9949a12f11dc670",
+      "requestDigest": "ae482dbddc7ef69355a540620b61caf0e13eefd33c4f181a56e757b743595eb8",
+      "evaluationTime": "2026-08-25T23:53:49.000Z",
+      "claimCore": {
+        "claimId": "ea7cc04459709076cebefe1a64b9a1c20b00cd6ee9e456215b588c50a90eae16",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:f6cd8139dc3c6845420d4927269e566fe057fed7e15580375f076e096b688fc6",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:8e022488c6887e3ce9c38f6d8d2ee228b199126f43208b6f8225598bfaeb04f5",
+        "canonicalBaseRevision": "86c3e7b44e15d258cde2a20cf333de30116dae1d",
+        "declaredWriteScope": [
+          "path:.github/workflows/pages.yml",
+          "path:guidelines/commit-push-deploy-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-divergence.test.mjs",
+          "path:scripts/__tests__/git-guidelines-pages-release-controller.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "path:scripts/lib/git-guidelines/divergence.mjs",
+          "path:scripts/lib/git-guidelines/pages-release-controller.mjs",
+          "semantic:protected-release-guidelines"
+        ],
+        "writeSetDigest": "ee697dfb49dfde5370c7d205850e7f2bab85016f906f0e52e230056212f32d9b",
+        "laneRevision": "90067cfcbb787b8e2d516727dcbc86392bb755bd",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-26T23:53:49.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "2654dd35cb1aa07d43ce05155d00fd4ebe07f5e166cc6a15a163571218dd6a1c",
+        "eligibleSince": "2026-08-25T23:53:49.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "16b25ecafd6f90eeeb9813b99111b270d9c5ff521b4ae73b4272cd2127c7d48d",
+      "digest": "32d1d1bb375496f0a8891dc0d24c0443f796b0c7683f92da69a6fe3a36d2ada5"
     }
   ]
 }

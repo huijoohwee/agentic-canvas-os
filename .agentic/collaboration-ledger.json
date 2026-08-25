@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5314,
-  "headDigest": "2d91398a1d61f588a0ebf84ad985227a9ce270768faaf62a9e7baed1f2e09d01",
+  "sequence": 5315,
+  "headDigest": "c360041b1df4e485f4e26480f05c4b4cb8cd6918d76f95907c78c6ca0c389296",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -269781,6 +269781,53 @@
       },
       "claimDigest": "97375436915a765a706dcda6b7ef361df5bbd962fd0706acca51038f150b8e77",
       "digest": "2d91398a1d61f588a0ebf84ad985227a9ce270768faaf62a9e7baed1f2e09d01"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5315,
+      "parentDigest": "2d91398a1d61f588a0ebf84ad985227a9ce270768faaf62a9e7baed1f2e09d01",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e4075e0fa03362ccf995edfca24e565aea7b0e35c8ffcd1f2bb91f83b736e5d5",
+      "idempotencyKey": "573233576f6b0bb8363e215723c0dab46fdf7285dab0758998278f28392c51d7",
+      "requestDigest": "55b0bb0f296f834d5b1bd4c5e14db74a24f8da7af1dc00bfd8156bbea186af22",
+      "evaluationTime": "2026-08-25T17:25:31.000Z",
+      "claimCore": {
+        "claimId": "e4075e0fa03362ccf995edfca24e565aea7b0e35c8ffcd1f2bb91f83b736e5d5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2e255b10ca78282c2d8306c570c756d07cc0b0e1c43dd009bd2ac9c9b46b0a97",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:18a48bc57c9c94df3034d85da618e242f1af5a2bb1be4c3166778fc275c55d72",
+        "canonicalBaseRevision": "ee6851ffdc793fc54c76b5416e69371dfd28b740",
+        "declaredWriteScope": [
+          "path:__tests__/expired-active-dirty-scope-expansion-pr-marker-recovery.test.mjs",
+          "path:docs/EXPIRED-ACTIVE-DIRTY-SCOPE-EXPANSION-PR-MARKER-RECOVERY.md",
+          "path:docs/schemas/expired-active-dirty-scope-expansion-pr-marker-recovery-plan.v1.schema.json",
+          "path:docs/schemas/expired-active-dirty-scope-expansion-pr-marker-recovery-receipt.v1.schema.json",
+          "path:scripts/expired-active-dirty-scope-expansion-pr-marker-recovery-contract.mjs",
+          "path:scripts/expired-active-dirty-scope-expansion-pr-marker-recovery-controller.mjs",
+          "path:scripts/expired-active-dirty-scope-expansion-pr-marker-recovery-evidence.mjs",
+          "path:scripts/expired-active-dirty-scope-expansion-pr-marker-recovery-repository-adapter.mjs",
+          "path:scripts/expired-active-dirty-scope-expansion-pr-marker-recovery.mjs",
+          "semantic:expired-active-dirty-pr-marker-recovery"
+        ],
+        "writeSetDigest": "e182f69234e37e2d07da1a01fd30bfa6b4b3385ea90b94820edd90c8526e8e5a",
+        "laneRevision": "ee6851ffdc793fc54c76b5416e69371dfd28b740",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-26T17:25:31.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "225a5381ad14d7652f8999dcae4bd1c3988025875f5f613ee7608d7f2f373fb1",
+      "digest": "c360041b1df4e485f4e26480f05c4b4cb8cd6918d76f95907c78c6ca0c389296"
     }
   ]
 }

@@ -7,7 +7,10 @@ import {
   normalizeExpiredCommittedScopeExpansionPlan,
 } from "../scripts/expired-committed-scope-expansion-contract.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { initializeExpiredCommittedScopeExpansionIntent }
+import {
+  initializeExpiredCommittedScopeExpansionIntent,
+  resolveExpiredCommittedSuccessorCanonicalBase,
+}
   from "../scripts/expired-committed-scope-expansion-repository-adapter.mjs";
 
 const sourceBaseSha = "1".repeat(40);
@@ -110,6 +113,13 @@ test("uses the newly persisted intent directly before the first cloud mutation",
     store: {},
     begin: () => assert.fail("replay must not persist a second intent"),
   }), persistedIntent);
+});
+
+test("binds the successor to incorporated protected main without rewriting the replay plan", () => {
+  const plan = buildExpiredCommittedScopeExpansionPlan(fixture());
+  assert.equal(plan.targetCanonicalBaseSha, sourceBaseSha);
+  assert.equal(resolveExpiredCommittedSuccessorCanonicalBase(plan), protectedMainSha);
+  assert.equal(normalizeExpiredCommittedScopeExpansionPlan(plan).planDigest, plan.planDigest);
 });
 
 function fixture() {

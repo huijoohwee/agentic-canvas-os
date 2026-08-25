@@ -36,6 +36,11 @@ import {
 } from "./writer-lease-registry-cas.mjs";
 const PHASES = ["intent", "waiting-successor", "source-retired", "promoted", "successor-bound", "local-cas", "pr-marker", "complete"];
 
+export function resolveExpiredCommittedSuccessorCanonicalBase(plan) {
+  return normalizeExpiredCommittedScopeExpansionPlan(plan)
+    .protectedMainIncorporationProof.protectedMainSha;
+}
+
 export function createExpiredCommittedScopeExpansionRepositoryAdapter({
   sourceRepository,
   sessionId,
@@ -118,6 +123,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
       store,
     });
     requireIntent(intent, plan);
+    const successorCanonicalBaseSha = resolveExpiredCommittedSuccessorCanonicalBase(plan);
 
     if (!atLeast(intent.status, "waiting-successor")) {
       const result = invoke({
@@ -126,7 +132,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
         request: {
           targetRepository: captured.lease.cloudAuthority.targetRepository,
           workItemId: plan.sourceScope,
-          canonicalBaseSha: plan.targetCanonicalBaseSha,
+          canonicalBaseSha: successorCanonicalBaseSha,
           headSha: plan.sourceFenceSha,
           declaredWriteSet: plan.targetDeclaredWriteSet,
           predecessorClaimId: plan.sourceClaimId,
@@ -247,7 +253,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
       const verification = verifyAdmissionCloudAuthority({
         authority,
         manifest: manifestFromExpiredCommittedPlan(plan),
-        canonicalBaseSha: plan.targetCanonicalBaseSha,
+        canonicalBaseSha: successorCanonicalBaseSha,
         environment,
         inspect: invoke,
         invoke: verify,
@@ -307,7 +313,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
     const verification = verifyAdmissionCloudAuthority({
       authority,
       manifest,
-      canonicalBaseSha: plan.targetCanonicalBaseSha,
+      canonicalBaseSha: resolveExpiredCommittedSuccessorCanonicalBase(plan),
       environment,
       inspect: invoke,
       invoke: verify,

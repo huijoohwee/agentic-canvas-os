@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5088,
-  "headDigest": "a3400676cdd8ac4758072f3a09c18612c333b58616609d46a26950fedb402a0a",
+  "sequence": 5089,
+  "headDigest": "9d9566f19dc64bee214afd9e7217a335ee6cce188edd869c5e7e8dbdacb3587b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -257163,6 +257163,51 @@
       },
       "claimDigest": "8649966c08e9f9fbc6ff4db2178710b87876c615e659c3e6ffb173996e000f4b",
       "digest": "a3400676cdd8ac4758072f3a09c18612c333b58616609d46a26950fedb402a0a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5089,
+      "parentDigest": "a3400676cdd8ac4758072f3a09c18612c333b58616609d46a26950fedb402a0a",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "30f081bc3fa3e752b6137e69030e55d45d2c636493fd798e32b12fec5368ea57",
+      "idempotencyKey": "d6c9404f5a225c0660efaf67e842c553093c8ef9d033d18daeffd2334a43e275",
+      "requestDigest": "6dd7d75ef10ecafea6a5622092b9722d96f0fe489b802d3982b326ccf3c32a21",
+      "evaluationTime": "2026-08-25T03:53:07.000Z",
+      "claimCore": {
+        "claimId": "30f081bc3fa3e752b6137e69030e55d45d2c636493fd798e32b12fec5368ea57",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:f86ce6bf56653ecaabec4417d2b156fc0b2cccac9dc200364f413de1d6e35360",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:164bf648e0bcff15c851abf3d6d0dd0a6c2e729dc40c7948ef7ca65adfab3f92",
+        "canonicalBaseRevision": "b99ee890ce196d2a6947abb6be494b03a7abfc39",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-forward-child-recovery.test.mjs",
+          "path:__tests__/source-correction-successor-task-binding-reconciliation.test.mjs",
+          "path:docs/REVIEWED-FORWARD-CHILD-RECOVERY.md",
+          "path:docs/SOURCE-CORRECTION-SUCCESSOR-TASK-BINDING-RECONCILIATION.md",
+          "path:scripts/reviewed-forward-child-recovery-repository-adapter.mjs",
+          "path:scripts/reviewed-forward-child-recovery.mjs",
+          "path:scripts/source-correction-successor-task-binding-reconciliation-repository-adapter.mjs",
+          "semantic:reviewed-forward-child-task-binding"
+        ],
+        "writeSetDigest": "6a2021fd70c2d5f20cd044e6552c32ef159ac7845087ae77d89236f3df628c38",
+        "laneRevision": "d3064540c5c6d6143db6c4ad01c3277c2252e2e1",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-25T05:48:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA4S2Sg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "67783036a8a8f6577b62ea734901a37296db8ec08e121691f9617ee816be532c",
+      "digest": "9d9566f19dc64bee214afd9e7217a335ee6cce188edd869c5e7e8dbdacb3587b"
     }
   ]
 }

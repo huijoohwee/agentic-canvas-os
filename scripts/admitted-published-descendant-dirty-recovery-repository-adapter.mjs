@@ -23,6 +23,15 @@ import { mutateWriterLeaseRegistry, writerLeaseDigest } from "./writer-lease-reg
 const INSTALLED_ROOT = realpathSync(fileURLToPath(new URL("..", import.meta.url)));
 const EVIDENCE_SCHEMA = "agentic-admitted-published-descendant-dirty-recovery-evidence/v1";
 
+export function isAdoptableRecoveredPublishedDescendantClaim({ claim, lease }) {
+  return claim?.state === "current" && claim.writeAuthority === true && claim.scopeReserved === true
+    && claim.canonicalBaseRevision === lease?.baseSha && claim.laneRevision === lease?.fenceSha
+    && claim.writeSetDigest === lease?.admission?.writeSetDigest
+    && claim.reviewRequestId === lease?.cloudAuthority?.reviewRequestId
+    && claim.transitionCounter === lease?.cloudAuthority?.transitionCounter + 1
+    && /^[0-9a-f]{64}$/u.test(String(claim.recovery?.evidenceDigest || ""));
+}
+
 export function createAdmittedPublishedDescendantDirtyRecoveryRepositoryAdapter(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session");
@@ -93,8 +102,10 @@ export function createAdmittedPublishedDescendantDirtyRecoveryRepositoryAdapter(
       request: { targetRepository: lease.cloudAuthority.targetRepository } });
     const matches = (status?.claims || []).filter(claim => claim.claimId === lease.cloudAuthority.claimId);
     const claim = matches[0];
-    if (status?.ok !== true || matches.length !== 1 || claim.state !== "dormant-preserved"
-      || claim.writeAuthority !== false || claim.scopeReserved !== true
+    const dormant = claim?.state === "dormant-preserved" && claim.writeAuthority === false
+      && claim.scopeReserved === true;
+    const recovered = isAdoptableRecoveredPublishedDescendantClaim({ claim, lease });
+    if (status?.ok !== true || matches.length !== 1 || (!dormant && !recovered)
       || claim.canonicalBaseRevision !== lease.baseSha || claim.laneRevision !== lease.fenceSha
       || claim.writeSetDigest !== lease.admission.writeSetDigest
       || claim.reviewRequestId !== lease.cloudAuthority.reviewRequestId) invalid("dormant source claim");
@@ -109,8 +120,9 @@ export function createAdmittedPublishedDescendantDirtyRecoveryRepositoryAdapter(
       pullRequest: { id: pullRequest.id, url: pullRequest.url, bodyDigest: digestValue(pullRequest.body),
         baseBranch: pullRequest.baseRefName },
       cloud: { claimId: claim.claimId, state: claim.state, fenceRevision: claim.fenceRevision,
-        transitionCounter: claim.transitionCounter, ledgerRevision: status.ledgerRevision,
-        ledgerDigest: status.ledgerDigest, operationReceiptDigest: claim.operationReceiptDigest },
+        transitionCounter: claim.transitionCounter,
+        operationReceiptDigest: claim.operationReceiptDigest,
+        recoveryEvidenceDigest: claim.recovery?.evidenceDigest || null },
       dirt,
     };
     return Object.freeze({ ...core, evidenceDigest: digestValue(core) });
@@ -133,26 +145,28 @@ export function createAdmittedPublishedDescendantDirtyRecoveryRepositoryAdapter(
       declaredWriteSet: lease.admission.declaredWriteSet,
       manifestDigest: lease.admission.manifestDigest,
       writeSetDigest: lease.admission.writeSetDigest };
-    const recoveryResult = cloudAction({ action: "continue",
-      ledgerRepository: lease.cloudAuthority.ledgerRepository, request: {
+    const recoveryResult = evidence.cloud.state === "current"
+      ? adoptCurrentRecovery({ evidence, lease })
+      : cloudAction({ action: "continue",
+        ledgerRepository: lease.cloudAuthority.ledgerRepository, request: {
         targetRepository: lease.cloudAuthority.targetRepository, claimId: evidence.cloud.claimId,
         expectedFenceRevision: evidence.cloud.fenceRevision,
         expectedTransitionCounter: evidence.cloud.transitionCounter,
-        expectedLedgerDigest: evidence.cloud.ledgerDigest, mode: "recovery",
+        mode: "recovery",
         ttlSeconds: plan.ttlSeconds, recoveryEvidenceDigest: plan.planDigest,
         deviceId: lease.device, sessionId: lease.sessionId,
         idempotencyKey: `admitted-published-descendant-dirty-recovery:${plan.planDigest}:recover`,
-      } });
+        } });
     if (recoveryResult?.ok !== true || recoveryResult.claim?.state !== "current") invalid("cloud recovery");
     const projectionResult = cloudAction({ action: "continue",
       ledgerRepository: lease.cloudAuthority.ledgerRepository, request: {
         targetRepository: lease.cloudAuthority.targetRepository, claimId: evidence.cloud.claimId,
         expectedFenceRevision: recoveryResult.claim.fenceRevision,
         expectedTransitionCounter: recoveryResult.claim.transitionCounter,
-        expectedLedgerDigest: recoveryResult.ledgerDigest || recoveryResult.receipt?.ledgerDigest,
         mode: "projection",
         laneRevision: evidence.lane.headSha,
         reviewRequestId: `github-pull-request:${evidence.pullRequest.id}`,
+        deviceId: lease.device, sessionId: lease.sessionId,
         idempotencyKey: `admitted-published-descendant-dirty-recovery:${plan.planDigest}:project`,
       } });
     if (projectionResult?.ok !== true || projectionResult.claim?.state !== "current"
@@ -192,12 +206,29 @@ export function createAdmittedPublishedDescendantDirtyRecoveryRepositoryAdapter(
     if (finalDirt.evidenceDigest !== evidence.dirt.evidenceDigest
       || git(["rev-parse", "HEAD"]) !== evidence.lane.headSha) invalid("preserved terminal bytes");
     return Object.freeze({
-      cloudRecoveryReceiptDigest: recoveryResult.operationReceipt?.receiptDigest,
+      cloudRecoveryReceiptDigest: recoveryResult.operationReceipt?.receiptDigest
+        || recoveryResult.claim.operationReceiptDigest,
       cloudProjectionReceiptDigest: projectionResult.operationReceipt?.receiptDigest,
       storedLeaseDigest: writerLeaseDigest(targetLease),
       taskAuthorityReceiptDigest: taskReceipt.receiptDigest,
       markerDigest: digestValue(marker),
     });
+  }
+
+  function adoptCurrentRecovery({ evidence, lease }) {
+    const status = cloudAction({ action: "status",
+      ledgerRepository: lease.cloudAuthority.ledgerRepository,
+      request: { targetRepository: lease.cloudAuthority.targetRepository } });
+    const matches = (status?.claims || []).filter(claim => claim.claimId === evidence.cloud.claimId);
+    const claim = matches[0];
+    if (status?.ok !== true || matches.length !== 1
+      || !isAdoptableRecoveredPublishedDescendantClaim({ claim, lease })
+      || claim.fenceRevision !== evidence.cloud.fenceRevision
+      || claim.transitionCounter !== evidence.cloud.transitionCounter
+      || claim.recovery?.evidenceDigest !== evidence.cloud.recoveryEvidenceDigest) {
+      invalid("recovered cloud response-loss state");
+    }
+    return Object.freeze({ ...status, claim });
   }
 
   return Object.freeze({ capture, authorize, recover });

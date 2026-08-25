@@ -28,6 +28,10 @@ published review head, compare-and-swap the local lease and continued task bindi
 the hidden review marker. It does not edit source or index bytes, create commits or refs, push,
 integrate, deploy, or clean up.
 
+If the recovery transition lands before projection, replay adopts only its exact counter-plus-one
+current claim with the sealed recovery evidence digest. The projection request retains the original
+device and session subjects; any later counter, foreign recovery digest, or owner drift fails closed.
+
 ```sh
 node scripts/admitted-published-descendant-dirty-recovery.mjs plan \
   --repository=/absolute/dirty-worktree --session=exact-source-session --json

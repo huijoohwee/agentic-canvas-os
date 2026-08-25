@@ -11,6 +11,8 @@ import { createReviewedTerminalHandoffScopeExpansionRecoveryController }
 import {
   buildScopeExpansionTargetAdmission, sealScopeExpansionRecoveryEvidence,
 } from "../scripts/reviewed-terminal-handoff-scope-expansion-recovery-evidence.mjs";
+import { buildScopeExpansionSourceRecoveryEvidenceDigest }
+  from "../scripts/reviewed-terminal-handoff-scope-expansion-recovery-repository-adapter.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -76,6 +78,33 @@ test("target admission preserves source lane evidence and binds the expanded cla
   assert.deepEqual(result.declaredWriteSet, targetManifest().declaredWriteSet);
   assert.equal(result.existingLaneStateDigest, admission().existingLaneStateDigest);
   assert.equal(result.admissionReceiptDigest, digest("3"));
+});
+
+test("source recovery derives a cloud-safe digest from the journaled operation key", () => {
+  const input = {
+    operationKey: "reviewed-terminal-handoff-scope-expansion-recovery:source-recovered:operation",
+    planDigest: digest("2"),
+    sourceClaimId: digest("3"),
+  };
+  const result = buildScopeExpansionSourceRecoveryEvidenceDigest(input);
+  assert.match(result, /^[0-9a-f]{64}$/u);
+  assert.equal(result, buildScopeExpansionSourceRecoveryEvidenceDigest(input));
+  assert.notEqual(result, buildScopeExpansionSourceRecoveryEvidenceDigest({
+    ...input,
+    operationKey: `${input.operationKey}:drift`,
+  }));
+  assert.notEqual(result, buildScopeExpansionSourceRecoveryEvidenceDigest({
+    ...input,
+    planDigest: digest("4"),
+  }));
+  assert.notEqual(result, buildScopeExpansionSourceRecoveryEvidenceDigest({
+    ...input,
+    sourceClaimId: digest("5"),
+  }));
+  assert.throws(() => buildScopeExpansionSourceRecoveryEvidenceDigest({
+    ...input,
+    planDigest: "not-a-digest",
+  }), /plan digest is invalid/u);
 });
 
 test("controller journals every effect and completes without granting integration", async () => {

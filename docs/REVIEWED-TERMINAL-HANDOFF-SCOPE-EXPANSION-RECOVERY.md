@@ -51,6 +51,13 @@ binding through one writer-registry CAS, updates only the PR writer marker, and
 archives the immutable source journal. Every effect is durably journaled and
 reconciled before retry.
 
+The source-recovery cloud transition receives a lowercase SHA-256 evidence
+digest derived from the journaled phase operation key, exact plan digest, and
+source claim id. The typed operation key is retained only as digest preimage;
+it is never passed directly into the cloud digest field. Drift in any bound
+input changes the evidence digest, while malformed plan or claim digests fail
+before a cloud call.
+
 The result remains review-ready. Normal `RELEASE-WORKFLOW.md` review,
 integration, protected-main proof, runtime proof, deployment, and cleanup gates
 remain independent.

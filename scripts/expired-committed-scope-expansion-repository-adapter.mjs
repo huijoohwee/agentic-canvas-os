@@ -53,6 +53,13 @@ export function resolveExpiredCommittedSourceRetirementIdentity({ plan, sourceAu
   });
 }
 
+export function readExpiredCommittedScopeExpansionIntentForLocalProjection(registry, plan) {
+  return requireIntent(
+    registry?.expiredCommittedScopeExpansionIntents?.[plan.sourceBranch],
+    plan,
+  );
+}
+
 export function createExpiredCommittedScopeExpansionRepositoryAdapter({
   sourceRepository,
   sessionId,
@@ -342,7 +349,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
       expectedLeaseDigest: plan.sourceLeaseDigest,
       expectedClaimId: plan.sourceClaimId,
       action: ({ registry, lease }) => {
-        requireIntent(registry.scopeExpansionIntents?.[plan.sourceBranch], plan);
+        readExpiredCommittedScopeExpansionIntentForLocalProjection(registry, plan);
         assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
         const admission = successorAdmission({ sourceAdmission: lease.admission, plan, authority });
         const nextCore = {

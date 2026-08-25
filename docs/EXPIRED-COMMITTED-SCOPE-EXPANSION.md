@@ -24,6 +24,11 @@ cloud mutation. The initial execution uses that persisted intent directly;
 replay reads the same plan snapshot and never creates or unwraps a second
 intent before continuing from the recorded phase.
 
+The local writer-registry projection reads only the durable
+`expiredCommittedScopeExpansionIntents` journal. Any superseded general
+scope-expansion intent is disposal input, never recovery authority and never a
+substitute for the authorized expired-committed plan.
+
 The successor claim and every remote-authority verification use the protected
 main SHA captured by the plan's incorporation proof as their canonical base.
 The source-base fields in the immutable plan and durable intent remain

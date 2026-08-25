@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5092,
-  "headDigest": "1d4ab57ade2abc4d1a5c615ccf32ee4b8abcddc8c20ae3ffb6090c2bec7cab24",
+  "sequence": 5093,
+  "headDigest": "2bbb4fd3a0d4f12f799f457157c65fc7765e7503112adbe1c08c24ba5d505bb6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -257375,6 +257375,48 @@
       },
       "claimDigest": "4092b4966af3916c0860396bc375ac3320759c6c336becebff784bd477c6eeaf",
       "digest": "1d4ab57ade2abc4d1a5c615ccf32ee4b8abcddc8c20ae3ffb6090c2bec7cab24"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5093,
+      "parentDigest": "1d4ab57ade2abc4d1a5c615ccf32ee4b8abcddc8c20ae3ffb6090c2bec7cab24",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d9e62b57ab22c7b6bb56bedec72655e97f6c721bb956ee8b6c23c1176ed66743",
+      "idempotencyKey": "c696743a02ffc1d4e119f6638cf539f5f08779201c8e97450824dc80afca5ae1",
+      "requestDigest": "661d9068ed04f0944b81dafe7b249d34bd737372ade7d4845fac14b36e1f2e04",
+      "evaluationTime": "2026-08-25T04:05:55.000Z",
+      "claimCore": {
+        "claimId": "d9e62b57ab22c7b6bb56bedec72655e97f6c721bb956ee8b6c23c1176ed66743",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:a3d5a906428af2db509e362d5564566f12be7e452be545dc1c5ee9c3c9aae62f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3deff0470fbe1e08cee71ce9a7e5ae57d6e9b0e19f44fc57c06126d9e1d39111",
+        "canonicalBaseRevision": "7b8c26a5b8c92bfcdb6051ee219fbbef7887e83a",
+        "declaredWriteScope": [
+          "path:__tests__/device-expired-committed-heartbeat.test.mjs",
+          "path:__tests__/expired-committed-heartbeat-recovery.test.mjs",
+          "path:docs/EXPIRED-COMMITTED-HEARTBEAT-RECOVERY.md",
+          "path:scripts/expired-committed-heartbeat-evidence.mjs",
+          "semantic:forward-child-heartbeat-lineage"
+        ],
+        "writeSetDigest": "a54a6aa457c4d9629ab6799cea7e5d02fa0b01663d59693487121e0d2616fa6d",
+        "laneRevision": "7b8c26a5b8c92bfcdb6051ee219fbbef7887e83a",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-25T06:05:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "f0101cf1a8184bbdf5adf440edbfff8972f37ae48a0ecb92e6c5fac20cd88c22",
+        "eligibleSince": "2026-08-25T04:05:55.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f8d741d3ed33974165d1a67d5e52e156165d157e1d5381c038c4f847c67cce3a",
+      "digest": "2bbb4fd3a0d4f12f799f457157c65fc7765e7503112adbe1c08c24ba5d505bb6"
     }
   ]
 }

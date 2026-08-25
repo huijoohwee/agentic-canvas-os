@@ -327,8 +327,12 @@ function preflightSnapshot({ root, evidence, claimId, planDigest, git }) {
   if (Buffer.byteLength(projected) > SNAPSHOT_MESSAGE_LIMIT) throw new Error(
     "Active-owned-dirt snapshot manifest exceeds 256 KiB.");
   for (const entry of evidence.entries) {
-    if (entry.worktreeType === "deleted") continue;
     withSecureWorktreeEntry({ root, relativePath: entry.path }, observed => {
+      if (entry.worktreeType === "deleted") {
+        if (observed) throw new Error(
+          `Deleted dirty path reappeared while preflighting ${entry.path}.`);
+        return;
+      }
       if (!observed || observed.type !== entry.worktreeType
         || observed.mode !== entry.worktreeMode) throw new Error(
           `Dirty path type or mode changed while preflighting ${entry.path}.`);
@@ -347,11 +351,12 @@ function withSecureWorktreeEntry({ root, relativePath }, action) {
   if (absolute === resolvedRoot || !absolute.startsWith(`${resolvedRoot}${path.sep}`)) {
     throw new Error("Dirty path escapes the repository.");
   }
-  const ancestors = captureAncestorIdentities({
-    root: resolvedRoot,
-    parent: path.dirname(absolute),
-    relativePath: safePath,
-  });
+  const ancestors = captureAncestorIdentities({ root: resolvedRoot,
+    parent: path.dirname(absolute), relativePath: safePath });
+  if (ancestors.at(-1)?.identity === null) {
+    try { return action(null); }
+    finally { assertAncestorIdentities(ancestors, safePath); }
+  }
   let target;
   try {
     target = lstatSync(absolute, { bigint: true });
@@ -369,25 +374,18 @@ function withSecureWorktreeEntry({ root, relativePath }, action) {
       assertTargetIdentity({ absolute, expected: targetIdentity, relativePath: safePath });
       assertAncestorIdentities(ancestors, safePath);
     };
-    let result;
-    try {
-      result = action({ type: "symlink", mode: "120000", bytes, assertUnchanged });
-    } finally {
-      assertUnchanged();
-    }
-    return result;
+    try { return action({ type: "symlink", mode: "120000", bytes, assertUnchanged }); }
+    finally { assertUnchanged(); }
   }
   if (!target.isFile()) throw new Error(`Unsupported dirty path type: ${safePath}`);
-  if (!Number.isInteger(constants.O_NOFOLLOW)) {
-    throw new Error("Secure dirty-file capture requires no-follow file opens.");
-  }
+  if (!Number.isInteger(constants.O_NOFOLLOW)) throw new Error(
+    "Secure dirty-file capture requires no-follow file opens.");
   let descriptor;
   try {
     descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW);
     const opened = fstatSync(descriptor, { bigint: true });
-    if (!opened.isFile() || statIdentity(opened) !== targetIdentity) {
-      throw new Error(`Dirty path changed before secure read: ${safePath}`);
-    }
+    if (!opened.isFile() || statIdentity(opened) !== targetIdentity) throw new Error(
+      `Dirty path changed before secure read: ${safePath}`);
     const bytes = readFileSync(descriptor);
     const mode = Number(opened.mode & 0o111n) ? "100755" : "100644";
     const assertUnchanged = () => {
@@ -398,13 +396,8 @@ function withSecureWorktreeEntry({ root, relativePath }, action) {
       assertTargetIdentity({ absolute, expected: targetIdentity, relativePath: safePath });
       assertAncestorIdentities(ancestors, safePath);
     };
-    let result;
-    try {
-      result = action({ type: "file", mode, bytes, assertUnchanged });
-    } finally {
-      assertUnchanged();
-    }
-    return result;
+    try { return action({ type: "file", mode, bytes, assertUnchanged }); }
+    finally { assertUnchanged(); }
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
     assertTargetIdentity({ absolute, expected: targetIdentity, relativePath: safePath });
@@ -423,23 +416,35 @@ function captureAncestorIdentities({ root, parent, relativePath }) {
     cursor = path.join(cursor, segment);
     paths.push(cursor);
   }
-  return paths.map(ancestor => {
-    const stat = lstatSync(ancestor, { bigint: true });
+  const identities = [];
+  for (const ancestor of paths) {
+    let stat;
+    try {
+      stat = lstatSync(ancestor, { bigint: true });
+    } catch (error) {
+      if (ancestor !== root && error?.code === "ENOENT") {
+        identities.push(Object.freeze({ path: ancestor, identity: null }));
+        break;
+      }
+      throw error;
+    }
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       throw new Error(`Dirty path has a symlink or non-directory ancestor: ${relativePath}`);
     }
-    return Object.freeze({ path: ancestor, identity: statIdentity(stat) });
-  });
+    identities.push(Object.freeze({ path: ancestor, identity: statIdentity(stat) }));
+  }
+  return Object.freeze(identities);
 }
 function assertAncestorIdentities(ancestors, relativePath) {
   for (const ancestor of ancestors) {
     let observed;
     try {
       observed = lstatSync(ancestor.path, { bigint: true });
-    } catch {
+    } catch (error) {
+      if (ancestor.identity === null && error?.code === "ENOENT") continue;
       throw new Error(`Dirty path ancestor changed during secure read: ${relativePath}`);
     }
-    if (observed.isSymbolicLink() || !observed.isDirectory()
+    if (ancestor.identity === null || observed.isSymbolicLink() || !observed.isDirectory()
       || statIdentity(observed) !== ancestor.identity) {
       throw new Error(`Dirty path ancestor changed during secure read: ${relativePath}`);
     }
@@ -466,15 +471,8 @@ function assertTargetAbsent(absolute, relativePath) {
   throw new Error(`Deleted dirty path reappeared during secure read: ${relativePath}`);
 }
 function statIdentity(stat) {
-  return [
-    stat.dev,
-    stat.ino,
-    stat.mode,
-    stat.nlink,
-    stat.size,
-    stat.mtimeNs,
-    stat.ctimeNs,
-  ].join(":");
+  return [stat.dev, stat.ino, stat.mode, stat.nlink, stat.size,
+    stat.mtimeNs, stat.ctimeNs].join(":");
 }
 function normalizeEntry(value) {
   const entry = {

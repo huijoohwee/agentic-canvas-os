@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5273,
-  "headDigest": "b712835274194aed74e216a304392cca946be57111638f16a8c4077ae3c91399",
+  "sequence": 5274,
+  "headDigest": "c8657a6d260a75e7f4584d146384058afbdaaa72f5c17ec8b4b5e430351fe49a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -266945,6 +266945,47 @@
       },
       "claimDigest": "46ef38e3e600604c476fffef5f8cd786a1bdd31b77826c44260b4afd58f4fe91",
       "digest": "b712835274194aed74e216a304392cca946be57111638f16a8c4077ae3c91399"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5274,
+      "parentDigest": "b712835274194aed74e216a304392cca946be57111638f16a8c4077ae3c91399",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8560ea8ce697c57727532a0f10ddb79532ffd1c3202a0e2d03eaa9b08084edd4",
+      "idempotencyKey": "a3b00c8c78c7d95adf7f285bf67697a5086201b8e8391c073073d5af1b3e9559",
+      "requestDigest": "157415738034199230e7b468746d8013698f19ed6a14d065d82e9fa0965c741e",
+      "evaluationTime": "2026-08-25T16:00:04.000Z",
+      "claimCore": {
+        "claimId": "8560ea8ce697c57727532a0f10ddb79532ffd1c3202a0e2d03eaa9b08084edd4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:316b2e79a0b7a8dcec0465644862f8c5621bc3680639aad37430b039edf22ec7",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3b4125bdb21542968ef0ddebcdb1645b867c2a7a0e727e6c4026f77c44705bf8",
+        "canonicalBaseRevision": "23688159cbc34a017211b5f20fec4bd224f9a446",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-scope-expansion-lost-capability-owner-recovery.test.mjs",
+          "path:docs/REVIEWED-SCOPE-EXPANSION-LOST-CAPABILITY-OWNER-RECOVERY.md",
+          "path:scripts/reviewed-scope-expansion-lost-capability-owner-recovery-repository-adapter.mjs",
+          "semantic:reviewed-scope-owner-recovery-atomic-convergence-defect-repair"
+        ],
+        "writeSetDigest": "bd3f03cb0b20103970ebeac98fdf5877c802c1eced0594f4f092c824873933e0",
+        "laneRevision": "af35d42e81d1a63eb88585e81ffda06bf23007fa",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T17:57:20.000Z",
+        "evidenceDigest": "fc58a562633f18fe0ccd2cd1061bc6c24e0a1d8c4ad8bb9b5cdc3a48d7c04192",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA9bdQQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "8d47ec15a3cb0bf4bd9714b86c898aae770f029717cb612082a187350b783803",
+      "digest": "c8657a6d260a75e7f4584d146384058afbdaaa72f5c17ec8b4b5e430351fe49a"
     }
   ]
 }

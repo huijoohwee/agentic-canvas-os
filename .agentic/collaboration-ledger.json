@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5397,
-  "headDigest": "f6b82af902670cede12bc43c49556ceba4fdb560e905a08b668da39ba487c836",
+  "sequence": 5398,
+  "headDigest": "d7664c91f9c463571aee288e8c725459393cf864d80ec1881b165ed583f74452",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -273693,6 +273693,47 @@
       },
       "claimDigest": "b6c4eb57bbe78ab291943e776d06d3877e17f6087008bd337c769521c84dcacf",
       "digest": "f6b82af902670cede12bc43c49556ceba4fdb560e905a08b668da39ba487c836"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5398,
+      "parentDigest": "f6b82af902670cede12bc43c49556ceba4fdb560e905a08b668da39ba487c836",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "96bffca89267dbebe6272883f57ddaa706c0933074d266dcde641d5fc019a836",
+      "idempotencyKey": "28ce5422a82d06a36c8c41039587c13c37cc2f65668689ef797a71fdb589dc5f",
+      "requestDigest": "43397f674da7d43d65d78298049db1776033566151ac7fd23acd654560b88a33",
+      "evaluationTime": "2026-08-25T21:39:51.000Z",
+      "claimCore": {
+        "claimId": "96bffca89267dbebe6272883f57ddaa706c0933074d266dcde641d5fc019a836",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:bf32f185a200d2eb304df0b01acc2bb547b77792b2d2550a3f56349ff2f189d6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:82d53194bdab949777c3b6eb79e51de949936a1e028a8c513cb740b372327b39",
+        "canonicalBaseRevision": "777a80d26dc8f879d02da179922fef72a1b77283",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-scope-expansion-lineage-contract.mjs",
+          "semantic:reviewed-scope-expansion-lineage-migration-contract-defect-repair"
+        ],
+        "writeSetDigest": "d44ebf6b13b76f758a0dd30232f79d3b6ef453b85e050a98f84f82c0b0a9c6d1",
+        "laneRevision": "53b7fb26226786c189c61e3176856aed9b1b129d",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T22:08:13.000Z",
+        "evidenceDigest": "b585fd7e67b97972d528f71546eb39b6d374f2260c183e04668538f00aca5eda",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA_6Ydg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "acc5e5622c68c019651fba5a188c9ed20dd934fcf4c39bf3529748f163afc406",
+      "digest": "d7664c91f9c463571aee288e8c725459393cf864d80ec1881b165ed583f74452"
     }
   ]
 }

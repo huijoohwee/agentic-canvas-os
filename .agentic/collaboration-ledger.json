@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5074,
-  "headDigest": "79544f7fbf18e6e3de93b0b117eb76cb9c0485abacf18bfb6855ccd33ae44777",
+  "sequence": 5075,
+  "headDigest": "a4d0e94541d59f677523a60518351d7bfc7f1c2f669b742e737d97a57c80676b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -255945,6 +255945,62 @@
       },
       "claimDigest": "e3369464d600a19b19d8b8ce32bbb6a4aab1def982962a1723d23ebfbc66a223",
       "digest": "79544f7fbf18e6e3de93b0b117eb76cb9c0485abacf18bfb6855ccd33ae44777"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5075,
+      "parentDigest": "79544f7fbf18e6e3de93b0b117eb76cb9c0485abacf18bfb6855ccd33ae44777",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d11d29c98727b3449b0b16c62a905e28520e5020018af6143480ad9e881c08b2",
+      "idempotencyKey": "f68efcd96df076c1bcd9c79513a0feba31d45377f113023940d675c6699b66e0",
+      "requestDigest": "384ab0faecb1b5c18caaa7453c46577576a5693837340db1874d7a0becdb562d",
+      "evaluationTime": "2026-08-25T00:57:58.000Z",
+      "claimCore": {
+        "claimId": "d11d29c98727b3449b0b16c62a905e28520e5020018af6143480ad9e881c08b2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:612126dd2d0de2405d3b8d04f254135f179ced7119b9051cf57147be55502769",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2c5d0237ae0874e03fb1f5dd19a91fab3c77fa1890da6df3c778c49de6ce3873",
+        "canonicalBaseRevision": "e7dfbe442dd554e986daec28c1cd891237da9d1e",
+        "declaredWriteScope": [
+          "path:__tests__/terminal-handoff-owned-dirt-successor-recovery.test.mjs",
+          "path:docs/TERMINAL-HANDOFF-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-contract.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-controller.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-evidence.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery.mjs",
+          "semantic:terminal-handoff-owned-dirt-successor-recovery"
+        ],
+        "writeSetDigest": "ee12fd44bb160755af70d46bfd3194e24f48bebe10fa108460a59bdf885b7e4c",
+        "laneRevision": "0d5db39c51261f98a6218a216554d5e64287eabf",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-25T02:33:06.000Z",
+        "evidenceDigest": "229e4d90cef400809cfef61b9624c70afd7f608de2c9b4e7af1d7d9b483e6b69",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA30dOw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "0d5db39c51261f98a6218a216554d5e64287eabf",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA30dOw",
+          "focusedEvidenceDigest": "229e4d90cef400809cfef61b9624c70afd7f608de2c9b4e7af1d7d9b483e6b69",
+          "dependencyClosureDigest": "9ac5a707db094729d7f7028172ad70c34eb6190638cd75bdc80b3af142d36d77",
+          "namedChecksDigest": "b74341465321d2efa44c6f8d5a29d75dcb39fd2e17a25837d90d522800c49b78",
+          "handoffEvidenceDigest": "5c6db8f250b04470d6eab1d25f5c192ab2edbead9703c4b9e800a8e505fb04f3",
+          "operatorDecisionDigest": "084f64305c966bcd6459416e9f3647355a9d3a56c2f42a0afeff542a3f4647c2",
+          "integrationIntentDigest": "a3ecafa663d2199552397ac3843334b59c49a99b3c75985bab2f6cddad54b22f",
+          "integratedAt": "2026-08-25T00:57:58.000Z"
+        }
+      },
+      "claimDigest": "47a70ce4745d1acebe41fdea2cbc9af81dfb04c30740b7cc7ab8edee411d5cc8",
+      "digest": "a4d0e94541d59f677523a60518351d7bfc7f1c2f669b742e737d97a57c80676b"
     }
   ]
 }

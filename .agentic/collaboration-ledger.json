@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5298,
-  "headDigest": "bd96d0cae5adbefc6d357abeb4c62466d5afe0c566f1456b7d008da844d0ee31",
+  "sequence": 5299,
+  "headDigest": "8e3375e44c0d5aad8e98817c29452e7d7bd64221bc54253fd7606bed27761636",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -268292,6 +268292,47 @@
       },
       "claimDigest": "0eb2f7cb8a390515d2470f7c8ec591cf4e7e645f21373e7ac19e5085d0d6fe58",
       "digest": "bd96d0cae5adbefc6d357abeb4c62466d5afe0c566f1456b7d008da844d0ee31"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5299,
+      "parentDigest": "bd96d0cae5adbefc6d357abeb4c62466d5afe0c566f1456b7d008da844d0ee31",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1ddcaccbc489b45ed7718bf8806e25470db52b8f32dacbcede5bf5fe068943d0",
+      "idempotencyKey": "06e02a1570147ed476cd3ef26fdaabe772d06e9128b0f49bdc927aa874ad05b2",
+      "requestDigest": "17677b82f760caabcc3b6d1fb84fab96cb4328505bf8fd5408706dedfd3d8f0d",
+      "evaluationTime": "2026-08-25T16:43:54.000Z",
+      "claimCore": {
+        "claimId": "1ddcaccbc489b45ed7718bf8806e25470db52b8f32dacbcede5bf5fe068943d0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:632b6a2b8b927a916743fc1179259019bb1101e3756152f1733d92744db2d3a6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b7240f1ff37871fa8daeac43405ff6b40f25986a8b0c8f36757e235598b6e760",
+        "canonicalBaseRevision": "9b623e154e7e160596d26451beed3c97b79a77df",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-terminal-handoff-scope-expansion-recovery.test.mjs",
+          "path:docs/REVIEWED-TERMINAL-HANDOFF-SCOPE-EXPANSION-RECOVERY.md",
+          "path:scripts/reviewed-terminal-handoff-scope-expansion-recovery-repository-adapter.mjs",
+          "semantic:reviewed-terminal-handoff-scope-expansion-recovery-historical-base-proof-defect-repair"
+        ],
+        "writeSetDigest": "113e77df3db8ee6b804e733ebdac527159da2e89bd383b9db10b365212b4f1b6",
+        "laneRevision": "d6a2d93dfc5e8bdea1f3648804f60fb2326978d1",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T18:39:11.000Z",
+        "evidenceDigest": "cceeac96c44a50d854ffc269550a774b62e1cb340f205b132ceeacbe1ef3d5c8",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA9xxIw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a93c08aebb484289ad50705bbef7e5184c9185c2d9535b2db061ab2ab3c69bc5",
+      "digest": "8e3375e44c0d5aad8e98817c29452e7d7bd64221bc54253fd7606bed27761636"
     }
   ]
 }

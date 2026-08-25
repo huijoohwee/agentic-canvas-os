@@ -26,11 +26,34 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     if (matches.length !== 1) invalid("dormant claim cardinality");
     const observedClaim = projectClaim(matches[0]);
     let claim = observedClaim;
-    if (observedClaim.state === "dormant-preserved"
+    if (observedClaim.state === "current"
       && observedClaim.transitionCounter === sourceAuthority.transitionCounter + 1) {
-      const projectedSourceClaim = projectSourceClaimFromExpiredResponseLoss({
+      const projectedSourceClaim = projectSourceClaimFromResponseLoss({
         claim: observedClaim,
         sourceAuthority,
+        sourceLease,
+      });
+      assertRecoveredResponseLossClaim({
+        claim: observedClaim,
+        sourceClaim: projectedSourceClaim,
+        sourceLease,
+        manifest,
+        sourceAuthority,
+        requireRecoveryMetadata: true,
+      });
+      assertSourceClaim({
+        claim: projectedSourceClaim,
+        sourceAuthority,
+        sourceLease,
+        manifest,
+      });
+      claim = projectedSourceClaim;
+    } else if (observedClaim.state === "dormant-preserved"
+      && observedClaim.transitionCounter === sourceAuthority.transitionCounter + 1) {
+      const projectedSourceClaim = projectSourceClaimFromResponseLoss({
+        claim: observedClaim,
+        sourceAuthority,
+        sourceLease,
       });
       assertExpiredRecoveredResponseLossClaim({
         claim: observedClaim,
@@ -38,6 +61,12 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
         sourceLease,
         manifest,
         sourceAuthority,
+      });
+      assertSourceClaim({
+        claim: projectedSourceClaim,
+        sourceAuthority,
+        sourceLease,
+        manifest,
       });
       claim = projectedSourceClaim;
     } else {
@@ -187,12 +216,21 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     }
     const matches = claims.filter(claim => claim.claimId === authority.claimId);
     if (matches.length !== 1) invalid("recovered claim cardinality");
-    const claim = matches[0];
-    if (claim.state !== "current" || claim.writeAuthority !== true || claim.scopeReserved !== true
-      || claim.transitionCounter !== normalizedPlan.evidence.cloud.claim.transitionCounter + 1
-      || claim.leaseEpoch !== normalizedPlan.evidence.cloud.claim.leaseEpoch) {
-      invalid("recovered cloud authority state");
-    }
+    const claim = projectCanonicalTargetClaim({
+      claim: matches[0],
+      sourceLease: normalizedPlan.evidence.sourceLease,
+    });
+    assertRecoveredResponseLossClaim({
+      claim,
+      sourceClaim: normalizedPlan.evidence.cloud.claim,
+      sourceLease: normalizedPlan.evidence.sourceLease,
+      manifest: normalizedPlan.evidence.manifest,
+      sourceAuthority: normalizedPlan.evidence.sourceLease.cloudAuthority,
+    });
+    if (claim.fenceRevision !== authority.claimDigest
+      || claim.transitionDigest !== authority.claimLedgerRevision
+      || claim.operationReceiptDigest !== authority.operationReceiptDigest
+      || claim.expiresAt !== authority.expiresAt) invalid("recovered cloud authority state");
     const competitors = claims.filter(candidate => candidate.claimId !== claim.claimId
       && candidate.repositoryId === claim.repositoryId
       && candidate.scopeReserved === true
@@ -249,6 +287,15 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
       ledgerDigest: status.ledgerDigest,
     };
     const { recovery: _recovery, ...historicalClaim } = claim;
+    const targetClaim = projectCanonicalTargetClaim({
+      claim: {
+        ...historicalClaim,
+        state: "current",
+        writeAuthority: true,
+        scopeReserved: true,
+      },
+      sourceLease: plan.evidence.sourceLease,
+    });
     return Object.freeze({
       authority,
       verificationReceiptDigest: digestValue(verificationCore),
@@ -256,11 +303,7 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
         status.inventoryDigest || digestValue(status.claims),
         "verification inventory",
       ),
-      targetClaimDigest: digestValue(projectTargetClaim({
-        ...historicalClaim,
-        state: "current",
-        writeAuthority: true,
-      })),
+      targetClaimDigest: digestValue(targetClaim),
       verifiedAt: requiredInstant(claim.recovery.recoveredAt, "verification time"),
     });
   }
@@ -288,10 +331,13 @@ export function createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
         sourceLease: plan.evidence.sourceLease,
         manifest: plan.evidence.manifest,
         recoveryEvidenceDigest: plan.evidence.evidenceDigest,
+        sourceAuthority: authority,
       });
     } else {
       assertRecoveredResponseLossClaim({ claim, sourceClaim: plan.evidence.cloud.claim,
-        sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest });
+        sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest,
+        recoveryEvidenceDigest: plan.evidence.evidenceDigest,
+        sourceAuthority: authority });
     }
     const competitors = status.claims.filter(candidate => candidate.claimId !== claim.claimId
       && candidate.repositoryId === claim.repositoryId && candidate.scopeReserved === true
@@ -385,13 +431,18 @@ function assertRecoveredClaim({ claim, sourceClaim, sourceLease, manifest, resul
     || result.ledgerRevision === undefined) invalid("same-claim dormant recovery result");
 }
 
-function assertRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, manifest }) {
+function assertRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, manifest,
+  recoveryEvidenceDigest = null, sourceAuthority = null,
+  requireRecoveryMetadata = recoveryEvidenceDigest !== null }) {
   const stableFields = [
     "claimId", "entrySchema", "claimIdentitySchema", "actorId", "repositoryId",
     "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
     "leaseEpoch", "reviewRequestId",
   ];
   const provenance = normalizeClaimProvenance(claim, "response-loss claim");
+  const recovery = requireRecoveryMetadata
+    ? normalizeRecoveryMetadata(claim.recovery)
+    : null;
   if (!provenance.mutationAuthorityEligible || claim.state !== "current"
     || claim.writeAuthority !== true || claim.scopeReserved !== true
     || stableFields.some(field => claim[field] !== sourceClaim[field])
@@ -401,7 +452,26 @@ function assertRecoveredResponseLossClaim({ claim, sourceClaim, sourceLease, man
       !== normalizeOwnerIdentifier("device", sourceLease.device)
     || normalizeOwnerIdentifier("session", claim.sessionId)
       !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
-    || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)) {
+    || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
+    || (recoveryEvidenceDigest !== null
+      && recovery.evidenceDigest !== requiredDigest(
+        recoveryEvidenceDigest,
+        "expected response-loss recovery evidence",
+      ))
+    || (sourceAuthority && (claim.claimId !== sourceAuthority.claimId
+      || claim.entrySchema !== sourceAuthority.entrySchema
+      || claim.claimIdentitySchema !== sourceAuthority.claimIdentitySchema
+      || claim.transitionCounter !== sourceAuthority.transitionCounter + 1
+      || claim.heartbeatCounter !== normalizeHeartbeatCounter(sourceAuthority.heartbeatCounter)
+      || claim.canonicalBaseRevision !== sourceAuthority.canonicalBaseSha
+      || claim.laneRevision !== sourceAuthority.laneRevision
+      || claim.writeSetDigest !== sourceAuthority.writeSetDigest
+      || claim.leaseEpoch !== sourceAuthority.leaseEpoch
+      || normalizeOwnerIdentifier("device", sourceAuthority.deviceId)
+        !== normalizeOwnerIdentifier("device", sourceLease.device)
+      || normalizeOwnerIdentifier("session", sourceAuthority.sessionId)
+        !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
+      || claim.reviewRequestId !== sourceAuthority.reviewRequestId))) {
     invalid("exact response-loss recovery claim");
   }
 }
@@ -413,6 +483,7 @@ function assertExpiredRecoveredResponseLossClaim({ claim, sourceClaim, sourceLea
     "workItemId", "canonicalBaseRevision", "laneRevision", "writeSetDigest",
     "leaseEpoch", "reviewRequestId",
   ];
+  const recovery = normalizeRecoveryMetadata(claim.recovery);
   if (claim.state !== "dormant-preserved" || claim.writeAuthority !== false
     || claim.scopeReserved !== true
     || stableFields.some(field => claim[field] !== sourceClaim[field])
@@ -423,9 +494,11 @@ function assertExpiredRecoveredResponseLossClaim({ claim, sourceClaim, sourceLea
     || normalizeOwnerIdentifier("session", claim.sessionId)
       !== normalizeOwnerIdentifier("session", sourceLease.sessionId)
     || canonicalJson(claim.declaredWriteScope) !== canonicalJson(manifest.declaredWriteSet)
-    || requiredDigest(claim.recovery?.evidenceDigest, "response-loss recovery evidence")
-      !== (recoveryEvidenceDigest || claim.recovery?.evidenceDigest)
-    || !requiredInstant(claim.recovery?.recoveredAt, "response-loss recovery time")
+    || (recoveryEvidenceDigest !== null
+      && recovery.evidenceDigest !== requiredDigest(
+        recoveryEvidenceDigest,
+        "expected response-loss recovery evidence",
+      ))
     || (sourceAuthority && (claim.claimId !== sourceAuthority.claimId
       || claim.entrySchema !== sourceAuthority.entrySchema
       || claim.claimIdentitySchema !== sourceAuthority.claimIdentitySchema
@@ -444,7 +517,7 @@ function assertExpiredRecoveredResponseLossClaim({ claim, sourceClaim, sourceLea
   }
 }
 
-function projectSourceClaimFromExpiredResponseLoss({ claim, sourceAuthority }) {
+function projectSourceClaimFromResponseLoss({ claim, sourceAuthority, sourceLease }) {
   const { recovery: _recovery, ...stableClaim } = claim;
   return Object.freeze({
     ...stableClaim,
@@ -457,6 +530,8 @@ function projectSourceClaimFromExpiredResponseLoss({ claim, sourceAuthority }) {
     operationReceiptDigest: sourceAuthority.operationReceiptDigest,
     transitionCounter: sourceAuthority.transitionCounter,
     heartbeatCounter: normalizeHeartbeatCounter(sourceAuthority.heartbeatCounter),
+    deviceId: normalizeOwnerIdentifier("device", sourceLease.device),
+    sessionId: normalizeOwnerIdentifier("session", sourceLease.sessionId),
   });
 }
 
@@ -500,6 +575,22 @@ function projectRecoveredAuthority({ source, claim, result }) {
     expiresAt: claim.expiresAt,
     state: "active",
   });
+}
+
+function projectCanonicalTargetClaim({ claim, sourceLease }) {
+  const state = String(claim?.state || "").replaceAll("-", "_");
+  if (!["current", "active"].includes(state)
+    || claim?.writeAuthority !== true || claim?.scopeReserved !== true) {
+    invalid("recovered cloud authority state");
+  }
+  return Object.freeze(projectTargetClaim({
+    ...claim,
+    state: "current",
+    writeAuthority: true,
+    scopeReserved: true,
+    deviceId: normalizeOwnerIdentifier("device", sourceLease.device),
+    sessionId: normalizeOwnerIdentifier("session", sourceLease.sessionId),
+  }));
 }
 
 function projectTargetClaim(value) {
@@ -562,6 +653,14 @@ function normalizeHeartbeatCounter(value) {
   return value === null || value === undefined
     ? 0
     : nonnegative(value, "source heartbeat counter");
+}
+
+function normalizeRecoveryMetadata(value) {
+  const source = record(value, "response-loss recovery metadata");
+  return Object.freeze({
+    evidenceDigest: requiredDigest(source.evidenceDigest, "response-loss recovery evidence"),
+    recoveredAt: requiredInstant(source.recoveredAt, "response-loss recovery time"),
+  });
 }
 
 function projectInventoryClaim(value) {

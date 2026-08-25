@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5330,
-  "headDigest": "17884eb883184d975b01086ed30eb15e2b23d112d009dc137e25d589e53c2bc4",
+  "sequence": 5331,
+  "headDigest": "9f6094bd0f1b53dc0433ba87e42fafae59ca0627b2afa634d99328f34bc0f63c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -270531,6 +270531,47 @@
       },
       "claimDigest": "ad21d92a48cb397f0bf5d8d7fc739f269b0dd93e8b8361167c6105f3e0a500a9",
       "digest": "17884eb883184d975b01086ed30eb15e2b23d112d009dc137e25d589e53c2bc4"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5331,
+      "parentDigest": "17884eb883184d975b01086ed30eb15e2b23d112d009dc137e25d589e53c2bc4",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0dd27f1c77cf5957cc25eb7949f8fd80e25e738586b753962851e4a5257d3f33",
+      "idempotencyKey": "73906834b6f6e5c3213ffc5e667643674c9d827b92010845b3766dfacb4a0c3a",
+      "requestDigest": "7d72b270de8cf9e07c735efe70cf6933d075ad02c75ae3c31d8e1b71f685c165",
+      "evaluationTime": "2026-08-25T18:03:36.000Z",
+      "claimCore": {
+        "claimId": "0dd27f1c77cf5957cc25eb7949f8fd80e25e738586b753962851e4a5257d3f33",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:1c9c61e0eb3da8c3f81a5a55a8eec196b1f248846964658f561b382968ec58e6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:227f910076861602e2580d51d0574f7f04fbc9c20919d6e3cbea38bb574462f2",
+        "canonicalBaseRevision": "df9ae544fa4225431b7e1da748c1a0b0021fd9b7",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-published-descendant-dirty-recovery.test.mjs",
+          "path:docs/ADMITTED-PUBLISHED-DESCENDANT-DIRTY-RECOVERY.md",
+          "path:scripts/admitted-published-descendant-dirty-recovery-repository-adapter.mjs",
+          "semantic:dirty-continuation-projection-fix"
+        ],
+        "writeSetDigest": "6e65818d172692166d6b9f2f1b83cb847eec813afe1c42be07944027aaf87945",
+        "laneRevision": "8195d93102b32a948faca55710b445624b25646f",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T18:53:30.000Z",
+        "evidenceDigest": "2d34bb5eb49964e8b050aae5b00e5c36399492b8795cf74acb4904a74e1e3e7c",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA-SJBw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "79c195b86380ff98a80452eff6b59069cfe35d745ceaa6e363ea1e24ec8caf49",
+      "digest": "9f6094bd0f1b53dc0433ba87e42fafae59ca0627b2afa634d99328f34bc0f63c"
     }
   ]
 }

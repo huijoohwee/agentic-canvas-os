@@ -1,5 +1,6 @@
 import { digestValue, normalizeWriteSet, validateLedger,
   writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 export const SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA = "agentic-cloud-authority-scope-expansion-lineage-plan/v1";
 export const SCOPE_EXPANSION_LINEAGE_ADMISSION_SCHEMA = "agentic-cloud-authority-scope-expansion-lineage-admission/v1";
 export const SCOPE_EXPANSION_LINEAGE_RECEIPT_SCHEMA = "agentic-cloud-authority-scope-expansion-lineage-receipt/v1";
@@ -9,6 +10,9 @@ const RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const REVIEW_STATES = new Set(["reviewed", "dormant-preserved"]);
+const ACTIVE_DIRTY_LINEAGE = "active-dirty-scope-expansion";
+const REVIEWED_RECOVERY_LINEAGE = "reviewed-terminal-handoff-scope-expansion-recovery";
+const HISTORICAL_LINEAGES = new Set([ACTIVE_DIRTY_LINEAGE, REVIEWED_RECOVERY_LINEAGE]);
 const VERIFIED_LINEAGES = new WeakSet();
 const VERIFIED_ADMISSIONS = new WeakSet();
 const VERIFIED_AUTHORIZATIONS = new WeakSet();
@@ -212,13 +216,24 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
     lane?.lease?.admission?.planReceiptDigest,
     "scope-expansion plan receipt digest",
   );
-  validateHistoricalShape({
+  const historicalVariant = validateHistoricalShape({
     lane, actor, status, legacyClaim, genesis, latest: anchor, sourceEntries,
     targetEntries, sourceRetirement, expansionPlanDigest,
   });
+  const reviewedHeadSha = requiredSha(legacyClaim.laneRevision, "reviewed head SHA");
+  const deliveryHeadSha = requiredSha(
+    lane?.refreshedHeadSha || lane?.headSha,
+    "delivery head SHA",
+  );
+  const protectedMainRefresh = normalizeProtectedMainRefresh(
+    lane?.protectedMainRefresh,
+    reviewedHeadSha,
+    deliveryHeadSha,
+  );
   const core = {
     schema: SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA,
     kind: "historical-scope-expansion",
+    historicalVariant,
     branch: requiredText(lane.branch, "branch"),
     ledgerRepository: requiredText(lane.authority.ledgerRepository, "ledger repository"),
     targetRepository: requiredText(lane.authority.targetRepository, "target repository"),
@@ -226,7 +241,9 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
     actorId: authenticatedActorId(actor),
     reviewRequestId: requiredText(legacyClaim.reviewRequestId, "review request ID"),
     canonicalBaseSha: requiredSha(legacyClaim.canonicalBaseRevision, "canonical base SHA"),
-    reviewedHeadSha: requiredSha(legacyClaim.laneRevision, "reviewed head SHA"),
+    reviewedHeadSha,
+    deliveryHeadSha,
+    protectedMainRefresh,
     manifestDigest: requiredDigest(lane.manifest.manifestDigest, "manifest digest"),
     writeSetDigest: requiredDigest(legacyClaim.writeSetDigest, "write-set digest"),
     declaredWriteSet: normalizeWriteSet(legacyClaim.declaredWriteScope),
@@ -272,7 +289,7 @@ function validateHistoricalShape({
   const source = sourceRetirement?.claimCore;
   const target = genesis.claimCore;
   const actorId = authenticatedActorId(actor);
-  const exact = (
+  const commonExact = (
     genesis.schema === ENTRY_SCHEMA
     && target?.leaseEpoch === 1
     && target.transitionCounter === 1
@@ -294,11 +311,9 @@ function validateHistoricalShape({
     && source.actorId === target.actorId
     && source.actorId === actorId
     && source.deviceId === target.deviceId
-    && source.sessionId === target.sessionId
     && source.repositoryId === target.repositoryId
     && target.repositoryId === status.repositoryId
     && source.canonicalBaseRevision === target.canonicalBaseRevision
-    && source.workItemId !== target.workItemId
     && strictSubset(source.declaredWriteScope, target.declaredWriteScope)
     && target.claimId === legacyClaim.claimId
     && target.predecessorClaimId === source.claimId
@@ -306,7 +321,26 @@ function validateHistoricalShape({
     && latest.claimDigest === legacyClaim.fenceRevision
     && lane?.pullRequest?.authorLogin === actor?.login
   );
-  if (!exact) throw new Error("Claim is not the exact receipt-bound historical scope-expansion shape.");
+  if (!commonExact) {
+    throw new Error("Claim is not the exact receipt-bound historical scope-expansion shape.");
+  }
+  const activeDirtyIdentity = source.sessionId === target.sessionId
+    && source.workItemId !== target.workItemId;
+  const reviewedRecoveryIdentity = source.sessionId !== target.sessionId
+    && source.workItemId === target.workItemId
+    && target.sessionId === pseudonymousIdentifier("session", lane.lease.sessionId);
+  if (activeDirtyIdentity) {
+    validateActiveDirtyRetirement({ source, target, expansionPlanDigest });
+    return ACTIVE_DIRTY_LINEAGE;
+  }
+  if (reviewedRecoveryIdentity) {
+    validateReviewedRecoveryRetirement({ source, target, expansionPlanDigest });
+    return REVIEWED_RECOVERY_LINEAGE;
+  }
+  throw new Error("Claim is not a recognized receipt-bound historical scope-expansion variant.");
+}
+
+function validateActiveDirtyRetirement({ source, target, expansionPlanDigest }) {
   const evidence = {
     schema: "agentic-active-dirty-scope-expansion-cloud-evidence/v1",
     phase: "source-retired",
@@ -326,13 +360,34 @@ function validateHistoricalShape({
   }
 }
 
+function validateReviewedRecoveryRetirement({ source, target, expansionPlanDigest }) {
+  const phase = "source-retired";
+  const operationKey = `${REVIEWED_RECOVERY_LINEAGE}:${phase}:${digestValue({
+    planDigest: expansionPlanDigest, phase,
+  })}`;
+  const expected = {
+    bytesDigest: digestValue({ operationKey, kind: "bytes" }),
+    namedChecksDigest: digestValue({ operationKey, kind: "checks" }),
+    handoffEvidenceDigest: digestValue({ operationKey, successor: target.claimId }),
+  };
+  for (const [field, digest] of Object.entries(expected)) {
+    if (source.retirement[field] !== digest) {
+      throw new Error(`Reviewed scope-recovery retirement ${field} does not bind its operation receipt.`);
+    }
+  }
+}
+
 function normalizePlan(value) {
   if (!value || value.schema !== SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA) {
     throw new Error("Scope-expansion lineage migration plan is malformed.");
   }
+  const reviewedHeadSha = requiredSha(value.reviewedHeadSha, "reviewed head SHA");
+  const deliveryHeadSha = requiredSha(value.deliveryHeadSha, "delivery head SHA");
   const core = {
     schema: SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA,
     kind: value.kind === "historical-scope-expansion" ? value.kind : invalid("migration kind"),
+    historicalVariant: HISTORICAL_LINEAGES.has(value.historicalVariant)
+      ? value.historicalVariant : invalid("historical lineage variant"),
     branch: requiredText(value.branch, "branch"),
     ledgerRepository: requiredText(value.ledgerRepository, "ledger repository"),
     targetRepository: requiredText(value.targetRepository, "target repository"),
@@ -340,7 +395,13 @@ function normalizePlan(value) {
     actorId: requiredText(value.actorId, "actor identity"),
     reviewRequestId: requiredText(value.reviewRequestId, "review request ID"),
     canonicalBaseSha: requiredSha(value.canonicalBaseSha, "canonical base SHA"),
-    reviewedHeadSha: requiredSha(value.reviewedHeadSha, "reviewed head SHA"),
+    reviewedHeadSha,
+    deliveryHeadSha,
+    protectedMainRefresh: normalizeProtectedMainRefresh(
+      value.protectedMainRefresh,
+      reviewedHeadSha,
+      deliveryHeadSha,
+    ),
     manifestDigest: requiredDigest(value.manifestDigest, "manifest digest"),
     writeSetDigest: requiredDigest(value.writeSetDigest, "write-set digest"),
     declaredWriteSet: normalizeWriteSet(value.declaredWriteSet),
@@ -415,16 +476,26 @@ function laneExact(lane, plan, claimId) {
   const authority = lane?.authority;
   const lease = lane?.lease;
   const remote = lane?.remoteLease;
+  let protectedMainRefresh;
+  try {
+    protectedMainRefresh = normalizeProtectedMainRefresh(
+      lane?.protectedMainRefresh,
+      plan.reviewedHeadSha,
+      lane?.refreshedHeadSha || lane?.headSha,
+    );
+  } catch { return false; }
   return Boolean(
     lane?.clean
     && lane.branch === plan.branch
     && lane.baseSha === plan.canonicalBaseSha
     && lane.headSha === plan.reviewedHeadSha
-    && lane.remoteHeadSha === plan.reviewedHeadSha
+    && (lane.refreshedHeadSha || lane.headSha) === plan.deliveryHeadSha
+    && lane.remoteHeadSha === plan.deliveryHeadSha
+    && digestValue(protectedMainRefresh) === digestValue(plan.protectedMainRefresh)
     && reviewHead === plan.reviewedHeadSha
     && lane.pullRequest?.state === "OPEN"
     && lane.pullRequest.isDraft === false
-    && lane.pullRequest.headRefOid === plan.reviewedHeadSha
+    && lane.pullRequest.headRefOid === plan.deliveryHeadSha
     && lane.pullRequest.baseRefName === "main"
     && lease.status === "review_ready"
     && lease.branch === plan.branch
@@ -445,6 +516,28 @@ function laneExact(lane, plan, claimId) {
     && lane.manifest.manifestDigest === plan.manifestDigest
     && sameWriteSet(lane.manifest.declaredWriteSet, plan.declaredWriteSet)
   );
+}
+
+function normalizeProtectedMainRefresh(value, reviewedHeadSha, deliveryHeadSha) {
+  const reviewed = requiredSha(reviewedHeadSha, "refresh reviewed head SHA");
+  const delivery = requiredSha(deliveryHeadSha, "refresh delivery head SHA");
+  if (delivery === reviewed) {
+    if (value !== null && value !== undefined) {
+      throw new Error("Unrefreshed lineage cannot carry a protected-main refresh receipt.");
+    }
+    return null;
+  }
+  const normalized = {
+    schema: value?.schema === "agentic-protected-main-refresh/v1"
+      ? value.schema : invalid("protected-main refresh schema"),
+    deliveredHeadSha: requiredSha(value?.deliveredHeadSha, "refresh delivered head SHA"),
+    refreshedHeadSha: requiredSha(value?.refreshedHeadSha, "refresh head SHA"),
+    mainParentSha: requiredSha(value?.mainParentSha, "refresh main parent SHA"),
+  };
+  if (normalized.deliveredHeadSha !== reviewed || normalized.refreshedHeadSha !== delivery) {
+    throw new Error("Protected-main refresh receipt does not join the reviewed and delivery heads.");
+  }
+  return Object.freeze(normalized);
 }
 
 function authorityProjectionExact(candidate, authority) {

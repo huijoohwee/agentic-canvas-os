@@ -142,19 +142,29 @@ leaves local projection rebinding to a recipient-owned repository step.
 ## Historical Scope-Expansion Lineage Migration
 
 The ordinary handoff validator remains strict: a v2 epoch-1 claim must have no
-predecessor. One repository-owned migration admits only the historical shape
-created when an active dirty lane expanded its declared scope through a waiting
-successor. It does not rewrite that claim or make the shape generally valid.
+predecessor. One repository-owned migration admits only either of two complete
+historical shapes created when an active dirty lane or an authorized
+reviewed-handoff recovery expanded its declared scope through a waiting
+successor. It does not rewrite either claim or make predecessor-bearing epoch-1
+claims generally valid.
 
 `scripts/cloud-authority-scope-expansion-lineage-migration.mjs` proves all of
 the following before it can call this controller:
 
 - one valid append-only v2 ledger and an exact current status digest
 - one epoch-1 target genesis whose predecessor is the earlier source claim
-- a strict source-scope subset with the same actor, device, session,
-  repository, base, and initial lane revision
-- a `superseded` source retirement whose bytes, checks, and handoff digests are
-  recomputed from the lane admission's portable plan receipt
+- a strict source-scope subset with the same actor, device, repository, base,
+  and initial lane revision
+- either the active-dirty identity pair (same session, distinct work item) and
+  its portable-plan retirement digests, or the reviewed-recovery identity pair
+  (distinct authorized successor session, same work item) and retirement
+  digests recomputed from its exact source-retired operation key
+- a content-bound historical-variant name in the migration plan; mixed identity
+  and retirement-receipt variants fail closed
+- when protected `main` refreshes the pull request after review, an exact
+  protected-main refresh receipt joining the reviewed head, delivery head, and
+  main parent; local review identity stays on the reviewed head while remote and
+  pull-request parity stays on the delivery head
 - exact clean review-lane, owner, pull-request, manifest, authority, and cloud
   projection parity, with no competing overlapping claim
 

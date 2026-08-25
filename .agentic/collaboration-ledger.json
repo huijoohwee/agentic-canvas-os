@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5403,
-  "headDigest": "8f7324e74e4a2c064de267cc201a5c70dfc328f1e69d706456eadfde623a1e83",
+  "sequence": 5404,
+  "headDigest": "07b14d71b94332bc4b3790e23e68f19c25d547077bfbcb61ac5492f28e20cbb2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -274075,6 +274075,49 @@
       },
       "claimDigest": "db97d337cf88963a30358ba70620ac0b3c5ec7dca59951e13c0605a324c32723",
       "digest": "8f7324e74e4a2c064de267cc201a5c70dfc328f1e69d706456eadfde623a1e83"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5404,
+      "parentDigest": "8f7324e74e4a2c064de267cc201a5c70dfc328f1e69d706456eadfde623a1e83",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c40871a1f54abdbd450d715fc970c6b7f4e08b4b64210f17c80c8bf23b2014c8",
+      "idempotencyKey": "9262ac589d26463fcd2609614e8ca519d74ed7514b72f521a7dfd02146131791",
+      "requestDigest": "179395f4261f8d61a7d668ec967671c8e4437d9dcaa568bbea5f6d4a157af17c",
+      "evaluationTime": "2026-08-25T23:21:19.000Z",
+      "claimCore": {
+        "claimId": "c40871a1f54abdbd450d715fc970c6b7f4e08b4b64210f17c80c8bf23b2014c8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:5fa2e77c8f4c83c0284e51c52f20c7d3a33eae50de6edf19d0acaf00d2703da9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:5e62bb335ab7d020baff17234570796b84567042ce0a143fcd4cde85fefb4035",
+        "canonicalBaseRevision": "4c0561060d87ab1c72c202d04b08c041bd1028e7",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-handoff-lineage.mjs",
+          "path:scripts/cloud-authority-scope-expansion-lineage-contract.mjs",
+          "path:scripts/cloud-authority-scope-expansion-lineage-migration.mjs",
+          "semantic:scope-expansion-lineage-integrated-replay-convergence-defect-repair"
+        ],
+        "writeSetDigest": "095d68f3db9fc13b901f0ed24e957d089ac487c0a3b4dbe93f87b1af0807a0e3",
+        "laneRevision": "26d21313f7f17fbdb73e09294f1369ffdb272a26",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T23:50:33.000Z",
+        "evidenceDigest": "0f7e0c379ebfaafadb836182141ec6151ccb734295a5f68f4a59115b6b1b67ce",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBAfFSg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d298b76600ab7989f0e2e531624a34c421df85d7687754e315195db37adfe36d",
+      "digest": "07b14d71b94332bc4b3790e23e68f19c25d547077bfbcb61ac5492f28e20cbb2"
     }
   ]
 }

@@ -10,6 +10,8 @@ import { complete, createReviewedForwardChildAdapter, pending } from "./reviewed
 import { createReviewedForwardChildJournal } from "./reviewed-forward-child-recovery-journal.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
+import { continueTaskAuthorityCloudSuccessorBinding }
+  from "./task-bound-lane-authority-store.mjs";
 import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import { casWriterLeaseProjection, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 export function createReviewedForwardChildRepositoryAdapter(options = {}, dependencies = {}) { return createReviewedForwardChildAdapter(createRuntime(options, dependencies)); }
@@ -17,6 +19,9 @@ function createRuntime(options, dependencies) {
   const repository = realpathSync(path.resolve(text(options.repository, "repository")));
   const sourceSessionId = text(options.sourceSessionId, "source session");
   const operatorSessionId = text(options.operatorSessionId, "operator session");
+  const taskAuthorityFile = options.taskAuthorityFile
+    ? realpathSync(path.resolve(options.taskAuthorityFile))
+    : null;
   const expectedPullRequest = integer(options.pullRequestNumber, "pull-request number");
   const environment = options.environment || process.env;
   const execute = dependencies.execute || ((command, args, settings = {}) => execFileSync(
@@ -419,12 +424,29 @@ function createRuntime(options, dependencies) {
       deviceId: sourceLease.device, sessionId: sourceLease.sessionId,
       focusedEvidenceDigest: null,
     });
+    if (!taskAuthorityFile) invalid("task authority capability");
+    const heartbeatAt = new Date().toISOString();
+    const nextLease = {
+      ...sourceLease,
+      status: "active",
+      fenceSha: plan.childHeadSha,
+      reviewHeadSha: null,
+      cloudAuthority: authority,
+      heartbeatAt,
+      expiresAt: authority.expiresAt,
+    };
+    const taskAuthority = continueTaskAuthorityCloudSuccessorBinding({
+      sourceLease,
+      nextLease,
+      capabilityPath: taskAuthorityFile,
+      boundAt: heartbeatAt,
+    });
     const updated = casWriterLeaseProjection({
       leaseStore, branch, expectedLeaseDigest: writerLeaseDigest(sourceLease),
       expectedClaimId: plan.sourceClaimId,
       values: {
         status: "active", fenceSha: plan.childHeadSha, reviewHeadSha: null,
-        cloudAuthority: authority, heartbeatAt: new Date().toISOString(),
+        cloudAuthority: authority, taskAuthority, heartbeatAt,
         expiresAt: authority.expiresAt,
       },
     }).lease;

@@ -1,6 +1,6 @@
 // Responsibility: Inspect and CAS-project only the missing successor task binding after source correction.
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
@@ -284,35 +284,56 @@ function assertExactRegisteredLane({ repository, branch, git }) {
 }
 
 function findSourceCorrectionCompletion({ commonDirectory, successorClaimId, sourceHeadSha }) {
-  const directory = path.join(
-    commonDirectory,
-    "agentic-canvas-os",
-    "reviewed-lane-source-correction",
-  );
-  const matches = readdirSync(directory)
-    .filter(name => name.endsWith(".json"))
-    .map(name => JSON.parse(readFileSync(path.join(directory, name), "utf8")))
-    .filter(value => value?.status === "complete"
-      && value.completion?.schema === "agentic-reviewed-lane-source-correction-completion/v1"
-      && value.completion.status === "authoring-restored"
-      && value.completion.successorClaimId === successorClaimId
-      && value.completion.sourceHeadSha === sourceHeadSha);
+  const root = path.join(commonDirectory, "agentic-canvas-os");
+  const matches = [
+    ...readJsonFiles(path.join(root, "reviewed-lane-source-correction"), 1),
+    ...readJsonFiles(path.join(root, "reviewed-forward-child-recovery"), 2),
+  ]
+    .filter(value => value?.status === "complete")
+    .map(value => normalizeSuccessorCompletion(value.completion))
+    .filter(value => value
+      && value.successorClaimId === successorClaimId
+      && value.sourceHeadSha === sourceHeadSha);
   if (matches.length !== 1) {
-    throw new Error("Expected one exact completed reviewed-lane source-correction journal.");
+    throw new Error("Expected one exact completed reviewed successor journal.");
   }
-  const completion = matches[0].completion;
+  return matches[0];
+}
+
+export function normalizeSuccessorCompletion(completion) {
+  if (!completion || completion.status !== "authoring-restored") return null;
   const { receiptDigest, ...core } = completion;
   if (digestValue(core) !== receiptDigest) {
-    throw new Error("Reviewed-lane source-correction completion receipt is invalid.");
+    throw new Error("Reviewed successor completion receipt is invalid.");
   }
+  if (completion.schema === "agentic-reviewed-lane-source-correction-completion/v1") {
+    return projectSuccessorCompletion(completion, completion.sourceHeadSha);
+  }
+  if (completion.schema === "agentic-reviewed-forward-child-recovery-completion/v1") {
+    return projectSuccessorCompletion(completion, completion.childHeadSha);
+  }
+  return null;
+}
+
+function projectSuccessorCompletion(completion, sourceHeadSha) {
   return Object.freeze({
-    planDigest: completion.planDigest,
-    sourceClaimId: completion.sourceClaimId,
-    successorClaimId: completion.successorClaimId,
-    sourceHeadSha: completion.sourceHeadSha,
-    leaseDigest: completion.leaseDigest,
-    receiptDigest: completion.receiptDigest,
+    planDigest: completion.planDigest, sourceClaimId: completion.sourceClaimId,
+    successorClaimId: completion.successorClaimId, sourceHeadSha,
+    leaseDigest: completion.leaseDigest, receiptDigest: completion.receiptDigest,
   });
+}
+
+function readJsonFiles(directory, depth) {
+  if (!existsSync(directory) || depth < 0) return [];
+  const values = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory() && depth > 0) values.push(...readJsonFiles(target, depth - 1));
+    else if (entry.isFile() && entry.name.endsWith(".json")) {
+      values.push(JSON.parse(readFileSync(target, "utf8")));
+    }
+  }
+  return values;
 }
 
 function remoteHead(line) {

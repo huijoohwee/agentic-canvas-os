@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5250,
-  "headDigest": "312b18a07787a48cf0e536cd432ce09c8138c1dbcd9db0308a67229de9cea8cf",
+  "sequence": 5251,
+  "headDigest": "5bf1260711a2988f92809299a01306d321a8a482681689b91be9d8096221bcab",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -265840,6 +265840,66 @@
       },
       "claimDigest": "67e69b95fd0004c5fe9c197a6b05a23ef65799f99655efa6598de8ac2ea82f09",
       "digest": "312b18a07787a48cf0e536cd432ce09c8138c1dbcd9db0308a67229de9cea8cf"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5251,
+      "parentDigest": "312b18a07787a48cf0e536cd432ce09c8138c1dbcd9db0308a67229de9cea8cf",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2f986f5ebc85dd0b8ae2518671c464a27d25b47cf7a5c18aee612f47101003b9",
+      "idempotencyKey": "2a5eaedd1fa323ec117502c183db740e94dbe491f2addca4f52d99f48a1e20e6",
+      "requestDigest": "f67cea5b03d140f3f44ea4711b301cbd1d0507387a3d00f2a42040252a2815b2",
+      "evaluationTime": "2026-08-25T14:43:39.000Z",
+      "claimCore": {
+        "claimId": "2f986f5ebc85dd0b8ae2518671c464a27d25b47cf7a5c18aee612f47101003b9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:cb9a28ef1dc8142e794771f143a18aaf526bc483f79084ae6f35d0474b82c404",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:93fce5edcf63b72e6859e459b6aa0371112ce34c9147ef8ce2c39969be362a85",
+        "canonicalBaseRevision": "9067e89763190bc5c6bd739259a6c4575972a435",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-terminal-handoff-scope-expansion-recovery.test.mjs",
+          "path:docs/REVIEWED-TERMINAL-HANDOFF-SCOPE-EXPANSION-RECOVERY.md",
+          "path:scripts/reviewed-terminal-handoff-scope-expansion-recovery-contract.mjs",
+          "path:scripts/reviewed-terminal-handoff-scope-expansion-recovery-controller.mjs",
+          "path:scripts/reviewed-terminal-handoff-scope-expansion-recovery-evidence.mjs",
+          "path:scripts/reviewed-terminal-handoff-scope-expansion-recovery-repository-adapter.mjs",
+          "path:scripts/reviewed-terminal-handoff-scope-expansion-recovery.mjs",
+          "semantic:reviewed-terminal-handoff-scope-recovery"
+        ],
+        "writeSetDigest": "2dd5f0a13fd757715e6f0a09fdf3f0a1107f1ab1f6311b7702eb27a8df49ec36",
+        "laneRevision": "7234ee0871c55724886bd114120d819b180fdb8c",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-25T16:30:14.000Z",
+        "evidenceDigest": "6c9c1b74d21ff58cf2d3f8b5a06d99a731e7c99dbcca17c7a6cb37bc759bea3c",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA8GFsw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "7c74b6910a8786d01ae2e39178a9336394179a0bd74811b8b3c41dd2ef7e9dcc",
+          "recoveredAt": "2026-08-25T14:30:14.000Z"
+        },
+        "integration": {
+          "candidateRevision": "7234ee0871c55724886bd114120d819b180fdb8c",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA8GFsw",
+          "focusedEvidenceDigest": "6c9c1b74d21ff58cf2d3f8b5a06d99a731e7c99dbcca17c7a6cb37bc759bea3c",
+          "dependencyClosureDigest": "cacad63b5746ff109c14fddac3e25b7ccfb882569459fcb0ca3c8e65231e80fd",
+          "namedChecksDigest": "7093e3cea081cfe6138dfb2d27b6e6b96bdd46bd4b5b24d5d37fb3e267407180",
+          "handoffEvidenceDigest": "865246e558b7d8d689fa506e801e0605830544a829c75ab16db01555d9d49241",
+          "operatorDecisionDigest": "0f49da2afee81e7e363571eb8eba34a4350d4165962b7d5ec086935bfca25ac6",
+          "integrationIntentDigest": "00170c7f796435d026cf30d3706223dfc5c3045f8d734a46989814a905d096e6",
+          "integratedAt": "2026-08-25T14:43:39.000Z"
+        }
+      },
+      "claimDigest": "23a55fbc884884868c1515a379814682dbacb93c8b833f64fa4ded5387a2f6f4",
+      "digest": "5bf1260711a2988f92809299a01306d321a8a482681689b91be9d8096221bcab"
     }
   ]
 }

@@ -10,11 +10,31 @@ import { createSourceCorrectionSuccessorTaskBindingReconciliationController }
 import {
   currentSuccessorRepair,
   isSourceCorrectionSuccessorHeadRelationshipExact,
+  normalizeSuccessorCompletion,
 }
   from "../scripts/source-correction-successor-task-binding-reconciliation-repository-adapter.mjs";
 
 const D = value => digestValue({ value });
 const S = value => String(value).repeat(40).slice(0, 40);
+
+test("normalizes a receipt-valid reviewed forward-child successor", () => {
+  const core = {
+    schema: "agentic-reviewed-forward-child-recovery-completion/v1",
+    status: "authoring-restored",
+    planDigest: D("plan"), sourceClaimId: D("source"), sourceHeadSha: S("a"),
+    childHeadSha: S("b"), autoMergeCancellationDigest: D("cancel"),
+    successorClaimId: D("successor"), successorClaimDigest: D("claim"),
+    leaseDigest: D("lease"), pullRequestDigest: D("pull"),
+    verificationDigest: D("verify"),
+    disposition: "same-owner-forward-child-authoring-restored",
+  };
+  const normalized = normalizeSuccessorCompletion({
+    ...core, receiptDigest: digestValue(core),
+  });
+  assert.equal(normalized.sourceHeadSha, core.childHeadSha);
+  assert.equal(normalized.sourceClaimId, core.sourceClaimId);
+  assert.equal(normalized.successorClaimId, core.successorClaimId);
+});
 
 function evidence(overrides = {}) {
   const core = {

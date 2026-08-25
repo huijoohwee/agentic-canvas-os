@@ -68,6 +68,9 @@ exist in the stable registered snapshot. An unselected peer must carry no
 dormant preservation receipt digest. These checks prevent both silent selection
 loss and implicit selection broadening.
 
+An empty selection still produces an operation-derived owner-, session-,
+operator-decision-, and current-inventory-bound receipt; it waives no peer.
+
 ## Independently Attributed Peers
 
 An unselected lane can continue when the shared classifier proves a disjoint

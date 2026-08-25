@@ -156,7 +156,6 @@ export function verifyDormantPreservation({
     pullRequestReferences.map(value => requiredText(value, "dormant pull request")),
     "dormant pull request",
   );
-  if (requestedPaths.length + requestedPullRequests.length === 0) return null;
   requiredDigest(operatorDecisionDigest, "operatorDecisionDigest");
   requiredText(sessionId, "sessionId");
   if (!isReadyRemoteInventory(remoteAuthorityVerification)) {

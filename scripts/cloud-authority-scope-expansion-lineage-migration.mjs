@@ -25,9 +25,17 @@ import {
   DEFAULT_LEDGER_REF,
 } from "./github-cloud-collaboration-adapter.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
+import { textCommandOptions } from "./command-text-options.mjs";
 
 export const SCOPE_EXPANSION_LINEAGE_RESULT_SCHEMA =
   "agentic-cloud-authority-scope-expansion-lineage-result/v1";
+
+export function githubLedgerCommandOptions(repository) {
+  return textCommandOptions({
+    cwd: repository,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
 
 export function createScopeExpansionLineageMigrationAdapter(methods = {}) {
   const adapter = Object.freeze({
@@ -156,9 +164,11 @@ export function createRepositoryScopeExpansionLineageMigrationAdapter({
   const repositoryGitText = gitText || (args => execFileSync("git", args, {
     cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
   }));
-  const repositoryGhText = ghText || (args => execFileSync("gh", args, {
-    cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
-  }));
+  const repositoryGhText = ghText || (args => execFileSync(
+    "gh",
+    args,
+    githubLedgerCommandOptions(repoRoot),
+  ));
   const owner = handoffAdapter || createRepositoryCloudAuthorityHandoffControllerAdapter({
     repository: repoRoot,
     sessionId: requiredText(sessionId, "session ID"),

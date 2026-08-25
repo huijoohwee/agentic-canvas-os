@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import test from "node:test";
 
 import { applyCloudTransition, createEmptyLedger, digestValue,
@@ -9,6 +10,7 @@ import { authorizeScopeExpansionLineageMigration, buildScopeExpansionLineageAdmi
   scopeExpansionLineageAdmissionMatches, verifyScopeExpansionLineageMigrationPlan,
 } from "../scripts/cloud-authority-scope-expansion-lineage-contract.mjs";
 import { createScopeExpansionLineageMigrationAdapter,
+  githubLedgerCommandOptions,
   runScopeExpansionLineageMigration } from "../scripts/cloud-authority-scope-expansion-lineage-migration.mjs";
 
 const BASE = "a".repeat(40);
@@ -434,6 +436,19 @@ test("plan proves the exact portable scope-expansion retirement chain", async ()
     status: state.status,
     ledger: state.ledger,
   }).planDigest, result.planDigest);
+});
+
+test("GitHub ledger reads retain provider responses larger than Node's default buffer", () => {
+  const outputBytes = 2 * 1024 * 1024;
+  const options = githubLedgerCommandOptions(process.cwd());
+  const output = execFileSync(process.execPath, [
+    "-e",
+    'process.stdout.write("x".repeat(Number(process.argv[1])))',
+    String(outputBytes),
+  ], options);
+
+  assert.equal(output.length, outputBytes);
+  assert.ok(options.maxBuffer > outputBytes);
 });
 
 test("execute uses the existing handoff controller and replays the standard epoch-2 successor", async () => {

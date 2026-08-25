@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5190,
-  "headDigest": "9af252a9d48dda68b493aafa0e20861a921e38f57438eb38144b41037cbd8e30",
+  "sequence": 5191,
+  "headDigest": "6246137e960941e11c0fb56d0406557fa1934854f5ff8b828be6685d4e7bc2c5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -262473,6 +262473,51 @@
       },
       "claimDigest": "1dcada8b543e69269468f6e573bb30a5e52eb30d16a089836ac188b8b2a77458",
       "digest": "9af252a9d48dda68b493aafa0e20861a921e38f57438eb38144b41037cbd8e30"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5191,
+      "parentDigest": "9af252a9d48dda68b493aafa0e20861a921e38f57438eb38144b41037cbd8e30",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "88c287472bab204da3f85d2b222d49928b0ee686e5e6f42f3e9512df65c21600",
+      "idempotencyKey": "4f15be30c51da5d858482e08abe18b88cb60affe4b392e8ab32e34f208732ac8",
+      "requestDigest": "f43f70e69d286c6f6935afb6bb9f22989d9725f5c724b36df772cec1abc12746",
+      "evaluationTime": "2026-08-25T12:42:16.000Z",
+      "claimCore": {
+        "claimId": "88c287472bab204da3f85d2b222d49928b0ee686e5e6f42f3e9512df65c21600",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:7c49ce068a7e4e95c603f42f0e304124372332595e2194dcc4d82c475c074d86",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:7b20a6fe3376befa962ee34128d539d6d4b20fad302977c475aed9a71524fe70",
+        "canonicalBaseRevision": "2734a111aca41726ae679b1a7b5eb08931e5ff00",
+        "declaredWriteScope": [
+          "path:__tests__/reviewed-terminal-handoff-successor-recovery.test.mjs",
+          "path:docs/REVIEWED-TERMINAL-HANDOFF-SUCCESSOR-RECOVERY.md",
+          "path:scripts/reviewed-terminal-handoff-successor-recovery-contract.mjs",
+          "path:scripts/reviewed-terminal-handoff-successor-recovery-controller.mjs",
+          "path:scripts/reviewed-terminal-handoff-successor-recovery-evidence.mjs",
+          "path:scripts/reviewed-terminal-handoff-successor-recovery-repository-adapter.mjs",
+          "path:scripts/reviewed-terminal-handoff-successor-recovery.mjs",
+          "semantic:reviewed-terminal-handoff-successor-recovery"
+        ],
+        "writeSetDigest": "e5e54a30e42d6f581dbb5db3540378abf0b6763f6dc93eb05fd424c8406984f4",
+        "laneRevision": "f4804778ce95e84ed91ff63b92f71d1d26b9ebeb",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 2,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T13:00:00.000Z",
+        "evidenceDigest": "ed070579086ae147db70496f6a102e0f9a145ff01f69ab83f71f3dd1315c5d18",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA7uJTQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "10056271b4d7147abd15fe697ccbea3f2ee12d8ebe053165e7b19edd495a4514",
+      "digest": "6246137e960941e11c0fb56d0406557fa1934854f5ff8b828be6685d4e7bc2c5"
     }
   ]
 }

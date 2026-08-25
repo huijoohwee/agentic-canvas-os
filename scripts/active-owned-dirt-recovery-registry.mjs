@@ -5,28 +5,16 @@ import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { reconcileCloudAuthorityProjection } from "./scoped-lane-cloud-reconciliation.mjs";
 import { parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker } from "./writer-lease-lib.mjs";
-import {
-  normalizeActiveOwnedDirtLeaseRecovery,
-  normalizeActiveOwnedDirtRecoveryPlan,
-  validateCompletedActiveOwnedDirtRecoveryIntent,
-} from "./active-owned-dirt-recovery-contract.mjs";
-import {
-  mutateWriterLeaseRegistry,
-  writerLeaseDigest,
-} from "./writer-lease-registry-cas.mjs";
+import { buildActiveOwnedDirtRecoveryReceipt, normalizeActiveOwnedDirtLeaseRecovery,
+  normalizeActiveOwnedDirtRecoveryPlan, validateCompletedActiveOwnedDirtRecoveryIntent }
+  from "./active-owned-dirt-recovery-contract.mjs";
+import { mutateWriterLeaseRegistry, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 import { continueTaskAuthorityBinding } from "./task-bound-lane-authority-store.mjs";
 
 export const ACTIVE_OWNED_DIRT_RECOVERY_INTENT_SCHEMA =
   "agentic-active-owned-dirt-recovery-intent/v1";
 
-const PHASES = Object.freeze([
-  "intent",
-  "snapshot",
-  "cloud",
-  "local-cas",
-  "pr-marker",
-  "complete",
-]);
+const PHASES = Object.freeze(["intent", "snapshot", "cloud", "local-cas", "pr-marker", "complete"]);
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 
 export function reconcileLostCloudHeartbeat({
@@ -261,6 +249,18 @@ export function buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ lease, c
     expiresAt: new Date(Math.min(...expiries)).toISOString(),
   };
   return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+}
+
+export function buildActiveOwnedDirtRecoveryVerifiedFinalReceipt({ plan, snapshot, intent, lease,
+  marker, verifiedAuthority, remoteAuthorityVerification, currentClaim, pullRequest } = {}) {
+  buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ lease,
+    currentAuthority: lease?.cloudAuthority, verifiedAuthority, remoteAuthorityVerification,
+    currentClaim, pullRequest });
+  return buildActiveOwnedDirtRecoveryReceipt({ phase: "complete", plan, values: {
+    snapshotReceiptDigest: snapshot?.snapshotReceiptDigest,
+    recoveredLeaseDigest: writerLeaseDigest(lease), markerDigest: digestValue(marker),
+    mutationAuthorityReceiptDigest: intent?.localProjection?.mutationAuthorityReceiptDigest,
+  } });
 }
 
 export function requireExactDraftHeartbeatMarker({ lease, pullRequest }) {

@@ -23,6 +23,15 @@ import { createWriterLeaseStore, parseWriterLeasePullRequestBody,
 const PHASES = ["prepared", "task-authorized", "cloud-bound", "local-projected",
   "marker-projected", "complete"];
 
+export function projectProvisionedStartDescendantAdmissionStableSource(evidence) {
+  const { observedAt: _observedAt, evidenceDigest: _evidenceDigest, cloud, ...source } = evidence;
+  const { ledgerRevision: _ledgerRevision, ledgerDigest: _ledgerDigest, claim, ...cloudSource } = cloud;
+  const stableClaim = ["current", "dormant-preserved"].includes(claim.state)
+    ? { ...claim, state: "transition-1-reserved", writeAuthority: false }
+    : claim;
+  return { ...source, cloud: { ...cloudSource, claim: stableClaim } };
+}
+
 export function createProvisionedStartDescendantAdmissionRecoveryRepositoryAdapter(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session ID");
@@ -236,7 +245,9 @@ export function createProvisionedStartDescendantAdmissionRecoveryRepositoryAdapt
     && authority.state === "active" && authority.transitionCounter >= 2; }
   function assertSource(plan) {
     const live = readEvidence();
-    if (digestValue(live) !== digestValue(plan.evidence)) invalid("sealed source drift");
+    const stableLive = projectProvisionedStartDescendantAdmissionStableSource(live);
+    const stablePlan = projectProvisionedStartDescendantAdmissionStableSource(plan.evidence);
+    if (digestValue(stableLive) !== digestValue(stablePlan)) invalid("sealed source drift");
   }
   function assertStatic(plan) {
     const lease = sourceLease("static-revalidation"), range = descendant(lease), review = pullRequest(lease);

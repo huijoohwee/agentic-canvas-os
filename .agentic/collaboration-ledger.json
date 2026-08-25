@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5187,
-  "headDigest": "55933bff02f55bd06cc5908233eb438b7d5fe7d32adca986105a2ae8aee434fb",
+  "sequence": 5188,
+  "headDigest": "61a6aea1d675b22b02870d6e21ba8880d3012a69b2dd766cc0321f68ada1f563",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -262347,6 +262347,47 @@
       },
       "claimDigest": "01707042569f2219b0ce7784aacd01684bb440cb379e14edcf31bf81905d3421",
       "digest": "55933bff02f55bd06cc5908233eb438b7d5fe7d32adca986105a2ae8aee434fb"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5188,
+      "parentDigest": "55933bff02f55bd06cc5908233eb438b7d5fe7d32adca986105a2ae8aee434fb",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c992019160940d67635c9697fe03c04a7f55803735aad6c302bb3f07386a5c23",
+      "idempotencyKey": "5dd9e67bdc71d8f39efbb35044e39bbe60852e1aa29ba4267971bda6f5d880fb",
+      "requestDigest": "ed81315444ac01c1d2e2402de8e3c246ab623d4c17b2e8cbc3edfa5162b697ac",
+      "evaluationTime": "2026-08-25T12:40:46.000Z",
+      "claimCore": {
+        "claimId": "c992019160940d67635c9697fe03c04a7f55803735aad6c302bb3f07386a5c23",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:766169674039f472bb163e6e8b246f49e3a48d4a7c07d54b7414b8259f22225f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b42f622b01765cc4f2e6c77faf9775a9930480aedcd37dc02597daa1b285201c",
+        "canonicalBaseRevision": "2734a111aca41726ae679b1a7b5eb08931e5ff00",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-recovery-controller.test.mjs",
+          "path:scripts/active-owned-dirt-recovery-controller.mjs",
+          "path:scripts/active-owned-dirt-recovery-registry.mjs",
+          "semantic:active-owned-dirt-recovery-finalize-ledger-drift"
+        ],
+        "writeSetDigest": "c5e81b3920ab56b597a9263318f5a32d35cff8471921f25660cdb6c33067ca22",
+        "laneRevision": "8fc754a634438c6bb5db83e14f3b774375ab2119",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-26T12:11:50.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA7qWPw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "84e1c023ac492479fb6ec4ed71711fd622f99bb2cdb7e85ef01c47ba3e39e35a",
+      "digest": "61a6aea1d675b22b02870d6e21ba8880d3012a69b2dd766cc0321f68ada1f563"
     }
   ]
 }

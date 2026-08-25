@@ -10,6 +10,7 @@ import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   initializeExpiredCommittedScopeExpansionIntent,
   readExpiredCommittedScopeExpansionIntentForLocalProjection,
+  resolveExpiredCommittedSuccessorLocalBase,
   resolveExpiredCommittedSourceRetirementIdentity,
   resolveExpiredCommittedSuccessorCanonicalBase,
 }
@@ -143,6 +144,14 @@ test("binds the successor to incorporated protected main without rewriting the r
   const plan = buildExpiredCommittedScopeExpansionPlan(fixture());
   assert.equal(plan.targetCanonicalBaseSha, sourceBaseSha);
   assert.equal(resolveExpiredCommittedSuccessorCanonicalBase(plan), protectedMainSha);
+  assert.equal(resolveExpiredCommittedSuccessorLocalBase({
+    plan,
+    authority: { canonicalBaseSha: protectedMainSha },
+  }), protectedMainSha);
+  assert.throws(() => resolveExpiredCommittedSuccessorLocalBase({
+    plan,
+    authority: { canonicalBaseSha: sourceBaseSha },
+  }), /exact protected-main incorporation proof/u);
   assert.equal(normalizeExpiredCommittedScopeExpansionPlan(plan).planDigest, plan.planDigest);
 });
 

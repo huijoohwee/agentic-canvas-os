@@ -41,6 +41,14 @@ export function resolveExpiredCommittedSuccessorCanonicalBase(plan) {
     .protectedMainIncorporationProof.protectedMainSha;
 }
 
+export function resolveExpiredCommittedSuccessorLocalBase({ plan, authority }) {
+  const expected = resolveExpiredCommittedSuccessorCanonicalBase(plan);
+  if (authority?.canonicalBaseSha !== expected) {
+    throw new Error("Successor local base requires the exact protected-main incorporation proof.");
+  }
+  return expected;
+}
+
 export function resolveExpiredCommittedSourceRetirementIdentity({ plan, sourceAuthority }) {
   const normalized = normalizeExpiredCommittedScopeExpansionPlan(plan);
   if (sourceAuthority?.claimId !== normalized.sourceClaimId
@@ -354,6 +362,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
         const admission = successorAdmission({ sourceAdmission: lease.admission, plan, authority });
         const nextCore = {
           ...lease,
+          baseSha: resolveExpiredCommittedSuccessorLocalBase({ plan, authority: verification.authority }),
           admission,
           cloudAuthority: verification.authority,
           heartbeatAt: verification.authority.expiresAt,

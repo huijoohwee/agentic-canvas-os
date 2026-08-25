@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5163,
-  "headDigest": "4f78dab4be7d4c27bd9bb359f01af472c3c756c9947e32eb5c30f84444714f6e",
+  "sequence": 5164,
+  "headDigest": "be6516ec335e2c35ad9bfd06f073b5d9e49262d805748044bcea1ed9fb52c333",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -261213,6 +261213,48 @@
       },
       "claimDigest": "242adca88f58611d6cb20310e0310371b6f79b8e768364781bc4c7c9f7e408d4",
       "digest": "4f78dab4be7d4c27bd9bb359f01af472c3c756c9947e32eb5c30f84444714f6e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5164,
+      "parentDigest": "4f78dab4be7d4c27bd9bb359f01af472c3c756c9947e32eb5c30f84444714f6e",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "1cb9f0b919ac2d0409e688fca5a3372638946c21532eed95cf533abc29d12f44",
+      "idempotencyKey": "b6e3fa8accffcc6fa7009ee4076a4f1924792fc930858d62291bfa144440f322",
+      "requestDigest": "0d60a039ebe83ee0de8539950018f0d5182b07a8285927fa74874c73f23b7ae9",
+      "evaluationTime": "2026-08-25T10:57:35.000Z",
+      "claimCore": {
+        "claimId": "1cb9f0b919ac2d0409e688fca5a3372638946c21532eed95cf533abc29d12f44",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:c1a9144b2e88ede80d649e494c133670c5f71d1e81f63309f8e6438c8adc7f33",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:26727587cbfba5a0bfe5bb1563f363cf8948ae5d0955d60c17e1ce44f9dbd80b",
+        "canonicalBaseRevision": "19ad8aa2480781c414b146a5b8e2becaa4fe4bff",
+        "declaredWriteScope": [
+          "path:docs/knowgrph-acos-deploy-runbook.md",
+          "path:scripts/__tests__/production-release-lifecycle.test.mjs",
+          "path:scripts/lib/production-release-lifecycle-evidence.mjs",
+          "path:scripts/production-release-lifecycle.mjs",
+          "semantic:adaptive-release-frontier-evidence"
+        ],
+        "writeSetDigest": "8799ef362e655e07cb730bcce35fe4f2c4c4ba66b467e7ca75aa3507428ced51",
+        "laneRevision": "19ad8aa2480781c414b146a5b8e2becaa4fe4bff",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-25T11:57:35.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "81ebeafb4aae96d9dfc0293c98b090c2ebf81dd70ecf8ee4d087d6ad0cd66e1c",
+      "digest": "be6516ec335e2c35ad9bfd06f073b5d9e49262d805748044bcea1ed9fb52c333"
     }
   ]
 }

@@ -193,6 +193,11 @@ agent-branch fetch refspecs. JSON failures redact every GitHub token family,
 credentialed URLs, and local paths, suppress child-process stderr, and cap the
 public diagnostic length.
 
+Authoritative GitHub contents and blob reads use the repository's bounded 64
+MiB text-command envelope. This admits the provider ledger response above
+Node's default child-output limit while preserving the contents-API/blob
+fallback and a finite subprocess memory bound.
+
 Plan first, without mutation:
 
 ```sh

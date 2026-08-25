@@ -184,11 +184,16 @@ export function createReviewedTerminalHandoffScopeExpansionRecoveryRepositoryAda
     captureEvidence, readIntent: journal.read, writeIntent: journal.write, withFence: journal.withFence,
     recoverSource(context) {
       const source = context.plan.evidence.sourceClaim;
+      const recoveryEvidenceDigest = buildScopeExpansionSourceRecoveryEvidenceDigest({
+        operationKey: context.operationKey,
+        planDigest: context.plan.planDigest,
+        sourceClaimId: source.claimId,
+      });
       const result = invoke({ action: "continue", ledgerRepository: readLease().cloudAuthority.ledgerRepository,
         request: { targetRepository: readLease().cloudAuthority.targetRepository,
           claimId: source.claimId, expectedFenceRevision: source.fenceRevision,
           expectedTransitionCounter: source.transitionCounter, mode: "recovery",
-          ttlSeconds: context.plan.ttlSeconds, recoveryEvidenceDigest: context.operationKey,
+          ttlSeconds: context.plan.ttlSeconds, recoveryEvidenceDigest,
           deviceId: readLease().device, sessionId: context.plan.evidence.sourceOperatorSessionId,
           idempotencyKey: `${context.plan.operation}:recover:${context.plan.planDigest}` }, environment });
       if (result?.ok !== true || result.action !== "continue" || result.claim?.claimId !== source.claimId
@@ -426,6 +431,19 @@ export function createReviewedTerminalHandoffScopeExpansionRecoveryRepositoryAda
   }
 }
 
+export function buildScopeExpansionSourceRecoveryEvidenceDigest({
+  operationKey,
+  planDigest,
+  sourceClaimId,
+}) {
+  return digestValue({
+    schema: "agentic-reviewed-terminal-handoff-scope-expansion-source-recovery-evidence/v1",
+    operationKey: requiredText(operationKey, "source-recovery operation key"),
+    planDigest: requiredDigest(planDigest, "source-recovery plan digest"),
+    sourceClaimId: requiredDigest(sourceClaimId, "source-recovery claim id"),
+  });
+}
+
 function effect(kind, values) { const core = { schema: "agentic-reviewed-handoff-scope-repair-effect/v1", kind, ...values };
   return Object.freeze({ ...core, receiptDigest: values.receiptDigest || digestValue(core) }); }
 function resultFromInventory(inventory, claim) { return { schema: "agentic-cloud-collaboration-result/v1",
@@ -443,5 +461,6 @@ function externalPath(repository, value, label) { const target = realpathSync(pa
   if (!relative || (!relative.startsWith(`..${path.sep}`) && relative !== "..")) throw new Error(`${label} must be external.`);
   return target; }
 function requiredText(value, label) { const result = String(value ?? "").trim(); if (!result) throw new Error(`${label} is required.`); return result; }
+function requiredDigest(value, label) { const result = requiredText(value, label); if (!/^[0-9a-f]{64}$/u.test(result)) throw new Error(`${label} is invalid.`); return result; }
 function sha(value, label) { const result = requiredText(value, label); if (!/^[0-9a-f]{40}$/u.test(result)) throw new Error(`${label} is invalid.`); return result; }
 function positive(value, label) { if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${label} is invalid.`); return value; }

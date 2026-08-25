@@ -9,6 +9,7 @@ import {
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   initializeExpiredCommittedScopeExpansionIntent,
+  readExpiredCommittedScopeExpansionIntentForLocalProjection,
   resolveExpiredCommittedSourceRetirementIdentity,
   resolveExpiredCommittedSuccessorCanonicalBase,
 }
@@ -114,6 +115,28 @@ test("uses the newly persisted intent directly before the first cloud mutation",
     store: {},
     begin: () => assert.fail("replay must not persist a second intent"),
   }), persistedIntent);
+});
+
+test("local projection consumes only the durable expired-committed intent", () => {
+  const plan = buildExpiredCommittedScopeExpansionPlan(fixture());
+  const durableIntent = {
+    status: "successor-bound",
+    planDigest: plan.planDigest,
+    sourceLeaseDigest: plan.sourceLeaseDigest,
+    sourceClaimId: plan.sourceClaimId,
+  };
+  const conflictingLegacyIntent = {
+    ...durableIntent,
+    planDigest: "f".repeat(64),
+  };
+  assert.equal(readExpiredCommittedScopeExpansionIntentForLocalProjection({
+    expiredCommittedScopeExpansionIntents: {
+      [plan.sourceBranch]: durableIntent,
+    },
+    scopeExpansionIntents: {
+      [plan.sourceBranch]: conflictingLegacyIntent,
+    },
+  }, plan), durableIntent);
 });
 
 test("binds the successor to incorporated protected main without rewriting the replay plan", () => {

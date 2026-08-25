@@ -23,6 +23,15 @@ import {
 import {
   buildReviewedLaneSourceCorrectionEvidence,
 } from "../scripts/reviewed-lane-source-correction-evidence.mjs";
+import {
+  advanceReviewedForwardChildIntent,
+  buildReviewedForwardChildPlan,
+  createReviewedForwardChildIntent,
+} from "../scripts/reviewed-forward-child-recovery-contract.mjs";
+import {
+  buildReviewedForwardChildCandidate,
+  buildReviewedForwardChildEvidence,
+} from "../scripts/reviewed-forward-child-recovery-evidence.mjs";
 import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 import {
   createTaskAuthorityBinding,
@@ -184,10 +193,13 @@ test("captures a descendant when the fence is an exact refresh parent plus empty
     tmpdir(),
     "expired-committed-heartbeat-recovery-",
   ));
-  writeSourceCorrectionJournal({
+  writeForwardChildJournal({
     gitCommonDir,
     source: lease,
-    priorFenceSha: refreshedFenceParentSha,
+    sourceHeadSha: refreshedFenceParentSha,
+    sourceTreeSha: refreshedFenceTreeSha,
+    reviewHeadSha: refreshedDeliveredHeadSha,
+    protectedMainParentSha: refreshedMainParentSha,
   });
   const snapshot = captureExpiredCommittedHeartbeatSnapshot({
     repo,
@@ -1201,6 +1213,154 @@ function liveManifestLease({ cloudExpiresAt = null } = {}) {
       ...(cloudExpiresAt ? { expiresAt: cloudExpiresAt } : {}),
     },
   };
+}
+
+function writeForwardChildJournal({
+  gitCommonDir,
+  source,
+  sourceHeadSha,
+  sourceTreeSha,
+  reviewHeadSha,
+  protectedMainParentSha,
+}) {
+  const directory = path.join(
+    gitCommonDir,
+    "agentic-canvas-os",
+    "reviewed-forward-child-recovery",
+    "branch-key",
+  );
+  mkdirSync(directory, { recursive: true });
+  const autoMergeRequest = {
+    mergeMethod: "SQUASH",
+    commitHeadline: "fix(expired-heartbeat): restore lineage",
+    commitBody: "exact body",
+    enabledAt: "2026-08-04T11:00:00.000Z",
+    enabledByLogin: "owner",
+  };
+  const sourceClaimId = "4".repeat(64);
+  const sourceEvidence = buildReviewedForwardChildEvidence({
+    repository: { fullName: "org/repo", nodeId: "repo-node" },
+    actor: { id: "1", login: "owner" },
+    source: {
+      branch: source.branch,
+      sessionId: source.sessionId,
+      headSha: sourceHeadSha,
+      remoteHeadSha: sourceHeadSha,
+      providerHeadSha: sourceHeadSha,
+      treeSha: sourceTreeSha,
+      parentShas: [reviewHeadSha, protectedMainParentSha],
+      clean: true,
+    },
+    lease: {
+      status: "review_ready",
+      epoch: source.epoch,
+      leaseDigest: "1".repeat(64),
+      baseSha: source.baseSha,
+      fenceSha: source.baseSha,
+      reviewHeadSha,
+      sessionId: source.sessionId,
+      device: source.device,
+      scope: source.scope,
+      branch: source.branch,
+      manifestDigest: source.admission.manifestDigest,
+      declaredWriteSet: source.admission.declaredWriteSet,
+      writeSetDigest: source.admission.writeSetDigest,
+      focusedEvidenceDigest: "2".repeat(64),
+      pullRequestUrl: source.pullRequestUrl,
+    },
+    claim: {
+      claimId: sourceClaimId,
+      claimDigest: "5".repeat(64),
+      transitionDigest: "6".repeat(64),
+      operationReceiptDigest: "8".repeat(64),
+      state: "dormant-preserved",
+      writeAuthority: false,
+      scopeReserved: true,
+      actorId: "github-user:1",
+      repositoryId: "github-repository:repo-node",
+      workItemId: "work-item:expired-heartbeat",
+      canonicalBaseSha: source.baseSha,
+      laneRevision: reviewHeadSha,
+      declaredWriteSet: source.admission.declaredWriteSet,
+      writeSetDigest: source.admission.writeSetDigest,
+      leaseEpoch: 1,
+      transitionCounter: 5,
+      reviewRequestId: "github-pull-request:81",
+    },
+    pullRequest: {
+      number: 81,
+      nodeId: "81",
+      url: source.pullRequestUrl,
+      state: "OPEN",
+      isDraft: false,
+      headBranch: source.branch,
+      headSha: sourceHeadSha,
+      baseBranch: "main",
+      baseSha: protectedMainParentSha,
+      headRepository: "org/repo",
+      baseRepository: "org/repo",
+      authorLogin: "owner",
+      bodyDigest: "9".repeat(64),
+      writerMarkerDigest: "a".repeat(64),
+      autoMergeRequest,
+      autoMergeDigest: digestValue(autoMergeRequest),
+      mergeQueueEntry: null,
+    },
+    protectedMainSha,
+    refreshChain: [{
+      headSha: sourceHeadSha,
+      treeSha: sourceTreeSha,
+      parentShas: [reviewHeadSha, protectedMainParentSha],
+    }],
+  });
+  const candidate = buildReviewedForwardChildCandidate({
+    sourceHeadSha,
+    sourceTreeSha,
+    childHeadSha: source.fenceSha,
+    childTreeSha: sourceTreeSha,
+    parentShas: [sourceHeadSha],
+    subject: "chore(reviewed-forward-child-recovery): resume authoring",
+  });
+  const plan = buildReviewedForwardChildPlan({
+    source: sourceEvidence,
+    candidate,
+    operatorSessionId: "operator-session",
+  });
+  let intent = createReviewedForwardChildIntent(plan, plan.exactAuthorization);
+  for (const status of [
+    "auto_merge_cancelled",
+    "forward_child_created",
+    "successor_waiting",
+    "source_retired",
+    "successor_current",
+    "local_ref_updated",
+    "remote_ref_updated",
+    "lease_activated",
+    "pr_drafted",
+    "verified",
+  ]) {
+    intent = advanceReviewedForwardChildIntent(intent, {
+      status,
+      values: { status },
+    });
+  }
+  intent = advanceReviewedForwardChildIntent(intent, {
+    status: "complete",
+    values: {
+      receipt: {
+        autoMergeCancellationDigest: "b".repeat(64),
+        successorClaimId: source.cloudAuthority.claimId,
+        successorClaimDigest: "c".repeat(64),
+        leaseDigest: "d".repeat(64),
+        pullRequestDigest: "e".repeat(64),
+        verificationDigest: "f".repeat(64),
+      },
+    },
+  });
+  writeFileSync(
+    path.join(directory, `${intent.intentDigest}.json`),
+    JSON.stringify(intent, null, 2),
+  );
 }
 
 function leaseWithDeclaredWriteSet(lease, declaredWriteSet) {

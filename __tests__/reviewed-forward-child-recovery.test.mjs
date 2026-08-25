@@ -440,6 +440,8 @@ test("repository publication is compare-and-swap and never force-based", () => {
   assert.match(source, /mode: "projection"/u);
   assert.match(source, /`reviewed-forward-child:bind:\$\{plan\.planDigest\}`/u);
   assert.match(source, /cloudStatus, plan\.childHeadSha\)/u);
+  assert.match(source, /continueTaskAuthorityCloudSuccessorBinding/u);
+  assert.match(source, /cloudAuthority: authority, taskAuthority, heartbeatAt/u);
   assert.match(source, /reason: integrated \? "integrated" : "superseded"/u);
   assert.match(source, /integrationReceiptDigest: source\.integrationReceiptDigest/u);
   assert.doesNotMatch(source, /--force|force-with-lease|reset|stash/u);
@@ -452,5 +454,6 @@ test("plan-only preparation does not materialize or publish the child", () => {
   ), "utf8");
   assert.match(cli, /controller\.plan/u);
   assert.match(cli, /operatorSessionId,/u);
+  assert.match(cli, /required\(options\["task-authority"\], "task-authority"\)/u);
   assert.doesNotMatch(cli, /git|push|hash-object/u);
 });

@@ -130,8 +130,9 @@ export function continueTaskAuthorityCloudSuccessorBinding({
     operation: "scope-expansion-cloud-successor-continuation",
     now: new Date(boundAt),
   });
-  const stableFields = ["branch", "scope", "device", "epoch", "baseSha"];
+  const stableFields = ["branch", "scope", "device", "epoch"];
   if (stableFields.some(field => sourceLease?.[field] !== nextLease?.[field])
+    || !isValidCloudSuccessorBaseTransition({ sourceLease, nextLease })
     || !sourceLease?.cloudAuthority?.claimId
     || !nextLease?.cloudAuthority?.claimId
     || sourceLease.cloudAuthority.claimId === nextLease.cloudAuthority.claimId) {
@@ -144,6 +145,12 @@ export function continueTaskAuthorityCloudSuccessorBinding({
     boundAt,
     priorBindingDigest: current.bindingDigest,
   });
+}
+
+function isValidCloudSuccessorBaseTransition({ sourceLease, nextLease }) {
+  if (sourceLease?.baseSha === nextLease?.baseSha) return true;
+  return sourceLease?.cloudAuthority?.canonicalBaseSha === sourceLease?.baseSha
+    && nextLease?.cloudAuthority?.canonicalBaseSha === nextLease?.baseSha;
 }
 
 export function bindDeliveryTaskAuthorityMigration({

@@ -262,7 +262,7 @@ export function continuePlannedScopedLaneAdmission({
 } = {}) {
   requirePlannedLease({ lease, cloudAuthority, manifest });
   requireCurrentVerification(remoteAuthorityVerification);
-  const candidate = requireCandidateLane({ lease, lanes });
+  const candidate = requireCandidateLane({ lease, lanes, cloudAuthority });
   const protectedAdvance = verifyProtectedAdvance({
     lease,
     manifest,
@@ -389,7 +389,7 @@ function requireCurrentVerification(verification) {
   ) throw new Error("Admission continuation requires operation-derived current cloud verification.");
 }
 
-function requireCandidateLane({ lease, lanes }) {
+function requireCandidateLane({ lease, lanes, cloudAuthority }) {
   const matches = (Array.isArray(lanes) ? lanes : []).filter(
     lane => path.resolve(lane.path) === path.resolve(lease.worktreePath),
   );
@@ -407,12 +407,51 @@ function requireCandidateLane({ lease, lanes }) {
     || candidate.lease?.sessionId !== lease.sessionId
     || candidate.lease?.epoch !== lease.epoch
   ) throw new Error("Admission continuation candidate drifted from its clean registered fence.");
+  requireBoundedHistoricalLeaseExpiry({
+    historicalLease: lease,
+    candidateLease: candidate.lease,
+    cloudAuthority,
+  });
   return Object.freeze({
     ...candidate,
     preparedIntegrationReceiptDigest: preparedIntegration
       ? digestValue(preparedIntegration)
       : null,
   });
+}
+
+function requireBoundedHistoricalLeaseExpiry({
+  historicalLease,
+  candidateLease,
+  cloudAuthority,
+}) {
+  const historicalExpiry = exactInstant(
+    historicalLease?.expiresAt,
+    "historical local lease expiry",
+  );
+  exactInstant(
+    candidateLease?.expiresAt,
+    "candidate local lease expiry",
+  );
+  const cloudExpiry = exactInstant(
+    cloudAuthority?.expiresAt,
+    "authenticated cloud expiry",
+  );
+  if (candidateLease.expiresAt !== historicalLease.expiresAt) {
+    throw new Error("Admission continuation changed the historical local lease expiry.");
+  }
+  if (historicalExpiry > cloudExpiry) {
+    throw new Error("Admission continuation local lease expiry exceeds authenticated cloud expiry.");
+  }
+  return true;
+}
+
+function exactInstant(value, label) {
+  const timestamp = Date.parse(String(value || ""));
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
+    throw new Error(`Admission continuation ${label} is invalid.`);
+  }
+  return timestamp;
 }
 
 function requirePreparedIntegrationCandidate({ lease, candidate }) {

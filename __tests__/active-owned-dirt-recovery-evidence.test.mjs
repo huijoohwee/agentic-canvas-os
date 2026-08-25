@@ -96,6 +96,82 @@ test("snapshot preserves staged, unstaged, untracked, deletion, executable, and 
   }
 });
 
+for (const staged of [false, true]) {
+  test(`snapshot preserves ${staged ? "a staged" : "an unstaged"} tracked deletion whose parent is absent`, () => {
+    const repository = mkdtempSync(path.join(os.tmpdir(), "active-owned-dirt-missing-parent-"));
+    const git = gitCommand(repository);
+    try {
+      git(["init", "-q"]);
+      git(["config", "user.name", "Test"]);
+      git(["config", "user.email", "test@example.test"]);
+      mkdirSync(path.join(repository, "gone", "nested"), { recursive: true });
+      writeFileSync(path.join(repository, "gone", "nested", "file.txt"), "base bytes\n");
+      git(["add", "."]);
+      git(["commit", "-qm", "base"]);
+      rmSync(path.join(repository, "gone"), { recursive: true });
+      if (staged) git(["add", "-u", "--", "gone/nested/file.txt"]);
+
+      const before = { head: git(["rev-parse", "HEAD"]),
+        index: git(["ls-files", "--stage", "-z"]),
+        status: git(["status", "--porcelain=v2", "-z", "--untracked-files=all"]) };
+      const evidence = captureActiveOwnedDirtEvidence({ repository });
+      const entry = evidence.entries[0];
+      assert.equal(evidence.pathCount, 1);
+      assert.equal(entry.path, "gone/nested/file.txt");
+      assert.equal(entry.staged, staged);
+      assert.equal(entry.unstaged, !staged);
+      assert.equal(entry.untracked, false);
+      assert.equal(entry.headMode, "100644");
+      assert.equal(entry.indexMode, staged ? null : "100644");
+      assert.equal(entry.indexBlob, staged ? null : entry.headBlob);
+      assert.equal(entry.worktreeType, "deleted");
+      assert.equal(entry.worktreeMode, null);
+      assert.equal(entry.worktreeBlob, null);
+
+      const snapshot = createActiveOwnedDirtSnapshot({ repository, evidence,
+        claimId: "c".repeat(64), planDigest: "d".repeat(64),
+        timestamp: "2026-08-09T00:00:00.000Z" });
+      assert.deepEqual(verifyActiveOwnedDirtSnapshot({ repository, snapshot }), snapshot);
+      assert.equal(git(["show", "-s", "--format=%P", snapshot.indexCommitSha]),
+        snapshot.headSha);
+      assert.equal(git(["show", "-s", "--format=%P", snapshot.commitSha]),
+        `${snapshot.headSha} ${snapshot.indexCommitSha}`);
+      if (staged) assert.throws(() => git(["cat-file", "-e",
+        `${snapshot.indexCommitSha}:gone/nested/file.txt`]));
+      else assert.equal(git(["show", `${snapshot.indexCommitSha}:gone/nested/file.txt`]),
+        "base bytes");
+      assert.throws(() => git(["cat-file", "-e", `${snapshot.commitSha}:gone/nested/file.txt`]));
+      assert.equal(git(["rev-parse", "HEAD"]), before.head);
+      assert.equal(git(["ls-files", "--stage", "-z"]), before.index);
+      assert.equal(git(["status", "--porcelain=v2", "-z", "--untracked-files=all"]), before.status);
+    } finally {
+      rmSync(repository, { recursive: true, force: true });
+    }
+  });
+}
+
+test("snapshot preflight rejects replacement of an absent ancestor before Git writes", () => {
+  const fixture = dirtyRepository({ relativePath: "gone/nested/file.txt" });
+  try {
+    rmSync(path.join(fixture.repository, "gone"), { recursive: true });
+    const evidence = captureActiveOwnedDirtEvidence({ repository: fixture.repository });
+    for (const replacement of ["file", "symlink"]) {
+      const ancestor = path.join(fixture.repository, "gone");
+      if (replacement === "file") writeFileSync(ancestor, "replacement\n");
+      else symlinkSync(fixture.repository, ancestor, "dir");
+      let gitCalls = 0;
+      assert.throws(() => createActiveOwnedDirtSnapshot({ repository: fixture.repository,
+        evidence, claimId: "e".repeat(64), planDigest: "f".repeat(64),
+        timestamp: "2026-08-09T00:00:00.000Z",
+        git: () => { gitCalls += 1; } }), /symlink or non-directory ancestor/u);
+      assert.equal(gitCalls, 0);
+      rmSync(ancestor, { recursive: true, force: true });
+    }
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test("evidence rejects paths outside the admitted write set", () => {
   const core = {
     schema: "agentic-active-owned-dirt-evidence/v1",

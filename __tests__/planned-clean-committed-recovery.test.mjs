@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  authorizeProjectedManifestCanonicalization,
+  isProjectedPredecessorPullRequestMarker,
   ownerIdentifierMatches,
   recoverPlannedAdmissionCloudAuthority,
+  recoverReceiptCanonicalizedPlannedLease,
+  recoveryEvidenceForLeaseProjection,
   shouldReconcileRecoveredPlannedLease,
 } from "../scripts/planned-clean-committed-recovery-lib.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { normalizeOwnerIdentifier } from "../scripts/planned-device-projection-recovery-evidence.mjs";
+import { projectWriterLeasePullRequestMarker } from "../scripts/writer-lease-lib.mjs";
+import { writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -22,7 +29,7 @@ const authority = {
   deviceId: "device",
   sessionId: "session",
 };
-const manifest = { writeSetDigest: authority.writeSetDigest };
+const manifest = { manifestDigest: digest("0"), writeSetDigest: authority.writeSetDigest };
 const dormant = {
   claimId: authority.claimId,
   state: "parked",
@@ -73,6 +80,178 @@ test("planned clean recovery advances only the exact dormant claim", () => {
   assert.equal(request.expectedTransitionCounter, 7);
   assert.equal(request.recoveryEvidenceDigest, digest("f"));
   assert.equal(result.authority.marker, projected);
+  assert.equal(result.authority.manifestDigest, manifest.manifestDigest);
+});
+
+test("planned clean recovery canonicalizes a missing manifest only from its exact fence-projection receipt", () => {
+  const branch = "agent/device/planned-scope";
+  const taskAuthorityCore = {
+    schema: "agentic-task-authority-binding/v1",
+    authoritySubjectId: `urn:agentic-task:${digest("5")}`,
+    proofAdapterId: "urn:agentic-proof:ed25519-file:v1",
+    generation: 1,
+    publicKey: "MCowBQYDK2VwAyEACUyj2+Djg0vdM+PGbZv96+mo10QyALragq2D5Vw86rY=",
+    publicKeyDigest: null,
+    laneBindingDigest: digest("6"),
+    bindingMode: "claim",
+    boundAt: "2026-08-24T01:00:00.000Z",
+    transitionPlanDigest: null,
+    priorBindingDigest: null,
+  };
+  taskAuthorityCore.publicKeyDigest = digestValue(taskAuthorityCore.publicKey);
+  const taskAuthority = {
+    ...taskAuthorityCore,
+    bindingDigest: digestValue(taskAuthorityCore),
+  };
+  const lease = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 1,
+    sessionId: "session",
+    device: "device",
+    scope: "planned-scope",
+    branch,
+    baseSha: sha("b"),
+    fenceSha: sha("c"),
+    autoDelivery: false,
+    runtimeRequired: false,
+    heartbeatAt: "2026-08-24T01:00:00.000Z",
+    expiresAt: "2026-08-24T01:30:00.000Z",
+    taskAuthority,
+    admission: { status: "planned", manifestDigest: digest("9") },
+    cloudAuthority: {
+      claimId: digest("a"),
+      transitionCounter: 3,
+      deviceId: normalizeOwnerIdentifier("device", "device"),
+      sessionId: normalizeOwnerIdentifier("session", "session"),
+    },
+  };
+  const predecessorLease = {
+    ...lease,
+    cloudAuthority: { ...lease.cloudAuthority, transitionCounter: 1 },
+  };
+  const predecessorMarker = {
+    ...projectWriterLeasePullRequestMarker(predecessorLease),
+    heartbeatAt: "2026-08-24T00:55:00.000Z",
+    expiresAt: "2026-08-24T01:25:00.000Z",
+  };
+  const attempted = {
+    idempotencyKey: digest("1"),
+    sourceLeaseDigest: writerLeaseDigest(predecessorLease),
+    targetLeaseDigest: writerLeaseDigest(lease),
+  };
+  const core = {
+    schema: "agentic-planned-start-fence-projection-recovery-registry-receipt/v1",
+    operationKey: `planned-start-fence-projection-recovery:local-attempted:${attempted.idempotencyKey}`,
+    planDigest: digest("3"),
+    sourceLeaseDigest: attempted.sourceLeaseDigest,
+    targetLeaseDigest: attempted.targetLeaseDigest,
+    claimId: lease.cloudAuthority.claimId,
+    sourceTransitionCounter: 1,
+    targetTransitionCounter: 3,
+    registryRevision: 9,
+    phaseValues: {
+      authorityVerified: {
+        taskAuthorityReceiptDigest: digest("4"),
+        taskAuthorityBindingDigest: lease.taskAuthority.bindingDigest,
+      },
+      localAttempted: attempted,
+    },
+    writerRegistryMutation: true,
+    cloudMutation: false,
+    providerMutation: false,
+    gitMutation: false,
+    sourceMutation: false,
+  };
+  const receipt = { ...core, receiptDigest: digestValue(core) };
+  const registry = {
+    revision: 9,
+    plannedStartFenceProjectionRecoveryReceipts: { [receipt.operationKey]: receipt },
+  };
+
+  assert.equal(authorizeProjectedManifestCanonicalization({ registry, lease }), receipt);
+  assert.equal(isProjectedPredecessorPullRequestMarker({
+    marker: predecessorMarker,
+    lease,
+    projectionReceipt: receipt,
+  }), true);
+  assert.equal(isProjectedPredecessorPullRequestMarker({
+    marker: { ...predecessorMarker, fenceSha: sha("f") },
+    lease,
+    projectionReceipt: receipt,
+  }), false);
+  const projectedLease = {
+    ...lease,
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      deviceId: lease.device,
+      sessionId: lease.sessionId,
+      manifestDigest: lease.admission.manifestDigest,
+      expiresAt: "2026-08-24T03:00:00.000Z",
+    },
+    heartbeatAt: "2026-08-24T02:00:00.000Z",
+    expiresAt: "2026-08-24T02:30:00.000Z",
+    expiredCommittedHeartbeatRecovery: { status: "recovered" },
+  };
+  let canonicalSourceLease = null;
+  let canonicalRenewedAuthority = null;
+  let projectedRecoveryEvidence = null;
+  const receiptBoundRecoveryEvidence = {
+    sourceEpoch: lease.epoch,
+    plannedFenceProjectionReceiptDigest: receipt.receiptDigest,
+  };
+  const recoveredLease = recoverReceiptCanonicalizedPlannedLease({
+    leaseStore: { statePath: "/unused/writer-leases.json" },
+    branch,
+    expectedLease: lease,
+    renewedCloudAuthority: projectedLease.cloudAuthority,
+    recoveryEvidence: receiptBoundRecoveryEvidence,
+    ttlMs: 1_800_000,
+    recoveredAt: projectedLease.heartbeatAt,
+    projectionReceipt: receipt,
+    instant: new Date("2026-08-24T02:00:01.000Z"),
+  }, {
+    projectLease: ({ sourceLease, renewedCloudAuthority, recoveryEvidence }) => {
+      canonicalSourceLease = sourceLease;
+      canonicalRenewedAuthority = renewedCloudAuthority;
+      projectedRecoveryEvidence = recoveryEvidence;
+      return projectedLease;
+    },
+    mutateRegistry: ({ expectedLeaseDigest, expectedClaimId, action }) => {
+      assert.equal(expectedLeaseDigest, writerLeaseDigest(lease));
+      assert.equal(expectedClaimId, lease.cloudAuthority.claimId);
+      const mutation = action({ registry: { ...registry, leases: { [branch]: lease } }, lease });
+      assert.equal(mutation.registry.plannedStartFenceProjectionRecoveryReceipts,
+        registry.plannedStartFenceProjectionRecoveryReceipts);
+      return { lease: mutation.lease };
+    },
+  });
+  assert.equal(canonicalSourceLease.cloudAuthority.manifestDigest,
+    lease.admission.manifestDigest);
+  assert.equal(canonicalSourceLease.cloudAuthority.deviceId, lease.device);
+  assert.equal(canonicalSourceLease.cloudAuthority.sessionId, lease.sessionId);
+  assert.equal(canonicalRenewedAuthority.deviceId, lease.device);
+  assert.equal(canonicalRenewedAuthority.sessionId, lease.sessionId);
+  assert.deepEqual(projectedRecoveryEvidence, { sourceEpoch: lease.epoch });
+  assert.deepEqual(recoveryEvidenceForLeaseProjection(receiptBoundRecoveryEvidence),
+    { sourceEpoch: lease.epoch });
+  assert.throws(() => recoveryEvidenceForLeaseProjection({
+    ...receiptBoundRecoveryEvidence,
+    plannedFenceProjectionReceiptDigest: "not-a-digest",
+  }), /receipt evidence is malformed/u);
+  assert.equal(recoveredLease, projectedLease);
+  assert.throws(() => authorizeProjectedManifestCanonicalization({ registry: { revision: 9 }, lease }),
+    /exact expired planned cloud-admitted lease/u);
+  assert.throws(() => authorizeProjectedManifestCanonicalization({
+    registry,
+    lease: { ...lease, cloudAuthority: { ...lease.cloudAuthority, manifestDigest: digest("7") } },
+  }), /exact expired planned cloud-admitted lease/u);
+  assert.throws(() => authorizeProjectedManifestCanonicalization({
+    registry: { ...registry, plannedStartFenceProjectionRecoveryReceipts: {
+      [receipt.operationKey]: { ...receipt, targetTransitionCounter: 2 },
+    } },
+    lease,
+  }), /exact expired planned cloud-admitted lease/u);
 });
 
 test("planned clean recovery accepts the provider-neutral dormant state", () => {

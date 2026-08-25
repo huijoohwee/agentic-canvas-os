@@ -31,6 +31,9 @@ substitute for the authorized expired-committed plan.
 
 The successor claim and every remote-authority verification use the protected
 main SHA captured by the plan's incorporation proof as their canonical base.
+The atomic local projection advances the successor lease to that same base;
+task-authority continuation permits this base change only when both predecessor
+and successor leases match their respective cloud canonical bases.
 The source-base fields in the immutable plan and durable intent remain
 unchanged so an interrupted transition can replay the exact authorized plan
 without digest substitution.

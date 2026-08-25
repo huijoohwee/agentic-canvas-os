@@ -349,6 +349,49 @@ test("scope expansion continues task authority across one cloud successor claim"
   }), /exact stable lane/);
 });
 
+test("cloud successor continuation advances to the successor canonical base", () => {
+  const root = temporaryRoot();
+  const ownerPath = path.join(root, "owner.json");
+  writeTaskAuthorityCapability({ outputPath: ownerPath });
+  const sourceLease = {
+    ...leaseFixture(),
+    cloudAuthority: { claimId: CLAIM, canonicalBaseSha: SHA },
+  };
+  const sourceBinding = createTaskAuthorityBinding({
+    capability: readTaskAuthorityCapability(ownerPath),
+    lease: sourceLease,
+    boundAt: "2026-08-13T00:00:00.000Z",
+  });
+  const boundSource = { ...sourceLease, taskAuthority: sourceBinding };
+  const successorBaseSha = "4".repeat(40);
+  const nextLease = {
+    ...boundSource,
+    baseSha: successorBaseSha,
+    cloudAuthority: {
+      claimId: "3".repeat(64),
+      canonicalBaseSha: successorBaseSha,
+    },
+  };
+  const continued = continueTaskAuthorityCloudSuccessorBinding({
+    sourceLease: boundSource,
+    nextLease,
+    capabilityPath: ownerPath,
+    boundAt: "2026-08-13T00:01:00.000Z",
+  });
+  assert.doesNotThrow(() => authorizeTaskBoundLeaseMutation({
+    lease: { ...nextLease, taskAuthority: continued },
+    capabilityPath: ownerPath,
+    operation: "edit",
+    now: new Date("2026-08-13T00:01:01.000Z"),
+  }));
+  assert.throws(() => continueTaskAuthorityCloudSuccessorBinding({
+    sourceLease: boundSource,
+    nextLease: { ...nextLease, baseSha: "5".repeat(40) },
+    capabilityPath: ownerPath,
+    boundAt: "2026-08-13T00:01:02.000Z",
+  }), /exact stable lane/);
+});
+
 test("writer authority handoff requires both keys and invalidates the predecessor", () => {
   const root = temporaryRoot();
   const common = createDirectory(path.join(root, "git-common"));

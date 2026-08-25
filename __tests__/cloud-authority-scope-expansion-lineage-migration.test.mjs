@@ -68,6 +68,7 @@ function fixture({
   retirementPlanDigest = PLAN_RECEIPT,
   lineageVariant = ACTIVE_DIRTY_LINEAGE,
   retirementVariant = lineageVariant,
+  integrated = false,
 } = {}) {
   const reviewedRecovery = lineageVariant === REVIEWED_RECOVERY_LINEAGE;
   const targetActor = reviewedRecovery ? SUCCESSOR_ACTOR : ACTOR;
@@ -179,6 +180,24 @@ function fixture({
     state.status.claims.find(claim => claim.claimId === target.claim.claimId),
     targetSessionId,
   );
+  if (integrated) {
+    const integratedResult = mutate(ledger, "integrate", "2020-01-01T01:10:00.000Z", {
+      claimId: reviewed.claim.claimId,
+      expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      candidateRevision: REVIEW_HEAD,
+      reviewRequestId: REVIEW,
+      focusedEvidenceDigest: FOCUSED_EVIDENCE,
+      dependencyClosureDigest: digestValue({ integration: "dependencies" }),
+      namedChecksDigest: digestValue({ integration: "checks" }),
+      handoffEvidenceDigest: digestValue({ integration: "handoff" }),
+      operatorDecisionDigest: digestValue({ integration: "operator" }),
+      integrationIntentDigest: digestValue({ integration: "intent" }),
+      idempotencyKey: "target-integrate",
+    }, targetActor);
+    state.ledger = integratedResult.ledger;
+    refreshStatus(state);
+  }
   return state;
 }
 
@@ -307,17 +326,32 @@ function authorityFromClaim(claim, sessionId) {
   };
 }
 
+function recoveredIntegratedAuthority(claim, sessionId) {
+  return {
+    ...authorityFromClaim(claim, sessionId),
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    transitionCounter: claim.transitionCounter,
+    expiresAt: claim.expiresAt,
+    state: "delivery_authorized",
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    integration: claim.integration,
+  };
+}
+
 function migrationAdapter(state, beforeContinue = () => {}) {
   return createScopeExpansionLineageMigrationAdapter({
     readLane: () => state.lane,
     readActor: () => CLOUD_ACTOR,
     readStatus: () => state.status,
     readLedger: () => state.ledger,
-    continueAuthority: ({ request, lineageAdmission }) => {
+    continueAuthority: async ({ request, lineageAdmission }) => {
       beforeContinue();
-      return continueExpiredReviewLaneAuthority(
+      state.lastContinued = await continueExpiredReviewLaneAuthority(
         request, { adapter: handoffAdapter(state), lineageAdmission },
       );
+      return state.lastContinued;
     },
   });
 }
@@ -405,6 +439,28 @@ function handoffAdapter(state) {
         remoteLease: { ...state.lane.remoteLease, cloudAuthority: authority },
       };
       return { receiptDigest: digestValue({ projection: authority.claimId }) };
+    },
+    recoverIntegratedAuthority: ({ integratedReplay }) => {
+      const claim = integratedReplay.claim;
+      const result = mutate(state.ledger, "continue", "2026-08-09T01:10:00.000Z", {
+        claimId: claim.claimId,
+        expectedFenceRevision: claim.fenceRevision,
+        expectedTransitionCounter: claim.transitionCounter,
+        mode: "recovery",
+        expiresAt: LIVE_EXPIRY,
+        recoveryEvidenceDigest: digestValue({ recovery: claim.claimId }),
+        deviceId: SUCCESSOR_ACTOR.deviceId,
+        sessionId: SUCCESSOR_ACTOR.sessionId,
+        idempotencyKey: "target-integrated-recovery",
+      }, SUCCESSOR_ACTOR);
+      state.ledger = result.ledger;
+      refreshStatus(state);
+      const recovered = state.status.claims.find(value => value.claimId === claim.claimId);
+      const authority = recoveredIntegratedAuthority(recovered, state.lane.lease.sessionId);
+      return {
+        authority,
+        convergenceEvidenceDigest: digestValue({ convergence: authority.claimLedgerRevision }),
+      };
     },
   };
 }
@@ -552,6 +608,48 @@ test("execute uses the existing handoff controller and replays the standard epoc
   assert.equal(replay.successorClaimId, migrated.successorClaimId);
 });
 
+test("integrated lineage recovery converges the same epoch-1 claim and replays idempotently", async () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
+  const adapter = migrationAdapter(state);
+  const planned = await runScopeExpansionLineageMigration(
+    { mode: "plan", branch: BRANCH }, { adapter },
+  );
+  const request = executeRequest(planned.plan, {
+    sessionId: "successor-session",
+    successorSessionId: "successor-session",
+  });
+  const recovered = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(recovered.outcome, "integrated-replay-recovered");
+  assert.equal(recovered.successorClaimId, recovered.predecessorClaimId);
+  assert.equal(recovered.successorLeaseEpoch, 1);
+  const sequence = state.ledger.sequence;
+  const replay = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(replay.outcome, "already-migrated");
+  assert.equal(replay.successorClaimId, recovered.predecessorClaimId);
+  assert.equal(replay.successorLeaseEpoch, 1);
+  assert.equal(state.ledger.sequence, sequence);
+});
+
+test("integrated lineage rejects a local projection outside the reviewed-to-integrated edge", () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
+  const unrelated = state.ledger.entries[0];
+  const authority = {
+    ...state.lane.authority,
+    claimDigest: unrelated.claimDigest,
+    claimLedgerRevision: unrelated.digest,
+    transitionCounter: unrelated.claimCore.transitionCounter,
+  };
+  state.lane = {
+    ...state.lane,
+    authority,
+    lease: { ...state.lane.lease, cloudAuthority: authority },
+    remoteLease: { ...state.lane.remoteLease, cloudAuthority: authority },
+  };
+  assert.throws(() => buildScopeExpansionLineageMigrationPlan({
+    lane: state.lane, actor: CLOUD_ACTOR, status: state.status, ledger: state.ledger,
+  }), /exact transition in the legacy claim lineage/u);
+});
+
 test("interrupted local-before-remote projection never attests migrated replay", async () => {
   for (const staleField of ["legacy", "ledgerDigest", "manifestDigest"]) {
     const state = fixture(), adapter = migrationAdapter(state), legacy = state.lane.remoteLease;
@@ -606,7 +704,7 @@ test("second-read remote owner drift blocks before successor claim", async () =>
     const planned = await runScopeExpansionLineageMigration({ mode: "plan", branch: BRANCH }, { adapter });
     const sequenceBefore = state.ledger.sequence;
     await assert.rejects(runScopeExpansionLineageMigration(executeRequest(planned.plan), { adapter }),
-      /exact standard epoch-2 continuation/u);
+      /exact standard successor or integrated replay continuation/u);
     assert.equal(state.ledger.sequence, sequenceBefore);
   }
 });

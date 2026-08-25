@@ -91,7 +91,7 @@ export async function runScopeExpansionLineageMigration(input = {}, { adapter } 
     planDigest: plan.planDigest,
     authorizationDigest: authorization.authorizationDigest,
   });
-  if (verified.state === "migrated") {
+  if (["migrated", "integrated-replay-recovered"].includes(verified.state)) {
     const migratedReceipt = verifyMigratedScopeExpansionLineage({
       plan,
       lane: observed.lane,
@@ -102,6 +102,7 @@ export async function runScopeExpansionLineageMigration(input = {}, { adapter } 
       outcome: "already-migrated",
       plan,
       successorClaimId: migratedReceipt.payload.successorClaimId,
+      successorLeaseEpoch: migratedReceipt.payload.successorLeaseEpoch,
       receipts: [authorizationReceipt, migratedReceipt],
     });
   }
@@ -119,17 +120,31 @@ export async function runScopeExpansionLineageMigration(input = {}, { adapter } 
     successorDeviceId: reclaimOwner.deviceId,
     ttlSeconds,
   };
+  const currentLegacyClaim = observed.status.claims.find(
+    claim => claim?.claimId === plan.legacyClaimId,
+  );
+  const integratedReplay = Boolean(
+    currentLegacyClaim?.integration && currentLegacyClaim.integrationReceiptDigest,
+  );
   const continued = await adapter.continueAuthority({ request, lineageAdmission: admission });
+  const expectedOutcome = integratedReplay ? "reclaimed-live-replay" : "reclaimed-live";
+  const expectedClaimId = integratedReplay ? plan.legacyClaimId : null;
+  const expectedLeaseEpoch = integratedReplay ? 1 : plan.successorLeaseEpoch;
   if (
     continued?.schema !== "agentic-cloud-authority-handoff-controller-result/v1"
-    || !["reclaimed-live", "reclaimed-live-replay"].includes(continued.outcome)
+    || continued.outcome !== expectedOutcome
     || continued.predecessorClaimId !== plan.legacyClaimId
-    || continued.successorLeaseEpoch !== plan.successorLeaseEpoch
+    || (expectedClaimId && continued.successorClaimId !== expectedClaimId)
+    || (!expectedClaimId && continued.successorClaimId === plan.legacyClaimId)
+    || continued.successorLeaseEpoch !== expectedLeaseEpoch
   ) {
-    throw new Error("Lineage migration did not produce the exact standard epoch-2 continuation.");
+    throw new Error("Lineage migration did not produce its exact standard successor or integrated replay continuation.");
   }
   const finalObserved = await readEvidence(adapter, plan.branch);
-  verifyScopeExpansionLineageMigrationPlan({ plan, ...finalObserved });
+  const finalVerified = verifyScopeExpansionLineageMigrationPlan({ plan, ...finalObserved });
+  if (finalVerified.state !== (integratedReplay ? "integrated-replay-recovered" : "migrated")) {
+    throw new Error("Lineage continuation did not converge to its exact verified terminal state.");
+  }
   const migratedReceipt = verifyMigratedScopeExpansionLineage({
     plan,
     lane: finalObserved.lane,
@@ -145,9 +160,10 @@ export async function runScopeExpansionLineageMigration(input = {}, { adapter } 
   });
   return finalizeResult({
     mode,
-    outcome: "migrated-live",
+    outcome: integratedReplay ? "integrated-replay-recovered" : "migrated-live",
     plan,
     successorClaimId: continued.successorClaimId,
+    successorLeaseEpoch: continued.successorLeaseEpoch,
     receipts: [authorizationReceipt, admission, continuationReceipt, migratedReceipt],
   });
 }
@@ -218,7 +234,9 @@ function readGitHubLedger({ ledgerRepository, ghText }) {
   return JSON.parse(Buffer.from(String(content).replaceAll("\n", ""), "base64").toString("utf8"));
 }
 
-function finalizeResult({ mode, outcome, plan, successorClaimId = null, receipts }) {
+function finalizeResult({
+  mode, outcome, plan, successorClaimId = null, successorLeaseEpoch = null, receipts,
+}) {
   const core = {
     schema: SCOPE_EXPANSION_LINEAGE_RESULT_SCHEMA,
     mode,
@@ -227,7 +245,7 @@ function finalizeResult({ mode, outcome, plan, successorClaimId = null, receipts
     planDigest: plan.planDigest,
     predecessorClaimId: plan.legacyClaimId,
     successorClaimId,
-    successorLeaseEpoch: successorClaimId ? plan.successorLeaseEpoch : null,
+    successorLeaseEpoch: successorClaimId ? successorLeaseEpoch ?? plan.successorLeaseEpoch : null,
     receipts,
   };
   return Object.freeze({ ...core, resultDigest: digestValue(core) });

@@ -104,8 +104,6 @@ export function scopeExpansionLineageAdmissionMatches({ admission, claim, lane, 
       && claim.expiresAt === normalized.expiresAt
       && lane?.authority?.claimId === claim.claimId
       && lane.authority.leaseEpoch === 1
-      && lane.authority.claimDigest === claim.fenceRevision
-      && lane.authority.claimLedgerRevision === claim.transitionDigest
       && digestValue(lane.authority) === normalized.localAuthorityDigest
       && status?.ledgerRevision === normalized.ledgerRevision
       && status?.ledgerDigest === normalized.ledgerDigest
@@ -125,11 +123,17 @@ export function verifyMigratedScopeExpansionLineage({ plan, lane, status }) {
   requireStatus(status);
   const authority = lane?.authority;
   const claim = uniqueClaim(status, authority?.claimId, "migrated successor claim");
-  const exact = (
-    authority?.claimId !== normalized.legacyClaimId
-    && authority?.leaseEpoch === normalized.successorLeaseEpoch
-    && claim.predecessorClaimId === normalized.legacyClaimId
-    && claim.leaseEpoch === normalized.successorLeaseEpoch
+  const integratedReplay = authority?.claimId === normalized.legacyClaimId;
+  const projectionMatchesClaim = integratedReplay
+    ? authority?.state === "review_ready"
+    : authority?.claimDigest === claim.fenceRevision
+      && authority.claimLedgerRevision === claim.transitionDigest
+      && authority.operationReceiptDigest === claim.operationReceiptDigest
+      && authority.transitionCounter === claim.transitionCounter
+      && authority.expiresAt === claim.expiresAt;
+  const exactIdentity = (
+    authority?.leaseEpoch === (integratedReplay ? 1 : normalized.successorLeaseEpoch)
+    && claim.leaseEpoch === (integratedReplay ? 1 : normalized.successorLeaseEpoch)
     && claim.actorId === normalized.actorId
     && claim.repositoryId === normalized.repositoryId
     && claim.workItemId === normalized.workItemId
@@ -138,18 +142,21 @@ export function verifyMigratedScopeExpansionLineage({ plan, lane, status }) {
     && claim.writeSetDigest === normalized.writeSetDigest
     && sameWriteSet(claim.declaredWriteScope, normalized.declaredWriteSet)
     && claim.reviewRequestId === normalized.reviewRequestId
-    && REVIEW_STATES.has(claim.state)
-    && authority.claimDigest === claim.fenceRevision
-    && authority.claimLedgerRevision === claim.transitionDigest
-    && authority.operationReceiptDigest === claim.operationReceiptDigest
-    && authority.transitionCounter === claim.transitionCounter
-    && authority.expiresAt === claim.expiresAt
+    && (integratedReplay
+      ? claim.state === "integrated-preserved" && claim.integration && claim.integrationReceiptDigest
+      : REVIEW_STATES.has(claim.state))
+    && projectionMatchesClaim
     && authority.reviewRequestId === claim.reviewRequestId
     && laneExact(lane, normalized, authority.claimId)
   );
-  if (!exact) throw new Error("Migrated successor did not preserve the exact standard epoch-2 identity.");
+  const exactLineage = integratedReplay
+    ? claim.predecessorClaimId === normalized.sourceClaimId
+    : claim.predecessorClaimId === normalized.legacyClaimId;
+  if (!exactIdentity || !exactLineage) {
+    throw new Error("Continued lineage did not preserve its exact standard successor or integrated replay identity.");
+  }
   rejectCompetingClaims(status, normalized, new Set([normalized.legacyClaimId, claim.claimId]));
-  return buildReceipt("migrated", {
+  return buildReceipt(integratedReplay ? "integrated-replay-recovered" : "migrated", {
     planDigest: normalized.planDigest,
     predecessorClaimId: normalized.legacyClaimId,
     successorClaimId: claim.claimId,
@@ -202,10 +209,15 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
   const anchor = expectedPlan
     ? targetEntries.find(entry => entry.digest === expectedPlan.legacyTransitionDigest)
     : targetEntries.at(-1);
-  const legacyClaim = statusMatches.length === 1 ? statusMatches[0] : claimFromEntry(anchor, genesis);
+  const legacyClaim = expectedPlan
+    ? claimFromEntry(anchor, genesis)
+    : statusMatches.length === 1 ? statusMatches[0] : claimFromEntry(anchor, genesis);
   if (!genesis || !anchor || statusMatches.length > 1
     || targetEntries.filter(entry => entry.action === "claim").length !== 1) {
     throw new Error("Legacy scope-expansion claim requires one exact ledger identity origin.");
+  }
+  if (localClaimId === legacyClaimId) {
+    validateLocalProjectionJoin({ lane, targetEntries, anchor, legacyClaimId });
   }
   const sourceClaimId = requiredDigest(genesis.claimCore?.predecessorClaimId, "source claim ID");
   const sourceEntries = entriesFor(ledger, sourceClaimId);
@@ -271,14 +283,65 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
   }
   const successor = findStandardSuccessor(status, plan);
   rejectCompetingClaims(status, plan, new Set([legacyClaimId, ...(successor ? [successor.claimId] : [])]));
-  const state = localClaimId === legacyClaimId ? "legacy" : "migrated";
+  const currentLegacyClaim = statusMatches.length === 1 ? statusMatches[0] : null;
+  const integratedReplayRecovered = Boolean(
+    expectedPlan
+    && localClaimId === legacyClaimId
+    && currentLegacyClaim?.integration
+    && currentLegacyClaim.integrationReceiptDigest
+    && currentLegacyClaim.transitionDigest !== plan.legacyTransitionDigest
+  );
+  const state = integratedReplayRecovered
+    ? "integrated-replay-recovered"
+    : localClaimId === legacyClaimId ? "legacy" : "migrated";
   if (state === "legacy" && !laneExact(lane, plan, legacyClaimId)) {
     throw new Error("Legacy lane projection drifted from its migration plan.");
   }
   if (state === "migrated" && (!successor || successor.claimId !== localClaimId || !laneExact(lane, plan, localClaimId))) {
     throw new Error("Local projection names no exact standard migration successor.");
   }
-  return freezeVerified({ plan, state, legacyClaim, successor }, VERIFIED_LINEAGES);
+  if (state === "integrated-replay-recovered" && !laneExact(lane, plan, legacyClaimId)) {
+    throw new Error("Recovered integrated replay projection drifted from its migration plan.");
+  }
+  return freezeVerified({
+    plan,
+    state,
+    legacyClaim,
+    successor,
+    continuationMode: anchor.action === "integrate"
+      ? "integrated-replay" : "standard-successor",
+  }, VERIFIED_LINEAGES);
+}
+
+function validateLocalProjectionJoin({ lane, targetEntries, anchor, legacyClaimId }) {
+  const authority = lane?.authority;
+  const localEntry = targetEntries.find(entry => entry.digest === authority?.claimLedgerRevision);
+  if (!localEntry || localEntry.claimId !== legacyClaimId
+    || localEntry.claimDigest !== authority.claimDigest
+    || localEntry.claimCore?.transitionCounter !== authority.transitionCounter
+    || localEntry.claimCore?.leaseEpoch !== 1) {
+    throw new Error("Local authority is not an exact transition in the legacy claim lineage.");
+  }
+  if (anchor.action !== "integrate") return;
+  if (authority.state === "review_ready") {
+    const localIndex = targetEntries.indexOf(localEntry);
+    const anchorIndex = targetEntries.indexOf(anchor);
+    if (localEntry.action !== "continue" || localEntry.claimCore?.state !== "reviewed"
+      || localIndex + 1 !== anchorIndex
+      || anchor.claimCore?.transitionCounter !== localEntry.claimCore.transitionCounter + 1
+      || anchor.claimCore?.reviewRequestId !== localEntry.claimCore.reviewRequestId
+      || anchor.claimCore?.laneRevision !== localEntry.claimCore.laneRevision
+      || anchor.claimCore?.evidenceDigest !== localEntry.claimCore.evidenceDigest) {
+      throw new Error("Integrated lineage is not the exact child of the local reviewed projection.");
+    }
+    return;
+  }
+  if (authority.state !== "delivery_authorized"
+    || localEntry.sequence <= anchor.sequence
+    || localEntry.claimCore?.integrationReceiptDigest !== anchor.claimCore?.integrationReceiptDigest
+    || digestValue(localEntry.claimCore?.integration) !== digestValue(anchor.claimCore?.integration)) {
+    throw new Error("Integrated replay recovery does not descend from the authorized integration transition.");
+  }
 }
 
 function validateHistoricalShape({

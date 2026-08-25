@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5131,
-  "headDigest": "bacd63ac1b849bed6497afe7d634ba6930e1fb7acb2617ee2702c59f7b7dee4f",
+  "sequence": 5132,
+  "headDigest": "f8848186811f1ba5f43ec457686ab3171952dcb994a12dc53c09f31ec2a70313",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -259460,6 +259460,47 @@
       },
       "claimDigest": "b370040387b6342d8b56c19e95eef091196cf4efa5ea6db405012cf7e1339c77",
       "digest": "bacd63ac1b849bed6497afe7d634ba6930e1fb7acb2617ee2702c59f7b7dee4f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5132,
+      "parentDigest": "bacd63ac1b849bed6497afe7d634ba6930e1fb7acb2617ee2702c59f7b7dee4f",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1d4480676d4cf06c3f9d72c65c08bf2b75017bee0fdd3c89caa6a64a569691e9",
+      "idempotencyKey": "8cf81d4818ae944932a1ddf14f100e71e3f411c1999d77b7e7820fe445c1c511",
+      "requestDigest": "2a8d2a65ccd987407191f4b1bebfec273eef5ef2ad1710ddc6b070d8c8bc250d",
+      "evaluationTime": "2026-08-25T06:53:20.000Z",
+      "claimCore": {
+        "claimId": "1d4480676d4cf06c3f9d72c65c08bf2b75017bee0fdd3c89caa6a64a569691e9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:b324beb903a619f465ba3161a8bc61f96f10136455c399f5e74561105437487e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c0a2c62b48b6e9ba7ef4a8edf56c29f6d12ab45520a77800fc5be4475b82a5d9",
+        "canonicalBaseRevision": "9ab88ca527acbff239eb29237b373c25ad10b4b1",
+        "declaredWriteScope": [
+          "path:__tests__/expired-committed-scope-expansion.test.mjs",
+          "path:docs/EXPIRED-COMMITTED-SCOPE-EXPANSION.md",
+          "path:scripts/expired-committed-scope-expansion-repository-adapter.mjs",
+          "semantic:expired-scope-expansion-local-cas"
+        ],
+        "writeSetDigest": "1a742ff6dcb5a1bddf05dad3b1b94b7f78bfc33493020fdec19e1fbe807062e1",
+        "laneRevision": "9ab88ca527acbff239eb29237b373c25ad10b4b1",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-25T08:53:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "56914202326a4cb63e85afca602912951623f0f42b88bb34f2d6dabc5732b229",
+      "digest": "f8848186811f1ba5f43ec457686ab3171952dcb994a12dc53c09f31ec2a70313"
     }
   ]
 }

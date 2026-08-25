@@ -47,7 +47,7 @@ export function createLostCapabilityOwnerRecoveryRepositoryAdapter(options = {},
     if (matches.length !== 1) throw new Error("Owner recovery requires one immutable live successor record.");
     return matches[0];
   }
-  function frame() {
+  function frame({ plan = null, allowTarget = false } = {}) {
     const record = assertRegisteredWorktree({ cwd: repository,
       porcelain: git(["worktree", "list", "--porcelain", "-z"]) });
     if (realpathSync(record.path) !== repository || record.branch !== `refs/heads/${branch}`) {
@@ -61,12 +61,24 @@ export function createLostCapabilityOwnerRecoveryRepositoryAdapter(options = {},
     const headSha = sha(git(["rev-parse", "HEAD"]), "HEAD");
     const remote = git(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]).split(/\s+/u)[0];
     if (headSha !== value.reviewHeadSha || remote !== headSha) throw new Error("Owner recovery source bytes drifted.");
+    const replacement = projectTaskAuthorityCapability(readTaskAuthorityCapability(capabilityPath));
+    const transitionKind = ownerRecoveryTaskTransitionKind({
+      currentBinding: value.taskAuthority,
+      replacement,
+      plan,
+      allowTarget,
+    });
+    if (!transitionKind) throw new Error("Owner recovery requires one distinct next-generation capability.");
     const sourceJournal = readReviewedTerminalHandoffSourceJournal({ commonDirectory: common, branch });
     const request = pull(value);
     const files = (request.files || []).map(item => item.path).sort();
     const marker = parseWriterLeasePullRequestBody(request.body);
     if (request.state !== "OPEN" || request.isDraft || request.headRefName !== branch
-      || request.headRefOid !== headSha || digestValue(marker) !== digestValue(projectWriterLeasePullRequestMarker(value))) {
+      || request.headRefOid !== headSha || !ownerRecoveryPullRequestMarkerJoinsLease({
+        marker,
+        lease: value,
+        sourceBinding: transitionKind === "target" ? plan.evidence.sourceBinding : null,
+      })) {
       throw new Error("Owner recovery pull request no longer joins the source lease.");
     }
     const manifest = normalizeScopeExpansionTargetManifest(JSON.parse(readFileSync(manifestPath, "utf8")),
@@ -76,11 +88,6 @@ export function createLostCapabilityOwnerRecoveryRepositoryAdapter(options = {},
     if (!files.every(item => scopeCoversPath(manifest.declaredWriteSet, item))
       || JSON.stringify(additions) !== JSON.stringify(missing.map(item => `path:${item}`).sort())) {
       throw new Error("Owner recovery manifest must add exactly the uncovered pull-request paths.");
-    }
-    const replacement = projectTaskAuthorityCapability(readTaskAuthorityCapability(capabilityPath));
-    if (replacement.generation !== value.taskAuthority.generation + 1
-      || replacement.authoritySubjectId === value.taskAuthority.authoritySubjectId) {
-      throw new Error("Owner recovery requires one distinct next-generation capability.");
     }
     return { value, headSha, sourceJournal, claim: sourceClaim(value, sourceJournal), request, files,
       missing, manifest, replacement };
@@ -168,7 +175,7 @@ export function createLostCapabilityOwnerRecoveryRepositoryAdapter(options = {},
   });
 
   function assertStable(plan, { allowTarget = false } = {}) {
-    const current = frame();
+    const current = frame({ plan, allowTarget });
     const source = writerLeaseDigest(current.value) === plan.evidence.sourceLeaseDigest;
     const target = allowTarget && current.value.taskAuthority.transitionPlanDigest === plan.planDigest
       && current.value.taskAuthority.authoritySubjectId === plan.evidence.targetCapability.authoritySubjectId;
@@ -191,6 +198,33 @@ export function createLostCapabilityOwnerRecoveryRepositoryAdapter(options = {},
       authorizationReceiptDigest: authorization.receiptDigest, replayed };
   }
   function journalFile(digest) { return path.join(journalRoot, `${digest}.json`); }
+}
+
+export function ownerRecoveryTaskTransitionKind({ currentBinding, replacement, plan = null,
+  allowTarget = false }) {
+  if (replacement.generation === currentBinding.generation + 1
+    && replacement.authoritySubjectId !== currentBinding.authoritySubjectId) return "source";
+  const target = allowTarget && plan
+    && currentBinding.bindingMode === "handoff"
+    && currentBinding.transitionPlanDigest === plan.planDigest
+    && currentBinding.priorBindingDigest === plan.evidence.sourceBinding.bindingDigest
+    && capabilityMatchesBinding(replacement, currentBinding);
+  return target ? "target" : null;
+}
+
+export function ownerRecoveryPullRequestMarkerJoinsLease({ marker, lease, sourceBinding = null }) {
+  const observed = digestValue(marker);
+  const candidates = [projectWriterLeasePullRequestMarker(lease)];
+  if (sourceBinding) candidates.push(projectWriterLeasePullRequestMarker({ ...lease, taskAuthority: sourceBinding }));
+  return candidates.some(candidate => digestValue(candidate) === observed);
+}
+
+function capabilityMatchesBinding(capability, binding) {
+  return capability.authoritySubjectId === binding.authoritySubjectId
+    && capability.proofAdapterId === binding.proofAdapterId
+    && capability.generation === binding.generation
+    && capability.publicKey === binding.publicKey
+    && capability.publicKeyDigest === binding.publicKeyDigest;
 }
 
 function remainderDigest(body) { return digestValue(String(body || "").replace(/<!--\s*agentic-writer-lease\/v2\s+\{.*?\}\s*-->/su, "").trim()); }

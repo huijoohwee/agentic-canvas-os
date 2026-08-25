@@ -25,7 +25,10 @@ Execution requires the planner's exact authorization. It persists an externalize
 journal before mutation, replaces only the task binding through one writer-registry CAS, verifies
 proof from the replacement capability, and projects only the PR writer marker. Source bytes, Git
 refs, cloud claims, authored PR text, merge, deployment, and cleanup are forbidden. Replay accepts
-only the exact already-projected target binding and receipt.
+only the exact already-projected target binding and receipt. During a journaled `binding-projected`
+replay, the adapter accepts either the exact authorized source marker or the exact target marker;
+all unrelated markers remain fenced. This bounded two-marker window closes when the existing
+journal projects and verifies the target marker.
 
 ```sh
 node scripts/reviewed-scope-expansion-lost-capability-owner-recovery.mjs plan \

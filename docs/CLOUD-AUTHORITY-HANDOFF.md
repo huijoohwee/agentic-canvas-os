@@ -174,11 +174,18 @@ process-local authorization and admission bound to the exact reclaim execution
 intent, current claim transition, local authority, and ledger revision. Their
 identity lives only in module-private weak registries; serialization, property
 copying, and symbol reflection cannot reconstruct either capability.
-The existing handoff controller creates a normal epoch-2 successor, retires the
-historical claim through the standard root operation, restores the unchanged
-review projection, and persists it through repository-owned APIs. A rerun
-verifies and returns the same successor as `already-migrated`; it never creates
-epoch 3 for the same plan.
+For a reviewed historical claim, the existing handoff controller creates a
+normal epoch-2 successor, retires the historical claim through the standard
+root operation, restores the unchanged review projection, and persists it
+through repository-owned APIs. When the authorized plan instead ends at the
+exact integrated child of the local reviewed transition, the controller uses
+the already-validated predecessor capability to recover that same claim as
+epoch 1. It does not mint a successor or replace the immutable integration
+receipt. Post-recovery verification keeps the exact local and remote reviewed
+projection as historical evidence, requires it to be the integrated
+transition's immediate parent, and proves the current cloud claim preserves
+the immutable integration evidence. A rerun returns `already-migrated` for the
+same epoch-1 claim or epoch-2 successor; it never creates an extra epoch.
 
 This migration is reclaim-only. The execution session, successor session, and
 successor device must equal the exact preserved lease session and device before

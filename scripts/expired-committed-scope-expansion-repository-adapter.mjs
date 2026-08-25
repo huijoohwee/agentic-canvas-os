@@ -111,17 +111,12 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
   async function execute({ authorization }) {
     const captured = capturePlan();
     const plan = captured.plan;
-    let intent = captured.intent;
-    if (!intent) {
-      authorizeExpiredCommittedScopeExpansion(plan, authorization);
-      intent = beginExpiredCommittedScopeExpansionIntent({
-        store,
-        branch: plan.sourceBranch,
-        expectedLeaseDigest: plan.sourceLeaseDigest,
-        expectedClaimId: plan.sourceClaimId,
-        plan,
-      }).intent;
-    }
+    let intent = initializeExpiredCommittedScopeExpansionIntent({
+      intent: captured.intent,
+      plan,
+      authorization,
+      store,
+    });
     requireIntent(intent, plan);
 
     if (!atLeast(intent.status, "waiting-successor")) {
@@ -405,6 +400,24 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
   }
 
   return Object.freeze({ capturePlan, execute });
+}
+
+export function initializeExpiredCommittedScopeExpansionIntent({
+  intent,
+  plan,
+  authorization,
+  store,
+  begin = beginExpiredCommittedScopeExpansionIntent,
+}) {
+  if (intent) return intent;
+  authorizeExpiredCommittedScopeExpansion(plan, authorization);
+  return begin({
+    store,
+    branch: plan.sourceBranch,
+    expectedLeaseDigest: plan.sourceLeaseDigest,
+    expectedClaimId: plan.sourceClaimId,
+    plan,
+  });
 }
 
 function successorAdmission({ sourceAdmission, plan, authority }) {

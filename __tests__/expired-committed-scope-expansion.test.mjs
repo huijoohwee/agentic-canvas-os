@@ -7,6 +7,8 @@ import {
   normalizeExpiredCommittedScopeExpansionPlan,
 } from "../scripts/expired-committed-scope-expansion-contract.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { initializeExpiredCommittedScopeExpansionIntent }
+  from "../scripts/expired-committed-scope-expansion-repository-adapter.mjs";
 
 const sourceBaseSha = "1".repeat(40);
 const protectedMainSha = "2".repeat(40);
@@ -77,6 +79,37 @@ test("rejects live local or cloud authority", () => {
     }),
     /dormant expired/u,
   );
+});
+
+test("uses the newly persisted intent directly before the first cloud mutation", () => {
+  const plan = buildExpiredCommittedScopeExpansionPlan(fixture());
+  const persistedIntent = {
+    status: "intent",
+    planDigest: plan.planDigest,
+    sourceLeaseDigest: plan.sourceLeaseDigest,
+    sourceClaimId: plan.sourceClaimId,
+  };
+  let calls = 0;
+  const initialized = initializeExpiredCommittedScopeExpansionIntent({
+    intent: null,
+    plan,
+    authorization: `authorize expired-committed-scope-expansion ${plan.planDigest}`,
+    store: {},
+    begin: options => {
+      calls += 1;
+      assert.equal(options.plan, plan);
+      return persistedIntent;
+    },
+  });
+  assert.equal(initialized, persistedIntent);
+  assert.equal(calls, 1);
+  assert.equal(initializeExpiredCommittedScopeExpansionIntent({
+    intent: persistedIntent,
+    plan,
+    authorization: "unused-on-replay",
+    store: {},
+    begin: () => assert.fail("replay must not persist a second intent"),
+  }), persistedIntent);
 });
 
 function fixture() {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5384,
-  "headDigest": "6cbeb550064a801a2b7b665d23d9d1c1c4eaa3bb1071b006fd45ca9741844c88",
+  "sequence": 5385,
+  "headDigest": "cd7f1328f8994d7b28516f94ef5e70119b3606006046f762bd3e95d316e8c657",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -273100,6 +273100,47 @@
       },
       "claimDigest": "cfaa1b4a2bc4ba8cdef856edb5d7c76bf238c13ef4656c3d883195d9c3d1c66b",
       "digest": "6cbeb550064a801a2b7b665d23d9d1c1c4eaa3bb1071b006fd45ca9741844c88"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5385,
+      "parentDigest": "6cbeb550064a801a2b7b665d23d9d1c1c4eaa3bb1071b006fd45ca9741844c88",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d51f263870fb8635bc7ded37424873c4163e68b4a4698acf1747d68aa0349969",
+      "idempotencyKey": "d70c9954133da048acf3717a8191a42f9917b5a11380d40ff6e728b9d0fe4c20",
+      "requestDigest": "7762a541c4ff5139654c44f3b58faa68a55983f0e1cb2916e3443b24fe6784d5",
+      "evaluationTime": "2026-08-25T21:08:47.000Z",
+      "claimCore": {
+        "claimId": "d51f263870fb8635bc7ded37424873c4163e68b4a4698acf1747d68aa0349969",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:6e5fbba3c30eca4094e80368fe56bb3183371ab16d3e7d78d199c0d5ee648dfa",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:12daf68773baa05ea58a3916a32e5deb2f6be91cddd2d410d9e3f9eb56b18c51",
+        "canonicalBaseRevision": "afe785e88ca88659d8763a3dc9b5007990c7f159",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-scope-expansion-lineage-migration.mjs",
+          "semantic:scope-expansion-lineage-migration-ledger-buffer-defect-repair"
+        ],
+        "writeSetDigest": "8952d5f5f6cbd2ca5e04e426164c89fd4f477eec8e43d6ead75d12eb3ebe2fd5",
+        "laneRevision": "12c50a7e48fce0d5b5a7106a9067d1b304198d73",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-25T23:08:14.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA_slPw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d4fa5b45237279cad34ac1e2f45b2664bcda666a8e62dc45593d1f6b64dade0c",
+      "digest": "cd7f1328f8994d7b28516f94ef5e70119b3606006046f762bd3e95d316e8c657"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5073,
-  "headDigest": "9b5d50004a5df247749abcd5127e596025120e818967bb1434dadb7e75d5a89e",
+  "sequence": 5074,
+  "headDigest": "79544f7fbf18e6e3de93b0b117eb76cb9c0485abacf18bfb6855ccd33ae44777",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -255900,6 +255900,51 @@
       },
       "claimDigest": "f27588c017777d415b3fe7c6d5e01f659c896e40f62320d8a606222f6176750a",
       "digest": "9b5d50004a5df247749abcd5127e596025120e818967bb1434dadb7e75d5a89e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5074,
+      "parentDigest": "9b5d50004a5df247749abcd5127e596025120e818967bb1434dadb7e75d5a89e",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d11d29c98727b3449b0b16c62a905e28520e5020018af6143480ad9e881c08b2",
+      "idempotencyKey": "5cb2ad9d3f16bb444c4773e38cd09a359eafbaa57d51e39fea859670d0ef7101",
+      "requestDigest": "6d74deff06fc7ed6ac5d67e6706548da48946f85f640f76e75d9918b8b79bc24",
+      "evaluationTime": "2026-08-25T00:56:30.000Z",
+      "claimCore": {
+        "claimId": "d11d29c98727b3449b0b16c62a905e28520e5020018af6143480ad9e881c08b2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:612126dd2d0de2405d3b8d04f254135f179ced7119b9051cf57147be55502769",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2c5d0237ae0874e03fb1f5dd19a91fab3c77fa1890da6df3c778c49de6ce3873",
+        "canonicalBaseRevision": "e7dfbe442dd554e986daec28c1cd891237da9d1e",
+        "declaredWriteScope": [
+          "path:__tests__/terminal-handoff-owned-dirt-successor-recovery.test.mjs",
+          "path:docs/TERMINAL-HANDOFF-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-contract.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-controller.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-evidence.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery.mjs",
+          "semantic:terminal-handoff-owned-dirt-successor-recovery"
+        ],
+        "writeSetDigest": "ee12fd44bb160755af70d46bfd3194e24f48bebe10fa108460a59bdf885b7e4c",
+        "laneRevision": "0d5db39c51261f98a6218a216554d5e64287eabf",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-25T02:33:06.000Z",
+        "evidenceDigest": "229e4d90cef400809cfef61b9624c70afd7f608de2c9b4e7af1d7d9b483e6b69",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABA30dOw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e3369464d600a19b19d8b8ce32bbb6a4aab1def982962a1723d23ebfbc66a223",
+      "digest": "79544f7fbf18e6e3de93b0b117eb76cb9c0485abacf18bfb6855ccd33ae44777"
     }
   ]
 }

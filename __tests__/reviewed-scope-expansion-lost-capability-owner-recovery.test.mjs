@@ -7,6 +7,11 @@ import { authorizeLostCapabilityOwnerRecovery, buildLostCapabilityOwnerRecoveryP
   from "../scripts/reviewed-scope-expansion-lost-capability-owner-recovery-contract.mjs";
 import { EVIDENCE_SCHEMA, sealLostCapabilityOwnerRecoveryEvidence }
   from "../scripts/reviewed-scope-expansion-lost-capability-owner-recovery-evidence.mjs";
+import { ownerRecoveryPullRequestMarkerJoinsLease, ownerRecoveryTaskTransitionKind }
+  from "../scripts/reviewed-scope-expansion-lost-capability-owner-recovery-repository-adapter.mjs";
+import { createTaskAuthorityBinding, createTaskAuthorityCapability, projectTaskAuthorityCapability }
+  from "../scripts/task-bound-lane-authority-contract.mjs";
+import { projectWriterLeasePullRequestMarker } from "../scripts/writer-lease-lib.mjs";
 
 const digest = character => character.repeat(64);
 const sha = character => character.repeat(40);
@@ -64,4 +69,52 @@ test("replacement must advance exactly one generation and change subject", () =>
   value.targetCapabilityDigest = digestValue(value.targetCapability);
   delete value.evidenceDigest;
   assert.throws(() => sealLostCapabilityOwnerRecoveryEvidence(value), /replacement capability transition/u);
+});
+
+test("binding-projected replay accepts only the authorized source or target marker", () => {
+  const lease = { schema: "agentic-writer-lease/v2", status: "review_ready", epoch: 1,
+    sessionId: "session", device: "device", scope: "scope", branch: "agent/device/scope",
+    baseSha: sha("1"), fenceSha: sha("2"), autoDelivery: false, runtimeRequired: false,
+    heartbeatAt: "2026-08-25T00:00:00.000Z", expiresAt: "2026-08-25T00:00:00.000Z" };
+  const sourceCapability = createTaskAuthorityCapability({ generation: 1,
+    issuedAt: "2026-08-25T00:00:00.000Z" });
+  const sourceBinding = createTaskAuthorityBinding({ capability: sourceCapability, lease,
+    boundAt: "2026-08-25T00:00:00.000Z" });
+  const plan = { planDigest: digest("7"), evidence: { sourceBinding } };
+  const targetCapability = createTaskAuthorityCapability({ generation: 2,
+    issuedAt: "2026-08-25T00:00:00.000Z" });
+  const targetBinding = createTaskAuthorityBinding({ capability: targetCapability,
+    lease: { ...lease, taskAuthority: sourceBinding }, bindingMode: "handoff",
+    boundAt: "2026-08-25T00:00:01.000Z", transitionPlanDigest: plan.planDigest,
+    priorBindingDigest: sourceBinding.bindingDigest });
+  const targetLease = { ...lease, taskAuthority: targetBinding };
+  assert.equal(ownerRecoveryTaskTransitionKind({ currentBinding: targetBinding,
+    replacement: projectTaskAuthorityCapability(targetCapability), plan, allowTarget: true }), "target");
+  assert.equal(ownerRecoveryTaskTransitionKind({ currentBinding: targetBinding,
+    replacement: projectTaskAuthorityCapability(targetCapability), plan, allowTarget: false }), null);
+  assert.equal(ownerRecoveryPullRequestMarkerJoinsLease({
+    marker: projectWriterLeasePullRequestMarker(targetLease),
+    lease: targetLease,
+    sourceBinding,
+  }), true);
+  assert.equal(ownerRecoveryPullRequestMarkerJoinsLease({
+    marker: projectWriterLeasePullRequestMarker({ ...lease, taskAuthority: sourceBinding }),
+    lease: targetLease,
+    sourceBinding,
+  }), true);
+  assert.equal(ownerRecoveryPullRequestMarkerJoinsLease({
+    marker: projectWriterLeasePullRequestMarker({ ...lease, taskAuthority: sourceBinding }),
+    lease: targetLease,
+  }), false);
+  const unrelatedCapability = createTaskAuthorityCapability({ generation: 2,
+    issuedAt: "2026-08-25T00:00:00.000Z" });
+  const unrelatedBinding = createTaskAuthorityBinding({ capability: unrelatedCapability,
+    lease: { ...lease, taskAuthority: sourceBinding }, bindingMode: "handoff",
+    boundAt: "2026-08-25T00:00:01.000Z", transitionPlanDigest: plan.planDigest,
+    priorBindingDigest: sourceBinding.bindingDigest });
+  assert.equal(ownerRecoveryPullRequestMarkerJoinsLease({
+    marker: projectWriterLeasePullRequestMarker({ ...lease, taskAuthority: unrelatedBinding }),
+    lease: targetLease,
+    sourceBinding,
+  }), false);
 });

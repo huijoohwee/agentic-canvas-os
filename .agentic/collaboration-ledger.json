@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5394,
-  "headDigest": "87aaf8a8ded5f76648c0bb42392df11ee1ede96ec793b0132fe11b0ae78230fc",
+  "sequence": 5395,
+  "headDigest": "0bb680df55e27b39038b33adc4599ff1961d8f1b9ccdd477db7afec67207d4bc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -273560,6 +273560,57 @@
       },
       "claimDigest": "8ce9478f8b06842e5dc111e91e81ba5442ff6da142d6b46cf963bb02fb115784",
       "digest": "87aaf8a8ded5f76648c0bb42392df11ee1ede96ec793b0132fe11b0ae78230fc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5395,
+      "parentDigest": "87aaf8a8ded5f76648c0bb42392df11ee1ede96ec793b0132fe11b0ae78230fc",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e6053d3aa52732bc17b5418de549177747355a85880ba952a69b884fb55d9428",
+      "idempotencyKey": "340ff500d0732176a70b40969664c6111ba5d18a1f0f85454c0267bed4336779",
+      "requestDigest": "fee8a22d4cb2d467daf7e52c4e1770f248295a364f8ac2ed992274b6f5612d04",
+      "evaluationTime": "2026-08-25T21:37:42.000Z",
+      "claimCore": {
+        "claimId": "e6053d3aa52732bc17b5418de549177747355a85880ba952a69b884fb55d9428",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:bf32f185a200d2eb304df0b01acc2bb547b77792b2d2550a3f56349ff2f189d6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f2f00b023fc5174e3ddd00e118e9cff65e301ca21a0e8f2cad05d7f3cf383969",
+        "canonicalBaseRevision": "777a80d26dc8f879d02da179922fef72a1b77283",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-scope-expansion-lineage-contract.mjs",
+          "semantic:reviewed-scope-expansion-lineage-migration-contract-defect-repair"
+        ],
+        "writeSetDigest": "d44ebf6b13b76f758a0dd30232f79d3b6ef453b85e050a98f84f82c0b0a9c6d1",
+        "laneRevision": "53b7fb2625c85a3b33d93305205066a8a9737167",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-25T22:06:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "53b7fb2625c85a3b33d93305205066a8a9737167",
+          "reviewRequestId": null,
+          "bytesDigest": "78dc96ea7c853b6523d6c9747c038dde963ab27690ebbad0138084ba1fe7a144",
+          "namedChecksDigest": "ae74cf7a1acd3ce9905f109223ac4f48839f8442f42fdf569e1684072cae0bd3",
+          "handoffEvidenceDigest": "3597d3b8593ec28a601a56cee834250b635f98f247a4299ccf0cfe1485b0bf8c",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-25T21:37:42.000Z"
+        }
+      },
+      "claimDigest": "fe442c0cf532a92c7324f2be19219e100631cac0887c45b4483d164467728ebf",
+      "digest": "0bb680df55e27b39038b33adc4599ff1961d8f1b9ccdd477db7afec67207d4bc"
     }
   ]
 }

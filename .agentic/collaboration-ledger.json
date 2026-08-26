@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5511,
-  "headDigest": "31b409d20fbd17920772f32ee539d00c491896928a4fa9edb528b4d4a245c738",
+  "sequence": 5512,
+  "headDigest": "9354c5b1341f588dc0d181daa67d7a02d429935f428df553521dbf7495f3e66d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -279734,6 +279734,59 @@
       },
       "claimDigest": "7f69d5ffdef69813d41999526c518d4f60c704faa305af8fe50267190dbee28f",
       "digest": "31b409d20fbd17920772f32ee539d00c491896928a4fa9edb528b4d4a245c738"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5512,
+      "parentDigest": "31b409d20fbd17920772f32ee539d00c491896928a4fa9edb528b4d4a245c738",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a0558af152bce1494a040506687f547ebbeb4117a180404aad82e2939f2a6bf7",
+      "idempotencyKey": "c54ddaf9219dde291522ea1719855c695ca97b50f150941a918b90a5ffd011a6",
+      "requestDigest": "a2c93681934f9edbb73457e9f213503f6df83e3569b2b772a27b61dec4296267",
+      "evaluationTime": "2026-08-26T23:10:31.000Z",
+      "claimCore": {
+        "claimId": "a0558af152bce1494a040506687f547ebbeb4117a180404aad82e2939f2a6bf7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2ce02d04f03c9648c4e3c7a43abe5cb7f12b38a1813ab9a0c3a8a1fe5d422b79",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ef1a5775a160bc803ca841bc8ad3d3f59188767fac37147309294c1d54356141",
+        "canonicalBaseRevision": "e3b95621aa0b3920722db159ba4a9a01f8d65b0f",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/helpers/legacy-dirty-lane-fixtures.mjs",
+          "path:__tests__/helpers/planned-dirty-admission-recovery-fixtures.mjs",
+          "path:__tests__/legacy-dirty-lane-adoption.test.mjs",
+          "path:__tests__/planned-dirty-admission-recovery.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-WRITE-SCOPE.md",
+          "path:docs/PLANNED-DIRTY-ADMISSION-RECOVERY.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:scripts/active-publish-prepared-base-rollover.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/planned-dirty-admission-recovery-cloud-frame.mjs",
+          "path:scripts/planned-dirty-admission-recovery-contract.mjs",
+          "path:scripts/planned-dirty-admission-recovery-evidence.mjs",
+          "path:scripts/planned-dirty-admission-recovery-repository-adapter.mjs",
+          "path:scripts/planned-dirty-admission-recovery-repository-support.mjs",
+          "semantic:planned-dirty-one-ahead-heartbeat-recovery"
+        ],
+        "writeSetDigest": "ef0d74ade4c3aaf52769ddd8320ea80314626ae686bdad3f22acdb9d4038c565",
+        "laneRevision": "359ffb745281bae9d6f0e5c363188b57c5925798",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-26T23:40:03.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ca3dd4daa2314f04ca66b6f15f3593b3f13d56a5b7274d318243c3d9bc61e653",
+      "digest": "9354c5b1341f588dc0d181daa67d7a02d429935f428df553521dbf7495f3e66d"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import test from "node:test";
 
 import { applyCloudTransition, createEmptyLedger, digestValue,
@@ -9,11 +10,15 @@ import { authorizeScopeExpansionLineageMigration, buildScopeExpansionLineageAdmi
   scopeExpansionLineageAdmissionMatches, verifyScopeExpansionLineageMigrationPlan,
 } from "../scripts/cloud-authority-scope-expansion-lineage-contract.mjs";
 import { createScopeExpansionLineageMigrationAdapter,
+  githubLedgerCommandOptions,
   runScopeExpansionLineageMigration } from "../scripts/cloud-authority-scope-expansion-lineage-migration.mjs";
+import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 
 const BASE = "a".repeat(40);
 const SOURCE_HEAD = "b".repeat(40);
 const REVIEW_HEAD = "c".repeat(40);
+const REFRESHED_HEAD = "7".repeat(40);
+const REFRESH_MAIN_PARENT = "8".repeat(40);
 const REVIEW = "github-pull-request:PR_scope_expansion";
 const BRANCH = "agent/legacy-device/game-os-core";
 const PLAN_RECEIPT = "d".repeat(64);
@@ -27,10 +32,15 @@ const TARGET_SCOPE = [
   "path:scripts/game-runtime.mjs",
   "semantic:game-os-core",
 ];
+const ACTIVE_DIRTY_LINEAGE = "active-dirty-scope-expansion";
+const REVIEWED_RECOVERY_LINEAGE = "reviewed-terminal-handoff-scope-expansion-recovery";
 const ACTOR = Object.freeze({
   actorId: "github-user:1",
   deviceId: "device:legacy-device",
   sessionId: "session:legacy-session",
+});
+const SUCCESSOR_ACTOR = Object.freeze({
+  ...ACTOR, sessionId: pseudonymousIdentifier("session", "successor-session"),
 });
 const REPOSITORY = Object.freeze({
   repositoryId: "github-repository:example",
@@ -52,9 +62,19 @@ const MIGRATION_TIMES = [
   "2026-08-09T01:03:00.000Z",
   "2026-08-09T01:04:00.000Z",
 ];
-const LIVE_EXPIRY = "2099-08-09T02:00:00.000Z";
+const LIVE_EXPIRY = "2026-08-09T02:00:00.000Z";
+const REPEATED_RECOVERY_EXPIRY = "2026-08-09T04:00:00.000Z";
+const REPEATED_RECOVERY_AT = "2026-08-09T03:10:00.000Z";
 
-function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
+function fixture({
+  retirementPlanDigest = PLAN_RECEIPT,
+  lineageVariant = ACTIVE_DIRTY_LINEAGE,
+  retirementVariant = lineageVariant,
+  integrated = false,
+} = {}) {
+  const reviewedRecovery = lineageVariant === REVIEWED_RECOVERY_LINEAGE;
+  const targetActor = reviewedRecovery ? SUCCESSOR_ACTOR : ACTOR;
+  const targetSessionId = reviewedRecovery ? "successor-session" : "legacy-session";
   let ledger = createEmptyLedger("github-repository:ledger");
   const source = mutate(ledger, "claim", T0, {
     workItemId: SOURCE_WORK_ITEM,
@@ -77,7 +97,7 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
   });
   ledger = sourceProjected.ledger;
   const target = mutate(ledger, "claim", T2, {
-    workItemId: TARGET_WORK_ITEM,
+    workItemId: reviewedRecovery ? SOURCE_WORK_ITEM : TARGET_WORK_ITEM,
     canonicalBaseRevision: BASE,
     declaredWriteScope: TARGET_SCOPE,
     laneRevision: SOURCE_HEAD,
@@ -85,7 +105,7 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
     leaseEpoch: 1,
     expiresAt: EXPIRED,
     idempotencyKey: "target-waiting",
-  });
+  }, targetActor);
   ledger = target.ledger;
   const retirementEvidence = {
     schema: "agentic-active-dirty-scope-expansion-cloud-evidence/v1",
@@ -96,6 +116,24 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
     sourceFenceSha: SOURCE_HEAD,
     targetWriteSetDigest: target.claim.writeSetDigest,
   };
+  const recoveryPhase = "source-retired";
+  const recoveryOperationKey = `${REVIEWED_RECOVERY_LINEAGE}:${recoveryPhase}:${digestValue({
+    planDigest: retirementPlanDigest, phase: recoveryPhase,
+  })}`;
+  const activeDirtyDigests = {
+    bytesDigest: digestValue({ ...retirementEvidence, kind: "bytes" }),
+    namedChecksDigest: digestValue({ ...retirementEvidence, kind: "checks" }),
+    handoffEvidenceDigest: digestValue({ ...retirementEvidence, kind: "handoff" }),
+  };
+  const reviewedRecoveryDigests = {
+    bytesDigest: digestValue({ operationKey: recoveryOperationKey, kind: "bytes" }),
+    namedChecksDigest: digestValue({ operationKey: recoveryOperationKey, kind: "checks" }),
+    handoffEvidenceDigest: digestValue({
+      operationKey: recoveryOperationKey, successor: target.claim.claimId,
+    }),
+  };
+  const retirementDigests = retirementVariant === REVIEWED_RECOVERY_LINEAGE
+    ? reviewedRecoveryDigests : activeDirtyDigests;
   const retired = mutate(ledger, "retire", T3, {
     claimId: sourceProjected.claim.claimId,
     expectedFenceRevision: sourceProjected.claim.fenceRevision,
@@ -103,9 +141,7 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
     reason: "superseded",
     finalRevision: SOURCE_HEAD,
     reviewRequestId: REVIEW,
-    bytesDigest: digestValue({ ...retirementEvidence, kind: "bytes" }),
-    namedChecksDigest: digestValue({ ...retirementEvidence, kind: "checks" }),
-    handoffEvidenceDigest: digestValue({ ...retirementEvidence, kind: "handoff" }),
+    ...retirementDigests,
     idempotencyKey: "source-retirement",
   });
   ledger = retired.ledger;
@@ -116,7 +152,7 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
     mode: "promote",
     expiresAt: EXPIRED,
     idempotencyKey: "target-promote",
-  });
+  }, targetActor);
   ledger = promoted.ledger;
   const projected = mutate(ledger, "continue", T5, {
     claimId: promoted.claim.claimId,
@@ -126,7 +162,7 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
     laneRevision: REVIEW_HEAD,
     reviewRequestId: REVIEW,
     idempotencyKey: "target-projection",
-  });
+  }, targetActor);
   ledger = projected.ledger;
   const reviewed = mutate(ledger, "continue", "2020-01-01T01:00:00.000Z", {
     claimId: projected.claim.claimId,
@@ -137,20 +173,41 @@ function fixture({ retirementPlanDigest = PLAN_RECEIPT } = {}) {
     reviewRequestId: REVIEW,
     focusedEvidenceDigest: FOCUSED_EVIDENCE,
     idempotencyKey: "target-review",
-  });
+  }, targetActor);
   ledger = reviewed.ledger;
 
-  const state = { ledger };
+  const state = { ledger, observedAt: OBSERVED_AT, integratedRecoveryCount: 0 };
   refreshStatus(state);
-  state.lane = legacyLane(state.status.claims.find(claim => claim.claimId === target.claim.claimId));
+  state.lane = legacyLane(
+    state.status.claims.find(claim => claim.claimId === target.claim.claimId),
+    targetSessionId,
+  );
+  if (integrated) {
+    const integratedResult = mutate(ledger, "integrate", "2020-01-01T01:10:00.000Z", {
+      claimId: reviewed.claim.claimId,
+      expectedFenceRevision: reviewed.claim.fenceRevision,
+      expectedTransitionCounter: reviewed.claim.transitionCounter,
+      candidateRevision: REVIEW_HEAD,
+      reviewRequestId: REVIEW,
+      focusedEvidenceDigest: FOCUSED_EVIDENCE,
+      dependencyClosureDigest: digestValue({ integration: "dependencies" }),
+      namedChecksDigest: digestValue({ integration: "checks" }),
+      handoffEvidenceDigest: digestValue({ integration: "handoff" }),
+      operatorDecisionDigest: digestValue({ integration: "operator" }),
+      integrationIntentDigest: digestValue({ integration: "intent" }),
+      idempotencyKey: "target-integrate",
+    }, targetActor);
+    state.ledger = integratedResult.ledger;
+    refreshStatus(state);
+  }
   return state;
 }
 
-function mutate(ledger, action, evaluationTime, request) {
+function mutate(ledger, action, evaluationTime, request, actor = ACTOR) {
   return applyCloudTransition({
     ledger,
     action,
-    actor: ACTOR,
+    actor,
     repository: REPOSITORY,
     evaluationTime,
     request: { ...request, expectedLedgerDigest: ledger.headDigest },
@@ -166,13 +223,13 @@ function refreshStatus(state) {
     repositoryId: REPOSITORY.repositoryId,
     ledgerRevision: revision(`ledger-${state.ledger.sequence}`),
     ledgerDigest: state.ledger.headDigest,
-    claims: listCurrentClaims(state.ledger, OBSERVED_AT, { repositoryId: REPOSITORY.repositoryId })
+    claims: listCurrentClaims(state.ledger, state.observedAt, { repositoryId: REPOSITORY.repositoryId })
       .map(projectClaim),
   };
 }
 
-function legacyLane(claim) {
-  const authority = authorityFromClaim(claim, "legacy-session");
+function legacyLane(claim, sessionId = "legacy-session") {
+  const authority = authorityFromClaim(claim, sessionId);
   const admission = {
     schema: "agentic-lane-admission-lease/v1",
     status: "admitted",
@@ -189,7 +246,7 @@ function legacyLane(claim) {
   const lease = {
     schema: "agentic-writer-lease/v2",
     status: "review_ready",
-    sessionId: "legacy-session",
+    sessionId,
     device: "legacy-device",
     scope: "game-os-core",
     branch: BRANCH,
@@ -230,7 +287,7 @@ function legacyLane(claim) {
       branch: BRANCH,
       baseSha: BASE,
       scope: "game-os-core",
-      sessionId: "legacy-session",
+      sessionId,
       device: "legacy-device",
       reviewHeadSha: REVIEW_HEAD,
       cloudAuthority: authority,
@@ -271,17 +328,32 @@ function authorityFromClaim(claim, sessionId) {
   };
 }
 
+function recoveredIntegratedAuthority(claim, sessionId) {
+  return {
+    ...authorityFromClaim(claim, sessionId),
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    transitionCounter: claim.transitionCounter,
+    expiresAt: claim.expiresAt,
+    state: "delivery_authorized",
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    integration: claim.integration,
+  };
+}
+
 function migrationAdapter(state, beforeContinue = () => {}) {
   return createScopeExpansionLineageMigrationAdapter({
     readLane: () => state.lane,
     readActor: () => CLOUD_ACTOR,
     readStatus: () => state.status,
     readLedger: () => state.ledger,
-    continueAuthority: ({ request, lineageAdmission }) => {
+    continueAuthority: async ({ request, lineageAdmission }) => {
       beforeContinue();
-      return continueExpiredReviewLaneAuthority(
+      state.lastContinued = await continueExpiredReviewLaneAuthority(
         request, { adapter: handoffAdapter(state), lineageAdmission },
       );
+      return state.lastContinued;
     },
   });
 }
@@ -370,6 +442,31 @@ function handoffAdapter(state) {
       };
       return { receiptDigest: digestValue({ projection: authority.claimId }) };
     },
+    recoverIntegratedAuthority: ({ integratedReplay }) => {
+      const claim = integratedReplay.claim;
+      const repeatedRecovery = state.integratedRecoveryCount > 0;
+      const result = mutate(state.ledger, "continue",
+        repeatedRecovery ? REPEATED_RECOVERY_AT : "2026-08-09T01:10:00.000Z", {
+        claimId: claim.claimId,
+        expectedFenceRevision: claim.fenceRevision,
+        expectedTransitionCounter: claim.transitionCounter,
+        mode: "recovery",
+        expiresAt: repeatedRecovery ? REPEATED_RECOVERY_EXPIRY : LIVE_EXPIRY,
+        recoveryEvidenceDigest: digestValue({ recovery: claim.claimId }),
+        deviceId: SUCCESSOR_ACTOR.deviceId,
+        sessionId: SUCCESSOR_ACTOR.sessionId,
+        idempotencyKey: `target-integrated-recovery-${claim.transitionCounter}`,
+      }, SUCCESSOR_ACTOR);
+      state.integratedRecoveryCount += 1;
+      state.ledger = result.ledger;
+      refreshStatus(state);
+      const recovered = state.status.claims.find(value => value.claimId === claim.claimId);
+      const authority = recoveredIntegratedAuthority(recovered, state.lane.lease.sessionId);
+      return {
+        authority,
+        convergenceEvidenceDigest: digestValue({ convergence: authority.claimLedgerRevision }),
+      };
+    },
   };
 }
 
@@ -425,6 +522,7 @@ test("plan proves the exact portable scope-expansion retirement chain", async ()
     branch: BRANCH,
   }, { adapter: migrationAdapter(state) });
   assert.equal(result.outcome, "planned");
+  assert.equal(result.plan.historicalVariant, ACTIVE_DIRTY_LINEAGE);
   assert.equal(result.plan.scopeExpansionPlanDigest, PLAN_RECEIPT);
   assert.equal(result.plan.legacyClaimId, state.lane.authority.claimId);
   assert.equal(result.plan.successorLeaseEpoch, 2);
@@ -434,6 +532,71 @@ test("plan proves the exact portable scope-expansion retirement chain", async ()
     status: state.status,
     ledger: state.ledger,
   }).planDigest, result.planDigest);
+});
+
+test("plan admits the exact reviewed scope-recovery lineage variant", () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE });
+  const plan = buildScopeExpansionLineageMigrationPlan({
+    lane: state.lane, actor: CLOUD_ACTOR, status: state.status, ledger: state.ledger,
+  });
+
+  assert.equal(plan.historicalVariant, REVIEWED_RECOVERY_LINEAGE);
+  assert.equal(plan.workItemId, plan.sourceWorkItemId);
+});
+
+test("plan content-binds an exact protected-main refresh between review and delivery heads", () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE });
+  const protectedMainRefresh = {
+    schema: "agentic-protected-main-refresh/v1",
+    deliveredHeadSha: REVIEW_HEAD,
+    refreshedHeadSha: REFRESHED_HEAD,
+    mainParentSha: REFRESH_MAIN_PARENT,
+  };
+  state.lane = {
+    ...state.lane,
+    refreshedHeadSha: REFRESHED_HEAD,
+    remoteHeadSha: REFRESHED_HEAD,
+    protectedMainRefresh,
+    pullRequest: { ...state.lane.pullRequest, headRefOid: REFRESHED_HEAD },
+  };
+  const plan = buildScopeExpansionLineageMigrationPlan({
+    lane: state.lane, actor: CLOUD_ACTOR, status: state.status, ledger: state.ledger,
+  });
+  assert.equal(plan.reviewedHeadSha, REVIEW_HEAD);
+  assert.equal(plan.deliveryHeadSha, REFRESHED_HEAD);
+  assert.deepEqual(plan.protectedMainRefresh, protectedMainRefresh);
+
+  state.lane.protectedMainRefresh = {
+    ...protectedMainRefresh, deliveredHeadSha: SOURCE_HEAD,
+  };
+  assert.throws(() => buildScopeExpansionLineageMigrationPlan({
+    lane: state.lane, actor: CLOUD_ACTOR, status: state.status, ledger: state.ledger,
+  }), /does not join/u);
+});
+
+test("mixed historical lineage identities and retirement receipts remain rejected", () => {
+  for (const [lineageVariant, retirementVariant] of [
+    [ACTIVE_DIRTY_LINEAGE, REVIEWED_RECOVERY_LINEAGE],
+    [REVIEWED_RECOVERY_LINEAGE, ACTIVE_DIRTY_LINEAGE],
+  ]) {
+    const state = fixture({ lineageVariant, retirementVariant });
+    assert.throws(() => buildScopeExpansionLineageMigrationPlan({
+      lane: state.lane, actor: CLOUD_ACTOR, status: state.status, ledger: state.ledger,
+    }), /retirement .* does not bind/u);
+  }
+});
+
+test("GitHub ledger reads retain provider responses larger than Node's default buffer", () => {
+  const outputBytes = 2 * 1024 * 1024;
+  const options = githubLedgerCommandOptions(process.cwd());
+  const output = execFileSync(process.execPath, [
+    "-e",
+    'process.stdout.write("x".repeat(Number(process.argv[1])))',
+    String(outputBytes),
+  ], options);
+
+  assert.equal(output.length, outputBytes);
+  assert.ok(options.maxBuffer > outputBytes);
 });
 
 test("execute uses the existing handoff controller and replays the standard epoch-2 successor", async () => {
@@ -448,6 +611,75 @@ test("execute uses the existing handoff controller and replays the standard epoc
   const replay = await runScopeExpansionLineageMigration(request, { adapter });
   assert.equal(replay.outcome, "already-migrated");
   assert.equal(replay.successorClaimId, migrated.successorClaimId);
+});
+
+test("integrated lineage recovery converges the same epoch-1 claim and replays idempotently", async () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
+  const adapter = migrationAdapter(state);
+  const planned = await runScopeExpansionLineageMigration(
+    { mode: "plan", branch: BRANCH }, { adapter },
+  );
+  const request = executeRequest(planned.plan, {
+    sessionId: "successor-session",
+    successorSessionId: "successor-session",
+  });
+  const recovered = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(recovered.outcome, "integrated-replay-recovered");
+  assert.equal(recovered.successorClaimId, recovered.predecessorClaimId);
+  assert.equal(recovered.successorLeaseEpoch, 1);
+  const sequence = state.ledger.sequence;
+  const replay = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(replay.outcome, "already-migrated");
+  assert.equal(replay.successorClaimId, recovered.predecessorClaimId);
+  assert.equal(replay.successorLeaseEpoch, 1);
+  assert.equal(state.ledger.sequence, sequence);
+});
+
+test("integrated lineage recovery converges again after the recovered claim expires", async () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
+  const adapter = migrationAdapter(state);
+  const planned = await runScopeExpansionLineageMigration(
+    { mode: "plan", branch: BRANCH }, { adapter },
+  );
+  const request = executeRequest(planned.plan, {
+    sessionId: "successor-session",
+    successorSessionId: "successor-session",
+  });
+  const first = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(first.outcome, "integrated-replay-recovered");
+
+  state.observedAt = "2026-08-09T03:00:00.000Z";
+  refreshStatus(state);
+  const dormant = state.status.claims.find(claim => claim.claimId === first.successorClaimId);
+  assert.equal(dormant.state, "dormant-preserved");
+  const sequence = state.ledger.sequence;
+
+  const repeated = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(repeated.outcome, "integrated-replay-recovered");
+  assert.equal(repeated.successorClaimId, first.successorClaimId);
+  assert.equal(repeated.successorLeaseEpoch, 1);
+  assert.equal(state.ledger.sequence, sequence + 1);
+  assert.equal(state.integratedRecoveryCount, 2);
+});
+
+test("integrated lineage rejects a local projection outside the reviewed-to-integrated edge", () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
+  const unrelated = state.ledger.entries[0];
+  const authority = {
+    ...state.lane.authority,
+    claimDigest: unrelated.claimDigest,
+    claimLedgerRevision: unrelated.digest,
+    transitionCounter: unrelated.claimCore.transitionCounter,
+  };
+  state.lane = {
+    ...state.lane,
+    authority,
+    lease: { ...state.lane.lease, cloudAuthority: authority },
+    remoteLease: { ...state.lane.remoteLease, cloudAuthority: authority },
+  };
+  assert.throws(() => buildScopeExpansionLineageMigrationPlan({
+    lane: state.lane, actor: CLOUD_ACTOR, status: state.status, ledger: state.ledger,
+  }), /exact transition in the legacy claim lineage/u);
 });
 
 test("interrupted local-before-remote projection never attests migrated replay", async () => {
@@ -504,7 +736,7 @@ test("second-read remote owner drift blocks before successor claim", async () =>
     const planned = await runScopeExpansionLineageMigration({ mode: "plan", branch: BRANCH }, { adapter });
     const sequenceBefore = state.ledger.sequence;
     await assert.rejects(runScopeExpansionLineageMigration(executeRequest(planned.plan), { adapter }),
-      /exact standard epoch-2 continuation/u);
+      /exact standard successor or integrated replay continuation/u);
     assert.equal(state.ledger.sequence, sequenceBefore);
   }
 });

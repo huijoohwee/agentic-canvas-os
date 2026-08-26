@@ -1,11 +1,13 @@
 // Responsibility: Bind reviewed-handoff scope repair to Git, GitHub, cloud, task proof, and lease CAS.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync, mkdirSync, readFileSync, realpathSync, renameSync,
 } from "node:fs";
 import path from "node:path";
 
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { proveLegacyReviewCanonicalDescendant }
+  from "./legacy-clean-committed-lane-bootstrap-adapter-lib.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import {
   bindAdmissionCloudAuthority, invokeRepositoryCloudAction,
@@ -43,6 +45,8 @@ export function createReviewedTerminalHandoffScopeExpansionRecoveryRepositoryAda
     maxBuffer: 64 * 1024 * 1024, ...settings,
   });
   const git = dependencies.gitText || (args => execute("git", args).trim());
+  const gitExitCode = dependencies.gitExitCode
+    || (args => spawnSync("git", args, { cwd: repository, stdio: "ignore" }).status);
   const gh = dependencies.ghText || (args => execute("gh", args).trim());
   const ghJson = dependencies.ghJson || (args => JSON.parse(execute("gh", args)));
   const invoke = dependencies.invoke || invokeRepositoryCloudAction;
@@ -202,6 +206,22 @@ export function createReviewedTerminalHandoffScopeExpansionRecoveryRepositoryAda
     },
     claimSuccessor(context) {
       const source = sourceValues(context);
+      const protectedMainSha = sha(remoteRefSha(git([
+        "ls-remote", "--heads", "origin", "refs/heads/main",
+      ])), "protected main");
+      execute("git", ["fetch", "--no-tags", "origin",
+        "+refs/heads/main:refs/remotes/origin/main"]);
+      if (sha(git(["rev-parse", "refs/remotes/origin/main"]), "fetched protected main")
+        !== protectedMainSha) {
+        throw new Error("Fetched protected main changed during scope-repair proof capture.");
+      }
+      const canonicalDescendantProof = captureScopeExpansionCanonicalDescendantProof({
+        sourceBaseSha: context.plan.evidence.sourceClaim.canonicalBaseRevision,
+        protectedMainSha,
+        declaredWriteSet: manifest(context.plan).declaredWriteSet,
+        gitText: git,
+        gitExitCode,
+      });
       const result = invoke({ action: "claim", ledgerRepository: readLease().cloudAuthority.ledgerRepository,
         request: { targetRepository: readLease().cloudAuthority.targetRepository,
           workItemId: context.plan.evidence.sourceClaim.workItemId,
@@ -209,6 +229,7 @@ export function createReviewedTerminalHandoffScopeExpansionRecoveryRepositoryAda
           headSha: context.plan.evidence.headSha,
           declaredWriteSet: manifest(context.plan).declaredWriteSet,
           predecessorClaimId: source.claimId, leaseEpoch: context.plan.targetCloudLeaseEpoch,
+          ...(canonicalDescendantProof ? { canonicalDescendantProof } : {}),
           ttlSeconds: context.plan.ttlSeconds, deviceId: readLease().device,
           sessionId: context.plan.operatorSessionId,
           idempotencyKey: `${context.plan.operation}:claim:${context.plan.planDigest}` }, environment });
@@ -444,6 +465,39 @@ export function buildScopeExpansionSourceRecoveryEvidenceDigest({
   });
 }
 
+export function captureScopeExpansionCanonicalDescendantProof({
+  sourceBaseSha,
+  protectedMainSha,
+  declaredWriteSet,
+  gitText,
+  gitExitCode,
+}) {
+  const source = sha(sourceBaseSha, "scope-recovery source base");
+  const target = sha(protectedMainSha, "scope-recovery protected main");
+  if (source === target) return null;
+  if (typeof gitText !== "function" || typeof gitExitCode !== "function") {
+    throw new Error("Scope-recovery historical-base Git evidence is unavailable.");
+  }
+  if (gitExitCode(["merge-base", "--is-ancestor", source, target]) !== 0) {
+    throw new Error("Scope-recovery source base is not an ancestor of protected main.");
+  }
+  const canonicalChangedPaths = String(gitText([
+    "diff", "--name-only", "--no-renames", "-z", source, target, "--",
+  ]) || "").split("\0").filter(Boolean);
+  const preservedChangedPaths = normalizeWriteSet(declaredWriteSet)
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
+  return proveLegacyReviewCanonicalDescendant({
+    sourceBaseSha: source,
+    targetBaseSha: target,
+    protectedMainSha: target,
+    canonicalChangedPaths,
+    preservedChangedPaths,
+    sourceIsAncestor: true,
+    targetIsProtectedAncestor: true,
+  });
+}
+
 function effect(kind, values) { const core = { schema: "agentic-reviewed-handoff-scope-repair-effect/v1", kind, ...values };
   return Object.freeze({ ...core, receiptDigest: values.receiptDigest || digestValue(core) }); }
 function resultFromInventory(inventory, claim) { return { schema: "agentic-cloud-collaboration-result/v1",
@@ -461,6 +515,7 @@ function externalPath(repository, value, label) { const target = realpathSync(pa
   if (!relative || (!relative.startsWith(`..${path.sep}`) && relative !== "..")) throw new Error(`${label} must be external.`);
   return target; }
 function requiredText(value, label) { const result = String(value ?? "").trim(); if (!result) throw new Error(`${label} is required.`); return result; }
+function remoteRefSha(value) { return requiredText(value, "remote ref").split(/\s+/u)[0]; }
 function requiredDigest(value, label) { const result = requiredText(value, label); if (!/^[0-9a-f]{64}$/u.test(result)) throw new Error(`${label} is invalid.`); return result; }
 function sha(value, label) { const result = requiredText(value, label); if (!/^[0-9a-f]{40}$/u.test(result)) throw new Error(`${label} is invalid.`); return result; }
 function positive(value, label) { if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${label} is invalid.`); return value; }

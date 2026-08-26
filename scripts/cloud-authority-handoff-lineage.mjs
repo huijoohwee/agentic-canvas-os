@@ -93,7 +93,7 @@ export function classifyIntegratedReplay({ request, lane, actor, status, predece
 
   const drifted = [];
   if (!integratedReplayClaimMatches({
-    claim, lane, actor, repositoryId: status.repositoryId,
+    claim, lane, predecessor,
   })) drifted.push(claim.claimId);
   const derivatives = status.claims.filter(
     candidate => candidate?.predecessorClaimId === lane.authority.claimId,
@@ -356,7 +356,7 @@ function predecessorReviewProjectionMatches({ claim, lane }) {
   );
 }
 
-function integratedReplayClaimMatches({ claim, lane, actor, repositoryId }) {
+function integratedReplayClaimMatches({ claim, lane, predecessor }) {
   const integration = claim?.integration;
   const integrationKeys = [
     "candidateRevision",
@@ -371,7 +371,9 @@ function integratedReplayClaimMatches({ claim, lane, actor, repositoryId }) {
   ];
   try {
     return Boolean(
-      predecessorImmutableIdentityMatches({ claim, lane, actor, repositoryId })
+      predecessor?.status === "ready"
+      && predecessor.claim === claim
+      && predecessor.candidate === claim
       && ["delivery_authorized", "parked"].includes(projectRootState(claim.state))
       && DIGEST_PATTERN.test(String(claim.integrationReceiptDigest || ""))
       && integration

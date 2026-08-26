@@ -1820,6 +1820,498 @@ test("active integration durably resumes every successor response-loss phase", (
   }
 });
 
+function prepareHistoricalActivePublishIntent(fixture, phase = "after-intent") {
+  assert.throws(() => fixture.integrate({
+    publishTask: () => { throw new Error("publish preceded prepared intent"); },
+  }), new RegExp(`simulated ${phase} response loss`, "u"));
+  const intent = structuredClone(fixture.lease.activePublishSuccessorIntent);
+  assert.equal(intent.schema, "agentic-active-publish-successor-intent/v1");
+  assert.equal(intent.targetCanonicalBaseSha, mainSha);
+  assert.equal(intent.targetHeadSha, fixture.rolloverHeadSha);
+  fixture.advancePreparedCanonicalBase();
+  return intent;
+}
+
+test("active integration rolls a source-only prepared intent across a disjoint protected advance", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { pullRequestBaseAfterAdvance: "historical" },
+  });
+  try {
+    const historicalIntent = prepareHistoricalActivePublishIntent(fixture);
+    const runCalls = fixture.calls.run.length;
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
+        assert.equal(fixture.lease.fenceSha, fixture.rolloverHeadSha);
+        assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+        throw new Error("stop after prepared-base rollover");
+      },
+    }), /stop after prepared-base rollover/u);
+
+    const rolledIntent = fixture.calls.cas[1].values.activePublishSuccessorIntent;
+    assert.equal(rolledIntent.schema, "agentic-active-publish-successor-intent/v2");
+    assert.deepEqual(rolledIntent.supersededIntent, historicalIntent);
+    assert.equal(rolledIntent.rolloverProof.sourceIntentDigest, historicalIntent.intentDigest);
+    assert.equal(rolledIntent.rolloverProof.historicalBaseSha, mainSha);
+    assert.equal(rolledIntent.rolloverProof.protectedBaseSha, fixture.rolloverBaseSha);
+    assert.equal(rolledIntent.rolloverProof.headSha, fixture.rolloverHeadSha);
+    assert.deepEqual(rolledIntent.rolloverProof.authoredPaths, ["scripts/runtime.mjs"]);
+    assert.deepEqual(rolledIntent.rolloverProof.protectedPaths, ["docs/protected-main.md"]);
+    assert.equal(rolledIntent.targetLeaseEpoch, 2);
+    assert.equal(fixture.calls.cas.length, 3);
+    assert.equal(fixture.calls.run.length, runCalls);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+    const rolloverCasIndex = fixture.calls.timeline.findIndex(item =>
+      item.kind === "cas" && item.intentSchema === "agentic-active-publish-successor-intent/v2");
+    const protectedSuccessorIndex = fixture.calls.timeline.findIndex(item =>
+      item.kind === "successor" && item.canonicalBaseSha === fixture.rolloverBaseSha);
+    assert.ok(rolloverCasIndex >= 0 && protectedSuccessorIndex > rolloverCasIndex);
+    assert.equal(fixture.calls.git.includes(
+      `merge-base --is-ancestor ${fixture.rolloverBaseSha} ${fixture.rolloverHeadSha}`,
+    ), false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration also rolls over when the provider already exposes the protected base", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-current-pr-base-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { pullRequestBaseAfterAdvance: "protected" },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after protected-base provider snapshot"); },
+    }), /stop after protected-base provider snapshot/u);
+    assert.equal(fixture.calls.cas[1].values.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration replays a durable rollover intent while the provider retains the historical base", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-historical-replay-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: {
+      loseCasResponse: true,
+      pullRequestBaseAfterAdvance: "historical",
+    },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded historical-base replay"); },
+    }), /simulated rollover-cas response loss/u);
+    const durableDigest = fixture.lease.activePublishSuccessorIntent.intentDigest;
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after historical-base replay"); },
+    }), /stop after historical-base replay/u);
+    assert.equal(fixture.calls.cas.filter(call =>
+      call.values.activePublishSuccessorIntent?.schema ===
+        "agentic-active-publish-successor-intent/v2").length, 1);
+    assert.equal(fixture.calls.cas[1].values.activePublishSuccessorIntent.intentDigest,
+      durableDigest);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration accepts a historical-to-protected provider-base transition under one v2 intent", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-provider-transition-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: {
+      pullRequestBaseAfterAdvance: "historical",
+      pullRequestBaseAfterV2Cas: "protected",
+    },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after provider-base transition"); },
+    }), /stop after provider-base transition/u);
+    const rolledIntent = fixture.calls.cas[1].values.activePublishSuccessorIntent;
+    assert.equal(rolledIntent.schema, "agentic-active-publish-successor-intent/v2");
+    assert.equal(rolledIntent.rolloverProof.pullRequestBaseSha, undefined);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects a provider base outside the exact historical/protected set", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-foreign-pr-base-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { pullRequestBaseAfterAdvance: "intermediate" },
+  });
+  try {
+    const historicalIntent = prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish escaped foreign provider base"); },
+    }), /outside the exact historical\/protected set/u);
+    assert.deepEqual(fixture.lease.activePublishSuccessorIntent, historicalIntent);
+    assert.equal(fixture.calls.cas.length, 1);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration replays a durable rollover intent after its CAS response is lost", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-cas-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { loseCasResponse: true },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded rollover replay"); },
+    }), /simulated rollover-cas response loss/u);
+    const durableDigest = fixture.lease.activePublishSuccessorIntent.intentDigest;
+    assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0);
+
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after rollover CAS replay"); },
+    }), /stop after rollover CAS replay/u);
+    const rolloverCasCalls = fixture.calls.cas.filter(call =>
+      call.values.activePublishSuccessorIntent?.schema ===
+        "agentic-active-publish-successor-intent/v2");
+    assert.equal(rolloverCasCalls.length, 1);
+    assert.equal(rolloverCasCalls[0].values.activePublishSuccessorIntent.intentDigest, durableDigest);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+    assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration adopts its exact protected-base derivative after response loss", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-cloud-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { loseCloudResponse: true },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded cloud replay"); },
+    }), /simulated rollover-cloud response loss/u);
+    assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
+
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after rollover-cloud replay"); },
+    }), /stop after rollover-cloud replay/u);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+    assert.equal(fixture.calls.verify.length, 1);
+    assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+    assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration resumes one exact waiting protected-base derivative beside its source", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-waiting-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { loseCloudResponsePhase: "waiting" },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded waiting rollover replay"); },
+    }), /simulated rollover-cloud response loss/u);
+    assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
+
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after waiting rollover replay"); },
+    }), /stop after waiting rollover replay/u);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 2);
+    assert.equal(fixture.calls.bind.length, 0);
+    assert.equal(fixture.calls.verify.length, 0);
+    assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+    assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects a current or bound protected derivative beside its source", () => {
+  for (const loseCloudResponsePhase of ["current-base", "bound"]) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-coexist-"));
+    const fixture = createActiveSuccessorFixture({
+      repo,
+      durableCas: true,
+      crashPhase: "after-intent",
+      preparedBaseRollover: {
+        loseCloudResponsePhase,
+        protectedDerivativeRetainsSource: true,
+      },
+    });
+    try {
+      prepareHistoricalActivePublishIntent(fixture);
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error("publish preceded coexistence rejection"); },
+      }), /simulated rollover-cloud response loss/u);
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error(`publish escaped ${loseCloudResponsePhase}`); },
+      }), /source claim coexists with a non-waiting derivative/u);
+      assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+        "agentic-active-publish-successor-intent/v2");
+      assert.equal(fixture.calls.successor.filter(call =>
+        call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration fetches an absent exact protected-base object without updating refs", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-fetch-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: {
+      protectedObjectAvailable: false,
+      pullRequestBaseAfterAdvance: "historical",
+    },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    const runCalls = fixture.calls.run.length;
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after exact protected-base fetch"); },
+    }), /stop after exact protected-base fetch/u);
+    assert.deepEqual(fixture.calls.run.slice(runCalls), [
+      `git fetch --no-tags --no-write-fetch-head origin ${fixture.rolloverBaseSha}`,
+    ]);
+    assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
+    assert.equal(fixture.lease.fenceSha, fixture.rolloverHeadSha);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects exact protected-base fetch failure or post-fetch base drift", () => {
+  const cases = [
+    ["fetch failure", { protectedObjectAvailable: false, fetchProtectedObjectFails: true }],
+    ["base drift", { protectedObjectAvailable: false, postFetchBaseDrift: true }],
+    ["pull-request base drift", {
+      protectedObjectAvailable: false,
+      postFetchPullRequestBaseDrift: true,
+      pullRequestBaseAfterAdvance: "historical",
+    }],
+  ];
+  for (const [label, preparedBaseRollover] of cases) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-fetch-"));
+    const fixture = createActiveSuccessorFixture({
+      repo, durableCas: true, crashPhase: "after-intent", preparedBaseRollover,
+    });
+    try {
+      const historicalIntent = prepareHistoricalActivePublishIntent(fixture);
+      const runCalls = fixture.calls.run.length;
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error(`publish escaped ${label}`); },
+      }));
+      assert.deepEqual(fixture.calls.run.slice(runCalls), [
+        `git fetch --no-tags --no-write-fetch-head origin ${fixture.rolloverBaseSha}`,
+      ], label);
+      assert.deepEqual(fixture.lease.activePublishSuccessorIntent, historicalIntent, label);
+      assert.equal(fixture.calls.cas.length, 1, label);
+      assert.equal(fixture.calls.successor.filter(call =>
+        call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0, label);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration rejects overlapping or inexact prepared-base rollover proofs", () => {
+  const cases = [
+    ["protected overlap", { protectedPaths: ["scripts/runtime.mjs"] }],
+    ["authored path outside admission", { authoredPaths: ["scripts/outside.mjs"] }],
+    ["missing merge base", { mergeBases: [] }],
+    ["wrong merge base", { mergeBases: [baseSha] }],
+    ["ambiguous merge base", { mergeBases: [mainSha, baseSha] }],
+  ];
+  for (const [label, preparedBaseRollover] of cases) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-proof-"));
+    const fixture = createActiveSuccessorFixture({
+      repo, durableCas: true, crashPhase: "after-intent", preparedBaseRollover,
+    });
+    try {
+      const historicalIntent = prepareHistoricalActivePublishIntent(fixture);
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error(`publish escaped ${label}`); },
+      }));
+      assert.deepEqual(fixture.lease.activePublishSuccessorIntent, historicalIntent, label);
+      assert.equal(fixture.calls.cas.length, 1, label);
+      assert.equal(fixture.calls.successor.filter(call =>
+        call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0, label);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration rejects post-CAS head or pull-request drift before rollover effects", () => {
+  for (const postCasDrift of [
+    "local-head", "remote-head", "pull-request-head", "pull-request-id",
+    "pull-request-base", "protected-base",
+  ]) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-drift-"));
+    const fixture = createActiveSuccessorFixture({
+      repo,
+      durableCas: true,
+      crashPhase: "after-intent",
+      preparedBaseRollover: { postCasDrift },
+    });
+    try {
+      prepareHistoricalActivePublishIntent(fixture);
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error(`publish escaped ${postCasDrift}`); },
+      }));
+      assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+        "agentic-active-publish-successor-intent/v2", postCasDrift);
+      assert.equal(fixture.calls.cas.length, 2, postCasDrift);
+      assert.equal(fixture.calls.successor.filter(call =>
+        call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0, postCasDrift);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration rejects every historical-base derivative before rollover CAS", () => {
+  for (const phase of ["waiting", "current", "bound"]) {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-effect-"));
+    const fixture = createActiveSuccessorFixture({
+      repo,
+      durableCas: true,
+      crashPhase: phase,
+      preparedBaseRollover: { protectedObjectAvailable: false },
+    });
+    try {
+      const historicalIntent = prepareHistoricalActivePublishIntent(fixture, phase);
+      assert.throws(() => fixture.integrate({
+        publishTask: () => { throw new Error(`publish escaped ${phase}`); },
+      }), /historical-base derivative/u);
+      assert.deepEqual(fixture.lease.activePublishSuccessorIntent, historicalIntent, phase);
+      assert.equal(fixture.calls.cas.length, 1, phase);
+      assert.equal(fixture.calls.successor.filter(call =>
+        call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0, phase);
+      assert.equal(fixture.calls.bind.length, 0, phase);
+      assert.equal(fixture.calls.verify.length, 0, phase);
+      assert.equal(fixture.calls.run.some(call =>
+        call.startsWith("git fetch --no-tags --no-write-fetch-head origin ")), false, phase);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+});
+
+test("active integration rejects a historical-base derivative raced after rollover CAS", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-race-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { postCasCloudPhase: "bound" },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish escaped raced historical derivative"); },
+    }), /historical-base derivative/u);
+    assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
+    assert.equal(fixture.calls.cas.length, 2);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0);
+    assert.equal(fixture.calls.bind.length, 0);
+    assert.equal(fixture.calls.verify.length, 0);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects a tampered durable rollover proof before cloud effects", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-tamper-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { loseCasResponse: true },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded proof tamper"); },
+    }), /simulated rollover-cas response loss/u);
+    const intent = structuredClone(fixture.lease.activePublishSuccessorIntent);
+    const proof = {
+      ...intent.rolloverProof,
+      protectedPaths: ["docs/tampered-protected-main.md"],
+    };
+    proof.protectedPathsDigest = digestValue(proof.protectedPaths);
+    const { evidenceDigest: _evidenceDigest, ...proofCore } = proof;
+    proof.evidenceDigest = digestValue(proofCore);
+    const changedIntent = { ...intent, rolloverProof: proof };
+    const { intentDigest: _intentDigest, ...intentCore } = changedIntent;
+    changedIntent.intentDigest = digestValue(intentCore);
+    fixture.replacePreparedIntent(changedIntent);
+    const casCalls = fixture.calls.cas.length;
+
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish escaped proof tamper"); },
+    }), /rollover proof drifted before cloud publication/u);
+    assert.equal(fixture.calls.cas.length, casCalls);
+    assert.equal(fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.rolloverBaseSha).length, 0);
+    assert.equal(fixture.lease.activePublishSuccessorIntent.intentDigest, changedIntent.intentDigest);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test("active integration retains a prepared intent when the successor expires before local CAS", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-expired-successor-"));
   const fixture = createActiveSuccessorFixture({ repo, durableCas: true, expiredSuccessor: true });
@@ -3998,6 +4490,7 @@ function createActiveSuccessorFixture({
   providerEpochDemand = null,
   laggingPullRequestBase = false,
   authorityManifestProjection = "canonical",
+  preparedBaseRollover = null,
 }) {
   const successorHeadSha = "2".repeat(40);
   const successorClaimId = "c".repeat(64);
@@ -4197,6 +4690,102 @@ function createActiveSuccessorFixture({
   });
   const secondBaseSha = "3".repeat(40);
   const secondHeadSha = "4".repeat(40);
+  const rolloverOptions = {
+    mergeBases: [mainSha],
+    authoredPaths: ["scripts/runtime.mjs"],
+    protectedPaths: ["docs/protected-main.md"],
+    pullRequestBaseAfterAdvance: "protected",
+    pullRequestBaseAfterV2Cas: null,
+    protectedObjectAvailable: true,
+    fetchProtectedObjectFails: false,
+    postFetchBaseDrift: false,
+    postFetchPullRequestBaseDrift: false,
+    loseCasResponse: false,
+    loseCloudResponse: false,
+    loseCloudResponsePhase: null,
+    protectedDerivativeRetainsSource: false,
+    postCasDrift: null,
+    postCasCloudPhase: null,
+    ...(preparedBaseRollover || {}),
+  };
+  const intermediateBaseSha = "5".repeat(40);
+  const postCasProtectedBaseSha = "6".repeat(40);
+  const preparedPullRequestBase = value => ({
+    historical: mainSha,
+    protected: secondBaseSha,
+    intermediate: intermediateBaseSha,
+  })[value] || value;
+  const rolloverClaimId = "0".repeat(64);
+  const rolloverClaimDigest = "1".repeat(64);
+  const rolloverLedgerRevision = "6".repeat(40);
+  const rolloverLedgerDigest = "7".repeat(64);
+  const rolloverClaimLedgerRevision = "8".repeat(64);
+  const rolloverOperationReceiptDigest = "9".repeat(64);
+  const rolloverSuccessorAuthority = Object.freeze({
+    ...successorAuthority,
+    claimId: rolloverClaimId,
+    claimDigest: rolloverClaimDigest,
+    ledgerRevision: rolloverLedgerRevision,
+    ledgerDigest: rolloverLedgerDigest,
+    claimLedgerRevision: rolloverClaimLedgerRevision,
+    operationReceiptDigest: rolloverOperationReceiptDigest,
+    canonicalBaseSha: secondBaseSha,
+    laneRevision: successorHeadSha,
+  });
+  const rolloverLiveSuccessor = Object.freeze({
+    ...liveSuccessor,
+    claimId: rolloverClaimId,
+    predecessorClaimId: claimId,
+    canonicalBaseRevision: secondBaseSha,
+    laneRevision: successorHeadSha,
+    fenceRevision: rolloverClaimDigest,
+    transitionDigest: rolloverClaimLedgerRevision,
+    operationReceiptDigest: rolloverOperationReceiptDigest,
+  });
+  const rolloverWaitingSuccessor = Object.freeze({
+    ...waitingSuccessor,
+    claimId: rolloverClaimId,
+    canonicalBaseRevision: secondBaseSha,
+    laneRevision: secondBaseSha,
+    fenceRevision: "a".repeat(64),
+    transitionDigest: "b".repeat(64),
+    operationReceiptDigest: "c".repeat(64),
+  });
+  const rolloverCurrentBaseSuccessor = Object.freeze({
+    ...rolloverWaitingSuccessor,
+    state: "current",
+    transitionCounter: 2,
+    fenceRevision: "d".repeat(64),
+    transitionDigest: "e".repeat(64),
+    operationReceiptDigest: "f".repeat(64),
+  });
+  const rolloverVerifiedClaim = Object.freeze({ ...rolloverLiveSuccessor, state: "active" });
+  const rolloverInventoryCore = Object.freeze({
+    schema: "agentic-cloud-claim-inventory/v1",
+    observedLedgerHeadRevision: rolloverLedgerRevision,
+    ledgerDigest: rolloverLedgerDigest,
+    evaluationTime: "2026-08-11T04:00:00.000Z",
+    claims: [rolloverVerifiedClaim],
+  });
+  const rolloverInventory = Object.freeze({
+    ...rolloverInventoryCore,
+    inventoryDigest: digestValue(rolloverInventoryCore),
+  });
+  const rolloverSuccessor = Object.freeze({
+    authority: rolloverSuccessorAuthority,
+    verification: Object.freeze({
+      ...successor.verification,
+      claimId: rolloverClaimId,
+      claimDigest: rolloverClaimDigest,
+      ledgerRevision: rolloverLedgerRevision,
+      ledgerDigest: rolloverLedgerDigest,
+      canonicalBaseSha: secondBaseSha,
+      laneRevision: successorHeadSha,
+      remoteClaimInventoryDigest: rolloverInventory.inventoryDigest,
+      inventory: rolloverInventory,
+      receiptDigest: "0".repeat(64),
+    }),
+  });
   const secondClaimId = "5".repeat(64);
   const secondClaimDigest = "6".repeat(64);
   const secondLedgerRevision = "7".repeat(40);
@@ -4269,7 +4858,10 @@ function createActiveSuccessorFixture({
     ledgerDigest: claims.includes(predecessor) ? sourceLedgerDigest : "5".repeat(64),
     claims,
   });
-  const calls = { successor: [], bind: [], verify: [], cas: [], run: [], invoke: [] };
+  const calls = {
+    successor: [], bind: [], verify: [], cas: [], run: [], invoke: [], git: [], status: [],
+    timeline: [],
+  };
   let leaseStore = null;
   if (durableCas) {
     const gitCommonDir = path.join(repo, "git-common");
@@ -4293,12 +4885,22 @@ function createActiveSuccessorFixture({
   let ancestorReads = 0;
   let cloudPhase = "predecessor";
   let crashInjected = false;
+  let preparedRolloverActive = false;
+  let rolloverCloudTarget = "historical";
+  let rolloverCasResponseLost = false;
+  let rolloverCloudResponseLost = false;
+  let protectedObjectAvailable = rolloverOptions.protectedObjectAvailable;
+  let pullRequestId = pullRequestNodeId;
+  const activeSuccessor = () => preparedRolloverActive ? rolloverSuccessor
+    : (activeRound === 1 ? successor : secondSuccessor);
   const fixture = {
     calls,
     sourceAdmission,
     sourceAuthority,
     sourceLease,
-    get successor() { return activeRound === 1 ? successor : secondSuccessor; },
+    get successor() { return activeSuccessor(); },
+    rolloverBaseSha: secondBaseSha,
+    rolloverHeadSha: successorHeadSha,
     workItemId,
     leaseStore,
     get lease() { return lease; },
@@ -4317,6 +4919,28 @@ function createActiveSuccessorFixture({
       cloudPhase = "predecessor";
       ancestorReads = 0;
     },
+    advancePreparedCanonicalBase() {
+      preparedRolloverActive = true;
+      canonicalHeadSha = secondBaseSha;
+      refreshHeadSha = successorHeadSha;
+      pullRequestBaseSha = preparedPullRequestBase(
+        rolloverOptions.pullRequestBaseAfterAdvance,
+      );
+      pullRequestHeadSha = successorHeadSha;
+      remoteHeadSha = successorHeadSha;
+      ancestorReads = 0;
+    },
+    replacePreparedIntent(activePublishSuccessorIntent) {
+      assert.ok(leaseStore, "prepared intent replacement requires a durable fixture");
+      const projected = casWriterLeaseProjection({
+        leaseStore,
+        branch,
+        expectedLeaseDigest: digestValue(lease),
+        expectedClaimId: lease.cloudAuthority.claimId,
+        values: { status: "active", activePublishSuccessorIntent },
+      });
+      lease = projected.lease;
+    },
     integrate({ publishTask, ...integrationOptions }) {
       return integrateSession({
         invocationPath: repo,
@@ -4332,6 +4956,7 @@ function createActiveSuccessorFixture({
         },
         gitText: args => {
           const key = args.join(" ");
+          calls.git.push(key);
           if (key === "branch --show-current") return branch;
           if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
           if (key === "diff --name-only -z HEAD --" ||
@@ -4339,6 +4964,23 @@ function createActiveSuccessorFixture({
           if (key === "rev-parse HEAD") return headSha;
           if (key === `diff --name-only -z ${canonicalHeadSha}..${refreshHeadSha} --`) {
             return "scripts/runtime.mjs\0";
+          }
+          if (preparedRolloverActive &&
+              key === `merge-base --all ${secondBaseSha} ${successorHeadSha}`) {
+            return rolloverOptions.mergeBases.join("\n");
+          }
+          if (preparedRolloverActive &&
+              key === `cat-file -e ${secondBaseSha}^{commit}`) {
+            if (!protectedObjectAvailable) throw new Error("missing protected-base object");
+            return "";
+          }
+          if (preparedRolloverActive &&
+              key === `diff --name-only --no-renames -z ${mainSha}..${successorHeadSha} --`) {
+            return `${rolloverOptions.authoredPaths.join("\0")}\0`;
+          }
+          if (preparedRolloverActive &&
+              key === `diff --name-only --no-renames -z ${mainSha}..${secondBaseSha} --`) {
+            return `${rolloverOptions.protectedPaths.join("\0")}\0`;
           }
           if (key === `merge-base --is-ancestor ${canonicalHeadSha} ${refreshHeadSha}`) {
             if (ancestorReads++ >= ancestorPasses) throw new Error("not an ancestor");
@@ -4357,7 +4999,7 @@ function createActiveSuccessorFixture({
               "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository",
           );
           return JSON.stringify({
-            id: pullRequestNodeId,
+            id: pullRequestId,
             url: pullRequestUrl,
             state: "OPEN",
             isDraft: true,
@@ -4371,6 +5013,19 @@ function createActiveSuccessorFixture({
         run: (command, args) => {
           const key = [command, ...args].join(" ");
           calls.run.push(key);
+          if (key === `git fetch --no-tags --no-write-fetch-head origin ${secondBaseSha}`) {
+            if (rolloverOptions.fetchProtectedObjectFails) {
+              throw new Error("simulated exact protected-base fetch failure");
+            }
+            protectedObjectAvailable = true;
+            if (rolloverOptions.postFetchBaseDrift) {
+              canonicalHeadSha = postCasProtectedBaseSha;
+              pullRequestBaseSha = canonicalHeadSha;
+            }
+            if (rolloverOptions.postFetchPullRequestBaseDrift) {
+              pullRequestBaseSha = intermediateBaseSha;
+            }
+          }
           if (key === `git merge -m ${protectedSquashSubject} origin/main`) headSha = refreshHeadSha;
         },
         runText: () => "",
@@ -4378,6 +5033,7 @@ function createActiveSuccessorFixture({
         completeTask: () => { throw new Error("successor fixture must stop during publish"); },
         ...(providerEpochDemand ? {} : { refreshActiveCloudSuccessor: input => {
           calls.successor.push(input);
+          calls.timeline.push({ kind: "successor", canonicalBaseSha: input.canonicalBaseSha });
           if (!crashInjected && crashPhase && crashPhase !== "final-cas") {
             crashInjected = true;
             cloudPhase = {
@@ -4389,29 +5045,57 @@ function createActiveSuccessorFixture({
             }[crashPhase];
             throw new Error(`simulated ${crashPhase} response loss`);
           }
-          cloudPhase = "bound";
-          return activeRound === 1 ? successor : secondSuccessor;
+          if (preparedRolloverActive) rolloverCloudTarget = "protected";
+          const rolloverLossPhase = rolloverOptions.loseCloudResponsePhase ||
+            (rolloverOptions.loseCloudResponse ? "bound" : null);
+          const loseRolloverResponse = preparedRolloverActive && rolloverLossPhase &&
+            !rolloverCloudResponseLost;
+          cloudPhase = loseRolloverResponse ? rolloverLossPhase : "bound";
+          if (loseRolloverResponse) {
+            rolloverCloudResponseLost = true;
+            throw new Error("simulated rollover-cloud response loss");
+          }
+          return activeSuccessor();
         } }),
         bindActiveCloudSuccessor: input => {
           calls.bind.push(input);
+          if (preparedRolloverActive) rolloverCloudTarget = "protected";
           cloudPhase = "bound";
-          return activeRound === 1 ? successor : secondSuccessor;
+          return activeSuccessor();
         },
         verifyActiveCloudSuccessor: input => {
           calls.verify.push(input);
-          return activeRound === 1 ? successor : secondSuccessor;
+          return activeSuccessor();
         },
-        inspectCloudStatus: () => ({
-          predecessor: cloudStatus([activeRound === 1 ? predecessor : liveSuccessor]),
-          waiting: cloudStatus(derivativeFault === "ambiguous"
-            ? [waitingSuccessor, { ...waitingSuccessor, claimId: "0".repeat(64) }]
-            : [{
-              ...waitingSuccessor,
-              leaseEpoch: derivativeFault === "wrong-epoch" ? 3 : waitingSuccessor.leaseEpoch,
-            }]),
-          "current-base": cloudStatus([currentBaseSuccessor]),
-          bound: cloudStatus([activeRound === 1 ? liveSuccessor : secondLiveSuccessor]),
-        })[cloudPhase],
+        inspectCloudStatus: () => {
+          calls.status.push({ cloudPhase, rolloverCloudTarget });
+          return ({
+            predecessor: cloudStatus([activeRound === 1 || preparedRolloverActive
+              ? predecessor : liveSuccessor]),
+            waiting: cloudStatus(derivativeFault === "ambiguous"
+              ? [waitingSuccessor, { ...waitingSuccessor, claimId: "0".repeat(64) }]
+              : preparedRolloverActive && rolloverCloudTarget === "protected"
+                ? [predecessor, rolloverWaitingSuccessor]
+                : [{
+                  ...waitingSuccessor,
+                  leaseEpoch: derivativeFault === "wrong-epoch" ? 3 : waitingSuccessor.leaseEpoch,
+                }]),
+            "current-base": cloudStatus(
+              preparedRolloverActive && rolloverCloudTarget === "protected"
+                ? [
+                  ...(rolloverOptions.protectedDerivativeRetainsSource ? [predecessor] : []),
+                  rolloverCurrentBaseSuccessor,
+                ]
+                : [currentBaseSuccessor],
+            ),
+            bound: cloudStatus(preparedRolloverActive && rolloverCloudTarget === "protected"
+              ? [
+                ...(rolloverOptions.protectedDerivativeRetainsSource ? [predecessor] : []),
+                rolloverLiveSuccessor,
+              ]
+              : [activeRound === 1 ? liveSuccessor : secondLiveSuccessor]),
+          })[cloudPhase];
+        },
         invokeCloudSuccessor: input => {
           calls.invoke.push(input);
           if (providerEpochDemand && input?.action === "claim") {
@@ -4422,11 +5106,44 @@ function createActiveSuccessorFixture({
         verifyCloudSuccessor: () => { throw new Error("fake successor must own cloud verification"); },
         casActiveLeaseProjection: input => {
           calls.cas.push(input);
+          calls.timeline.push({
+            kind: "cas",
+            intentSchema: input.values.activePublishSuccessorIntent?.schema || null,
+          });
           assert.equal(digestValue(lease), input.expectedLeaseDigest);
           assert.equal(lease.cloudAuthority.claimId, input.expectedClaimId);
           if (leaseStore) {
             const projected = casWriterLeaseProjection(input);
             lease = projected.lease;
+            if (preparedRolloverActive &&
+                input.values.activePublishSuccessorIntent?.schema ===
+                  "agentic-active-publish-successor-intent/v2") {
+              if (rolloverOptions.postCasDrift === "local-head") headSha = secondHeadSha;
+              if (rolloverOptions.postCasDrift === "remote-head") remoteHeadSha = secondHeadSha;
+              if (rolloverOptions.postCasDrift === "pull-request-head") {
+                pullRequestHeadSha = secondHeadSha;
+              }
+              if (rolloverOptions.postCasDrift === "pull-request-id") pullRequestId = "PR_DRIFT";
+              if (rolloverOptions.postCasDrift === "protected-base") {
+                canonicalHeadSha = postCasProtectedBaseSha;
+              }
+              if (rolloverOptions.postCasDrift === "pull-request-base") {
+                pullRequestBaseSha = intermediateBaseSha;
+              }
+              if (rolloverOptions.pullRequestBaseAfterV2Cas) {
+                pullRequestBaseSha = preparedPullRequestBase(
+                  rolloverOptions.pullRequestBaseAfterV2Cas,
+                );
+              }
+              if (rolloverOptions.postCasCloudPhase) {
+                cloudPhase = rolloverOptions.postCasCloudPhase;
+                rolloverCloudTarget = "historical";
+              }
+              if (rolloverOptions.loseCasResponse && !rolloverCasResponseLost) {
+                rolloverCasResponseLost = true;
+                throw new Error("simulated rollover-cas response loss");
+              }
+            }
             if (!crashInjected && crashPhase === "final-cas" &&
                 input.values.activePublishSuccessorIntent === null) {
               crashInjected = true;

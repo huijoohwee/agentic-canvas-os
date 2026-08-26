@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5508,
-  "headDigest": "6bbcb2e27d17575fd56c7c0f81a6e3c2ed185566bbec1e3b28701ac303457033",
+  "sequence": 5509,
+  "headDigest": "da4dc201827167dd82046929f37ac82d08c1bd46fb7ab477a8b461f48029190a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -279573,6 +279573,72 @@
       },
       "claimDigest": "e5e299d53f6f4c15d677c79a701ffc4b110f7e41daf128734529a71536e86311",
       "digest": "6bbcb2e27d17575fd56c7c0f81a6e3c2ed185566bbec1e3b28701ac303457033"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5509,
+      "parentDigest": "6bbcb2e27d17575fd56c7c0f81a6e3c2ed185566bbec1e3b28701ac303457033",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9c965bb059085358fb28d9250034e3cb29ee25dc02fbd181a34ef3d4902af988",
+      "idempotencyKey": "98dc47361b0c51b348c407e1165ddcfe24550f97d05e635b2403e5fb15a52eec",
+      "requestDigest": "7ebddf07411ccc635e4ba6368145955ce3311fe606b7d521e72bc2072f3fd684",
+      "evaluationTime": "2026-08-26T10:15:13.000Z",
+      "claimCore": {
+        "claimId": "9c965bb059085358fb28d9250034e3cb29ee25dc02fbd181a34ef3d4902af988",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:8fc134a076d9f1c03032fa451a566f9da175ee8cdffdd7a1244197ecc5c13d23",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f11b78d4ecbf55448c740cd313b2ed90e3b873e71458b25d94affbe69249d8b3",
+        "canonicalBaseRevision": "415e914da9e757387b992a5b03d89ac8855cb310",
+        "declaredWriteScope": [
+          "path:__tests__/integrated-source-duplicate-pr-reconciliation.test.mjs",
+          "path:docs/INTEGRATED-SOURCE-DUPLICATE-PR-RECONCILIATION.md",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation-contract.mjs",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation-controller.mjs",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation-repository-adapter.mjs",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation.mjs",
+          "semantic:integrated-source-duplicate-pr-reconciliation"
+        ],
+        "writeSetDigest": "517bcfc81ece52d826faf2631a7dd552a16f04cdac6542d9a1b4cb3c6b81668c",
+        "laneRevision": "273ef6f0c7cc7c8b5c67adee8cd0c61c91e1c26e",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-26T10:58:00.000Z",
+        "evidenceDigest": "7d37a717d51976963e3967c2d1e58a365ea0a50d734f719ec9583a1a1ca0067c",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBDTWTw",
+        "predecessorClaimId": "5be1edb21dfcea05ae400e26ddb2aff6734575420aef40123570af1a2ce47293",
+        "eligibleSince": "2026-08-26T09:53:25.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-26T09:58:00.000Z",
+        "integration": {
+          "candidateRevision": "273ef6f0c7cc7c8b5c67adee8cd0c61c91e1c26e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBDTWTw",
+          "focusedEvidenceDigest": "7d37a717d51976963e3967c2d1e58a365ea0a50d734f719ec9583a1a1ca0067c",
+          "dependencyClosureDigest": "4271834859f140c284d61f1bcca26666223d6f09fde0eb69d4c4e4a27ee75c19",
+          "namedChecksDigest": "739abc8a69e9119eff0ad4fcafca4a0a4b5845a29e128195daaa4ce9ca538e37",
+          "handoffEvidenceDigest": "6e993063ca7bcb1d3c84c2f8632087ba1bd0ea06980ac7396ae92e90e7cf6c4b",
+          "operatorDecisionDigest": "0bd213d41facb3aa20ee33a8fb95b96eb2c554112530931476fcb28d2deeef24",
+          "integrationIntentDigest": "3e8e3b8cbe1e92602c32a9b2885141c8e047e4995545730c287cfd10c310ac58",
+          "integratedAt": "2026-08-26T10:11:48.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "273ef6f0c7cc7c8b5c67adee8cd0c61c91e1c26e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBDTWTw",
+          "bytesDigest": "1336d5fb6019c9debc32fdcaa41b382d255383688e9c15eba822ec117119e8f4",
+          "namedChecksDigest": "739abc8a69e9119eff0ad4fcafca4a0a4b5845a29e128195daaa4ce9ca538e37",
+          "handoffEvidenceDigest": "6e993063ca7bcb1d3c84c2f8632087ba1bd0ea06980ac7396ae92e90e7cf6c4b",
+          "integrationReceiptDigest": "dfb5b6da72a2c781cec7a630fc36bcf53f69f5a1a308235218735f94501a3bd3",
+          "retiredAt": "2026-08-26T10:15:13.000Z"
+        }
+      },
+      "claimDigest": "fb4b1ff21a21ac3095183a49c2f69ec93e3ff406ce46af2cddfe9c0164ce205d",
+      "digest": "da4dc201827167dd82046929f37ac82d08c1bd46fb7ab477a8b461f48029190a"
     }
   ]
 }

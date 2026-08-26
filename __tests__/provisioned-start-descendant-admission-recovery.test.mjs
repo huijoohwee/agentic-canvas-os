@@ -11,6 +11,8 @@ import { createProvisionedStartDescendantAdmissionRecoveryController }
   from "../scripts/provisioned-start-descendant-admission-recovery-controller.mjs";
 import { buildProvisionedStartDescendantAdmissionRecoveryEvidence }
   from "../scripts/provisioned-start-descendant-admission-recovery-evidence.mjs";
+import { projectProvisionedStartDescendantAdmissionStableSource }
+  from "../scripts/provisioned-start-descendant-admission-recovery-repository-adapter.mjs";
 
 const sha = character => character.repeat(40);
 const digest = value => digestValue({ value });
@@ -79,6 +81,35 @@ test("evidence requires the provider head to expose the authored descendant", ()
     ...current.evidence, evidenceDigest: undefined,
     pullRequest: { ...current.pullRequest, headSha: current.lease.fenceSha },
   }), /open draft descendant pull request/u);
+});
+
+test("run source identity excludes only time-derived and unrelated ledger observations", () => {
+  const { evidence } = fixture();
+  const refreshed = buildProvisionedStartDescendantAdmissionRecoveryEvidence({
+    ...evidence,
+    observedAt: "2026-08-25T00:20:00.000Z",
+    cloud: {
+      ...evidence.cloud,
+      ledgerRevision: sha("3"),
+      ledgerDigest: digest("later-ledger"),
+      claim: {
+        ...evidence.cloud.claim,
+        state: "dormant-preserved",
+        writeAuthority: false,
+      },
+    },
+  });
+  assert.deepEqual(
+    projectProvisionedStartDescendantAdmissionStableSource(refreshed),
+    projectProvisionedStartDescendantAdmissionStableSource(evidence),
+  );
+
+  const claimDrift = structuredClone(refreshed);
+  claimDrift.cloud.claim.fenceRevision = digest("different-claim-fence");
+  assert.notDeepEqual(
+    projectProvisionedStartDescendantAdmissionStableSource(claimDrift),
+    projectProvisionedStartDescendantAdmissionStableSource(evidence),
+  );
 });
 
 test("local projection admits only the exact cloud-bound descendant", () => {

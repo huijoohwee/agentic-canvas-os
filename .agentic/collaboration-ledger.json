@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5419,
-  "headDigest": "7d2a8c89c58e43d8ef1fe7b856352ec8460573e7ffd38c4cfcf7b8507ecac43a",
+  "sequence": 5420,
+  "headDigest": "743f41977895a45bca402b9e6e3ffb909d73403cd619de6b770b954c90db5001",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -274970,6 +274970,63 @@
       },
       "claimDigest": "464fb8ae20aabcee5bd40f70b45a6ead80f29171ad07a3a80ad1b1270e77d300",
       "digest": "7d2a8c89c58e43d8ef1fe7b856352ec8460573e7ffd38c4cfcf7b8507ecac43a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5420,
+      "parentDigest": "7d2a8c89c58e43d8ef1fe7b856352ec8460573e7ffd38c4cfcf7b8507ecac43a",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "ea7cc04459709076cebefe1a64b9a1c20b00cd6ee9e456215b588c50a90eae16",
+      "idempotencyKey": "c1d78326f50a0e5d9fd936ad0150e3956fc70cc7e4f5d2c4c79796a9d0176582",
+      "requestDigest": "33be578011c17c3957178e27e6133ef6c9e6bd6d3ee2ec38181935aa712fd625",
+      "evaluationTime": "2026-08-26T00:04:22.000Z",
+      "claimCore": {
+        "claimId": "ea7cc04459709076cebefe1a64b9a1c20b00cd6ee9e456215b588c50a90eae16",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:f6cd8139dc3c6845420d4927269e566fe057fed7e15580375f076e096b688fc6",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:8e022488c6887e3ce9c38f6d8d2ee228b199126f43208b6f8225598bfaeb04f5",
+        "canonicalBaseRevision": "86c3e7b44e15d258cde2a20cf333de30116dae1d",
+        "declaredWriteScope": [
+          "path:.github/workflows/pages.yml",
+          "path:guidelines/commit-push-deploy-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-divergence.test.mjs",
+          "path:scripts/__tests__/git-guidelines-pages-release-controller.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "path:scripts/lib/git-guidelines/divergence.mjs",
+          "path:scripts/lib/git-guidelines/pages-release-controller.mjs",
+          "semantic:protected-release-guidelines"
+        ],
+        "writeSetDigest": "ee697dfb49dfde5370c7d205850e7f2bab85016f906f0e52e230056212f32d9b",
+        "laneRevision": "d54f8244d8c86f3adf032ab73e29c3b43c137ba2",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-26T23:54:47.000Z",
+        "evidenceDigest": "b54e1dc7bcfec85a2d882ef075661877a12559d0e7e8cfc5bed42e5487cd9ff1",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABA_wAug",
+        "predecessorClaimId": "2654dd35cb1aa07d43ce05155d00fd4ebe07f5e166cc6a15a163571218dd6a1c",
+        "eligibleSince": "2026-08-25T23:53:49.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-25T23:54:47.000Z",
+        "integration": {
+          "candidateRevision": "d54f8244d8c86f3adf032ab73e29c3b43c137ba2",
+          "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABA_wAug",
+          "focusedEvidenceDigest": "b54e1dc7bcfec85a2d882ef075661877a12559d0e7e8cfc5bed42e5487cd9ff1",
+          "dependencyClosureDigest": "0ae22bcaaa6fa487b32486202cdfdf791b4aa56b2d6d9d35192452c8c8cfaf26",
+          "namedChecksDigest": "4e4d344dd57df6dc25ce6d28120abd722b1844fe53a2b70608715b1f39dc6be9",
+          "handoffEvidenceDigest": "9653c498ca6013114bf789a27dec301964d43ed19a9eaf366628cb42a6e65765",
+          "operatorDecisionDigest": "a0a25cfa2b0d7b1f3b16b22eb99cd1b1b85309a6334f0e35110cbe1fe0365a92",
+          "integrationIntentDigest": "2399d88fba2df153386e63714d5f2edc500e1e0b6a9b01a40a1721b65313e5e6",
+          "integratedAt": "2026-08-26T00:04:22.000Z"
+        }
+      },
+      "claimDigest": "66078cf3e8687eaaad4551be07f5cc9f08dc684ce80c46c4427a1fec044aa693",
+      "digest": "743f41977895a45bca402b9e6e3ffb909d73403cd619de6b770b954c90db5001"
     }
   ]
 }

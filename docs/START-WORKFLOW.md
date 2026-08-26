@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-08-24"
+date: "2026-08-25"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -313,6 +313,18 @@ the returned `authorize planned-owned-dirt-scope-expansion-recovery
 successor and local registry CAS preserve every byte, index entry, ref, draft
 review, and task subject. Success restores scoped mutation authority only; see
 `PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md`.
+
+An `active`, admitted, dirty lane whose exact cloud claim is terminally
+`retired` as `abandoned` and whose draft pull request is closed uses only `retired-abandoned-owned-dirt-successor-recovery.mjs`. Planning
+seals historical base \(B\), its empty coordination fence \(F\), exact current protected \(P\), no live source/successor/overlap,
+a strict-superset manifest covering all dirt, possession of source generation \(g\), and a distinct generation \(g+1\) target using the same adapter.
+Fresh exact authorization proves source authority, then snapshots \(F/I_1/W_1\) before reanchor effects.
+It derives \(I_2/W_2\) by retaining each source entry changed from \(B\) and taking \(P\) everywhere else,
+then creates coordination merge \(C\) with tree \(P\) and parents \(F,P\), moves local `HEAD`/index/worktree/ref to \(C/I_2/W_2\),
+compare-and-swap pushes \(F\rightarrow C\), and reopens the draft review at \(P/C\) before a fresh no-predecessor,
+ledger-epoch-derived claim and generation-advanced local binding. Authored entries remain exact; same-path protected overlaps remain ordinary dirt.
+No authored-content commit, pull-request merge, deploy, or cleanup occurs; neighboring recovery routes do not match. See
+`RETIRED-ABANDONED-OWNED-DIRT-SUCCESSOR-RECOVERY.md`.
 
 Heartbeat before the 30-minute default TTL expires:
 

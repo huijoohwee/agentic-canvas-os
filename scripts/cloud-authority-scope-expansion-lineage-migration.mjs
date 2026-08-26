@@ -91,7 +91,16 @@ export async function runScopeExpansionLineageMigration(input = {}, { adapter } 
     planDigest: plan.planDigest,
     authorizationDigest: authorization.authorizationDigest,
   });
-  if (["migrated", "integrated-replay-recovered"].includes(verified.state)) {
+  const currentLegacyClaim = observed.status.claims.find(
+    claim => claim?.claimId === plan.legacyClaimId,
+  );
+  const integratedReplay = Boolean(
+    currentLegacyClaim?.integration && currentLegacyClaim.integrationReceiptDigest,
+  );
+  const integratedReplayNeedsRecovery = verified.state === "integrated-replay-recovered"
+    && currentLegacyClaim?.state === "dormant-preserved";
+  if (verified.state === "migrated"
+    || (verified.state === "integrated-replay-recovered" && !integratedReplayNeedsRecovery)) {
     const migratedReceipt = verifyMigratedScopeExpansionLineage({
       plan,
       lane: observed.lane,
@@ -120,12 +129,6 @@ export async function runScopeExpansionLineageMigration(input = {}, { adapter } 
     successorDeviceId: reclaimOwner.deviceId,
     ttlSeconds,
   };
-  const currentLegacyClaim = observed.status.claims.find(
-    claim => claim?.claimId === plan.legacyClaimId,
-  );
-  const integratedReplay = Boolean(
-    currentLegacyClaim?.integration && currentLegacyClaim.integrationReceiptDigest,
-  );
   const continued = await adapter.continueAuthority({ request, lineageAdmission: admission });
   const expectedOutcome = integratedReplay ? "reclaimed-live-replay" : "reclaimed-live";
   const expectedClaimId = integratedReplay ? plan.legacyClaimId : null;

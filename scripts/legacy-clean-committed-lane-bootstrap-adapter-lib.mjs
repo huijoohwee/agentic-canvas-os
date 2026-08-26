@@ -60,10 +60,32 @@ export function proveLegacyReviewCanonicalDescendant({ sourceBaseSha, targetBase
   return Object.freeze({ ...evidence, evidenceDigest: digestValue(evidence) });
 }
 
-export function findLegacyReviewCurrentBaseCandidate({ claims, request, targetBaseSha } = {}) {
+export function findLegacyReviewCurrentBaseCandidate({
+  claims,
+  request,
+  targetBaseSha,
+  allowedReviewRequestIds = [null],
+  sourceAuthority,
+  canonicalDescendantProof = null,
+} = {}) {
   const declaredWriteScope = normalizeWriteSet(request?.declaredWriteScope);
+  const permittedReviews = new Set(allowedReviewRequestIds);
+  const sameClaimOrExactSuccessor = claim => {
+    if (!sourceAuthority?.claimId) return false;
+    if (claim?.claimId === sourceAuthority.claimId) {
+      return claim.canonicalBaseRevision === sourceAuthority.canonicalBaseSha
+        && claim.leaseEpoch === sourceAuthority.leaseEpoch;
+    }
+    const divergentBase = sourceAuthority.canonicalBaseSha !== targetBaseSha;
+    return claim?.predecessorClaimId === sourceAuthority.claimId
+      && claim.leaseEpoch === sourceAuthority.leaseEpoch + 1
+      && (divergentBase
+        ? digestValue(claim.canonicalDescendantProof) === digestValue(canonicalDescendantProof)
+        : claim.canonicalDescendantProof === null || claim.canonicalDescendantProof === undefined);
+  };
   const matches = (Array.isArray(claims) ? claims : []).filter(claim => (
-    ["current", "waiting-successor"].includes(claim?.state)
+    ["current", "dormant-preserved"].includes(claim?.state)
+    && claim?.writeAuthority === (claim.state === "current")
     && claim?.scopeReserved === true
     && claim?.workItemId === pseudonymousIdentifier("work-item", request?.branch)
     && claim?.deviceId === pseudonymousIdentifier("device", request?.deviceId)
@@ -72,7 +94,8 @@ export function findLegacyReviewCurrentBaseCandidate({ claims, request, targetBa
     && [targetBaseSha, request?.expectedHeadSha].includes(claim?.laneRevision)
     && claim?.writeSetDigest === request?.writeSetDigest
     && JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope)) === JSON.stringify(declaredWriteScope)
-    && claim?.reviewRequestId === null
+    && permittedReviews.has(claim?.reviewRequestId ?? null)
+    && sameClaimOrExactSuccessor(claim)
   ));
   if (matches.length > 1) {
     throw new Error("Legacy review recovery found multiple live current-base candidates.");
@@ -213,6 +236,60 @@ export function findRecoverableLegacyBootstrapClaim({
   return matches[0] || null;
 }
 
+export function findLegacyBootstrapCheckpointClaim({
+  claims,
+  request,
+  checkpoint,
+  identity,
+  canonicalBaseSha,
+  allowedReviewRequestIds = [null],
+} = {}) {
+  const authority = checkpoint?.outputs?.cloudClaim?.authority;
+  if (
+    checkpoint?.schema !== "agentic-legacy-clean-committed-lane-bootstrap-checkpoint/v1"
+    || checkpoint.identity?.identityDigest !== identity?.identityDigest
+    || !authority?.claimId
+  ) {
+    throw new Error("Legacy bootstrap checkpoint claim identity is incomplete.");
+  }
+  const declaredWriteScope = normalizeWriteSet(request?.declaredWriteScope);
+  const permittedReviews = new Set(allowedReviewRequestIds);
+  const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({ request, identity });
+  const matches = (Array.isArray(claims) ? claims : []).filter(claim => {
+    const sameTransition = claim?.transitionCounter === authority.transitionCounter
+      && claim?.fenceRevision === authority.claimDigest;
+    const exactRecoverySuffix = claim?.transitionCounter > authority.transitionCounter
+      && claim?.recovery?.evidenceDigest === recoveryEvidenceDigest;
+    const exactReviewSuffix = claim?.transitionCounter > authority.transitionCounter
+      && claim?.reviewRequestId !== null
+      && permittedReviews.has(claim.reviewRequestId);
+    return ["current", "dormant-preserved"].includes(claim?.state)
+      && claim.writeAuthority === (claim.state === "current")
+      && claim.scopeReserved === true
+      && claim.entrySchema === authority.entrySchema
+      && claim.claimIdentitySchema === authority.claimIdentitySchema
+      && claim.claimId === authority.claimId
+      && claim.workItemId === pseudonymousIdentifier("work-item", request.branch)
+      && claim.deviceId === pseudonymousIdentifier("device", request.deviceId)
+      && claim.sessionId === pseudonymousIdentifier("session", request.sessionId)
+      && claim.canonicalBaseRevision === canonicalBaseSha
+      && claim.laneRevision === request.expectedHeadSha
+      && claim.writeSetDigest === request.writeSetDigest
+      && JSON.stringify(normalizeWriteSet(claim.declaredWriteScope))
+        === JSON.stringify(declaredWriteScope)
+      && claim.leaseEpoch === authority.leaseEpoch
+      && permittedReviews.has(claim.reviewRequestId ?? null)
+      && claim.predecessorClaimId === null
+      && claim.integrationReceiptDigest === null
+      && claim.integration === null
+      && (sameTransition || exactRecoverySuffix || exactReviewSuffix);
+  });
+  if (matches.length > 1) {
+    throw new Error("Legacy bootstrap checkpoint recovery found multiple exact claim projections.");
+  }
+  return matches[0] || null;
+}
+
 export function legacyBootstrapRecoveryEvidenceDigest({ request, identity } = {}) {
   return digestValue({
     schema: "agentic-legacy-clean-committed-lane-bootstrap-response-loss-evidence/v1",
@@ -261,6 +338,8 @@ export function requireRecoveredLegacyBootstrapClaim({
   request,
   identity,
   canonicalBaseSha,
+  expectedLaneRevision = canonicalBaseSha,
+  expectedReviewRequestId = null,
   now = new Date(),
 } = {}) {
   const recoveryEvidenceDigest = legacyBootstrapRecoveryEvidenceDigest({ request, identity });
@@ -283,13 +362,15 @@ export function requireRecoveredLegacyBootstrapClaim({
     || claim?.sessionId !== sourceClaim.sessionId
     || claim?.recovery?.evidenceDigest !== recoveryEvidenceDigest
     || claim?.canonicalBaseRevision !== canonicalBaseSha
-    || claim?.laneRevision !== canonicalBaseSha
+    || claim?.laneRevision !== expectedLaneRevision
     || claim?.writeSetDigest !== request.writeSetDigest
     || JSON.stringify(normalizeWriteSet(claim?.declaredWriteScope))
       !== JSON.stringify(normalizeWriteSet(request.declaredWriteScope))
     || claim?.leaseEpoch !== sourceClaim.leaseEpoch
-    || claim?.reviewRequestId !== null
-    || claim?.predecessorClaimId !== null
+    || claim?.reviewRequestId !== expectedReviewRequestId
+    || claim?.predecessorClaimId !== (sourceClaim.predecessorClaimId ?? null)
+    || digestValue(claim?.canonicalDescendantProof ?? null)
+      !== digestValue(sourceClaim.canonicalDescendantProof ?? null)
     || claim?.integrationReceiptDigest !== null
     || claim?.integration !== null
     || Date.parse(claim?.expiresAt || "") <= now.getTime()

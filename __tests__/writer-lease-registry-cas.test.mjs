@@ -75,3 +75,95 @@ test("registry CAS fences delayed C1 heartbeats and permits only the bound C2 pr
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("registry CAS admits only an explicitly fenced null-cloud source", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "null-cloud-cas-"));
+  const store = createWriterLeaseStore({ gitCommonDir: root });
+  try {
+    const source = store.claim({
+      sessionId: "session", device: "device", scope: "protected-head-refresh-controller",
+      branch: BRANCH, worktreePath: "/worktree", baseSha: "a".repeat(40),
+    });
+    const sourceDigest = writerLeaseDigest(source);
+
+    assert.throws(() => casWriterLeaseProjection({
+      leaseStore: store, branch: BRANCH, expectedLeaseDigest: sourceDigest,
+      expectedClaimId: undefined, values: { cloudAuthority: { claimId: CLAIM_1 } },
+    }), /expected claim ID must be a SHA-256 digest/);
+    assert.throws(() => casWriterLeaseProjection({
+      leaseStore: store, branch: BRANCH, expectedLeaseDigest: "f".repeat(64),
+      expectedClaimId: null, values: { cloudAuthority: { claimId: CLAIM_1 } },
+    }), /Writer lease changed before scope-expansion CAS/);
+
+    const projected = casWriterLeaseProjection({
+      leaseStore: store, branch: BRANCH, expectedLeaseDigest: sourceDigest,
+      expectedClaimId: null, values: { cloudAuthority: { claimId: CLAIM_1 } },
+    }).lease;
+    assert.equal(projected.cloudAuthority.claimId, CLAIM_1);
+
+    assert.throws(() => casWriterLeaseProjection({
+      leaseStore: store, branch: BRANCH, expectedLeaseDigest: writerLeaseDigest(projected),
+      expectedClaimId: null, values: { cloudAuthority: { claimId: CLAIM_2 } },
+    }), /Writer lease claim changed before scope-expansion CAS/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("literal null claim fence rejects every non-null cloud-authority object", () => {
+  const cases = [
+    { label: "empty", cloudAuthority: {} },
+    {
+      label: "missing-claim-id",
+      cloudAuthority: { schema: "agentic-lane-cloud-authority/v1" },
+    },
+  ];
+
+  for (const { label, cloudAuthority } of cases) {
+    const root = mkdtempSync(path.join(os.tmpdir(), `null-cloud-${label}-`));
+    const store = createWriterLeaseStore({ gitCommonDir: root });
+    const branch = `agent/device/null-cloud-${label}`;
+    try {
+      let source = store.claim({
+        sessionId: "session", device: "device", scope: `null-cloud-${label}`,
+        branch, worktreePath: "/worktree", baseSha: "a".repeat(40),
+      });
+      source = store.annotate({
+        sessionId: "session", branch, values: { cloudAuthority },
+      });
+
+      assert.throws(() => casWriterLeaseProjection({
+        leaseStore: store, branch, expectedLeaseDigest: writerLeaseDigest(source),
+        expectedClaimId: null, values: { cloudAuthority: { claimId: CLAIM_1 } },
+      }), /Writer lease claim changed before scope-expansion CAS/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test("literal null claim fence accepts an absent cloud-authority field", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "null-cloud-absent-"));
+  const store = createWriterLeaseStore({ gitCommonDir: root });
+  const branch = "agent/device/null-cloud-absent";
+  try {
+    const source = { ...store.claim({
+      sessionId: "session", device: "device", scope: "null-cloud-absent",
+      branch, worktreePath: "/worktree", baseSha: "a".repeat(40),
+    }) };
+    delete source.cloudAuthority;
+    assert.equal(Object.hasOwn(source, "cloudAuthority"), false);
+
+    const projected = casWriterLeaseProjection({
+      leaseStore: {
+        verify: () => source,
+        annotate: ({ values }) => ({ ...source, ...values }),
+      },
+      branch, expectedLeaseDigest: writerLeaseDigest(source),
+      expectedClaimId: null, values: { cloudAuthority: { claimId: CLAIM_1 } },
+    }).lease;
+    assert.equal(projected.cloudAuthority.claimId, CLAIM_1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

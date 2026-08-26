@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5438,
-  "headDigest": "1308ffd9e760de1e1798bc4aac0033af634f465c4e3d87d147be2d34b7c1c210",
+  "sequence": 5439,
+  "headDigest": "23e5fb057da5e62138e148cd51647153e946274fc08985bada6a4c8d3df71ca7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -276080,6 +276080,57 @@
       },
       "claimDigest": "5c0544b89de0de82c4656de8dca8e1926e4c87b9c1f601ecc421bf73929cdf68",
       "digest": "1308ffd9e760de1e1798bc4aac0033af634f465c4e3d87d147be2d34b7c1c210"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5439,
+      "parentDigest": "1308ffd9e760de1e1798bc4aac0033af634f465c4e3d87d147be2d34b7c1c210",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "71c6b023b8f6b1591d7cbf251d30e5af871a26afffb1afd8484369a6d1d11db8",
+      "idempotencyKey": "c6d8e54e25e021d9d918afd0f1cc1c74157f6184ae382fa87a8d19b2fa640587",
+      "requestDigest": "73f6cddf9d6b77d3bcc74faf5dd2fab0d3cff783797120bab2fb1473baaaa61e",
+      "evaluationTime": "2026-08-26T01:23:13.000Z",
+      "claimCore": {
+        "claimId": "71c6b023b8f6b1591d7cbf251d30e5af871a26afffb1afd8484369a6d1d11db8",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4d0b08589df59f1c8b8a9f4a766b88e80c000fdd4dcf736a8b34cde7ae856b62",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:616844802c9bb8913d0f24e8d1fa40f37ad9cd2d538ce0c90c942bb946f8ec89",
+        "canonicalBaseRevision": "9a3017bd51bc84adfb64dcc9d3084fc812812065",
+        "declaredWriteScope": [
+          "path:__tests__/retired-abandoned-owned-dirt-successor-recovery.test.mjs",
+          "path:__tests__/terminal-handoff-owned-dirt-successor-recovery.test.mjs",
+          "path:docs/RETIRED-ABANDONED-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/TERMINAL-HANDOFF-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-contract.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-controller.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-evidence.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "path:scripts/terminal-handoff-owned-dirt-successor-recovery.mjs",
+          "semantic:retired-abandoned-owned-dirt-recovery"
+        ],
+        "writeSetDigest": "544ca19cc50ef894d1d41e87b762998de4d062a2f834feba8c270ce44c7196b7",
+        "laneRevision": "9a3017bd51bc84adfb64dcc9d3084fc812812065",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-26T01:53:13.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "e0d806e05d117c704ffcc27c39708f2e4cbcceabe71fc05dc66c00126fb3d26a",
+        "eligibleSince": "2026-08-26T01:22:04.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-26T01:23:13.000Z"
+      },
+      "claimDigest": "617a1377a6c8f5e6eb74d1ff2e87013b602905db49e4935d3d811032ac9aba65",
+      "digest": "23e5fb057da5e62138e148cd51647153e946274fc08985bada6a4c8d3df71ca7"
     }
   ]
 }

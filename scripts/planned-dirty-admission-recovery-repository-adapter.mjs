@@ -1,15 +1,15 @@
 // Responsibility: Join exact dirt, cloud, review, task proof, registry CAS, and marker projection.
-
 import { execFileSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
 import { captureActiveOwnedDirtEvidence, requireSameActiveOwnedDirtEvidence }
   from "./active-owned-dirt-recovery-evidence.mjs";
-import { canonicalJson, digestValue, writeSetsOverlap }
+import { canonicalJson, digestValue }
   from "./cloud-collaboration-primitives.mjs";
 import { captureProtectedMainAdvance } from "./device-branch-ownership-lib.mjs";
+import { buildPlannedDirtyAdmissionRecoveryCloudFrame }
+  from "./planned-dirty-admission-recovery-cloud-frame.mjs";
 import {
   buildPlannedDirtyAdmissionRecoveryEvidence,
   normalizePlannedDirtyAdmissionRecoveryEvidence,
@@ -21,13 +21,22 @@ import {
   resolvePlannedDirtyAdmissionRecoveryJournalPath,
 } from "./planned-dirty-admission-recovery-store.mjs";
 import {
-  attestProvisionedStartCloudAuthoritySubject,
-  projectProvisionedStartCloudAuthoritySubject,
-  requireProvisionedStartCloudAuthorityAttestation,
-} from "./provisioned-start-cloud-authority-subject.mjs";
+  assertExactTargetMarkerBodyCapacity,
+  assertProjectedAdmissionMarkerBodyCapacity,
+  digestPattern,
+  firstSha,
+  githubRepositoryFromRemoteUrl,
+  inside,
+  invalid,
+  positive,
+  required,
+  reviewRequestId,
+  sha,
+} from "./planned-dirty-admission-recovery-repository-support.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
-import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { invokeRepositoryCloudAction, verifyAdmissionCloudAuthority }
+  from "./scoped-lane-cloud-authority.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
 import { authorizeTaskBoundLeaseMutation } from "./task-bound-lane-authority-store.mjs";
 import {
@@ -44,12 +53,13 @@ import {
 
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RECEIPTS_FIELD = "plannedDirtyAdmissionRecoveryReceipts";
-const GITHUB_PULL_REQUEST_BODY_LIMIT_BYTES = 65_536;
 const IMPLEMENTATION_FILES = Object.freeze([
   "scripts/planned-dirty-admission-recovery-contract.mjs",
   "scripts/planned-dirty-admission-recovery-controller.mjs",
+  "scripts/planned-dirty-admission-recovery-cloud-frame.mjs",
   "scripts/planned-dirty-admission-recovery-evidence.mjs",
   "scripts/planned-dirty-admission-recovery-repository-adapter.mjs",
+  "scripts/planned-dirty-admission-recovery-repository-support.mjs",
   "scripts/planned-dirty-admission-recovery-store.mjs",
   "scripts/planned-dirty-admission-recovery.mjs",
 ]);
@@ -77,8 +87,10 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
   const ghRunner = dependencies.gh || options.gh;
   const gh = args => String(ghRunner ? ghRunner(args) : execute("gh", args)).trim();
   const now = dependencies.now || options.clock || options.now || (() => new Date());
-  const verifyCloud = dependencies.verifyCloud || options.verifyCloud
-    || verifyAdmissionCloudAuthority;
+  const customVerifyCloud = dependencies.verifyCloud || options.verifyCloud || null;
+  const verifyCloud = customVerifyCloud || verifyAdmissionCloudAuthority;
+  const inspectCloudStatus = dependencies.inspectCloudStatus || options.inspectCloudStatus
+    || (customVerifyCloud ? null : invokeRepositoryCloudAction);
   const assertMutation = dependencies.assertMutationAuthority || options.assertMutationAuthority
     || assertAdmissionMutationAuthority;
   const authorizeTaskMutation = dependencies.authorizeTaskMutation
@@ -129,9 +141,8 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       || lease.branch !== branch || lease.sessionId !== sessionId
       || path.resolve(lease.worktreePath || "") !== repository
       || lease.admission?.status !== "planned" || lease.integration != null
-      || !lease.cloudAuthority || !lease.taskAuthority
-      || Date.parse(lease.expiresAt) <= now().getTime()) {
-      invalid("exact registered task-bound active unexpired planned lease");
+      || !lease.cloudAuthority || !lease.taskAuthority) {
+      invalid("exact registered task-bound active planned lease");
     }
     manifestFromLease(lease);
     return lease;
@@ -218,23 +229,11 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     return Object.freeze({ controller, protectedMainAdvance });
   }
 
-  function cloudFrame(lease, manifest) {
-    const verified = verifyCloud({ authority: lease.cloudAuthority, manifest,
-      canonicalBaseSha: lease.baseSha, environment });
-    const subject = projectProvisionedStartCloudAuthoritySubject({ verified, lease, manifest });
-    const attestation = attestProvisionedStartCloudAuthoritySubject({ verified, subject });
-    requireProvisionedStartCloudAuthorityAttestation(attestation, digestValue(subject));
-    const mutation = assertMutation({ lease, cloudAuthority: verified.authority,
-      remoteAuthorityVerification: verified.verification,
-      allowPlanned: lease.admission?.status === "planned" });
-    const claims = verified.verification?.inventory?.claims;
-    if (!Array.isArray(claims)) invalid("cloud claim inventory");
-    const overlaps = claims.filter(claim => claim.claimId !== subject.claim.claimId
-      && (claim.writeAuthority === true || claim.scopeReserved === true)
-      && writeSetsOverlap(claim.declaredWriteScope, manifest.declaredWriteSet))
-      .map(claim => claim.claimId).sort();
-    if (overlaps.length) invalid("non-overlapping peer inventory");
-    return Object.freeze({ subject, attestation, mutation, overlaps });
+  function cloudFrame(lease, manifest, sealedHeartbeatProjection = null) {
+    return buildPlannedDirtyAdmissionRecoveryCloudFrame({
+      lease, branch, manifest, sealedHeartbeatProjection,
+      inspectCloudStatus, verifyCloud, assertMutation, environment, now,
+    });
   }
 
   function capturePlanFrame() {
@@ -263,6 +262,8 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       dirtObservations: [first.dirt, second.dirt], manifest: first.manifest,
       pullRequestObservations: [first.pullRequest, second.pullRequest],
       cloudSubjects: [first.cloud.subject, second.cloud.subject],
+      targetCloudAuthorityObservations: [first.cloud.targetCloudAuthority,
+        second.cloud.targetCloudAuthority],
       controllerObservations: [first.controller, second.controller],
       protectedMainObservations: [first.protectedMainAdvance,
         second.protectedMainAdvance], overlappingClaimIds: first.cloud.overlaps,
@@ -280,7 +281,7 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
   function recoveryRecord(plan, intent, mutationReceipt, projectedAt) {
     const authorized = authorizedValues(intent);
     const authorityReceipt = normalizeMutationReceipt(plan, mutationReceipt);
-    const core = { schema: "agentic-planned-dirty-admission-preservation/v1",
+    const core = { schema: "agentic-planned-dirty-admission-preservation/v2",
       planDigest: plan.planDigest, sourceLeaseDigest: plan.evidence.sourceLeaseDigest,
       sourceAdmissionDigest: digestValue(plan.evidence.sourceLease.admission),
       dirtEvidenceDigest: plan.evidence.dirtDigest,
@@ -288,6 +289,8 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       taskAuthorityReceiptDigest: authorized.taskAuthorityReceiptDigest,
       taskProofDigest: authorized.taskProofDigest,
       plannedMutationAuthorityReceipt: authorityReceipt, projectedAt };
+    core.targetCloudAuthorityDigest = plan.evidence.targetCloudAuthorityDigest;
+    core.heartbeatProjectionDigest = plan.evidence.heartbeatProjection.projectionDigest;
     return Object.freeze({ ...core, receiptDigest: digestValue(core) });
   }
 
@@ -297,14 +300,22 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     const admission = Object.freeze({ ...source.admission, status: "admitted",
       admittedReportDigest: preservation.receiptDigest,
       preservationReceiptDigest: preservation.receiptDigest });
-    return Object.freeze({ ...source, admission,
+    return Object.freeze({ ...source,
+      cloudAuthority: plan.evidence.targetCloudAuthority,
+      heartbeatAt: plan.evidence.heartbeatProjection.heartbeatAt,
+      expiresAt: plan.evidence.heartbeatProjection.expiresAt,
+      admission,
       plannedDirtyAdmissionRecovery: preservation });
   }
 
   function validTargetLease(plan, intent, lease) {
     const record = lease?.plannedDirtyAdmissionRecovery;
-    if (!record || record.planDigest !== plan.planDigest
+    if (!record || record.schema !== "agentic-planned-dirty-admission-preservation/v2"
+      || record.planDigest !== plan.planDigest
       || record.sourceLeaseDigest !== plan.evidence.sourceLeaseDigest
+      || record.targetCloudAuthorityDigest !== plan.evidence.targetCloudAuthorityDigest
+      || record.heartbeatProjectionDigest
+        !== plan.evidence.heartbeatProjection.projectionDigest
       || !record.plannedMutationAuthorityReceipt?.receiptDigest) return false;
     const { receiptDigest, ...core } = record;
     if (receiptDigest !== digestValue(core)) return false;
@@ -320,7 +331,7 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     }
     const receipt = structuredClone(value);
     const { receiptDigest, ...core } = receipt;
-    const authority = plan.evidence.sourceLease.cloudAuthority;
+    const authority = plan.evidence.targetCloudAuthority;
     if (receipt.schema !== "agentic-admission-mutation-authority/v1"
       || receipt.status !== "ready" || !digestPattern(receiptDigest)
       || receiptDigest !== digestValue(core) || receipt.claimId !== authority.claimId
@@ -349,11 +360,17 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     if (source && receipt) invalid("source registry recovery receipt");
     if (target) {
       const { receiptDigest, ...receiptCore } = receipt || {};
-      if (!receipt || receipt.planDigest !== plan.planDigest
+      if (!receipt
+        || receipt.schema
+          !== "agentic-planned-dirty-admission-recovery-registry-receipt/v2"
+        || receipt.planDigest !== plan.planDigest
         || receipt.operationKey !== operationKey
         || receipt.sourceLeaseDigest !== plan.evidence.sourceLeaseDigest
         || receipt.targetLeaseDigest !== digest
         || receipt.claimId !== plan.evidence.sourceLease.cloudAuthority.claimId
+        || receipt.targetCloudAuthorityDigest !== plan.evidence.targetCloudAuthorityDigest
+        || receipt.heartbeatProjectionDigest
+          !== plan.evidence.heartbeatProjection.projectionDigest
         || receipt.dirtDigest !== plan.evidence.dirtDigest
         || receipt.registryRevision > state.registry.revision
         || receipt.registryRevision !== plan.evidence.sourceRegistry.revision + 1
@@ -391,7 +408,7 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     const repositoryState = repositoryFrame(lease);
     const pullRequest = pullRequestFrame(lease);
     const marker = markerDisposition(plan, registry.disposition, lease, pullRequest);
-    const cloud = cloudFrame(lease, manifest);
+    const cloud = cloudFrame(lease, manifest, plan.evidence.heartbeatProjection);
     const protectedState = controllerFrame(lease, pullRequest, manifest);
     return Object.freeze({ registry, lease, manifest, dirt: repositoryState.dirt,
       pullRequest, marker, cloud, controller: protectedState.controller,
@@ -404,7 +421,10 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       registryDisposition: frame.registry.disposition,
       dirtDigest: frame.dirt.evidenceDigest, pullRequest: frame.pullRequest,
       markerDisposition: frame.marker.disposition,
-      cloudSubject: frame.cloud.subject, controller: frame.controller,
+      cloudSubject: frame.cloud.subject,
+      targetCloudAuthorityDigest: digestValue(frame.cloud.targetCloudAuthority),
+      heartbeatProjectionDigest: frame.cloud.heartbeatProjection.projectionDigest,
+      controller: frame.controller,
       protectedMainAdvance: frame.protectedMainAdvance };
   }
 
@@ -418,6 +438,10 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     requireSameActiveOwnedDirtEvidence(plan.evidence.ownedDirt, second.dirt);
     if (canonicalJson(second.manifest) !== canonicalJson(plan.evidence.manifest)
       || digestValue(second.cloud.subject) !== plan.evidence.cloudAuthoritySubjectDigest
+      || digestValue(second.cloud.targetCloudAuthority)
+        !== plan.evidence.targetCloudAuthorityDigest
+      || second.cloud.heartbeatProjection.projectionDigest
+        !== plan.evidence.heartbeatProjection.projectionDigest
       || second.cloud.overlaps.length
       || canonicalJson(second.controller) !== canonicalJson(plan.evidence.protectedController)
       || canonicalJson(second.protectedMainAdvance)
@@ -448,6 +472,8 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       preservationReceiptDigest: record.receiptDigest,
       plannedMutationAuthorityReceiptDigest:
         record.plannedMutationAuthorityReceipt.receiptDigest,
+      targetCloudAuthorityDigest: plan.evidence.targetCloudAuthorityDigest,
+      heartbeatProjectionDigest: plan.evidence.heartbeatProjection.projectionDigest,
       registryRevision: state.registry.revision, adopted });
   }
 
@@ -489,6 +515,9 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       }
       const mutation = before.cloud.mutation;
       const target = projectTargetLease(plan, intent, mutation, mutation.evaluatedAt);
+      assertExactTargetMarkerBodyCapacity({
+        sourceBody: plan.evidence.pullRequest.body, targetLease: target,
+      });
       const operationKey = before.registry.operationKey;
       const targetDigest = writerLeaseDigest(target);
       const result = mutateWriterLeaseRegistry({ leaseStore, branch,
@@ -496,10 +525,12 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
         expectedClaimId: plan.evidence.sourceLease.cloudAuthority.claimId,
         action: ({ registry }) => {
           const receiptCore = { schema:
-            "agentic-planned-dirty-admission-recovery-registry-receipt/v1",
+            "agentic-planned-dirty-admission-recovery-registry-receipt/v2",
           operationKey, planDigest: plan.planDigest,
           sourceLeaseDigest: plan.evidence.sourceLeaseDigest,
           targetLeaseDigest: targetDigest, claimId: target.cloudAuthority.claimId,
+          targetCloudAuthorityDigest: plan.evidence.targetCloudAuthorityDigest,
+          heartbeatProjectionDigest: plan.evidence.heartbeatProjection.projectionDigest,
           dirtDigest: plan.evidence.dirtDigest, registryRevision: registry.revision + 1 };
           const receipt = { ...receiptCore, receiptDigest: digestValue(receiptCore) };
           return { registry: { ...registry, leases: { ...registry.leases, [branch]: target },
@@ -564,33 +595,5 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
     },
   });
 }
-
 export const createRepositoryPlannedDirtyAdmissionRecoveryAdapter =
   createPlannedDirtyAdmissionRecoveryRepositoryAdapter;
-
-function reviewRequestId(value) { const id = required(value, "review identity");
-  return id.startsWith("github-pull-request:") ? id : `github-pull-request:${id}`; }
-function assertProjectedAdmissionMarkerBodyCapacity({ body, lease }) {
-  if (lease.admission?.status !== "planned") return;
-  const placeholder = "0".repeat(64);
-  const projected = { ...lease, admission: { ...lease.admission, status: "admitted",
-    admittedReportDigest: placeholder, preservationReceiptDigest: placeholder } };
-  const targetBody = updateWriterLeasePullRequestBody(body, projected);
-  if (Buffer.byteLength(targetBody) > GITHUB_PULL_REQUEST_BODY_LIMIT_BYTES) {
-    invalid("bounded target pull-request marker body");
-  }
-}
-function githubRepositoryFromRemoteUrl(value) {
-  const source = required(value, "origin remote URL");
-  const match = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([^/\s]+\/[^/\s]+?)(?:\.git)?\/?$/u.exec(source);
-  if (!match) invalid("GitHub origin repository");
-  return match[1];
-}
-function firstSha(value) { return sha(String(value || "").trim().split(/\s+/u)[0], "remote SHA"); }
-function inside(root, candidate) { const relative = path.relative(root, candidate);
-  return !relative || (!relative.startsWith("..") && !path.isAbsolute(relative)); }
-function required(value, label) { if (typeof value !== "string" || !value.trim()) invalid(label); return value.trim(); }
-function sha(value, label) { if (!/^[0-9a-f]{40}$/u.test(String(value || ""))) invalid(label); return value; }
-function positive(value, label) { if (!Number.isSafeInteger(value) || value < 1) invalid(label); return value; }
-function digestPattern(value) { return /^[0-9a-f]{64}$/u.test(String(value || "")); }
-function invalid(label) { throw new Error(`Planned-dirty admission recovery has invalid ${label}.`); }

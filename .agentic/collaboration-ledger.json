@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5502,
-  "headDigest": "8a61a4cad7322d85fc60e9cff4fb922913301c4dd90e9e2fa161c734e025e741",
+  "sequence": 5503,
+  "headDigest": "592f089e5c691e57169d696cc20a1ce2a6919adb03d7a2412e1d27f2ae3abca0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -279284,6 +279284,50 @@
       },
       "claimDigest": "d4d76a707ccffd1da9a2b163cebedd7470dc19824353071870bffe434f741d8e",
       "digest": "8a61a4cad7322d85fc60e9cff4fb922913301c4dd90e9e2fa161c734e025e741"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5503,
+      "parentDigest": "8a61a4cad7322d85fc60e9cff4fb922913301c4dd90e9e2fa161c734e025e741",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9c965bb059085358fb28d9250034e3cb29ee25dc02fbd181a34ef3d4902af988",
+      "idempotencyKey": "e56030c9fafd381475b856edd9f465b505afb811f9739e0e8d4276cbbb316787",
+      "requestDigest": "404a98a032293053f17e2d214dc470e7196d0ab26acf74a5a4d2b074c4ffb445",
+      "evaluationTime": "2026-08-26T09:53:25.000Z",
+      "claimCore": {
+        "claimId": "9c965bb059085358fb28d9250034e3cb29ee25dc02fbd181a34ef3d4902af988",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:8fc134a076d9f1c03032fa451a566f9da175ee8cdffdd7a1244197ecc5c13d23",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f11b78d4ecbf55448c740cd313b2ed90e3b873e71458b25d94affbe69249d8b3",
+        "canonicalBaseRevision": "415e914da9e757387b992a5b03d89ac8855cb310",
+        "declaredWriteScope": [
+          "path:__tests__/integrated-source-duplicate-pr-reconciliation.test.mjs",
+          "path:docs/INTEGRATED-SOURCE-DUPLICATE-PR-RECONCILIATION.md",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation-contract.mjs",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation-controller.mjs",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation-repository-adapter.mjs",
+          "path:scripts/integrated-source-duplicate-pr-reconciliation.mjs",
+          "semantic:integrated-source-duplicate-pr-reconciliation"
+        ],
+        "writeSetDigest": "517bcfc81ece52d826faf2631a7dd552a16f04cdac6542d9a1b4cb3c6b81668c",
+        "laneRevision": "273ef6f0c7cc7c8b5c67adee8cd0c61c91e1c26e",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-26T10:53:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "5be1edb21dfcea05ae400e26ddb2aff6734575420aef40123570af1a2ce47293",
+        "eligibleSince": "2026-08-26T09:53:25.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "37af481b53378d08b8f488004a9ddda63843e10e2fea9682e3f459e8b320fba8",
+      "digest": "592f089e5c691e57169d696cc20a1ce2a6919adb03d7a2412e1d27f2ae3abca0"
     }
   ]
 }

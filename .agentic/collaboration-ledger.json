@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5420,
-  "headDigest": "743f41977895a45bca402b9e6e3ffb909d73403cd619de6b770b954c90db5001",
+  "sequence": 5421,
+  "headDigest": "01f34ed4a70eaa70eb5c27f74c1aa6fc3f2802ecfd7d83ba01c5ed6c6733ce26",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -275027,6 +275027,48 @@
       },
       "claimDigest": "66078cf3e8687eaaad4551be07f5cc9f08dc684ce80c46c4427a1fec044aa693",
       "digest": "743f41977895a45bca402b9e6e3ffb909d73403cd619de6b770b954c90db5001"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5421,
+      "parentDigest": "743f41977895a45bca402b9e6e3ffb909d73403cd619de6b770b954c90db5001",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b99ccdcbc8469ee41c3b526813e5b5240318996a2e3cf47e0bab38a0ccdd70bc",
+      "idempotencyKey": "df57754f1b3c5d1e013aa6a55e78629bb639a90ac40bb39d32b7b53bb4e36a8c",
+      "requestDigest": "f158dadf2448d037eddebd161573c7f889f65ace972bdd567e14e1c5774a28be",
+      "evaluationTime": "2026-08-26T00:12:36.000Z",
+      "claimCore": {
+        "claimId": "b99ccdcbc8469ee41c3b526813e5b5240318996a2e3cf47e0bab38a0ccdd70bc",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:e261056ed8ce1271a432bb1f0b282b2063c492737a9edfce433101c63b168664",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ea731baa05a4d229e8bc088c96776388ad309405708031e2771a0f4c5e0bc9d7",
+        "canonicalBaseRevision": "2f40c4078b5c41e5618d36b969d4287a423df6df",
+        "declaredWriteScope": [
+          "path:__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs",
+          "path:docs/CLOUD-AUTHORITY-HANDOFF.md",
+          "path:scripts/cloud-authority-scope-expansion-lineage-contract.mjs",
+          "path:scripts/cloud-authority-scope-expansion-lineage-migration.mjs",
+          "semantic:lineage-repeated-integrated-replay-recovery"
+        ],
+        "writeSetDigest": "23c55f8bd49bb214d2d59dffb7b81ae134d5ad4f7c3235e3d2434243c4b83318",
+        "laneRevision": "2f40c4078b5c41e5618d36b969d4287a423df6df",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-26T01:12:36.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "03dc42acf150fa5ee0d01c1187a94efb293c5a25b6679b3587d51868b3590bfb",
+      "digest": "01f34ed4a70eaa70eb5c27f74c1aa6fc3f2802ecfd7d83ba01c5ed6c6733ce26"
     }
   ]
 }

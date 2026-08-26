@@ -184,8 +184,13 @@ epoch 1. It does not mint a successor or replace the immutable integration
 receipt. Post-recovery verification keeps the exact local and remote reviewed
 projection as historical evidence, requires it to be the integrated
 transition's immediate parent, and proves the current cloud claim preserves
-the immutable integration evidence. A rerun returns `already-migrated` for the
-same epoch-1 claim or epoch-2 successor; it never creates an extra epoch.
+the immutable integration evidence. A rerun returns `already-migrated` while
+that recovered epoch-1 claim remains live. If the same verified claim expires
+again, the migration reissues its process-local lineage admission against the
+current dormant transition and invokes the repository-owned integrated-replay
+recovery again. The claim ID, epoch, predecessor, and immutable integration
+receipt remain unchanged; no generic reclaim or extra epoch is created. An
+epoch-2 successor remains an idempotent `already-migrated` result.
 
 This migration is reclaim-only. The execution session, successor session, and
 successor device must equal the exact preserved lease session and device before

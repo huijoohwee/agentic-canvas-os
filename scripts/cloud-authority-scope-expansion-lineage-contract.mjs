@@ -49,8 +49,9 @@ export function authorizeScopeExpansionLineageMigration({ plan, authorization, e
 }
 
 export function buildScopeExpansionLineageAdmission({ verified, authorization, executionIntent, lane, status }) {
-  if (!VERIFIED_LINEAGES.has(verified) || verified.state !== "legacy") {
-    throw new Error("Lineage admission requires a freshly verified legacy ledger proof.");
+  if (!VERIFIED_LINEAGES.has(verified)
+    || !["legacy", "integrated-replay-recovered"].includes(verified.state)) {
+    throw new Error("Lineage admission requires a freshly verified recoverable ledger proof.");
   }
   const normalized = verified.plan;
   const intent = normalizeExecutionIntent(executionIntent);

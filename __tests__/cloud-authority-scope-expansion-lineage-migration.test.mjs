@@ -62,7 +62,9 @@ const MIGRATION_TIMES = [
   "2026-08-09T01:03:00.000Z",
   "2026-08-09T01:04:00.000Z",
 ];
-const LIVE_EXPIRY = "2099-08-09T02:00:00.000Z";
+const LIVE_EXPIRY = "2026-08-09T02:00:00.000Z";
+const REPEATED_RECOVERY_EXPIRY = "2026-08-09T04:00:00.000Z";
+const REPEATED_RECOVERY_AT = "2026-08-09T03:10:00.000Z";
 
 function fixture({
   retirementPlanDigest = PLAN_RECEIPT,
@@ -174,7 +176,7 @@ function fixture({
   }, targetActor);
   ledger = reviewed.ledger;
 
-  const state = { ledger };
+  const state = { ledger, observedAt: OBSERVED_AT, integratedRecoveryCount: 0 };
   refreshStatus(state);
   state.lane = legacyLane(
     state.status.claims.find(claim => claim.claimId === target.claim.claimId),
@@ -221,7 +223,7 @@ function refreshStatus(state) {
     repositoryId: REPOSITORY.repositoryId,
     ledgerRevision: revision(`ledger-${state.ledger.sequence}`),
     ledgerDigest: state.ledger.headDigest,
-    claims: listCurrentClaims(state.ledger, OBSERVED_AT, { repositoryId: REPOSITORY.repositoryId })
+    claims: listCurrentClaims(state.ledger, state.observedAt, { repositoryId: REPOSITORY.repositoryId })
       .map(projectClaim),
   };
 }
@@ -442,17 +444,20 @@ function handoffAdapter(state) {
     },
     recoverIntegratedAuthority: ({ integratedReplay }) => {
       const claim = integratedReplay.claim;
-      const result = mutate(state.ledger, "continue", "2026-08-09T01:10:00.000Z", {
+      const repeatedRecovery = state.integratedRecoveryCount > 0;
+      const result = mutate(state.ledger, "continue",
+        repeatedRecovery ? REPEATED_RECOVERY_AT : "2026-08-09T01:10:00.000Z", {
         claimId: claim.claimId,
         expectedFenceRevision: claim.fenceRevision,
         expectedTransitionCounter: claim.transitionCounter,
         mode: "recovery",
-        expiresAt: LIVE_EXPIRY,
+        expiresAt: repeatedRecovery ? REPEATED_RECOVERY_EXPIRY : LIVE_EXPIRY,
         recoveryEvidenceDigest: digestValue({ recovery: claim.claimId }),
         deviceId: SUCCESSOR_ACTOR.deviceId,
         sessionId: SUCCESSOR_ACTOR.sessionId,
-        idempotencyKey: "target-integrated-recovery",
+        idempotencyKey: `target-integrated-recovery-${claim.transitionCounter}`,
       }, SUCCESSOR_ACTOR);
+      state.integratedRecoveryCount += 1;
       state.ledger = result.ledger;
       refreshStatus(state);
       const recovered = state.status.claims.find(value => value.claimId === claim.claimId);
@@ -628,6 +633,33 @@ test("integrated lineage recovery converges the same epoch-1 claim and replays i
   assert.equal(replay.successorClaimId, recovered.predecessorClaimId);
   assert.equal(replay.successorLeaseEpoch, 1);
   assert.equal(state.ledger.sequence, sequence);
+});
+
+test("integrated lineage recovery converges again after the recovered claim expires", async () => {
+  const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
+  const adapter = migrationAdapter(state);
+  const planned = await runScopeExpansionLineageMigration(
+    { mode: "plan", branch: BRANCH }, { adapter },
+  );
+  const request = executeRequest(planned.plan, {
+    sessionId: "successor-session",
+    successorSessionId: "successor-session",
+  });
+  const first = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(first.outcome, "integrated-replay-recovered");
+
+  state.observedAt = "2026-08-09T03:00:00.000Z";
+  refreshStatus(state);
+  const dormant = state.status.claims.find(claim => claim.claimId === first.successorClaimId);
+  assert.equal(dormant.state, "dormant-preserved");
+  const sequence = state.ledger.sequence;
+
+  const repeated = await runScopeExpansionLineageMigration(request, { adapter });
+  assert.equal(repeated.outcome, "integrated-replay-recovered");
+  assert.equal(repeated.successorClaimId, first.successorClaimId);
+  assert.equal(repeated.successorLeaseEpoch, 1);
+  assert.equal(state.ledger.sequence, sequence + 1);
+  assert.equal(state.integratedRecoveryCount, 2);
 });
 
 test("integrated lineage rejects a local projection outside the reviewed-to-integrated edge", () => {

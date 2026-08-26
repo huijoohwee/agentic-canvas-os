@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5458,
-  "headDigest": "b340b304fb2631acec1cdb41d05ba391e2867ca24e6eee597c8312eea07682ed",
+  "sequence": 5459,
+  "headDigest": "5415aee8687e3c46ef80c9e29c581934176db497e092247c429a6b24f1aa08a6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -277028,6 +277028,52 @@
       },
       "claimDigest": "53586bb70e48534e3c25769aa5c64b29f5f00f713b23bfabe45ab2a2953f6ff0",
       "digest": "b340b304fb2631acec1cdb41d05ba391e2867ca24e6eee597c8312eea07682ed"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5459,
+      "parentDigest": "b340b304fb2631acec1cdb41d05ba391e2867ca24e6eee597c8312eea07682ed",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "5b45c824653c1e8fbd4f914663a1a8b8415ea24b4d48020e5220e15452654776",
+      "idempotencyKey": "b9d0d85c910358c4d4faffd585cc7e5b4b6aa6fb94306abf99daf811115864ca",
+      "requestDigest": "3a2e9436a5f0a3e11437c4040781b60b08765608cd9c3e1cc0320a17668de5c8",
+      "evaluationTime": "2026-08-26T02:08:09.000Z",
+      "claimCore": {
+        "claimId": "5b45c824653c1e8fbd4f914663a1a8b8415ea24b4d48020e5220e15452654776",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:db97e049ee8791120712f0e07be09b901e35ebf8bbea505b1475690dea735324",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2c9b5317895599c0f2d4f5d59e3d600e1d0e2a55dbd8ce42ddcd735a50a2e345",
+        "canonicalBaseRevision": "f9663ab045ee0331c2ec5548012e8959f67bd804",
+        "declaredWriteScope": [
+          "path:__tests__/planned-dirty-admission-recovery.test.mjs",
+          "path:docs/PLANNED-DIRTY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-dirty-admission-recovery-contract.mjs",
+          "path:scripts/planned-dirty-admission-recovery-controller.mjs",
+          "path:scripts/planned-dirty-admission-recovery-evidence.mjs",
+          "path:scripts/planned-dirty-admission-recovery-repository-adapter.mjs",
+          "path:scripts/planned-dirty-admission-recovery-store.mjs",
+          "path:scripts/planned-dirty-admission-recovery.mjs",
+          "semantic:planned-dirty-admission-recovery"
+        ],
+        "writeSetDigest": "f941b58973818bcbbbebb0134735bef6807e61d6bd926bb3fc1a55879c9aafd6",
+        "laneRevision": "f9663ab045ee0331c2ec5548012e8959f67bd804",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-27T02:08:09.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "04413b48a9885ec06ec34f92a3f86b681bcfac405e7cc00ff3024414fde66acc",
+      "digest": "5415aee8687e3c46ef80c9e29c581934176db497e092247c429a6b24f1aa08a6"
     }
   ]
 }

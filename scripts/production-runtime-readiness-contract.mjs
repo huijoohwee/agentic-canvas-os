@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const PRODUCTION_RUNTIME_READINESS_SCHEMA = 'knowgrph-production-runtime-readiness/v2'
+export const PRODUCTION_RUNTIME_READINESS_SCHEMA = 'agenticgraph-production-runtime-readiness/v2'
 export const PRODUCTION_RUNTIME_READINESS_SCHEMA_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -58,8 +58,8 @@ export function validateProductionRuntimeReadiness(value) {
   if (!isExactObject(value.mirror, ['repository']) || value.mirror.repository !== 'huijoohwee/huijoohwee') {
     throw new Error('mirror identity is invalid')
   }
-  if (!Array.isArray(value.surfaces) || value.surfaces.length !== 2 || !value.surfaces.includes('/') || !value.surfaces.includes('/knowgrph')) {
-    throw new Error('runtime readiness must bind the apex and /knowgrph surfaces')
+  if (!Array.isArray(value.surfaces) || value.surfaces.length !== 2 || !value.surfaces.includes('/') || !value.surfaces.includes('/agenticgraph')) {
+    throw new Error('runtime readiness must bind the apex and /agenticgraph surfaces')
   }
   return value
 }

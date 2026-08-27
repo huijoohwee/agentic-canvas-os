@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5519,
-  "headDigest": "05c4d696fe06ab0b91357efca249c6148b27bb6d936b6606c09125f2826eb959",
+  "sequence": 5520,
+  "headDigest": "55dac964d89816a663eed3846845848cf9a0282c392cbce4204e8ebf3448340c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -280166,6 +280166,47 @@
       },
       "claimDigest": "3ab464e430aaacf4fd2ca317d98667ce202c526ddeb1dc6e2ad52aced04a5ac2",
       "digest": "05c4d696fe06ab0b91357efca249c6148b27bb6d936b6606c09125f2826eb959"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5520,
+      "parentDigest": "05c4d696fe06ab0b91357efca249c6148b27bb6d936b6606c09125f2826eb959",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "849245e009571f15652ce6ff26d8e2815610718f1f0eab0bc35451bae1650569",
+      "idempotencyKey": "f8c6264597155d33ada8fd313d5474ca30cb3ab36eed814d1afde91a897f0e43",
+      "requestDigest": "a73452a284adff145aef46b71000dddef59ac4d1377bc90d23b3d671e8205dee",
+      "evaluationTime": "2026-08-27T00:05:06.000Z",
+      "claimCore": {
+        "claimId": "849245e009571f15652ce6ff26d8e2815610718f1f0eab0bc35451bae1650569",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:cdfb85e1c7cdc19b5c0b66b24890159c4b0251d67c1f41ef1c8b0c19768a4e82",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:edbcf287b197a03d5238c21d4f4465abf7650e6e74ece02e1d3da427a8b37994",
+        "canonicalBaseRevision": "fae679a688da3a60ceaf686679d382cd5c0fe762",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-WRITE-SCOPE.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:active-publish-prepared-dormant-predecessor"
+        ],
+        "writeSetDigest": "f7fc4b98db8128d67c725f36b9cf8208ab13e90e76a359bd5e24cc4b5a4dc279",
+        "laneRevision": "343f21ef8b3fc15a107a2e162673b9a204860d8a",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-28T00:05:06.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBJDXtg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c0d1576aba164117712869c205764dbacd9ef986aee3279cd6767b73e521eb94",
+      "digest": "55dac964d89816a663eed3846845848cf9a0282c392cbce4204e8ebf3448340c"
     }
   ]
 }

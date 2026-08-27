@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5534,
-  "headDigest": "1eaa3692f18829f8dbcb9816c4872e39ed3278f0251a7d51b386add98bc4ff37",
+  "sequence": 5535,
+  "headDigest": "7cecfe525a09fb7ae1c3d481b2e880316fb7b0bfebb315b6124ec67e8db2f81a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -280883,6 +280883,58 @@
       },
       "claimDigest": "5b3cecdf2a04836c83332fb441997e3fae294f965856404462b25f0922616ab6",
       "digest": "1eaa3692f18829f8dbcb9816c4872e39ed3278f0251a7d51b386add98bc4ff37"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5535,
+      "parentDigest": "1eaa3692f18829f8dbcb9816c4872e39ed3278f0251a7d51b386add98bc4ff37",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "96efc0f29aa8b5a30ee53505242fc0d0b97112d8f2229b96f86f52bcd6225028",
+      "idempotencyKey": "ec51ff341a39767221f9d8e62acb33db4b0d8120089427adadfffd1f0840a3c1",
+      "requestDigest": "56b7c6c0a379202b24a938a783e89da6f17f0576b54957323c28774da8979c44",
+      "evaluationTime": "2026-08-27T02:49:03.000Z",
+      "claimCore": {
+        "claimId": "96efc0f29aa8b5a30ee53505242fc0d0b97112d8f2229b96f86f52bcd6225028",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:1d7efcbeb5b45a87a1e512f29a7ee56382c5517bbbb0d5e7b569cb5ee9cc070c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b55c0aa671aca4c2af9780954697714df1cee5c1c918ffe88226667f4cd03b96",
+        "canonicalBaseRevision": "58ddd317eb73ada5827f989a264be604c260c095",
+        "declaredWriteScope": [
+          "path:__tests__/integrated-delivery-terminal-retirement.test.mjs",
+          "path:__tests__/planned-dirty-heartbeat-projection-recovery.test.mjs",
+          "path:__tests__/post-merge-cloud-authority-controller.test.mjs",
+          "path:__tests__/post-merge-cloud-authority-verifier.test.mjs",
+          "path:docs/PLANNED-DIRTY-HEARTBEAT-PROJECTION-RECOVERY.md",
+          "path:docs/POST-MERGE-CLOUD-AUTHORITY.md",
+          "path:scripts/integrated-delivery-terminal-retirement.mjs",
+          "path:scripts/planned-dirty-heartbeat-projection-recovery-contract.mjs",
+          "path:scripts/planned-dirty-heartbeat-projection-recovery-controller.mjs",
+          "path:scripts/planned-dirty-heartbeat-projection-recovery-evidence.mjs",
+          "path:scripts/planned-dirty-heartbeat-projection-recovery-repository-adapter.mjs",
+          "path:scripts/planned-dirty-heartbeat-projection-recovery.mjs",
+          "path:scripts/post-merge-cloud-authority-controller.mjs",
+          "path:scripts/post-merge-cloud-authority-verifier.mjs",
+          "semantic:post-merge-terminal-retirement"
+        ],
+        "writeSetDigest": "ff82a27f04fd005ea847f95b05fd64c5d348c5214bc290fb5f2a02d9e94e16fe",
+        "laneRevision": "46a30c74d234d7d287c24ec53e7e68219fc0146b",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-27T03:19:03.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "6bb55eef4add3263d20c53c455b1818be5be35d03b38d9c16a585b19165c1ec5",
+        "eligibleSince": "2026-08-27T02:49:03.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5f4e0b6e9bd8ca4490556d6f96c5f714cb195ab3782df88057cb7320645fdcc8",
+      "digest": "7cecfe525a09fb7ae1c3d481b2e880316fb7b0bfebb315b6124ec67e8db2f81a"
     }
   ]
 }

@@ -26,6 +26,7 @@ import { collectScopedLaneState } from "../scripts/scoped-lane-admission-state.m
 import { defaultGit } from "../scripts/planned-clean-fence-one-ahead-admission-finalization-ports.mjs";
 import { assertStatusVerificationJoin, capturePlannedCleanFenceProtectedController,
   captureRegisteredRawIndexFrame, projectStatusVerifiedCloudAuthority,
+  projectVerifiedCandidateLeaseState,
   rawIndexSha256, readExactWriterMarker,
   recoverProtectedDescendantCandidateRegistration, replacePlannedCleanFenceWriterMarker }
   from "../scripts/planned-clean-fence-one-ahead-admission-finalization-evidence.mjs";
@@ -497,6 +498,92 @@ test("protected-main descendant evidence reconstructs only the clean registered 
     branch: "agent/device/repair",
     git: (cwd, args) => dirtyValues.get(`${cwd}\0${args.join(" ")}`),
   }), /exact clean fence registration/u);
+});
+
+test("planning proves the source lane before a pure target-lease projection", () => {
+  const sourceLease = evidenceFixture({ oneAhead: true }).sourceLease;
+  const targetLease = {
+    ...sourceLease,
+    cloudAuthority: {
+      ...sourceLease.cloudAuthority,
+      transitionCounter: sourceLease.cloudAuthority.transitionCounter + 1,
+      heartbeatCounter: 1,
+      claimDigest: D("one-ahead claim"),
+    },
+    heartbeatAt: "2026-08-26T00:01:00.000Z",
+    expiresAt: "2026-08-27T00:01:00.000Z",
+    admission: { ...sourceLease.admission, planReceiptDigest: D("fresh plan") },
+  };
+  const treeSha = "c".repeat(40);
+  const operation = {
+    targetPath: sourceLease.worktreePath,
+    baseSha: sourceLease.baseSha,
+    baseTreeSha: treeSha,
+  };
+  const sourceState = {
+    path: sourceLease.worktreePath,
+    head: sourceLease.fenceSha,
+    treeSha,
+    branch: `refs/heads/${sourceLease.branch}`,
+    detached: false,
+    bare: false,
+    locked: false,
+    prunable: false,
+    invalid: false,
+    dirty: false,
+    indexDigest: D("index"),
+    workingTreeDigest: digestValue({ status: "", workingFiles: [] }),
+    leaseAmbiguous: false,
+    lease: sourceLease,
+  };
+  const candidate = { ...sourceState, stateDigest: digestValue(sourceState) };
+  const peer = Object.freeze({ path: "/controller", stateDigest: D("peer") });
+  const lanes = Object.freeze([peer, candidate]);
+  const projected = projectVerifiedCandidateLeaseState({
+    lanes,
+    candidatePath: sourceLease.worktreePath,
+    sourceLease,
+    targetLease,
+    candidateCreateRegisterResult: operation,
+  });
+  const target = projected.find(lane => lane.path === sourceLease.worktreePath);
+  assert.equal(projected[0], peer);
+  assert.equal(candidate.lease, sourceLease);
+  assert.equal(target.lease, targetLease);
+  assert.equal(target.stateDigest, digestValue({ ...sourceState, lease: targetLease }));
+  assert.deepEqual({ ...target, lease: null, stateDigest: null },
+    { ...candidate, lease: null, stateDigest: null });
+
+  const foreignLease = { ...sourceLease, sessionId: "foreign-session" };
+  const foreignState = { ...sourceState, lease: foreignLease };
+  assert.throws(() => projectVerifiedCandidateLeaseState({
+    lanes: [peer, { ...foreignState, stateDigest: digestValue(foreignState) }],
+    candidatePath: sourceLease.worktreePath,
+    sourceLease,
+    targetLease,
+    candidateCreateRegisterResult: operation,
+  }), /exact clean registered lease/u);
+  assert.throws(() => projectVerifiedCandidateLeaseState({
+    lanes,
+    candidatePath: sourceLease.worktreePath,
+    sourceLease,
+    targetLease: { ...targetLease, sessionId: "foreign-session" },
+    candidateCreateRegisterResult: operation,
+  }), /immutable source identity/u);
+  for (const drift of [
+    { dirty: true },
+    { head: "d".repeat(40) },
+    { treeSha: "e".repeat(40) },
+  ]) {
+    const driftedState = { ...sourceState, ...drift };
+    assert.throws(() => projectVerifiedCandidateLeaseState({
+      lanes: [peer, { ...driftedState, stateDigest: digestValue(driftedState) }],
+      candidatePath: sourceLease.worktreePath,
+      sourceLease,
+      targetLease,
+      candidateCreateRegisterResult: operation,
+    }), /exact clean registered lease/u);
+  }
 });
 
 function controllerFixture({ objectFormat = "sha1", status = "", branch = "main",

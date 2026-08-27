@@ -17,6 +17,13 @@ export const CONTROLLER_IMPLEMENTATION_FILES = Object.freeze([
   "scripts/planned-clean-fence-one-ahead-admission-finalization.mjs",
 ]);
 const BODY_LIMIT = 65_536;
+const CLEAN_WORKTREE_DIGEST = digestValue({ status: "", workingFiles: [] });
+const PROJECTED_LEASE_FIELDS = new Set([
+  "admission",
+  "cloudAuthority",
+  "expiresAt",
+  "heartbeatAt",
+]);
 
 export const FINALIZATION_RECEIPTS_FIELD =
   "plannedCleanFenceAdmissionFinalizationReceipts";
@@ -195,6 +202,58 @@ export function projectFinalizationPreviewEvidence(value) {
     admittedReportDigest: value.admittedReport.reportDigest,
     planRecoveryReceiptDigest: value.planRecoveryReceipt.receiptDigest,
   });
+}
+
+export function projectVerifiedCandidateLeaseState({
+  lanes,
+  candidatePath,
+  sourceLease,
+  targetLease,
+  candidateCreateRegisterResult,
+} = {}) {
+  if (!Array.isArray(lanes)
+    || !sourceLease || typeof sourceLease !== "object" || Array.isArray(sourceLease)
+    || !targetLease || typeof targetLease !== "object" || Array.isArray(targetLease)) {
+    throw new Error("Admission-finalization lease projection requires exact lane and lease evidence.");
+  }
+  const target = path.resolve(String(candidatePath || ""));
+  const candidates = lanes.filter(lane => path.resolve(String(lane?.path || "")) === target);
+  if (candidates.length !== 1) {
+    throw new Error("Admission-finalization lease projection requires one exact candidate lane.");
+  }
+  const candidate = candidates[0];
+  const { stateDigest, ...sourceState } = candidate;
+  const operation = candidateCreateRegisterResult;
+  if (digestValue(sourceState) !== stateDigest
+    || digestValue(candidate.lease) !== digestValue(sourceLease)
+    || path.resolve(String(sourceLease.worktreePath || "")) !== target
+    || candidate.branch !== `refs/heads/${sourceLease.branch}`
+    || candidate.head !== sourceLease.fenceSha
+    || candidate.treeSha !== operation?.baseTreeSha
+    || operation?.targetPath !== target
+    || operation?.baseSha !== sourceLease.baseSha
+    || candidate.dirty
+    || candidate.invalid
+    || candidate.leaseAmbiguous
+    || candidate.bare || candidate.detached || candidate.locked || candidate.prunable
+    || candidate.workingTreeDigest !== CLEAN_WORKTREE_DIGEST) {
+    throw new Error("Admission-finalization source candidate is not the exact clean registered lease.");
+  }
+  const leaseKeys = [...new Set([
+    ...Object.keys(sourceLease),
+    ...Object.keys(targetLease),
+  ])];
+  const disallowed = leaseKeys.filter(key => !PROJECTED_LEASE_FIELDS.has(key)
+    && canonicalJson({ value: sourceLease[key] }) !== canonicalJson({ value: targetLease[key] }));
+  if (disallowed.length > 0 || digestValue(sourceLease) === digestValue(targetLease)) {
+    throw new Error("Admission-finalization target lease changed immutable source identity.");
+  }
+  const targetState = { ...sourceState, lease: targetLease };
+  const projectedCandidate = Object.freeze({
+    ...targetState,
+    stateDigest: digestValue(targetState),
+  });
+  return Object.freeze(lanes.map(lane => lane === candidate ? projectedCandidate : lane));
 }
 
 export function assertNoCompetingFinalizationIntent({ registry, branch }) {

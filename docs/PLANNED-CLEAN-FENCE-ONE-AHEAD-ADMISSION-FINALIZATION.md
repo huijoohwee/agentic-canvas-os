@@ -43,7 +43,12 @@ and every registered peer before and after complete evidence capture, then
 fails if any byte changes. Plan and execution also attest that the controller
 is clean protected `main`, with HEAD, local `main`, `origin/main`, and the
 remote `main` equal, and with the runtime implementation bytes equal to that
-integrated tree. An uncommitted hotfix cannot plan or run. Planning returns one
+integrated tree. The observed candidate must join the exact source lease before
+the controller constructs a pure in-memory post-CAS projection that changes
+only cloud authority, heartbeat time, expiry, and admission fields. The normal
+preservation verifier evaluates that logical target state; planning never
+persists it, and execution remains the sole writer-registry CAS. An uncommitted
+hotfix cannot plan or run. Planning returns one
 exact operator boundary:
 
 ```text

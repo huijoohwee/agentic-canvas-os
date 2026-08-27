@@ -28,6 +28,7 @@ import { FINALIZATION_RECEIPTS_FIELD, assertFinalizationBodyCapacity,
   assertRegisteredRawIndexFrame,
   capturePlannedCleanFenceProtectedController, captureRegisteredRawIndexFrame,
   projectFinalizationPreviewEvidence, projectStatusVerifiedCloudAuthority,
+  projectVerifiedCandidateLeaseState,
   rawIndexSha256, readExactWriterMarker,
   recoverProtectedDescendantCandidateRegistration, replacePlannedCleanFenceWriterMarker }
   from "./planned-clean-fence-one-ahead-admission-finalization-evidence.mjs";
@@ -391,9 +392,16 @@ export function createPlannedCleanFenceAdmissionFinalizationRepositoryAdapter(
       expiresAt: cloud.heartbeatProjection.expiresAt,
       admission: createAdmissionLeaseProjection(report),
     };
+    const projectedLanes = projectVerifiedCandidateLeaseState({
+      lanes: collectScopedLaneState({ repository: canonicalRepository, git }).lanes,
+      candidatePath: repository,
+      sourceLease,
+      targetLease: projectedPlannedLease,
+      candidateCreateRegisterResult,
+    });
     const preservationReceipt = verifyPreservedLaneState(
       report,
-      collectScopedLaneState({ repository: canonicalRepository, git }).lanes,
+      projectedLanes,
       {
         lease: projectedPlannedLease,
         candidateCreateRegisterResult,

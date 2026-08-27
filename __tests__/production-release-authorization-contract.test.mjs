@@ -46,7 +46,7 @@ const trees = {
   agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: docsRevision, tree: docsTree },
 };
 const readiness = {
-  schema: "knowgrph-production-runtime-readiness/v2",
+  schema: "agenticgraph-production-runtime-readiness/v2",
   status: "verified-build",
   source: { repository: "huijoohwee/knowgrph", revision: sourceRevision, tree: sourceTree },
   agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: docsRevision },
@@ -54,7 +54,7 @@ const readiness = {
   artifact: { algorithm: "sha256", digest: "f".repeat(64) },
   immutableManifest: { algorithm: "sha256", digest: "1".repeat(64) },
   mirror: { repository: "huijoohwee/huijoohwee" },
-  surfaces: ["/", "/knowgrph"],
+  surfaces: ["/", "/agenticgraph"],
 };
 const gameXrRevision = "803e3a2a20dfcd1401673690a3b5d82500322f67";
 const neutralReviewSurface = {

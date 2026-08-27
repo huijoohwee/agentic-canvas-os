@@ -68,17 +68,78 @@ re-read before proof capture. No ancestry or merge-base proof against `P` runs
 before that object is materialized. Fetch failure or any post-fetch drift
 preserves v1 and stops before the rollover CAS.
 
-The proof seals `B`, `P`, `H`, path digests, and the source-claim projection; it
-does not seal transient `Q`. The exact `B`/`P` acceptance set and every subject
-identity are revalidated immediately before the v2 CAS, after that CAS before
+The `/v2` proof seals `B`, `P`, `H`, path digests, the source-claim projection,
+and the exact cloud-ledger head that must parent the successor claim. It does not
+seal transient `Q`. The exact `B`/`P` acceptance set and every subject identity
+are revalidated immediately before the v2 intent CAS, after that CAS before
 cloud publication, and again before the local successor CAS. A provider-only
 `Q` transition between `B` and `P` is therefore replay-safe, while a new
-protected head `P2` requires separate recovery.
+protected head `P2` requires separate recovery. The historical rollover proof
+`/v1` shape remains parseable as immutable evidence, but it has no source-ledger
+seal and cannot authorize publication; a durable intent carrying it requires
+operator recovery before any cloud mutation.
 
-The proof intentionally does not freeze the global cloud-ledger head: unrelated
-claims may advance its revision and digest. Replay instead requires the sealed
-source-claim projection to remain exact and source-only, or adopts only the
-exact `P/H` derivative created from the durable v2 intent.
+The ledger seal does not require the global head to remain frozen forever. A new
+successor claim may append only when the first ledger snapshot still has the
+sealed head. After that claim commits, unrelated claims may advance the ledger.
+A retry is accepted only as the exact idempotent claim entry whose
+`parentDigest` equals the durable seal and whose action and semantic request are
+unchanged. Any other head advance fails before another claim candidate is
+created.
+
+Prepared-base rollover also accepts its exact source claim when the cloud
+controller has parked that claim as `dormant-preserved`. This exception is
+limited to rollover validation: the claim must retain every sealed identity and
+authority projection, report `writeAuthority: false`, and keep
+`scopeReserved: true`. The already-validated dormant predecessor is carried
+into the v2 successor resolver, which names that exact claim as the cloud
+predecessor and may create exactly one `P/H` successor. A waiting-derivative
+replay supplies the same derivative predecessor, preserving the original claim
+idempotency lineage instead of joining whichever overlap is observed later.
+Named-predecessor successors can therefore be waiting or promoted unbound at
+`H`; legacy predecessor-implicit successors remain waiting or unbound at `P`.
+Replay repeats a `P` waiter without a predecessor to preserve its legacy key,
+and repeats an `H` waiter with its exact predecessor. Every v2 derivative,
+including an unbound current claim or a claim already bound at `H`, must first
+re-enter that sealed claim path and return an idempotent replay of the observed
+claim ID's original waiting projection. The waiting projection must retain the
+normalized device and session owner IDs of the source cloud authority. A raw
+stored owner is pseudonymized once; an already normalized owner is retained.
+Only then may the controller bind or verify the progressed claim. An unbound claim's
+revision distinguishes implicit `P` from named `H`. A bound claim does not, so
+recovery probes named `H` first and then implicit `P` only when the first probe
+returns the exact caller-sealed stale-parent error. Any other first-probe error,
+or failure of both shapes, fails closed.
+Ordinary active publication continues to require an `active` or `current`
+source claim and therefore cannot reopen a dormant claim.
+
+If a v2 proof sealed the source while it was `current`, later expiry may project
+that same claim as `dormant-preserved` without changing the proof. The
+controller reconstructs only the deterministic pre-expiry projection: state
+`current`, `writeAuthority: true`, and `scopeReserved: true`, and requires its
+digest to equal the sealed source digest. The sealed digest is reused during
+proof recapture; any other source-field drift fails before a cloud successor
+effect.
+
+The claim wrapper retires the source before the successor helper's next status
+read. It uses the deterministic `legacy-review-supersede` key, the original
+waiting-claim fence, exact succession evidence, and the source claim digest,
+transition counter, lane revision, and review identity sealed by the durable
+intent. The retirement result must be the exact released source transition. On
+a progressed-derivative replay, this proves the historical retirement by
+idempotently replaying it; a different key or a later same-ID fence cannot be
+substituted. The successor claim legitimately advances the global ledger, so
+retirement uses ordinary current-head CAS and does not inherit the old ledger
+seal. A time-only current-to-dormant projection changes neither the ledger nor
+the claim fence and remains governed by the sealed projection reconstruction
+above.
+
+Every active-publish successor status, mutation, and verification child receives
+a cloned environment with all `AGENTIC_CLOUD_*` mutation overrides plus
+`AGENTIC_TARGET_REPOSITORY`, `AGENTIC_DEVICE_ID`, and `AGENTIC_SESSION_ID`
+removed. Credentials and unrelated environment entries are preserved. This
+applies to pre-CAS proof reads and replay reads as well as later bind and verify
+calls, so ambient process input cannot replace the durable request fields.
 
 The one transitional exception is an exact `P` `waiting-successor` derivative
 coexisting with the still-current sealed source after a lost provider response.

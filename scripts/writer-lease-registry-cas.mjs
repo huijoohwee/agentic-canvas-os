@@ -326,7 +326,13 @@ function assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId }) {
   if (writerLeaseDigest(lease) !== requiredDigest(expectedLeaseDigest, "expected lease digest")) {
     throw new Error("Writer lease changed before scope-expansion CAS or active-owned-dirt recovery CAS.");
   }
-  if (lease.cloudAuthority?.claimId !== requiredDigest(expectedClaimId, "expected claim ID")) {
+  const normalizedExpectedClaimId = expectedClaimId === null
+    ? null
+    : requiredDigest(expectedClaimId, "expected claim ID");
+  const claimMatches = normalizedExpectedClaimId === null
+    ? lease.cloudAuthority === null || lease.cloudAuthority === undefined
+    : lease.cloudAuthority?.claimId === normalizedExpectedClaimId;
+  if (!claimMatches) {
     throw new Error("Writer lease claim changed before scope-expansion CAS or active-owned-dirt recovery CAS.");
   }
 }

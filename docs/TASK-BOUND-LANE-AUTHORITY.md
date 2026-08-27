@@ -2,7 +2,7 @@
 title: "Task-Bound Lane Authority"
 graphId: "md:agentic-task-bound-lane-authority"
 doc_type: "Runtime Contract"
-date: "2026-08-13"
+date: "2026-08-26"
 lang: "en-US"
 schema: "agentic-task-bound-lane-authority-contract/v1"
 frontmatter_contract: "required"
@@ -10,8 +10,8 @@ status: "focused-tested"
 authority: "proof-of-possession binding for one writer lane"
 runtime_scope: "capability issuance, public lease projection, mutation proof, active-publish continuation, clean migration, and two-party handoff"
 runtime_claim: "local Dev authority proof only; cloud claims, review, integration, release, and deployment remain separately gated"
-runtime_owner: "../scripts/task-bound-lane-authority-contract.mjs; ../scripts/task-bound-lane-authority-store.mjs; ../scripts/task-bound-lane-authority-cli.mjs; ../scripts/active-publish-task-authority-successor.mjs; ../scripts/writer-lease-lib.mjs; ../scripts/device-branch.mjs; ../scripts/device-child-process-policy.mjs"
-runtime_proof: "../__tests__/task-bound-lane-authority.test.mjs; ../__tests__/active-publish-task-authority-successor.test.mjs; ../__tests__/writer-lease-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-child-process-policy.test.mjs"
+runtime_owner: "../scripts/task-bound-lane-authority-contract.mjs; ../scripts/task-bound-lane-authority-store.mjs; ../scripts/task-bound-lane-authority-cli.mjs; ../scripts/active-publish-task-authority-successor.mjs; ../scripts/active-publish-prepared-base-rollover.mjs; ../scripts/device-integrate-lib.mjs; ../scripts/writer-lease-lib.mjs; ../scripts/device-branch.mjs; ../scripts/device-child-process-policy.mjs"
+runtime_proof: "../__tests__/task-bound-lane-authority.test.mjs; ../__tests__/active-publish-task-authority-successor.test.mjs; ../__tests__/writer-lease-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-child-process-policy.test.mjs; ../__tests__/device-integrate.test.mjs"
 report_schema: "schemas/task-bound-lane-authority.v1.schema.json"
 publish_policy: "Dev-only; no integration, Production, publication, or deployment authority"
 ---
@@ -179,6 +179,23 @@ public key, session identifier, or successor claim is insufficient. Owner,
 scope, epoch, review, receipt, or claim drift fails before local projection.
 The resulting receipt is audit evidence only: it grants neither review,
 integration, release, nor deployment authority.
+
+If a prepared active-publish intent names historical base `B` and protected
+main advances disjointly to `P`, a sealed source-only rollover may replace that
+intent before the cloud successor is created. The rollover preserves the same
+task subject, key, generation, branch, scope, source claim, lease epoch, review
+identity, head, manifest, and write set. It changes only the intended protected
+base after proving the unique `B` merge base, admitted authored paths,
+disjoint protected paths, and absence of any source derivative. The exact v1
+intent and proof remain embedded in the durable v2 intent for replay and audit.
+
+This zero-effect rollover is ordinary protected code-review publication within
+the already admitted task authority, not a migration, handoff, scope increase,
+release, or deployment. It therefore requires the normal task capability and
+integration gates but no new literal human authorization. A lost local CAS
+response may replay only the identical durable v2 intent. Any historical-base
+cloud effect or proof drift blocks for explicit recovery rather than borrowing
+authority from the protected-base advance.
 
 ## Observer and supervisor boundary
 

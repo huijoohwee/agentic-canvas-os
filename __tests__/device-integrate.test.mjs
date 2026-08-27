@@ -1959,12 +1959,17 @@ test("active integration rolls a source-only prepared intent across a disjoint p
     assert.deepEqual(rolledIntent.rolloverProof.protectedPaths, ["docs/protected-main.md"]);
     assert.equal(rolledIntent.targetLeaseEpoch, 2);
     assert.equal(fixture.calls.cas.length, 3);
-    assert.equal(fixture.calls.run.length, runCalls);
+    assert.deepEqual(fixture.calls.run.slice(runCalls), [
+      "git fetch origin main",
+      `git merge -m ${protectedSquashSubject} origin/main`,
+    ]);
     const rolloverSuccessorCalls = fixture.calls.successor.filter(call =>
       call.canonicalBaseSha === fixture.rolloverBaseSha);
     assert.equal(rolloverSuccessorCalls.length, 1);
     assert.equal(rolloverSuccessorCalls[0].predecessorClaimId,
       fixture.sourceAuthority.claimId);
+    assert.equal(rolloverSuccessorCalls[0].pullRequestNumber, null);
+    assert.equal(rolloverSuccessorCalls[0].reviewRequestId, reviewRequestId);
     const rolloverCasIndex = fixture.calls.timeline.findIndex(item =>
       item.kind === "cas" && item.intentSchema === "agentic-active-publish-successor-intent/v2");
     const protectedSuccessorIndex = fixture.calls.timeline.findIndex(item =>
@@ -2260,6 +2265,105 @@ test("active integration accepts a historical-to-protected provider-base transit
     assert.equal(rolledIntent.rolloverProof.pullRequestBaseSha, undefined);
     assert.equal(fixture.calls.successor.filter(call =>
       call.canonicalBaseSha === fixture.rolloverBaseSha).length, 1);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration finalizes an exact historical successor before ordinary descendant refresh", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-descendant-refresh-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: {
+      pullRequestBaseAfterAdvance: "historical",
+      loseCloudResponsePhase: "current-base",
+    },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded current successor effect"); },
+    }), /simulated rollover-cloud response loss/u);
+    assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
+
+    fixture.advancePreparedProtectedDescendant({ pullRequestBase: "historical" });
+    let publishCalls = 0;
+    assert.throws(() => fixture.integrate({
+      publishTask: () => {
+        publishCalls += 1;
+        assert.equal(fixture.lease.activePublishSuccessorIntent, null);
+        assert.equal(fixture.headSha, fixture.descendantHeadSha);
+        if (publishCalls === 1) {
+          assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
+          assert.equal(fixture.lease.fenceSha, fixture.rolloverHeadSha);
+          fixture.convergeRemote();
+          throw new Error("Cloud collaboration projection targets another canonical base.");
+        }
+        assert.equal(fixture.lease.baseSha, fixture.descendantBaseSha);
+        assert.equal(fixture.lease.fenceSha, fixture.descendantHeadSha);
+        throw new Error("stop after descendant successor publication");
+      },
+    }), /stop after descendant successor publication/u);
+
+    assert.equal(publishCalls, 2);
+    const historicalBind = fixture.calls.bind.find(call =>
+      call.authority?.canonicalBaseSha === fixture.rolloverBaseSha);
+    assert.ok(historicalBind);
+    assert.equal(historicalBind.pullRequestNumber, null);
+    assert.equal(historicalBind.reviewRequestId, reviewRequestId);
+    const descendantClaims = fixture.calls.successor.filter(call =>
+      call.canonicalBaseSha === fixture.descendantBaseSha);
+    assert.equal(descendantClaims.length, 1);
+    assert.equal(descendantClaims[0].pullRequestNumber, 42);
+    assert.equal(fixture.lease.cloudAuthority.claimId,
+      fixture.descendantSuccessor.authority.claimId);
+    assert.equal(fixture.lease.baseSha, fixture.descendantBaseSha);
+    assert.equal(fixture.lease.fenceSha, fixture.descendantHeadSha);
+    assert.ok(fixture.calls.run.includes("git fetch origin main"));
+    assert.ok(fixture.calls.run.includes(
+      `git merge -m ${protectedSquashSubject} origin/main`,
+    ));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects a non-descendant protected head before historical finalization", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-descendant-reject-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: {
+      pullRequestBaseAfterAdvance: "historical",
+      loseCloudResponsePhase: "current-base",
+      descendantIsAncestor: false,
+    },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish preceded current successor effect"); },
+    }), /simulated rollover-cloud response loss/u);
+    fixture.advancePreparedProtectedDescendant({ pullRequestBase: "historical" });
+    const before = {
+      bind: fixture.calls.bind.length,
+      cas: fixture.calls.cas.length,
+      successor: fixture.calls.successor.length,
+    };
+    let publishCalls = 0;
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { publishCalls += 1; },
+    }), /live protected head is not a descendant of its sealed base/u);
+    assert.equal(fixture.calls.bind.length, before.bind);
+    assert.equal(fixture.calls.cas.length, before.cas);
+    assert.equal(fixture.calls.successor.length, before.successor);
+    assert.equal(publishCalls, 0);
+    assert.equal(fixture.lease.activePublishSuccessorIntent.schema,
+      "agentic-active-publish-successor-intent/v2");
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -2828,6 +2932,8 @@ test("active integration fetches an absent exact protected-base object without u
     }), /stop after exact protected-base fetch/u);
     assert.deepEqual(fixture.calls.run.slice(runCalls), [
       `git fetch --no-tags --no-write-fetch-head origin ${fixture.rolloverBaseSha}`,
+      "git fetch origin main",
+      `git merge -m ${protectedSquashSubject} origin/main`,
     ]);
     assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
     assert.equal(fixture.lease.fenceSha, fixture.rolloverHeadSha);
@@ -5605,6 +5711,8 @@ function createActiveSuccessorFixture({
   });
   const secondBaseSha = "3".repeat(40);
   const secondHeadSha = "4".repeat(40);
+  const descendantBaseSha = "7".repeat(40);
+  const descendantHeadSha = "9".repeat(40);
   const rolloverOptions = {
     mergeBases: [mainSha],
     authoredPaths: ["scripts/runtime.mjs"],
@@ -5631,6 +5739,7 @@ function createActiveSuccessorFixture({
     rolloverClaimReplayOwnerOverrides: null,
     postCasDrift: null,
     postCasCloudPhase: null,
+    descendantIsAncestor: true,
     ...(preparedBaseRollover || {}),
   };
   const intermediateBaseSha = "5".repeat(40);
@@ -5638,6 +5747,7 @@ function createActiveSuccessorFixture({
   const preparedPullRequestBase = value => ({
     historical: mainSha,
     protected: secondBaseSha,
+    descendant: descendantBaseSha,
     intermediate: intermediateBaseSha,
   })[value] || value;
   const rolloverClaimId = "0".repeat(64);
@@ -5727,6 +5837,65 @@ function createActiveSuccessorFixture({
       remoteClaimInventoryDigest: rolloverInventory.inventoryDigest,
       inventory: rolloverInventory,
       receiptDigest: "0".repeat(64),
+    }),
+  });
+  const descendantClaimId = "4".repeat(64);
+  const descendantClaimDigest = "5".repeat(64);
+  const descendantLedgerRevision = "6".repeat(40);
+  const descendantLedgerDigest = "6".repeat(64);
+  const descendantClaimLedgerRevision = "7".repeat(64);
+  const descendantOperationReceiptDigest = "8".repeat(64);
+  const descendantSuccessorAuthority = Object.freeze({
+    ...rolloverSuccessorAuthority,
+    claimId: descendantClaimId,
+    claimDigest: descendantClaimDigest,
+    ledgerRevision: descendantLedgerRevision,
+    ledgerDigest: descendantLedgerDigest,
+    claimLedgerRevision: descendantClaimLedgerRevision,
+    operationReceiptDigest: descendantOperationReceiptDigest,
+    canonicalBaseSha: descendantBaseSha,
+    laneRevision: descendantHeadSha,
+    leaseEpoch: 3,
+  });
+  const descendantLiveSuccessor = Object.freeze({
+    ...rolloverLiveSuccessor,
+    claimId: descendantClaimId,
+    predecessorClaimId: rolloverClaimId,
+    canonicalBaseRevision: descendantBaseSha,
+    laneRevision: descendantHeadSha,
+    leaseEpoch: 3,
+    fenceRevision: descendantClaimDigest,
+    transitionDigest: descendantClaimLedgerRevision,
+    operationReceiptDigest: descendantOperationReceiptDigest,
+  });
+  const descendantVerifiedClaim = Object.freeze({
+    ...descendantLiveSuccessor,
+    state: "active",
+  });
+  const descendantInventoryCore = Object.freeze({
+    schema: "agentic-cloud-claim-inventory/v1",
+    observedLedgerHeadRevision: descendantLedgerRevision,
+    ledgerDigest: descendantLedgerDigest,
+    evaluationTime: "2026-08-11T04:00:00.000Z",
+    claims: [descendantVerifiedClaim],
+  });
+  const descendantInventory = Object.freeze({
+    ...descendantInventoryCore,
+    inventoryDigest: digestValue(descendantInventoryCore),
+  });
+  const descendantSuccessor = Object.freeze({
+    authority: descendantSuccessorAuthority,
+    verification: Object.freeze({
+      ...rolloverSuccessor.verification,
+      claimId: descendantClaimId,
+      claimDigest: descendantClaimDigest,
+      ledgerRevision: descendantLedgerRevision,
+      ledgerDigest: descendantLedgerDigest,
+      canonicalBaseSha: descendantBaseSha,
+      laneRevision: descendantHeadSha,
+      remoteClaimInventoryDigest: descendantInventory.inventoryDigest,
+      inventory: descendantInventory,
+      receiptDigest: "d".repeat(64),
     }),
   });
   const secondClaimId = "5".repeat(64);
@@ -5883,9 +6052,13 @@ function createActiveSuccessorFixture({
     get successor() { return activeSuccessor(); },
     rolloverBaseSha: secondBaseSha,
     rolloverHeadSha: successorHeadSha,
+    descendantBaseSha,
+    descendantHeadSha,
+    descendantSuccessor,
     workItemId,
     leaseStore,
     get lease() { return lease; },
+    get headSha() { return headSha; },
     convergeRemote() {
       pullRequestBaseSha = canonicalHeadSha;
       pullRequestHeadSha = refreshHeadSha;
@@ -5910,6 +6083,15 @@ function createActiveSuccessorFixture({
       );
       pullRequestHeadSha = successorHeadSha;
       remoteHeadSha = successorHeadSha;
+      ancestorReads = 0;
+    },
+    advancePreparedProtectedDescendant({ pullRequestBase = "historical" } = {}) {
+      canonicalHeadSha = descendantBaseSha;
+      refreshHeadSha = descendantHeadSha;
+      pullRequestBaseSha = preparedPullRequestBase(pullRequestBase);
+      pullRequestHeadSha = successorHeadSha;
+      remoteHeadSha = successorHeadSha;
+      protectedObjectAvailable = true;
       ancestorReads = 0;
     },
     replacePreparedIntent(activePublishSuccessorIntent) {
@@ -5979,6 +6161,22 @@ function createActiveSuccessorFixture({
               key === `cat-file -e ${secondBaseSha}^{commit}`) {
             if (!protectedObjectAvailable) throw new Error("missing protected-base object");
             return "";
+          }
+          if (preparedRolloverActive &&
+              key === `cat-file -e ${descendantBaseSha}^{commit}`) {
+            if (!protectedObjectAvailable) throw new Error("missing protected-base object");
+            return "";
+          }
+          if (preparedRolloverActive &&
+              key === `merge-base --is-ancestor ${secondBaseSha} ${descendantBaseSha}`) {
+            if (!rolloverOptions.descendantIsAncestor) {
+              throw new Error("sealed protected base is not an ancestor");
+            }
+            return "";
+          }
+          if (preparedRolloverActive &&
+              key === `merge-base --all ${descendantBaseSha} ${successorHeadSha}`) {
+            return rolloverOptions.mergeBases.join("\n");
           }
           if (preparedRolloverActive &&
               key === `diff --name-only --no-renames -z ${mainSha}..${successorHeadSha} --`) {
@@ -6095,7 +6293,9 @@ function createActiveSuccessorFixture({
             }[crashPhase];
             throw new Error(`simulated ${crashPhase} response loss`);
           }
-          if (preparedRolloverActive) {
+          if (input.canonicalBaseSha === descendantBaseSha) {
+            rolloverCloudTarget = "descendant";
+          } else if (preparedRolloverActive) {
             rolloverCloudTarget = "protected";
             if (input.predecessorClaimId === claimId) rolloverNamedLineage = true;
           }
@@ -6108,7 +6308,9 @@ function createActiveSuccessorFixture({
             rolloverCloudResponseLost = true;
             throw new Error("simulated rollover-cloud response loss");
           }
-          return activeSuccessor();
+          return input.canonicalBaseSha === descendantBaseSha
+            ? descendantSuccessor
+            : activeSuccessor();
         } }),
         bindActiveCloudSuccessor: input => {
           calls.bind.push(input);
@@ -6147,13 +6349,17 @@ function createActiveSuccessorFixture({
                 ]
                 : [currentBaseSuccessor],
             ),
-            bound: observedStatus(preparedRolloverActive && rolloverCloudTarget === "protected"
-              ? [
-                ...(rolloverOptions.protectedDerivativeRetainsSource
-                  ? [activePredecessor()] : []),
-                rolloverBoundProjection(),
-              ]
-              : [activeRound === 1 ? liveSuccessor : secondLiveSuccessor]),
+            bound: observedStatus(
+              preparedRolloverActive && rolloverCloudTarget === "descendant"
+                ? [descendantLiveSuccessor]
+                : preparedRolloverActive && rolloverCloudTarget === "protected"
+                  ? [
+                    ...(rolloverOptions.protectedDerivativeRetainsSource
+                      ? [activePredecessor()] : []),
+                    rolloverBoundProjection(),
+                  ]
+                  : [activeRound === 1 ? liveSuccessor : secondLiveSuccessor],
+            ),
           })[cloudPhase];
           calls.status.push({
             cloudPhase,

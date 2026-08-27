@@ -288,6 +288,13 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
   const repositoryValue = normalizeRepository(repository);
   const actorValue = normalizeActor(actor, request);
   const rawIntent = normalizeRootIntent(normalizedAction, request, actorValue, repositoryValue.repositoryId);
+  const idempotencyKey = digestValue(text(request.idempotencyKey, "idempotencyKey"));
+  const prior = ledger.entries.find((entry) => entry.idempotencyKey === idempotencyKey);
+  const sealedReplay = exactCallerSealedClaimReplay({
+    ledger, action: normalizedAction, rawIntent, prior, idempotencyKey,
+    evaluationTime: evaluatedAt,
+  });
+  if (sealedReplay) return sealedReplay;
   const claimOnlyRollover = normalizedAction === "claim"
     ? claimOnlySuccessorBaseRolloverPredecessor({ ledger, intent: rawIntent,
       evaluationTime: evaluatedAt, protectedRevision: repositoryValue.canonicalRevision,
@@ -306,8 +313,6 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
     fail("stale_canonical_base", "canonicalBaseRevision does not match protected source"); }
   const { expectedLedgerDigest: _expectedLedgerDigest, ...semanticIntent } = intent;
   const requestDigest = digestValue({ action: normalizedAction, intent: semanticIntent });
-  const idempotencyKey = digestValue(text(request.idempotencyKey, "idempotencyKey"));
-  const prior = ledger.entries.find((entry) => entry.idempotencyKey === idempotencyKey);
   if (prior) { if (prior.action !== normalizedAction || prior.requestDigest !== requestDigest) {
       fail("idempotency_conflict", "idempotencyKey was already used for a different transition"); }
     return mutationResult(ledger, prior, true); }
@@ -317,6 +322,43 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
   const appendedFailures = validateLedger(appended.ledger);
   if (appendedFailures.length > 0) fail("invalid_transition", appendedFailures.join("; "));
   return mutationResult(appended.ledger, appended.entry, false); }
+function exactCallerSealedClaimReplay({
+  ledger, action, rawIntent, prior, idempotencyKey, evaluationTime,
+}) {
+  if (action !== "claim" || !prior || !rawIntent.expectedLedgerDigest
+    || prior.parentDigest !== rawIntent.expectedLedgerDigest) return null;
+  if (prior.action !== action) {
+    fail("idempotency_conflict", "idempotencyKey was already used for a different transition");
+  }
+  const protectedRevision = rawIntent.canonicalDescendantProof?.protectedMainSha
+    ?? rawIntent.canonicalBaseRevision;
+  const claimOnlyRollover = claimOnlySuccessorBaseRolloverPredecessor({
+    ledger, intent: rawIntent, evaluationTime, protectedRevision,
+    requireProtectedRevision: true,
+  });
+  const canonicalDescendantProof = rawIntent.canonicalDescendantProof
+    ? normalizeCanonicalDescendantProof({
+      value: rawIntent.canonicalDescendantProof,
+      sourceBaseSha: claimOnlyRollover?.canonicalBaseRevision
+        ?? rawIntent.canonicalBaseRevision,
+      protectedRevision,
+    }) : null;
+  if (canonicalDescendantProof && !rawIntent.predecessorClaimId) {
+    fail("invalid_request", "canonicalDescendantProof requires predecessorClaimId");
+  }
+  const intent = canonicalDescendantProof
+    ? { ...rawIntent, canonicalDescendantProof }
+    : rawIntent;
+  const { expectedLedgerDigest: _expectedLedgerDigest, ...semanticIntent } = intent;
+  const requestDigest = digestValue({ action, intent: semanticIntent });
+  if (prior.requestDigest !== requestDigest) {
+    fail("idempotency_conflict", "idempotencyKey was already used for a different transition");
+  }
+  if (prior.idempotencyKey !== idempotencyKey) {
+    fail("idempotency_conflict", "idempotencyKey was already used for a different transition");
+  }
+  return mutationResult(ledger, prior, true);
+}
 export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
   const evaluatedAt = instant(evaluationTime, "evaluationTime");
   const failures = validateLedger(ledger);

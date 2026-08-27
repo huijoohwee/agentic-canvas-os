@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5523,
-  "headDigest": "e259094f29626f631b618d674ccd53c7316beca33f1b5a5d031f5e168206ff58",
+  "sequence": 5524,
+  "headDigest": "09f134296133fb9bc7691f9a47f6d7c8f02e51894c8685a9c3e4cf7f460e49b2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -280349,6 +280349,52 @@
       },
       "claimDigest": "91bda0b519547d1b908909961508d22ec8a86e4bf1c6cd7fe50a37ea72a66049",
       "digest": "e259094f29626f631b618d674ccd53c7316beca33f1b5a5d031f5e168206ff58"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5524,
+      "parentDigest": "e259094f29626f631b618d674ccd53c7316beca33f1b5a5d031f5e168206ff58",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b0ef83fac19c4d4a8119fa1ec13387a1cef976e5194d930e5f95bd6949ff550b",
+      "idempotencyKey": "dc1f1c36d8a8da8005fa3d64d7105ed22759200d9f9235a816d2bcf67ef562e1",
+      "requestDigest": "5bc1e9c18acb513f86c832e4d8ded844f3276ebf31ffe5cb41547f278e3fba83",
+      "evaluationTime": "2026-08-27T00:45:29.000Z",
+      "claimCore": {
+        "claimId": "b0ef83fac19c4d4a8119fa1ec13387a1cef976e5194d930e5f95bd6949ff550b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:cdfb85e1c7cdc19b5c0b66b24890159c4b0251d67c1f41ef1c8b0c19768a4e82",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:edbcf287b197a03d5238c21d4f4465abf7650e6e74ece02e1d3da427a8b37994",
+        "canonicalBaseRevision": "fae679a688da3a60ceaf686679d382cd5c0fe762",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/github-cloud-collaboration-adapter.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-WRITE-SCOPE.md",
+          "path:docs/CLOUD-COLLABORATION.md",
+          "path:scripts/active-publish-prepared-base-rollover.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/github-cloud-collaboration-adapter.mjs",
+          "semantic:active-publish-prepared-dormant-predecessor"
+        ],
+        "writeSetDigest": "99c8928eca420722f7a4389e9ef5cc415c0c5a9294282c9cfdd12003b6f502e1",
+        "laneRevision": "343f21ef8b3fc15a107a2e162673b9a204860d8a",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T00:44:49.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBJDXtg",
+        "predecessorClaimId": "849245e009571f15652ce6ff26d8e2815610718f1f0eab0bc35451bae1650569",
+        "eligibleSince": "2026-08-27T00:43:47.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-27T00:44:49.000Z"
+      },
+      "claimDigest": "1b65b55cb5388eacf860f8c025e0de30263c65eee087bfdef13f9283e5d387e3",
+      "digest": "09f134296133fb9bc7691f9a47f6d7c8f02e51894c8685a9c3e4cf7f460e49b2"
     }
   ]
 }

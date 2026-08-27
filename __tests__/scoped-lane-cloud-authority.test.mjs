@@ -840,6 +840,32 @@ test("legacy review bootstrap claims at base and binds the exact reviewed head",
   assert.equal(bootstrapped.authority.laneRevision, HEAD_SHA);
 });
 
+test("legacy review bootstrap can bind by an exact sealed review identity without PR resolution", () => {
+  const sealedReviewRequestId = "github-pull-request:PR_SEALED";
+  const harness = projectionHarness(rootClaim({
+    laneRevision: BASE_SHA,
+    transitionCounter: 1,
+  }));
+  claimLegacyReviewAdmissionCloudAuthority({
+    ledgerRepository: "owner/ledger",
+    targetRepository: "owner/target",
+    manifest: MANIFEST,
+    canonicalBaseSha: BASE_SHA,
+    branch: BRANCH,
+    headSha: HEAD_SHA,
+    reviewRequestId: sealedReviewRequestId,
+    deviceId: DEVICE_ID,
+    sessionId: SESSION_ID,
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+  assert.equal(harness.calls[1].action, "continue");
+  assert.equal(harness.calls[1].request.mode, "projection");
+  assert.equal(harness.calls[1].request.pullRequestNumber, undefined);
+  assert.equal(harness.calls[1].request.reviewRequestId, sealedReviewRequestId);
+});
+
 test("legacy review bootstrap claims the preserved head for an exact historical-base predecessor", () => {
   const predecessorClaimId = "e".repeat(64);
   const canonicalDescendantProof = { evidenceDigest: "d".repeat(64) };

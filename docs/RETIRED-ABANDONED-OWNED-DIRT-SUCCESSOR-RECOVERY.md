@@ -2,7 +2,7 @@
 title: "Retired Abandoned Owned Dirt Successor Recovery"
 graphId: "md:agentic-retired-abandoned-owned-dirt-successor-recovery"
 doc_type: "Runtime Contract"
-date: "2026-08-25"
+date: "2026-08-27"
 lang: "en-US"
 schema: "agentic-retired-abandoned-owned-dirt-successor-recovery/v1"
 frontmatter_contract: "required"
@@ -142,6 +142,9 @@ message limits and remains the recovery handle for response-loss replay.
 
 Index and worktree states are overlaid independently. For every path \(p\),
 entry equality includes absence, object type, mode, and blob identity:
+
+Every repository-path collection uses unsigned UTF-8 byte ordering. Locale
+collation and JavaScript's default UTF-16 code-unit ordering are forbidden.
 
 ```text
 I2(p) = I1(p), when I1(p) differs from B(p); otherwise P(p)

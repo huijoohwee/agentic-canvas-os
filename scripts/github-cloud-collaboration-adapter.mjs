@@ -7,6 +7,7 @@ export const DEFAULT_LEDGER_REF = "agentic/collaboration-ledger";
 export const DEFAULT_LEDGER_PATH = ".agentic/collaboration-ledger.json";
 export { CLOUD_RESULT_SCHEMA } from "./github-cloud-collaboration-mapping.mjs";
 const MUTATING_ACTIONS = new Set(["claim", "continue", "integrate", "retire"]);
+const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const PULL_REQUEST_FILES_PAGE_SIZE = 100;
 const PULL_REQUEST_FILES_PAGE_LIMIT = 100;
 export const SMART_GIT_LEDGER_THRESHOLD_BYTES = 10 * 1024 * 1024;
@@ -245,6 +246,7 @@ async function mutateLedger({
   smartGitLedgerCommit,
   token,
 }) {
+  const sealedClaimParentDigest = callerSealedClaimParentDigest(action, context.input);
   let lastConflict = null;
   let semanticRequest = null;
   let subjectDigest = null;
@@ -259,6 +261,7 @@ async function mutateLedger({
       allowMissing: true,
     });
     if (!snapshot) {
+      if (sealedClaimParentDigest) staleCallerSealedClaimParent();
       snapshot = await bootstrapLedger({
         send, ledgerRepository, ledgerIdentity, ledgerRef, ledgerPath,
       });
@@ -275,12 +278,22 @@ async function mutateLedger({
       throw new Error("Mutation subject changed during collaboration compare-and-swap.");
     }
     const prior = findIdempotentEntry(snapshot.ledger, context.input.idempotencyKey);
+    requireCallerSealedClaimSnapshot({
+      action,
+      ledger: snapshot.ledger,
+      prior,
+      sealedClaimParentDigest,
+    });
     committedReplay ||= Boolean(prior?.action === action);
     const fixedExpiresAt = semanticRequest?.expiresAt
       || (committedReplay && mutationUsesExpiry(action, context.input) ? prior.claimCore.expiresAt : null);
     semanticRequest ??= {
       ...prepareMutationRequest({
-        action, input: { ...context.input, expectedLedgerDigest: snapshot.ledger.headDigest },
+        action,
+        input: {
+          ...context.input,
+          expectedLedgerDigest: sealedClaimParentDigest ?? snapshot.ledger.headDigest,
+        },
         actor: context.actor, repository: context.repository, pullRequest: subject.pullRequest,
         evaluationTime: snapshotTime, fixedExpiresAt,
       }),
@@ -290,7 +303,12 @@ async function mutateLedger({
       throw new Error("Frozen collaboration expiry elapsed before compare-and-swap completed.");
     }
     const evaluationTime = snapshotTime;
-    const preparedRequest = { ...semanticRequest, expectedLedgerDigest: snapshot.ledger.headDigest };
+    const preparedRequest = {
+      ...semanticRequest,
+      expectedLedgerDigest: committedReplay && sealedClaimParentDigest
+        ? sealedClaimParentDigest
+        : snapshot.ledger.headDigest,
+    };
     const repository = contractRepository(
       context.repository,
       action === "claim" ? subject.canonicalRevision : null,
@@ -350,6 +368,32 @@ async function mutateLedger({
   throw new Error(
     `Cloud collaboration compare-and-swap exhausted ${maxAttempts} attempts${lastConflict ? `: ${lastConflict}` : "."}`,
   );
+}
+function callerSealedClaimParentDigest(action, input) {
+  if (action !== "claim" || input?.expectedLedgerDigest === undefined ||
+      input.expectedLedgerDigest === null) {
+    return null;
+  }
+  const value = String(input.expectedLedgerDigest).normalize("NFC").trim();
+  if (!SHA256_PATTERN.test(value)) {
+    throw new Error("expectedLedgerDigest must be a lowercase SHA-256 digest.");
+  }
+  return value;
+}
+function requireCallerSealedClaimSnapshot({
+  action, ledger, prior, sealedClaimParentDigest,
+}) {
+  if (action !== "claim" || !sealedClaimParentDigest) return;
+  if (prior) {
+    if (prior.action !== "claim" || prior.parentDigest !== sealedClaimParentDigest) {
+      staleCallerSealedClaimParent();
+    }
+    return;
+  }
+  if (ledger.headDigest !== sealedClaimParentDigest) staleCallerSealedClaimParent();
+}
+function staleCallerSealedClaimParent() {
+  throw new Error("Cloud collaboration claim failed: expectedLedgerDigest is stale");
 }
 function mutationUsesExpiry(action, input) {
   return action === "claim" || (action === "continue" && ["renewal", "recovery", "promote"].includes(input.mode));

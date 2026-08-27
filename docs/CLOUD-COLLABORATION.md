@@ -90,6 +90,26 @@ new snapshot's server time and fails closed if that expiry has elapsed. Reusing
 a replay key for different intent fails closed. The protected source ref and
 exact pull-request subject are also re-resolved before every mutation attempt;
 drift aborts the operation instead of authorizing a stale candidate.
+
+For `claim`, a non-null caller `expectedLedgerDigest` is an immutable parent
+seal rather than a retry hint. A new claim requires the first and every retried
+snapshot head to equal that seal. A missing ledger is stale and is not
+bootstrapped. If the claim already committed, replay is allowed only when the
+same idempotency entry is a `claim` whose `parentDigest` equals the seal; normal
+action and semantic request-digest replay checks still apply. A competing head
+advance cannot be rebased. When the field is absent or null, the adapter retains
+ordinary dynamic-head bootstrap and bounded CAS retry behavior. Continuation,
+integration, and retirement retain ordinary dynamic ledger CAS; their exact
+claim fence and transition counter prevent same-ID transition drift.
+
+A controller adopting a progressed successor must not infer that claim's
+genesis from its current projection alone. It replays the original sealed claim
+key, requires the original waiting claim and owner projection, and replays the
+deterministic source retirement at the source claim fence sealed by its durable
+intent. The retirement uses dynamic ledger CAS rather than the historical claim
+parent seal; its idempotency key and claim fence prove that a later or unrelated
+retirement was not substituted.
+
 Historical v1 entries remain immutable evidence; all newly authored entries use
 the current four-operation schema. Current claim projections derive and expose
 the immutable schema of the original claim identity, so a v1 lineage continued

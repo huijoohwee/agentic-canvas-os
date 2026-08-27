@@ -217,7 +217,7 @@ function validateWorkspaceSeedProjection({ relativePath, frontmatter, failures }
     relativePath,
     frontmatter,
     key: "source_root",
-    expected: "knowgrph/docs",
+    expected: "agenticgraph/docs",
     failures,
   });
   requireScalar({

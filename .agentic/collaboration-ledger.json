@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5596,
-  "headDigest": "8caec67af4214289c7dfeacdd4d82427f9d14ed6dbb0cd59dec323ecc01fd0a2",
+  "sequence": 5597,
+  "headDigest": "cc41252f180499333c7e8104b5cf321e823fa36a7d00aca1f6575546acd40be9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -284111,6 +284111,70 @@
       },
       "claimDigest": "fd82adfcc01cb2093b34e0fc65a66fd79298f9270b073311cfbee9ed31e6a811",
       "digest": "8caec67af4214289c7dfeacdd4d82427f9d14ed6dbb0cd59dec323ecc01fd0a2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5597,
+      "parentDigest": "8caec67af4214289c7dfeacdd4d82427f9d14ed6dbb0cd59dec323ecc01fd0a2",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1ad185ab04a66e6ed306bfcc546cd38fd61f4b5ab61503368d4fa8b4ec84e33f",
+      "idempotencyKey": "84e1a459d19988ecdcfaa706dbb678d478790c85cd499d49e7691c22ef30060c",
+      "requestDigest": "d933f0f44516e2bf1cd86caafc6a5e9d0cda95c8681a7aaf8323010ddbf8d232",
+      "evaluationTime": "2026-08-27T14:58:58.000Z",
+      "claimCore": {
+        "claimId": "1ad185ab04a66e6ed306bfcc546cd38fd61f4b5ab61503368d4fa8b4ec84e33f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:bc144b108a78c4d13523d056b1c7c2c1b4fa2dcb6eb45efedbb659cae1e2224d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cd4c4f310c5a908bb3d17a207786168688366bcb34e3c913871e397fa331002d",
+        "canonicalBaseRevision": "fc816001dee063d419e297ee95e802fbe55e2baf",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-fence-one-ahead-admission-finalization.test.mjs",
+          "path:docs/PLANNED-CLEAN-FENCE-ONE-AHEAD-ADMISSION-FINALIZATION.md",
+          "path:scripts/planned-clean-fence-one-ahead-admission-finalization-evidence.mjs",
+          "path:scripts/planned-clean-fence-one-ahead-admission-finalization-repository-adapter.mjs",
+          "semantic:planned-clean-fence-one-ahead-projection-join"
+        ],
+        "writeSetDigest": "a1ec8a4d28d5a423fa2c5f2832775178bad74ed18f819a7837cac38f243baa5f",
+        "laneRevision": "2eae3d49ea48f43caf0495d26bac8244abc5c42a",
+        "leaseEpoch": 2,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-27T15:00:42.000Z",
+        "evidenceDigest": "41daa776402cf4d41daecf0bd9bd707419bf8fa69a9652cd699853db6e088939",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBL8-vw",
+        "predecessorClaimId": "680f6e348bf11a7a6c368e0cf836930b367732f4f4e313a913d67095e52170c1",
+        "eligibleSince": "2026-08-27T14:29:17.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-27T14:30:42.000Z",
+        "integration": {
+          "candidateRevision": "2eae3d49ea48f43caf0495d26bac8244abc5c42a",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBL8-vw",
+          "focusedEvidenceDigest": "41daa776402cf4d41daecf0bd9bd707419bf8fa69a9652cd699853db6e088939",
+          "dependencyClosureDigest": "7899049698b22991b03962403eca7bceb0677719b642b1484960a0d2fac156f5",
+          "namedChecksDigest": "0374ccd6570c3ebf9407804fe2b174a481480021bdea070e71dc965627924f1e",
+          "handoffEvidenceDigest": "ad91954776f66924aae9f2fd881ec2ea0cae485637c00cb7efd2258674f65026",
+          "operatorDecisionDigest": "db28c653dafe1d25fc6b62fddd34359c0802a95b6eb3d91db26d8e72badcde9c",
+          "integrationIntentDigest": "bd648ce55477ecfc461f6e323839d2eff76db1facd1666463cf11f529607ca87",
+          "integratedAt": "2026-08-27T14:38:25.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "2eae3d49ea48f43caf0495d26bac8244abc5c42a",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBL8-vw",
+          "bytesDigest": "318a788e85aebef5ec3b081644c2d7949fb2fc7e0fa98d4e0a297ceae7c73e7f",
+          "namedChecksDigest": "0374ccd6570c3ebf9407804fe2b174a481480021bdea070e71dc965627924f1e",
+          "handoffEvidenceDigest": "ad91954776f66924aae9f2fd881ec2ea0cae485637c00cb7efd2258674f65026",
+          "integrationReceiptDigest": "304a33b893e9bc3a4c4b85f20c8943310184b4f31a8f0dba8b68aee9d4eeda28",
+          "retiredAt": "2026-08-27T14:58:58.000Z"
+        }
+      },
+      "claimDigest": "e42bee05b1f58deadee6f9c29307ebfa169e2545210bfda5321d8004f22ea163",
+      "digest": "cc41252f180499333c7e8104b5cf321e823fa36a7d00aca1f6575546acd40be9"
     }
   ]
 }

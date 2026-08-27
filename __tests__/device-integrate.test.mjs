@@ -23,7 +23,10 @@ import {
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
 import { casWriterLeaseProjection } from "../scripts/writer-lease-registry-cas.mjs";
-import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
+import {
+  createWriterLeaseStore,
+  updateWriterLeasePullRequestBody,
+} from "../scripts/writer-lease-lib.mjs";
 import { createWorktreeCleanupOperationId } from "../scripts/worktree-lifecycle-lib.mjs";
 import { deriveTaskWorktreeContainers } from "../scripts/task-worktree-owned-containers.mjs";
 
@@ -1833,6 +1836,93 @@ function prepareHistoricalActivePublishIntent(fixture, phase = "after-intent") {
   fixture.advancePreparedCanonicalBase();
   return intent;
 }
+
+function replacePreparedIntentWithLegacyStableDigest(fixture, intent) {
+  const {
+    activePublishSuccessorIntent: _activePublishSuccessorIntent,
+    heartbeatAt: _heartbeatAt,
+    expiresAt: _expiresAt,
+    status: _status,
+    ...stableLease
+  } = fixture.lease;
+  const { intentDigest: _intentDigest, ...intentCore } = intent;
+  const legacyCore = {
+    ...intentCore,
+    sourceStableLeaseDigest: digestValue({ ...stableLease, status: "active" }),
+  };
+  const legacyIntent = { ...legacyCore, intentDigest: digestValue(legacyCore) };
+  fixture.replacePreparedIntent(legacyIntent);
+  return legacyIntent;
+}
+
+test("active integration ignores later ledger-head coordinates for a new prepared intent", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-ledger-projection-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { pullRequestBaseAfterAdvance: "historical" },
+  });
+  try {
+    prepareHistoricalActivePublishIntent(fixture);
+    fixture.refreshSourceLedgerProjection();
+    fixture.clearPullRequestMarker();
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after ledger-independent rollover"); },
+    }), /stop after ledger-independent rollover/u);
+    assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration resumes a legacy prepared intent from an exact historical marker", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-legacy-ledger-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { pullRequestBaseAfterAdvance: "historical" },
+  });
+  try {
+    const intent = prepareHistoricalActivePublishIntent(fixture);
+    const legacyIntent = replacePreparedIntentWithLegacyStableDigest(fixture, intent);
+    fixture.refreshSourceLedgerProjection();
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("stop after legacy ledger rollover"); },
+    }), /stop after legacy ledger rollover/u);
+    const rolloverCas = fixture.calls.cas.find(call =>
+      call.values.activePublishSuccessorIntent?.schema ===
+        "agentic-active-publish-successor-intent/v2");
+    assert.equal(rolloverCas.values.activePublishSuccessorIntent
+      .supersededIntent.intentDigest, legacyIntent.intentDigest);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active integration rejects legacy ledger drift without its exact historical marker", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-legacy-marker-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    crashPhase: "after-intent",
+    preparedBaseRollover: { pullRequestBaseAfterAdvance: "historical" },
+  });
+  try {
+    const intent = prepareHistoricalActivePublishIntent(fixture);
+    replacePreparedIntentWithLegacyStableDigest(fixture, intent);
+    fixture.refreshSourceLedgerProjection();
+    fixture.clearPullRequestMarker();
+    const successorCalls = fixture.calls.successor.length;
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("publish escaped missing marker"); },
+    }), /Active publish successor intent drifted/u);
+    assert.equal(fixture.calls.successor.length, successorCalls);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
 
 test("active integration rolls a source-only prepared intent across a disjoint protected advance", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rollover-"));
@@ -5731,6 +5821,7 @@ function createActiveSuccessorFixture({
     leaseStore = createWriterLeaseStore({ gitCommonDir });
   }
   let lease = leaseStore?.read(branch) || sourceLease;
+  let pullRequestBody = updateWriterLeasePullRequestBody("", sourceLease);
   let headSha = commitSha;
   let activeRound = 1;
   let canonicalHeadSha = mainSha;
@@ -5832,6 +5923,30 @@ function createActiveSuccessorFixture({
       });
       lease = projected.lease;
     },
+    refreshSourceLedgerProjection({
+      ledgerRevision: refreshedLedgerRevision = "9".repeat(40),
+      ledgerDigest: refreshedLedgerDigest = "0".repeat(64),
+    } = {}) {
+      assert.ok(leaseStore, "ledger projection refresh requires a durable fixture");
+      const projected = casWriterLeaseProjection({
+        leaseStore,
+        branch,
+        expectedLeaseDigest: digestValue(lease),
+        expectedClaimId: lease.cloudAuthority.claimId,
+        values: {
+          status: "active",
+          cloudAuthority: {
+            ...lease.cloudAuthority,
+            ledgerRevision: refreshedLedgerRevision,
+            ledgerDigest: refreshedLedgerDigest,
+          },
+        },
+      });
+      lease = projected.lease;
+    },
+    clearPullRequestMarker() {
+      pullRequestBody = "";
+    },
     integrate({ publishTask, ...integrationOptions }) {
       return integrateSession({
         invocationPath: repo,
@@ -5887,7 +6002,7 @@ function createActiveSuccessorFixture({
           assert.equal(
             args.join(" "),
             `pr view ${pullRequestUrl} --json ` +
-              "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository",
+              "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository,body",
           );
           return JSON.stringify({
             id: pullRequestId,
@@ -5899,6 +6014,7 @@ function createActiveSuccessorFixture({
             headRefName: branch,
             headRefOid: pullRequestHeadSha,
             headRepository: { nameWithOwner: sourceAuthority.targetRepository },
+            body: pullRequestBody,
           });
         },
         run: (command, args) => {

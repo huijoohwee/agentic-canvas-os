@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5584,
-  "headDigest": "6758f142a4632422bf6845bbeb3570fb9ea6af5afec6d06afde171acef2b20e8",
+  "sequence": 5585,
+  "headDigest": "2d7aa038249098e05106650a1bf69989f702ccaf912a82372a5509bdb2355df4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -283571,6 +283571,48 @@
       },
       "claimDigest": "4abcbaed5483d19da17b541172f3c234d15566b34a97f0162c923120bf05484f",
       "digest": "6758f142a4632422bf6845bbeb3570fb9ea6af5afec6d06afde171acef2b20e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5585,
+      "parentDigest": "6758f142a4632422bf6845bbeb3570fb9ea6af5afec6d06afde171acef2b20e8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "680f6e348bf11a7a6c368e0cf836930b367732f4f4e313a913d67095e52170c1",
+      "idempotencyKey": "04a3211a38affeb5c11efd53a92caecb36287324692e31ec9a108ae3d39660aa",
+      "requestDigest": "077f204aa7b6b71eca8da540e76d19ede6dfc372083dd2a7eef220334f33d2f4",
+      "evaluationTime": "2026-08-27T09:41:53.000Z",
+      "claimCore": {
+        "claimId": "680f6e348bf11a7a6c368e0cf836930b367732f4f4e313a913d67095e52170c1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:bc144b108a78c4d13523d056b1c7c2c1b4fa2dcb6eb45efedbb659cae1e2224d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:cd4c4f310c5a908bb3d17a207786168688366bcb34e3c913871e397fa331002d",
+        "canonicalBaseRevision": "fc816001dee063d419e297ee95e802fbe55e2baf",
+        "declaredWriteScope": [
+          "path:__tests__/planned-clean-fence-one-ahead-admission-finalization.test.mjs",
+          "path:docs/PLANNED-CLEAN-FENCE-ONE-AHEAD-ADMISSION-FINALIZATION.md",
+          "path:scripts/planned-clean-fence-one-ahead-admission-finalization-evidence.mjs",
+          "path:scripts/planned-clean-fence-one-ahead-admission-finalization-repository-adapter.mjs",
+          "semantic:planned-clean-fence-one-ahead-projection-join"
+        ],
+        "writeSetDigest": "a1ec8a4d28d5a423fa2c5f2832775178bad74ed18f819a7837cac38f243baa5f",
+        "laneRevision": "2eae3d49ea48f43caf0495d26bac8244abc5c42a",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-27T10:11:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "426a883de0bd562167b15bc0ca160c06d971c42061b97a7b5ab7e2dc075483b5",
+      "digest": "2d7aa038249098e05106650a1bf69989f702ccaf912a82372a5509bdb2355df4"
     }
   ]
 }

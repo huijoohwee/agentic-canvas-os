@@ -14,7 +14,7 @@ import {
 
 const REPOSITORY_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const DOCS_ROOT = path.join(REPOSITORY_ROOT, "docs");
-const SEED_RELATIVE_PATH = "workspace-seeds/knowgrph-physics-playground-demo.md";
+const SEED_RELATIVE_PATH = "workspace-seeds/agenticgraph-physics-playground-demo.md";
 const SEED_PATH = path.join(DOCS_ROOT, ...SEED_RELATIVE_PATH.split("/"));
 
 test("recursive discovery includes the protected runtime-ready workspace seed", async () => {

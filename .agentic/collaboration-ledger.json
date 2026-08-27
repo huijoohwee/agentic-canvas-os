@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5537,
-  "headDigest": "c6557efd3f16c2583c92908f3d5cc9d2014b3c6fb6d2a38cd45de5e3cc31895f",
+  "sequence": 5538,
+  "headDigest": "ff0e2d3ff73018a971cac7732b73743e586fc2063591c10ec8e646ec4cd6e5a9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -281093,6 +281093,48 @@
       },
       "claimDigest": "30f988a6f501da7824ea6999c427b7a24f06950034c7192be05a4591f7cb7abd",
       "digest": "c6557efd3f16c2583c92908f3d5cc9d2014b3c6fb6d2a38cd45de5e3cc31895f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5538,
+      "parentDigest": "c6557efd3f16c2583c92908f3d5cc9d2014b3c6fb6d2a38cd45de5e3cc31895f",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9f240103ab0fbfbffc29237e3c7c80780938e89823ccc7993f5d5516f00d0ab7",
+      "idempotencyKey": "a1942f178b0637335ede2a7d3bc4b4abfd2d6c8c17cdd9fb426d501bf59667e2",
+      "requestDigest": "44ff69a0ad1528d9b5c7b78b8033d388cc386de5d48836376b8507847cd7eeaf",
+      "evaluationTime": "2026-08-27T03:06:18.000Z",
+      "claimCore": {
+        "claimId": "9f240103ab0fbfbffc29237e3c7c80780938e89823ccc7993f5d5516f00d0ab7",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:d40aeb97b5a62b7c1d02c7749782537fc3d9ccd0e3765327b7b624b8ba4e3c00",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2e61e2c7a287c7b32758fa85700fc04d21d01286c103d13fc75b8dd580eea954",
+        "canonicalBaseRevision": "58ddd317eb73ada5827f989a264be604c260c095",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/scoped-lane-cloud-authority.test.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/scoped-lane-cloud-authority.mjs",
+          "semantic:active-publish-historical-base-refresh"
+        ],
+        "writeSetDigest": "a6c099d689d2c11bf2b1aa3068f07e4ed3243334a10613443b387c92c98eac9b",
+        "laneRevision": "58ddd317eb73ada5827f989a264be604c260c095",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T03:06:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "77611da1e16ae990d59e4332aad5e27e92c8c1baf4b8011f2cce5dad64ccb416",
+      "digest": "ff0e2d3ff73018a971cac7732b73743e586fc2063591c10ec8e646ec4cd6e5a9"
     }
   ]
 }

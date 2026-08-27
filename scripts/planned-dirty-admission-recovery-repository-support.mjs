@@ -47,6 +47,16 @@ export function firstSha(value) {
   return sha(String(value || "").trim().split(/\s+/u)[0], "remote SHA");
 }
 
+export function captureExactTargetProtectedMain(git) {
+  if (typeof git !== "function") invalid("target repository Git reader");
+  const local = sha(git(["rev-parse", "refs/heads/main"]), "target local main");
+  const tracking = sha(git(["rev-parse", "refs/remotes/origin/main"]),
+    "target origin main");
+  const remote = firstSha(git(["ls-remote", "--heads", "origin", "refs/heads/main"]));
+  if (local !== tracking || local !== remote) invalid("exact target protected main");
+  return local;
+}
+
 export function inside(root, candidate) {
   const relative = path.relative(root, candidate);
   return !relative || (!relative.startsWith("..") && !path.isAbsolute(relative));

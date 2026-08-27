@@ -38,7 +38,8 @@ export function planFixture(options = {}) {
 export function evidenceFixture({ kind = "staged", clean = false,
   dirtPath = "docs/a.md", dirtHead = FENCE, admissionStatus = "planned",
   cloudState = "active", overlap = null, oneAhead = false,
-  targetAuthorityChanges = {}, bodyPrefix = "" } = {}) {
+  targetAuthorityChanges = {}, bodyPrefix = "", controllerHeadSha = PROTECTED,
+  targetProtectedMainSha = PROTECTED } = {}) {
   const manifest = normalizeDeclaredWriteScopeManifest({
     schema: "agentic-declared-write-scope/v1", semanticScope: "repair",
     paths: ["docs/a.md"],
@@ -128,11 +129,12 @@ export function evidenceFixture({ kind = "staged", clean = false,
     headSha: FENCE, remoteHeadSha: FENCE, baseBranch: "main", baseSha: BASE,
     body, bodyDigest: digestValue(body), marker, markerDigest: digestValue(marker) };
   const controller = { repositoryPathDigest: D("controller path"), branch: "main",
-    headSha: PROTECTED, treeSha: D("tree").slice(0, 40), originMainSha: PROTECTED,
-    remoteMainSha: PROTECTED, statusDigest: D("clean"), clean: true,
+    headSha: controllerHeadSha, treeSha: D("tree").slice(0, 40),
+    originMainSha: controllerHeadSha, remoteMainSha: controllerHeadSha,
+    statusDigest: D("clean"), clean: true,
     protected: true, implementationDigest: D("implementation") };
   const advance = { schema: "agentic-active-owned-dirt-protected-main-advance/v1",
-    baseSha: BASE, pullRequestBaseSha: BASE, protectedMainSha: PROTECTED,
+    baseSha: BASE, pullRequestBaseSha: BASE, protectedMainSha: targetProtectedMainSha,
     protectedMainTreeSha: D("protected tree").slice(0, 40),
     declaredWriteSetDigest: manifest.writeSetDigest, changedPathCount: 0,
     changedPathsDigest: digestValue([]) };
@@ -189,7 +191,7 @@ export function terminalAdapterFixture({ registryRevision = 2, thirdStateLease =
   originRepository = null, pullRequestUrl = null, registrySource = false,
   markerResponseLoss = false, oneAhead = false, mutableRegistry = false,
   registryResponseLoss = false, secondHeartbeat = false,
-  exactTargetOverflow = false } = {}) {
+  laterLedgerAdvance = false, exactTargetOverflow = false } = {}) {
   let plan = planFixture({ oneAhead });
   if (exactTargetOverflow) {
     const source = plan.evidence.sourceLease;
@@ -281,6 +283,11 @@ export function terminalAdapterFixture({ registryRevision = 2, thirdStateLease =
     heartbeatCounter: plan.evidence.targetCloudAuthority.heartbeatCounter + 1,
     expiresAt: "2026-08-28T00:00:00.000Z",
   } : null;
+  const laterLedgerAuthority = laterLedgerAdvance ? {
+    ...plan.evidence.targetCloudAuthority,
+    ledgerRevision: "e".repeat(40),
+    ledgerDigest: D("later unrelated ledger advance"),
+  } : null;
   const registryRoot = mkdtempSync(path.join(os.tmpdir(), "planned-dirty-registry-"));
   const registryPath = path.join(registryRoot, "writer-leases.json");
   writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`, { mode: 0o600 });
@@ -326,8 +333,9 @@ export function terminalAdapterFixture({ registryRevision = 2, thirdStateLease =
         baseRefName: "main", baseRefOid: plan.evidence.pullRequest.baseSha,
         body: currentBody });
     },
-    ...(oneAhead ? { inspectCloudStatus: () => cloudStatus(
-      secondHeartbeatAuthority || plan.evidence.targetCloudAuthority,
+    ...(oneAhead || laterLedgerAdvance ? { inspectCloudStatus: () => cloudStatus(
+      secondHeartbeatAuthority || laterLedgerAuthority
+        || plan.evidence.targetCloudAuthority,
       subject,
     ) } : {}),
     verifyCloud: ({ authority }) => ({ authority,

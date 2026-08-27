@@ -198,12 +198,15 @@ export function projectPlannedDirtyHeartbeatProjection({
   const oneAhead = target.transitionCounter === source.transitionCounter + 1
     && targetHeartbeatCounter === sourceHeartbeatCounter + 1;
   if (!same && !oneAhead) invalid("heartbeat counter successor");
-  const changingDigests = ["claimDigest", "claimLedgerRevision",
-    "operationReceiptDigest", "ledgerRevision", "ledgerDigest"];
+  const claimDigests = ["claimDigest", "claimLedgerRevision", "operationReceiptDigest"];
+  const ledgerRevisionChanged = target.ledgerRevision !== source.ledgerRevision;
+  const ledgerDigestChanged = target.ledgerDigest !== source.ledgerDigest;
   if (same && (target.expiresAt !== source.expiresAt
-    || changingDigests.some(field => target[field] !== source[field]))) {
+    || claimDigests.some(field => target[field] !== source[field])
+    || ledgerRevisionChanged !== ledgerDigestChanged)) {
     invalid("unchanged heartbeat projection");
   }
+  const changingDigests = [...claimDigests, "ledgerRevision", "ledgerDigest"];
   if (oneAhead && (Date.parse(target.expiresAt) <= Date.parse(source.expiresAt)
     || changingDigests.some(field => target[field] === source[field]))) {
     invalid("one-ahead heartbeat projection");
@@ -470,7 +473,6 @@ function assertJoinedSubject(value) {
     ["no overlap", value.overlappingClaimIds.length === 0],
     ["protected main", value.protectedMainAdvance.baseSha === lease.baseSha
       && value.protectedMainAdvance.pullRequestBaseSha === review.baseSha
-      && value.protectedMainAdvance.protectedMainSha === value.protectedController.headSha
       && value.protectedMainAdvance.declaredWriteSetDigest === value.manifest.writeSetDigest],
   ].filter(([, pass]) => !pass).map(([label]) => label);
   if (failed.length) invalid(`joined recovery subject (${failed.join(", ")})`);

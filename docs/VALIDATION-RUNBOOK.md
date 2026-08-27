@@ -92,11 +92,11 @@ Resolve repository roots once, then run all checks through those roots:
 AGENTIC_CANVAS_OS_ROOT="$(git rev-parse --show-toplevel)"
 GITHUB_ROOT="$(dirname "$AGENTIC_CANVAS_OS_ROOT")"
 DOCS_ROOT="$AGENTIC_CANVAS_OS_ROOT/docs"
-KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
+AGENTICGRAPH_ROOT="$GITHUB_ROOT/knowgrph"
 PROD_MIRROR_ROOT="$GITHUB_ROOT/huijoohwee/content/knowgrph"
 MEMORY_ROOT="$AGENTIC_CANVAS_OS_ROOT/memory"
 PLANNING_ROOT="$AGENTIC_CANVAS_OS_ROOT/todo"
-export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT KNOWGRPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
+export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT AGENTICGRAPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
 find "$DOCS_ROOT" -maxdepth 1 -type f -name '*.md' -print0 | xargs -0 ruby -rdate -ryaml -e 'ARGV.each { |path| text=File.read(path); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{path}: missing frontmatter"); YAML.safe_load(match[1], permitted_classes: [Date], aliases: true); puts "#{path}: frontmatter ok" }'
 wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
@@ -148,7 +148,7 @@ This is the only required operator command. It resolves the sibling Knowgrph che
 
 The automated contexts model two independent collaboration peers; the gate does not require two physical devices. It does not accept clipboard actions or manually assembled evidence; its private run-scoped proof artifact is validator-owned and deleted after success. `Copy diagnostic JSON` remains optional troubleshooting only. A nonzero exit, fewer than two peers, a room-key mismatch, duplicate runtime identity, revision mismatch, stale hydration, different digest, propagation failure, or leaked run-owned process blocks parity and release without blocking ownership-qualified isolated authoring.
 
-`KNOWGRPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
+`AGENTICGRAPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 
 ## Mandatory Completion Gate
 
@@ -177,15 +177,15 @@ without separate operator authorization.
 Create the artifact from one exact source object, then validate the downloaded bytes against the same source and pinned docs revisions:
 
 ```bash
-export KNOWGRPH_SOURCE_REVISION="<exact-knowgrph-sha>"
-export KNOWGRPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
-npm --prefix "$KNOWGRPH_ROOT" run release:manifest:create -- \
-  --source-sha "$KNOWGRPH_SOURCE_REVISION" \
-  --target-ref "$KNOWGRPH_TARGET_REF" \
+export AGENTICGRAPH_SOURCE_REVISION="<exact-knowgrph-sha>"
+export AGENTICGRAPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
+npm --prefix "$AGENTICGRAPH_ROOT" run release:manifest:create -- \
+  --source-sha "$AGENTICGRAPH_SOURCE_REVISION" \
+  --target-ref "$AGENTICGRAPH_TARGET_REF" \
   --output immutable-release-manifest.json
-npm --prefix "$KNOWGRPH_ROOT" run release:manifest:check -- \
+npm --prefix "$AGENTICGRAPH_ROOT" run release:manifest:check -- \
   immutable-release-manifest.json \
-  --source-sha "$KNOWGRPH_SOURCE_REVISION"
+  --source-sha "$AGENTICGRAPH_SOURCE_REVISION"
 ```
 
 CI must upload the generated file, download it into a separate directory, and rerun the checker with the expected app SHA, resolved Agentic Canvas OS SHA, and first-pass manifest digest. A current-worktree report, individually green docs PR, branch name, manually assembled JSON, or unvalidated upload is insufficient.
@@ -409,13 +409,13 @@ Expected:
 
 ## Knowgrph Local Runtime Checks
 
-Run only when a runtime owner in `$KNOWGRPH_ROOT` is touched:
+Run only when a runtime owner in `$AGENTICGRAPH_ROOT` is touched:
 
 ```bash
-npm -C "$KNOWGRPH_ROOT" run vdeoxpln:check
-npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- mcpLocalToolContract
-npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- vdeoxplnContract
-npm -C "$KNOWGRPH_ROOT/canvas" run typecheck
+npm -C "$AGENTICGRAPH_ROOT" run vdeoxpln:check
+npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- mcpLocalToolContract
+npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- vdeoxplnContract
+npm -C "$AGENTICGRAPH_ROOT/canvas" run typecheck
 ```
 
 Choose the subset matching touched owners. Do not run broader suites unless the change crosses shared contracts or compiler boundaries.
@@ -440,8 +440,8 @@ The proof must show the protected remote collaboration ledger admits at most one
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |
 | Video Remix Director | Missing approvals produce blocked zero-cost manifest; approved dry-run emits storyboard evidence. |
 | Canvas dashboard | Frontmatter parses; KGC graph materializes through existing Source Files/Canvas owners. |
-| Agentic OS slash dictionary | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
-| FloatingPanel Chat action recommendation | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
+| Agentic OS slash dictionary | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
+| FloatingPanel Chat action recommendation | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
 | Soul identity | Focused docs route check reports `soul route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes prompt slot 1 assembly, scan, bounds, typed fallback, and no-hardcoded-default rejection. |
 | Mixture of Agents | Focused docs route check reports `moa route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes preset resolution, reference fan-out, aggregator action, separated cost logs, and no-recursion rejection. |
 | Persistent memory | Focused docs route check reports `persistent-memory route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes bounded memory/profile targets, frozen snapshot reads, typed capacity errors, scan, and session search. |
@@ -463,7 +463,7 @@ The proof must show the protected remote collaboration ledger admits at most one
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check` must report a fresh verified proof, 20 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |
-| Computing-flow | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
+| Computing-flow | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
 | Learning loop and Skill Evolution | Focused docs routing covers memory, experience, skill, identity, and `agent.learning`; `npm run skill-evolution:check` proves only the model-free ACOS spec and fail-closed client transport for singular invocation, resumable operations, isolated validation, strict metrics, candidate roles, complete snapshots, dependency/import clean-room checks, and safety flags. Runtime readiness requires exact integrated Knowgrph test citations. |
 | Stateful orchestration | Focused docs route check reports `orchestration route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed graph, checkpoint, review, and trace outputs. |
 | Long-horizon SuperAgent | Focused docs route check reports `superagent route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed graph, sandbox workspace, message gateway, artifact manifest, verification, cost, and stop condition outputs. |
@@ -474,7 +474,7 @@ Documentation-only changes must end with:
 
 ```bash
 git -C "$AGENTIC_CANVAS_OS_ROOT" status --short -- docs
-git -C "$KNOWGRPH_ROOT" status --short
+git -C "$AGENTICGRAPH_ROOT" status --short
 ```
 
 Confirm:

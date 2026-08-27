@@ -37,7 +37,7 @@ agentic_os_memory:
   owner: "operator"
   default_scope: "local-dev"
   deployment_boundaries:
-    dev: "$KNOWGRPH_ROOT"
+    dev: "$AGENTICGRAPH_ROOT"
     prod_mirror: "$PROD_MIRROR_ROOT"
     cloudflare_routes: ["airvio.co", "airvio.co/knowgrph"]
     deploy_gate: "forbid Prod and Cloudflare deploy until explicit operator instruction"
@@ -316,7 +316,7 @@ The file is spec-complete when its frontmatter can be parsed as the source of tr
 
 ## Operating Defaults
 
-- Work Dev-first in `$KNOWGRPH_ROOT`.
+- Work Dev-first in `$AGENTICGRAPH_ROOT`.
 - Treat `$PROD_MIRROR_ROOT` as a Prod mirror, not a working default.
 - Treat `airvio.co` and `airvio.co/knowgrph` as Cloudflare deployment targets, not completion criteria.
 - Forbid Prod or Cloudflare deploy unless the operator explicitly opens that gate.

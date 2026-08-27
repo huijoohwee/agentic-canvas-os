@@ -53,7 +53,7 @@ test("collaboration gate resolves the sibling Knowgrph owner without machine pat
     path.resolve("/repos/knowgrph"),
   );
   assert.equal(
-    resolveKnowgrphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: { KNOWGRPH_ROOT: "/work/knowgrph" } }),
+    resolveKnowgrphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: { AGENTICGRAPH_ROOT: "/work/knowgrph" } }),
     path.resolve("/work/knowgrph"),
   );
 });

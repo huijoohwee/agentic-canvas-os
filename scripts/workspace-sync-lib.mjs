@@ -212,7 +212,7 @@ export function createCanonicalWorkspaceSynchronizer({
       for (const candidate of candidates) {
         const agenticRoot = candidateRoots.get('agentic-canvas-os') || agenticRepository?.root
         const environment = agenticRoot
-          ? { ...process.env, KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.resolve(agenticRoot, 'docs') }
+          ? { ...process.env, AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.resolve(agenticRoot, 'docs') }
           : process.env
         if (verifyCandidate) {
           await verifyCandidate(candidate, environment)

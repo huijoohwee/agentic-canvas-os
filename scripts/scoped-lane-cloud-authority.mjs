@@ -579,6 +579,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
   branch,
   headSha,
   pullRequestNumber = null,
+  reviewRequestId = null,
   deviceId,
   sessionId,
   workItemId = branch,
@@ -604,6 +605,8 @@ export function claimLegacyReviewAdmissionCloudAuthority({
     "canonicalBaseSha",
   );
   const resolvedHeadSha = requiredSha(headSha, "headSha");
+  const resolvedReviewRequestId = reviewRequestId
+    ? requiredText(reviewRequestId, "reviewRequestId") : null;
   const resolvedBranch = requiredText(branch, "branch");
   const resolvedPredecessorClaimId = predecessorClaimId
     ? requiredDigest(predecessorClaimId, "predecessorClaimId") : null;
@@ -712,6 +715,7 @@ export function claimLegacyReviewAdmissionCloudAuthority({
     branch: resolvedBranch,
     headSha: resolvedHeadSha,
     pullRequestNumber,
+    reviewRequestId: resolvedReviewRequestId,
     deviceId,
     sessionId,
     environment,

@@ -4,7 +4,7 @@ graphId: "md:planned-dirty-admission-recovery"
 doc_type: "Recovery Controller Contract"
 date: "2026-08-26"
 lang: "en-US"
-schema: "agentic-planned-dirty-admission-recovery-doc/v1"
+schema: "agentic-planned-dirty-admission-recovery-doc/v2"
 frontmatter_contract: "required"
 status: "focused-tested"
 runtime_owner: "../scripts/planned-dirty-admission-recovery.mjs"
@@ -20,11 +20,21 @@ but stopped before the final preservation receipt and admitted projection. The
 same task then produced nonempty in-scope dirt while local, remote, cloud, and
 review heads remained at that fence.
 
+The cloud claim may either remain exact-current or be exactly one heartbeat
+ahead after a successful renewal response was lost. The successor is admitted
+only when the claim identity, schemas, actor, repository, work item, base,
+lane, fence, write set, epoch, review, and integration fields remain exact;
+transition and heartbeat counters each advance by one; expiry grows; and the
+claim-fence, transition, operation, and ledger digests all change. A missing
+source heartbeat counter means zero. A later heartbeat or any drift requires a
+fresh plan.
+
 The dirt is evidence, not permission to manufacture a commit or erase and
 reapply bytes. Planning double-reads and content-binds the complete index,
 working-tree, untracked, file-type, mode, conflict, and blob inventory. It also
 binds the unchanged scope and manifest, task capability, lease and registry,
-claim and stable cloud-authority subject, review identity and hidden marker,
+source claim, full verified target cloud authority and local heartbeat window,
+stable cloud-authority subject, review identity and hidden marker,
 protected controller revision, canonical ancestry, and non-overlapping peer
 inventory. Clean lanes, committed descendants, expired or non-writing claims,
 out-of-scope paths, conflicts, scope expansion, identity drift, or ambiguous
@@ -43,7 +53,9 @@ each effect and permits only:
 1. a private replay journal under the Git common directory;
 2. one compare-and-swap writer-registry projection from `planned` to
    `admitted`, retaining the exact claim, scope, manifest, owner, branch, base,
-   fence, epochs, task binding, expiry, and dirt evidence; and
+   fence, epochs, task binding, and dirt evidence while atomically projecting
+   the sealed cloud authority plus renewed local heartbeat and bounded expiry;
+   and
 3. replacement of only the deterministic hidden writer marker in the same
    open draft review.
 
@@ -64,10 +76,10 @@ The marker write uses an immediate exact pre-read, deterministic projection,
 and exact post-read of the whole review body; this controller does not claim an
 atomic provider compare-and-swap. A provider edit in the final check-to-write
 window cannot be excluded, so the owning task and review body must be quiescent.
-Observed review edits or lease heartbeats are third states and are not treated
-as successors by this controller. Planning also proves that the projected
-admitted marker remains within the provider body-size limit before the registry
-projection can occur.
+Observed review edits or any heartbeat beyond the sealed exact successor are
+third states. Planning and execution prove that the full deterministic target
+lease marker, including its preservation record, remains within the provider
+body-size limit before the registry projection can occur.
 
 ```sh
 node scripts/planned-dirty-admission-recovery.mjs plan \
@@ -100,3 +112,11 @@ protected pull-request review. It does not authorize direct protected-main
 mutation, hook or branch-protection bypass, force-push, claim or lease edits,
 manual ledger or review-marker edits, merge bypass, cleanup, release, or
 deployment. Future uses must use this controller's normal exact plan token.
+
+The one-ahead extension was separately authorized on the isolated branch
+`hotfix/planned-dirty-one-ahead-heartbeat-recovery` from protected revision
+`415e914da9e757387b992a5b03d89ac8855cb310` with the exact phrase
+`authorize second isolated protected bootstrap hotfix for planned-dirty one-ahead heartbeat recovery; ordinary protected branch and PR lifecycle only; no direct main, ledger, lease, registry, low-level ref, marker, protection, cleanup, release, deployment, force-push, or bypass edits`.
+It grants only authorship and ordinary protected review for this bounded
+extension, not recovery execution, lifecycle mutation, integration bypass,
+cleanup, release, or deployment.

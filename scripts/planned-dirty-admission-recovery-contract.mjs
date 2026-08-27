@@ -5,10 +5,10 @@ import { normalizePlannedDirtyAdmissionRecoveryEvidence }
   from "./planned-dirty-admission-recovery-evidence.mjs";
 
 export const OPERATION = "planned-dirty-admission-recovery";
-export const PLAN_SCHEMA = "agentic-planned-dirty-admission-recovery-plan/v1";
-export const INTENT_SCHEMA = "agentic-planned-dirty-admission-recovery-intent/v1";
+export const PLAN_SCHEMA = "agentic-planned-dirty-admission-recovery-plan/v2";
+export const INTENT_SCHEMA = "agentic-planned-dirty-admission-recovery-intent/v2";
 export const COMPLETION_SCHEMA =
-  "agentic-planned-dirty-admission-recovery-completion/v1";
+  "agentic-planned-dirty-admission-recovery-completion/v2";
 export const PHASES = Object.freeze([
   "authorized",
   "registry-projected",
@@ -51,7 +51,7 @@ export function authorizePlannedDirtyAdmissionRecovery(planOrInput, authorizatio
     throw new Error(`Exact authorization required: ${exactAuthorization}`);
   }
   const core = {
-    schema: "agentic-planned-dirty-admission-recovery-authorization/v1",
+    schema: "agentic-planned-dirty-admission-recovery-authorization/v2",
     planDigest: sealed.planDigest,
     exactAuthorization,
   };
@@ -147,6 +147,18 @@ export function buildCompletionReceipt(value) {
     planDigest: plan.planDigest,
     sourceLeaseDigest: digest(plan.evidence.sourceLeaseDigest, "source lease digest"),
     targetLeaseDigest: digest(registry.leaseDigest, "target lease digest"),
+    sourceCloudAuthorityDigest: digest(
+      plan.evidence.heartbeatProjection.sourceAuthorityDigest,
+      "source cloud-authority digest",
+    ),
+    targetCloudAuthorityDigest: digest(
+      registry.targetCloudAuthorityDigest,
+      "target cloud-authority digest",
+    ),
+    heartbeatProjectionDigest: digest(
+      registry.heartbeatProjectionDigest,
+      "heartbeat projection digest",
+    ),
     sealedDirtDigest: digest(plan.evidence.dirtDigest, "sealed dirt digest"),
     markerDigest: digest(marker.markerDigest, "pull-request marker digest"),
     plannedMutationAuthorityReceiptDigest: digest(
@@ -190,7 +202,7 @@ function phaseReceipt(plan, phase, previousReceiptDigest, values) {
   if (!PHASES.includes(phase)) invalid("phase");
   const normalizedValues = normalizePhaseValues(phase, values);
   const core = {
-    schema: "agentic-planned-dirty-admission-recovery-phase/v1",
+    schema: "agentic-planned-dirty-admission-recovery-phase/v2",
     phase,
     planDigest: plan.planDigest,
     previousReceiptDigest,
@@ -210,6 +222,8 @@ function normalizePhaseValues(phase, values) {
     optionalDigest(source.taskAuthorityBindingDigest, "task-authority binding digest");
   } else if (phase === "registry-projected") {
     digest(source.leaseDigest, "projected lease digest");
+    digest(source.targetCloudAuthorityDigest, "target cloud-authority digest");
+    digest(source.heartbeatProjectionDigest, "heartbeat projection digest");
     optionalDigest(source.preservationReceiptDigest, "preservation receipt digest");
     const plannedMutationAuthorityReceiptDigest = source.plannedMutationAuthorityReceiptDigest
       || source.mutationAuthorityReceiptDigest;
@@ -273,6 +287,12 @@ function assertPhaseLineage(plan, phases) {
   const registry = phases["registry-projected"]?.values;
   const marker = phases["pr-marker-projected"]?.values;
   const terminal = phases.complete?.values;
+  if (registry && (registry.targetCloudAuthorityDigest
+      !== plan.evidence.targetCloudAuthorityDigest
+    || registry.heartbeatProjectionDigest
+      !== plan.evidence.heartbeatProjection.projectionDigest)) {
+    invalid("registry heartbeat phase lineage");
+  }
   if (!terminal) return;
   if ((terminal.leaseDigest !== undefined && terminal.leaseDigest !== registry.leaseDigest)
     || (terminal.markerDigest !== undefined && terminal.markerDigest !== marker.markerDigest)

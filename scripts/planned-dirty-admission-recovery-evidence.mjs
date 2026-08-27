@@ -16,8 +16,10 @@ import { parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker }
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 export const PLANNED_DIRTY_ADMISSION_RECOVERY_EVIDENCE_SCHEMA =
-  "agentic-planned-dirty-admission-recovery-evidence/v1";
+  "agentic-planned-dirty-admission-recovery-evidence/v2";
 export const EVIDENCE_SCHEMA = PLANNED_DIRTY_ADMISSION_RECOVERY_EVIDENCE_SCHEMA;
+export const PLANNED_DIRTY_HEARTBEAT_PROJECTION_SCHEMA =
+  "agentic-planned-dirty-heartbeat-projection/v1";
 
 const SHA = /^[0-9a-f]{40}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
@@ -38,6 +40,8 @@ export function buildPlannedDirtyAdmissionRecoveryEvidence(input = {}) {
     "protected-controller double-read");
   const protectedMainAdvance = stablePair(input.protectedMainObservations,
     normalizeProtectedMainAdvance, "protected-main double-read");
+  const targetCloudAuthority = stablePair(input.targetCloudAuthorityObservations,
+    normalizeTargetCloudAuthority, "target cloud-authority double-read");
   const manifest = normalizeManifest(input.manifest);
   const overlappingClaimIds = normalizeDigests(input.overlappingClaimIds,
     "overlapping claim identities");
@@ -63,6 +67,11 @@ export function buildPlannedDirtyAdmissionRecoveryEvidence(input = {}) {
     pullRequest: review,
     cloudAuthoritySubject,
     cloudAuthoritySubjectDigest: digestValue(cloudAuthoritySubject),
+    targetCloudAuthority,
+    targetCloudAuthorityDigest: digestValue(targetCloudAuthority),
+    heartbeatProjection: projectPlannedDirtyHeartbeatProjection({
+      sourceLease: lease, targetCloudAuthority, observedAt,
+    }),
     protectedController,
     protectedMainAdvance,
     overlappingClaimIds,
@@ -95,6 +104,10 @@ export function normalizePlannedDirtyAdmissionRecoveryEvidence(value) {
     cloudAuthoritySubject: normalizeCloudSubject(source.cloudAuthoritySubject),
     cloudAuthoritySubjectDigest: digest(source.cloudAuthoritySubjectDigest,
       "cloud subject digest"),
+    targetCloudAuthority: normalizeTargetCloudAuthority(source.targetCloudAuthority),
+    targetCloudAuthorityDigest: digest(source.targetCloudAuthorityDigest,
+      "target cloud-authority digest"),
+    heartbeatProjection: normalizeHeartbeatProjection(source.heartbeatProjection),
     protectedController: normalizeController(source.protectedController),
     protectedMainAdvance: normalizeProtectedMainAdvance(source.protectedMainAdvance),
     overlappingClaimIds: normalizeDigests(source.overlappingClaimIds,
@@ -130,6 +143,8 @@ export function projectPlannedDirtyAdmissionRecoveryStableSubject(value) {
     dirtDigest: evidence.dirtDigest,
     pullRequest: evidence.pullRequest,
     cloudAuthoritySubject: evidence.cloudAuthoritySubject,
+    targetCloudAuthority: evidence.targetCloudAuthority,
+    heartbeatProjection: evidence.heartbeatProjection,
     protectedController: evidence.protectedController,
     protectedMainAdvance: evidence.protectedMainAdvance,
     overlappingClaimIds: evidence.overlappingClaimIds,
@@ -160,6 +175,127 @@ function normalizeLease(value) {
   lease.admission = { ...admission, declaredWriteSet: writeSet };
   lease.taskAuthority = binding;
   return deepFreeze(lease);
+}
+
+export function projectPlannedDirtyHeartbeatProjection({
+  sourceLease, targetCloudAuthority, observedAt,
+} = {}) {
+  const lease = normalizeLease(sourceLease);
+  const source = normalizeTargetCloudAuthority({
+    ...lease.cloudAuthority,
+    heartbeatCounter: lease.cloudAuthority?.heartbeatCounter ?? 0,
+  });
+  const target = normalizeTargetCloudAuthority(targetCloudAuthority);
+  const sourceHeartbeatCounter = source.heartbeatCounter;
+  const targetHeartbeatCounter = target.heartbeatCounter;
+  const sourceStable = stableCloudAuthority(source);
+  const targetStable = stableCloudAuthority(target);
+  if (canonicalJson(sourceStable) !== canonicalJson(targetStable)) {
+    invalid("heartbeat immutable cloud subject");
+  }
+  const same = target.transitionCounter === source.transitionCounter
+    && targetHeartbeatCounter === sourceHeartbeatCounter;
+  const oneAhead = target.transitionCounter === source.transitionCounter + 1
+    && targetHeartbeatCounter === sourceHeartbeatCounter + 1;
+  if (!same && !oneAhead) invalid("heartbeat counter successor");
+  const changingDigests = ["claimDigest", "claimLedgerRevision",
+    "operationReceiptDigest", "ledgerRevision", "ledgerDigest"];
+  if (same && (target.expiresAt !== source.expiresAt
+    || changingDigests.some(field => target[field] !== source[field]))) {
+    invalid("unchanged heartbeat projection");
+  }
+  if (oneAhead && (Date.parse(target.expiresAt) <= Date.parse(source.expiresAt)
+    || changingDigests.some(field => target[field] === source[field]))) {
+    invalid("one-ahead heartbeat projection");
+  }
+  const heartbeatAt = oneAhead ? instant(observedAt, "target local heartbeat")
+    : lease.heartbeatAt;
+  const sourceTtl = Date.parse(lease.expiresAt) - Date.parse(lease.heartbeatAt);
+  if (!Number.isSafeInteger(sourceTtl) || sourceTtl < 1) invalid("source local heartbeat TTL");
+  const expiresAt = oneAhead
+    ? new Date(Math.min(Date.parse(heartbeatAt) + sourceTtl,
+      Date.parse(target.expiresAt))).toISOString()
+    : lease.expiresAt;
+  if (Date.parse(expiresAt) <= Date.parse(heartbeatAt)
+    || Date.parse(expiresAt) > Date.parse(target.expiresAt)) {
+    invalid("target local heartbeat expiry");
+  }
+  const core = {
+    schema: PLANNED_DIRTY_HEARTBEAT_PROJECTION_SCHEMA,
+    disposition: oneAhead ? "one-ahead" : "unchanged",
+    sourceAuthorityDigest: digestValue(lease.cloudAuthority),
+    targetAuthorityDigest: digestValue(target),
+    sourceTransitionCounter: source.transitionCounter,
+    targetTransitionCounter: target.transitionCounter,
+    sourceHeartbeatCounter,
+    targetHeartbeatCounter,
+    heartbeatAt,
+    expiresAt,
+  };
+  return deepFreeze({ ...core, projectionDigest: digestValue(core) });
+}
+
+function normalizeHeartbeatProjection(value) {
+  const source = record(value, "heartbeat projection");
+  const result = {
+    schema: source.schema,
+    disposition: source.disposition,
+    sourceAuthorityDigest: digest(source.sourceAuthorityDigest, "source authority digest"),
+    targetAuthorityDigest: digest(source.targetAuthorityDigest, "target authority digest"),
+    sourceTransitionCounter: positive(source.sourceTransitionCounter, "source transition"),
+    targetTransitionCounter: positive(source.targetTransitionCounter, "target transition"),
+    sourceHeartbeatCounter: nonnegative(source.sourceHeartbeatCounter, "source heartbeat"),
+    targetHeartbeatCounter: nonnegative(source.targetHeartbeatCounter, "target heartbeat"),
+    heartbeatAt: instant(source.heartbeatAt, "target local heartbeat"),
+    expiresAt: instant(source.expiresAt, "target local expiry"),
+  };
+  if (result.schema !== PLANNED_DIRTY_HEARTBEAT_PROJECTION_SCHEMA
+    || !["unchanged", "one-ahead"].includes(result.disposition)
+    || source.projectionDigest !== digestValue(result)) invalid("heartbeat projection");
+  return deepFreeze({ ...result, projectionDigest: source.projectionDigest });
+}
+
+function normalizeTargetCloudAuthority(value) {
+  const source = structuredClone(record(value, "target cloud authority"));
+  if (source.schema !== "agentic-lane-cloud-authority/v1" || source.provider !== "github"
+    || source.state !== "active" || source.mutationAuthorityEligible !== true) {
+    invalid("target active cloud authority");
+  }
+  for (const [candidate, label] of [[source.ledgerRepository, "ledger repository"],
+    [source.targetRepository, "target repository"], [source.deviceId, "authority device"],
+    [source.sessionId, "authority session"], [source.reviewRequestId, "authority review"]]) {
+    text(candidate, label);
+  }
+  for (const [candidate, label] of [[source.claimId, "authority claim"],
+    [source.claimDigest, "authority fence"], [source.ledgerDigest, "authority ledger digest"],
+    [source.claimLedgerRevision, "authority transition"],
+    [source.operationReceiptDigest, "authority operation"],
+    [source.writeSetDigest, "authority write set"],
+    [source.manifestDigest, "authority manifest"]]) digest(candidate, label);
+  sha(source.ledgerRevision, "authority ledger revision");
+  sha(source.canonicalBaseSha, "authority base"); sha(source.laneRevision, "authority lane");
+  positive(source.leaseEpoch, "authority epoch");
+  positive(source.transitionCounter, "authority transition counter");
+  nonnegative(source.heartbeatCounter, "authority heartbeat counter");
+  instant(source.expiresAt, "authority expiry");
+  source.cloudDeclaredWriteScope = normalizeWriteSet(source.cloudDeclaredWriteScope);
+  if (source.writeSetDigest !== digestValue(source.cloudDeclaredWriteScope)
+    || source.entrySchema !== "agentic-cloud-collaboration-entry/v2"
+    || source.claimIdentitySchema !== source.entrySchema
+    || (source.integrationReceiptDigest !== null
+      && source.integrationReceiptDigest !== undefined
+      && !DIGEST.test(String(source.integrationReceiptDigest)))) {
+    invalid("target cloud authority projection");
+  }
+  return deepFreeze(source);
+}
+
+function stableCloudAuthority(value) {
+  const source = structuredClone(value);
+  for (const field of ["claimDigest", "ledgerRevision", "ledgerDigest",
+    "claimLedgerRevision", "operationReceiptDigest", "transitionCounter",
+    "heartbeatCounter", "expiresAt"]) delete source[field];
+  return source;
 }
 
 function normalizeRegistry(value) {
@@ -268,13 +404,19 @@ function assertJoinedSubject(value) {
   const lease = value.sourceLease, admission = lease.admission;
   const authority = lease.cloudAuthority;
   const cloud = value.cloudAuthoritySubject, review = value.pullRequest;
+  const target = value.targetCloudAuthority;
+  const heartbeat = projectPlannedDirtyHeartbeatProjection({ sourceLease: lease,
+    targetCloudAuthority: target, observedAt: value.observedAt });
   const binding = assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
   const failed = [
     ["lease digest", value.sourceLeaseDigest === writerLeaseDigest(lease)],
     ["registry lease", value.sourceRegistry.leaseDigest === value.sourceLeaseDigest],
     ["repository", digestValue(lease.worktreePath) === value.repositoryPathDigest],
     ["owner", lease.branch === value.branch && lease.sessionId === value.sessionId],
-    ["unexpired lease", Date.parse(lease.expiresAt) > Date.parse(value.observedAt)],
+    ["heartbeat projection", canonicalJson(heartbeat)
+      === canonicalJson(value.heartbeatProjection)
+      && value.targetCloudAuthorityDigest === digestValue(target)],
+    ["usable local projection", Date.parse(heartbeat.expiresAt) > Date.parse(value.observedAt)],
     ["manifest", admission.manifestDigest === value.manifest.manifestDigest
       && admission.writeSetDigest === value.manifest.writeSetDigest
       && canonicalJson(admission.declaredWriteSet) === canonicalJson(value.manifest.declaredWriteSet)],
@@ -299,21 +441,30 @@ function assertJoinedSubject(value) {
       && canonicalJson(authority.cloudDeclaredWriteScope)
         === canonicalJson(value.manifest.declaredWriteSet)
       && authority.deviceId === lease.device && authority.sessionId === lease.sessionId
-      && Date.parse(authority.expiresAt) > Date.parse(value.observedAt)],
+      && authority.manifestDigest === value.manifest.manifestDigest],
     ["cloud lane", cloud.lane.branch === lease.branch
       && cloud.lane.canonicalBaseSha === lease.baseSha
       && cloud.lane.laneRevision === lease.fenceSha && cloud.lane.fenceSha === lease.fenceSha
       && cloud.lane.reviewRequestId === review.reviewRequestId],
-    ["cloud owner", cloud.owner.deviceId === lease.cloudAuthority.deviceId
-      && cloud.owner.sessionId === lease.cloudAuthority.sessionId],
+    ["cloud owner", cloud.owner.deviceId === target.deviceId
+      && cloud.owner.sessionId === target.sessionId
+      && digestValue({ actorId: cloud.owner.actorId,
+        canonicalBaseRevision: cloud.lane.canonicalBaseSha,
+        leaseEpoch: cloud.claim.leaseEpoch, repositoryId: cloud.owner.repositoryId,
+        workItemId: cloud.owner.workItemId, writeSetDigest: cloud.scope.writeSetDigest })
+        === target.claimId],
     ["cloud scope", cloud.scope.semanticScope === lease.scope
       && cloud.scope.manifestDigest === value.manifest.manifestDigest
       && cloud.scope.writeSetDigest === value.manifest.writeSetDigest
       && canonicalJson(cloud.scope.declaredWriteSet) === canonicalJson(value.manifest.declaredWriteSet)],
-    ["cloud claim", cloud.claim.claimId === lease.cloudAuthority.claimId
-      && cloud.claim.claimDigest === lease.cloudAuthority.claimDigest
-      && cloud.claim.leaseEpoch === lease.cloudAuthority.leaseEpoch
-      && cloud.claim.transitionCounter === lease.cloudAuthority.transitionCounter
+    ["cloud claim", cloud.claim.claimId === target.claimId
+      && cloud.claim.claimDigest === target.claimDigest
+      && cloud.claim.claimLedgerRevision === target.claimLedgerRevision
+      && cloud.claim.operationReceiptDigest === target.operationReceiptDigest
+      && cloud.claim.leaseEpoch === target.leaseEpoch
+      && cloud.claim.transitionCounter === target.transitionCounter
+      && cloud.claim.heartbeatCounter === target.heartbeatCounter
+      && cloud.claim.expiresAt === target.expiresAt
       && Date.parse(cloud.claim.expiresAt) > Date.parse(value.observedAt)],
     ["cloud digest", value.cloudAuthoritySubjectDigest === digestValue(cloud)],
     ["no overlap", value.overlappingClaimIds.length === 0],

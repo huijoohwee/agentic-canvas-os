@@ -10,6 +10,7 @@ import {
   createDeviceDeliveryEvidence,
 } from "./device-delivery-evidence.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
   bindAdmissionCloudAuthority,
@@ -124,6 +125,7 @@ function integrateSessionUnfenced({
   controllerRoot,
   waitSeconds = 900,
   pollSeconds = 5,
+  environment = process.env,
   now = () => new Date(),
   sleep = defaultSleep,
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
@@ -184,6 +186,7 @@ function integrateSessionUnfenced({
       invokeCloudSuccessor,
       verifyCloudSuccessor,
       casActiveLeaseProjection,
+      environment,
       waitSeconds,
       pollSeconds,
       now,
@@ -227,6 +230,7 @@ function integrateSessionUnfenced({
       invokeCloudSuccessor,
       verifyCloudSuccessor,
       casActiveLeaseProjection,
+      environment,
       waitSeconds,
       pollSeconds,
       now,
@@ -1204,8 +1208,18 @@ function publishActiveWithSuccessorRecovery({
   branch, lease, leaseStore, sessionId, gitText, ghText, run, publishTask,
   refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
   inspectCloudStatus, invokeCloudSuccessor,
-  verifyCloudSuccessor, casActiveLeaseProjection, waitSeconds, pollSeconds, now, sleep,
+  verifyCloudSuccessor, casActiveLeaseProjection, environment,
+  waitSeconds, pollSeconds, now, sleep,
 }) {
+  const activePublishInspectCloudStatus = fenceActivePublishCloudChildEnvironment({
+    invoke: inspectCloudStatus, environment,
+  });
+  const activePublishInvokeCloudSuccessor = fenceActivePublishCloudChildEnvironment({
+    invoke: invokeCloudSuccessor, environment,
+  });
+  const activePublishVerifyCloudSuccessor = fenceActivePublishCloudChildEnvironment({
+    invoke: verifyCloudSuccessor, environment,
+  });
   let preparedIntent = lease.activePublishSuccessorIntent
     ? normalizeActivePublishSuccessorIntent(lease.activePublishSuccessorIntent)
     : null;
@@ -1231,7 +1245,8 @@ function publishActiveWithSuccessorRecovery({
         preparedIntent.targetCanonicalBaseSha !== synchronized.protectedBaseSha)) {
     const rollover = reconcilePreparedActivePublishBaseAdvance({
       branch, lease, leaseStore, sourceLeaseDigest, intent: preparedIntent,
-      headSha, subject: synchronized, gitText, ghText, run, inspectCloudStatus,
+      headSha, subject: synchronized, gitText, ghText, run,
+      inspectCloudStatus: activePublishInspectCloudStatus,
       casActiveLeaseProjection, now,
     });
     lease = rollover.lease;
@@ -1244,8 +1259,10 @@ function publishActiveWithSuccessorRecovery({
     refreshActivePublishSuccessor({
       branch, lease, leaseStore, sessionId, headSha, subject: synchronized, gitText, ghText,
       refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
-      inspectCloudStatus, invokeCloudSuccessor,
-      verifyCloudSuccessor, casActiveLeaseProjection, sourceLeaseDigest,
+      inspectCloudStatus: activePublishInspectCloudStatus,
+      invokeCloudSuccessor: activePublishInvokeCloudSuccessor,
+      verifyCloudSuccessor: activePublishVerifyCloudSuccessor,
+      casActiveLeaseProjection, sourceLeaseDigest,
       prevalidatedStatus, now,
     });
   }
@@ -1261,12 +1278,27 @@ function publishActiveWithSuccessorRecovery({
     refreshActivePublishSuccessor({
       branch, lease, leaseStore, sessionId, headSha, subject, gitText, ghText,
       refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
-      inspectCloudStatus, invokeCloudSuccessor,
-      verifyCloudSuccessor, casActiveLeaseProjection, sourceLeaseDigest,
+      inspectCloudStatus: activePublishInspectCloudStatus,
+      invokeCloudSuccessor: activePublishInvokeCloudSuccessor,
+      verifyCloudSuccessor: activePublishVerifyCloudSuccessor,
+      casActiveLeaseProjection, sourceLeaseDigest,
       now,
     });
     publishTask();
   }
+}
+
+function fenceActivePublishCloudChildEnvironment({ invoke, environment }) {
+  const sanitized = { ...(environment || {}) };
+  for (const key of Object.keys(sanitized)) {
+    if (key.startsWith("AGENTIC_CLOUD_")) delete sanitized[key];
+  }
+  for (const key of [
+    "AGENTIC_TARGET_REPOSITORY",
+    "AGENTIC_DEVICE_ID",
+    "AGENTIC_SESSION_ID",
+  ]) delete sanitized[key];
+  return input => invoke({ ...input, environment: { ...sanitized } });
 }
 
 function isActivePublishSuccessorCandidate(lease) {
@@ -1419,10 +1451,12 @@ function refreshActivePublishSuccessor({
     rolloverDisposition = requireActivePublishRolloverCloudDisposition({
       status, intent, source, admission,
     });
-    if (rolloverDisposition.predecessor &&
-        digestValue(rolloverDisposition.predecessor) !==
-          rolloverProof.sourceClaimProjectionDigest) {
-      throw new Error("Active publish prepared-base rollover source claim drifted before publication.");
+    if (rolloverDisposition.predecessor) {
+      requireActivePublishRolloverSourceProjectionDigest({
+        claim: rolloverDisposition.predecessor,
+        sealedDigest: rolloverProof.sourceClaimProjectionDigest,
+        message: "Active publish prepared-base rollover source claim drifted before publication.",
+      });
     }
   }
   if (!rolloverProof) {
@@ -1434,6 +1468,7 @@ function refreshActivePublishSuccessor({
   }
   const successor = resolveActivePublishCloudSuccessor({
     status, intent, source, admission, lease, branch, headSha, sessionId,
+    rolloverPredecessor: rolloverDisposition?.predecessor || null,
     rolloverDerivative: rolloverDisposition?.derivative || null,
     refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
     inspectCloudStatus, invokeCloudSuccessor, verifyCloudSuccessor,
@@ -1515,12 +1550,17 @@ function inspectActivePublishCloudStatus({ source, inspectCloudStatus }) {
 
 function resolveActivePublishCloudSuccessor({
   status, intent, source, admission, lease, branch, headSha, sessionId,
+  rolloverPredecessor = null,
   rolloverDerivative = null,
   refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
   inspectCloudStatus, invokeCloudSuccessor, verifyCloudSuccessor,
 }) {
-  const exactInvoke = fenceActivePublishSuccessorClaimEpoch({
+  const exactInvoke = fenceActivePublishSuccessorCloudMutations({
     intent,
+    source,
+    expectedLedgerDigest: intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2
+      ? intent.rolloverProof.sourceLedgerDigest
+      : null,
     invoke: invokeCloudSuccessor,
   });
   const common = {
@@ -1541,7 +1581,8 @@ function resolveActivePublishCloudSuccessor({
   };
   let derivative = rolloverDerivative;
   if (!derivative) {
-    const predecessor = exactActivePublishClaim({ status, authority: source, admission });
+    const predecessor = rolloverPredecessor ||
+      exactActivePublishClaim({ status, authority: source, admission });
     if (predecessor) {
       const exactSource = predecessor.actorId === intent.sourceActorId &&
         predecessor.repositoryId === intent.sourceRepositoryId &&
@@ -1551,15 +1592,63 @@ function resolveActivePublishCloudSuccessor({
       if (!exactSource) {
         throw new Error("Active publish predecessor drifted from its prepared successor intent.");
       }
-      return refreshActiveCloudSuccessor(common);
+      return refreshActiveCloudSuccessor(rolloverPredecessor
+        ? { ...common, predecessorClaimId: intent.sourceClaimId }
+        : common);
     }
-    derivative = requireActivePublishDerivative({ status, intent, admission });
+    derivative = requireActivePublishDerivative({ status, intent, source, admission });
   }
-  if (derivative.state === "waiting-successor") return refreshActiveCloudSuccessor(common);
+  if (derivative.state === "waiting-successor") {
+    const namedRolloverLineage = rolloverDerivative &&
+      derivative.laneRevision === intent.targetHeadSha;
+    const replayCommon = intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 &&
+      rolloverDerivative
+      ? {
+        ...common,
+        activePublishRequiredReplayClaimId: derivative.claimId,
+        invoke: input => exactInvoke({
+          ...input,
+          activePublishRequiredReplayClaimId: derivative.claimId,
+        }),
+      }
+      : common;
+    return refreshActiveCloudSuccessor(namedRolloverLineage
+      ? { ...replayCommon, predecessorClaimId: derivative.predecessorClaimId }
+      : replayCommon);
+  }
+  if (intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 && rolloverDerivative) {
+    if (derivative.reviewRequestId) {
+      try {
+        replayActivePublishRolloverClaim({
+          common,
+          expectedClaimId: derivative.claimId,
+          predecessorClaimId: derivative.predecessorClaimId,
+          refreshActiveCloudSuccessor,
+        });
+      } catch (error) {
+        if (!isCallerSealedClaimParentMismatch(error)) throw error;
+        replayActivePublishRolloverClaim({
+          common,
+          expectedClaimId: derivative.claimId,
+          refreshActiveCloudSuccessor,
+        });
+      }
+    } else {
+      const namedRolloverLineage = derivative.laneRevision === intent.targetHeadSha;
+      replayActivePublishRolloverClaim({
+        common,
+        expectedClaimId: derivative.claimId,
+        predecessorClaimId: namedRolloverLineage
+          ? derivative.predecessorClaimId
+          : null,
+        refreshActiveCloudSuccessor,
+      });
+    }
+  }
   const authority = activePublishDerivativeAuthority({
     status, claim: derivative, source, admission, lease, sessionId,
   });
-  if (derivative.laneRevision === intent.targetCanonicalBaseSha) {
+  if (!derivative.reviewRequestId) {
     return bindActiveCloudSuccessor({
       authority,
       manifest: admission,
@@ -1584,13 +1673,188 @@ function resolveActivePublishCloudSuccessor({
   });
 }
 
-function fenceActivePublishSuccessorClaimEpoch({ intent, invoke }) {
+function replayActivePublishRolloverClaim({
+  common, expectedClaimId, predecessorClaimId = null, refreshActiveCloudSuccessor,
+}) {
+  const replayComplete = new Error("Active publish rollover claim replay is complete.");
+  let replayed = false;
+  let stoppedAtReplay = false;
+  try {
+    refreshActiveCloudSuccessor({
+      ...common,
+      ...(predecessorClaimId ? { predecessorClaimId } : {}),
+      activePublishClaimReplayOnly: true,
+      invoke: input => {
+        if (input?.action !== "claim") {
+          throw new Error(
+            "Active publish rollover claim replay attempted a non-claim mutation.",
+          );
+        }
+        const actualPredecessorClaimId = input.request?.predecessorClaimId || null;
+        if (actualPredecessorClaimId !== predecessorClaimId) {
+          throw new Error(
+            "Active publish rollover claim replay drifted from its deterministic lineage.",
+          );
+        }
+        common.invoke({
+          ...input,
+          activePublishRequiredReplayClaimId: expectedClaimId,
+        });
+        replayed = true;
+        throw replayComplete;
+      },
+    });
+  } catch (error) {
+    if (error !== replayComplete) throw error;
+    stoppedAtReplay = true;
+  }
+  if (!replayed || !stoppedAtReplay) {
+    throw new Error(
+      "Active publish rollover claim replay returned without invoking its sealed claim.",
+    );
+  }
+}
+
+function isCallerSealedClaimParentMismatch(error) {
+  const message = String(error?.message || "");
+  return message === "Cloud collaboration claim failed: expectedLedgerDigest is stale" ||
+    message === "Cloud collaboration claim failed: " +
+      "Cloud collaboration claim failed: expectedLedgerDigest is stale";
+}
+
+function fenceActivePublishSuccessorCloudMutations({
+  intent, source, expectedLedgerDigest = null, invoke,
+}) {
+  const ledgerFence = expectedLedgerDigest
+    ? requiredIntentDigest(expectedLedgerDigest)
+    : null;
+  const sourceClaimFence = requiredIntentDigest(intent.sourceClaimDigest);
+  const sourceTransitionCounter = requiredPositiveInteger(intent.sourceTransitionCounter);
   return input => {
     if (input?.action === "claim" && input?.request?.leaseEpoch !== intent.targetLeaseEpoch) {
       throw new Error("Active publish successor claim epoch drifted from its durable intent.");
     }
-    return invoke(input);
+    if (input?.action === "retire" && input?.request?.claimId === intent.sourceClaimId) {
+      if (input.request.expectedFenceRevision !== sourceClaimFence ||
+          input.request.expectedTransitionCounter !== sourceTransitionCounter) {
+        throw new Error(
+          "Active publish successor source retirement fence drifted from its durable intent.",
+        );
+      }
+      return invoke(input);
+    }
+    if (input?.action !== "claim" || !ledgerFence) return invoke(input);
+    if (input.request.expectedLedgerDigest &&
+        input.request.expectedLedgerDigest !== ledgerFence) {
+      throw new Error("Active publish successor claim ledger fence drifted from its durable intent.");
+    }
+    const requiredReplayClaimId = input.activePublishRequiredReplayClaimId
+      ? requiredIntentDigest(input.activePublishRequiredReplayClaimId)
+      : null;
+    const { activePublishRequiredReplayClaimId: _requiredReplayClaimId, ...providerInput } = input;
+    const claimResult = invoke({
+      ...providerInput,
+      request: { ...input.request, expectedLedgerDigest: ledgerFence },
+    });
+    const waitingClaim = requireExactActivePublishRolloverWaitingClaim({
+      claimResult,
+      expectedLaneRevision: input.request.headSha,
+      intent,
+      requiredReplayClaimId,
+      source,
+    });
+    retireActivePublishRolloverSource({
+      intent,
+      ledgerRepository: input.ledgerRepository,
+      waitingClaim,
+      invoke,
+    });
+    return claimResult;
   };
+}
+
+function requireExactActivePublishRolloverWaitingClaim({
+  claimResult, expectedLaneRevision, intent, requiredReplayClaimId = null, source,
+}) {
+  const claim = claimResult?.claim;
+  const exact = claimResult?.schema === "agentic-cloud-collaboration-result/v1" &&
+    claimResult.ok === true && claimResult.action === "claim" &&
+    (!requiredReplayClaimId || claimResult.replayed === true) &&
+    (!requiredReplayClaimId || claim?.claimId === requiredReplayClaimId) &&
+    requiredIntentDigest(claim?.claimId) === claim.claimId &&
+    claimResult.claimDigest === claim.fenceRevision &&
+    claim.state === "waiting-successor" &&
+    claim.predecessorClaimId === intent.sourceClaimId &&
+    claim.actorId === intent.sourceActorId &&
+    claim.deviceId === normalizeActivePublishCloudOwner("device", source.deviceId) &&
+    claim.sessionId === normalizeActivePublishCloudOwner("session", source.sessionId) &&
+    claim.repositoryId === intent.sourceRepositoryId &&
+    claim.workItemId === intent.sourceWorkItemId &&
+    claim.canonicalBaseRevision === intent.targetCanonicalBaseSha &&
+    [intent.targetCanonicalBaseSha, intent.targetHeadSha].includes(expectedLaneRevision) &&
+    claim.laneRevision === expectedLaneRevision &&
+    claim.writeSetDigest === intent.writeSetDigest &&
+    claim.leaseEpoch === intent.targetLeaseEpoch && claim.transitionCounter === 1 &&
+    claim.reviewRequestId === null &&
+    requiredIntentDigest(claim.fenceRevision) === claim.fenceRevision;
+  if (!exact) {
+    throw new Error(
+      "Active publish rollover sealed claim did not return its exact original waiting projection.",
+    );
+  }
+  return claim;
+}
+
+function retireActivePublishRolloverSource({
+  intent, ledgerRepository, waitingClaim, invoke,
+}) {
+  const successionEvidence = {
+    schema: "agentic-legacy-review-successor-promotion/v1",
+    branch: intent.branch,
+    predecessorClaimId: intent.sourceClaimId,
+    successorClaimId: waitingClaim.claimId,
+    canonicalBaseSha: intent.targetCanonicalBaseSha,
+    manifestDigest: intent.manifestDigest,
+    writeSetDigest: intent.writeSetDigest,
+  };
+  const retirement = invoke({
+    action: "retire",
+    ledgerRepository,
+    request: {
+      targetRepository: intent.targetRepository,
+      claimId: intent.sourceClaimId,
+      expectedFenceRevision: intent.sourceClaimDigest,
+      expectedTransitionCounter: intent.sourceTransitionCounter,
+      reason: "superseded",
+      finalRevision: intent.sourceLaneRevision,
+      reviewRequestId: intent.sourceReviewRequestId,
+      bytesDigest: digestValue({ ...successionEvidence, operation: "retire-bytes" }),
+      namedChecksDigest: digestValue({ ...successionEvidence, operation: "retire-checks" }),
+      handoffEvidenceDigest: digestValue({ ...successionEvidence, operation: "retire-handoff" }),
+      integrationReceiptDigest: null,
+      deviceId: intent.sourceDeviceId,
+      sessionId: intent.sourceSessionId,
+      idempotencyKey: [
+        "legacy-review-supersede",
+        intent.sourceClaimId,
+        waitingClaim.claimId,
+        waitingClaim.fenceRevision,
+      ].join(":"),
+    },
+  });
+  const claim = retirement?.claim;
+  const exact = retirement?.schema === "agentic-cloud-collaboration-result/v1" &&
+    retirement.ok === true && retirement.action === "retire" &&
+    claim?.claimId === intent.sourceClaimId &&
+    projectRootState(claim.state) === "released" &&
+    claim.laneRevision === intent.sourceLaneRevision &&
+    claim.reviewRequestId === intent.sourceReviewRequestId &&
+    claim.transitionCounter === intent.sourceTransitionCounter + 1;
+  if (!exact) {
+    throw new Error(
+      "Active publish rollover did not retire the exact intent-sealed source transition.",
+    );
+  }
 }
 
 const ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1 =
@@ -1656,6 +1920,7 @@ function reconcilePreparedActivePublishBaseAdvance({
       admission,
       sourceClaimId: currentIntent.sourceClaimId,
       sourceClaimProjectionDigest: digestValue(disposition.predecessor),
+      sourceLedgerDigest: status.ledgerDigest,
       gitText,
     });
     const preCasSubject = readExactActivePublishSubject({
@@ -1671,9 +1936,15 @@ function reconcilePreparedActivePublishBaseAdvance({
     const preCasDisposition = requireActivePublishRolloverCloudDisposition({
       status: preCasStatus, intent: currentIntent, source, admission,
     });
-    if (digestValue(preCasDisposition.predecessor) !==
-        rolloverProof.sourceClaimProjectionDigest) {
-      throw new Error("Active publish prepared-base rollover source claim drifted before intent CAS.");
+    requireActivePublishRolloverSourceProjectionDigest({
+      claim: preCasDisposition.predecessor,
+      sealedDigest: rolloverProof.sourceClaimProjectionDigest,
+      message: "Active publish prepared-base rollover source claim drifted before intent CAS.",
+    });
+    if (preCasStatus.ledgerDigest !== rolloverProof.sourceLedgerDigest) {
+      throw new Error(
+        "Active publish prepared-base rollover source ledger drifted before intent CAS.",
+      );
     }
     subject = preCasSubject;
     const rolledOverIntent = createRolledOverActivePublishSuccessorIntent({
@@ -1737,8 +2008,13 @@ function reconcilePreparedActivePublishBaseAdvance({
     admission,
     sourceClaimId: currentIntent.sourceClaimId,
     sourceClaimProjectionDigest: disposition.predecessor
-      ? digestValue(disposition.predecessor)
+      ? requireActivePublishRolloverSourceProjectionDigest({
+        claim: disposition.predecessor,
+        sealedDigest: proof.sourceClaimProjectionDigest,
+        message: "Active publish prepared-base rollover source claim drifted before cloud publication.",
+      })
       : proof.sourceClaimProjectionDigest,
+    sourceLedgerDigest: proof.sourceLedgerDigest,
     gitText,
   });
   if (recaptured.evidenceDigest !== proof.evidenceDigest) {
@@ -1814,6 +2090,11 @@ function requireActivePublishRolloverIntentProof({ intent, admission, subject, h
     throw new Error("Active publish prepared-base rollover intent is missing.");
   }
   const proof = normalizeActivePublishPreparedBaseRolloverProof(intent.rolloverProof, { admission });
+  if (!proof.sourceLedgerDigest) {
+    throw new Error(
+      "Active publish prepared-base rollover proof lacks a sealed source ledger digest and requires operator recovery.",
+    );
+  }
   const exact = intent.status === "prepared" &&
     proof.sourceIntentDigest === intent.supersededIntent.intentDigest &&
     proof.historicalBaseSha === intent.supersededIntent.targetCanonicalBaseSha &&
@@ -1825,6 +2106,23 @@ function requireActivePublishRolloverIntentProof({ intent, admission, subject, h
     throw new Error("Active publish prepared-base rollover proof drifted from its exact intent.");
   }
   return proof;
+}
+
+function requireActivePublishRolloverSourceProjectionDigest({
+  claim, sealedDigest, message,
+}) {
+  if (digestValue(claim) === sealedDigest) return sealedDigest;
+  if (claim?.state === "dormant-preserved" && claim.writeAuthority === false &&
+      claim.scopeReserved === true) {
+    const currentProjection = {
+      ...claim,
+      state: "current",
+      writeAuthority: true,
+      scopeReserved: true,
+    };
+    if (digestValue(currentProjection) === sealedDigest) return sealedDigest;
+  }
+  throw new Error(message);
 }
 
 function requireActivePublishRolloverCloudDisposition({ status, intent, source, admission }) {
@@ -1849,7 +2147,9 @@ function requireActivePublishRolloverCloudDisposition({ status, intent, source, 
       "Active publish prepared-base rollover found a historical-base derivative and requires operator recovery.",
     );
   }
-  const predecessor = exactActivePublishClaim({ status, authority: source, admission });
+  const predecessor = exactActivePublishClaim({
+    status, authority: source, admission, allowDormantPreserved: true,
+  });
   if (predecessor) {
     const exactSource = predecessor.actorId === intent.sourceActorId &&
       predecessor.repositoryId === intent.sourceRepositoryId &&
@@ -1870,7 +2170,7 @@ function requireActivePublishRolloverCloudDisposition({ status, intent, source, 
       "Active publish prepared-base rollover requires the exact source claim with no derivative.",
     );
   }
-  const derivative = requireActivePublishDerivative({ status, intent, admission });
+  const derivative = requireActivePublishDerivative({ status, intent, source, admission });
   if (candidates.length !== 1 || candidates[0]?.claimId !== derivative.claimId) {
     throw new Error("Active publish prepared-base rollover has ambiguous successor effects.");
   }
@@ -2058,21 +2358,27 @@ function activePublishSourceStableDigest(lease) {
   return digestValue({ ...stable, status: "active" });
 }
 
-function requireActivePublishDerivative({ status, intent, admission }) {
+function requireActivePublishDerivative({ status, intent, source, admission }) {
   if (!isExactActivePublishStatus(status)) {
     throw new Error("Active publish successor status evidence is malformed.");
   }
   const derivatives = Array.isArray(status?.claims) ? status.claims.filter(claim =>
     claim?.claimId !== intent.sourceClaimId && claim?.predecessorClaimId === intent.sourceClaimId) : [];
   const claim = derivatives.length === 1 ? derivatives[0] : null;
+  const atUnboundRevision = claim?.laneRevision === intent.targetCanonicalBaseSha ||
+    (intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 &&
+      claim?.laneRevision === intent.targetHeadSha);
   const waiting = claim?.state === "waiting-successor" &&
-    claim.laneRevision === intent.targetCanonicalBaseSha && !claim.reviewRequestId;
-  const currentAtBase = ["active", "current"].includes(claim?.state) &&
-    claim.laneRevision === intent.targetCanonicalBaseSha && !claim.reviewRequestId;
+    atUnboundRevision && !claim.reviewRequestId;
+  const currentUnbound = ["active", "current"].includes(claim?.state) &&
+    atUnboundRevision && !claim.reviewRequestId;
   const currentBound = ["active", "current"].includes(claim?.state) &&
     claim.laneRevision === intent.targetHeadSha && claim.reviewRequestId === intent.sourceReviewRequestId;
-  const exact = claim && (waiting || currentAtBase || currentBound) &&
-    claim.actorId === intent.sourceActorId && claim.repositoryId === intent.sourceRepositoryId &&
+  const exact = claim && (waiting || currentUnbound || currentBound) &&
+    claim.actorId === intent.sourceActorId &&
+    claim.deviceId === normalizeActivePublishCloudOwner("device", source.deviceId) &&
+    claim.sessionId === normalizeActivePublishCloudOwner("session", source.sessionId) &&
+    claim.repositoryId === intent.sourceRepositoryId &&
     claim.workItemId === intent.sourceWorkItemId &&
     claim.entrySchema === intent.sourceEntrySchema &&
     claim.claimIdentitySchema === intent.sourceClaimIdentitySchema &&
@@ -2087,6 +2393,15 @@ function requireActivePublishDerivative({ status, intent, admission }) {
     Number.isInteger(claim.transitionCounter) && claim.transitionCounter > 0;
   if (!exact) throw new Error("Active publish successor intent has no exact resumable derivative claim.");
   return claim;
+}
+
+function normalizeActivePublishCloudOwner(namespace, value) {
+  const owner = requiredIntentText(value);
+  const prefix = `${namespace}:`;
+  if (owner.startsWith(prefix) && DIGEST_PATTERN.test(owner.slice(prefix.length))) {
+    return owner;
+  }
+  return pseudonymousIdentifier(namespace, owner);
 }
 
 function activePublishDerivativeAuthority({ status, claim, source, admission, lease, sessionId }) {
@@ -2175,13 +2490,18 @@ function requireExactActivePublishClaim({ status, authority, admission }) {
   return claim;
 }
 
-function exactActivePublishClaim({ status, authority, admission }) {
+function exactActivePublishClaim({
+  status, authority, admission, allowDormantPreserved = false,
+}) {
   const claim = exactStatusClaim(status, authority.claimId);
   const fallbackManifestDigest = digestValue({
     declaredWriteSet: admission.declaredWriteSet,
     writeSetDigest: admission.writeSetDigest,
   });
-  const exact = ["active", "current"].includes(claim?.state) &&
+  const current = ["active", "current"].includes(claim?.state);
+  const dormantPreserved = allowDormantPreserved && claim?.state === "dormant-preserved" &&
+    claim.writeAuthority === false && claim.scopeReserved === true;
+  const exact = (current || dormantPreserved) &&
     authority.writeSetDigest === admission.writeSetDigest &&
     sameValue(authority.cloudDeclaredWriteScope, admission.declaredWriteSet) &&
     [admission.manifestDigest, fallbackManifestDigest].includes(authority.manifestDigest) &&

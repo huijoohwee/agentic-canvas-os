@@ -211,7 +211,7 @@ test("adapter rejects a stale sealed claim before creating a ledger candidate", 
   assert.equal(github.mutationCount(), writesBefore);
   assert.equal(github.createdLedgerValues().length, candidatesBefore);
 });
-test("adapter replays an exact sealed claim only from its sealed parent after later head advance", async () => {
+test("adapter replays an exact sealed claim after ledger and protected-head advance without writes", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const predecessor = await adapter.execute("claim", claimInput());
@@ -220,15 +220,17 @@ test("adapter replays an exact sealed claim only from its sealed parent after la
   const claimed = await adapter.execute("claim", input);
   const claimEntry = github.createdLedgerValues().at(-1).entries.at(-1);
   assert.equal(claimEntry.parentDigest, sealed);
-  await adapter.execute("claim", claimInput({
+  const later = await adapter.execute("claim", claimInput({
     workItemId: "later disjoint claim",
     declaredWriteScope: ["path:docs/later-disjoint-claim.md"],
     idempotencyKey: "later-disjoint-claim",
   }));
+  github.setMainRevision("5".repeat(40));
   const writesBefore = github.mutationCount();
   const replay = await adapter.execute("claim", input);
   assert.equal(replay.replayed, true);
   assert.equal(replay.claimDigest, claimed.claimDigest);
+  assert.equal(replay.ledgerRevision, later.ledgerRevision);
   assert.equal(github.mutationCount(), writesBefore);
 });
 test("adapter rejects an idempotent claim replay whose entry parent differs from its seal", async () => {
@@ -833,6 +835,9 @@ function createFakeGitHub({
     },
     loseNextPatchResponse() {
       lostResponseLimit += 1;
+    },
+    setMainRevision(revision) {
+      refs.set(`${targetRepository}:main`, revision);
     },
     setPullRequestValue(overrides = {}) {
       pullRequest = pullRequestValue(overrides);

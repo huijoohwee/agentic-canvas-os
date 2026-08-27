@@ -303,7 +303,12 @@ async function mutateLedger({
       throw new Error("Frozen collaboration expiry elapsed before compare-and-swap completed.");
     }
     const evaluationTime = snapshotTime;
-    const preparedRequest = { ...semanticRequest, expectedLedgerDigest: snapshot.ledger.headDigest };
+    const preparedRequest = {
+      ...semanticRequest,
+      expectedLedgerDigest: committedReplay && sealedClaimParentDigest
+        ? sealedClaimParentDigest
+        : snapshot.ledger.headDigest,
+    };
     const repository = contractRepository(
       context.repository,
       action === "claim" ? subject.canonicalRevision : null,

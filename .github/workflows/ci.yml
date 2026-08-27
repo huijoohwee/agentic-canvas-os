@@ -118,6 +118,10 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-slim
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - name: Require exact CI authorization
         env:
@@ -136,7 +140,22 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - run: node --test --test-shard=${{ matrix.shard }}/4 __tests__/*.test.mjs
+
+  test_aggregate:
+    name: test
+    needs: [authorization, test]
+    if: ${{ always() }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Require authorization and every test shard
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+          TEST_SHARDS_RESULT: ${{ needs.test.result }}
+        run: |
+          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
+          [ "$TEST_SHARDS_RESULT" = "success" ] || exit 1
 
   build:
     name: build

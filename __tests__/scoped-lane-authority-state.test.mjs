@@ -221,6 +221,91 @@ test("dormant preservation falls back to GraphQL actor identity on REST 503", ()
   assert.equal(receipt.authenticatedActor.login, "owner");
 });
 
+test("empty preservation remains operation-derived and authority-bound", () => {
+  const remoteAuthorityVerification = inventoryVerification();
+  let actorReads = 0;
+  let repositoryReads = 0;
+  const receipt = verifyDormantPreservation({
+    repository: REPOSITORY_PATH,
+    targetRepository: REPOSITORY_NAME,
+    lanes: [],
+    worktreePaths: [],
+    pullRequestReferences: [],
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+    sessionId: "zero-selection-session",
+    remoteAuthorityVerification,
+    ghJson: argumentsList => {
+      if (argumentsList[0] === "api" && argumentsList[1] === "user") {
+        actorReads += 1;
+      }
+      if (argumentsList[0] === "repo") repositoryReads += 1;
+      return githubJson()(argumentsList);
+    },
+    verifiedAt: "2026-08-04T00:00:00.000Z",
+  });
+
+  assert.equal(actorReads, 2);
+  assert.equal(repositoryReads, 2);
+  assert.equal(isOperationDerivedDormantPreservation(receipt), true);
+  assert.equal(receipt.authenticatedActor.login, "owner");
+  assert.equal(receipt.repository.nameWithOwner, REPOSITORY_NAME);
+  assert.equal(receipt.repository.path, REPOSITORY_PATH);
+  assert.equal(receipt.sessionId, "zero-selection-session");
+  assert.equal(receipt.operatorDecisionDigest, OPERATOR_DECISION_DIGEST);
+  assert.deepEqual(receipt.cloudInventory, {
+    ledgerRevision: remoteAuthorityVerification.ledgerRevision,
+    ledgerDigest: remoteAuthorityVerification.ledgerDigest,
+    inventoryDigest: digestValue(remoteAuthorityVerification.inventory.claims),
+    verificationReceiptDigest: remoteAuthorityVerification.receiptDigest,
+  });
+  assert.deepEqual(receipt.worktrees, []);
+  assert.deepEqual(receipt.pullRequests, []);
+  assert.equal(isOperationDerivedDormantPreservation(structuredClone(receipt)), false);
+
+  let identityRead = 0;
+  assert.throws(() => verifyDormantPreservation({
+    repository: REPOSITORY_PATH,
+    targetRepository: REPOSITORY_NAME,
+    lanes: [],
+    worktreePaths: [],
+    pullRequestReferences: [],
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+    sessionId: "zero-selection-session",
+    remoteAuthorityVerification,
+    ghJson: argumentsList => {
+      if (argumentsList[0] !== "repo") return githubJson()(argumentsList);
+      identityRead += 1;
+      return {
+        id: identityRead === 1 ? "R_repo" : "R_changed",
+        nameWithOwner: REPOSITORY_NAME,
+        owner: { login: "owner" },
+      };
+    },
+  }), /identity changed during dormant preservation/u);
+  assert.throws(() => verifyDormantPreservation({
+    repository: REPOSITORY_PATH,
+    targetRepository: REPOSITORY_NAME,
+    lanes: [],
+    worktreePaths: [],
+    pullRequestReferences: [],
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+    sessionId: "zero-selection-session",
+    remoteAuthorityVerification,
+    ghJson: githubJson({ actorLogin: "not-owner" }),
+  }), /authenticated repository owner/u);
+  assert.throws(() => verifyDormantPreservation({
+    repository: REPOSITORY_PATH,
+    targetRepository: REPOSITORY_NAME,
+    lanes: [],
+    worktreePaths: [],
+    pullRequestReferences: [],
+    operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
+    sessionId: "zero-selection-session",
+    remoteAuthorityVerification: structuredClone(remoteAuthorityVerification),
+    ghJson: githubJson(),
+  }), /fresh operation-derived cloud inventory/u);
+});
+
 test("verified dormant authority admits a same-scope successor but never the same branch", () => {
   const sourceLane = lane();
   const receipt = dormantReceipt({ sourceLane });

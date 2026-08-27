@@ -468,9 +468,16 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
   const inspect = () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
     action: "status", status: "ready", ledgerRevision: S("5"), ledgerDigest: D("ledger"),
     claims: [observedClaim] });
-  const verify = ({ authority }) => ({ authority, verification: { status: "ready",
-    inventory: { claims: [result.claim] }, receiptDigest: D("verification"),
-    remoteClaimInventoryDigest: D("verified-inventory"), verifiedAt: RECOVERED } });
+  const verify = ({ authority }) => {
+    const { deviceId: _deviceId, sessionId: _sessionId, recovery: _recovery,
+      ...normalizedClaim } = result.claim;
+    const inventoryClaim = { ...normalizedClaim, state: "active",
+      mutationAuthorityEligible: true };
+    return { authority, verification: { status: "ready",
+      inventory: { claims: [{ ...inventoryClaim, recordDigest: digestValue(inventoryClaim) }] },
+      receiptDigest: D("verification"), remoteClaimInventoryDigest: D("verified-inventory"),
+      verifiedAt: RECOVERED } };
+  };
   const adapter = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     inspect,
     invoke: () => result,
@@ -490,7 +497,8 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
     recoveryEvidenceDigest: plan.evidence.evidenceDigest,
   } });
   const target = { ...claim, state: "current", writeAuthority: true, transitionCounter: 4,
-    expiresAt, fenceRevision: D("target-fence"), transitionDigest: D("target-transition") };
+    expiresAt, fenceRevision: D("target-fence"), transitionDigest: D("target-transition"),
+    recovery: { evidenceDigest: plan.evidence.evidenceDigest, recoveredAt: RECOVERED } };
   const operationCore = { schema: "agentic-collaboration-continuation-receipt/v1",
     operation: "continue", status: "current", repositoryId: claim.repositoryId,
     claimId: claim.claimId, claimDigest: target.fenceRevision, fenceRevision: target.fenceRevision,
@@ -509,11 +517,38 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
   const recovered = adapter.recover({ plan, sealedRequest: sealed });
   assert.equal(recovered.operationReceiptDigest, operationReceipt.receiptDigest);
   assert.equal(recovered.semanticOperationDigest, requestDigest);
+  assert.equal(recovered.authority.state, "active");
   const forged = structuredClone(result);
   forged.operationReceipt.requestDigest = D("foreign-request");
   assert.throws(() => createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     inspect, invoke: () => forged, verify,
   }).recover({ plan, sealedRequest: sealed }), /same-claim dormant recovery result/u);
+
+  observedClaim = target;
+  const projectedLiveSource = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({ inspect })
+    .inspectDormant({ sourceAuthority: plan.evidence.sourceLease.cloudAuthority,
+      sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest });
+  assert.equal(projectedLiveSource.claim.transitionCounter, claim.transitionCounter);
+  assert.equal(projectedLiveSource.claim.fenceRevision, claim.fenceRevision);
+  assert.equal(projectedLiveSource.claim.deviceId, CLOUD_DEVICE);
+  assert.equal(projectedLiveSource.claim.sessionId, CLOUD_SESSION);
+  assert.equal(projectedLiveSource.claim.recovery, undefined);
+  const liveReplayed = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
+    inspect, invoke: () => ({ ...result, replayed: true }), verify,
+  }).recover({ plan, sealedRequest: sealed });
+  assert.equal(liveReplayed.disposition, "replayed");
+  assert.equal(liveReplayed.targetClaimDigest, recovered.targetClaimDigest);
+
+  observedClaim = { ...target, deviceId: pseudonymousIdentifier("device", "foreign-device") };
+  assert.throws(() => createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({ inspect })
+    .inspectDormant({ sourceAuthority: plan.evidence.sourceLease.cloudAuthority,
+      sourceLease: plan.evidence.sourceLease, manifest: plan.evidence.manifest }),
+  /exact response-loss recovery claim/u);
+  observedClaim = { ...target,
+    recovery: { ...target.recovery, evidenceDigest: D("foreign-live-recovery") } };
+  assert.throws(() => createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
+    inspect, invoke: () => ({ ...result, replayed: true }), verify,
+  }).recover({ plan, sealedRequest: sealed }), /exact response-loss recovery claim/u);
 
   observedClaim = { ...target, state: "dormant-preserved", writeAuthority: false,
     recovery: { evidenceDigest: plan.evidence.evidenceDigest, recoveredAt: RECOVERED } };
@@ -523,13 +558,14 @@ test("cloud recovery joins the exact operation and provider receipts", () => {
   assert.equal(projectedSource.claim.transitionCounter, claim.transitionCounter);
   assert.equal(projectedSource.claim.fenceRevision, claim.fenceRevision);
   assert.equal(projectedSource.claim.recovery, undefined);
-  const replayed = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
+  const expiredReplayed = createPlannedFenceOnlyAdmissionRecoveryCloudAdapter({
     inspect, invoke: () => ({ ...result, replayed: true }),
     verify: () => { throw new Error("verification was blocked"); },
   }).recover({ plan, sealedRequest: sealed });
-  assert.equal(replayed.disposition, "replayed");
-  assert.equal(replayed.authority.state, "active");
-  assert.equal(replayed.authority.expiresAt, observedClaim.expiresAt);
+  assert.equal(expiredReplayed.disposition, "replayed");
+  assert.equal(expiredReplayed.authority.state, "active");
+  assert.equal(expiredReplayed.authority.expiresAt, observedClaim.expiresAt);
+  assert.equal(expiredReplayed.targetClaimDigest, recovered.targetClaimDigest);
 
   observedClaim = { ...observedClaim,
     recovery: { ...observedClaim.recovery, evidenceDigest: D("foreign-recovery") } };

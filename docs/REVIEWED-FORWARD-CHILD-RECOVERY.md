@@ -45,6 +45,7 @@ node scripts/reviewed-forward-child-recovery.mjs run \
   --source-session=<exact-source-session> \
   --pull-request=<number> \
   --operator-session=<distinct-controller-session> \
+  --task-authority=<exact-source-capability.json> \
   --authorize='authorize reviewed-forward-child-recovery <planDigest>'
 ```
 
@@ -57,7 +58,7 @@ The durable intent performs and receipt-binds these phases in order:
 3. Create one same-owner waiting successor claim at the child.
 4. Retire the dormant predecessor, then promote the successor.
 5. Compare-and-swap the local ref and publish the ordinary fast-forward remote update.
-6. Activate the existing writer lease against the successor claim.
+6. Atomically activate the writer lease and continue its task-authority binding to the successor claim.
 7. Demote the PR to draft, project its exact writer marker, and verify terminal parity.
 
 Every phase first reconciles provider and repository state. A lost response is adopted only when the

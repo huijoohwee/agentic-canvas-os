@@ -15,6 +15,7 @@ export async function runReviewedForwardChildRecovery({
   sourceSessionId,
   pullRequestNumber,
   operatorSessionId,
+  taskAuthorityFile = null,
   authorization = null,
   ttlSeconds = 3_600,
 } = {}) {
@@ -26,6 +27,7 @@ export async function runReviewedForwardChildRecovery({
     sourceSessionId,
     pullRequestNumber,
     operatorSessionId,
+    taskAuthorityFile,
     ttlSeconds,
   });
   const controller = createReviewedForwardChildController({ adapter });
@@ -62,6 +64,9 @@ function parseArguments(argumentsList) {
     sourceSessionId: required(options["source-session"], "source-session"),
     pullRequestNumber,
     operatorSessionId: required(options["operator-session"], "operator-session"),
+    taskAuthorityFile: mode === "run"
+      ? realpathSync(path.resolve(required(options["task-authority"], "task-authority")))
+      : null,
     authorization: options.authorize || null,
     ttlSeconds,
   };

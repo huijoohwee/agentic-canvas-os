@@ -90,6 +90,26 @@ new snapshot's server time and fails closed if that expiry has elapsed. Reusing
 a replay key for different intent fails closed. The protected source ref and
 exact pull-request subject are also re-resolved before every mutation attempt;
 drift aborts the operation instead of authorizing a stale candidate.
+
+For `claim`, a non-null caller `expectedLedgerDigest` is an immutable parent
+seal rather than a retry hint. A new claim requires the first and every retried
+snapshot head to equal that seal. A missing ledger is stale and is not
+bootstrapped. If the claim already committed, replay is allowed only when the
+same idempotency entry is a `claim` whose `parentDigest` equals the seal; normal
+action and semantic request-digest replay checks still apply. A competing head
+advance cannot be rebased. When the field is absent or null, the adapter retains
+ordinary dynamic-head bootstrap and bounded CAS retry behavior. Continuation,
+integration, and retirement retain ordinary dynamic ledger CAS; their exact
+claim fence and transition counter prevent same-ID transition drift.
+
+A controller adopting a progressed successor must not infer that claim's
+genesis from its current projection alone. It replays the original sealed claim
+key, requires the original waiting claim and owner projection, and replays the
+deterministic source retirement at the source claim fence sealed by its durable
+intent. The retirement uses dynamic ledger CAS rather than the historical claim
+parent seal; its idempotency key and claim fence prove that a later or unrelated
+retirement was not substituted.
+
 Historical v1 entries remain immutable evidence; all newly authored entries use
 the current four-operation schema. Current claim projections derive and expose
 the immutable schema of the original claim identity, so a v1 lineage continued
@@ -144,6 +164,27 @@ Provider mapping passes an already canonical work-item identifier through
 unchanged and pseudonymizes raw input exactly once. A continuation must never
 retry epoch 1, rederive identity from a branch or scope projection, or weaken
 the cloud contract to make a mismatched tuple admissible.
+
+One claim-only successor rollover may advance its base after protected `main`
+moves. The predecessor must be a v2 epoch claim admitted as a base-equal
+`waiting-successor`, followed immediately by its `superseded` retirement. It
+must have no authored lane revision, heartbeat, review request, focused
+evidence, recovery, integration, or intermediate transition. Its replacement
+must name that exact retired claim, retain the authenticated actor, repository,
+work item, device, session, and normalized write set, and use exactly the next
+lease epoch. Both replacement base and lane revision must equal current
+protected `main`.
+
+That rollover additionally requires the exact disjoint protected-descendant
+proof from the retired predecessor's historical base to current protected
+`main`. Proof normalization uses that historical source only after the complete
+claim-only lineage and successor identity match. A wrong source or target,
+overlapping changed paths, non-current target, non-superseded or live
+predecessor, or any authored, heartbeat, review, evidence, recovery, or
+integration history keeps the ordinary stale-base and predecessor rules in
+force. The exception grants only a new current Dev claim; it does not promote a
+live waiter or confer review, integration, release, Production, deployment, or
+cleanup authority.
 
 One bounded controller migration preserves this invariant for a historical v2
 scope-expansion artifact: an epoch-1 waiting-successor claim whose immutable

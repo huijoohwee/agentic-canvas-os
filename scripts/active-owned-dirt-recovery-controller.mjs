@@ -14,6 +14,7 @@ import {
 import {
   advanceActiveOwnedDirtRecoveryIntent, beginActiveOwnedDirtRecoveryIntent,
   assertActiveDraftMutationAuthority, assertActiveOwnedDirtPlanSource,
+  buildActiveOwnedDirtRecoveryVerifiedFinalReceipt,
   normalizeActiveOwnedDirtRecoveryIntent, projectActiveOwnedDirtRecoveredLease,
   readActiveOwnedDirtRecoveryIntent, verifiedHeartbeatAuthority,
 } from "./active-owned-dirt-recovery-registry.mjs";
@@ -464,22 +465,11 @@ export function createRepositoryActiveOwnedDirtRecoveryAdapter({
         canonicalBaseSha: plan.sourceBaseSha,
         environment, inspect: invoke, invoke: verify,
       });
-      assertActiveDraftMutationAuthority({
-        lease: current.source.lease,
-        cloudAuthority: verified.authority,
+      return buildActiveOwnedDirtRecoveryVerifiedFinalReceipt({ plan, snapshot,
+        intent: current.intent, lease: current.source.lease, marker,
+        verifiedAuthority: verified.authority,
         remoteAuthorityVerification: verified.verification,
-        pullRequest: current.source.pullRequest,
-      });
-      return buildActiveOwnedDirtRecoveryReceipt({
-        phase: "complete",
-        plan,
-        values: {
-          snapshotReceiptDigest: snapshot.snapshotReceiptDigest,
-          recoveredLeaseDigest: writerLeaseDigest(current.source.lease),
-          markerDigest: digestValue(marker),
-          mutationAuthorityReceiptDigest:
-            current.intent.localProjection.mutationAuthorityReceiptDigest,
-        },
+        currentClaim: current.source.claim, pullRequest: current.source.pullRequest,
       });
     },
   });

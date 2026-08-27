@@ -2,7 +2,7 @@
 title: "Knowgrph Conflict-Safe Session Start Workflow"
 graphId: "md:knowgrph-conflict-safe-session-start-workflow"
 doc_type: "Session Start Workflow Contract"
-date: "2026-08-24"
+date: "2026-08-25"
 lang: "en-US"
 schema: "knowgrph-start-workflow/v2"
 frontmatter_contract: "required"
@@ -95,6 +95,22 @@ Before classifying tracked dirt as `blocked-dirty`, compare the index and workin
 New or untracked authored paths stay byte-for-byte in their actual owning task worktree. Do not delete, stash, ignore-mask, relocate to canonical `main`, copy into another task, or adopt them under another session. A durably attributed task lane reports `owned-untracked`, remains registered with its pull request, rejects cleanup and completion, and blocks only its semantic scope. Canonical dirt remains `blocked-canonical` for runtime/parity, but an unrelated scope may activate from a clean detached fetched ref after recording the dirty state as retained overlap; unattributed dirt remains `blocked-dirty`. Neither state authorizes mutation by an unrelated task. If authoring lands on canonical `main`, preserve the exact bytes and move them into one isolated admitted task lane before the next normal commit or publication step. Repository-owned tooling should steer that transition explicitly instead of surfacing a generic protected-branch commit denial for task-lane authoring.
 
 `/session.start #multi-agent-collaboration #runtime-ready @operator @working-directory @runtime-proof` requests this pre-build workflow. It grants no release, Prod mirror, Cloudflare, force-push, cleanup, or unrelated-work mutation authority.
+
+## Durable Owner Coordination SSOT
+
+The shared provider-neutral owner-coordination vocabulary consists of exactly two normative records: **Coordination Request** and **Authority Transition Receipt**. Every lifecycle profile, including a later release profile, must reference these names and fields without aliases, copies, or divergent semantics. Concrete transport adapters are non-normative mappings selected by repository policy; they cannot grant authority or redefine either record.
+
+### Coordination Request
+
+A **Coordination Request** is one idempotent, repository-visible request to the exact current owner discovered from authenticated authority state. It binds `repository`, `authoritySubject`, `ownerSubject`, normalized `scope`, `writeSetDigest`, `claimId`, `leaseEpoch`, `fenceRevision`, `immutableRevision`, `reviewLocator`, `blocker`, `requestedTransition` (`continue`, `retire`, or `handoff`), `dependentWork`, `replyLocator`, `observedAt`, `expiresAt`, and `requestDigest`. Exactly one current owner must be resolved before emission; the policy-selected adapter uses `requestDigest` as its idempotency key and cannot reinterpret delivery as authority.
+
+### Authority Transition Receipt
+
+An **Authority Transition Receipt** is the only record that can satisfy the request. It binds `repository`, `authoritySubject`, `requestDigest`, `requestedTransition`, `sourceClaimId`, `sourceLeaseEpoch`, `sourceFenceRevision`, `resultClaimId`, `resultLeaseEpoch`, `resultFenceRevision`, `resultState`, `immutableRevision`, `reviewLocator`, `operationReceiptDigest`, `transitionedAt`, and `receiptDigest`. It is valid only after an authoritative compare-and-swap applies the requested transition to the exact source claim, epoch, and fence and readback proves the resulting authority state.
+
+- Transport acknowledgement is observation only. Resume source mutation only after the authoritative compare-and-swap transition and its exact Authority Transition Receipt both verify.
+- Missing or ambiguous owner identity and unknown delivery fail closed for the overlapping scope. Independently admitted disjoint work may continue without mutating the blocker.
+- Retrying the same Coordination Request reuses its `requestDigest`; it must not mint a claim, controller, authorization, lane, review request, or content commit. A changed authority subject or requested transition requires a new request digest that explicitly supersedes the prior request.
 
 ## Split-Lane Work Groups
 
@@ -287,7 +303,7 @@ node "$AGENTIC_CANVAS_OS_ROOT/scripts/device-branch.mjs" start \
   --target-repository="<owner/repository>" --json
 ```
 
-If this combined call is interrupted after the claim, an exact-session retry from the recorded `$TASK_WORKTREE` without `--provision` may reconcile only the activation base, claim subject, fence, remote head, and single draft pull request; it does not reconstruct a missing Preservation Receipt or authorize source edits. Keep a `planned` recovery lane untouched until owner-led lifecycle recovery closes it and a fresh admission completes. An expired same-session planned lane with a clean committed descendant may run `planned-clean-committed-recovery.mjs`; it recovers only the exact dormant cloud claim and local lease projection, preserves `planned` status and every ref and byte, returns no mutation authority, and still requires the exact dormant-preservation admission before review, publication, or integration. The external cloud claim remains its owner's authority: a failed check/start never silently releases or replaces it, so the owner must retry compatibly or explicitly release/reclaim the exact claim through `CLOUD-COLLABORATION.md`. A target, branch, lease, PR, session, ledger, or expiry mismatch fails closed. Before first and every later mutation batch, including heartbeat renewal, revalidate the current cloud claim and local lease/epoch/fence/expiry; local expiry never exceeds cloud expiry.
+If this combined call is interrupted after the claim, an exact-session retry from the recorded `$TASK_WORKTREE` without `--provision` may reconcile only the activation base, claim subject, fence, remote head, and single draft pull request; it does not reconstruct a missing Preservation Receipt or authorize source edits. Keep a `planned` recovery lane untouched until owner-led lifecycle recovery closes it and a fresh admission completes. An expired same-session planned lane with a clean committed descendant may run `planned-clean-committed-recovery.mjs`; it recovers only the exact dormant cloud claim and local lease projection, preserves `planned` status and every ref and byte, returns no mutation authority, and still requires the exact dormant-preservation admission before review, publication, or integration. A missing local cloud `manifestDigest` remains fail-closed unless the current lease is the exact target of one append-only `planned-start-fence-projection-recovery` registry receipt whose task-authority binding, claim, transition, lease digests, registry revision, and no-cloud/no-provider/no-Git mutation boundary all verify; that receipt permits recovery to canonicalize only the admission's already-bound manifest digest. The final local recovery writes that canonical projection through a receipt-bound registry CAS whose expected digest remains the original missing-manifest lease, so the append-only receipt is preserved and concurrent source drift fails closed. The receipt digest remains part of the cloud recovery evidence digest and CAS check, but is omitted from the generic stored heartbeat-recovery projection whose closed schema does not own planned-start receipts. For that same bounded projection, provider-normalized device and session identifiers are converted to their already-verified local owner identifiers only after canonical owner comparison proves both subjects equivalent; arbitrary owner drift remains fail-closed. When the same receipt lets the pull-request marker reconstruct that exact `sourceLeaseDigest`, planned-clean may adopt a marker whose only remaining difference is one monotonic prior heartbeat/expiry window with the same TTL and at most one-TTL lag, solely as input to its existing final renewed-lease marker projection; any other marker-field drift remains fail-closed. The external cloud claim remains its owner's authority: a failed check/start never silently releases or replaces it, so the owner must retry compatibly or explicitly release/reclaim the exact claim through `CLOUD-COLLABORATION.md`. A target, branch, lease, PR, session, ledger, or expiry mismatch fails closed. Before first and every later mutation batch, including heartbeat renewal, revalidate the current cloud claim and local lease/epoch/fence/expiry; local expiry never exceeds cloud expiry.
 
 A task-bound `planned` lane with owned dirt at its unchanged fence may widen
 scope only through `planned-owned-dirt-scope-expansion-recovery.mjs`. Its
@@ -297,6 +313,18 @@ the returned `authorize planned-owned-dirt-scope-expansion-recovery
 successor and local registry CAS preserve every byte, index entry, ref, draft
 review, and task subject. Success restores scoped mutation authority only; see
 `PLANNED-OWNED-DIRT-SCOPE-EXPANSION-RECOVERY.md`.
+
+An `active`, admitted, dirty lane whose exact cloud claim is terminally
+`retired` as `abandoned` and whose draft pull request is closed uses only `retired-abandoned-owned-dirt-successor-recovery.mjs`. Planning
+seals historical base \(B\), its empty coordination fence \(F\), exact current protected \(P\), no live source/successor/overlap,
+a strict-superset manifest covering all dirt, possession of source generation \(g\), and a distinct generation \(g+1\) target using the same adapter.
+Fresh exact authorization proves source authority, then snapshots \(F/I_1/W_1\) before reanchor effects.
+It derives \(I_2/W_2\) by retaining each source entry changed from \(B\) and taking \(P\) everywhere else,
+then creates coordination merge \(C\) with tree \(P\) and parents \(F,P\), moves local `HEAD`/index/worktree/ref to \(C/I_2/W_2\),
+compare-and-swap pushes \(F\rightarrow C\), and reopens the draft review at \(P/C\) before a fresh no-predecessor,
+ledger-epoch-derived claim and generation-advanced local binding. Authored entries remain exact; same-path protected overlaps remain ordinary dirt.
+No authored-content commit, pull-request merge, deploy, or cleanup occurs; neighboring recovery routes do not match. See
+`RETIRED-ABANDONED-OWNED-DIRT-SUCCESSOR-RECOVERY.md`.
 
 Heartbeat before the 30-minute default TTL expires:
 
@@ -503,38 +531,11 @@ Repository-owned integration may also converge an ancillary canonical source whe
 If protected synchronization advances a published pull request, integration accepts a bounded exact first-parent chain from the recorded delivery head. Every refresh must have exactly two parents, use the preceding head as its first parent, use a second parent contained by current protected `main`, and have the same tree as the deterministic merge of those parents.
 It fetches the immutable pull-request head, admits only a clean local HEAD that is an exact chain member, fast-forwards to the observed head, and records either the compatible single-refresh receipt or the ordered refresh-chain proof; authored, non-ancestral, discontinuous, octopus, tree-mismatched, or unbounded movement fails closed.
 `--runtime=none` is valid only for a lane declared `runtimeRequirement: not-required`. It emits source status `integrated` and runtime status `not-required`, never `runtime_ready`. For a `required` lane, runtime evidence remains mandatory.
-After canonical convergence and any required runtime proof, the command may use
-the lifecycle cleaner only when its own exact target is independently cleanup-eligible;
-the task branch and commits remain recoverable.
+After canonical convergence and any required runtime proof, the command may use the lifecycle cleaner only when its own exact target is independently cleanup-eligible; the task branch and commits remain recoverable.
 
-The completion wrapper fails closed unless the working tree is clean, the task
-branch has a merged pull request targeting `main`, its merge commit is contained
-by fetched `origin/main`, the task worktree detaches at that exact commit object,
-and the checkout remains clean. It records a durable `completing` intent before
-cleanup, retires only fully proven restored stash/ref evidence under the shared
-stash-operation lock, and records `completed` only after clean detachment. A
-retry may start detached, proves the recorded merge and prior main SHA remain
-ancestors of the current canonical tip, and finishes only the missing phase.
-If the attached merged branch lost its local lease record, completion may recover
-only the exact writer-lease marker preserved in that merged pull request body; no
-session, branch, base, fence, or head evidence may be synthesized locally.
-Its JSON must name
-`completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and
-`"status":"ok"`. `device:end` keeps that gate for actual completion replay and
-must never park unmerged work and label the result complete. When the canonical
-worktree is already clean on exact fetched `main` and no active or completing
-lease still owns that worktree, `device:end` returns the same compatible JSON as
-an idempotent no-op with null branch, pull-request, and merge fields plus a
-machine-readable `disposition`; dirty, stale, or actively leased `main` still
-fails closed.
+The completion wrapper fails closed unless the working tree is clean, the task branch has a merged pull request targeting `main`, its merge commit is contained by fetched `origin/main`, the task worktree detaches at that exact commit object, and the checkout remains clean. It records a durable `completing` intent before cleanup, retires only fully proven restored stash/ref evidence under the shared stash-operation lock, and records `completed` only after clean detachment. A retry may start detached, proves the recorded merge and prior main SHA remain ancestors of the current canonical tip, and finishes only the missing phase. If the attached merged branch lost its local lease record, completion may recover only the exact writer-lease marker preserved in that merged pull request body; no session, branch, base, fence, or head evidence may be synthesized locally. Its JSON must name `completedBranch`, `pullRequestUrl`, `mergeCommitSha`, `mainSha`, and `"status":"ok"`. `device:end` keeps that gate for actual completion replay and must never park unmerged work and label the result complete. When the canonical worktree is already clean on exact fetched `main` and no active or completing lease still owns that worktree, `device:end` returns the same compatible JSON as an idempotent no-op with null branch, pull-request, and merge fields plus a machine-readable `disposition`; dirty, stale, or actively leased `main` still fails closed.
 
-For legacy local-only work intentionally paused or blocked, run `npm run device:park` and report
-the state explicitly. A cloud-admitted lane fails closed before local parking until explicit cloud handoff/reclaim owns the transition. Legacy parking preserves dirty work under a deterministic message,
-exact stash commit, and immutable per-lease `refs/agentic-canvas-os/parked/...`
-ref before detaching at `origin/main`. Resume restores that exact object and
-verifies staged, tracked, untracked, mode, and conflict state. Repeated park
-cycles pin the successor before retiring only the prior restored object; unrelated
-worktree stash entries and refs must survive. Parking never satisfies completion.
+For legacy local-only work intentionally paused or blocked, run `npm run device:park` and report the state explicitly. A cloud-admitted lane fails closed before local parking until explicit cloud handoff/reclaim owns the transition. Legacy parking preserves dirty work under a deterministic message, exact stash commit, and immutable per-lease `refs/agentic-canvas-os/parked/...` ref before detaching at `origin/main`. Resume restores that exact object and verifies staged, tracked, untracked, mode, and conflict state. Repeated park cycles pin the successor before retiring only the prior restored object; unrelated worktree stash entries and refs must survive. Parking never satisfies completion.
 
 ### Session-End Worktree Lifecycle
 

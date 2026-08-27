@@ -1,5 +1,6 @@
 import { digestValue, normalizeWriteSet, validateLedger,
   writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 export const SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA = "agentic-cloud-authority-scope-expansion-lineage-plan/v1";
 export const SCOPE_EXPANSION_LINEAGE_ADMISSION_SCHEMA = "agentic-cloud-authority-scope-expansion-lineage-admission/v1";
 export const SCOPE_EXPANSION_LINEAGE_RECEIPT_SCHEMA = "agentic-cloud-authority-scope-expansion-lineage-receipt/v1";
@@ -9,6 +10,9 @@ const RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const REVIEW_STATES = new Set(["reviewed", "dormant-preserved"]);
+const ACTIVE_DIRTY_LINEAGE = "active-dirty-scope-expansion";
+const REVIEWED_RECOVERY_LINEAGE = "reviewed-terminal-handoff-scope-expansion-recovery";
+const HISTORICAL_LINEAGES = new Set([ACTIVE_DIRTY_LINEAGE, REVIEWED_RECOVERY_LINEAGE]);
 const VERIFIED_LINEAGES = new WeakSet();
 const VERIFIED_ADMISSIONS = new WeakSet();
 const VERIFIED_AUTHORIZATIONS = new WeakSet();
@@ -45,8 +49,9 @@ export function authorizeScopeExpansionLineageMigration({ plan, authorization, e
 }
 
 export function buildScopeExpansionLineageAdmission({ verified, authorization, executionIntent, lane, status }) {
-  if (!VERIFIED_LINEAGES.has(verified) || verified.state !== "legacy") {
-    throw new Error("Lineage admission requires a freshly verified legacy ledger proof.");
+  if (!VERIFIED_LINEAGES.has(verified)
+    || !["legacy", "integrated-replay-recovered"].includes(verified.state)) {
+    throw new Error("Lineage admission requires a freshly verified recoverable ledger proof.");
   }
   const normalized = verified.plan;
   const intent = normalizeExecutionIntent(executionIntent);
@@ -100,8 +105,6 @@ export function scopeExpansionLineageAdmissionMatches({ admission, claim, lane, 
       && claim.expiresAt === normalized.expiresAt
       && lane?.authority?.claimId === claim.claimId
       && lane.authority.leaseEpoch === 1
-      && lane.authority.claimDigest === claim.fenceRevision
-      && lane.authority.claimLedgerRevision === claim.transitionDigest
       && digestValue(lane.authority) === normalized.localAuthorityDigest
       && status?.ledgerRevision === normalized.ledgerRevision
       && status?.ledgerDigest === normalized.ledgerDigest
@@ -121,11 +124,17 @@ export function verifyMigratedScopeExpansionLineage({ plan, lane, status }) {
   requireStatus(status);
   const authority = lane?.authority;
   const claim = uniqueClaim(status, authority?.claimId, "migrated successor claim");
-  const exact = (
-    authority?.claimId !== normalized.legacyClaimId
-    && authority?.leaseEpoch === normalized.successorLeaseEpoch
-    && claim.predecessorClaimId === normalized.legacyClaimId
-    && claim.leaseEpoch === normalized.successorLeaseEpoch
+  const integratedReplay = authority?.claimId === normalized.legacyClaimId;
+  const projectionMatchesClaim = integratedReplay
+    ? authority?.state === "review_ready"
+    : authority?.claimDigest === claim.fenceRevision
+      && authority.claimLedgerRevision === claim.transitionDigest
+      && authority.operationReceiptDigest === claim.operationReceiptDigest
+      && authority.transitionCounter === claim.transitionCounter
+      && authority.expiresAt === claim.expiresAt;
+  const exactIdentity = (
+    authority?.leaseEpoch === (integratedReplay ? 1 : normalized.successorLeaseEpoch)
+    && claim.leaseEpoch === (integratedReplay ? 1 : normalized.successorLeaseEpoch)
     && claim.actorId === normalized.actorId
     && claim.repositoryId === normalized.repositoryId
     && claim.workItemId === normalized.workItemId
@@ -134,18 +143,21 @@ export function verifyMigratedScopeExpansionLineage({ plan, lane, status }) {
     && claim.writeSetDigest === normalized.writeSetDigest
     && sameWriteSet(claim.declaredWriteScope, normalized.declaredWriteSet)
     && claim.reviewRequestId === normalized.reviewRequestId
-    && REVIEW_STATES.has(claim.state)
-    && authority.claimDigest === claim.fenceRevision
-    && authority.claimLedgerRevision === claim.transitionDigest
-    && authority.operationReceiptDigest === claim.operationReceiptDigest
-    && authority.transitionCounter === claim.transitionCounter
-    && authority.expiresAt === claim.expiresAt
+    && (integratedReplay
+      ? claim.state === "integrated-preserved" && claim.integration && claim.integrationReceiptDigest
+      : REVIEW_STATES.has(claim.state))
+    && projectionMatchesClaim
     && authority.reviewRequestId === claim.reviewRequestId
     && laneExact(lane, normalized, authority.claimId)
   );
-  if (!exact) throw new Error("Migrated successor did not preserve the exact standard epoch-2 identity.");
+  const exactLineage = integratedReplay
+    ? claim.predecessorClaimId === normalized.sourceClaimId
+    : claim.predecessorClaimId === normalized.legacyClaimId;
+  if (!exactIdentity || !exactLineage) {
+    throw new Error("Continued lineage did not preserve its exact standard successor or integrated replay identity.");
+  }
   rejectCompetingClaims(status, normalized, new Set([normalized.legacyClaimId, claim.claimId]));
-  return buildReceipt("migrated", {
+  return buildReceipt(integratedReplay ? "integrated-replay-recovered" : "migrated", {
     planDigest: normalized.planDigest,
     predecessorClaimId: normalized.legacyClaimId,
     successorClaimId: claim.claimId,
@@ -198,10 +210,15 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
   const anchor = expectedPlan
     ? targetEntries.find(entry => entry.digest === expectedPlan.legacyTransitionDigest)
     : targetEntries.at(-1);
-  const legacyClaim = statusMatches.length === 1 ? statusMatches[0] : claimFromEntry(anchor, genesis);
+  const legacyClaim = expectedPlan
+    ? claimFromEntry(anchor, genesis)
+    : statusMatches.length === 1 ? statusMatches[0] : claimFromEntry(anchor, genesis);
   if (!genesis || !anchor || statusMatches.length > 1
     || targetEntries.filter(entry => entry.action === "claim").length !== 1) {
     throw new Error("Legacy scope-expansion claim requires one exact ledger identity origin.");
+  }
+  if (localClaimId === legacyClaimId) {
+    validateLocalProjectionJoin({ lane, targetEntries, anchor, legacyClaimId });
   }
   const sourceClaimId = requiredDigest(genesis.claimCore?.predecessorClaimId, "source claim ID");
   const sourceEntries = entriesFor(ledger, sourceClaimId);
@@ -212,13 +229,24 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
     lane?.lease?.admission?.planReceiptDigest,
     "scope-expansion plan receipt digest",
   );
-  validateHistoricalShape({
+  const historicalVariant = validateHistoricalShape({
     lane, actor, status, legacyClaim, genesis, latest: anchor, sourceEntries,
     targetEntries, sourceRetirement, expansionPlanDigest,
   });
+  const reviewedHeadSha = requiredSha(legacyClaim.laneRevision, "reviewed head SHA");
+  const deliveryHeadSha = requiredSha(
+    lane?.refreshedHeadSha || lane?.headSha,
+    "delivery head SHA",
+  );
+  const protectedMainRefresh = normalizeProtectedMainRefresh(
+    lane?.protectedMainRefresh,
+    reviewedHeadSha,
+    deliveryHeadSha,
+  );
   const core = {
     schema: SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA,
     kind: "historical-scope-expansion",
+    historicalVariant,
     branch: requiredText(lane.branch, "branch"),
     ledgerRepository: requiredText(lane.authority.ledgerRepository, "ledger repository"),
     targetRepository: requiredText(lane.authority.targetRepository, "target repository"),
@@ -226,7 +254,9 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
     actorId: authenticatedActorId(actor),
     reviewRequestId: requiredText(legacyClaim.reviewRequestId, "review request ID"),
     canonicalBaseSha: requiredSha(legacyClaim.canonicalBaseRevision, "canonical base SHA"),
-    reviewedHeadSha: requiredSha(legacyClaim.laneRevision, "reviewed head SHA"),
+    reviewedHeadSha,
+    deliveryHeadSha,
+    protectedMainRefresh,
     manifestDigest: requiredDigest(lane.manifest.manifestDigest, "manifest digest"),
     writeSetDigest: requiredDigest(legacyClaim.writeSetDigest, "write-set digest"),
     declaredWriteSet: normalizeWriteSet(legacyClaim.declaredWriteScope),
@@ -254,14 +284,65 @@ function inspectLineage({ lane, actor, status, ledger, expectedPlan }) {
   }
   const successor = findStandardSuccessor(status, plan);
   rejectCompetingClaims(status, plan, new Set([legacyClaimId, ...(successor ? [successor.claimId] : [])]));
-  const state = localClaimId === legacyClaimId ? "legacy" : "migrated";
+  const currentLegacyClaim = statusMatches.length === 1 ? statusMatches[0] : null;
+  const integratedReplayRecovered = Boolean(
+    expectedPlan
+    && localClaimId === legacyClaimId
+    && currentLegacyClaim?.integration
+    && currentLegacyClaim.integrationReceiptDigest
+    && currentLegacyClaim.transitionDigest !== plan.legacyTransitionDigest
+  );
+  const state = integratedReplayRecovered
+    ? "integrated-replay-recovered"
+    : localClaimId === legacyClaimId ? "legacy" : "migrated";
   if (state === "legacy" && !laneExact(lane, plan, legacyClaimId)) {
     throw new Error("Legacy lane projection drifted from its migration plan.");
   }
   if (state === "migrated" && (!successor || successor.claimId !== localClaimId || !laneExact(lane, plan, localClaimId))) {
     throw new Error("Local projection names no exact standard migration successor.");
   }
-  return freezeVerified({ plan, state, legacyClaim, successor }, VERIFIED_LINEAGES);
+  if (state === "integrated-replay-recovered" && !laneExact(lane, plan, legacyClaimId)) {
+    throw new Error("Recovered integrated replay projection drifted from its migration plan.");
+  }
+  return freezeVerified({
+    plan,
+    state,
+    legacyClaim,
+    successor,
+    continuationMode: anchor.action === "integrate"
+      ? "integrated-replay" : "standard-successor",
+  }, VERIFIED_LINEAGES);
+}
+
+function validateLocalProjectionJoin({ lane, targetEntries, anchor, legacyClaimId }) {
+  const authority = lane?.authority;
+  const localEntry = targetEntries.find(entry => entry.digest === authority?.claimLedgerRevision);
+  if (!localEntry || localEntry.claimId !== legacyClaimId
+    || localEntry.claimDigest !== authority.claimDigest
+    || localEntry.claimCore?.transitionCounter !== authority.transitionCounter
+    || localEntry.claimCore?.leaseEpoch !== 1) {
+    throw new Error("Local authority is not an exact transition in the legacy claim lineage.");
+  }
+  if (anchor.action !== "integrate") return;
+  if (authority.state === "review_ready") {
+    const localIndex = targetEntries.indexOf(localEntry);
+    const anchorIndex = targetEntries.indexOf(anchor);
+    if (localEntry.action !== "continue" || localEntry.claimCore?.state !== "reviewed"
+      || localIndex + 1 !== anchorIndex
+      || anchor.claimCore?.transitionCounter !== localEntry.claimCore.transitionCounter + 1
+      || anchor.claimCore?.reviewRequestId !== localEntry.claimCore.reviewRequestId
+      || anchor.claimCore?.laneRevision !== localEntry.claimCore.laneRevision
+      || anchor.claimCore?.evidenceDigest !== localEntry.claimCore.evidenceDigest) {
+      throw new Error("Integrated lineage is not the exact child of the local reviewed projection.");
+    }
+    return;
+  }
+  if (authority.state !== "delivery_authorized"
+    || localEntry.sequence <= anchor.sequence
+    || localEntry.claimCore?.integrationReceiptDigest !== anchor.claimCore?.integrationReceiptDigest
+    || digestValue(localEntry.claimCore?.integration) !== digestValue(anchor.claimCore?.integration)) {
+    throw new Error("Integrated replay recovery does not descend from the authorized integration transition.");
+  }
 }
 
 function validateHistoricalShape({
@@ -272,7 +353,7 @@ function validateHistoricalShape({
   const source = sourceRetirement?.claimCore;
   const target = genesis.claimCore;
   const actorId = authenticatedActorId(actor);
-  const exact = (
+  const commonExact = (
     genesis.schema === ENTRY_SCHEMA
     && target?.leaseEpoch === 1
     && target.transitionCounter === 1
@@ -294,11 +375,9 @@ function validateHistoricalShape({
     && source.actorId === target.actorId
     && source.actorId === actorId
     && source.deviceId === target.deviceId
-    && source.sessionId === target.sessionId
     && source.repositoryId === target.repositoryId
     && target.repositoryId === status.repositoryId
     && source.canonicalBaseRevision === target.canonicalBaseRevision
-    && source.workItemId !== target.workItemId
     && strictSubset(source.declaredWriteScope, target.declaredWriteScope)
     && target.claimId === legacyClaim.claimId
     && target.predecessorClaimId === source.claimId
@@ -306,7 +385,26 @@ function validateHistoricalShape({
     && latest.claimDigest === legacyClaim.fenceRevision
     && lane?.pullRequest?.authorLogin === actor?.login
   );
-  if (!exact) throw new Error("Claim is not the exact receipt-bound historical scope-expansion shape.");
+  if (!commonExact) {
+    throw new Error("Claim is not the exact receipt-bound historical scope-expansion shape.");
+  }
+  const activeDirtyIdentity = source.sessionId === target.sessionId
+    && source.workItemId !== target.workItemId;
+  const reviewedRecoveryIdentity = source.sessionId !== target.sessionId
+    && source.workItemId === target.workItemId
+    && target.sessionId === pseudonymousIdentifier("session", lane.lease.sessionId);
+  if (activeDirtyIdentity) {
+    validateActiveDirtyRetirement({ source, target, expansionPlanDigest });
+    return ACTIVE_DIRTY_LINEAGE;
+  }
+  if (reviewedRecoveryIdentity) {
+    validateReviewedRecoveryRetirement({ source, target, expansionPlanDigest });
+    return REVIEWED_RECOVERY_LINEAGE;
+  }
+  throw new Error("Claim is not a recognized receipt-bound historical scope-expansion variant.");
+}
+
+function validateActiveDirtyRetirement({ source, target, expansionPlanDigest }) {
   const evidence = {
     schema: "agentic-active-dirty-scope-expansion-cloud-evidence/v1",
     phase: "source-retired",
@@ -326,13 +424,34 @@ function validateHistoricalShape({
   }
 }
 
+function validateReviewedRecoveryRetirement({ source, target, expansionPlanDigest }) {
+  const phase = "source-retired";
+  const operationKey = `${REVIEWED_RECOVERY_LINEAGE}:${phase}:${digestValue({
+    planDigest: expansionPlanDigest, phase,
+  })}`;
+  const expected = {
+    bytesDigest: digestValue({ operationKey, kind: "bytes" }),
+    namedChecksDigest: digestValue({ operationKey, kind: "checks" }),
+    handoffEvidenceDigest: digestValue({ operationKey, successor: target.claimId }),
+  };
+  for (const [field, digest] of Object.entries(expected)) {
+    if (source.retirement[field] !== digest) {
+      throw new Error(`Reviewed scope-recovery retirement ${field} does not bind its operation receipt.`);
+    }
+  }
+}
+
 function normalizePlan(value) {
   if (!value || value.schema !== SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA) {
     throw new Error("Scope-expansion lineage migration plan is malformed.");
   }
+  const reviewedHeadSha = requiredSha(value.reviewedHeadSha, "reviewed head SHA");
+  const deliveryHeadSha = requiredSha(value.deliveryHeadSha, "delivery head SHA");
   const core = {
     schema: SCOPE_EXPANSION_LINEAGE_PLAN_SCHEMA,
     kind: value.kind === "historical-scope-expansion" ? value.kind : invalid("migration kind"),
+    historicalVariant: HISTORICAL_LINEAGES.has(value.historicalVariant)
+      ? value.historicalVariant : invalid("historical lineage variant"),
     branch: requiredText(value.branch, "branch"),
     ledgerRepository: requiredText(value.ledgerRepository, "ledger repository"),
     targetRepository: requiredText(value.targetRepository, "target repository"),
@@ -340,7 +459,13 @@ function normalizePlan(value) {
     actorId: requiredText(value.actorId, "actor identity"),
     reviewRequestId: requiredText(value.reviewRequestId, "review request ID"),
     canonicalBaseSha: requiredSha(value.canonicalBaseSha, "canonical base SHA"),
-    reviewedHeadSha: requiredSha(value.reviewedHeadSha, "reviewed head SHA"),
+    reviewedHeadSha,
+    deliveryHeadSha,
+    protectedMainRefresh: normalizeProtectedMainRefresh(
+      value.protectedMainRefresh,
+      reviewedHeadSha,
+      deliveryHeadSha,
+    ),
     manifestDigest: requiredDigest(value.manifestDigest, "manifest digest"),
     writeSetDigest: requiredDigest(value.writeSetDigest, "write-set digest"),
     declaredWriteSet: normalizeWriteSet(value.declaredWriteSet),
@@ -415,16 +540,26 @@ function laneExact(lane, plan, claimId) {
   const authority = lane?.authority;
   const lease = lane?.lease;
   const remote = lane?.remoteLease;
+  let protectedMainRefresh;
+  try {
+    protectedMainRefresh = normalizeProtectedMainRefresh(
+      lane?.protectedMainRefresh,
+      plan.reviewedHeadSha,
+      lane?.refreshedHeadSha || lane?.headSha,
+    );
+  } catch { return false; }
   return Boolean(
     lane?.clean
     && lane.branch === plan.branch
     && lane.baseSha === plan.canonicalBaseSha
     && lane.headSha === plan.reviewedHeadSha
-    && lane.remoteHeadSha === plan.reviewedHeadSha
+    && (lane.refreshedHeadSha || lane.headSha) === plan.deliveryHeadSha
+    && lane.remoteHeadSha === plan.deliveryHeadSha
+    && digestValue(protectedMainRefresh) === digestValue(plan.protectedMainRefresh)
     && reviewHead === plan.reviewedHeadSha
     && lane.pullRequest?.state === "OPEN"
     && lane.pullRequest.isDraft === false
-    && lane.pullRequest.headRefOid === plan.reviewedHeadSha
+    && lane.pullRequest.headRefOid === plan.deliveryHeadSha
     && lane.pullRequest.baseRefName === "main"
     && lease.status === "review_ready"
     && lease.branch === plan.branch
@@ -445,6 +580,28 @@ function laneExact(lane, plan, claimId) {
     && lane.manifest.manifestDigest === plan.manifestDigest
     && sameWriteSet(lane.manifest.declaredWriteSet, plan.declaredWriteSet)
   );
+}
+
+function normalizeProtectedMainRefresh(value, reviewedHeadSha, deliveryHeadSha) {
+  const reviewed = requiredSha(reviewedHeadSha, "refresh reviewed head SHA");
+  const delivery = requiredSha(deliveryHeadSha, "refresh delivery head SHA");
+  if (delivery === reviewed) {
+    if (value !== null && value !== undefined) {
+      throw new Error("Unrefreshed lineage cannot carry a protected-main refresh receipt.");
+    }
+    return null;
+  }
+  const normalized = {
+    schema: value?.schema === "agentic-protected-main-refresh/v1"
+      ? value.schema : invalid("protected-main refresh schema"),
+    deliveredHeadSha: requiredSha(value?.deliveredHeadSha, "refresh delivered head SHA"),
+    refreshedHeadSha: requiredSha(value?.refreshedHeadSha, "refresh head SHA"),
+    mainParentSha: requiredSha(value?.mainParentSha, "refresh main parent SHA"),
+  };
+  if (normalized.deliveredHeadSha !== reviewed || normalized.refreshedHeadSha !== delivery) {
+    throw new Error("Protected-main refresh receipt does not join the reviewed and delivery heads.");
+  }
+  return Object.freeze(normalized);
 }
 
 function authorityProjectionExact(candidate, authority) {

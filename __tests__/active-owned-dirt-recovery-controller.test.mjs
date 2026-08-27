@@ -2,25 +2,16 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-
-import {
-  buildActiveOwnedDirtRecoveryPlan, buildActiveOwnedDirtRecoveryReceipt,
-} from "../scripts/active-owned-dirt-recovery-contract.mjs";
-import {
-  createActiveOwnedDirtRecoveryControllerAdapter,
-  createRepositoryActiveOwnedDirtRecoveryAdapter,
-  captureProtectedMainAdvance,
-  invokeActiveOwnedDirtRecoveryContinue,
-  requireLaneFence,
-  requireProtectedMainEquivalent,
-  runActiveOwnedDirtRecovery,
-} from "../scripts/active-owned-dirt-recovery-controller.mjs";
-import { assertActiveOwnedDirtPlanSource }
-  from "../scripts/active-owned-dirt-recovery-registry.mjs";
+import { buildActiveOwnedDirtRecoveryPlan, buildActiveOwnedDirtRecoveryReceipt } from "../scripts/active-owned-dirt-recovery-contract.mjs";
+import { createActiveOwnedDirtRecoveryControllerAdapter, createRepositoryActiveOwnedDirtRecoveryAdapter,
+  captureProtectedMainAdvance, invokeActiveOwnedDirtRecoveryContinue, requireLaneFence,
+  requireProtectedMainEquivalent, runActiveOwnedDirtRecovery }
+  from "../scripts/active-owned-dirt-recovery-controller.mjs";
+import { assertActiveOwnedDirtPlanSource, buildActiveOwnedDirtRecoveryFinalizeMutationAuthority,
+  buildActiveOwnedDirtRecoveryVerifiedFinalReceipt } from "../scripts/active-owned-dirt-recovery-registry.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-
+import { markOperationDerivedCloudVerification } from "../scripts/scoped-lane-admission-lib.mjs";
 const CLI = fileURLToPath(new URL("../scripts/active-owned-dirt-recovery.mjs", import.meta.url));
-
 test("CLI redacts paths and GitHub tokens and suppresses child-process diagnostics", () => {
   const token = `ghp_${"A".repeat(36)}`;
   const missing = spawnSync(process.execPath, [
@@ -30,7 +21,6 @@ test("CLI redacts paths and GitHub tokens and suppresses child-process diagnosti
   assert.doesNotMatch(missing.stdout, /ghp_|\/Users\/operator/u);
   assert.match(missing.stdout, /\[local-path\]/u);
   assert.ok(JSON.parse(missing.stdout).error.length <= 300);
-
   const linuxSecret = `linux-secret-${process.pid}`;
   const linuxMissing = spawnSync(process.execPath, [
     CLI, "plan", `--repository=/tmp/${linuxSecret}/missing`, "--session=source", "--json",
@@ -38,20 +28,17 @@ test("CLI redacts paths and GitHub tokens and suppresses child-process diagnosti
   assert.equal(linuxMissing.status, 1);
   assert.doesNotMatch(linuxMissing.stdout, /\/tmp\/|linux-secret/u);
   assert.match(linuxMissing.stdout, /\[local-path\]/u);
-
   const subprocess = spawnSync(process.execPath, [
     CLI, "plan", `--repository=${process.cwd()}`, "--session=source", "--json",
   ], { encoding: "utf8", env: { ...process.env, PATH: "/missing-bin" } });
   assert.equal(subprocess.status, 1);
   assert.equal(JSON.parse(subprocess.stdout).error, "Recovery subprocess failed.");
 });
-
 test("CLI exposes the external task-authority continuation input", () => {
   const source = spawnSync(process.execPath, [CLI, "invalid"], { encoding: "utf8" });
   assert.notEqual(source.status, 0);
   assert.match(source.stderr, /--task-authority=<absolute-capability\.json>/u);
 });
-
 test("repository adapter rejects a branch attached to more than one worktree record", () => {
   const root = process.cwd();
   const branch = "agent/device/recovery";
@@ -69,7 +56,6 @@ test("repository adapter rejects a branch attached to more than one worktree rec
     gitText: args => values.get(args.join(" ")) || "",
   }), /exact registered attached worktree/);
 });
-
 test("cloud response loss retries the identical continue invocation exactly once", () => {
   const invocation = { action: "continue", request: { idempotencyKey: "same" } };
   const observed = [];
@@ -86,7 +72,6 @@ test("cloud response loss retries the identical continue invocation exactly once
   assert.equal(observed[0], invocation);
   assert.equal(observed[1], invocation);
 });
-
 test("protected-main evidence admits only disjoint descendant advancement", () => {
   const baseSha = "1".repeat(40);
   const pullRequestBaseSha = "2".repeat(40);
@@ -128,7 +113,6 @@ test("protected-main evidence admits only disjoint descendant advancement", () =
     },
   }), /not a descendant/);
 });
-
 test("lane fence revalidates protected-main advancement with its repository Git adapter", () => {
   const source = sourceFixture();
   const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });
@@ -146,7 +130,6 @@ test("lane fence revalidates protected-main advancement with its repository Git 
   };
   assert.doesNotThrow(() => requireLaneFence(current, plan, () => ""));
 });
-
 test("plan replay permits only disjoint global-ledger movement", () => {
   const source = sourceFixture();
   source.leaseDigest = digestValue(source.lease);
@@ -185,6 +168,102 @@ test("plan replay permits only disjoint global-ledger movement", () => {
   }), /projection drifted/u);
 });
 
+test("recovery finalize admits only disjoint global-ledger head movement", () => {
+  const D = value => value.repeat(64), S = value => value.repeat(40);
+  const base = S("1"), head = S("2"), scope = ["path:scripts/recovery.mjs", "semantic:recovery"];
+  const writeSetDigest = digestValue(scope), identity = { actorId: "github-user:42", canonicalBaseRevision: base,
+    leaseEpoch: 4, repositoryId: "github-repository:R_recovery", workItemId: "work-item:recovery", writeSetDigest };
+  const claimId = digestValue(identity);
+  const authority = { schema: "agentic-lane-cloud-authority/v1", provider: "github", ledgerRepository: "org/repo",
+    targetRepository: "org/repo", claimId, claimDigest: D("3"), ledgerRevision: S("4"), ledgerDigest: D("5"),
+    claimLedgerRevision: D("6"), entrySchema: "agentic-cloud-collaboration-entry/v2", claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    operationReceiptDigest: D("7"), mutationAuthorityEligible: true, canonicalBaseSha: base, laneRevision: head,
+    cloudDeclaredWriteScope: scope, writeSetDigest, deviceId: "device", sessionId: "session",
+    reviewRequestId: "github-pull-request:PR_finalize", leaseEpoch: 4, transitionCounter: 9, heartbeatCounter: 2,
+    state: "active", expiresAt: "2026-08-12T01:00:00.000Z", integrationReceiptDigest: null, integration: null, manifestDigest: D("8") };
+  const sealRecord = source => { const { recordDigest: _digest, ...core } = source; return { ...core, recordDigest: digestValue(core) }; };
+  const candidate = sealRecord({ claimId, entrySchema: authority.entrySchema, claimIdentitySchema: authority.claimIdentitySchema,
+    operationReceiptDigest: authority.operationReceiptDigest, mutationAuthorityEligible: true, state: "active",
+    writeAuthority: true, scopeReserved: true, ...identity, laneRevision: head, declaredWriteScope: scope,
+    transitionCounter: authority.transitionCounter, heartbeatCounter: authority.heartbeatCounter,
+    reviewRequestId: authority.reviewRequestId, expiresAt: authority.expiresAt, fenceRevision: authority.claimDigest,
+    transitionDigest: authority.claimLedgerRevision });
+  const peerScope = ["path:docs/unrelated.md", "semantic:unrelated"];
+  const peerIdentity = { actorId: "github-user:7", canonicalBaseRevision: base, leaseEpoch: 1,
+    repositoryId: "github-repository:R_recovery", workItemId: "work-item:unrelated", writeSetDigest: digestValue(peerScope) };
+  const peer = sealRecord({ claimId: digestValue(peerIdentity), entrySchema: authority.entrySchema,
+    claimIdentitySchema: authority.claimIdentitySchema, operationReceiptDigest: D("9"), mutationAuthorityEligible: true,
+    state: "active", writeAuthority: true, scopeReserved: true, ...peerIdentity, laneRevision: S("a"),
+    declaredWriteScope: peerScope, transitionCounter: 1, heartbeatCounter: 0, reviewRequestId: null,
+    expiresAt: authority.expiresAt, fenceRevision: D("a"), transitionDigest: D("b") });
+  const verificationFor = (records, revision = S("b"), digest = D("c"),
+    evaluatedAt = "2026-08-12T00:30:00.000Z") => {
+    const claims = [...records].sort((left, right) => left.claimId.localeCompare(right.claimId));
+    const inventoryCore = { schema: "agentic-cloud-claim-inventory/v1", observedLedgerHeadRevision: revision,
+      ledgerDigest: digest, evaluationTime: evaluatedAt, claims };
+    const inventory = { ...inventoryCore, inventoryDigest: digestValue(inventoryCore) };
+    return markOperationDerivedCloudVerification({ schema: "agentic-lane-cloud-verification/v1", status: "ready",
+      claimId, claimDigest: authority.claimDigest, ledgerRevision: inventory.observedLedgerHeadRevision,
+      ledgerDigest: inventory.ledgerDigest, canonicalBaseSha: base, laneRevision: head, writeSetDigest,
+      reviewRequestId: authority.reviewRequestId, remoteClaimInventoryDigest: inventory.inventoryDigest, inventory,
+      receiptDigest: digestValue({ revision, digest, evaluatedAt }), verifiedAt: inventory.evaluationTime });
+  };
+  const verification = verificationFor([candidate, peer]);
+  const verifiedAuthority = { ...authority, ledgerRevision: verification.ledgerRevision, ledgerDigest: verification.ledgerDigest };
+  const currentClaim = { claimId, entrySchema: authority.entrySchema, claimIdentitySchema: authority.claimIdentitySchema,
+    state: "current", writeAuthority: true, scopeReserved: true, actorId: identity.actorId,
+    deviceId: `device:${digestValue({ namespace: "device", value: authority.deviceId })}`,
+    sessionId: `session:${digestValue({ namespace: "session", value: authority.sessionId })}`,
+    repositoryId: identity.repositoryId, workItemId: identity.workItemId, canonicalBaseRevision: base, laneRevision: head,
+    declaredWriteScope: scope, writeSetDigest, leaseEpoch: authority.leaseEpoch, transitionCounter: authority.transitionCounter,
+    heartbeatCounter: authority.heartbeatCounter, reviewRequestId: authority.reviewRequestId, predecessorClaimId: null,
+    expiresAt: authority.expiresAt, fenceRevision: authority.claimDigest, transitionDigest: authority.claimLedgerRevision,
+    operationReceiptDigest: authority.operationReceiptDigest, integrationReceiptDigest: null, integration: null };
+  const lease = { schema: "agentic-writer-lease/v2", status: "active", epoch: 12, sessionId: authority.sessionId,
+    device: authority.deviceId, scope: "recovery", branch: "agent/device/recovery", worktreePath: "/worktree", baseSha: base,
+    fenceSha: head, pullRequestUrl: "https://github.test/org/repo/pull/1",
+    admission: { schema: "agentic-lane-admission-lease/v1", status: "admitted", semanticScope: "recovery",
+      declaredWriteSet: scope, writeSetDigest, manifestDigest: authority.manifestDigest }, cloudAuthority: authority,
+    heartbeatAt: "2026-08-12T00:00:00.000Z", expiresAt: authority.expiresAt };
+  const pullRequest = { id: "PR_finalize", url: lease.pullRequestUrl, state: "OPEN", isDraft: true,
+    headRefName: lease.branch, headRefOid: head,
+    headRepository: { nameWithOwner: authority.targetRepository }, autoMergeRequest: null };
+  const input = { lease, currentAuthority: authority, verifiedAuthority, remoteAuthorityVerification: verification,
+    currentClaim, pullRequest };
+  const receipt = buildActiveOwnedDirtRecoveryFinalizeMutationAuthority(input);
+  assert.equal(receipt.localAuthorityDigest, digestValue(authority));
+  assert.equal(receipt.globalLedgerRevision, verification.ledgerRevision);
+  assert.throws(() => buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ ...input, remoteAuthorityVerification: { ...verification } }), /fresh operation-derived inventory/u);
+  assert.throws(() => buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ ...input, lease: { ...lease, expiresAt: verification.verifiedAt } }), /joined local projection/u);
+  const drift = value => Array.isArray(value) ? [...value, "semantic:drift"] : value === null ? { drift: true }
+    : typeof value === "boolean" ? !value : typeof value === "number" ? value + 1 : `${value}-drift`;
+  const exactFields = Object.keys(verifiedAuthority).filter(value => !["ledgerRevision", "ledgerDigest"].includes(value));
+  for (const field of exactFields) assert.throws(() => buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({
+    ...input, verifiedAuthority: { ...verifiedAuthority, [field]: drift(verifiedAuthority[field]) },
+  }), /exact claim-local subject/u);
+  assert.throws(() => buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ ...input,
+    verifiedAuthority: { ...verifiedAuthority, unknownAuthority: "drift" } }), /exact claim-local subject/u);
+  const driftedCandidate = sealRecord({ ...candidate, transitionDigest: D("e") });
+  assert.throws(() => buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({
+    ...input, remoteAuthorityVerification: verificationFor([driftedCandidate, peer]),
+  }), /exact claim-local subject/u);
+  const overlappingIdentity = { ...peerIdentity, workItemId: "work-item:overlap", writeSetDigest };
+  const overlappingPeer = sealRecord({ ...peer, claimId: digestValue(overlappingIdentity),
+    ...overlappingIdentity, declaredWriteScope: scope });
+  assert.throws(() => buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({
+    ...input, remoteAuthorityVerification: verificationFor([candidate, overlappingPeer]),
+  }), /competing overlapping cloud authority/u);
+  const plan = buildActiveOwnedDirtRecoveryPlan({ source: sourceFixture(), ttlSeconds: 1_800 });
+  const completion = { plan, snapshot: snapshotFixture(plan), intent: { localProjection: {
+    mutationAuthorityReceiptDigest: D("e") } }, lease, marker: { schema: "marker/v1" }, currentClaim, pullRequest };
+  const firstFinal = buildActiveOwnedDirtRecoveryVerifiedFinalReceipt({ ...completion, verifiedAuthority,
+    remoteAuthorityVerification: verification });
+  const replayVerification = verificationFor([candidate, peer], S("e"), D("f"), "2026-08-12T00:40:00.000Z");
+  const replayFinal = buildActiveOwnedDirtRecoveryVerifiedFinalReceipt({ ...completion, verifiedAuthority: { ...authority,
+    ledgerRevision: replayVerification.ledgerRevision, ledgerDigest: replayVerification.ledgerDigest },
+    remoteAuthorityVerification: replayVerification });
+  assert.equal(replayFinal.receiptDigest, firstFinal.receiptDigest);
+});
 test("controller orders durable snapshot before cloud and replays every phase once", async () => {
   const source = sourceFixture();
   const plan = buildActiveOwnedDirtRecoveryPlan({ source, ttlSeconds: 1_800 });

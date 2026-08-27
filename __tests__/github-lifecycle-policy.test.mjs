@@ -68,13 +68,38 @@ test('CI uses Node 22 slim runners without dependency caches', async () => {
   for (const name of ['test', 'build', 'docs-contract', 'collaboration-integration']) {
     assert.match(source, new RegExp(`^\\s+name: ${name}$`, 'm'));
   }
-  const testJob = source.slice(source.indexOf('\n  test:'), source.indexOf('\n  build:'));
+  const testJob = source.slice(source.indexOf('\n  test:'), source.indexOf('\n  test_aggregate:'));
   assert.match(testJob, /^\s+- run: npm ci --ignore-scripts --no-audit --no-fund$/m);
   assert.equal((source.match(/^\s+- run: npm ci\b/gm) || []).length, 2);
   assert.equal((source.match(/^\s+cache: npm$/gm) || []).length, 0);
-  assert.equal((source.match(/^\s+runs-on: ubuntu-slim$/gm) || []).length, 6);
+  assert.equal((source.match(/^\s+runs-on: ubuntu-slim$/gm) || []).length, 7);
   assert.equal((source.match(/^\s+node-version: 22$/gm) || []).length, 5);
   assert.doesNotMatch(source, /timeout-minutes: (?:1[1-9]|[2-9]\d)/);
+});
+
+test('CI shards the complete Node test suite and preserves one fail-closed required context', async () => {
+  const source = await readWorkflow('ci.yml');
+  const shards = source.slice(source.indexOf('\n  test:'), source.indexOf('\n  test_aggregate:'));
+  const aggregate = source.slice(source.indexOf('\n  test_aggregate:'), source.indexOf('\n  build:'));
+
+  assert.match(shards, /^\s+name: test$/m);
+  assert.match(shards, /^\s+timeout-minutes: 10$/m);
+  assert.match(shards, /^\s+fail-fast: false$/m);
+  assert.match(shards, /^\s+shard: \[1, 2, 3, 4\]$/m);
+  assert.match(
+    shards,
+    /^\s+- run: node --test --test-shard=\$\{\{ matrix\.shard \}\}\/4 __tests__\/\*\.test\.mjs$/m,
+  );
+  assert.doesNotMatch(source, /^\s+- run: npm test$/m);
+
+  assert.match(aggregate, /^\s+name: test$/m);
+  assert.match(aggregate, /^\s+needs: \[authorization, test\]$/m);
+  assert.match(aggregate, /^\s+if: \$\{\{ always\(\) \}\}$/m);
+  assert.match(aggregate, /^\s+timeout-minutes: 5$/m);
+  assert.match(aggregate, /AUTHORIZATION_RESULT: \$\{\{ needs\.authorization\.result \}\}/);
+  assert.match(aggregate, /TEST_SHARDS_RESULT: \$\{\{ needs\.test\.result \}\}/);
+  assert.match(aggregate, /\[ "\$AUTHORIZATION_RESULT" = "success" \] \|\| exit 1/);
+  assert.match(aggregate, /\[ "\$TEST_SHARDS_RESULT" = "success" \] \|\| exit 1/);
 });
 
 test('CI reports policy-runtime readiness without claiming consumer-run conformance', async () => {

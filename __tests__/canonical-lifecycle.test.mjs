@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const lifecycle = fs.readFileSync(new URL('../docs/CANONICAL-LIFECYCLE.md', import.meta.url), 'utf8')
 const startWorkflow = fs.readFileSync(new URL('../docs/START-WORKFLOW.md', import.meta.url), 'utf8')
+const durableOwnerCoordination = startWorkflow.match(/## Durable Owner Coordination SSOT\n[\s\S]*?(?=\n## )/)?.[0] ?? ''
 const releaseWorkflow = fs.readFileSync(new URL('../docs/RELEASE-WORKFLOW.md', import.meta.url), 'utf8')
 const runtimeProof = fs.readFileSync(new URL('../docs/RUNTIME-PROOF.md', import.meta.url), 'utf8')
 const synchronizer = fs.readFileSync(new URL('../scripts/workspace-sync.mjs', import.meta.url), 'utf8')
@@ -136,6 +137,26 @@ test('session and release profiles preserve multi-user fences and the human boun
   assert.match(releaseWorkflow, /re-prove `runtime-ready`, HTTP 200 canonical probes/)
   assert.match(releaseWorkflow, /localhost URL is a bound review surface, not Production authority/)
   assert.doesNotMatch(runtimeProof, /Automatic after protected integration/)
+})
+
+test('session startup owns the shared durable owner-coordination records', () => {
+  assert.match(durableOwnerCoordination, /exactly two normative records: \*\*Coordination Request\*\* and \*\*Authority Transition Receipt\*\*/)
+  for (const field of [
+    'repository', 'authoritySubject', 'ownerSubject', 'scope', 'writeSetDigest',
+    'claimId', 'leaseEpoch', 'fenceRevision', 'immutableRevision', 'reviewLocator',
+    'blocker', 'requestedTransition', 'dependentWork', 'replyLocator', 'observedAt',
+    'expiresAt', 'requestDigest', 'sourceClaimId', 'sourceLeaseEpoch',
+    'sourceFenceRevision', 'resultClaimId', 'resultLeaseEpoch', 'resultFenceRevision',
+    'resultState', 'operationReceiptDigest', 'transitionedAt', 'receiptDigest',
+  ]) assert.ok(durableOwnerCoordination.includes('`' + field + '`'))
+  assert.match(durableOwnerCoordination, /`continue`, `retire`, or `handoff`/)
+  assert.match(durableOwnerCoordination, /Transport acknowledgement is observation only/)
+  assert.match(durableOwnerCoordination, /authoritative compare-and-swap transition and its exact Authority Transition Receipt both verify/)
+  assert.match(durableOwnerCoordination, /Missing or ambiguous owner identity and unknown delivery fail closed/)
+  assert.match(durableOwnerCoordination, /Independently admitted disjoint work may continue/)
+  assert.match(durableOwnerCoordination, /must not mint a claim, controller, authorization, lane, review request, or content commit/)
+  assert.doesNotMatch(durableOwnerCoordination, /GitHub|Cloudflare|Codex|task UI|PR #\d+|incident/i)
+  assert.ok(startWorkflow.trimEnd().split('\n').length < 600)
 })
 
 test('workspace synchronization is bounded, fast-forward-only, and recoverable', () => {

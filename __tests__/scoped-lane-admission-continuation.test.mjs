@@ -7,8 +7,10 @@ import {
   normalizeDeclaredWriteScopeManifest,
 } from "../scripts/scoped-lane-admission-lib.mjs";
 import {
+  assertPlannedContinuationIdentity,
   continuePlannedAdmissionFromRepository,
   continuePlannedScopedLaneAdmission,
+  selectedPreservationMatchesLane,
 } from "../scripts/scoped-lane-admission-continuation.mjs";
 import {
   verifyDormantPreservation,
@@ -240,7 +242,7 @@ function githubIdentity(argumentsList) {
   throw new Error(`Unexpected GitHub invocation: ${argumentsList.join(" ")}`);
 }
 
-function fixture({ overlappingRemotePeer = false } = {}) {
+function fixture({ overlappingRemotePeer = false, dormantSelection = true } = {}) {
   const manifest = manifestFixture();
   const verified = verifiedAuthority(
     manifest,
@@ -255,8 +257,8 @@ function fixture({ overlappingRemotePeer = false } = {}) {
   const dormantPreservationReceipt = verifyDormantPreservation({
     repository: REPOSITORY,
     targetRepository: TARGET_REPOSITORY,
-    lanes: [dormantLane],
-    worktreePaths: [DORMANT_PATH],
+    lanes: dormantSelection ? [dormantLane] : [],
+    worktreePaths: dormantSelection ? [DORMANT_PATH] : [],
     operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
     sessionId: SESSION_ID,
     remoteAuthorityVerification: verified.verification,
@@ -303,12 +305,13 @@ function fixture({ overlappingRemotePeer = false } = {}) {
       lease,
       stateDigest: "e".repeat(64),
     }),
-    dormantLane,
+    ...(dormantSelection ? [dormantLane] : []),
   ];
   return {
     manifest,
     verified,
     dormantPreservationReceipt,
+    dormantWorktreePaths: dormantSelection ? [DORMANT_PATH] : [],
     lease,
     lanes,
   };
@@ -370,7 +373,7 @@ function repositoryContinuationFixture(source, {
       semanticScope: source.manifest.semanticScope,
       paths: source.manifest.paths,
     },
-    dormantWorktreePaths: [DORMANT_PATH],
+    dormantWorktreePaths: source.dormantWorktreePaths,
     dormantPullRequests: [],
     operatorDecisionDigest: OPERATOR_DECISION_DIGEST,
     gitText,
@@ -404,8 +407,10 @@ function defaultRepositoryGitText(argumentsList) {
   throw new Error(`Unexpected git invocation: ${argumentsList.join(" ")}`);
 }
 
-test("same-session planned admission continues with current operation-derived preservation", () => {
+test("same-session planned admission accepts an immutable shorter local TTL", () => {
   const source = fixture();
+  assert.ok(Date.parse(source.lease.expiresAt)
+    < Date.parse(source.verified.authority.expiresAt));
   const continued = continueFixture(source);
 
   assert.equal(continued.admission.status, "admitted");
@@ -426,6 +431,57 @@ test("same-session planned admission continues with current operation-derived pr
     "disjoint-attributed",
   );
   assert.equal(continued.mutationAuthorityReceipt.status, "ready");
+});
+
+test("continuation rejects a local expiry later than authenticated cloud expiry", () => {
+  const source = fixture();
+  const lease = { ...source.lease, expiresAt: "2099-08-05T00:00:00.000Z" };
+  const lanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease }
+    : item);
+  assert.throws(
+    () => continueFixture({ ...source, lease, lanes }),
+    /local lease expiry exceeds authenticated cloud expiry/u,
+  );
+});
+
+test("continuation rejects historical local expiry drift", () => {
+  const source = fixture();
+  const lanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease: { ...item.lease, expiresAt: "2099-08-02T00:00:00.000Z" } }
+    : item);
+  assert.throws(
+    () => continueFixture(source, { lanes }),
+    /changed the historical local lease expiry/u,
+  );
+});
+
+test("continuation rejects invalid local, candidate, or cloud expiry timestamps", () => {
+  const source = fixture();
+  const invalid = "not-a-finite-instant";
+  const invalidLocalLease = { ...source.lease, expiresAt: invalid };
+  const invalidLocalLanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease: invalidLocalLease }
+    : item);
+  assert.throws(
+    () => continueFixture({ ...source, lease: invalidLocalLease, lanes: invalidLocalLanes }),
+    /historical local lease expiry is invalid/u,
+  );
+
+  const invalidCandidateLanes = source.lanes.map(item => item.path === CANDIDATE_PATH
+    ? { ...item, lease: { ...item.lease, expiresAt: invalid } }
+    : item);
+  assert.throws(
+    () => continueFixture(source, { lanes: invalidCandidateLanes }),
+    /candidate local lease expiry is invalid/u,
+  );
+
+  assert.throws(
+    () => continueFixture(source, {
+      cloudAuthority: { ...source.verified.authority, expiresAt: invalid },
+    }),
+    /authenticated cloud expiry is invalid/u,
+  );
 });
 
 test("continuation rejects an overlapping protected-source delta", () => {
@@ -452,6 +508,158 @@ test("continuation rejects protected canonical identity drift", () => {
       () => continueFixture(source, { lanes }),
       /clean verified protected canonical lane/u,
     );
+  }
+});
+
+test("planned identity accepts one proven live protected controller descendant", () => {
+  const manifest = manifestFixture();
+  const historicalTree = "1".repeat(40);
+  const protectedTree = "2".repeat(40);
+  const controller = {
+    path: REPOSITORY,
+    origin: "https://github.test/owner/repository.git",
+    headSha: PROTECTED_SHA,
+    originMainSha: PROTECTED_SHA,
+    remoteMainSha: PROTECTED_SHA,
+    treeSha: protectedTree,
+    clean: true,
+    deviceBranchScriptDigest: "4".repeat(64),
+  };
+  const candidate = {
+    semanticScope: manifest.semanticScope,
+    branch: BRANCH,
+    sessionId: SESSION_ID,
+    targetPath: CANDIDATE_PATH,
+    manifest,
+    candidateClaim: { claimId: "5".repeat(64) },
+    selectionFileDigest: "6".repeat(64),
+    manifestFileDigest: "7".repeat(64),
+    cloudAuthorityFileDigest: "8".repeat(64),
+  };
+  const source = {
+    sourceEvidenceDigest: "9".repeat(64),
+    controller: {
+      ...controller,
+      headSha: BASE_SHA,
+      originMainSha: BASE_SHA,
+      remoteMainSha: BASE_SHA,
+      treeSha: historicalTree,
+    },
+    canonical: { headSha: BASE_SHA, treeSha: historicalTree },
+    candidate,
+  };
+  const input = {
+    plan: {
+      planDigest: "a".repeat(64),
+      sourceEvidenceDigest: source.sourceEvidenceDigest,
+      sourceEvidence: source,
+    },
+    controller,
+    candidateLease: {
+      worktreePath: CANDIDATE_PATH,
+      branch: BRANCH,
+      sessionId: SESSION_ID,
+      scope: manifest.semanticScope,
+      baseSha: BASE_SHA,
+      fenceSha: FENCE_SHA,
+      admission: {
+        status: "planned",
+        manifestDigest: manifest.manifestDigest,
+        writeSetDigest: manifest.writeSetDigest,
+      },
+      cloudAuthority: { claimId: candidate.candidateClaim.claimId },
+    },
+    candidateLineage: {
+      headSha: FENCE_SHA,
+      parentSha: BASE_SHA,
+      parentCount: 1,
+      treeSha: historicalTree,
+    },
+    manifest,
+    files: {
+      selectionFileDigest: candidate.selectionFileDigest,
+      manifestFileDigest: candidate.manifestFileDigest,
+      cloudAuthorityFileDigest: candidate.cloudAuthorityFileDigest,
+    },
+    gitText: argumentsList => {
+      if (argumentsList[0] === "merge-base") return "";
+      if (argumentsList[0] === "diff") return "docs/protected.md\0";
+      if (argumentsList[0] === "rev-parse") return protectedTree;
+      throw new Error("unexpected git operation");
+    },
+  };
+  assert.equal(assertPlannedContinuationIdentity(input), true);
+  for (const controllerDrift of [
+    { clean: false },
+    { path: "/workspace/other" },
+    { origin: "https://github.test/other/repository.git" },
+    { originMainSha: BASE_SHA },
+    { remoteMainSha: BASE_SHA },
+    { treeSha: "3".repeat(40) },
+    { deviceBranchScriptDigest: "f".repeat(64) },
+  ]) {
+    assert.throws(
+      () => assertPlannedContinuationIdentity({
+        ...input,
+        controller: { ...controller, ...controllerDrift },
+      }),
+      /immutable planned identity/u,
+    );
+  }
+  assert.throws(
+    () => assertPlannedContinuationIdentity({
+      ...input,
+      gitText: argumentsList => {
+        if (argumentsList[0] === "merge-base") throw new Error("not descendant");
+        return "";
+      },
+    }),
+    /immutable planned identity/u,
+  );
+});
+
+test("selected preservation retains an exact retired-preserved owner", () => {
+  const rawLane = lane({
+    lanePath: DORMANT_PATH,
+    branch: "refs/heads/agent/old-device/dormant",
+    head: FENCE_SHA,
+    stateDigest: "9".repeat(64),
+  });
+  const projection = {
+    path: rawLane.path,
+    branch: rawLane.branch,
+    detached: rawLane.detached,
+    dirty: rawLane.dirty,
+    headSha: rawLane.head,
+    treeSha: rawLane.treeSha,
+    indexDigest: rawLane.indexDigest,
+    workingTreeDigest: rawLane.workingTreeDigest,
+    stateDigest: rawLane.stateDigest,
+    projectedClaimId: null,
+  };
+  const retired = {
+    ...rawLane,
+    classification: "disjoint-attributed",
+    authorityState: "retired-preserved",
+    dormantPreservationReceiptDigest: null,
+  };
+  const receipt = { receiptDigest: "a".repeat(64), worktrees: [projection] };
+  assert.equal(selectedPreservationMatchesLane({
+    lane: retired,
+    rawLane,
+    dormantPreservationReceipt: receipt,
+  }), true);
+  for (const drifted of [
+    { lane: { ...retired, classification: "ambiguous" }, rawLane, receipt },
+    { lane: { ...retired, authorityState: "unattributed" }, rawLane, receipt },
+    { lane: { ...retired, dormantPreservationReceiptDigest: receipt.receiptDigest }, rawLane, receipt },
+    { lane: retired, rawLane: { ...rawLane, stateDigest: "b".repeat(64) }, receipt },
+  ]) {
+    assert.equal(selectedPreservationMatchesLane({
+      lane: drifted.lane,
+      rawLane: drifted.rawLane,
+      dormantPreservationReceipt: drifted.receipt,
+    }), false);
   }
 });
 
@@ -733,6 +941,64 @@ test("repository continuation joins cloud observations by canonical current clai
     /dormant preservation does not join the current cloud inventory/iu,
   );
   assert.equal(rejected.counters.annotate, 0);
+});
+
+test("repository continuation admits zero selection with a disjoint current peer", () => {
+  const source = fixture({ dormantSelection: false });
+  const wrapper = repositoryContinuationFixture(source);
+  assert.deepEqual(wrapper.options.dormantWorktreePaths, []);
+  assert.deepEqual(wrapper.options.dormantPullRequests, []);
+
+  const result = continuePlannedAdmissionFromRepository(wrapper.options);
+
+  assert.equal(result.admission.status, "admitted");
+  assert.deepEqual(source.dormantPreservationReceipt.worktrees, []);
+  assert.deepEqual(source.dormantPreservationReceipt.pullRequests, []);
+  assert.equal(result.peerOperationReceipts.length, 1);
+  assert.equal(result.peerOperationReceipts[0].claimId, peerClaim().claimId);
+  assert.equal(wrapper.counters.verifyDormant, 1);
+  assert.equal(wrapper.counters.annotate, 1);
+});
+
+test("zero-selection repository continuation rejects an unattributed peer before annotation", () => {
+  const source = fixture({ dormantSelection: false });
+  const uncovered = lane({
+    lanePath: "/workspace/worktrees/uncovered",
+    branch: "refs/heads/agent/other/uncovered",
+    stateDigest: "f".repeat(64),
+  });
+  const wrapper = repositoryContinuationFixture({
+    ...source,
+    lanes: [...source.lanes, uncovered],
+  });
+
+  assert.throws(
+    () => continuePlannedAdmissionFromRepository(wrapper.options),
+    /unattributed peer lanes/u,
+  );
+  assert.equal(wrapper.counters.annotate, 0);
+});
+
+test("zero-selection repository continuation rejects final inventory drift before annotation", () => {
+  const source = fixture({ dormantSelection: false });
+  const changedClaims = verifiedAuthority(
+    source.manifest,
+    peerClaim({ heartbeatCounter: 4 }),
+    {
+      evaluationTime: LATER_EVALUATION,
+      verificationReceipt: "b".repeat(64),
+    },
+  );
+  const wrapper = repositoryContinuationFixture(source, {
+    cloudVerifications: [source.verified, changedClaims],
+  });
+
+  assert.throws(
+    () => continuePlannedAdmissionFromRepository(wrapper.options),
+    /dormant preservation does not join the current cloud inventory/iu,
+  );
+  assert.equal(wrapper.counters.verifyCloudAuthority, 2);
+  assert.equal(wrapper.counters.annotate, 0);
 });
 
 test("repository continuation rejects a non-descendant protected revision", () => {

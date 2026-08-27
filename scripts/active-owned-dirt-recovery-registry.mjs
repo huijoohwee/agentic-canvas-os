@@ -1,36 +1,20 @@
 // Responsibility: Persist recovery intents and reconcile exact cloud/local response-loss projections.
-import { digestValue, normalizeWriteSet, writeSetsOverlap }
-  from "./cloud-collaboration-primitives.mjs";
-import { isOperationDerivedCloudVerification }
-  from "./scoped-lane-admission-lib.mjs";
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { isOperationDerivedCloudVerification } from "./scoped-lane-admission-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
-import { reconcileCloudAuthorityProjection }
-  from "./scoped-lane-cloud-reconciliation.mjs";
-import { parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker }
-  from "./writer-lease-lib.mjs";
-import {
-  normalizeActiveOwnedDirtLeaseRecovery,
-  normalizeActiveOwnedDirtRecoveryPlan,
-  validateCompletedActiveOwnedDirtRecoveryIntent,
-} from "./active-owned-dirt-recovery-contract.mjs";
-import {
-  mutateWriterLeaseRegistry,
-  writerLeaseDigest,
-} from "./writer-lease-registry-cas.mjs";
-import { continueTaskAuthorityBinding }
-  from "./task-bound-lane-authority-store.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
+import { reconcileCloudAuthorityProjection } from "./scoped-lane-cloud-reconciliation.mjs";
+import { parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker } from "./writer-lease-lib.mjs";
+import { buildActiveOwnedDirtRecoveryReceipt, normalizeActiveOwnedDirtLeaseRecovery,
+  normalizeActiveOwnedDirtRecoveryPlan, validateCompletedActiveOwnedDirtRecoveryIntent }
+  from "./active-owned-dirt-recovery-contract.mjs";
+import { mutateWriterLeaseRegistry, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
+import { continueTaskAuthorityBinding } from "./task-bound-lane-authority-store.mjs";
 
 export const ACTIVE_OWNED_DIRT_RECOVERY_INTENT_SCHEMA =
   "agentic-active-owned-dirt-recovery-intent/v1";
 
-const PHASES = Object.freeze([
-  "intent",
-  "snapshot",
-  "cloud",
-  "local-cas",
-  "pr-marker",
-  "complete",
-]);
+const PHASES = Object.freeze(["intent", "snapshot", "cloud", "local-cas", "pr-marker", "complete"]);
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 
 export function reconcileLostCloudHeartbeat({
@@ -137,6 +121,146 @@ export function assertActiveDraftMutationAuthority(input) {
     cloudVerificationReceiptDigest: verified.receiptDigest,
     evaluatedAt: verified.verifiedAt, expiresAt: lease.expiresAt };
   return Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) });
+}
+
+export function buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ lease, currentAuthority,
+  verifiedAuthority, remoteAuthorityVerification, currentClaim, pullRequest } = {}) {
+  const verification = remoteAuthorityVerification, inventory = verification?.inventory;
+  const claims = inventory?.claims, candidates = Array.isArray(claims)
+    ? claims.filter(claim => claim.claimId === currentAuthority?.claimId) : [];
+  const inventoryCore = inventory && { schema: inventory.schema,
+    observedLedgerHeadRevision: inventory.observedLedgerHeadRevision,
+    ledgerDigest: inventory.ledgerDigest, evaluationTime: inventory.evaluationTime, claims };
+  const recordsSealed = Array.isArray(claims) && claims.every(claim => {
+    const { recordDigest, ...core } = claim || {};
+    return DIGEST_PATTERN.test(String(recordDigest || "")) && recordDigest === digestValue(core);
+  });
+  if (!isOperationDerivedCloudVerification(verification)
+    || verification?.schema !== "agentic-lane-cloud-verification/v1"
+    || verification.status !== "ready" || inventory?.schema !== "agentic-cloud-claim-inventory/v1"
+    || !Array.isArray(claims) || candidates.length !== 1 || !recordsSealed
+    || inventory.inventoryDigest !== digestValue(inventoryCore)
+    || verification.remoteClaimInventoryDigest !== inventory.inventoryDigest
+    || verification.ledgerRevision !== inventory.observedLedgerHeadRevision
+    || verification.ledgerDigest !== inventory.ledgerDigest || verification.verifiedAt !== inventory.evaluationTime
+    || !DIGEST_PATTERN.test(String(verification.receiptDigest || ""))) {
+    throw new Error("Recovery finalize mutation authority requires one fresh operation-derived inventory.");
+  }
+  const omitGlobalHead = value => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const { ledgerRevision: _revision, ledgerDigest: _digest, ...subject } = value;
+    return subject;
+  };
+  const authority = currentAuthority, candidate = candidates[0];
+  const scope = normalizeWriteSet(authority?.cloudDeclaredWriteScope);
+  const same = (left, right) => digestValue(left) === digestValue(right);
+  const claimIdentity = claim => ({ actorId: claim?.actorId,
+    canonicalBaseRevision: claim?.canonicalBaseRevision, leaseEpoch: claim?.leaseEpoch,
+    repositoryId: claim?.repositoryId, workItemId: claim?.workItemId, writeSetDigest: claim?.writeSetDigest });
+  const claimAuthority = claim => ({ claimId: claim?.claimId, entrySchema: claim?.entrySchema,
+    claimIdentitySchema: claim?.claimIdentitySchema,
+    operationReceiptDigest: claim?.operationReceiptDigest,
+    canonicalBaseRevision: claim?.canonicalBaseRevision, laneRevision: claim?.laneRevision,
+    declaredWriteScope: normalizeWriteSet(claim?.declaredWriteScope),
+    writeSetDigest: claim?.writeSetDigest, leaseEpoch: claim?.leaseEpoch,
+    transitionCounter: claim?.transitionCounter, heartbeatCounter: claim?.heartbeatCounter,
+    reviewRequestId: claim?.reviewRequestId, expiresAt: claim?.expiresAt, fenceRevision: claim?.fenceRevision,
+    transitionDigest: claim?.transitionDigest ?? claim?.ledgerRevision });
+  const expectedClaim = { claimId: authority?.claimId, entrySchema: authority?.entrySchema,
+    claimIdentitySchema: authority?.claimIdentitySchema, operationReceiptDigest: authority?.operationReceiptDigest,
+    canonicalBaseRevision: authority?.canonicalBaseSha, laneRevision: authority?.laneRevision,
+    declaredWriteScope: scope, writeSetDigest: authority?.writeSetDigest,
+    leaseEpoch: authority?.leaseEpoch, transitionCounter: authority?.transitionCounter,
+    heartbeatCounter: authority?.heartbeatCounter, reviewRequestId: authority?.reviewRequestId,
+    expiresAt: authority?.expiresAt, fenceRevision: authority?.claimDigest,
+    transitionDigest: authority?.claimLedgerRevision };
+  const expectedVerification = { claimId: authority?.claimId, claimDigest: authority?.claimDigest,
+    canonicalBaseSha: authority?.canonicalBaseSha, laneRevision: authority?.laneRevision,
+    writeSetDigest: authority?.writeSetDigest, reviewRequestId: authority?.reviewRequestId };
+  const publicOwner = (namespace, value) => String(value || "").startsWith(`${namespace}:`)
+    && DIGEST_PATTERN.test(String(value).slice(namespace.length + 1))
+    ? value : pseudonymousIdentifier(namespace, value);
+  const exactSubject = digestValue(omitGlobalHead(verifiedAuthority))
+      === digestValue(omitGlobalHead(authority))
+    && same({ claimId: verification.claimId, claimDigest: verification.claimDigest,
+      canonicalBaseSha: verification.canonicalBaseSha, laneRevision: verification.laneRevision,
+      writeSetDigest: verification.writeSetDigest,
+      reviewRequestId: verification.reviewRequestId }, expectedVerification)
+    && verification.ledgerRevision === verifiedAuthority?.ledgerRevision
+    && verification.ledgerDigest === verifiedAuthority?.ledgerDigest
+    && same(claimAuthority(currentClaim), expectedClaim)
+    && same(claimAuthority(candidate), expectedClaim)
+    && same(claimIdentity(currentClaim), claimIdentity(candidate))
+    && digestValue(claimIdentity(candidate)) === authority?.claimId
+    && authority.entrySchema === "agentic-cloud-collaboration-entry/v2"
+    && authority.claimIdentitySchema === authority.entrySchema && authority.mutationAuthorityEligible === true
+    && candidate.mutationAuthorityEligible === true
+    && currentClaim.state === "current" && currentClaim.writeAuthority === true
+    && currentClaim.scopeReserved === true && candidate.state === "active"
+    && candidate.writeAuthority === true && candidate.scopeReserved === true
+    && currentClaim.deviceId === publicOwner("device", authority.deviceId)
+    && currentClaim.sessionId === publicOwner("session", authority.sessionId)
+    && digestValue(scope) === authority.writeSetDigest
+    && same(currentClaim.integrationReceiptDigest ?? null, authority.integrationReceiptDigest ?? null)
+    && same(currentClaim.integration ?? null, authority.integration ?? null);
+  if (!exactSubject) throw new Error("Recovery finalize mutation authority changed the exact claim-local subject.");
+  const competing = claims.some(claim => claim.claimId !== authority.claimId
+    && claim.state !== "waiting-successor"
+    && writeSetsOverlap(claim.declaredWriteScope, scope));
+  if (competing) throw new Error("Recovery finalize mutation authority found competing overlapping cloud authority.");
+  const evaluatedAt = Date.parse(verification.verifiedAt);
+  const expiries = [lease?.expiresAt, authority.expiresAt, currentClaim.expiresAt,
+    candidate.expiresAt].map(Date.parse);
+  const reviewIdentity = authority.reviewRequestId === null
+    || authority.reviewRequestId === `github-pull-request:${pullRequest?.id}`;
+  const localExact = digestValue(authority) === digestValue(lease?.cloudAuthority)
+    && lease?.schema === "agentic-writer-lease/v2" && lease.status === "active"
+    && lease.admission?.schema === "agentic-lane-admission-lease/v1"
+    && lease.admission.status === "admitted" && lease.admission.semanticScope === lease.scope
+    && lease.admission.writeSetDigest === authority.writeSetDigest
+    && lease.admission.manifestDigest === authority.manifestDigest
+    && same(normalizeWriteSet(lease.admission.declaredWriteSet), scope)
+    && authority.schema === "agentic-lane-cloud-authority/v1"
+    && authority.state === "active" && authority.deviceId === lease.device
+    && authority.sessionId === lease.sessionId && authority.canonicalBaseSha === lease.baseSha
+    && authority.laneRevision === lease.fenceSha && DIGEST_PATTERN.test(String(authority.manifestDigest || ""))
+    && Number.isSafeInteger(lease.epoch) && lease.epoch > 0
+    && Number.isSafeInteger(authority.leaseEpoch) && authority.leaseEpoch > 0
+    && pullRequest?.id && pullRequest.url === lease.pullRequestUrl
+    && pullRequest.state === "OPEN" && pullRequest.isDraft === true
+    && pullRequest.headRefName === lease.branch && pullRequest.headRefOid === lease.fenceSha
+    && pullRequest.headRepository?.nameWithOwner === authority.targetRepository
+    && pullRequest.autoMergeRequest === null && reviewIdentity
+    && Number.isFinite(evaluatedAt) && expiries.every(Number.isFinite)
+    && expiries[0] <= expiries[1] && Math.min(...expiries) > evaluatedAt;
+  if (!localExact) throw new Error("Recovery finalize mutation authority changed the exact joined local projection.");
+  const core = {
+    schema: "agentic-active-owned-dirt-recovery-finalize-mutation-authority/v1",
+    status: "ready", claimId: authority.claimId, claimDigest: authority.claimDigest,
+    claimLedgerRevision: authority.claimLedgerRevision, operationReceiptDigest: authority.operationReceiptDigest,
+    transitionCounter: authority.transitionCounter, heartbeatCounter: authority.heartbeatCounter,
+    localAuthorityDigest: digestValue(authority), localLeaseDigest: writerLeaseDigest(lease),
+    localLeaseEpoch: lease.epoch, localFenceSha: lease.fenceSha,
+    remoteLeaseEpoch: authority.leaseEpoch, pullRequestId: pullRequest.id,
+    pullRequestUrl: pullRequest.url, globalLedgerRevision: verification.ledgerRevision,
+    globalLedgerDigest: verification.ledgerDigest, currentClaimDigest: digestValue(currentClaim),
+    verifiedClaimRecordDigest: candidate.recordDigest, currentClaimInventoryDigest: inventory.inventoryDigest,
+    cloudVerificationReceiptDigest: verification.receiptDigest, evaluatedAt: verification.verifiedAt,
+    expiresAt: new Date(Math.min(...expiries)).toISOString(),
+  };
+  return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+}
+
+export function buildActiveOwnedDirtRecoveryVerifiedFinalReceipt({ plan, snapshot, intent, lease,
+  marker, verifiedAuthority, remoteAuthorityVerification, currentClaim, pullRequest } = {}) {
+  buildActiveOwnedDirtRecoveryFinalizeMutationAuthority({ lease,
+    currentAuthority: lease?.cloudAuthority, verifiedAuthority, remoteAuthorityVerification,
+    currentClaim, pullRequest });
+  return buildActiveOwnedDirtRecoveryReceipt({ phase: "complete", plan, values: {
+    snapshotReceiptDigest: snapshot?.snapshotReceiptDigest,
+    recoveredLeaseDigest: writerLeaseDigest(lease), markerDigest: digestValue(marker),
+    mutationAuthorityReceiptDigest: intent?.localProjection?.mutationAuthorityReceiptDigest,
+  } });
 }
 
 export function requireExactDraftHeartbeatMarker({ lease, pullRequest }) {

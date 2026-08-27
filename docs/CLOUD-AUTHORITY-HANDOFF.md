@@ -142,19 +142,29 @@ leaves local projection rebinding to a recipient-owned repository step.
 ## Historical Scope-Expansion Lineage Migration
 
 The ordinary handoff validator remains strict: a v2 epoch-1 claim must have no
-predecessor. One repository-owned migration admits only the historical shape
-created when an active dirty lane expanded its declared scope through a waiting
-successor. It does not rewrite that claim or make the shape generally valid.
+predecessor. One repository-owned migration admits only either of two complete
+historical shapes created when an active dirty lane or an authorized
+reviewed-handoff recovery expanded its declared scope through a waiting
+successor. It does not rewrite either claim or make predecessor-bearing epoch-1
+claims generally valid.
 
 `scripts/cloud-authority-scope-expansion-lineage-migration.mjs` proves all of
 the following before it can call this controller:
 
 - one valid append-only v2 ledger and an exact current status digest
 - one epoch-1 target genesis whose predecessor is the earlier source claim
-- a strict source-scope subset with the same actor, device, session,
-  repository, base, and initial lane revision
-- a `superseded` source retirement whose bytes, checks, and handoff digests are
-  recomputed from the lane admission's portable plan receipt
+- a strict source-scope subset with the same actor, device, repository, base,
+  and initial lane revision
+- either the active-dirty identity pair (same session, distinct work item) and
+  its portable-plan retirement digests, or the reviewed-recovery identity pair
+  (distinct authorized successor session, same work item) and retirement
+  digests recomputed from its exact source-retired operation key
+- a content-bound historical-variant name in the migration plan; mixed identity
+  and retirement-receipt variants fail closed
+- when protected `main` refreshes the pull request after review, an exact
+  protected-main refresh receipt joining the reviewed head, delivery head, and
+  main parent; local review identity stays on the reviewed head while remote and
+  pull-request parity stays on the delivery head
 - exact clean review-lane, owner, pull-request, manifest, authority, and cloud
   projection parity, with no competing overlapping claim
 
@@ -164,11 +174,23 @@ process-local authorization and admission bound to the exact reclaim execution
 intent, current claim transition, local authority, and ledger revision. Their
 identity lives only in module-private weak registries; serialization, property
 copying, and symbol reflection cannot reconstruct either capability.
-The existing handoff controller creates a normal epoch-2 successor, retires the
-historical claim through the standard root operation, restores the unchanged
-review projection, and persists it through repository-owned APIs. A rerun
-verifies and returns the same successor as `already-migrated`; it never creates
-epoch 3 for the same plan.
+For a reviewed historical claim, the existing handoff controller creates a
+normal epoch-2 successor, retires the historical claim through the standard
+root operation, restores the unchanged review projection, and persists it
+through repository-owned APIs. When the authorized plan instead ends at the
+exact integrated child of the local reviewed transition, the controller uses
+the already-validated predecessor capability to recover that same claim as
+epoch 1. It does not mint a successor or replace the immutable integration
+receipt. Post-recovery verification keeps the exact local and remote reviewed
+projection as historical evidence, requires it to be the integrated
+transition's immediate parent, and proves the current cloud claim preserves
+the immutable integration evidence. A rerun returns `already-migrated` while
+that recovered epoch-1 claim remains live. If the same verified claim expires
+again, the migration reissues its process-local lineage admission against the
+current dormant transition and invokes the repository-owned integrated-replay
+recovery again. The claim ID, epoch, predecessor, and immutable integration
+receipt remain unchanged; no generic reclaim or extra epoch is created. An
+epoch-2 successor remains an idempotent `already-migrated` result.
 
 This migration is reclaim-only. The execution session, successor session, and
 successor device must equal the exact preserved lease session and device before
@@ -192,6 +214,11 @@ exact registered branch worktree, and uses only explicit protected-main and
 agent-branch fetch refspecs. JSON failures redact every GitHub token family,
 credentialed URLs, and local paths, suppress child-process stderr, and cap the
 public diagnostic length.
+
+Authoritative GitHub contents and blob reads use the repository's bounded 64
+MiB text-command envelope. This admits the provider ledger response above
+Node's default child-output limit while preserving the contents-API/blob
+fallback and a finite subprocess memory bound.
 
 Plan first, without mutation:
 

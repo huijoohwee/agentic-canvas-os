@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5565,
-  "headDigest": "f5bac9a4b96facd36d4a13a292eb18df377fee98712b2f46bc0646f55e0206ac",
+  "sequence": 5566,
+  "headDigest": "dbbe49cd58a6b4b90877a7a9071325487016329e0a562e504d499e487f4bfe43",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -282711,6 +282711,65 @@
       },
       "claimDigest": "b9606ff933832a4b870b419a9f296dded3ba5a88a761bc92f15e40def467224a",
       "digest": "f5bac9a4b96facd36d4a13a292eb18df377fee98712b2f46bc0646f55e0206ac"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5566,
+      "parentDigest": "f5bac9a4b96facd36d4a13a292eb18df377fee98712b2f46bc0646f55e0206ac",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "fad37df6c8f86d623dd345706ca86f4b147fe6dcf4c7f26036c7f569b5b5d1cd",
+      "idempotencyKey": "3695677e45300389037e5887bddbb73d5680690e25d3a3d76d70cf36ddcf5df0",
+      "requestDigest": "9523323b1d8924992680a78c273a9d092c4b37b0525df1a7bd860f36cc2c90e4",
+      "evaluationTime": "2026-08-27T05:47:38.000Z",
+      "claimCore": {
+        "claimId": "fad37df6c8f86d623dd345706ca86f4b147fe6dcf4c7f26036c7f569b5b5d1cd",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b94f39b8cd805c84798682e0d9384f6c810bac9c813f4ff6397db373fc856f8c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:697698141fd55b31574f9fd9b120d9902af74f792aac9e56e9dcf872df8f13cb",
+        "canonicalBaseRevision": "6b0f9a598d17a3ec693e9bce2ed5858fab40f368",
+        "declaredWriteScope": [
+          "path:__tests__/helpers/planned-dirty-admission-recovery-fixtures.mjs",
+          "path:__tests__/planned-dirty-admission-recovery.test.mjs",
+          "path:__tests__/retired-abandoned-owned-dirt-successor-recovery.test.mjs",
+          "path:docs/PLANNED-DIRTY-ADMISSION-RECOVERY.md",
+          "path:docs/RETIRED-ABANDONED-OWNED-DIRT-SUCCESSOR-RECOVERY.md",
+          "path:scripts/planned-dirty-admission-recovery-cloud-frame.mjs",
+          "path:scripts/planned-dirty-admission-recovery-evidence.mjs",
+          "path:scripts/planned-dirty-admission-recovery-repository-adapter.mjs",
+          "path:scripts/planned-dirty-admission-recovery-repository-support.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-evidence.mjs",
+          "semantic:recovery-controller-target-path-order"
+        ],
+        "writeSetDigest": "17ba9eccfc0e1783809746d02fb1052664889ebb3001e7fd7539501023bc768d",
+        "laneRevision": "1093aec8f23ba2b63fd2afcc2e4403db2735c1cd",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-27T05:59:13.000Z",
+        "evidenceDigest": "474a6f7ddc339a034b7c97cae8a2fc53867a6f4d3c9926a7084c0e83b71c6072",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBKbq2A",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "1093aec8f23ba2b63fd2afcc2e4403db2735c1cd",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBKbq2A",
+          "focusedEvidenceDigest": "474a6f7ddc339a034b7c97cae8a2fc53867a6f4d3c9926a7084c0e83b71c6072",
+          "dependencyClosureDigest": "88546f4a4ef6a8de01f54dd9e6b06de3ebbb5b4f715369d7e334b29fd706fade",
+          "namedChecksDigest": "783c27a5b80842573927b9d765fb37e7299a6cd64015480ed58f1a0bb1b80c52",
+          "handoffEvidenceDigest": "5e3bb3d37afd5a13c0dc075b54feac62ac1e5caa2db4ebdf0fc6135d49fb5155",
+          "operatorDecisionDigest": "854105198ba09433f1fa5d96f714b011708b2aa6d940a1531b2847335bb9e8c9",
+          "integrationIntentDigest": "596092490054f90cbbb4e9bff3b929e4b6b220806bfd363fbce2a06317a83f25",
+          "integratedAt": "2026-08-27T05:47:38.000Z"
+        }
+      },
+      "claimDigest": "c71f4759335873807209b3d5015ca17b6c671c1d93aa4f558be6d013d6ad3b88",
+      "digest": "dbbe49cd58a6b4b90877a7a9071325487016329e0a562e504d499e487f4bfe43"
     }
   ]
 }

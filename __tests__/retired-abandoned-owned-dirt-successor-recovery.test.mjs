@@ -68,6 +68,8 @@ import {
 
 const hex = value => digestValue(value);
 const sha = value => hex(value).slice(0, 40);
+const comparePaths = (left, right) => Buffer.compare(Buffer.from(left, "utf8"),
+  Buffer.from(right, "utf8"));
 const SOURCE_PATHS = ["src/owned"];
 const TARGET_PATHS = ["src/new-runtime", ...SOURCE_PATHS];
 
@@ -161,6 +163,23 @@ test("seals deterministic current-base reanchor without changing authored overla
   assert.throws(() => evidenceFixture({ dirtyOverlapPaths: [] }), /dirty-overlap/u);
   assert.throws(() => evidenceFixture({ sourceFenceParentSha: sha("wrong-parent") }),
     /empty coordination fence/u);
+});
+
+test("normalizes every reanchor path collection in unsigned UTF-8 byte order", () => {
+  const orderingPaths = [
+    "z.txt", "\uE000.txt", "😀.txt", "__smoke__/proof.mjs",
+    ".github/workflows/proof.yml", "Alpha.txt", "alpha.txt",
+  ];
+  const evidence = evidenceFixture({ orderingPaths });
+  const expected = [...new Set([...orderingPaths, "docs/protected-main.md",
+    "src/new-runtime/new.mjs"])].sort(comparePaths);
+  const dispositionPaths = evidence.reanchor.dispositions.map(item => item.path);
+  assert.deepEqual(dispositionPaths, expected);
+  assert.equal(evidence.reanchor.dispositionCount, expected.length);
+  assert.equal(new Set(dispositionPaths).size, dispositionPaths.length);
+  assert.deepEqual(evidence.targetProtectedMain.changedPaths, expected);
+  assert.deepEqual(evidence.reanchor.targetDirt.entries.map(item => item.path),
+    ["src/new-runtime/new.mjs"]);
 });
 
 test("rejects live source, successor, and strict-superset overlap", () => {
@@ -681,6 +700,7 @@ function evidenceFixture({
   targetGeneration = 2,
   dirtyOverlapPaths = ["src/new-runtime/new.mjs"],
   sourceFenceParentSha = null,
+  orderingPaths = [],
 } = {}) {
   const source = sourceFixture();
   const targetManifest = manifest(targetPaths);
@@ -699,7 +719,8 @@ function evidenceFixture({
   const sourceTreeSha = sha("source-base-tree");
   const protectedMainSha = sha("protected-main");
   const protectedMainTreeSha = sha("protected-main-tree");
-  const changedPaths = ["docs/protected-main.md", "src/new-runtime/new.mjs"];
+  const changedPaths = [...orderingPaths, "docs/protected-main.md",
+    "src/new-runtime/new.mjs"].sort(comparePaths);
   const targetEpochProof = selectTargetCloudLeaseEpochProof({
     entries: source.entries,
     sourceProof,
@@ -716,7 +737,19 @@ function evidenceFixture({
   const baseDocBlob = sha("base-doc");
   const protectedDocBlob = sha("protected-doc");
   const protectedNewBlob = sha("protected-new-runtime");
-  const dispositions = [{
+  const protectedOnlyDispositions = orderingPaths.map(relativePath => ({
+    path: relativePath,
+    base: { mode: "100644", blob: sha(`base:${relativePath}`) },
+    protected: { mode: "100644", blob: sha(`protected:${relativePath}`) },
+    sourceIndex: { mode: "100644", blob: sha(`base:${relativePath}`) },
+    sourceWorktree: { type: "file", mode: "100644", blob: sha(`base:${relativePath}`) },
+    targetIndex: { mode: "100644", blob: sha(`protected:${relativePath}`) },
+    targetWorktree: { type: "file", mode: "100644",
+      blob: sha(`protected:${relativePath}`) },
+    indexDisposition: "protected",
+    worktreeDisposition: "protected",
+  }));
+  const dispositions = [...protectedOnlyDispositions, {
     path: "docs/protected-main.md",
     base: { mode: "100644", blob: baseDocBlob },
     protected: { mode: "100644", blob: protectedDocBlob },
@@ -736,7 +769,7 @@ function evidenceFixture({
     targetWorktree: { type: "file", mode: "100644", blob: dirt.entries[0].worktreeBlob },
     indexDisposition: "protected",
     worktreeDisposition: "source",
-  }];
+  }].toReversed();
   const targetDirt = targetDirtFixture({
     headSha: coordination.commitSha,
     protectedBlob: protectedNewBlob,
@@ -766,9 +799,9 @@ function evidenceFixture({
       localOriginMainSha: protectedMainSha,
       remoteMainSha: protectedMainSha,
       changedPaths,
-      changedPathsDigest: digestValue(changedPaths.toSorted()),
+      changedPathsDigest: digestValue(changedPaths),
       dirtyOverlapPaths,
-      dirtyOverlapPathsDigest: digestValue(dirtyOverlapPaths.toSorted()),
+      dirtyOverlapPathsDigest: digestValue(dirtyOverlapPaths.toSorted(comparePaths)),
     },
     reanchor: {
       coordination,

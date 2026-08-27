@@ -17,6 +17,8 @@ import { createPlannedDirtyAdmissionRecoveryStore }
   from "../scripts/planned-dirty-admission-recovery-store.mjs";
 import { parsePlannedDirtyAdmissionRecoveryArguments }
   from "../scripts/planned-dirty-admission-recovery.mjs";
+import { captureExactTargetProtectedMain }
+  from "../scripts/planned-dirty-admission-recovery-repository-support.mjs";
 import {
   controllerState,
   D,
@@ -57,6 +59,61 @@ test("plan seals one exact lost heartbeat and renews only the local projection",
   assert.equal(heartbeat.expiresAt, "2026-08-26T00:30:00.000Z");
   assert.equal(plan.evidence.targetCloudAuthority.transitionCounter, 3);
   assert.equal(plan.evidence.targetCloudAuthority.heartbeatCounter, 1);
+});
+
+test("fresh planning accepts only paired unrelated global ledger advancement", () => {
+  const evidence = evidenceFixture({ targetAuthorityChanges: {
+    ledgerRevision: "e".repeat(40), ledgerDigest: D("unrelated ledger advance"),
+  } });
+  assert.equal(evidence.heartbeatProjection.disposition, "unchanged");
+  assert.equal(evidence.heartbeatProjection.sourceTransitionCounter, 2);
+  assert.equal(evidence.heartbeatProjection.targetTransitionCounter, 2);
+  assert.equal(evidence.targetCloudAuthority.claimDigest,
+    evidence.sourceLease.cloudAuthority.claimDigest);
+  for (const targetAuthorityChanges of [
+    { ledgerRevision: "e".repeat(40) },
+    { ledgerDigest: D("partial unrelated ledger advance") },
+  ]) {
+    assert.throws(() => evidenceFixture({ targetAuthorityChanges }),
+      /unchanged heartbeat projection/u);
+  }
+});
+
+test("repository planning reconciles and verifies the current global ledger pair", () => {
+  const fixture = terminalAdapterFixture({ registrySource: true,
+    laterLedgerAdvance: true });
+  const evidence = fixture.adapter.readEvidence();
+  assert.equal(evidence.heartbeatProjection.disposition, "unchanged");
+  assert.equal(evidence.targetCloudAuthority.ledgerRevision, "e".repeat(40));
+  assert.equal(evidence.targetCloudAuthority.ledgerDigest,
+    D("later unrelated ledger advance"));
+});
+
+test("target protected main is independent of the protected controller revision", () => {
+  const evidence = evidenceFixture({ controllerHeadSha: "e".repeat(40),
+    targetProtectedMainSha: "f".repeat(40) });
+  assert.equal(evidence.protectedController.headSha, "e".repeat(40));
+  assert.equal(evidence.protectedMainAdvance.protectedMainSha, "f".repeat(40));
+});
+
+test("target protected main joins local, tracking, and authenticated remote refs", () => {
+  const expected = "f".repeat(40);
+  const calls = [];
+  const capture = values => captureExactTargetProtectedMain(argumentsList => {
+    const command = argumentsList.join(" ");
+    calls.push(command);
+    return values[command];
+  });
+  const values = {
+    "rev-parse refs/heads/main": expected,
+    "rev-parse refs/remotes/origin/main": expected,
+    "ls-remote --heads origin refs/heads/main": `${expected}\trefs/heads/main`,
+  };
+  assert.equal(capture(values), expected);
+  assert.deepEqual(calls, Object.keys(values));
+  assert.throws(() => capture({ ...values,
+    "rev-parse refs/remotes/origin/main": "e".repeat(40) }),
+  /exact target protected main/u);
 });
 
 test("one-ahead evidence rejects counter, expiry, digest, and immutable identity drift", () => {
@@ -166,7 +223,16 @@ test("repository adapter rejects a second heartbeat after the sealed plan", () =
     mutableRegistry: true, secondHeartbeat: true });
   assert.throws(() => fixture.adapter.projectRegistry({
     plan: fixture.plan, intent: fixture.intent,
-  }), /not one exact renewal ahead/u);
+  }), /sealed target cloud authority/u);
+  assert.equal(fixture.registry().revision, 1);
+});
+
+test("repository adapter rejects unrelated global ledger movement after planning", () => {
+  const fixture = terminalAdapterFixture({ registrySource: true,
+    mutableRegistry: true, laterLedgerAdvance: true });
+  assert.throws(() => fixture.adapter.projectRegistry({
+    plan: fixture.plan, intent: fixture.intent,
+  }), /sealed target cloud authority/u);
   assert.equal(fixture.registry().revision, 1);
 });
 

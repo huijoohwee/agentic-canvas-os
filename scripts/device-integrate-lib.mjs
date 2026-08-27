@@ -10,6 +10,7 @@ import {
   createDeviceDeliveryEvidence,
 } from "./device-delivery-evidence.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
   authorizeDeliveryAdmissionCloudAuthority,
   bindAdmissionCloudAuthority,
@@ -25,11 +26,16 @@ import {
 import { assertActivePublishPathsAdmitted } from "./active-publish-write-scope.mjs";
 import {
   captureActivePublishPreparedBaseRolloverProof,
+  deriveActivePublishPreparedBaseExpectation,
   normalizeActivePublishPreparedBaseRolloverProof,
 } from "./active-publish-prepared-base-rollover.mjs";
 import { continueActivePublishTaskAuthoritySuccessor }
   from "./active-publish-task-authority-successor.mjs";
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
+import {
+  parseWriterLeasePullRequestBody,
+  projectWriterLeasePullRequestMarker,
+} from "./writer-lease-lib.mjs";
 import {
   appendProtectedMainRefresh,
   normalizeProtectedHeadRefreshProjection,
@@ -58,6 +64,11 @@ export const CHANGE_MANIFEST_SCHEMA = "agentic-change-manifest/v1";
 export const DEVICE_INTEGRATION_RESULT_SCHEMA = "agentic-device-integration-result/v1";
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+const ACTIVE_PUBLISH_ORDINARY_BASE_EXPECTATION = Object.freeze({
+  kind: "ordinary",
+  historicalBaseSha: null,
+  requiredProtectedBaseSha: null,
+});
 const REPOSITORY_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/u;
 const MANAGED_COMMIT_SUBJECT_PATTERN =
   /^(feat|fix|docs|test|refactor|chore)\(([a-z0-9][a-z0-9._/-]*)\): (\S.*)$/u;
@@ -118,6 +129,7 @@ function integrateSessionUnfenced({
   controllerRoot,
   waitSeconds = 900,
   pollSeconds = 5,
+  environment = process.env,
   now = () => new Date(),
   sleep = defaultSleep,
   verifyCloudAuthority = verifyCloudDeliveryAuthority,
@@ -162,7 +174,7 @@ function integrateSessionUnfenced({
   // Keep the lease active so claim() retains ownership. Cooperative device entrypoints must
   // serialize; only integrate resumes a prepared intent, and it cannot publish before final CAS.
   if (lease.status === "active" && activePublishIntent?.status === "prepared") {
-    publishActiveWithSuccessorRecovery({
+    const preparedPublish = publishActiveWithSuccessorRecovery({
       branch,
       lease,
       leaseStore,
@@ -178,12 +190,51 @@ function integrateSessionUnfenced({
       invokeCloudSuccessor,
       verifyCloudSuccessor,
       casActiveLeaseProjection,
+      environment,
       waitSeconds,
       pollSeconds,
       now,
       sleep,
     });
     lease = leaseStore.read(branch);
+    if (preparedPublish?.schema === ACTIVE_PUBLISH_PREPARED_SUCCESSOR_PROJECTION_SCHEMA) {
+      const refreshSubject = requirePreparedActivePublishSuccessorProjection({
+        result: preparedPublish,
+        lease,
+        gitText,
+      });
+      refreshTaskBranchFromMain({
+        repo,
+        gitText,
+        run,
+        runText,
+        squashSubject: refreshSubject,
+      });
+      lease = leaseStore.read(branch);
+      publishActiveWithSuccessorRecovery({
+        branch,
+        lease,
+        leaseStore,
+        sessionId,
+        gitText,
+        ghText,
+        run,
+        publishTask,
+        refreshActiveCloudSuccessor,
+        bindActiveCloudSuccessor,
+        verifyActiveCloudSuccessor,
+        inspectCloudStatus,
+        invokeCloudSuccessor,
+        verifyCloudSuccessor,
+        casActiveLeaseProjection,
+        environment,
+        waitSeconds,
+        pollSeconds,
+        now,
+        sleep,
+      });
+      lease = leaseStore.read(branch);
+    }
   } else if (lease.status === "active") {
     lease = renewIntegrationAuthority({
       branch, lease, leaseStore, sessionId, gitText, renewActiveAuthority,
@@ -221,6 +272,7 @@ function integrateSessionUnfenced({
       invokeCloudSuccessor,
       verifyCloudSuccessor,
       casActiveLeaseProjection,
+      environment,
       waitSeconds,
       pollSeconds,
       now,
@@ -1198,8 +1250,18 @@ function publishActiveWithSuccessorRecovery({
   branch, lease, leaseStore, sessionId, gitText, ghText, run, publishTask,
   refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
   inspectCloudStatus, invokeCloudSuccessor,
-  verifyCloudSuccessor, casActiveLeaseProjection, waitSeconds, pollSeconds, now, sleep,
+  verifyCloudSuccessor, casActiveLeaseProjection, environment,
+  waitSeconds, pollSeconds, now, sleep,
 }) {
+  const activePublishInspectCloudStatus = fenceActivePublishCloudChildEnvironment({
+    invoke: inspectCloudStatus, environment,
+  });
+  const activePublishInvokeCloudSuccessor = fenceActivePublishCloudChildEnvironment({
+    invoke: invokeCloudSuccessor, environment,
+  });
+  const activePublishVerifyCloudSuccessor = fenceActivePublishCloudChildEnvironment({
+    invoke: verifyCloudSuccessor, environment,
+  });
   let preparedIntent = lease.activePublishSuccessorIntent
     ? normalizeActivePublishSuccessorIntent(lease.activePublishSuccessorIntent)
     : null;
@@ -1209,9 +1271,10 @@ function publishActiveWithSuccessorRecovery({
   if (!isActivePublishSuccessorCandidate(lease)) return publishTask();
   let sourceLeaseDigest = digestValue(lease);
   const headSha = requireSha(gitText(["rev-parse", "HEAD"]).trim(), "active publish HEAD");
+  const subjectExpectation = activePublishBaseExpectation(preparedIntent);
   let synchronized = readExactActivePublishSubject({
     branch, lease, headSha, gitText, ghText,
-    allowDivergentHead: Boolean(preparedIntent),
+    expectation: subjectExpectation,
   });
   if (preparedIntent?.status === "prepared" && !synchronized) {
     throw new Error(
@@ -1221,10 +1284,11 @@ function publishActiveWithSuccessorRecovery({
   let prevalidatedStatus = null;
   if (preparedIntent?.status === "prepared" && synchronized &&
       (preparedIntent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 ||
-        preparedIntent.targetCanonicalBaseSha !== synchronized.canonicalBaseSha)) {
+        preparedIntent.targetCanonicalBaseSha !== synchronized.protectedBaseSha)) {
     const rollover = reconcilePreparedActivePublishBaseAdvance({
       branch, lease, leaseStore, sourceLeaseDigest, intent: preparedIntent,
-      headSha, subject: synchronized, gitText, ghText, run, inspectCloudStatus,
+      headSha, subject: synchronized, gitText, ghText, run,
+      inspectCloudStatus: activePublishInspectCloudStatus,
       casActiveLeaseProjection, now,
     });
     lease = rollover.lease;
@@ -1234,13 +1298,26 @@ function publishActiveWithSuccessorRecovery({
     sourceLeaseDigest = digestValue(lease);
   }
   if (synchronized) {
-    refreshActivePublishSuccessor({
+    const projected = refreshActivePublishSuccessor({
       branch, lease, leaseStore, sessionId, headSha, subject: synchronized, gitText, ghText,
       refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
-      inspectCloudStatus, invokeCloudSuccessor,
-      verifyCloudSuccessor, casActiveLeaseProjection, sourceLeaseDigest,
+      inspectCloudStatus: activePublishInspectCloudStatus,
+      invokeCloudSuccessor: activePublishInvokeCloudSuccessor,
+      verifyCloudSuccessor: activePublishVerifyCloudSuccessor,
+      casActiveLeaseProjection, sourceLeaseDigest,
       prevalidatedStatus, now,
     });
+    if (preparedIntent?.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 && projected) {
+      const projectedLease = projected.lease || leaseStore.read(branch);
+      return Object.freeze({
+        schema: ACTIVE_PUBLISH_PREPARED_SUCCESSOR_PROJECTION_SCHEMA,
+        sourceClaimId: preparedIntent.sourceClaimId,
+        successorClaimId: requiredIntentDigest(projectedLease?.cloudAuthority?.claimId),
+        canonicalBaseSha: preparedIntent.targetCanonicalBaseSha,
+        headSha: preparedIntent.targetHeadSha,
+        reviewRequestId: preparedIntent.sourceReviewRequestId,
+      });
+    }
   }
   try {
     publishTask();
@@ -1254,12 +1331,49 @@ function publishActiveWithSuccessorRecovery({
     refreshActivePublishSuccessor({
       branch, lease, leaseStore, sessionId, headSha, subject, gitText, ghText,
       refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
-      inspectCloudStatus, invokeCloudSuccessor,
-      verifyCloudSuccessor, casActiveLeaseProjection, sourceLeaseDigest,
+      inspectCloudStatus: activePublishInspectCloudStatus,
+      invokeCloudSuccessor: activePublishInvokeCloudSuccessor,
+      verifyCloudSuccessor: activePublishVerifyCloudSuccessor,
+      casActiveLeaseProjection, sourceLeaseDigest,
       now,
     });
     publishTask();
   }
+}
+
+function requirePreparedActivePublishSuccessorProjection({ result, lease, gitText }) {
+  const exact = result?.schema === ACTIVE_PUBLISH_PREPARED_SUCCESSOR_PROJECTION_SCHEMA &&
+    lease?.status === "active" && lease.activePublishSuccessorIntent === null &&
+    lease.cloudAuthority?.state === "active" &&
+    lease.cloudAuthority.claimId === result.successorClaimId &&
+    lease.cloudAuthority.claimId !== result.sourceClaimId &&
+    lease.cloudAuthority.canonicalBaseSha === result.canonicalBaseSha &&
+    lease.cloudAuthority.laneRevision === result.headSha &&
+    lease.cloudAuthority.reviewRequestId === result.reviewRequestId &&
+    lease.baseSha === result.canonicalBaseSha && lease.fenceSha === result.headSha &&
+    gitText(["rev-parse", "HEAD"]).trim() === result.headSha &&
+    !gitText(["status", "--porcelain"]).trim();
+  if (!exact) {
+    throw new Error(
+      "Prepared active publish successor projection drifted before protected-main refresh.",
+    );
+  }
+  return requireProtectedSquashSubject(lease.integration?.commitMessage, {
+    label: "Prepared active publish refresh subject",
+  });
+}
+
+function fenceActivePublishCloudChildEnvironment({ invoke, environment }) {
+  const sanitized = { ...(environment || {}) };
+  for (const key of Object.keys(sanitized)) {
+    if (key.startsWith("AGENTIC_CLOUD_")) delete sanitized[key];
+  }
+  for (const key of [
+    "AGENTIC_TARGET_REPOSITORY",
+    "AGENTIC_DEVICE_ID",
+    "AGENTIC_SESSION_ID",
+  ]) delete sanitized[key];
+  return input => invoke({ ...input, environment: { ...sanitized } });
 }
 
 function isActivePublishSuccessorCandidate(lease) {
@@ -1269,12 +1383,25 @@ function isActivePublishSuccessorCandidate(lease) {
     lease.cloudAuthority.state === "active" && Boolean(lease.cloudAuthority.reviewRequestId);
 }
 
+function activePublishBaseExpectation(preparedIntent = null) {
+  if (!preparedIntent) return ACTIVE_PUBLISH_ORDINARY_BASE_EXPECTATION;
+  const normalized = normalizeActivePublishSuccessorIntent(preparedIntent);
+  const expectation = deriveActivePublishPreparedBaseExpectation(normalized);
+  if (normalized.schema !== ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2) return expectation;
+  return Object.freeze({
+    ...expectation,
+    requiredProtectedBaseSha: null,
+    sealedProtectedBaseSha: normalized.targetCanonicalBaseSha,
+  });
+}
+
 function readExactActivePublishSubject({
-  branch, lease, headSha, gitText, ghText, allowDivergentHead = false,
+  branch, lease, headSha, gitText, ghText,
+  expectation = ACTIVE_PUBLISH_ORDINARY_BASE_EXPECTATION,
 }) {
   const pullRequest = JSON.parse(ghText([
     "pr", "view", lease.pullRequestUrl, "--json",
-    "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository",
+    "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository,body",
   ]));
   if (pullRequest.url !== lease.pullRequestUrl || pullRequest.state !== "OPEN" ||
       pullRequest.isDraft !== true || pullRequest.baseRefName !== "main" ||
@@ -1293,21 +1420,44 @@ function readExactActivePublishSubject({
     return null;
   }
   const remoteHeadSha = remote.get(`refs/heads/${branch}`) || null;
-  const remoteBaseSha = remote.get("refs/heads/main") || null;
-  if (!remoteHeadSha || !remoteBaseSha) return null;
-  if (remoteBaseSha !== pullRequest.baseRefOid) {
-    try {
-      gitText(["merge-base", "--is-ancestor", pullRequest.baseRefOid, remoteBaseSha]);
-    } catch {
-      throw new Error("Active publish successor pull-request base diverged from the fetched canonical head.");
+  const protectedBaseSha = remote.get("refs/heads/main") || null;
+  if (!remoteHeadSha || !protectedBaseSha) return null;
+  const pullRequestBaseSha = pullRequest.baseRefOid;
+  if (expectation.kind === "ordinary") {
+    if (pullRequestBaseSha !== protectedBaseSha) return null;
+  } else {
+    if (!["prepared-v1", "prepared-v2"].includes(expectation.kind) ||
+        !SHA_PATTERN.test(String(expectation.historicalBaseSha || "")) ||
+        (expectation.requiredProtectedBaseSha !== null &&
+          !SHA_PATTERN.test(String(expectation.requiredProtectedBaseSha || "")))) {
+      throw new Error("Active publish prepared-base expectation is malformed.");
     }
-    return null;
+    if (expectation.kind === "prepared-v2" &&
+        !SHA_PATTERN.test(String(expectation.sealedProtectedBaseSha || ""))) {
+      throw new Error("Active publish prepared-base expectation is malformed.");
+    }
+    if (expectation.requiredProtectedBaseSha &&
+        protectedBaseSha !== expectation.requiredProtectedBaseSha) {
+      throw new Error("Active publish prepared-base rollover protected head drifted.");
+    }
+    const permittedPullRequestBases = expectation.kind === "prepared-v2"
+      ? [
+        expectation.historicalBaseSha,
+        expectation.sealedProtectedBaseSha,
+        protectedBaseSha,
+      ]
+      : [expectation.historicalBaseSha, protectedBaseSha];
+    if (!permittedPullRequestBases.includes(pullRequestBaseSha)) {
+      throw new Error(
+        "Active publish prepared-base rollover pull-request base is outside the exact historical/protected set.",
+      );
+    }
   }
   if (remoteHeadSha !== headSha || pullRequest.headRefOid !== headSha) return null;
-  if (!allowDivergentHead) {
-    requireActivePublishBaseAncestor({ gitText, canonicalBaseSha: remoteBaseSha, headSha });
+  if (expectation.kind === "ordinary") {
+    requireActivePublishBaseAncestor({ gitText, canonicalBaseSha: protectedBaseSha, headSha });
   }
-  return Object.freeze({ pullRequest, canonicalBaseSha: pullRequest.baseRefOid });
+  return Object.freeze({ pullRequest, protectedBaseSha, pullRequestBaseSha });
 }
 
 function waitForExactActivePublishSubject({
@@ -1341,18 +1491,28 @@ function refreshActivePublishSuccessor({
   const source = lease.cloudAuthority;
   const admission = lease.admission;
   const hasPreparedIntent = lease.activePublishSuccessorIntent?.status === "prepared";
-  if (source.canonicalBaseSha === subject.canonicalBaseSha && !hasPreparedIntent) return null;
+  if (source.canonicalBaseSha === subject.protectedBaseSha && !hasPreparedIntent) return null;
   requireUnchangedActivePublishLease({ leaseStore, branch, sourceLeaseDigest, lease });
   const recordedIntent = lease.activePublishSuccessorIntent
     ? normalizeActivePublishSuccessorIntent(lease.activePublishSuccessorIntent)
     : null;
   const rolloverProof = recordedIntent?.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2
     ? requireActivePublishRolloverIntentProof({
-      intent: recordedIntent, admission, subject, headSha,
+      intent: recordedIntent,
+      admission,
+      subject: Object.freeze({
+        ...subject,
+        protectedBaseSha: recordedIntent.targetCanonicalBaseSha,
+      }),
+      headSha,
     })
     : null;
+  const successorBaseSha = rolloverProof?.protectedBaseSha || subject.protectedBaseSha;
+  const successorSubject = rolloverProof
+    ? Object.freeze({ ...subject, protectedBaseSha: successorBaseSha })
+    : subject;
   const paths = rolloverProof?.authoredPaths || splitNul(gitText([
-    "diff", "--name-only", "-z", `${subject.canonicalBaseSha}..${headSha}`, "--",
+    "diff", "--name-only", "-z", `${subject.protectedBaseSha}..${headSha}`, "--",
   ]));
   assertActivePublishPathsAdmitted({ paths, admission });
   const manifest = Object.freeze({
@@ -1364,13 +1524,15 @@ function refreshActivePublishSuccessor({
   if (!rolloverProof) {
     requireActivePublishBaseAncestor({
       gitText,
-      canonicalBaseSha: subject.canonicalBaseSha,
+      canonicalBaseSha: subject.protectedBaseSha,
       headSha,
     });
   }
   const status = prevalidatedStatus || inspectActivePublishCloudStatus({ source, inspectCloudStatus });
   let intent = recordedIntent?.status === "prepared"
-    ? requireActivePublishSuccessorIntent({ lease, source, admission, subject, headSha })
+    ? requireActivePublishSuccessorIntent({
+      lease, source, admission, subject: successorSubject, headSha,
+    })
     : null;
   if (!intent) {
     const predecessor = requireExactActivePublishClaim({ status, authority: source, admission });
@@ -1392,21 +1554,25 @@ function refreshActivePublishSuccessor({
     rolloverDisposition = requireActivePublishRolloverCloudDisposition({
       status, intent, source, admission,
     });
-    if (rolloverDisposition.predecessor &&
-        digestValue(rolloverDisposition.predecessor) !==
-          rolloverProof.sourceClaimProjectionDigest) {
-      throw new Error("Active publish prepared-base rollover source claim drifted before publication.");
+    if (rolloverDisposition.predecessor) {
+      requireActivePublishRolloverSourceProjectionDigest({
+        claim: rolloverDisposition.predecessor,
+        sealedDigest: rolloverProof.sourceClaimProjectionDigest,
+        message: "Active publish prepared-base rollover source claim drifted before publication.",
+      });
     }
   }
   if (!rolloverProof) {
     requireActivePublishBaseAncestor({
       gitText,
-      canonicalBaseSha: subject.canonicalBaseSha,
+      canonicalBaseSha: subject.protectedBaseSha,
       headSha,
     });
   }
   const successor = resolveActivePublishCloudSuccessor({
     status, intent, source, admission, lease, branch, headSha, sessionId,
+    rolloverPullRequestBaseSha: rolloverProof ? subject.pullRequestBaseSha : null,
+    rolloverPredecessor: rolloverDisposition?.predecessor || null,
     rolloverDerivative: rolloverDisposition?.derivative || null,
     refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
     inspectCloudStatus, invokeCloudSuccessor, verifyCloudSuccessor,
@@ -1418,22 +1584,26 @@ function refreshActivePublishSuccessor({
   const predecessor = { claimId: intent.sourceClaimId, workItemId: intent.sourceWorkItemId };
   requireExactActivePublishSuccessor({
     successor, postStatus, predecessor, source, admission, manifest,
-    canonicalBaseSha: subject.canonicalBaseSha, headSha, lease, sessionId,
+    canonicalBaseSha: successorBaseSha, headSha, lease, sessionId,
   });
   if (gitText(["rev-parse", "HEAD"]).trim() !== headSha) {
     throw new Error("Active publish HEAD changed before successor local projection.");
   }
   const revalidatedSubject = readExactActivePublishSubject({
     branch, lease, headSha, gitText, ghText,
-    allowDivergentHead: Boolean(rolloverProof),
+    expectation: activePublishBaseExpectation(
+      recordedIntent?.status === "prepared" ? recordedIntent : null,
+    ),
   });
-  if (!revalidatedSubject || revalidatedSubject.canonicalBaseSha !== subject.canonicalBaseSha ||
+  if (!revalidatedSubject || revalidatedSubject.protectedBaseSha !== subject.protectedBaseSha ||
       revalidatedSubject.pullRequest.id !== subject.pullRequest.id ||
       revalidatedSubject.pullRequest.url !== subject.pullRequest.url) {
     throw new Error("Active publish successor subject drifted before its local projection CAS.");
   }
   const current = leaseStore.read(branch);
-  requireActivePublishSuccessorIntent({ lease: current, source, admission, subject, headSha });
+  requireActivePublishSuccessorIntent({
+    lease: current, source, admission, subject: successorSubject, headSha,
+  });
   const completedAt = now().toISOString();
   if (Date.parse(successor.authority.expiresAt) <= Date.parse(completedAt)) {
     throw new Error("Active publish successor expired before its local projection CAS.");
@@ -1443,7 +1613,7 @@ function refreshActivePublishSuccessor({
   });
   const successorValues = {
     status: "active",
-    baseSha: subject.canonicalBaseSha,
+    baseSha: successorBaseSha,
     fenceSha: headSha,
     heartbeatAt: completedAt,
     expiresAt: successor.authority.expiresAt,
@@ -1486,14 +1656,30 @@ function inspectActivePublishCloudStatus({ source, inspectCloudStatus }) {
 
 function resolveActivePublishCloudSuccessor({
   status, intent, source, admission, lease, branch, headSha, sessionId,
+  rolloverPullRequestBaseSha = null,
+  rolloverPredecessor = null,
   rolloverDerivative = null,
   refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
   inspectCloudStatus, invokeCloudSuccessor, verifyCloudSuccessor,
 }) {
-  const exactInvoke = fenceActivePublishSuccessorClaimEpoch({
+  const exactInvoke = fenceActivePublishSuccessorCloudMutations({
     intent,
+    source,
+    expectedLedgerDigest: intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2
+      ? intent.rolloverProof.sourceLedgerDigest
+      : null,
     invoke: invokeCloudSuccessor,
   });
+  const resolvedRolloverPullRequestBaseSha =
+    intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2
+      ? requireSha(
+        rolloverPullRequestBaseSha,
+        "active publish rollover pull-request base",
+      )
+      : null;
+  const bindBySealedReviewIdentity =
+    intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 &&
+    resolvedRolloverPullRequestBaseSha !== intent.targetCanonicalBaseSha;
   const common = {
     ledgerRepository: source.ledgerRepository,
     targetRepository: source.targetRepository,
@@ -1501,7 +1687,8 @@ function resolveActivePublishCloudSuccessor({
     canonicalBaseSha: intent.targetCanonicalBaseSha,
     branch,
     headSha,
-    pullRequestNumber: intent.targetPullRequestNumber,
+    pullRequestNumber: bindBySealedReviewIdentity ? null : intent.targetPullRequestNumber,
+    reviewRequestId: bindBySealedReviewIdentity ? intent.sourceReviewRequestId : null,
     deviceId: lease.device,
     sessionId,
     workItemId: intent.sourceWorkItemId,
@@ -1512,7 +1699,8 @@ function resolveActivePublishCloudSuccessor({
   };
   let derivative = rolloverDerivative;
   if (!derivative) {
-    const predecessor = exactActivePublishClaim({ status, authority: source, admission });
+    const predecessor = rolloverPredecessor ||
+      exactActivePublishClaim({ status, authority: source, admission });
     if (predecessor) {
       const exactSource = predecessor.actorId === intent.sourceActorId &&
         predecessor.repositoryId === intent.sourceRepositoryId &&
@@ -1522,21 +1710,69 @@ function resolveActivePublishCloudSuccessor({
       if (!exactSource) {
         throw new Error("Active publish predecessor drifted from its prepared successor intent.");
       }
-      return refreshActiveCloudSuccessor(common);
+      return refreshActiveCloudSuccessor(rolloverPredecessor
+        ? { ...common, predecessorClaimId: intent.sourceClaimId }
+        : common);
     }
-    derivative = requireActivePublishDerivative({ status, intent, admission });
+    derivative = requireActivePublishDerivative({ status, intent, source, admission });
   }
-  if (derivative.state === "waiting-successor") return refreshActiveCloudSuccessor(common);
+  if (derivative.state === "waiting-successor") {
+    const namedRolloverLineage = rolloverDerivative &&
+      derivative.laneRevision === intent.targetHeadSha;
+    const replayCommon = intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 &&
+      rolloverDerivative
+      ? {
+        ...common,
+        activePublishRequiredReplayClaimId: derivative.claimId,
+        invoke: input => exactInvoke({
+          ...input,
+          activePublishRequiredReplayClaimId: derivative.claimId,
+        }),
+      }
+      : common;
+    return refreshActiveCloudSuccessor(namedRolloverLineage
+      ? { ...replayCommon, predecessorClaimId: derivative.predecessorClaimId }
+      : replayCommon);
+  }
+  if (intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 && rolloverDerivative) {
+    if (derivative.reviewRequestId) {
+      try {
+        replayActivePublishRolloverClaim({
+          common,
+          expectedClaimId: derivative.claimId,
+          predecessorClaimId: derivative.predecessorClaimId,
+          refreshActiveCloudSuccessor,
+        });
+      } catch (error) {
+        if (!isCallerSealedClaimParentMismatch(error)) throw error;
+        replayActivePublishRolloverClaim({
+          common,
+          expectedClaimId: derivative.claimId,
+          refreshActiveCloudSuccessor,
+        });
+      }
+    } else {
+      const namedRolloverLineage = derivative.laneRevision === intent.targetHeadSha;
+      replayActivePublishRolloverClaim({
+        common,
+        expectedClaimId: derivative.claimId,
+        predecessorClaimId: namedRolloverLineage
+          ? derivative.predecessorClaimId
+          : null,
+        refreshActiveCloudSuccessor,
+      });
+    }
+  }
   const authority = activePublishDerivativeAuthority({
     status, claim: derivative, source, admission, lease, sessionId,
   });
-  if (derivative.laneRevision === intent.targetCanonicalBaseSha) {
+  if (!derivative.reviewRequestId) {
     return bindActiveCloudSuccessor({
       authority,
       manifest: admission,
       branch,
       headSha,
-      pullRequestNumber: intent.targetPullRequestNumber,
+      pullRequestNumber: bindBySealedReviewIdentity ? null : intent.targetPullRequestNumber,
       reviewRequestId: intent.sourceReviewRequestId,
       deviceId: lease.device,
       sessionId,
@@ -1555,19 +1791,196 @@ function resolveActivePublishCloudSuccessor({
   });
 }
 
-function fenceActivePublishSuccessorClaimEpoch({ intent, invoke }) {
+function replayActivePublishRolloverClaim({
+  common, expectedClaimId, predecessorClaimId = null, refreshActiveCloudSuccessor,
+}) {
+  const replayComplete = new Error("Active publish rollover claim replay is complete.");
+  let replayed = false;
+  let stoppedAtReplay = false;
+  try {
+    refreshActiveCloudSuccessor({
+      ...common,
+      ...(predecessorClaimId ? { predecessorClaimId } : {}),
+      activePublishClaimReplayOnly: true,
+      invoke: input => {
+        if (input?.action !== "claim") {
+          throw new Error(
+            "Active publish rollover claim replay attempted a non-claim mutation.",
+          );
+        }
+        const actualPredecessorClaimId = input.request?.predecessorClaimId || null;
+        if (actualPredecessorClaimId !== predecessorClaimId) {
+          throw new Error(
+            "Active publish rollover claim replay drifted from its deterministic lineage.",
+          );
+        }
+        common.invoke({
+          ...input,
+          activePublishRequiredReplayClaimId: expectedClaimId,
+        });
+        replayed = true;
+        throw replayComplete;
+      },
+    });
+  } catch (error) {
+    if (error !== replayComplete) throw error;
+    stoppedAtReplay = true;
+  }
+  if (!replayed || !stoppedAtReplay) {
+    throw new Error(
+      "Active publish rollover claim replay returned without invoking its sealed claim.",
+    );
+  }
+}
+
+function isCallerSealedClaimParentMismatch(error) {
+  const message = String(error?.message || "");
+  return message === "Cloud collaboration claim failed: expectedLedgerDigest is stale" ||
+    message === "Cloud collaboration claim failed: " +
+      "Cloud collaboration claim failed: expectedLedgerDigest is stale";
+}
+
+function fenceActivePublishSuccessorCloudMutations({
+  intent, source, expectedLedgerDigest = null, invoke,
+}) {
+  const ledgerFence = expectedLedgerDigest
+    ? requiredIntentDigest(expectedLedgerDigest)
+    : null;
+  const sourceClaimFence = requiredIntentDigest(intent.sourceClaimDigest);
+  const sourceTransitionCounter = requiredPositiveInteger(intent.sourceTransitionCounter);
   return input => {
     if (input?.action === "claim" && input?.request?.leaseEpoch !== intent.targetLeaseEpoch) {
       throw new Error("Active publish successor claim epoch drifted from its durable intent.");
     }
-    return invoke(input);
+    if (input?.action === "retire" && input?.request?.claimId === intent.sourceClaimId) {
+      if (input.request.expectedFenceRevision !== sourceClaimFence ||
+          input.request.expectedTransitionCounter !== sourceTransitionCounter) {
+        throw new Error(
+          "Active publish successor source retirement fence drifted from its durable intent.",
+        );
+      }
+      return invoke(input);
+    }
+    if (input?.action !== "claim" || !ledgerFence) return invoke(input);
+    if (input.request.expectedLedgerDigest &&
+        input.request.expectedLedgerDigest !== ledgerFence) {
+      throw new Error("Active publish successor claim ledger fence drifted from its durable intent.");
+    }
+    const requiredReplayClaimId = input.activePublishRequiredReplayClaimId
+      ? requiredIntentDigest(input.activePublishRequiredReplayClaimId)
+      : null;
+    const { activePublishRequiredReplayClaimId: _requiredReplayClaimId, ...providerInput } = input;
+    const claimResult = invoke({
+      ...providerInput,
+      request: { ...input.request, expectedLedgerDigest: ledgerFence },
+    });
+    const waitingClaim = requireExactActivePublishRolloverWaitingClaim({
+      claimResult,
+      expectedLaneRevision: input.request.headSha,
+      intent,
+      requiredReplayClaimId,
+      source,
+    });
+    retireActivePublishRolloverSource({
+      intent,
+      ledgerRepository: input.ledgerRepository,
+      waitingClaim,
+      invoke,
+    });
+    return claimResult;
   };
+}
+
+function requireExactActivePublishRolloverWaitingClaim({
+  claimResult, expectedLaneRevision, intent, requiredReplayClaimId = null, source,
+}) {
+  const claim = claimResult?.claim;
+  const exact = claimResult?.schema === "agentic-cloud-collaboration-result/v1" &&
+    claimResult.ok === true && claimResult.action === "claim" &&
+    (!requiredReplayClaimId || claimResult.replayed === true) &&
+    (!requiredReplayClaimId || claim?.claimId === requiredReplayClaimId) &&
+    requiredIntentDigest(claim?.claimId) === claim.claimId &&
+    claimResult.claimDigest === claim.fenceRevision &&
+    claim.state === "waiting-successor" &&
+    claim.predecessorClaimId === intent.sourceClaimId &&
+    claim.actorId === intent.sourceActorId &&
+    claim.deviceId === normalizeActivePublishCloudOwner("device", source.deviceId) &&
+    claim.sessionId === normalizeActivePublishCloudOwner("session", source.sessionId) &&
+    claim.repositoryId === intent.sourceRepositoryId &&
+    claim.workItemId === intent.sourceWorkItemId &&
+    claim.canonicalBaseRevision === intent.targetCanonicalBaseSha &&
+    [intent.targetCanonicalBaseSha, intent.targetHeadSha].includes(expectedLaneRevision) &&
+    claim.laneRevision === expectedLaneRevision &&
+    claim.writeSetDigest === intent.writeSetDigest &&
+    claim.leaseEpoch === intent.targetLeaseEpoch && claim.transitionCounter === 1 &&
+    claim.reviewRequestId === null &&
+    requiredIntentDigest(claim.fenceRevision) === claim.fenceRevision;
+  if (!exact) {
+    throw new Error(
+      "Active publish rollover sealed claim did not return its exact original waiting projection.",
+    );
+  }
+  return claim;
+}
+
+function retireActivePublishRolloverSource({
+  intent, ledgerRepository, waitingClaim, invoke,
+}) {
+  const successionEvidence = {
+    schema: "agentic-legacy-review-successor-promotion/v1",
+    branch: intent.branch,
+    predecessorClaimId: intent.sourceClaimId,
+    successorClaimId: waitingClaim.claimId,
+    canonicalBaseSha: intent.targetCanonicalBaseSha,
+    manifestDigest: intent.manifestDigest,
+    writeSetDigest: intent.writeSetDigest,
+  };
+  const retirement = invoke({
+    action: "retire",
+    ledgerRepository,
+    request: {
+      targetRepository: intent.targetRepository,
+      claimId: intent.sourceClaimId,
+      expectedFenceRevision: intent.sourceClaimDigest,
+      expectedTransitionCounter: intent.sourceTransitionCounter,
+      reason: "superseded",
+      finalRevision: intent.sourceLaneRevision,
+      reviewRequestId: intent.sourceReviewRequestId,
+      bytesDigest: digestValue({ ...successionEvidence, operation: "retire-bytes" }),
+      namedChecksDigest: digestValue({ ...successionEvidence, operation: "retire-checks" }),
+      handoffEvidenceDigest: digestValue({ ...successionEvidence, operation: "retire-handoff" }),
+      integrationReceiptDigest: null,
+      deviceId: intent.sourceDeviceId,
+      sessionId: intent.sourceSessionId,
+      idempotencyKey: [
+        "legacy-review-supersede",
+        intent.sourceClaimId,
+        waitingClaim.claimId,
+        waitingClaim.fenceRevision,
+      ].join(":"),
+    },
+  });
+  const claim = retirement?.claim;
+  const exact = retirement?.schema === "agentic-cloud-collaboration-result/v1" &&
+    retirement.ok === true && retirement.action === "retire" &&
+    claim?.claimId === intent.sourceClaimId &&
+    projectRootState(claim.state) === "released" &&
+    claim.laneRevision === intent.sourceLaneRevision &&
+    claim.reviewRequestId === intent.sourceReviewRequestId &&
+    claim.transitionCounter === intent.sourceTransitionCounter + 1;
+  if (!exact) {
+    throw new Error(
+      "Active publish rollover did not retire the exact intent-sealed source transition.",
+    );
+  }
 }
 
 const ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1 =
   "agentic-active-publish-successor-intent/v1";
 const ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 =
   "agentic-active-publish-successor-intent/v2";
+const ACTIVE_PUBLISH_PREPARED_SUCCESSOR_PROJECTION_SCHEMA =
+  "agentic-active-publish-prepared-successor-projection/v1";
 const ACTIVE_PUBLISH_SUCCESSOR_INTENT_SCHEMA = ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1;
 const ACTIVE_PUBLISH_ROLLOVER_STABLE_FIELDS = Object.freeze([
   "status", "branch", "sourceLeaseDigest", "sourceStableLeaseDigest", "sourceClaimId",
@@ -1602,12 +2015,13 @@ function reconcilePreparedActivePublishBaseAdvance({
   if (currentIntent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1) {
     const historicalSubject = Object.freeze({
       pullRequest: subject.pullRequest,
-      canonicalBaseSha: currentIntent.targetCanonicalBaseSha,
+      protectedBaseSha: currentIntent.targetCanonicalBaseSha,
+      pullRequestBaseSha: subject.pullRequestBaseSha,
     });
     requireActivePublishSuccessorIntent({
       lease: currentLease, source, admission, subject: historicalSubject, headSha,
     });
-    if (currentIntent.targetCanonicalBaseSha === subject.canonicalBaseSha) {
+    if (currentIntent.targetCanonicalBaseSha === subject.protectedBaseSha) {
       throw new Error("Active publish prepared-base rollover requires a strict protected advance.");
     }
     const status = inspectActivePublishCloudStatus({ source, inspectCloudStatus });
@@ -1616,17 +2030,43 @@ function reconcilePreparedActivePublishBaseAdvance({
     });
     subject = requireActivePublishRolloverCommitObject({
       branch, lease: currentLease, headSha, subject, gitText, ghText, run,
+      expectation: activePublishBaseExpectation(currentIntent),
     });
     const rolloverProof = captureActivePublishPreparedBaseRolloverProof({
       sourceIntentDigest: currentIntent.intentDigest,
       historicalBaseSha: currentIntent.targetCanonicalBaseSha,
-      protectedBaseSha: subject.canonicalBaseSha,
+      protectedBaseSha: subject.protectedBaseSha,
       headSha,
       admission,
       sourceClaimId: currentIntent.sourceClaimId,
       sourceClaimProjectionDigest: digestValue(disposition.predecessor),
+      sourceLedgerDigest: status.ledgerDigest,
       gitText,
     });
+    const preCasSubject = readExactActivePublishSubject({
+      branch, lease: currentLease, headSha, gitText, ghText,
+      expectation: activePublishBaseExpectation(currentIntent),
+    });
+    if (!preCasSubject || preCasSubject.protectedBaseSha !== subject.protectedBaseSha ||
+        preCasSubject.pullRequest.id !== currentIntent.targetPullRequestId ||
+        preCasSubject.pullRequest.url !== currentIntent.targetPullRequestUrl) {
+      throw new Error("Active publish prepared-base rollover subject drifted before intent CAS.");
+    }
+    const preCasStatus = inspectActivePublishCloudStatus({ source, inspectCloudStatus });
+    const preCasDisposition = requireActivePublishRolloverCloudDisposition({
+      status: preCasStatus, intent: currentIntent, source, admission,
+    });
+    requireActivePublishRolloverSourceProjectionDigest({
+      claim: preCasDisposition.predecessor,
+      sealedDigest: rolloverProof.sourceClaimProjectionDigest,
+      message: "Active publish prepared-base rollover source claim drifted before intent CAS.",
+    });
+    if (preCasStatus.ledgerDigest !== rolloverProof.sourceLedgerDigest) {
+      throw new Error(
+        "Active publish prepared-base rollover source ledger drifted before intent CAS.",
+      );
+    }
+    subject = preCasSubject;
     const rolledOverIntent = createRolledOverActivePublishSuccessorIntent({
       intent: currentIntent, subject, rolloverProof, now,
     });
@@ -1642,16 +2082,37 @@ function reconcilePreparedActivePublishBaseAdvance({
       lease: currentLease, source, admission, subject, headSha,
     });
   } else {
-    currentIntent = requireActivePublishSuccessorIntent({
-      lease: currentLease, source, admission, subject, headSha,
-    });
     subject = requireActivePublishRolloverCommitObject({
       branch, lease: currentLease, headSha, subject, gitText, ghText, run,
+      expectation: activePublishBaseExpectation(currentIntent),
+    });
+    requireActivePublishCommitObject({
+      sha: currentIntent.targetCanonicalBaseSha,
+      gitText,
+      run,
+    });
+    requireActivePublishProtectedDescendant({
+      historicalBaseSha: currentIntent.supersededIntent.targetCanonicalBaseSha,
+      sealedProtectedBaseSha: currentIntent.targetCanonicalBaseSha,
+      liveProtectedBaseSha: subject.protectedBaseSha,
+      headSha,
+      gitText,
+    });
+    const sealedSubject = Object.freeze({
+      ...subject,
+      protectedBaseSha: currentIntent.targetCanonicalBaseSha,
+    });
+    currentIntent = requireActivePublishSuccessorIntent({
+      lease: currentLease, source, admission, subject: sealedSubject, headSha,
     });
   }
 
+  const sealedSubject = Object.freeze({
+    ...subject,
+    protectedBaseSha: currentIntent.targetCanonicalBaseSha,
+  });
   const proof = requireActivePublishRolloverIntentProof({
-    intent: currentIntent, admission, subject, headSha,
+    intent: currentIntent, admission, subject: sealedSubject, headSha,
   });
   requireUnchangedActivePublishLease({
     leaseStore,
@@ -1666,10 +2127,11 @@ function reconcilePreparedActivePublishBaseAdvance({
     throw new Error("Active publish HEAD changed after prepared-base rollover.");
   }
   const revalidatedSubject = readExactActivePublishSubject({
-    branch, lease: currentLease, headSha, gitText, ghText, allowDivergentHead: true,
+    branch, lease: currentLease, headSha, gitText, ghText,
+    expectation: activePublishBaseExpectation(currentIntent),
   });
   if (!revalidatedSubject ||
-      revalidatedSubject.canonicalBaseSha !== currentIntent.targetCanonicalBaseSha ||
+      revalidatedSubject.protectedBaseSha !== subject.protectedBaseSha ||
       revalidatedSubject.pullRequest.id !== currentIntent.targetPullRequestId ||
       revalidatedSubject.pullRequest.url !== currentIntent.targetPullRequestUrl) {
     throw new Error("Active publish prepared-base rollover subject drifted before cloud publication.");
@@ -1686,8 +2148,13 @@ function reconcilePreparedActivePublishBaseAdvance({
     admission,
     sourceClaimId: currentIntent.sourceClaimId,
     sourceClaimProjectionDigest: disposition.predecessor
-      ? digestValue(disposition.predecessor)
+      ? requireActivePublishRolloverSourceProjectionDigest({
+        claim: disposition.predecessor,
+        sealedDigest: proof.sourceClaimProjectionDigest,
+        message: "Active publish prepared-base rollover source claim drifted before cloud publication.",
+      })
       : proof.sourceClaimProjectionDigest,
+    sourceLedgerDigest: proof.sourceLedgerDigest,
     gitText,
   });
   if (recaptured.evidenceDigest !== proof.evidenceDigest) {
@@ -1696,44 +2163,77 @@ function reconcilePreparedActivePublishBaseAdvance({
   return Object.freeze({
     lease: currentLease,
     intent: currentIntent,
-    subject: revalidatedSubject,
+    subject: Object.freeze({
+      ...revalidatedSubject,
+      successorBaseSha: currentIntent.targetCanonicalBaseSha,
+    }),
     status,
   });
 }
 
-function requireActivePublishRolloverCommitObject({
-  branch, lease, headSha, subject, gitText, ghText, run,
-}) {
-  const protectedBaseSha = requireSha(
-    subject?.canonicalBaseSha,
-    "active publish prepared-base rollover protected base",
-  );
+function requireActivePublishCommitObject({ sha, gitText, run }) {
+  const commitSha = requireSha(sha, "active publish prepared-base commit");
   try {
-    gitText(["cat-file", "-e", `${protectedBaseSha}^{commit}`]);
+    gitText(["cat-file", "-e", `${commitSha}^{commit}`]);
   } catch {
     if (typeof run !== "function") {
-      throw new Error("Active publish prepared-base rollover cannot fetch its missing protected base.");
+      throw new Error("Active publish prepared-base rollover cannot fetch its missing commit.");
     }
     try {
       run("git", [
-        "fetch", "--no-tags", "--no-write-fetch-head", "origin", protectedBaseSha,
+        "fetch", "--no-tags", "--no-write-fetch-head", "origin", commitSha,
       ]);
-      gitText(["cat-file", "-e", `${protectedBaseSha}^{commit}`]);
+      gitText(["cat-file", "-e", `${commitSha}^{commit}`]);
     } catch (error) {
       throw new Error(
-        "Active publish prepared-base rollover could not materialize its exact protected-base object.",
+        "Active publish prepared-base rollover could not materialize its exact commit object.",
         { cause: error },
       );
     }
   }
+}
+
+function requireActivePublishProtectedDescendant({
+  historicalBaseSha, sealedProtectedBaseSha, liveProtectedBaseSha, headSha, gitText,
+}) {
+  const historical = requireSha(historicalBaseSha, "active publish historical base");
+  const sealed = requireSha(sealedProtectedBaseSha, "active publish sealed protected base");
+  const live = requireSha(liveProtectedBaseSha, "active publish live protected base");
+  if (live === sealed) return;
+  try {
+    gitText(["merge-base", "--is-ancestor", sealed, live]);
+  } catch (error) {
+    throw new Error(
+      "Active publish prepared-base rollover live protected head is not a descendant of its sealed base.",
+      { cause: error },
+    );
+  }
+  const mergeBases = String(gitText([
+    "merge-base", "--all", live, requireSha(headSha, "active publish head"),
+  ]) || "").trim().split(/\s+/u).filter(Boolean);
+  if (mergeBases.length !== 1 || mergeBases[0] !== historical) {
+    throw new Error(
+      "Active publish prepared-base rollover live protected head changed the exact historical merge base.",
+    );
+  }
+}
+
+function requireActivePublishRolloverCommitObject({
+  branch, lease, headSha, subject, gitText, ghText, run, expectation,
+}) {
+  const protectedBaseSha = requireSha(
+    subject?.protectedBaseSha,
+    "active publish prepared-base rollover protected base",
+  );
+  requireActivePublishCommitObject({ sha: protectedBaseSha, gitText, run });
   if (gitText(["status", "--porcelain"]).trim() ||
       gitText(["rev-parse", "HEAD"]).trim() !== headSha) {
     throw new Error("Active publish prepared-base rollover worktree drifted before proof capture.");
   }
   const revalidated = readExactActivePublishSubject({
-    branch, lease, headSha, gitText, ghText, allowDivergentHead: true,
+    branch, lease, headSha, gitText, ghText, expectation,
   });
-  if (!revalidated || revalidated.canonicalBaseSha !== protectedBaseSha ||
+  if (!revalidated || revalidated.protectedBaseSha !== protectedBaseSha ||
       revalidated.pullRequest.id !== subject.pullRequest.id ||
       revalidated.pullRequest.url !== subject.pullRequest.url) {
     throw new Error("Active publish prepared-base rollover protected base drifted before proof capture.");
@@ -1751,7 +2251,7 @@ function createRolledOverActivePublishSuccessorIntent({ intent, subject, rollove
   return sealActivePublishSuccessorIntent({
     ...sourceCore,
     schema: ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2,
-    targetCanonicalBaseSha: subject.canonicalBaseSha,
+    targetCanonicalBaseSha: subject.protectedBaseSha,
     supersededIntent: sourceIntent,
     rolloverProof,
     rolledOverAt: now().toISOString(),
@@ -1763,17 +2263,39 @@ function requireActivePublishRolloverIntentProof({ intent, admission, subject, h
     throw new Error("Active publish prepared-base rollover intent is missing.");
   }
   const proof = normalizeActivePublishPreparedBaseRolloverProof(intent.rolloverProof, { admission });
+  if (!proof.sourceLedgerDigest) {
+    throw new Error(
+      "Active publish prepared-base rollover proof lacks a sealed source ledger digest and requires operator recovery.",
+    );
+  }
   const exact = intent.status === "prepared" &&
     proof.sourceIntentDigest === intent.supersededIntent.intentDigest &&
     proof.historicalBaseSha === intent.supersededIntent.targetCanonicalBaseSha &&
     proof.protectedBaseSha === intent.targetCanonicalBaseSha &&
-    proof.protectedBaseSha === subject.canonicalBaseSha &&
+    proof.protectedBaseSha === subject.protectedBaseSha &&
     proof.headSha === intent.targetHeadSha && proof.headSha === headSha &&
     proof.sourceClaimId === intent.sourceClaimId;
   if (!exact) {
     throw new Error("Active publish prepared-base rollover proof drifted from its exact intent.");
   }
   return proof;
+}
+
+function requireActivePublishRolloverSourceProjectionDigest({
+  claim, sealedDigest, message,
+}) {
+  if (digestValue(claim) === sealedDigest) return sealedDigest;
+  if (claim?.state === "dormant-preserved" && claim.writeAuthority === false &&
+      claim.scopeReserved === true) {
+    const currentProjection = {
+      ...claim,
+      state: "current",
+      writeAuthority: true,
+      scopeReserved: true,
+    };
+    if (digestValue(currentProjection) === sealedDigest) return sealedDigest;
+  }
+  throw new Error(message);
 }
 
 function requireActivePublishRolloverCloudDisposition({ status, intent, source, admission }) {
@@ -1798,7 +2320,9 @@ function requireActivePublishRolloverCloudDisposition({ status, intent, source, 
       "Active publish prepared-base rollover found a historical-base derivative and requires operator recovery.",
     );
   }
-  const predecessor = exactActivePublishClaim({ status, authority: source, admission });
+  const predecessor = exactActivePublishClaim({
+    status, authority: source, admission, allowDormantPreserved: true,
+  });
   if (predecessor) {
     const exactSource = predecessor.actorId === intent.sourceActorId &&
       predecessor.repositoryId === intent.sourceRepositoryId &&
@@ -1819,7 +2343,19 @@ function requireActivePublishRolloverCloudDisposition({ status, intent, source, 
       "Active publish prepared-base rollover requires the exact source claim with no derivative.",
     );
   }
-  const derivative = requireActivePublishDerivative({ status, intent, admission });
+  const derivative = requireActivePublishDerivative({ status, intent, source, admission });
+  const downstream = status.claims.filter(claim =>
+    claim?.claimId !== derivative.claimId &&
+    (claim?.predecessorClaimId === derivative.claimId ||
+      (claim?.actorId === intent.sourceActorId &&
+        claim?.repositoryId === intent.sourceRepositoryId &&
+        claim?.workItemId === intent.sourceWorkItemId &&
+        claim?.writeSetDigest === intent.writeSetDigest &&
+        Number.isInteger(claim?.leaseEpoch) &&
+        claim.leaseEpoch > intent.targetLeaseEpoch)));
+  if (downstream.length > 0) {
+    throw new Error("Active publish prepared-base rollover has a downstream successor effect.");
+  }
   if (candidates.length !== 1 || candidates[0]?.claimId !== derivative.claimId) {
     throw new Error("Active publish prepared-base rollover has ambiguous successor effects.");
   }
@@ -1855,7 +2391,7 @@ function createActivePublishSuccessorIntent({
     sourceClaimIdentitySchema: predecessor.claimIdentitySchema,
     sourceDeviceId: lease.device,
     sourceSessionId: lease.sessionId,
-    targetCanonicalBaseSha: subject.canonicalBaseSha,
+    targetCanonicalBaseSha: subject.protectedBaseSha,
     targetHeadSha: headSha,
     targetPullRequestId: subject.pullRequest.id,
     targetPullRequestUrl: subject.pullRequest.url,
@@ -1878,7 +2414,9 @@ function createActivePublishSuccessorIntent({
 function requireActivePublishSuccessorIntent({ lease, source, admission, subject, headSha }) {
   const intent = normalizeActivePublishSuccessorIntent(lease.activePublishSuccessorIntent);
   const exact = intent.status === "prepared" && lease.status === "active" &&
-    intent.branch === lease.branch && intent.sourceStableLeaseDigest === activePublishSourceStableDigest(lease) &&
+    intent.branch === lease.branch && activePublishSourceStableDigestMatches({
+      intent, lease, subject,
+    }) &&
     intent.sourceClaimId === source.claimId && intent.sourceClaimDigest === source.claimDigest &&
     intent.sourceClaimLedgerRevision === source.claimLedgerRevision &&
     intent.sourceCanonicalBaseSha === source.canonicalBaseSha &&
@@ -1887,7 +2425,7 @@ function requireActivePublishSuccessorIntent({ lease, source, admission, subject
     intent.sourceReviewRequestId === source.reviewRequestId &&
     intent.sourceDeviceId === lease.device && intent.sourceSessionId === lease.sessionId &&
     intent.targetCanonicalBaseSha !== intent.sourceCanonicalBaseSha &&
-    intent.targetCanonicalBaseSha === subject.canonicalBaseSha && intent.targetHeadSha === headSha &&
+    intent.targetCanonicalBaseSha === subject.protectedBaseSha && intent.targetHeadSha === headSha &&
     intent.targetPullRequestId === subject.pullRequest.id &&
     intent.targetPullRequestUrl === subject.pullRequest.url &&
     intent.targetPullRequestNumber === pullRequestNumber(subject.pullRequest.url) &&
@@ -1996,7 +2534,7 @@ function sealActivePublishSuccessorIntent(value) {
   return normalizeActivePublishSuccessorIntent({ ...core, intentDigest: digestValue(core) });
 }
 
-function activePublishSourceStableDigest(lease) {
+function activePublishSourceStableLeaseProjection(lease) {
   const {
     activePublishSuccessorIntent: _intent,
     heartbeatAt: _heartbeatAt,
@@ -2004,24 +2542,89 @@ function activePublishSourceStableDigest(lease) {
     status: _status,
     ...stable
   } = lease;
-  return digestValue({ ...stable, status: "active" });
+  return { ...stable, status: "active" };
 }
 
-function requireActivePublishDerivative({ status, intent, admission }) {
+function withoutActivePublishLedgerObservation(value) {
+  if (!value?.cloudAuthority || typeof value.cloudAuthority !== "object") return value;
+  const {
+    ledgerRevision: _ledgerRevision,
+    ledgerDigest: _ledgerDigest,
+    ...cloudAuthority
+  } = value.cloudAuthority;
+  return { ...value, cloudAuthority };
+}
+
+function activePublishSourceStableDigest(lease) {
+  return digestValue(withoutActivePublishLedgerObservation(
+    activePublishSourceStableLeaseProjection(lease),
+  ));
+}
+
+function legacyActivePublishSourceStableDigest(lease) {
+  return digestValue(activePublishSourceStableLeaseProjection(lease));
+}
+
+function activePublishMarkerStableProjection(marker) {
+  const {
+    heartbeatAt: _heartbeatAt,
+    expiresAt: _expiresAt,
+    status: _status,
+    ...stable
+  } = marker;
+  return withoutActivePublishLedgerObservation({ ...stable, status: "active" });
+}
+
+function activePublishSourceStableDigestMatches({ intent, lease, subject }) {
+  const sealed = intent.sourceStableLeaseDigest;
+  if (sealed === activePublishSourceStableDigest(lease) ||
+      sealed === legacyActivePublishSourceStableDigest(lease)) return true;
+
+  let marker;
+  try {
+    marker = parseWriterLeasePullRequestBody(subject?.pullRequest?.body);
+  } catch {
+    return false;
+  }
+  if (!marker?.cloudAuthority ||
+      !SHA_PATTERN.test(String(marker.cloudAuthority.ledgerRevision || "")) ||
+      !DIGEST_PATTERN.test(String(marker.cloudAuthority.ledgerDigest || ""))) return false;
+  const currentMarker = projectWriterLeasePullRequestMarker(lease);
+  if (digestValue(activePublishMarkerStableProjection(marker)) !==
+      digestValue(activePublishMarkerStableProjection(currentMarker))) return false;
+
+  const reconstructed = {
+    ...lease,
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      ledgerRevision: marker.cloudAuthority.ledgerRevision,
+      ledgerDigest: marker.cloudAuthority.ledgerDigest,
+    },
+  };
+  return sealed === legacyActivePublishSourceStableDigest(reconstructed);
+}
+
+function requireActivePublishDerivative({ status, intent, source, admission }) {
   if (!isExactActivePublishStatus(status)) {
     throw new Error("Active publish successor status evidence is malformed.");
   }
   const derivatives = Array.isArray(status?.claims) ? status.claims.filter(claim =>
     claim?.claimId !== intent.sourceClaimId && claim?.predecessorClaimId === intent.sourceClaimId) : [];
   const claim = derivatives.length === 1 ? derivatives[0] : null;
+  const atUnboundRevision = claim?.laneRevision === intent.targetCanonicalBaseSha ||
+    (intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 &&
+      claim?.laneRevision === intent.targetHeadSha);
   const waiting = claim?.state === "waiting-successor" &&
-    claim.laneRevision === intent.targetCanonicalBaseSha && !claim.reviewRequestId;
-  const currentAtBase = ["active", "current"].includes(claim?.state) &&
-    claim.laneRevision === intent.targetCanonicalBaseSha && !claim.reviewRequestId;
+    atUnboundRevision && !claim.reviewRequestId;
+  const currentUnbound = ["active", "current"].includes(claim?.state) &&
+    atUnboundRevision && !claim.reviewRequestId;
   const currentBound = ["active", "current"].includes(claim?.state) &&
     claim.laneRevision === intent.targetHeadSha && claim.reviewRequestId === intent.sourceReviewRequestId;
-  const exact = claim && (waiting || currentAtBase || currentBound) &&
-    claim.actorId === intent.sourceActorId && claim.repositoryId === intent.sourceRepositoryId &&
+  const exact = claim && (waiting || currentUnbound || currentBound) &&
+    claim.actorId === intent.sourceActorId &&
+    claim.deviceId === normalizeActivePublishCloudOwner("device", source.deviceId) &&
+    claim.sessionId === normalizeActivePublishCloudOwner("session", source.sessionId) &&
+    claim.repositoryId === intent.sourceRepositoryId &&
     claim.workItemId === intent.sourceWorkItemId &&
     claim.entrySchema === intent.sourceEntrySchema &&
     claim.claimIdentitySchema === intent.sourceClaimIdentitySchema &&
@@ -2036,6 +2639,15 @@ function requireActivePublishDerivative({ status, intent, admission }) {
     Number.isInteger(claim.transitionCounter) && claim.transitionCounter > 0;
   if (!exact) throw new Error("Active publish successor intent has no exact resumable derivative claim.");
   return claim;
+}
+
+function normalizeActivePublishCloudOwner(namespace, value) {
+  const owner = requiredIntentText(value);
+  const prefix = `${namespace}:`;
+  if (owner.startsWith(prefix) && DIGEST_PATTERN.test(owner.slice(prefix.length))) {
+    return owner;
+  }
+  return pseudonymousIdentifier(namespace, owner);
 }
 
 function activePublishDerivativeAuthority({ status, claim, source, admission, lease, sessionId }) {
@@ -2124,13 +2736,18 @@ function requireExactActivePublishClaim({ status, authority, admission }) {
   return claim;
 }
 
-function exactActivePublishClaim({ status, authority, admission }) {
+function exactActivePublishClaim({
+  status, authority, admission, allowDormantPreserved = false,
+}) {
   const claim = exactStatusClaim(status, authority.claimId);
   const fallbackManifestDigest = digestValue({
     declaredWriteSet: admission.declaredWriteSet,
     writeSetDigest: admission.writeSetDigest,
   });
-  const exact = ["active", "current"].includes(claim?.state) &&
+  const current = ["active", "current"].includes(claim?.state);
+  const dormantPreserved = allowDormantPreserved && claim?.state === "dormant-preserved" &&
+    claim.writeAuthority === false && claim.scopeReserved === true;
+  const exact = (current || dormantPreserved) &&
     authority.writeSetDigest === admission.writeSetDigest &&
     sameValue(authority.cloudDeclaredWriteScope, admission.declaredWriteSet) &&
     [admission.manifestDigest, fallbackManifestDigest].includes(authority.manifestDigest) &&

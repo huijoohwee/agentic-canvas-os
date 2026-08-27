@@ -134,6 +134,158 @@ test("adapter retries a same-parent CAS conflict with a frozen server-time inten
   assert.equal(candidateLedgers.at(-1).entries[0].claimCore.expiresAt, candidateLedgers.at(-2).entries[0].claimCore.expiresAt);
   assert.notEqual(candidateLedgers.at(-1).entries[0].evaluationTime, candidateLedgers.at(-2).entries[0].evaluationTime);
 });
+test("adapter preserves ordinary dynamic claim CAS when the caller seal is absent or null", async () => {
+  for (const expectedLedgerDigest of [undefined, null]) {
+    const github = createFakeGitHub({ conflicts: [409] });
+    const input = claimInput({
+      idempotencyKey: `dynamic-claim-${expectedLedgerDigest === null ? "null" : "absent"}`,
+      ...(expectedLedgerDigest === null ? { expectedLedgerDigest } : {}),
+    });
+    const result = await createAdapter(github).execute("claim", input);
+    assert.equal(result.ok, true);
+    assert.equal(result.attempts, 2);
+    assert.equal(github.calls.filter(call => call.method === "PATCH").length, 2);
+  }
+});
+test("adapter rejects a sealed claim against a missing ledger without bootstrapping", async () => {
+  const github = createFakeGitHub();
+  await assert.rejects(
+    createAdapter(github).execute("claim", claimInput({
+      expectedLedgerDigest: "a".repeat(64),
+    })),
+    /expectedLedgerDigest is stale/u,
+  );
+  assert.equal(github.mutationCount(), 0);
+});
+test("adapter retries a sealed claim while a same-parent conflict leaves its seal current", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const sealed = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  github.queueConflict(409);
+  const patchesBefore = github.calls.filter(call => call.method === "PATCH").length;
+  const candidatesBefore = github.createdLedgerValues().length;
+  const result = await adapter.execute("claim",
+    successorClaimInput(predecessor, sealed, "sealed-same-parent-retry"));
+  assert.equal(result.ok, true);
+  assert.equal(result.attempts, 2);
+  assert.equal(github.calls.filter(call => call.method === "PATCH").length,
+    patchesBefore + 2);
+  const candidates = github.createdLedgerValues().slice(candidatesBefore);
+  assert.equal(candidates.length, 2);
+  assert.ok(candidates.every(ledger => ledger.entries.at(-1).parentDigest === sealed));
+});
+test("adapter does not rebase a sealed claim after a competing head wins its CAS", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const sealed = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  github.queueConflict(409, { advanceLedger: true });
+  const patchesBefore = github.calls.filter(call => call.method === "PATCH").length;
+  const candidatesBefore = github.createdLedgerValues().length;
+  await assert.rejects(
+    adapter.execute("claim",
+      successorClaimInput(predecessor, sealed, "sealed-competing-head")),
+    /expectedLedgerDigest is stale/u,
+  );
+  assert.equal(github.calls.filter(call => call.method === "PATCH").length,
+    patchesBefore + 1);
+  assert.equal(github.createdLedgerValues().length, candidatesBefore + 1);
+});
+test("adapter rejects a stale sealed claim before creating a ledger candidate", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const sealed = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  await adapter.execute("claim", claimInput({
+    workItemId: "disjoint sealed-fence peer",
+    declaredWriteScope: ["path:docs/disjoint-sealed-fence-peer.md"],
+    idempotencyKey: "disjoint-sealed-fence-peer",
+  }));
+  const writesBefore = github.mutationCount();
+  const candidatesBefore = github.createdLedgerValues().length;
+  await assert.rejects(
+    adapter.execute("claim", successorClaimInput(predecessor, sealed, "stale-sealed-successor")),
+    /expectedLedgerDigest is stale/u,
+  );
+  assert.equal(github.mutationCount(), writesBefore);
+  assert.equal(github.createdLedgerValues().length, candidatesBefore);
+});
+test("adapter replays an exact sealed claim after ledger and protected-head advance without writes", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const sealed = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  const input = successorClaimInput(predecessor, sealed, "sealed-successor-replay");
+  const claimed = await adapter.execute("claim", input);
+  const claimEntry = github.createdLedgerValues().at(-1).entries.at(-1);
+  assert.equal(claimEntry.parentDigest, sealed);
+  const later = await adapter.execute("claim", claimInput({
+    workItemId: "later disjoint claim",
+    declaredWriteScope: ["path:docs/later-disjoint-claim.md"],
+    idempotencyKey: "later-disjoint-claim",
+  }));
+  github.setMainRevision("5".repeat(40));
+  const writesBefore = github.mutationCount();
+  const replay = await adapter.execute("claim", input);
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.claimDigest, claimed.claimDigest);
+  assert.equal(replay.ledgerRevision, later.ledgerRevision);
+  assert.equal(github.mutationCount(), writesBefore);
+});
+test("adapter rejects an idempotent claim replay whose entry parent differs from its seal", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const originalSeal = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  const input = successorClaimInput(predecessor, originalSeal, "wrong-parent-replay");
+  await adapter.execute("claim", input);
+  const wrongSeal = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  const writesBefore = github.mutationCount();
+  await assert.rejects(
+    adapter.execute("claim", { ...input, expectedLedgerDigest: wrongSeal }),
+    /expectedLedgerDigest is stale/u,
+  );
+  assert.equal(github.mutationCount(), writesBefore);
+});
+test("adapter retains semantic and action idempotency checks for a parent-matched sealed replay", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const sealed = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  const input = successorClaimInput(predecessor, sealed, "sealed-semantic-conflict");
+  const claimed = await adapter.execute("claim", input);
+  const writesBefore = github.mutationCount();
+  await assert.rejects(
+    adapter.execute("claim", { ...input, laneRevision: pullHeadSha }),
+    /idempotencyKey was already used for a different transition/u,
+  );
+  await assert.rejects(
+    adapter.execute("continue", fencedInput(claimed, {
+      expectedTransitionCounter: 1,
+      mode: "projection",
+      laneRevision: claimed.claim.laneRevision,
+      idempotencyKey: input.idempotencyKey,
+    })),
+    /idempotencyKey was already used for a different transition/u,
+  );
+  assert.equal(github.mutationCount(), writesBefore);
+});
+test("adapter adopts a response-lost sealed claim only from its exact sealed parent", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const sealed = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  github.loseNextPatchResponse();
+  const patchesBefore = github.calls.filter(call => call.method === "PATCH").length;
+  const result = await adapter.execute("claim",
+    successorClaimInput(predecessor, sealed, "response-lost-sealed-successor"));
+  assert.equal(result.replayed, true);
+  assert.equal(result.attempts, 2);
+  assert.equal(github.calls.filter(call => call.method === "PATCH").length,
+    patchesBefore + 1);
+  assert.equal(github.createdLedgerValues().at(-1).entries.at(-1).parentDigest, sealed);
+});
 test("adapter replays relative-TTL intent across fresh process instances", async () => {
   const github = createFakeGitHub({ advanceSeconds: 1 });
   const input = claimInput({ idempotencyKey: "cross-process-replay" });
@@ -458,10 +610,19 @@ function fencedInput(result, overrides) {
     deviceId: "personal-device-name", sessionId: "private-chat-session", ...overrides,
   };
 }
+function successorClaimInput(predecessor, expectedLedgerDigest, idempotencyKey) {
+  return claimInput({
+    leaseEpoch: 2,
+    predecessorClaimId: predecessor.claim.claimId,
+    expectedLedgerDigest,
+    idempotencyKey,
+  });
+}
 function createFakeGitHub({
   conflicts = [], hiddenLedgerRefReadsAfterCreate = 0, advanceSeconds = 0,
   lostPatchResponses = 0, userStatus = 200, graphQlViewerStatus = 200,
   advanceMainOnConflict = false, advancePullOnConflict = false,
+  advanceLedgerOnConflict = false,
 } = {}) {
   const calls = [];
   let pullRequest = pullRequestValue();
@@ -482,8 +643,10 @@ function createFakeGitHub({
   const createdLedgers = [];
   let nextObject = 16;
   let conflictIndex = 0;
+  const conflictAdvancesLedger = conflicts.map(() => advanceLedgerOnConflict);
   let hiddenLedgerRefReads = 0;
   let lostResponses = 0;
+  let lostResponseLimit = lostPatchResponses;
   async function request({ method = "GET", path, body }) {
     calls.push({ method, path, body });
     const date = new Date(Date.parse("Thu, 30 Jul 2026 05:00:00 GMT") + calls.length * advanceSeconds * 1_000).toUTCString();
@@ -618,11 +781,13 @@ function createFakeGitHub({
     ) {
       if (conflictIndex < conflicts.length) {
         const status = conflicts[conflictIndex];
+        const advanceLedger = conflictAdvancesLedger[conflictIndex];
         conflictIndex += 1;
         if (advanceMainOnConflict) refs.set(`${targetRepository}:main`, "5".repeat(40));
         if (advancePullOnConflict) pullRequest = pullRequestValue({
           head: { ref: "agent/device/cloud-scope", sha: "5".repeat(40), repo: { full_name: targetRepository } },
         });
+        if (advanceLedger) advanceLedgerWithCompetingEntry(body.sha, conflictIndex);
         return response(status, { message: "Update is not a fast forward" }, date);
       }
       const key = `${ledgerRepository}:agentic/collaboration-ledger`;
@@ -632,7 +797,7 @@ function createFakeGitHub({
         return response(422, { message: "Update is not a fast forward" }, date);
       }
       refs.set(key, body.sha);
-      if (lostResponses < lostPatchResponses) {
+      if (lostResponses < lostResponseLimit) {
         lostResponses += 1;
         throw new Error("simulated lost update response");
       }
@@ -664,6 +829,16 @@ function createFakeGitHub({
     request,
     mutationCount: () => calls.filter((call) => call.method !== "GET").length,
     createdLedgerValues: () => createdLedgers,
+    queueConflict(status, { advanceLedger = false } = {}) {
+      conflicts.push(status);
+      conflictAdvancesLedger.push(advanceLedger);
+    },
+    loseNextPatchResponse() {
+      lostResponseLimit += 1;
+    },
+    setMainRevision(revision) {
+      refs.set(`${targetRepository}:main`, revision);
+    },
     setPullRequestValue(overrides = {}) {
       pullRequest = pullRequestValue(overrides);
     },
@@ -683,6 +858,33 @@ function createFakeGitHub({
       replaceLedgerContent(revision, `${JSON.stringify(value)}\n`);
     },
   };
+  function advanceLedgerWithCompetingEntry(candidateRevision, ordinal) {
+    const ledger = JSON.parse(ledgerContentForRevision(candidateRevision));
+    const candidateEntry = ledger.entries.at(-1);
+    const { digest: _digest, ...candidateDraft } = candidateEntry;
+    const competingDraft = {
+      ...candidateDraft,
+      idempotencyKey: digestValue(`competing-ledger-entry:${ordinal}`),
+      requestDigest: digestValue(`competing-ledger-request:${ordinal}`),
+    };
+    const competingEntry = { ...competingDraft, digest: digestValue(competingDraft) };
+    ledger.entries[ledger.entries.length - 1] = competingEntry;
+    ledger.headDigest = competingEntry.digest;
+    const blobSha = objectSha();
+    blobs.set(blobSha, `${JSON.stringify(ledger, null, 2)}\n`);
+    const directoryTreeSha = objectSha();
+    trees.set(directoryTreeSha, { entries: [{
+      path: "collaboration-ledger.json", mode: "100644", type: "blob", sha: blobSha,
+    }] });
+    const rootTreeSha = objectSha();
+    trees.set(rootTreeSha, { entries: [{
+      path: ".agentic", mode: "040000", type: "tree", sha: directoryTreeSha,
+    }] });
+    const commitSha = objectSha();
+    const key = `${ledgerRepository}:agentic/collaboration-ledger`;
+    commits.set(commitSha, { tree: rootTreeSha, parents: [refs.get(key)] });
+    refs.set(key, commitSha);
+  }
   function ledgerContentForRevision(revision) {
     const commit = commits.get(revision);
     const rootTree = commit ? trees.get(commit.tree) : null;

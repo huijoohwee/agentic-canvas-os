@@ -6,12 +6,49 @@ import {
 } from "./cloud-collaboration-primitives.mjs";
 import { assertActivePublishPathsAdmitted } from "./active-publish-write-scope.mjs";
 
-export const ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_SCHEMA =
+export const ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_V1_SCHEMA =
   "agentic-active-publish-prepared-base-rollover-proof/v1";
+export const ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_SCHEMA =
+  "agentic-active-publish-prepared-base-rollover-proof/v2";
 
+const ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1 =
+  "agentic-active-publish-successor-intent/v1";
+const ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 =
+  "agentic-active-publish-successor-intent/v2";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const MAX_CHANGED_PATHS = 256;
+
+export function deriveActivePublishPreparedBaseExpectation(intent) {
+  if (!intent || intent.status !== "prepared") {
+    throw new Error("Active publish prepared-base expectation requires a prepared intent.");
+  }
+  if (intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1) {
+    return Object.freeze({
+      kind: "prepared-v1",
+      historicalBaseSha: sha(intent.targetCanonicalBaseSha, "historical base"),
+      requiredProtectedBaseSha: null,
+    });
+  }
+  if (intent.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V2 &&
+      intent.supersededIntent?.schema === ACTIVE_PUBLISH_SUCCESSOR_INTENT_V1 &&
+      intent.supersededIntent.status === "prepared") {
+    const historicalBaseSha = sha(
+      intent.supersededIntent.targetCanonicalBaseSha,
+      "historical base",
+    );
+    const requiredProtectedBaseSha = sha(intent.targetCanonicalBaseSha, "protected base");
+    if (historicalBaseSha === requiredProtectedBaseSha) {
+      throw new Error("Active publish prepared-base expectation requires a strict protected advance.");
+    }
+    return Object.freeze({
+      kind: "prepared-v2",
+      historicalBaseSha,
+      requiredProtectedBaseSha,
+    });
+  }
+  throw new Error("Active publish prepared-base expectation requires an exact v1 or v2 intent.");
+}
 
 export function captureActivePublishPreparedBaseRolloverProof({
   sourceIntentDigest,
@@ -21,6 +58,7 @@ export function captureActivePublishPreparedBaseRolloverProof({
   admission,
   sourceClaimId,
   sourceClaimProjectionDigest,
+  sourceLedgerDigest,
   gitText,
 } = {}) {
   const sourceDigest = digest(sourceIntentDigest, "source intent");
@@ -60,6 +98,7 @@ export function captureActivePublishPreparedBaseRolloverProof({
     sourceClaimProjectionDigest,
     "source claim projection",
   );
+  const sourceLedger = digest(sourceLedgerDigest, "source ledger");
   const core = {
     schema: ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_SCHEMA,
     sourceIntentDigest: sourceDigest,
@@ -73,6 +112,7 @@ export function captureActivePublishPreparedBaseRolloverProof({
     protectedPathsDigest: digestValue(protectedPaths),
     sourceClaimId: sourceId,
     sourceClaimProjectionDigest: sourceProjectionDigest,
+    sourceLedgerDigest: sourceLedger,
     cloudDisposition: "exact-source-only",
     disposition: "disjoint-zero-effect",
   };
@@ -85,10 +125,16 @@ export function normalizeActivePublishPreparedBaseRolloverProof(value, {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Active publish prepared-base rollover proof is missing.");
   }
+  const isV1 = value.schema === ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_V1_SCHEMA;
+  const isV2 = value.schema === ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_SCHEMA;
+  if (!isV1 && !isV2) {
+    throw new Error("Active publish prepared-base rollover proof is invalid.");
+  }
   exactKeys(value, [
     "schema", "sourceIntentDigest", "historicalBaseSha", "protectedBaseSha", "headSha",
     "mergeBaseSha", "authoredPaths", "authoredPathsDigest", "protectedPaths",
     "protectedPathsDigest", "sourceClaimId", "sourceClaimProjectionDigest",
+    ...(isV2 ? ["sourceLedgerDigest"] : []),
     "cloudDisposition", "disposition", "evidenceDigest",
   ]);
   const authoredPaths = normalizedPaths(value.authoredPaths, "authored");
@@ -106,11 +152,11 @@ export function normalizeActivePublishPreparedBaseRolloverProof(value, {
     protectedPathsDigest: digest(value.protectedPathsDigest, "protected paths"),
     sourceClaimId: digest(value.sourceClaimId, "source claim"),
     sourceClaimProjectionDigest: digest(value.sourceClaimProjectionDigest, "source claim projection"),
+    ...(isV2 ? { sourceLedgerDigest: digest(value.sourceLedgerDigest, "source ledger") } : {}),
     cloudDisposition: value.cloudDisposition,
     disposition: value.disposition,
   };
-  const exact = core.schema === ACTIVE_PUBLISH_PREPARED_BASE_ROLLOVER_PROOF_SCHEMA &&
-    core.historicalBaseSha !== core.protectedBaseSha &&
+  const exact = core.historicalBaseSha !== core.protectedBaseSha &&
     core.mergeBaseSha === core.historicalBaseSha &&
     core.authoredPathsDigest === digestValue(authoredPaths) &&
     core.protectedPathsDigest === digestValue(protectedPaths) &&

@@ -2,7 +2,7 @@
 title: "Planned dirty admission recovery"
 graphId: "md:planned-dirty-admission-recovery"
 doc_type: "Recovery Controller Contract"
-date: "2026-08-26"
+date: "2026-08-27"
 lang: "en-US"
 schema: "agentic-planned-dirty-admission-recovery-doc/v2"
 frontmatter_contract: "required"
@@ -13,7 +13,7 @@ runtime_proof: "../__tests__/planned-dirty-admission-recovery.test.mjs"
 
 # Planned dirty admission recovery
 
-This controller closes one interrupted root-source startup state. Provisioning
+This controller closes one interrupted task-lane startup state. Provisioning
 created and cloud-bound the exact task worktree, empty coordination fence,
 active planned writer lease, task capability, current claim, and draft review,
 but stopped before the final preservation receipt and admitted projection. The
@@ -21,22 +21,26 @@ same task then produced nonempty in-scope dirt while local, remote, cloud, and
 review heads remained at that fence.
 
 The cloud claim may either remain exact-current or be exactly one heartbeat
-ahead after a successful renewal response was lost. The successor is admitted
+ahead after a successful renewal response was lost. Exact-current also permits
+the verified global ledger revision and digest to advance together for unrelated
+claims while every claim-specific field, counter, expiry, and identity remains
+unchanged; either ledger field moving alone fails closed. The successor is admitted
 only when the claim identity, schemas, actor, repository, work item, base,
 lane, fence, write set, epoch, review, and integration fields remain exact;
 transition and heartbeat counters each advance by one; expiry grows; and the
 claim-fence, transition, operation, and ledger digests all change. A missing
 source heartbeat counter means zero. A later heartbeat or any drift requires a
-fresh plan.
+fresh plan, including global ledger movement after the refreshed pair is sealed.
 
 The dirt is evidence, not permission to manufacture a commit or erase and
 reapply bytes. Planning double-reads and content-binds the complete index,
 working-tree, untracked, file-type, mode, conflict, and blob inventory. It also
 binds the unchanged scope and manifest, task capability, lease and registry,
 source claim, full verified target cloud authority and local heartbeat window,
-stable cloud-authority subject, review identity and hidden marker,
-protected controller revision, canonical ancestry, and non-overlapping peer
-inventory. Clean lanes, committed descendants, expired or non-writing claims,
+stable cloud-authority subject, review identity and hidden marker, the task
+repository's protected-main ancestry, an independently clean protected
+controller revision, and non-overlapping peer inventory. Clean lanes, committed
+descendants, expired or non-writing claims,
 out-of-scope paths, conflicts, scope expansion, identity drift, or ambiguous
 ownership fail closed and belong to other lifecycle owners.
 

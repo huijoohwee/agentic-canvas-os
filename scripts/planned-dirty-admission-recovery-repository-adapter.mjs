@@ -23,6 +23,7 @@ import {
 import {
   assertExactTargetMarkerBodyCapacity,
   assertProjectedAdmissionMarkerBodyCapacity,
+  captureExactTargetProtectedMain,
   digestPattern,
   firstSha,
   githubRepositoryFromRemoteUrl,
@@ -50,7 +51,6 @@ import {
   withHeartbeatProjectionFence,
   writerLeaseDigest,
 } from "./writer-lease-registry-cas.mjs";
-
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RECEIPTS_FIELD = "plannedDirtyAdmissionRecoveryReceipts";
 const IMPLEMENTATION_FILES = Object.freeze([
@@ -63,7 +63,6 @@ const IMPLEMENTATION_FILES = Object.freeze([
   "scripts/planned-dirty-admission-recovery-store.mjs",
   "scripts/planned-dirty-admission-recovery.mjs",
 ]);
-
 export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
   options = {}, dependencies = {},
 ) {
@@ -105,7 +104,6 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
   const leaseStore = dependencies.leaseStore || options.leaseStore || createWriterLeaseStore({
     gitCommonDir: commonDirectory, taskAuthorityPolicy: "projected", now,
   });
-
   function replayStore(plan) {
     return createPlannedDirtyAdmissionRecoveryStore({ statePath:
       resolvePlannedDirtyAdmissionRecoveryJournalPath({ commonDirectory,
@@ -214,6 +212,8 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       "controller origin/main");
     const remoteMainSha = firstSha(git(["ls-remote", "--heads", "origin",
       "refs/heads/main"], controllerRoot));
+    const targetMainSha = captureExactTargetProtectedMain(
+      args => git(args, repository));
     const status = git(["status", "--porcelain=v1", "--untracked-files=all"], controllerRoot);
     const controller = Object.freeze({ repositoryPathDigest: digestValue(controllerRoot),
       branch: git(["branch", "--show-current"], controllerRoot), headSha,
@@ -223,9 +223,9 @@ export function createPlannedDirtyAdmissionRecoveryRepositoryAdapter(
       implementationDigest: digestValue(IMPLEMENTATION_FILES.map(file => ({ file,
         digest: digestValue(readFileSync(path.join(controllerRoot, file))) }))) });
     const protectedMainAdvance = captureProtectedMainAdvance({ baseSha: lease.baseSha,
-      pullRequestBaseSha: pullRequest.baseSha, protectedMainSha: headSha,
+      pullRequestBaseSha: pullRequest.baseSha, protectedMainSha: targetMainSha,
       declaredWriteSet: manifest.declaredWriteSet,
-      gitText: args => git(args, controllerRoot) });
+      gitText: args => git(args, repository) });
     return Object.freeze({ controller, protectedMainAdvance });
   }
 

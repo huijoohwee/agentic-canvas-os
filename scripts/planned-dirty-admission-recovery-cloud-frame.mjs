@@ -1,10 +1,12 @@
 // Responsibility: Join verified cloud authority, heartbeat projection, and mutation authority.
 
-import { reconcileLostCloudHeartbeat, verifiedHeartbeatAuthority }
+import { verifiedHeartbeatAuthority }
   from "./active-owned-dirt-recovery-registry.mjs";
 import { digestValue, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { projectPlannedDirtyHeartbeatProjection }
   from "./planned-dirty-admission-recovery-evidence.mjs";
+import { reconcileCloudAuthorityProjection }
+  from "./scoped-lane-cloud-reconciliation.mjs";
 import {
   attestProvisionedStartCloudAuthoritySubject,
   projectProvisionedStartCloudAuthoritySubject,
@@ -22,21 +24,21 @@ export function buildPlannedDirtyAdmissionRecoveryCloudFrame({
   environment,
   now,
 }) {
-  let verified = reconcileLostCloudHeartbeat({
-    current: lease,
-    branch,
-    inspectCloudStatus,
-    verifyActiveCloudAuthority: input => verifyCloud({ ...input, environment }),
-    now,
-  });
-  if (!verified) {
-    verified = verifyCloud({
+  const authority = typeof inspectCloudStatus === "function"
+    ? reconcileCloudAuthorityProjection({
       authority: lease.cloudAuthority,
       manifest,
-      canonicalBaseSha: lease.baseSha,
-      environment,
-    });
-  }
+      statusResult: inspectCloudStatus({ action: "status",
+        ledgerRepository: lease.cloudAuthority.ledgerRepository,
+        request: { targetRepository: lease.cloudAuthority.targetRepository,
+          claimId: lease.cloudAuthority.claimId } }),
+      branch,
+      headSha: lease.fenceSha,
+      now: now(),
+    }).authority
+    : lease.cloudAuthority;
+  let verified = verifyCloud({ authority, manifest,
+    canonicalBaseSha: lease.baseSha, environment });
   const targetCloudAuthority = verifiedHeartbeatAuthority(verified);
   verified = { ...verified, authority: targetCloudAuthority };
   const heartbeatProjection = sealedHeartbeatProjection

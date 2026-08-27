@@ -549,7 +549,7 @@ function normalizeReanchorProjection(value, {
   });
   const dispositions = Array.isArray(source.dispositions)
     ? source.dispositions.map(normalizeDisposition)
-      .sort((left, right) => left.path.localeCompare(right.path))
+      .sort((left, right) => comparePaths(left.path, right.path))
     : (() => { throw new Error("Reanchor path dispositions are required."); })();
   if (dispositions.some((item, index) => item.path === dispositions[index - 1]?.path)) {
     throw new Error("Reanchor path dispositions repeat a path.");
@@ -558,7 +558,7 @@ function normalizeReanchorProjection(value, {
   const unionPaths = [...new Set([
     ...targetProtectedMain.changedPaths,
     ...dirt.entries.map(entry => entry.path),
-  ])].sort();
+  ])].sort(comparePaths);
   if (canonicalJson(dispositionPaths) !== canonicalJson(unionPaths)) {
     throw new Error("Reanchor dispositions do not cover the exact protected/dirt path union.");
   }
@@ -858,6 +858,9 @@ function terminalRetirementReceiptDigest(entry) {
 function strictSubset(left, right) {
   return left.length < right.length && left.every(item => right.includes(item));
 }
+function comparePaths(left, right) {
+  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+}
 function paths(value, label) {
   if (!Array.isArray(value)) throw new Error(`${label} are required.`);
   return [...new Set(value.map(item => {
@@ -868,7 +871,7 @@ function paths(value, label) {
     const result = normalized[0].slice("path:".length);
     if (result === ".") throw new Error(`${label} must identify repository entries.`);
     return result;
-  }))].sort();
+  }))].sort(comparePaths);
 }
 function record(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {

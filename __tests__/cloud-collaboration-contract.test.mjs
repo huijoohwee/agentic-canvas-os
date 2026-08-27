@@ -141,6 +141,86 @@ test("claim is CAS-fenced, device-neutral, replay-safe, and actor-authenticated"
     repository, evaluationTime: T1,
     request: { ...request, expectedLedgerDigest: evidence("stale") }, }), "stale_ledger_digest");
 });
+test("an exact caller-sealed proof-bearing claim replays after protected main advances", () => {
+  const fixture = claimOnlyRolloverFixture();
+  const sealedParent = fixture.predecessorRetired.ledger.headDigest;
+  const claimed = claimOnlyRollover(fixture);
+  const later = claim(claimed.ledger, {
+    workItemId: "work:after-sealed-proof-replay",
+    scope: ["path:docs/after-sealed-proof-replay.md"],
+    time: T5,
+    expiresAt: T6,
+    idempotencyKey: "claim:after-sealed-proof-replay",
+  });
+  const request = {
+    workItemId: "work:claim-only-rollover",
+    canonicalBaseRevision: repository.canonicalRevision,
+    declaredWriteScope: fixture.scope,
+    laneRevision: repository.canonicalRevision,
+    leaseEpoch: 2,
+    predecessorClaimId: fixture.waiting.claim.claimId,
+    canonicalDescendantProof: fixture.proof,
+    expiresAt: T6,
+    expectedLedgerDigest: sealedParent,
+    idempotencyKey: "claim:claim-only-rollover",
+  };
+  const advancedRepository = {
+    ...repository,
+    canonicalRevision: revision("advanced-after-sealed-proof-claim"),
+  };
+  const ledgerBytes = canonicalJson(later.ledger);
+  const replay = applyCloudTransition({
+    ledger: later.ledger,
+    action: "claim",
+    actor: owner,
+    repository: advancedRepository,
+    evaluationTime: T5,
+    request,
+  });
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.claimDigest, claimed.claimDigest);
+  assert.strictEqual(replay.ledger, later.ledger);
+  assert.equal(canonicalJson(replay.ledger), ledgerBytes);
+  throwsCode(() => applyCloudTransition({
+    ledger: later.ledger,
+    action: "claim",
+    actor: owner,
+    repository: advancedRepository,
+    evaluationTime: T5,
+    request: { ...request, expiresAt: "2026-08-04T02:00:00.000Z" },
+  }), "idempotency_conflict");
+  throwsCode(() => applyCloudTransition({
+    ledger: later.ledger,
+    action: "continue",
+    actor: owner,
+    repository: advancedRepository,
+    evaluationTime: T5,
+    request: {
+      claimId: claimed.claim.claimId,
+      expectedFenceRevision: claimed.claim.fenceRevision,
+      expectedTransitionCounter: claimed.claim.transitionCounter,
+      expectedLedgerDigest: later.ledger.headDigest,
+      mode: "projection",
+      laneRevision: claimed.claim.laneRevision,
+      idempotencyKey: request.idempotencyKey,
+    },
+  }), "idempotency_conflict");
+  for (const invalid of [
+    { ...request, expectedLedgerDigest: claimed.ledger.headDigest },
+    { ...request, expectedLedgerDigest: null },
+    { ...request, idempotencyKey: "claim:absent-sealed-proof-replay" },
+  ]) {
+    assert.throws(() => applyCloudTransition({
+      ledger: later.ledger,
+      action: "claim",
+      actor: owner,
+      repository: advancedRepository,
+      evaluationTime: T5,
+      request: invalid,
+    }));
+  }
+  assert.equal(canonicalJson(later.ledger), ledgerBytes);
+});
 test("unlimited disjoint authorities have no policy cardinality cap", () => {
   let ledger = createEmptyLedger("ledger:repository");
   for (let index = 0; index < 140; index += 1) { ledger = claim(ledger, {

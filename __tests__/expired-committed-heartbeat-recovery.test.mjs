@@ -330,7 +330,7 @@ test("captures the real XR-shaped shared-history prefix and current-main suffix"
     sourceFenceSha: realFenceSha,
   });
   const authoredPath =
-    "docs/workspace-seeds/knowgrph-physics-playground-demo.md";
+    "docs/workspace-seeds/agenticgraph-physics-playground-demo.md";
   const protectedPath =
     "docs/runtime-readiness-contract.md";
   const sharedHistoryBlobSha =

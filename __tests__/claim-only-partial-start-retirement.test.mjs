@@ -10,6 +10,7 @@ import {
   advanceClaimOnlyJournal,
   authorizeClaimOnlyPlan,
   buildClaimOnlyCompletionReceipt,
+  buildClaimOnlyTerminalVerification,
   buildRetirementPlan,
   buildRolloverPlan,
   claimOnlyOperationKey,
@@ -20,16 +21,16 @@ import {
   startClaimOnlyJournal,
 } from "../scripts/claim-only-partial-start-retirement-contract.mjs";
 import {
+  captureClaimOnlyRepositoryIdentity,
+  claimOnlyRetirementRequestDigest,
   createClaimOnlyPartialStartRetirementStore,
   readClaimOnlyPrivateJson,
 } from "../scripts/claim-only-partial-start-retirement-store.mjs";
-import { createClaimOnlyPartialStartRetirementController }
+import { createClaimOnlyPartialStartRetirementController,
+  validateClaimOnlyReplacementTerminal, validateClaimOnlyRetirementTerminal }
   from "../scripts/claim-only-partial-start-retirement-controller.mjs";
 import { main as claimOnlyCliMain }
   from "../scripts/claim-only-partial-start-retirement.mjs";
-import { captureClaimOnlyRepositoryIdentity, validateClaimOnlyReplacementTerminal,
-  validateClaimOnlyRetirementTerminal }
-  from "../scripts/claim-only-partial-start-retirement-repository-adapter.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 const digest = character => String(character).repeat(64);
 const sha = character => character.repeat(40);
@@ -81,10 +82,9 @@ test("retirement journal is ordered, sealed, and emits a terminal receipt", () =
   }), /cannot advance/u);
   journal = advanceClaimOnlyJournal(journal, "prepared", { operationKey: claimOnlyOperationKey(plan, "prepared"), freshFrameDigest: digest("3"),
   });
-  journal = advanceClaimOnlyJournal(journal, "source-retired", { operationKey: claimOnlyOperationKey(plan, "source-retired"), requestDigest: digest("3"), operationReceiptDigest: digest("4"), terminalEntryDigest: digest("5"), disposition: "projected", cloudMutation: true,
+  journal = advanceClaimOnlyJournal(journal, "source-retired", { operationKey: claimOnlyOperationKey(plan, "source-retired"), requestDigest: claimOnlyRetirementRequestDigest(plan, plan.evidence.source, "source-retired"), operationReceiptDigest: digest("4"), terminalEntryDigest: digest("5"), disposition: "projected", cloudMutation: true,
   });
-  journal = advanceClaimOnlyJournal(journal, "verified", { terminalEvidenceDigest: digest("6"), preservationDigest: digest("7"),
-  });
+  journal = advanceClaimOnlyJournal(journal, "verified", buildClaimOnlyTerminalVerification(journal));
   const receipt = buildClaimOnlyCompletionReceipt(journal);
   assert.equal(receipt.operation, RETIREMENT_OPERATION);
   assert.equal(receipt.cloudRetirementReceiptDigest, digest("4"));
@@ -127,12 +127,11 @@ test("rollover receipt binds stale retirement, raw output, and new authority", (
   let journal = startClaimOnlyJournal(createClaimOnlyJournal(plan), plan.exactAuthorization);
   journal = advanceClaimOnlyJournal(journal, "prepared", { operationKey: claimOnlyOperationKey(plan, "prepared"), freshFrameDigest: digest("3"),
   });
-  journal = advanceClaimOnlyJournal(journal, "stale-successor-retired", { operationKey: claimOnlyOperationKey(plan, "stale-successor-retired"), requestDigest: digest("3"), operationReceiptDigest: digest("4"), terminalEntryDigest: digest("5"), disposition: "adopted", cloudMutation: false,
+  journal = advanceClaimOnlyJournal(journal, "stale-successor-retired", { operationKey: claimOnlyOperationKey(plan, "stale-successor-retired"), requestDigest: claimOnlyRetirementRequestDigest(plan, plan.evidence.successor, "stale-successor-retired"), operationReceiptDigest: digest("4"), terminalEntryDigest: digest("5"), disposition: "adopted", cloudMutation: true,
   });
   journal = advanceClaimOnlyJournal(journal, "replacement-claimed", { operationKey: claimOnlyOperationKey(plan, "replacement-claimed"), requestDigest: digest("5"), operationReceiptDigest: digest("6"), terminalEntryDigest: digest("7"), replacementClaimId: plan.evidence.replacement.expectedClaimId, rawClaimResultDigest: digest("8"), outputReceiptDigest: digest("9"), authorityDigest: digest("a"), disposition: "projected", cloudMutation: true,
   });
-  journal = advanceClaimOnlyJournal(journal, "verified", { terminalEvidenceDigest: digest("b"), preservationDigest: digest("c"),
-  });
+  journal = advanceClaimOnlyJournal(journal, "verified", buildClaimOnlyTerminalVerification(journal));
   const receipt = buildClaimOnlyCompletionReceipt(journal);
   assert.equal(receipt.sourceRetirementReceiptDigest, retirement.receipt.receiptDigest);
   assert.equal(receipt.replacementClaimId, plan.evidence.replacement.expectedClaimId);
@@ -292,8 +291,7 @@ function completedRetirement() {
   });
   journal = advanceClaimOnlyJournal(journal, "source-retired", { operationKey: claimOnlyOperationKey(plan, "source-retired"), requestDigest: terminal.requestDigest, operationReceiptDigest: operationReceipt(terminal).receiptDigest, terminalEntryDigest: terminal.digest, disposition: "projected", cloudMutation: true,
   });
-  journal = advanceClaimOnlyJournal(journal, "verified", { terminalEvidenceDigest: digest("6"), preservationDigest: digest("7"),
-  });
+  journal = advanceClaimOnlyJournal(journal, "verified", buildClaimOnlyTerminalVerification(journal));
   const receipt = buildClaimOnlyCompletionReceipt(journal);
   return { plan, receipt, terminal, journal: advanceClaimOnlyJournal(journal, "complete", { receipt }) };
 }
@@ -336,7 +334,7 @@ function operationReceipt(entry, status = entry.action === "retire" ? "retired" 
 }
 function rawRetirementEntry(plan, subject, phase) {
   const projected = retirementTerminalCore(plan.planDigest, subject, plan.evidence.successor, claimOnlyOperationKey(plan, phase), phase);
-  const claimCore = { claimId: subject.claimId, actorId: subject.actorId, deviceId: subject.deviceId, sessionId: subject.sessionId, repositoryId: subject.repositoryId, workItemId: subject.workItemId, canonicalBaseRevision: subject.canonicalBaseRevision, declaredWriteScope: subject.declaredWriteScope, writeSetDigest: subject.writeSetDigest, laneRevision: subject.laneRevision, leaseEpoch: subject.leaseEpoch, transitionCounter: subject.transitionCounter + 1, heartbeatCounter: subject.heartbeatCounter, state: "retired", expiresAt: subject.expiresAt, evidenceDigest: subject.evidenceDigest, reviewRequestId: null, predecessorClaimId: subject.predecessorClaimId, eligibleSince: subject.eligibleSince, handoff: null, release: null, retirement: projected.retirement };
+  const claimCore = { claimId: subject.claimId, actorId: subject.actorId, deviceId: subject.deviceId, sessionId: subject.sessionId, repositoryId: subject.repositoryId, workItemId: subject.workItemId, canonicalBaseRevision: subject.canonicalBaseRevision, declaredWriteScope: subject.declaredWriteScope, writeSetDigest: subject.writeSetDigest, laneRevision: subject.laneRevision, leaseEpoch: subject.leaseEpoch, transitionCounter: subject.transitionCounter + 1, heartbeatCounter: subject.heartbeatCounter, state: "retired", expiresAt: subject.expiresAt, evidenceDigest: subject.evidenceDigest, reviewRequestId: null, predecessorClaimId: subject.predecessorClaimId, eligibleSince: subject.eligibleSince, handoff: null, release: null, recovery: subject.recovery ?? null, integration: subject.integration ?? null, canonicalDescendantProof: subject.canonicalDescendantProof ?? null, retirement: projected.retirement };
   const draft = { schema: projected.schema, sequence: 3, parentDigest: digest("9"), action: "retire", repositoryId: subject.repositoryId, claimId: subject.claimId, idempotencyKey: projected.idempotencyKey, requestDigest: projected.requestDigest, evaluationTime: projected.evaluationTime, claimCore, claimDigest: digestValue(claimCore) };
   return { ...draft, digest: digestValue(draft) };
 }
@@ -358,7 +356,9 @@ function rawReplacement(plan) {
   const entry = { ...draft, digest: digestValue(draft) }, result = mutationResult(entry, "current");
   return { entry, result, frame: { ledger: { entries: [entry] }, status: { claims: [result.claim] } } };
 }
-function controller() { return { branch: "main", clean: true, protected: true,
+function controller() { return { repository: "huijoohwee/agentic-canvas-os",
+  providerRepositoryId: "R_controller", nameWithOwner: "huijoohwee/agentic-canvas-os",
+  branch: "main", clean: true, protected: true,
   headSha: MAIN, originMainSha: MAIN, remoteMainSha: MAIN,
   runtimeDigest: digest("6"), protectionDigest: digest("7") }; }
 function cloud() { return { ledgerRepository: "huijoohwee/agentic-canvas-os",
@@ -377,12 +377,14 @@ function fakeAdapter({ retirement = null, rollover = null, failSourceResponse = 
   failPrepare = false }) {
   let journal = null, sourceRetired = false, staleRetired = false, replacementClaimed = false;
   const calls = { retireSource: 0, retireStaleSuccessor: 0, claimReplacement: 0, order: [] };
-  const adapter = { withOperationLock: async (_context, action) => action(), readJournal: async () => journal, writeJournal: async ({ expected, next }) => { assert.deepEqual(expected, journal); journal = next; return journal; }, observeRetirement: async () => retirement, observeRollover: async () => rollover, prepare: async () => { if (failPrepare) throw new Error("simulated C3 preflight block"); return { freshFrameDigest: digest("f") }; }, classifySourceRetired: async context => sourceRetired ? { state: "complete", values: retirementEffectValues(context, failSourceResponse ? "adopted" : "projected") } : { state: "pending" }, retireSource: async () => { calls.retireSource += 1; sourceRetired = true; if (failSourceResponse) throw new Error("simulated response loss"); }, classifyStaleSuccessorRetired: async context => staleRetired ? { state: "complete", values: retirementEffectValues(context, "projected") } : { state: "pending" }, retireStaleSuccessor: async () => { calls.retireStaleSuccessor += 1; calls.order.push("retire-stale"); staleRetired = true; }, classifyReplacementClaimed: async context => replacementClaimed ? { state: "complete", values: replacementEffectValues(context) } : { state: "pending" }, claimReplacement: async () => { assert.equal(staleRetired, true); calls.claimReplacement += 1; calls.order.push("claim-replacement"); replacementClaimed = true; }, verifyRetirement: async () => ({ terminalEvidenceDigest: digest("a"), preservationDigest: digest("b") }), verifyRollover: async () => ({ terminalEvidenceDigest: digest("c"), preservationDigest: digest("d") }),
+  const adapter = { withOperationLock: async (_context, action) => action(), readJournal: async () => journal, writeJournal: async ({ expected, next }) => { assert.deepEqual(expected, journal); journal = next; return journal; }, observeRetirement: async () => retirement, observeRollover: async () => rollover, prepare: async () => { if (failPrepare) throw new Error("simulated C3 preflight block"); return { freshFrameDigest: digest("f") }; }, classifySourceRetired: async context => sourceRetired ? { state: "complete", values: retirementEffectValues(context, failSourceResponse ? "adopted" : "projected") } : { state: "pending" }, retireSource: async () => { calls.retireSource += 1; sourceRetired = true; if (failSourceResponse) throw new Error("simulated response loss"); }, classifyStaleSuccessorRetired: async context => staleRetired ? { state: "complete", values: retirementEffectValues(context, "projected") } : { state: "pending" }, retireStaleSuccessor: async () => { calls.retireStaleSuccessor += 1; calls.order.push("retire-stale"); staleRetired = true; }, classifyReplacementClaimed: async context => replacementClaimed ? { state: "complete", values: replacementEffectValues(context) } : { state: "pending" }, claimReplacement: async () => { assert.equal(staleRetired, true); calls.claimReplacement += 1; calls.order.push("claim-replacement"); replacementClaimed = true; }, verifyRetirement: async ({ journal: current }) => buildClaimOnlyTerminalVerification(current), verifyRollover: async ({ journal: current }) => buildClaimOnlyTerminalVerification(current),
   };
   return { adapter, calls, journal: () => journal };
 }
 function retirementEffectValues(context, disposition) {
-  return { operationKey: context.operationKey, requestDigest: digest("3"), operationReceiptDigest: digest("4"), terminalEntryDigest: digest("5"), disposition, cloudMutation: true };
+  const claim = context.phase === "source-retired"
+    ? context.plan.evidence.source : context.plan.evidence.successor;
+  return { operationKey: context.operationKey, requestDigest: claimOnlyRetirementRequestDigest(context.plan, claim, context.phase), operationReceiptDigest: digest("4"), terminalEntryDigest: digest("5"), disposition, cloudMutation: true };
 }
 function replacementEffectValues(context) {
   return { operationKey: context.operationKey, requestDigest: digest("5"), operationReceiptDigest: digest("6"), terminalEntryDigest: digest("7"), replacementClaimId: context.plan.evidence.replacement.expectedClaimId, rawClaimResultDigest: digest("8"), outputReceiptDigest: digest("9"), authorityDigest: digest("a"), disposition: "projected", cloudMutation: true };

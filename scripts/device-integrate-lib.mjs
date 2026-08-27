@@ -33,6 +33,10 @@ import { continueActivePublishTaskAuthoritySuccessor }
   from "./active-publish-task-authority-successor.mjs";
 import { casWriterLeaseProjection } from "./writer-lease-registry-cas.mjs";
 import {
+  parseWriterLeasePullRequestBody,
+  projectWriterLeasePullRequestMarker,
+} from "./writer-lease-lib.mjs";
+import {
   appendProtectedMainRefresh,
   normalizeProtectedHeadRefreshProjection,
   protectedHeadRefreshOperationId,
@@ -1320,7 +1324,7 @@ function readExactActivePublishSubject({
 }) {
   const pullRequest = JSON.parse(ghText([
     "pr", "view", lease.pullRequestUrl, "--json",
-    "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository",
+    "id,url,state,isDraft,baseRefName,baseRefOid,headRefName,headRefOid,headRepository,body",
   ]));
   if (pullRequest.url !== lease.pullRequestUrl || pullRequest.state !== "OPEN" ||
       pullRequest.isDraft !== true || pullRequest.baseRefName !== "main" ||
@@ -2229,7 +2233,9 @@ function createActivePublishSuccessorIntent({
 function requireActivePublishSuccessorIntent({ lease, source, admission, subject, headSha }) {
   const intent = normalizeActivePublishSuccessorIntent(lease.activePublishSuccessorIntent);
   const exact = intent.status === "prepared" && lease.status === "active" &&
-    intent.branch === lease.branch && intent.sourceStableLeaseDigest === activePublishSourceStableDigest(lease) &&
+    intent.branch === lease.branch && activePublishSourceStableDigestMatches({
+      intent, lease, subject,
+    }) &&
     intent.sourceClaimId === source.claimId && intent.sourceClaimDigest === source.claimDigest &&
     intent.sourceClaimLedgerRevision === source.claimLedgerRevision &&
     intent.sourceCanonicalBaseSha === source.canonicalBaseSha &&
@@ -2347,7 +2353,7 @@ function sealActivePublishSuccessorIntent(value) {
   return normalizeActivePublishSuccessorIntent({ ...core, intentDigest: digestValue(core) });
 }
 
-function activePublishSourceStableDigest(lease) {
+function activePublishSourceStableLeaseProjection(lease) {
   const {
     activePublishSuccessorIntent: _intent,
     heartbeatAt: _heartbeatAt,
@@ -2355,7 +2361,66 @@ function activePublishSourceStableDigest(lease) {
     status: _status,
     ...stable
   } = lease;
-  return digestValue({ ...stable, status: "active" });
+  return { ...stable, status: "active" };
+}
+
+function withoutActivePublishLedgerObservation(value) {
+  if (!value?.cloudAuthority || typeof value.cloudAuthority !== "object") return value;
+  const {
+    ledgerRevision: _ledgerRevision,
+    ledgerDigest: _ledgerDigest,
+    ...cloudAuthority
+  } = value.cloudAuthority;
+  return { ...value, cloudAuthority };
+}
+
+function activePublishSourceStableDigest(lease) {
+  return digestValue(withoutActivePublishLedgerObservation(
+    activePublishSourceStableLeaseProjection(lease),
+  ));
+}
+
+function legacyActivePublishSourceStableDigest(lease) {
+  return digestValue(activePublishSourceStableLeaseProjection(lease));
+}
+
+function activePublishMarkerStableProjection(marker) {
+  const {
+    heartbeatAt: _heartbeatAt,
+    expiresAt: _expiresAt,
+    status: _status,
+    ...stable
+  } = marker;
+  return withoutActivePublishLedgerObservation({ ...stable, status: "active" });
+}
+
+function activePublishSourceStableDigestMatches({ intent, lease, subject }) {
+  const sealed = intent.sourceStableLeaseDigest;
+  if (sealed === activePublishSourceStableDigest(lease) ||
+      sealed === legacyActivePublishSourceStableDigest(lease)) return true;
+
+  let marker;
+  try {
+    marker = parseWriterLeasePullRequestBody(subject?.pullRequest?.body);
+  } catch {
+    return false;
+  }
+  if (!marker?.cloudAuthority ||
+      !SHA_PATTERN.test(String(marker.cloudAuthority.ledgerRevision || "")) ||
+      !DIGEST_PATTERN.test(String(marker.cloudAuthority.ledgerDigest || ""))) return false;
+  const currentMarker = projectWriterLeasePullRequestMarker(lease);
+  if (digestValue(activePublishMarkerStableProjection(marker)) !==
+      digestValue(activePublishMarkerStableProjection(currentMarker))) return false;
+
+  const reconstructed = {
+    ...lease,
+    cloudAuthority: {
+      ...lease.cloudAuthority,
+      ledgerRevision: marker.cloudAuthority.ledgerRevision,
+      ledgerDigest: marker.cloudAuthority.ledgerDigest,
+    },
+  };
+  return sealed === legacyActivePublishSourceStableDigest(reconstructed);
 }
 
 function requireActivePublishDerivative({ status, intent, source, admission }) {

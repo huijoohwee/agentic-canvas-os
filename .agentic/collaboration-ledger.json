@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5569,
-  "headDigest": "55136917a6b6e55531ff14afe470b21342505688d655b88bfad27a2989845c43",
+  "sequence": 5570,
+  "headDigest": "e329259f323dd91fe488fbc99deefa5b601e6d4703c2e69bc12fbac37fb7cd67",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -282898,6 +282898,48 @@
       },
       "claimDigest": "2d9e50d63722188f90edb3d9691ea976ea808e0e5fb51a457b4862faa4acb03e",
       "digest": "55136917a6b6e55531ff14afe470b21342505688d655b88bfad27a2989845c43"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5570,
+      "parentDigest": "55136917a6b6e55531ff14afe470b21342505688d655b88bfad27a2989845c43",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "dbd79e76c29e18b80786c45a76d7dc44a16f1e3ed1c095b1ecf0399de51acf78",
+      "idempotencyKey": "4792a73c86d3b1b01a463d5154b80fc992935f1a1bf76427fe9cd611279a8558",
+      "requestDigest": "d2c8d3210cb8ec9511dc2ab7f26c9afe22ef0be18bd493d3a16f8e03044aeaf9",
+      "evaluationTime": "2026-08-27T06:53:30.000Z",
+      "claimCore": {
+        "claimId": "dbd79e76c29e18b80786c45a76d7dc44a16f1e3ed1c095b1ecf0399de51acf78",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:dcaa57974bf3b2b522543ecbf7c97785266c5f6db19968953c82e07cec42fc14",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:2bb738c976a7d69665163dc0006bb96b71d132fb185e3f93397e7117544a4d36",
+        "canonicalBaseRevision": "8021b9f6104ebf682a1a095ae86cf137fcdfa2c1",
+        "declaredWriteScope": [
+          "path:__tests__/git-blob-evidence-transport.test.mjs",
+          "path:docs/GIT-BLOB-EVIDENCE-TRANSPORT.md",
+          "path:scripts/git-blob-evidence-transport.mjs",
+          "path:scripts/retired-abandoned-owned-dirt-successor-recovery-repository-adapter.mjs",
+          "semantic:pr835-blob-evidence-transport"
+        ],
+        "writeSetDigest": "7a7964671ff00b8247bbe6e62aa1abafcb3ac94d7f4bf2cb8fa8a48ef70cb3f6",
+        "laneRevision": "61a15133230135ee997878317175a2f90248ea82",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-28T06:53:30.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBK2A1g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b0c02fffe06ae1d882c1389c8150274f66d23a20fcfdd16e55baf782918e310a",
+      "digest": "e329259f323dd91fe488fbc99deefa5b601e6d4703c2e69bc12fbac37fb7cd67"
     }
   ]
 }

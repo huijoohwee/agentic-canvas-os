@@ -87,7 +87,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
   }
   const agenticBase = devUrl(required(env, "AGENTIC_DEV_URL"), "AGENTIC_DEV_URL");
   const mcpEndpoint = devUrl(required(env, "KNOWGRPH_DEV_MCP_ENDPOINT"), "KNOWGRPH_DEV_MCP_ENDPOINT");
-  const mcpBearer = required(env, "KNOWGRPH_AGENT_RUNTIME_BEARER_TOKEN");
+  const mcpBearer = required(env, "AGENTICGRAPH_AGENT_RUNTIME_BEARER_TOKEN");
   const reviewSecret = required(env, "AGENT_REVIEW_JWT_SECRET");
   const suffix = typeof env.AGENTIC_LIVE_PROOF_SUFFIX === "string" && env.AGENTIC_LIVE_PROOF_SUFFIX.trim()
     ? env.AGENTIC_LIVE_PROOF_SUFFIX.trim()

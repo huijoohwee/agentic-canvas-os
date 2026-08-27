@@ -148,7 +148,7 @@ The checked-in `team.collaborative-intelligence@1.0.0` source binds
 `agent.collaboration-manager@1.0.0`, `agent.evidence-scout@1.0.0`, and
 `agent.risk-reviewer@1.0.0` to two ordered delegate branches. The manager owns
 both branch synthesis and the final public answer. The operator must explicitly
-select an exact model with `KNOWGRPH_AGENT_TEAM_MODEL`; loopback Ollama is the
+select an exact model with `AGENTICGRAPH_AGENT_TEAM_MODEL`; loopback Ollama is the
 default, no model is downloaded or hard-coded, and unconfigured execution
 fails before durable state or model work.
 

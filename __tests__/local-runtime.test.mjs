@@ -235,7 +235,7 @@ test("session Vite ownership binds exact session, process start, repository, com
     command: "node /workspace/knowgrph/node_modules/.bin/vite --strictPort",
     gitCommonDir: candidate.knowgrph.gitCommonDir,
     listenerEnvironment: `AGENTIC_SESSION_ID=session-a AGENTIC_SESSION_RUNTIME_TOKEN=${token} ` +
-      `KNOWGRPH_SOURCE_REVISION=${applicationSha} KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${docsSha}`,
+      `AGENTICGRAPH_SOURCE_REVISION=${applicationSha} AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${docsSha}`,
   };
   assert.equal(validateOwnedSessionService({
     state, processEvidence: evidence, token, candidate, sessionId: "session-a",
@@ -347,7 +347,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.equal(listeners.get(APEX_PORT), 301);
     assert.deepEqual(launchedCommands[1], [
       "run", "storage:worker:dev", "--", "--local", "--var",
-      "KNOWGRPH_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",
+      "AGENTICGRAPH_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",
     ]);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });

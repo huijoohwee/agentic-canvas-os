@@ -103,19 +103,19 @@
     var panBtn = null;
     var mediaBtn = document.getElementById('kg-media-toggle');
 
-    var KG_TOGGLE_MEDIA_INTERACTION_LABEL = 'Toggle media interaction';
+    var AG_TOGGLE_MEDIA_INTERACTION_LABEL = 'Toggle media interaction';
 
-    var KG_PROXY_ORIGIN = "";
-    var KG_PROXY_ORIGIN_RUNTIME = (typeof KG_PROXY_ORIGIN === 'string' ? String(KG_PROXY_ORIGIN || '').trim() : '');
-    var KG_ALLOW_RUNTIME_NETWORK = false;
+    var AG_PROXY_ORIGIN = "";
+    var AG_PROXY_ORIGIN_RUNTIME = (typeof AG_PROXY_ORIGIN === 'string' ? String(AG_PROXY_ORIGIN || '').trim() : '');
+    var AG_ALLOW_RUNTIME_NETWORK = false;
 
     var kgGetProxyOrigin = function(){
-      try { return String(KG_PROXY_ORIGIN_RUNTIME || '').trim(); } catch (e) { return ''; }
+      try { return String(AG_PROXY_ORIGIN_RUNTIME || '').trim(); } catch (e) { return ''; }
     };
 
     var kgShouldUseProxy = function(){
       try {
-        if (!KG_ALLOW_RUNTIME_NETWORK) return false;
+        if (!AG_ALLOW_RUNTIME_NETWORK) return false;
         return !!kgGetProxyOrigin();
       } catch (e) {
         return false;
@@ -293,7 +293,7 @@
 
     var kgFetchWebpageMeta = function(absUrl, onDone){
       try {
-        if (!KG_ALLOW_RUNTIME_NETWORK) { try { onDone && onDone(null); } catch (e00) {} return; }
+        if (!AG_ALLOW_RUNTIME_NETWORK) { try { onDone && onDone(null); } catch (e00) {} return; }
         var url = String(absUrl || '').trim();
         if (!url) return;
         var cache = kgGetWebpageMetaCache();
@@ -408,7 +408,7 @@
       var u = String(url || '').trim();
       if (!u) return '';
       if (/^\s*(data:|blob:|mailto:|tel:)/i.test(u)) return u;
-      if (!KG_ALLOW_RUNTIME_NETWORK && (u.startsWith('/__') || u.startsWith('/@') || /^https?:\/\//i.test(u))) return '';
+      if (!AG_ALLOW_RUNTIME_NETWORK && (u.startsWith('/__') || u.startsWith('/@') || /^https?:\/\//i.test(u))) return '';
       if (u.startsWith('/__') || u.startsWith('/@')) {
         try {
           var origin = kgGetProxyOrigin();
@@ -4589,7 +4589,7 @@
             try {
               var raw = String(url || '').trim();
               var cur = String(imgEl.getAttribute('src') || '').trim();
-              if (KG_ALLOW_RUNTIME_NETWORK && raw && cur !== raw) imgEl.src = raw;
+              if (AG_ALLOW_RUNTIME_NETWORK && raw && cur !== raw) imgEl.src = raw;
             } catch (e11) {
               void 0;
             }
@@ -4602,7 +4602,7 @@
             try {
               var raw = String(url || '').trim();
               var cur = String(vid.getAttribute('src') || '').trim();
-              if (KG_ALLOW_RUNTIME_NETWORK && raw && cur !== raw) vid.src = raw;
+              if (AG_ALLOW_RUNTIME_NETWORK && raw && cur !== raw) vid.src = raw;
             } catch (e12) {
               void 0;
             }
@@ -5146,7 +5146,7 @@
           var baseSy1 = (svgBase && isFinite(svgBase.sy) && svgBase.sy > 0) ? svgBase.sy : 1;
           var ox1 = (svgBase && isFinite(svgBase.ox)) ? svgBase.ox : 0;
           var oy1 = (svgBase && isFinite(svgBase.oy)) ? svgBase.oy : 0;
-          var density1 = __KG_DENSITY__;
+          var density1 = __AG_DENSITY__;
           var headerH = density1 === 'compact' ? 22 : 28;
           var offMap = svg.__kgNodeOffsetById || (svg.__kgNodeOffsetById = {});
 

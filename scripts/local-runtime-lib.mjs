@@ -27,7 +27,7 @@ export const STORAGE_PORT = 8787;
 export const DEFAULT_TIMEOUT_MS = 120_000;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const STORAGE_EXPORT_PATH = "/api/storage/export/kgws%3Acanonical-docs";
-const STORAGE_LOCAL_RUNTIME_WRANGLER_VAR = "KNOWGRPH_STORAGE_LOCAL_RUNTIME:true";
+const STORAGE_LOCAL_RUNTIME_WRANGLER_VAR = "AGENTICGRAPH_STORAGE_LOCAL_RUNTIME:true";
 const REQUIRED_CHECKS = Object.freeze({
   "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration"],
   knowgrph: ["Integration Gate"],
@@ -262,11 +262,11 @@ export function validateOwnedSessionService({ state, processEvidence, token, can
   if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTIC_SESSION_ID=${sessionId}`)) {
     throw new Error("Session Vite process session identity is missing or changed.");
   }
-  if (!String(processEvidence.listenerEnvironment || "").includes(`KNOWGRPH_SOURCE_REVISION=${state.source?.revision}`)) {
+  if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTICGRAPH_SOURCE_REVISION=${state.source?.revision}`)) {
     throw new Error("Session Vite source revision evidence is missing or changed.");
   }
   if (!String(processEvidence.listenerEnvironment || "").includes(
-    `KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${state.agenticCanvasOs?.revision}`,
+    `AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${state.agenticCanvasOs?.revision}`,
   )) {
     throw new Error("Session Vite Agentic Canvas OS revision evidence is missing or changed.");
   }
@@ -310,9 +310,9 @@ async function launchSessionRuntime(candidate, options, locations, deps) {
     ...process.env,
     AGENTIC_SESSION_ID: options.sessionId,
     AGENTIC_SESSION_RUNTIME_TOKEN: token,
-    KNOWGRPH_SOURCE_REVISION: candidate.knowgrph.headSha,
-    KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
-    KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    AGENTICGRAPH_SOURCE_REVISION: candidate.knowgrph.headSha,
+    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
     VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
   };
   try {
@@ -398,9 +398,9 @@ async function startRuntime(candidate, options, locations, deps) {
   const environment = {
     ...process.env,
     AGENTIC_LOCAL_RUNTIME_TOKEN: token,
-    KNOWGRPH_SOURCE_REVISION: candidate.knowgrph.headSha,
-    KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
-    KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    AGENTICGRAPH_SOURCE_REVISION: candidate.knowgrph.headSha,
+    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
     VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
   };
   const started = [];

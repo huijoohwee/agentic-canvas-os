@@ -13,7 +13,7 @@ export function resolveKnowgrphRoot({
   agenticCanvasOsRoot = defaultAgenticCanvasOsRoot,
   env = process.env,
 } = {}) {
-  const configuredRoot = String(env.KNOWGRPH_ROOT || "").trim();
+  const configuredRoot = String(env.AGENTICGRAPH_ROOT || "").trim();
   return configuredRoot
     ? path.resolve(configuredRoot)
     : path.resolve(agenticCanvasOsRoot, "..", "knowgrph");

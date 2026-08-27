@@ -209,20 +209,20 @@ A pull can merge or rebase into the current branch before its ownership and dirt
 Use the repository-owned command when a normal canonical Dev restart reports that clean local `main` is behind a fetched `origin/main`:
 
 ```sh
-git -C "$KNOWGRPH_ROOT" status --short --branch
-npm --prefix "$KNOWGRPH_ROOT" run dev:latest
+git -C "$AGENTICGRAPH_ROOT" status --short --branch
+npm --prefix "$AGENTICGRAPH_ROOT" run dev:latest
 ```
 
 The command reads the canonical source registry, fetches every source, and completes a two-phase safety check before changing a main worktree. Every main source must have no local changes, its canonical branch active, and `HEAD` as an ancestor of the fetched canonical ref. Registered task worktrees are inspected for conflicts but are never switched, merged, or used as runtime source. Only after the full set passes does the command apply `git merge --ff-only` to the main worktrees and delegate to ordinary fail-closed Dev startup. If tracked canonical bytes were separately preserved and then merged through their leased protected task pull request, `canonical:main:fast-forward-equivalence -- --repository=... --session=... --expected-local-head=... --expected-origin-head=... --acknowledge-protected-equivalence --json` may reconcile only an unstaged tracked-only working set when every dirty path's mode and blob exactly equal that protected descendant and every other path remains clean against the expected local head; unrelated protected fast-forward changes then materialize from the pinned descendant. It writes a content-bound Git-metadata receipt, proves ignored-state retention, uses compare-and-swap, and rejects untracked, staged, conflicting, deleted, partial, extra, mode-mismatched, or drifted state without creating a commit, stash, branch, pull request, deployment, or Production authority.
 
-Do not use `dev:latest` for an owned task branch. On a contract-valid `agent/<device>/<semantic-scope>` branch, start with `npm run dev` or `npm run dev:apex`; the Knowgrph guard selects task mode automatically. `KG_DEV_SOURCE_MODE` remains an expert override. Reconcile task-branch upstream history through the task workflow rather than changing it during Dev startup.
+Do not use `dev:latest` for an owned task branch. On a contract-valid `agent/<device>/<semantic-scope>` branch, start with `npm run dev` or `npm run dev:apex`; the Knowgrph guard selects task mode automatically. `AG_DEV_SOURCE_MODE` remains an expert override. Reconcile task-branch upstream history through the task workflow rather than changing it during Dev startup.
 
 ### Checkout-Free Immutable Publication
 
 The object lane remains available only for an already-created commit whose writer has stopped. Normal authoring now belongs in a leased registered task worktree, so immutable publication is a recovery/integration path rather than the concurrency mechanism. The command must verify the source commit and tree, require an expected remote head, prove fast-forward ancestry, read the pinned docs SHA from that source object, generate a schema-valid app/docs/catalog manifest under Git metadata, push the exact SHA to one unprotected task ref, and verify the resulting remote ref. It must never switch, stage, reset, stash, restore, merge, create a worktree, touch authored files, or deploy.
 
 ```sh
-npm --prefix "$KNOWGRPH_ROOT" run release:publish:immutable -- \
+npm --prefix "$AGENTICGRAPH_ROOT" run release:publish:immutable -- \
   --source-sha "<exact-source-sha>" \
   --target-ref "refs/heads/agent/<device>/<semantic-scope>" \
   --expected-remote-sha "<exact-current-remote-sha>"
@@ -248,9 +248,9 @@ Resolve `$GITHUB_ROOT` from the registered main worktree rather than a user-spec
 ```sh
 export GITHUB_ROOT="$(cd "$(git -C agentic-canvas-os rev-parse --show-toplevel)/.." && pwd)"
 export AGENTIC_CANVAS_OS_ROOT="$GITHUB_ROOT/agentic-canvas-os"
-export KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
+export AGENTICGRAPH_ROOT="$GITHUB_ROOT/knowgrph"
 git -C "$AGENTIC_CANVAS_OS_ROOT" worktree list --porcelain -z
-git -C "$KNOWGRPH_ROOT" worktree list --porcelain -z
+git -C "$AGENTICGRAPH_ROOT" worktree list --porcelain -z
 ```
 
 ### 2. Fetch
@@ -259,7 +259,7 @@ Refresh remote refs before starting Codex or editing files.
 
 ```sh
 git -C "$AGENTIC_CANVAS_OS_ROOT" fetch --prune origin
-git -C "$KNOWGRPH_ROOT" fetch --prune origin
+git -C "$AGENTICGRAPH_ROOT" fetch --prune origin
 ```
 
 Fetch failure blocks startup. Do not build from assumed-current refs or compensate with repeated pull attempts.
@@ -272,10 +272,10 @@ Inspect the source checkout, branch tracking, divergence, worktrees, and open se
 git -C "$AGENTIC_CANVAS_OS_ROOT" status --short --branch
 git -C "$AGENTIC_CANVAS_OS_ROOT" rev-parse HEAD
 git -C "$AGENTIC_CANVAS_OS_ROOT" rev-parse origin/main
-git -C "$KNOWGRPH_ROOT" status --short --branch
-git -C "$KNOWGRPH_ROOT" branch --verbose --verbose
-git -C "$KNOWGRPH_ROOT" worktree list
-git -C "$KNOWGRPH_ROOT" rev-parse origin/main
+git -C "$AGENTICGRAPH_ROOT" status --short --branch
+git -C "$AGENTICGRAPH_ROOT" branch --verbose --verbose
+git -C "$AGENTICGRAPH_ROOT" worktree list
+git -C "$AGENTICGRAPH_ROOT" rev-parse origin/main
 ```
 
 Stop when a listed worktree is missing, prunable, unregistered, on a duplicate checked-out branch, or contains dirt that remains unexplained after the exact canonical-equivalence check; when the configured canonical ref is unavailable; when either registered canonical worktree differs from its fetched canonical ref; or when another current ledger claim owns the same or overlapping write set. Resolve overlap only through the protected handoff, release, or reclaim protocol. Attributed canonical dirt blocks canonical mutation and runtime, but not activation of an unrelated clean detached fetched-ref lane; bind it to an Overlap Preservation Receipt and leave its bytes in place. `owned-untracked` in another task worktree blocks only that worktree and overlapping scopes, not an unrelated isolated lane.
@@ -297,7 +297,7 @@ In the root-source `agentic-canvas-os` repository, fresh task activation now fai
 ```sh
 node "$AGENTIC_CANVAS_OS_ROOT/scripts/device-branch.mjs" start \
   "<semantic-scope>" --session="$AGENTIC_SESSION_ID" \
-  --repository="$KNOWGRPH_ROOT" --provision --worktree="$TASK_WORKTREE" \
+  --repository="$AGENTICGRAPH_ROOT" --provision --worktree="$TASK_WORKTREE" \
   --write-scope-manifest="<external-manifest.json>" \
   --cloud-authority="<external-cloud-claim-result.json>" \
   --target-repository="<owner/repository>" --json

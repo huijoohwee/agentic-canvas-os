@@ -35,6 +35,13 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   assert.equal(first.claim.claimIdentitySchema, "agentic-cloud-collaboration-entry/v2");
   assert.equal(first.claim.workItemId, pseudonymousIdentifier("work-item", input.workItemId));
   assert.equal(first.replayed, false);
+  assert.equal(first.claimConflictDecisionSchema,
+    "agentic-cloud-claim-conflict-decision/v1");
+  assert.equal(first.claimConflictDisposition, "current");
+  assert.match(first.claimConflictDecisionDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(first.receipt.claimConflictDisposition, "current");
+  assert.equal(first.receipt.claimConflictDecisionDigest,
+    first.claimConflictDecisionDigest);
   assert.match(first.ledgerRevision, /^[0-9a-f]{40}$/u);
   assert.match(first.claimDigest, /^[0-9a-f]{64}$/u);
   assert.equal(JSON.stringify(first).includes(input.deviceId), false);
@@ -145,6 +152,7 @@ test("adapter preserves ordinary dynamic claim CAS when the caller seal is absen
     const result = await createAdapter(github).execute("claim", input);
     assert.equal(result.ok, true);
     assert.equal(result.attempts, 2);
+    assert.equal(result.claimConflictDisposition, "current");
     assert.equal(github.calls.filter(call => call.method === "PATCH").length, 2);
   }
 });
@@ -211,9 +219,14 @@ test("adapter retries a lost CAS by re-parenting across a disjoint winning claim
   assert.equal(winningPeer.claimCore.workItemId, "work-item:disjoint-cas-winner-1");
   assert.equal(candidate.parentDigest, winningPeer.digest);
   assert.equal(result.acceptedAuditParentDigest, winningPeer.digest);
+  assert.equal(result.claimConflictDisposition, "disjoint-rebase");
   assert.match(result.conflictSetDigest, /^[0-9a-f]{64}$/u);
+  assert.match(result.claimConflictDecisionDigest, /^[0-9a-f]{64}$/u);
   assert.equal(result.receipt.acceptedAuditParentDigest, winningPeer.digest);
   assert.equal(result.receipt.conflictSetDigest, result.conflictSetDigest);
+  assert.equal(result.receipt.claimConflictDisposition, "disjoint-rebase");
+  assert.equal(result.receipt.claimConflictDecisionDigest,
+    result.claimConflictDecisionDigest);
 });
 test("adapter rebases an observed claim across a disjoint committed peer", async () => {
   const github = createFakeGitHub();
@@ -255,6 +268,7 @@ test("adapter replays an exact sealed claim after ledger and protected-head adva
   const writesBefore = github.mutationCount();
   const replay = await adapter.execute("claim", input);
   assert.equal(replay.replayed, true);
+  assert.equal(replay.claimConflictDisposition, "idempotent-replay");
   assert.equal(replay.claimDigest, claimed.claimDigest);
   assert.equal(replay.ledgerRevision, later.ledgerRevision);
   assert.equal(github.mutationCount(), writesBefore);

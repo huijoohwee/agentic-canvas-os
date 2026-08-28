@@ -260,6 +260,9 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
     contractReceiptDigest: transition.receipt?.receiptDigest || null,
     acceptedAuditParentDigest: transition.acceptedParentDigest ?? null,
     conflictSetDigest: transition.conflictSetDigest ?? null,
+    claimConflictDecisionSchema: transition.claimConflictDecisionSchema ?? null,
+    claimConflictDisposition: transition.claimConflictDisposition ?? null,
+    claimConflictDecisionDigest: transition.claimConflictDecisionDigest ?? null,
     sequence: transition.ledger.sequence,
     evaluationTime,
   };
@@ -275,6 +278,9 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
     claimDigest: transition.claimDigest || null,
     acceptedAuditParentDigest: transition.acceptedParentDigest ?? null,
     conflictSetDigest: transition.conflictSetDigest ?? null,
+    claimConflictDecisionSchema: transition.claimConflictDecisionSchema ?? null,
+    claimConflictDisposition: transition.claimConflictDisposition ?? null,
+    claimConflictDecisionDigest: transition.claimConflictDecisionDigest ?? null,
     operationReceipt: transition.receipt || null,
     receipt: { ...receipt, receiptDigest: digestValue(receipt) },
   };

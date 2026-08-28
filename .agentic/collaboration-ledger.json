@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5740,
-  "headDigest": "1555716e096699dd381c215b378767a66c724345de39c28c6865fb778c86dfb2",
+  "sequence": 5741,
+  "headDigest": "dc6ea99309236dcbe29d3407168582a082a4ae1d13aa36f1e79924602e8d3110",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -291998,6 +291998,46 @@
       },
       "claimDigest": "4a8f9b62dd54f471a9cc335c944b82405319b5be74b0ecf2a0e108f24c858895",
       "digest": "1555716e096699dd381c215b378767a66c724345de39c28c6865fb778c86dfb2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5741,
+      "parentDigest": "1555716e096699dd381c215b378767a66c724345de39c28c6865fb778c86dfb2",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "ec8da9bad8b71c767ea356bf4f956a93673d1e23f19568237ce418fe42dcc213",
+      "idempotencyKey": "b142f7419ed2c8cdd19f982a43f4974bd38cbb79985031c9c4676224fee90f26",
+      "requestDigest": "8961cbe09ffb2d28635266add6e40546336d14491f31f56c4f65cd69e0ec84f6",
+      "evaluationTime": "2026-08-28T11:37:25.000Z",
+      "claimCore": {
+        "claimId": "ec8da9bad8b71c767ea356bf4f956a93673d1e23f19568237ce418fe42dcc213",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:065582bbee88678e6b9ec03201b6b61d20242c048f4a57c53d0f3858c4c8ca81",
+        "canonicalBaseRevision": "b5b0f881db65ce478537051c29161151b7a61764",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-mixed-identity-pair-retirement.test.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs",
+          "semantic:claim-only-pair-stable-base-projection"
+        ],
+        "writeSetDigest": "3447ee1240fe607b37f17f58223e8ed3e9ccc2865f6a07009b4fd2628b6ccb81",
+        "laneRevision": "702cce8a392bf31f1f4fb1bb66b968979cc81c62",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-28T12:20:02.000Z",
+        "evidenceDigest": "7d11cb845a16c51d4f8016f77fcf94a91b91b53c777aece1c4d6e9e9ee8c8fb2",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBU2xuA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7bc8f4de0490000ea0f808998839773f05b9afda2fc354a9675430de9c19cf18",
+      "digest": "dc6ea99309236dcbe29d3407168582a082a4ae1d13aa36f1e79924602e8d3110"
     }
   ]
 }

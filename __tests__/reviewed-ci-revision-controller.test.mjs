@@ -23,7 +23,10 @@ import {
 } from "../scripts/reviewed-ci-revision-controller.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { sourceFixture } from "./reviewed-ci-revision-contract.test.mjs";
-import { integrateSession } from "../scripts/device-integrate-lib.mjs";
+import {
+  integrateSession,
+  renderProtectedMainRefreshCommitMessage,
+} from "../scripts/device-integrate-lib.mjs";
 import { review } from "../scripts/device-branch-lib.mjs";
 import { assertAdmissionMutationAuthority } from "../scripts/scoped-lane-admission-state.mjs";
 import {
@@ -351,9 +354,11 @@ test("active local mismatch enters integration writes before cloud verification"
     verifyCloudAuthority() { trace.push("verify-cloud"); throw new Error("stop after pre-auth writes"); },
   }), /stop after pre-auth writes/);
   assert.ok(trace.includes("git fetch origin main"));
-  assert.ok(trace.includes(
-    "git merge -m fix(reviewed-ci-revision-recovery): test active refresh origin/main",
-  ));
+  assert.ok(trace.includes(`git merge -m ${renderProtectedMainRefreshCommitMessage({
+    subject: lease.integration.commitMessage,
+    branch: lease.branch,
+    lease,
+  })} origin/main`));
   assert.equal(trace.filter(command => command.startsWith("git merge -m ")).length, 1);
   assert.ok(trace.indexOf("publish") < trace.indexOf("verify-cloud"));
 });

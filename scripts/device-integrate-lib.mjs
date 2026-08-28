@@ -209,6 +209,8 @@ function integrateSessionUnfenced({
         run,
         runText,
         squashSubject: refreshSubject,
+        branch,
+        lease,
       });
       lease = leaseStore.read(branch);
       publishActiveWithSuccessorRecovery({
@@ -254,6 +256,8 @@ function integrateSessionUnfenced({
       run,
       runText,
       squashSubject: commitEvidence.commitMessage,
+      branch,
+      lease,
     });
     lease = leaseStore.read(branch);
     publishActiveWithSuccessorRecovery({
@@ -1231,16 +1235,18 @@ function pullRequestNumber(value) {
   return Number(match[1]);
 }
 
-function refreshTaskBranchFromMain({ repo, gitText, run, runText, squashSubject }) {
+function refreshTaskBranchFromMain({ repo, gitText, run, runText, squashSubject, branch, lease }) {
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Integration commit did not leave a clean task worktree.");
   }
-  const refreshSubject = requireProtectedSquashSubject(squashSubject, {
-    label: "Integration refresh subject",
+  const refreshMessage = renderProtectedMainRefreshCommitMessage({
+    subject: squashSubject,
+    branch,
+    lease,
   });
   run("git", ["fetch", "origin", "main"]);
   runText("git", ["merge-tree", "--write-tree", "HEAD", "origin/main"], { cwd: repo });
-  run("git", ["merge", "-m", refreshSubject, "origin/main"]);
+  run("git", ["merge", "-m", refreshMessage, "origin/main"]);
   if (gitText(["status", "--porcelain"]).trim()) {
     throw new Error("Protected-main refresh did not leave a clean task worktree.");
   }
@@ -3987,6 +3993,24 @@ export function renderProtectedSquashCommitBody({ branch, lease }) {
   );
   return [
     `Integrate the declared ${branchScope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`,
+    "",
+    `Agentic-Task: ${branchScope}`,
+    `Agentic-Scope: ${branchScope}`,
+    `Agentic-Lease-Epoch: ${claimEpoch}`,
+    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+  ].join("\n");
+}
+
+export function renderProtectedMainRefreshCommitMessage({ subject, branch, lease }) {
+  const refreshSubject = requireProtectedSquashSubject(subject, {
+    label: "Integration refresh subject",
+  });
+  const { branchScope, claimEpoch } = resolveManagedCommitAttribution(
+    { branch, lease },
+    { allowLocalEpochFallback: true },
+  );
+  return [
+    refreshSubject,
     "",
     `Agentic-Task: ${branchScope}`,
     `Agentic-Scope: ${branchScope}`,

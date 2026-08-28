@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5838,
-  "headDigest": "8cc6dc5a82a35e60ddeb6a35a99767e2719bb7311e6956396306dc45fe7317e3",
+  "sequence": 5839,
+  "headDigest": "840ba07627a34e379213b95b11a0a7f1dbd0c8402883e225d202dfd0ac0d9f8d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -296916,6 +296916,53 @@
       },
       "claimDigest": "dc97d41cc0c534c2865347e175a30563aedcb12d692060eff628adfa07a6f123",
       "digest": "8cc6dc5a82a35e60ddeb6a35a99767e2719bb7311e6956396306dc45fe7317e3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5839,
+      "parentDigest": "8cc6dc5a82a35e60ddeb6a35a99767e2719bb7311e6956396306dc45fe7317e3",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1b76ffa4d6b2e3ec3e0b537a73779ae6ffd4ded8be08ca2a663a0641d455866d",
+      "idempotencyKey": "87549b076c81accc4fe1f3f8578b05e498db9c3202581e221a8985f165c45a1e",
+      "requestDigest": "e99a2aac0a626e3d85059101bac98ad4c851a4266fef8de8ea021bcdd8053bf7",
+      "evaluationTime": "2026-08-28T16:47:08.000Z",
+      "claimCore": {
+        "claimId": "1b76ffa4d6b2e3ec3e0b537a73779ae6ffd4ded8be08ca2a663a0641d455866d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:13c69082861dcbaacfcb09bf732c23b09a1f452d205e48cbfefd64f8cccc17ee",
+        "canonicalBaseRevision": "110ffba7397fc9e28d6f47bb8a4cb9abe581495b",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-cli.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-contract.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-controller.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-repository-adapter.test.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-contract.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-controller.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-repository-adapter.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement.mjs",
+          "semantic:prepared-supersession-retirement"
+        ],
+        "writeSetDigest": "4f477e38d856cb867dab58b9962229cbd78eebab29c53a65c558edfca0479ef0",
+        "laneRevision": "3305e605265f4b0ea4462921afc23fce89797eb2",
+        "leaseEpoch": 2,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-28T17:12:37.000Z",
+        "evidenceDigest": "534dd66007d666ad6881804f55ad4b49b31c40c792f7c9f7c15e4b2691e2f88b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBW3PLw",
+        "predecessorClaimId": "48dbbac276c3600b2327ea73194bc434a89c71c643a5f0838c6f74809e855de3",
+        "eligibleSince": "2026-08-28T16:41:05.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-28T16:42:37.000Z"
+      },
+      "claimDigest": "8b54698aada0bcb4e511a9d22ae017d7633c5f6c2451c1e12b7d2e6f21b5c3d2",
+      "digest": "840ba07627a34e379213b95b11a0a7f1dbd0c8402883e225d202dfd0ac0d9f8d"
     }
   ]
 }

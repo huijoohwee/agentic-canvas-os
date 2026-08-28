@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5724,
-  "headDigest": "225fac3d7813a42642135b039169825b3d97e60bedf31a4e8a2fde70767da63c",
+  "sequence": 5725,
+  "headDigest": "e6604cc036576d99ef11e2645bd6039f45dc04469301160e360d962a045f8e63",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -291263,6 +291263,54 @@
       },
       "claimDigest": "61cd47b50ce09c6b94c47aef6fe507d87e2a4318e88a3580ffb1d37210b00743",
       "digest": "225fac3d7813a42642135b039169825b3d97e60bedf31a4e8a2fde70767da63c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5725,
+      "parentDigest": "225fac3d7813a42642135b039169825b3d97e60bedf31a4e8a2fde70767da63c",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "421ba420ceff11f57f77b7a9752d2366e3a626a2bf95d995ff2f34bc58eb76ef",
+      "idempotencyKey": "3aef56318e7418e4d1d9f1596d42c690312894ae9615ec9694b9b42686b3173f",
+      "requestDigest": "749f46f8b1103dc212030ab2d5568ef0f0081e54c42fd421e38766504e765781",
+      "evaluationTime": "2026-08-28T10:29:34.000Z",
+      "claimCore": {
+        "claimId": "421ba420ceff11f57f77b7a9752d2366e3a626a2bf95d995ff2f34bc58eb76ef",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:5f6dc80ca84c753a4da495052d3bb79f48eeb709b21ce3d0a394a84d4876080e",
+        "canonicalBaseRevision": "b5b0f881db65ce478537051c29161151b7a61764",
+        "declaredWriteScope": [
+          "path:__tests__/autonomous-runtime.test.mjs",
+          "path:__tests__/tool-search-config.test.mjs",
+          "path:agent-api/src/app.js",
+          "path:agent-api/src/autonomous-runtime-config.js",
+          "path:agent-api/src/tool-search-config.js",
+          "path:docs/AUTONOMOUS-RUNTIME.md",
+          "path:docs/FUNCTION-CALLING.md",
+          "path:docs/NATIVE-SKILL-HARNESS.md",
+          "path:docs/TOOL-SEARCH.md",
+          "path:worker/index.js",
+          "semantic:agenticgraph-env-gateway-closure"
+        ],
+        "writeSetDigest": "f14dc3a729ab29e49c19d41ab05056315a977151db2ed41b87295fe638fc24d5",
+        "laneRevision": "b5b0f881db65ce478537051c29161151b7a61764",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T11:29:34.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "dc7834ca480bb80226d7484c31b6f9bb39a45ab3da9897759be2bbe1d8efe953",
+      "digest": "e6604cc036576d99ef11e2645bd6039f45dc04469301160e360d962a045f8e63"
     }
   ]
 }

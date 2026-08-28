@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5851,
-  "headDigest": "36a92a774df114059fe8ca4e5bad9e1a273543d482af1d14f77d1be4b83cca8d",
+  "sequence": 5852,
+  "headDigest": "fa06a933bbeb6f2cc647c43a2bae582f3a186cf9ab10f01830d8f0ec575e0d55",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -297539,6 +297539,55 @@
       },
       "claimDigest": "7c4a609749b40ec3e2a2d8a663b32fcbd49d797f481f84a000cd50439d9020c4",
       "digest": "36a92a774df114059fe8ca4e5bad9e1a273543d482af1d14f77d1be4b83cca8d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5852,
+      "parentDigest": "36a92a774df114059fe8ca4e5bad9e1a273543d482af1d14f77d1be4b83cca8d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "630274ee61ed3bac80203dc53b42605afd5b9b94e8eaf9d62567dc9e6a886ec4",
+      "idempotencyKey": "bbb9f80114f9a6df36a82e934360511a87d5c89dc0a608ec0ccee7bc97af9aa3",
+      "requestDigest": "6ab51fa6b5b431197227eb9000d85533af15caa7c91bbcf0ffaeb9d1d6676979",
+      "evaluationTime": "2026-08-28T23:15:53.000Z",
+      "claimCore": {
+        "claimId": "630274ee61ed3bac80203dc53b42605afd5b9b94e8eaf9d62567dc9e6a886ec4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:fd8c4b6908c21eaa51371d346e90fda5fd95e86bf582e099790ddc015426cfa3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f0ed4403ce18b10b46a0a6e911046fecf919e228df560cd4e7a90d0369befb72",
+        "canonicalBaseRevision": "1ef0b07ef7fc7561b0debe05606b148220ebafb3",
+        "declaredWriteScope": [
+          "path:__tests__/web-runtime-conformance.test.mjs",
+          "path:docs/RUNTIME-PROOF.md",
+          "path:docs/RUNTIME-READINESS.md",
+          "path:web/app.js",
+          "path:web/build.mjs",
+          "path:web/command-overlay.css",
+          "path:web/command-overlay.js",
+          "path:web/invocation-runtime.js",
+          "path:web/manifest.webmanifest",
+          "path:web/offline-queue.js",
+          "path:web/service-worker.js",
+          "semantic:browser-runtime-conformance"
+        ],
+        "writeSetDigest": "8593b8cca271deb371a043460c5da146407128d9ecd333a860ffce5c9ff280ca",
+        "laneRevision": "1ef0b07ef7fc7561b0debe05606b148220ebafb3",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T00:15:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "69046e6d18225e6d4015fdc1d7f38440677b376da9b2813f2b5c046970f91bcf",
+      "digest": "fa06a933bbeb6f2cc647c43a2bae582f3a186cf9ab10f01830d8f0ec575e0d55"
     }
   ]
 }

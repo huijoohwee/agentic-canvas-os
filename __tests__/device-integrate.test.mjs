@@ -265,6 +265,57 @@ test("runtime repository identity falls back to origin metadata and rejects unsu
   }
 });
 
+test("ancillary runtime accepts exact origin identities after package renames", () => {
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-runtime-renamed-packages-"));
+  const canonicalRoot = path.join(workspace, "site-canonical");
+  const agenticCanvasOsRoot = path.join(workspace, "controller-canonical");
+  const knowgrphRoot = path.join(workspace, "runtime-canonical");
+  mkdirSync(canonicalRoot, { recursive: true });
+  mkdirSync(agenticCanvasOsRoot, { recursive: true });
+  mkdirSync(knowgrphRoot, { recursive: true });
+  writeFileSync(
+    path.join(canonicalRoot, "package.json"),
+    JSON.stringify({ name: "huijoohwee.github.io" }),
+  );
+  writeFileSync(
+    path.join(agenticCanvasOsRoot, "package.json"),
+    JSON.stringify({ name: "agentic-canvas-runtime" }),
+  );
+  writeFileSync(
+    path.join(knowgrphRoot, "package.json"),
+    JSON.stringify({ name: "agenticgraph" }),
+  );
+  const origins = new Map([
+    [canonicalRoot, "ssh://git@code.example/team/huijoohwee.github.io.git"],
+    [agenticCanvasOsRoot, "git@code.example:team/agentic-canvas-os.git"],
+    [knowgrphRoot, "https://code.example/team/knowgrph.git"],
+  ]);
+
+  try {
+    assert.deepEqual(resolveRuntimeRepositories({
+      canonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      runtimeRepository: knowgrphRoot,
+      allowAncillary: true,
+      readOriginRemote: root => origins.get(root) || "",
+    }), {
+      integratedRepository: "huijoohwee.github.io",
+      agenticCanvasOsRoot,
+      knowgrphRoot,
+    });
+    origins.set(knowgrphRoot, "https://code.example/team/different-runtime.git");
+    assert.throws(() => resolveRuntimeRepositories({
+      canonicalRoot,
+      controllerRoot: agenticCanvasOsRoot,
+      runtimeRepository: knowgrphRoot,
+      allowAncillary: true,
+      readOriginRemote: root => origins.get(root) || "",
+    }), /Knowgrph canonical repository identity is unavailable/u);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test("cleanup validation accepts safe retained containers and preserves the typed receipt", () => {
   const repository = "/workspace/agentic-canvas-os";
   const worktreePath = "/workspace/.worktrees/agentic-canvas-os/runtime-integration";
@@ -3827,7 +3878,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
     assert.equal(completed, true);
     assert.deepEqual(commitSubjectReads, []);
     assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha, commitSha]);
-    assert.equal(verifiedProtectedRefreshes.length, 3);
+    assert.equal(verifiedProtectedRefreshes.length, 4);
     assert.deepEqual(result.protectedMainRefresh, {
       schema: "agentic-protected-main-refresh/v1",
       deliveredHeadSha: commitSha,
@@ -3932,6 +3983,43 @@ test("expired delivery merged replay verifies historical retirement after live r
   assert.equal(events.filter(event => event === "recover:status").length, 1);
   assert.equal(events.includes("recover:continue"), false);
   assert.ok(events.includes(`verify:${commitSha}`));
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("delivery merged replay reconstructs a refreshed head before its first cloud verification", () => {
+  const events = [];
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  const refreshedTreeSha = "4".repeat(40);
+  let verificationCount = 0;
+  const result = runProtectedRefreshScenario({
+    leaseStatus: "delivery",
+    events,
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: refreshedTreeSha,
+    },
+    observations: [
+      mergedPullRequest({ headRefOid: refreshedHeadSha }),
+      mergedPullRequest({ headRefOid: refreshedHeadSha }),
+    ],
+    initialLocalHeadSha: refreshedHeadSha,
+    onVerify: input => {
+      verificationCount += 1;
+      if (!input.protectedMainRefresh) {
+        throw new Error("merged refresh receipt is required");
+      }
+      assert.equal(input.protectedMainRefresh.deliveredHeadSha, commitSha);
+      assert.equal(input.protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
+    },
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.ok(verificationCount > 1);
+  assert.ok(events.includes("run:git fetch origin refs/pull/42/head"));
+  assert.equal(events.includes("run:git merge --ff-only FETCH_HEAD"), false);
+  assert.equal(result.protectedMainRefresh.refreshedHeadSha, refreshedHeadSha);
   assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
 });
 
@@ -4965,6 +5053,7 @@ function runProtectedRefreshScenario({
   terminalMergedReplay = false,
   livePullRequest = protectedRefreshPullRequest(),
   liveMainRef = protectedRefreshMainRef(),
+  initialLocalHeadSha = commitSha,
 }) {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-protected-refresh-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
@@ -5011,7 +5100,7 @@ function runProtectedRefreshScenario({
   let recoveryPullRequestRead = 0;
   let autoMergeReplayPending = false;
   let observationIndex = 0;
-  let head = commitSha;
+  let head = initialLocalHeadSha;
   let clock = 0;
   try {
     return integrateSession({

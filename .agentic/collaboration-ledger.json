@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5805,
-  "headDigest": "5c08fcef4be0895e2db1e0c241d5eac78a8873ca8135e00231d3105aa16ce013",
+  "sequence": 5806,
+  "headDigest": "804547c8a442ba0ff6ebe3b2a372ec3e8ba26fa40b946eca906364838708b843",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -295259,6 +295259,63 @@
       },
       "claimDigest": "ca3ba2a5ac6854de672c371dfe701c3c11ff9f3d88ec8ebab7b7bce54438807a",
       "digest": "5c08fcef4be0895e2db1e0c241d5eac78a8873ca8135e00231d3105aa16ce013"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5806,
+      "parentDigest": "5c08fcef4be0895e2db1e0c241d5eac78a8873ca8135e00231d3105aa16ce013",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8f1cf48bffadc8aaa1007cb44f68ddc784fa7ff5180ec9cd245945c149534269",
+      "idempotencyKey": "6038d93ec4a8b0a13d1779be143aab66794758cbd353c75d21f810371b5a12e4",
+      "requestDigest": "eceb4c923cb8b0e7e07ee9b85f139208fd423137780e76eb3fff7b1aa7084a87",
+      "evaluationTime": "2026-08-28T14:16:32.000Z",
+      "claimCore": {
+        "claimId": "8f1cf48bffadc8aaa1007cb44f68ddc784fa7ff5180ec9cd245945c149534269",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:495100b19529643cafb156f810c89e9422d61879b5ec6050fca329f04f4b4449",
+        "canonicalBaseRevision": "6095bbfdb82b321e34a8833acc1c4ef701327b31",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-cli.test.mjs",
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-contract.test.mjs",
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-controller.test.mjs",
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-repository-adapter.test.mjs",
+          "path:scripts/admitted-empty-abandoned-owner-retirement-contract.mjs",
+          "path:scripts/admitted-empty-abandoned-owner-retirement-controller.mjs",
+          "path:scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs",
+          "path:scripts/admitted-empty-abandoned-owner-retirement.mjs",
+          "semantic:empty-retirement-task-authority"
+        ],
+        "writeSetDigest": "a9be149ca60f664f3098609265c05a60db8c2655fb6fde4b6378fe1a3949858a",
+        "laneRevision": "89c21b28eddc2185d4234474d1a495dcd74f74b3",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T14:43:28.000Z",
+        "evidenceDigest": "c86fb671911e2be5ae49dcfb41f2194bdf86819f0f7c6debaaac02b63953c328",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBWHRcA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "89c21b28eddc2185d4234474d1a495dcd74f74b3",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBWHRcA",
+          "focusedEvidenceDigest": "c86fb671911e2be5ae49dcfb41f2194bdf86819f0f7c6debaaac02b63953c328",
+          "dependencyClosureDigest": "4dc82b14733ea6892e14125f5457265f3632e68ec96b27db4a28ce3083375109",
+          "namedChecksDigest": "97638b66d94ff52ff395a7272e5cc593ce6d09936d3a02c374fe80b64d7a08e2",
+          "handoffEvidenceDigest": "3e3fcf9bdbc58bdff7565e1c9f8c50656e24fe6fe9a283407ff2c4f242f1285a",
+          "operatorDecisionDigest": "20c3346534958a52ea6b5e2841d7f34f25af41b07ab109bfa90c0ae91d053d99",
+          "integrationIntentDigest": "7165ed1c6097492ce77e504899afeabc61aec3579bc6770ac2f61d7ef4fba42c",
+          "integratedAt": "2026-08-28T14:16:32.000Z"
+        }
+      },
+      "claimDigest": "84f253bbdd89b3a3add3e5339144b027abd5db12c42274052cb756c2ae416749",
+      "digest": "804547c8a442ba0ff6ebe3b2a372ec3e8ba26fa40b946eca906364838708b843"
     }
   ]
 }

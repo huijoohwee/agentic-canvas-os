@@ -20,7 +20,7 @@ This instruction accepts two bounded decisions for the native skill creation
 harness increment:
 
 1. The sequencing order remains `after` the teardown effort recorded against
-   `/Users/huijoohwee/Documents/GitHub/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`.
+   `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`.
 2. The Prerequisite Gate may remain `waived` for this increment while the
    shipped default honestly reports the upstream runtime surfaces as
    unconfigured and provider execution as unverified.

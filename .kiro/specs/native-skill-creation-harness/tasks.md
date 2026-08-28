@@ -199,7 +199,7 @@ at the end and is not part of this increment.
       roughly 21,100 lines, plus 4 scripts and the new test files)
     - Record the sequencing decision that this feature ships after the teardown effort, that the
       decision is made against the task-branch version of the `repository-teardown` spec at
-      `/Users/huijoohwee/Documents/GitHub/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`
+      `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`
       rather than a merged version, and that the operator instruction accepting that order does not
       exist yet
     - Record the mitigating fact that `tool-search.js` and the Agent Definition registry are

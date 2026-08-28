@@ -60,7 +60,7 @@ function sourceUnit() {
   return unit({
     unitId: "jh-source",
     repository: sourceGuideline.repository,
-    worktree: "/Users/huijoohwee/Documents/GitHub/.worktrees/huijoohwee.github.io/git-guidelines-companion",
+    worktree: "$GITHUB_ROOT/.worktrees/huijoohwee.github.io/git-guidelines-companion",
     paths: [
       "guidelines/agentic-sdlc-guidelines.md",
       "docs/documents/git-guidelines.md",
@@ -83,7 +83,7 @@ function projectionUnit() {
   return unit({
     unitId: "acos-projection",
     repository: "huijoohwee/agentic-canvas-os",
-    worktree: "/Users/huijoohwee/Documents/GitHub/.worktrees/agentic-canvas-os/git-guidelines-companion",
+    worktree: "$GITHUB_ROOT/.worktrees/agentic-canvas-os/git-guidelines-companion",
     paths: [
       ".github/workflows/cloud-collaboration.yml",
       "__tests__/cloud-collaboration-cli.test.mjs",

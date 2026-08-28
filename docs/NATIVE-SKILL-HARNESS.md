@@ -170,7 +170,7 @@ Sequencing decision:
 - This feature ships after the teardown effort.
 - The decision is made against the task-branch version of the
   `repository-teardown` spec under
-  `/Users/huijoohwee/Documents/GitHub/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`.
+  `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`.
 - The operator instruction accepting that order is
   `operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17`.
 

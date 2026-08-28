@@ -3,13 +3,13 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
-  createKnowgrphKnowledgeGraphClient,
+  createKnowgrphAgenticGraphClient,
   createKnowgrphMcpClient,
-  KNOWLEDGE_GRAPH_MCP_TOOLS,
+  AGENTIC_GRAPH_MCP_TOOLS,
   KnowgrphMcpError,
-  validateKnowledgeGraphIngestResult,
-  validateKnowledgeGraphReadResult,
-  validateKnowledgeGraphRequest,
+  validateAgenticGraphIngestResult,
+  validateAgenticGraphReadResult,
+  validateAgenticGraphRequest,
 } from "../src/knowgrph-mcp-client.js";
 
 const ENDPOINT = "http://127.0.0.1:31888/mcp";
@@ -21,10 +21,10 @@ const EDGE_ID = `kg:edge:${"4".repeat(28)}`;
 const SOURCE_NODE_ID = "kg:source-file:source";
 const TARGET_NODE_ID = "kg:syntax-node:target";
 const RESULT_SCHEMAS = {
-  ingest: "knowgrph-knowledge-graph-ingest/v1",
-  parser_generate: "knowgrph-knowledge-graph-parser-generate/v1",
-  query: "knowgrph-knowledge-graph-query/v1",
-  explain_edge: "knowgrph-knowledge-graph-explain-edge/v1",
+  ingest: "agenticgraph-knowledge-graph-ingest/v1",
+  parser_generate: "agenticgraph-knowledge-graph-parser-generate/v1",
+  query: "agenticgraph-knowledge-graph-query/v1",
+  explain_edge: "agenticgraph-knowledge-graph-explain-edge/v1",
 };
 const stableValue = (value) => (
   Array.isArray(value)
@@ -143,7 +143,7 @@ function createRecordingClient() {
       if (request.body.method === "initialize") {
         return response({ jsonrpc: "2.0", id: request.body.id, result: {} }, "kg-session");
       }
-      const structuredContent = request.body.params.name === KNOWLEDGE_GRAPH_MCP_TOOLS.ingest
+      const structuredContent = request.body.params.name === AGENTIC_GRAPH_MCP_TOOLS.ingest
         ? {
             schema: RESULT_SCHEMAS.ingest,
             ok: true,
@@ -160,25 +160,25 @@ function createRecordingClient() {
               truncated: false,
               limit: 200,
               graphData: {
-                context: "knowgrph-knowledge-graph-projection",
+                context: "agenticgraph-knowledge-graph-projection",
                 type: "Graph",
                 nodes: [],
                 edges: [],
               },
             },
           }
-        : request.body.params.name === KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser ? {
+        : request.body.params.name === AGENTIC_GRAPH_MCP_TOOLS.generateParser ? {
             schema: RESULT_SCHEMAS.parser_generate,
             ok: true,
             operation: "parser_generate",
             parserRegistryDigest: registryDigest,
             parserRegistry: {
-              schema: "knowgrph-knowledge-graph-parser-registry/v2",
+              schema: "agenticgraph-knowledge-graph-parser-registry/v2",
               digest: registryDigest,
               descriptors: parserDescriptors,
             },
           }
-        : request.body.params.name === KNOWLEDGE_GRAPH_MCP_TOOLS.query ? {
+        : request.body.params.name === AGENTIC_GRAPH_MCP_TOOLS.query ? {
             schema: RESULT_SCHEMAS.query,
             ok: true,
             operation: "query",
@@ -225,12 +225,12 @@ function createRecordingClient() {
   return { client, requests };
 }
 
-test("knowledge graph methods use the four exact Knowgrph tool identities", async () => {
-  assert.deepEqual(KNOWLEDGE_GRAPH_MCP_TOOLS, {
-    ingest: "knowgrph.knowledge_graph.ingest",
-    generateParser: "knowgrph.knowledge_graph.parser_generate",
-    query: "knowgrph.knowledge_graph.query",
-    explainEdge: "knowgrph.knowledge_graph.explain_edge",
+test("agentic graph methods use the four exact Knowgrph tool identities", async () => {
+  assert.deepEqual(AGENTIC_GRAPH_MCP_TOOLS, {
+    ingest: "agenticgraph.knowledge_graph.ingest",
+    generateParser: "agenticgraph.knowledge_graph.parser_generate",
+    query: "agenticgraph.knowledge_graph.query",
+    explainEdge: "agenticgraph.knowledge_graph.explain_edge",
   });
 
   const { client, requests } = createRecordingClient();
@@ -263,10 +263,10 @@ test("knowledge graph methods use the four exact Knowgrph tool identities", asyn
     }],
   };
 
-  await client.ingestKnowledgeGraph(ingest);
-  await client.generateKnowledgeGraphParser(parser);
-  await client.queryKnowledgeGraph(query);
-  await client.explainKnowledgeGraphEdge(explain);
+  await client.ingestAgenticGraph(ingest);
+  await client.generateAgenticGraphParser(parser);
+  await client.queryAgenticGraph(query);
+  await client.explainAgenticGraphEdge(explain);
 
   const calls = requests
     .filter((request) => request.body.method === "tools/call")
@@ -274,10 +274,10 @@ test("knowledge graph methods use the four exact Knowgrph tool identities", asyn
   assert.deepEqual(
     calls.map((call) => call.name),
     [
-      KNOWLEDGE_GRAPH_MCP_TOOLS.ingest,
-      KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser,
-      KNOWLEDGE_GRAPH_MCP_TOOLS.query,
-      KNOWLEDGE_GRAPH_MCP_TOOLS.explainEdge,
+      AGENTIC_GRAPH_MCP_TOOLS.ingest,
+      AGENTIC_GRAPH_MCP_TOOLS.generateParser,
+      AGENTIC_GRAPH_MCP_TOOLS.query,
+      AGENTIC_GRAPH_MCP_TOOLS.explainEdge,
     ],
   );
   assert.deepEqual(calls.map((call) => call.arguments), [ingest, parser, query, explain]);
@@ -295,25 +295,25 @@ test("query and edge explanation require an exact lowercase SHA-256 digest", asy
   };
 
   for (const invoke of [
-    () => client.queryKnowledgeGraph(query),
-    () => client.queryKnowledgeGraph({ ...query, expectedSnapshotDigest: DIGEST.toUpperCase() }),
-    () => client.explainKnowledgeGraphEdge(explain),
-    () => client.explainKnowledgeGraphEdge({ ...explain, expectedSnapshotDigest: "b".repeat(63) }),
+    () => client.queryAgenticGraph(query),
+    () => client.queryAgenticGraph({ ...query, expectedSnapshotDigest: DIGEST.toUpperCase() }),
+    () => client.explainAgenticGraphEdge(explain),
+    () => client.explainAgenticGraphEdge({ ...explain, expectedSnapshotDigest: "b".repeat(63) }),
   ]) {
     await assert.rejects(
       async () => invoke(),
       (error) => error instanceof KnowgrphMcpError
-        && error.code === "mcp_knowledge_graph_request_invalid"
+        && error.code === "mcp_agentic_graph_request_invalid"
         && error.data.fields.includes("expectedSnapshotDigest"),
     );
   }
   assert.equal(requests.length, 0, "invalid reads must fail before transport initialization");
 });
 
-test("knowledge graph request validation keeps server-owned optional fields intact", () => {
+test("agentic graph request validation keeps server-owned optional fields intact", () => {
   const invocation = {
-    schema: "knowgrph-knowledge-graph-invocation/v1",
-    tool: "knowgrph.knowledge_graph.ingest",
+    schema: "agenticgraph-knowledge-graph-invocation/v1",
+    tool: "agenticgraph.knowledge_graph.ingest",
     action: "/source.resolved.ingest",
     semantics: ["#source-backed"],
     bindings: ["@working-directory"],
@@ -336,49 +336,49 @@ test("knowledge graph request validation keeps server-owned optional fields inta
     limit: 20,
   };
 
-  assert.equal(validateKnowledgeGraphRequest("ingest", ingest), ingest);
-  assert.equal(validateKnowledgeGraphRequest("query", query), query);
+  assert.equal(validateAgenticGraphRequest("ingest", ingest), ingest);
+  assert.equal(validateAgenticGraphRequest("query", query), query);
   for (const invalidInvocation of [
-    { ...invocation, tool: "knowgrph.knowledge_graph.query" },
+    { ...invocation, tool: "agenticgraph.knowledge_graph.query" },
     { ...invocation, action: "#source.resolved.ingest" },
     { ...invocation, routingDigest: "c".repeat(63) },
     { ...invocation, extra: true },
   ]) {
     assert.throws(
-      () => validateKnowledgeGraphRequest("ingest", {
+      () => validateAgenticGraphRequest("ingest", {
         ...ingest,
         invocation: invalidInvocation,
       }),
-      (error) => error.code === "mcp_knowledge_graph_request_invalid"
+      (error) => error.code === "mcp_agentic_graph_request_invalid"
         && error.data.fields.includes("invocation"),
     );
   }
   assert.throws(
-    () => validateKnowledgeGraphRequest("query", { ...query, mode: "vector" }),
-    (error) => error.code === "mcp_knowledge_graph_request_invalid"
+    () => validateAgenticGraphRequest("query", { ...query, mode: "vector" }),
+    (error) => error.code === "mcp_agentic_graph_request_invalid"
       && error.data.fields.includes("mode"),
   );
   assert.throws(
-    () => validateKnowledgeGraphRequest("ingest", {
+    () => validateAgenticGraphRequest("ingest", {
       rootPath: "/workspace",
       outputPath: "/private/store/graph.json",
     }),
-    (error) => error.code === "mcp_knowledge_graph_request_invalid"
+    (error) => error.code === "mcp_agentic_graph_request_invalid"
       && error.data.fields.includes("outputPath"),
   );
   assert.throws(
-    () => validateKnowledgeGraphRequest("query", {
+    () => validateAgenticGraphRequest("query", {
       ...query,
       artifactPath: "/private/store/graph.json",
     }),
-    (error) => error.code === "mcp_knowledge_graph_request_invalid"
+    (error) => error.code === "mcp_agentic_graph_request_invalid"
       && error.data.fields.includes("artifactPath"),
   );
   for (const repositoryUrl of [
     "https://code.example.test/group/project",
     "https://source.example.test/nested/group/project.git",
   ]) {
-    assert.equal(validateKnowledgeGraphRequest("ingest", { repositoryUrl }).repositoryUrl, repositoryUrl);
+    assert.equal(validateAgenticGraphRequest("ingest", { repositoryUrl }).repositoryUrl, repositoryUrl);
   }
   for (const repositoryUrl of [
     "http://code.example.test/group/project",
@@ -390,25 +390,25 @@ test("knowledge graph request validation keeps server-owned optional fields inta
     " https://code.example.test/group/project",
   ]) {
     assert.throws(
-      () => validateKnowledgeGraphRequest("ingest", { repositoryUrl }),
-      (error) => error.code === "mcp_knowledge_graph_request_invalid"
+      () => validateAgenticGraphRequest("ingest", { repositoryUrl }),
+      (error) => error.code === "mcp_agentic_graph_request_invalid"
         && error.data.fields.includes("repositoryUrl"),
     );
   }
 });
 
-test("knowledge graph methods reject missing operation identities before transport", async () => {
+test("agentic graph methods reject missing operation identities before transport", async () => {
   const { client, requests } = createRecordingClient();
   await assert.rejects(
-    () => client.ingestKnowledgeGraph({}),
+    () => client.ingestAgenticGraph({}),
     KnowgrphMcpError,
   );
   for (const invoke of [
-    () => client.queryKnowledgeGraph({
+    () => client.queryAgenticGraph({
       expectedSnapshotDigest: DIGEST,
       mode: "summary",
     }),
-    () => client.explainKnowledgeGraphEdge({
+    () => client.explainAgenticGraphEdge({
       graphId: GRAPH_ID,
       expectedSnapshotDigest: DIGEST,
     }),
@@ -435,17 +435,17 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
       truncated: false,
       limit: 200,
       graphData: {
-        context: "knowgrph-knowledge-graph-projection",
+        context: "agenticgraph-knowledge-graph-projection",
         type: "Graph",
         nodes: [],
         edges: [],
       },
     },
   };
-  assert.equal(validateKnowledgeGraphIngestResult(result), result);
+  assert.equal(validateAgenticGraphIngestResult(result), result);
 
   for (const invalid of [
-    { ...result, schema: "knowgrph-knowledge-graph-ingest/v2" },
+    { ...result, schema: "agenticgraph-knowledge-graph-ingest/v2" },
     { ...result, graphId: "workspace" },
     { ...result, projection: { ...result.projection, token: "projection:workspace" } },
     {
@@ -457,21 +457,21 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
     },
   ]) {
     assert.throws(
-      () => validateKnowledgeGraphIngestResult(invalid),
-      (error) => error.code === "mcp_knowledge_graph_result_invalid",
+      () => validateAgenticGraphIngestResult(invalid),
+      (error) => error.code === "mcp_agentic_graph_result_invalid",
     );
   }
 
   assert.throws(
-    () => validateKnowledgeGraphIngestResult({
+    () => validateAgenticGraphIngestResult({
       ...result,
       artifactPath: "/private/store/graph.json",
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("artifactPath"),
   );
   assert.throws(
-    () => validateKnowledgeGraphIngestResult({
+    () => validateAgenticGraphIngestResult({
       ...result,
       projection: {
         ...result.projection,
@@ -481,30 +481,30 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
         },
       },
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("projection.graphData.metadata.storePath"),
   );
   assert.throws(
-    () => validateKnowledgeGraphIngestResult({
+    () => validateAgenticGraphIngestResult({
       ...result,
       counts: { sources: 1, nodes: 2_001, edges: 0 },
       projection: {
         ...result.projection,
         graphData: {
           type: "Graph",
-          context: "knowgrph-knowledge-graph-projection",
+          context: "agenticgraph-knowledge-graph-projection",
           nodes: Array.from({ length: 2_001 }, (_, index) => ({ id: `node:${index}` })),
           edges: [],
         },
       },
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("projection.graphData.nodes"),
   );
   let nested = {};
   for (let depth = 0; depth < 26; depth += 1) nested = { nested };
   assert.throws(
-    () => validateKnowledgeGraphIngestResult({
+    () => validateAgenticGraphIngestResult({
       ...result,
       projection: {
         ...result.projection,
@@ -514,11 +514,11 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
         },
       },
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.some((field) => field.endsWith(".depth")),
   );
   assert.throws(
-    () => validateKnowledgeGraphIngestResult({
+    () => validateAgenticGraphIngestResult({
       ...result,
       projection: {
         ...result.projection,
@@ -528,7 +528,7 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
         },
       },
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("projection.graphData.metadata.RootPath"),
   );
 });
@@ -546,15 +546,15 @@ test("read results must echo the requested graph and snapshot identity", () => {
     graphId: request.graphId,
     ...queryPayload("summary"),
   };
-  assert.equal(validateKnowledgeGraphReadResult("query", request, result), result);
+  assert.equal(validateAgenticGraphReadResult("query", request, result), result);
   assert.throws(
-    () => validateKnowledgeGraphReadResult("query", request, {
+    () => validateAgenticGraphReadResult("query", request, {
       ...result,
       graphId: OTHER_GRAPH_ID,
       snapshotDigest: "b".repeat(64),
       metadata: { artifactPath: "/private/graph.json" },
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("graphId")
       && error.data.fields.includes("snapshotDigest")
       && error.data.fields.includes("metadata.artifactPath"),
@@ -574,9 +574,9 @@ test("read results require versioned operation-specific query and explanation pa
     graphId: GRAPH_ID,
     ...queryPayload("summary"),
   };
-  assert.equal(validateKnowledgeGraphReadResult("query", summaryRequest, validSummary), validSummary);
+  assert.equal(validateAgenticGraphReadResult("query", summaryRequest, validSummary), validSummary);
   for (const invalid of [
-    { ...validSummary, schema: "knowgrph-knowledge-graph-query/v2" },
+    { ...validSummary, schema: "agenticgraph-knowledge-graph-query/v2" },
     {
       schema: RESULT_SCHEMAS.query,
       ok: true,
@@ -587,8 +587,8 @@ test("read results require versioned operation-specific query and explanation pa
     { ...validSummary, mode: "search" },
   ]) {
     assert.throws(
-      () => validateKnowledgeGraphReadResult("query", summaryRequest, invalid),
-      (error) => error.code === "mcp_knowledge_graph_result_invalid"
+      () => validateAgenticGraphReadResult("query", summaryRequest, invalid),
+      (error) => error.code === "mcp_agentic_graph_result_invalid"
         && error.data.fields.some((field) => ["schema", "payload"].includes(field)),
     );
   }
@@ -599,7 +599,7 @@ test("read results require versioned operation-specific query and explanation pa
     edgeId: EDGE_ID,
   };
   assert.throws(
-    () => validateKnowledgeGraphReadResult("explain_edge", explainRequest, {
+    () => validateAgenticGraphReadResult("explain_edge", explainRequest, {
       schema: RESULT_SCHEMAS.explain_edge,
       ok: true,
       operation: "explain_edge",
@@ -607,12 +607,12 @@ test("read results require versioned operation-specific query and explanation pa
       snapshotDigest: DIGEST,
       edge: { id: EDGE_ID },
     }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("payload"),
   );
 });
 
-test("typed knowledge graph failures preserve server code, message, and details", async () => {
+test("typed agentic graph failures preserve server code, message, and details", async () => {
   const failure = {
     schema: RESULT_SCHEMAS.query,
     ok: false,
@@ -623,9 +623,9 @@ test("typed knowledge graph failures preserve server code, message, and details"
       details: { expectedSnapshotDigest: DIGEST, actualSnapshotDigest: "b".repeat(64) },
     },
   };
-  const client = createKnowgrphKnowledgeGraphClient({ callTool: async () => failure });
+  const client = createKnowgrphAgenticGraphClient({ callTool: async () => failure });
   await assert.rejects(
-    () => client.queryKnowledgeGraph({
+    () => client.queryAgenticGraph({
       graphId: GRAPH_ID,
       expectedSnapshotDigest: DIGEST,
       mode: "summary",
@@ -636,12 +636,12 @@ test("typed knowledge graph failures preserve server code, message, and details"
       && error.data.actualSnapshotDigest === failure.error.details.actualSnapshotDigest,
   );
   assert.throws(
-    () => validateKnowledgeGraphReadResult("query", {
+    () => validateAgenticGraphReadResult("query", {
       graphId: GRAPH_ID,
       expectedSnapshotDigest: DIGEST,
       mode: "summary",
     }, { ...failure, schema: "wrong" }),
-    (error) => error.code === "mcp_knowledge_graph_result_invalid"
+    (error) => error.code === "mcp_agentic_graph_result_invalid"
       && error.data.fields.includes("schema"),
   );
 });
@@ -650,7 +650,7 @@ test("local client snapshots a request before the asynchronous transport boundar
   let release;
   const blocked = new Promise((resolve) => { release = resolve; });
   let sent;
-  const client = createKnowgrphKnowledgeGraphClient({
+  const client = createKnowgrphAgenticGraphClient({
     callTool: async (_name, input) => {
       await blocked;
       sent = input;
@@ -668,7 +668,7 @@ test("local client snapshots a request before the asynchronous transport boundar
     expectedSnapshotDigest: DIGEST,
     mode: "summary",
   };
-  const pending = client.queryKnowledgeGraph(input);
+  const pending = client.queryAgenticGraph(input);
   input.expectedSnapshotDigest = "b".repeat(64);
   input.artifactPath = "/private/graph.json";
   release();
@@ -690,11 +690,11 @@ test("generic HTTP client refuses filesystem-scoped graph calls on a remote endp
     },
   });
   await assert.rejects(
-    () => client.ingestKnowledgeGraph({ rootPath: "/workspace" }),
-    (error) => error.code === "mcp_knowledge_graph_local_transport_required",
+    () => client.ingestAgenticGraph({ rootPath: "/workspace" }),
+    (error) => error.code === "mcp_agentic_graph_local_transport_required",
   );
   await assert.rejects(
-    () => client.generateKnowledgeGraphParser({
+    () => client.generateAgenticGraphParser({
       descriptors: [{
         id: "fixture",
         kind: "fixture",
@@ -703,7 +703,7 @@ test("generic HTTP client refuses filesystem-scoped graph calls on a remote endp
         extensions: [".fixture"],
       }],
     }),
-    (error) => error.code === "mcp_knowledge_graph_local_transport_required",
+    (error) => error.code === "mcp_agentic_graph_local_transport_required",
   );
   assert.equal(requests, 0);
 });

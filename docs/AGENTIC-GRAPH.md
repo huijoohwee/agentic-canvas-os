@@ -1,10 +1,10 @@
 ---
-title: "Deterministic Knowledge Graph Invocation Contract"
-graphId: "md:agentic-canvas-os-deterministic-knowledge-graph"
+title: "Deterministic Agentic Graph Invocation Contract"
+graphId: "md:agentic-canvas-os-deterministic-agentic-graph"
 doc_type: "Invocation And Client Contract"
 date: "2026-07-30"
 lang: "en-US"
-schema: "deterministic-knowledge-graph-invocation-contract/v1"
+schema: "deterministic-agentic-graph-invocation-contract/v1"
 frontmatter_contract: "required"
 status: "spec-complete"
 authority: "canonical command, semantic, binding, policy, and typed Knowgrph client contract"
@@ -13,26 +13,26 @@ runtime_claim: "contract/client-ready; Knowgrph owns the executable parser, grap
 runtime_proof: "RUNTIME-PROOF.md"
 publish_policy: "Dev-only until exact protected integration and runtime proof"
 invocations:
-  - {action: "/knowledge.graph.ingest", semantics: ["#knowledge-graph", "#mcp", "#runtime-ready"], bindings: ["@working-directory", "@knowledge-graph", "@operator", "@runtime-proof"]}
-  - {action: "/knowledge.graph.parser.generate", semantics: ["#knowledge-graph", "#parser-generation", "#mcp"], bindings: ["@parser-specification", "@runtime-proof"]}
-  - {action: "/knowledge.graph.query", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
-  - {action: "/knowledge.graph.explain", semantics: ["#knowledge-graph", "#mcp", "#vcc"], bindings: ["@knowledge-graph", "@runtime-proof"]}
+  - {action: "/agentic.graph.ingest", semantics: ["#agentic-graph", "#mcp", "#runtime-ready"], bindings: ["@working-directory", "@agentic-graph", "@operator", "@runtime-proof"]}
+  - {action: "/agentic.graph.parser.generate", semantics: ["#agentic-graph", "#parser-generation", "#mcp"], bindings: ["@parser-specification", "@runtime-proof"]}
+  - {action: "/agentic.graph.query", semantics: ["#agentic-graph", "#mcp", "#vcc"], bindings: ["@agentic-graph", "@runtime-proof"]}
+  - {action: "/agentic.graph.explain", semantics: ["#agentic-graph", "#mcp", "#vcc"], bindings: ["@agentic-graph", "@runtime-proof"]}
 mcp_dispatch:
-  "/knowledge.graph.ingest": "knowgrph.knowledge_graph.ingest"
-  "/knowledge.graph.parser.generate": "knowgrph.knowledge_graph.parser_generate"
-  "/knowledge.graph.query": "knowgrph.knowledge_graph.query"
-  "/knowledge.graph.explain": "knowgrph.knowledge_graph.explain_edge"
+  "/agentic.graph.ingest": "agenticgraph.knowledge_graph.ingest"
+  "/agentic.graph.parser.generate": "agenticgraph.knowledge_graph.parser_generate"
+  "/agentic.graph.query": "agenticgraph.knowledge_graph.query"
+  "/agentic.graph.explain": "agenticgraph.knowledge_graph.explain_edge"
 external_dependency: "forbidden"
 ---
 
-# Deterministic Knowledge Graph Invocation Contract
+# Deterministic Agentic Graph Invocation Contract
 
 ## Outcome
 
 Agentic Canvas OS supplies the canonical `/`, `#`, and `@` vocabulary, policy
 boundaries, and typed MCP client methods for turning an explicitly selected
 codebase plus its docs, SQL schemas, configs, and text-bearing PDFs into a
-queryable knowledge graph. Knowgrph owns the executable parser, graph builder,
+queryable agentic graph. Knowgrph owns the executable parser, graph builder,
 artifact store, queries, edge explanations, Launch import flows, and Canvas
 projection.
 
@@ -45,14 +45,14 @@ Knowgrph transport.
 
 | Agentic Canvas OS invocation | Exact Knowgrph tool |
 |---|---|
-| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | `knowgrph.knowledge_graph.ingest` |
-| `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof` | `knowgrph.knowledge_graph.parser_generate` |
-| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.query` |
-| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | `knowgrph.knowledge_graph.explain_edge` |
+| `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | `agenticgraph.knowledge_graph.ingest` |
+| `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | `agenticgraph.knowledge_graph.parser_generate` |
+| `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | `agenticgraph.knowledge_graph.query` |
+| `/agentic.graph.explain #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | `agenticgraph.knowledge_graph.explain_edge` |
 
-`createKnowgrphKnowledgeGraphClient` binds `ingestKnowledgeGraph`,
-`generateKnowledgeGraphParser`, `queryKnowledgeGraph`, and
-`explainKnowledgeGraphEdge` to a host-supplied local MCP transport.
+`createKnowgrphAgenticGraphClient` binds `ingestAgenticGraph`,
+`generateAgenticGraphParser`, `queryAgenticGraph`, and
+`explainAgenticGraphEdge` to a host-supplied local MCP transport.
 `createKnowgrphMcpClient` exposes the same typed methods only when its
 Streamable HTTP endpoint is loopback. Both paths snapshot and validate the
 request before any asynchronous boundary, validate response identity and
@@ -111,9 +111,9 @@ expected digest; drift fails closed before discovery.
 The existing Knowgrph Toolbar > Launch > Import folder flow remains the
 explicit local-corpus acquisition surface. Toolbar > Launch > Import URL opens
 the shared FloatingPanel Skills & Commands catalog for the source-backed
-knowledge-graph ingestion command. The Canvas resolves that command's `/`,
+agentic-graph ingestion command. The Canvas resolves that command's `/`,
 `#`, and `@` tuple through `knowgrph.agentic_canvas_os.docs.invoke` before the
-local knowledge-graph MCP host receives the repository URL. The Launch surface
+local agentic-graph MCP host receives the repository URL. The Launch surface
 must not own a second catalog or a hardcoded semantic/binding list.
 
 URL acquisition, when invoked, is a separately bounded network stage that
@@ -134,7 +134,7 @@ generate, select, or upgrade an undeclared parser.
 
 ## Semantic And Evidence Policy
 
-`#knowledge-graph` means deterministic, source-backed structure. Every edge
+`#agentic-graph` means deterministic, source-backed structure. Every edge
 must retain a stable identity, fixed explanation, extraction rule, parser
 identity, source path and digest, exact span, bounded excerpt evidence,
 resolution premises, and ambiguity or confidence state. Unsupported or partial
@@ -158,6 +158,6 @@ source-scoped resolution, every-edge evidence, local query and explanation,
 Canvas projection, and zero model/embedding/vector behavior. Production and
 Cloudflare remain outside this contract.
 
-VCC: run `npm run knowledge-graph-contract:check` and `npm run docs:check`.
+VCC: run `npm run agentic-graph-contract:check` and `npm run docs:check`.
 Require zero failures, no Agentic Canvas OS executable graph runtime, and
 separate exact Knowgrph runtime proof before any combined readiness claim.

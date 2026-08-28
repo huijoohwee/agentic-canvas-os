@@ -16,9 +16,9 @@ import {
 import {
   privatePathFields,
   validExplainSuccess,
-  validKnowledgeGraphCounts,
+  validAgenticGraphCounts,
   validQuerySuccess,
-  validateKnowledgeGraphProjection,
+  validateAgenticGraphProjection,
 } from "./knowgrph-mcp-result-contract.js";
 
 export class KnowgrphMcpError extends Error {
@@ -31,28 +31,28 @@ export class KnowgrphMcpError extends Error {
   }
 }
 
-export const KNOWLEDGE_GRAPH_MCP_TOOLS = Object.freeze({
-  ingest: "knowgrph.knowledge_graph.ingest",
-  generateParser: "knowgrph.knowledge_graph.parser_generate",
-  query: "knowgrph.knowledge_graph.query",
-  explainEdge: "knowgrph.knowledge_graph.explain_edge",
+export const AGENTIC_GRAPH_MCP_TOOLS = Object.freeze({
+  ingest: "agenticgraph.knowledge_graph.ingest",
+  generateParser: "agenticgraph.knowledge_graph.parser_generate",
+  query: "agenticgraph.knowledge_graph.query",
+  explainEdge: "agenticgraph.knowledge_graph.explain_edge",
 });
 
-export const KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE = "default-source";
+export const AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE = "default-source";
 
-const INVOCATION_SCHEMA = "knowgrph-knowledge-graph-invocation/v1";
+const INVOCATION_SCHEMA = "agenticgraph-knowledge-graph-invocation/v1";
 const ROUTING_SCHEMA = "agentic-canvas-os-docs-routing/v1";
 const RESULT_SCHEMAS = Object.freeze({
-  ingest: "knowgrph-knowledge-graph-ingest/v1",
-  parser_generate: "knowgrph-knowledge-graph-parser-generate/v1",
-  query: "knowgrph-knowledge-graph-query/v1",
-  explain_edge: "knowgrph-knowledge-graph-explain-edge/v1",
+  ingest: "agenticgraph-knowledge-graph-ingest/v1",
+  parser_generate: "agenticgraph-knowledge-graph-parser-generate/v1",
+  query: "agenticgraph-knowledge-graph-query/v1",
+  explain_edge: "agenticgraph-knowledge-graph-explain-edge/v1",
 });
 const TOOL_BY_OPERATION = Object.freeze({
-  ingest: KNOWLEDGE_GRAPH_MCP_TOOLS.ingest,
-  parser_generate: KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser,
-  query: KNOWLEDGE_GRAPH_MCP_TOOLS.query,
-  explain_edge: KNOWLEDGE_GRAPH_MCP_TOOLS.explainEdge,
+  ingest: AGENTIC_GRAPH_MCP_TOOLS.ingest,
+  parser_generate: AGENTIC_GRAPH_MCP_TOOLS.generateParser,
+  query: AGENTIC_GRAPH_MCP_TOOLS.query,
+  explain_edge: AGENTIC_GRAPH_MCP_TOOLS.explainEdge,
 });
 const QUERY_MODES = new Set(["search", "path", "neighbors", "impact", "summary"]);
 const REPOSITORY_PATH_SEGMENT = /^[A-Za-z0-9](?:[A-Za-z0-9._~-]{0,199})$/u;
@@ -63,7 +63,7 @@ const INVOCATION_TOKEN = Object.freeze({
   binding: new RegExp(`^@${INVOCATION_TOKEN_TAIL}$`, "u"),
 });
 
-function isKnowledgeGraphInvocationProof(operation, value) {
+function isAgenticGraphInvocationProof(operation, value) {
   const expectedKeys = [
     "action",
     "bindings",
@@ -111,7 +111,7 @@ function isCredentialFreeHttpsRepositoryUrl(value) {
   }
 }
 
-function cloneKnowledgeGraphPayload(value, label) {
+function cloneAgenticGraphPayload(value, label) {
   try {
     const serialized = JSON.stringify(value);
     if (typeof serialized !== "string") throw new Error("not JSON");
@@ -119,14 +119,14 @@ function cloneKnowledgeGraphPayload(value, label) {
     if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("too large");
     return JSON.parse(serialized);
   } catch {
-    throw new KnowgrphMcpError(`invalid knowledge graph ${label}`, {
-      code: `mcp_knowledge_graph_${label}_invalid`,
+    throw new KnowgrphMcpError(`invalid agentic graph ${label}`, {
+      code: `mcp_agentic_graph_${label}_invalid`,
       data: { fields: [label] },
     });
   }
 }
 
-export function validateKnowledgeGraphRequest(operation, input) {
+export function validateAgenticGraphRequest(operation, input) {
   const fields = [];
   if (!isPlainObject(input)) {
     fields.push("input");
@@ -143,7 +143,7 @@ export function validateKnowledgeGraphRequest(operation, input) {
       fields.push("parser");
     } else if (hasDescriptors && !validParserDescriptors(input.descriptors, { generated: false })) {
       fields.push("descriptors");
-    } else if (hasProfile && input.profile !== KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE) {
+    } else if (hasProfile && input.profile !== AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE) {
       fields.push("profile");
     }
     if (Object.hasOwn(input, "outputPath")) fields.push("outputPath");
@@ -162,10 +162,10 @@ export function validateKnowledgeGraphRequest(operation, input) {
   }
   if (isPlainObject(input)
     && Object.hasOwn(input, "invocation")
-    && !isKnowledgeGraphInvocationProof(operation, input.invocation)) fields.push("invocation");
+    && !isAgenticGraphInvocationProof(operation, input.invocation)) fields.push("invocation");
   if (fields.length) {
-    throw new KnowgrphMcpError("invalid knowledge graph request", {
-      code: "mcp_knowledge_graph_request_invalid",
+    throw new KnowgrphMcpError("invalid agentic graph request", {
+      code: "mcp_agentic_graph_request_invalid",
       data: { operation, fields },
     });
   }
@@ -173,8 +173,8 @@ export function validateKnowledgeGraphRequest(operation, input) {
 }
 
 function invalidResult(operation, fields) {
-  throw new KnowgrphMcpError(`invalid knowledge graph ${operation} result`, {
-    code: "mcp_knowledge_graph_result_invalid",
+  throw new KnowgrphMcpError(`invalid agentic graph ${operation} result`, {
+    code: "mcp_agentic_graph_result_invalid",
     data: { operation, fields: [...new Set(fields)] },
   });
 }
@@ -205,7 +205,7 @@ function validateResultEnvelope(operation, value, fields) {
   });
 }
 
-export function validateKnowledgeGraphIngestResult(value) {
+export function validateAgenticGraphIngestResult(value) {
   const fields = [];
   const failure = validateResultEnvelope("ingest", value, fields);
   if (isPlainObject(value)) {
@@ -214,14 +214,14 @@ export function validateKnowledgeGraphIngestResult(value) {
     if (!SHA256_DIGEST.test(value.snapshotDigest)) fields.push("snapshotDigest");
     if (!SHA256_DIGEST.test(value.parserRegistryDigest)) fields.push("parserRegistryDigest");
     if (typeof value.complete !== "boolean") fields.push("complete");
-    if (!validKnowledgeGraphCounts(value.counts)) fields.push("counts");
-    else validateKnowledgeGraphProjection(value.projection, value.counts, fields);
+    if (!validAgenticGraphCounts(value.counts)) fields.push("counts");
+    else validateAgenticGraphProjection(value.projection, value.counts, fields);
   }
   if (failure || fields.length) invalidResult("ingest", fields);
   return value;
 }
 
-export function validateKnowledgeGraphParserResult(value) {
+export function validateAgenticGraphParserResult(value) {
   const fields = [];
   const failure = validateResultEnvelope("parser_generate", value, fields);
   if (isPlainObject(value)) {
@@ -238,7 +238,7 @@ export function validateKnowledgeGraphParserResult(value) {
   return value;
 }
 
-export function validateKnowledgeGraphReadResult(operation, request, value) {
+export function validateAgenticGraphReadResult(operation, request, value) {
   const fields = [];
   const failure = validateResultEnvelope(operation, value, fields);
   if (isPlainObject(value)) {
@@ -252,32 +252,32 @@ export function validateKnowledgeGraphReadResult(operation, request, value) {
   return value;
 }
 
-export function createKnowgrphKnowledgeGraphClient({ callTool } = {}) {
+export function createKnowgrphAgenticGraphClient({ callTool } = {}) {
   if (typeof callTool !== "function") {
     throw new KnowgrphMcpError("local Knowgrph MCP transport is required", {
-      code: "mcp_knowledge_graph_local_transport_required",
+      code: "mcp_agentic_graph_local_transport_required",
     });
   }
   const invoke = async (operation, toolName, input, opts) => {
-    const request = cloneKnowledgeGraphPayload(input, "request");
-    validateKnowledgeGraphRequest(operation, request);
-    const result = cloneKnowledgeGraphPayload(await callTool(toolName, request, opts), "result");
-    if (operation === "ingest") return validateKnowledgeGraphIngestResult(result);
-    if (operation === "parser_generate") return validateKnowledgeGraphParserResult(result);
-    return validateKnowledgeGraphReadResult(operation, request, result);
+    const request = cloneAgenticGraphPayload(input, "request");
+    validateAgenticGraphRequest(operation, request);
+    const result = cloneAgenticGraphPayload(await callTool(toolName, request, opts), "result");
+    if (operation === "ingest") return validateAgenticGraphIngestResult(result);
+    if (operation === "parser_generate") return validateAgenticGraphParserResult(result);
+    return validateAgenticGraphReadResult(operation, request, result);
   };
   return Object.freeze({
-    ingestKnowledgeGraph: (input, opts) => (
-      invoke("ingest", KNOWLEDGE_GRAPH_MCP_TOOLS.ingest, input, opts)
+    ingestAgenticGraph: (input, opts) => (
+      invoke("ingest", AGENTIC_GRAPH_MCP_TOOLS.ingest, input, opts)
     ),
-    generateKnowledgeGraphParser: (input, opts) => (
-      invoke("parser_generate", KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser, input, opts)
+    generateAgenticGraphParser: (input, opts) => (
+      invoke("parser_generate", AGENTIC_GRAPH_MCP_TOOLS.generateParser, input, opts)
     ),
-    queryKnowledgeGraph: (input, opts) => (
-      invoke("query", KNOWLEDGE_GRAPH_MCP_TOOLS.query, input, opts)
+    queryAgenticGraph: (input, opts) => (
+      invoke("query", AGENTIC_GRAPH_MCP_TOOLS.query, input, opts)
     ),
-    explainKnowledgeGraphEdge: (input, opts) => (
-      invoke("explain_edge", KNOWLEDGE_GRAPH_MCP_TOOLS.explainEdge, input, opts)
+    explainAgenticGraphEdge: (input, opts) => (
+      invoke("explain_edge", AGENTIC_GRAPH_MCP_TOOLS.explainEdge, input, opts)
     ),
   });
 }

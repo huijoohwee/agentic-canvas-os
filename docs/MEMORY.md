@@ -12,7 +12,7 @@ source_docs:
   - "USER.md"
   - "FACTS.md"
   - "TODO.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENTIC-GRAPH.md"
   - "$GITHUB_ROOT/huijoohwee/docs/knowgrph-strybldr-starter-template.md"
   - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-guidelines.md"
 implementation_contract: "FACTS.md owns shared truth; MEMORY.md persists bounded agent notes; USER.md persists bounded explicit operator profile; frontmatter and authored Markdown body are SSOT"
@@ -162,11 +162,11 @@ agentic_os_memory:
     semantics: ["#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#message-gateway"]
     bindings: ["@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@message-gateway"]
     guards: ["typed state", "explicit nodes and edges", "checkpoint and resume", "human review gate", "sandbox scope", "message gateway", "bounded trace", "no deploy"]
-  deterministic_knowledge_graph:
+  deterministic_agentic_graph:
     source_policy: "Agentic Canvas OS owns invocation and client policy only; Knowgrph owns the executable parser, graph, store, query, explanation, import, and Canvas projection without a duplicate runtime here"
-    commands: ["/knowledge.graph.ingest", "/knowledge.graph.query", "/knowledge.graph.explain"]
-    semantics: ["#knowledge-graph"]
-    bindings: ["@working-directory", "@knowledge-graph", "@runtime-proof", "@operator"]
+    commands: ["/agentic.graph.ingest", "/agentic.graph.query", "/agentic.graph.explain"]
+    semantics: ["#agentic-graph"]
+    bindings: ["@working-directory", "@agentic-graph", "@runtime-proof", "@operator"]
     guards: ["bounded workspace", "opaque graph id", "expected snapshot digest", "source evidence for every edge", "stored deterministic explanations", "typed omissions", "no artifact path", "no model", "no embedding", "no vector store", "metadata lookup is not execution", "no duplicate runtime", "no deploy"]
 socket_types:
   agentic_os_source_signal: {color: "#14b8a6", edgeWidthPx: 2, handleStrokeWidthPx: 2, accepts: [agentic_os_source_signal]}

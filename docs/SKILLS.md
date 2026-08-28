@@ -15,7 +15,7 @@ source_docs:
   - "DICTIONARY-BINDING.md"
   - "HARNESS-CONTRACTS.md"
   - "AGENT-TEAM.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENTIC-GRAPH.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "SKILL-EVOLUTION.md"
@@ -91,10 +91,10 @@ skill_contracts:
   - "stream.trace"
   - "superagent.run"
   - "implementation.run"
-  - "knowledge.graph.parser.generate"
-  - "knowledge.graph.ingest"
-  - "knowledge.graph.query"
-  - "knowledge.graph.explain"
+  - "agentic.graph.parser.generate"
+  - "agentic.graph.ingest"
+  - "agentic.graph.query"
+  - "agentic.graph.explain"
   - "repository.pack"
   - "workspace.artifact.lifecycle"
   - "sme.risk.profile"
@@ -150,7 +150,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
 | Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `implementation.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `MANAGED-IMPLEMENTATION-RUNS.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
-| Knowledge graph | `knowledge.graph.parser.generate`, `knowledge.graph.ingest`, `knowledge.graph.query`, `knowledge.graph.explain` | `KNOWLEDGE-GRAPH.md`, `MCP-GATEWAY.md`, and the Knowgrph executable owner |
+| Agentic graph | `agentic.graph.parser.generate`, `agentic.graph.ingest`, `agentic.graph.query`, `agentic.graph.explain` | `AGENTIC-GRAPH.md`, `MCP-GATEWAY.md`, and the Knowgrph executable owner |
 | Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `url.ingest`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
 ## Specialized Contracts
@@ -168,7 +168,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Agent Toolkit | `AGENT-TOOLKIT.md` |
 | Skill Evolution | `SKILL-EVOLUTION.md` |
 | Managed implementation runs | `MANAGED-IMPLEMENTATION-RUNS.md` |
-| Deterministic knowledge graph | `KNOWLEDGE-GRAPH.md` |
+| Deterministic agentic graph | `AGENTIC-GRAPH.md` |
 | Repository packing | `REPOSITORY-PACKING.md` |
 | Workspace artifact lifecycle | Invocation dictionaries and `MCP-GATEWAY.md` |
 | Computing flow | `PRD-TAD.md` and the invocation dictionaries |
@@ -184,7 +184,7 @@ variants resolve through `/investment-research-agent`, `/sme-care-agent`,
 `/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`.
 A variant does not create a wildcard command or a second execution registry.
 The `url.ingest` skill resolves only through the exact four-token invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `knowgrph.agentic_canvas_os.docs.invoke` supplies read-only discovery metadata and guarded browser WebMCP tool `knowgrph.control_local_import_url` remains the sole Import URL executor.
-The `knowledge.graph.parser.generate` skill resolves only through `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof`; dictionary resolution remains read-only, while the exact local Knowgrph MCP tool owns deterministic compilation and returns digest-fenced identity without generated code or implicit ingest.
+The `agentic.graph.parser.generate` skill resolves only through `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof`; dictionary resolution remains read-only, while the exact local Knowgrph MCP tool owns deterministic compilation and returns digest-fenced identity without generated code or implicit ingest.
 The `workspace.artifact.lifecycle` skill resolves only through `/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof`; add `@operator` only for apply. The skill delegates local execution to the exact plan/apply MCP tools and preserves `/workspace.launch`, `/source.ingest`, and `/file.sync` as the UI, URL-ingest, and provider-sync owners.
 
 ## Selection And Mutation

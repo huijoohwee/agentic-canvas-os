@@ -3,10 +3,10 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
-  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
-  KNOWLEDGE_GRAPH_MCP_TOOLS,
-  validateKnowledgeGraphParserResult,
-  validateKnowledgeGraphRequest,
+  AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
+  AGENTIC_GRAPH_MCP_TOOLS,
+  validateAgenticGraphParserResult,
+  validateAgenticGraphRequest,
 } from "../src/knowgrph-mcp-client.js";
 
 const DECLARATIVE_GRAMMAR = {
@@ -48,12 +48,12 @@ const digestFor = (descriptors) => createHash("sha256")
 const registryResult = (descriptors) => {
   const digest = digestFor(descriptors);
   return {
-    schema: "knowgrph-knowledge-graph-parser-generate/v1",
+    schema: "agenticgraph-knowledge-graph-parser-generate/v1",
     ok: true,
     operation: "parser_generate",
     parserRegistryDigest: digest,
     parserRegistry: {
-      schema: "knowgrph-knowledge-graph-parser-registry/v2",
+      schema: "agenticgraph-knowledge-graph-parser-registry/v2",
       digest,
       descriptors,
     },
@@ -62,10 +62,10 @@ const registryResult = (descriptors) => {
 
 test("parser generation validates a built-in profile or source-backed descriptors", () => {
   const invocation = {
-    schema: "knowgrph-knowledge-graph-invocation/v1",
-    tool: KNOWLEDGE_GRAPH_MCP_TOOLS.generateParser,
-    action: "/knowledge.graph.parser.generate",
-    semantics: ["#knowledge-graph", "#parser-generation", "#mcp"],
+    schema: "agenticgraph-knowledge-graph-invocation/v1",
+    tool: AGENTIC_GRAPH_MCP_TOOLS.generateParser,
+    action: "/agentic.graph.parser.generate",
+    semantics: ["#agentic-graph", "#parser-generation", "#mcp"],
     bindings: ["@parser-specification", "@runtime-proof"],
     sourceRevision: "a".repeat(40),
     catalogDigest: "b".repeat(64),
@@ -93,12 +93,12 @@ test("parser generation validates a built-in profile or source-backed descriptor
     }],
   };
   const builtIn = {
-    profile: KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
+    profile: AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
     invocation,
   };
-  assert.equal(validateKnowledgeGraphRequest("parser_generate", fixed), fixed);
-  assert.equal(validateKnowledgeGraphRequest("parser_generate", generated), generated);
-  assert.equal(validateKnowledgeGraphRequest("parser_generate", builtIn), builtIn);
+  assert.equal(validateAgenticGraphRequest("parser_generate", fixed), fixed);
+  assert.equal(validateAgenticGraphRequest("parser_generate", generated), generated);
+  assert.equal(validateAgenticGraphRequest("parser_generate", builtIn), builtIn);
   for (const invalid of [
     {},
     { ...fixed, descriptors: [] },
@@ -108,11 +108,11 @@ test("parser generation validates a built-in profile or source-backed descriptor
     { ...builtIn, profile: "alternate-source" },
     { ...builtIn, descriptors: fixed.descriptors },
     { ...fixed, outputPath: "/private/parser" },
-    { ...fixed, invocation: { ...invocation, tool: KNOWLEDGE_GRAPH_MCP_TOOLS.ingest } },
+    { ...fixed, invocation: { ...invocation, tool: AGENTIC_GRAPH_MCP_TOOLS.ingest } },
   ]) {
     assert.throws(
-      () => validateKnowledgeGraphRequest("parser_generate", invalid),
-      (error) => error.code === "mcp_knowledge_graph_request_invalid",
+      () => validateAgenticGraphRequest("parser_generate", invalid),
+      (error) => error.code === "mcp_agentic_graph_request_invalid",
     );
   }
 });
@@ -139,8 +139,8 @@ test("parser result requires one digest-bound v2 registry with inert grammar dat
     priority: 0,
     grammar: CANONICAL_DECLARATIVE_GRAMMAR,
   }]);
-  assert.equal(validateKnowledgeGraphParserResult(result), result);
-  assert.equal(validateKnowledgeGraphParserResult(generated), generated);
+  assert.equal(validateAgenticGraphParserResult(result), result);
+  assert.equal(validateAgenticGraphParserResult(generated), generated);
   for (const invalid of [
     { ...result, schema: "wrong" },
     { ...result, parserRegistryDigest: "c".repeat(63) },
@@ -159,8 +159,8 @@ test("parser result requires one digest-bound v2 registry with inert grammar dat
     { ...result, metadata: { harmless: true } },
   ]) {
     assert.throws(
-      () => validateKnowledgeGraphParserResult(invalid),
-      (error) => error.code === "mcp_knowledge_graph_result_invalid",
+      () => validateAgenticGraphParserResult(invalid),
+      (error) => error.code === "mcp_agentic_graph_result_invalid",
     );
   }
 });
@@ -185,7 +185,7 @@ test("parser result recomputes canonical digest and rejects ambiguous or noncano
     basenameFamilies: [],
     priority: 0,
   }];
-  assert.equal(validateKnowledgeGraphParserResult(registryResult(descriptors)).ok, true);
+  assert.equal(validateAgenticGraphParserResult(registryResult(descriptors)).ok, true);
 
   const forged = registryResult(descriptors);
   forged.parserRegistryDigest = "f".repeat(64);
@@ -210,8 +210,8 @@ test("parser result recomputes canonical digest and rejects ambiguous or noncano
   }]);
   for (const invalid of [forged, noncanonical, ambiguous, ambiguousGrammar]) {
     assert.throws(
-      () => validateKnowledgeGraphParserResult(invalid),
-      (error) => error.code === "mcp_knowledge_graph_result_invalid"
+      () => validateAgenticGraphParserResult(invalid),
+      (error) => error.code === "mcp_agentic_graph_result_invalid"
         && error.data.fields.includes("parserRegistry"),
     );
   }

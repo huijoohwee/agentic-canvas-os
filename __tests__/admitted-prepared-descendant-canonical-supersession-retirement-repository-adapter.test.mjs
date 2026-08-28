@@ -105,7 +105,7 @@ async function exerciseAdapter(t, { partial = false } = {}) {
   let ledger = transition.ledger, retired = partial, pullClosed = partial, retireCalls = 0, liveClaims = [];
   let closeCalls = 0, releaseCalls = 0, canonicalHead = P, controllerHead = T, pullHead = I;
   let raceOnConditionalRead = !partial, corruptCapabilityAfterClose = !partial;
-  let closeActor = "owner", loseReleaseResponse = partial;
+  let closeActor = "owner", loseReleaseResponse = partial, pullReadCount = 0, timelineReadCount = 0;
   let lease = { schema: "agentic-writer-lease/v2", status: "active", epoch: 1,
     sessionId: actor.sessionId, device: actor.deviceId, scope: "prepared-source", branch,
     worktreePath: subjectPath, baseSha: B, fenceSha: F,
@@ -218,11 +218,11 @@ async function exerciseAdapter(t, { partial = false } = {}) {
     now: () => new Date("2026-08-28T16:00:00.000Z"),
     gh: () => JSON.stringify({ number: 7, id: nodeId, url: lease.pullRequestUrl,
       state: pullClosed ? "CLOSED" : "OPEN", isDraft: true, mergedAt: null,
-      closedAt: pullClosed ? "2026-08-28T16:00:00.000Z" : null,
+      closedAt: pullClosed ? (pullReadCount++ % 2 ? "2026-08-28T16:00:00.000Z" : "2026-08-28T16:00:00Z") : null,
       headRefName: branch, headRefOid: pullHead, headRepository: { nameWithOwner: targetRepository },
       baseRefName: "main", baseRefOid: B }),
     readPullTimeline: () => pullClosed ? [{ event: "closed", id: 77, node_id: "CE_source",
-      actor: { login: closeActor, id: 17, type: "User" }, created_at: "2026-08-28T16:00:00.000Z",
+      actor: { login: closeActor, id: 17, type: "User" }, created_at: timelineReadCount++ % 2 ? "2026-08-28T16:00:00.000Z" : "2026-08-28T16:00:00Z",
       performed_via_github_app: null }] : [],
     readConditionalPull: () => { const snapshot = { etag: "\"source-etag\"", number: 7, nodeId,
       url: lease.pullRequestUrl, state: "OPEN", isDraft: true, mergedAt: null,
@@ -258,6 +258,8 @@ async function exerciseAdapter(t, { partial = false } = {}) {
   assert.equal(plan.canonical.entries[0].targetValue, plan.canonical.targetDependencyRevision);
   if (partial) {
     assert.equal(plan.mode, "partial-recovery"); assert.equal(plan.recovery.reason, "abandoned");
+    assert.equal(plan.subject.pullRequest.closedAt, "2026-08-28T16:00:00.000Z");
+    assert.equal(plan.subject.pullRequest.closeEvent.createdAt, "2026-08-28T16:00:00.000Z");
     assert.deepEqual(plan.effects, ["release-local-lease"]);
     const exactLedger = structuredClone(ledger), exactLease = structuredClone(lease);
     for (const mutate of [

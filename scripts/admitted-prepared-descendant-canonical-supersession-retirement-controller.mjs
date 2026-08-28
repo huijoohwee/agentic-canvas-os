@@ -56,6 +56,11 @@ export function normalizePullCloseChronology({
   pull, timeline, targetRepository, observedAt = null, expectedCloseEvent = undefined,
 }) {
   if (!pull || !Array.isArray(timeline)) throw new Error("Pull-request close chronology is malformed.");
+  pull = { ...pull, closedAt: pull.closedAt === null ? null : normalizeProviderInstant(pull.closedAt) };
+  timeline = timeline.map(item => ({ ...item, createdAt: normalizeProviderInstant(item?.createdAt) }));
+  if (expectedCloseEvent) expectedCloseEvent = { ...expectedCloseEvent,
+    createdAt: normalizeProviderInstant(expectedCloseEvent.createdAt) };
+  if (observedAt) observedAt = normalizeProviderInstant(observedAt);
   if (pull.state === "OPEN") {
     if (pull.closedAt !== null || timeline.length !== 0 || expectedCloseEvent) {
       throw new Error("Open pull request has ambiguous close or reopen chronology.");
@@ -228,6 +233,14 @@ function compareUtf8(left, right) {
 function canonicalInstant(value) {
   const parsed = Date.parse(String(value || ""));
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+export function normalizeProviderInstant(value) {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{3}))?Z$/u.exec(String(value || ""));
+  if (!match) throw new Error("Provider timestamp is not canonical UTC RFC3339 seconds or milliseconds.");
+  const canonical = `${match[1]}.${match[2] || "000"}Z`, parsed = Date.parse(canonical);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== canonical)
+    throw new Error("Provider timestamp is not a valid canonical UTC instant.");
+  return canonical;
 }
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;

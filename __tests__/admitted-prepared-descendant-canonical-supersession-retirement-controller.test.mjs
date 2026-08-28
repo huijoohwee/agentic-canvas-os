@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createController } from
+import { createController, normalizePullCloseChronology, normalizeProviderInstant } from
   "../scripts/admitted-prepared-descendant-canonical-supersession-retirement-controller.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 
@@ -191,4 +191,24 @@ test("terminal replay is idempotent but rejects terminal evidence drift", async 
   scenario.setTerminal(digest("0"));
   await assert.rejects(controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization }), /terminal evidence drifted/u);
+});
+
+test("provider close timestamps converge from RFC3339 seconds and milliseconds", () => {
+  const event = { event: "closed", eventId: 1, nodeId: "CE_close", actorLogin: "owner",
+    actorId: 2, actorType: "User", createdAt: "2026-08-28T16:09:30Z",
+    performedViaGitHubApp: null };
+  const { event: _event, ...expected } = event;
+  const result = normalizePullCloseChronology({ targetRepository: "owner/repo",
+    pull: { state: "CLOSED", mergedAt: null, closedAt: "2026-08-28T16:09:29Z" },
+    timeline: [event], observedAt: "2026-08-28T16:10:00Z",
+    expectedCloseEvent: { ...expected, createdAt: "2026-08-28T16:09:30.000Z" } });
+  assert.equal(result.createdAt, "2026-08-28T16:09:30.000Z");
+  assert.equal(normalizeProviderInstant("2026-08-28T16:09:29.123Z"), "2026-08-28T16:09:29.123Z");
+  for (const value of ["2026-08-28T16:09:29+00:00", "2026-08-28t16:09:29z",
+    "2026-08-28 16:09:29Z", "2026-08-28T16:09:29.1Z", "2026-08-28T16:09:29.12Z",
+    "2026-08-28T16:09:29.1234Z", "2026-02-30T16:09:29Z", "2026-08-28T16:09:60Z"])
+    assert.throws(() => normalizeProviderInstant(value), /Provider timestamp/u);
+  assert.throws(() => normalizePullCloseChronology({ targetRepository: "owner/repo",
+    pull: { state: "CLOSED", mergedAt: null, closedAt: "2026-08-28T16:09:29Z" }, timeline: [event],
+    expectedCloseEvent: { ...expected, createdAt: "2026-08-28T16:09:30.001Z" } }), /drifted/u);
 });

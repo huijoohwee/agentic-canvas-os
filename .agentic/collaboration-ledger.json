@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5841,
-  "headDigest": "275afd83fbb16e069a39ea5f7bbacf27f243542102414c0b9c5230da1a9c32a5",
+  "sequence": 5842,
+  "headDigest": "406d5916f2f9d8bf6dbb0fbb6a5dfc9673c3d9064f12c58a57e0aff6de7ab7dd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -297089,6 +297089,48 @@
       },
       "claimDigest": "36e06bc26ec5894563101f913be51a6683ea1d14345b687725a9864df9a91b14",
       "digest": "275afd83fbb16e069a39ea5f7bbacf27f243542102414c0b9c5230da1a9c32a5"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5842,
+      "parentDigest": "275afd83fbb16e069a39ea5f7bbacf27f243542102414c0b9c5230da1a9c32a5",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1ba0e8a8ff4de3bef666108bd6428574156f666de96127b043c718e6b57c357f",
+      "idempotencyKey": "e547ed3e581ba08bf48c5de6b457cad54e60a29e72330df00106316eac65570f",
+      "requestDigest": "7c01d18b3770169040ac3ef108835d4a91e0d4c6e5e987fad8bddbd169622ce4",
+      "evaluationTime": "2026-08-28T16:57:52.000Z",
+      "claimCore": {
+        "claimId": "1ba0e8a8ff4de3bef666108bd6428574156f666de96127b043c718e6b57c357f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:71210f549f17bdd3a95b76d09374cf82c02a7cf97924e8295f98cde6d58a7cdd",
+        "canonicalBaseRevision": "1ef0b07ef7fc7561b0debe05606b148220ebafb3",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-controller.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-repository-adapter.test.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-controller.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-repository-adapter.mjs",
+          "semantic:supersession-close-time-normalization"
+        ],
+        "writeSetDigest": "3dedb87db50d9e880a662fefd332c0c79176a9d9ddc0f4db6a9536c0a2c96efb",
+        "laneRevision": "1ef0b07ef7fc7561b0debe05606b148220ebafb3",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T17:57:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "72d81d16b3613278b8b097dab821118167d86ac544a3a6bdd1dd196db9e35bad",
+      "digest": "406d5916f2f9d8bf6dbb0fbb6a5dfc9673c3d9064f12c58a57e0aff6de7ab7dd"
     }
   ]
 }

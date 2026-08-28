@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5701,
-  "headDigest": "7ae5c39807278e23853e152b5ceb3c2fcded7da7bba603f2d19a1073ac758e2d",
+  "sequence": 5702,
+  "headDigest": "1d0129381441b959a7c29b056d334f3ea6f40817b315cc9176040ffe41a1cad7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -290175,6 +290175,65 @@
       },
       "claimDigest": "d24a25083f0c3f61ff24a34c76071d6a0333ee6b358f774c427d9ee42a644e78",
       "digest": "7ae5c39807278e23853e152b5ceb3c2fcded7da7bba603f2d19a1073ac758e2d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5702,
+      "parentDigest": "7ae5c39807278e23853e152b5ceb3c2fcded7da7bba603f2d19a1073ac758e2d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "968b46c1a43a4686398ebd8c4680e7270be786c476664f96ab0d47985ec68e2d",
+      "idempotencyKey": "5e59c3c989e36fd3648284468d4dd1352b4d430ac3036a66b963257c6653792e",
+      "requestDigest": "d001e457834483c601ade398d4fab29a6eb4079cc5433c68bdc635bbb89c1d0a",
+      "evaluationTime": "2026-08-28T09:19:02.000Z",
+      "claimCore": {
+        "claimId": "968b46c1a43a4686398ebd8c4680e7270be786c476664f96ab0d47985ec68e2d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:7118d5211d16508b142dfc46f95577a59b36490992393a0c250f567e94e2637c",
+        "canonicalBaseRevision": "fea0bb6b77e5dfc706485917b228470242348b78",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:canvas/src/__tests__/knowledgeGraphHostAdapter.test.ts",
+          "path:canvas/src/__tests__/knowledgeGraphImportUrlSurfaces.test.ts",
+          "path:canvas/src/__tests__/knowledgeGraphLaunchInputInteraction.test.ts",
+          "path:docs/documents/agenticgraph-deterministic-knowledge-graph-runtime.md",
+          "path:mcp/README.md",
+          "semantic:agenticgraph-invocation-surface"
+        ],
+        "writeSetDigest": "3d02c66c9f5e4930ec1b1b30c5c41db59a5f332d34da0dc85ca7e1864e65e74b",
+        "laneRevision": "3f8940533748596554f8abfa874a79fa4bef4fc5",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T09:49:02.000Z",
+        "evidenceDigest": "69ffbed03cc07b754120fc5a62c5581e458f038d9e73b9a282a0da7a9e45fed5",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBTtezA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "3f8940533748596554f8abfa874a79fa4bef4fc5",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBTtezA",
+          "focusedEvidenceDigest": "69ffbed03cc07b754120fc5a62c5581e458f038d9e73b9a282a0da7a9e45fed5",
+          "dependencyClosureDigest": "bcf224f48a93e26390e775bdb3f45d1b011fd3fb472a4af84799f8cd1f2393ef",
+          "namedChecksDigest": "5f905bf48b9ba3bc8aae04f68c6d7aa781159858ed3b4c205192f321a345dde9",
+          "handoffEvidenceDigest": "5aea23ed46f1bab051bb99e2095ef52be7ed0d62fbdefe8a57cf6656a8264316",
+          "operatorDecisionDigest": "aa8e2b35644c77eaf5a293a735894129f737376f3f202c7fa9d96bc7de6e7550",
+          "integrationIntentDigest": "899ae0d6d17f9bfe83dd3285091939c4e98ccec3913174c5d890ec84d983c75b",
+          "integratedAt": "2026-08-28T08:46:31.000Z"
+        },
+        "recovery": {
+          "evidenceDigest": "87c0bb8b829149c6bea3a6da7d4d21778dc999e44346bdc6afb53271c93c1e92",
+          "recoveredAt": "2026-08-28T09:19:02.000Z"
+        }
+      },
+      "claimDigest": "a3370c3396f8b14b33d9ce4c8794765bddb169ffe240798e96d889d2175a8f34",
+      "digest": "1d0129381441b959a7c29b056d334f3ea6f40817b315cc9176040ffe41a1cad7"
     }
   ]
 }

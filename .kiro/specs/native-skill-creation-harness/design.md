@@ -1450,7 +1450,7 @@ base is not at risk from it. What is at risk is only the module budget and the s
 Sequencing decision (Requirement 17 criteria 3 and 4): this feature should ship **after** the teardown
 effort, and the sequencing decision is made against the **task-branch** version of the
 `repository-teardown` spec at
-`/Users/huijoohwee/Documents/GitHub/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`,
+`$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`,
 not against a merged version, because that spec is not on `main`. The operator instruction accepting
 this order does not exist yet and is required before Must-tier implementation starts. Rationale for
 ordering after rather than before: adding three modules to a tree that a teardown is about to

@@ -569,10 +569,13 @@ function requireRepository(value, label) {
 
 function requiredInstant(value, label) {
   const text = requiredText(value, label);
-  if (!Number.isFinite(Date.parse(text)) || new Date(text).toISOString() !== text) {
+  const instant = new Date(text);
+  const canonical = Number.isFinite(instant.valueOf()) ? instant.toISOString() : "";
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(text)
+    || (text !== canonical && `${text.slice(0, -1)}.000Z` !== canonical)) {
     throw new Error(`${label} must be an exact ISO instant.`);
   }
-  return text;
+  return canonical;
 }
 
 function requiredText(value, label) {

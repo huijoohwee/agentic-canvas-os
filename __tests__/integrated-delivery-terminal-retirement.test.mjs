@@ -140,7 +140,7 @@ function fixture({ retired = false, reviewReady = false } = {}) {
     baseRefName: "main",
     baseRefOid: baseSha,
     mergeCommit: { oid: mergeSha },
-    mergedAt: "2026-08-26T01:05:00.000Z",
+    mergedAt: "2026-08-26T01:05:00Z",
   };
   return { authority, integrationEntry, integrationReceipt, ledger, pullRequest };
 }
@@ -183,6 +183,7 @@ test("builds one stable exact integrated-retirement request", () => {
   assert.equal(first.run.runDigest, second.run.runDigest);
   assert.equal(first.request.idempotencyKey, second.request.idempotencyKey);
   assert.notEqual(first.request.expectedLedgerDigest, second.request.expectedLedgerDigest);
+  assert.equal(first.subject.mergedAt, "2026-08-26T01:05:00.000Z");
 });
 test("accepts one exact terminal integrated retirement", () => {
   const value = fixture({ retired: true });

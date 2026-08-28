@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -68,6 +68,12 @@ test("repository observation joins an expired planned fence commit to a distinct
   cloud.claims[0].deviceId = pseudonymousIdentifier("device", "device");
   cloud.claims[0].sessionId = "foreign-session";
   await assert.rejects(adapter.observe(), /session identity/u);
+  cloud.claims[0].sessionId = pseudonymousIdentifier("session", "session");
+  delete cloud.claims[0].deviceId;
+  await assert.rejects(adapter.observe(), /device identity/u);
+  cloud.claims[0].deviceId = pseudonymousIdentifier("device", "device");
+  delete cloud.claims[0].sessionId;
+  await assert.rejects(adapter.observe(), /session identity/u);
 });
 
 test("PR-bound retirement preserves Git projections and replays terminally", async t => {
@@ -95,6 +101,7 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
       laneRevision: head, reviewRequestId, idempotencyKey: "project:empty-owner" } });
   const claimId = transition.claim.claimId;
   let ledger = transition.ledger, retired = false, pullClosed = false, closeCalls = 0;
+  let failRetireBeforeEffect = true;
   const retireRequests = [], gitMutations = [];
   let lease = { status: "active", device: "device", sessionId: "session", branch,
     worktreePath: subject, baseSha: base, fenceSha: head,
@@ -145,6 +152,12 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
     }
     closeCalls += 1; pullClosed = true; return ""; },
     invokeCloud: ({ action, request }) => { assert.equal(action, "retire"); retireRequests.push(request);
+      assert.equal(request.deviceId, lease.device);
+      assert.equal(request.sessionId, lease.sessionId);
+      if (failRetireBeforeEffect) {
+        failRetireBeforeEffect = false;
+        throw new Error("synthetic cloud retirement failure before effect");
+      }
       transition = applyCloudTransition({ ledger, action: "retire", actor,
         repository: cloudRepository, evaluationTime: "2026-08-23T11:00:00.000Z",
         request: { ...request, expectedLedgerDigest: ledger.headDigest } });
@@ -153,14 +166,23 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
   const controller = createController({ adapter }), plan = await controller.plan();
   assert.equal(plan.subject.claim.laneRevision, head);
   assert.equal(plan.subject.claim.reviewRequestId, reviewRequestId);
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /synthetic cloud retirement failure/u);
+  const partial = JSON.parse(readFileSync(path.join(temporary, "state.json"), "utf8"));
+  assert.equal(partial.phase, "authorized");
+  assert.equal(retired, false);
+  assert.equal(pullClosed, false);
+  assert.equal(lease.status, "active");
   const receipt = await controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization });
   const replay = await controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization });
   assert.equal(replay.receiptDigest, receipt.receiptDigest);
-  assert.equal(retireRequests.length, 1);
-  assert.equal(retireRequests[0].finalRevision, head);
-  assert.equal(retireRequests[0].reviewRequestId, reviewRequestId);
+  assert.equal(retireRequests.length, 2);
+  assert.equal(retireRequests[1].finalRevision, head);
+  assert.equal(retireRequests[1].reviewRequestId, reviewRequestId);
+  assert.equal(retireRequests[1].deviceId, actor.deviceId);
+  assert.equal(retireRequests[1].sessionId, actor.sessionId);
   assert.equal(closeCalls, 1);
   assert.deepEqual(gitMutations, []);
   assert.equal(lease.status, "released");

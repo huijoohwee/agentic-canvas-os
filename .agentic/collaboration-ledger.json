@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5597,
-  "headDigest": "cc41252f180499333c7e8104b5cf321e823fa36a7d00aca1f6575546acd40be9",
+  "sequence": 5598,
+  "headDigest": "809aaefe25ad8945053ee3046b9234065b406dec672cee2ebee3b172b82d6a13",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -284175,6 +284175,52 @@
       },
       "claimDigest": "e42bee05b1f58deadee6f9c29307ebfa169e2545210bfda5321d8004f22ea163",
       "digest": "cc41252f180499333c7e8104b5cf321e823fa36a7d00aca1f6575546acd40be9"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5598,
+      "parentDigest": "cc41252f180499333c7e8104b5cf321e823fa36a7d00aca1f6575546acd40be9",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "267c8dba7dcb11511678421d1aee90629b0a38e95b1a106f342afbffc2bbe1e6",
+      "idempotencyKey": "6b5568e5a944661bd226ed020b1a8a4679a3543a787914faa17862db4145bf6a",
+      "requestDigest": "227d66758d3fc7ffe0efa0247076f33c711661a2b20edf502ee1baaf133df5a8",
+      "evaluationTime": "2026-08-28T02:19:33.000Z",
+      "claimCore": {
+        "claimId": "267c8dba7dcb11511678421d1aee90629b0a38e95b1a106f342afbffc2bbe1e6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2417abfbaa6269dc67638915e602270a8d01f76e91b7cc567965cdb2640bbdd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0fc8fcc8bbf3bdb8416686d7460ee72596505bf8f546a8f559849759c4fbb943",
+        "canonicalBaseRevision": "893f969304a410b0bfaa7fb1dce103beab1f5baf",
+        "declaredWriteScope": [
+          "path:.kiro/specs/native-skill-creation-harness/design.md",
+          "path:.kiro/specs/native-skill-creation-harness/requirements.md",
+          "path:.kiro/specs/native-skill-creation-harness/tasks.md",
+          "path:__tests__/cross-repository-coordination-task.test.mjs",
+          "path:docs/NATIVE-SKILL-HARNESS-OPERATOR-INSTRUCTION-2026-08-17.md",
+          "path:docs/NATIVE-SKILL-HARNESS.md",
+          "path:memory/2026-08.md",
+          "path:todo/2026-08/path-neutralization.md",
+          "semantic:path-neutralization"
+        ],
+        "writeSetDigest": "beec6aeb92064fb52d42467e0affbdb74bb402a450c0df3b390b42b6f91e89a8",
+        "laneRevision": "893f969304a410b0bfaa7fb1dce103beab1f5baf",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T02:49:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0b31f464b431ee36ad66f581a1a1f8d669a7f2f45ea9bd47a0575921236a5c4a",
+      "digest": "809aaefe25ad8945053ee3046b9234065b406dec672cee2ebee3b172b82d6a13"
     }
   ]
 }

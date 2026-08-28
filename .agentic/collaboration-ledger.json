@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5734,
-  "headDigest": "4805519e3783af3576b2add0a7a6cf4e432ed904a188ef03fd8a3faab5b0668c",
+  "sequence": 5735,
+  "headDigest": "0f9f435047dbc7109877872f22a52dd899203c355f9130f6d35c621bca6c6146",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -291723,6 +291723,47 @@
       },
       "claimDigest": "cb3b675144542b939c971d87cd691a66e36ff2220dea1daf26e36cf4d47f8333",
       "digest": "4805519e3783af3576b2add0a7a6cf4e432ed904a188ef03fd8a3faab5b0668c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5735,
+      "parentDigest": "4805519e3783af3576b2add0a7a6cf4e432ed904a188ef03fd8a3faab5b0668c",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "5eae5c67f7ad0e52d5a4db9bc96c0d45f7fccf29f5582c45ee1afcf8bb2753ed",
+      "idempotencyKey": "8b9d4ced88e520e21f4a0a338df0d06d4fbc91f047e35e97ed43ce45e20efe60",
+      "requestDigest": "038c3139cb731c7d5114a2cbae709f08817f94d95524de0594356e149a872ec1",
+      "evaluationTime": "2026-08-28T10:56:30.000Z",
+      "claimCore": {
+        "claimId": "5eae5c67f7ad0e52d5a4db9bc96c0d45f7fccf29f5582c45ee1afcf8bb2753ed",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:2c2cbeff70e8c0f501ec71218a5055efcdc63c82d06d86c289fb872a9028109d",
+        "canonicalBaseRevision": "f22a2d952538c27702180c2d8059e63ab6fd3ed4",
+        "declaredWriteScope": [
+          "path:.github/workflows/pages.yml",
+          "path:scripts/__tests__/git-guidelines-pages-release-controller.test.mjs",
+          "path:scripts/__tests__/git-guidelines-workflow.test.mjs",
+          "semantic:pages-ruleset-semantic-attestation"
+        ],
+        "writeSetDigest": "9eaa197395c2c3527d615e8fb377d7bf66870b3f3fd178b3e5e9f5574de05534",
+        "laneRevision": "4337d3690054830e2e5ffc574cd83753f6fabb6a",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T12:55:02.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBU_8Ig",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "026f0f59dc4dbcf0c4a160b488ed62516bd041be45eba2cf135246cfda1bcdcc",
+      "digest": "0f9f435047dbc7109877872f22a52dd899203c355f9130f6d35c621bca6c6146"
     }
   ]
 }

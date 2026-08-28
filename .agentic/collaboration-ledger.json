@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5853,
-  "headDigest": "6ca79c0f587f73fb10435c5571cad8ed5e46cf82d755fe811168a035bcdf2d6b",
+  "sequence": 5854,
+  "headDigest": "402138a888174985dfda7a1578f2d7bc74f17b51e0eb3ab53660824f6631337d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -297634,6 +297634,47 @@
       },
       "claimDigest": "cf3d4c934b7bdb01a52d2691b5ff45b6cb0b23a315e49ce0c120b14aebc89be5",
       "digest": "6ca79c0f587f73fb10435c5571cad8ed5e46cf82d755fe811168a035bcdf2d6b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5854,
+      "parentDigest": "6ca79c0f587f73fb10435c5571cad8ed5e46cf82d755fe811168a035bcdf2d6b",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "fc5861ed5d4f394c1fa2f5e93f1406023438a3be1cab8446d18c812481f7ec0b",
+      "idempotencyKey": "3e33c6ce81fdc0e69c1ed66f257d8b68e6fb9595ed3ae670c52ee325684790ae",
+      "requestDigest": "daceb7e75e7681507088e73993e67f19c9f14ad5901f6703beab949db564e8be",
+      "evaluationTime": "2026-08-28T23:17:22.000Z",
+      "claimCore": {
+        "claimId": "fc5861ed5d4f394c1fa2f5e93f1406023438a3be1cab8446d18c812481f7ec0b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:453f6f9d0a50a08b3e21953c2a7af68eacc98c809df6ba22c4133a4a5262830f",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:22dc7abb08104d1618a18bb7b344d8cd3848313a8a314c9be944ff005072ffc2",
+        "canonicalBaseRevision": "37d5b41a9a61632f6bcf1c691c8909668ab210b1",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-cloud-collaboration.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:global-ledger-conflict-rebase"
+        ],
+        "writeSetDigest": "534f5787f0278036621756827627da8ba5c29b13943e607e120f8f582027434f",
+        "laneRevision": "28e80e2da84ff97b49499f1e9bfa18af51f5199c",
+        "leaseEpoch": 3,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-29T01:17:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "dde050bbdd2e0829ad3682383ee608cc4b297b794428fddc2e6a2816ec39e141",
+        "eligibleSince": "2026-08-28T23:17:22.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5ef5b97a3077a403a2a2a018f85825f35e849adbe3a28ae9b998921df837499d",
+      "digest": "402138a888174985dfda7a1578f2d7bc74f17b51e0eb3ab53660824f6631337d"
     }
   ]
 }

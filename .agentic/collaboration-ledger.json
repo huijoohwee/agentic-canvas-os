@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5813,
-  "headDigest": "86088691429092f02ec149a073292d813f6f4b6198a987b2cbfc9bd23cbe339e",
+  "sequence": 5814,
+  "headDigest": "b87b5f79b124e75f9cf1713277452b39f7da5dbd777868f45b7f5816dcdf9950",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -295641,6 +295641,48 @@
       },
       "claimDigest": "00761c233e6c14c33a23e1d595c32febd879b756e3c13f3f1d2848a5d576c0cf",
       "digest": "86088691429092f02ec149a073292d813f6f4b6198a987b2cbfc9bd23cbe339e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5814,
+      "parentDigest": "86088691429092f02ec149a073292d813f6f4b6198a987b2cbfc9bd23cbe339e",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "109d79122c42a5afe237abced902bfbb3715ca2b5fbf6183d0a592c818d2730f",
+      "idempotencyKey": "10f41d4f9c470b0c3a8d983d19c8eb7de903894cfba62d9af462d199dda3fd62",
+      "requestDigest": "42d9c8fb6556c096368eaf4f7d47dc46d668b3d4defc0c483873c135dab178b2",
+      "evaluationTime": "2026-08-28T14:42:18.000Z",
+      "claimCore": {
+        "claimId": "109d79122c42a5afe237abced902bfbb3715ca2b5fbf6183d0a592c818d2730f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b33af5da97ba6e458e976a48aa32f5172db0c04b24a184e22dbd630c1687fed5",
+        "canonicalBaseRevision": "ac6fef6b20fd984b094cabe255a808206d5ef68a",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:scripts/device-branch-ownership-lib.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:prepared-integration-replay-fence"
+        ],
+        "writeSetDigest": "2742207ed44f26f8eba692cdab85c7e027acc99d7e950f1a77b1e582aceef7fb",
+        "laneRevision": "ac6fef6b20fd984b094cabe255a808206d5ef68a",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T15:12:18.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "085d365e8519cbc2f557541cdf07fe1d89b798710c8eb1b3a0c9e84b3d2fe52f",
+        "eligibleSince": "2026-08-28T14:40:53.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-28T14:42:18.000Z"
+      },
+      "claimDigest": "22348be53f2abf16f516be16900e3aa696b21f3ac6917d24d50870ad9fef1731",
+      "digest": "b87b5f79b124e75f9cf1713277452b39f7da5dbd777868f45b7f5816dcdf9950"
     }
   ]
 }

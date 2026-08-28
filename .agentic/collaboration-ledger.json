@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5696,
-  "headDigest": "86fe59436c0e0c8278a7aceb9afe155179438d20b3dfb2d51452a64815c29e7c",
+  "sequence": 5697,
+  "headDigest": "6558a7876829c3d554f1950e217fce44a423318a33ab01d052c712fe48b65bcd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -289928,6 +289928,63 @@
       },
       "claimDigest": "1f28e3e5845d17355451fbdd389cffe20b2492b31deffc69aa475790f77b626e",
       "digest": "86fe59436c0e0c8278a7aceb9afe155179438d20b3dfb2d51452a64815c29e7c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5697,
+      "parentDigest": "86fe59436c0e0c8278a7aceb9afe155179438d20b3dfb2d51452a64815c29e7c",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "db8eb11e4764e60f0d6257b19a9449d65b33e97b9dabdb4feaca74d58fb34e54",
+      "idempotencyKey": "f05662deda48b5e91f8e3f282b3db59077026ea0125fda0105290867d12050bc",
+      "requestDigest": "f271e9318a63d1ea098c4a4abf155f2aeb97939fed3b2b3f1d59cfca7af1415c",
+      "evaluationTime": "2026-08-28T08:57:46.000Z",
+      "claimCore": {
+        "claimId": "db8eb11e4764e60f0d6257b19a9449d65b33e97b9dabdb4feaca74d58fb34e54",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:80818a6f09e8134254eb6b9e2f42af52f91f4361799f3c2fbb2fed424e2979b8",
+        "canonicalBaseRevision": "25e050e84144f33e6110d0aae80336674f103504",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/protected-head-refresh-provider.test.mjs",
+          "path:__tests__/protected-head-refresh-repository-policy.test.mjs",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/protected-head-refresh-github-provider.mjs",
+          "path:scripts/protected-head-refresh-repository-policy.mjs",
+          "semantic:protected-refresh-consumer-enrollment"
+        ],
+        "writeSetDigest": "58aca6ea7d55d11312f84f3c5241adf82c6b4e4014d2b69e624b902c56089d72",
+        "laneRevision": "2e7f4e72bc1d54f0e4f4b3ab3b562b13575c6ab5",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T14:33:55.000Z",
+        "evidenceDigest": "1d76b47d95fa1cd8f2daa6e61cadf337a78c0c811fc0828d49498c41e839fb1f",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUDavw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "2e7f4e72bc1d54f0e4f4b3ab3b562b13575c6ab5",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUDavw",
+          "focusedEvidenceDigest": "1d76b47d95fa1cd8f2daa6e61cadf337a78c0c811fc0828d49498c41e839fb1f",
+          "dependencyClosureDigest": "1371d54b4718a3d9b2c8373b6b93d1b300d2c7a9653336fead8b159731b013ec",
+          "namedChecksDigest": "59a4c3e3d777772f671e1b644f05e05ee82d1b07c10296e6c76f285cd6264a08",
+          "handoffEvidenceDigest": "e16ed208fa15092a287975f13539e33a2fc5d8bf3fab53e588e52824b6ad3ee6",
+          "operatorDecisionDigest": "fb48fe209d0d00f8fb28862671ba7e60d662aa3e88e50fdc1596bf599aa15b7d",
+          "integrationIntentDigest": "f82e9a3ea04ac34c9a2ac4494e1f78be00617a1ae82b11f1a0e05933dbfa392b",
+          "integratedAt": "2026-08-28T08:57:46.000Z"
+        }
+      },
+      "claimDigest": "62c74e809dc9be602d08034f719ecf3b726a5dc6ab5c48a2795e7558224b7de5",
+      "digest": "6558a7876829c3d554f1950e217fce44a423318a33ab01d052c712fe48b65bcd"
     }
   ]
 }

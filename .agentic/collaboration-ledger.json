@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5750,
-  "headDigest": "584fb41ec795ff59315cd4b9a707d3d29e6b34f2c6a942a8f079c743f1cf3ed8",
+  "sequence": 5751,
+  "headDigest": "edf6e77d5b7ab38bc460a639d83b18e0c0068a4b45ca4d6a94ef24bcd8bb3d53",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -292595,6 +292595,53 @@
       },
       "claimDigest": "d2285b1b988461d19a6f181fd5634aa83f831d4ea949ef60717a526bc35f5554",
       "digest": "584fb41ec795ff59315cd4b9a707d3d29e6b34f2c6a942a8f079c743f1cf3ed8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5751,
+      "parentDigest": "584fb41ec795ff59315cd4b9a707d3d29e6b34f2c6a942a8f079c743f1cf3ed8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e16f8cad2b88520db2a6849e873dbce2cc77d4ea5bd514821fc263800f0c789a",
+      "idempotencyKey": "f86c68f9ea48ebfa72129f459a536308ad2b686adc1963879dfbf5a2c3c6fe49",
+      "requestDigest": "9b0ac3c258a8a74e8ef6720f6337a427685eec115588e9aed8bec7fd92000af1",
+      "evaluationTime": "2026-08-28T11:51:05.000Z",
+      "claimCore": {
+        "claimId": "e16f8cad2b88520db2a6849e873dbce2cc77d4ea5bd514821fc263800f0c789a",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:20df78f09dc525089df020bc57b02349824b1a75a782d4b3c825096392c82450",
+        "canonicalBaseRevision": "af3bff6f15ea2e6e7a01e461c077a6c99ac22a28",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-partial-start-retirement.test.mjs",
+          "path:docs/CLAIM-ONLY-PARTIAL-START-RETIREMENT.md",
+          "path:scripts/claim-only-partial-start-retirement-contract.mjs",
+          "path:scripts/claim-only-partial-start-retirement-controller.mjs",
+          "path:scripts/claim-only-partial-start-retirement-repository-adapter.mjs",
+          "semantic:claim-only-mixed-identity-compatibility"
+        ],
+        "writeSetDigest": "45a71ccdaab3bfc46fb4a6b80bf782907081372ee0cb049c6206c57950cf16d2",
+        "laneRevision": "ed6cad1c5fc4750e41431b82ab2af014c2c9a6c4",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-28T12:21:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUnskA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "b977c0972b7e6b532103c128238a706b0a5f26f3ffae8b6643e4ce13570501a6",
+          "recoveredAt": "2026-08-28T11:51:05.000Z"
+        }
+      },
+      "claimDigest": "b44895fbf8105e86c975757ba31d689ce3dc25cc737a5b7e5bce5d073227196b",
+      "digest": "edf6e77d5b7ab38bc460a639d83b18e0c0068a4b45ca4d6a94ef24bcd8bb3d53"
     }
   ]
 }

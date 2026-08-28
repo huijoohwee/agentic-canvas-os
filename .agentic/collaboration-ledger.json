@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5856,
-  "headDigest": "561e652325c9fd54b7c170b5e25a4647aa6948aaf23d004ab26e53f135bb7bcb",
+  "sequence": 5857,
+  "headDigest": "e5232d7ae98a1710ec2865fc59f4a942a45efb53dffdd303a7eeea6e5b7d1500",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -297769,6 +297769,48 @@
       },
       "claimDigest": "392b0c85344621a014a64d012b5f98dcf6a3baf318e2865b2a72199dba15dcf0",
       "digest": "561e652325c9fd54b7c170b5e25a4647aa6948aaf23d004ab26e53f135bb7bcb"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5857,
+      "parentDigest": "561e652325c9fd54b7c170b5e25a4647aa6948aaf23d004ab26e53f135bb7bcb",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "fc5861ed5d4f394c1fa2f5e93f1406023438a3be1cab8446d18c812481f7ec0b",
+      "idempotencyKey": "b531f3cad57ba2b0a4497fa62b62071a569a1b33a9a4b2d7ad27a93c236be4b7",
+      "requestDigest": "d6f6158df34a353113d19b56ff671712cdd11391acca4dc890d0826549853a63",
+      "evaluationTime": "2026-08-28T23:19:33.000Z",
+      "claimCore": {
+        "claimId": "fc5861ed5d4f394c1fa2f5e93f1406023438a3be1cab8446d18c812481f7ec0b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:453f6f9d0a50a08b3e21953c2a7af68eacc98c809df6ba22c4133a4a5262830f",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:22dc7abb08104d1618a18bb7b344d8cd3848313a8a314c9be944ff005072ffc2",
+        "canonicalBaseRevision": "37d5b41a9a61632f6bcf1c691c8909668ab210b1",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-cloud-collaboration.md",
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:global-ledger-conflict-rebase"
+        ],
+        "writeSetDigest": "534f5787f0278036621756827627da8ba5c29b13943e607e120f8f582027434f",
+        "laneRevision": "95fdc29e031e092aa7ea42b8fd78f2e62068a35c",
+        "leaseEpoch": 3,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T01:18:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "dde050bbdd2e0829ad3682383ee608cc4b297b794428fddc2e6a2816ec39e141",
+        "eligibleSince": "2026-08-28T23:17:22.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-28T23:18:40.000Z"
+      },
+      "claimDigest": "c1fcc9788507a1c7dc5354fab6c0a58a2b8850a76a50fbdc72aeaf4b16e1af0d",
+      "digest": "e5232d7ae98a1710ec2865fc59f4a942a45efb53dffdd303a7eeea6e5b7d1500"
     }
   ]
 }

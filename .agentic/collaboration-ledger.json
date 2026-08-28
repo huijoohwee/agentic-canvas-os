@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5861,
-  "headDigest": "119498cd28c931cb606db6fd0abfc872a251a669ee33c194aff2e79295c0fab3",
+  "sequence": 5862,
+  "headDigest": "d0e6273765e92f8f3d1432baae1d848fd12a776fbdace8644ea97119ef25be77",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -298012,6 +298012,55 @@
       },
       "claimDigest": "d460012682b712c0997e21b889365ec3e2641d635b24b33e1a26f7a15b3ff1bf",
       "digest": "119498cd28c931cb606db6fd0abfc872a251a669ee33c194aff2e79295c0fab3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5862,
+      "parentDigest": "119498cd28c931cb606db6fd0abfc872a251a669ee33c194aff2e79295c0fab3",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "662b4d64aef3fc14626668cde383df90ab27c05a1d1f2be778365932be7cd6a9",
+      "idempotencyKey": "103375d9bd4bba562d2413deb1525f7ff7d5ff6e3a314d250c723b3b5f93ea98",
+      "requestDigest": "f00db81b19e78753861246a880fe5d641f4c24561c8255dd4847822a999c2eba",
+      "evaluationTime": "2026-08-28T23:25:20.000Z",
+      "claimCore": {
+        "claimId": "662b4d64aef3fc14626668cde383df90ab27c05a1d1f2be778365932be7cd6a9",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:2db9667dbbef46736edfc3fb7e003bd2165f3df9f377f68a7dde4303906b32df",
+        "sessionId": "session:91f0f09c4c440bf20692b4d453c64fb847ca91f0d5d711f231eb3c34ff00b013",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:7724e70f8ebff822c061300a0f36827e261c4794dbf77b71a10b0aa98fe398aa",
+        "canonicalBaseRevision": "1f7b529d42b0f0cff2c7cd749842fdfe51755bed",
+        "declaredWriteScope": [
+          "path:canvas/src/__tests__/agenticOsInvocationExecutor.test.ts",
+          "path:canvas/src/__tests__/knowledgeGraphSkillsCommandsLaunch.test.ts",
+          "path:canvas/src/__tests__/webMcpRuntime.test.ts",
+          "path:canvas/src/features/agent-ready/webMcpRuntime.ts",
+          "path:canvas/src/features/agent-ready/webMcpToolRegistry.ts",
+          "path:canvas/src/features/agentic-os/agenticOsInvocationExecutor.ts",
+          "path:canvas/src/features/agentic-os/skillsCommandsMcpTarget.ts",
+          "path:canvas/src/features/panels/views/SkillsCommandsView.tsx",
+          "path:canvas/src/features/toolbar/FloatingPanelSkillsCommandsView.tsx",
+          "path:canvas/src/tests/registry/postParserCases8.ts",
+          "path:docs/runtime-api.md",
+          "semantic:invocation-executor-runtime"
+        ],
+        "writeSetDigest": "65c89624bd8976adb37f3c9acdeedff467a843a3da36d21bb89b2c126eaaeedb",
+        "laneRevision": "1f7b529d42b0f0cff2c7cd749842fdfe51755bed",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T00:25:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "820fbceed923abf020cb828cc985870c039401300ebac6e7ca2d43c3a531e421",
+      "digest": "d0e6273765e92f8f3d1432baae1d848fd12a776fbdace8644ea97119ef25be77"
     }
   ]
 }

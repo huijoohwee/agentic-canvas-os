@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5720,
-  "headDigest": "24b7fdb413aab223f9f57f09124e687fbf3efce93db44501c49ba43fb156903d",
+  "sequence": 5721,
+  "headDigest": "d0b434eff1d64f339a4ee8045c419cfab91404458afa0661e4b41c454be91c03",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -291056,6 +291056,63 @@
       },
       "claimDigest": "4d3f131af6fdb084b3502f28f41aac37d0a3df6ef9627c56b06a1c8139907a3d",
       "digest": "24b7fdb413aab223f9f57f09124e687fbf3efce93db44501c49ba43fb156903d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5721,
+      "parentDigest": "24b7fdb413aab223f9f57f09124e687fbf3efce93db44501c49ba43fb156903d",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bc9c968c5710945b38d62fd899c438e2175e9c37f04df43a0c70124489e0b62c",
+      "idempotencyKey": "565a0889fa6eb980ce337217ed331672a1e530800e60e82f66db3b178c162a84",
+      "requestDigest": "0c10ead444fe24c08b6a1236fea2298cebccb7e32f64cee19ad8c81bfc904dde",
+      "evaluationTime": "2026-08-28T10:06:31.000Z",
+      "claimCore": {
+        "claimId": "bc9c968c5710945b38d62fd899c438e2175e9c37f04df43a0c70124489e0b62c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:26cd201235dc9afbd70278a0b2d509dcfc8d8ed1d8a98079b8bcc794ff2cd2a1",
+        "canonicalBaseRevision": "af3bff6f15ea2e6e7a01e461c077a6c99ac22a28",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-mixed-identity-pair-retirement.test.mjs",
+          "path:docs/CLAIM-ONLY-MIXED-IDENTITY-PAIR-RETIREMENT.md",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-contract.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-controller.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-evidence.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-store.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement.mjs",
+          "semantic:claim-only-mixed-identity-pair-retirement"
+        ],
+        "writeSetDigest": "b4283b65682922c0a73bc4db6cedfa436fa599c82ab5ae4d3f0cba2a16d675e9",
+        "laneRevision": "1e227ba456f14f7df36f704015767d639e7fcb4c",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T15:40:54.000Z",
+        "evidenceDigest": "acd6d45ad0a9c9fc3125e37336b4ba9f7f87415a9a48c749cc4395374b3bc95b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUZb6Q",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "1e227ba456f14f7df36f704015767d639e7fcb4c",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUZb6Q",
+          "focusedEvidenceDigest": "acd6d45ad0a9c9fc3125e37336b4ba9f7f87415a9a48c749cc4395374b3bc95b",
+          "dependencyClosureDigest": "25666e79ad54e328b8408c66139337e89bc0f03adb94d30afb2057d2cf547d20",
+          "namedChecksDigest": "4dd880060d8a08a2e47ec739399e2174c149f0212d93c03a19f395d195a32392",
+          "handoffEvidenceDigest": "f3a2f1cdbe8cad2e74b1eb5170bc7c62c13a37584f0fd17d98798735190399a3",
+          "operatorDecisionDigest": "07cf5aa5ab487ad7b6bf8588273751420c980ccd10b047a5babd97527e132d99",
+          "integrationIntentDigest": "92e06e10dc2a4f6602f6a64d5aee157e6f3f9c1bbaa979221bcfb9029e60b5d9",
+          "integratedAt": "2026-08-28T10:06:31.000Z"
+        }
+      },
+      "claimDigest": "4f0d5a5fa8ea6ac8c0a476ac451dc690972664bd0252bf208fa19d9a26deaab7",
+      "digest": "d0b434eff1d64f339a4ee8045c419cfab91404458afa0661e4b41c454be91c03"
     }
   ]
 }

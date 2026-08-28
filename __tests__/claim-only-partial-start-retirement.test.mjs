@@ -37,11 +37,13 @@ const sha = character => character.repeat(40);
 const SOURCE_ID = digest("1");
 const SUCCESSOR_ID = digest("2");
 const BASE = sha("a");
+const SUCCESSOR_BASE = sha("c");
 const MAIN = sha("b");
 const SCOPE = Object.freeze([
   "path:__tests__/active-dirty-scope-expansion-repository-adapter.test.mjs",
   "path:scripts/active-dirty-scope-expansion-controller.mjs",
 ]);
+const SUCCESSOR_ONLY_SCOPE = "path:scripts/integrated-delivery-retirement-controller.mjs";
 test("retirement plan seals the exact inert source and waiting successor", () => {
   const plan = buildRetirementPlan(retirementEvidence());
   assert.equal(plan.operation, RETIREMENT_OPERATION);
@@ -64,13 +66,60 @@ test("retirement rejects a non-genesis source or an associated local projection"
   queue.overlap.higherPriorityWaitingClaimIds.push(digest("9"));
   assert.throws(() => buildRetirementPlan(queue), /overlap cardinality or priority/u);
 });
-test("source and direct successor require one exact owner, repository, work item, and scope", () => {
-  const drifts = [["actorId", "github-user:2"], ["repositoryId", "github-repository:fork"], ["workItemId", "work-item:foreign"], ["deviceId", "device:other"], ["sessionId", "session:other"], ["writeSetDigest", digest("f")]];
+test("same-identity retirement preserves exact work item, session, and scope", () => {
+  const drifts = [["workItemId", "work-item:foreign"], ["sessionId", "session:other"], ["writeSetDigest", digest("f")]];
   for (const [field, value] of drifts) { const evidence = retirementEvidence(); evidence.successor[field] = value; assert.throws(() => buildRetirementPlan(evidence), /source\/successor|write-set/u, field);
   }
   const scope = retirementEvidence(); scope.successor.declaredWriteScope = ["path:foreign"];
   scope.successor.writeSetDigest = digestValue(scope.successor.declaredWriteScope);
-  assert.throws(() => buildRetirementPlan(scope), /declared write scope|writeSetDigest/u);
+  assert.throws(() => buildRetirementPlan(scope), /source\/successor|declared write scope|writeSetDigest/u);
+});
+test("mixed-identity retirement accepts a forward proper scope overlap", () => {
+  const evidence = mixedIdentityRetirementEvidence();
+  const plan = buildRetirementPlan(evidence);
+  assert.notEqual(plan.evidence.source.workItemId, plan.evidence.successor.workItemId);
+  assert.notEqual(plan.evidence.source.sessionId, plan.evidence.successor.sessionId);
+  assert.deepEqual(plan.evidence.successor.declaredWriteScope,
+    [SCOPE[1], SUCCESSOR_ONLY_SCOPE].sort());
+  assert.equal(plan.evidence.canonical.sourceBaseStrictAncestorOfSuccessorBase, true);
+});
+test("mixed-identity retirement rejects subset, disjoint, and equal scopes", () => {
+  const invalidScopes = [
+    [SCOPE[0]],
+    [SUCCESSOR_ONLY_SCOPE, "path:scripts/integrated-delivery-retirement-contract.mjs"],
+    [...SCOPE],
+  ];
+  for (const successorScope of invalidScopes) {
+    const evidence = mixedIdentityRetirementEvidence({ successorScope });
+    assert.throws(() => buildRetirementPlan(evidence), /source\/successor|mixed-identity|scope/u);
+  }
+});
+test("mixed-identity scope expansion is semantic across path ancestry", () => {
+  const narrower = mixedIdentityRetirementEvidence({ sourceScope: ["path:scripts"],
+    successorScope: ["path:scripts/child.mjs"] });
+  assert.throws(() => buildRetirementPlan(narrower), /mixed-identity|scope|expansion/u);
+  const broader = mixedIdentityRetirementEvidence({ sourceScope: ["path:scripts/child.mjs"],
+    successorScope: ["path:scripts"] });
+  assert.equal(buildRetirementPlan(broader).operation, RETIREMENT_OPERATION);
+});
+test("mixed-identity retirement rejects ownership and ancestry drift", () => {
+  for (const [field, value] of [["actorId", "github-user:2"],
+    ["repositoryId", "github-repository:fork"], ["deviceId", "device:other"]]) {
+    const evidence = mixedIdentityRetirementEvidence();
+    evidence.successor[field] = value;
+    assert.throws(() => buildRetirementPlan(evidence), /source\/successor|mixed-identity/u, field);
+  }
+  const sameBase = mixedIdentityRetirementEvidence();
+  sameBase.successor.canonicalBaseRevision = sameBase.source.canonicalBaseRevision;
+  sameBase.successor.laneRevision = sameBase.source.laneRevision;
+  assert.throws(() => buildRetirementPlan(sameBase), /source\/successor|mixed-identity|base|ancestor/u);
+  const falseAncestry = mixedIdentityRetirementEvidence({ strictAncestry: false });
+  assert.throws(() => buildRetirementPlan(falseAncestry), /strict ancestor|ancestr|mixed-identity/u);
+  for (const field of ["sourceBaseContained", "successorBaseContained"]) {
+    const evidence = mixedIdentityRetirementEvidence();
+    evidence.canonical[field] = false;
+    assert.throws(() => buildRetirementPlan(evidence), /canonical|contain/u, field);
+  }
 });
 test("retirement journal is ordered, sealed, and emits a terminal receipt", () => {
   const plan = buildRetirementPlan(retirementEvidence());
@@ -300,6 +349,18 @@ function retirementEvidence() {
   const successor = claim({ claimId: SUCCESSOR_ID, state: "waiting-successor", recordedState: "waiting-successor", reserved: false, predecessorClaimId: SOURCE_ID, base: BASE, expiry: "2026-08-24T01:00:00.000Z" });
   return { schema: "agentic-claim-only-partial-start-retirement-evidence/v1", observedAt: "2026-08-24T02:00:00.000Z", repository: repositoryEvidence(), controller: controller(), canonical: { targetRepository: "huijoohwee/agentic-canvas-os", mainSha: MAIN, sourceBaseContained: true, successorBaseContained: true }, cloud: cloud(), source, successor, sourceEntry: entry(source, { state: "current", predecessorClaimId: null, sequence: 1 }), successorEntry: entry(successor, { state: "waiting-successor", predecessorClaimId: SOURCE_ID, sequence: 2 }), sourceLineageCount: 1, successorLineageCount: 1, associations: associations(), preservation: preservation(), overlap: { reservedClaimIds: [SOURCE_ID], waitingClaimIds: [SUCCESSOR_ID], higherPriorityWaitingClaimIds: [] },
   };
+}
+function mixedIdentityRetirementEvidence({ sourceScope = SCOPE,
+  successorScope = [SCOPE[1], SUCCESSOR_ONLY_SCOPE], strictAncestry = true } = {}) {
+  const evidence = retirementEvidence();
+  Object.assign(evidence.source, { declaredWriteScope: [...sourceScope].sort(),
+    writeSetDigest: digestValue([...sourceScope].sort()) });
+  Object.assign(evidence.successor, { workItemId: "work-item:integrated-delivery-retirement",
+    sessionId: "session:mixed-successor", canonicalBaseRevision: SUCCESSOR_BASE,
+    laneRevision: SUCCESSOR_BASE, declaredWriteScope: [...successorScope].sort(),
+    writeSetDigest: digestValue([...successorScope].sort()) });
+  evidence.canonical.sourceBaseStrictAncestorOfSuccessorBase = strictAncestry;
+  return evidence;
 }
 function rolloverEvidence(retirementReceipt) {
   const source = claim({ claimId: SOURCE_ID, state: "retired", recordedState: "retired", reserved: false, predecessorClaimId: null, base: BASE, expiry: "2026-08-24T00:00:00.000Z" });

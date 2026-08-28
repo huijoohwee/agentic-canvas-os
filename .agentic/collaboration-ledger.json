@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5676,
-  "headDigest": "020b3db61f1082ed2b629217f193927937367c101a3a519ba110e7ca83ec73ac",
+  "sequence": 5677,
+  "headDigest": "fdb390973b066af72eeb3941d8fc7228509574a9221c7d60ccb1c914f1c6a61b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -288907,6 +288907,50 @@
       },
       "claimDigest": "1679b36c7781085b488ecb99b06c8dc257a39fd94b8ef7b4d3c345dbf7928936",
       "digest": "020b3db61f1082ed2b629217f193927937367c101a3a519ba110e7ca83ec73ac"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5677,
+      "parentDigest": "020b3db61f1082ed2b629217f193927937367c101a3a519ba110e7ca83ec73ac",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "968b46c1a43a4686398ebd8c4680e7270be786c476664f96ab0d47985ec68e2d",
+      "idempotencyKey": "4bb5c7969d72ab440e9c6b8a5cc313024db00b98eddc793c024c014887d466a3",
+      "requestDigest": "951b324626593275c7d03413398d41bcfbe879b45d7242d5f023145b60e56c7b",
+      "evaluationTime": "2026-08-28T08:07:31.000Z",
+      "claimCore": {
+        "claimId": "968b46c1a43a4686398ebd8c4680e7270be786c476664f96ab0d47985ec68e2d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:7118d5211d16508b142dfc46f95577a59b36490992393a0c250f567e94e2637c",
+        "canonicalBaseRevision": "fea0bb6b77e5dfc706485917b228470242348b78",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:canvas/src/__tests__/knowledgeGraphHostAdapter.test.ts",
+          "path:canvas/src/__tests__/knowledgeGraphImportUrlSurfaces.test.ts",
+          "path:canvas/src/__tests__/knowledgeGraphLaunchInputInteraction.test.ts",
+          "path:docs/documents/agenticgraph-deterministic-knowledge-graph-runtime.md",
+          "path:mcp/README.md",
+          "semantic:agenticgraph-invocation-surface"
+        ],
+        "writeSetDigest": "3d02c66c9f5e4930ec1b1b30c5c41db59a5f332d34da0dc85ca7e1864e65e74b",
+        "laneRevision": "3f8940533748596554f8abfa874a79fa4bef4fc5",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 1,
+        "state": "reviewed",
+        "expiresAt": "2026-08-28T08:59:42.000Z",
+        "evidenceDigest": "69ffbed03cc07b754120fc5a62c5581e458f038d9e73b9a282a0da7a9e45fed5",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBTtezA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "9a7b8567a7e190c89a14b6aa7ff2e12f4a0c72beadb047dffbe4c0bd6ca375ed",
+      "digest": "fdb390973b066af72eeb3941d8fc7228509574a9221c7d60ccb1c914f1c6a61b"
     }
   ]
 }

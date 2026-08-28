@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { authorizePlan, buildPlan, createState, normalizeState }
+import { authorizePlan, buildPlan, createState, normalizePlan, normalizeState }
   from "../scripts/admitted-empty-abandoned-owner-retirement-contract.mjs";
 
 const sha = value => value.repeat(40).slice(0, 40), digest = value => value.repeat(64).slice(0, 64);
@@ -27,7 +27,41 @@ test("plan seals the fence-only subject, distinct authored lane, and exact autho
   const plan = buildPlan(fixture());
   assert.equal(authorizePlan(plan, plan.exactAuthorization).planDigest, plan.planDigest);
   assert.equal(normalizeState(createState(plan)).plan.planDigest, plan.planDigest);
+  assert.equal(normalizePlan(plan).planDigest, plan.planDigest);
   assert.equal(plan.preservation.subjectTree, "preserved");
+});
+
+test("planning accepts the exact pull-request-bound fence projection", () => {
+  const recovered = fixture();
+  recovered.subject.claim.laneRevision = recovered.subject.headSha;
+  recovered.subject.claim.reviewRequestId =
+    `github-pull-request:${recovered.subject.pullRequest.nodeId}`;
+  const plan = buildPlan(recovered);
+  assert.equal(plan.subject.claim.laneRevision, recovered.subject.headSha);
+  assert.equal(plan.subject.claim.reviewRequestId, "github-pull-request:PR_7");
+  assert.equal(normalizePlan(plan).planDigest, plan.planDigest);
+});
+
+test("planning rejects fence, base, and pull-request projection drift", () => {
+  const wrongFence = fixture();
+  wrongFence.subject.claim.laneRevision = sha("4");
+  wrongFence.subject.claim.reviewRequestId = "github-pull-request:PR_7";
+  assert.throws(() => buildPlan(wrongFence), /fence-only/u);
+
+  const wrongBase = fixture();
+  wrongBase.subject.claim.canonicalBaseRevision = sha("4");
+  assert.throws(() => buildPlan(wrongBase), /fence-only/u);
+
+  for (const reviewRequestId of [null, "github-pull-request:PR_FOREIGN", "PR_7"]) {
+    const wrongReview = fixture();
+    wrongReview.subject.claim.laneRevision = wrongReview.subject.headSha;
+    wrongReview.subject.claim.reviewRequestId = reviewRequestId;
+    assert.throws(() => buildPlan(wrongReview), /fence-only/u);
+  }
+
+  const mixedLegacy = fixture();
+  mixedLegacy.subject.claim.reviewRequestId = "github-pull-request:PR_7";
+  assert.throws(() => buildPlan(mixedLegacy), /fence-only/u);
 });
 
 test("planning rejects source bytes, live authority, and lane conflation", () => {

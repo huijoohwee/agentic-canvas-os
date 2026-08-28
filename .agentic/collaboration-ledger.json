@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5651,
-  "headDigest": "3bdd6c1c78a74ff823795889e7fa31cc5006dca973c5559c153f6ecf40bdb1e8",
+  "sequence": 5652,
+  "headDigest": "13de21d3618ebcdd33546c4ef1ad7395a5bcc9a481373addad9032d4ceb8ce1f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -287300,6 +287300,65 @@
       },
       "claimDigest": "fb142179e839b9b11c951906d01bd1a1ab700d1994ce564d5b74817a25a9a667",
       "digest": "3bdd6c1c78a74ff823795889e7fa31cc5006dca973c5559c153f6ecf40bdb1e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5652,
+      "parentDigest": "3bdd6c1c78a74ff823795889e7fa31cc5006dca973c5559c153f6ecf40bdb1e8",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "99536cfb86996783e74cce233d349a7aabb11782aae8c231ef7d5de89125e8d0",
+      "idempotencyKey": "95cd6c27713f9f8a7e34fb45f1f6bd0f4ec8ae1153e7aa37960a3c48aca47e38",
+      "requestDigest": "81cde1fb169c5c892c5665ad4657519ef84d8d24f0496eda55fae51bb743f545",
+      "evaluationTime": "2026-08-28T07:05:00.000Z",
+      "claimCore": {
+        "claimId": "99536cfb86996783e74cce233d349a7aabb11782aae8c231ef7d5de89125e8d0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:2d4b785b31ce41423ee33d1e35acb7ace5c8dbbc554317b372bacd35c72fc9dd",
+        "canonicalBaseRevision": "fc0274f69347852c7dd96453d993439a945e3b2b",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:docs/documents/git-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-budget.test.mjs",
+          "path:scripts/__tests__/git-guidelines-checker.test.mjs",
+          "path:scripts/__tests__/git-guidelines-input-resolver.test.mjs",
+          "path:scripts/__tests__/git-guidelines-modules.test.mjs",
+          "path:scripts/__tests__/git-guidelines-rule-contract.test.mjs",
+          "path:scripts/check-git-guidelines.mjs",
+          "path:scripts/lib/git-guidelines/commit-attribution.mjs",
+          "path:scripts/lib/git-guidelines/content-contracts.mjs",
+          "path:scripts/lib/git-guidelines/input-resolver.mjs",
+          "semantic:git-guidelines-refresh-proof"
+        ],
+        "writeSetDigest": "bf76eb304ed24528f02afa3cdaeac58a1a763941ef84ddbfe8be0f7893795fd0",
+        "laneRevision": "fc0274f69347852c7dd96453d993439a945e3b2b",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-28T08:03:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "fe466882613021ab97f2fb5a3e288a89133000e8262e56e87f4f83015775f000",
+        "eligibleSince": "2026-08-28T07:03:33.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "fc0274f69347852c7dd96453d993439a945e3b2b",
+          "reviewRequestId": null,
+          "bytesDigest": "7a4da128a52be7dec134dcec30b0bf30ce238d6d7deb1b6a391e305247254ee3",
+          "namedChecksDigest": "7a4da128a52be7dec134dcec30b0bf30ce238d6d7deb1b6a391e305247254ee3",
+          "handoffEvidenceDigest": "7a4da128a52be7dec134dcec30b0bf30ce238d6d7deb1b6a391e305247254ee3",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-28T07:05:00.000Z"
+        }
+      },
+      "claimDigest": "7aaa8e30e43e64e7a2b2e48ebe150ff7d34a4a526823048a0c804bee4924bda1",
+      "digest": "13de21d3618ebcdd33546c4ef1ad7395a5bcc9a481373addad9032d4ceb8ce1f"
     }
   ]
 }

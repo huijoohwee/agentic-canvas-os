@@ -26,8 +26,8 @@ function fixture() { const base = sha("1"), head = sha("2"), tree = sha("3"), le
     runtimeDigest: digest("8"), clean: true, protected: true },
   cloud: { ledgerRepository: "owner/ledger", ledgerRevision: sha("9"), ledgerDigest: digest("9"), sequence: 3 } }; }
 
-function partialState() {
-  const plan = buildPlan(fixture());
+function partialState(input = fixture()) {
+  const plan = buildPlan(input);
   let state = createState(plan);
   state = advanceState(state, "authorized", phaseReceipt("authorized", {
     authorizationDigest: digest("1"),
@@ -124,10 +124,49 @@ test("resume seals the partial receipt lineage and requires fresh exact authoriz
   wrongClose.recovery.pullRequestClosedAt = "2026-08-23T11:03:00.000Z";
   assert.throws(() => buildResumePlan(wrongClose), /partial source journal/u);
 
+  const wrongAuthoredLane = resumeEvidence();
+  wrongAuthoredLane.recovery.authoredLaneStateDigest = digest("0");
+  assert.throws(() => buildResumePlan(wrongAuthoredLane), /partial source journal/u);
+
   for (const field of ["retirementEntryDigest", "taskAuthorityBindingDigest"]) {
     const changed = structuredClone(plan);
     changed.recovery[field] = digest("0");
     assert.throws(() => normalizeResumePlan(changed), /invalid or drifted/u);
+  }
+});
+
+test("resume admits only a sealed protected-main authored descendant", () => {
+  const input = fixture();
+  input.authoredLane = { ...input.authoredLane, path: "/controller", branch: "main",
+    headSha: input.controller.headSha, treeSha: input.controller.treeSha,
+    stateDigest: digest("0") };
+  const evidence = resumeEvidence(partialState(input));
+  evidence.recovery = { ...evidence.recovery,
+    authoredLaneDisposition: "protected-main-descendant",
+    authoredLaneStateDigest: digest("1"),
+    authoredLaneHeadSha: evidence.controller.headSha,
+    authoredLaneTreeSha: evidence.controller.treeSha };
+  const plan = buildResumePlan(evidence);
+  assert.equal(plan.recovery.authoredLaneDisposition, "protected-main-descendant");
+  assert.equal(plan.recovery.authoredLaneHeadSha, evidence.controller.headSha);
+
+  for (const [field, value] of [["authoredLaneHeadSha", sha("0")],
+    ["authoredLaneTreeSha", sha("0")], ["authoredLaneDisposition", "foreign"]]) {
+    const changed = structuredClone(evidence);
+    changed.recovery[field] = value;
+    assert.throws(() => buildResumePlan(changed), /authored lane|partial source journal/u);
+  }
+
+  for (const field of ["branch", "headSha", "treeSha"]) {
+    const changedInput = fixture();
+    changedInput.authoredLane = { ...input.authoredLane,
+      [field]: field === "branch" ? "agent/device/authored" : sha("0") };
+    const changed = resumeEvidence(partialState(changedInput));
+    changed.recovery = { ...changed.recovery,
+      authoredLaneDisposition: "protected-main-descendant",
+      authoredLaneStateDigest: digest("1"), authoredLaneHeadSha: changed.controller.headSha,
+      authoredLaneTreeSha: changed.controller.treeSha };
+    assert.throws(() => buildResumePlan(changed), /partial source journal/u);
   }
 });
 

@@ -318,7 +318,9 @@ export function verificationResult({
     status: verification.ok ? "ready" : "blocked",
     ledgerRevision: snapshot.revision,
     claimDigest,
-    claim: verification.claim ? projectPublicClaim(verification.claim) : null,
+    claim: verification.claim
+      ? projectPublicClaim(verification.claim, { includeAuditMetadata: true })
+      : null,
     currentClaimInventory,
     ...(context.pullRequest ? {
       subject: {

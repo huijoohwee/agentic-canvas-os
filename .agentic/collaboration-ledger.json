@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5698,
-  "headDigest": "55a43593b6c61d7745e1a8279f78c4a0ed84b50ea806c4bb70906f61d689e012",
+  "sequence": 5699,
+  "headDigest": "39df43b6eea26753c270b77c569a8a108860402ec92a7004081036db6a3840b7",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -290052,6 +290052,47 @@
       },
       "claimDigest": "2eef8004c50a7c33bf52ef433934185f3cb1ca0b7bad9c4c4b07b96a7737529e",
       "digest": "55a43593b6c61d7745e1a8279f78c4a0ed84b50ea806c4bb70906f61d689e012"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5699,
+      "parentDigest": "55a43593b6c61d7745e1a8279f78c4a0ed84b50ea806c4bb70906f61d689e012",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b101ca02ff4b15c8a7ccb3b1b51480577f0f778acafd0ca1a0be537d9bab3b7d",
+      "idempotencyKey": "b544a42fd161d5c95b7d6dac2f061cae89596f270c8a6797cb5c4114f893ebae",
+      "requestDigest": "ab14566039c1c5c6782e468c27738bb8c732c38e66dfc05fc879a61a2a4462d4",
+      "evaluationTime": "2026-08-28T09:05:11.000Z",
+      "claimCore": {
+        "claimId": "b101ca02ff4b15c8a7ccb3b1b51480577f0f778acafd0ca1a0be537d9bab3b7d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:80818a6f09e8134254eb6b9e2f42af52f91f4361799f3c2fbb2fed424e2979b8",
+        "canonicalBaseRevision": "868aa424f0ffd85bbc3e445f2a0176650d2c980c",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:.github/workflows/protected-head-refresh-ci.yml",
+          "path:scripts/__tests__/protected-head-refresh-enrollment.test.mjs",
+          "semantic:protected-refresh-consumer-enrollment"
+        ],
+        "writeSetDigest": "6cf7afa1003e3d9f6dcce451701a97dcd23893860b783de83b4914985bad16b4",
+        "laneRevision": "868aa424f0ffd85bbc3e445f2a0176650d2c980c",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T15:05:11.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "494afb21c0b137669ee5421d4505a5d3e3fb038d689212e3a22128874f69c4ec",
+      "digest": "39df43b6eea26753c270b77c569a8a108860402ec92a7004081036db6a3840b7"
     }
   ]
 }

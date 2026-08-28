@@ -123,7 +123,7 @@ export function createRepositoryMixedIdentityPairRetirementAdapter(
         ? dependencies.readRepositoryIdentity({ targetRepository })
         : JSON.parse(gh(["repo", "view", targetRepository, "--json", "id,nameWithOwner"])),
     });
-    return Object.freeze({ ...value, ledgerRepository });
+    return projectMixedIdentityPairRepositoryEvidence(value, ledgerRepository);
   }
   function controllerEvidence() {
     const value = captureClaimOnlyControllerEvidence({
@@ -559,6 +559,11 @@ function scopeComparison(source, waiting) {
 function effectContext(plan, journal, phase) {
   return { plan, journal, phase, operationKey: mixedIdentityPairRetirementOperationKey(plan, phase) };
 }
+export function projectMixedIdentityPairRepositoryEvidence(value, ledgerRepository) {
+  return Object.freeze({ targetRepository: value.targetRepository, ledgerRepository,
+    providerRepositoryId: value.providerRepositoryId, topLevelDigest: value.topLevelDigest,
+    gitCommonDirectoryDigest: value.gitCommonDirectoryDigest, originUrlDigest: value.originUrlDigest });
+}
 function effectReceiptValues(value) {
   const result = { ...value }; delete result.phase; delete result.receiptDigest; return result;
 }
@@ -586,14 +591,8 @@ function repositoryName(value) {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) invalid("repository");
   return result;
 }
-function text(value, label) {
-  if (typeof value !== "string" || !value.trim()) invalid(label);
-  return value.trim();
-}
-function digest(value, label) {
-  if (!DIGEST.test(String(value || ""))) invalid(label);
-  return value;
-}
-function invalid(label) {
-  throw new Error(`Mixed-identity pair repository ${label} is invalid.`);
-}
+function text(value, label) { if (typeof value !== "string" || !value.trim()) invalid(label);
+  return value.trim(); }
+function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(label);
+  return value; }
+function invalid(label) { throw new Error(`Mixed-identity pair repository ${label} is invalid.`); }

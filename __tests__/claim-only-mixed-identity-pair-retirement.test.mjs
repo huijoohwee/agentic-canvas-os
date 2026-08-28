@@ -15,7 +15,10 @@ import {
 } from "../scripts/claim-only-mixed-identity-pair-retirement-contract.mjs";
 import { createMixedIdentityPairRetirementController }
   from "../scripts/claim-only-mixed-identity-pair-retirement-controller.mjs";
-import { convergeRetirementAtFreshLedger }
+import {
+  convergeRetirementAtFreshLedger,
+  projectMixedIdentityPairRepositoryEvidence,
+}
   from "../scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs";
 import {
   mixedIdentityPairRetirementRequestDigest,
@@ -137,6 +140,16 @@ test("retries an unrelated ledger CAS advance with a fresh head", async () => {
   });
   assert.equal(result.state, "complete");
   assert.equal(invokes, 2);
+});
+
+test("stable repository evidence excludes provider display metadata", () => {
+  const expected = rawEvidence().repository;
+  const projected = projectMixedIdentityPairRepositoryEvidence({
+    ...expected,
+    nameWithOwner: expected.targetRepository,
+  }, expected.ledgerRepository);
+  assert.deepEqual(projected, expected);
+  assert.equal(Object.hasOwn(projected, "nameWithOwner"), false);
 });
 
 test("relevant subject drift blocks before source retirement", async () => {

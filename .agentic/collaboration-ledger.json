@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5645,
-  "headDigest": "ba157afd8b40f126f402a7b9a3de71f0f397f18b0a8d6c92461b4eae18a5060f",
+  "sequence": 5646,
+  "headDigest": "54d59ee25a67288167842b72cf4d6a8fe4bb22749f757640c98015dc83d5fe9b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -287030,6 +287030,48 @@
       },
       "claimDigest": "872c6c7ecdbab9c6c9f7d1c08845b45c2831213b5aef41f9ad0f884836af5beb",
       "digest": "ba157afd8b40f126f402a7b9a3de71f0f397f18b0a8d6c92461b4eae18a5060f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5646,
+      "parentDigest": "ba157afd8b40f126f402a7b9a3de71f0f397f18b0a8d6c92461b4eae18a5060f",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0d8b27c0eababdfab1d192acfcf2eb8addf510bb5c6a4fe78dd20a510d58ab31",
+      "idempotencyKey": "924002202d4758931d2e8165fb3b6b768de220cd2134908271e9018e591e2c1a",
+      "requestDigest": "41f98369a176944f87a0a9e7adc661c0ab622b6ea8b6265b0d79c4dbda80416f",
+      "evaluationTime": "2026-08-28T05:29:38.000Z",
+      "claimCore": {
+        "claimId": "0d8b27c0eababdfab1d192acfcf2eb8addf510bb5c6a4fe78dd20a510d58ab31",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2417abfbaa6269dc67638915e602270a8d01f76e91b7cc567965cdb2640bbdd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4f7d2f5398eb0195b7bb8ce16b09e3856d4326bf3dab4de3864a29f4c760489d",
+        "canonicalBaseRevision": "c272110d0b9bf61fa02583ae893553279b62dbab",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:memory/2026-08.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:todo/2026-08/refresh-merge-attribution.md",
+          "semantic:refresh-merge-attribution"
+        ],
+        "writeSetDigest": "52c1813bb6e77037b3c5c6cc635231718d455ab53c3dfca39b832fbfcae0579c",
+        "laneRevision": "c272110d0b9bf61fa02583ae893553279b62dbab",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T05:59:38.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f3c834e21a892725d87d54e909951d9ade41316cad6fca1ec569ffefa012c46b",
+      "digest": "54d59ee25a67288167842b72cf4d6a8fe4bb22749f757640c98015dc83d5fe9b"
     }
   ]
 }

@@ -12,6 +12,7 @@ import {
   WORKTREE_CLEANUP_RESULT_SCHEMA,
   integrateSession,
   renderManagedCommitMessage,
+  renderProtectedMainRefreshCommitMessage,
   renderProtectedSquashCommitBody,
   resolveRuntimeRepositories,
   validateIntegrationCleanupReceipt,
@@ -59,6 +60,16 @@ const protectedSquashBody = [
   "Agentic-Lease-Epoch: 1",
   "Agentic-Mechanism: Agentic Canvas OS protected integration",
 ].join("\n");
+function refreshMergeMessage(subject, epoch = 1) {
+  return [
+    subject,
+    "",
+    "Agentic-Task: runtime-integration",
+    "Agentic-Scope: runtime-integration",
+    `Agentic-Lease-Epoch: ${epoch}`,
+    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+  ].join("\n");
+}
 const oversizedReviewedMergeSubject =
   "Merge remote-tracking branch 'origin/main' into agent/huis-macbook-pro-3/lark-readonly-knowledge-ingestion";
 const oversizedRefreshedMergeSubject =
@@ -646,7 +657,7 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     assert.ok(commands.some(call => call.join(" ") === "npm run check"));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin main"));
     assert.ok(commands.some(call => call.join(" ") ===
-      `git merge -m ${managedCommitSubject} origin/main`));
+      `git merge -m ${refreshMergeMessage(managedCommitSubject)} origin/main`));
     assert.equal(result.runtime.integratedSource.mainSha, mainSha);
     assert.equal(result.runtime.integratedSource.repository, "agentic-canvas-os");
     assert.equal(result.runtime.readiness.source.revision, knowgrphSha);
@@ -734,6 +745,47 @@ test("managed integration commit attribution is bound to the leased branch scope
     commitMessage: "fix(runtime-integration): reject missing claim epoch",
     lease: { ...lease, epoch: 197, cloudAuthority: {} },
   }), /positive claim epoch/u);
+});
+
+test("protected-main refresh merge message carries the leased attribution trailers", () => {
+  const lease = createLease({ repo: "/tmp/managed-integration" });
+  assert.equal(renderProtectedMainRefreshCommitMessage({
+    subject: "fix(runtime-integration): emit lease attribution",
+    branch,
+    lease,
+  }), [
+    "fix(runtime-integration): emit lease attribution",
+    "",
+    "Agentic-Task: runtime-integration",
+    "Agentic-Scope: runtime-integration",
+    "Agentic-Lease-Epoch: 1",
+    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+  ].join("\n"));
+  assert.equal(renderProtectedMainRefreshCommitMessage({
+    subject: "fix(runtime-integration): bind cloud claim epoch",
+    branch,
+    lease: { ...lease, epoch: 197, cloudAuthority: { leaseEpoch: 3 } },
+  }).split("\n")[4], "Agentic-Lease-Epoch: 3");
+  assert.throws(() => renderProtectedMainRefreshCommitMessage({
+    subject: "fix: subject\nwith body",
+    branch,
+    lease,
+  }), /single line/u);
+  assert.throws(() => renderProtectedMainRefreshCommitMessage({
+    subject: `fix: ${"x".repeat(80)}`,
+    branch,
+    lease,
+  }), /exceeds 72 characters/u);
+  assert.throws(() => renderProtectedMainRefreshCommitMessage({
+    subject: "",
+    branch,
+    lease,
+  }), /must not be empty/u);
+  assert.throws(() => renderProtectedMainRefreshCommitMessage({
+    subject: "fix(runtime-integration): reject foreign lease binding",
+    branch,
+    lease: { ...lease, scope: "other-scope" },
+  }), /exact leased task-branch scope/u);
 });
 
 test("invalid managed integration subjects fail before validation or staging", () => {
@@ -1961,7 +2013,7 @@ test("active integration rolls a source-only prepared intent across a disjoint p
     assert.equal(fixture.calls.cas.length, 3);
     assert.deepEqual(fixture.calls.run.slice(runCalls), [
       "git fetch origin main",
-      `git merge -m ${protectedSquashSubject} origin/main`,
+      `git merge -m ${refreshMergeMessage(protectedSquashSubject, 2)} origin/main`,
     ]);
     const rolloverSuccessorCalls = fixture.calls.successor.filter(call =>
       call.canonicalBaseSha === fixture.rolloverBaseSha);
@@ -2324,7 +2376,7 @@ test("active integration finalizes an exact historical successor before ordinary
     assert.equal(fixture.lease.fenceSha, fixture.descendantHeadSha);
     assert.ok(fixture.calls.run.includes("git fetch origin main"));
     assert.ok(fixture.calls.run.includes(
-      `git merge -m ${protectedSquashSubject} origin/main`,
+      `git merge -m ${refreshMergeMessage(protectedSquashSubject, 2)} origin/main`,
     ));
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -2933,7 +2985,7 @@ test("active integration fetches an absent exact protected-base object without u
     assert.deepEqual(fixture.calls.run.slice(runCalls), [
       `git fetch --no-tags --no-write-fetch-head origin ${fixture.rolloverBaseSha}`,
       "git fetch origin main",
-      `git merge -m ${protectedSquashSubject} origin/main`,
+      `git merge -m ${refreshMergeMessage(protectedSquashSubject, 2)} origin/main`,
     ]);
     assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
     assert.equal(fixture.lease.fenceSha, fixture.rolloverHeadSha);
@@ -6231,7 +6283,10 @@ function createActiveSuccessorFixture({
               pullRequestBaseSha = intermediateBaseSha;
             }
           }
-          if (key === `git merge -m ${protectedSquashSubject} origin/main`) headSha = refreshHeadSha;
+          if (key === `git merge -m ${refreshMergeMessage(
+            protectedSquashSubject,
+            lease.cloudAuthority.leaseEpoch,
+          )} origin/main`) headSha = refreshHeadSha;
         },
         runText: () => "",
         publishTask,

@@ -34,4 +34,4 @@ export const AGENT_API_BASE_URL = readEnv(
 );
 
 /** The hero MCP tool exposed by the knowgrph control plane. */
-export const KNOWGRPH_RUN_TOOL = "knowgrph.video_remix.run";
+export const KNOWGRPH_RUN_TOOL = "agenticgraph.video_remix.run";

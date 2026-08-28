@@ -102,7 +102,7 @@ the non-operator mechanism that produced the draft.
 
 | Token | Owner | Tool identity | Typed arguments | Artifact produced | Promotion owner | Trust boundary |
 |---|---|---|---|---|---|---|
-| `/skill.propose` | Skill Evolution contract | `knowgrph.skill.evolve` | skill text evolution inputs | `skill-text` proposal | `/skill.manage` | review-gated |
+| `/skill.propose` | Skill Evolution contract | `agenticgraph.skill.evolve` | skill text evolution inputs | `skill-text` proposal | `/skill.manage` | review-gated |
 | `/propose-skill` | ACOS Skill Proposer | `acos.skill_proposer.propose` | `{ gap_signal }` | `agent-definition` draft | `acos-skill-registry-gate` | approval-gated |
 
 Bindings remain distinct:

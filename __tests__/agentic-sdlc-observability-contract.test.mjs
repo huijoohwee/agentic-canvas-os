@@ -14,7 +14,7 @@ const proof = read("docs/RUNTIME-PROOF.md");
 const planning = read("todo/2026-07.md");
 
 const invocation = "/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof";
-const tool = "knowgrph.agentic_sdlc.observe";
+const tool = "agenticgraph.agentic_sdlc.observe";
 
 function count(source, expression) {
   return [...source.matchAll(new RegExp(expression, "gm"))].length;
@@ -47,7 +47,7 @@ test("the exact slash, hash, and reused at bindings resolve canonically", () => 
 });
 
 test("one local wire tool is receipt-gated and has the exact request and result identities", () => {
-  assert.equal(count(gateway, "^\\| `knowgrph\\.agentic_sdlc\\.observe`"), 1);
+  assert.equal(count(gateway, "^\\| `agenticgraph\\.agentic_sdlc\\.observe`"), 1);
   assert.match(runtime, /`state\.result\.agenticSdlcLedger`/);
   assert.match(runtime, /schema: "agentic-sdlc-ledger-receipt\/v1"/);
   for (const field of [

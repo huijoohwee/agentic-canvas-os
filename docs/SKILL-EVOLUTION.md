@@ -16,7 +16,7 @@ invocation:
   action: "/skill.evolve"
   semantics: ["#skill-evolution"]
   bindings: ["@skill-catalog", "@skill-policy", "@runtime-proof", "@operator"]
-mcp_tool: "knowgrph.skill.evolve"
+mcp_tool: "agenticgraph.skill.evolve"
 external_pattern_sources:
   - "https://github.com/microsoft/SkillOpt"
 external_dependency: "forbidden"
@@ -43,7 +43,7 @@ The three dictionaries remain the only `/`, `#`, and `@` token owners. This cont
 | Owner | Responsibility | Forbidden ownership |
 |---|---|---|
 | Agentic Canvas OS | Invocation tokens, request and result contract, clean-room boundary, validation requirements, review-only handoff, and focused contract proof. | Candidate execution, durable optimization scheduling, a second skill registry, or direct canonical skill writes. |
-| Knowgrph local MCP | `knowgrph.skill.evolve`, immutable run admission, resumable state, deterministic batching, injected adapters, budgets, validation gates, cost evidence, and proposal artifact. | Invocation aliases, model-weight updates, automatic skill apply, merge, release, or deployment. |
+| Knowgrph local MCP | `agenticgraph.skill.evolve`, immutable run admission, resumable state, deterministic batching, injected adapters, budgets, validation gates, cost evidence, and proposal artifact. | Invocation aliases, model-weight updates, automatic skill apply, merge, release, or deployment. |
 | Frozen executor adapter | Run exact skill candidates against referenced training cases and return typed evidence. | Fine-tuning, gradient updates, optimizer state, provider-specific authority, or unbounded calls. |
 | Candidate adapter | Propose bounded text mutations from training evidence only. | Validation-case access, canonical writes, hidden prompts, or exceeding mutation and spend limits. |
 | Held-out evaluator | Exclusively resolve validation references, own isolated validation rollouts through the frozen executor, compute the declared metric and gates, and return aggregate evidence and cost. | Giving the candidate adapter validation references, payloads, outputs, scores, per-case traces, or evaluator state. |

@@ -45,7 +45,7 @@ function withReplacement(name, before, after) {
 test("repository keeps one canonical AI Voice Studio contract", async () => {
   assert.equal(VOICE_STUDIO_COMMAND, "/voice.studio");
   assert.deepEqual(VOICE_STUDIO_OPERATIONS, ["clone", "dictate", "create"]);
-  assert.equal(VOICE_STUDIO_MCP_TOOL, "knowgrph.voice.studio");
+  assert.equal(VOICE_STUDIO_MCP_TOOL, "agenticgraph.voice.studio");
   assert.deepEqual(VOICE_STUDIO_ROUTES, {
     clone: "/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof",
     dictate: "/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof",

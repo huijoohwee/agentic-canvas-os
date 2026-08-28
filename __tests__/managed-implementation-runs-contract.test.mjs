@@ -23,7 +23,7 @@ test("managed implementation invocation tokens are exact canonical dictionary en
 
 test("managed implementation contract exposes the exact MCP and lifecycle boundary", () => {
   for (const tool of ["plan", "start", "list", "control"]) {
-    assert.match(managed, new RegExp(`knowgrph\\.implementation_run\\.${tool}`));
+    assert.match(managed, new RegExp(`agenticgraph\\.implementation_run\\.${tool}`));
   }
   assert.match(managed, /managed-run default terminal state is `delivery_ready`/);
   assert.match(managed, /ACOS lease\/CLI has reached `review_ready`/);

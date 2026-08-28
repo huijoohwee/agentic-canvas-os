@@ -17,11 +17,11 @@ invocation:
   semantics: ["#managed-implementation-run", "#multi-agent-collaboration", "#runtime-ready"]
   bindings: ["@work-item", "@implementation-run", "@sandbox-workspace", "@runtime-proof", "@operator"]
 mcp_tools:
-  - "knowgrph.implementation_run.plan"
-  - "knowgrph.implementation_run.start"
-  - "knowgrph.implementation_run.list"
-  - "knowgrph.implementation_run.control"
-  - "knowgrph.agentic_sdlc.observe"
+  - "agenticgraph.implementation_run.plan"
+  - "agenticgraph.implementation_run.start"
+  - "agenticgraph.implementation_run.list"
+  - "agenticgraph.implementation_run.control"
+  - "agenticgraph.agentic_sdlc.observe"
 external_pattern_sources:
   - "https://github.com/openai/symphony/blob/1f3219bb1ea5f69a1305dc594e79b0db57c113c5/SPEC.md"
   - "https://openai.com/index/open-source-codex-orchestration-symphony/"
@@ -73,11 +73,11 @@ Knowgrph retains caller `semanticScope` as human metadata and derives a distinct
 
 | Tool | Role | Mutation boundary |
 |---|---|---|
-| `knowgrph.implementation_run.plan` | Validate invocation, work item, repository, runner availability, sandbox-policy preflight, bounds, and proposed worktree without creating it. | Read-only and zero model spend. |
-| `knowgrph.implementation_run.start` | Persist one idempotent run request, provision and claim its fenced task lane through Agentic Canvas OS, then start the configured supervisor. | Mutates only the run ledger, new task worktree, task branch, lease, and ownership PR. |
-| `knowgrph.implementation_run.list` | Return bounded run summaries, blockers, evidence references, and next team action. | Read-only; no polling loop or model call. |
-| `knowgrph.implementation_run.control` | Pause, cancel, retry, request review, or record an operator decision against a current run version. Retry performs fenced ACOS resumption when the prior lane must reactivate. | Explicit control plus state precondition required; delivery remains a separate operator-authorized action. |
-| `knowgrph.agentic_sdlc.observe` | Validate one exact immutable ledger receipt and return a deterministic, bounded end-to-end KGC and GraphData projection for the existing Canvas. | Read-only, local, model-free, network-free, zero-token, zero-cost, and Dev-only; no run, ledger, source, Canvas, review, release, Prod, or Cloudflare mutation. |
+| `agenticgraph.implementation_run.plan` | Validate invocation, work item, repository, runner availability, sandbox-policy preflight, bounds, and proposed worktree without creating it. | Read-only and zero model spend. |
+| `agenticgraph.implementation_run.start` | Persist one idempotent run request, provision and claim its fenced task lane through Agentic Canvas OS, then start the configured supervisor. | Mutates only the run ledger, new task worktree, task branch, lease, and ownership PR. |
+| `agenticgraph.implementation_run.list` | Return bounded run summaries, blockers, evidence references, and next team action. | Read-only; no polling loop or model call. |
+| `agenticgraph.implementation_run.control` | Pause, cancel, retry, request review, or record an operator decision against a current run version. Retry performs fenced ACOS resumption when the prior lane must reactivate. | Explicit control plus state precondition required; delivery remains a separate operator-authorized action. |
+| `agenticgraph.agentic_sdlc.observe` | Validate one exact immutable ledger receipt and return a deterministic, bounded end-to-end KGC and GraphData projection for the existing Canvas. | Read-only, local, model-free, network-free, zero-token, zero-cost, and Dev-only; no run, ledger, source, Canvas, review, release, Prod, or Cloudflare mutation. |
 
 The tools are MCP-invocable. The exact invocation tokens also make the capability `/`, `#`, and `@` discoverable through the existing catalog projection; they do not create alternate tool names or a second dispatcher.
 

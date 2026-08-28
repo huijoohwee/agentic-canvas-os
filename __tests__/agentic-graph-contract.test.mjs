@@ -149,7 +149,7 @@ test("agentic graph documentation remains bounded and contract/client-ready", ()
   assert.match(contract, /Knowgrph owns (?:the )?executable/iu);
   assert.match(contract, /expectedSnapshotDigest/u);
   assert.match(contract, /FloatingPanel Skills & Commands/iu);
-  assert.match(contract, /knowgrph\.agentic_canvas_os\.docs\.invoke/u);
+  assert.match(contract, /agenticgraph\.agentic_canvas_os\.docs\.invoke/u);
   assert.match(contract, /\/agentic\.graph\.parser\.generate/u);
   assert.match(contract, new RegExp(`profile: "${AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE}"`, "u"));
   assert.match(contract, /alternative to `descriptors`/u);

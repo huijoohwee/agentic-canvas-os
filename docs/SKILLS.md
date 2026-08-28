@@ -183,7 +183,7 @@ Knowgrph Agent Definition registry and its `/collaboration-manager-agent`,
 variants resolve through `/investment-research-agent`, `/sme-care-agent`,
 `/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`.
 A variant does not create a wildcard command or a second execution registry.
-The `url.ingest` skill resolves only through the exact four-token invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `knowgrph.agentic_canvas_os.docs.invoke` supplies read-only discovery metadata and guarded browser WebMCP tool `knowgrph.control_local_import_url` remains the sole Import URL executor.
+The `url.ingest` skill resolves only through the exact four-token invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `agenticgraph.agentic_canvas_os.docs.invoke` supplies read-only discovery metadata and guarded browser WebMCP tool `agenticgraph.control_local_import_url` remains the sole Import URL executor.
 The `agentic.graph.parser.generate` skill resolves only through `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof`; dictionary resolution remains read-only, while the exact local Knowgrph MCP tool owns deterministic compilation and returns digest-fenced identity without generated code or implicit ingest.
 The `workspace.artifact.lifecycle` skill resolves only through `/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof`; add `@operator` only for apply. The skill delegates local execution to the exact plan/apply MCP tools and preserves `/workspace.launch`, `/source.ingest`, and `/file.sync` as the UI, URL-ingest, and provider-sync owners.
 
@@ -199,7 +199,7 @@ The `workspace.artifact.lifecycle` skill resolves only through `/workspace.artif
 
 A catalog entry is spec-complete when its identity, owner, schemas, bounds, cost posture, fallback, and VCC are source-backed. Runtime-ready status additionally requires focused executable proof from the shared owner. Catalog presence alone never proves provider availability, live execution, artifact persistence, or deployment.
 
-The shared `knowgrph.agentic_canvas_os.docs.invoke` projection binds the three invocation dictionaries into one deterministic SHA-256 catalog digest over token, kind, label, summary, and source path. FloatingPanel Skills & Commands may mix local executable behavior with those rows, but source-backed dictionary metadata wins token collisions; hydration is fresh only after exact `/`, `#`, and `@` counts and browser-recomputed digest parity pass.
+The shared `agenticgraph.agentic_canvas_os.docs.invoke` projection binds the three invocation dictionaries into one deterministic SHA-256 catalog digest over token, kind, label, summary, and source path. FloatingPanel Skills & Commands may mix local executable behavior with those rows, but source-backed dictionary metadata wins token collisions; hydration is fresh only after exact `/`, `#`, and `@` counts and browser-recomputed digest parity pass.
 
 `instruction.audit` is model-free. It audits `AGENTS.md` and this catalog for required intent, bounded instruction density, duplicate instructions, route-detail load, and canonical-owner leakage. Its typed report contains zero model tokens and no mutation or deployment authority.
 

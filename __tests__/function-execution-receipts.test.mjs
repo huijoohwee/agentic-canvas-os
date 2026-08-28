@@ -161,7 +161,7 @@ test("gateway persists review authorization before mutation and replays a fresh-
     mapOutput: (payload) => ({ ok: payload.ok, value: payload.value }),
     inputGuardrails: [{ name: "mutation-input", stage: "tool-input" }],
     outputGuardrails: [{ name: "mutation-output", stage: "tool-output" }],
-    mcpToolName: "knowgrph.record.update",
+    mcpToolName: "agenticgraph.record.update",
   });
   const toolRecords = Object.freeze({ update_record: mutationRecord });
   const reviewRuntime = () => createGuardrailsHumanReviewRuntime({

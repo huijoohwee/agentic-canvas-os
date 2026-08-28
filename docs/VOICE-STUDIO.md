@@ -18,7 +18,7 @@ semantic_routes:
   clone: "/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof"
   dictate: "/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof"
   create: "/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof"
-mcp_tool: "knowgrph.voice.studio"
+mcp_tool: "agenticgraph.voice.studio"
 external_pattern_source: "https://github.com/jamiepine/voicebox"
 external_source_policy: "abstract workflow inspiration only; local source, vocabulary, schemas, prompts, fixtures, tests, assets, UI, and prose are independently authored"
 external_dependency: "forbidden"
@@ -29,7 +29,7 @@ publish_policy: "Dev-only until matching Knowgrph runtime proof and explicit ope
 
 `/voice.studio` selects one bounded provider-neutral studio for `clone`, `dictate`, or `create`. The selected semantic route determines the operation and its typed bindings. There are no `/voice.clone`, `/voice.dictate`, or `/voice.create` compatibility commands.
 
-The `/`, `#`, and `@` tokens are host discovery and handoff metadata. MCP clients call the single exact `knowgrph.voice.studio` wire tool with a strict operation discriminator. A dictionary match never executes audio processing, grants recording rights, supplies consent, approves spend, or authorizes persistence.
+The `/`, `#`, and `@` tokens are host discovery and handoff metadata. MCP clients call the single exact `agenticgraph.voice.studio` wire tool with a strict operation discriminator. A dictionary match never executes audio processing, grants recording rights, supplies consent, approves spend, or authorizes persistence.
 
 ## Exact Routes
 
@@ -46,7 +46,7 @@ Exactly one semantic route is accepted per request. A missing semantic, multiple
 | Owner | Owns | Does not own |
 |---|---|---|
 | Agentic Canvas OS | Canonical command, semantic routes, binding meanings, request/result requirements, safety policy, bounds, clean-room boundary, and promotion gate. | Audio capture, media bytes, profiles, provider calls, credentials, durable jobs, UI state, or deployment. |
-| Knowgrph local stdio MCP | The exact `knowgrph.voice.studio` schema, validation, idempotency, bounded adapter dispatch, cancellation, sanitized result, and deterministic Dev proof. | Consent inference, recording rights, provider entitlement, caller credentials, or authority from dictionary tokens. |
+| Knowgrph local stdio MCP | The exact `agenticgraph.voice.studio` schema, validation, idempotency, bounded adapter dispatch, cancellation, sanitized result, and deterministic Dev proof. | Consent inference, recording rights, provider entitlement, caller credentials, or authority from dictionary tokens. |
 | Existing media and workspace owners | Immutable audio/text artifacts, hashes, metadata, retention state, read-back, Rich Media, Card, and Timeline projection. | A copied voice store, alternate file namespace, or implicit public URL. |
 | Approved voice adapter | Capability-specific clone, transcription, or synthesis work and returned provider evidence. | Host invocation parsing, approval policy, durable authority, or fabricated cost and provenance. |
 | Operator or authorized speaker | Explicit recording rights, speaker consent, permitted uses, revocation, disclosure, and paid-call approval where required. | Silent approval through profile selection, prior unrelated consent, or a dictionary binding. |
@@ -126,7 +126,7 @@ Removing network access and the external repository changes neither this contrac
 ## VCCs
 
 - Given `/voice.studio`, when exactly one supported semantic and its required bindings resolve, then the host returns metadata for `clone`, `dictate`, or `create` and never claims MCP execution.
-- Given a valid MCP request, when consent, recording rights, permitted use, approval, bounds, capability, and artifact identity pass, then only `knowgrph.voice.studio` may dispatch the selected adapter.
+- Given a valid MCP request, when consent, recording rights, permitted use, approval, bounds, capability, and artifact identity pass, then only `agenticgraph.voice.studio` may dispatch the selected adapter.
 - Given missing, expired, mismatched, or revoked authorization, when work is considered, then no audio read, adapter call, persistence, spend, or generated artifact begins.
 - Given an exact idempotency replay, when a terminal result exists, then the same sanitized result returns without a second adapter call or cost.
 - Given a completed operation, when output is returned, then raw and derived artifacts remain separate and exact source, profile, authorization, disclosure, usage, cost, and read-back evidence are present.

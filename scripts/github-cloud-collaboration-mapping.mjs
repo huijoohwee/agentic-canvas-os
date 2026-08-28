@@ -235,6 +235,12 @@ export function projectPublicClaim(claim) {
     expiresAt: claim.expiresAt,
     fenceRevision: claim.fenceRevision,
     transitionDigest: claim.ledgerRevision,
+    ...(claim.ledgerSequence === undefined
+      ? {}
+      : { ledgerSequence: claim.ledgerSequence }),
+    ...(claim.operationTime === undefined
+      ? {}
+      : { operationTime: claim.operationTime }),
     operationReceiptDigest: claim.operationReceiptDigest,
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration ?? null,
@@ -252,6 +258,8 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
     claimId: claim?.claimId || null,
     claimDigest: transition.claimDigest || null,
     contractReceiptDigest: transition.receipt?.receiptDigest || null,
+    acceptedAuditParentDigest: transition.acceptedParentDigest ?? null,
+    conflictSetDigest: transition.conflictSetDigest ?? null,
     sequence: transition.ledger.sequence,
     evaluationTime,
   };
@@ -265,6 +273,8 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
     ledgerRevision,
     claim: claim ? projectPublicClaim(claim) : null,
     claimDigest: transition.claimDigest || null,
+    acceptedAuditParentDigest: transition.acceptedParentDigest ?? null,
+    conflictSetDigest: transition.conflictSetDigest ?? null,
     operationReceipt: transition.receipt || null,
     receipt: { ...receipt, receiptDigest: digestValue(receipt) },
   };

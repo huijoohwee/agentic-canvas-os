@@ -2,15 +2,15 @@
 title: "Scoped Concurrent Lane Admission Contract"
 graphId: "md:agentic-scoped-lane-admission"
 doc_type: "Runtime Contract"
-date: "2026-07-30"
+date: "2026-08-28"
 lang: "en-US"
 schema: "agentic-scoped-lane-admission-contract/v1"
 frontmatter_contract: "required"
 status: "focused-tested"
 authority: "additive registered-worktree admission while preserving every existing lane"
 runtime_scope: "read-only lane planning, operation-derived cloud-authority verification, candidate-only device:start provisioning, and receipt-joined authoring admission"
-runtime_claim: "the bounded source-lane path is executable and focused-tested; full shared-coordination-state and independently advancing peer receipt support remain fail-closed and unevaluated"
-runtime_owner: "../scripts/scoped-lane-admission-lib.mjs; ../scripts/scoped-lane-admission-state.mjs; ../scripts/scoped-lane-cloud-authority.mjs; ../scripts/scoped-lane-cloud-reconciliation.mjs; ../scripts/scoped-lane-admission.mjs; ../scripts/scoped-lane-admission-cli.mjs; ../scripts/scoped-lane-bootstrap-authorization.mjs; ../scripts/scoped-lane-bootstrap-maintenance.mjs; ../scripts/task-worktree-provision.mjs; ../scripts/device-branch.mjs; ../scripts/device-start-lib.mjs; ../scripts/device-branch-lib.mjs; ../scripts/device-branch-ownership-lib.mjs; ../scripts/device-resume-lib.mjs; ../scripts/device-resume-replay-lib.mjs; ../scripts/device-park-lib.mjs; ../scripts/writer-lease-lib.mjs"
+runtime_claim: "the bounded source-lane path and typed independently-advanced-disjoint peer reconciliation are executable and focused-tested; full shared-coordination-state conformance remains separately unevaluated"
+runtime_owner: "../scripts/scoped-lane-admission-lib.mjs; ../scripts/scoped-lane-admission-state.mjs; ../scripts/scoped-lane-cloud-authority.mjs; ../scripts/scoped-lane-cloud-reconciliation.mjs; ../scripts/scoped-lane-peer-reconciliation.mjs; ../scripts/scoped-lane-admission.mjs; ../scripts/scoped-lane-admission-cli.mjs; ../scripts/scoped-lane-bootstrap-authorization.mjs; ../scripts/scoped-lane-bootstrap-maintenance.mjs; ../scripts/task-worktree-provision.mjs; ../scripts/device-branch.mjs; ../scripts/device-start-lib.mjs; ../scripts/device-branch-lib.mjs; ../scripts/device-branch-ownership-lib.mjs; ../scripts/device-resume-lib.mjs; ../scripts/device-resume-replay-lib.mjs; ../scripts/device-park-lib.mjs; ../scripts/writer-lease-lib.mjs"
 runtime_proof: "../__tests__/scoped-lane-admission.test.mjs; ../__tests__/scoped-lane-cloud-authority.test.mjs; ../__tests__/scoped-lane-bootstrap-admission.test.mjs; ../__tests__/scoped-lane-clean-preservation-bootstrap.test.mjs; ../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/device-start.test.mjs; ../__tests__/device-branch-lib.test.mjs; ../__tests__/device-branch-cli.test.mjs; ../__tests__/device-review.test.mjs; ../__tests__/task-worktree-provision.test.mjs; ../__tests__/writer-lease-lib.test.mjs"
 report_schema: "schemas/scoped-lane-admission-report.v1.schema.json"
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
@@ -249,8 +249,11 @@ The command:
    request, binds the exact head and PR through the cloud CAS owner, and caps
    local expiry at the accepted cloud expiry;
 5. performs a final atomic cloud verification, proves every pre-existing local
-   lane and relevant peer claim unchanged, emits the Preservation Receipt, and joins both
-   receipts to derive `authoringAdmission.status: admitted`; and
+   lane unchanged, and accepts each remote peer only when it is unchanged or
+   carries one operation-derived, independently-advanced-disjoint receipt;
+   removed, overlapping, multi-step, identity-changing, or unreceipted peer
+   drift blocks. It emits the Preservation Receipt and joins both receipts to
+   derive `authoringAdmission.status: admitted`; and
 6. immediately revalidates the exact current cloud claim, protected ledger,
    local lease, epoch, fence, and both expiries before returning mutation
    authority; and
@@ -354,14 +357,18 @@ Production, publication, or deployment.
 
 This implementation does not yet emit the guideline's full
 `sharedCoordinationStateDigest` over configuration, hooks, dependencies, refs,
-registrations, leases, and recovery state. It also does not consume
-`agentic-independent-peer-operation-receipt/v1`. Any peer claim or
-pre-existing-lane drift therefore blocks preservation instead of being
-classified as independently authorized progress. For that reason an otherwise
-admitted report independently keeps `admissionRuntimeConformance.status:
-unevaluated`; `runtimeReadiness` and `lifecycleReadiness` also remain
-independently `unevaluated`. An individual admission block does not promote,
-collapse, or synthesize any of those results.
+registrations, leases, and recovery state. It does consume
+`agentic-independent-peer-operation-receipt/v1` for the narrower verified
+cloud-inventory boundary: a peer may be new at transition one or advance
+exactly one transition only when immutable identity and scope are stable, its
+operation receipt/time/ledger sequence are current, and its scope remains
+disjoint. Every pre-existing local lane must still be byte- and
+authority-unchanged; peer removal, overlap, multi-step movement, or incomplete
+provenance blocks. Because the broader digest remains unimplemented, an
+otherwise admitted report independently keeps
+`admissionRuntimeConformance.status: unevaluated`; `runtimeReadiness` and
+`lifecycleReadiness` also remain independently `unevaluated`. An individual
+admission block does not promote, collapse, or synthesize those results.
 
 Current authority enforcement runs at successful combined start and at each
 cloud-backed heartbeat; it does not intercept arbitrary editor filesystem
@@ -400,8 +407,10 @@ Focused proof must show:
 - the candidate create/register result proves one locked registry addition plus
   clean exact-base HEAD/tree identity, and provisioned JSON retains the full
   final report and mutation-authority receipt;
-- peer drift blocks while typed independent peer-operation receipts and the full
-  shared-coordination-state digest remain unsupported;
+- one-step disjoint peer progress emits typed independent peer-operation
+  receipts, while removal, overlap, immutable-identity drift, multi-step
+  movement, and incomplete operation provenance block; the broader
+  shared-coordination-state digest remains independently unsupported;
 - two device candidates from one ledger parent produce one accepted successor;
   an overlapping loser blocks and same-parent CAS retry remains non-forced;
 - remote epoch `1` remains independent from a higher clone-local epoch;

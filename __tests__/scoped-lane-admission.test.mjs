@@ -11,7 +11,7 @@ import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { createAdmissionLeaseProjection, evaluateScopedLaneAdmission, normalizeCloudAuthority, normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
 import { verifyAdmissionCloudAuthority } from "../scripts/scoped-lane-cloud-authority.mjs";
-import { assertAdmissionMutationAuthority, assertWorkspaceGuardsReady, attachAdmissionReceipt, collectScopedLaneState, finalizeScopedLaneAdmission, verifyPreservedLaneState } from "../scripts/scoped-lane-admission-state.mjs";
+import { assertAdmissionMutationAuthority, assertPeersUnchanged, assertWorkspaceGuardsReady, attachAdmissionReceipt, collectScopedLaneState, finalizeScopedLaneAdmission, verifyPreservedLaneState } from "../scripts/scoped-lane-admission-state.mjs";
 import { createWriterLeaseStore } from "../scripts/writer-lease-lib.mjs";
 const canonicalSha = "a".repeat(40), fenceSha = "b".repeat(40);
 const claimDigest = "2".repeat(64), claimLedgerRevision = "3".repeat(64), ledgerRevision = "c".repeat(40);
@@ -147,6 +147,8 @@ function publicClaim(manifest, overrides = {}) {
     entrySchema: "agentic-cloud-collaboration-entry/v2",
     claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
     operationReceiptDigest: "1".repeat(64),
+    operationTime: evaluationTime,
+    ledgerSequence: 1,
     state: "active",
     actorId: "github-user:1",
     deviceId: "device",
@@ -1467,6 +1469,90 @@ test("joined receipts finalize admitted while peer drift blocks", () => {
       remoteAuthorityVerification: drifted.verification,
     },
   ), /competing overlapping cloud authority/);
+});
+test("peer reconciliation admits one-step disjoint progress and rejects ambiguous drift", () => {
+  const manifest = manifestFor();
+  const authority = authorityFor(manifest);
+  const candidate = publicClaim(manifest);
+  const peerScope = ["path:docs/peer-progress", "semantic:peer-progress"];
+  const peerManifest = {
+    declaredWriteSet: peerScope,
+    writeSetDigest: digestValue(peerScope),
+  };
+  const peer = publicClaim(peerManifest, {
+    actorId: "github-user:2",
+    deviceId: "peer-device",
+    sessionId: "peer-session",
+    repositoryId: "github-repository:R_1",
+    workItemId: "work-item:peer-progress",
+    fenceRevision: "6".repeat(64),
+    transitionDigest: "7".repeat(64),
+    operationReceiptDigest: "8".repeat(64),
+    ledgerSequence: 2,
+  });
+  const initialVerification = verifiedBundle(authority, manifest, [candidate, peer]);
+  let report = evaluate({
+    manifest,
+    authority,
+    verification: initialVerification.verification,
+    lanes: [canonicalLane()],
+  });
+  report = attachAdmissionReceipt({
+    report,
+    targetObservationDigest: "d".repeat(64),
+    remoteAuthorityVerification: initialVerification.verification,
+  });
+  const advancedPeer = {
+    ...peer,
+    transitionCounter: 2,
+    heartbeatCounter: 1,
+    fenceRevision: "9".repeat(64),
+    transitionDigest: "a".repeat(64),
+    operationReceiptDigest: "b".repeat(64),
+    ledgerSequence: 4,
+  };
+  const advancedVerification = verifiedBundle(authority, manifest, [candidate, advancedPeer]);
+  const accepted = assertPeersUnchanged(report, advancedVerification.verification);
+  assert.equal(
+    accepted.peerDisposition,
+    "unchanged-or-independently-advanced-disjoint",
+  );
+  assert.equal(accepted.peerOperationReceipts.length, 1);
+  assert.equal(accepted.peerOperationReceipts[0].claimId, peer.claimId);
+  assert.equal(accepted.peerOperationReceipts[0].beforeRecordDigest,
+    report.remoteClaims.find(claim => claim.claimId === peer.claimId).recordDigest);
+
+  const removedVerification = verifiedBundle(authority, manifest, [candidate]);
+  assert.throws(
+    () => assertPeersUnchanged(report, removedVerification.verification),
+    /disappeared without a terminal lineage receipt/u,
+  );
+  const multiStepVerification = verifiedBundle(authority, manifest, [candidate, {
+    ...advancedPeer,
+    transitionCounter: 3,
+  }]);
+  assert.throws(
+    () => assertPeersUnchanged(report, multiStepVerification.verification),
+    /did not advance exactly one transition/u,
+  );
+  const unreceiptedVerification = verifiedBundle(authority, manifest, [candidate, {
+    ...advancedPeer,
+    operationTime: null,
+  }]);
+  assert.throws(
+    () => assertPeersUnchanged(report, unreceiptedVerification.verification),
+    /operationTime is missing or malformed/u,
+  );
+  const overlappingScope = manifest.declaredWriteSet;
+  const overlappingVerification = verifiedBundle(authority, manifest, [candidate, {
+    ...advancedPeer,
+    declaredWriteScope: overlappingScope,
+    writeSetDigest: digestValue(overlappingScope),
+  }]);
+  assert.throws(
+    () => assertPeersUnchanged(report, overlappingVerification.verification),
+    /overlaps the candidate write scope/u,
+  );
 });
 test("lane collection rejects torn snapshots and guard check never rewrites hooks", () => {
   let reads = 0;

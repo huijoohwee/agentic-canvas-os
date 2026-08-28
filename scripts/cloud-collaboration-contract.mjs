@@ -17,7 +17,7 @@ const OPERATION_RECEIPT_SCHEMAS = Object.freeze({ claim: "agentic-collaboration-
   retire: "agentic-collaboration-retirement-receipt/v1", });
 function hydrate(entry, evaluationTime = null) { if (!entry) return null; const claim = {
     ...entry.claimCore, fenceRevision: entry.claimDigest, ledgerRevision: entry.digest,
-    entrySchema: entry.schema, }; claim.state = projectAuthorityState(claim.state);
+    entrySchema: entry.schema, operationTime: entry.evaluationTime, }; claim.state = projectAuthorityState(claim.state);
   claim.recordedState = claim.state; if (evaluationTime && SCOPE_RESERVATION_STATES.has(claim.state)
     && Date.parse(evaluationTime) >= Date.parse(claim.expiresAt)) claim.state = "dormant-preserved";
   claim.writeAuthority = WRITE_AUTHORITY_STATES.has(claim.state);
@@ -75,9 +75,10 @@ function receiptForEntry(entry, status) { if (entry.schema === LEGACY_ENTRY_SCHE
     idempotencyKey: entry.idempotencyKey, requestDigest: entry.requestDigest,
     evaluationTime: entry.evaluationTime, };
   return { ...receipt, receiptDigest: digestValue(receipt) }; }
-function mutationResult(ledger, entry, replayed) { return { ledger,
+function mutationResult(ledger, entry, replayed, { conflictSetDigest = null } = {}) { return { ledger,
     claim: hydrateWithLedger(ledger, entry, entry.evaluationTime), claimDigest: entry.claimDigest,
-    receipt: buildReceipt(entry), replayed, }; }
+    receipt: buildReceipt(entry), replayed, conflictSetDigest,
+    acceptedParentDigest: entry.parentDigest, }; }
 function requireOwnedClaim(ledger, intent, evaluationTime) {
   const entry = findClaimEntry(ledger, intent.claimId);
   if (!entry) fail("claim_not_found", `claim ${intent.claimId} does not exist`);
@@ -98,7 +99,7 @@ function claimCoreForAction(action, intent, ledger, evaluationTime) {
   if (action === "claim") return buildClaimCore(intent, ledger, evaluationTime);
   const previous = requireOwnedClaim(ledger, intent, evaluationTime); const base = { ...previous };
   for (const field of [ "writeAuthority", "scopeReserved", "fenceRevision", "ledgerRevision",
-    "ledgerSequence", "entrySchema", "recordedState", "operationReceiptDigest",
+    "ledgerSequence", "entrySchema", "recordedState", "operationReceiptDigest", "operationTime",
     "deliveryAuthorization", ]) delete base[field]; base.eligibleSince ??= null;
   base.handoff = null; base.release = null; base.transitionCounter += 1;
   if (action === "continue") return continueClaim({ base, previous, intent, ledger, evaluationTime });
@@ -253,6 +254,80 @@ function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime, pro
     && predecessor.canonicalBaseRevision === intent.canonicalBaseRevision) return true;
   return Boolean(normalizeCanonicalDescendantProof({ value: intent.canonicalDescendantProof,
     sourceBaseSha: intent.canonicalBaseRevision, protectedRevision, })); }
+function ledgerAtObservedHead(ledger, observedHeadDigest) {
+  if (observedHeadDigest === ledger.headDigest) return ledger;
+  if (observedHeadDigest === null) return {
+    ...ledger, sequence: 0, headDigest: null, entries: [],
+  };
+  const index = ledger.entries.findIndex((entry) => entry.digest === observedHeadDigest);
+  if (index < 0) fail("stale_ledger_digest", "expectedLedgerDigest is not in the current ledger ancestry");
+  return { ...ledger, sequence: index + 1, headDigest: observedHeadDigest,
+    entries: ledger.entries.slice(0, index + 1), };
+}
+function relatedClaimEntries(ledger, intent) {
+  const latest = [...currentClaimEntries(ledger).values()]
+    .filter((entry) => entry.repositoryId === intent.repositoryId);
+  const relatedIds = new Set([intent.claimId, intent.predecessorClaimId].filter(Boolean));
+  for (const entry of latest) {
+    const core = entry.claimCore;
+    if (core.workItemId === intent.workItemId
+      || writeSetsOverlap(core.declaredWriteScope, intent.declaredWriteScope)) {
+      relatedIds.add(entry.claimId);
+      if (core.predecessorClaimId) relatedIds.add(core.predecessorClaimId);
+    }
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const entry of latest) {
+      const predecessorClaimId = entry.claimCore.predecessorClaimId;
+      if (!relatedIds.has(entry.claimId) && !relatedIds.has(predecessorClaimId)) continue;
+      for (const claimId of [entry.claimId, predecessorClaimId].filter(Boolean)) {
+        if (!relatedIds.has(claimId)) { relatedIds.add(claimId); changed = true; }
+      }
+    }
+  }
+  return latest.filter((entry) => relatedIds.has(entry.claimId))
+    .sort((left, right) => left.claimId.localeCompare(right.claimId));
+}
+export function claimConflictSetDigest(ledger, intent) {
+  const conflictSet = {
+    schema: "agentic-cloud-claim-conflict-set/v1",
+    policyRevision: "agentic-cloud-collaboration/v1@1.1.0",
+    repositoryId: intent.repositoryId,
+    subject: {
+      claimId: intent.claimId,
+      actorId: intent.actorId,
+      deviceId: intent.deviceId,
+      sessionId: intent.sessionId,
+      workItemId: intent.workItemId,
+      canonicalBaseRevision: intent.canonicalBaseRevision,
+      canonicalDescendantProof: intent.canonicalDescendantProof ?? null,
+      laneRevision: intent.laneRevision,
+      writeSetDigest: intent.writeSetDigest,
+      leaseEpoch: intent.leaseEpoch,
+      predecessorClaimId: intent.predecessorClaimId ?? null,
+      expiresAt: intent.expiresAt,
+    },
+    claims: relatedClaimEntries(ledger, intent).map((entry) => ({
+      claimId: entry.claimId,
+      claimDigest: entry.claimDigest,
+      state: entry.claimCore.state,
+      transitionCounter: entry.claimCore.transitionCounter,
+      predecessorClaimId: entry.claimCore.predecessorClaimId,
+    })),
+  };
+  return digestValue(conflictSet);
+}
+function requireCompatibleClaimObservation(ledger, intent) {
+  const currentConflictSetDigest = claimConflictSetDigest(ledger, intent);
+  if (intent.expectedLedgerDigest === ledger.headDigest) return currentConflictSetDigest;
+  const observedLedger = ledgerAtObservedHead(ledger, intent.expectedLedgerDigest);
+  if (claimConflictSetDigest(observedLedger, intent) !== currentConflictSetDigest) {
+    fail("stale_ledger_digest", "expectedLedgerDigest conflict set is stale");
+  }
+  return currentConflictSetDigest;
+}
 function appendEntry(ledger, action, intent, requestDigest, idempotencyKey, evaluationTime) {
   const claimCore = claimCoreForAction(action, intent, ledger, evaluationTime);
   const claimDigest = digestValue(claimCore); const draft = { schema: ENTRY_SCHEMA,
@@ -290,11 +365,11 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
   const rawIntent = normalizeRootIntent(normalizedAction, request, actorValue, repositoryValue.repositoryId);
   const idempotencyKey = digestValue(text(request.idempotencyKey, "idempotencyKey"));
   const prior = ledger.entries.find((entry) => entry.idempotencyKey === idempotencyKey);
-  const sealedReplay = exactCallerSealedClaimReplay({
+  const claimReplay = exactIdempotentClaimReplay({
     ledger, action: normalizedAction, rawIntent, prior, idempotencyKey,
     evaluationTime: evaluatedAt,
   });
-  if (sealedReplay) return sealedReplay;
+  if (claimReplay) return claimReplay;
   const claimOnlyRollover = normalizedAction === "claim"
     ? claimOnlySuccessorBaseRolloverPredecessor({ ledger, intent: rawIntent,
       evaluationTime: evaluatedAt, protectedRevision: repositoryValue.canonicalRevision,
@@ -316,17 +391,20 @@ export function applyCloudTransition({ ledger, action, request = {}, actor, repo
   if (prior) { if (prior.action !== normalizedAction || prior.requestDigest !== requestDigest) {
       fail("idempotency_conflict", "idempotencyKey was already used for a different transition"); }
     return mutationResult(ledger, prior, true); }
-  if (intent.expectedLedgerDigest !== ledger.headDigest) {
-    fail("stale_ledger_digest", "expectedLedgerDigest is stale"); } const appended = appendEntry(
+  const conflictSetDigest = normalizedAction === "claim"
+    ? requireCompatibleClaimObservation(ledger, intent)
+    : null;
+  if (normalizedAction !== "claim" && intent.expectedLedgerDigest !== ledger.headDigest) {
+    fail("stale_ledger_digest", "expectedLedgerDigest is stale"); }
+  const appended = appendEntry(
     ledger, normalizedAction, intent, requestDigest, idempotencyKey, evaluatedAt, );
   const appendedFailures = validateLedger(appended.ledger);
   if (appendedFailures.length > 0) fail("invalid_transition", appendedFailures.join("; "));
-  return mutationResult(appended.ledger, appended.entry, false); }
-function exactCallerSealedClaimReplay({
+  return mutationResult(appended.ledger, appended.entry, false, { conflictSetDigest }); }
+function exactIdempotentClaimReplay({
   ledger, action, rawIntent, prior, idempotencyKey, evaluationTime,
 }) {
-  if (action !== "claim" || !prior || !rawIntent.expectedLedgerDigest
-    || prior.parentDigest !== rawIntent.expectedLedgerDigest) return null;
+  if (action !== "claim" || !prior) return null;
   if (prior.action !== action) {
     fail("idempotency_conflict", "idempotencyKey was already used for a different transition");
   }
@@ -357,7 +435,13 @@ function exactCallerSealedClaimReplay({
   if (prior.idempotencyKey !== idempotencyKey) {
     fail("idempotency_conflict", "idempotencyKey was already used for a different transition");
   }
-  return mutationResult(ledger, prior, true);
+  const acceptedConflictSetDigest = claimConflictSetDigest(
+    ledgerAtObservedHead(ledger, prior.parentDigest),
+    intent,
+  );
+  return mutationResult(ledger, prior, true, {
+    conflictSetDigest: acceptedConflictSetDigest,
+  });
 }
 export function verifyCloudClaim({ ledger, request = {}, evaluationTime }) {
   const evaluatedAt = instant(evaluationTime, "evaluationTime");

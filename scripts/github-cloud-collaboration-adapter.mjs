@@ -246,7 +246,7 @@ async function mutateLedger({
   smartGitLedgerCommit,
   token,
 }) {
-  const sealedClaimParentDigest = callerSealedClaimParentDigest(action, context.input);
+  const observedClaimHeadDigest = callerObservedClaimHeadDigest(action, context.input);
   let lastConflict = null;
   let semanticRequest = null;
   let subjectDigest = null;
@@ -261,7 +261,7 @@ async function mutateLedger({
       allowMissing: true,
     });
     if (!snapshot) {
-      if (sealedClaimParentDigest) staleCallerSealedClaimParent();
+      if (observedClaimHeadDigest) staleCallerObservedClaimHead();
       snapshot = await bootstrapLedger({
         send, ledgerRepository, ledgerIdentity, ledgerRef, ledgerPath,
       });
@@ -278,12 +278,6 @@ async function mutateLedger({
       throw new Error("Mutation subject changed during collaboration compare-and-swap.");
     }
     const prior = findIdempotentEntry(snapshot.ledger, context.input.idempotencyKey);
-    requireCallerSealedClaimSnapshot({
-      action,
-      ledger: snapshot.ledger,
-      prior,
-      sealedClaimParentDigest,
-    });
     committedReplay ||= Boolean(prior?.action === action);
     const fixedExpiresAt = semanticRequest?.expiresAt
       || (committedReplay && mutationUsesExpiry(action, context.input) ? prior.claimCore.expiresAt : null);
@@ -292,7 +286,7 @@ async function mutateLedger({
         action,
         input: {
           ...context.input,
-          expectedLedgerDigest: sealedClaimParentDigest ?? snapshot.ledger.headDigest,
+          expectedLedgerDigest: observedClaimHeadDigest ?? snapshot.ledger.headDigest,
         },
         actor: context.actor, repository: context.repository, pullRequest: subject.pullRequest,
         evaluationTime: snapshotTime, fixedExpiresAt,
@@ -305,9 +299,7 @@ async function mutateLedger({
     const evaluationTime = snapshotTime;
     const preparedRequest = {
       ...semanticRequest,
-      expectedLedgerDigest: committedReplay && sealedClaimParentDigest
-        ? sealedClaimParentDigest
-        : snapshot.ledger.headDigest,
+      expectedLedgerDigest: observedClaimHeadDigest ?? snapshot.ledger.headDigest,
     };
     const repository = contractRepository(
       context.repository,
@@ -369,7 +361,7 @@ async function mutateLedger({
     `Cloud collaboration compare-and-swap exhausted ${maxAttempts} attempts${lastConflict ? `: ${lastConflict}` : "."}`,
   );
 }
-function callerSealedClaimParentDigest(action, input) {
+function callerObservedClaimHeadDigest(action, input) {
   if (action !== "claim" || input?.expectedLedgerDigest === undefined ||
       input.expectedLedgerDigest === null) {
     return null;
@@ -380,19 +372,7 @@ function callerSealedClaimParentDigest(action, input) {
   }
   return value;
 }
-function requireCallerSealedClaimSnapshot({
-  action, ledger, prior, sealedClaimParentDigest,
-}) {
-  if (action !== "claim" || !sealedClaimParentDigest) return;
-  if (prior) {
-    if (prior.action !== "claim" || prior.parentDigest !== sealedClaimParentDigest) {
-      staleCallerSealedClaimParent();
-    }
-    return;
-  }
-  if (ledger.headDigest !== sealedClaimParentDigest) staleCallerSealedClaimParent();
-}
-function staleCallerSealedClaimParent() {
+function staleCallerObservedClaimHead() {
   throw new Error("Cloud collaboration claim failed: expectedLedgerDigest is stale");
 }
 function mutationUsesExpiry(action, input) {

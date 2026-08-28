@@ -141,7 +141,7 @@ test("claim is CAS-fenced, device-neutral, replay-safe, and actor-authenticated"
     repository, evaluationTime: T1,
     request: { ...request, expectedLedgerDigest: evidence("stale") }, }), "stale_ledger_digest");
 });
-test("an exact caller-sealed proof-bearing claim replays after protected main advances", () => {
+test("an exact idempotent proof-bearing claim replays after ledger and protected main advance", () => {
   const fixture = claimOnlyRolloverFixture();
   const sealedParent = fixture.predecessorRetired.ledger.headDigest;
   const claimed = claimOnlyRollover(fixture);
@@ -205,21 +205,79 @@ test("an exact caller-sealed proof-bearing claim replays after protected main ad
       idempotencyKey: request.idempotencyKey,
     },
   }), "idempotency_conflict");
-  for (const invalid of [
+  for (const equivalentObservation of [
     { ...request, expectedLedgerDigest: claimed.ledger.headDigest },
     { ...request, expectedLedgerDigest: null },
-    { ...request, idempotencyKey: "claim:absent-sealed-proof-replay" },
   ]) {
-    assert.throws(() => applyCloudTransition({
+    const equivalentReplay = applyCloudTransition({
       ledger: later.ledger,
       action: "claim",
       actor: owner,
       repository: advancedRepository,
       evaluationTime: T5,
-      request: invalid,
-    }));
+      request: equivalentObservation,
+    });
+    assert.equal(equivalentReplay.replayed, true);
   }
+  assert.throws(() => applyCloudTransition({
+    ledger: later.ledger,
+    action: "claim",
+    actor: owner,
+    repository: advancedRepository,
+    evaluationTime: T5,
+    request: { ...request, idempotencyKey: "claim:absent-idempotent-proof-replay" },
+  }));
   assert.equal(canonicalJson(later.ledger), ledgerBytes);
+});
+test("claim observation rebases across disjoint audit entries but not a changed conflict set", () => {
+  const baseline = claim(createEmptyLedger("ledger:repository"), {
+    workItemId: "work:baseline",
+    scope: ["path:docs/baseline.md"],
+    idempotencyKey: "claim:baseline",
+  });
+  const observedHead = baseline.ledger.headDigest;
+  const disjoint = claim(baseline.ledger, {
+    workItemId: "work:disjoint-peer",
+    scope: ["path:docs/disjoint-peer.md"],
+    time: T1,
+    idempotencyKey: "claim:disjoint-peer",
+  });
+  const rebased = claim(disjoint.ledger, {
+    workItemId: "work:rebased-candidate",
+    scope: ["path:scripts/rebased-candidate.mjs"],
+    time: T2,
+    expectedLedgerDigest: observedHead,
+    idempotencyKey: "claim:rebased-candidate",
+  });
+  assert.equal(rebased.acceptedParentDigest, disjoint.ledger.headDigest);
+  assert.match(rebased.conflictSetDigest, /^[0-9a-f]{64}$/u);
+
+  const empty = createEmptyLedger("ledger:repository");
+  const overlapping = claim(empty, {
+    workItemId: "work:overlapping-peer",
+    scope: ["path:scripts/shared.mjs"],
+    idempotencyKey: "claim:overlapping-peer",
+  });
+  throwsCode(() => claim(overlapping.ledger, {
+    workItemId: "work:overlapping-candidate",
+    scope: ["path:scripts/shared.mjs"],
+    time: T1,
+    expectedLedgerDigest: null,
+    idempotencyKey: "claim:overlapping-candidate",
+  }), "stale_ledger_digest");
+
+  const sameWork = claim(empty, {
+    workItemId: "work:shared-identity",
+    scope: ["path:docs/one.md"],
+    idempotencyKey: "claim:same-work-peer",
+  });
+  throwsCode(() => claim(sameWork.ledger, {
+    workItemId: "work:shared-identity",
+    scope: ["path:docs/two.md"],
+    time: T1,
+    expectedLedgerDigest: null,
+    idempotencyKey: "claim:same-work-candidate",
+  }), "stale_ledger_digest");
 });
 test("unlimited disjoint authorities have no policy cardinality cap", () => {
   let ledger = createEmptyLedger("ledger:repository");

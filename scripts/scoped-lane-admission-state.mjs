@@ -22,6 +22,7 @@ import {
   assertPreservationReceiptIntegrity,
   verifyCandidateProvisionEvidence,
 } from "./task-worktree-provision.mjs";
+import { reconcileIndependentPeerOperations } from "./scoped-lane-peer-reconciliation.mjs";
 
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -197,7 +198,10 @@ export function verifyPreservedLaneState(beforeReport, afterLanes, {
     lease,
     report: beforeReport,
   });
-  assertPeersUnchanged(beforeReport, remoteAuthorityVerification);
+  const peerReconciliation = assertPeersUnchanged(
+    beforeReport,
+    remoteAuthorityVerification,
+  );
   const receipt = {
     schema: "agentic-lane-preservation-result/v1",
     status: "preserved",
@@ -209,11 +213,15 @@ export function verifyPreservedLaneState(beforeReport, afterLanes, {
     candidateLeaseDigest: evidence.leaseDigest,
     finalRemoteClaimInventoryDigest:
       remoteAuthorityVerification.remoteClaimInventoryDigest,
+    finalPeerClaimSetDigest: peerReconciliation.finalPeerClaimSetDigest,
+    peerOperationReceipts: peerReconciliation.peerOperationReceipts,
+    peerOperationReceiptDigests:
+      peerReconciliation.peerOperationReceiptDigests,
     finalLedgerRevision: remoteAuthorityVerification.ledgerRevision,
     finalLedgerDigest: remoteAuthorityVerification.ledgerDigest,
     cloudVerificationReceiptDigest: remoteAuthorityVerification.receiptDigest,
     preservedPaths: beforeReport.lanes.map(lane => lane.path).sort(),
-    peerDisposition: "unchanged",
+    peerDisposition: peerReconciliation.peerDisposition,
     causality: "candidate-only",
   };
   const verified = Object.freeze({
@@ -659,16 +667,7 @@ function within(root, candidate) {
 }
 
 export function assertPeersUnchanged(report, verification) {
-  const candidateId = report.cloudAuthority.claimId;
-  const before = report.remoteClaims
-    .filter(claim => claim.claimId !== candidateId)
-    .map(claim => [claim.claimId, claim.recordDigest]);
-  const after = verification.inventory.claims
-    .filter(claim => claim.claimId !== candidateId)
-    .map(claim => [claim.claimId, claim.recordDigest]);
-  if (JSON.stringify(before) !== JSON.stringify(after)) {
-    throw new Error("Peer claim inventory drift requires an independent peer-operation receipt; provisioning blocked.");
-  }
+  return reconcileIndependentPeerOperations({ report, verification });
 }
 
 function withReportDigest(report) {

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { canonicalJson, digestValue, validateLedger } from "./cloud-collaboration-primitives.mjs";
 import { normalizeState } from "./admitted-empty-abandoned-owner-retirement-contract.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
 
@@ -104,6 +105,14 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     if (matches.length > 1) throw new Error("Cloud claim cardinality is ambiguous.");
     if (matches.length === 0) return null;
     const claim = matches[0];
+    const branch = git(subjectPath, ["branch", "--show-current"]);
+    const lease = leaseStore.read(branch);
+    if (claim.deviceId != null && !ownerIdentifierMatches("device", claim.deviceId, lease?.device)) {
+      throw new Error("Cloud claim device identity does not match the local owner.");
+    }
+    if (claim.sessionId != null && !ownerIdentifierMatches("session", claim.sessionId, lease?.sessionId)) {
+      throw new Error("Cloud claim session identity does not match the local owner.");
+    }
     return { claimId, claimDigest: claim.fenceRevision || claim.claimDigest,
       state: claim.state, writeAuthority: claim.writeAuthority, scopeReserved: claim.scopeReserved,
       laneRevision: claim.laneRevision, canonicalBaseRevision: claim.canonicalBaseRevision,
@@ -251,6 +260,10 @@ function isReleasedLease(lease, plan) { const receipt = lease?.admittedEmptyAban
     && receipt.planDigest === plan.planDigest && receipt.originalLeaseDigest === plan.subject.lease.digest; }
 function effectValues(phase, values) { const core = { phase, ...values }; return { ...values, operationDigest: digestValue(core) }; }
 function claimOperationKey(plan) { return `admitted-empty-abandoned-owner-retirement:${plan.planDigest}:claim`; }
+function ownerIdentifierMatches(namespace, projected, local) {
+  return typeof local === "string" && local.length > 0
+    && (projected === local || projected === pseudonymousIdentifier(namespace, local));
+}
 function requireRetirementEntry({ status, plan, gh, dependencies }) {
   const ledger = dependencies.readLedger ? dependencies.readLedger(status)
     : JSON.parse(gh(["api", "--method", "GET", "-H", "Accept: application/vnd.github.raw+json",

@@ -107,10 +107,10 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     const claim = matches[0];
     const branch = git(subjectPath, ["branch", "--show-current"]);
     const lease = leaseStore.read(branch);
-    if (claim.deviceId != null && !ownerIdentifierMatches("device", claim.deviceId, lease?.device)) {
+    if (!ownerIdentifierMatches("device", claim.deviceId, lease?.device)) {
       throw new Error("Cloud claim device identity does not match the local owner.");
     }
-    if (claim.sessionId != null && !ownerIdentifierMatches("session", claim.sessionId, lease?.sessionId)) {
+    if (!ownerIdentifierMatches("session", claim.sessionId, lease?.sessionId)) {
       throw new Error("Cloud claim session identity does not match the local owner.");
     }
     return { claimId, claimDigest: claim.fenceRevision || claim.claimDigest,
@@ -186,6 +186,7 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       if (digestValue(claim) !== digestValue(plan.subject.claim)) throw new Error("Cloud claim drifted before retirement.");
       const request = { targetRepository, claimId, expectedFenceRevision: claim.claimDigest,
         expectedTransitionCounter: claim.transitionCounter, expectedLedgerDigest: cloud.ledgerDigest,
+        deviceId: state.subject.rawLease.device, sessionId: state.subject.rawLease.sessionId,
         reason: "abandoned", finalRevision: claim.laneRevision, reviewRequestId: claim.reviewRequestId,
         bytesDigest: digestValue({ subject: plan.subject.stateDigest, authored: plan.authoredLane.stateDigest }),
         namedChecksDigest: digestValue({ fenceOnly: true, changedPaths: plan.subject.changedPaths }),

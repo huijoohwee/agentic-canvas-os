@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process"; import { createHash, randomUU
 import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path"; import { fileURLToPath } from "node:url";
 import { normalizeState } from "./admitted-prepared-descendant-canonical-supersession-retirement-contract.mjs";
-import { compareStructuredSupersessionDocuments, normalizeAbandonedRecoveryLineage, normalizePullCloseChronology, normalizeSupersessionManifest } from "./admitted-prepared-descendant-canonical-supersession-retirement-controller.mjs";
+import { compareStructuredSupersessionDocuments, normalizeAbandonedRecoveryLineage, normalizeProviderInstant, normalizePullCloseChronology, normalizeSupersessionManifest } from "./admitted-prepared-descendant-canonical-supersession-retirement-controller.mjs";
 import { canonicalJson, digestValue, validateLedger } from "./cloud-collaboration-primitives.mjs";
 import { assertPreparedIntegrationRemoteFence } from "./device-branch-ownership-lib.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
@@ -47,8 +47,8 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     return value;
   }
   function pullProjection() {
-    const raw = JSON.parse(gh(["pr", "view", String(pullRequestNumber), "--repo", targetRepository,
-      "--json", "number,id,url,state,isDraft,mergedAt,closedAt,headRefName,headRefOid,headRepository,baseRefName,baseRefOid"]));
+    const input = JSON.parse(gh(["pr", "view", String(pullRequestNumber), "--repo", targetRepository,
+      "--json", "number,id,url,state,isDraft,mergedAt,closedAt,headRefName,headRefOid,headRepository,baseRefName,baseRefOid"])), raw = { ...input, closedAt: input.closedAt === null ? null : normalizeProviderInstant(input.closedAt) };
     if (raw?.headRepository?.nameWithOwner !== targetRepository)
       throw new Error("Pull request is not an exact same-repository review.");
     return { raw, public: { number: raw.number, nodeId: raw.id, url: raw.url, state: raw.state,
@@ -70,7 +70,7 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       if (!Array.isArray(events)) throw new Error("Pull-request timeline is malformed.");
       return events.filter(item => ["closed", "reopened"].includes(item?.event)).map(item => ({ event: item.event,
         eventId: item.id, nodeId: item.node_id, actorLogin: item.actor?.login, actorId: item.actor?.id,
-        actorType: item.actor?.type, createdAt: item.created_at, performedViaGitHubApp: item.performed_via_github_app ?? null }));
+        actorType: item.actor?.type, createdAt: normalizeProviderInstant(item.created_at), performedViaGitHubApp: item.performed_via_github_app ?? null }));
     };
     const first = read(), second = read();
     if (canonicalJson(first) !== canonicalJson(second))

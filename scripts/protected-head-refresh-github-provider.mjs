@@ -564,6 +564,7 @@ export function createProtectedHeadRefreshGithubProvider({
     const branchProtectionRule = mainBranch?.protection?.required_status_checks;
     const contexts = branchProtectionRule?.contexts;
     const checks = branchProtectionRule?.checks;
+    const expectsClassicProtection = classicContexts.length > 0;
     const hasExactContexts = (
       Array.isArray(contexts)
       && contexts.length === classicContexts.length
@@ -579,13 +580,25 @@ export function createProtectedHeadRefreshGithubProvider({
         && check?.app_id === PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID
       ))
     );
+    const hasExactClassicProtection = expectsClassicProtection
+      ? (
+        mainBranch?.protection?.enabled === true
+        && branchProtectionRule?.enforcement_level === "everyone"
+        && hasExactContexts
+        && hasExactChecks
+      )
+      : (
+        branchProtectionRule == null
+        || (
+          branchProtectionRule?.enforcement_level === "off"
+          && hasExactContexts
+          && hasExactChecks
+        )
+      );
     if (
       mainBranch?.name !== "main"
       || mainBranch?.protected !== true
-      || mainBranch?.protection?.enabled !== true
-      || branchProtectionRule?.enforcement_level !== "everyone"
-      || !hasExactContexts
-      || !hasExactChecks
+      || !hasExactClassicProtection
     ) {
       throw new Error("Protected main lacks the exact enforced classic required checks.");
     }

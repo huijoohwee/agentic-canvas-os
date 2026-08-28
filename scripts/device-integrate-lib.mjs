@@ -4005,17 +4005,10 @@ export function renderProtectedMainRefreshCommitMessage({ subject, branch, lease
   const refreshSubject = requireProtectedSquashSubject(subject, {
     label: "Integration refresh subject",
   });
-  const { branchScope, claimEpoch } = resolveManagedCommitAttribution(
-    { branch, lease },
-    { allowLocalEpochFallback: true },
-  );
   return [
     refreshSubject,
     "",
-    `Agentic-Task: ${branchScope}`,
-    `Agentic-Scope: ${branchScope}`,
-    `Agentic-Lease-Epoch: ${claimEpoch}`,
-    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+    renderProtectedSquashCommitBody({ branch, lease }),
   ].join("\n");
 }
 

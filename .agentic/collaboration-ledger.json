@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5700,
-  "headDigest": "3f880dff413bb61bdc1273317b31a6cf375e0e13b0d421652cfd5c0209285318",
+  "sequence": 5701,
+  "headDigest": "7ae5c39807278e23853e152b5ceb3c2fcded7da7bba603f2d19a1073ac758e2d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -290134,6 +290134,47 @@
       },
       "claimDigest": "9825aabe11bea552599b85f41343ace83e97208483ef7fc0f3968defd6dad55b",
       "digest": "3f880dff413bb61bdc1273317b31a6cf375e0e13b0d421652cfd5c0209285318"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5701,
+      "parentDigest": "3f880dff413bb61bdc1273317b31a6cf375e0e13b0d421652cfd5c0209285318",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "b101ca02ff4b15c8a7ccb3b1b51480577f0f778acafd0ca1a0be537d9bab3b7d",
+      "idempotencyKey": "0c8815cdf7ccb0637812e3f4e44db3a1eda75c037779082a13ce93e1cd51dec8",
+      "requestDigest": "8472b5ff11fe3e0b60743cfc9ad12266ccd64270a0f079b59e732f1e018d2c3c",
+      "evaluationTime": "2026-08-28T09:14:25.000Z",
+      "claimCore": {
+        "claimId": "b101ca02ff4b15c8a7ccb3b1b51480577f0f778acafd0ca1a0be537d9bab3b7d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:80818a6f09e8134254eb6b9e2f42af52f91f4361799f3c2fbb2fed424e2979b8",
+        "canonicalBaseRevision": "868aa424f0ffd85bbc3e445f2a0176650d2c980c",
+        "declaredWriteScope": [
+          "path:.github/workflows/auto-delivery.yml",
+          "path:.github/workflows/protected-head-refresh-ci.yml",
+          "path:scripts/__tests__/protected-head-refresh-enrollment.test.mjs",
+          "semantic:protected-refresh-consumer-enrollment"
+        ],
+        "writeSetDigest": "6cf7afa1003e3d9f6dcce451701a97dcd23893860b783de83b4914985bad16b4",
+        "laneRevision": "889514864fd8ec9cbefabc16bc8870b8853d6302",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-28T15:14:25.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBUTvLw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d24a25083f0c3f61ff24a34c76071d6a0333ee6b358f774c427d9ee42a644e78",
+      "digest": "7ae5c39807278e23853e152b5ceb3c2fcded7da7bba603f2d19a1073ac758e2d"
     }
   ]
 }

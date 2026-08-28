@@ -169,7 +169,7 @@ export const KNOWGRPH_TOOL_RECORDS = Object.freeze({
     mapOutput: (payload, argumentsValue) => statusOutput(payload, argumentsValue.view),
     inputGuardrails: Object.freeze([{ name: STATUS_INPUT_GUARDRAIL, stage: "tool-input" }]),
     outputGuardrails: Object.freeze([{ name: STATUS_OUTPUT_GUARDRAIL, stage: "tool-output" }]),
-    mcpToolName: "knowgrph.os.status",
+    mcpToolName: "agenticgraph.os.status",
   }),
   [RUN_NOTE_TOOL_NAME]: Object.freeze({
     type: "function",
@@ -188,7 +188,7 @@ export const KNOWGRPH_TOOL_RECORDS = Object.freeze({
     mapOutput: runNoteOutput,
     inputGuardrails: Object.freeze([{ name: RUN_NOTE_INPUT_GUARDRAIL, stage: "tool-input" }]),
     outputGuardrails: Object.freeze([{ name: RUN_NOTE_OUTPUT_GUARDRAIL, stage: "tool-output" }]),
-    mcpToolName: "knowgrph.run_manifest.note.update",
+    mcpToolName: "agenticgraph.run_manifest.note.update",
   }),
 });
 

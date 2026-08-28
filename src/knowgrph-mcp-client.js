@@ -275,10 +275,10 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     endpoint: url,
     callTool,
     runVideoRemix(input, opts) {
-      return callTool("knowgrph.video_remix.run", input, opts);
+      return callTool("agenticgraph.video_remix.run", input, opts);
     },
     invokeDocsGrammar(input, opts) {
-      return callTool("knowgrph.agentic_canvas_os.docs.invoke", input, opts);
+      return callTool("agenticgraph.agentic_canvas_os.docs.invoke", input, opts);
     },
     ...agenticGraph,
     async evolveSkill(input, opts) {
@@ -289,7 +289,7 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
           data: { fields: ["operation"] },
         });
       }
-      const result = await callTool("knowgrph.skill.evolve", input, opts);
+      const result = await callTool("agenticgraph.skill.evolve", input, opts);
       return validateSkillEvolutionResult(result, { expectedOperation });
     },
   };

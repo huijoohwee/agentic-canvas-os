@@ -16,7 +16,7 @@ export const SKILL_EVOLUTION_INVOCATION = Object.freeze({
   text: "/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator",
 });
 
-export const SKILL_EVOLUTION_MCP_TOOL = "knowgrph.skill.evolve";
+export const SKILL_EVOLUTION_MCP_TOOL = "agenticgraph.skill.evolve";
 export const SKILL_EVOLUTION_OPERATIONS = Object.freeze([
   "plan",
   "start",

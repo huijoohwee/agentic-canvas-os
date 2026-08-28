@@ -18,7 +18,7 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 
 // Pinned pre-feature digests: this feature must not move either file.
 const WRANGLER_SHA256 = "32f1c08f4833f04bcce5bae2f851289ae9b3e779e273eca86877ed654d806c46";
-const SKILL_EVOLUTION_SHA256 = "d37f2f9f12d2a354d9d133579442ec488cb7166eef09ed61685b54e8d48e1204";
+const SKILL_EVOLUTION_SHA256 = "fcf84f312ae010bd665c58d0648ac9712141522f219c733fa53e93bd459c7bc9";
 const PROPERTY_SEED = 20260817;
 
 function parseLocalImports(text) {

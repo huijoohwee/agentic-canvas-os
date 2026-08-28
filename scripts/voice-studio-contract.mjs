@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 export const VOICE_STUDIO_COMMAND = "/voice.studio";
 export const VOICE_STUDIO_OPERATIONS = Object.freeze(["clone", "dictate", "create"]);
-export const VOICE_STUDIO_MCP_TOOL = "knowgrph.voice.studio";
+export const VOICE_STUDIO_MCP_TOOL = "agenticgraph.voice.studio";
 export const VOICE_STUDIO_ROUTES = Object.freeze({
   clone: "/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof",
   dictate: "/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof",
@@ -341,7 +341,7 @@ export function validateVoiceStudioContractDocuments(documents) {
   requireMarkers(required["VALIDATION-RUNBOOK.md"], "VALIDATION-RUNBOOK.md Voice Studio projection", [
     'run voice-studio-contract:check',
     "exact clone, dictate, and create metadata routes",
-    "one `knowgrph.voice.studio` wire identity",
+    "one `agenticgraph.voice.studio` wire identity",
   ], failures);
   return failures;
 }

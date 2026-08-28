@@ -6,8 +6,8 @@ export const GAME_MODE_INVOCATION = Object.freeze({
 });
 
 export const GAME_MODE_WEB_MCP_TOOLS = Object.freeze([
-  "knowgrph.inspect_local_game_mode",
-  "knowgrph.control_local_game_mode",
+  "agenticgraph.inspect_local_game_mode",
+  "agenticgraph.control_local_game_mode",
 ]);
 
 const FORBIDDEN_ALIASES = Object.freeze(["/game.fps", "#game-mode"]);

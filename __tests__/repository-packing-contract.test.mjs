@@ -37,7 +37,7 @@ test("repository packing keeps one canonical invocation and bounded contract", (
     binding: "@repository-root",
     proofBinding: "@runtime-proof",
     text: "/repository.pack #repository-packing @repository-root @runtime-proof",
-    tool: "knowgrph.repository.pack",
+    tool: "agenticgraph.repository.pack",
   });
   assert.deepEqual(REPOSITORY_PACKING_BOUNDS, {
     defaultMaxFiles: 12_000,
@@ -177,7 +177,7 @@ test("MCP gateway exposes exactly one canonical local tool", () => {
   const duplicate = new Map(repositoryDocuments);
   duplicate.set(
     "MCP-GATEWAY.md",
-    `${duplicate.get("MCP-GATEWAY.md")}\n| \`knowgrph.repository.pack\` | duplicate | duplicate |\n`,
+    `${duplicate.get("MCP-GATEWAY.md")}\n| \`agenticgraph.repository.pack\` | duplicate | duplicate |\n`,
   );
   assert.equal(
     validateRepositoryPackingContractDocuments(duplicate)
@@ -187,7 +187,7 @@ test("MCP gateway exposes exactly one canonical local tool", () => {
 
   const renamed = withReplacement(
     "MCP-GATEWAY.md",
-    "`knowgrph.repository.pack`",
+    "`agenticgraph.repository.pack`",
     "`knowgrph.repomix.pack`",
   );
   assert.equal(
@@ -329,10 +329,10 @@ test("clean-room guard rejects dependencies, locators, imports, binaries, and se
 test("every projection row proves its content instead of only its label", () => {
   for (const [name, prefix, selector, columns] of [
     ["HARNESS-CONTRACTS.md", "| Repository Packing |", "knowgrph-repository-pack-result/v1", 5],
-    ["MCP-GATEWAY.md", "| `knowgrph.repository.pack` |", "return verified metadata only", 3],
+    ["MCP-GATEWAY.md", "| `agenticgraph.repository.pack` |", "return verified metadata only", 3],
     ["SKILLS.md", "| Repository packing |", "REPOSITORY-PACKING.md", 2],
     ["RUNTIME-READINESS.md", "| Repository packing contract |", "exact integrated Knowgrph revision", 4],
-    ["RUNTIME-PROOF.md", "| Repository packing contract |", "single `knowgrph.repository.pack`", 3],
+    ["RUNTIME-PROOF.md", "| Repository packing contract |", "single `agenticgraph.repository.pack`", 3],
     ["RUNTIME-PROOF.md", "| Repository packing contract is executable |", "repository-packing-contract:check", 3],
     ["RUNTIME-PROOF.md", "| Repository packing contract |", "exact protected Knowgrph tool proof", 3],
     ["VALIDATION-RUNBOOK.md", "| Repository Packing |", "exact Knowgrph focused", 2],
@@ -393,7 +393,7 @@ test("planning row is unique, complete, dated, and directive-bounded", () => {
 
   for (const [before, after, expected] of [
     ["/repository.pack #repository-packing @repository-root @runtime-proof", "generic invocation", "missing /repository.pack"],
-    ["`knowgrph.repository.pack`", "`other.tool`", "missing `knowgrph.repository.pack`"],
+    ["`agenticgraph.repository.pack`", "`other.tool`", "missing `agenticgraph.repository.pack`"],
     ["Agentic Canvas OS owns", "A owns", "missing Agentic Canvas OS owns"],
     ["Knowgrph owns", "B owns", "missing Knowgrph owns"],
   ]) {

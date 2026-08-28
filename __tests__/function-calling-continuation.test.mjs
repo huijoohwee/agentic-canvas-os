@@ -82,7 +82,7 @@ function statusPayload() {
   return {
     ok: true,
     view: "capabilities",
-    entries: [{ toolId: "knowgrph.os.status" }],
+    entries: [{ toolId: "agenticgraph.os.status" }],
     unavailableSources: [],
     cost_log: {
       model: "none", prompt_tokens: 0, completion_tokens: 0,

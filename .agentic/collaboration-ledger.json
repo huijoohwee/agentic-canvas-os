@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5718,
-  "headDigest": "c0cba0745006a841e74d9bf9e8f86d32eedd69e1056bb8a3abe8216fe91a1cee",
+  "sequence": 5719,
+  "headDigest": "34dc9cf2fb4d4b201c1fabbdb79c173e5160cc12a3ebf1d19f0290521a6f633d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -290964,6 +290964,52 @@
       },
       "claimDigest": "2c3a7c1b2cf80782ccc064548e140289ce99d115ced4cea9ee36e3864912a50a",
       "digest": "c0cba0745006a841e74d9bf9e8f86d32eedd69e1056bb8a3abe8216fe91a1cee"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5719,
+      "parentDigest": "c0cba0745006a841e74d9bf9e8f86d32eedd69e1056bb8a3abe8216fe91a1cee",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bc9c968c5710945b38d62fd899c438e2175e9c37f04df43a0c70124489e0b62c",
+      "idempotencyKey": "0c6fe4e267dabeb2842a5cf34db0c209aada7e946e772e4ec011677c2b40af3e",
+      "requestDigest": "0928f1e9e6cd01fcc04d13795f0696b7bee6f56b221b3d537d69991577e544e2",
+      "evaluationTime": "2026-08-28T10:04:37.000Z",
+      "claimCore": {
+        "claimId": "bc9c968c5710945b38d62fd899c438e2175e9c37f04df43a0c70124489e0b62c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:159ff9d24ff40649f330a0cd729cd928d7a06f8e3e4cf3dfcadecc280a920cd2",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:26cd201235dc9afbd70278a0b2d509dcfc8d8ed1d8a98079b8bcc794ff2cd2a1",
+        "canonicalBaseRevision": "af3bff6f15ea2e6e7a01e461c077a6c99ac22a28",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-mixed-identity-pair-retirement.test.mjs",
+          "path:docs/CLAIM-ONLY-MIXED-IDENTITY-PAIR-RETIREMENT.md",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-contract.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-controller.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-evidence.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-store.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement.mjs",
+          "semantic:claim-only-mixed-identity-pair-retirement"
+        ],
+        "writeSetDigest": "b4283b65682922c0a73bc4db6cedfa436fa599c82ab5ae4d3f0cba2a16d675e9",
+        "laneRevision": "1e227ba456f14f7df36f704015767d639e7fcb4c",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-28T15:40:54.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUZb6Q",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "0bbc651ccdaf9bf2df1a89e306adbee298f494d799879280278b50bc2d6b1b75",
+      "digest": "34dc9cf2fb4d4b201c1fabbdb79c173e5160cc12a3ebf1d19f0290521a6f633d"
     }
   ]
 }

@@ -38,6 +38,7 @@ export function readProtectedHeadRefreshRepositoryPolicy({ environment = process
       environment.PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON,
       DEFAULT_PROTECTED_HEAD_REFRESH_REPOSITORY_POLICY.classicRequiredChecks,
       "classic required checks",
+      { allowEmpty: true },
     ),
     rulesetRequiredChecks: readArray(
       environment.PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON,
@@ -60,14 +61,30 @@ function buildPolicy({
   rulesetRequiredChecks,
   auditedWorkflows,
 }) {
+  const normalizedClassicRequiredChecks = contexts(
+    classicRequiredChecks,
+    "classic required checks",
+    { allowEmpty: true },
+  );
+  const normalizedRulesetRequiredChecks = contexts(
+    rulesetRequiredChecks,
+    "ruleset required checks",
+    { allowEmpty: true },
+  );
+  if (
+    normalizedClassicRequiredChecks.length === 0
+    && normalizedRulesetRequiredChecks.length === 0
+  ) {
+    throw new Error(
+      "Protected-head refresh requires at least one classic or ruleset required check.",
+    );
+  }
   const core = {
     schema: PROTECTED_HEAD_REFRESH_REPOSITORY_POLICY_SCHEMA,
     ciWorkflow: workflow(ciWorkflow, "CI workflow"),
     requiredCiContexts: contexts(requiredCiContexts, "required CI contexts"),
-    classicRequiredChecks: contexts(classicRequiredChecks, "classic required checks"),
-    rulesetRequiredChecks: contexts(rulesetRequiredChecks, "ruleset required checks", {
-      allowEmpty: true,
-    }),
+    classicRequiredChecks: normalizedClassicRequiredChecks,
+    rulesetRequiredChecks: normalizedRulesetRequiredChecks,
     auditedWorkflows: workflows(auditedWorkflows, "audited workflows"),
   };
   return Object.freeze({

@@ -64,6 +64,8 @@ function refreshMergeMessage(subject, epoch = 1) {
   return [
     subject,
     "",
+    "Integrate the declared runtime-integration change through its protected managed task lane so downstream policy can attribute the change to its writer lease.",
+    "",
     "Agentic-Task: runtime-integration",
     "Agentic-Scope: runtime-integration",
     `Agentic-Lease-Epoch: ${epoch}`,
@@ -756,6 +758,8 @@ test("protected-main refresh merge message carries the leased attribution traile
   }), [
     "fix(runtime-integration): emit lease attribution",
     "",
+    "Integrate the declared runtime-integration change through its protected managed task lane so downstream policy can attribute the change to its writer lease.",
+    "",
     "Agentic-Task: runtime-integration",
     "Agentic-Scope: runtime-integration",
     "Agentic-Lease-Epoch: 1",
@@ -765,7 +769,7 @@ test("protected-main refresh merge message carries the leased attribution traile
     subject: "fix(runtime-integration): bind cloud claim epoch",
     branch,
     lease: { ...lease, epoch: 197, cloudAuthority: { leaseEpoch: 3 } },
-  }).split("\n")[4], "Agentic-Lease-Epoch: 3");
+  }).split("\n").includes("Agentic-Lease-Epoch: 3"), true);
   assert.throws(() => renderProtectedMainRefreshCommitMessage({
     subject: "fix: subject\nwith body",
     branch,

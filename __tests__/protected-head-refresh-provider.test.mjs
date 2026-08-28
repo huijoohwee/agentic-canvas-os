@@ -316,6 +316,52 @@ test("GitHub provider accepts a repository-neutral single-gate policy", () => {
   assert.doesNotThrow(() => provider.verifyBranchProtection());
 });
 
+test("GitHub provider accepts an exact ruleset-only protection profile", () => {
+  const policy = readProtectedHeadRefreshRepositoryPolicy({ environment: {
+    PROTECTED_HEAD_REFRESH_CI_WORKFLOW: "integration.yml",
+    PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: '["Policy Gate"]',
+    PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: "[]",
+    PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: '["Policy Gate"]',
+    PROTECTED_HEAD_REFRESH_AUDITED_WORKFLOWS_JSON: '["auto-delivery.yml"]',
+  } });
+  const { provider } = branchProtectionHarness({
+    policy,
+    mainBranch: protectedMainBranch({
+      enabled: false,
+      enforcement: "off",
+      contexts: [],
+      checks: [],
+    }),
+    applicable: applicableProtectionRules({ context: "Policy Gate" }),
+  });
+  assert.doesNotThrow(() => provider.verifyBranchProtection());
+});
+
+test("GitHub provider rejects undeclared classic checks for a ruleset-only profile", () => {
+  const policy = readProtectedHeadRefreshRepositoryPolicy({ environment: {
+    PROTECTED_HEAD_REFRESH_CI_WORKFLOW: "integration.yml",
+    PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: '["Policy Gate"]',
+    PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: "[]",
+    PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: '["Policy Gate"]',
+    PROTECTED_HEAD_REFRESH_AUDITED_WORKFLOWS_JSON: '["auto-delivery.yml"]',
+  } });
+  const { provider } = branchProtectionHarness({
+    policy,
+    mainBranch: protectedMainBranch({
+      contexts: ["Unexpected Gate"],
+      checks: [{
+        context: "Unexpected Gate",
+        app_id: PROTECTED_HEAD_REFRESH_ACTIONS_APP_ID,
+      }],
+    }),
+    applicable: applicableProtectionRules({ context: "Policy Gate" }),
+  });
+  assert.throws(
+    () => provider.verifyBranchProtection(),
+    /lacks the exact enforced classic required checks/u,
+  );
+});
+
 test("GitHub provider binds synchronize probes and CI dispatch to exact operation argv", () => {
   const projection = normalizedProjection();
   const workflowRun = ciRun({ operationId: projection.operation_id });

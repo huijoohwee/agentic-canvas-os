@@ -66,7 +66,7 @@ export function buildResumePlan(input) {
   const observedAt = instant(input.observedAt, "resume observation instant");
   const controller = normalizeController(input.controller);
   const cloud = normalizeCloud(input.cloud);
-  const recovery = normalizeResumeRecovery(input.recovery, sourceState);
+  const recovery = normalizeResumeRecovery(input.recovery, sourceState, controller);
   const core = {
     schema: RESUME_PLAN_SCHEMA,
     action: "resume-admitted-empty-abandoned-owner-retirement",
@@ -189,8 +189,12 @@ function assertSourceReceiptsForResume(state) {
   }
 }
 
-function normalizeResumeRecovery(value, sourceState) {
+function normalizeResumeRecovery(value, sourceState, controller) {
   const source = object(value, "retirement resume recovery evidence"), plan = sourceState.plan;
+  const authoredLaneDisposition = source.authoredLaneDisposition ?? "source-exact";
+  if (!["source-exact", "protected-main-descendant"].includes(authoredLaneDisposition)) {
+    throw new Error("Retirement resume authored lane disposition is invalid.");
+  }
   const result = {
     sourceStateDigest: digest(source.sourceStateDigest, "resume source state digest"),
     sourcePlanDigest: digest(source.sourcePlanDigest, "resume source plan digest"),
@@ -202,16 +206,31 @@ function normalizeResumeRecovery(value, sourceState) {
     leaseDigest: digest(source.leaseDigest, "resume lease digest"),
     taskAuthorityBindingDigest: digest(source.taskAuthorityBindingDigest, "resume task authority binding digest"),
     subjectStateDigest: digest(source.subjectStateDigest, "resume subject state digest"),
+    authoredLaneDisposition,
     authoredLaneStateDigest: digest(source.authoredLaneStateDigest, "resume authored lane state digest"),
+    authoredLaneHeadSha: sha(source.authoredLaneHeadSha ?? plan.authoredLane.headSha,
+      "resume authored lane head"),
+    authoredLaneTreeSha: sha(source.authoredLaneTreeSha ?? plan.authoredLane.treeSha,
+      "resume authored lane tree"),
     remoteHeadSha: sha(source.remoteHeadSha, "resume remote head"),
   };
+  const sourceExact = result.authoredLaneDisposition === "source-exact"
+    && result.authoredLaneStateDigest === plan.authoredLane.stateDigest
+    && result.authoredLaneHeadSha === plan.authoredLane.headSha
+    && result.authoredLaneTreeSha === plan.authoredLane.treeSha;
+  const protectedMainDescendant = result.authoredLaneDisposition === "protected-main-descendant"
+    && plan.authoredLane.branch === "main"
+    && plan.authoredLane.headSha === plan.controller.headSha
+    && plan.authoredLane.treeSha === plan.controller.treeSha
+    && result.authoredLaneHeadSha === controller.headSha
+    && result.authoredLaneTreeSha === controller.treeSha;
   if (result.sourceStateDigest !== sourceState.stateDigest
     || result.sourcePlanDigest !== plan.planDigest || !result.claimAbsent
     || result.pullRequestState !== "CLOSED" || result.leaseStatus !== "active"
     || result.pullRequestClosedAt !== sourceState.receipts["pull-request-closed"].closedAt
     || result.leaseDigest !== plan.subject.lease.digest
     || result.subjectStateDigest !== plan.subject.stateDigest
-    || result.authoredLaneStateDigest !== plan.authoredLane.stateDigest
+    || (!sourceExact && !protectedMainDescendant)
     || result.remoteHeadSha !== plan.subject.remoteHeadSha) {
     throw new Error("Retirement resume evidence does not match the partial source journal.");
   }

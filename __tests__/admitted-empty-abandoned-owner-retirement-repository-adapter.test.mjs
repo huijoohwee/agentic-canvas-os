@@ -195,12 +195,12 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
   assert.equal(lease.status, "released");
 });
 
-test("partial remote retirement resumes only its task-authorized local release", async t => {
+test("partial remote retirement follows canonical authored main and replays terminally", async t => {
   const temporary = mkdtempSync(path.join(tmpdir(), "empty-owner-resume-"));
   t.after(() => rmSync(temporary, { recursive: true, force: true }));
-  const repository = "/repo", subject = "/subject", authored = "/authored";
+  const repository = "/repo", subject = "/subject", authored = path.resolve(".");
   const base = "1".repeat(40), head = "2".repeat(40), tree = "3".repeat(40);
-  const authoredHead = "4".repeat(40), branch = "agent/device/empty";
+  const branch = "agent/device/empty";
   const nodeId = "PR_7", reviewRequestId = `github-pull-request:${nodeId}`;
   const actor = { actorId: "actor:owner", deviceId: "device", sessionId: "session" };
   const cloudRepository = { repositoryId: "repository:target", canonicalRevision: base };
@@ -222,6 +222,7 @@ test("partial remote retirement resumes only its task-authorized local release",
   writeFileSync(taskAuthorityFile, "{}\n", { mode: 0o600 }); chmodSync(taskAuthorityFile, 0o600);
   let ledger = transition.ledger, retired = false, pullClosed = false;
   let controllerHead = "6".repeat(40), controllerTree = "7".repeat(40), unrelatedClaim = null;
+  let authoredBranch = "main", mergeBaseAccepted = true;
   let authorityProofs = 0, releaseAttempts = 0, closeCalls = 0, cloudRetireCalls = 0;
   let lease = { status: "active", device: actor.deviceId, sessionId: actor.sessionId, branch,
     worktreePath: subject, baseSha: base, fenceSha: head,
@@ -235,19 +236,28 @@ test("partial remote retirement resumes only its task-authorized local release",
     if (cwd === subject && command === "show -s --format=%P HEAD") return base;
     if (cwd === subject && command === `rev-parse ${base}^{tree}`) return tree;
     if (cwd === subject && command === "diff-tree --no-commit-id --name-only -r HEAD") return "";
-    if (cwd === authored && command === "branch --show-current") return "agent/device/authored";
-    if (cwd === authored && command === "rev-parse HEAD") return authoredHead;
-    if (cwd === authored && command === "rev-parse HEAD^{tree}") return "5".repeat(40);
+    if ((cwd === authored || cwd === "/foreign-authored") && command === "branch --show-current") {
+      return authoredBranch;
+    }
+    if ((cwd === authored || cwd === "/foreign-authored") && command === "rev-parse HEAD") {
+      return controllerHead;
+    }
+    if ((cwd === authored || cwd === "/foreign-authored") && command === "rev-parse HEAD^{tree}") {
+      return controllerTree;
+    }
     if (cwd === repository && command === `ls-remote --heads origin ${branch}`) {
       return `${head}\trefs/heads/${branch}`;
     }
-    if (command.startsWith("merge-base --is-ancestor ")) return "";
+    if (command.startsWith("merge-base --is-ancestor ")) {
+      if (!mergeBaseAccepted) throw new Error("not an ancestor");
+      return "";
+    }
     if (command === "rev-parse HEAD" || command === "rev-parse origin/main") return controllerHead;
     if (command === "rev-parse HEAD^{tree}") return controllerTree;
     throw new Error(`unexpected git ${cwd} ${command}`); };
   const gitRaw = (cwd, args) => { const command = args.join(" ");
     if (cwd === repository && command === "worktree list --porcelain -z") {
-      return `worktree ${subject}\0HEAD ${head}\0branch refs/heads/${branch}\0worktree ${authored}\0HEAD ${authoredHead}\0branch refs/heads/agent/device/authored\0`;
+      return `worktree ${subject}\0HEAD ${head}\0branch refs/heads/${branch}\0worktree ${authored}\0HEAD ${controllerHead}\0branch refs/heads/${authoredBranch}\0worktree /foreign-authored\0HEAD ${controllerHead}\0branch refs/heads/${authoredBranch}\0`;
     }
     if (command === "status --porcelain=v1 --untracked-files=all") return "";
     throw new Error(`unexpected raw git ${cwd} ${command}`); };
@@ -294,6 +304,24 @@ test("partial remote retirement resumes only its task-authorized local release",
   assert.equal(cloudRetireCalls, 1); assert.equal(closeCalls, 1); assert.equal(releaseAttempts, 1);
 
   controllerHead = "a".repeat(40); controllerTree = "b".repeat(40);
+  authoredBranch = "agent/device/foreign";
+  const wrongBranchAdapter = createRepositoryAdapter({ repository, subjectWorktree: subject,
+    authoredWorktree: authored, targetRepository: "owner/repo", ledgerRepository: "owner/ledger",
+    pullRequestNumber: 7, claimId, statePath: path.join(temporary, "wrong-branch.json"),
+    sourceStatePath, taskAuthorityFile }, dependencies);
+  assert.throws(() => wrongBranchAdapter.observeResume(), /canonical authored lane/u);
+  authoredBranch = "main";
+
+  const wrongPathAdapter = createRepositoryAdapter({ repository, subjectWorktree: subject,
+    authoredWorktree: "/foreign-authored", targetRepository: "owner/repo",
+    ledgerRepository: "owner/ledger", pullRequestNumber: 7, claimId,
+    statePath: path.join(temporary, "wrong-path.json"), sourceStatePath,
+    taskAuthorityFile }, dependencies);
+  assert.throws(() => wrongPathAdapter.observeResume(), /canonical authored lane/u);
+
+  mergeBaseAccepted = false;
+  assert.throws(() => wrongBranchAdapter.observeResume(), /not a protected descendant/u);
+  mergeBaseAccepted = true;
   const resumeAdapter = createRepositoryAdapter({ repository, subjectWorktree: subject,
     authoredWorktree: authored, targetRepository: "owner/repo", ledgerRepository: "owner/ledger",
     pullRequestNumber: 7, claimId, statePath: resumeStatePath, sourceStatePath,
@@ -302,6 +330,13 @@ test("partial remote retirement resumes only its task-authorized local release",
   const resumePlan = await resumeController.resumePlan();
   assert.equal(resumePlan.recovery.pullRequestClosedAt, "2026-08-23T11:00:00.000Z");
   assert.equal(resumePlan.recovery.taskAuthorityBindingDigest, lease.taskAuthority.bindingDigest);
+  assert.equal(resumePlan.recovery.authoredLaneDisposition, "protected-main-descendant");
+  assert.equal(resumePlan.recovery.authoredLaneHeadSha, controllerHead);
+
+  controllerHead = "e".repeat(40); controllerTree = "f".repeat(40);
+  await assert.rejects(resumeController.resumeRun({ planDigest: resumePlan.planDigest,
+    authorization: resumePlan.exactAuthorization }), /evidence drifted|controller drifted/u);
+  controllerHead = "a".repeat(40); controllerTree = "b".repeat(40);
 
   const unrelatedActor = { actorId: "actor:peer", deviceId: "peer-device", sessionId: "peer-session" };
   const unrelated = applyCloudTransition({ ledger, action: "claim", actor: unrelatedActor,

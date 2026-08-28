@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5663,
-  "headDigest": "40c8a1e6026e06bdbb35e68cb2d7f482eb56131aed50c96d3a62b3e8ee0d65a0",
+  "sequence": 5664,
+  "headDigest": "b40c4a2d3e5cb1d1efad233bc0d1ed12bcbc85bf8b4a937bdc6c0398e51427bf",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -288170,6 +288170,50 @@
       },
       "claimDigest": "b6a6b32fd9611cd6a88d336234b56cf41fc9d970a477ee6c795a3ac5412906d5",
       "digest": "40c8a1e6026e06bdbb35e68cb2d7f482eb56131aed50c96d3a62b3e8ee0d65a0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5664,
+      "parentDigest": "40c8a1e6026e06bdbb35e68cb2d7f482eb56131aed50c96d3a62b3e8ee0d65a0",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "fae4220dc755b76930b5dbb076a26dd1b3481f1b634cebeb41a80f9641728ea1",
+      "idempotencyKey": "327e8fb4e001202821e4a141d81d2d87755ca45aff6aa2060c6531f7637c1b05",
+      "requestDigest": "401bf9d67cf83024690badced61e9de58a1eab1d7302a751f6afa7c8f0bf35a7",
+      "evaluationTime": "2026-08-28T07:27:26.000Z",
+      "claimCore": {
+        "claimId": "fae4220dc755b76930b5dbb076a26dd1b3481f1b634cebeb41a80f9641728ea1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2417abfbaa6269dc67638915e602270a8d01f76e91b7cc567965cdb2640bbdd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4f7d2f5398eb0195b7bb8ce16b09e3856d4326bf3dab4de3864a29f4c760489d",
+        "canonicalBaseRevision": "93e18fea38323f2544f16ea00912d50008e0d87f",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/reviewed-ci-revision-controller.test.mjs",
+          "path:memory/2026-08.md",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:todo/2026-08/refresh-merge-attribution.md",
+          "semantic:refresh-merge-attribution"
+        ],
+        "writeSetDigest": "75fe9c8300da6119a5a0a3da5f3345c7b34bb5c1b060ab5af0b5f23e544cc75e",
+        "laneRevision": "8cafab89a035b7a6bd2991cd8e6597e76e84f278",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T07:56:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBTAs-w",
+        "predecessorClaimId": "11cca0579fd4db5faf2f63f8417c7c219bc5226047e6176072aabba3c8799113",
+        "eligibleSince": "2026-08-28T07:25:24.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-28T07:26:43.000Z"
+      },
+      "claimDigest": "cf892c92fb3f25121a7097e5cc5489ad2acd267af06dd201c0f34b9b5a103a7f",
+      "digest": "b40c4a2d3e5cb1d1efad233bc0d1ed12bcbc85bf8b4a937bdc6c0398e51427bf"
     }
   ]
 }

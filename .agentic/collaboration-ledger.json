@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5630,
-  "headDigest": "f47c70fc27b77da2bcaf2b478cf782d607ac5fa14615bc060ec1cca30f4c7432",
+  "sequence": 5631,
+  "headDigest": "887369c22c7b4470abc3397088681c884c0b51b5ad1c1ce299a067cb3123c70e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -286029,6 +286029,52 @@
       },
       "claimDigest": "5320c94bb0391fe8baf023f5d574fec28ab155dedf8bad3b0b1800bb75783900",
       "digest": "f47c70fc27b77da2bcaf2b478cf782d607ac5fa14615bc060ec1cca30f4c7432"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5631,
+      "parentDigest": "f47c70fc27b77da2bcaf2b478cf782d607ac5fa14615bc060ec1cca30f4c7432",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "32b32c27545464be43fed8f298953f758b3851fa4d7ed1d1bf9fa27e2a8128a1",
+      "idempotencyKey": "2953592f0c8f97c64222576a899d464b49b2eca5adca4e46790043f35d4a448b",
+      "requestDigest": "be969eb6f34c1e0489c70ad5a50f75e1a33472d49f81107980c6cb4e03eb3f75",
+      "evaluationTime": "2026-08-28T04:11:26.000Z",
+      "claimCore": {
+        "claimId": "32b32c27545464be43fed8f298953f758b3851fa4d7ed1d1bf9fa27e2a8128a1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2417abfbaa6269dc67638915e602270a8d01f76e91b7cc567965cdb2640bbdd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c8276cff048e5cbce379abdc3b1dfdc621ad6161fb97191e07f4c6f44f647df4",
+        "canonicalBaseRevision": "fc57ade915990330e851a97ea0c570fa5f474af2",
+        "declaredWriteScope": [
+          "path:__tests__/local-runtime.test.mjs",
+          "path:memory/2026-08.md",
+          "path:scripts/local-runtime-candidate-lib.mjs",
+          "path:scripts/local-runtime-lib.mjs",
+          "path:scripts/local-runtime-session-lib.mjs",
+          "path:scripts/local-runtime-supervisor-lib.mjs",
+          "path:scripts/local-runtime.mjs",
+          "path:todo/2026-08/local-runtime-split.md",
+          "semantic:local-runtime-split"
+        ],
+        "writeSetDigest": "957a1a07d91627e75a6720fc3ac89228361523f132f9ee947bfa13978a084504",
+        "laneRevision": "79956d039129d7c874d784030344a8ecde050fc6",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T04:40:34.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBSs1sg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "2e1b883fc1aa380d7bc5ae5dfce1885e5e6115cc4806412b64401edcaebcf9e0",
+      "digest": "887369c22c7b4470abc3397088681c884c0b51b5ad1c1ce299a067cb3123c70e"
     }
   ]
 }

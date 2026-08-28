@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5624,
-  "headDigest": "c107cb1e00ffee792d867f3ed46f27e22586a165854d6f2faaa1762a390649e2",
+  "sequence": 5625,
+  "headDigest": "541611669e39246f154eda10b6d578de79d349c2d58baf9ee88eda97b06abd15",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -285699,6 +285699,50 @@
       },
       "claimDigest": "5a754413516afd1156864335f342cd65f9b9fe9cbcc8537bde1d95f365980284",
       "digest": "c107cb1e00ffee792d867f3ed46f27e22586a165854d6f2faaa1762a390649e2"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5625,
+      "parentDigest": "c107cb1e00ffee792d867f3ed46f27e22586a165854d6f2faaa1762a390649e2",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "fd8971d68b402c42e39020bc83263e4d04d5fa36e7d79a345f6ca29cc5021d2e",
+      "idempotencyKey": "4795aed8293511dfe56952419ed604db50849a6ae82491e589aec72068fdad50",
+      "requestDigest": "41bbce1443b1fd6372331803d1d1235a9b99386a15b7a9ed8ac90a818bd0871a",
+      "evaluationTime": "2026-08-28T03:56:02.000Z",
+      "claimCore": {
+        "claimId": "fd8971d68b402c42e39020bc83263e4d04d5fa36e7d79a345f6ca29cc5021d2e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2417abfbaa6269dc67638915e602270a8d01f76e91b7cc567965cdb2640bbdd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:dc6a69f5b1d89cbcfc381d85432342721826ae873a3cab70e5c97e0f443b684c",
+        "canonicalBaseRevision": "06cab88b0938b40d882be181cae0e8492e380f24",
+        "declaredWriteScope": [
+          "path:__tests__/local-runtime.test.mjs",
+          "path:memory/2026-08.md",
+          "path:scripts/local-runtime-candidate-lib.mjs",
+          "path:scripts/local-runtime-lib.mjs",
+          "path:scripts/local-runtime.mjs",
+          "path:todo/2026-08/file-split-remediation.md",
+          "semantic:file-split-remediation"
+        ],
+        "writeSetDigest": "1369e5ce1f814e74addb4d9af98284bd385030a1bcb18603e1f33c55d5ece6d1",
+        "laneRevision": "06cab88b0938b40d882be181cae0e8492e380f24",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T04:26:02.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "86f7be9f1b6d8fdb727b5133e99de70baa94e54c251735b02786bb7c7cb09f04",
+      "digest": "541611669e39246f154eda10b6d578de79d349c2d58baf9ee88eda97b06abd15"
     }
   ]
 }

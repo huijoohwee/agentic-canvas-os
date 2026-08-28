@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5603,
-  "headDigest": "c737a97ec901795f82aae00e50a4694bec81cad81fab9f3f688899345cfa9b64",
+  "sequence": 5604,
+  "headDigest": "9c543993f3c5afc72922c5da35409ba40bf194e544458d336a8e931934835881",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -284451,6 +284451,63 @@
       },
       "claimDigest": "b9e32d1311594abc2ef5c294195522da6e7f364838e544329296ab4adcd3aa4f",
       "digest": "c737a97ec901795f82aae00e50a4694bec81cad81fab9f3f688899345cfa9b64"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5604,
+      "parentDigest": "c737a97ec901795f82aae00e50a4694bec81cad81fab9f3f688899345cfa9b64",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "267c8dba7dcb11511678421d1aee90629b0a38e95b1a106f342afbffc2bbe1e6",
+      "idempotencyKey": "842b8a268e3078c7899d33e754b6e3a36ad48515101b9c700542a04dba8db252",
+      "requestDigest": "267a781ee7101a9b61318152498a0e16b63d64ab961921e6d4c8c2c78709041a",
+      "evaluationTime": "2026-08-28T02:46:34.000Z",
+      "claimCore": {
+        "claimId": "267c8dba7dcb11511678421d1aee90629b0a38e95b1a106f342afbffc2bbe1e6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:2417abfbaa6269dc67638915e602270a8d01f76e91b7cc567965cdb2640bbdd0",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0fc8fcc8bbf3bdb8416686d7460ee72596505bf8f546a8f559849759c4fbb943",
+        "canonicalBaseRevision": "893f969304a410b0bfaa7fb1dce103beab1f5baf",
+        "declaredWriteScope": [
+          "path:.kiro/specs/native-skill-creation-harness/design.md",
+          "path:.kiro/specs/native-skill-creation-harness/requirements.md",
+          "path:.kiro/specs/native-skill-creation-harness/tasks.md",
+          "path:__tests__/cross-repository-coordination-task.test.mjs",
+          "path:docs/NATIVE-SKILL-HARNESS-OPERATOR-INSTRUCTION-2026-08-17.md",
+          "path:docs/NATIVE-SKILL-HARNESS.md",
+          "path:memory/2026-08.md",
+          "path:todo/2026-08/path-neutralization.md",
+          "semantic:path-neutralization"
+        ],
+        "writeSetDigest": "beec6aeb92064fb52d42467e0affbdb74bb402a450c0df3b390b42b6f91e89a8",
+        "laneRevision": "bf150b05f74817d45117840c498d0c80568a23cf",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 2,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T03:07:11.000Z",
+        "evidenceDigest": "ab086e93d74de0589875ff59845cd2e156b5b3ec7336b25b2ad0355f0031a4e7",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBSRgvQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "bf150b05f74817d45117840c498d0c80568a23cf",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBSRgvQ",
+          "focusedEvidenceDigest": "ab086e93d74de0589875ff59845cd2e156b5b3ec7336b25b2ad0355f0031a4e7",
+          "dependencyClosureDigest": "33133e19f5dc0b6b3afeac526d450a4c87bbd3ea8ea2b62bd00582b4e701ff29",
+          "namedChecksDigest": "a921c877d81aff2ef7e717a4cbc78b1ada1fc927c56bb70df18d7cab69a14c0a",
+          "handoffEvidenceDigest": "a4ec20411fc7313f23fe42f6468d824ec631c97f6a6f94bc6f7277fbaf82778b",
+          "operatorDecisionDigest": "b946b60e2548e2ffa359d76d6566e5107604af05e64ffc878167c17e3d85a7f1",
+          "integrationIntentDigest": "086895543ca2209f7920b48ccd585a0ec6dfc7313a32a99d4d50ad89f5ae060f",
+          "integratedAt": "2026-08-28T02:46:34.000Z"
+        }
+      },
+      "claimDigest": "45f5aae5dec930d7fb207c5f344aa2168eda4b1e3ef630874d1372f43e74867b",
+      "digest": "9c543993f3c5afc72922c5da35409ba40bf194e544458d336a8e931934835881"
     }
   ]
 }

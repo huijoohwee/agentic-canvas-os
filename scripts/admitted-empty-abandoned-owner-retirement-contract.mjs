@@ -124,6 +124,11 @@ function normalizeSubject(value) {
       headSha: sha(pull.headSha, "pull request head"), baseBranch: text(pull.baseBranch, "pull request base branch"),
       baseSha: sha(pull.baseSha, "pull request base") },
   };
+  const legacyClaimProjection = result.claim.laneRevision === result.baseSha
+    && result.claim.reviewRequestId === null;
+  const pullRequestBoundFenceProjection = result.claim.laneRevision === result.headSha
+    && result.claim.laneRevision === result.lease.fenceSha
+    && result.claim.reviewRequestId === `github-pull-request:${result.pullRequest.nodeId}`;
   if (!result.clean || !result.registered || result.parentShas.length !== 1 || result.changedPaths.length !== 0
     || result.headTreeSha !== result.baseTreeSha || result.parentShas[0] !== result.baseSha
     || result.headSha !== result.remoteHeadSha || result.lease.status !== "active"
@@ -131,8 +136,8 @@ function normalizeSubject(value) {
     || result.lease.worktreePath !== result.path || result.lease.baseSha !== result.baseSha
     || result.lease.fenceSha !== result.headSha || result.lease.claimId !== result.claim.claimId
     || result.claim.state !== "dormant-preserved" || result.claim.writeAuthority
-    || !result.claim.scopeReserved || result.claim.laneRevision !== result.baseSha
-    || result.claim.canonicalBaseRevision !== result.baseSha || result.claim.reviewRequestId !== null
+    || !result.claim.scopeReserved || result.claim.canonicalBaseRevision !== result.baseSha
+    || (!legacyClaimProjection && !pullRequestBoundFenceProjection)
     || result.pullRequest.state !== "OPEN" || !result.pullRequest.isDraft || result.pullRequest.mergedAt !== null
     || result.pullRequest.headBranch !== result.branch || result.pullRequest.headSha !== result.headSha
     || result.pullRequest.baseBranch !== "main" || result.pullRequest.baseSha !== result.baseSha) {

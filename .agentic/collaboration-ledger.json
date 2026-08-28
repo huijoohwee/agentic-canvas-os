@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5741,
-  "headDigest": "dc6ea99309236dcbe29d3407168582a082a4ae1d13aa36f1e79924602e8d3110",
+  "sequence": 5742,
+  "headDigest": "da423e6dbdcdbd3da0591271207e640a52c603ee5af656ce41f3f530f266b896",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -292038,6 +292038,70 @@
       },
       "claimDigest": "7bc8f4de0490000ea0f808998839773f05b9afda2fc354a9675430de9c19cf18",
       "digest": "dc6ea99309236dcbe29d3407168582a082a4ae1d13aa36f1e79924602e8d3110"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5742,
+      "parentDigest": "dc6ea99309236dcbe29d3407168582a082a4ae1d13aa36f1e79924602e8d3110",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "f968543bf33427a0689f2c5af9a79bfae44e445256c1cbb412bfed0f5f5d25cf",
+      "idempotencyKey": "e31a874a3e8c45548fbed014af1c6da9602c60ef4f161bf15f5641626c8aaeb9",
+      "requestDigest": "6e2c92c5f4eb323d55d31234bf7e343c6b6a6653f611a204cafd40d41a25410d",
+      "evaluationTime": "2026-08-28T11:38:14.000Z",
+      "claimCore": {
+        "claimId": "f968543bf33427a0689f2c5af9a79bfae44e445256c1cbb412bfed0f5f5d25cf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:c2c8488d2b0327696c61d3cd24d1e80a1a1971a8ee472042cdca901a928c91dc",
+        "canonicalBaseRevision": "fc0274f69347852c7dd96453d993439a945e3b2b",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:docs/documents/git-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-budget.test.mjs",
+          "path:scripts/__tests__/git-guidelines-checker.test.mjs",
+          "path:scripts/__tests__/git-guidelines-input-resolver.test.mjs",
+          "path:scripts/__tests__/git-guidelines-modules.test.mjs",
+          "path:scripts/__tests__/git-guidelines-rule-contract.test.mjs",
+          "path:scripts/check-git-guidelines.mjs",
+          "path:scripts/lib/git-guidelines/commit-attribution.mjs",
+          "path:scripts/lib/git-guidelines/content-contracts.mjs",
+          "path:scripts/lib/git-guidelines/input-resolver.mjs",
+          "semantic:git-guidelines-refresh-proof"
+        ],
+        "writeSetDigest": "bf76eb304ed24528f02afa3cdaeac58a1a763941ef84ddbfe8be0f7893795fd0",
+        "laneRevision": "d4d258f4df609dbce6e7c8ebac9a34219e61f242",
+        "leaseEpoch": 1,
+        "transitionCounter": 8,
+        "heartbeatCounter": 2,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T12:08:14.000Z",
+        "evidenceDigest": "d8ac285aeea49be48f1065491362ecc23db5a029b98085fa21d071ba0e86d8d5",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBTf-dw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "d4d258f4df609dbce6e7c8ebac9a34219e61f242",
+          "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBTf-dw",
+          "focusedEvidenceDigest": "d8ac285aeea49be48f1065491362ecc23db5a029b98085fa21d071ba0e86d8d5",
+          "dependencyClosureDigest": "3292ec7834b965a41465f0491ebbe3c775a6f297e5644a23da9039d47e558422",
+          "namedChecksDigest": "b0e6ba49d1001e536f3130575509bc01ac8726b9c9acc047c7d6d8999049348b",
+          "handoffEvidenceDigest": "6f14a8b8b74f3f558112ca65950e65646932033d96727ae8831c85f4308a3a91",
+          "operatorDecisionDigest": "02f91c1b8d2d869436eb0a9651ad077e08331e444a705df1651f035d63af1684",
+          "integrationIntentDigest": "70700a46f7423ef3ca4b17e23c3430e430ac187a4d31bf8d2b506ca9b1269ab4",
+          "integratedAt": "2026-08-28T08:15:03.000Z"
+        },
+        "recovery": {
+          "evidenceDigest": "be59f285b90802870af664026cbd165039a17cae5754599ea18e05ace3f8da5c",
+          "recoveredAt": "2026-08-28T11:38:14.000Z"
+        }
+      },
+      "claimDigest": "79894861e6c276256a28d9933e965714610200cac8437647ef98d8fe6a4f6cb6",
+      "digest": "da423e6dbdcdbd3da0591271207e640a52c603ee5af656ce41f3f530f266b896"
     }
   ]
 }

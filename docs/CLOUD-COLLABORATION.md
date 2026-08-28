@@ -2,7 +2,7 @@
 title: "Cloud Collaboration Contract"
 graphId: "md:agentic-cloud-collaboration"
 doc_type: "Runtime Contract"
-date: "2026-08-09"
+date: "2026-08-28"
 lang: "en-US"
 schema: "agentic-cloud-collaboration-contract/v2"
 frontmatter_contract: "required"
@@ -13,10 +13,11 @@ runtime_claim: "four root operations coordinate disjoint multi-device authoring 
 runtime_owner: "../scripts/cloud-collaboration-contract.mjs; ../scripts/cloud-collaboration-primitives.mjs; ../scripts/github-cloud-collaboration-mapping.mjs; ../scripts/github-cloud-collaboration-adapter.mjs; ../scripts/cloud-collaboration.mjs; ../scripts/cloud-authority-scope-expansion-lineage-contract.mjs; ../scripts/cloud-authority-scope-expansion-lineage-migration.mjs"
 runtime_proof: "../__tests__/cloud-collaboration-contract.test.mjs; ../__tests__/cloud-collaboration-cli.test.mjs; ../__tests__/github-cloud-collaboration-adapter.test.mjs; ../__tests__/cloud-collaboration-projection.test.mjs; ../__tests__/cloud-authority-scope-expansion-lineage-migration.test.mjs"
 guideline_repository: "huijoohwee/huijoohwee.github.io"
-guideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"
-guideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"
-guideline_source_digest: "ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd"
-git_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5"
+guideline_source_revision: "3a58c0648642d87ba912747396ef12186d3913be"
+guideline_source_tree: "da3224f9431eac58def323372336660093e27328"
+guideline_source_digest: "4173c4280e0125ad773362f586db4247480bd708f791dcb83b68404e8a8d2cf7"
+git_companion_digest: "46fb069cc6b053157274e5b51837c219646c08034cb92c3193ee2b4bc37b26e1"
+cloud_collaboration_source_digest: "9a949763d097dd9c0b1bb74de846ee48521152e4c977ef2b0f7bc34d00dc5c84"
 publish_policy: "Dev-only; no protected integration, Production, publication, or Cloudflare authority"
 ---
 
@@ -91,20 +92,36 @@ a replay key for different intent fails closed. The protected source ref and
 exact pull-request subject are also re-resolved before every mutation attempt;
 drift aborts the operation instead of authorizing a stale candidate.
 
-For `claim`, a non-null caller `expectedLedgerDigest` is an immutable parent
-seal rather than a retry hint. A new claim requires the first and every retried
-snapshot head to equal that seal. A missing ledger is stale and is not
-bootstrapped. If the claim already committed, replay is allowed only when the
-same idempotency entry is a `claim` whose `parentDigest` equals the seal; normal
-action and semantic request-digest replay checks still apply. A competing head
-advance cannot be rebased. When the field is absent or null, the adapter retains
-ordinary dynamic-head bootstrap and bounded CAS retry behavior. Continuation,
-integration, and retirement retain ordinary dynamic ledger CAS; their exact
-claim fence and transition counter prevent same-ID transition drift.
+The global head is the physical audit parent for append-only CAS, not a global
+semantic lock or Stable Plan Identity. For `claim`, a non-null caller
+`expectedLedgerDigest` records an observed ancestor. The reducer reconstructs
+that ledger prefix and compares a stable conflict-set digest over the immutable
+claim subject plus overlapping, same-work-item, and predecessor-related claim
+lineages. If that conflict set is unchanged, an unrelated winning append is
+accepted and the same idempotent transition is re-parented to the current audit
+head. If the conflict set changed, or the observed digest is not in the current
+ancestry, the claim fails as stale. A claim against a missing observed ledger
+also remains stale and is not bootstrapped.
+
+The reducer emits one digest-bound `agentic-cloud-claim-conflict-decision/v1`
+classification for each accepted claim: `current`, `disjoint-rebase`,
+`overlapping`, or `idempotent-replay`. A changed related set raises the typed
+`claim_conflict_set_changed` error; missing ancestry raises the typed
+`claim_observation_unknown` error. The provider receipt exposes the disposition
+and decision digest, while transport ordering and exact global inventory parity
+remain non-authoritative.
+
+An already committed claim replays by exact action, idempotency key, and
+semantic request digest regardless of later unrelated audit-head movement; a
+different intent still fails as an idempotency conflict. When the field is
+absent or null, the adapter retains ordinary dynamic-head bootstrap and bounded
+CAS retry behavior. Continuation, integration, and retirement retain exact
+current-head CAS plus their claim fence and transition counter, so same-lineage
+transition drift remains fail-closed.
 
 A controller adopting a progressed successor must not infer that claim's
-genesis from its current projection alone. It replays the original sealed claim
-key, requires the original waiting claim and owner projection, and replays the
+genesis from its current projection alone. It replays the original idempotent
+claim key, requires the original waiting claim and owner projection, and replays the
 deterministic source retirement at the source claim fence sealed by its durable
 intent. The retirement uses dynamic ledger CAS rather than the historical claim
 parent seal; its idempotency key and claim fence prove that a later or unrelated

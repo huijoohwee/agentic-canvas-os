@@ -4,6 +4,7 @@ import path from "node:path";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 import { createAdmissionLeaseProjection } from "./scoped-lane-admission-lib.mjs";
+import { reconcileIndependentPeerOperations } from "./scoped-lane-peer-reconciliation.mjs";
 import {
   cleanupEmptyTaskWorktreeContainers,
   deriveTaskWorktreeContainers,
@@ -466,6 +467,10 @@ export function assertPreservationReceiptIntegrity({
     throw new Error("Admission finalization requires a Preservation Receipt.");
   }
   const { receiptDigest, ...core } = receipt;
+  const peerReconciliation = reconcileIndependentPeerOperations({
+    report,
+    verification,
+  });
   const expected = {
     schema: "agentic-lane-preservation-result/v1",
     status: "preserved",
@@ -477,16 +482,25 @@ export function assertPreservationReceiptIntegrity({
     candidateLeaseDigest: digestValue(lease),
     finalRemoteClaimInventoryDigest:
       verification?.remoteClaimInventoryDigest,
+    finalPeerClaimSetDigest:
+      peerReconciliation.finalPeerClaimSetDigest,
+    peerOperationReceipts:
+      peerReconciliation.peerOperationReceipts,
+    peerOperationReceiptDigests:
+      peerReconciliation.peerOperationReceiptDigests,
     finalLedgerRevision: verification?.ledgerRevision,
     finalLedgerDigest: verification?.ledgerDigest,
     cloudVerificationReceiptDigest: verification?.receiptDigest,
     preservedPaths: report.lanes.map(lane => lane.path).sort(),
-    peerDisposition: "unchanged",
+    peerDisposition: peerReconciliation.peerDisposition,
     causality: "candidate-only",
   };
   if (
     !DIGEST_PATTERN.test(String(receipt.candidateCreateRegisterResultDigest || ""))
     || !DIGEST_PATTERN.test(String(receipt.candidateStateDigest || ""))
+    || !DIGEST_PATTERN.test(String(receipt.finalPeerClaimSetDigest || ""))
+    || !Array.isArray(receipt.peerOperationReceipts)
+    || !Array.isArray(receipt.peerOperationReceiptDigests)
     || !DIGEST_PATTERN.test(String(receiptDigest || ""))
     || digestValue(lease?.admission)
       !== digestValue(createAdmissionLeaseProjection(report))

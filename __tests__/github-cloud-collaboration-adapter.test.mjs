@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { applyCloudTransition } from "../scripts/cloud-collaboration-contract.mjs";
 import {
   createGitHubCloudCollaborationAdapter,
   shouldUseSmartGitLedgerTransport,
@@ -34,6 +35,13 @@ test("adapter bootstraps the ledger, advances only by non-forced CAS, and replay
   assert.equal(first.claim.claimIdentitySchema, "agentic-cloud-collaboration-entry/v2");
   assert.equal(first.claim.workItemId, pseudonymousIdentifier("work-item", input.workItemId));
   assert.equal(first.replayed, false);
+  assert.equal(first.claimConflictDecisionSchema,
+    "agentic-cloud-claim-conflict-decision/v1");
+  assert.equal(first.claimConflictDisposition, "current");
+  assert.match(first.claimConflictDecisionDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(first.receipt.claimConflictDisposition, "current");
+  assert.equal(first.receipt.claimConflictDecisionDigest,
+    first.claimConflictDecisionDigest);
   assert.match(first.ledgerRevision, /^[0-9a-f]{40}$/u);
   assert.match(first.claimDigest, /^[0-9a-f]{64}$/u);
   assert.equal(JSON.stringify(first).includes(input.deviceId), false);
@@ -144,6 +152,7 @@ test("adapter preserves ordinary dynamic claim CAS when the caller seal is absen
     const result = await createAdapter(github).execute("claim", input);
     assert.equal(result.ok, true);
     assert.equal(result.attempts, 2);
+    assert.equal(result.claimConflictDisposition, "current");
     assert.equal(github.calls.filter(call => call.method === "PATCH").length, 2);
   }
 });
@@ -175,7 +184,7 @@ test("adapter retries a sealed claim while a same-parent conflict leaves its sea
   assert.equal(candidates.length, 2);
   assert.ok(candidates.every(ledger => ledger.entries.at(-1).parentDigest === sealed));
 });
-test("adapter does not rebase a sealed claim after a competing head wins its CAS", async () => {
+test("adapter blocks observed-head rebase after the competing conflict set changes", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const predecessor = await adapter.execute("claim", claimInput());
@@ -186,13 +195,40 @@ test("adapter does not rebase a sealed claim after a competing head wins its CAS
   await assert.rejects(
     adapter.execute("claim",
       successorClaimInput(predecessor, sealed, "sealed-competing-head")),
-    /expectedLedgerDigest is stale/u,
+    /expectedLedgerDigest conflict set is stale/u,
   );
   assert.equal(github.calls.filter(call => call.method === "PATCH").length,
     patchesBefore + 1);
   assert.equal(github.createdLedgerValues().length, candidatesBefore + 1);
 });
-test("adapter rejects a stale sealed claim before creating a ledger candidate", async () => {
+test("adapter retries a lost CAS by re-parenting across a disjoint winning claim", async () => {
+  const github = createFakeGitHub();
+  const adapter = createAdapter(github);
+  const predecessor = await adapter.execute("claim", claimInput());
+  const observedHead = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  github.queueConflict(409, { advanceLedger: "disjoint" });
+  const result = await adapter.execute(
+    "claim",
+    successorClaimInput(predecessor, observedHead, "disjoint-cas-winner-successor"),
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.attempts, 2);
+  const committed = github.createdLedgerValues().at(-1);
+  const winningPeer = committed.entries.at(-2);
+  const candidate = committed.entries.at(-1);
+  assert.equal(winningPeer.claimCore.workItemId, "work-item:disjoint-cas-winner-1");
+  assert.equal(candidate.parentDigest, winningPeer.digest);
+  assert.equal(result.acceptedAuditParentDigest, winningPeer.digest);
+  assert.equal(result.claimConflictDisposition, "disjoint-rebase");
+  assert.match(result.conflictSetDigest, /^[0-9a-f]{64}$/u);
+  assert.match(result.claimConflictDecisionDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(result.receipt.acceptedAuditParentDigest, winningPeer.digest);
+  assert.equal(result.receipt.conflictSetDigest, result.conflictSetDigest);
+  assert.equal(result.receipt.claimConflictDisposition, "disjoint-rebase");
+  assert.equal(result.receipt.claimConflictDecisionDigest,
+    result.claimConflictDecisionDigest);
+});
+test("adapter rebases an observed claim across a disjoint committed peer", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const predecessor = await adapter.execute("claim", claimInput());
@@ -204,12 +240,15 @@ test("adapter rejects a stale sealed claim before creating a ledger candidate", 
   }));
   const writesBefore = github.mutationCount();
   const candidatesBefore = github.createdLedgerValues().length;
-  await assert.rejects(
-    adapter.execute("claim", successorClaimInput(predecessor, sealed, "stale-sealed-successor")),
-    /expectedLedgerDigest is stale/u,
+  const latestHead = (await adapter.execute("status", { targetRepository })).ledgerDigest;
+  const result = await adapter.execute(
+    "claim",
+    successorClaimInput(predecessor, sealed, "disjoint-observed-successor"),
   );
-  assert.equal(github.mutationCount(), writesBefore);
-  assert.equal(github.createdLedgerValues().length, candidatesBefore);
+  assert.equal(result.ok, true);
+  assert.equal(github.mutationCount(), writesBefore + 4);
+  assert.equal(github.createdLedgerValues().length, candidatesBefore + 1);
+  assert.equal(github.createdLedgerValues().at(-1).entries.at(-1).parentDigest, latestHead);
 });
 test("adapter replays an exact sealed claim after ledger and protected-head advance without writes", async () => {
   const github = createFakeGitHub();
@@ -229,11 +268,12 @@ test("adapter replays an exact sealed claim after ledger and protected-head adva
   const writesBefore = github.mutationCount();
   const replay = await adapter.execute("claim", input);
   assert.equal(replay.replayed, true);
+  assert.equal(replay.claimConflictDisposition, "idempotent-replay");
   assert.equal(replay.claimDigest, claimed.claimDigest);
   assert.equal(replay.ledgerRevision, later.ledgerRevision);
   assert.equal(github.mutationCount(), writesBefore);
 });
-test("adapter rejects an idempotent claim replay whose entry parent differs from its seal", async () => {
+test("adapter replays an idempotent claim regardless of a later observation head", async () => {
   const github = createFakeGitHub();
   const adapter = createAdapter(github);
   const predecessor = await adapter.execute("claim", claimInput());
@@ -242,10 +282,11 @@ test("adapter rejects an idempotent claim replay whose entry parent differs from
   await adapter.execute("claim", input);
   const wrongSeal = (await adapter.execute("status", { targetRepository })).ledgerDigest;
   const writesBefore = github.mutationCount();
-  await assert.rejects(
-    adapter.execute("claim", { ...input, expectedLedgerDigest: wrongSeal }),
-    /expectedLedgerDigest is stale/u,
-  );
+  const replay = await adapter.execute("claim", {
+    ...input,
+    expectedLedgerDigest: wrongSeal,
+  });
+  assert.equal(replay.replayed, true);
   assert.equal(github.mutationCount(), writesBefore);
 });
 test("adapter retains semantic and action idempotency checks for a parent-matched sealed replay", async () => {
@@ -787,7 +828,11 @@ function createFakeGitHub({
         if (advancePullOnConflict) pullRequest = pullRequestValue({
           head: { ref: "agent/device/cloud-scope", sha: "5".repeat(40), repo: { full_name: targetRepository } },
         });
-        if (advanceLedger) advanceLedgerWithCompetingEntry(body.sha, conflictIndex);
+        if (advanceLedger === "disjoint") {
+          advanceLedgerWithDisjointEntry(conflictIndex, date);
+        } else if (advanceLedger) {
+          advanceLedgerWithCompetingEntry(body.sha, conflictIndex);
+        }
         return response(status, { message: "Update is not a fast forward" }, date);
       }
       const key = `${ledgerRepository}:agentic/collaboration-ledger`;
@@ -883,6 +928,49 @@ function createFakeGitHub({
     const commitSha = objectSha();
     const key = `${ledgerRepository}:agentic/collaboration-ledger`;
     commits.set(commitSha, { tree: rootTreeSha, parents: [refs.get(key)] });
+    refs.set(key, commitSha);
+  }
+  function advanceLedgerWithDisjointEntry(ordinal, date) {
+    const key = `${ledgerRepository}:agentic/collaboration-ledger`;
+    const parentRevision = refs.get(key);
+    const ledger = JSON.parse(ledgerContentForRevision(parentRevision));
+    const evaluationTime = new Date(date).toISOString();
+    const transition = applyCloudTransition({
+      ledger,
+      action: "claim",
+      actor: {
+        actorId: "github-user:99",
+        deviceId: "device:disjoint-cas-winner",
+        sessionId: "session:disjoint-cas-winner",
+      },
+      repository: {
+        repositoryId: "github-repository:R_target",
+        canonicalRevision: targetMainSha,
+      },
+      evaluationTime,
+      request: {
+        workItemId: `work-item:disjoint-cas-winner-${ordinal}`,
+        canonicalBaseRevision: targetMainSha,
+        declaredWriteScope: [`path:docs/disjoint-cas-winner-${ordinal}.md`],
+        laneRevision: targetMainSha,
+        leaseEpoch: 1,
+        expiresAt: new Date(Date.parse(evaluationTime) + 3_600_000).toISOString(),
+        expectedLedgerDigest: ledger.headDigest,
+        idempotencyKey: `disjoint-cas-winner-${ordinal}`,
+      },
+    });
+    const blobSha = objectSha();
+    blobs.set(blobSha, `${JSON.stringify(transition.ledger, null, 2)}\n`);
+    const directoryTreeSha = objectSha();
+    trees.set(directoryTreeSha, { entries: [{
+      path: "collaboration-ledger.json", mode: "100644", type: "blob", sha: blobSha,
+    }] });
+    const rootTreeSha = objectSha();
+    trees.set(rootTreeSha, { entries: [{
+      path: ".agentic", mode: "040000", type: "tree", sha: directoryTreeSha,
+    }] });
+    const commitSha = objectSha();
+    commits.set(commitSha, { tree: rootTreeSha, parents: [parentRevision] });
     refs.set(key, commitSha);
   }
   function ledgerContentForRevision(revision) {

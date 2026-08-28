@@ -210,7 +210,7 @@ export function selectVerificationClaim(claims, request) {
   throw new Error("Cloud verification matched more than one current claim.");
 }
 
-export function projectPublicClaim(claim) {
+export function projectPublicClaim(claim, { includeAuditMetadata = false } = {}) {
   return {
     claimId: claim.claimId,
     entrySchema: claim.entrySchema,
@@ -235,6 +235,12 @@ export function projectPublicClaim(claim) {
     expiresAt: claim.expiresAt,
     fenceRevision: claim.fenceRevision,
     transitionDigest: claim.ledgerRevision,
+    ...(includeAuditMetadata && claim.ledgerSequence !== undefined
+      ? { ledgerSequence: claim.ledgerSequence }
+      : {}),
+    ...(includeAuditMetadata && claim.operationTime !== undefined
+      ? { operationTime: claim.operationTime }
+      : {}),
     operationReceiptDigest: claim.operationReceiptDigest,
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration ?? null,
@@ -252,6 +258,11 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
     claimId: claim?.claimId || null,
     claimDigest: transition.claimDigest || null,
     contractReceiptDigest: transition.receipt?.receiptDigest || null,
+    acceptedAuditParentDigest: transition.acceptedParentDigest ?? null,
+    conflictSetDigest: transition.conflictSetDigest ?? null,
+    claimConflictDecisionSchema: transition.claimConflictDecisionSchema ?? null,
+    claimConflictDisposition: transition.claimConflictDisposition ?? null,
+    claimConflictDecisionDigest: transition.claimConflictDecisionDigest ?? null,
     sequence: transition.ledger.sequence,
     evaluationTime,
   };
@@ -265,6 +276,11 @@ export function createPublicResult({ action, transition, ledgerRevision, evaluat
     ledgerRevision,
     claim: claim ? projectPublicClaim(claim) : null,
     claimDigest: transition.claimDigest || null,
+    acceptedAuditParentDigest: transition.acceptedParentDigest ?? null,
+    conflictSetDigest: transition.conflictSetDigest ?? null,
+    claimConflictDecisionSchema: transition.claimConflictDecisionSchema ?? null,
+    claimConflictDisposition: transition.claimConflictDisposition ?? null,
+    claimConflictDecisionDigest: transition.claimConflictDecisionDigest ?? null,
     operationReceipt: transition.receipt || null,
     receipt: { ...receipt, receiptDigest: digestValue(receipt) },
   };
@@ -302,7 +318,9 @@ export function verificationResult({
     status: verification.ok ? "ready" : "blocked",
     ledgerRevision: snapshot.revision,
     claimDigest,
-    claim: verification.claim ? projectPublicClaim(verification.claim) : null,
+    claim: verification.claim
+      ? projectPublicClaim(verification.claim, { includeAuditMetadata: true })
+      : null,
     currentClaimInventory,
     ...(context.pullRequest ? {
       subject: {
@@ -324,7 +342,9 @@ function buildCurrentClaimInventory({ claims, snapshot, evaluationTime }) {
       `Cloud verification current-claim inventory must contain 0 to ${MAX_CURRENT_CLAIMS} claims.`,
     );
   }
-  const projectedClaims = claims.map(projectPublicClaim)
+  const projectedClaims = claims.map((claim) => projectPublicClaim(claim, {
+    includeAuditMetadata: true,
+  }))
     .sort((left, right) => left.claimId.localeCompare(right.claimId));
   if (new Set(projectedClaims.map((claim) => claim.claimId)).size !== projectedClaims.length) {
     throw new Error("Cloud verification current-claim inventory contains duplicate claim identities.");
@@ -343,7 +363,8 @@ function buildCurrentClaimInventory({ claims, snapshot, evaluationTime }) {
 }
 
 export function publicSnapshot(snapshot) {
-  const claims = listCurrentClaims(snapshot.ledger, snapshot.evaluationTime).map(projectPublicClaim);
+  const claims = listCurrentClaims(snapshot.ledger, snapshot.evaluationTime)
+    .map((claim) => projectPublicClaim(claim, { includeAuditMetadata: true }));
   return {
     schema: CLOUD_RESULT_SCHEMA,
     ok: true,

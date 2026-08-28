@@ -315,8 +315,17 @@ function normalizeInventoryClaim(source, evaluationTime) {
       ? expectedAuthority.scopeReserved
       : requiredBoolean(source.scopeReserved, "inventory scopeReserved"),
     actorId: requiredText(source.actorId, "inventory actorId"),
+    deviceId: source.deviceId
+      ? requiredText(source.deviceId, "inventory deviceId")
+      : null,
+    sessionId: source.sessionId
+      ? requiredText(source.sessionId, "inventory sessionId")
+      : null,
     repositoryId: requiredText(source.repositoryId, "inventory repositoryId"),
     workItemId: requiredText(source.workItemId, "inventory workItemId"),
+    predecessorClaimId: source.predecessorClaimId
+      ? requiredDigest(source.predecessorClaimId, "inventory predecessorClaimId")
+      : null,
     canonicalBaseRevision: requiredSha(
       source.canonicalBaseRevision,
       "inventory canonicalBaseRevision",
@@ -348,6 +357,12 @@ function normalizeInventoryClaim(source, evaluationTime) {
       source.transitionDigest,
       "inventory transitionDigest",
     ),
+    ledgerSequence: source.ledgerSequence === undefined
+      ? null
+      : positiveInteger(source.ledgerSequence, "inventory ledgerSequence"),
+    operationTime: source.operationTime
+      ? requiredInstant(source.operationTime, "inventory operationTime")
+      : null,
   };
   if (
     digestValue(core.declaredWriteScope) !== core.writeSetDigest

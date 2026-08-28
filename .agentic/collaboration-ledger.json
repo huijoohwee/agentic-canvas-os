@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5747,
-  "headDigest": "1b254f592278e1cf28fc0669325bdc17d3d6ada780499b88eea4c409dac58e8c",
+  "sequence": 5748,
+  "headDigest": "3a711bbe799feb98509e6e5588212f2494de8a1df68e7f9d0110db8f29bf2f80",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -292417,6 +292417,71 @@
       },
       "claimDigest": "0d305cb89de99fc5a5fb8567fa4b6748b818f175908a1170f9da560fbf743b9e",
       "digest": "1b254f592278e1cf28fc0669325bdc17d3d6ada780499b88eea4c409dac58e8c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5748,
+      "parentDigest": "1b254f592278e1cf28fc0669325bdc17d3d6ada780499b88eea4c409dac58e8c",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4ce7ac90a0bc6404c0102580cd5e01d4a9ff141538f7ed0fcbc761356b82d53c",
+      "idempotencyKey": "3da1ad5d2a9c147d9072227dc1daf7381c8340bfe8ee7edad546c386c45b2df6",
+      "requestDigest": "2fc9b5103d287372ac86d057c67bc0cd80b38e632963a170fbea012e13ecc903",
+      "evaluationTime": "2026-08-28T11:45:42.000Z",
+      "claimCore": {
+        "claimId": "4ce7ac90a0bc6404c0102580cd5e01d4a9ff141538f7ed0fcbc761356b82d53c",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b6e7967b1635714f32080f72c074c1e34a6d915cd6757c06ed49f10985d61267",
+        "canonicalBaseRevision": "25e050e84144f33e6110d0aae80336674f103504",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:__tests__/agent-api-app.test.mjs",
+          "path:__tests__/cloudflare-worker.test.mjs",
+          "path:__tests__/function-execution-receipts.test.mjs",
+          "path:__tests__/integrated-delivery-terminal-retirement.test.mjs",
+          "path:__tests__/knowgrph-mcp-client.test.mjs",
+          "path:__tests__/live-function-run-note-proof.test.mjs",
+          "path:__tests__/native-skill-harness-structure.test.mjs",
+          "path:__tests__/openai-function-gateway.test.mjs",
+          "path:agent-api/src/function-execution-receipts.js",
+          "path:docs/MCP-GATEWAY.md",
+          "path:scripts/deploy-dev-function-gateway.mjs",
+          "path:scripts/function-gateway-run-note-proof.mjs",
+          "path:scripts/integrated-delivery-terminal-retirement.mjs",
+          "path:scripts/live-function-run-note-proof.mjs",
+          "path:src/config.js",
+          "path:wrangler.jsonc",
+          "semantic:agenticgraph-runtime-parity"
+        ],
+        "writeSetDigest": "44a7698d630e02c9769158c56bc571f84d4d1d32970f29b54a46ec27cfedb2ac",
+        "laneRevision": "25e050e84144f33e6110d0aae80336674f103504",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-28T09:20:32.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "f2d92f6e05615a0d3df99bbcce9202cdaec0e872575fbc1260ea6df0e47aeacf",
+        "eligibleSince": "2026-08-28T08:20:32.000Z",
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "25e050e84144f33e6110d0aae80336674f103504",
+          "reviewRequestId": null,
+          "bytesDigest": "181593bc81ab78fcb4b59407ba1c20b02b95d26ae8ae86931b51b6df616da7dc",
+          "namedChecksDigest": "4037256c100018447fa27678b5c255bff5aded3561fed77d2b9fa3aa4bd4ddd5",
+          "handoffEvidenceDigest": "68d1a6be22d76fb8fc8ab68f4148ec3b2b09aa8c9e5834475c88a4d7c333691b",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-28T11:45:42.000Z"
+        }
+      },
+      "claimDigest": "e691255463e7a705e5ec28009fe5db3ffaa0c8e912f32b8fc988fbfa6afc3a96",
+      "digest": "3a711bbe799feb98509e6e5588212f2494de8a1df68e7f9d0110db8f29bf2f80"
     }
   ]
 }

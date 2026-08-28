@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "857d60a7d580e3cb21cdae556160bedadd8d3356a7667dbb6104565c543aad47"
+catalog_digest: "89b506d37384d8c03b8cd76db448680f925803c02051044577463f3246d408b3"
 catalog_entry_count: 420
 source_docs:
   - "FACTS.md"
@@ -17,7 +17,7 @@ source_docs:
   - "AGENTS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENTIC-GRAPH.md"
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
@@ -104,10 +104,10 @@ dictionary_entries:
   - "/propose-skill"
   - "/identity.reflect"
   - "/application.compose"
-  - "/knowledge.graph.ingest"
-  - "/knowledge.graph.parser.generate"
-  - "/knowledge.graph.query"
-  - "/knowledge.graph.explain"
+  - "/agentic.graph.ingest"
+  - "/agentic.graph.parser.generate"
+  - "/agentic.graph.query"
+  - "/agentic.graph.explain"
   - "/orchestration.graph"
   - "/agent.team"
   - "/agent.swarm"
@@ -275,10 +275,10 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/propose-skill` | Draft a candidate Agent Definition with `status: proposed` from a typed capability-gap signal; owned by the ACOS Skill_Proposer harness and distinct from `/skill.propose` by owner, typed arguments `{ gap_signal }`, and artifact type. | `@skill-registry`, `@operator` | `#skill-candidate`, `#approval-gate` | One `status: proposed` Draft_Definition exists in the draft store together with one trace entry carrying the iteration count, or a typed no-draft result returns; the Active_Registry_Snapshot stays byte-identical and promotion happens only through the separate operator-gated gate. |
 | `/identity.reflect` | Update the local identity model from stable operator preferences, project boundaries, and working rules. | `@identity-model`, `@operator`, `@memory-store` | `#identity-model`, `#truth`, `#no-hardcode` | Reflection stores stable, non-secret, source-backed preferences or returns rejected inference reasons. |
 | `/application.compose` | Compile or execute one version-locked agent or LLM application from interoperable component and integration interfaces. | `@application-manifest`, `@component-catalog`, `@integration-profile`, `@runtime-proof`, and `@operator` only for live or mutating execution | `#application-composition`, `#runtime-ready`, `#no-hardcode` | Plan returns one immutable digest over exact revisions, schema digests, owners, bounds, and a deterministic dependency DAG; execute delegates bounded ready steps without silent upgrade, retry, migration, or deploy. |
-| `/knowledge.graph.ingest` | Compile one bounded local workspace containing parser-supported code, docs, SQL, configs, and text-bearing PDFs into one digest-fenced explained-edge graph snapshot. | `@working-directory`, `@knowledge-graph`, `@operator`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#runtime-ready` | `knowgrph.knowledge_graph.ingest` returns opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection; Agentic Canvas OS supplies invocation policy and typed forwarding only. |
-| `/knowledge.graph.parser.generate` | Compile one source-backed inert parser-registry specification into a deterministic canonical v2 registry of fixed adapters or bounded declarative grammar data. | exactly `@parser-specification` and `@runtime-proof` | exactly `#knowledge-graph`, `#parser-generation`, and `#mcp` | `knowgrph.knowledge_graph.parser_generate` validates bounded descriptors and finite grammar data, then returns one canonical registry with its exact digest; Agentic Canvas OS adds no parser runtime, generated code, adapter, artifact store, model, network path, or implicit ingest. |
-| `/knowledge.graph.query` | Query one exact local knowledge-graph snapshot with bounded deterministic lexical search, path, neighborhood, impact, or summary operations. | `@knowledge-graph`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#vcc` | `knowgrph.knowledge_graph.query` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `mode`, then returns ordered evidence from that exact snapshot; stale identity and vector lookup fail closed. |
-| `/knowledge.graph.explain` | Explain one exact relationship from one digest-bound local knowledge-graph snapshot. | `@knowledge-graph`, `@runtime-proof` | `#knowledge-graph`, `#mcp`, `#vcc` | `knowgrph.knowledge_graph.explain_edge` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `edgeId`, then returns stored endpoints, relationship kind, deterministic explanation, source evidence, parser identity, and extraction rule without reparsing or inference. |
+| `/agentic.graph.ingest` | Compile one bounded local workspace containing parser-supported code, docs, SQL, configs, and text-bearing PDFs into one digest-fenced explained-edge graph snapshot. | `@working-directory`, `@agentic-graph`, `@operator`, `@runtime-proof` | `#agentic-graph`, `#mcp`, `#runtime-ready` | `agenticgraph.knowledge_graph.ingest` returns opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection; Agentic Canvas OS supplies invocation policy and typed forwarding only. |
+| `/agentic.graph.parser.generate` | Compile one source-backed inert parser-registry specification into a deterministic canonical v2 registry of fixed adapters or bounded declarative grammar data. | exactly `@parser-specification` and `@runtime-proof` | exactly `#agentic-graph`, `#parser-generation`, and `#mcp` | `agenticgraph.knowledge_graph.parser_generate` validates bounded descriptors and finite grammar data, then returns one canonical registry with its exact digest; Agentic Canvas OS adds no parser runtime, generated code, adapter, artifact store, model, network path, or implicit ingest. |
+| `/agentic.graph.query` | Query one exact local knowledge-graph snapshot with bounded deterministic lexical search, path, neighborhood, impact, or summary operations. | `@agentic-graph`, `@runtime-proof` | `#agentic-graph`, `#mcp`, `#vcc` | `agenticgraph.knowledge_graph.query` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `mode`, then returns ordered evidence from that exact snapshot; stale identity and vector lookup fail closed. |
+| `/agentic.graph.explain` | Explain one exact relationship from one digest-bound local knowledge-graph snapshot. | `@agentic-graph`, `@runtime-proof` | `#agentic-graph`, `#mcp`, `#vcc` | `agenticgraph.knowledge_graph.explain_edge` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `edgeId`, then returns stored endpoints, relationship kind, deterministic explanation, source evidence, parser identity, and extraction rule without reparsing or inference. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
 | `/agent.team` | Plan, start, list, or control one exact source-backed role-playing agent team through the Knowgrph local stdio MCP owner. | exactly `@agent-team` | exactly `#role-based-agent-team` | `/agent.team #role-based-agent-team @agent-team` resolves exact Agent Definition and Agent Orchestration revisions, preserves delegate or handoff ownership, enforces bounded durable state and human review, and returns typed proof without broadening Agent Swarm. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
@@ -424,7 +424,7 @@ command:
 | `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
 | `/sdlc.observe` lacks an exact immutable `agentic-sdlc-ledger-receipt/v1`, expected revision, or expected ledger digest, or the source bytes drift | Return a typed read-only block before projection; do not infer a receipt, repair a ledger, translate `delivery_ready` into `verified`, infer `deployed`, call a model or network, or create a second graph store or renderer. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
-| `/knowledge.graph.parser.generate` receives a missing, mutable, executable, ambiguous, oversized, or unsupported parser specification | Reject before registry compilation or publication; do not infer source matchers, download an adapter, execute caller code, fall back to a model or remote service, or start ingestion. |
+| `/agentic.graph.parser.generate` receives a missing, mutable, executable, ambiguous, oversized, or unsupported parser specification | Reject before registry compilation or publication; do not infer source matchers, download an adapter, execute caller code, fall back to a model or remote service, or start ingestion. |
 | `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
@@ -435,10 +435,10 @@ command:
 
 | Token | Facts source |
 |---|---|
-| `/knowledge.graph.ingest` | `FACTS.md` direct-resolution entry for bounded native parser generation and graph ingestion. |
-| `/knowledge.graph.parser.generate` | `FACTS.md` direct-resolution entry for deterministic source-backed parser generation. |
-| `/knowledge.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
-| `/knowledge.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
+| `/agentic.graph.ingest` | `FACTS.md` direct-resolution entry for bounded native parser generation and graph ingestion. |
+| `/agentic.graph.parser.generate` | `FACTS.md` direct-resolution entry for deterministic source-backed parser generation. |
+| `/agentic.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
+| `/agentic.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
 | `/sdlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only Agentic SDLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable Knowgrph MCP control. |

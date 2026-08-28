@@ -8,35 +8,35 @@ import path from "node:path";
 import test from "node:test";
 
 import {
-  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
-  KNOWLEDGE_GRAPH_MCP_TOOLS,
+  AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
+  AGENTIC_GRAPH_MCP_TOOLS,
 } from "../src/knowgrph-mcp-client.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const EXPECTED_TOOLS = [
-  "knowgrph.knowledge_graph.ingest",
-  "knowgrph.knowledge_graph.parser_generate",
-  "knowgrph.knowledge_graph.query",
-  "knowgrph.knowledge_graph.explain_edge",
+  "agenticgraph.knowledge_graph.ingest",
+  "agenticgraph.knowledge_graph.parser_generate",
+  "agenticgraph.knowledge_graph.query",
+  "agenticgraph.knowledge_graph.explain_edge",
 ];
 const EXPECTED_DISPATCH = [
-  ["/knowledge.graph.ingest", EXPECTED_TOOLS[0]],
-  ["/knowledge.graph.parser.generate", EXPECTED_TOOLS[1]],
-  ["/knowledge.graph.query", EXPECTED_TOOLS[2]],
-  ["/knowledge.graph.explain", EXPECTED_TOOLS[3]],
+  ["/agentic.graph.ingest", EXPECTED_TOOLS[0]],
+  ["/agentic.graph.parser.generate", EXPECTED_TOOLS[1]],
+  ["/agentic.graph.query", EXPECTED_TOOLS[2]],
+  ["/agentic.graph.explain", EXPECTED_TOOLS[3]],
 ];
 const EXPECTED_FACTS_RESOLUTION = [
-  ["/knowledge.graph.ingest", "DICTIONARY-COMMAND.md#/knowledge.graph.ingest"],
-  ["/knowledge.graph.parser.generate", "DICTIONARY-COMMAND.md#/knowledge.graph.parser.generate"],
-  ["/knowledge.graph.query", "DICTIONARY-COMMAND.md#/knowledge.graph.query"],
-  ["/knowledge.graph.explain", "DICTIONARY-COMMAND.md#/knowledge.graph.explain"],
-  ["#knowledge-graph", "DICTIONARY-SEMANTIC.md##knowledge-graph"],
+  ["/agentic.graph.ingest", "DICTIONARY-COMMAND.md#/agentic.graph.ingest"],
+  ["/agentic.graph.parser.generate", "DICTIONARY-COMMAND.md#/agentic.graph.parser.generate"],
+  ["/agentic.graph.query", "DICTIONARY-COMMAND.md#/agentic.graph.query"],
+  ["/agentic.graph.explain", "DICTIONARY-COMMAND.md#/agentic.graph.explain"],
+  ["#agentic-graph", "DICTIONARY-SEMANTIC.md##agentic-graph"],
   ["#parser-generation", "DICTIONARY-SEMANTIC.md##parser-generation"],
-  ["@knowledge-graph", "DICTIONARY-BINDING.md#@knowledge-graph"],
+  ["@agentic-graph", "DICTIONARY-BINDING.md#@agentic-graph"],
   ["@parser-specification", "DICTIONARY-BINDING.md#@parser-specification"],
 ];
 const DOC_FILES = [
-  "docs/KNOWLEDGE-GRAPH.md",
+  "docs/AGENTIC-GRAPH.md",
   "docs/DICTIONARY-COMMAND.md",
   "docs/DICTIONARY-SEMANTIC.md",
   "docs/DICTIONARY-BINDING.md",
@@ -55,16 +55,16 @@ const RETIRED_RUNTIME_PATHS = [
 ];
 
 test("canonical commands map to exactly four Knowgrph-owned MCP tools", () => {
-  assert.deepEqual(KNOWLEDGE_GRAPH_MCP_TOOLS, {
+  assert.deepEqual(AGENTIC_GRAPH_MCP_TOOLS, {
     ingest: EXPECTED_TOOLS[0],
     generateParser: EXPECTED_TOOLS[1],
     query: EXPECTED_TOOLS[2],
     explainEdge: EXPECTED_TOOLS[3],
   });
 
-  const contract = read("docs/KNOWLEDGE-GRAPH.md");
+  const contract = read("docs/AGENTIC-GRAPH.md");
   const dispatch = [...readFrontmatter(contract).matchAll(
-    /^  "(\/knowledge\.graph(?:\.[a-z]+)+)": "(knowgrph\.knowledge_graph\.[a-z_]+)"$/gmu,
+    /^  "(\/agentic\.graph(?:\.[a-z]+)+)": "(agenticgraph\.knowledge_graph\.[a-z_]+)"$/gmu,
   )].map((match) => [match[1], match[2]]);
   assert.deepEqual(dispatch, EXPECTED_DISPATCH);
 
@@ -73,14 +73,14 @@ test("canonical commands map to exactly four Knowgrph-owned MCP tools", () => {
     "docs/MCP-GATEWAY.md",
   ]) {
     assert.deepEqual(
-      [...new Set(read(file).match(/knowgrph\.knowledge_graph\.[a-z_]+/gu) ?? [])],
+      [...new Set(read(file).match(/agenticgraph\.knowledge_graph\.[a-z_]+/gu) ?? [])],
       EXPECTED_TOOLS,
       `${file} tool projection`,
     );
   }
 });
 
-test("FACTS resolves every knowledge graph token exactly once", () => {
+test("FACTS resolves every agentic graph token exactly once", () => {
   const frontmatter = readFrontmatter(read("docs/FACTS.md"));
   const directResolution = readFrontmatterSection(
     frontmatter,
@@ -91,8 +91,8 @@ test("FACTS resolves every knowledge graph token exactly once", () => {
     /^  "([^"]+)": "([^"]+)"$/gmu,
   )]
     .map((match) => [match[1], match[2]])
-    .filter(([token]) => token.includes("knowledge.graph") || token === "#knowledge-graph"
-      || token === "#parser-generation" || token === "@knowledge-graph"
+    .filter(([token]) => token.includes("agentic.graph") || token === "#agentic-graph"
+      || token === "#parser-generation" || token === "@agentic-graph"
       || token === "@parser-specification");
   assert.deepEqual(resolvedTokens, EXPECTED_FACTS_RESOLUTION);
 
@@ -104,16 +104,16 @@ test("FACTS resolves every knowledge graph token exactly once", () => {
     }),
   );
   assert.deepEqual(
-    truthTokens.commands.filter((token) => token.startsWith("/knowledge.graph.")),
+    truthTokens.commands.filter((token) => token.startsWith("/agentic.graph.")),
     EXPECTED_DISPATCH.map(([command]) => command),
   );
   assert.deepEqual(
-    truthTokens.semantics.filter((token) => ["#knowledge-graph", "#parser-generation"].includes(token)),
-    ["#knowledge-graph", "#parser-generation"],
+    truthTokens.semantics.filter((token) => ["#agentic-graph", "#parser-generation"].includes(token)),
+    ["#agentic-graph", "#parser-generation"],
   );
   assert.deepEqual(
-    truthTokens.bindings.filter((token) => ["@knowledge-graph", "@parser-specification"].includes(token)),
-    ["@knowledge-graph", "@parser-specification"],
+    truthTokens.bindings.filter((token) => ["@agentic-graph", "@parser-specification"].includes(token)),
+    ["@agentic-graph", "@parser-specification"],
   );
 });
 
@@ -130,28 +130,28 @@ test("Agentic Canvas OS retains contracts and client code, not a second graph ru
 
   const scripts = JSON.parse(read("package.json")).scripts;
   assert.equal(
-    scripts["knowledge-graph-contract:check"],
-    "node --test __tests__/knowledge-graph-client.test.mjs __tests__/knowledge-graph-parser-client.test.mjs __tests__/knowledge-graph-contract.test.mjs",
+    scripts["agentic-graph-contract:check"],
+    "node --test __tests__/agentic-graph-client.test.mjs __tests__/agentic-graph-parser-client.test.mjs __tests__/agentic-graph-contract.test.mjs",
   );
   assert.equal(Object.hasOwn(scripts, "knowledge-graph:check"), false);
   assert.equal(Object.hasOwn(scripts, "knowledge-graph:mcp"), false);
 });
 
-test("knowledge graph documentation remains bounded and contract/client-ready", () => {
+test("agentic graph documentation remains bounded and contract/client-ready", () => {
   for (const file of DOC_FILES) {
     const source = read(file);
     assert.ok(source.trim(), `${file} must not be empty`);
     assert.ok(lineCount(source) < 600, `${file} must stay below 600 lines`);
   }
 
-  const contract = read("docs/KNOWLEDGE-GRAPH.md");
+  const contract = read("docs/AGENTIC-GRAPH.md");
   assert.match(contract, /contract\/client-ready/iu);
   assert.match(contract, /Knowgrph owns (?:the )?executable/iu);
   assert.match(contract, /expectedSnapshotDigest/u);
   assert.match(contract, /FloatingPanel Skills & Commands/iu);
   assert.match(contract, /knowgrph\.agentic_canvas_os\.docs\.invoke/u);
-  assert.match(contract, /\/knowledge\.graph\.parser\.generate/u);
-  assert.match(contract, new RegExp(`profile: "${KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE}"`, "u"));
+  assert.match(contract, /\/agentic\.graph\.parser\.generate/u);
+  assert.match(contract, new RegExp(`profile: "${AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE}"`, "u"));
   assert.match(contract, /alternative to `descriptors`/u);
   assert.match(contract, /parser generation is independently invocable/iu);
   assert.match(contract, /must not own a second catalog or a hardcoded semantic\/binding list/iu);
@@ -160,11 +160,11 @@ test("knowledge graph documentation remains bounded and contract/client-ready", 
   assert.doesNotMatch(contract, /src\/knowledge-graph\//u);
 
   const skills = read("docs/SKILLS.md");
-  assert.match(skills, /knowledge\.graph\.parser\.generate/u);
-  assert.match(skills, /KNOWLEDGE-GRAPH\.md/u);
+  assert.match(skills, /agentic\.graph\.parser\.generate/u);
+  assert.match(skills, /AGENTIC-GRAPH\.md/u);
 });
 
-test("knowledge graph contracts retain deterministic, explained, vector-free semantics", () => {
+test("agentic graph contracts retain deterministic, explained, vector-free semantics", () => {
   const contract = DOC_FILES.map(read).join("\n");
   assert.match(contract, /deterministic/iu);
   assert.match(contract, /every edge/iu);

@@ -17,7 +17,7 @@ source_docs:
   - "RUNTIME-READINESS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENTIC-GRAPH.md"
   - "AGENT-TEAM.md"
   - "AGENTIC-SDLC-RUNTIME.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
@@ -157,7 +157,7 @@ dictionary_entries:
   - "#managed-implementation-run"
   - "#agentic-sdlc-observability"
   - "#application-composition"
-  - "#knowledge-graph"
+  - "#agentic-graph"
   - "#parser-generation"
   - "#role-based-agent-team"
   - "#tool-gateway"
@@ -327,8 +327,8 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#managed-implementation-run` | Durable work-item-oriented autonomous implementation with isolated source mutation and team-visible control. | A project task should proceed through configured execution, bounded verification, pause/cancel/retry/review controls, and evidence without continuous agent supervision. | One versioned run ledger, safe fenced task worktree, configured runner, bounded attempts and time, exact review head, and `delivery_ready` default are proven; ACOS `review_ready` is distinct and automatic merge/deploy remain absent. |
 | `#agentic-sdlc-observability` | Deterministic read-only projection of one immutable Agentic SDLC ledger into end-to-end execution, evidence, budget, gate, checkpoint, and release-receipt graph context. | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` requests a local observation of one exact run and ledger revision. | Exact receipt schema and digest, stable node and edge identities, source-backed GraphData and KGC Markdown, existing Canvas ownership, typed separation of `verified`, `delivery_ready`, and `deployed`, cache identity, zero model/network/token/cost evidence, and a closed Dev-only deploy boundary are explicit. |
 | `#application-composition` | Exact versioned component and interface composition for agent and LLM applications. | An application joins agent, model, tool, workflow, memory, guardrail, or integration components without absorbing their runtimes. | Exact source and component revisions, interface and schema digests, negotiated capabilities, runtime owners, one immutable plan digest, a deterministic dependency DAG, and explicit non-mutating migration diagnostics are present before execution. |
-| `#knowledge-graph` | Local deterministic graph of source-backed codebase entities and relationships with auditable evidence. | A request generates a native parser or ingests, queries, traverses, or explains a graph derived from a bounded workspace containing code, docs, SQL, configs, or text-bearing PDFs. | Exact parser, registry, snapshot, and source digests, stable node and edge identities, deterministic ordering, typed omissions, and non-empty source evidence plus explanation for every edge are present; model, embedding, vector store, external parser, and external graph service paths are absent. |
-| `#parser-generation` | Deterministic compilation of one inert parser-registry specification into a canonical registry of native parser adapter identities. | `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof` requests the Knowgrph local MCP owner. | Exact result digest, bounded source matchers, deterministic conflict rejection, declared source kinds and fidelity, no executable caller payload, no downloaded adapter, zero model/network use, and no implicit ingest are proven. |
+| `#agentic-graph` | Local deterministic graph of source-backed codebase entities and relationships with auditable evidence. | A request generates a native parser or ingests, queries, traverses, or explains a graph derived from a bounded workspace containing code, docs, SQL, configs, or text-bearing PDFs. | Exact parser, registry, snapshot, and source digests, stable node and edge identities, deterministic ordering, typed omissions, and non-empty source evidence plus explanation for every edge are present; model, embedding, vector store, external parser, and external graph service paths are absent. |
+| `#parser-generation` | Deterministic compilation of one inert parser-registry specification into a canonical registry of native parser adapter identities. | `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` requests the Knowgrph local MCP owner. | Exact result digest, bounded source matchers, deterministic conflict rejection, declared source kinds and fidelity, no executable caller payload, no downloaded adapter, zero model/network use, and no implicit ingest are proven. |
 | `#tool-gateway` | Existing-infrastructure routing for tool calls. | A request uses web search, image generation, TTS, cloud browser, or another tool surface. | Tool route resolves to local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owner without adding a proxy. |
 | `#tool-routing` | Per-tool provider selection and fallback. | A tool category can use gateway, direct, local, or unavailable provider state. | Provider state, fallback, approval, cost, and secret boundary are explicit before execution. |
 | `#tool-function` | Callable function that extends agent capability. | A capability can be invoked as a typed tool call. | Function schema, owner, risk class, approval policy, cost posture, and typed fallback are present. |
@@ -397,10 +397,10 @@ semantic:
 | `/implementation.run #managed-implementation-run @work-item @implementation-run` | Bind one durable work item to an isolated managed run that stops `delivery_ready` when ACOS is `review_ready`. |
 | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` | Read one immutable local ledger receipt and project its end-to-end graph through the existing KGC, GraphData, and Canvas owners without mutation, model use, network use, spend, or deployment. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
-| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Resolve one bounded workspace to the exact Knowgrph ingest tool after explicit operator selection. |
-| `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof` | Compile one exact inert parser specification through the Knowgrph executable owner without adding an Agentic Canvas OS parser runtime. |
-| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Query one exact Knowgrph artifact digest through bounded lexical and structural operations without vector lookup. |
-| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Return one Knowgrph-stored relationship explanation and its exact source evidence without reparsing. |
+| `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | Resolve one bounded workspace to the exact Knowgrph ingest tool after explicit operator selection. |
+| `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | Compile one exact inert parser specification through the Knowgrph executable owner without adding an Agentic Canvas OS parser runtime. |
+| `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Query one exact Knowgrph artifact digest through bounded lexical and structural operations without vector lookup. |
+| `/agentic.graph.explain #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Return one Knowgrph-stored relationship explanation and its exact source evidence without reparsing. |
 | `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/deploy.guard #dev-only #approval-gate @operator` | Confirm deploy boundary and require explicit approval for release. |
 | `/source.normalize #frontmatter #no-hardcode @source.frontmatter` | Fix source-owned identity or hardcoded data upstream. |
@@ -474,7 +474,7 @@ semantic:
 
 | Token | Facts source |
 |---|---|
-| `#knowledge-graph` | `FACTS.md` direct-resolution entry for deterministic source-backed graph semantics with Knowgrph as executable owner. |
+| `#agentic-graph` | `FACTS.md` direct-resolution entry for deterministic source-backed graph semantics with Knowgrph as executable owner. |
 | `#application-composition` | `FACTS.md` direct-resolution entry for exact component, interface, capability, and dependency planning. |
 | `#agentic-sdlc-observability` | `FACTS.md` direct-resolution entry for immutable-ledger Agentic SDLC graph observation. |
 | `#role-based-agent-team` | `FACTS.md` direct-resolution entry for exact role-based team semantics without authority inference. |

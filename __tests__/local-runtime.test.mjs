@@ -5,22 +5,26 @@ import path from "node:path";
 import test from "node:test";
 
 import {
-  APEX_PORT,
   classifyCanonicalRuntimeResidue,
+  parseConsumerPinnedDocsRef,
+  resolveCanonicalMainWorktree,
+  resolveWorkspaceRootFromGitCommonDir,
+  validateCanonicalRuntimeCandidate,
+} from "../scripts/local-runtime-candidate-lib.mjs";
+import { endLocalRuntimeTurn } from "../scripts/local-runtime-lib.mjs";
+import {
+  startSessionRuntime,
+  validateOwnedSessionService,
+} from "../scripts/local-runtime-session-lib.mjs";
+import {
+  APEX_PORT,
   LOCAL_RUNTIME_SCHEMA,
   SESSION_RUNTIME_SCHEMA,
   STORAGE_PORT,
   acquireLock,
   parseLifecycleCommandResult,
-  resolveCanonicalMainWorktree,
-  resolveWorkspaceRootFromGitCommonDir,
-  endLocalRuntimeTurn,
-  parseConsumerPinnedDocsRef,
-  startSessionRuntime,
-  validateCanonicalRuntimeCandidate,
   validateOwnedService,
-  validateOwnedSessionService,
-} from "../scripts/local-runtime-lib.mjs";
+} from "../scripts/local-runtime-supervisor-lib.mjs";
 
 const applicationSha = "a".repeat(40);
 const docsSha = "b".repeat(40);

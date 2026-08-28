@@ -538,27 +538,82 @@ function integrateSessionUnfenced({
         }).canonicalBaseSha;
       }
       const requestedProtectedMainRefreshHeads = new Set();
-      verifyCloudAuthority({
-        pullRequestUrl: lease.pullRequestUrl,
-        branch,
-        headSha: deliveryAuthorizedHeadSha,
-        canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
-        cloudAuthority: deliveryCloudAuthority,
-        protectedMainRefresh,
-      });
+      const verifyDeliveryCloudAuthority = () => verifyCloudAuthority({
+          pullRequestUrl: lease.pullRequestUrl,
+          branch,
+          headSha: deliveryAuthorizedHeadSha,
+          canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
+          cloudAuthority: deliveryCloudAuthority,
+          protectedMainRefresh,
+        });
+      try {
+        verifyDeliveryCloudAuthority();
+      } catch (initialVerificationError) {
+        if (
+          lease.status !== "delivery"
+          || expiredDeliveryRecovery.recovered
+          || protectedMainAuthorizationRefresh
+        ) {
+          throw initialVerificationError;
+        }
+        let localReplayHeadSha = "";
+        try {
+          localReplayHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+        } catch {
+          throw initialVerificationError;
+        }
+        if (
+          !SHA_PATTERN.test(localReplayHeadSha)
+          || localReplayHeadSha === deliveryAuthorizedHeadSha
+        ) {
+          throw initialVerificationError;
+        }
+        const replayPullRequest = readPullRequestForProtectedRefresh({
+          ghText,
+          url: lease.pullRequestUrl,
+        });
+        if (
+          replayPullRequest.url !== lease.pullRequestUrl
+          || replayPullRequest.baseRefName !== "main"
+          || replayPullRequest.headRefOid !== localReplayHeadSha
+        ) {
+          throw new Error(
+            `Pull request identity for ${lease.pullRequestUrl} changed before delivery replay.`,
+          );
+        }
+        protectedMainAuthorizationRefresh = reconcileProtectedMainRefresh({
+          url: lease.pullRequestUrl,
+          expectedHeadSha: deliveryAuthorizedHeadSha,
+          observedHeadSha: localReplayHeadSha,
+          gitText,
+          run,
+        });
+        protectedMainRefresh = appendProtectedMainRefresh(
+          protectedMainRefresh,
+          protectedMainAuthorizationRefresh,
+        );
+        acceptedProtectedRefreshBaseSha = projectRepeatedProtectedRefreshBase({
+          acceptedHeadSha: deliveryAuthorizedHeadSha,
+          refreshReceipt: protectedMainAuthorizationRefresh,
+        }).canonicalBaseSha;
+        verifyDeliveryCloudAuthority();
+      }
       const pullRequest = waitForMergedPullRequest({
       url: lease.pullRequestUrl,
       expectedHeadSha: deliveryAuthorizedHeadSha,
       ghText, waitSeconds, pollSeconds, now, sleep,
       onHeadAdvance: allowProtectedMainRefresh
         ? ({ expectedHeadSha, observedHeadSha }) => {
+          const refreshBaseHeadSha = protectedMainAuthorizationRefresh
+            && protectedMainAuthorizationRefresh.refreshedHeadSha !== observedHeadSha
+            ? protectedMainAuthorizationRefresh.refreshedHeadSha
+            : expectedHeadSha;
           const refresh = protectedMainAuthorizationRefresh
-            && protectedMainAuthorizationRefresh.deliveredHeadSha === expectedHeadSha
             && protectedMainAuthorizationRefresh.refreshedHeadSha === observedHeadSha
             ? protectedMainAuthorizationRefresh
             : reconcileProtectedMainRefresh({
               url: lease.pullRequestUrl,
-              expectedHeadSha,
+              expectedHeadSha: refreshBaseHeadSha,
               observedHeadSha,
               gitText,
               run,
@@ -568,9 +623,10 @@ function integrateSessionUnfenced({
               protectedMainRefresh,
               refresh,
             );
+            protectedMainAuthorizationRefresh = protectedMainRefresh;
           }
           acceptedProtectedRefreshBaseSha = projectRepeatedProtectedRefreshBase({
-            acceptedHeadSha: expectedHeadSha,
+            acceptedHeadSha: refreshBaseHeadSha,
             refreshReceipt: refresh,
           }).canonicalBaseSha;
           verifyCloudAuthority({
@@ -579,6 +635,7 @@ function integrateSessionUnfenced({
             headSha: deliveryAuthorizedHeadSha,
             canonicalBaseSha: deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha,
             cloudAuthority: deliveryCloudAuthority,
+            protectedMainRefresh,
           });
           return refresh.refreshedHeadSha;
         }
@@ -859,7 +916,11 @@ function recoverExpiredDeliveryCloudAuthority({
   recoverIntegratedCloudAuthority,
   now,
 }) {
-  const unchanged = () => Object.freeze({ authority, protectedMainRefresh: null });
+  const unchanged = () => Object.freeze({
+    authority,
+    protectedMainRefresh: null,
+    recovered: false,
+  });
   if (lease?.status !== "delivery") return unchanged();
   const observedAt = now().getTime();
   const expiresAt = Date.parse(String(authority?.expiresAt || ""));
@@ -943,7 +1004,11 @@ function recoverExpiredDeliveryCloudAuthority({
     authority,
     expected: preflight,
   });
-  return Object.freeze({ authority: recoveredAuthority, protectedMainRefresh });
+  return Object.freeze({
+    authority: recoveredAuthority,
+    protectedMainRefresh,
+    recovered: true,
+  });
 }
 
 function verifyRetiredMergedDeliveryAfterRecoveryFailure({
@@ -3525,10 +3590,10 @@ function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runti
     runtimeRepository,
     allowAncillary: true,
     runtimeRequired: runtime === "canonical",
-    readOriginRemote: () => runText(
+    readOriginRemote: repositoryRoot => runText(
       "git",
       ["remote", "get-url", "origin"],
-      { cwd: canonicalRoot },
+      { cwd: repositoryRoot || canonicalRoot },
     ),
   });
   return {
@@ -3809,8 +3874,20 @@ export function resolveRuntimeRepositories({
     }
   }
   if (allowAncillary && ancillaryIntegration) {
-    requireRepositoryPackageIdentity(agenticCanvasOsRoot, "agentic-canvas-os", "Agentic Canvas OS");
-    if (runtimeRequired) requireRepositoryPackageIdentity(knowgrphRoot, "knowgrph", "Knowgrph");
+    requireRepositoryPackageIdentity(
+      agenticCanvasOsRoot,
+      "agentic-canvas-os",
+      "Agentic Canvas OS",
+      readOriginRemote,
+    );
+    if (runtimeRequired) {
+      requireRepositoryPackageIdentity(
+        knowgrphRoot,
+        "knowgrph",
+        "Knowgrph",
+        readOriginRemote,
+      );
+    }
   }
   return { integratedRepository, agenticCanvasOsRoot, knowgrphRoot };
 }
@@ -3829,7 +3906,7 @@ function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote, a
 
   let remoteName = "";
   try {
-    remoteName = repositoryNameFromRemote(readOriginRemote());
+    remoteName = repositoryNameFromRemote(readOriginRemote(canonicalRoot));
   } catch {
     remoteName = "";
   }
@@ -3848,16 +3925,22 @@ function resolveCanonicalRepositoryIdentity({ canonicalRoot, readOriginRemote, a
   throw new Error(`Unsupported canonical integration repository identity: ${observed}.`);
 }
 
-function requireRepositoryPackageIdentity(root, expectedName, label) {
+function requireRepositoryPackageIdentity(root, expectedName, label, readOriginRemote) {
   let packageName = "";
   try {
     packageName = String(JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"))?.name || "").trim();
   } catch {
     packageName = "";
   }
-  if (packageName !== expectedName) {
-    throw new Error(`${label} canonical repository identity is unavailable at ${root}.`);
+  if (packageName === expectedName) return;
+  let remoteName = "";
+  try {
+    remoteName = repositoryNameFromRemote(readOriginRemote(root));
+  } catch {
+    remoteName = "";
   }
+  if (remoteName === expectedName) return;
+  throw new Error(`${label} canonical repository identity is unavailable at ${root}.`);
 }
 
 function repositoryNameFromRemote(value) {
